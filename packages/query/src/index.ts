@@ -17,11 +17,24 @@
  * above this layer sees a `WalletResponse`.
  */
 export { queryKeys } from './keys'
-export { createQueryClient, shouldRetry } from './client'
+export {
+  MAX_RETRY_AFTER_MS,
+  createQueryClient,
+  createQueryKeyHash,
+  retryDelay,
+  shouldRetry,
+  shouldThrowOnError,
+} from './client'
+export type { QueryClientOptions } from './client'
+
+export { describeFreshness } from './freshness'
+export type { Freshness, FreshnessSource } from './freshness'
+
+export { useDebouncedValue } from './useDebouncedValue'
 
 // Re-exported so a component can branch on failure without importing `@fp/api`,
 // which the boundary rule forbids. The error shape is part of the door.
-export { ApiError, ErrorKind } from '@fp/api'
+export { ApiError, ErrorKind, serverReason } from '@fp/api'
 
 export {
   FlexpriceProvider,
@@ -38,8 +51,13 @@ export {
   useEnvironmentList,
   useRenameEnvironment,
   useSignIn,
+  useSignUp,
+  useSignUpWithToken,
 } from './session'
 export type { CurrentUser, RenameEnvironment, SessionCredentials } from './session'
+
+export { PASSWORD_ONLY, useAuthCapabilities, useAuthCapabilitiesValue } from './authCapabilities'
+export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
 
 export {
   fetchInvoices,
@@ -51,16 +69,29 @@ export {
   useAttemptInvoicePayment,
   useCreateInvoice,
   useFinalizeInvoice,
+  applyLineChanges,
+  useModifyInvoiceLineItems,
+  useSaveInvoiceEdit,
+  runInvoiceEdit,
+  useUpdateInvoice,
+  useUpdateInvoiceMetadata,
+  useUpdateInvoicePaymentStatus,
   useInvoice,
   useInvoices,
   useRecalculateInvoice,
   useSendInvoice,
   useVoidInvoice,
 } from './invoices'
+export type { InvoiceEdit, InvoiceEditSave, InvoiceLineChanges, LineItemEdit } from './invoices'
 export type { InvoiceDetailWire, InvoicePage, InvoiceWire } from './invoices'
 
-export { summariseCollections, useCollectionsSummary } from './collections'
-export type { CollectionsSummary } from './collections'
+export {
+  summariseCollections,
+  summariseDunning,
+  useCollectionsSummary,
+  useDunning,
+} from './collections'
+export type { CollectionsSummary, DunningRow, DunningSummary } from './collections'
 
 export { toOverrideLineItem } from './priceOverrides'
 export type { OverrideLineItem } from './priceOverrides'
@@ -121,6 +152,7 @@ export {
   useArchiveCoupon,
   useCoupon,
   useCouponAssociations,
+  useCouponRedemptions,
   useCoupons,
   useUpdateCoupon,
   toCreateCouponRequest,
@@ -152,7 +184,9 @@ export {
   toGroup,
   toGroupFilter,
   useGroup,
+  useGroupMembers,
   useGroups,
+  usePriceGroupOptions,
   toCreateGroupRequest,
   useCreateGroup,
   useDeleteGroup,
@@ -192,12 +226,17 @@ export {
   useCreateCustomer,
   useUpdateCustomer,
   useDeleteCustomer,
+  toIntegrationLinks,
+  useCustomerIntegrationLinks,
+  useLinkCustomerIntegration,
+  useUnlinkCustomerIntegration,
 } from './customers'
 export type {
   CustomerDetailWire,
   CustomerPage,
   CustomerUsageSummary,
   CustomerWire,
+  IntegrationMappingWire,
 } from './customers'
 
 export {
@@ -217,9 +256,22 @@ export {
   toLineItemChangeRequest,
   toUpdateLineItemRequest,
   useActivateSubscription,
+  useUpdateSubscriptionMetadata,
+  useRemoveSubscriptionAddon,
+  useRemoveSubscriptionTax,
+  useCancelSubscriptionCreditGrant,
+  useCustomerContractCounts,
   useCancelSubscription,
   useCreateSubscription,
   useCreateSubscriptionLineItem,
+  toAddAddonRequest,
+  toAddCouponRequest,
+  toRemoveCouponRequest,
+  useAddSubscriptionAddon,
+  useAddSubscriptionCoupon,
+  useCreateSubscriptionCreditGrant,
+  useCreateSubscriptionEntitlement,
+  useCreateSubscriptionTax,
   useDeleteSubscriptionLineItem,
   useExecuteLineChange,
   usePreviewLineChange,
@@ -227,8 +279,12 @@ export {
   useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
   useSubscriptionInvoices,
+  useSubscriptionAddons,
+  useSubscriptionCoupons,
+  useSubscriptionInvoicePreview,
   useSubscriptionLines,
   useSubscriptionSchedules,
+  useSubscriptionTaxes,
   useSubscriptionUsage,
   useSubscriptions,
   useUpdateSubscriptionLineItem,
@@ -259,6 +315,7 @@ export {
   toPaymentDetail,
   toPaymentFilter,
   toRecordPaymentRequest,
+  useCustomerPayments,
   useDeletePayment,
   useInvoicePayments,
   usePayment,
@@ -438,15 +495,39 @@ export {
 } from './alertSettings'
 export type { AlertSettingPage, AlertSettingWire } from './alertSettings'
 
-export { useNavCounts } from './counts'
-export { useFeatureLinkage } from './featureLinkage'
+export { useCount, useInvoiceCount, useNavCounts } from './counts'
+export { COUNT_CONCURRENCY, mapBounded, useFeatureLinkage } from './featureLinkage'
 export type { FeatureLinkage } from './featureLinkage'
+export { usePlanLinkage } from './planLinkage'
+export { useAddonLinkage } from './addonLinkage'
+export type { AddonLinkage } from './addonLinkage'
+export { APPLY_STEP_LABEL, applySteps, useApplyPricingSchema, useParsePricing } from './aiPricing'
+export { useEventDebug } from './eventDebug'
+export type { ApplyResult, ApplyStep } from './aiPricing'
+export type { PlanLinkage } from './planLinkage'
 export type { CountableId } from './counts'
 
 export { useCatalogStats } from './catalogStats'
 export type { CatalogEntity, CatalogStats } from './catalogStats'
 
 export { toUsageAnalytics, useUsageAnalytics, UsageWindowSize } from './events'
+export {
+  sumDecimals,
+  toInvoicedRevenue,
+  toRevenueOverview,
+  useInvoicedRevenue,
+  useRevenueOverview,
+  useRevenueSeries,
+} from './revenue'
+export type {
+  InvoicedCurrency,
+  InvoicedRevenue,
+  InvoicedRow,
+  RevenueCustomer,
+  RevenueDay,
+  RevenueOverview,
+  RevenueSummary,
+} from './revenue'
 export type {
   FeatureUsageRow,
   UsageAnalytics,
@@ -463,19 +544,27 @@ export type { DataExportPage, DataExportWire } from './dataExports'
 export {
   countConnections,
   fetchIntegrations,
+  toIntegrationConnection,
   toIntegrations,
+  useCompleteOAuth,
+  useConnectIntegration,
+  useDisconnectIntegration,
   useIntegrations,
+  useStartOAuth,
+  useUpdateConnection,
 } from './integrations'
-export type { ConnectionWire } from './integrations'
+export type { ConnectionWire, OAuthStart } from './integrations'
 export {
   toCreateWalletRequest,
   toTopUpRequest,
+  toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
   useCreateWallet,
   useCustomerWallets,
   useTerminateWallet,
   useTopUpWallet,
+  useUpdateAutoTopup,
   useWalletTransactions,
 } from './wallets'
 export type { WalletTransactionWire, WalletWire } from './wallets'
@@ -488,7 +577,7 @@ export {
   useDeleteTaxAssociation,
   useUpdateTaxAssociation,
 } from './taxAssociations'
-export type { TaxAssociationWire } from './taxAssociations'
+export type { TaxAssociationEntityType, TaxAssociationWire } from './taxAssociations'
 
 export {
   hourlyWindows,
@@ -522,3 +611,11 @@ export {
   useWebhookPortal,
 } from './webhooks'
 export type { WebhookPortalStatus } from './webhooks'
+
+export {
+  useEntityIntegrationLinks,
+  useEntityIntegrationColumns,
+  useEntityIntegrationControls,
+} from './entityIntegrationLinks'
+
+export { useContractChargeAlerts } from './contractChargeAlerts'

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { FeatureStatus, FeatureType, type Feature } from '@fp/domain'
+import { FeatureStatus, FeatureType, type Feature, type Charge } from '@fp/domain'
 import { makeCharges, makeEntitlements } from '../plans/planDetailFixtures'
 import { featureFixtures } from './featureFixtures'
 import {
@@ -30,6 +30,7 @@ interface HarnessProps {
   onSave: (changes: Record<string, string>) => Promise<unknown>
   onDuplicate: () => void
   onDelete: () => void
+  onOpenChargeParent: (charge: Charge) => void
 }
 
 /** One fixture feature of the requested type, with the status overridden. */
@@ -96,7 +97,7 @@ function FeatureDetailHarness({
 
 /** A feature's detail page with Overview, Charges, Entitlements and Information tabs. */
 const meta = {
-  title: 'App/Product catalog/Products/Product detail view',
+  title: 'App/Product catalog/Features/Feature detail view',
   component: FeatureDetailHarness,
   parameters: {
     layout: 'fullscreen',
@@ -122,6 +123,7 @@ const meta = {
     onSave: fn(() => Promise.resolve()),
     onDuplicate: fn(),
     onDelete: fn(),
+    onOpenChargeParent: fn(),
   },
   argTypes: {
     featureType: { control: 'select', options: Object.values(FeatureType) },
@@ -152,63 +154,148 @@ type Story = StoryObj<typeof meta>
 /** Every knob: feature type and status, tab, row counts, loading and error. */
 export const Playground: Story = {}
 
+/**
+ * Information is the create form, read-only.
+ *
+ * It was three idioms for one thing — a small editable card, an
+ * "Event and aggregation" panel and a box of ids — in an order that matched
+ * nothing anyone had just filled in. It is the form's own shape now, so this
+ * asserts the form's card titles rather than the old panel's name.
+ */
 export const Information: Story = {
+  args: { tab: 'information' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'API calls' })).toBeInTheDocument()
-    await expect(canvas.getByText('Event and aggregation')).toBeInTheDocument()
+
+    // The create form's two cards, in its order.
+    await expect(canvas.getByText('Details')).toBeVisible()
+    await expect(canvas.getByText('Metering')).toBeVisible()
+    await expect(canvas.queryByText('Event and aggregation')).toBeNull()
+
+    // Read-only: there is no pencil, because editing is the header's
+    // "Edit details", which opens the real form.
+    await expect(canvas.queryByRole('button', { name: /^Edit details$/i })).toBeNull()
   },
 }
 
 export const Overview: Story = {
+  args: { tab: 'overview', chargeCount: 8, entitlementCount: 8 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Both tables on one tab, beside the rail — this is the whole page.
+    await expect(
+      canvas.getByText('Every plan and add-on that bills for this feature'),
+    ).toBeInTheDocument()
+    await expect(
+      canvas.getByText('What each plan includes before charges apply'),
+    ).toBeInTheDocument()
+    await expect(canvas.getByText('Send a test event')).toBeInTheDocument()
+    await expect(canvas.getByText('Metadata')).toBeInTheDocument()
+  },
+}
+
+/**
+ * Two tabs, and no Usage panel.
+ *
+ * Charges and Entitlements were tabs of their own; Overview showed a Usage
+ * section that could never fill, because the API reports nothing per feature.
+ * This is the assertion that stops either coming back.
+ */
+export const TwoTabs: Story = {
   args: { tab: 'overview' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const tabs = canvas.getAllByRole('tab').map((tab) => tab.textContent?.trim())
+    await expect(tabs).toEqual(['Overview', 'Information'])
+    await expect(canvas.queryByText(/usage for this feature is not available/i)).toBeNull()
+  },
 }
 
-export const Charges: Story = {
-  args: { tab: 'charges', chargeCount: 8 },
-}
-
+/** Loading is a skeleton, never "No charges yet". */
 export const ChargesLoading: Story = {
-  args: { tab: 'charges', chargesLoading: true },
+  args: { tab: 'overview', chargeCount: 0, chargesLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Loading charges')).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).toBeNull()
+  },
 }
 
 export const ChargesEmpty: Story = {
-  args: { tab: 'charges', chargeCount: 0 },
+  args: { tab: 'overview', chargeCount: 0 },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('No charges yet')).toBeInTheDocument()
   },
 }
 
+/** A failed load says so; it never reads as "No charges yet". */
 export const ChargesError: Story = {
-  args: { tab: 'charges', chargesError: 'Could not load the charges for this feature.' },
-}
-
-export const Entitlements: Story = {
-  args: { tab: 'entitlements', entitlementCount: 8 },
+  args: {
+    tab: 'overview',
+    chargeCount: 0,
+    chargesError: 'Could not load the charges for this feature.',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByText('Could not load the charges for this feature.'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).toBeNull()
+  },
 }
 
 export const EntitlementsEmpty: Story = {
-  args: { tab: 'entitlements', entitlementCount: 0 },
+  args: { tab: 'overview', chargeCount: 8, entitlementCount: 0 },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('No entitlements yet')).toBeInTheDocument()
   },
 }
 
 export const EntitlementsLoading: Story = {
-  args: { tab: 'entitlements', entitlementsLoading: true },
+  args: { tab: 'overview', entitlementCount: 0, entitlementsLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Loading entitlements')).toBeInTheDocument()
+    await expect(canvas.queryByText('No entitlements yet')).toBeNull()
+  },
+}
+
+/** A failed entitlements load says so; it never reads as "No entitlements yet". */
+export const EntitlementsError: Story = {
+  args: {
+    tab: 'overview',
+    entitlementCount: 0,
+    entitlementsError: 'Could not load the entitlements for this feature.',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByText('Could not load the entitlements for this feature.'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('No entitlements yet')).toBeNull()
+  },
 }
 
 export const ManyRows: Story = {
-  args: { tab: 'charges', chargeCount: 40, entitlementCount: 40 },
+  args: { tab: 'overview', chargeCount: 40, entitlementCount: 40 },
 }
 
-/** A boolean feature has no Overview or Charges tab, so the page opens on Entitlements. */
+/**
+ * A boolean feature has no meter, so nothing prices it and there is no event
+ * to send. Overview is its entitlements and its metadata, and the tabs are
+ * still the same two — the page no longer rearranges itself by type.
+ */
 export const BooleanFeature: Story = {
-  args: { featureType: FeatureType.Boolean, tab: 'overview' },
+  args: { featureType: FeatureType.Boolean, tab: 'overview', entitlementCount: 4 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.queryByRole('tab', { name: /Overview/ })).toBeNull()
-    await expect(canvas.getByRole('tab', { name: /Entitlements/ })).toBeInTheDocument()
+    await expect(canvas.getByRole('tab', { name: /Overview/ })).toBeInTheDocument()
+    await expect(
+      canvas.getByText('What each plan includes before charges apply'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('Send a test event')).toBeNull()
+    await expect(canvas.queryByText(/bills for this feature/)).toBeNull()
   },
 }
 
@@ -220,7 +307,7 @@ export const ConfigFeature: Story = {
   args: { featureType: FeatureType.Config, tab: 'information' },
 }
 
-/** An archived feature locks the General card and shows an Archived badge. */
+/** An archived feature locks the Feature details card and shows an Archived badge. */
 export const Archived: Story = {
   args: { featureStatus: FeatureStatus.Archived, tab: 'information' },
 }
@@ -230,8 +317,8 @@ export const SwitchesTabs: Story = {
   args: { tab: 'overview' },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Charges/ }))
-    await expect(args.onTabChange).toHaveBeenCalledWith('charges')
+    await userEvent.click(canvas.getByRole('tab', { name: /Information/ }))
+    await expect(args.onTabChange).toHaveBeenCalledWith('information')
     await expect(canvas.queryByText('Send a test event')).toBeNull()
   },
 }
@@ -243,8 +330,23 @@ export const EditFromMenu: Story = {
     await expect(canvas.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
     await userEvent.click(
-      await within(canvasElement.ownerDocument.body).findByRole('menuitem', { name: 'Edit' }),
+      await within(canvasElement.ownerDocument.body).findByRole('menuitem', {
+        name: 'Edit details',
+      }),
     )
     await expect(args.onEditConfiguration).toHaveBeenCalled()
+  },
+}
+
+export const ChargeOpensParent: Story = {
+  args: { tab: 'overview', chargeCount: 1, entitlementCount: 0 },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('columnheader', { name: 'Plan / add-on' })).toBeVisible()
+    await userEvent.click(canvas.getByText('Starter', { exact: true }))
+    await expect(args.onOpenChargeParent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: chargeLinks(1)[0]!.charge.id }),
+    )
+    await expect(within(document.body).queryByRole('dialog')).toBeNull()
   },
 }

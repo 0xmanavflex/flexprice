@@ -85,34 +85,28 @@ function manyPayments(count: number): Payment[] {
 export const Default: Story = {}
 
 /**
- * Method and Gateway are different facts, and both are real fields.
+ * Method is a real field; a payment recorded by hand has none and dashes.
  *
- * "Card" is what the customer presented; Stripe is who charged it. A payment
- * recorded by hand has neither and dashes on both.
+ * "Card" is what the customer presented; the wire's screaming snake case is
+ * made readable without a lookup table that would render an unknown method
+ * blank.
  */
-export const MethodAndGateway: Story = {
+export const PaymentMethod: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
     await expect(await canvas.findByText('INV-1041')).toBeInTheDocument()
     await expect(canvas.getAllByText('Card').length).toBeGreaterThan(0)
-    // Two rows were taken through Stripe, one through Razorpay.
-    await expect(canvas.getAllByText('Stripe')).toHaveLength(2)
-    await expect(canvas.getByText('Razorpay')).toBeInTheDocument()
-    // The wire's screaming snake case, made readable without a lookup table
-    // that would render an unknown method blank.
     await expect(canvas.getByText('Ach Debit')).toBeInTheDocument()
     await expect(canvas.getAllByText('—').length).toBeGreaterThanOrEqual(3)
   },
 }
 
 /**
- * Customer is not a column, because `PaymentResponse` has no customer.
- *
- * Not a name, not even a `customer_id` — only `destination_id`, which is the
- * invoice. The Invoice column is the honest version of the same lookup.
+ * The columns V1 showed: when, which invoice, how much, how, and the
+ * gateway's reference. No always-empty customer or receipt column.
  */
-export const NoCustomerColumn: Story = {
+export const Columns: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('INV-1041')
@@ -120,9 +114,18 @@ export const NoCustomerColumn: Story = {
     const headers = Array.from(canvasElement.querySelectorAll('thead th')).map((th) =>
       (th.textContent ?? '').trim().toLowerCase(),
     )
+    await expect(headers).toEqual(
+      expect.arrayContaining([
+        'date',
+        'invoice number',
+        'amount',
+        'payment method',
+        'status',
+        'gateway reference',
+      ]),
+    )
     await expect(headers).not.toContain('customer')
-    await expect(headers).toContain('invoice')
-    await expect(headers).toContain('gateway')
+    await expect(headers).not.toContain('receipt number')
   },
 }
 
@@ -149,10 +152,35 @@ export const FilteredEmpty: Story = {
     onClearFilters: fn(),
   },
   play: async ({ canvasElement }) => {
-    await expect(
-      await within(canvasElement).findByText(/no payments match these filters/i),
-    ).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    // Empty here means "none on this page", never "none in the ledger".
+    await expect(await canvas.findByText(/no matching payments on this page/i)).toBeInTheDocument()
+    await expect(canvas.getByText(/other pages may have matches/i)).toBeInTheDocument()
   },
+}
+
+/** A status filter over a page that still has hits: the caveat sits above the toolbar. */
+export const FilteredWithinLoadedRows: Story = {
+  args: {
+    payments: paymentFixtures().slice(1, 2),
+    total: 40,
+    query: { ...DEFAULT_PAYMENT_QUERY, statuses: [PaymentStatus.Failed] },
+    onClearFilters: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/filtered within the loaded rows/i)).toBeVisible()
+    await expect(canvas.getByText(/the count below is every payment/i)).toBeVisible()
+  },
+}
+
+/** Rows stay put while the next page loads; they are dimmed, not blanked. */
+export const Refreshing: Story = { args: { isRefreshing: true } }
+
+/** Held rows are dimmed on purpose, so they are not asserted against the contrast floor. */
+export const ProvisionalPage: Story = {
+  args: { isProvisional: true, isRefreshing: true },
+  parameters: { a11y: { config: { rules: [{ id: 'color-contrast', enabled: false }] } } },
 }
 
 export const FirstRun: Story = {

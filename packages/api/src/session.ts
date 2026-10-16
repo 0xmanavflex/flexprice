@@ -1,4 +1,12 @@
-import { ApiError, ErrorKind, kindForStatus, readErrorBody, toApiError } from './errors'
+import {
+  ApiError,
+  ErrorKind,
+  kindForStatus,
+  parseRetryAfter,
+  readErrorBody,
+  toApiError,
+} from './errors'
+import { fetchWithTimeout, transportError } from './timeout'
 
 /**
  * Session bootstrap: the calls the SDK cannot make.
@@ -64,35 +72,50 @@ function str(source: Record<string, unknown>, key: string): string {
 async function request(
   serverURL: string,
   path: string,
-  init: { method: string; token?: string | null; body?: unknown },
+  init: {
+    method: string
+    token?: string | null
+    body?: unknown
+    /**
+     * `X-Environment-ID`. Only the discovery routes (listing, creating and
+     * reading environments, `/users/me`) are served without one; anything else
+     * — renaming an environment included — is refused with 403 "Invalid or
+     * inaccessible environment" when it is missing.
+     */
+    environmentId?: string
+  },
 ): Promise<unknown> {
   const url = `${serverURL.replace(/\/+$/, '')}${path}`
   const headers = new Headers({ 'Content-Type': 'application/json' })
   if (init.token) headers.set('Authorization', `Bearer ${init.token}`)
+  if (init.environmentId) headers.set('X-Environment-ID', init.environmentId)
 
   let response: Response
   try {
-    response = await fetch(url, {
+    response = await fetchWithTimeout(url, {
       method: init.method,
       headers,
       ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
     })
   } catch (cause) {
-    // `fetch` rejects only for transport: offline, DNS, CORS, abort. There is
-    // no status to classify, so the kind is decided here rather than guessed.
-    throw new ApiError(ErrorKind.Network, 'Could not reach Flexprice.', { cause })
+    // `fetch` rejects only for transport: offline, DNS, CORS, abort, deadline.
+    // There is no status to classify, so the kind is read off the rejection.
+    throw transportError(cause)
   }
 
   const text = await response.text()
 
   if (!response.ok) {
-    const { message, details } = readErrorBody(
+    const { message, details, fromServer } = readErrorBody(
       text,
       response.statusText || `The request failed (${response.status}).`,
     )
+    const retryAfterMs = parseRetryAfter(response.headers.get('retry-after'))
     throw new ApiError(kindForStatus(response.status), message, {
       status: response.status,
       ...(details ? { details } : {}),
+      ...(fromServer ? { fromServer } : {}),
+      ...(response.status === 429 && retryAfterMs !== undefined ? { retryAfterMs } : {}),
     })
   }
 
@@ -124,14 +147,38 @@ export async function signIn(
   return toCredentials(body)
 }
 
+/**
+ * Creates the account and its organisation — `POST /auth/signup`.
+ *
+ * What it needs depends on the deployment's identity provider:
+ *
+ *   - **Supabase** (the hosted regions) takes no password. The person has
+ *     already registered with Supabase from the browser and confirmed their
+ *     email; `token` is that confirmed session's access token, and the backend
+ *     refuses without it ("A verified sign-in is required to create an
+ *     account"). The email must match the token's.
+ *   - **Flexprice's own provider** (self-hosted) takes the email and password
+ *     directly and needs no token.
+ *
+ * `metadata` is free-form attribution the backend stores on the tenant.
+ */
 export async function signUp(
   serverURL: string,
-  email: string,
-  password: string,
+  details: {
+    email: string
+    password?: string | undefined
+    token?: string | undefined
+    metadata?: Record<string, string> | undefined
+  },
 ): Promise<SessionCredentials> {
   const body = await request(serverURL, '/auth/signup', {
     method: 'POST',
-    body: { email, password },
+    body: {
+      email: details.email,
+      ...(details.password ? { password: details.password } : {}),
+      ...(details.token ? { token: details.token } : {}),
+      ...(details.metadata ? { metadata: details.metadata } : {}),
+    },
   })
   return toCredentials(body)
 }
@@ -260,6 +307,8 @@ export async function updateEnvironment(
   const body = await request(serverURL, `/environments/${encodeURIComponent(id)}`, {
     method: 'PUT',
     token,
+    // The route is environment-scoped; the environment being renamed is the scope.
+    environmentId: id,
     body: { name: patch.name },
   })
   const row = isRecord(body) ? body : {}

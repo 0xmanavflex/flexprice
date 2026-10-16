@@ -1,30 +1,34 @@
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import type { TenantFeatureUsage } from '@fp/domain'
 import {
-  ApiError,
   useCustomer,
+  useCustomerIntegrationLinks,
+  useIntegrations,
+  useLinkCustomerIntegration,
+  useUnlinkCustomerIntegration,
   useCustomerInvoices,
+  useCustomerPayments,
   useCustomerSubscriptions,
   useCustomerUsageSummary,
+  useDeleteCustomer,
   useUpdateCustomer,
 } from '@fp/query'
-import {
-  CUSTOMER_TABS,
-  CustomerAnalyticsView,
-  CustomerDetail,
-  DEMO_FEATURE_ANALYTICS,
-  QuotaCard,
-  type CustomerTab,
-} from '@fp/ui/pages'
+import { CUSTOMER_TABS, CustomerDetail, QuotaCard, Toaster, type CustomerTab } from '@fp/ui/pages'
+import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
-import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
+import { AppFailure, ConfirmDialog, EmptyState, LoadingRows, Section } from '@fp/ui/compositions'
+import { detailGate } from '@/pages/shared/detailGate'
+import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
 
 /**
  * Turns whatever is in `?tab=` into a real section, defaulting to Overview.
  *
  * Exported so the route can validate its search param against the same list the
- * page renders — one source of truth for which sections exist.
+ * page renders — one source of truth for which sections exist. The retired
+ * `?tab=subscriptions` is not in that list, so it lands on Overview, where the
+ * contracts now live.
  */
 export function parseCustomerTab(value: unknown): CustomerTab {
   return typeof value === 'string' && (CUSTOMER_TABS as readonly string[]).includes(value)
@@ -58,123 +62,175 @@ export function CustomerDetailPage({
   onEdit,
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
+  const integrationLinks = useCustomerIntegrationLinks(customerId)
+  const integrations = useIntegrations()
+  const linkIntegration = useLinkCustomerIntegration(customerId)
+  const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const externalId = customer.data?.externalId ?? ''
   const subscriptions = useCustomerSubscriptions(externalId)
   const invoices = useCustomerInvoices(externalId)
+  // No customer filter on the payments API: read the payments of the most recent invoices.
+  const payments = useCustomerPayments(
+    (invoices.data?.invoices ?? []).slice(0, 10).map((invoice) => invoice.id),
+  )
   // Keyed on the *internal* id: `GET /customers/usage` takes that, unlike the
   // subscription and invoice reads above, which are scoped by the external one.
   const usage = useCustomerUsageSummary(customerId)
   const update = useUpdateCustomer()
+  const remove = useDeleteCustomer()
+  const [archiving, setArchiving] = useState(false)
   const navigate = useNavigate()
-
-  if (customer.isPending) {
-    return (
-      <div className="p-6">
-        <LoadingRows />
-      </div>
-    )
-  }
-
-  if (customer.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(customer.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void customer.refetch()}
-        />
-      </PageBody>
-    )
-  }
+  // The customer is already on screen, so the menu leaves out "View customer".
+  const invoiceRows = useInvoiceRowActions({
+    onRecordPayment: (invoiceId) =>
+      void navigate({ to: '/payments/new', search: { invoice: invoiceId } }),
+    onIssueCreditNote: (invoiceId) =>
+      void navigate({ to: '/credit-memos/new', search: { invoice: invoiceId } }),
+  })
 
   if (!customer.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This customer no longer exists"
-          detail="It may have been deleted. Everything else in billing still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(customer, {
+      noun: 'this customer',
+      listName: 'customers',
+      onBack: onNavigateToList,
+    })
   }
 
   return (
-    <CustomerDetail
-      customer={customer.data}
-      subscriptions={subscriptions.data ?? []}
-      invoices={invoices.data?.invoices ?? []}
-      tab={tab}
-      onTabChange={onTabChange}
-      onBack={onNavigateToList}
-      onCreateInvoice={() => void navigate({ to: '/invoices/new' })}
-      onCreateContract={() =>
-        void navigate({
-          to: '/customers/$customerId/subscriptions/new',
-          params: { customerId: customer.data.id },
-        })
-      }
-      onEdit={() => onEdit(customer.data.id)}
-      onOpenInvoice={(invoiceId) =>
-        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
-      }
-      onOpenPlan={(planId) =>
-        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
-      }
-      onOpenContract={(subscriptionId) =>
-        void navigate({
-          to: '/subscriptions/$subscriptionId',
-          params: { subscriptionId },
-          search: {} as never,
-        })
-      }
-      onUpdateField={(patch) =>
-        update.mutateAsync({
-          id: customer.data.id,
-          draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
-        })
-      }
-      onUpdateMetadata={(metadata) =>
-        update.mutateAsync({
-          id: customer.data.id,
-          draft: { externalId: customer.data.externalId, name: customer.data.name, metadata },
-        })
-      }
-      subscriptionsLoading={subscriptions.isLoading}
-      subscriptionsError={subscriptions.isError}
-      invoicesLoading={invoices.isLoading}
-      wallet={<CustomerWalletPanel customerId={customer.data.id} />}
-      taxes={<CustomerTaxPanel customerId={customer.data.id} />}
-      usage={
-        <div className="flex flex-col gap-8">
-          <CustomerAnalyticsView features={DEMO_FEATURE_ANALYTICS} />
-          <UsageSection
-            features={usage.data?.features ?? []}
-            isLoading={usage.isLoading}
-            failed={usage.error !== null}
-            onRetry={() => void usage.refetch()}
-          />
-        </div>
-      }
-    />
+    <>
+      <CustomerDetail
+        {...(integrationLinks.isSuccess && integrations.isSuccess
+          ? {
+              integrationControls: {
+                links: integrationLinks.data,
+                linkable: integrations.data
+                  .filter(
+                    (integration) =>
+                      integration.connection &&
+                      !integrationLinks.data.some(
+                        (link) => link.providerType === integration.providerType,
+                      ),
+                  )
+                  .map(({ providerType, name }) => ({ providerType, name })),
+                onLink: (input: { providerType: string; providerEntityId: string }) =>
+                  linkIntegration.mutateAsync(input),
+                onUnlink: (input: { providerType: string }) => unlinkIntegration.mutateAsync(input),
+              },
+            }
+          : {})}
+        customer={customer.data}
+        subscriptions={subscriptions.data ?? []}
+        invoices={invoices.data?.invoices ?? []}
+        tab={tab}
+        onTabChange={onTabChange}
+        onBack={onNavigateToList}
+        onCreateInvoice={() =>
+          void navigate({ to: '/invoices/new', search: { customer: customerId } })
+        }
+        onCreateContract={() =>
+          void navigate({
+            to: '/customers/$customerId/contracts/new',
+            params: { customerId: customer.data.id },
+          })
+        }
+        onEdit={() => onEdit(customer.data.id)}
+        onArchive={() => setArchiving(true)}
+        onOpenInvoice={(invoiceId) =>
+          void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
+        }
+        invoiceActions={invoiceRows.actionsFor}
+        onViewAllPayments={() => void navigate({ to: '/payments', search: {} as never })}
+        onOpenPlan={(planId) =>
+          void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+        }
+        onOpenContract={(subscriptionId) =>
+          void navigate({
+            to: '/contracts/$subscriptionId',
+            params: { subscriptionId },
+            search: {} as never,
+          })
+        }
+        onUpdateField={(patch) =>
+          update.mutateAsync({
+            id: customer.data.id,
+            draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
+          })
+        }
+        onUpdateMetadata={(metadata) =>
+          update.mutateAsync({
+            id: customer.data.id,
+            draft: { externalId: customer.data.externalId, name: customer.data.name, metadata },
+          })
+        }
+        subscriptionsLoading={subscriptions.isLoading}
+        subscriptionsError={subscriptions.isError && !subscriptions.data}
+        onRetrySubscriptions={() => void subscriptions.refetch()}
+        invoicesLoading={invoices.isLoading}
+        invoicesError={invoices.isError && !invoices.data}
+        onRetryInvoices={() => void invoices.refetch()}
+        payments={invoices.data ? payments.payments : undefined}
+        paymentsLoading={invoices.isLoading || payments.isLoading}
+        paymentsError={payments.isError}
+        onRetryPayments={payments.refetch}
+        events={
+          customer.data.externalId ? (
+            <CustomerEventsPanel externalId={customer.data.externalId} />
+          ) : (
+            <EmptyState
+              scene="customers"
+              title="No external ID"
+              description="Events are matched to a customer by external ID, and this customer has none."
+            />
+          )
+        }
+        wallet={<CustomerWalletPanel customerId={customer.data.id} />}
+        taxes={<CustomerTaxPanel customerId={customer.data.id} />}
+        usage={
+          <div className="flex flex-col gap-8">
+            <Section title="Analytics">
+              <EmptyState
+                scene="customers"
+                size="inline"
+                title="Revenue and cost by feature are not available yet"
+                description="Flexprice does not report revenue or cost per feature for a customer, so none is shown. Allowances and consumption are below."
+              />
+            </Section>
+            <UsageSection
+              features={usage.data?.features ?? []}
+              isLoading={usage.isLoading}
+              failed={usage.error !== null}
+              onRetry={() => void usage.refetch()}
+            />
+          </div>
+        }
+      />
+      <ConfirmDialog
+        open={archiving}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiving(false)
+            remove.reset()
+          }
+        }}
+        title={`Archive ${customer.data.name}?`}
+        description="The customer is removed from your billing. This cannot be undone."
+        confirmLabel="Archive customer"
+        onConfirm={() =>
+          remove.mutate(customer.data.id, {
+            onSuccess: () => {
+              setArchiving(false)
+              onNavigateToList()
+            },
+          })
+        }
+        isPending={remove.isPending}
+        destructive
+        error={remove.error ? 'Could not archive the customer. Try again.' : null}
+      />
+      {invoiceRows.dialogs}
+      <Toaster />
+    </>
   )
-}
-
-/** An API error, as a sentence a person can act on. */
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this customer'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice'
-      default:
-        return 'This customer could not be loaded'
-    }
-  }
-  return 'This customer could not be loaded'
 }
 
 /**
@@ -210,7 +266,7 @@ function UsageSection({
   failed: boolean
   onRetry: () => void
 }) {
-  if (isLoading) {
+  if (features.length === 0 && isLoading) {
     return (
       <Section title="Usage">
         <LoadingRows />
@@ -218,7 +274,7 @@ function UsageSection({
     )
   }
 
-  if (failed) {
+  if (features.length === 0 && failed) {
     return (
       <Section title="Usage">
         <AppFailure
@@ -234,6 +290,7 @@ function UsageSection({
     return (
       <Section title="Usage">
         <EmptyState
+          scene="customers"
           size="inline"
           title="No entitlements yet"
           description="Quotas appear here once this customer is on a plan that grants a feature."

@@ -7,7 +7,7 @@ import {
   PercentIcon,
   PlusIcon,
   Trash2Icon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   DEFAULT_TAX_RATE_QUERY,
   TAX_RATE_SCOPE_LABEL,
@@ -244,6 +244,7 @@ export function TaxRateGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No tax rates match these filters"
       empty={{
+        scene: 'settings',
         title: 'No taxes set up yet',
         description:
           'Taxes are the percentages added on top of an invoice, like VAT or GST. Add a tax, then attach it to the customers, plans or charges it applies to.',

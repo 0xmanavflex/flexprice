@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GaugeIcon, RepeatIcon } from 'lucide-react'
+import { GaugeIcon, RepeatIcon } from '@ui/icons'
 import {
   type AddContractCharge,
   type BillingPeriod,

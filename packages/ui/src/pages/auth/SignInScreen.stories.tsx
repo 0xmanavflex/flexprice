@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, within } from 'storybook/test'
 import { SignInScreen } from './SignInScreen'
 
 /**
@@ -141,18 +141,20 @@ export const FullyConfigured: Story = {
 }
 
 /**
- * The provider row is part of the block's design, so it renders — but nothing
- * is wired to it yet. Clicking must say so rather than appear to work.
+ * A deployment that does not offer Google does not draw the button.
+ *
+ * It used to render always and explain on click that it was not enabled, which
+ * reads as a broken feature rather than an absent one. The app now passes
+ * `onProvider` only when `useAuthCapabilities` reports Google as available, so
+ * the absence of the prop is the absence of the button.
  */
 export const ProviderNotConfigured: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Google' }))
-
-    await expect(await canvas.findByRole('status')).toHaveTextContent(
-      /Google sign-in isn't enabled/,
-    )
+    await expect(canvas.queryByRole('button', { name: 'Continue with Google' })).toBeNull()
+    // Password sign-in is still fully there — that is the point of failing open.
+    await expect(canvas.getByRole('button', { name: /sign in/i })).toBeVisible()
   },
 }
 

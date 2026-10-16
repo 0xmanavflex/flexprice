@@ -1,7 +1,8 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState, type ReactNode } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { PlusIcon, Trash2Icon, XIcon } from 'lucide-react'
+import { PlusIcon, Trash2Icon, XIcon } from '@ui/icons'
 import {
   BILLING_PERIOD_LABEL,
   type CreateCharge,
@@ -11,6 +12,8 @@ import {
   PriceType,
   createPlanSchema,
   emptyPlan,
+  KEY_PREFIX,
+  suggestKey,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
@@ -72,6 +75,8 @@ export interface PlanFormProps {
   onStepChange?: ((id: string) => void) | undefined
   meters?: MeterOption[]
   priceUnits?: PriceUnitOption[]
+  /** The account's price groups a new charge may join. */
+  priceGroups?: readonly { value: string; label: string }[]
   /** Features an entitlement can be granted on. */
   features?: FeatureOption[]
   onSubmit: (value: PlanFormValue) => void
@@ -101,6 +106,7 @@ export function PlanForm({
   onStepChange,
   meters = [],
   priceUnits = [],
+  priceGroups = [],
   features = [],
   onSubmit,
   onCancel,
@@ -108,10 +114,20 @@ export function PlanForm({
   submitError = null,
 }: PlanFormProps) {
   const isEdit = mode === 'edit'
-  const form = useForm<CreatePlan>({
+  const form = useCalmForm<CreatePlan>({
     resolver: standardSchemaResolver(createPlanSchema) as Resolver<CreatePlan>,
     defaultValues: defaultValue ?? emptyPlan(),
-    mode: 'onTouched',
+  })
+
+  const nameField = form.register('name', {
+    onChange: (event: { target: { value: string } }) => {
+      // The lookupKey follows the name until the person types one of their own.
+      if (!isEdit && !form.getFieldState('lookupKey').isDirty) {
+        form.setValue('lookupKey', suggestKey(KEY_PREFIX.plan, event.target.value), {
+          shouldValidate: form.formState.isSubmitted,
+        })
+      }
+    },
   })
   const errors = form.formState.errors
 
@@ -149,12 +165,12 @@ export function PlanForm({
           error={errors.name?.message}
         >
           {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            <Input id={id} disabled={isSubmitting} {...field} {...nameField} />
           )}
         </FormRow>
         <FormRow
           label="Lookup key"
-          hint="Optional stable identifier for the API. Lowercase, numbers and underscores."
+          hint="Optional stable identifier for the API. Lowercase, numbers, hyphens and underscores."
           error={errors.lookupKey?.message}
         >
           {({ id, ...field }) => (
@@ -206,6 +222,7 @@ export function PlanForm({
           mode="create"
           meters={meters}
           priceUnits={priceUnits}
+          priceOptions={{ groups: priceGroups }}
           submitLabel="Add charge"
           onSubmit={(charge) => {
             setCharges((rows) => [...rows, charge])

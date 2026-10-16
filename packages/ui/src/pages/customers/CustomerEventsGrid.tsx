@@ -7,107 +7,104 @@ import {
   SheetTitle,
 } from '@ui/components/primitives/sheet'
 import { Section } from '@ui/compositions/layout/Section'
+import { SubTabState, truncationNote, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { DetailTable } from '../shared/DetailTable'
 
-/** Demo usage events: no customer event feed is wired yet. */
+/** One ingested event for a customer, as the events grid shows it. */
 export interface CustomerEvent {
   id: string
   name: string
   properties: Record<string, string>
   source: string
+  /** Already formatted for display; empty when the event carries no timestamp. */
   receivedAt: string
 }
-
-export const DEMO_CUSTOMER_EVENTS: CustomerEvent[] = [
-  {
-    id: 'evt_6',
-    name: 'api_call',
-    properties: { endpoint: '/v1/chat', tokens: '1204' },
-    source: 'sdk',
-    receivedAt: 'Today, 09:14',
-  },
-  {
-    id: 'evt_5',
-    name: 'api_call',
-    properties: { endpoint: '/v1/embed', tokens: '88' },
-    source: 'sdk',
-    receivedAt: 'Today, 08:52',
-  },
-  {
-    id: 'evt_4',
-    name: 'storage_write',
-    properties: { gb: '12' },
-    source: 'api',
-    receivedAt: 'Yesterday',
-  },
-  {
-    id: 'evt_3',
-    name: 'seat_added',
-    properties: { seat: 'dana@acme.com' },
-    source: 'api',
-    receivedAt: 'Sep 28',
-  },
-  {
-    id: 'evt_2',
-    name: 'api_call',
-    properties: { endpoint: '/v1/chat', tokens: '640' },
-    source: 'sdk',
-    receivedAt: 'Sep 20',
-  },
-  {
-    id: 'evt_1',
-    name: 'storage_write',
-    properties: { gb: '4' },
-    source: 'api',
-    receivedAt: 'Sep 1',
-  },
-]
 
 const summarize = (properties: Record<string, string>) =>
   Object.entries(properties)
     .map(([key, value]) => `${key}: ${value}`)
     .join(', ')
 
-export function CustomerEventsGrid({ events }: { events: CustomerEvent[] }) {
+/** The most recent events the customer page asks for. */
+export const CUSTOMER_EVENTS_LIMIT = 50
+
+export interface CustomerEventsGridProps extends Partial<SubTabQuery> {
+  events: CustomerEvent[]
+  /** Events the customer has in all, when the read reports it; shown beside the cap. */
+  total?: number | undefined
+}
+
+export function CustomerEventsGrid({
+  events,
+  total,
+  isLoading = false,
+  error,
+  errorKind,
+  retryAfterMs,
+  onRetry,
+  isRetrying,
+}: CustomerEventsGridProps) {
   const [selected, setSelected] = useState<CustomerEvent | null>(null)
+  const capped =
+    total !== undefined && total > events.length
+      ? `Showing the latest ${events.length} of ${total} events.`
+      : truncationNote(events.length, CUSTOMER_EVENTS_LIMIT)
 
   return (
     <>
-      <Section title="Recent events" flush bare>
-        <DetailTable
-          label="Recent events"
-          noun="events"
-          rows={events}
-          getRowId={(event) => event.id}
-          onRowClick={setSelected}
-          columns={[
-            {
-              key: 'name',
-              header: 'Event',
-              cell: (e) => <span className="font-mono text-[13px]">{e.name}</span>,
-            },
-            {
-              key: 'properties',
-              header: 'Properties',
-              cell: (e) => (
-                <span className="text-muted-foreground block max-w-md truncate font-mono text-xs">
-                  {summarize(e.properties)}
-                </span>
-              ),
-            },
-            {
-              key: 'source',
-              header: 'Source',
-              cell: (e) => <span className="text-muted-foreground">{e.source}</span>,
-            },
-            {
-              key: 'at',
-              header: 'Received',
-              cell: (e) => <span className="text-muted-foreground">{e.receivedAt}</span>,
-            },
-          ]}
-          empty="No events yet. Events ingested for this customer appear here as they arrive."
-        />
+      <Section table title="Recent events">
+        <SubTabState
+          hasData={events.length > 0}
+          isLoading={isLoading}
+          error={error}
+          errorKind={errorKind}
+          retryAfterMs={retryAfterMs}
+          onRetry={onRetry}
+          isRetrying={isRetrying}
+          columns={4}
+          loadingLabel="Loading events"
+          truncation={capped}
+          empty={{
+            scene: 'customers',
+            title: 'No events yet',
+            description: 'Events ingested for this customer appear here as they arrive.',
+          }}
+        >
+          <DetailTable
+            label="Recent events"
+            noun="events"
+            rows={events}
+            getRowId={(event) => event.id}
+            onRowClick={setSelected}
+            columns={[
+              {
+                key: 'name',
+                header: 'Event',
+                cell: (e) => <span className="font-mono text-[13px]">{e.name}</span>,
+              },
+              {
+                key: 'properties',
+                header: 'Properties',
+                cell: (e) => (
+                  <span className="text-muted-foreground block max-w-md truncate font-mono text-xs">
+                    {summarize(e.properties)}
+                  </span>
+                ),
+              },
+              {
+                key: 'source',
+                header: 'Source',
+                cell: (e) => <span className="text-muted-foreground">{e.source || '—'}</span>,
+              },
+              {
+                key: 'at',
+                header: 'Received',
+                cell: (e) => <span className="text-muted-foreground">{e.receivedAt || '—'}</span>,
+              },
+            ]}
+            empty="No events yet. Events ingested for this customer appear here as they arrive."
+          />
+        </SubTabState>
       </Section>
 
       <Sheet
@@ -118,7 +115,8 @@ export function CustomerEventsGrid({ events }: { events: CustomerEvent[] }) {
           <SheetHeader>
             <SheetTitle className="font-mono text-sm">{selected?.name}</SheetTitle>
             <SheetDescription>
-              Received {selected?.receivedAt} via {selected?.source}
+              Received {selected?.receivedAt || 'at an unknown time'} via{' '}
+              {selected?.source || 'an unknown source'}
             </SheetDescription>
           </SheetHeader>
           <dl className="flex flex-col gap-3 px-4 text-sm">

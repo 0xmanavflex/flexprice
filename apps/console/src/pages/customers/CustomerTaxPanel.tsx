@@ -7,6 +7,7 @@ import {
   useDeleteTaxAssociation,
   useTaxRates,
   useUpdateTaxAssociation,
+  serverReason,
 } from '@fp/query'
 import { CustomerTaxSection, toast } from '@fp/ui/pages'
 
@@ -76,7 +77,7 @@ export function CustomerTaxPanel({ customerId }: CustomerTaxPanelProps) {
 function failure(error: unknown, action: string): string | null {
   if (!error) return null
   if (error instanceof ApiError && error.kind === 'forbidden')
-    return `You do not have permission to ${action}.`
+    return serverReason(error) ?? `You do not have permission to ${action}.`
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
   return `Could not ${action}. Try again.`

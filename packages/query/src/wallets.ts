@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { call } from '@fp/api'
 import {
+  type AutoTopup,
   type CreateWallet,
   type TopUpWallet,
   type Wallet,
@@ -29,7 +30,14 @@ export interface WalletWire {
   realTimeBalance?: string | undefined
   conversionRate?: string | undefined
   topupConversionRate?: string | undefined
-  autoTopup?: { enabled?: boolean | undefined } | undefined
+  autoTopup?:
+    | {
+        enabled?: boolean | undefined
+        threshold?: number | string | undefined
+        amount?: number | string | undefined
+        invoicing?: boolean | undefined
+      }
+    | undefined
   createdAt?: Date | undefined
 }
 
@@ -41,13 +49,15 @@ export interface WalletTransactionWire {
   creditAmount?: string | undefined
   amount?: string | undefined
   currency?: string | undefined
+  creditsAvailable?: string | undefined
+  expiryDate?: Date | undefined
   createdAt?: Date | undefined
 }
 
 const STATUSES = new Set<string>(Object.values(WalletStatus))
 
 export function toWallet(wire: WalletWire): Wallet {
-  const currency = wire.currency || 'USD'
+  const currency = (wire.currency || 'USD').toUpperCase()
   const credits = wire.creditBalance ?? '0'
   const amount = wire.balance ?? '0'
   return {
@@ -64,7 +74,12 @@ export function toWallet(wire: WalletWire): Wallet {
     realTimeBalance: moneyOr(wire.realTimeBalance ?? amount, currency),
     conversionRate: wire.conversionRate ?? '1',
     topupConversionRate: wire.topupConversionRate ?? wire.conversionRate ?? '1',
-    autoTopup: wire.autoTopup?.enabled === true,
+    autoTopup: {
+      enabled: wire.autoTopup?.enabled === true,
+      threshold: String(wire.autoTopup?.threshold ?? ''),
+      amount: String(wire.autoTopup?.amount ?? ''),
+      invoicing: wire.autoTopup?.invoicing ?? true,
+    },
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -93,6 +108,8 @@ export function toWalletTransaction(wire: WalletTransactionWire, index = 0): Wal
     credits: wire.creditAmount ?? '0',
     amount: moneyOr(wire.amount, wire.currency),
     createdAt: wire.createdAt ?? null,
+    creditsAvailable: wire.creditsAvailable ?? null,
+    expiresAt: wire.expiryDate ?? null,
   }
 }
 
@@ -106,19 +123,47 @@ export function toCreateWalletRequest(
     customerId,
     currency: draft.currency.toUpperCase(),
     conversionRate: draft.conversionRate,
-    walletType: 'PRE_PAID',
+    walletType: draft.walletType,
     ...(description ? { description } : {}),
+    ...(draft.topupConversionRate ? { topupConversionRate: draft.topupConversionRate } : {}),
     ...(draft.initialCredits ? { initialCreditsToLoad: draft.initialCredits } : {}),
+    ...(draft.initialCredits && draft.initialCreditsExpiry
+      ? { initialCreditsExpiryDateUtc: `${draft.initialCreditsExpiry}T00:00:00Z` }
+      : {}),
   }
 }
 
 /** Builds `POST /wallets/{id}/top-up`. Purchased credits are charged; free ones are a grant. */
 export function toTopUpRequest(draft: TopUpWallet): Record<string, unknown> {
   const description = draft.description.trim()
+  const referenceId = draft.referenceId.trim()
+  const reason =
+    draft.kind === 'free'
+      ? 'FREE_CREDIT_GRANT'
+      : draft.invoice
+        ? 'PURCHASED_CREDIT_INVOICED'
+        : 'PURCHASED_CREDIT_DIRECT'
   return {
     creditsToAdd: draft.credits,
-    transactionReason: draft.kind === 'free' ? 'FREE_CREDIT_GRANT' : 'PURCHASED_CREDIT_DIRECT',
+    transactionReason: reason,
     ...(description ? { description } : {}),
+    // The credits lapse at the start of the picked day, in UTC.
+    ...(draft.expiryDate ? { expiryDateUtc: `${draft.expiryDate}T00:00:00Z` } : {}),
+    ...(draft.priority ? { priority: Number(draft.priority) } : {}),
+    ...(referenceId ? { idempotencyKey: referenceId } : {}),
+  }
+}
+
+/** Builds the `autoTopup` body of `PUT /wallets/{id}`. Off sends only the switch, so saved values survive. */
+export function toUpdateAutoTopupRequest(draft: AutoTopup): Record<string, unknown> {
+  if (!draft.enabled) return { autoTopup: { enabled: false } }
+  return {
+    autoTopup: {
+      enabled: true,
+      threshold: Number(draft.threshold),
+      amount: Number(draft.amount),
+      invoicing: draft.invoicing,
+    },
   }
 }
 
@@ -144,7 +189,7 @@ export function useWalletTransactions(walletId: string | null) {
     enabled: walletId !== null,
     queryFn: async () => {
       const response = await call(() =>
-        client.wallets.getWalletTransactions({ idPathParameter: walletId ?? '', limit: 50 }),
+        client.wallets.getWalletTransactions({ idPathParameter: walletId ?? '', limit: 200 }),
       )
       return ((response.items ?? []) as WalletTransactionWire[]).map(toWalletTransaction)
     },
@@ -174,6 +219,17 @@ export function useTopUpWallet(walletId: string) {
   return useMutation({
     mutationFn: (draft: TopUpWallet) =>
       call(() => client.wallets.topUpWallet(walletId, toTopUpRequest(draft) as never)),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateAutoTopup(walletId: string) {
+  const client = useFlexprice()
+  const invalidate = useInvalidateWallets()
+
+  return useMutation({
+    mutationFn: (draft: AutoTopup) =>
+      call(() => client.wallets.updateWallet(walletId, toUpdateAutoTopupRequest(draft) as never)),
     onSuccess: invalidate,
   })
 }

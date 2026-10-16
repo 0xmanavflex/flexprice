@@ -8,7 +8,7 @@ import {
   UserPlusIcon,
   CodeXmlIcon,
   GalleryHorizontalEndIcon,
-  Blocks as IntegrationsIcon,
+  LinkIcon as IntegrationsIcon,
   HouseIcon,
   Layers2Icon,
   LandmarkIcon,
@@ -16,7 +16,7 @@ import {
   FileSignatureIcon,
   HandCoinsIcon,
   SettingsIcon,
-} from 'lucide-react'
+} from '@fp/ui/icons'
 import {
   AppShell,
   EnvironmentSwitcher,
@@ -149,10 +149,15 @@ export function ConsoleShell({
   const searchItems = useMemo(() => destinations.items.map(withSearchIcon), [destinations])
   const searchResults = useMemo(() => found.results.map(withSearchIcon), [found.results])
 
+  const open = (href: string) => {
+    if (/^https?:\/\//.test(href)) window.open(href, '_blank', 'noopener,noreferrer')
+    else onNavigate(href)
+  }
+
   const goTo = (id: string) => {
     const href = hrefForNavId(id)
     if (href) {
-      onNavigate(href)
+      open(href)
       return
     }
     // A parent: go to its first child rather than doing nothing.
@@ -161,8 +166,8 @@ export function ConsoleShell({
     if (childHref) onNavigate(childHref)
   }
 
-  // A detail page hands up "list, record": the list crumb becomes a link back
-  // and the record's name is appended, so the header carries the one trail.
+  // A detail page hands up "list, page": the list crumb becomes a link back
+  // and the page type ("Customer details") is appended, never the record id.
   // The group crumb goes where the sidebar's group goes — its first page.
   // The page crumb is a link whenever you are somewhere under it.
   const pagePath = activeItemId ? pathForNavId(activeItemId) : undefined
@@ -259,10 +264,12 @@ export function ConsoleShell({
           items: searchItems,
           results: searchResults,
           isSearching: found.isSearching,
+          hasError: found.hasError,
+          onRetry: found.retry,
           onTermChange: setSearchTerm,
           onSelect: (item) => {
             const path = destinations.paths.get(item.id) ?? found.paths.get(item.id)
-            if (path) onNavigate(path)
+            if (path) open(path)
           },
         }}
       >

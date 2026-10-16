@@ -6,10 +6,12 @@ import {
   AddonSortField,
   AddonStatus,
   type CreateAddon,
+  ADDON_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter } from './search'
+import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Add-ons: the translation between product vocabulary and the API.
@@ -29,11 +31,17 @@ export interface AddonWire {
   status?: string | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
+  metadata?: Record<string, string> | null | undefined
+  /** Present only with `expand: 'prices'`; absent when the add-on has none. */
+  prices?: unknown[] | null | undefined
 }
 
 const ADDON_STATUSES = new Set<string>(Object.values(AddonStatus))
 
 export function toAddon(wire: AddonWire): Addon {
+  const prices: Array<Record<string, unknown>> = Array.isArray(wire.prices)
+    ? (wire.prices as Array<Record<string, unknown>>)
+    : []
   const status = ADDON_STATUSES.has(wire.status ?? '')
     ? (wire.status as AddonStatus)
     : AddonStatus.Published
@@ -44,6 +52,12 @@ export function toAddon(wire: AddonWire): Addon {
     lookupKey: wire.lookupKey ?? '',
     description: wire.description ?? '',
     status,
+    chargeCount: prices.length,
+    // `type` is `FIXED` or `USAGE`; anything else counts as a charge but as
+    // neither kind, so a new price type cannot inflate one of the two.
+    fixedChargeCount: prices.filter((price) => price['type'] === 'FIXED').length,
+    usageChargeCount: prices.filter((price) => price['type'] === 'USAGE').length,
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -59,8 +73,27 @@ export function toAddonFilter(query: AddonQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
-    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
+    // The Type pill and the Charges count are read off the add-on's prices.
+    expand: 'prices',
+    /*
+     * Status, server-side.
+     *
+     * It used to narrow the fetched page in the browser, which is a different
+     * and wrong thing: the request returns one page, rows are dropped from
+     * *that* page, and the pager still reports the server's unfiltered total.
+     * `status` is a declared field on this filter model and a real column the
+     * backend accepts, so there was never a reason not to send it.
+     */
+    ...statusFilterField(query.statuses, Object.values(AddonStatus)),
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
+    ...(query.search || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search ? nameContainsFilter(query.search) : []),
+            ...toFilterConditions(query.filters ?? [], ADDON_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 
@@ -74,11 +107,7 @@ export async function fetchAddons(client: Flexprice, query: AddonQuery): Promise
   const addons = (response.items ?? []).map((item) => toAddon(item as AddonWire))
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page.
-    addons:
-      query.statuses.length > 0
-        ? addons.filter((addon) => query.statuses.includes(addon.status))
-        : addons,
+    addons,
     total: response.pagination?.total ?? 0,
   }
 }
@@ -117,6 +146,7 @@ export function toUpdateAddonRequest(draft: CreateAddon): Record<string, unknown
     // `description` is cleared with an empty string rather than omitted, so
     // removing the text on an edit actually removes it.
     description: draft.description ?? '',
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
   }
 }
 

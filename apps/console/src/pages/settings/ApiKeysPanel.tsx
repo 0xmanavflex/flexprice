@@ -15,7 +15,7 @@ import {
 import { DEFAULT_API_KEY_QUERY, useApiKeys, useCreateApiKey, useDeleteApiKey } from '@fp/query'
 import { ConfirmDialog, Field, FormDialog, LoadingRows } from '@fp/ui/compositions'
 import { Badge, Button, Input } from '@fp/ui/primitives'
-import { CheckIcon, CopyIcon, KeyRoundIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon } from '@fp/ui/icons'
 import {
   ActionError,
   DelayedHint,
@@ -32,7 +32,7 @@ import { useDraft } from './useDraft'
 const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
 
 /**
- * API keys — list, issue, revoke. Lives under Developers (`/api-keys`).
+ * API keys — list, issue, revoke. Lives in Settings; `/api-keys` redirects to its section.
  *
  * ## A snippet list, not a data table
  *
@@ -84,7 +84,7 @@ export function ApiKeysPanel() {
           <LoadingRows rows={3} columns={3} />
         ) : firstRun ? (
           <PanelFirstRun
-            icon={<KeyRoundIcon aria-hidden />}
+            scene="developers"
             title="No API keys yet"
             description="An API key lets your servers send usage events and call the Flexprice API without a person signing in."
             action={<Button onClick={() => setIsCreating(true)}>Create API key</Button>}
@@ -95,9 +95,7 @@ export function ApiKeysPanel() {
           <>
             <div className="flex justify-end">
               <DelayedHint text="What your systems authenticate with when they send usage or read billing data.">
-                <Button size="sm" onClick={() => setIsCreating(true)}>
-                  Create API key
-                </Button>
+                <Button onClick={() => setIsCreating(true)}>Create API key</Button>
               </DelayedHint>
             </div>
             <ul aria-label="API keys" className="bg-background divide-y rounded-xl border">

@@ -7,8 +7,9 @@ import {
   Trash2Icon,
   UserIcon,
   PlusIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
+  CUSTOMER_FILTERS,
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,
   type Customer,
@@ -19,9 +20,19 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
+import {
+  type EntityColumn,
+  EmDash,
+  dateColumn,
+  idColumn,
+  numberColumn,
+  pillColumn,
+  textColumn,
+} from '../shared/cells'
+import { CopyValue } from '../shared/CopyValue'
+import { IntegrationChips } from './IntegrationMark'
 
 /**
  * The customer list, on the shared `EntityList`.
@@ -66,11 +77,6 @@ export const CustomerGridProvenance = provenance({
 const SORT_OPTIONS = Object.values(CustomerSortField).map((value) => ({
   value,
   label: CUSTOMER_SORT_LABEL[value],
-}))
-
-const STATUS_CHOICES = Object.values(CustomerStatus).map((value) => ({
-  value,
-  label: CUSTOMER_STATUS_LABEL[value],
 }))
 
 /**
@@ -125,6 +131,8 @@ export interface CustomerGridProps {
   onClearFilters?: () => void
   /** Locale for dates. Supplied by the app, never read from a global. */
   locale?: string
+  /** Contracts per customer id, when the page has counted them; absent customers show an em dash. */
+  contractCounts?: Record<string, number>
 }
 
 export function CustomerGrid({
@@ -141,10 +149,11 @@ export function CustomerGrid({
   onDelete,
   onClearFilters,
   locale,
+  contractCounts,
 }: CustomerGridProps) {
   const columns = useMemo<EntityColumn<Customer>[]>(
     () => [
-      textColumn<Customer>('name', 'Customer', (row) => row.name, {
+      textColumn<Customer>('name', 'Name', (row) => row.name, {
         width: 240,
         sortable: true,
         sortValue: CustomerSortField.Name,
@@ -157,27 +166,66 @@ export function CustomerGrid({
       // it is a value like any other — and it is the field support actually
       // searches by.
       textColumn<Customer>('email', 'Email', (row) => row.email, { width: 220 }),
-      idColumn<Customer>('externalId', 'External ID', (row) => row.externalId, { width: 180 }),
+      {
+        ...idColumn<Customer>('externalId', 'External ID', (row) => row.externalId, { width: 170 }),
+        cell: (row) =>
+          row.externalId ? <CopyValue value={row.externalId} label="external ID" /> : <EmDash />,
+      },
+      {
+        id: 'integrations',
+        header: 'Integrations',
+        width: 140,
+        text: (row) =>
+          row.integrations
+            .map((integration) =>
+              integration.providerEntityId
+                ? `${integration.name} (${integration.providerEntityId})`
+                : integration.name,
+            )
+            .join(', '),
+        cell: (row) =>
+          row.integrations.length === 0 ? (
+            <EmDash />
+          ) : (
+            <IntegrationChips integrations={row.integrations} />
+          ),
+      },
+      // The list endpoint returns no subscription count, so this reads from
+      // `contractCounts` when the page has one and is an em dash otherwise —
+      // never a zero that nobody counted.
+      numberColumn<Customer>('contracts', 'Contracts', (row) => contractCounts?.[row.id], {
+        width: 110,
+        align: 'center',
+        zeroAsDash: true,
+        ...(locale ? { locale } : {}),
+      }),
+      dateColumn<Customer>('createdAt', 'Created on', (row) => row.createdAt, {
+        width: 140,
+        sortable: true,
+        sortValue: CustomerSortField.CreatedAt,
+        ...(locale ? { locale } : {}),
+      }),
+      // Optional columns: off by default, available from the column menu.
+      // Status stays a filter above the table as well.
+      pillColumn<Customer>(
+        'status',
+        'Status',
+        (row) => ({
+          label: CUSTOMER_STATUS_LABEL[row.status],
+          tone: row.status === CustomerStatus.Published ? 'success' : 'neutral',
+        }),
+        { hiddenByDefault: true },
+      ),
       // Uppercased because ISO 3166-1 alpha-2 is uppercase; the API is not
       // always consistent about sending it that way.
       textColumn<Customer>(
         'country',
         'Country',
         (row) => (row.addressCountry ? row.addressCountry.toUpperCase() : null),
-        { width: 100 },
+        { width: 100, hiddenByDefault: true },
       ),
-      pillColumn<Customer>('status', 'Status', (row) => ({
-        label: CUSTOMER_STATUS_LABEL[row.status],
-        tone: row.status === CustomerStatus.Published ? 'success' : 'neutral',
-      })),
-      dateColumn<Customer>('createdAt', 'Created', (row) => row.createdAt, {
-        width: 140,
-        sortable: true,
-        sortValue: CustomerSortField.CreatedAt,
-        ...(locale ? { locale } : {}),
-      }),
     ],
-    [locale],
+    [locale, contractCounts],
   )
 
   const isDefaultSort =
@@ -231,20 +279,13 @@ export function CustomerGrid({
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search customers…"
       /*
-       * The dropdown and the advanced filter both write `query.statuses`, so
-       * a choice in either place shows up in the other. `CustomerFilter` on
-       * the wire has no other enumerable facet to put in the builder.
-       *
-       * No counts. `fetchCustomers` narrows status *on the page it received*,
-       * because the search endpoint has no status field — so there is no
-       * server total per status to read, and the only number available would
-       * be a count of the twenty-five rows on screen. The dropdown shows no
-       * number rather than a confident wrong one.
+       * Field-by-field filters (name, external ID, email, status, created),
+       * applied by the search endpoint so the total and pages agree with them.
        */
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: CUSTOMER_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -273,10 +314,13 @@ export function CustomerGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No customers match these filters"
       empty={{
+        scene: 'customers',
         title: 'Nobody to bill yet',
         description:
           'A customer is who an invoice is addressed to. Create one — or send your first event with a new external id and Flexprice will create it for you.',

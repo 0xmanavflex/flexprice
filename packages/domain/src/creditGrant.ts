@@ -63,6 +63,7 @@ export const CREDIT_GRANT_PERIOD_LABEL: Record<CreditGrantPeriod, string> = {
 export const CreditGrantScope = {
   Plan: 'PLAN',
   Addon: 'ADDON',
+  Subscription: 'SUBSCRIPTION',
 } as const
 export type CreditGrantScope = (typeof CreditGrantScope)[keyof typeof CreditGrantScope]
 
@@ -172,10 +173,7 @@ export const createCreditGrantSchema = z
      * "no rate", not an error — otherwise an untouched field would block a save.
      */
     conversionRate: z
-      .union([
-        z.literal(''),
-        decimal.refine((v) => Number(v) > 0, 'Must be greater than zero'),
-      ])
+      .union([z.literal(''), decimal.refine((v) => Number(v) > 0, 'Must be greater than zero')])
       .optional(),
     priority: z.number().int().nonnegative('Cannot be negative'),
   })
@@ -183,7 +181,10 @@ export const createCreditGrantSchema = z
     if (grant.cadence === CreditGrantCadence.Recurring && !grant.period) {
       ctx.addIssue({ code: 'custom', path: ['period'], message: 'Choose a period' })
     }
-    if (grant.expirationType === CreditGrantExpiryType.Duration && grant.expirationDuration == null) {
+    if (
+      grant.expirationType === CreditGrantExpiryType.Duration &&
+      grant.expirationDuration == null
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['expirationDuration'],
@@ -209,6 +210,27 @@ export function emptyCreditGrant(): CreateCreditGrant {
     periodCount: 1,
     expirationType: CreditGrantExpiryType.Never,
     priority: 0,
+  }
+}
+
+/**
+ * A saved grant as a draft — how a contract starts from its plan's grants and
+ * lets them be changed for that contract alone.
+ */
+export function creditGrantToDraft(grant: CreditGrant): CreateCreditGrant {
+  return {
+    name: grant.name,
+    credits: grant.credits,
+    cadence: grant.cadence,
+    ...(grant.period ? { period: grant.period } : {}),
+    ...(grant.periodCount ? { periodCount: grant.periodCount } : {}),
+    expirationType: grant.expirationType,
+    ...(grant.expirationDuration ? { expirationDuration: grant.expirationDuration } : {}),
+    ...(grant.expirationDurationUnit
+      ? { expirationDurationUnit: grant.expirationDurationUnit }
+      : {}),
+    ...(grant.conversionRate ? { conversionRate: grant.conversionRate } : {}),
+    priority: grant.priority,
   }
 }
 

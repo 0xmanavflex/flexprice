@@ -1,28 +1,22 @@
-import { useState } from 'react'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { toast } from 'sonner'
 import {
   type AggregationType,
-  BILLING_MODEL_LABEL,
-  BILLING_PERIOD_LABEL,
-  BillingModel,
-  type BillingPeriod,
   type Charge,
   type Entitlement,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   FeatureType,
-  InvoiceCadence,
   needsAggregationTarget,
-  TierMode,
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon, PlusIcon } from 'lucide-react'
+import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
+import { DetailBreadcrumb } from '../../../compositions/detail/DetailShell'
 import { EditableCard } from '../../../compositions/forms/EditableCard'
-import { LoadingRows } from '../../../compositions'
+import { SubTabState } from '../../../compositions/detail/SubTabState'
+import type { ErrorKind } from '../../../compositions/feedback/States'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { Section } from '../../../compositions/layout/Section'
 import {
@@ -31,11 +25,21 @@ import {
   Properties,
   type DetailMenuItem,
 } from '../../../compositions/detail/DetailKit'
-import { MetricChart, type MetricPoint } from '../../shared/charts'
 import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../../shared/cells'
+import { ChargeTable } from '../charges/ChargeTable'
 import { DetailTable } from '../../shared/DetailTable'
 
-export type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
+/**
+ * Two tabs, not four.
+ *
+ * Charges and Entitlements were tabs of their own, each holding one table, and
+ * Overview held a truncated copy of the charges plus a Usage panel that was
+ * always empty — Flexprice reports no usage, customers or billed amount per
+ * feature, so there was never anything to draw. The redesign puts both tables
+ * on Overview beside the test-event and metadata rail, which is the whole of
+ * what this page can actually say, and leaves Information for the fields.
+ */
+export type FeatureTab = 'overview' | 'information'
 
 /** A charge that prices this feature, and the plan or add-on it belongs to. */
 export interface FeatureChargeLink {
@@ -58,8 +62,6 @@ export interface FeatureDetailViewProps {
   onBack?: () => void
   /** The stepped configuration flow. */
   onEditConfiguration: () => void
-  /** Real save of name/description; rejects to show an inline error. */
-  onSave: (changes: Record<string, string>) => Promise<unknown>
   /** Header menu: Duplicate. Omitted, the item is not shown. */
   onDuplicate?: () => void
   /** Header menu: delete the feature. Omitted, the item is not shown. */
@@ -68,24 +70,19 @@ export interface FeatureDetailViewProps {
   charges?: FeatureChargeLink[]
   chargesLoading?: boolean
   chargesError?: string | null
+  chargesErrorKind?: ErrorKind | undefined
+  onRetryCharges?: (() => void) | undefined
   /** Plans and add-ons that grant this feature. */
   entitlements?: FeatureEntitlementLink[]
   entitlementsLoading?: boolean
   entitlementsError?: string | null
+  entitlementsErrorKind?: ErrorKind | undefined
+  onRetryEntitlements?: (() => void) | undefined
   /** Charges tab CTA: price this feature on a plan. Omitted, no button is shown. */
   onAddPlan?: () => void
-  /** Entitlements tab CTA: grant this feature on a plan. Omitted, no button is shown. */
-  onAddEntitlement?: () => void
+  onOpenChargeParent?: (charge: Charge) => void
   /** Saves the whole metadata map. Omitted, the Metadata section is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
-}
-
-/** Thirty days of plausible-looking usage. Demo only: no usage read exists for a feature yet. */
-export function demoUsagePoints(): MetricPoint[] {
-  return Array.from({ length: 30 }, (_, index) => ({
-    label: `Day ${index + 1}`,
-    value: Math.round(3200 + index * 90 + Math.sin(index / 2.2) * 900 + ((index * 37) % 7) * 120),
-  }))
 }
 
 /**
@@ -139,36 +136,6 @@ function statusLabel(status: string): string {
   return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown'
 }
 
-/** "Flat fee", "Volume tiered", "Slab tiered", "Package". */
-function modelLabel(charge: Charge): string {
-  if (charge.billingModel === BillingModel.Tiered) {
-    return charge.tierMode === TierMode.Slab ? 'Slab tiered' : 'Volume tiered'
-  }
-  return BILLING_MODEL_LABEL[charge.billingModel]
-}
-
-/** "Monthly, in arrears". */
-function billedLabel(charge: Charge): string {
-  const period = BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? charge.billingPeriod
-  return `${period}, ${charge.invoiceCadence === InvoiceCadence.Advance ? 'in advance' : 'in arrears'}`
-}
-
-function priceLabel(charge: Charge): string {
-  const display = charge.displayAmount || charge.amount
-  switch (charge.billingModel) {
-    case BillingModel.FlatFee:
-      return display || '—'
-    case BillingModel.Package:
-      return `${display || '0'} per ${charge.transformQuantity?.divideBy?.toLocaleString() ?? '?'}`
-    case BillingModel.Tiered: {
-      const count = charge.tiers.length
-      const first = charge.tiers[0]?.unitAmount
-      const from = first ? `, from ${first}` : ''
-      return `${count} tier${count === 1 ? '' : 's'}${from}`
-    }
-  }
-}
-
 function allowanceOf(entitlement: Entitlement): string {
   if (entitlement.featureType === FeatureType.Metered) {
     return entitlement.usageLimit == null ? 'Unlimited' : entitlement.usageLimit.toLocaleString()
@@ -186,50 +153,37 @@ export function FeatureDetailView({
   feature,
   tab,
   onTabChange,
+  onBack,
   onEditConfiguration,
-  onSave,
   onDuplicate,
   onDelete,
   charges = [],
   chargesLoading = false,
   chargesError = null,
+  chargesErrorKind,
+  onRetryCharges,
   entitlements = [],
   entitlementsLoading = false,
   entitlementsError = null,
+  entitlementsErrorKind,
+  onRetryEntitlements,
   onAddPlan,
-  onAddEntitlement,
+  onOpenChargeParent,
   onSaveMetadata,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
   const Glyph = FEATURE_TYPE_GLYPH[feature.type]
   const archived = feature.status === 'archived'
-  // Overview and Charges only exist for metered features; the rest start on Entitlements.
-  const active: FeatureTab =
-    !isMetered && (tab === 'overview' || tab === 'charges') ? 'entitlements' : tab
 
   const tabs = [
-    ...(isMetered
-      ? [
-          { value: 'overview', label: 'Overview' },
-          {
-            value: 'charges',
-            label: 'Charges',
-            ...(chargesLoading ? {} : { count: charges.length }),
-          },
-        ]
-      : []),
-    {
-      value: 'entitlements',
-      label: 'Entitlements',
-      ...(entitlementsLoading ? {} : { count: entitlements.length }),
-    },
+    { value: 'overview', label: 'Overview' },
     { value: 'information', label: 'Information' },
   ]
 
   const menu: DetailMenuItem[] = [
     {
       id: 'edit',
-      label: 'Edit',
+      label: 'Edit details',
       icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
       onSelect: onEditConfiguration,
     },
@@ -246,8 +200,8 @@ export function FeatureDetailView({
     ...(onDelete
       ? [
           {
-            id: 'delete',
-            label: 'Delete feature',
+            id: 'archive',
+            label: 'Archive',
             icon: <ArchiveIcon aria-hidden />,
             destructive: true,
             onSelect: onDelete,
@@ -259,212 +213,104 @@ export function FeatureDetailView({
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       <DetailHeader
+        breadcrumb={
+          <DetailBreadcrumb
+            trail={[
+              { label: 'Features', ...(onBack ? { onClick: onBack } : {}) },
+              { label: 'Feature details' },
+            ]}
+          />
+        }
         icon={<Glyph />}
         title={feature.name}
         id={feature.lookupKey || feature.id}
         badges={
           <>
+            <Status value={FEATURE_STATUS_LABEL[feature.status]} />
             <FeatureTypePill type={feature.type} label={FEATURE_TYPE_LABEL[feature.type]} />
-            {archived ? <Status value="archived" /> : null}
           </>
         }
         actions={<DetailMoreMenu label="More actions" items={menu} />}
       />
 
-      <DetailTabs tabs={tabs} value={active} onChange={(next) => onTabChange(next as FeatureTab)} />
+      <DetailTabs tabs={tabs} value={tab} onChange={(next) => onTabChange(next as FeatureTab)} />
 
-      {active === 'overview' ? (
+      {tab === 'overview' ? (
         <OverviewTab
-          feature={feature}
-          charges={charges}
-          chargesLoading={chargesLoading}
-          onSeeCharges={() => onTabChange('charges')}
-        />
-      ) : null}
-
-      {active === 'charges' ? (
-        <ChargesTab
-          rows={charges}
-          isLoading={chargesLoading}
-          error={chargesError}
-          {...(onAddPlan ? { onAdd: onAddPlan } : {})}
-        />
-      ) : null}
-
-      {active === 'entitlements' ? (
-        <EntitlementsTab
-          rows={entitlements}
-          isLoading={entitlementsLoading}
-          error={entitlementsError}
-          {...(onAddEntitlement ? { onAdd: onAddEntitlement } : {})}
-        />
-      ) : null}
-
-      {active === 'information' ? (
-        <InformationTab
           feature={feature}
           isMetered={isMetered}
           archived={archived}
-          onSave={onSave}
+          charges={charges}
+          chargesLoading={chargesLoading}
+          chargesError={chargesError}
+          chargesErrorKind={chargesErrorKind}
+          onRetryCharges={onRetryCharges}
+          {...(onAddPlan ? { onAddPlan } : {})}
+          {...(onOpenChargeParent ? { onOpenChargeParent } : {})}
+          entitlements={entitlements}
+          entitlementsLoading={entitlementsLoading}
+          entitlementsError={entitlementsError}
+          entitlementsErrorKind={entitlementsErrorKind}
+          onRetryEntitlements={onRetryEntitlements}
           {...(onSaveMetadata ? { onSaveMetadata } : {})}
         />
-      ) : null}
+      ) : (
+        <InformationTab feature={feature} isMetered={isMetered} />
+      )}
     </div>
   )
 }
 
-/** A tab's create button: the same small outline button in the empty state and the toolbar. */
-function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <Button variant="outline" size="sm" onClick={onClick}>
-      <PlusIcon aria-hidden />
-      {label}
-    </Button>
-  )
-}
-
-function ChargesTab({
+function EntitlementsSection({
   rows,
   isLoading,
   error,
-  onAdd,
-}: {
-  rows: FeatureChargeLink[]
-  isLoading: boolean
-  error: string | null
-  onAdd?: () => void
-}) {
-  const add = onAdd ? <AddButton label="Add plan" onClick={onAdd} /> : undefined
-  if (error) return <p className="text-destructive p-6 text-sm">{error}</p>
-  if (isLoading) {
-    return (
-      <Section title="Charges" flush>
-        <div className="p-4">
-          <LoadingRows />
-        </div>
-      </Section>
-    )
-  }
-  if (rows.length === 0) {
-    return (
-      <Section title="Charges" flush>
-        <SectionEmpty
-          title="No charges yet"
-          description="No plan or add-on prices this feature yet."
-          action={add}
-        />
-      </Section>
-    )
-  }
-  return (
-    <Section table title="Charges">
-      <DetailTable
-        compact
-        label="Charges"
-        noun="charges"
-        action={add}
-        rows={rows}
-        getRowId={(row) => row.charge.id}
-        facets={[
-          { id: 'model', label: 'Billing model', value: (row) => modelLabel(row.charge) },
-          { id: 'status', label: 'Plan status', value: (row) => statusLabel(row.parentStatus) },
-        ]}
-        searchText={(row) =>
-          [
-            row.parentName,
-            modelLabel(row.charge),
-            billedLabel(row.charge),
-            priceLabel(row.charge),
-            statusLabel(row.parentStatus),
-          ].join(' ')
-        }
-        columns={[
-          {
-            key: 'plan',
-            header: 'Plan / add-on',
-            width: 200,
-            sortBy: (row) => row.parentName,
-            text: (row) => row.parentName,
-            cell: (row) => <span className="font-medium">{row.parentName}</span>,
-          },
-          {
-            key: 'model',
-            header: 'Billing model',
-            width: 130,
-            sortBy: (row) => modelLabel(row.charge),
-            text: (row) => modelLabel(row.charge),
-            cell: (row) => muted(modelLabel(row.charge)),
-          },
-          {
-            key: 'billed',
-            header: 'Billed',
-            width: 150,
-            sortBy: (row) => billedLabel(row.charge),
-            text: (row) => billedLabel(row.charge),
-            cell: (row) => muted(billedLabel(row.charge)),
-          },
-          {
-            key: 'price',
-            header: 'Price',
-            width: 130,
-            sortBy: (row) => Number(row.charge.amount) || 0,
-            text: (row) => priceLabel(row.charge),
-            cell: (row) => <span className="tabular-nums">{priceLabel(row.charge)}</span>,
-          },
-          {
-            key: 'status',
-            header: 'Plan status',
-            width: 110,
-            sortBy: (row) => statusLabel(row.parentStatus),
-            text: (row) => statusLabel(row.parentStatus),
-            cell: (row) => <Status value={statusLabel(row.parentStatus)} />,
-          },
-        ]}
-      />
-    </Section>
-  )
-}
-
-function EntitlementsTab({
-  rows,
-  isLoading,
-  error,
-  onAdd,
+  errorKind,
+  onRetry,
 }: {
   rows: FeatureEntitlementLink[]
   isLoading: boolean
   error: string | null
-  onAdd?: () => void
+  errorKind?: ErrorKind | undefined
+  onRetry?: (() => void) | undefined
 }) {
-  const add = onAdd ? <AddButton label="Add entitlement" onClick={onAdd} /> : undefined
-  if (error) return <p className="text-destructive p-6 text-sm">{error}</p>
-  if (isLoading) {
-    return (
-      <Section title="Entitlements" flush>
-        <div className="p-4">
-          <LoadingRows />
-        </div>
-      </Section>
-    )
-  }
   if (rows.length === 0) {
     return (
-      <Section title="Entitlements" flush>
-        <SectionEmpty
-          title="No entitlements yet"
-          description="No plan includes this feature yet."
-          action={add}
-        />
+      <Section
+        title="Entitlements"
+        description="What each plan includes before charges apply"
+        flush
+      >
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading}
+          error={error}
+          errorKind={errorKind}
+          onRetry={onRetry}
+          columns={4}
+          loadingLabel="Loading entitlements"
+          empty={{
+            scene: 'catalog',
+            title: 'No entitlements yet',
+            description: 'No plan includes this feature yet.',
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }
   return (
-    <Section table title="Entitlements">
+    <Section
+      table
+      showTitle
+      title="Entitlements"
+      description="What each plan includes before charges apply"
+    >
       <DetailTable
         compact
         label="Entitlements"
         noun="entitlements"
-        action={add}
         rows={rows}
         getRowId={(row) => row.entitlement.id}
         facets={[
@@ -517,95 +363,99 @@ function EntitlementsTab({
   )
 }
 
+/**
+ * Everything the page can actually say about a feature, on one screen.
+ *
+ * Left: who bills for it (Charges) and who includes it (Entitlements) — the
+ * full tables, not a four-row preview of one of them. Right: how to send it an
+ * event, and the metadata carried with the record.
+ *
+ * A non-metered feature has no event and nothing prices it, so it gets the
+ * entitlements table and the metadata card, and neither of the other two.
+ */
 function OverviewTab({
   feature,
+  isMetered,
+  archived,
   charges,
   chargesLoading,
-  onSeeCharges,
+  chargesError,
+  chargesErrorKind,
+  onRetryCharges,
+  onAddPlan,
+  onOpenChargeParent,
+  entitlements,
+  entitlementsLoading,
+  entitlementsError,
+  entitlementsErrorKind,
+  onRetryEntitlements,
+  onSaveMetadata,
 }: {
   feature: Feature
+  isMetered: boolean
+  archived: boolean
   charges: FeatureChargeLink[]
   chargesLoading: boolean
-  onSeeCharges: () => void
+  chargesError: string | null
+  chargesErrorKind?: ErrorKind | undefined
+  onRetryCharges?: (() => void) | undefined
+  onAddPlan?: (() => void) | undefined
+  onOpenChargeParent?: ((charge: Charge) => void) | undefined
+  entitlements: FeatureEntitlementLink[]
+  entitlementsLoading: boolean
+  entitlementsError: string | null
+  entitlementsErrorKind?: ErrorKind | undefined
+  onRetryEntitlements?: (() => void) | undefined
+  onSaveMetadata?: ((metadata: Record<string, string>) => Promise<unknown>) | undefined
 }) {
-  const [metric, setMetric] = useState('usage')
-  const usage = demoUsagePoints()
-  const total = usage.reduce((sum, point) => sum + point.value, 0)
-  const unit = feature.unitPlural || 'units'
-  const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
-  const chartTabs = [
-    {
-      id: 'usage',
-      label: 'Usage, last 30 days',
-      value: (
-        <>
-          {compact.format(total)}
-          <span className="text-muted-foreground ms-1.5 text-sm font-normal">{unit}</span>
-        </>
-      ),
-      points: usage,
-    },
-    {
-      id: 'customers',
-      label: 'Customers reporting',
-      value: '212',
-      points: usage.map((point, index) => ({
-        ...point,
-        value: 150 + Math.round(point.value / 160) + (index % 5),
-      })),
-    },
-    {
-      id: 'billed',
-      label: 'Billed from this feature',
-      value: '$18,420',
-      points: usage.map((point) => ({ ...point, value: Math.round(point.value / 6) })),
-    },
-  ]
-
   return (
-    <div className="flex flex-col gap-5">
-      <MetricChart
-        tabs={chartTabs}
-        activeTab={metric}
-        onTabChange={setMetric}
-        caption="Demo data: real usage is not wired yet"
-      />
-      <div className="grid gap-5 xl:grid-cols-5">
-        <Section
-          className="xl:col-span-3"
-          title="Plans attached"
-          flush
-          bodyClassName="flex flex-col"
-          action={
-            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onSeeCharges}>
-              All charges
-            </Button>
-          }
-        >
-          {/* Rows share the height of the panel so both overview panels line up. */}
-          {chargesLoading ? (
-            <div className="p-4">
-              <LoadingRows />
-            </div>
-          ) : charges.length === 0 ? (
-            <p className="text-muted-foreground px-6 py-10 text-center text-[13px]">
-              No plan prices this feature yet.
-            </p>
-          ) : (
-            <ul className="divide-border/50 flex flex-1 flex-col divide-y">
-              {charges.slice(0, 4).map((row) => (
-                <li key={row.charge.id} className="flex min-h-12 flex-1 items-center gap-4 px-6">
-                  <span className="flex-1 text-sm">{row.parentName}</span>
-                  <span className="text-muted-foreground w-28 text-[13px]">
-                    {modelLabel(row.charge)}
-                  </span>
-                  <span className="w-56 text-[13px] tabular-nums">{priceLabel(row.charge)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-        <TestEventPanel feature={feature} />
+    <div className="grid gap-5 xl:grid-cols-3">
+      <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
+        {isMetered ? (
+          <ChargeTable
+            charges={
+              chargesLoading || chargesError
+                ? []
+                : charges.map(({ charge, parentName }) => ({ ...charge, displayName: parentName }))
+            }
+            chargeColumnLabel="Plan / add-on"
+            description="Every plan and add-on that bills for this feature"
+            emptyDescription="No plan or add-on prices this feature yet."
+            layout="narrow"
+            hideRowActions
+            addLabel="Add plan"
+            facets={[
+              {
+                id: 'parent-status',
+                label: 'Plan status',
+                value: (charge) =>
+                  statusLabel(
+                    charges.find((row) => row.charge.id === charge.id)?.parentStatus ?? '',
+                  ),
+              },
+            ]}
+            {...(onOpenChargeParent ? { onRowClick: onOpenChargeParent } : {})}
+            isLoading={chargesLoading}
+            error={chargesError}
+            errorKind={chargesErrorKind}
+            onRetry={onRetryCharges}
+            {...(onAddPlan ? { onAdd: onAddPlan } : {})}
+          />
+        ) : null}
+        <EntitlementsSection
+          rows={entitlements}
+          isLoading={entitlementsLoading}
+          error={entitlementsError}
+          errorKind={entitlementsErrorKind}
+          onRetry={onRetryEntitlements}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-5">
+        {isMetered ? <TestEventPanel feature={feature} /> : null}
+        <MetadataCard
+          metadata={feature.metadata ?? {}}
+          {...(onSaveMetadata && !archived ? { onSave: onSaveMetadata } : {})}
+        />
       </div>
     </div>
   )
@@ -681,42 +531,34 @@ function EventProperties({ filters }: { filters: { key: string; values: string[]
   )
 }
 
-/** The user-defined unit: "call / calls", or the one name when only one is set. */
-function unitLabel(feature: Feature): string {
-  const { unitSingular: one, unitPlural: many } = feature
-  if (!one && !many) return '—'
-  if (!one || !many || one === many) return many || one
-  return `${one} / ${many}`
-}
+/**
+ * The create form, shown read-only.
+ *
+ * It used to be a mix: an editable card holding a few fields, an "Event and
+ * aggregation" panel built out of `Properties`, and identifiers in a third
+ * box — three idioms for one thing, in an order that matched nothing. Someone
+ * who had just filled the create form could not find the field they had
+ * filled.
+ *
+ * So this is the form's own shape: **Details** then **Metering**, the same
+ * cards with the same labels in the same order, locked. Editing is the one
+ * place it was always meant to be — "Edit details" in the header's ⋯ menu
+ * opens the real form — so nothing here becomes unreachable, and there is no
+ * longer a second, smaller editor that knows about four of the fields.
+ */
+function InformationTab({ feature, isMetered }: { feature: Feature; isMetered: boolean }) {
+  const unit =
+    feature.unitSingular || feature.unitPlural
+      ? [feature.unitSingular, feature.unitPlural].filter(Boolean).join(' / ')
+      : ''
 
-function InformationTab({
-  feature,
-  isMetered,
-  archived,
-  onSave,
-  onSaveMetadata,
-}: {
-  feature: Feature
-  isMetered: boolean
-  archived: boolean
-  onSave: (changes: Record<string, string>) => Promise<unknown>
-  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
-}) {
   return (
     <div className="grid gap-5 xl:grid-cols-3">
       <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
         <EditableCard
-          title="General"
-          locked={archived}
+          title="Details"
+          locked
           fields={[
-            { key: 'name', label: 'Name', value: feature.name, required: true },
-            {
-              key: 'lookupKey',
-              label: 'Lookup key',
-              value: feature.lookupKey,
-              display: mono(feature.lookupKey),
-              readOnly: true,
-            },
             {
               key: 'type',
               label: 'Type',
@@ -726,23 +568,12 @@ function InformationTab({
               ),
               readOnly: true,
             },
+            { key: 'name', label: 'Name', value: feature.name, readOnly: true },
             {
-              key: 'status',
-              label: 'Status',
-              value: FEATURE_STATUS_LABEL[feature.status],
-              display: <Status value={feature.status} />,
-              readOnly: true,
-            },
-            {
-              key: 'created',
-              label: 'Created',
-              value: formatDate(feature.createdAt),
-              readOnly: true,
-            },
-            {
-              key: 'updated',
-              label: 'Updated',
-              value: formatDate(feature.updatedAt),
+              key: 'lookupKey',
+              label: 'Lookup key',
+              value: feature.lookupKey,
+              display: mono(feature.lookupKey),
               readOnly: true,
             },
             {
@@ -751,13 +582,14 @@ function InformationTab({
               value: feature.description,
               placeholder: 'No description',
               multiline: true,
+              readOnly: true,
             },
           ]}
-          onSave={onSave}
+          onSave={noSave}
         />
 
         {isMetered ? (
-          <Section title="Event and aggregation">
+          <Section title="Metering">
             <Properties
               items={[
                 { label: 'Event name', value: mono(feature.eventName) },
@@ -769,21 +601,24 @@ function InformationTab({
                     '—'
                   ),
                 },
+                // Only when the aggregation has one — the form hides it too.
                 ...(feature.aggregationField
-                  ? [{ label: 'Field', value: mono(feature.aggregationField) }]
+                  ? [{ label: 'Event field', value: mono(feature.aggregationField) }]
                   : []),
-                { label: 'Unit', value: unitLabel(feature) },
+                ...(unit ? [{ label: 'Unit', value: unit }] : []),
               ]}
             />
             <div className="mt-6 space-y-2 border-t pt-5">
-              <p className="text-muted-foreground text-xs">Event properties</p>
+              <p className="text-muted-foreground text-xs">Event filters</p>
               <EventProperties filters={feature.meterFilters ?? []} />
             </div>
           </Section>
         ) : null}
       </div>
       <div className="flex min-w-0 flex-col gap-5">
-        {/* The ids people copy into API calls stay in view above the free-form fields. */}
+        {/* Not create-form fields: the ids people paste into API calls, and
+            when the record changed. Metadata is on Overview, beside the event
+            it annotates. */}
         <Section title="Identifiers">
           <Properties
             columns={2}
@@ -793,11 +628,19 @@ function InformationTab({
             ]}
           />
         </Section>
-        <MetadataCard
-          metadata={feature.metadata ?? {}}
-          {...(onSaveMetadata && !archived ? { onSave: onSaveMetadata } : {})}
-        />
+        <Section title="History">
+          <Properties
+            columns={2}
+            items={[
+              { label: 'Created', value: formatDate(feature.createdAt) },
+              { label: 'Updated', value: formatDate(feature.updatedAt) },
+            ]}
+          />
+        </Section>
       </div>
     </div>
   )
 }
+
+/** A locked card never saves; `EditableCard` wants the prop regardless. */
+const noSave = async () => undefined

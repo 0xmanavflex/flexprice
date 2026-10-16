@@ -13,9 +13,10 @@ describe('parsePlanSearch', () => {
       pageSize: 50,
       search: 'pro',
       statuses: [PlanStatus.Archived],
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy: DEFAULT_PLAN_QUERY.sortBy,
+      sortDirection: DEFAULT_PLAN_QUERY.sortDirection,
       view: 'table',
+      filters: [],
     })
   })
 

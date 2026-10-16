@@ -25,12 +25,17 @@ export interface NavEntry {
   label: string
   /** Absent for a parent: it expands, and clicking it goes to its first child. */
   path?: string
+  /** A page outside the console: the row is a link that opens it in a new tab. */
+  external?: string
   /** Search params that select this row on a page shared with others (Settings tabs). */
   query?: Record<string, string>
   /** Which `query` keys decide whether the row is active. Defaults to all of them. */
   match?: readonly string[]
   children?: NavEntry[]
 }
+
+/** Flexprice's own documentation, where the Documentation row sends you. */
+export const DOCS_URL = 'https://docs.flexprice.io/docs/welcome-to-flexprice'
 
 export const NAV: NavEntry[] = [
   { id: 'home', label: 'Home', path: '/' },
@@ -39,19 +44,19 @@ export const NAV: NavEntry[] = [
     id: 'catalog',
     label: 'Product catalog',
     children: [
-      { id: 'features', label: 'Products', path: '/features' },
+      { id: 'features', label: 'Features', path: '/features' },
       { id: 'plans', label: 'Plans', path: '/plans' },
       { id: 'addons', label: 'Add-ons', path: '/addons' },
       { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },
     ],
   },
-  { id: 'subscriptions', label: 'Contracts', path: '/subscriptions' },
+  { id: 'subscriptions', label: 'Contracts', path: '/contracts' },
   {
     id: 'billing',
     label: 'Billing',
     children: [
       { id: 'invoices', label: 'Invoices', path: '/invoices' },
-      { id: 'credit-notes', label: 'Credit notes', path: '/credit-notes' },
+      { id: 'credit-notes', label: 'Credit memos', path: '/credit-memos' },
     ],
   },
   {
@@ -64,7 +69,6 @@ export const NAV: NavEntry[] = [
     id: 'developers',
     label: 'Developers',
     children: [
-      { id: 'api-keys', label: 'API keys', path: '/api-keys' },
       { id: 'service-accounts', label: 'Service accounts', path: '/service-accounts' },
       { id: 'events', label: 'Events debugger', path: '/events' },
       { id: 'webhooks', label: 'Webhooks', path: '/webhooks' },
@@ -84,7 +88,7 @@ export const NAV: NavEntry[] = [
  */
 export const FOOTER_NAV: NavEntry[] = [
   { id: 'integrations', label: 'Integrations', path: '/integrations' },
-  { id: 'docs', label: 'Documentation', path: '/docs' },
+  { id: 'docs', label: 'Documentation', external: DOCS_URL },
 ]
 
 /**
@@ -98,6 +102,12 @@ export const FOOTER_NAV: NavEntry[] = [
  */
 export const SECONDARY: NavEntry[] = [
   { id: 'settings', label: 'Settings', path: '/settings' },
+  {
+    id: 'api-keys',
+    label: 'API keys',
+    path: '/settings',
+    query: { section: 'api-keys', tab: 'api-keys' },
+  },
   { id: 'settings-discounts', label: 'Discounts', path: '/coupons' },
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
@@ -133,7 +143,12 @@ export function navEntryForPath(pathname: string, search = ''): string | undefin
   const params = new URLSearchParams(search)
   const score = (entry: NavEntry): number => {
     const path = entry.path ?? ''
-    if (path === '/' ? pathname !== '/' : !pathname.startsWith(path)) return -1
+    if (
+      path === '/'
+        ? pathname !== '/'
+        : !(pathname === path || pathname.startsWith(`${path}/`) || pathname.startsWith(`${path}?`))
+    )
+      return -1
     if (!entry.query) return path.length * 10
     const keys = entry.match ?? Object.keys(entry.query)
     return keys.every((key) => params.get(key) === entry.query?.[key])
@@ -150,7 +165,10 @@ export function navEntryForPath(pathname: string, search = ''): string | undefin
 
 /** The link for an entry: its path, with the search that selects it. */
 export function hrefForNavId(id: string): string | undefined {
-  const entry = leaves().find((candidate) => candidate.id === id)
+  const entry = [...leaves(), ...ALL.filter((candidate) => candidate.external)].find(
+    (candidate) => candidate.id === id,
+  )
+  if (entry?.external) return entry.external
   if (!entry?.path) return undefined
   return entry.query ? `${entry.path}?${new URLSearchParams(entry.query).toString()}` : entry.path
 }
@@ -168,7 +186,8 @@ export function labelForNavId(id: string): string | undefined {
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
   // Discounts, Taxes, Cost Tracking and Tags are rows of Settings that keep their own routes.
-  if (id.startsWith('settings-')) return SECONDARY.find((entry) => entry.id === 'settings')
+  if (id.startsWith('settings-') || id === 'api-keys' || id === 'groups')
+    return SECONDARY.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),
   )
@@ -197,6 +216,7 @@ function toItems(entries: NavEntry[], icons: Record<string, React.ReactNode>): S
     id: entry.id,
     label: entry.label,
     ...(icons[entry.id] ? { icon: icons[entry.id] } : {}),
+    ...(entry.external ? { href: entry.external } : {}),
     ...(entry.children ? { items: toItems(entry.children, {}) } : {}),
   }))
 }

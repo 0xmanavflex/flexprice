@@ -13,8 +13,8 @@ describe('parseTaxSearch', () => {
       pageSize: 50,
       search: 'gst',
       statuses: [TaxRateStatus.Archived],
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy: DEFAULT_TAX_RATE_QUERY.sortBy,
+      sortDirection: DEFAULT_TAX_RATE_QUERY.sortDirection,
     })
   })
 

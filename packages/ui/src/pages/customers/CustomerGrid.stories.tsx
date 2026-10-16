@@ -96,6 +96,14 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Published,
       createdAt: new Date('2025-04-19T00:00:00Z'),
       updatedAt: new Date('2026-09-01T00:00:00Z'),
+      integrations: [
+        {
+          id: 'stripe',
+          name: 'Stripe',
+          providerType: 'stripe',
+          providerEntityId: 'cus_Qx83mKd02aZpL',
+        },
+      ],
     },
     {
       id: 'cus_02',
@@ -106,6 +114,20 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Published,
       createdAt: new Date('2025-06-02T00:00:00Z'),
       updatedAt: new Date('2026-08-11T00:00:00Z'),
+      integrations: [
+        {
+          id: 'stripe',
+          name: 'Stripe',
+          providerType: 'stripe',
+          providerEntityId: 'cus_Rt41vNb77cWqE',
+        },
+        {
+          id: 'quickbooks',
+          name: 'QuickBooks',
+          providerType: 'quickbooks',
+          providerEntityId: 'qb_1042',
+        },
+      ],
     },
     {
       // Everything optional absent: the row a hand-written demo never includes,
@@ -118,6 +140,7 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Published,
       createdAt: new Date('2026-01-15T00:00:00Z'),
       updatedAt: null,
+      integrations: [],
     },
     {
       id: 'cus_04',
@@ -128,6 +151,7 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Archived,
       createdAt: new Date('2024-11-30T00:00:00Z'),
       updatedAt: new Date('2026-02-02T00:00:00Z'),
+      integrations: [{ id: 'razorpay', name: 'Razorpay', providerType: 'razorpay' }],
     },
   ]
 }
@@ -154,10 +178,7 @@ export const Populated: Story = {
 
     await expect(await canvas.findByText('Acme Robotics')).toBeInTheDocument()
     await expect(canvas.getByText('billing@acme.example')).toBeInTheDocument()
-    // Lowercase on the wire, uppercase in the cell: ISO 3166-1 alpha-2 is
-    // uppercase and the API is not consistent about sending it that way.
-    await expect(canvas.getByText('CA')).toBeInTheDocument()
-    // Initech carries no email, external id or country.
+    // Initech carries no email, external id or integrations.
     await expect(canvas.getAllByText('—').length).toBeGreaterThanOrEqual(3)
   },
 }
@@ -182,7 +203,7 @@ export const NoInventedColumns: Story = {
     for (const absent of ['mrr', 'plan', 'wallet balance', 'subscriptions']) {
       await expect(headers).not.toContain(absent)
     }
-    await expect(headers).toContain('customer')
+    await expect(headers).toContain('name')
   },
 }
 

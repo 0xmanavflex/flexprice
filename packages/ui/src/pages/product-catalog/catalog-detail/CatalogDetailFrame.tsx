@@ -16,10 +16,12 @@ export interface CatalogDetailFrameProps {
   onBack: () => void
   icon: ReactNode
   title: string
-  /** Status and type chips, shown in the header's right-hand cluster. */
+  /** Small pills under the title: status first, then the facts that identify the record. */
   badges?: ReactNode
   /** Copyable identifier. */
   id: string
+  /** Sits immediately before the ID chip, e.g. the payment gateway's logo. */
+  leading?: ReactNode
   /** Accessible name of the More button. */
   menuLabel: string
   /**
@@ -34,9 +36,24 @@ export interface CatalogDetailFrameProps {
   children?: ReactNode
 }
 
+/** The current page in the breadcrumb. The title and the ID chip keep the record. */
+function detailPageLabel(listLabel: string): string {
+  const known: Record<string, string> = {
+    'Add-ons': 'Add-on details',
+    Coupons: 'Coupon details',
+    Payments: 'Payment details',
+    'Credit memos': 'Credit memo details',
+    'Price Units': 'Price unit details',
+    Groups: 'Group details',
+    'Cost sheets': 'Cost sheet details',
+    Webhooks: 'Webhook details',
+  }
+  return known[listLabel] ?? `${listLabel.replace(/s$/, '')} details`
+}
+
 /**
  * The shared shell for catalog detail pages (coupon, add-on, cost sheet, group):
- * `DetailShell` (icon tile, title; right cluster of chips, "ID" copy chip and a
+ * `DetailShell` (icon tile, title, small pills under it, "ID" copy chip and a
  * single ⋯ menu holding every action), then line `DetailTabs`.
  */
 export function CatalogDetailFrame({
@@ -46,6 +63,7 @@ export function CatalogDetailFrame({
   title,
   badges,
   id,
+  leading,
   menuLabel,
   menu = [],
   tabs,
@@ -55,11 +73,12 @@ export function CatalogDetailFrame({
 }: CatalogDetailFrameProps) {
   return (
     <DetailShell
-      trail={[{ label: listLabel, onClick: onBack }, { label: title }]}
+      trail={[{ label: listLabel, onClick: onBack }, { label: detailPageLabel(listLabel) }]}
       icon={icon}
       title={title}
       {...(badges ? { badges } : {})}
       id={id}
+      {...(leading ? { leading } : {})}
       actions={<DetailMoreMenu label={menuLabel} items={menu} />}
     >
       <DetailTabs

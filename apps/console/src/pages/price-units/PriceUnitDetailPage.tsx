@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
-import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
+import { useDeletePriceUnit, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, Pill } from '@fp/ui/pages'
-import { AppFailure, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
-import { CoinsIcon } from 'lucide-react'
+import { ConfirmDialog, EditableCard, MetadataCard, Section } from '@fp/ui/compositions'
+import { ArchiveIcon, CoinsIcon, PencilIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
 
 export interface PriceUnitDetailPageProps {
   priceUnitId: string
@@ -36,34 +37,16 @@ export function PriceUnitDetailPage({
 }: PriceUnitDetailPageProps) {
   const priceUnit = usePriceUnit(priceUnitId)
   const update = useUpdatePriceUnit()
+  const remove = useDeletePriceUnit()
+  const [archiving, setArchiving] = useState(false)
   const [tab, setTab] = useState(startEditing ? 'information' : 'overview')
 
-  if (priceUnit.isPending) {
-    return (
-      <div className="p-6">
-        <LoadingRows />
-      </div>
-    )
-  }
-
-  if (priceUnit.error) {
-    return (
-      <AppFailure
-        title={failureTitle(priceUnit.error)}
-        detail="The rest of the console still works. Try again, or go back to the list."
-        onRetry={() => void priceUnit.refetch()}
-      />
-    )
-  }
-
   if (!priceUnit.data) {
-    return (
-      <AppFailure
-        title="This price unit no longer exists"
-        detail="It may have been deleted. Everything else in the catalogue still works."
-        onRetry={onNavigateToList}
-      />
-    )
+    return detailGate(priceUnit, {
+      noun: 'this price unit',
+      listName: 'price units',
+      onBack: onNavigateToList,
+    })
   }
 
   const data = priceUnit.data
@@ -83,17 +66,32 @@ export function PriceUnitDetailPage({
       title={data.name}
       badges={
         <>
+          <CatalogStatusBadge status={data.status} />
           <Pill>
             {baseCurrency && data.conversionRate
               ? `1 ${codeLabel} = ${data.conversionRate} ${baseCurrency}`
               : 'Custom pricing unit'}
           </Pill>
-          {data.status === 'archived' ? <CatalogStatusBadge status={data.status} /> : null}
         </>
       }
       id={data.code || data.id}
       menuLabel="Price unit actions"
-      menu={[{ id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') }]}
+      menu={[
+        {
+          id: 'edit-details',
+          label: 'Edit details',
+          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setTab('information'),
+        },
+        {
+          id: 'archive',
+          label: 'Archive',
+          icon: <ArchiveIcon aria-hidden />,
+          destructive: true,
+          disabled: data.status === 'archived',
+          onSelect: () => setArchiving(true),
+        },
+      ]}
       tab={tab}
       onTabChange={setTab}
       tabs={[
@@ -132,75 +130,119 @@ export function PriceUnitDetailPage({
           value: 'information',
           label: 'Information',
           content: (
-            <EditableCard
-              title="General"
-              description="The name is the only field that can change once a unit is created."
-              locked={data.status === 'archived'}
-              fields={[
-                { key: 'name', label: 'Name', value: data.name, required: true },
-                {
-                  key: 'code',
-                  label: 'Code',
-                  value: data.code,
-                  display: data.code ? (
-                    <span className="font-mono text-[13px]">{data.code}</span>
-                  ) : (
-                    '—'
-                  ),
-                  readOnly: true,
-                },
-                { key: 'symbol', label: 'Symbol', value: symbolDisplay, readOnly: true },
-                { key: 'base', label: 'Base currency', value: baseCurrency ?? '—', readOnly: true },
-                {
-                  key: 'rate',
-                  label: 'Conversion rate',
-                  value: data.conversionRate || '—',
-                  readOnly: true,
-                },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  value: data.status,
-                  display: <CatalogStatusBadge status={data.status} />,
-                  readOnly: true,
-                },
-                {
-                  key: 'id',
-                  label: 'Price unit ID',
-                  value: data.id,
-                  display: <span className="font-mono text-[13px]">{data.id}</span>,
-                  readOnly: true,
-                },
-                {
-                  key: 'created',
-                  label: 'Created',
-                  value: formatDate(data.createdAt),
-                  readOnly: true,
-                },
-                {
-                  key: 'updated',
-                  label: 'Updated',
-                  value: formatDate(data.updatedAt),
-                  readOnly: true,
-                },
-              ]}
-              onSave={(changes) =>
-                update.mutateAsync({
-                  id: data.id,
-                  draft: {
-                    name: changes.name ?? data.name,
-                    code: data.code,
-                    symbol: data.symbol,
-                    baseCurrency: data.baseCurrency.toUpperCase(),
-                    conversionRate: Number(data.conversionRate) || 1,
+            <div className="grid items-start gap-5 xl:grid-cols-3">
+              <EditableCard
+                className="xl:col-span-2"
+                title="General"
+                description="The name is the only field that can change once a unit is created."
+                locked={data.status === 'archived'}
+                fields={[
+                  { key: 'name', label: 'Name', value: data.name, required: true },
+                  {
+                    key: 'code',
+                    label: 'Code',
+                    value: data.code,
+                    display: data.code ? (
+                      <span className="font-mono text-[13px]">{data.code}</span>
+                    ) : (
+                      '—'
+                    ),
+                    readOnly: true,
                   },
-                })
-              }
-            />
+                  { key: 'symbol', label: 'Symbol', value: symbolDisplay, readOnly: true },
+                  {
+                    key: 'base',
+                    label: 'Base currency',
+                    value: baseCurrency ?? '—',
+                    readOnly: true,
+                  },
+                  {
+                    key: 'rate',
+                    label: 'Conversion rate',
+                    value: data.conversionRate || '—',
+                    readOnly: true,
+                  },
+                  {
+                    key: 'id',
+                    label: 'Price unit ID',
+                    value: data.id,
+                    display: <span className="font-mono text-[13px]">{data.id}</span>,
+                    readOnly: true,
+                  },
+                  {
+                    key: 'created',
+                    label: 'Created',
+                    value: formatDate(data.createdAt),
+                    readOnly: true,
+                  },
+                  {
+                    key: 'updated',
+                    label: 'Updated',
+                    value: formatDate(data.updatedAt),
+                    readOnly: true,
+                  },
+                ]}
+                onSave={(changes) =>
+                  update.mutateAsync({
+                    id: data.id,
+                    draft: {
+                      name: changes.name ?? data.name,
+                      code: data.code,
+                      symbol: data.symbol,
+                      baseCurrency: data.baseCurrency.toUpperCase(),
+                      conversionRate: Number(data.conversionRate) || 1,
+                    },
+                  })
+                }
+              />
+              <MetadataCard
+                metadata={data.metadata ?? {}}
+                {...(data.status === 'archived'
+                  ? {}
+                  : {
+                      onSave: (metadata: Record<string, string>) =>
+                        update.mutateAsync({
+                          id: data.id,
+                          draft: {
+                            name: data.name,
+                            code: data.code,
+                            symbol: data.symbol,
+                            baseCurrency: data.baseCurrency.toUpperCase(),
+                            conversionRate: Number(data.conversionRate) || 1,
+                            metadata,
+                          },
+                        }),
+                    })}
+              />
+            </div>
           ),
         },
       ]}
-    />
+    >
+      <ConfirmDialog
+        open={archiving}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiving(false)
+            remove.reset()
+          }
+        }}
+        title="Archive price unit"
+        description={`Archive ${data.name}? Prices already using it keep working.`}
+        confirmLabel="Archive price unit"
+        destructive
+        isPending={remove.isPending}
+        error={remove.isError ? 'Could not archive the price unit. Try again.' : null}
+        onConfirm={() =>
+          remove.mutate(data.id, {
+            onSuccess: () => {
+              setArchiving(false)
+              onNavigateToList()
+            },
+          })
+        }
+      />
+    </CatalogDetailFrame>
   )
 }
 
@@ -244,20 +286,4 @@ function scaleDecimal(decimal: string, factor: number): string {
 function formatDate(value: Date | null): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this price unit.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This price unit could not be loaded.'
-    }
-  }
-  return 'This price unit could not be loaded.'
 }

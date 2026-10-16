@@ -33,7 +33,7 @@ test.describe('the tax rates list', () => {
 
     await page.getByRole('button', { name: 'Add tax' }).first().click()
     await expect(page).toHaveURL(/\/taxes\/new$/)
-    await expect(page.getByRole('heading', { name: 'Create tax rate' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Tax rate details' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Create tax rate' }).click()
     await expect(page.getByText('Enter a name')).toBeVisible()

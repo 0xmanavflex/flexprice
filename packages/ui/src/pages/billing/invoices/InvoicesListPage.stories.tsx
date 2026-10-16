@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { ReceiptIcon } from 'lucide-react'
 import { DEFAULT_INVOICE_QUERY, InvoiceStatus, type InvoiceQuery } from '@fp/domain'
 import { ListState, PageBody } from '@ui/compositions'
 import { InvoiceGrid } from '@ui/pages/billing/invoices/InvoiceGrid'
@@ -64,7 +63,6 @@ function InvoicesListBody({
         isFiltered={isFiltered}
         onRetry={fn()}
         onClearFilters={clearFilters}
-        emptyIcon={<ReceiptIcon aria-hidden />}
         emptyTitle="No invoices yet"
         emptyDescription="Invoices are produced when a contract's billing period closes. Create a plan and subscribe a customer, and the first one will appear here."
       >

@@ -1,10 +1,10 @@
 import { type ReactNode } from 'react'
 import { usePublishDetailTrail, useShellDetailTrail } from '../shell/ShellDetailTrail'
-import { ChevronRightIcon } from 'lucide-react'
+import { ChevronRightIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { MetricRail, type DetailMetric } from './MetricRail'
-import { DetailHeaderCluster } from './DetailKit'
+import { DetailHeader } from './DetailHeader'
 
 /**
  * The one shell every detail page opens with.
@@ -12,7 +12,7 @@ import { DetailHeaderCluster } from './DetailKit'
  * Before this, detail pages used two different headers with two different
  * breadcrumb styles, and only some got a summary strip — so the flagship plan
  * page looked unlike the rest. This is the single opening: a breadcrumb, a large
- * title, a right-hand cluster (primary actions, status chips, "ID" copy chip,
+ * title, status pills under the title, a right-hand cluster ("ID" copy chip,
  * More menu; see `DetailHeaderCluster`), and — the
  * part that makes a detail page worth visiting — a **metric rail** of how the
  * record is doing. The body (tabs or sections) is `children`.
@@ -33,9 +33,9 @@ export interface DetailCrumb {
 /**
  * The detail page's own breadcrumb — where this record sits, and the way back.
  *
- * A real trail ("Customers / Acme Robotics"), not a lone back button: it names
- * the parent list *and* the record, so the header says which one you are on
- * without re-reading the title, and the parent is one click away. Rendered above
+ * A real trail ("Customers / Customer details"), not a lone back button: it names
+ * the parent list and the kind of page, never the record id. The title still
+ * names the record. The parent is one click away. Rendered above
  * the title, it replaces the assorted "← Back" links each detail page used to
  * grow its own.
  */
@@ -86,7 +86,7 @@ export interface DetailShellProps {
   title: string
   /** Icon shown in the tile left of the title (reference DetailHeader). */
   icon?: ReactNode
-  /** Status and type chips, shown in the right-hand cluster (never beside the name). */
+  /** Status and type pills, shown small under the title (status first). */
   badges?: ReactNode
   /** The record id, rendered as an "ID" copy chip on the right. */
   id?: string
@@ -94,6 +94,8 @@ export interface DetailShellProps {
   identifier?: string
   /** An email, rendered as a mail-icon copy chip beside the id. */
   email?: string
+  /** Sits immediately before the copy-ID chip: connected integration marks. */
+  leading?: ReactNode
   /** Legacy inline action slot. Prefer putting every action in `actions` via `DetailMoreMenu`. */
   primary?: ReactNode
   /** The overflow (More) menu, last in the right-hand cluster. Build it with `DetailMoreMenu`. */
@@ -143,6 +145,7 @@ export function DetailShell({
   id,
   identifier,
   email,
+  leading,
   primary,
   actions,
   metrics,
@@ -154,27 +157,20 @@ export function DetailShell({
     // content region (which is `overflow-hidden`): header + body together, so a
     // long page is never clipped.
     <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
-      <header className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-5 px-6 pt-5 pb-5">
+      <div className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-5 px-6 pt-5 pb-5">
         {trail && trail.length > 0 ? <DetailBreadcrumb trail={trail} /> : breadcrumb}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-4">
-            {icon ? (
-              <span className="bg-muted/60 text-foreground/70 flex size-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-5">
-                {icon}
-              </span>
-            ) : null}
-            <h1 className="min-w-0 truncate text-xl font-medium tracking-tight">{title}</h1>
-          </div>
-          <DetailHeaderCluster
-            primary={primary}
-            badges={badges}
-            id={id ?? identifier}
-            email={email}
-            more={actions}
-          />
-        </div>
+        <DetailHeader
+          title={title}
+          icon={icon}
+          badges={badges}
+          id={id ?? identifier}
+          email={email}
+          leading={leading}
+          primary={primary}
+          actions={actions}
+        />
         {metrics && metrics.length > 0 ? <MetricRail metrics={metrics} /> : null}
-      </header>
+      </div>
       {/* Header and body each cap at `--shell-max` and centre, so they align
           with each other and with the shell header, and the detail page fills a
           1440 screen but stops sprawling edge-to-edge at 2560.

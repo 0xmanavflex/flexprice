@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
@@ -54,6 +55,8 @@ export interface CreditGrantFormProps<T> {
    */
   onCancel?: (() => void) | undefined
   submitLabel?: string
+  /** Opens on this grant instead of a blank one — editing a plan's grant on a contract. */
+  defaultValue?: T
 }
 
 const messageOf = (errors: unknown, key: string): string | undefined =>
@@ -77,10 +80,9 @@ export function CreditGrantEditForm({
   onSubmit,
   submitLabel,
 }: CreditGrantFormProps<EditCreditGrant> & { defaultValue: EditCreditGrant }) {
-  const form = useForm<EditCreditGrant>({
+  const form = useCalmForm<EditCreditGrant>({
     resolver: standardSchemaResolver(editCreditGrantSchema) as Resolver<EditCreditGrant>,
     defaultValues: defaultValue,
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
 
@@ -139,11 +141,11 @@ export function CreditGrantCreateForm({
   submitError = null,
   onSubmit,
   submitLabel,
+  defaultValue,
 }: CreditGrantFormProps<CreateCreditGrant>) {
-  const form = useForm<CreateCreditGrant>({
+  const form = useCalmForm<CreateCreditGrant>({
     resolver: standardSchemaResolver(createCreditGrantSchema) as Resolver<CreateCreditGrant>,
-    defaultValues: emptyCreditGrant(),
-    mode: 'onTouched',
+    defaultValues: defaultValue ?? emptyCreditGrant(),
   })
 
   const errors = form.formState.errors

@@ -160,7 +160,7 @@ export const Pills: Story = {
     await expect(canvas.getByText('Metered')).toBeInTheDocument()
 
     // 24px, fully rounded — the one pill shape the whole console uses.
-    const pill = canvas.getByText('Neutral').closest('span')
+    const pill = canvas.getByText('Neutral').closest('span[title]')
     await expect(pill).not.toBeNull()
     const box = (pill as HTMLElement).getBoundingClientRect()
     await expect(Math.round(box.height)).toBe(24)

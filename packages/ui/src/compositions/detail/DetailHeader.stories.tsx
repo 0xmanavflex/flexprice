@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { MoreHorizontalIcon, UserIcon } from 'lucide-react'
+import { MoreHorizontalIcon, UserIcon } from '@ui/icons'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -173,5 +173,34 @@ export const LongTitle: Story = {
   ],
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('button', { name: 'Edit customer' })).toBeVisible()
+  },
+}
+
+/** Long names must leave all header actions reachable on a phone. */
+export const NarrowWithIntegrations: Story = {
+  args: {
+    title: 'An exceptionally long customer name that must not push actions offscreen',
+    showPrimary: false,
+    leading: (
+      <Button variant="outline" size="sm">
+        Stripe integration
+      </Button>
+    ),
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 320 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const heading = canvas.getByRole('heading', { level: 1 })
+    const header = heading.closest('header')!
+    await expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth + 1)
+    await expect(canvas.getByRole('button', { name: 'Stripe integration' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'More actions' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Copy ID cus_01HZX3K8Q2' })).toBeVisible()
   },
 }

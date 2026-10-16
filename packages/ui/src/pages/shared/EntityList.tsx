@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  type ColumnDef,
-  type PaginationState,
-  type RowSelectionState,
-  useTable,
-} from '@tanstack/react-table'
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
+import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
 import {
   ArrowDownIcon,
   ArrowUpDownIcon,
@@ -14,18 +18,14 @@ import {
   MoreHorizontalIcon,
   SearchIcon,
   XIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   DataGrid,
   DataGridContainer,
   dataGridFeatures,
 } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
-import {
-  DataGridTable,
-  DataGridTableRowSelect,
-  DataGridTableRowSelectAll,
-} from '@ui/components/reui/data-grid/data-grid-table'
+import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -52,8 +52,11 @@ import {
   SelectValue,
 } from '@ui/components/primitives/select'
 import { Skeleton } from '@ui/components/primitives/skeleton'
+import { DataRegion } from '@ui/compositions/feedback/DataBoundary'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
 import { GuidedEmptyState } from '@ui/compositions/feedback/GuidedEmptyState'
+import type { EmptyScene } from '@ui/compositions/feedback/SceneIllustration'
 import { FilterBar, type FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { SortMenu, type SortOption } from '@ui/compositions/tables/SortMenu'
 import { cn } from '@ui/lib/cn'
@@ -109,7 +112,7 @@ import type { EntityColumn } from './cells'
  */
 export const EntityListProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/filters', 'ui/select'],
+  composes: ['@reui/data-grid', '@reui/filters', 'ui/select', 'compositions/feedback/States'],
   note: 'The one list table: borderless (or bordered via `border`), 44px header, 60px rows, auto-width columns, pin-on-overflow. Lineage: @reui/empty-state-3.',
 })
 
@@ -119,8 +122,6 @@ export const EntityListProvenance = provenance({
 
 /** The `⋯` row-actions column. Wide enough for a 28px button and no wider. */
 const ACTIONS_WIDTH = 40
-/** The checkbox column. */
-const SELECT_WIDTH = 44
 /**
  * How far the set of columns may be squeezed below its natural width before
  * the table stops squeezing and scrolls sideways instead.
@@ -135,7 +136,6 @@ const MIN_FLEX_WIDTH = 64
 /** The page sizes the footer offers. */
 const PAGE_SIZES = [10, 25, 50, 100]
 /** Ids reserved by the table itself, so a caller cannot collide with them. */
-const SELECT_ID = '__select'
 const ACTIONS_ID = '__actions'
 
 /* ------------------------------------------------------------------ *
@@ -154,6 +154,8 @@ export interface EntityFilter {
   activeCount?: number | undefined
   /** A "Status: All" select beside the search, writing the same rule as the filter. */
   quick?: EntityQuickSelect | undefined
+  /** AND-only conditions, no groups: what the search endpoints can run. */
+  flat?: boolean | undefined
 }
 
 /** The inline select next to the search box: one value, `all` for none. */
@@ -203,6 +205,8 @@ export interface EntityEmpty {
   actions?: ReactNode
   /** Three cards. Each ends in "Read docs". */
   guides?: EntityGuide[] | undefined
+  /** The drawing for this area of the product. Defaults to the table figure. */
+  scene?: EmptyScene | undefined
 }
 
 export interface EntityListProps<T> {
@@ -239,14 +243,24 @@ export interface EntityListProps<T> {
   /* --- rows --- */
   onRowClick?: ((row: T) => void) | undefined
   rowActions?: ((row: T) => EntityRowAction[]) | undefined
-  /** Adds the pinned checkbox column. */
-  selectable?: boolean | undefined
-  onSelectionChange?: ((ids: string[]) => void) | undefined
 
   /* --- states --- */
   isLoading?: boolean | undefined
   error?: string | null | undefined
+  /** Why `error` happened; picks the figure and withholds retry for `denied`. */
+  errorKind?: ErrorKind | undefined
   onRetry?: (() => void) | undefined
+  /**
+   * The rows were narrowed in the browser from the page fetched, so zero rows
+   * on a later page means "none here", not "this page is past the end".
+   */
+  isPageLocalFilter?: boolean | undefined
+  /** A retry is in flight. Disables the retry button. */
+  isRetrying?: boolean | undefined
+  /** A background request is updating the rows on screen: they stay, a thin bar says so. */
+  isRefreshing?: boolean | undefined
+  /** The rows on screen belong to the previous page or filter; they are dimmed. */
+  isProvisional?: boolean | undefined
   /** True when a search or filter is what emptied the list, not the catalogue
    *  being empty. Only the page can tell these apart. */
   isFiltered?: boolean | undefined
@@ -261,6 +275,8 @@ export interface EntityListProps<T> {
   headingAs?: 'h1' | 'h3'
   /** For a table inside a panel: 36px header, 48px rows, 32px toolbar controls, and a footer only once there is a second page. */
   compact?: boolean | undefined
+  /** For a short, fully shown set (an invoice's lines): no page-size picker or range footer. */
+  hideFooter?: boolean | undefined
   /** Leaves out the search and filter row: a short list that needs none. */
   hideToolbar?: boolean | undefined
   /**
@@ -282,9 +298,20 @@ export interface EntityListProps<T> {
  * more spent on the data. Tracking is what keeps 11px uppercase from setting
  * as a single grey smudge.
  */
-function HeaderLabel({ title }: { title: string }) {
+function HeaderLabel({ title, className }: { title: string; className?: string }) {
   return (
-    <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+    <span
+      /*
+       * `flex` only when centring.
+       * Adding it unconditionally changed the box of every table header in
+       * the app — fourteen visual baselines moved for a change that was
+       * meant to touch four count columns.
+       */
+      className={cn(
+        'text-muted-foreground text-[11px] font-medium tracking-wider uppercase',
+        className && `flex ${className}`,
+      )}
+    >
       {title}
     </span>
   )
@@ -380,6 +407,107 @@ function downloadCsv(filename: string, csv: string): void {
  * ------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------ *
+ * Horizontal scroll
+ *
+ * The native bar hides until you scroll, so a table that runs past the card
+ * looks clipped. This draws a bar whenever the rows are wider than the card,
+ * and dragging it moves the same scroller.
+ * ------------------------------------------------------------------ */
+
+function TableScroller({
+  minWidth,
+  scrolls,
+  children,
+}: {
+  minWidth: number
+  /** The columns are wider than the card, so the bar is shown. */
+  scrolls: boolean
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ pointerId: number; startX: number; startScroll: number } | null>(null)
+  const [bar, setBar] = useState({ overflow: false, thumb: 0, offset: 0, track: 0 })
+
+  const measure = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth
+    const overflow = max > 1
+    const track = Math.max(0, el.clientWidth - 24)
+    const thumb = overflow ? Math.max(32, (el.clientWidth / el.scrollWidth) * track) : 0
+    const offset = overflow && track > thumb ? (el.scrollLeft / max) * (track - thumb) : 0
+    setBar((prev) =>
+      prev.overflow === overflow &&
+      prev.track === track &&
+      Math.abs(prev.thumb - thumb) < 0.5 &&
+      Math.abs(prev.offset - offset) < 0.5
+        ? prev
+        : { overflow, thumb, offset, track },
+    )
+  }, [])
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    measure()
+    el.addEventListener('scroll', measure, { passive: true })
+    return () => el.removeEventListener('scroll', measure)
+  }, [measure])
+
+  useLayoutEffect(() => {
+    measure()
+  }, [measure, minWidth, scrolls])
+
+  const onThumbPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const el = ref.current
+    if (!el) return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    drag.current = { pointerId: event.pointerId, startX: event.clientX, startScroll: el.scrollLeft }
+  }
+
+  const onThumbPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const el = ref.current
+    const current = drag.current
+    if (!el || !current || current.pointerId !== event.pointerId) return
+    const max = el.scrollWidth - el.clientWidth
+    const travel = bar.track - bar.thumb
+    if (travel <= 0) return
+    el.scrollLeft = current.startScroll + ((event.clientX - current.startX) / travel) * max
+  }
+
+  const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId === event.pointerId) drag.current = null
+  }
+
+  return (
+    <>
+      <div
+        ref={ref}
+        className="w-full min-w-0 [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden"
+        style={{ '--table-min': `${minWidth}px` } as React.CSSProperties}
+      >
+        {children}
+      </div>
+      {scrolls ? (
+        <div className="pt-1.5" aria-hidden="true">
+          <div className="bg-muted relative mx-3 h-1.5 rounded-full">
+            <div
+              className="bg-muted-foreground/50 absolute inset-y-0 cursor-grab rounded-full active:cursor-grabbing"
+              style={{ width: bar.thumb, transform: `translateX(${bar.offset}px)` }}
+              onPointerDown={onThumbPointerDown}
+              onPointerMove={onThumbPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+            />
+          </div>
+        </div>
+      ) : null}
+    </>
+  )
+}
+
+/* ------------------------------------------------------------------ *
  * The component
  * ------------------------------------------------------------------ */
 
@@ -402,11 +530,14 @@ export function EntityList<T extends object>({
   exportFileName,
   onRowClick,
   rowActions,
-  selectable = false,
-  onSelectionChange,
   isLoading = false,
   error = null,
+  errorKind,
   onRetry,
+  isRetrying,
+  isPageLocalFilter = false,
+  isRefreshing = false,
+  isProvisional = false,
   isFiltered = false,
   onClearFilters,
   empty,
@@ -414,6 +545,7 @@ export function EntityList<T extends object>({
   filteredEmptyDescription,
   headingAs: Heading = 'h1',
   compact = false,
+  hideFooter = false,
   hideToolbar = false,
   border = false,
   className,
@@ -424,7 +556,6 @@ export function EntityList<T extends object>({
       columns.filter((column) => column.hiddenByDefault).map((column) => [column.id, false]),
     ),
   )
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
   /* --- the measured width of the content area the table has to fill --- */
   const frameRef = useRef<HTMLDivElement>(null)
@@ -471,7 +602,6 @@ export function EntityList<T extends object>({
    */
   const { sizing, overflows } = useMemo(() => {
     const fixedWidth =
-      (selectable ? SELECT_WIDTH : 0) +
       (rowActions ? ACTIONS_WIDTH : 0) +
       visibleColumns.filter((column) => column.fixed).reduce((sum, c) => sum + (c.width ?? 120), 0)
     const flexible = visibleColumns.filter((column) => !column.fixed)
@@ -481,7 +611,6 @@ export function EntityList<T extends object>({
     for (const column of visibleColumns) {
       if (column.fixed) result[column.id] = column.width ?? 120
     }
-    if (selectable) result[SELECT_ID] = SELECT_WIDTH
     if (rowActions) result[ACTIONS_ID] = ACTIONS_WIDTH
 
     if (frameWidth === null || base === 0) {
@@ -524,7 +653,7 @@ export function EntityList<T extends object>({
     // A pixel of tolerance: sub-pixel frame widths are routine, and rounding
     // one of them up must not be read as "this table scrolls".
     return { sizing: result, overflows: fixedWidth + used > frameWidth + 1 }
-  }, [visibleColumns, frameWidth, selectable, rowActions])
+  }, [visibleColumns, frameWidth, rowActions])
   const tableMin = Object.values(sizing).reduce((sum, width) => sum + width, 0)
 
   /* --- build the TanStack columns --- */
@@ -535,18 +664,6 @@ export function EntityList<T extends object>({
   const tableColumns = useMemo(() => {
     const defs: ColumnDef<never, T>[] = []
 
-    if (selectable) {
-      defs.push({
-        id: SELECT_ID,
-        size: SELECT_WIDTH,
-        enableSorting: false,
-        enableHiding: false,
-        header: () => <DataGridTableRowSelectAll />,
-        cell: ({ row }: { row: never }) => <DataGridTableRowSelect row={row} />,
-        meta: { skeleton: <Skeleton className="size-4 rounded-sm" /> },
-      } as never)
-    }
-
     for (const column of columns) {
       defs.push({
         id: column.id,
@@ -556,7 +673,14 @@ export function EntityList<T extends object>({
         meta: {
           headerTitle: column.header,
           skeleton: column.skeleton ?? <Skeleton className="h-4 w-24" />,
-          ...(column.cellClassName ? { cellClassName: column.cellClassName } : {}),
+          ...(column.cellClassName || column.align === 'center'
+            ? {
+                cellClassName: cn(
+                  column.align === 'center' && 'text-center [&>*]:mx-auto',
+                  column.cellClassName,
+                ),
+              }
+            : {}),
         },
         header: () =>
           column.sortable && onSortChange ? (
@@ -572,7 +696,10 @@ export function EntityList<T extends object>({
               }}
             />
           ) : column.header ? (
-            <HeaderLabel title={column.header} />
+            <HeaderLabel
+              title={column.header}
+              {...(column.align === 'center' ? { className: 'justify-center' } : {})}
+            />
           ) : (
             <span className="sr-only">Actions</span>
           ),
@@ -595,7 +722,7 @@ export function EntityList<T extends object>({
     }
 
     return defs as never
-  }, [columns, selectable, rowActions, sizing, sortField, sortDirection, onSortChange])
+  }, [columns, rowActions, sizing, sortField, sortDirection, onSortChange])
 
   const pagination: PaginationState = { pageIndex: page - 1, pageSize }
 
@@ -615,11 +742,14 @@ export function EntityList<T extends object>({
             // logical one, and a `{ left, right }` object type-checks against
             // the loose state slot and then reads as *no pinning at all* — the
             // table asks for `start.length` and gets `undefined`.
-            start: selectable ? [SELECT_ID] : [],
-            end: rowActions ? [ACTIONS_ID] : [],
+            start: [],
+            end: [
+              ...visibleColumns.filter((column) => column.fixed).map((column) => column.id),
+              ...(rowActions ? [ACTIONS_ID] : []),
+            ],
           }
         : { start: [], end: [] },
-    [overflows, selectable, rowActions],
+    [overflows, rowActions, visibleColumns],
   )
 
   const table = useTable({
@@ -632,17 +762,9 @@ export function EntityList<T extends object>({
     manualSorting: true,
     rowCount: total,
     getRowId: (row: T) => getRowId(row),
-    enableRowSelection: selectable,
-    state: { pagination, columnVisibility, columnSizing: sizing, columnPinning, rowSelection },
+    enableRowSelection: false,
+    state: { pagination, columnVisibility, columnSizing: sizing, columnPinning },
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (s: RowSelectionState) => RowSelectionState)(rowSelection)
-          : (updater as RowSelectionState)
-      setRowSelection(next)
-      onSelectionChange?.(Object.keys(next).filter((id) => next[id]))
-    },
     onPaginationChange: (updater: unknown) => {
       const next =
         typeof updater === 'function'
@@ -658,29 +780,31 @@ export function EntityList<T extends object>({
   }, [exportFileName, visibleColumns, rows])
 
   const hideableColumns = columns.filter((column) => column.hideable !== false)
-  const selectedCount = Object.values(rowSelection).filter(Boolean).length
 
   /* --- error replaces everything: a toolbar over a table that failed to load
          offers controls that cannot do anything --- */
   if (error) {
     return (
-      <div
-        role="alert"
-        className="border-destructive/20 bg-destructive/10 flex flex-col items-start gap-3 rounded-xl border p-6"
-      >
-        <p className="text-destructive-foreground dark:text-destructive text-sm font-medium">
-          {error}
-        </p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
+      <ErrorState
+        title={error}
+        {...(errorKind ? { kind: errorKind } : {})}
+        {...(onRetry ? { onRetry } : {})}
+        {...(isRetrying !== undefined ? { isRetrying } : {})}
+      />
     )
   }
 
-  const showFirstRun = !isLoading && rows.length === 0 && !isFiltered && empty !== undefined
+  /*
+   * "Nothing exists" is a fact about the *total*, not about this page's rows.
+   * Keyed off `rows.length`, page 3 of a 60-record list that came back empty
+   * (a deleted tail, a stale URL) read as "create your first record". Out of
+   * range is its own state: the records are there, this page is past them.
+   */
+  const isOutOfRange =
+    !isLoading && rows.length === 0 && total > 0 && page > 1 && !isPageLocalFilter
+  const showFirstRun =
+    !isLoading && rows.length === 0 && total === 0 && !isFiltered && empty !== undefined
+  const goToFirstPage = () => onPaginationChange(1, pageSize)
 
   const toolbar = (
     <div
@@ -737,13 +861,6 @@ export function EntityList<T extends object>({
       </div>
 
       <div className="flex items-center gap-2">
-        {selectedCount > 0 ? (
-          <span aria-live="polite" className="text-muted-foreground mr-1 text-xs">
-            <span className="text-foreground font-medium tabular-nums">{selectedCount}</span>{' '}
-            selected
-          </span>
-        ) : null}
-
         {filter ? (
           <FilterBar
             variant="advanced"
@@ -751,6 +868,7 @@ export function EntityList<T extends object>({
             fields={filter.fields}
             query={filter.query}
             onQueryChange={filter.onQueryChange}
+            {...(filter.flat ? { flat: true } : {})}
             trigger={
               <Button
                 type="button"
@@ -841,7 +959,18 @@ export function EntityList<T extends object>({
           </DropdownMenu>
         ) : null}
 
-        {primaryAction}
+        {primaryAction ? (
+          // Text buttons take the height of the icon buttons beside them,
+          // whatever size the caller asked for.
+          <div
+            className={cn(
+              'flex items-center gap-2',
+              compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
+            )}
+          >
+            {primaryAction}
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -859,109 +988,144 @@ export function EntityList<T extends object>({
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
           stops an overflowing table pushing the page itself wider. */}
-      <div
-        ref={frameRef}
-        data-slot="entity-list-frame"
-        data-border={border ? '' : undefined}
-        className={cn(
-          'w-full min-w-0',
-          border && 'bg-background overflow-hidden rounded-xl border',
-        )}
+      <DataRegion
+        state={{ refreshing: isRefreshing, provisional: isProvisional }}
+        className="min-w-0"
       >
-        {showFirstRun && empty ? (
-          <GuidedEmptyState
-            title={empty.title}
-            description={empty.description}
-            actions={empty.actions}
-            guides={empty.guides}
-            label={`${label}: nothing here yet`}
-          />
-        ) : (
-          <DataGrid
-            table={table as never}
-            recordCount={total}
-            isLoading={isLoading}
-            loadingMode="skeleton"
-            {...(onRowClick ? { onRowClick } : {})}
-            emptyMessage={
-              <EmptyState
-                size="inline"
-                isFiltered
-                title={filteredEmptyTitle ?? `No ${noun} match these filters`}
-                description={
-                  filteredEmptyDescription ??
-                  'Try a different search, or clear what is narrowing the list.'
-                }
-                {...(onClearFilters
-                  ? {
-                      onClearFilters: (
-                        <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                          Clear filters
-                        </Button>
-                      ),
+        <div
+          ref={frameRef}
+          data-slot="entity-list-frame"
+          data-border={border ? '' : undefined}
+          className={cn(
+            'w-full min-w-0',
+            border && 'bg-background overflow-hidden rounded-xl border',
+          )}
+        >
+          {showFirstRun && empty ? (
+            <GuidedEmptyState
+              title={empty.title}
+              description={empty.description}
+              actions={empty.actions}
+              guides={empty.guides}
+              scene={empty.scene}
+              label={`${label}: nothing here yet`}
+            />
+          ) : (
+            <DataGrid
+              table={table as never}
+              recordCount={total}
+              isLoading={isLoading}
+              loadingMode="skeleton"
+              {...(onRowClick ? { onRowClick } : {})}
+              emptyMessage={
+                isOutOfRange ? (
+                  <EmptyState
+                    size="inline"
+                    isFiltered
+                    {...(empty?.scene ? { scene: empty.scene } : {})}
+                    title="This page is out of range"
+                    description={`There are ${total} ${noun}, but none on page ${page}. Your records are all still here.`}
+                    onClearFilters={
+                      <Button type="button" variant="outline" size="sm" onClick={goToFirstPage}>
+                        Go to first page
+                      </Button>
                     }
-                  : {})}
-              />
-            }
-            tableLayout={{
-              headerSticky: false,
-              headerBackground: false,
-              rowBorder: true,
-              columnsVisibility: true,
-              columnsPinnable: true,
-              width: 'fixed',
-            }}
-            tableClassNames={{
-              base: 'min-w-(--table-min)',
-              edgeCell: compact ? 'first:ps-6 last:pe-4' : 'first:ps-4 last:pe-2',
-              headerRow: cn(
-                'bg-muted/60 [&>th]:px-4 [&>th]:border-0',
-                compact
-                  ? '[&>th]:h-9'
-                  : cn(
-                      '[&>th]:h-11',
-                      // Inside a frame the outline already rounds the corners.
-                      !border && '[&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
-                    ),
-              ),
-              /*
-               * Every cell clips (`overflow-hidden`): `table-fixed` fixes the
-               * cell box, not its contents, so a pill or any other
-               * non-truncating child would paint past its column and inflate
-               * the scroll container. The cell helpers truncate their text;
-               * this is the backstop for the ones that cannot.
-               */
-              bodyRow: cn(
-                compact ? 'h-12 [&_.font-medium]:font-[450]' : 'h-[60px]',
-                'hover:bg-muted/30 [&>td]:px-4 [&>td]:whitespace-nowrap [&>td]:border-border/40 [&>td]:overflow-hidden last:[&>td]:border-b-0',
-                onRowClick && 'cursor-pointer',
-              ),
-            }}
-          >
-            <DataGridContainer className="flex flex-col border-0 bg-transparent">
-              <div
-                className="w-full overflow-x-auto"
-                style={{ '--table-min': `${tableMin}px` } as React.CSSProperties}
-              >
-                <DataGridTable />
-              </div>
-              {total > 0 && (!compact || total > pageSize) ? (
-                <div
-                  className={cn(
-                    'border-border/60 border-t',
-                    compact ? 'px-6 py-3' : border ? 'px-4 py-3' : 'px-4 pt-4',
-                  )}
-                >
-                  <DataGridPagination
-                    sizes={PAGE_SIZES}
-                    info={`{from} - {to} of {count} ${noun}`}
                   />
-                </div>
-              ) : null}
-            </DataGridContainer>
-          </DataGrid>
-        )}
-      </div>
+                ) : isFiltered ? (
+                  <EmptyState
+                    size="inline"
+                    isFiltered
+                    {...(empty?.scene ? { scene: empty.scene } : {})}
+                    title={filteredEmptyTitle ?? `No ${noun} match these filters`}
+                    description={
+                      filteredEmptyDescription ??
+                      'Try a different search, or clear what is narrowing the list.'
+                    }
+                    {...(onClearFilters
+                      ? {
+                          onClearFilters: (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={onClearFilters}
+                            >
+                              Clear filters
+                            </Button>
+                          ),
+                        }
+                      : {})}
+                  />
+                ) : (
+                  /* Neither filtered nor out of range: the list itself is empty.
+                   Saying "match these filters" here would blame a filter that
+                   does not exist. */
+                  <EmptyState
+                    size="inline"
+                    isFiltered
+                    {...(empty?.scene ? { scene: empty.scene } : {})}
+                    title={empty?.title ?? `No ${noun}`}
+                    {...(empty?.description ? { description: empty.description } : {})}
+                  />
+                )
+              }
+              tableLayout={{
+                headerSticky: false,
+                headerBackground: false,
+                rowBorder: true,
+                columnsVisibility: true,
+                columnsPinnable: true,
+                width: 'fixed',
+              }}
+              tableClassNames={{
+                base: 'min-w-(--table-min)',
+                edgeCell: compact ? 'first:ps-6 last:pe-4' : 'first:ps-4 last:pe-2',
+                headerRow: cn(
+                  'bg-muted/60 [&>th]:px-4 [&>th]:border-0',
+                  compact
+                    ? '[&>th]:h-9'
+                    : cn(
+                        '[&>th]:h-11',
+                        // Inside a frame the outline already rounds the corners.
+                        !border && '[&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
+                      ),
+                ),
+                /*
+                 * Every cell clips (`overflow-hidden`): `table-fixed` fixes the
+                 * cell box, not its contents, so a pill or any other
+                 * non-truncating child would paint past its column and inflate
+                 * the scroll container. The cell helpers truncate their text;
+                 * this is the backstop for the ones that cannot.
+                 */
+                bodyRow: cn(
+                  compact ? 'h-12 [&_.font-medium]:font-[450]' : 'h-[60px]',
+                  'hover:bg-muted/30 [&>td]:px-4 [&>td]:whitespace-nowrap [&>td]:border-border/40 [&>td]:overflow-hidden last:[&>td]:border-b-0',
+                  onRowClick && 'cursor-pointer',
+                ),
+              }}
+            >
+              <DataGridContainer className="flex min-w-0 flex-col border-0 bg-transparent">
+                <TableScroller minWidth={tableMin} scrolls={overflows}>
+                  <DataGridTable />
+                </TableScroller>
+                {total > 0 && !hideFooter ? (
+                  <div
+                    className={cn(
+                      'border-border/60 border-t',
+                      compact ? 'px-6 py-3' : border ? 'px-4 py-3' : 'px-4 pt-4',
+                    )}
+                  >
+                    <DataGridPagination
+                      sizes={[...new Set([...PAGE_SIZES, pageSize])].sort((a, b) => a - b)}
+                      info={`{from} - {to} of {count} ${noun}`}
+                    />
+                  </div>
+                ) : null}
+              </DataGridContainer>
+            </DataGrid>
+          )}
+        </div>
+      </DataRegion>
     </div>
   )
 }

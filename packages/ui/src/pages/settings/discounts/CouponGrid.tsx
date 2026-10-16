@@ -6,7 +6,7 @@ import {
   PencilIcon,
   TicketPercentIcon,
   PlusIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   COUPON_CADENCE_LABEL,
   COUPON_SORT_LABEL,
@@ -18,10 +18,11 @@ import {
   CouponStatus,
   DEFAULT_COUPON_QUERY,
   formatMoney,
+  COUPON_FILTERS,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../../shared/cells'
 
@@ -52,11 +53,6 @@ export const CouponGridProvenance = provenance({
 const SORT_OPTIONS = Object.values(CouponSortField).map((value) => ({
   value,
   label: COUPON_SORT_LABEL[value],
-}))
-
-const STATUS_CHOICES = Object.values(CouponStatus).map((value) => ({
-  value,
-  label: COUPON_STATUS_LABEL[value],
 }))
 
 /**
@@ -246,10 +242,10 @@ export function CouponGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search coupons…"
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: COUPON_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -273,10 +269,13 @@ export function CouponGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No coupons match these filters"
       empty={{
+        scene: 'settings',
         title: 'No coupons yet',
         description:
           'A coupon takes an amount or a percentage off a contract — once, for a few periods, or forever. Create one and apply it at checkout or on an existing contract.',

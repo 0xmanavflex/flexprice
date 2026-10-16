@@ -6,8 +6,15 @@ import { AppFailure, ThemeProvider } from '@fp/ui/compositions'
 import { FlexpriceProvider, createQueryClient } from '@fp/query'
 import './styles.css'
 import { router } from './app/router'
-import { SessionProvider, bypassesSignIn, useAuthSource, useSession } from './app/session'
+import {
+  SessionProvider,
+  bypassesSignIn,
+  getActiveEnvironmentId,
+  useAuthSource,
+  useSession,
+} from './app/session'
 import { env } from './env'
+import { RegionProvider, useRegion } from './app/region'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('#root is missing from index.html')
@@ -15,13 +22,15 @@ if (!container) throw new Error('#root is missing from index.html')
 /**
  * A tab left open across a deploy asks for chunks whose hashed names no longer
  * exist; the host answers with index.html and the dynamic import fails. Reload
- * once to pick up the new build. The flag stops a loop if the chunk is truly gone.
+ * to pick up the new build. The timestamp stops a loop if the chunk is truly
+ * gone, while still letting a later deploy recover the same tab again.
  */
 window.addEventListener('vite:preloadError', (event) => {
   const key = 'fp:chunk-reload'
   try {
-    if (sessionStorage.getItem(key)) return
-    sessionStorage.setItem(key, '1')
+    const last = Number(sessionStorage.getItem(key) ?? 0)
+    if (Date.now() - last < 30_000) return
+    sessionStorage.setItem(key, String(Date.now()))
   } catch {
     return
   }
@@ -65,11 +74,12 @@ if (env.problem) {
  * harmless — `useQueryClient()` finds the nearer provider, and both hold the
  * identical client, so there is exactly one cache no matter which one answers.
  */
-const queryClient = createQueryClient()
+const queryClient = createQueryClient({ getEnvironmentId: getActiveEnvironmentId })
 
 function ConsoleApp() {
   const auth = useAuthSource()
   const { signOut } = useSession()
+  const { serverURL } = useRegion()
 
   /**
    * A 401 ends the session, in exactly one place.
@@ -94,7 +104,7 @@ function ConsoleApp() {
 
   return (
     <FlexpriceProvider
-      serverURL={env.apiUrl}
+      serverURL={serverURL}
       auth={auth}
       queryClient={queryClient}
       onUnauthorized={onUnauthorized}
@@ -109,7 +119,9 @@ createRoot(container).render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
-          <ConsoleApp />
+          <RegionProvider>
+            <ConsoleApp />
+          </RegionProvider>
         </SessionProvider>
       </QueryClientProvider>
     </ThemeProvider>

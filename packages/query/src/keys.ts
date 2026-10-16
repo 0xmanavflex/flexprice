@@ -15,6 +15,8 @@ export const queryKeys = {
     all: () => ['session'] as const,
     current: () => ['session', 'current'] as const,
     environments: () => ['session', 'environments'] as const,
+    /** Keyed by server URL: the region picker can switch deployments mid-session. */
+    capabilities: (serverURL: string) => ['session', 'capabilities', serverURL] as const,
   },
   customers: {
     all: () => ['customers'] as const,
@@ -35,15 +37,29 @@ export const queryKeys = {
     invoices: (id: string, filter: Readonly<Record<string, unknown>> = {}) =>
       ['subscriptions', 'invoices', id, filter] as const,
     entitlements: (id: string) => ['subscriptions', 'entitlements', id] as const,
+    preview: (id: string, hideZero: boolean) => ['subscriptions', 'preview', id, hideZero] as const,
+    addons: (id: string) => ['subscriptions', 'addons', id] as const,
+    coupons: (id: string) => ['subscriptions', 'coupons', id] as const,
+    taxes: (id: string) => ['subscriptions', 'taxes', id] as const,
   },
   counts: {
     all: () => ['counts'] as const,
     of: (entity: string) => ['counts', entity] as const,
   },
+  revenue: {
+    all: () => ['revenue'] as const,
+    overview: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['revenue', 'overview', filter] as const,
+    series: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['revenue', 'series', filter] as const,
+  },
   events: {
     all: () => ['events'] as const,
     analytics: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['events', 'analytics', filter] as const,
+    /** One event's trace. Keyed by both ids, because the route needs both. */
+    debug: (eventId: string, externalCustomerId: string) =>
+      ['events', 'debug', eventId, externalCustomerId] as const,
   },
   features: {
     all: () => ['features'] as const,
@@ -120,6 +136,11 @@ export const queryKeys = {
   },
   integrations: {
     all: () => ['integrations'] as const,
+  },
+  /** A customer's provider mappings — `GET /integrations/mappings`. */
+  integrationLinks: {
+    all: () => ['integrationLinks'] as const,
+    forCustomer: (customerId: string) => ['integrationLinks', 'customer', customerId] as const,
   },
   dataExports: {
     all: () => ['dataExports'] as const,

@@ -2,7 +2,6 @@ import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   type Addon,
-  type Charge,
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreditGrant,
@@ -18,17 +17,16 @@ import {
   entitlementToEdit,
 } from '@fp/domain'
 import {
-  ApiError,
   useAddon,
   useCreateBulkEntitlements,
   useCreateCreditGrant,
   useCreditGrants,
+  useDeleteAddon,
   useDeleteCreditGrant,
   useDeleteEntitlement,
   useEntitlements,
   useFeatures,
   usePrices,
-  useTerminatePrice,
   useUpdateAddon,
   useUpdateCreditGrant,
   useUpdateEntitlement,
@@ -37,7 +35,6 @@ import {
   AddonSubscriptionsView,
   CatalogDetailFrame,
   CatalogStatusBadge,
-  ChargeTable,
   CreditGrantCreateForm,
   CreditGrantEditForm,
   CreditGrantTable,
@@ -47,24 +44,16 @@ import {
   type FeatureOption,
   Pill,
 } from '@fp/ui/pages'
-import {
-  AppFailure,
-  ConfirmDialog,
-  EditableCard,
-  FormDialog,
-  LoadingRows,
-  PageBody,
-  Properties,
-  Section,
-} from '@fp/ui/compositions'
-import { PuzzleIcon } from 'lucide-react'
+import { ConfirmDialog, EditableCard, FormDialog, MetadataCard } from '@fp/ui/compositions'
+import { ArchiveIcon, PencilIcon, PuzzleIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
+import { subTab } from '../shared/subTab'
+import { CatalogCharges } from '../shared/CatalogCharges'
 
 export interface AddonDetailPageProps {
   addonId: string
   /** Open with the details already in edit mode (the list row's Edit). */
   startEditing?: boolean
-  /** Open the full edit form. */
-  onEdit?: () => void
   onNavigateToList: () => void
 }
 
@@ -93,49 +82,20 @@ type AddonTab = 'charges' | 'entitlements' | 'subscriptions' | 'information'
 export function AddonDetailPage({
   addonId,
   startEditing = false,
-  onEdit,
   onNavigateToList,
 }: AddonDetailPageProps) {
   const addon = useAddon(addonId)
   const update = useUpdateAddon()
+  const remove = useDeleteAddon()
   // Fetched here too (deduped by react-query) so the rail can carry real counts.
   const prices = usePrices(PriceEntityType.Addon, addonId)
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
 
   const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'charges')
-
-  if (addon.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (addon.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(addon.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void addon.refetch()}
-        />
-      </PageBody>
-    )
-  }
+  const [archiving, setArchiving] = useState(false)
 
   if (!addon.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This add-on no longer exists"
-          detail="It may have been deleted. Everything else in the catalogue still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(addon, { noun: 'this add-on', listName: 'add-ons', onBack: onNavigateToList })
   }
 
   const data = addon.data
@@ -143,13 +103,10 @@ export function AddonDetailPage({
   const entitlementCount = (entitlements.data ?? []).length
   const badges = (
     <>
+      <CatalogStatusBadge status={data.status} />
       <Pill>
         {chargeCount} {chargeCount === 1 ? 'charge' : 'charges'}
       </Pill>
-      <Pill>
-        {entitlementCount} {entitlementCount === 1 ? 'entitlement' : 'entitlements'}
-      </Pill>
-      {data.status === 'archived' ? <CatalogStatusBadge status={data.status} /> : null}
     </>
   )
 
@@ -163,14 +120,20 @@ export function AddonDetailPage({
       id={data.lookupKey || data.id}
       menuLabel="Add-on actions"
       menu={[
-        { id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') },
-        ...(onEdit ? [{ id: 'edit', label: 'Edit add-on', onSelect: onEdit }] : []),
         {
-          id: 'entitlements',
-          label: 'Manage entitlements',
-          onSelect: () => setTab('entitlements'),
+          id: 'edit-details',
+          label: 'Edit details',
+          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setTab('information'),
         },
-        { id: 'charges', label: 'View charges', onSelect: () => setTab('charges') },
+        {
+          id: 'archive',
+          label: 'Archive',
+          icon: <ArchiveIcon aria-hidden />,
+          destructive: true,
+          disabled: data.status === 'archived',
+          onSelect: () => setArchiving(true),
+        },
       ]}
       tab={tab}
       onTabChange={(next) => setTab(next as AddonTab)}
@@ -178,13 +141,20 @@ export function AddonDetailPage({
         {
           value: 'charges',
           label: 'Charges',
-          ...(prices.isPending ? {} : { count: chargeCount }),
-          content: <PricesTab addonId={addonId} />,
+          ...(prices.data ? { count: chargeCount } : {}),
+          content: (
+            <CatalogCharges
+              entityType={PriceEntityType.Addon}
+              entityId={addonId}
+              noun="add-on"
+              emptyDescription="This add-on bills nothing until it has a charge."
+            />
+          ),
         },
         {
           value: 'entitlements',
           label: 'Entitlements',
-          ...(entitlements.isPending ? {} : { count: entitlementCount }),
+          ...(entitlements.data ? { count: entitlementCount } : {}),
           content: (
             <div className="flex flex-col gap-5">
               <EntitlementsTab addonId={addonId} />
@@ -216,53 +186,31 @@ export function AddonDetailPage({
           ),
         },
       ]}
-    />
-  )
-}
-
-/** Charges — the prices this add-on carries. Terminating one is confirmed first. */
-function PricesTab({ addonId }: { addonId: string }) {
-  const charges = usePrices(PriceEntityType.Addon, addonId)
-  const terminate = useTerminatePrice()
-  const [target, setTarget] = useState<Charge | null>(null)
-
-  if (charges.isPending) return <LoadingRows />
-
-  const close = () => {
-    setTarget(null)
-    terminate.reset()
-  }
-
-  return (
-    <>
-      {/*
-        No add flow yet — an add-on has no charges builder route — so `onAdd` is
-        omitted, and with it the "add a charge" instruction: telling someone to
-        do a thing this surface offers no way to do is worse than saying
-        nothing. The empty copy names the add-on rather than inheriting the
-        table's plan wording.
-      */}
-      <ChargeTable
-        charges={charges.data ?? []}
-        emptyDescription="This add-on bills nothing until it has a charge."
-        onTerminate={(charge) => setTarget(charge)}
-      />
+    >
       <ConfirmDialog
-        open={target !== null}
+        open={archiving}
         onOpenChange={(open) => {
-          if (!open) close()
+          if (!open) {
+            setArchiving(false)
+            remove.reset()
+          }
         }}
-        title="Terminate this charge?"
-        description={`“${target?.displayName || target?.meterName || 'This charge'}” will stop billing on this add-on. Past invoices that referenced it are unaffected.`}
-        confirmLabel="Terminate charge"
+        title="Archive add-on"
+        description={`Archive ${data.name}? Subscriptions already using it keep it, but it can no longer be added.`}
+        confirmLabel="Archive add-on"
         destructive
-        isPending={terminate.isPending}
-        error={terminate.isError ? 'Could not terminate the charge. Try again.' : null}
-        onConfirm={() => {
-          if (target) terminate.mutate({ id: target.id }, { onSuccess: () => setTarget(null) })
-        }}
+        isPending={remove.isPending}
+        error={remove.isError ? 'Could not archive the add-on. Try again.' : null}
+        onConfirm={() =>
+          remove.mutate(data.id, {
+            onSuccess: () => {
+              setArchiving(false)
+              onNavigateToList()
+            },
+          })
+        }
       />
-    </>
+    </CatalogDetailFrame>
   )
 }
 
@@ -289,8 +237,6 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   const allFeatures = features.data?.features ?? []
   const options = allFeatures.filter((f) => !granted.has(f.id)).map(toOption)
   const editingFeature = editing ? allFeatures.find((f) => f.id === editing.featureId) : undefined
-
-  if (entitlements.isPending) return <LoadingRows />
 
   const submit = (draft: CreateEntitlement) => {
     create.mutate(
@@ -339,7 +285,9 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   return (
     <>
       <EntitlementTable
+        showTitle
         entitlements={entitlements.data ?? []}
+        {...subTab(entitlements, 'entitlements')}
         onAdd={() => setAdding(true)}
         onEdit={(entitlement) => setEditing(entitlement)}
         onDelete={(entitlement) => setTarget(entitlement)}
@@ -388,8 +336,6 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   const [editing, setEditing] = useState<CreditGrant | null>(null)
   const [target, setTarget] = useState<CreditGrant | null>(null)
 
-  if (grants.isPending) return <LoadingRows />
-
   const submit = (grant: CreateCreditGrant) => {
     create.mutate(
       { scope: CreditGrantScope.Addon, id: addonId, grant },
@@ -427,7 +373,9 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   return (
     <>
       <CreditGrantTable
+        showTitle
         grants={grants.data ?? []}
+        {...subTab(grants, 'credit grants')}
         onAdd={() => setAdding(true)}
         onEdit={(grant) => setEditing(grant)}
         onDelete={(grant) => setTarget(grant)}
@@ -463,16 +411,23 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   )
 }
 
-/** Information — one pencil edits the name and description in place; the rest is read-only. */
+/**
+ * Information — one pencil edits the name and description in place; the rest
+ * is read-only. The metadata card beside it edits, adds and removes fields.
+ */
 function InformationTab({
   addon,
   onSave,
 }: {
   addon: Addon
-  onSave: (patch: { name?: string; description?: string }) => Promise<void>
+  onSave: (patch: {
+    name?: string
+    description?: string
+    metadata?: Record<string, string>
+  }) => Promise<void>
 }) {
   return (
-    <div className="grid gap-5 xl:grid-cols-3">
+    <div className="grid items-start gap-5 xl:grid-cols-3">
       <EditableCard
         className="xl:col-span-2"
         title="Add-on details"
@@ -487,18 +442,6 @@ function InformationTab({
             display: <span className="font-mono text-[13px]">{addon.lookupKey}</span>,
             readOnly: true,
           },
-          {
-            key: 'status',
-            label: 'Status',
-            value: addon.status,
-            // The pill is taller than a text line; this keeps its row as tall as its neighbours.
-            display: (
-              <span className="flex h-5 items-center">
-                <CatalogStatusBadge status={addon.status} />
-              </span>
-            ),
-            readOnly: true,
-          },
           { key: 'created', label: 'Created', value: formatDate(addon.createdAt), readOnly: true },
           { key: 'updated', label: 'Updated', value: formatDate(addon.updatedAt), readOnly: true },
           {
@@ -511,19 +454,12 @@ function InformationTab({
         ]}
         onSave={(changes) => onSave(changes)}
       />
-      <div className="flex flex-col gap-5">
-        <Section title="Metadata">
-          <Properties
-            columns={2}
-            items={[
-              {
-                label: 'Add-on ID',
-                value: <span className="font-mono text-[13px]">{addon.id}</span>,
-              },
-            ]}
-          />
-        </Section>
-      </div>
+      <MetadataCard
+        metadata={addon.metadata ?? {}}
+        {...(addon.status === 'archived'
+          ? {}
+          : { onSave: (metadata: Record<string, string>) => onSave({ metadata }) })}
+      />
     </div>
   )
 }
@@ -531,20 +467,4 @@ function InformationTab({
 function formatDate(value: Date | null): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this add-on.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This add-on could not be loaded.'
-    }
-  }
-  return 'This add-on could not be loaded.'
 }

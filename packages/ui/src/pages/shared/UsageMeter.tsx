@@ -40,7 +40,9 @@ export function UsageMeter({ label, used, limit, unit, locale }: UsageMeterProps
   const unlimited = limit === null
   const exhausted = !unlimited && limit === 0
   const over = !unlimited && !exhausted && used > limit
-  const percent = unlimited || exhausted ? 0 : Math.min(100, Math.round((used / limit) * 100))
+  // Floor, not round: 99.5% is not "100%", and a full bar means the limit is reached.
+  const percent =
+    unlimited || exhausted ? 0 : used >= limit ? 100 : Math.floor(Math.max(0, (used / limit) * 100))
 
   const summary = unlimited
     ? `${format(used)}${unit ? ` ${unit}` : ''} used of unlimited`

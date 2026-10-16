@@ -3,24 +3,30 @@ import { useNavigate } from '@tanstack/react-router'
 import {
   useCustomers,
   useInvoices,
+  useInvoicedRevenue,
   useSubscriptions,
   useUsageAnalytics,
   UsageWindowSize,
 } from '@fp/query'
-import type { UsageAnalytics } from '@fp/query'
+import type { InvoicedRevenue, UsageAnalytics } from '@fp/query'
 import {
   CustomerSortField,
   DEFAULT_INVOICE_QUERY,
   DEFAULT_SUBSCRIPTION_QUERY,
   InvoiceStatus,
+  isZeroMoney,
 } from '@fp/domain'
 import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
-import { DashboardHome } from '@fp/ui/pages'
+import { CUSTOM_RANGE_ID, DashboardHome } from '@fp/ui/pages'
+import { qualityOf, withoutData } from './queryView'
+import type { QueryView } from './queryView'
 import type {
   CustomersPanel,
+  DayRange,
   EventsPanel,
   FilterOption,
   InvoicesPanel,
+  RevenuePanel,
   SubscriptionsPanel,
 } from '@fp/ui/pages'
 
@@ -48,10 +54,6 @@ import type {
  *   - **Invoice payment status** from `useInvoices`, bucketed by the domain's
  *     own derived status.
  *
- * And the number that is simply not available anywhere — processing lag — is
- * rendered as absent by the surface itself, with the reason. See
- * `DashboardHome`.
- *
  * Usage by feature and API key health are parked until quota-based metrics
  * land: the surface no longer renders them, so their queries and shaping are
  * commented out below rather than fetched for nothing.
@@ -65,9 +67,21 @@ interface RangeSpec extends FilterOption {
 
 const RANGES: RangeSpec[] = [
   { id: '7d', label: 'Last 7 days', days: 7 },
+  { id: '14d', label: 'Last 14 days', days: 14 },
   { id: '30d', label: 'Last 30 days', days: 30 },
   { id: '90d', label: 'Last 90 days', days: 90 },
+  { id: '180d', label: 'Last 6 months', days: 180 },
+  { id: '365d', label: 'Last 12 months', days: 365 },
 ]
+
+/** The presets plus "Custom range", which opens the date picker. */
+const RANGE_OPTIONS: FilterOption[] = [
+  ...RANGES.map(({ id, label }) => ({ id, label })),
+  { id: CUSTOM_RANGE_ID, label: 'Custom range' },
+]
+
+/** Hourly buckets stop being readable (and cheap) past a month. */
+const MAX_HOURLY_DAYS = 31
 
 const GRANULARITIES: (FilterOption & { windowSize: UsageWindowSize })[] = [
   { id: 'hourly', label: 'Hourly', windowSize: UsageWindowSize.Hour },
@@ -75,7 +89,16 @@ const GRANULARITIES: (FilterOption & { windowSize: UsageWindowSize })[] = [
   { id: 'weekly', label: 'Weekly', windowSize: UsageWindowSize.Week },
 ]
 
-const ALL_CUSTOMERS = 'all'
+/** A picked calendar day as midnight UTC, so a custom window is cut like a preset one. */
+function utcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+}
+
+const pickedDay = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
 
 /** Midnight UTC `daysAgo` days back — the boundary every window is cut on. */
 function dayStart(daysAgo: number): Date {
@@ -84,7 +107,16 @@ function dayStart(daysAgo: number): Date {
   return date
 }
 
-const dayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
+/*
+ * Every label is cut in UTC, because every window is: `dayStart` buckets on
+ * midnight UTC, so a label in the browser's zone would put a bucket's events
+ * under the wrong date.
+ */
+const dayLabel = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+})
 /*
  * The subscription matrix's axis, which carries the day alone.
  *
@@ -94,8 +126,8 @@ const dayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'sh
  * seven times spends the only horizontal room the axis has on the one part
  * that does not change.
  */
-const columnDayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric' })
-const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric' })
+const columnDayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', timeZone: 'UTC' })
+const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric', timeZone: 'UTC' })
 // Parked with `toUsagePanel` until quota-based metrics land.
 // const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
@@ -137,59 +169,58 @@ export function HomePage() {
   const navigate = useNavigate()
   const [rangeId, setRangeId] = useState('7d')
   const [granularityId, setGranularityId] = useState('daily')
-  const [customerId, setCustomerId] = useState(ALL_CUSTOMERS)
-
-  const range = RANGES.find((entry) => entry.id === rangeId) ?? RANGES[0]!
-  const granularity = GRANULARITIES.find((entry) => entry.id === granularityId) ?? GRANULARITIES[1]!
+  // Seeded with the last 30 days, so choosing "Custom range" shows data at once.
+  const [custom, setCustom] = useState<DayRange>(() => ({
+    from: new Date(Date.now() - 29 * DAY_MS),
+    to: new Date(),
+  }))
+  const isCustom = rangeId === CUSTOM_RANGE_ID
 
   /*
    * Both windows are derived from one `now` per render pass, so the current and
    * prior windows are exactly adjacent and the same width. Two independent
    * `Date.now()` calls would leave a sliver of time in neither.
    */
-  const windows = useMemo(() => {
+  const windows = useMemo<Windows>(() => {
+    if (isCustom) {
+      // Both picked days are inclusive: the window runs to the end of the last one,
+      // or to now when that is today.
+      const start = utcDay(custom.from)
+      const end = new Date(Math.min(utcDay(custom.to).getTime() + DAY_MS, Date.now()))
+      const days = Math.max(
+        1,
+        Math.round((utcDay(custom.to).getTime() - start.getTime()) / DAY_MS) + 1,
+      )
+      const priorStart = new Date(start.getTime() - days * DAY_MS)
+      return { current: { start, end }, prior: { start: priorStart, end: start }, days }
+    }
+    const preset = RANGES.find((entry) => entry.id === rangeId) ?? RANGES[0]!
     const end = new Date()
-    const start = dayStart(range.days)
-    const priorEnd = start
-    const priorStart = new Date(start.getTime() - range.days * DAY_MS)
-    return { current: { start, end }, prior: { start: priorStart, end: priorEnd } }
-  }, [range.days])
+    const start = dayStart(preset.days)
+    const priorStart = new Date(start.getTime() - preset.days * DAY_MS)
+    return {
+      current: { start, end },
+      prior: { start: priorStart, end: start },
+      days: preset.days,
+    }
+  }, [isCustom, custom, rangeId])
+  const days = windows.days
+  const rangeLabel = isCustom
+    ? `${pickedDay.formatRange(custom.from, custom.to)}`
+    : (RANGES.find((entry) => entry.id === rangeId) ?? RANGES[0]!).label.toLowerCase()
 
-  // Customers for the filter. One page is plenty for a picker.
-  const customers = useCustomers({
-    page: 1,
-    pageSize: 50,
-    search: '',
-    statuses: [],
-    sortBy: 'name',
-    sortDirection: 'asc',
-  })
-
-  const externalCustomerId =
-    customerId === ALL_CUSTOMERS
-      ? undefined
-      : (customers.data?.customers.find((entry) => entry.id === customerId)?.externalId ??
-        undefined)
-
-  const analytics = useUsageAnalytics({
-    window: windows.current,
-    windowSize: granularity.windowSize,
-    ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
-  })
-  // The window before this one, so the tab strip's changes are two real
-  // measurements compared. The granularity is irrelevant to the totals it feeds.
-  const priorAnalytics = useUsageAnalytics({
-    window: windows.prior,
-    windowSize: UsageWindowSize.Day,
-    ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
-  })
+  const granularityOptions = GRANULARITIES.filter(
+    (entry) => entry.id !== 'hourly' || days <= MAX_HOURLY_DAYS,
+  )
+  const granularity =
+    granularityOptions.find((entry) => entry.id === granularityId) ?? GRANULARITIES[1]!
 
   /*
    * Newest first, so once a row falls before the window every row after it is
-   * older still — which makes the count exact, unless the whole page is inside
-   * the window, in which case the panel says the figure is a floor.
+   * older still — which makes the new-customer count exact, unless the whole
+   * page is inside the window, in which case the panel says the figure is a floor.
    */
-  const recentCustomers = useCustomers({
+  const customers = useCustomers({
     page: 1,
     pageSize: 100,
     search: '',
@@ -198,11 +229,23 @@ export function HomePage() {
     sortDirection: 'desc',
   })
 
+  const analytics = useUsageAnalytics({
+    window: windows.current,
+    windowSize: granularity.windowSize,
+  })
+  // The window before this one, so the tab strip's changes are two real
+  // measurements compared. The granularity is irrelevant to the totals it feeds.
+  const priorAnalytics = useUsageAnalytics({
+    window: windows.prior,
+    windowSize: UsageWindowSize.Day,
+  })
+
   /*
    * A page large enough that every row inside the window is on it. Sorted
    * newest-first by the server, so once the rows fall out of the window the
    * rest are older still — which is what makes counting them here exact rather
-   * than a sample.
+   * than a sample. When the page is full and still inside the window, the
+   * panel says so (`basedOn`) instead of presenting a floor as a total.
    */
   const subscriptions = useSubscriptions({
     ...DEFAULT_SUBSCRIPTION_QUERY,
@@ -219,90 +262,39 @@ export function HomePage() {
   // Parked with the API panel until quota-based metrics land.
   // const apiKeys = useApiKeys()
 
-  const eventsPanel = useMemo<EventsPanel>(
-    () =>
-      toEventsPanel(
-        analytics.data,
-        priorAnalytics.data,
-        analytics.isPending,
-        analytics.isError,
-        granularityId,
-      ),
-    [analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError, granularityId],
-  )
+  /*
+   * Invoiced revenue: every finalized invoice created in this window and the
+   * one before it. The headline, the points and the top customers all read the
+   * same invoices, so the headline is exactly the sum of what is plotted.
+   */
+  const revenue = useInvoicedRevenue(windows.current)
+  const priorRevenue = useInvoicedRevenue(windows.prior)
 
-  const customersPanel = useMemo<CustomersPanel>(
-    () =>
-      toCustomersPanel(
-        recentCustomers.data?.customers ?? [],
-        recentCustomers.data?.total ?? null,
-        windows,
-        range.days,
-        recentCustomers.isPending,
-        recentCustomers.isError,
-      ),
-    [recentCustomers.data, recentCustomers.isPending, recentCustomers.isError, windows, range.days],
-  )
+  const eventsPanel = toEventsPanel(analytics, priorAnalytics, granularity.id)
+  const revenuePanel = toRevenuePanel(revenue, priorRevenue, windows, granularity.id)
+  const customersPanel = toCustomersPanel(customers, windows)
 
   /*
    * Parked until quota-based metrics land.
    *
-   * const usagePanel = useMemo<UsagePanel>(
-   *   () => toUsagePanel(analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError),
-   *   [analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError],
-   * )
+   * const usagePanel = toUsagePanel(analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError)
    */
 
-  const subscriptionsPanel = useMemo<SubscriptionsPanel>(
-    () =>
-      toSubscriptionsPanel(
-        subscriptions.data?.subscriptions ?? [],
-        windows,
-        range.days,
-        subscriptions.isPending,
-        subscriptions.isError,
-      ),
-    [subscriptions.data, subscriptions.isPending, subscriptions.isError, windows, range.days],
-  )
-
-  const invoicesPanel = useMemo<InvoicesPanel>(
-    () =>
-      toInvoicesPanel(
-        invoices.data?.invoices ?? [],
-        windows.current,
-        invoices.isPending,
-        invoices.isError,
-      ),
-    [invoices.data, invoices.isPending, invoices.isError, windows],
-  )
-
-  /*
-   * Parked until quota-based metrics land.
-   *
-   * const apiPanel = useMemo<ApiPanel>(
-   *   () => toApiPanel(apiKeys.data?.keys ?? [], apiKeys.isPending, apiKeys.isError),
-   *   [apiKeys.data, apiKeys.isPending, apiKeys.isError],
-   * )
-   */
-
-  const customerOptions: FilterOption[] = [
-    { id: ALL_CUSTOMERS, label: 'All customers' },
-    ...(customers.data?.customers ?? []).map((entry) => ({ id: entry.id, label: entry.name })),
-  ]
+  const subscriptionsPanel = toSubscriptionsPanel(subscriptions, windows)
+  const invoicesPanel = toInvoicesPanel(invoices, windows)
 
   return (
     <DashboardHome
-      rangeOptions={RANGES.map(({ id, label }) => ({ id, label }))}
+      rangeOptions={RANGE_OPTIONS}
       range={rangeId}
       onRangeChange={setRangeId}
-      granularityOptions={GRANULARITIES.map(({ id, label }) => ({ id, label }))}
-      granularity={granularityId}
+      customRange={{ value: custom, onChange: setCustom }}
+      granularityOptions={granularityOptions.map(({ id, label }) => ({ id, label }))}
+      granularity={granularity.id}
       onGranularityChange={setGranularityId}
-      customerOptions={customerOptions}
-      customer={customerId}
-      onCustomerChange={setCustomerId}
-      rangeLabel={range.label.toLowerCase()}
+      rangeLabel={rangeLabel}
       events={eventsPanel}
+      revenue={revenuePanel}
       customers={customersPanel}
       subscriptions={subscriptionsPanel}
       invoices={invoicesPanel}
@@ -314,23 +306,26 @@ export function HomePage() {
 /* ---- Shaping the panels -------------------------------------------------- */
 
 function toEventsPanel(
-  data: UsageAnalytics | undefined,
-  prior: UsageAnalytics | undefined,
-  isPending: boolean,
-  isError: boolean,
+  view: QueryView<UsageAnalytics>,
+  prior: QueryView<UsageAnalytics>,
   granularityId: string,
 ): EventsPanel {
-  if (isError) return { status: 'unavailable', points: [], total: null, revenue: null }
-  if (isPending || data === undefined) {
-    return { status: 'loading', points: [], total: null, revenue: null }
+  const meta = qualityOf(view)
+  const data = view.data
+  if (data === undefined) {
+    return { ...meta, status: withoutData(view), points: [], total: null, revenue: null }
   }
   if (data.points.length === 0) {
-    return { status: 'empty', points: [], total: null, revenue: null }
+    return { ...meta, status: 'empty', points: [], total: null, revenue: null }
   }
 
   const format = granularityId === 'hourly' ? hourLabel : dayLabel
+  // A change is two real measurements compared. A prior window that is itself
+  // a held-over copy of another window is not one.
+  const priorData = prior.data !== undefined && !prior.isPlaceholderData ? prior.data : undefined
 
   return {
+    ...meta,
     status: 'ready',
     points: data.points.map((point) => ({
       label: format.format(point.timestamp),
@@ -338,8 +333,14 @@ function toEventsPanel(
     })),
     total: data.eventCount,
     revenue: data.revenue,
-    totalChangePercent: prior === undefined ? null : change(data.eventCount, prior.eventCount),
-    revenueChangePercent: revenueChange(data.revenue, prior?.revenue ?? null),
+    totalChangePercent:
+      priorData === undefined || view.isPlaceholderData
+        ? null
+        : change(data.eventCount, priorData.eventCount),
+    revenueChangePercent:
+      priorData === undefined || view.isPlaceholderData
+        ? null
+        : revenueChange(data.revenue, priorData.revenue),
   }
 }
 
@@ -377,6 +378,85 @@ function toEventsPanel(
  * }
  */
 
+/** Customers listed under "Top customers by revenue". */
+const TOP_CUSTOMERS = 5
+
+/**
+ * The invoiced-revenue panel. The headline currency is the one invoiced to the
+ * most customers; any others are named, never added in.
+ */
+function toRevenuePanel(
+  view: QueryView<InvoicedRevenue>,
+  prior: QueryView<InvoicedRevenue>,
+  windows: Windows,
+  granularityId: string,
+): RevenuePanel {
+  const meta = qualityOf(view)
+  const blank = {
+    total: null,
+    fixed: null,
+    usage: null,
+    points: [],
+    topCustomers: [],
+    otherCurrencies: [],
+  }
+  const data = view.data
+  if (data === undefined) return { ...meta, ...blank, status: withoutData(view) }
+  const [main, ...others] = data.currencies
+  if (!main || isZeroMoney(main.total)) return { ...meta, ...blank, status: 'empty' }
+
+  const priorMain =
+    prior.data !== undefined && !prior.isPlaceholderData && !view.isPlaceholderData
+      ? prior.data.currencies.find((entry) => entry.currency === main.currency)
+      : undefined
+
+  return {
+    ...meta,
+    status: 'ready',
+    total: main.total,
+    fixed: null,
+    usage: null,
+    changePercent: priorMain ? revenueChange(main.total, priorMain.total) : null,
+    points: revenuePoints(main.rows, windows, granularityId),
+    topCustomers: main.customers
+      .filter((row) => !isZeroMoney(row.total))
+      .slice(0, TOP_CUSTOMERS)
+      .map((row) => ({ id: row.customerId, name: row.name, total: row.total })),
+    otherCurrencies: others
+      .filter((other) => !isZeroMoney(other.total))
+      .map((other) => other.currency),
+  }
+}
+
+/**
+ * Invoices as chart points: one per UTC day of the window (a quiet day is a
+ * zero, not a gap), or one per week under the weekly granularity. Hourly reads
+ * as daily — an invoice total has no meaningful hour.
+ */
+function revenuePoints(
+  rows: InvoicedRevenue['currencies'][number]['rows'],
+  windows: Windows,
+  granularityId: string,
+): { label: string; value: number }[] {
+  const byDay = new Map<string, number>()
+  for (const row of rows) {
+    const day = row.createdAt.toISOString().slice(0, 10)
+    // A chart value only; the headline is the exact sum, not this.
+    byDay.set(day, (byDay.get(day) ?? 0) + Number(row.amount))
+  }
+  const step = granularityId === 'weekly' ? 7 : 1
+  const span = spanDays(windows)
+  const points: { label: string; value: number }[] = []
+  for (let index = 0; index < span; index += step) {
+    let value = 0
+    for (let offset = index; offset < Math.min(index + step, span); offset += 1) {
+      value += byDay.get(windowDay(windows, offset).toISOString().slice(0, 10)) ?? 0
+    }
+    points.push({ label: dayLabel.format(windowDay(windows, index)), value })
+  }
+  return points
+}
+
 /**
  * Change between two priced subtotals. Only comparable in one currency, and
  * the server's two decimal strings are compared as a ratio — never summed or
@@ -387,29 +467,57 @@ function revenueChange(current: Money | null, prior: Money | null): number | nul
   return change(Number(current.amount), Number(prior.amount))
 }
 
-function toCustomersPanel(
-  rows: Customer[],
-  total: number | null,
-  windows: { current: { start: Date; end: Date }; prior: { start: Date; end: Date } },
-  days: number,
-  isPending: boolean,
-  isError: boolean,
-): CustomersPanel {
-  const window = windows.current
-  const blank: CustomersPanel = { status: 'loading', newCount: null, partial: false, points: [] }
-  if (isError) return { ...blank, status: 'unavailable' }
-  if (isPending) return blank
+interface Windows {
+  current: { start: Date; end: Date }
+  prior: { start: Date; end: Date }
+  /** Whole days in the current window. */
+  days: number
+}
 
+/** Calendar days the current window touches: a preset's runs to now, so it includes today. */
+function spanDays(windows: Windows): number {
+  return Math.max(
+    1,
+    Math.ceil((windows.current.end.getTime() - windows.current.start.getTime()) / DAY_MS),
+  )
+}
+
+/** The UTC day `index` days after the window's first one. */
+function windowDay(windows: Windows, index: number): Date {
+  return new Date(windows.current.start.getTime() + index * DAY_MS)
+}
+
+/** The earliest of a set of dates, or `null` when there are none. */
+function earliest(dates: (Date | null)[]): Date | null {
+  let min: Date | null = null
+  for (const at of dates) {
+    if (at !== null && (min === null || at < min)) min = at
+  }
+  return min
+}
+
+function toCustomersPanel(
+  view: QueryView<{ customers: Customer[]; total: number }>,
+  windows: Windows,
+): CustomersPanel {
+  const meta = qualityOf(view)
+  const blank = { newCount: null, partial: false, points: [] }
+  const page = view.data
+  if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
+
+  const rows = page.customers
+  const total = page.total
+  const window = windows.current
   const dates = rows.map((row) => row.createdAt).filter((at): at is Date => at !== null)
   const created = dates.filter((at) => at >= window.start && at < window.end)
-  if (created.length === 0) return { ...blank, status: 'empty', newCount: 0 }
+  if (created.length === 0) return { ...meta, ...blank, status: 'empty', newCount: 0 }
 
   // Every row on the page is new and the server holds more: the count is a floor.
-  const partial = created.length === rows.length && total !== null && total > rows.length
+  const partial = created.length === rows.length && total > rows.length
 
   // A point per day, oldest first, so a quiet day is a zero rather than a gap.
-  const points = Array.from({ length: days + 1 }, (_, index) => {
-    const start = dayStart(days - index)
+  const points = Array.from({ length: spanDays(windows) }, (_, index) => {
+    const start = windowDay(windows, index)
     const end = new Date(start.getTime() + DAY_MS)
     return {
       label: dayLabel.format(start),
@@ -423,42 +531,57 @@ function toCustomersPanel(
    * customer. Otherwise the earlier count would be a floor posing as a total,
    * and no change is shown.
    */
-  const priorComplete =
-    (total !== null && total <= rows.length) || dates.some((at) => at < windows.prior.start)
+  const priorComplete = total <= rows.length || dates.some((at) => at < windows.prior.start)
   const priorCount = dates.filter(
     (at) => at >= windows.prior.start && at < windows.prior.end,
   ).length
   const changePercent = partial || !priorComplete ? null : change(created.length, priorCount)
 
-  return { status: 'ready', newCount: created.length, partial, points, changePercent }
+  return {
+    ...meta,
+    status: 'ready',
+    newCount: created.length,
+    partial,
+    points,
+    changePercent,
+    basedOn: partial
+      ? `Counted from the newest ${rows.length.toLocaleString()} customers.`
+      : undefined,
+  }
 }
 
 function toSubscriptionsPanel(
-  rows: Subscription[],
-  windows: { current: { start: Date; end: Date }; prior: { start: Date; end: Date } },
-  days: number,
-  isPending: boolean,
-  isError: boolean,
+  view: QueryView<{ subscriptions: Subscription[]; total: number }>,
+  windows: Windows,
 ): SubscriptionsPanel {
-  const blank: SubscriptionsPanel = {
-    status: 'loading',
-    total: 0,
-    changePercent: null,
-    days: [],
-    plans: [],
-  }
-  if (isError) return { ...blank, status: 'unavailable' }
-  if (isPending) return blank
+  const meta = qualityOf(view)
+  const blank = { total: 0, changePercent: null, days: [], plans: [] }
+  const page = view.data
+  if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
+
+  const rows = page.subscriptions
 
   /** A subscription's own start date is what "new in this period" means. */
+  const startedAt = (row: Subscription) => row.startDate ?? row.createdAt
   const startedIn = (window: { start: Date; end: Date }) =>
     rows.filter((row) => {
-      const at = row.startDate ?? row.createdAt
+      const at = startedAt(row)
       return at !== null && at >= window.start && at < window.end
     })
 
   const current = startedIn(windows.current)
-  if (current.length === 0) return { ...blank, status: 'empty' }
+  if (current.length === 0) return { ...meta, ...blank, status: 'empty' }
+
+  /*
+   * The page is newest first and the server holds more than it returned: a
+   * window the oldest loaded row is still inside may have older members that
+   * were never fetched. Then the figure is a floor and its change against the
+   * prior window is not computable.
+   */
+  const truncated = page.total > rows.length
+  const oldest = earliest(rows.map(startedAt))
+  const currentComplete = !truncated || (oldest !== null && oldest < windows.current.start)
+  const priorComplete = !truncated || (oldest !== null && oldest < windows.prior.start)
 
   const byPlanTotal = new Map<string, number>()
   for (const row of current) {
@@ -481,15 +604,16 @@ function toSubscriptionsPanel(
    * truncated: every subscription inside it is still counted, in a column that
    * spans several days and says so on the axis.
    */
-  const bucketDays = Math.max(1, Math.ceil(days / MAX_COLUMNS))
+  const bucketDays = Math.max(1, Math.ceil(spanDays(windows) / MAX_COLUMNS))
   const buckets: { label: string; byPlan: Record<string, number> }[] = []
-  for (let offset = days - 1; offset >= 0; offset -= bucketDays) {
-    const start = dayStart(offset)
-    const last = dayStart(Math.max(offset - bucketDays + 1, 0))
+  const span = spanDays(windows)
+  for (let index = 0; index < span; index += bucketDays) {
+    const start = windowDay(windows, index)
+    const last = windowDay(windows, Math.min(index + bucketDays, span) - 1)
     const end = new Date(last.getTime() + DAY_MS)
     const byPlan: Record<string, number> = {}
     for (const row of current) {
-      const at = row.startDate ?? row.createdAt
+      const at = startedAt(row)
       if (at === null || at < start || at >= end) continue
       if (!drawn.has(row.planName)) continue
       byPlan[row.planName] = (byPlan[row.planName] ?? 0) + 1
@@ -498,39 +622,55 @@ function toSubscriptionsPanel(
   }
 
   return {
+    ...meta,
     status: 'ready',
     total: current.length,
-    changePercent: change(current.length, startedIn(windows.prior).length),
+    changePercent:
+      currentComplete && priorComplete
+        ? change(current.length, startedIn(windows.prior).length)
+        : null,
     days: buckets,
     plans,
+    basedOn: currentComplete
+      ? undefined
+      : `Based on the latest ${rows.length.toLocaleString()} subscriptions; older ones may also fall in this period.`,
   }
 }
 
 function toInvoicesPanel(
-  rows: Invoice[],
-  window: { start: Date; end: Date },
-  isPending: boolean,
-  isError: boolean,
+  view: QueryView<{ invoices: Invoice[]; total: number }>,
+  windows: Windows,
 ): InvoicesPanel {
-  const blank: InvoicesPanel = { status: 'loading', total: 0, paid: 0, open: 0, overdue: 0 }
-  if (isError) return { ...blank, status: 'unavailable' }
-  if (isPending) return blank
+  const meta = qualityOf(view)
+  const blank = { total: 0, paid: 0, open: 0, overdue: 0 }
+  const page = view.data
+  if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
 
+  const window = windows.current
   // Issued inside the window — "finalized in the last 7 days", in the domain's
   // vocabulary. A draft has no issue date and is not finalized, so it is out.
-  const issued = rows.filter(
+  const issued = page.invoices.filter(
     (row) => row.issuedAt !== null && row.issuedAt >= window.start && row.issuedAt < window.end,
   )
-  if (issued.length === 0) return { ...blank, status: 'empty' }
+  if (issued.length === 0) return { ...meta, ...blank, status: 'empty' }
 
   const count = (status: string) => issued.filter((row) => row.status === status).length
 
+  // Newest first by issue date: a window the oldest loaded row is still inside
+  // may continue past the page, so the split is of "the latest N" and says so.
+  const oldest = earliest(page.invoices.map((row) => row.issuedAt))
+  const complete = page.total <= page.invoices.length || (oldest !== null && oldest < window.start)
+
   return {
+    ...meta,
     status: 'ready',
     total: issued.length,
     paid: count(InvoiceStatus.Paid),
     open: count(InvoiceStatus.Open),
     overdue: count(InvoiceStatus.Overdue),
+    basedOn: complete
+      ? undefined
+      : `Based on the latest ${page.invoices.length.toLocaleString()} invoices.`,
   }
 }
 

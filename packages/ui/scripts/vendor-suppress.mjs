@@ -31,6 +31,8 @@ const VENDORED = [
   // fixture data. They are a starting point to adapt, not code we maintain —
   // same rule, same treatment.
   'src/components/blocks/**/*.{ts,tsx}',
+  // Motion Icons installed by scripts/icons-sync.mjs, which writes its own header.
+  'src/reui/**/*.{ts,tsx}',
   /*
    * Registry hooks land here, and every file in `hooks/` comes from the
    * registry — `use-mobile` and `use-file-upload` are both declared

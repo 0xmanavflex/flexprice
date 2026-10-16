@@ -23,10 +23,22 @@ test.beforeEach(async ({ context }) => {
  */
 test.describe('the features list', () => {
   const list = (page: Page) =>
-    new CatalogListPage(page, { heading: 'Products', searchLabel: 'Search products' })
+    new CatalogListPage(page, { heading: 'Features', searchLabel: 'Search features' })
 
   const openRowMenu = async (page: Page, item: string) => {
+    /*
+     * Wait for the linkage columns before opening a menu.
+     *
+     * The list renders its rows, then fills the plan and entitlement counts
+     * from a second fan-out of requests. That arrival re-renders every row,
+     * including the trigger of an open dropdown, and the menu goes with it —
+     * so a click placed in the gap finds nothing and spends the whole timeout
+     * looking. It cost two CI runs, a different features journey each time,
+     * which is what a race looks like from the outside.
+     */
+    await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0)
     await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
+    await expect(page.getByRole('menu')).toBeVisible()
     await page.getByRole('menuitem', { name: item }).click()
   }
 
@@ -34,7 +46,7 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
-    await page.getByRole('button', { name: 'New product' }).first().click()
+    await page.getByRole('button', { name: 'New feature' }).first().click()
     await expect(page).toHaveURL(/\/features\/new/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
@@ -42,7 +54,7 @@ test.describe('the features list', () => {
     await expect(page.getByRole('radio', { name: /Metered/ })).toBeChecked()
     await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0)
 
-    const create = page.getByRole('button', { name: 'Create product' })
+    const create = page.getByRole('button', { name: 'Create feature' })
     await create.click()
     await expect(page.getByText('Enter a name')).toBeVisible()
 
@@ -62,7 +74,7 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
-    await openRowMenu(page, 'Edit product')
+    await openRowMenu(page, 'Edit feature')
     await expect(page).toHaveURL(/\/features\/[^/]+\/edit/)
     await expect(page.getByLabel('Lookup key')).toHaveAttribute('readonly', '')
 
@@ -79,8 +91,8 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
-    await openRowMenu(page, 'Clone product')
-    const dialog = page.getByRole('dialog', { name: 'Clone product' })
+    await openRowMenu(page, 'Clone feature')
+    const dialog = page.getByRole('dialog', { name: 'Clone feature' })
     await dialog.getByLabel('Lookup key').fill('cloned_key')
 
     const request = page.waitForRequest(
@@ -96,38 +108,40 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
-    await openRowMenu(page, 'Delete product')
-    const dialog = page.getByRole('dialog', { name: 'Delete product' })
+    await openRowMenu(page, 'Delete feature')
+    const dialog = page.getByRole('dialog', { name: 'Delete feature' })
 
     const request = page.waitForRequest(
       (r) => r.method() === 'DELETE' && /\/v1\/features\/[^/]+$/.test(new URL(r.url()).pathname),
     )
-    await dialog.getByRole('button', { name: 'Delete product' }).click()
+    await dialog.getByRole('button', { name: 'Delete feature' }).click()
     await request
     await expect(dialog).toBeHidden()
   })
 
-  test('opens the create page from /features/new and edits from the detail page', async ({
-    page,
-  }) => {
+  test('opens the create page at /features/new', async ({ page }) => {
     await page.goto('/features/new')
-    await expect(page.getByRole('heading', { name: 'Create product' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Details' })).toBeVisible()
+  })
 
+  test('edits from the detail page', async ({ page }) => {
     await page.goto('/features')
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
     await list(page).rows().first().getByRole('cell').nth(2).click()
     await expect(page).toHaveURL(/\/features\/[^/?#]+$/)
 
-    // The General card's pencil edits in place: fields become inputs, the URL does not change.
+    // Information is the create form's own shape, locked: the same cards, the
+    // same labels, the same order — and no second, smaller editor beside the
+    // real one. So the tab reads, and nothing on it offers to edit.
     const url = page.url()
     await page.getByRole('tab', { name: 'Information' }).click()
-    await page.getByRole('button', { name: 'Edit general' }).click()
-    await expect(page.getByLabel('Name')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Details' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Edit/ })).toHaveCount(0)
     await expect(page).toHaveURL(url)
-    await page.getByRole('button', { name: 'Cancel' }).click()
 
-    // The header menu's Edit item opens the dedicated edit page.
+    // Editing is the one place it was always meant to be.
     await page.getByRole('button', { name: 'More actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Edit details' }).click()
     await expect(page).toHaveURL(/\/edit$/)
   })
 })

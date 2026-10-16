@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * A plan, as the list and detail pages read it. Narrow and total.
  *
@@ -43,10 +44,60 @@ export interface Plan {
   status: PlanStatus
   /** How many charges (prices) the plan carries. 0 means it bills nothing yet. */
   chargeCount: number
+  /** Of those charges, how many are a fixed fee. */
+  fixedChargeCount: number
+  /** Of those charges, how many are metered usage. */
+  usageChargeCount: number
   /** The pricing-card headline, or null when the plan prices nothing yet. */
   headline: PlanHeadline | null
+  /** Free-form key/value fields, empty when none. */
+  metadata: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
+}
+
+/**
+ * What kind of plan this is, read off its charges rather than stored.
+ *
+ * Nothing on the plan says "hybrid": the shape is the mix of fixed fees and
+ * metered usage underneath it, which is exactly what someone scanning the list
+ * wants to know before opening anything. A plan with no charges is called that
+ * rather than being lumped in with flat-rate — it bills nothing at all.
+ */
+export const PlanKind = {
+  Empty: 'empty',
+  Flat: 'flat',
+  Usage: 'usage',
+  Hybrid: 'hybrid',
+} as const
+export type PlanKind = (typeof PlanKind)[keyof typeof PlanKind]
+
+export const PLAN_KIND_LABEL: Record<PlanKind, string> = {
+  [PlanKind.Empty]: 'No charges yet',
+  [PlanKind.Flat]: 'Flat-rate plan',
+  [PlanKind.Usage]: 'Usage-based plan',
+  [PlanKind.Hybrid]: 'Hybrid plan',
+}
+
+/**
+ * The same label for something that is not a plan.
+ *
+ * Add-ons carry the same pill — the mix of fixed and usage charges is the
+ * same question — but "Hybrid plan" on an add-on row is simply wrong. The
+ * noun is a parameter, as it is in the prototype.
+ */
+export function planKindLabel(kind: PlanKind, noun = 'plan'): string {
+  if (kind === PlanKind.Empty) return 'No charges yet'
+  const shape =
+    kind === PlanKind.Hybrid ? 'Hybrid' : kind === PlanKind.Usage ? 'Usage-based' : 'Flat-rate'
+  return noun ? `${shape} ${noun}` : shape
+}
+
+export function planKind(plan: Pick<Plan, 'fixedChargeCount' | 'usageChargeCount'>): PlanKind {
+  const { fixedChargeCount: fixed, usageChargeCount: usage } = plan
+  if (fixed === 0 && usage === 0) return PlanKind.Empty
+  if (fixed > 0 && usage > 0) return PlanKind.Hybrid
+  return usage > 0 ? PlanKind.Usage : PlanKind.Flat
 }
 
 /**
@@ -83,6 +134,8 @@ export interface PlanQuery {
   sortBy: PlanSortField
   sortDirection: 'asc' | 'desc'
   view: PlanView
+  /** Granular field filters, applied by the search endpoint. See `PLAN_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_PLAN_QUERY: PlanQuery = {
@@ -91,10 +144,26 @@ export const DEFAULT_PLAN_QUERY: PlanQuery = {
   search: '',
   statuses: [],
   // Alphabetical: a catalogue is looked *up* more often than scanned for change.
-  sortBy: PlanSortField.Name,
-  sortDirection: 'asc',
+  sortBy: PlanSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: PlanView.Table,
+  filters: [],
 }
+/** What the plan list can filter on — V1's fields, by their wire names. */
+export const PLAN_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * The rules for creating or editing a plan's details.
@@ -112,9 +181,10 @@ export const createPlanSchema = z.object({
   lookupKey: z
     .string()
     .trim()
-    .regex(/^[a-z0-9_]*$/, 'Use lowercase letters, numbers and underscores')
+    .regex(/^[a-z0-9_-]*$/, 'Use lowercase letters, numbers, hyphens and underscores')
     .optional(),
   description: z.string().trim().optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type CreatePlan = z.infer<typeof createPlanSchema>

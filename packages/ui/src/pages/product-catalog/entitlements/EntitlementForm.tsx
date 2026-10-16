@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState, type FormEvent } from 'react'
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   type CreateEntitlement,
@@ -83,21 +84,26 @@ interface SharedProps {
 export interface EntitlementCreateFormProps extends SharedProps {
   /** Features not already entitled — offered as the choice. */
   features: FeatureOption[]
+  /** Opens with this feature already chosen, e.g. from the product it was started on. */
+  defaultFeatureId?: string
   onSubmit: (entitlement: CreateEntitlement) => void
 }
 
 export function EntitlementCreateForm({
   features,
+  defaultFeatureId,
   onSubmit,
   isSubmitting = false,
   submitError = null,
   submitLabel,
   usagePrice,
 }: EntitlementCreateFormProps) {
-  const form = useForm<CreateEntitlement>({
+  const form = useCalmForm<CreateEntitlement>({
     resolver: standardSchemaResolver(createEntitlementSchema) as Resolver<CreateEntitlement>,
-    defaultValues: emptyEntitlement('', FeatureType.Metered),
-    mode: 'onTouched',
+    defaultValues: emptyEntitlement(
+      defaultFeatureId ?? '',
+      features.find((option) => option.id === defaultFeatureId)?.type ?? FeatureType.Metered,
+    ),
   })
   const [configText, setConfigText] = useState('{}')
   const [configError, setConfigError] = useState<string | null>(null)
@@ -147,7 +153,8 @@ export function EntitlementCreateForm({
               ...(option.unit ? { hint: option.unit } : {}),
               trailing: <FeatureTypeGlyph type={option.type} />,
             }))}
-            placeholder="Choose a feature"
+            searchable
+            placeholder="Search features…"
             emptyText="Every feature is already granted."
             disabled={isSubmitting}
             aria-describedby={describedBy}
@@ -261,10 +268,9 @@ export function EntitlementEditForm({
   submitError = null,
   usagePrice,
 }: EntitlementEditFormProps) {
-  const form = useForm<EditEntitlement>({
+  const form = useCalmForm<EditEntitlement>({
     resolver: standardSchemaResolver(editEntitlementSchema) as Resolver<EditEntitlement>,
     defaultValues: defaultValue,
-    mode: 'onTouched',
   })
   const [configText, setConfigText] = useState(
     JSON.stringify(defaultValue.configValue ?? {}, null, 2),

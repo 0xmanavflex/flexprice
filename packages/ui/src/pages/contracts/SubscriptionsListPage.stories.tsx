@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { RefreshCwIcon } from 'lucide-react'
 import {
   DEFAULT_SUBSCRIPTION_QUERY,
   SubscriptionStatus,
@@ -93,7 +92,6 @@ function SubscriptionsListBody({
         onRetry={fn()}
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New contract</Button>}
-        emptyIcon={<RefreshCwIcon aria-hidden />}
         emptyTitle="No contracts yet"
         emptyDescription="A contract puts a customer on a plan and starts their billing cycle."
       >

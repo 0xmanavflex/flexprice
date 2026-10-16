@@ -294,3 +294,11 @@ export const LongNameTruncates: Story = {
     action: { label: 'View usage', onClick: () => {} },
   },
 }
+
+/** An unparseable renewal date shows the dash, never "Invalid Date". */
+export const InvalidRenewalDate: Story = {
+  args: { resetsOn: new Date('not a date') },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByText(/Invalid Date/)).not.toBeInTheDocument()
+  },
+}

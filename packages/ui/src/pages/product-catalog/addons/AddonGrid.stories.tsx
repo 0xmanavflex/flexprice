@@ -96,13 +96,19 @@ export const OmitsUnsourcedColumns: Story = {
     const canvas = within(canvasElement)
     await canvas.findByRole('columnheader', { name: /add-on/i })
 
-    await expect(canvas.queryByRole('columnheader', { name: /^type$/i })).toBeNull()
+    /*
+     * Contracts is the one the redesign asks for and the API cannot answer:
+     * `POST /subscriptions/search` ignores both `addon_id` and `addon_ids`,
+     * so the figure would be the environment's whole subscription count on
+     * every row. A column of wrong numbers is worse than no column.
+     */
+    await expect(canvas.queryByRole('columnheader', { name: /contracts/i })).toBeNull()
     await expect(canvas.queryByRole('columnheader', { name: /^price$/i })).toBeNull()
     await expect(canvas.queryByRole('columnheader', { name: /subscribers/i })).toBeNull()
 
-    // What the read model does carry.
-    await expect(canvas.getByRole('columnheader', { name: /^key$/i })).toBeInTheDocument()
-    await expect(canvas.getByRole('columnheader', { name: /description/i })).toBeInTheDocument()
+    // Type is sourced now — it is read off the add-on's expanded prices.
+    await expect(canvas.getByRole('columnheader', { name: /^type$/i })).toBeInTheDocument()
+    await expect(canvas.getByRole('columnheader', { name: /lookup key/i })).toBeInTheDocument()
   },
 }
 
@@ -177,5 +183,42 @@ export const PaginationReportsDomainQuery: Story = {
     const reported = reportedPage() as Record<string, unknown>
     expect(reported).toMatchObject({ page: 2 })
     expect(Object.keys(reported).sort()).toEqual(Object.keys(fixtureAddonQuery).sort())
+  },
+}
+
+/**
+ * The add-on list carries the same Type pill and counts as Plans.
+ *
+ * §3 of the handoff: "Add-on, Type, Charges, Entitlements, Contracts,
+ * Status, Lookup key — same Type pill and counts as Plans". Contracts is
+ * absent and that is deliberate: `POST /subscriptions/search` accepts both
+ * `addon_id` and `addon_ids` and ignores both, so every add-on would show
+ * the environment's whole subscription count. Checked live.
+ */
+export const ColumnsMatchPlans: Story = {
+  args: {
+    linkage: new Map([
+      ['addon_01', { entitlements: 3 }],
+      ['addon_02', { entitlements: 0 }],
+    ]),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const headers = canvas
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent?.trim())
+      .filter((text): text is string => Boolean(text))
+    await expect(headers.slice(0, 6)).toEqual([
+      'Add-on',
+      'Type',
+      'Charges',
+      'Entitlements',
+      'Status',
+      'Lookup key',
+    ])
+    await expect(canvas.queryByRole('columnheader', { name: /contracts/i })).toBeNull()
+
+    // Both catalogs use the same concise Type labels.
+    await expect(canvas.getAllByText(/^(Flat-rate|Usage-based|Hybrid)$/).length).toBeGreaterThan(0)
   },
 }

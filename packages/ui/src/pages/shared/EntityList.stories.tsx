@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { BookOpenIcon, RocketIcon, WrenchIcon } from 'lucide-react'
+import { BookOpenIcon, RocketIcon, WrenchIcon } from '@ui/icons'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { money } from '@fp/domain'
 import { createFilterQuery } from '@ui/components/reui/filters/filters-query'
@@ -100,7 +100,6 @@ interface PlaygroundArgs {
   isLoading: boolean
   hasError: boolean
   showFirstRunEmpty: boolean
-  selectable: boolean
   showRowActions: boolean
   clickableRows: boolean
   showSort: boolean
@@ -120,7 +119,6 @@ function PlaygroundList({
   isLoading,
   hasError,
   showFirstRunEmpty,
-  selectable,
   showRowActions,
   clickableRows,
   showSort,
@@ -179,7 +177,6 @@ function PlaygroundList({
       onRetry={onRetry}
       isFiltered={search.trim().length > 0}
       onClearFilters={() => setSearch('')}
-      selectable={selectable}
       compact={compact}
       hideToolbar={hideToolbar}
       {...(showFirstRunEmpty
@@ -223,7 +220,6 @@ export const Playground = {
     isLoading: false,
     hasError: false,
     showFirstRunEmpty: true,
-    selectable: false,
     showRowActions: true,
     clickableRows: false,
     showSort: true,
@@ -241,7 +237,6 @@ export const Playground = {
     isLoading: { control: 'boolean' },
     hasError: { control: 'boolean' },
     showFirstRunEmpty: { control: 'boolean', description: 'Custom empty copy when rowCount is 0.' },
-    selectable: { control: 'boolean' },
     showRowActions: { control: 'boolean' },
     clickableRows: { control: 'boolean' },
     showSort: { control: 'boolean' },
@@ -261,7 +256,6 @@ export const Playground = {
         'isLoading',
         'hasError',
         'showFirstRunEmpty',
-        'selectable',
         'showRowActions',
         'clickableRows',
         'showSort',
@@ -341,7 +335,7 @@ export const Layout: Story = {
  * overflow rather than configured.
  */
 export const ColumnsFillTheWidth: Story = {
-  args: { selectable: true, rowActions: () => [{ label: 'Open', onSelect: fn() }] },
+  args: { rowActions: () => [{ label: 'Open', onSelect: fn() }] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('API calls 1')
@@ -367,12 +361,11 @@ export const ColumnsFillTheWidth: Story = {
 }
 
 /**
- * Too many columns for the width: the table scrolls, and *then* the checkbox
- * and `⋯` columns pin with their dividers.
+ * Too many columns for the width: the table scrolls, and *then* the `⋯`
+ * column pins with its divider.
  */
 export const PinsOnlyWhenScrolling: Story = {
   args: {
-    selectable: true,
     rowActions: () => [{ label: 'Open', onSelect: fn() }],
     columns: [...COLUMNS, ...COLUMNS.map((c) => ({ ...c, id: `${c.id}2` }))],
   },
@@ -559,6 +552,28 @@ export const Failed: Story = {
   },
 }
 
+/**
+ * Zero rows on page 3 of a list that has records is "this page is past the end",
+ * not "create your first record". The way back is one button.
+ */
+export const OutOfRange: Story = {
+  args: { rows: [], total: 60, page: 3, pageSize: 25, onPaginationChange: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('This page is out of range')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Go to first page' }))
+    await expect(args.onPaginationChange).toHaveBeenCalledWith(1, 25)
+  },
+}
+
+/** A background refetch: the rows stay on screen and are never swapped for a spinner. */
+export const Refreshing: Story = {
+  args: { isRefreshing: true },
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText('API calls 1')).toBeInTheDocument()
+  },
+}
+
 /** Paging reports a 1-based page and the size together. */
 export const Paginates: Story = {
   args: { rows: widgets(25), total: 120, pageSize: 25 },
@@ -570,37 +585,5 @@ export const Paginates: Story = {
     // call[0]. Wait for the call that reported page 2.
     const spy = args.onPaginationChange as unknown as { mock: { calls: unknown[][] } }
     await waitFor(() => expect(spy.mock.calls.some((call) => call[0] === 2)).toBe(true))
-  },
-}
-
-/** The selection state a page would own, so the story can read it back. */
-function SelectionHarness(args: WidgetList) {
-  const [selected, setSelected] = useState<string[]>([])
-  return (
-    <div className="flex flex-col gap-2">
-      <WidgetEntityList {...args} selectable onSelectionChange={setSelected} />
-      <p data-testid="selected">{selected.join(',')}</p>
-    </div>
-  )
-}
-
-/** Selection is reported as ids, and the toolbar says how many. */
-export const Selection: Story = {
-  render: (args) => <SelectionHarness {...args} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await canvas.findByText('API calls 1')
-    const boxes = canvas.getAllByRole('checkbox')
-    await userEvent.click(boxes[1]!)
-    await waitFor(async () => {
-      await expect(canvas.getByTestId('selected')).toHaveTextContent('wid_001')
-    })
-    // The count sits in its own emphasised span, so match the whole live region.
-    await expect(
-      canvas.getByText(
-        (_, element) =>
-          element?.getAttribute('aria-live') === 'polite' && element.textContent === '1 selected',
-      ),
-    ).toBeInTheDocument()
   },
 }

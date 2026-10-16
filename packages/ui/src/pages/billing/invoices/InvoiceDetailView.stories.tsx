@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { InvoiceStatus, PaymentStatus } from '@fp/domain'
+import type { SubTabQuery } from '../../../compositions/detail/SubTabState'
 import { DEMO_INVOICE, type InvoiceDocument } from './invoiceDocument'
 import { InvoiceDetailView, type InvoiceDetailViewProps } from './InvoiceDetailView'
 
@@ -23,12 +24,33 @@ interface InvoiceShape {
   hasIssuer: boolean
   hasSubscription: boolean
   hasNumber: boolean
+  paymentsState: SubTabMode
+  creditNotesState: SubTabMode
 }
 
-type PlaygroundArgs = Omit<InvoiceDetailViewProps, 'invoice'> & InvoiceShape
+type SubTabMode = 'loaded' | 'loading' | 'error'
 
-/** Every line is a whole-dollar amount, and every fifth is zero so "show zero" has something to reveal. */
-function makeInvoice(args: InvoiceShape): InvoiceDocument {
+/** A sub-query in one of the three states a tab can be in besides "has rows". */
+function subTab(mode: SubTabMode, onRetry: () => void): SubTabQuery {
+  return mode === 'loading'
+    ? { isLoading: true }
+    : mode === 'error'
+      ? {
+          isLoading: false,
+          error: 'Flexprice had a problem loading this.',
+          errorKind: 'server',
+          onRetry,
+        }
+      : { isLoading: false }
+}
+
+type PlaygroundArgs = Omit<InvoiceDetailViewProps, 'invoice'> &
+  InvoiceShape & { onRetrySubTab: () => void }
+
+/** Every line is a whole-dollar amount, and every fifth is zero so the always-hidden zero lines have something to hide. */
+function makeInvoice(
+  args: Omit<InvoiceShape, 'paymentsState' | 'creditNotesState'>,
+): InvoiceDocument {
   const lines = Array.from({ length: args.lineCount }, (_, index) => {
     const zero = index % 5 === 4
     return {
@@ -92,6 +114,9 @@ function InvoiceDetailPlayground({
   hasIssuer,
   hasSubscription,
   hasNumber,
+  paymentsState,
+  creditNotesState,
+  onRetrySubTab,
   ...handlers
 }: PlaygroundArgs) {
   const invoice = makeInvoice({
@@ -106,10 +131,17 @@ function InvoiceDetailPlayground({
     hasSubscription,
     hasNumber,
   })
-  return <InvoiceDetailView invoice={invoice} {...handlers} />
+  return (
+    <InvoiceDetailView
+      invoice={invoice}
+      payments={subTab(paymentsState, onRetrySubTab)}
+      creditNotes={subTab(creditNotesState, onRetrySubTab)}
+      {...handlers}
+    />
+  )
 }
 
-/** One invoice as a document, with Payments and Credit notes tabs and an Activity, Metadata, Related rail. */
+/** One invoice: Invoice details (document plus Activity, Metadata, Related rail), Payments and Credit memos tabs. */
 const meta = {
   title: 'App/Billing/Invoices/Invoice detail view',
   component: InvoiceDetailPlayground,
@@ -126,9 +158,10 @@ const meta = {
     hasSubscription: true,
     hasNumber: true,
     isFinalizing: false,
-    paymentsLoading: false,
-    creditNotesLoading: false,
-    showZeroAmounts: false,
+    paymentsState: 'loaded',
+    creditNotesState: 'loaded',
+    pendingAction: null,
+    onRetrySubTab: fn(),
     onBack: fn(),
     onEdit: fn(),
     onFinalize: fn(),
@@ -156,9 +189,13 @@ const meta = {
     hasSubscription: { control: 'boolean' },
     hasNumber: { control: 'boolean' },
     isFinalizing: { control: 'boolean' },
-    paymentsLoading: { control: 'boolean' },
-    creditNotesLoading: { control: 'boolean' },
-    showZeroAmounts: { control: 'boolean' },
+    paymentsState: { control: 'inline-radio', options: ['loaded', 'loading', 'error'] },
+    creditNotesState: { control: 'inline-radio', options: ['loaded', 'loading', 'error'] },
+    pendingAction: {
+      control: 'select',
+      options: [null, 'finalize', 'recalculate', 'send', 'retry-payment'],
+    },
+    onRetrySubTab: { control: false },
     onBack: { control: false },
     onEdit: { control: false },
     onFinalize: { control: false },
@@ -189,7 +226,7 @@ type Story = StoryObj<typeof meta>
 /** Status, payment status, and line, payment, credit-note and event counts as controls. */
 export const Playground: Story = {}
 
-/** Plain "Invoice" title; an open invoice whose last payment failed, with status chips, ID chip and the More menu on the right. */
+/** Plain "Invoice" title; an open invoice whose last payment failed, with status pills, ID chip and the More menu on the right. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -206,8 +243,13 @@ export const Default: Story = {
     await expect(canvas.getByText('Date of issue')).toBeVisible()
     await expect(canvas.getByText('Bill from')).toBeVisible()
     await expect(canvas.getByText('Unit price')).toBeVisible()
-    // Only two tabs; the rail is Activity, Metadata, Related.
-    await expect(canvas.getAllByRole('tab')).toHaveLength(2)
+    // Three tabs, Invoice details first and selected; the rail is on that tab only.
+    const tabs = canvas.getAllByRole('tab')
+    await expect(tabs).toHaveLength(3)
+    await expect(tabs[0]).toHaveTextContent('Invoice details')
+    await expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
+    await expect(canvas.queryByText('Invoice number')).toBeNull()
+    await expect(canvas.getByText('Amount due', { selector: 'p' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Related' })).toBeVisible()
@@ -231,7 +273,7 @@ export const MoreMenu: Story = {
       'aria-disabled',
       'true',
     )
-    await expect(screen.getByRole('menuitem', { name: /Issue credit note/ })).toBeInTheDocument()
+    await expect(screen.getByRole('menuitem', { name: /Issue credit memo/ })).toBeInTheDocument()
     await expect(screen.getByRole('menuitem', { name: /Send invoice/ })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('menuitem', { name: 'Void invoice' }))
     await expect(args.onVoid).toHaveBeenCalledOnce()
@@ -262,7 +304,7 @@ export const Finalizing: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'More actions' }))
-    await expect(await screen.findByRole('menuitem', { name: /Finalize invoice/ })).toHaveAttribute(
+    await expect(await screen.findByRole('menuitem', { name: /Finalizing/ })).toHaveAttribute(
       'aria-disabled',
       'true',
     )
@@ -273,7 +315,7 @@ export const Open: Story = {
   args: { status: InvoiceStatus.Open, paymentStatus: 'none', paymentCount: 0 },
 }
 
-/** Overdue reads as a subtle red chip beside Finalized. */
+/** Overdue reads as a danger pill beside Finalized. */
 export const Overdue: Story = {
   args: { status: InvoiceStatus.Overdue, paymentStatus: PaymentStatus.Pending },
   play: async ({ canvasElement }) => {
@@ -299,7 +341,9 @@ export const Paid: Story = {
     paymentCount: 1,
   },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('Paid in full')).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    await expect(within(canvas.getByRole('banner')).getByText('Paid')).toBeVisible()
+    await expect(canvas.getByText('Paid in full.')).toBeInTheDocument()
   },
 }
 
@@ -307,7 +351,7 @@ export const Void: Story = {
   args: { status: InvoiceStatus.Void, paymentStatus: 'none', paymentCount: 0 },
 }
 
-/** Thirty lines, payments, credit notes and events: the long-list state of every tab. */
+/** Thirty lines, payments, credit memos and events: the long-list state of every tab. */
 export const LongInvoice: Story = {
   args: {
     lineCount: 30,
@@ -341,6 +385,7 @@ export const NoPayments: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: /Payments/ }))
     await expect(await canvas.findByText('No payments yet')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Record payment' })).toBeVisible()
   },
 }
 
@@ -348,7 +393,7 @@ export const CreditNotesTab: Story = {
   args: { creditNoteCount: 3 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Credit notes/ }))
+    await userEvent.click(canvas.getByRole('tab', { name: /Credit memos/ }))
     await expect(await canvas.findByText('CN-1000')).toBeInTheDocument()
   },
 }
@@ -356,29 +401,28 @@ export const CreditNotesTab: Story = {
 export const NoCreditNotes: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Credit notes/ }))
-    await expect(await canvas.findByText('No credit notes yet')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('tab', { name: /Credit memos/ }))
+    await expect(await canvas.findByText('No credit memos yet')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Issue credit memo' })).toBeVisible()
   },
 }
 
-/** The zero-amount line stays hidden until "show zero" is switched on. */
-export const ShowsZeroLines: Story = {
+/** Zero-amount lines are always hidden, and there is no Items label or switch. */
+export const HidesZeroLines: Story = {
   args: { lineCount: 5 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText('Support add-on')).toBeNull()
-    await userEvent.click(canvas.getByRole('switch', { name: /Show zero amounts/ }))
-    await expect(await canvas.findByText('Support add-on')).toBeInTheDocument()
+    await expect(canvas.queryByRole('switch')).toBeNull()
+    await expect(canvas.queryByText('Items')).toBeNull()
   },
 }
 
-/** Zero lines shown from the start; the items table sits clear of the toggle row above it. */
-export const ZeroAmountsShown: Story = {
-  args: { lineCount: 5, showZeroAmounts: true },
+/** A draft has no payment note strip. */
+export const DraftHasNoNote: Story = {
+  args: { status: InvoiceStatus.Draft, paymentStatus: 'none', paymentCount: 0, eventCount: 1 },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByRole('switch', { name: /Show zero amounts/ })).toBeChecked()
-    await expect(canvas.getByText('Support add-on')).toBeVisible()
+    await expect(within(canvasElement).queryByText(/Finalizing assigns/)).toBeNull()
   },
 }
 
@@ -388,5 +432,88 @@ export const BillTo: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Billing email')).toBeVisible()
     await expect(canvas.getByText('Billing address')).toBeVisible()
+  },
+}
+
+/** Payments still loading: a table-shaped skeleton, and the tab label carries no count. */
+export const PaymentsLoading: Story = {
+  args: { paymentsState: 'loading', paymentCount: 0 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('tab', { name: 'Payments' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: 'Payments' }))
+    await expect(await canvas.findByText('Loading payments')).toBeVisible()
+    await expect(canvas.queryByText('No payments yet')).toBeNull()
+  },
+}
+
+/** A failed payments read is an error with a retry, never "No payments yet" and never a 0. */
+export const PaymentsError: Story = {
+  args: { paymentsState: 'error', paymentCount: 0, paymentStatus: 'none' },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('tab', { name: 'Payments' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: 'Payments' }))
+    await expect(await canvas.findByText('Flexprice had a problem loading this.')).toBeVisible()
+    await expect(canvas.queryByText('No payments yet')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /Try again/ }))
+    await expect(args.onRetrySubTab).toHaveBeenCalled()
+  },
+}
+
+export const CreditNotesError: Story = {
+  args: { creditNotesState: 'error' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: 'Credit memos' }))
+    await expect(await canvas.findByText('Flexprice had a problem loading this.')).toBeVisible()
+    await expect(canvas.queryByText('No credit memos yet')).toBeNull()
+  },
+}
+
+/** At the read's cap the list says it may be cut. */
+export const PaymentsTruncated: Story = {
+  args: { paymentCount: 100 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: /Payments/ }))
+    await expect(await canvas.findByText(/Showing the latest 100/)).toBeVisible()
+  },
+}
+
+/** Sending is in flight: the menu item says so and cannot be pressed again. */
+export const Sending: Story = {
+  args: { pendingAction: 'send' },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'More actions' }))
+    const item = await screen.findByRole('menuitem', { name: /Sending…/ })
+    await expect(item).toHaveAttribute('aria-disabled', 'true')
+  },
+}
+
+export const ProviderInvoiceMapping: Story = {
+  args: {
+    integrationLinks: [
+      {
+        id: 'stripe',
+        name: 'Stripe',
+        providerType: 'stripe',
+        mappingId: 'map_invoice',
+        providerEntityId: 'in_external',
+        createdAt: null,
+        updatedAt: null,
+      },
+    ],
+  },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Manage Stripe integration' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Stripe integration', exact: true }))
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByRole('menuitem', { name: 'Copy invoice ID' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: 'Copy customer ID' })).toBeNull()
+    await expect(screen.queryByRole('menuitem', { name: 'Unlink Stripe' })).toBeNull()
   },
 }

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { PackageIcon } from 'lucide-react'
 import { DEFAULT_PLAN_QUERY, PlanStatus, type PlanQuery } from '@fp/domain'
 import { ListState, PageBody } from '@ui/compositions'
 import { PlanGrid } from '@ui/pages/product-catalog/plans/PlanGrid'
@@ -54,7 +53,6 @@ function PlansListBody({ rows, status, isLoading, hasError, initialSearch }: Pla
         onRetry={fn()}
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New plan</Button>}
-        emptyIcon={<PackageIcon aria-hidden />}
         emptyTitle="No plans yet"
         emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants — create the first to start selling."
       >

@@ -1,22 +1,11 @@
 import { useState } from 'react'
 import { PriceEntityType } from '@fp/domain'
-import { ApiError, useCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
-import {
-  CatalogDetailFrame,
-  CatalogStatusBadge,
-  ChargeTable,
-  CostMarginCard,
-  Pill,
-} from '@fp/ui/pages'
-import {
-  AppFailure,
-  EditableCard,
-  EmptyState,
-  LoadingRows,
-  PageBody,
-  Section,
-} from '@fp/ui/compositions'
-import { CalculatorIcon, ReceiptIcon } from 'lucide-react'
+import { useCostSheet, useDeleteCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
+import { CatalogDetailFrame, CatalogStatusBadge, CostMarginCard, Pill } from '@fp/ui/pages'
+import { ConfirmDialog, EditableCard, MetadataCard } from '@fp/ui/compositions'
+import { ArchiveIcon, CalculatorIcon, PencilIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
+import { CatalogCharges } from '../shared/CatalogCharges'
 
 type CostSheetTab = 'costs' | 'information'
 
@@ -24,8 +13,6 @@ export interface CostSheetDetailPageProps {
   costSheetId: string
   /** Open with the details already in edit mode (the list row's Edit). */
   startEditing?: boolean
-  /** Open the full edit form. */
-  onEdit?: () => void
   onNavigateToList: () => void
 }
 
@@ -48,46 +35,21 @@ export interface CostSheetDetailPageProps {
 export function CostSheetDetailPage({
   costSheetId,
   startEditing = false,
-  onEdit,
   onNavigateToList,
 }: CostSheetDetailPageProps) {
   const costSheet = useCostSheet(costSheetId)
   const prices = usePrices(PriceEntityType.CostSheet, costSheetId)
   const update = useUpdateCostSheet()
+  const remove = useDeleteCostSheet()
+  const [archiving, setArchiving] = useState(false)
   const [tab, setTab] = useState<CostSheetTab>(startEditing ? 'information' : 'costs')
 
-  if (costSheet.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (costSheet.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(costSheet.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void costSheet.refetch()}
-        />
-      </PageBody>
-    )
-  }
-
   if (!costSheet.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This cost sheet no longer exists"
-          detail="It may have been deleted. Everything else in the catalogue still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(costSheet, {
+      noun: 'this cost sheet',
+      listName: 'cost sheets',
+      onBack: onNavigateToList,
+    })
   }
 
   const data = costSheet.data
@@ -103,18 +65,29 @@ export function CostSheetDetailPage({
       title={data.name}
       badges={
         <>
+          <CatalogStatusBadge status={data.status} />
           <Pill>
             {count} {count === 1 ? 'price' : 'prices'}
           </Pill>
-          {data.status === 'archived' ? <CatalogStatusBadge status={data.status} /> : null}
         </>
       }
       id={data.lookupKey || data.id}
       menuLabel="Cost sheet actions"
       menu={[
-        { id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') },
-        ...(onEdit ? [{ id: 'edit', label: 'Edit cost sheet', onSelect: onEdit }] : []),
-        { id: 'costs', label: 'View costs', onSelect: () => setTab('costs') },
+        {
+          id: 'edit-details',
+          label: 'Edit details',
+          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setTab('information'),
+        },
+        {
+          id: 'archive',
+          label: 'Archive',
+          icon: <ArchiveIcon aria-hidden />,
+          destructive: true,
+          disabled: data.status === 'archived',
+          onSelect: () => setArchiving(true),
+        },
       ]}
       tab={tab}
       onTabChange={(next) => setTab(next as CostSheetTab)}
@@ -125,25 +98,14 @@ export function CostSheetDetailPage({
           count,
           content: (
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-              {prices.isPending ? (
-                <Section title="Costs" flush>
-                  <div className="p-6">
-                    <LoadingRows />
-                  </div>
-                </Section>
-              ) : charges && charges.length > 0 ? (
-                <ChargeTable charges={charges} title="Costs" />
-              ) : (
-                <Section title="Costs" flush>
-                  <EmptyState
-                    size="inline"
-                    icon={<ReceiptIcon aria-hidden />}
-                    title="No prices yet"
-                    description="Prices tagged to this cost sheet will appear here. None have been added to it yet."
-                  />
-                </Section>
-              )}
-              {/* Margin numbers are DEMO_COST_MARGIN: the API carries no revenue/cost totals. */}
+              <CatalogCharges
+                entityType={PriceEntityType.CostSheet}
+                entityId={costSheetId}
+                noun="cost sheet"
+                title="Costs"
+                emptyDescription="Costs added to this cost sheet appear here. None have been added yet."
+              />
+              {/* No margin source: the API carries no revenue/cost totals, so the card says so. */}
               <CostMarginCard />
             </div>
           ),
@@ -152,87 +114,107 @@ export function CostSheetDetailPage({
           value: 'information',
           label: 'Information',
           content: (
-            <EditableCard
-              className="max-w-3xl"
-              title="Cost sheet details"
-              locked={data.status === 'archived'}
-              fields={[
-                { key: 'name', label: 'Name', value: data.name, required: true },
-                {
-                  key: 'lookupKey',
-                  label: 'Lookup key',
-                  value: data.lookupKey ?? '',
-                  placeholder: 'No lookup key',
-                },
-                {
-                  key: 'id',
-                  label: 'Cost sheet ID',
-                  value: data.id,
-                  display: <span className="font-mono text-[13px]">{data.id}</span>,
-                  readOnly: true,
-                },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  value: data.status,
-                  display: <CatalogStatusBadge status={data.status} />,
-                  readOnly: true,
-                },
-                {
-                  key: 'created',
-                  label: 'Created',
-                  value: formatDate(data.createdAt),
-                  readOnly: true,
-                },
-                {
-                  key: 'updated',
-                  label: 'Updated',
-                  value: formatDate(data.updatedAt),
-                  readOnly: true,
-                },
-                {
-                  key: 'description',
-                  label: 'Description',
-                  value: data.description ?? '',
-                  multiline: true,
-                  placeholder: 'No description',
-                },
-              ]}
-              onSave={(changes) =>
-                update.mutateAsync({
-                  id: data.id,
-                  draft: {
-                    name: changes.name ?? data.name,
-                    lookupKey: changes.lookupKey ?? data.lookupKey,
-                    description: changes.description ?? data.description,
+            <div className="grid gap-5 xl:grid-cols-3">
+              <EditableCard
+                className="xl:col-span-2"
+                title="Cost sheet details"
+                locked={data.status === 'archived'}
+                fields={[
+                  { key: 'name', label: 'Name', value: data.name, required: true },
+                  {
+                    key: 'lookupKey',
+                    label: 'Lookup key',
+                    value: data.lookupKey ?? '',
+                    placeholder: 'No lookup key',
                   },
-                })
-              }
-            />
+                  {
+                    key: 'id',
+                    label: 'Cost sheet ID',
+                    value: data.id,
+                    display: <span className="font-mono text-[13px]">{data.id}</span>,
+                    readOnly: true,
+                  },
+                  {
+                    key: 'created',
+                    label: 'Created',
+                    value: formatDate(data.createdAt),
+                    readOnly: true,
+                  },
+                  {
+                    key: 'updated',
+                    label: 'Updated',
+                    value: formatDate(data.updatedAt),
+                    readOnly: true,
+                  },
+                  {
+                    key: 'description',
+                    label: 'Description',
+                    value: data.description ?? '',
+                    multiline: true,
+                    placeholder: 'No description',
+                  },
+                ]}
+                onSave={(changes) =>
+                  update.mutateAsync({
+                    id: data.id,
+                    draft: {
+                      name: changes.name ?? data.name,
+                      lookupKey: changes.lookupKey ?? data.lookupKey,
+                      description: changes.description ?? data.description,
+                    },
+                  })
+                }
+              />
+              <MetadataCard
+                metadata={data.metadata ?? {}}
+                {...(data.status === 'archived'
+                  ? {}
+                  : {
+                      onSave: (metadata: Record<string, string>) =>
+                        update.mutateAsync({
+                          id: data.id,
+                          draft: {
+                            name: data.name,
+                            lookupKey: data.lookupKey,
+                            description: data.description,
+                            metadata,
+                          },
+                        }),
+                    })}
+              />
+            </div>
           ),
         },
       ]}
-    />
+    >
+      <ConfirmDialog
+        open={archiving}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiving(false)
+            remove.reset()
+          }
+        }}
+        title="Archive cost sheet"
+        description={`Archive ${data.name}? Prices tagged to it keep their history.`}
+        confirmLabel="Archive cost sheet"
+        destructive
+        isPending={remove.isPending}
+        error={remove.isError ? 'Could not archive the cost sheet. Try again.' : null}
+        onConfirm={() =>
+          remove.mutate(data.id, {
+            onSuccess: () => {
+              setArchiving(false)
+              onNavigateToList()
+            },
+          })
+        }
+      />
+    </CatalogDetailFrame>
   )
 }
 
 function formatDate(value: Date | null): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this cost sheet.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This cost sheet could not be loaded.'
-    }
-  }
-  return 'This cost sheet could not be loaded.'
 }

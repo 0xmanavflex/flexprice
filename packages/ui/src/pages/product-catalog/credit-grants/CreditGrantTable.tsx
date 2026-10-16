@@ -5,9 +5,9 @@ import {
   type CreditGrant,
   CreditGrantCadence,
 } from '@fp/domain'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
+import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { Button } from '@ui/components/primitives/button'
-import { PlusIcon } from 'lucide-react'
+import { PlusIcon } from '@ui/icons'
 
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
@@ -23,15 +23,22 @@ import { DetailTable } from '../../shared/DetailTable'
  */
 export const CreditGrantTableProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/Section', 'pages/shared/DetailTable', 'ui/button'],
+  composes: [
+    'compositions/Section',
+    'compositions/SubTabState',
+    'pages/shared/DetailTable',
+    'ui/button',
+  ],
   note: 'Read-only credit-grants table for the plan Credit Grants tab.',
 })
 
-export interface CreditGrantTableProps {
+export interface CreditGrantTableProps extends Partial<SubTabQuery> {
   grants: CreditGrant[]
   onAdd?: () => void
   onEdit?: (grant: CreditGrant) => void
   onDelete?: (grant: CreditGrant) => void
+  /** Show the heading above the box, for a tab that stacks this table with another. */
+  showTitle?: boolean
 }
 
 function cadenceLabel(grant: CreditGrant): string {
@@ -41,7 +48,19 @@ function cadenceLabel(grant: CreditGrant): string {
   return CREDIT_GRANT_CADENCE_LABEL[grant.cadence]
 }
 
-export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGrantTableProps) {
+export function CreditGrantTable({
+  grants,
+  onAdd,
+  onEdit,
+  onDelete,
+  showTitle,
+  isLoading,
+  error,
+  errorKind,
+  retryAfterMs,
+  onRetry,
+  isRetrying,
+}: CreditGrantTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
     <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
@@ -49,69 +68,88 @@ export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGran
       Add credit grant
     </Button>
   ) : null
+  if (grants.length === 0) {
+    return (
+      <Section title="Credit grants" flush>
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading ?? false}
+          error={error}
+          errorKind={errorKind}
+          retryAfterMs={retryAfterMs}
+          onRetry={onRetry}
+          isRetrying={isRetrying}
+          columns={5}
+          loadingLabel="Loading credit grants"
+          empty={{
+            scene: 'catalog',
+            title: 'No credit grants yet',
+            description: `Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`,
+            action: addButton,
+          }}
+        >
+          {null}
+        </SubTabState>
+      </Section>
+    )
+  }
+
   return (
-    <Section title="Credit grants" flush bare={grants.length > 0}>
-      {grants.length === 0 ? (
-        <SectionEmpty
-          title="No credit grants yet"
-          description={`Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`}
-          action={addButton}
-        />
-      ) : (
-        <DetailTable
-          label="Credit grants"
-          {...(addButton ? { action: addButton } : {})}
-          noun="credit grants"
-          rows={grants}
-          getRowId={(grant) => grant.id}
-          columns={[
-            {
-              key: 'name',
-              header: 'Name',
-              sortBy: (grant) => grant.name,
-              cell: (grant) => <span className="font-medium">{grant.name}</span>,
-            },
-            {
-              key: 'credits',
-              header: 'Credits',
-              sortBy: (grant) => Number(grant.credits),
-              cell: (grant) => <span className="tabular-nums">{grant.credits}</span>,
-            },
-            { key: 'cadence', header: 'Cadence', cell: (grant) => cadenceLabel(grant) },
-            {
-              key: 'expiry',
-              header: 'Expiry',
-              cell: (grant) => (
-                <span className="text-muted-foreground">
-                  {CREDIT_GRANT_EXPIRY_TYPE_LABEL[grant.expirationType]}
-                </span>
-              ),
-            },
-            {
-              key: 'priority',
-              header: 'Priority',
-              sortBy: (grant) => Number(grant.priority),
-              cell: (grant) => <span className="tabular-nums">{grant.priority}</span>,
-            },
-            ...(hasActions
-              ? [
-                  {
-                    key: 'actions',
-                    header: '',
-                    className: 'w-10',
-                    cell: (grant: CreditGrant) => (
-                      <RowActionsMenu
-                        label={grant.name}
-                        onEdit={onEdit ? () => onEdit(grant) : undefined}
-                        onRemove={onDelete ? () => onDelete(grant) : undefined}
-                      />
-                    ),
-                  },
-                ]
-              : []),
-          ]}
-        />
-      )}
+    <Section table title="Credit grants" {...(showTitle ? { showTitle } : {})}>
+      <DetailTable
+        compact
+        label="Credit grants"
+        {...(addButton ? { action: addButton } : {})}
+        noun="credit grants"
+        rows={grants}
+        getRowId={(grant) => grant.id}
+        columns={[
+          {
+            key: 'name',
+            header: 'Name',
+            sortBy: (grant) => grant.name,
+            cell: (grant) => <span className="font-medium">{grant.name}</span>,
+          },
+          {
+            key: 'credits',
+            header: 'Credits',
+            sortBy: (grant) => Number(grant.credits),
+            cell: (grant) => <span className="tabular-nums">{grant.credits}</span>,
+          },
+          { key: 'cadence', header: 'Cadence', cell: (grant) => cadenceLabel(grant) },
+          {
+            key: 'expiry',
+            header: 'Expiry',
+            cell: (grant) => (
+              <span className="text-muted-foreground">
+                {CREDIT_GRANT_EXPIRY_TYPE_LABEL[grant.expirationType]}
+              </span>
+            ),
+          },
+          {
+            key: 'priority',
+            header: 'Priority',
+            sortBy: (grant) => Number(grant.priority),
+            cell: (grant) => <span className="tabular-nums">{grant.priority}</span>,
+          },
+          ...(hasActions
+            ? [
+                {
+                  key: 'actions',
+                  header: '',
+                  className: 'w-10',
+                  cell: (grant: CreditGrant) => (
+                    <RowActionsMenu
+                      label={grant.name}
+                      onEdit={onEdit ? () => onEdit(grant) : undefined}
+                      onRemove={onDelete ? () => onDelete(grant) : undefined}
+                    />
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
     </Section>
   )
 }

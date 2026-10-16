@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * An add-on, as the list reads it.
  *
@@ -25,6 +26,13 @@ export interface Addon {
   lookupKey: string
   description: string
   status: AddonStatus
+  /** How many charges (prices) the add-on carries. */
+  chargeCount: number
+  /** Of those, how many are a fixed fee, and how many metered usage. */
+  fixedChargeCount: number
+  usageChargeCount: number
+  /** Free-form key/value fields; absent or empty when none. */
+  metadata?: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -57,6 +65,8 @@ export interface AddonQuery {
   sortBy: AddonSortField
   sortDirection: 'asc' | 'desc'
   view: AddonView
+  /** Granular field filters, applied by the search endpoint. See `ADDON_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_ADDON_QUERY: AddonQuery = {
@@ -64,10 +74,26 @@ export const DEFAULT_ADDON_QUERY: AddonQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: AddonSortField.Name,
-  sortDirection: 'asc',
+  sortBy: AddonSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: AddonView.Table,
+  filters: [],
 }
+/** What the add-on list can filter on — V1's fields, by their wire names. */
+export const ADDON_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * The rules for creating or editing an add-on's details.
@@ -88,8 +114,9 @@ export const createAddonSchema = z.object({
     .string()
     .trim()
     .min(1, 'Enter a lookup key')
-    .regex(/^[a-z0-9_]+$/, 'Use lowercase letters, numbers and underscores'),
+    .regex(/^[a-z0-9_-]+$/, 'Use lowercase letters, numbers, hyphens and underscores'),
   description: z.string().trim().optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type CreateAddon = z.infer<typeof createAddonSchema>

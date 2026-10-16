@@ -1,9 +1,16 @@
 import { type ReactNode, useId } from 'react'
-import { ArrowUpRightIcon, InfoIcon } from 'lucide-react'
+import { ArrowUpRightIcon, InfoIcon } from '@fp/ui/icons'
 import { ApiError } from '@fp/query'
-import { EmptyState, ErrorState } from '@fp/ui/compositions'
+import {
+  EMPTY_CATALOGUE,
+  EmptyState,
+  ErrorState,
+  TableSkeleton,
+  type EmptyScene,
+} from '@fp/ui/compositions'
 import { DetailTable, type DetailColumn } from '@fp/ui/pages'
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@fp/ui/primitives'
+import { type ListFailure, toListFailure } from '../shared/listFailure'
 
 /**
  * The few things every settings panel needs, in one place.
@@ -13,40 +20,57 @@ import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@fp/ui/primitiv
  * are here instead, so a panel is its own content plus wiring.
  */
 
-export interface Failure {
-  message: string
-  canRetry: boolean
-}
+export type Failure = ListFailure
 
 /**
  * An error, as a sentence somebody can act on.
  *
  * `noun` is the thing that failed, in the product's words — "your
- * organisation", "the members list" — so the message names what is missing
- * rather than reporting a status code. The same shape `ListState` takes.
+ * organisation", "the members list". One mapping with every list and detail
+ * page (`toListFailure`), so a 403 never offers a retry and a timeout never
+ * reads as "offline".
  */
 export function toFailure(error: unknown, noun: string): Failure | null {
-  if (!error) return null
+  return toListFailure(error, noun)
+}
 
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: `You do not have access to ${noun}.`, canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: `Flexprice had a problem loading ${noun}.`, canRetry: true }
-      default:
-        // The API's own message, when it wrote one — a 400 explaining *why*
-        // (an environment limit, a duplicate name) is worth far more than
-        // anything this switch could invent.
-        return { message: error.message, canRetry: false }
-    }
-  }
+export { queryPhase, type QueryPhase } from './queryPhase'
 
-  return { message: `Something went wrong loading ${noun}.`, canRetry: true }
+/** The skeleton a settings form shows while its read is genuinely in flight. */
+export function PanelLoading({ rows = 5 }: { rows?: number }) {
+  return (
+    <Panel>
+      <TableSkeleton rows={rows} columns={2} header={false} label="Loading settings" />
+    </Panel>
+  )
+}
+
+/**
+ * A panel that cannot load because it cannot be asked: no environment is
+ * selected, the role lacks access, or the capability is off. Says so, rather
+ * than drawing a skeleton for something that is not coming.
+ */
+export function PanelUnavailable({
+  reason,
+  title,
+  description,
+}: {
+  reason: 'setup' | 'permission' | 'unavailable'
+  title?: string
+  description?: string
+}) {
+  const copy = EMPTY_CATALOGUE[reason]
+  return (
+    <Panel>
+      <EmptyState
+        size="inline"
+        figure={copy.figure}
+        motion={copy.motion}
+        title={title ?? copy.title}
+        description={description ?? copy.description}
+      />
+    </Panel>
+  )
 }
 
 /**
@@ -74,7 +98,14 @@ export function mutationMessage(error: unknown, fallback: string): string | null
  * answer will not change.
  */
 export function PanelError({ failure, onRetry }: { failure: Failure; onRetry: () => void }) {
-  return <ErrorState title={failure.message} {...(failure.canRetry ? { onRetry } : {})} />
+  return (
+    <ErrorState
+      title={failure.message}
+      kind={failure.kind}
+      {...(failure.canRetry ? { onRetry } : {})}
+      {...(failure.retryAfterMs !== undefined ? { retryAfterMs: failure.retryAfterMs } : {})}
+    />
+  )
 }
 
 /** A failed action, announced rather than only painted red. */
@@ -129,9 +160,7 @@ export function SettingsBlock({
         {label}
       </h3>
       {info ? <InfoBlock>{info}</InfoBlock> : null}
-      <div
-        className={flush ? 'min-w-0' : 'flex min-w-0 flex-col gap-4 overflow-x-auto px-5 py-4'}
-      >
+      <div className={flush ? 'min-w-0' : 'flex min-w-0 flex-col gap-4 overflow-x-auto px-5 py-4'}>
         {children}
       </div>
       {actions ? (
@@ -226,11 +255,11 @@ export function SettingsTable<T extends object>({
   // With no rows the empty state carries the create button itself, so the
   // toolbar does not offer it a second time above it.
   const firstRun = !isLoading && rows.length === 0
-  const toolbarAction = firstRun
-    ? undefined
-    : action && hint
-      ? <DelayedHint text={hint}>{action}</DelayedHint>
-      : action
+  const toolbarAction = firstRun ? undefined : action && hint ? (
+    <DelayedHint text={hint}>{action}</DelayedHint>
+  ) : (
+    action
+  )
   return (
     <DetailTable<T>
       // Flush with the content column: the settings rail is the frame.
@@ -279,14 +308,14 @@ export function WidePanel({ children, fill = false }: { children: ReactNode; fil
  * once, and inside `<WidePanel fill>` so it has a height to centre in.
  */
 export function PanelFirstRun({
-  icon,
+  scene = 'settings',
   title,
   description,
   action,
   docsHref,
   docsLabel = 'Read the docs',
 }: {
-  icon: ReactNode
+  scene?: EmptyScene
   title: string
   description: string
   action: ReactNode
@@ -296,7 +325,7 @@ export function PanelFirstRun({
   return (
     <EmptyState
       size="page"
-      icon={icon}
+      scene={scene}
       title={title}
       description={description}
       action={action}

@@ -3,6 +3,9 @@ import {
   type InvoiceQuery,
   InvoiceSortField,
   InvoiceStatus,
+  INVOICE_FILTERS,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -60,12 +63,17 @@ export function parseInvoiceSearch(raw: Record<string, unknown>): InvoiceQuery {
 
   return {
     page: positiveInt(raw['page'], DEFAULT_INVOICE_QUERY.page),
-    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_INVOICE_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(
+      param(raw, 'size', 'pageSize'),
+      DEFAULT_INVOICE_QUERY.pageSize,
+      MAX_PAGE_SIZE,
+    ),
     sortBy: SORT_VALUES.has(sortBy) ? (sortBy as InvoiceSortField) : DEFAULT_INVOICE_QUERY.sortBy,
     sortDirection: direction === 'asc' ? 'asc' : 'desc',
     // De-duplicated so `?status=paid&status=paid` cannot produce a filter that
     // looks selected twice in the UI.
     statuses: [...new Set(statuses)],
     search: String(param(raw, 'q', 'search') ?? '').trim(),
+    filters: runnableFilters(decodeListFilters(raw['filters']), INVOICE_FILTERS),
   }
 }

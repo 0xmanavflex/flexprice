@@ -1,6 +1,14 @@
+import { PaymentStatus } from '@fp/domain'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_INVOICE_QUERY, InvoiceSortField, InvoiceStatus } from '@fp/domain'
-import { isServerFilterable, toInvoice, toInvoiceFilter, type InvoiceWire } from './invoices'
+import {
+  applyLineChanges,
+  runInvoiceEdit,
+  isServerFilterable,
+  toInvoice,
+  toInvoiceFilter,
+  type InvoiceWire,
+} from './invoices'
 
 describe('toInvoiceFilter — domain vocabulary out, transport in', () => {
   it('turns a 1-based page into an offset', () => {
@@ -89,9 +97,11 @@ describe('toInvoice — a narrow model out of a 45-field optional response', () 
     expect(toInvoice({ ...wire, customer: undefined }).customerName).toBe('cus_1')
   })
 
-  it('shows the id when a draft has no number yet', () => {
-    expect(toInvoice({ ...wire, invoiceNumber: undefined }).number).toBe('inv_1')
-    expect(toInvoice({ ...wire, invoiceNumber: '' }).number).toBe('inv_1')
+  it('leaves the number blank when the API has not issued one', () => {
+    expect(toInvoice({ ...wire, invoiceNumber: undefined }).number).toBe('')
+    expect(toInvoice({ ...wire, invoiceNumber: '' }).number).toBe('')
+    expect(toInvoice({ ...wire, invoiceNumber: '   ' }).number).toBe('')
+    expect(toInvoice({ ...wire, invoiceNumber: undefined }).id).toBe('inv_1')
   })
 
   // Every field on InvoiceResponse is optional. The grid must still get a row.
@@ -106,5 +116,224 @@ describe('toInvoice — a narrow model out of a 45-field optional response', () 
 
   it('treats a zero remaining balance as paid, whatever the payment status says', () => {
     expect(toInvoice({ ...wire, amountRemaining: '0.00' }).status).toBe(InvoiceStatus.Paid)
+  })
+})
+
+describe('applyLineChanges — the order and the id-threading are the logic', () => {
+  /** Records each call, and lets a test say which invoice id the API answers with. */
+  function recorder(answers: (string | undefined)[] = []) {
+    const calls: { id: string; params: Record<string, unknown> }[] = []
+    let n = 0
+    const execute = async (id: string, params: Record<string, unknown>) => {
+      calls.push({ id, params })
+      return answers[n++]
+    }
+    return { calls, execute }
+  }
+
+  const line = (over: Record<string, unknown> = {}) => ({
+    displayName: 'Onboarding',
+    amount: '250',
+    quantity: '1',
+    ...over,
+  })
+
+  it('removes first, updates next, adds last', async () => {
+    const { calls, execute } = recorder()
+    await applyLineChanges(
+      {
+        invoiceId: 'inv_1',
+        removed: ['li_old'],
+        updated: [line({ id: 'li_a' })],
+        added: [line({ displayName: 'Training' })],
+      },
+      execute,
+    )
+    expect(calls.map((c) => c.params['action'])).toEqual(['remove', 'update', 'add'])
+  })
+
+  it('sends one call per update, because an update versions the line item', async () => {
+    // Batching two updates into one call is not available, and reusing the
+    // original id after the first edit would address a line that no longer
+    // exists under that id.
+    const { calls, execute } = recorder()
+    await applyLineChanges(
+      {
+        invoiceId: 'inv_1',
+        removed: [],
+        updated: [line({ id: 'li_a' }), line({ id: 'li_b' })],
+        added: [],
+      },
+      execute,
+    )
+    expect(calls).toHaveLength(2)
+    expect(calls.map((c) => c.params['lineItemId'])).toEqual(['li_a', 'li_b'])
+  })
+
+  it('threads the id the API answers with through the rest of the batch', async () => {
+    /*
+     * Modifying a finalized invoice voids it and returns a draft copy under a
+     * new id. Every later call has to address that copy — the API rejects one
+     * that still names the voided original — and the caller needs the id it
+     * ended on so it can navigate somewhere that exists.
+     */
+    const { calls, execute } = recorder(['inv_copy'])
+    const ended = await applyLineChanges(
+      {
+        invoiceId: 'inv_final',
+        removed: ['li_old'],
+        updated: [line({ id: 'li_a' })],
+        added: [],
+      },
+      execute,
+    )
+    expect(calls[0]?.id).toBe('inv_final')
+    expect(calls[1]?.id).toBe('inv_copy')
+    expect(ended).toBe('inv_copy')
+  })
+
+  it('keeps the original id when the API does not name a new one', async () => {
+    const { calls, execute } = recorder()
+    const ended = await applyLineChanges(
+      { invoiceId: 'inv_1', removed: [], updated: [line({ id: 'li_a' })], added: [] },
+      execute,
+    )
+    expect(calls[0]?.id).toBe('inv_1')
+    expect(ended).toBe('inv_1')
+  })
+
+  it('sends nothing at all when nothing changed', async () => {
+    const { calls, execute } = recorder()
+    const ended = await applyLineChanges(
+      { invoiceId: 'inv_1', removed: [], updated: [], added: [] },
+      execute,
+    )
+    expect(calls).toEqual([])
+    expect(ended).toBe('inv_1')
+  })
+
+  it('skips an update with no id rather than addressing nothing', async () => {
+    const { calls, execute } = recorder()
+    await applyLineChanges(
+      { invoiceId: 'inv_1', removed: [], updated: [line()], added: [] },
+      execute,
+    )
+    expect(calls).toEqual([])
+  })
+
+  it('omits description when the editor never set one', async () => {
+    // The API treats an absent description as "leave it"; sending undefined
+    // explicitly is the difference between keeping and clearing it.
+    const { calls, execute } = recorder()
+    await applyLineChanges(
+      { invoiceId: 'inv_1', removed: [], updated: [], added: [line()] },
+      execute,
+    )
+    const items = calls[0]?.params['items'] as Record<string, unknown>[]
+    expect(items[0]).not.toHaveProperty('description')
+  })
+
+  it('stops at the first failure and does not run the rest', async () => {
+    // There is no transaction, so a compensating edit would be issuing more
+    // changes against an invoice whose state is already unknown.
+    const calls: string[] = []
+    const execute = async (_id: string, params: Record<string, unknown>) => {
+      calls.push(String(params['action']))
+      if (params['action'] === 'update') throw new Error('rejected')
+      return undefined
+    }
+    await expect(
+      applyLineChanges(
+        {
+          invoiceId: 'inv_1',
+          removed: ['li_old'],
+          updated: [line({ id: 'li_a' })],
+          added: [line()],
+        },
+        execute,
+      ),
+    ).rejects.toThrow('rejected')
+    expect(calls).toEqual(['remove', 'update'])
+  })
+})
+
+describe('runInvoiceEdit — the whole edit page, in the order the API needs', () => {
+  function recorder(ids: Record<string, string> = {}) {
+    const log: string[] = []
+    return {
+      log,
+      calls: {
+        update: async (id: string, body: object) => {
+          log.push(`update ${id} ${JSON.stringify(body)}`)
+          return ids['update'] ?? id
+        },
+        paymentStatus: async (id: string, change: { status: string }) => {
+          log.push(`payment ${id} ${change.status}`)
+        },
+        modify: async (id: string, params: { action?: string }) => {
+          log.push(`modify ${id} ${params.action}`)
+          return ids['modify'] ?? id
+        },
+        finalize: async (id: string) => {
+          log.push(`finalize ${id}`)
+        },
+        void: async (id: string) => {
+          log.push(`void ${id}`)
+        },
+      },
+    }
+  }
+
+  it('saves fields, then payment, then lines, then the lifecycle step', async () => {
+    const { log, calls } = recorder()
+    const id = await runInvoiceEdit(
+      {
+        invoiceId: 'inv_1',
+        metadata: { po: '7' },
+        paymentStatus: { status: PaymentStatus.Failed },
+        lines: {
+          removed: ['li_1'],
+          updated: [],
+          added: [{ displayName: 'Setup', amount: '10', quantity: '1' }],
+        },
+        nextStatus: 'finalize',
+      },
+      calls as never,
+    )
+    expect(log).toEqual([
+      'update inv_1 {"metadata":{"po":"7"}}',
+      'payment inv_1 failed',
+      'modify inv_1 remove',
+      'modify inv_1 add',
+      'finalize inv_1',
+    ])
+    expect(id).toBe('inv_1')
+  })
+
+  it('follows the draft copy a finalized invoice is replaced by', async () => {
+    const { log, calls } = recorder({ update: 'inv_copy' })
+    const id = await runInvoiceEdit(
+      {
+        invoiceId: 'inv_1',
+        applyDiscount: true,
+        lines: {
+          removed: [],
+          updated: [{ id: 'li_1', displayName: 'A', amount: '1', quantity: '1' }],
+          added: [],
+        },
+      },
+      calls as never,
+    )
+    expect(log).toEqual(['update inv_1 {"applyDiscount":true}', 'modify inv_copy update'])
+    expect(id).toBe('inv_copy')
+  })
+
+  it('makes no call for an untouched page', async () => {
+    const { log, calls } = recorder()
+    await runInvoiceEdit(
+      { invoiceId: 'inv_1', lines: { removed: [], updated: [], added: [] } },
+      calls as never,
+    )
+    expect(log).toEqual([])
   })
 })

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { CustomerStatus, DEFAULT_CUSTOMER_QUERY } from '@fp/domain'
-import { toCustomer, toCustomerFilter, type CustomerWire } from './customers'
+import type { Flexprice } from '@fp/api'
+import {
+  fetchCustomers,
+  toCustomer,
+  toCustomerFilter,
+  toIntegrationLinks,
+  type CustomerWire,
+} from './customers'
 
 describe('toCustomer', () => {
   it('carries the wire fields straight across', () => {
@@ -41,7 +48,23 @@ describe('toCustomer', () => {
     expect(customer.email).toBe('')
     expect(customer.externalId).toBe('')
     expect(customer.addressCountry).toBe('')
+    expect(customer.integrations).toEqual([])
     expect(customer.status).toBe(CustomerStatus.Published)
+  })
+
+  it('keeps one published mark per provider and names it from the catalogue', () => {
+    const customer = toCustomer({
+      integrations: [
+        { providerType: 'stripe', status: 'published' },
+        { providerType: 'stripe', status: 'published' },
+        { providerType: 'quickbooks', status: 'archived' },
+        { providerType: 'zoho_books' },
+      ],
+    })
+    expect(customer.integrations).toEqual([
+      { id: 'stripe', name: 'Stripe', providerType: 'stripe' },
+      { id: 'zoho', name: 'Zoho', providerType: 'zoho_books' },
+    ])
   })
 
   it('collapses a soft-deleted or unknown status to published', () => {
@@ -63,14 +86,130 @@ describe('toCustomerFilter', () => {
     expect(filter).toMatchObject({
       limit: 25,
       offset: 50,
-      sort: [{ field: 'updated_at', direction: 'desc' }],
+      sort: [
+        { field: 'updated_at', direction: 'desc' },
+        { field: 'id', direction: 'desc' },
+      ],
     })
   })
 
-  it('does not send search or status — both are applied on the page', () => {
+  it('sends the search term as a server-side name condition', () => {
+    // Not `nameContains`: the SDK's zod strips keys its model does not declare,
+    // so that key never reaches the wire. The filter DSL does.
     const filter = toCustomerFilter({ ...DEFAULT_CUSTOMER_QUERY, search: 'acme' })
     expect(filter).not.toHaveProperty('nameContains')
-    expect(filter).not.toHaveProperty('status')
-    expect(filter).not.toHaveProperty('statuses')
+    expect(filter['filters']).toEqual([
+      { field: 'name', operator: 'contains', dataType: 'string', value: { string: 'acme' } },
+    ])
+  })
+
+  it('trims the search term, and sends nothing for a blank one', () => {
+    expect(toCustomerFilter({ ...DEFAULT_CUSTOMER_QUERY, search: '  acme  ' })['filters']).toEqual([
+      { field: 'name', operator: 'contains', dataType: 'string', value: { string: 'acme' } },
+    ])
+    expect(toCustomerFilter({ ...DEFAULT_CUSTOMER_QUERY, search: '   ' })).not.toHaveProperty(
+      'filters',
+    )
+  })
+
+  it('sends one selected status as the server-side field', () => {
+    const filter = toCustomerFilter({
+      ...DEFAULT_CUSTOMER_QUERY,
+      statuses: [CustomerStatus.Archived],
+    })
+    expect(filter['status']).toBe('archived')
+  })
+
+  it('sends no status when none or all are selected', () => {
+    expect(toCustomerFilter({ ...DEFAULT_CUSTOMER_QUERY, statuses: [] })).not.toHaveProperty(
+      'status',
+    )
+    expect(
+      toCustomerFilter({
+        ...DEFAULT_CUSTOMER_QUERY,
+        statuses: [CustomerStatus.Published, CustomerStatus.Archived],
+      }),
+    ).not.toHaveProperty('status')
+  })
+
+  it('sends granular filters as typed conditions', () => {
+    const filter = toCustomerFilter({
+      ...DEFAULT_CUSTOMER_QUERY,
+      filters: [{ field: 'email', op: 'contains', value: '@acme' }],
+    })
+    expect(filter['filters']).toEqual([
+      { field: 'email', operator: 'contains', dataType: 'string', value: { string: '@acme' } },
+    ])
+    expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)).not.toHaveProperty('filters')
+  })
+
+  it('expands integrations so the list can show each customer’s marks', () => {
+    expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)).toMatchObject({ expand: 'integrations' })
+  })
+})
+
+describe('toIntegrationLinks', () => {
+  it('keeps published mappings, one per provider, named from the catalogue', () => {
+    const created = new Date('2026-08-01T00:00:00Z')
+    const links = toIntegrationLinks([
+      { id: 'map_1', providerType: 'stripe', providerEntityId: ' cus_Q3x9 ', createdAt: created },
+      { id: 'map_2', providerType: 'stripe', providerEntityId: 'cus_dup' },
+      { id: 'map_3', providerType: 'quickbooks', status: 'archived', providerEntityId: 'qb_1' },
+      { id: 'map_4', providerType: 'mystery', status: 'published' },
+      { id: 'map_5' },
+    ])
+
+    expect(links).toHaveLength(2)
+    expect(links[0]).toMatchObject({
+      id: 'stripe',
+      providerType: 'stripe',
+      mappingId: 'map_1',
+      providerEntityId: 'cus_Q3x9',
+      createdAt: created,
+      updatedAt: null,
+    })
+    expect(links[0]?.name).not.toBe('')
+    // An unknown provider falls back to its provider type for the mark.
+    expect(links[1]).toMatchObject({ id: 'mystery', name: 'mystery', providerEntityId: '' })
+  })
+
+  it('is empty for no mappings', () => {
+    expect(toIntegrationLinks(undefined)).toEqual([])
+  })
+})
+
+describe('fetchCustomers', () => {
+  /**
+   * The page is returned as the server sent it.
+   *
+   * This is a regression guard, not a tautology. Search and status used to be
+   * applied to the fetched page here, which made a search find only the
+   * matches inside the current 25 rows while `total` kept reporting every
+   * customer — so the pager offered pages that came back empty. Both are
+   * server-side now, and re-adding a `.filter()` would silently bring that
+   * back: the rows would still look right on page one.
+   */
+  it('does not narrow the page it was given', async () => {
+    const queryCustomer = async () => ({
+      items: [
+        { id: 'cust_1', name: 'Acme', status: 'published' },
+        // Neither of these matches the search term or the status asked for.
+        // The server decided they belong on this page; the browser must not
+        // second-guess it, or the count above the table stops matching it.
+        { id: 'cust_2', name: 'Globex', status: 'archived' },
+        { id: 'cust_3', name: 'Initech', status: 'archived' },
+      ],
+      pagination: { total: 97, limit: 25, offset: 0 },
+    })
+    const client = { customers: { queryCustomer } } as unknown as Flexprice
+
+    const result = await fetchCustomers(client, {
+      ...DEFAULT_CUSTOMER_QUERY,
+      search: 'acme',
+      statuses: [CustomerStatus.Published],
+    })
+
+    expect(result.customers.map((customer) => customer.id)).toEqual(['cust_1', 'cust_2', 'cust_3'])
+    expect(result.total).toBe(97)
   })
 })

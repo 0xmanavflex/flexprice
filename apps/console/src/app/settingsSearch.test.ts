@@ -52,8 +52,11 @@ describe('parseSettingsSearch', () => {
     })
   })
 
-  it('no longer has API keys, service accounts or environments as settings panels', () => {
-    expect(parseSettingsSearch({ section: 'api-keys' })).toEqual(DEFAULT_SETTINGS_QUERY)
+  it('opens API keys in Settings and leaves service accounts and environments separate', () => {
+    expect(parseSettingsSearch({ section: 'api-keys' })).toEqual({
+      section: 'api-keys',
+      tab: 'api-keys',
+    })
     expect(parseSettingsSearch({ section: 'service-accounts' })).toEqual(DEFAULT_SETTINGS_QUERY)
     expect(parseSettingsSearch({ section: 'organization', tab: 'environments' })).toEqual({
       section: 'organization',

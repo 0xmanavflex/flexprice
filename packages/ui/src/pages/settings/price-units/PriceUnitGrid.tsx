@@ -1,5 +1,13 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CoinsIcon, CopyIcon, PencilIcon, ScaleIcon, PlusIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  CoinsIcon,
+  CopyIcon,
+  PencilIcon,
+  ScaleIcon,
+  PlusIcon,
+  ArchiveIcon,
+} from '@ui/icons'
 import {
   DEFAULT_PRICE_UNIT_QUERY,
   PRICE_UNIT_SORT_LABEL,
@@ -8,10 +16,11 @@ import {
   type PriceUnitQuery,
   PriceUnitSortField,
   PriceUnitStatus,
+  PRICE_UNIT_FILTERS,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../../shared/cells'
 
@@ -72,11 +81,6 @@ const GUIDES: EntityGuide[] = [
   },
 ]
 
-const STATUS_CHOICES = Object.values(PriceUnitStatus).map((value) => ({
-  value,
-  label: PRICE_UNIT_STATUS_LABEL[value],
-}))
-
 export interface PriceUnitGridProps {
   priceUnits: PriceUnit[]
   total: number
@@ -90,6 +94,8 @@ export interface PriceUnitGridProps {
   onCreate?: () => void
   /** Row menu: open the editor. Only the name is editable once created. */
   onEdit?: ((priceUnit: PriceUnit) => void) | undefined
+  /** Row menu: archive. Rendered destructive, last. */
+  onArchive?: ((priceUnit: PriceUnit) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   locale?: string
@@ -106,6 +112,7 @@ export function PriceUnitGrid({
   onPriceUnitClick,
   onCreate,
   onEdit,
+  onArchive,
   onClearFilters,
   locale,
 }: PriceUnitGridProps) {
@@ -178,6 +185,14 @@ export function PriceUnitGrid({
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(priceUnit.id),
     })
+    if (onArchive && priceUnit.status !== PriceUnitStatus.Archived) {
+      actions.push({
+        label: 'Archive price unit',
+        icon: <ArchiveIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onArchive(priceUnit),
+      })
+    }
     return actions
   }
 
@@ -195,10 +210,10 @@ export function PriceUnitGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search price units…"
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: PRICE_UNIT_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -222,10 +237,13 @@ export function PriceUnitGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No price units match these filters"
       empty={{
+        scene: 'settings',
         title: 'No price units yet',
         description:
           'A price unit lets you charge in something other than a currency — credits, tokens, minutes — by pinning a code and a symbol to a base currency through a rate.',

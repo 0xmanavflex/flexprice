@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 
 /**
@@ -47,6 +48,8 @@ export interface Group {
   entityType: GroupEntityType
   /** How many entities the group holds. */
   entityCount: number
+  /** The ids of what it holds: feature ids or price ids, by `entityType`. */
+  entityIds?: string[]
   status: GroupStatus
   createdAt: Date | null
   updatedAt: Date | null
@@ -80,6 +83,16 @@ export interface GroupQuery {
   sortBy: GroupSortField
   sortDirection: 'asc' | 'desc'
   view: GroupView
+  /** Granular field filters, applied by the search endpoint. See `GROUP_FILTERS`. */
+  filters?: ListFilter[]
+  /**
+   * Only the groups that hold this kind of thing.
+   *
+   * Server-side. The pickers want one kind — a feature form offers feature
+   * labels, never price ones — and narrowing a fetched page in the browser
+   * gets that wrong as soon as there are more groups than the page holds.
+   */
+  entityType?: GroupEntityType
 }
 
 export const DEFAULT_GROUP_QUERY: GroupQuery = {
@@ -87,10 +100,26 @@ export const DEFAULT_GROUP_QUERY: GroupQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: GroupSortField.Name,
-  sortDirection: 'asc',
+  sortBy: GroupSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: GroupView.Table,
+  filters: [],
 }
+/** What the group list can filter on — V1's fields, by their wire names. */
+export const GROUP_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'entity_type',
+    label: 'Holds',
+    kind: 'options',
+    options: [
+      { value: 'price', label: 'Prices' },
+      { value: 'feature', label: 'Features' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * A group draft. A group holds either prices or features, never both, so the

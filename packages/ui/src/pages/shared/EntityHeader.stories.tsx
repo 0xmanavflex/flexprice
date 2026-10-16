@@ -6,7 +6,7 @@ import {
   HashIcon,
   PencilIcon,
   ToggleRightIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { FeatureType } from '@fp/domain'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import type { DetailMenuItem } from '@ui/compositions/detail/DetailKit'

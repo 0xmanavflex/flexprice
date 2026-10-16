@@ -116,6 +116,131 @@ if (!import.meta.env.DEV && apiKeyConfigured) {
   )
 }
 
+/**
+ * Supabase, for password reset only.
+ *
+ * Reset is the one flow the Flexprice API does not expose: the backend's public
+ * auth routes are `/auth/signup`, `/auth/login` and SAML, and nothing else. V1
+ * solved it by talking to Supabase from the browser, and this console now does
+ * the same, so these two variables are read here.
+ *
+ * Unlike the API key above, these are genuinely publishable: the anon key is
+ * designed to ship to browsers and is constrained by row-level security. It is
+ * still per-deployment, which is why it is configuration and not a constant.
+ *
+ * ## Why this is per region
+ *
+ * The console can switch between the India and US APIs at runtime (see
+ * `app/region.tsx`), and those are separate deployments with separate accounts
+ * — so they are very likely separate Supabase projects. One project's anon key
+ * cannot reset a password held by the other: the request would succeed against
+ * the wrong project and simply never send an email to a user who exists only in
+ * the other one. A per-region value prevents that, and `VITE_SUPABASE_URL` /
+ * `VITE_SUPABASE_ANON_KEY` remain as the fallback for a single-region or
+ * self-hosted deployment.
+ *
+ * Absent config is not an error. A self-hosted install has no Supabase at all,
+ * and must still sign in normally — it simply gets no reset link.
+ */
+export interface SupabaseConfig {
+  url: string
+  anonKey: string
+}
+
+function supabaseFor(url: string | undefined, anonKey: string | undefined): SupabaseConfig | null {
+  return url && anonKey ? { url, anonKey } : null
+}
+
+const supabaseDefault = supabaseFor(
+  clean(import.meta.env.VITE_SUPABASE_URL),
+  clean(import.meta.env.VITE_SUPABASE_ANON_KEY),
+)
+
+const supabaseByRegion: Readonly<Record<string, SupabaseConfig | null>> = {
+  in:
+    supabaseFor(
+      clean(import.meta.env.VITE_SUPABASE_URL_IN),
+      clean(import.meta.env.VITE_SUPABASE_ANON_KEY_IN),
+    ) ?? supabaseDefault,
+  us:
+    supabaseFor(
+      clean(import.meta.env.VITE_SUPABASE_URL_US),
+      clean(import.meta.env.VITE_SUPABASE_ANON_KEY_US),
+    ) ?? supabaseDefault,
+}
+
+/**
+ * Which hosted region this deployment *is*.
+ *
+ * Each region is its own deployment with its own API, its own accounts and
+ * its own identity provider — so switching region is a navigation to another
+ * dashboard, not a setting inside this one. `VITE_FLEXPRICE_REGION` is what
+ * that deployment calls itself; unset (self-hosted, preview, mocks) means the
+ * console is not part of the hosted set and offers no switch.
+ */
+export type RegionId = 'in' | 'us' | 'ca'
+
+const REGION_IDS: readonly string[] = ['in', 'us', 'ca']
+
+const declaredRegion = clean(import.meta.env.VITE_FLEXPRICE_REGION)?.toLowerCase()
+const region: RegionId | null =
+  declaredRegion && REGION_IDS.includes(declaredRegion) ? (declaredRegion as RegionId) : null
+
+if (declaredRegion && region === null) {
+  console.warn(
+    `[flexprice] VITE_FLEXPRICE_REGION="${declaredRegion}" is not one of ${REGION_IDS.join(', ')} ` +
+      'and is ignored. The region switcher will not be shown.',
+  )
+}
+
+/**
+ * Where each region's dashboard lives.
+ *
+ * Overridable as JSON so a preview or a differently-hosted region does not
+ * need a code change: `{"us":"https://us.app.flexprice.io"}` replaces one
+ * entry and leaves the rest. An entry that is not a URL is dropped rather
+ * than sending someone to a broken address.
+ */
+const DEFAULT_REGION_URLS: Record<RegionId, string> = {
+  in: 'https://in.app.flexprice.io',
+  // The unprefixed host is the canonical one — it is what the OAuth redirect
+  // URIs are registered against. `us.app.flexprice.io` is accepted as an alias
+  // when detecting which region a browser is already on.
+  us: 'https://app.flexprice.io',
+  ca: 'https://ca.app.flexprice.io',
+}
+
+/** Hosts that mean a region without being its canonical address. */
+export const REGION_HOST_ALIASES: Record<RegionId, string[]> = {
+  in: [],
+  us: ['https://us.app.flexprice.io'],
+  ca: [],
+}
+
+function parseRegionUrls(): Record<RegionId, string> {
+  const raw = clean(import.meta.env.VITE_FLEXPRICE_REGION_URLS)
+  if (!raw) return DEFAULT_REGION_URLS
+  try {
+    const parsed = JSON.parse(raw) as Partial<Record<RegionId, unknown>>
+    const out = { ...DEFAULT_REGION_URLS }
+    for (const id of REGION_IDS as RegionId[]) {
+      const value = parsed[id]
+      if (typeof value !== 'string' || value.length === 0) continue
+      try {
+        out[id] = new URL(value).origin
+      } catch {
+        console.warn(`[flexprice] VITE_FLEXPRICE_REGION_URLS.${id} is not a URL and is ignored.`)
+      }
+    }
+    return out
+  } catch {
+    console.warn('[flexprice] VITE_FLEXPRICE_REGION_URLS is not valid JSON and is ignored.')
+    return DEFAULT_REGION_URLS
+  }
+}
+
+const regionUrls = parseRegionUrls()
+
 /** A configuration problem, as a value the app can render. */
 export interface ConfigProblem {
   title: string
@@ -167,4 +292,15 @@ export const env = {
    * and would not be safe shipped.
    */
   apiKey,
+  /**
+   * Supabase for the region currently selected, or `null` where none is
+   * configured. `null` means the console offers no password reset, which is
+   * the correct and honest state for a self-hosted deployment.
+   */
+  supabaseFor: (region: string): SupabaseConfig | null =>
+    supabaseByRegion[region] ?? supabaseDefault,
+  /** This deployment's region, or `null` when it is not one of the hosted set. */
+  region,
+  /** Each region's dashboard origin, after any `VITE_FLEXPRICE_REGION_URLS` override. */
+  regionUrls,
 } as const

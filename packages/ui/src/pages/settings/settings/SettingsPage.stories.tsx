@@ -11,7 +11,7 @@ import {
   SmileIcon,
   TagIcon,
   UsersIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   ErrorState,
   LoadingRows,

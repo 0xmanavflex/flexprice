@@ -77,7 +77,7 @@ export function CostSheetFormPage(props: CostSheetFormPageProps) {
       defaultValue={costSheetToEdit(costSheet)}
       trail={[
         { label: 'Cost sheets', onClick: onNavigateToList },
-        { label: costSheet.name, onClick: () => props.onDone(costSheet.id) },
+        { label: 'Cost sheet details', onClick: () => props.onDone(costSheet.id) },
         { label: 'Edit' },
       ]}
       onCancel={onCancel}

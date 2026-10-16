@@ -76,33 +76,29 @@ export interface InvoiceDocument {
   events: InvoiceActivity[]
 }
 
-export type ChipVariant =
-  'outline' | 'success-light' | 'warning-light' | 'destructive-light' | 'info-light'
-
 export interface StatusChip {
   label: string
-  variant: ChipVariant
+  tone: 'neutral' | 'success' | 'info' | 'warning' | 'danger'
 }
 
 /**
  * The header's status chips: the document state (Draft, Finalized, Void,
  * Skipped), then — for a finalized invoice — what the money did (Paid, Overdue,
- * Payment failed, Partially paid). Overdue and failed use the subtle red.
+ * Payment failed, Partially paid). Overdue and failed carry the danger tone.
  */
 export function statusChips(
   doc: Pick<InvoiceDocument, 'status' | 'paymentStatus' | 'paid'>,
 ): StatusChip[] {
-  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', variant: 'outline' }]
-  if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', variant: 'outline' }]
-  if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', variant: 'outline' }]
-  const chips: StatusChip[] = [{ label: 'Finalized', variant: 'outline' }]
-  if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', variant: 'success-light' })
-  else if (doc.status === InvoiceStatus.Overdue)
-    chips.push({ label: 'Overdue', variant: 'destructive-light' })
+  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'neutral' }]
+  if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', tone: 'neutral' }]
+  if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', tone: 'neutral' }]
+  const chips: StatusChip[] = [{ label: 'Finalized', tone: 'neutral' }]
+  if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', tone: 'success' })
+  else if (doc.status === InvoiceStatus.Overdue) chips.push({ label: 'Overdue', tone: 'danger' })
   if (doc.status !== InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Failed)
-    chips.push({ label: 'Payment failed', variant: 'destructive-light' })
+    chips.push({ label: 'Payment failed', tone: 'danger' })
   else if (doc.status !== InvoiceStatus.Paid && doc.paid > 0)
-    chips.push({ label: 'Partially paid', variant: 'warning-light' })
+    chips.push({ label: 'Partially paid', tone: 'warning' })
   return chips
 }
 

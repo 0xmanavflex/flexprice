@@ -41,6 +41,22 @@ const editValue = {
 }
 
 /** Flip create/edit, submitting and a server error from the controls. */
+/** The lookup key is filled from the name until the person types their own. */
+export const LookupKeyFollowsName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const field = canvas.getByRole('textbox', { name: /^lookup key/i })
+
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Name' }), 'Acme Pro')
+    await expect(field).toHaveValue('addon-acme-pro')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, 'mine')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Name' }), ' Plus')
+    await expect(field).toHaveValue('mine')
+  },
+}
+
 export const Playground: Story = {
   args: { isSubmitting: false, submitError: '' },
   render: ({ mode, submitError, ...args }) => (
@@ -125,11 +141,13 @@ export const RejectsAMalformedLookupKey: Story = {
     // Queried by role/accessible name: the required fields carry a visual "*"
     // in the label text, which the accessible name (and a screen reader) omits.
     await userEvent.type(canvas.getByRole('textbox', { name: 'Name' }), 'Priority support')
-    await userEvent.type(canvas.getByRole('textbox', { name: 'Lookup key' }), 'Priority Support')
+    const lookupKey = canvas.getByRole('textbox', { name: 'Lookup key' })
+    await userEvent.clear(lookupKey)
+    await userEvent.type(lookupKey, 'Priority Support')
     await userEvent.click(canvas.getByRole('button', { name: /create add-on/i }))
 
     await expect(
-      await canvas.findByText('Use lowercase letters, numbers and underscores'),
+      await canvas.findByText('Use lowercase letters, numbers, hyphens and underscores'),
     ).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
@@ -141,7 +159,9 @@ export const SubmitsAValidatedDomainValue: Story = {
     const canvas = within(canvasElement)
 
     await userEvent.type(canvas.getByRole('textbox', { name: 'Name' }), 'Priority support')
-    await userEvent.type(canvas.getByRole('textbox', { name: 'Lookup key' }), 'priority_support')
+    const lookupKey = canvas.getByRole('textbox', { name: 'Lookup key' })
+    await userEvent.clear(lookupKey)
+    await userEvent.type(lookupKey, 'priority_support')
 
     await userEvent.click(canvas.getByRole('button', { name: /create add-on/i }))
 

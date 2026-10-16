@@ -11,7 +11,7 @@ import {
   TrendingUpIcon,
   UsersIcon,
   WalletIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { AppShell } from '@ui/compositions/shell/AppShell'
 import { EnvironmentSwitcher } from '@ui/compositions/shell/EnvironmentSwitcher'
 import { ShellBreadcrumb } from '@ui/compositions/shell/ShellBreadcrumb'
@@ -44,7 +44,7 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
         icon: <ReceiptIcon className="size-4" />,
         items: [
           { id: 'invoices', label: 'Invoices' },
-          { id: 'credit-notes', label: 'Credit notes' },
+          { id: 'credit-notes', label: 'Credit memos' },
         ],
       },
       {
@@ -59,7 +59,7 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
         label: 'Product catalog',
         icon: <PackageIcon className="size-4" />,
         items: [
-          { id: 'features', label: 'Products' },
+          { id: 'features', label: 'Features' },
           { id: 'plans', label: 'Plans' },
           { id: 'addons', label: 'Add-ons' },
           { id: 'coupons', label: 'Coupons' },

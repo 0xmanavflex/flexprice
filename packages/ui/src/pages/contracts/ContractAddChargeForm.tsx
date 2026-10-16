@@ -81,6 +81,9 @@ export function ContractAddChargeForm({
       mode="create"
       lockType
       lockCurrency
+      // The window is collected below in `UsageTermsFields`, beside the
+      // commitment it interacts with, so the price form must not draw a second.
+      showUsageWindow={false}
       defaultValue={defaultValue}
       meters={meters}
       priceUnits={priceUnits}

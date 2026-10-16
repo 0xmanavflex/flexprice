@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { UsersIcon } from 'lucide-react'
 import {
   type Customer,
   CustomerStatus,
@@ -35,6 +34,15 @@ function manyCustomers(count: number, status: 'mixed' | CustomerStatus): Custome
           : status,
       createdAt: new Date(Date.UTC(2025, index % 12, 1 + (index % 27))),
       updatedAt: index % 6 === 2 ? null : new Date(Date.UTC(2026, index % 9, 1 + (index % 27))),
+      integrations:
+        index % 3 === 0
+          ? [{ id: 'stripe', name: 'Stripe', providerType: 'stripe' }]
+          : index % 3 === 1
+            ? [
+                { id: 'stripe', name: 'Stripe', providerType: 'stripe' },
+                { id: 'quickbooks', name: 'QuickBooks', providerType: 'quickbooks' },
+              ]
+            : [],
     }
   })
 }
@@ -103,7 +111,6 @@ function CustomersListBody({
         onRetry={fn()}
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New customer</Button>}
-        emptyIcon={<UsersIcon aria-hidden />}
         emptyTitle="No customers yet"
         emptyDescription="Customers are who you bill. Each carries contracts, invoices and a payment history."
       >

@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react'
-import { ArrowRightIcon } from 'lucide-react'
-// eslint-disable-next-line no-restricted-imports -- wraps the empty-state-3 illustration unchanged, by design
-import { ProjectsEmptyIllustration } from '@ui/components/blocks/empty-state-3/components/projects-empty-illustration'
+import { Children, Fragment, isValidElement, type ReactNode } from 'react'
+import { Button } from '@ui/components/primitives/button'
+import { ArrowRightIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
+import { SceneIllustration, type EmptyScene } from './SceneIllustration'
 
 export interface GuideCard {
   title: string
@@ -20,13 +20,14 @@ export interface GuidedEmptyStateProps {
   guides?: GuideCard[] | undefined
   /** Accessible name for the status region. */
   label?: string
+  /** Which area of the product this page belongs to; picks the drawing. */
+  scene?: EmptyScene | undefined
 }
 
 /**
- * The first-run empty state: `empty-state-3`'s illustration (unchanged) with
- * title, description, primary action, and three "Read docs" guide cards.
- * Wraps the block's illustration only; the block's own copy/buttons are demo.
- * Laid out exactly as the reference's `EmptyState`: a centred message, then the
+ * The first-run empty state: a hairline drawing for the area of the product
+ * (see `SceneIllustration`) with title, description, primary action, and three
+ * "Read docs" guide cards. Laid out as `empty-state-3`'s `EmptyState`: a centred message, then the
  * guide grid as three routes forward.
  */
 export function GuidedEmptyState({
@@ -35,7 +36,12 @@ export function GuidedEmptyState({
   actions,
   guides,
   label,
+  scene = 'table',
 }: GuidedEmptyStateProps) {
+  const actionCount =
+    isValidElement<{ children?: ReactNode }>(actions) && actions.type === Fragment
+      ? Children.count(actions.props.children)
+      : Children.count(actions)
   return (
     <div
       className="flex w-full flex-col items-center gap-16 pt-12 pb-8"
@@ -43,16 +49,27 @@ export function GuidedEmptyState({
       {...(label ? { 'aria-label': label } : {})}
     >
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
-        <span className="text-foreground">
-          <ProjectsEmptyIllustration />
-        </span>
+        <SceneIllustration scene={scene} />
         <div className="space-y-2">
           <p className="text-lg font-medium tracking-tight">{title}</p>
           {description ? (
             <p className="text-muted-foreground text-sm/relaxed text-balance">{description}</p>
           ) : null}
         </div>
-        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+        {actions ? (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {actions}
+            {actionCount === 1 && guides?.[0] ? (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<a href={guides[0].href} target="_blank" rel="noopener noreferrer" />}
+              >
+                View documentation
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {guides && guides.length > 0 ? (

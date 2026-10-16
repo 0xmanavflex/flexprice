@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -21,8 +21,9 @@ import { useInFormDialog } from '../forms/formDialogContext'
  *   header  -> what this thing is, in one line, plus its actions
  *   tabs    -> one job per tab; "Information" holds every raw property
  *   section -> a titled surface; tables inside it use the list-page style
- * Status and type chips sit in the header's right-hand cluster (see
- * `DetailHeaderCluster`), never beside the name; there is no subtitle line.
+ * Status and type pills sit in a small row directly under the title (see
+ * `DetailPills`); the right-hand cluster (`DetailHeaderCluster`) holds only the
+ * copy chips and the More menu. There is no subtitle line.
  */
 export const DetailKitProvenance = provenance({
   source: 'composition',
@@ -166,40 +167,37 @@ export function DetailMoreMenu({
 }
 
 /**
- * The right-hand cluster every detail header shares, in one fixed order:
- * status and type chips, the id and email copy chips, then the overflow menu
- * (`DetailMoreMenu`), which holds every action. Chips never sit beside the
- * record name.
+ * The right-hand cluster every detail header shares, in one fixed order: the id
+ * and email copy chips, then the overflow menu (`DetailMoreMenu`), which holds
+ * every action. Status and type pills are not here: they sit under the title.
  *
- * Chips are pinned to one height (`h-6`) so a small type pill and a status pill
- * sit level; the copy chips and the More button share `h-8`.
+ * The copy chips and the More button share `h-8`.
  *
  * `primary` is legacy: new headers put every action in the menu.
  */
 export function DetailHeaderCluster({
   primary,
-  badges,
+  leading,
   id,
   email,
   more,
 }: {
   /** Legacy inline action slot; prefer menu items. */
   primary?: ReactNode
-  badges?: ReactNode
+  /** Connected integration marks, after the copy chips and before the menu. */
+  leading?: ReactNode
   id?: string | undefined
   email?: string | undefined
   /** The overflow ("More") menu, always last. */
   more?: ReactNode
 }) {
-  if (!primary && !badges && !id && !email && !more) return null
+  if (!primary && !leading && !id && !email && !more) return null
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {primary}
-      {badges ? (
-        <div className="flex flex-wrap items-center gap-1.5 [&>*]:h-6">{badges}</div>
-      ) : null}
       {id ? <CopyId value={id} /> : null}
       {email ? <CopyEmail value={email} /> : null}
+      {leading}
       {more}
     </div>
   )
@@ -278,7 +276,7 @@ export function Properties({
       {items.map((item) => (
         <div key={item.label} className="min-w-0 space-y-1">
           <dt className="text-muted-foreground text-xs">{item.label}</dt>
-          <dd className="truncate text-sm">{item.value}</dd>
+          <dd className="text-sm break-words">{item.value}</dd>
         </div>
       ))}
     </dl>
@@ -310,6 +308,43 @@ export function SummaryRow({
           <dt className="text-muted-foreground text-xs">{item.label}</dt>
           <dd className="text-lg font-medium tabular-nums">{item.value}</dd>
           {item.hint ? <dd className="text-muted-foreground text-xs">{item.hint}</dd> : null}
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+export interface OverviewTile {
+  label: string
+  value: ReactNode
+  /** A muted line under the value. */
+  detail?: ReactNode
+}
+
+/**
+ * One bordered box of figures in a 2 x 2 grid split by hairlines: a label, a
+ * large value and a muted detail line per tile. It is the first thing in an
+ * Overview (or Usage) tab, never above the tabs.
+ */
+export function OverviewTiles({ tiles, className }: { tiles: OverviewTile[]; className?: string }) {
+  return (
+    <dl
+      className={cn(
+        'bg-background grid grid-cols-1 overflow-hidden rounded-xl border sm:grid-cols-2',
+        '[&>div]:border-b sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-last-child(-n+2)]:border-b-0',
+        '[&>div:last-child]:border-b-0',
+        className,
+      )}
+    >
+      {tiles.map((tile) => (
+        <div key={tile.label} className="min-w-0 space-y-1 px-6 py-5">
+          <dt className="text-muted-foreground text-xs">{tile.label}</dt>
+          <dd className="truncate text-2xl font-medium tracking-tight tabular-nums">
+            {tile.value}
+          </dd>
+          {tile.detail ? (
+            <dd className="text-muted-foreground truncate text-[13px]">{tile.detail}</dd>
+          ) : null}
         </div>
       ))}
     </dl>

@@ -1,5 +1,5 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { CustomerForm } from './CustomerForm'
 
 /** Customer create and edit: one page, no preview rail. */
@@ -45,7 +45,7 @@ export const Playground: Story = {
         {...args}
         mode="edit"
         customerName={customerName ?? 'Acme Corp'}
-        trail={[{ label: 'Customers' }, { label: customerName ?? 'Acme Corp' }, { label: 'Edit' }]}
+        trail={[{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }]}
         submitError={submitError || null}
         defaultValue={{ externalId: 'acme', name: 'Acme Corp', email: 'billing@acme.test' }}
       />
@@ -69,7 +69,9 @@ export const Create: Story = {
     await expect(args.onSubmit).not.toHaveBeenCalled()
 
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Corp')
-    await userEvent.type(canvas.getByRole('textbox', { name: /external id/i }), 'acme')
+    const externalId = canvas.getByRole('textbox', { name: /external id/i })
+    await userEvent.clear(externalId)
+    await userEvent.type(externalId, 'acme')
     await userEvent.click(canvas.getByRole('button', { name: 'Create customer' }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Acme Corp', externalId: 'acme' }),
@@ -77,11 +79,28 @@ export const Create: Story = {
   },
 }
 
+/** The external ID is filled from the name until the person types their own. */
+export const ExternalIdFollowsName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const name = canvas.getByRole('textbox', { name: /^name/i })
+    const externalId = canvas.getByRole('textbox', { name: /external id/i })
+
+    await userEvent.type(name, 'Acme Corp')
+    await expect(externalId).toHaveValue('cust-acme-corp')
+
+    await userEvent.clear(externalId)
+    await userEvent.type(externalId, 'acme')
+    await userEvent.type(name, ' Robotics')
+    await expect(externalId).toHaveValue('acme')
+  },
+}
+
 export const Edit: Story = {
   args: {
     mode: 'edit',
     customerName: 'Acme Corp',
-    trail: [{ label: 'Customers' }, { label: 'Acme Corp' }, { label: 'Edit' }],
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
     defaultValue: { externalId: 'acme', name: 'Acme Corp', email: 'billing@acme.test' },
   },
   play: async ({ canvasElement, args }) => {
@@ -89,6 +108,9 @@ export const Edit: Story = {
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
     await expect(canvas.queryByRole('complementary')).toBeNull()
     await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
+    // Renaming a saved customer never rewrites its external ID.
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
+    await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue('acme')
     await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
     await expect(args.onSubmit).toHaveBeenCalled()
   },
@@ -98,5 +120,61 @@ export const SubmitError: Story = {
   args: { submitError: 'A customer with that external ID already exists.' },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('alert')).toBeInTheDocument()
+  },
+}
+
+/**
+ * Country is chosen, not typed.
+ *
+ * It was a free-text box capped at two characters: it accepted "zz", told
+ * nobody which code it wanted, and could not be searched. The stored value
+ * is still the alpha-2 code; what changed is that you find it by name.
+ */
+export const CountryIsSearchable: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Both fields live in the collapsed "More details" disclosure.
+    await userEvent.click(canvas.getByRole('button', { name: /More details/ }))
+    const country = canvas.getByRole('combobox', { name: 'Country' })
+    await userEvent.type(country, 'united king')
+    const option = await within(document.body).findByRole('option', {
+      name: /United Kingdom \(GB\)/,
+    })
+    await userEvent.click(option)
+    await expect(country).toHaveValue('United Kingdom (GB)')
+    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
+  },
+}
+
+/**
+ * Time zones are found by abbreviation and offset, which is the reported bug.
+ *
+ * The options were bare IANA names, so someone looking for their own zone had
+ * to know its spelling — "IST" and "+05:30" both found nothing.
+ */
+export const TimezoneFoundByAbbreviation: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /More details/ }))
+    const timezone = canvas.getByRole('combobox', { name: 'Timezone' })
+    await userEvent.type(timezone, 'IST')
+    /*
+     * Matched on the abbreviation, not on a zone name.
+     * Which IANA spelling a runtime enumerates is its own business — this one
+     * offers `Asia/Calcutta` where another offers `Asia/Kolkata` — so the
+     * assertion is that searching "IST" finds an IST zone, which is the thing
+     * that was broken.
+     */
+    const options = await within(document.body).findAllByRole('option')
+    await expect(options.some((option) => option.textContent?.includes('IST'))).toBe(true)
+
+    /*
+     * Close it before the scan.
+     * While the popup is open Base UI marks the rest of the page
+     * `aria-hidden`, and axe fails the focusable content inside it. The a11y
+     * run happens when this returns, so it must see the settled DOM.
+     */
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
   },
 }

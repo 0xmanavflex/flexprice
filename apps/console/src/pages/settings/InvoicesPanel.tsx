@@ -8,13 +8,7 @@ import {
   splitDelay,
 } from '@fp/domain'
 import { useInvoiceConfig, useResetInvoiceConfig, useUpdateInvoiceConfig } from '@fp/query'
-import {
-  ConfirmDialog,
-  EmptyState,
-  LoadingRows,
-  SettingRow,
-  SettingsFieldGroup,
-} from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
 import {
   Button,
   Input,
@@ -35,6 +29,9 @@ import {
   SettingsBlock,
   mutationMessage,
   toFailure,
+  PanelLoading,
+  PanelUnavailable,
+  queryPhase,
 } from './panelKit'
 import { useDraft } from './useDraft'
 
@@ -96,13 +93,9 @@ export function InvoicesPanel() {
     )
   }
 
-  if (config.isPending || !config.data) {
-    return (
-      <Panel>
-        <LoadingRows rows={6} columns={2} />
-      </Panel>
-    )
-  }
+  const phase = queryPhase(config)
+  if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
+  if (phase === 'loading' || !config.data) return <PanelLoading rows={6} />
 
   // Keyed on the environment rather than on the record: the draft should
   // survive a save — the mutation writes its own response into this cache
@@ -449,7 +442,6 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
             </SettingsFieldGroup>
           </SettingsBlock>
         </Panel>
-
       </form>
 
       <ConfirmDialog
@@ -511,7 +503,13 @@ function TextRow({
       labelFor={id}
       {...(last ? { last: true } : {})}
       {...(required
-        ? { titleAddon: <span className="text-destructive" aria-hidden="true">*</span> }
+        ? {
+            titleAddon: (
+              <span className="text-destructive" aria-hidden="true">
+                *
+              </span>
+            ),
+          }
         : {})}
     >
       <div className="flex w-full flex-col gap-1">

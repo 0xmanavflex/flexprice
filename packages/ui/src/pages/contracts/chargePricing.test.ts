@@ -24,6 +24,7 @@ const flat: Charge = {
   tierMode: null,
   tiers: [],
   transformQuantity: null,
+  bucketSize: null,
   meterId: 'meter_1',
   meterName: 'API calls',
   entityType: PriceEntityType.Plan,
@@ -31,6 +32,9 @@ const flat: Charge = {
   lookupKey: '',
   description: '',
   displayName: 'API calls',
+  startDate: null,
+  endDate: null,
+  sequence: 1,
   createdAt: null,
 }
 

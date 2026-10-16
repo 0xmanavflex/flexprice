@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, RefreshCwIcon, WaypointsIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, RefreshCwIcon, WaypointsIcon } from '@ui/icons'
 import {
   USAGE_SYNC_STATE,
   USAGE_SYNC_STATE_LABEL,
@@ -10,7 +10,13 @@ import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
-import { type EntityColumn, idColumn, moneyColumn, pillColumn, textColumn } from '../../shared/cells'
+import {
+  type EntityColumn,
+  idColumn,
+  moneyColumn,
+  pillColumn,
+  textColumn,
+} from '../../shared/cells'
 import { providerLabel } from './usageSyncProviders'
 
 /**
@@ -184,6 +190,7 @@ export function UsageSyncGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No usage syncs match these filters"
       empty={{
+        scene: 'developers',
         title: 'No usage has been recorded yet',
         description:
           'Usage that bills through a cloud marketplace is recorded per billing period, and where it was reported shows here.',

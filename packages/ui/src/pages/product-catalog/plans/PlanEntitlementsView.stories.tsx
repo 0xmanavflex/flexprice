@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { FeatureType } from '@fp/domain'
+import type { SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { PlanEntitlementsView, type PlanEntitlementsViewProps } from './PlanEntitlementsView'
 import { makeEntitlements } from './planDetailFixtures'
 
@@ -14,6 +15,8 @@ interface PlaygroundProps extends Pick<PlanEntitlementsViewProps, 'onAdd' | 'onE
   /** Wire `onOpenFeature`, which makes rows clickable. */
   rowsOpenFeature: boolean
   onOpenFeature: (featureId: string) => void
+  /** The sub-tab's load state; absent means loaded. */
+  query?: Partial<SubTabQuery> | undefined
 }
 
 /** Fixture entitlements built from the controls. */
@@ -24,6 +27,7 @@ function EntitlementsPlayground({
   hasUsagePrice,
   rowsOpenFeature,
   onOpenFeature,
+  query,
   ...handlers
 }: PlaygroundProps) {
   return (
@@ -31,6 +35,7 @@ function EntitlementsPlayground({
       entitlements={makeEntitlements(rows, { featureType, unlimitedEvery })}
       usagePrice={() => (hasUsagePrice ? '$0.002 per unit' : null)}
       {...(rowsOpenFeature ? { onOpenFeature } : {})}
+      {...query}
       {...handlers}
     />
   )
@@ -62,6 +67,7 @@ const meta = {
     onEdit: { control: false },
     onDelete: { control: false },
     onOpenFeature: { control: false },
+    query: { control: false },
   },
 } satisfies Meta<typeof EntitlementsPlayground>
 
@@ -111,4 +117,34 @@ export const Unlimited: Story = {
 
 export const LongList: Story = {
   args: { rows: 40 },
+}
+
+/** Loading is a skeleton, never "No entitlements yet". */
+export const Loading: Story = {
+  args: { rows: 0, query: { isLoading: true } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Loading entitlements')).toBeInTheDocument()
+    await expect(canvas.queryByText('No entitlements yet')).toBeNull()
+  },
+}
+
+/** A failed load says so and offers a retry; it never reads as "No entitlements yet". */
+export const SubTabError: Story = {
+  args: {
+    rows: 0,
+    query: {
+      isLoading: false,
+      error: 'Could not load the entitlements.',
+      errorKind: 'server',
+      onRetry: fn(),
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Could not load the entitlements.')).toBeInTheDocument()
+    await expect(canvas.queryByText('No entitlements yet')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.query?.onRetry).toHaveBeenCalledOnce()
+  },
 }

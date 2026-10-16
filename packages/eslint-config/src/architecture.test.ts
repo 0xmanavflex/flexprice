@@ -186,3 +186,29 @@ describe('pages follow the redesign', () => {
     expect(await lintAt(viz, 'const a = "font-bold"')).toHaveLength(1)
   })
 })
+
+describe('icons come from the ReUI barrel', () => {
+  const lucide = "import { Plus } from 'lucide-react'"
+
+  it.each([
+    'apps/console/src/pages/Invoices.tsx',
+    'packages/ui/src/compositions/forms/Thing.tsx',
+    'packages/ui/src/pages/Thing.tsx',
+  ])('refuses lucide-react in %s', async (path) => {
+    const messages = await lintAt(path, lucide)
+    expect(messages.join(' ')).toMatch(/icon-map\.json/)
+  })
+
+  it('leaves vendored registry code alone, since the build aliases it to the barrel', async () => {
+    expect(await lintAt('packages/ui/src/components/primitives/dialog.tsx', lucide)).toEqual([])
+  })
+
+  it('accepts the barrel', async () => {
+    expect(
+      await lintAt(
+        'packages/ui/src/compositions/forms/Thing.tsx',
+        "import { PlusIcon } from '@ui/icons'",
+      ),
+    ).toEqual([])
+  })
+})

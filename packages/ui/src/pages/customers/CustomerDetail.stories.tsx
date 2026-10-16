@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import {
@@ -28,6 +28,7 @@ const CUSTOMER: CustomerDetailModel = {
   taxTreatment: 'taxable',
   metadata: { segment: 'enterprise' },
   status: 'published',
+  integrations: [{ id: 'stripe', name: 'Stripe', providerType: 'stripe' }],
   createdAt: new Date('2025-04-19T00:00:00Z'),
   updatedAt: new Date('2026-09-01T00:00:00Z'),
 }
@@ -52,7 +53,7 @@ const SUBSCRIPTIONS: Subscription[] = [
 const INVOICES: Invoice[] = [
   {
     id: 'inv_draft',
-    number: 'Draft',
+    number: '',
     customerId: CUSTOMER.id,
     customerName: CUSTOMER.name,
     status: InvoiceStatus.Draft,
@@ -96,6 +97,10 @@ function Harness({
   subscriptionsLoading = false,
   subscriptionsError = false,
   invoicesLoading = false,
+  invoicesError = false,
+  onRetryInvoices,
+  onRetrySubscriptions,
+  events,
   initialTab = 'overview',
 }: {
   customer?: CustomerDetailModel
@@ -111,6 +116,10 @@ function Harness({
   subscriptionsLoading?: boolean
   subscriptionsError?: boolean
   invoicesLoading?: boolean
+  invoicesError?: boolean
+  onRetryInvoices?: () => void
+  onRetrySubscriptions?: () => void
+  events?: ReactNode
   initialTab?: CustomerTab
 }) {
   const [tab, setTab] = useState<CustomerTab>(initialTab)
@@ -125,6 +134,10 @@ function Harness({
         subscriptionsLoading={subscriptionsLoading}
         subscriptionsError={subscriptionsError}
         invoicesLoading={invoicesLoading}
+        invoicesError={invoicesError}
+        {...(onRetryInvoices ? { onRetryInvoices } : {})}
+        {...(onRetrySubscriptions ? { onRetrySubscriptions } : {})}
+        {...(events ? { events } : {})}
         onBack={onBack ?? (() => {})}
         onCreateInvoice={() => onCreateInvoice?.()}
         onCreateContract={() => onCreateContract?.()}
@@ -196,7 +209,8 @@ function makeInvoices(count: number, status: InvoiceStatus): Invoice[] {
     const paid = status === InvoiceStatus.Paid
     return {
       id: `inv_gen_${index}`,
-      number: `INV-2026-${String(1000 + index).padStart(5, '0')}`,
+      number:
+        status === InvoiceStatus.Draft ? '' : `INV-2026-${String(1000 + index).padStart(5, '0')}`,
       customerId: CUSTOMER.id,
       customerName: CUSTOMER.name,
       status,
@@ -273,6 +287,9 @@ export const Default: Story = {
     // Overview opens on the invoices table. Its title is for assistive tech; the table is what is on screen.
     await expect(canvas.getByRole('region', { name: 'Invoices table' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Contracts' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
+    await expect(canvas.queryByRole('tab', { name: /Contracts/ })).toBeNull()
   },
 }
 
@@ -280,7 +297,6 @@ export const Default: Story = {
 export const NavigatesSections: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
     await expect(canvas.getByRole('button', { name: 'Create contract' })).toBeVisible()
 
     await userEvent.click(canvas.getByRole('tab', { name: /Invoices/ }))
@@ -295,12 +311,11 @@ export const NavigatesSections: Story = {
   },
 }
 
-/** The Contracts table carries its own Create contract action; the detail view only hands off. */
+/** The Overview Contracts table carries its own Create contract action; the detail view only hands off. */
 export const CreatesContractFromTable: Story = {
   args: { onCreateContract: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await expect(args.onCreateContract).toHaveBeenCalledOnce()
   },
@@ -311,7 +326,6 @@ export const OpensContractFromTable: Story = {
   args: { onOpenContract: fn(), onOpenPlan: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
     const headers = canvas.getAllByRole('columnheader').map((header) => header.textContent)
     await expect(headers.indexOf('Contract')).toBeLessThan(headers.indexOf('Plan'))
     await userEvent.click(canvas.getByRole('button', { name: SUBSCRIPTIONS[0]?.id ?? '' }))
@@ -325,7 +339,6 @@ export const CreatesInvoiceFromMenu: Story = {
   args: { onCreateInvoice: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.queryByRole('button', { name: 'Create contract' })).not.toBeInTheDocument()
     await expect(canvas.queryByRole('button', { name: 'Create invoice' })).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
     const body = within(canvasElement.ownerDocument.body)
@@ -385,12 +398,11 @@ export const Empty: Story = {
   },
 }
 
-/** With no contracts the tab says what a contract is and offers Create contract in the middle. */
+/** With no contracts the Overview table says what a contract is and keeps Create contract in its header. */
 export const EmptyContracts: Story = {
   args: { subscriptions: [], onCreateContract: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
     await expect(canvas.getByText('No contracts yet')).toBeVisible()
     await expect(canvas.getByText(/puts this customer on a plan/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
@@ -403,8 +415,57 @@ export const ContractsLoadFailed: Story = {
   args: { subscriptions: [], subscriptionsError: true, onCreateContract: fn() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
     await expect(canvas.getByText("Contracts couldn't be loaded")).toBeVisible()
     await expect(canvas.queryByText('No contracts yet')).toBeNull()
+  },
+}
+
+/** A failed contracts read offers Try again, which calls the page's refetch. */
+export const ContractsRetry: Story = {
+  args: { subscriptions: [], subscriptionsError: true, onRetrySubscriptions: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: /try again/i }))
+    await expect(args.onRetrySubscriptions).toHaveBeenCalledOnce()
+  },
+}
+
+/** Overview tiles and the Invoices tab count do not count what has not arrived. */
+export const InvoicesLoading: Story = {
+  args: { invoices: [], invoicesLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Loading invoices…')).toBeVisible()
+    await expect(canvas.queryByText('No invoices issued yet')).toBeNull()
+    await expect(canvas.queryByText(/No invoices yet/)).toBeNull()
+    await expect(canvas.getByRole('tab', { name: 'Invoices' })).toBeVisible()
+  },
+}
+
+/** A failed invoices read is an error with retry on the tab, never "No invoices yet" or a 0 count. */
+export const InvoicesLoadFailed: Story = {
+  args: {
+    invoices: [],
+    invoicesError: true,
+    initialTab: 'invoices',
+    onRetryInvoices: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText("Invoices couldn't be loaded")).toBeVisible()
+    await expect(canvas.queryByText(/No invoices yet/)).toBeNull()
+    await expect(canvas.getByRole('tab', { name: 'Invoices' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetryInvoices).toHaveBeenCalledOnce()
+  },
+}
+
+/** With no events slot the tab says it has nothing to show, rather than sample events. */
+export const EventsNotAvailable: Story = {
+  args: { initialTab: 'events' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Events not available here')).toBeVisible()
+    await expect(canvas.queryByText('api_call')).toBeNull()
   },
 }

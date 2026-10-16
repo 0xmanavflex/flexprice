@@ -11,6 +11,8 @@ export interface ShellNavItem {
   id: string
   label: string
   icon?: ReactNode
+  /** A page outside the app: the row is a real link that opens in a new tab. */
+  href?: string
   /** Children. A parent with children expands rather than standing alone. */
   items?: ShellNavItem[]
 }

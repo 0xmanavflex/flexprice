@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useInvoices, useUsageAnalytics, UsageWindowSize } from '@fp/query'
-import type { UsageAnalytics } from '@fp/query'
-import { DEFAULT_INVOICE_QUERY, InvoiceStatus } from '@fp/domain'
+import { useInvoices, useRevenueOverview, useUsageAnalytics, UsageWindowSize } from '@fp/query'
+import type { RevenueOverview, UsageAnalytics } from '@fp/query'
+import { useSession } from '@/app/session'
+import { DEFAULT_INVOICE_QUERY, InvoiceStatus, formatMoney } from '@fp/domain'
 import type { Invoice } from '@fp/domain'
 import { RevenueDashboard } from '@fp/ui/pages'
 import type { MetricTab, RevenueDashboardProps } from '@fp/ui/pages'
+import { qualityOf, withoutData } from '../home/queryView'
+import type { QueryView } from '../home/queryView'
 
 /**
  * Revenue — wired to what the API can actually answer, and explicit about the
@@ -51,14 +54,24 @@ const DAY_MS = 86_400_000
 /**
  * The window the whole page is measured over.
  *
- * Thirty days rather than the overview's seven, and not only for variety: the
+ * Ninety days rather than the overview's seven, and not only for variety: the
  * overview answers "what is happening", which is a question about this week,
  * while a revenue report answers "what did we bill", which is a question about
- * the billing cycle. It also keeps the two surfaces from quoting the same
- * number at each other as if they were two findings.
+ * the quarter. It also keeps the two surfaces from quoting the same number at
+ * each other as if they were two findings.
+ *
+ * Ninety is what the redesign opens on, agreed with the revenue API's owner.
+ *
+ * **And it opens with no comparison.** A prior window doubles the analytics
+ * requests on mount, and the point of the first paint is the figures, not a
+ * delta nobody asked for. The handoff puts the comparison behind a picker
+ * ("Δ badges only when Compare ≠ none"); the picker is not built yet, so for
+ * now the page simply does not compare, and nothing shows a change. The
+ * machinery for one window is the same as for two — when the picker lands it
+ * adds the second window, it does not have to unpick this.
  */
-const RANGE_DAYS = 30
-const RANGE_LABEL = 'last 30 days'
+const RANGE_DAYS = 90
+const RANGE_LABEL = 'last 90 days'
 
 /** Midnight UTC `daysAgo` days back — the boundary every window is cut on. */
 function dayStart(daysAgo: number): Date {
@@ -67,21 +80,14 @@ function dayStart(daysAgo: number): Date {
   return date
 }
 
-const dayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
+// Days are cut at midnight UTC (`dayStart`), so they are labelled in UTC too.
+const dayLabel = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+})
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
-
-/**
- * Percentage change between two windows, or `null` when there is nothing to
- * compare against.
- *
- * Growth from zero is not a percentage — it is "the first one" — and printing
- * `+100%` for it is the confident nonsense this page exists to avoid.
- */
-function change(current: number, prior: number): number | null {
-  if (prior <= 0) return null
-  return ((current - prior) / prior) * 100
-}
 
 interface Window {
   start: Date
@@ -100,55 +106,32 @@ interface Window {
  * "the API cannot" when the truth is "we have not" sends the next person to
  * the wrong team.
  */
-const MARGIN_UNAVAILABLE =
-  'Gross margin is not wired up yet. The cost analytics endpoint does return revenue, cost and margin together, but no hook in this console calls it, so there is no figure to show rather than no figure to be had.'
+const MARGIN_UNAVAILABLE = 'Gross margin is not available yet.'
 
 /**
- * Why the per-customer table cannot be drawn, column by column.
- *
- * Each `blocker` names the specific capability, so the screen doubles as the
- * spec for the backend work. Findings from a sweep of `@flexprice/sdk`
- * 2.1.30: there is no `POST /analytics/revenue` at all; `POST
- * /events/analytics` cannot group by customer (`group_by` takes only
- * `source`, `feature_id` and `properties.*`); `POST /costs/analytics` answers
- * for the tenant or for a single `external_customer_id`; and the one
- * per-customer revenue figure that exists — `total_revenue_amount` from `GET
- * /customers/{id}/invoices/summary` — is a lifetime total, split by currency,
- * one HTTP call per customer, and unwired.
+ * The per-customer table reads `POST /dashboard/revenue-dashboard` (see
+ * `@fp/api/revenue`): invoiced revenue per customer for the window, split into
+ * fixed and usage, the same source as Home's top customers. Plan, cost and
+ * margin have no windowed per-customer source, so those columns are left out.
+ * While the request is loading or has failed, this says what the table needs.
  */
 const REVENUE_BY_CUSTOMER_UNAVAILABLE =
-  'No endpoint returns revenue grouped by customer. The figures below could only be assembled one request per customer, or by summing invoices in the browser — which this console does not do, because a total it recomputes will eventually disagree with the invoice the customer was actually charged.'
+  'Revenue by customer comes from the revenue dashboard, which could not be loaded for this environment.'
 
 const REVENUE_BY_CUSTOMER_GAPS = [
   {
+    column: 'Net, fixed and usage revenue',
+    blocker: 'POST /dashboard/revenue-dashboard, per customer for the window. Shown once it loads.',
+  },
+  {
     column: 'Plan',
     blocker:
-      'A customer record carries no plan; a plan belongs to their contracts. Needs a joined list view, or one contracts request per customer.',
+      'A customer record carries no plan; a plan belongs to their contracts. Needs a joined list view.',
   },
   {
-    column: 'Net revenue',
+    column: 'Cost and margin',
     blocker:
-      'Available per customer only as a lifetime total, from GET /customers/{id}/invoices/summary — one call each, not windowed to the range above, and split per currency.',
-  },
-  {
-    column: 'Contract',
-    blocker:
-      'No endpoint splits recognised revenue into fixed and usage components. The invoice summary splits only what is still unpaid.',
-  },
-  {
-    column: 'Usage',
-    blocker:
-      'POST /events/analytics prices a window as a whole and cannot group by customer, so usage revenue per customer has no source.',
-  },
-  {
-    column: 'Cost',
-    blocker:
-      'POST /costs/analytics returns cost per customer, but one external_customer_id per request, and its per-meter items would have to be summed to get a row total.',
-  },
-  {
-    column: 'Margin %',
-    blocker:
-      'Returned by POST /costs/analytics for the tenant or for a single customer. Needs the same per-customer fan-out as Cost, plus a hook — there is none today.',
+      'POST /costs/analytics answers one external_customer_id per request, so a per-customer table would need one call per row.',
   },
 ]
 
@@ -165,18 +148,11 @@ export function RevenuePage() {
   const windows = useMemo(() => {
     const end = new Date()
     const start = dayStart(RANGE_DAYS)
-    return {
-      current: { start, end },
-      prior: { start: new Date(start.getTime() - RANGE_DAYS * DAY_MS), end: start },
-    }
+    return { current: { start, end } }
   }, [])
 
   const analytics = useUsageAnalytics({
     window: windows.current,
-    windowSize: UsageWindowSize.Day,
-  })
-  const priorAnalytics = useUsageAnalytics({
-    window: windows.prior,
     windowSize: UsageWindowSize.Day,
   })
 
@@ -195,46 +171,16 @@ export function RevenuePage() {
     sortDirection: 'desc',
   })
 
-  const chart = useMemo<RevenueDashboardProps['chart']>(
-    () => ({
-      ...toChartPanel(
-        analytics.data,
-        priorAnalytics.data,
-        invoices.data?.invoices ?? [],
-        windows,
-        analytics.isPending || invoices.isPending,
-        analytics.isError,
-      ),
-      activeTab,
-      onTabChange: setActiveTab,
-    }),
-    [
-      analytics.data,
-      analytics.isPending,
-      analytics.isError,
-      priorAnalytics.data,
-      invoices.data,
-      invoices.isPending,
-      windows,
-      activeTab,
-    ],
-  )
-
-  const mix = useMemo<RevenueDashboardProps['mix']>(
-    () => toMixPanel(analytics.data, analytics.isPending, analytics.isError),
-    [analytics.data, analytics.isPending, analytics.isError],
-  )
-
-  const collections = useMemo<RevenueDashboardProps['collections']>(
-    () =>
-      toCollectionsPanel(
-        invoices.data?.invoices ?? [],
-        windows.current,
-        invoices.isPending,
-        invoices.isError,
-      ),
-    [invoices.data, invoices.isPending, invoices.isError, windows],
-  )
+  const chart: RevenueDashboardProps['chart'] = {
+    ...toChartPanel(analytics, invoices, windows),
+    activeTab,
+    onTabChange: setActiveTab,
+  }
+  const mix = toMixPanel(analytics)
+  const { environmentId } = useSession()
+  const revenue = useRevenueOverview(environmentId, windows.current)
+  const byCustomerRows = toByCustomerRows(revenue.data)
+  const collections = toCollectionsPanel(invoices, windows.current)
 
   return (
     <RevenueDashboard
@@ -251,9 +197,12 @@ export function RevenuePage() {
       margin={{ status: 'unavailable', percent: null, reason: MARGIN_UNAVAILABLE }}
       collections={collections}
       byCustomer={{
-        status: 'unavailable',
-        reason: REVENUE_BY_CUSTOMER_UNAVAILABLE,
+        status: byCustomerRows.length > 0 ? 'ready' : revenue.isPending ? 'loading' : 'unavailable',
+        reason: revenue.data
+          ? 'No customer was invoiced in this period.'
+          : REVENUE_BY_CUSTOMER_UNAVAILABLE,
         columns: REVENUE_BY_CUSTOMER_GAPS,
+        rows: byCustomerRows,
       }}
       onNavigate={(path) => void navigate({ to: path, search: {} as never })}
     />
@@ -262,6 +211,29 @@ export function RevenuePage() {
 
 /* ---- Shaping the panels -------------------------------------------------- */
 
+/**
+ * Customers invoiced in the window, in the currency billed to the most of
+ * them — the same currency Home leads with. Others are not mixed in.
+ */
+function toByCustomerRows(
+  data: RevenueOverview | undefined,
+): NonNullable<RevenueDashboardProps['byCustomer']['rows']> {
+  const currency = data?.summaries[0]?.currency
+  if (!data || !currency) return []
+  return data.customers
+    .filter((row) => row.total.currency === currency)
+    .map((row) => ({
+      id: row.customerId || row.name,
+      customer: row.name,
+      plan: '—',
+      netRevenue: formatMoney(row.total),
+      contract: formatMoney(row.fixed),
+      usage: formatMoney(row.usage),
+      cost: '—',
+      margin: '—',
+    }))
+}
+
 /** Invoices issued inside a window. A draft has no issue date and is not one. */
 function issuedIn(rows: Invoice[], window: Window): Invoice[] {
   return rows.filter(
@@ -269,79 +241,186 @@ function issuedIn(rows: Invoice[], window: Window): Invoice[] {
   )
 }
 
+type InvoiceView = QueryView<{ invoices: Invoice[]; total: number }>
+
+/** The earliest issue date among loaded invoices, or `null` when none has one. */
+function oldestIssued(rows: Invoice[]): Date | null {
+  let min: Date | null = null
+  for (const row of rows) {
+    if (row.issuedAt !== null && (min === null || row.issuedAt < min)) min = row.issuedAt
+  }
+  return min
+}
+
+/**
+ * What the invoice list can vouch for.
+ *
+ * The page is newest-first and capped. When the server holds more rows than
+ * came back and the oldest one loaded is still inside a window, older members
+ * of that window were never fetched, so any count over it is a floor.
+ */
+function invoiceCoverage(page: { invoices: Invoice[]; total: number }, windows: Windows) {
+  const truncated = page.total > page.invoices.length
+  const oldest = oldestIssued(page.invoices)
+  return {
+    current: !truncated || (oldest !== null && oldest < windows.current.start),
+    note: `Based on the latest ${page.invoices.length.toLocaleString()} invoices.`,
+  }
+}
+
+interface Windows {
+  current: Window
+}
+
 /**
  * The tab strip and its three series.
  *
- * Every tab's headline is the total of the series plotted beneath it, and every
- * change is the same metric measured over the window before this one. None of
+ * Every tab's headline is the total of the series plotted beneath it. None of
  * the three is money, and that is the finding rather than an omission: see the
  * file header.
+ *
+ * No tab carries a change, because the page does not compare — see
+ * `RANGE_DAYS`.
+ *
+ * Each tab has its own status, because two queries feed the strip and they can
+ * disagree: metered usage can be on screen while the invoice list has failed,
+ * and that tab then says so and offers a retry instead of drawing a dash. The
+ * strip as a whole is `loading` or `unavailable` only when nothing has loaded,
+ * and `empty` (the first-run message) only when both sources answered and both
+ * were empty.
  */
 function toChartPanel(
-  data: UsageAnalytics | undefined,
-  prior: UsageAnalytics | undefined,
-  invoiceRows: Invoice[],
-  windows: { current: Window; prior: Window },
-  isPending: boolean,
-  isError: boolean,
+  analytics: QueryView<UsageAnalytics>,
+  invoices: InvoiceView,
+  windows: Windows,
 ): Omit<RevenueDashboardProps['chart'], 'activeTab' | 'onTabChange'> {
-  if (isError) return { status: 'unavailable', tabs: [] }
-  if (isPending || data === undefined) return { status: 'loading', tabs: [] }
-  if (data.points.length === 0) return { status: 'empty', tabs: [] }
+  const data = analytics.data
+  const page = invoices.data
+  const usageStatus = data !== undefined ? 'ready' : withoutData(analytics)
+  const invoiceStatus = page !== undefined ? 'ready' : withoutData(invoices)
 
-  const usage = data.points.reduce((sum, point) => sum + point.usage, 0)
-  const priorUsage = prior?.points.reduce((sum, point) => sum + point.usage, 0) ?? 0
+  const aQuality = qualityOf(analytics)
+  const iQuality = qualityOf(invoices)
+  const updated = [aQuality.updatedAt, iQuality.updatedAt].filter(
+    (at): at is number => at !== undefined,
+  )
+  const quality = {
+    onRetry: () => {
+      // Only ask again for what failed; an in-flight or good source stays.
+      if (usageStatus === 'unavailable' || aQuality.stale) aQuality.onRetry()
+      if (invoiceStatus === 'unavailable' || iQuality.stale) iQuality.onRetry()
+    },
+    isRetrying: aQuality.isRetrying || iQuality.isRetrying,
+    refreshing: aQuality.refreshing || iQuality.refreshing,
+    provisional: aQuality.provisional || iQuality.provisional,
+    stale: aQuality.stale || iQuality.stale,
+    // The older of the two, so "updated" never claims fresher than the stalest figure.
+    updatedAt: updated.length > 0 ? Math.min(...updated) : undefined,
+  }
 
-  // One bucket per day of the window, oldest first, so a quiet day is a gap in
-  // the line rather than a day that silently leaves the axis.
-  const invoiceBuckets: { label: string; value: number }[] = []
-  const issued = issuedIn(invoiceRows, windows.current)
-  for (let offset = RANGE_DAYS - 1; offset >= 0; offset -= 1) {
-    const start = dayStart(offset)
-    const end = new Date(start.getTime() + DAY_MS)
-    invoiceBuckets.push({
-      label: dayLabel.format(start),
-      value: issued.filter(
-        (row) => row.issuedAt !== null && row.issuedAt >= start && row.issuedAt < end,
-      ).length,
+  if (data === undefined && page === undefined) {
+    // Nothing on screen. Homogeneous states collapse to one; mixed ones fall
+    // through to a strip whose tabs say which source is which.
+    if (usageStatus === 'loading' && invoiceStatus === 'loading') {
+      return { ...quality, status: 'loading', tabs: [] }
+    }
+    if (usageStatus === 'unavailable' && invoiceStatus === 'unavailable') {
+      return { ...quality, status: 'unavailable', tabs: [] }
+    }
+  }
+
+  const issued = page ? issuedIn(page.invoices, windows.current) : []
+  if (data?.points.length === 0 && page !== undefined && issued.length === 0) {
+    return { ...quality, status: 'empty', tabs: [] }
+  }
+
+  const coverage = page ? invoiceCoverage(page, windows) : undefined
+
+  const tabs: MetricTab[] = []
+
+  if (data === undefined) {
+    // No data for this source: say whether it is loading or failed, per tab.
+    for (const [id, label] of [
+      ['usage', 'Metered usage'],
+      ['events', 'Events ingested'],
+    ] as const) {
+      tabs.push({
+        id,
+        label,
+        value: '',
+        points: [],
+        status: usageStatus,
+        onRetry: () => void analytics.refetch(),
+      })
+    }
+  } else {
+    const usage = data.points.reduce((sum, point) => sum + point.usage, 0)
+    tabs.push(
+      {
+        id: 'usage',
+        label: 'Metered usage',
+        value: compact.format(usage),
+        points: data.points.map((point) => ({
+          label: dayLabel.format(point.timestamp),
+          value: point.usage,
+        })),
+        format: (value) => compact.format(value),
+        emptyMessage: 'No metered usage in this period',
+      },
+      {
+        id: 'events',
+        label: 'Events ingested',
+        value: compact.format(data.eventCount),
+        points: data.points.map((point) => ({
+          label: dayLabel.format(point.timestamp),
+          value: point.eventCount,
+        })),
+        format: (value) => compact.format(value),
+        emptyMessage: 'No events ingested in this period',
+      },
+    )
+  }
+
+  if (page === undefined) {
+    tabs.push({
+      id: 'invoices',
+      label: 'Invoices issued',
+      value: '',
+      points: [],
+      status: invoiceStatus,
+      onRetry: () => void invoices.refetch(),
+    })
+  } else {
+    // One bucket per day of the window, oldest first, so a quiet day is a gap in
+    // the line rather than a day that silently leaves the axis.
+    const invoiceBuckets: { label: string; value: number }[] = []
+    for (let offset = RANGE_DAYS - 1; offset >= 0; offset -= 1) {
+      const start = dayStart(offset)
+      const end = new Date(start.getTime() + DAY_MS)
+      invoiceBuckets.push({
+        label: dayLabel.format(start),
+        value: issued.filter(
+          (row) => row.issuedAt !== null && row.issuedAt >= start && row.issuedAt < end,
+        ).length,
+      })
+    }
+    const complete = coverage?.current ?? true
+    tabs.push({
+      id: 'invoices',
+      label: 'Invoices issued',
+      // A floor is written as one, never as the total.
+      value: `${whole.format(issued.length)}${complete ? '' : '+'}`,
+      points: invoiceBuckets,
+      format: (value) => whole.format(value),
     })
   }
 
-  const tabs: MetricTab[] = [
-    {
-      id: 'usage',
-      label: 'Metered usage',
-      value: compact.format(usage),
-      changePercent: change(usage, priorUsage) ?? undefined,
-      points: data.points.map((point) => ({
-        label: dayLabel.format(point.timestamp),
-        value: point.usage,
-      })),
-      format: (value) => compact.format(value),
-    },
-    {
-      id: 'events',
-      label: 'Events ingested',
-      value: compact.format(data.eventCount),
-      changePercent: change(data.eventCount, prior?.eventCount ?? 0) ?? undefined,
-      points: data.points.map((point) => ({
-        label: dayLabel.format(point.timestamp),
-        value: point.eventCount,
-      })),
-      format: (value) => compact.format(value),
-    },
-    {
-      id: 'invoices',
-      label: 'Invoices issued',
-      value: whole.format(issued.length),
-      changePercent:
-        change(issued.length, issuedIn(invoiceRows, windows.prior).length) ?? undefined,
-      points: invoiceBuckets,
-      format: (value) => whole.format(value),
-    },
-  ]
-
-  return { status: 'ready', tabs }
+  return {
+    ...quality,
+    status: 'ready',
+    tabs,
+    basedOn: coverage && !coverage.current ? coverage.note : undefined,
+  }
 }
 
 /**
@@ -358,18 +437,17 @@ function toChartPanel(
  * for; at a phone's width, four feature names run into each other. A legend
  * that cannot be read is worse than a tail that has been folded into "other".
  */
-function toMixPanel(
-  data: UsageAnalytics | undefined,
-  isPending: boolean,
-  isError: boolean,
-): RevenueDashboardProps['mix'] {
-  if (isError) return { status: 'unavailable', slices: [], total: 0 }
-  if (isPending || data === undefined) return { status: 'loading', slices: [], total: 0 }
+function toMixPanel(view: QueryView<UsageAnalytics>): RevenueDashboardProps['mix'] {
+  const quality = qualityOf(view)
+  const data = view.data
+  if (data === undefined) {
+    return { ...quality, status: withoutData(view), slices: [], total: 0 }
+  }
 
   const ranked = [...data.features]
     .filter((feature) => feature.eventCount > 0)
     .sort((a, b) => b.eventCount - a.eventCount)
-  if (ranked.length === 0) return { status: 'empty', slices: [], total: 0 }
+  if (ranked.length === 0) return { ...quality, status: 'empty', slices: [], total: 0 }
 
   const named = ranked.length <= 3 ? ranked : ranked.slice(0, 2)
   const slices = named.map((feature) => ({
@@ -382,6 +460,7 @@ function toMixPanel(
   if (rest > 0) slices.push({ id: 'other', label: 'Other features', value: rest })
 
   return {
+    ...quality,
     status: 'ready',
     slices,
     // The sum of the slices, not `data.eventCount`: features with no events in
@@ -392,24 +471,31 @@ function toMixPanel(
 }
 
 function toCollectionsPanel(
-  rows: Invoice[],
+  view: InvoiceView,
   window: Window,
-  isPending: boolean,
-  isError: boolean,
 ): RevenueDashboardProps['collections'] {
+  const quality = qualityOf(view)
   const blank = { paid: 0, open: 0, overdue: 0 }
-  if (isError) return { status: 'unavailable', ...blank }
-  if (isPending) return { status: 'loading', ...blank }
+  const page = view.data
+  if (page === undefined) return { ...quality, status: withoutData(view), ...blank }
 
-  const issued = issuedIn(rows, window)
-  if (issued.length === 0) return { status: 'empty', ...blank }
+  const issued = issuedIn(page.invoices, window)
+  if (issued.length === 0) return { ...quality, status: 'empty', ...blank }
 
   const count = (status: string) => issued.filter((row) => row.status === status).length
 
+  const truncated = page.total > page.invoices.length
+  const oldest = oldestIssued(page.invoices)
+  const complete = !truncated || (oldest !== null && oldest < window.start)
+
   return {
+    ...quality,
     status: 'ready',
     paid: count(InvoiceStatus.Paid),
     open: count(InvoiceStatus.Open),
     overdue: count(InvoiceStatus.Overdue),
+    basedOn: complete
+      ? undefined
+      : `Based on the latest ${page.invoices.length.toLocaleString()} invoices.`,
   }
 }

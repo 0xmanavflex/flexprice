@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { BookOpenIcon, CodeIcon, ZapIcon } from 'lucide-react'
+import { BookOpenIcon, CodeIcon, ZapIcon } from '@ui/icons'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import {

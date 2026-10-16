@@ -25,20 +25,21 @@ import {
   useResetCustomerOnboarding,
   useUpdateCustomerOnboarding,
 } from '@fp/query'
-import { EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
+import { EmptyState, Field } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { WorkflowIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import {
   ActionError,
   ActionNote,
   DelayedHint,
   Fact,
-
   Panel,
   PanelError,
   mutationMessage,
   toFailure,
+  PanelLoading,
+  PanelUnavailable,
+  queryPhase,
   SettingsBlock,
 } from './panelKit'
 import { useDraft } from './useDraft'
@@ -106,13 +107,15 @@ export function OnboardingPanel() {
     )
   }
 
-  if (!environmentId || onboarding.isPending || !onboarding.data) {
+  if (!environmentId) {
     return (
-      <Panel>
-        <LoadingRows rows={5} columns={2} />
-      </Panel>
+      <PanelUnavailable reason="setup" description="Choose an environment to see these settings." />
     )
   }
+
+  const phase = queryPhase(onboarding)
+  if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
+  if (phase === 'loading' || !onboarding.data) return <PanelLoading rows={5} />
 
   return (
     <OnboardingForm key={environmentId} environmentId={environmentId} config={onboarding.data} />
@@ -204,7 +207,6 @@ function OnboardingForm({
           <SettingsBlock label="Steps">
             <EmptyState
               size="inline"
-              icon={<WorkflowIcon aria-hidden />}
               title="No onboarding steps"
               description="Steps run in order the first time Flexprice sees a new customer. Add one below to open a wallet, start a contract or roll out a price automatically."
             />

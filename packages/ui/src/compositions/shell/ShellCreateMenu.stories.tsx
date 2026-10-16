@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { CreditCardIcon, PackageIcon, ReceiptIcon, RepeatIcon, UserPlusIcon } from 'lucide-react'
+import { CreditCardIcon, PackageIcon, ReceiptIcon, RepeatIcon, UserPlusIcon } from '@ui/icons'
 import { ShellCreateMenu, type ShellCreateAction } from './ShellCreateMenu'
 
 const ACTION_POOL: ShellCreateAction[] = [

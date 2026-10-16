@@ -11,10 +11,13 @@ import {
   FeatureStatus,
   FeatureType,
   FeatureSortField,
+  FEATURE_FILTERS,
 } from '@fp/domain'
 import { toAlertConfigRequest } from './alertSettings'
 import { queryKeys } from './keys'
+import { toFilterConditions } from './search'
 import { useFlexprice } from './provider'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Features: the translation between product vocabulary and the API.
@@ -67,6 +70,8 @@ export interface FeatureWire {
               type?: string | undefined
               field?: string | undefined
               groupBy?: string | undefined
+              /** The meter's own usage window, when it is bucketed at the meter level. */
+              bucketSize?: string | undefined
             }
           | undefined
         filters?: { key?: string | undefined; values?: string[] | undefined }[] | undefined
@@ -118,6 +123,7 @@ export function toFeature(wire: FeatureWire): Feature {
     meterFilters: (wire.meter?.filters ?? [])
       .filter((f) => typeof f.key === 'string' && f.key.length > 0)
       .map((f) => ({ key: f.key ?? '', values: f.values ?? [] })),
+    meterBucketSize: wire.meter?.aggregation?.bucketSize ? wire.meter.aggregation.bucketSize : null,
     aggregationField: wire.meter?.aggregation?.field ? wire.meter.aggregation.field : null,
     aggregationGroupBy: wire.meter?.aggregation?.groupBy ? wire.meter.aggregation.groupBy : null,
     metadata: wire.metadata ?? {},
@@ -129,6 +135,8 @@ export function toFeature(wire: FeatureWire): Feature {
 /** Product sort names to the wire's. The only place the two are related. */
 const SORT_FIELD: Record<FeatureSortField, string> = {
   [FeatureSortField.Name]: 'name',
+  [FeatureSortField.LookupKey]: 'lookup_key',
+  [FeatureSortField.Type]: 'type',
   [FeatureSortField.CreatedAt]: 'created_at',
   [FeatureSortField.UpdatedAt]: 'updated_at',
 }
@@ -151,9 +159,12 @@ export function toFeatureFilter(query: FeatureQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'meters',
     ...(query.search ? { nameContains: query.search } : {}),
+    ...((query.filters?.length ?? 0) > 0
+      ? { filters: toFilterConditions(query.filters ?? [], FEATURE_FILTERS) }
+      : {}),
   }
 }
 
@@ -262,8 +273,15 @@ export interface FeaturePage {
   total: number
 }
 
-export async function fetchFeatures(client: Flexprice, query: FeatureQuery): Promise<FeaturePage> {
-  const response = await call(() => client.features.queryFeature(toFeatureFilter(query) as never))
+export async function fetchFeatures(
+  client: Flexprice,
+  query: FeatureQuery,
+  signal?: AbortSignal,
+): Promise<FeaturePage> {
+  const response = await call(
+    (options) => client.features.queryFeature(toFeatureFilter(query) as never, options),
+    signal,
+  )
   const features = (response.items ?? []).map((item) => toFeature(item as FeatureWire))
 
   // Type and status are not server-side filters on FeatureFilter, so they are
@@ -292,7 +310,7 @@ export function useFeatures(query: FeatureQuery, options: { enabled?: boolean } 
       types: [...query.types].sort(),
       statuses: [...query.statuses].sort(),
     }),
-    queryFn: () => fetchFeatures(client, query),
+    queryFn: ({ signal }) => fetchFeatures(client, query, signal),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -304,9 +322,14 @@ export function useFeature(id: string) {
 
   return useQuery({
     queryKey: queryKeys.features.detail(id),
-    queryFn: async () => {
-      const response = await call(() =>
-        client.features.queryFeature({ featureIds: [id], limit: 1, expand: 'meters' } as never),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.features.queryFeature(
+            { featureIds: [id], limit: 1, expand: 'meters' } as never,
+            options,
+          ),
+        signal,
       )
       const first = (response.items ?? [])[0]
       return first ? toFeature(first as FeatureWire) : null

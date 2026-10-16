@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * A price unit, as the list reads it.
  *
@@ -42,6 +43,8 @@ export interface PriceUnit {
    */
   conversionRate: string
   status: PriceUnitStatus
+  /** Free-form key/value fields; absent or empty when none. */
+  metadata?: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -76,6 +79,8 @@ export interface PriceUnitQuery {
   sortBy: PriceUnitSortField
   sortDirection: 'asc' | 'desc'
   view: PriceUnitView
+  /** Granular field filters, applied by the search endpoint. See `PRICE_UNIT_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_PRICE_UNIT_QUERY: PriceUnitQuery = {
@@ -83,10 +88,27 @@ export const DEFAULT_PRICE_UNIT_QUERY: PriceUnitQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: PriceUnitSortField.Name,
-  sortDirection: 'asc',
+  sortBy: PriceUnitSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: PriceUnitView.Table,
+  filters: [],
 }
+/** What the price unit list can filter on — V1's fields, by their wire names. */
+export const PRICE_UNIT_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'code', label: 'Code', kind: 'text' },
+  { field: 'base_currency', label: 'Base currency', kind: 'text' },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * The rules for creating a price unit, and — narrowed — for editing one.
@@ -109,6 +131,7 @@ export const createPriceUnitSchema = z.object({
   conversionRate: z
     .number({ message: 'Enter a conversion rate' })
     .positive('Must be greater than zero'),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type CreatePriceUnit = z.infer<typeof createPriceUnitSchema>

@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { type ReactNode } from 'react'
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   BILLING_MODEL_LABEL,
@@ -10,12 +11,16 @@ import {
   INVOICE_CADENCE_LABEL,
   InvoiceCadence,
   PRICE_TYPE_LABEL,
+  PRICE_WINDOW_SIZE_LABEL,
   PriceType,
+  type PriceWindowSize,
+  WINDOWABLE_AGGREGATIONS,
   type Tier,
   TIER_MODE_LABEL,
   TierMode,
   createChargeSchema,
   emptyCharge,
+  currencyCodes,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
@@ -67,6 +72,22 @@ export interface MeterOption {
   name: string
   /** Singular unit of the meter's feature ("call"), for "per call" wording. */
   unit?: string
+  /**
+   * The meter's aggregation, which decides whether a usage window is offered.
+   *
+   * Windowing re-aggregates inside each window, so it changes the answer only
+   * for MAX and SUM — the API rejects it on anything else. Absent means the
+   * caller did not supply it, and the field is then left out rather than
+   * guessed at.
+   */
+  aggregationType?: string | null
+  /**
+   * The meter's own window, when it is bucketed at the meter level.
+   *
+   * A price may not set a second one: the API refuses it rather than deciding
+   * which wins. Present means the field is shown disabled, saying why.
+   */
+  bucketSize?: string | null
 }
 
 /** A custom price unit a charge can be denominated in instead of a currency. */
@@ -105,10 +126,24 @@ export interface ChargeFormProps {
   lockCurrency?: boolean
   /** Shows the display name locked, for a container that cannot rename a charge. */
   lockDisplayName?: boolean
+  /**
+   * Shows the catalogue's price options on create — price group, start date and,
+   * for a fixed charge, minimum quantity. Left out where the container decides
+   * these itself, as a contract does.
+   */
+  priceOptions?: { groups: readonly { value: string; label: string }[] }
+  /**
+   * Draws the usage window on a metered charge. Default on.
+   *
+   * Off where the container owns the window itself: a contract collects it in
+   * `UsageTermsFields` beside the commitment it interacts with, and two
+   * controls for one field in one dialog is worse than either.
+   */
+  showUsageWindow?: boolean
 }
 
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
-const DEFAULT_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR']
+const DEFAULT_CURRENCIES = currencyCodes()
 const FIAT = 'FIAT'
 
 /** Fixed charges can be one-time; usage cannot — you cannot meter a one-off. */
@@ -144,12 +179,13 @@ export function ChargeForm({
   notice,
   lockCurrency = false,
   lockDisplayName = false,
+  priceOptions,
+  showUsageWindow = true,
 }: ChargeFormProps) {
   const isEdit = mode === 'edit'
-  const form = useForm<CreateCharge>({
+  const form = useCalmForm<CreateCharge>({
     resolver: standardSchemaResolver(createChargeSchema) as Resolver<CreateCharge>,
     defaultValues: defaultValue ?? emptyCharge(PriceType.Fixed, BillingModel.FlatFee),
-    mode: 'onTouched',
   })
 
   const type = form.watch('type')
@@ -159,6 +195,26 @@ export function ChargeForm({
   const priceUnit = form.watch('priceUnit')
   const errors = form.formState.errors
   const isUsage = type === PriceType.Usage
+  /*
+   * Whether this charge may carry a usage window, and why not when it may not.
+   *
+   * The three rules are the API's, checked here so the field is never offered
+   * where saving would fail: windows are for usage charges, only MAX and SUM
+   * change their answer when re-aggregated, and a meter that already buckets
+   * refuses a second source rather than letting the price shadow it.
+   *
+   * A meter whose aggregation the caller did not supply is treated as not
+   * offerable. Showing the field on a guess and failing on save is worse than
+   * leaving a rarely-used option out.
+   */
+  const selectedMeterId = (form.watch('meterId' as never) as unknown as string | undefined) ?? ''
+  const selectedMeter = meters.find((meter) => meter.id === selectedMeterId)
+  const meterBuckets = Boolean(selectedMeter?.bucketSize)
+  const windowable =
+    selectedMeter?.aggregationType != null &&
+    (WINDOWABLE_AGGREGATIONS as readonly string[]).includes(selectedMeter.aggregationType)
+  const showWindow =
+    showUsageWindow && isUsage && Boolean(selectedMeter) && (windowable || meterBuckets)
   const periods = isUsage ? USAGE_PERIODS : FIXED_PERIODS
   const unitLabel = priceUnit || currency
   const lockedInput = (id: string, value: string) => (
@@ -183,6 +239,11 @@ export function ChargeForm({
       ...(current.displayName ? { displayName: current.displayName } : {}),
       ...(current.priceUnit ? { priceUnit: current.priceUnit } : {}),
       ...(current.effectiveFrom ? { effectiveFrom: current.effectiveFrom } : {}),
+      ...(current.groupId ? { groupId: current.groupId } : {}),
+      ...(current.startDate ? { startDate: current.startDate } : {}),
+      ...(nextType === PriceType.Fixed && current.minQuantity !== undefined
+        ? { minQuantity: current.minQuantity }
+        : {}),
       ...(nextType === PriceType.Fixed && current.trialPeriodDays
         ? { trialPeriodDays: current.trialPeriodDays }
         : {}),
@@ -289,8 +350,9 @@ export function ChargeForm({
                         label: meter.name,
                         trailing: <FeatureTypeGlyph type="metered" />,
                       }))}
-                      placeholder="Choose a feature to meter"
-                      emptyText="No metered features."
+                      searchable
+                      placeholder="Search metered features…"
+                      emptyText="No metered features match."
                       disabled={isSubmitting || isEdit}
                       aria-describedby={describedBy}
                       aria-invalid={invalid}
@@ -479,6 +541,51 @@ export function ChargeForm({
         </p>
       ) : null}
 
+      {showWindow ? (
+        <div className="max-w-xs">
+          <Field
+            label="Usage window"
+            hint={
+              meterBuckets
+                ? `Set on the ${selectedMeter?.name ?? 'meter'} feature itself, so it cannot be changed here.`
+                : 'Optional. Aggregate the meter inside each window and price the windows, instead of once across the period.'
+            }
+            error={messageOf(errors, 'bucketSize')}
+          >
+            {({ id }) =>
+              meterBuckets ? (
+                lockedInput(
+                  id,
+                  PRICE_WINDOW_SIZE_LABEL[selectedMeter?.bucketSize as PriceWindowSize] ??
+                    String(selectedMeter?.bucketSize ?? ''),
+                )
+              ) : (
+                <Controller
+                  control={form.control}
+                  name={'bucketSize' as never}
+                  render={({ field }) => (
+                    <OptionCombobox
+                      id={id}
+                      value={(field.value as string) || ''}
+                      onValueChange={(next) => field.onChange(next === '' ? undefined : next)}
+                      options={[
+                        { value: '', label: 'No window — the whole period' },
+                        ...Object.entries(PRICE_WINDOW_SIZE_LABEL).map(([value, label]) => ({
+                          value,
+                          label,
+                        })),
+                      ]}
+                      placeholder="No window — the whole period"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )
+            }
+          </Field>
+        </div>
+      ) : null}
+
       <fieldset disabled={isSubmitting} className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">Billing model</legend>
         <ChoiceCards
@@ -575,6 +682,79 @@ export function ChargeForm({
             <p role="alert" className="text-destructive text-xs">
               {tierMessage}
             </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {priceOptions && !isEdit ? (
+        <div className="grid gap-5 sm:grid-cols-2">
+          {priceOptions.groups.length > 0 ? (
+            <Field
+              label="Price group"
+              hint="Optional. Groups related prices for reporting and bulk changes."
+            >
+              {({ id }) => (
+                <Controller
+                  control={form.control}
+                  name={'groupId' as never}
+                  render={({ field }) => (
+                    <OptionCombobox
+                      id={id}
+                      value={(field.value as string | undefined) ?? ''}
+                      onValueChange={(value) => field.onChange(value || undefined)}
+                      options={[...priceOptions.groups]}
+                      placeholder="No group"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </Field>
+          ) : null}
+          <Field
+            label="Start date"
+            hint="Optional. The price applies from this day; empty means now."
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <Controller
+                control={form.control}
+                name={'startDate' as never}
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={(field.value as string | undefined) ?? ''}
+                    onValueChange={(value) => field.onChange(value || undefined)}
+                    placeholder="Now"
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )}
+          </Field>
+          {!isUsage ? (
+            <Field
+              label="Minimum quantity"
+              hint="Optional. The fewest units a subscriber can hold of this charge."
+              error={messageOf(errors, 'minQuantity')}
+            >
+              {({ id, ...field }) => (
+                <Input
+                  id={id}
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  disabled={isSubmitting}
+                  {...field}
+                  {...form.register('minQuantity' as never, {
+                    setValueAs: (value: unknown) =>
+                      value === '' || value == null || Number.isNaN(Number(value))
+                        ? undefined
+                        : Number(value),
+                  })}
+                />
+              )}
+            </Field>
           ) : null}
         </div>
       ) : null}

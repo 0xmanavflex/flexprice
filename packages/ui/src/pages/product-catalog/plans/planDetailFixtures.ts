@@ -68,6 +68,7 @@ export function makeCharge(index: number, options: MakeChargeOptions): Charge {
         : [],
     transformQuantity:
       billingModel === BillingModel.Package ? { divideBy: 1000, round: RoundType.Up } : null,
+    bucketSize: null,
     meterId: isUsage ? meter.id : null,
     meterName: isUsage ? meter.name : null,
     entityType: PriceEntityType.Plan,
@@ -77,6 +78,9 @@ export function makeCharge(index: number, options: MakeChargeOptions): Charge {
     displayName: isUsage
       ? ''
       : `${FIXED_NAMES[index % FIXED_NAMES.length]}${index >= FIXED_NAMES.length ? ` ${index}` : ''}`,
+    startDate: null,
+    endDate: null,
+    sequence: 1,
     createdAt: new Date('2026-01-10T00:00:00Z'),
   }
 }

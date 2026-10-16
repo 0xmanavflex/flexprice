@@ -1,15 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  type Charge,
   type CreateGroup,
   type Group,
   type GroupQuery,
   GroupEntityType,
   GroupSortField,
   GroupStatus,
+  GROUP_FILTERS,
 } from '@fp/domain'
+import { toCharge, type ChargeWire } from './prices'
 import { queryKeys } from './keys'
+import { statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Groups: the translation between product vocabulary and the API.
@@ -53,6 +58,7 @@ export function toGroup(wire: GroupWire): Group {
     lookupKey: wire.lookupKey ?? '',
     entityType,
     entityCount: wire.entityIds?.length ?? 0,
+    entityIds: wire.entityIds ?? [],
     status,
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -69,8 +75,22 @@ export function toGroupFilter(query: GroupQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    /*
+     * Status, server-side.
+     *
+     * It used to narrow the fetched page in the browser, which is a different
+     * and wrong thing: the request returns one page, rows are dropped from
+     * *that* page, and the pager still reports the server's unfiltered total.
+     * `status` is a declared field on this filter model and a real column the
+     * backend accepts, so there was never a reason not to send it.
+     */
+    ...statusFilterField(query.statuses, Object.values(GroupStatus)),
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     ...(query.search ? { name: query.search } : {}),
+    ...(query.entityType ? { entityType: query.entityType } : {}),
+    ...((query.filters?.length ?? 0) > 0
+      ? { filters: toFilterConditions(query.filters ?? [], GROUP_FILTERS) }
+      : {}),
   }
 }
 
@@ -84,12 +104,7 @@ export async function fetchGroups(client: Flexprice, query: GroupQuery): Promise
   const groups = (response.items ?? []).map((item) => toGroup(item as GroupWire))
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page —
-    // the same split add-ons and coupons use.
-    groups:
-      query.statuses.length > 0
-        ? groups.filter((group) => query.statuses.includes(group.status))
-        : groups,
+    groups,
     total: response.pagination?.total ?? 0,
   }
 }
@@ -153,4 +168,84 @@ export function useDeleteGroup() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.features.all() })
     },
   })
+}
+
+/** One thing a group holds, named for the members table. */
+export interface GroupMemberRow {
+  charge?: Charge
+  id: string
+  name: string
+  detail: string
+}
+
+/**
+ * What a group holds, by name: its `entityIds` read back through the feature
+ * or price search, which both filter by id. Ids the search no longer returns
+ * (deleted since) are listed by id so the count still adds up.
+ */
+export function useGroupMembers(group: Group | undefined) {
+  const client = useFlexprice()
+  const ids = group?.entityIds ?? []
+
+  return useQuery({
+    queryKey: [...queryKeys.groups.detail(group?.id ?? ''), 'members', ids],
+    enabled: group !== undefined,
+    queryFn: async ({ signal }): Promise<GroupMemberRow[]> => {
+      if (!group || ids.length === 0) return []
+      const found = new Map<string, GroupMemberRow>()
+      if (group.entityType === GroupEntityType.Feature) {
+        const response = await call(
+          (options) =>
+            client.features.queryFeature({ featureIds: ids, limit: ids.length } as never, options),
+          signal,
+        )
+        for (const item of (response.items ?? []) as Array<{
+          id?: string
+          name?: string
+          type?: string
+        }>) {
+          if (!item.id) continue
+          const type = item.type ?? ''
+          found.set(item.id, {
+            id: item.id,
+            name: item.name || item.id,
+            detail: type ? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() : 'Feature',
+          })
+        }
+      } else {
+        const response = await call(
+          (options) =>
+            client.prices.queryPrice({ priceIds: ids, limit: ids.length } as never, options),
+          signal,
+        )
+        for (const item of (response.items ?? []) as ChargeWire[]) {
+          if (!item.id) continue
+          found.set(item.id, {
+            id: item.id,
+            name: item.displayName || item.meter?.name || item.lookupKey || item.id,
+            detail: item.type === 'USAGE' ? 'Usage price' : 'Fixed price',
+            charge: toCharge(item),
+          })
+        }
+      }
+      return ids.map((id) => found.get(id) ?? { id, name: id, detail: 'Not found' })
+    },
+  })
+}
+
+/** The account's price groups, as choices for a charge — the first 100, by name. */
+export function usePriceGroupOptions() {
+  const groups = useGroups({
+    page: 1,
+    pageSize: 100,
+    search: '',
+    statuses: [],
+    sortBy: GroupSortField.Name,
+    sortDirection: 'asc',
+    view: 'table' as GroupQuery['view'],
+    filters: [{ field: 'entity_type', op: 'in', value: [GroupEntityType.Price] }],
+  })
+  return (groups.data?.groups ?? [])
+    .filter((group) => group.entityType === GroupEntityType.Price)
+    .map((group) => ({ value: group.id, label: group.name }))
 }

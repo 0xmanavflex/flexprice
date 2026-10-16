@@ -1,23 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  CUSTOMER_FILTERS,
   type CreateCustomer,
   type Customer,
+  type CustomerIntegration,
   type EditCustomer,
+  type IntegrationLink,
   type CustomerDetail,
   type CustomerQuery,
   CustomerSortField,
   CustomerStatus,
   CustomerTaxTreatment,
   DEFAULT_INVOICE_QUERY,
+  INTEGRATION_CATALOG,
   type Subscription,
   type TenantFeatureUsage,
 } from '@fp/domain'
 import { queryKeys } from './keys'
+import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 import { type SubscriptionWire, toSubscription } from './subscriptions'
 import { type InvoicePage, fetchInvoices } from './invoices'
 import { type FeatureUsageWire, toFeatureUsage } from './tenant'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Customers: the translation between billing vocabulary and the API.
@@ -29,6 +35,13 @@ import { type FeatureUsageWire, toFeatureUsage } from './tenant'
  * than vanishing from the list.
  */
 
+/** One row of the customer's `integrations` array, after the SDK camelCases it. */
+export interface CustomerIntegrationWire {
+  providerType?: string | undefined
+  providerEntityId?: string | undefined
+  status?: string | undefined
+}
+
 /** The wire shape this reads, after the SDK camelCases the response. */
 export interface CustomerWire {
   id?: string | undefined
@@ -37,8 +50,31 @@ export interface CustomerWire {
   externalId?: string | undefined
   addressCountry?: string | undefined
   status?: string | undefined
+  integrations?: CustomerIntegrationWire[] | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
+}
+
+/** Published mappings only, one mark per provider. */
+export function toCustomerIntegrations(
+  wires: CustomerIntegrationWire[] | undefined,
+): CustomerIntegration[] {
+  const seen = new Set<string>()
+  const integrations: CustomerIntegration[] = []
+  for (const wire of wires ?? []) {
+    const providerType = wire.providerType?.trim()
+    if (!providerType || seen.has(providerType)) continue
+    if (wire.status && wire.status !== 'published') continue
+    seen.add(providerType)
+    const spec = INTEGRATION_CATALOG.find((entry) => entry.providerType === providerType)
+    integrations.push({
+      id: spec?.id ?? providerType,
+      name: spec?.name ?? providerType,
+      providerType,
+      ...(wire.providerEntityId?.trim() ? { providerEntityId: wire.providerEntityId.trim() } : {}),
+    })
+  }
+  return integrations
 }
 
 const CUSTOMER_STATUSES = new Set<string>(Object.values(CustomerStatus))
@@ -55,6 +91,7 @@ export function toCustomer(wire: CustomerWire): Customer {
     externalId: wire.externalId ?? '',
     addressCountry: wire.addressCountry ?? '',
     status,
+    integrations: toCustomerIntegrations(wire.integrations),
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -70,7 +107,19 @@ export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> 
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
+    // The integration marks in the list: one batched lookup on the server
+    // instead of a mappings request per row.
+    expand: 'integrations',
+    ...statusFilterField(query.statuses, Object.values(CustomerStatus)),
+    ...(query.search.trim() || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search.trim() ? nameContainsFilter(query.search.trim()) : []),
+            ...toFilterConditions(query.filters ?? [], CUSTOMER_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 
@@ -82,30 +131,36 @@ export interface CustomerPage {
 export async function fetchCustomers(
   client: Flexprice,
   query: CustomerQuery,
+  signal?: AbortSignal,
 ): Promise<CustomerPage> {
-  const response = await call(() =>
-    client.customers.queryCustomer(toCustomerFilter(query) as never),
+  const response = await call(
+    (options) => client.customers.queryCustomer(toCustomerFilter(query) as never, options),
+    signal,
   )
   const customers = (response.items ?? []).map((item) => toCustomer(item as CustomerWire))
 
-  // The SDK's customer filter has no name-search field and does not narrow by
-  // status, so both are applied on the page — the same split coupons and price
-  // units use. Search matches the name, email or external id, case-insensitively.
-  const needle = query.search.trim().toLowerCase()
-  const filtered = customers
-    .filter((customer) =>
-      query.statuses.length > 0 ? query.statuses.includes(customer.status) : true,
-    )
-    .filter((customer) =>
-      needle
-        ? [customer.name, customer.email, customer.externalId].some((field) =>
-            field.toLowerCase().includes(needle),
-          )
-        : true,
-    )
-
+  /*
+   * No narrowing happens here any more, and that is the fix.
+   *
+   * Search and status used to be applied to the fetched page: the request asked
+   * for 25 rows, the browser dropped the ones that did not match, and `total`
+   * still reported the server's unfiltered count. Searching "acme" found an
+   * Acme on page 1 and missed the one on page 3, the pager promised pages that
+   * came back empty, and page 2 of a search was not the second page of matches
+   * but the matches inside the second page of everything.
+   *
+   * Both are server-side now (see `toCustomerFilter`), so `pagination.total` is
+   * the count of rows that actually match and every page is full.
+   *
+   * One deliberate narrowing of behaviour: search matches the **name** only,
+   * where the browser version also matched email and external id. The filter
+   * DSL conjoins its conditions — Ent's `Where(...)` ANDs them — so one box
+   * across three fields would need an OR the API does not offer. Email and
+   * external id remain searchable as their own `contains` filters in the filter
+   * bar (`CUSTOMER_FILTERS`), which do work across every page.
+   */
   return {
-    customers: filtered,
+    customers,
     total: response.pagination?.total ?? 0,
   }
 }
@@ -115,7 +170,7 @@ export function useCustomers(query: CustomerQuery, options: { enabled?: boolean 
 
   return useQuery({
     queryKey: queryKeys.customers.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchCustomers(client, query),
+    queryFn: ({ signal }) => fetchCustomers(client, query, signal),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -163,8 +218,12 @@ export function toCustomerDetail(wire: CustomerDetailWire): CustomerDetail {
   }
 }
 
-export async function fetchCustomer(client: Flexprice, id: string): Promise<CustomerDetail> {
-  const response = await call(() => client.customers.getCustomer(id))
+export async function fetchCustomer(
+  client: Flexprice,
+  id: string,
+  signal?: AbortSignal,
+): Promise<CustomerDetail> {
+  const response = await call((options) => client.customers.getCustomer(id, options), signal)
   return toCustomerDetail(response as CustomerDetailWire)
 }
 
@@ -180,7 +239,7 @@ export function useCustomer(id: string) {
 
   return useQuery({
     queryKey: queryKeys.customers.detail(id),
-    queryFn: () => fetchCustomer(client, id),
+    queryFn: ({ signal }) => fetchCustomer(client, id, signal),
     enabled: id.length > 0,
   })
 }
@@ -235,7 +294,7 @@ export function useCustomerInvoices(externalId: string) {
   return useQuery<InvoicePage>({
     queryKey: queryKeys.invoices.list({ externalCustomerId: externalId }),
     queryFn: () =>
-      fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, search: externalId, pageSize: 50 }),
+      fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, search: externalId, pageSize: 200 }),
     enabled: externalId.length > 0,
   })
 }
@@ -284,9 +343,7 @@ export async function fetchCustomerUsageSummary(
   client: Flexprice,
   customerId: string,
 ): Promise<CustomerUsageSummary> {
-  const response = await call(() =>
-    client.customers.getCustomerUsageSummary({ customerId } as never),
-  )
+  const response = await call(() => client.customers.getCustomerUsageSummary({ customerId }))
   return toCustomerUsageSummary(response as CustomerUsageSummaryWire)
 }
 
@@ -380,5 +437,114 @@ export function useDeleteCustomer() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
       void queryClient.removeQueries({ queryKey: queryKeys.customers.detail(id) })
     },
+  })
+}
+
+/** One row of `GET /integrations/mappings`, after the SDK camelCases it. */
+export interface IntegrationMappingWire {
+  id?: string | undefined
+  providerType?: string | undefined
+  providerEntityId?: string | undefined
+  status?: string | undefined
+  createdAt?: Date | undefined
+  updatedAt?: Date | undefined
+}
+
+/**
+ * Published mappings only, one per provider, named from the integration
+ * catalogue exactly as the customer list names its marks — the catalogue `id`
+ * is what picks the logo.
+ */
+export function toIntegrationLinks(wires: IntegrationMappingWire[] | undefined): IntegrationLink[] {
+  const seen = new Set<string>()
+  const links: IntegrationLink[] = []
+  for (const wire of wires ?? []) {
+    const providerType = wire.providerType?.trim()
+    if (!providerType || seen.has(providerType)) continue
+    if (wire.status && wire.status !== 'published') continue
+    seen.add(providerType)
+    const spec = INTEGRATION_CATALOG.find((entry) => entry.providerType === providerType)
+    links.push({
+      id: spec?.id ?? providerType,
+      name: spec?.name ?? providerType,
+      providerType,
+      mappingId: wire.id ?? '',
+      providerEntityId: wire.providerEntityId?.trim() ?? '',
+      createdAt: wire.createdAt ?? null,
+      updatedAt: wire.updatedAt ?? null,
+    })
+  }
+  return links
+}
+
+/** Where a customer is mapped in each connected provider — `GET /integrations/mappings`. */
+export function useCustomerIntegrationLinks(customerId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.integrationLinks.forCustomer(customerId),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.integrations.getEntityIntegrationMappings('customer', customerId, options),
+        signal,
+      )
+      return toIntegrationLinks(response.items)
+    },
+    enabled: customerId.length > 0,
+  })
+}
+
+/** The customer list and detail show the same marks, so a link change refreshes both. */
+function invalidateIntegrationLinks(
+  queryClient: ReturnType<typeof useQueryClient>,
+  customerId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.integrationLinks.forCustomer(customerId),
+  })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
+}
+
+/** Map this customer to their record in a provider — `POST /integrations/link`. */
+export function useLinkCustomerIntegration(customerId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      providerType,
+      providerEntityId,
+    }: {
+      providerType: string
+      providerEntityId: string
+    }) =>
+      call(() =>
+        client.integrations.linkIntegrationMapping({
+          entityId: customerId,
+          entityType: 'customer',
+          providerType,
+          providerEntityId,
+        }),
+      ),
+    onSuccess: () => invalidateIntegrationLinks(queryClient, customerId),
+  })
+}
+
+/** Remove a provider mapping — `DELETE /integrations/link`, which carries a body. */
+export function useUnlinkCustomerIntegration(customerId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ providerType }: { providerType: string }) =>
+      call(() =>
+        client.integrations.delinkIntegrationMapping({
+          entityId: customerId,
+          entityType: 'customer',
+          providerType,
+        }),
+      ),
+    onSuccess: () => invalidateIntegrationLinks(queryClient, customerId),
   })
 }

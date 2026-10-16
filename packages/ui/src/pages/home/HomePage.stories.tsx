@@ -14,10 +14,6 @@ const GRANULARITY_OPTIONS = [
   { id: 'daily', label: 'Daily' },
   { id: 'hourly', label: 'Hourly' },
 ]
-const CUSTOMER_OPTIONS = [
-  { id: 'all', label: 'All customers' },
-  { id: 'cus_1', label: 'Globex 1' },
-]
 const PANEL_STATUSES: PanelStatus[] = ['ready', 'loading', 'empty', 'unavailable']
 const PLAN_POOL = ['Studio', 'Growth', 'Starter', 'Platform']
 
@@ -26,7 +22,6 @@ interface HomePageProps {
   status: PanelStatus
   range: string
   granularity: string
-  customer: string
   /** Buckets on the events chart and the contracts stack. */
   dayCount: number
   eventsPerDay: number
@@ -103,14 +98,12 @@ function makePanels(
   }
 }
 
-/** The home route as the console composes it: shell, then the overview with its three live filters. */
+/** The home route as the console composes it: shell, then the overview. */
 function HomePage(args: HomePageProps) {
   const [range, setRange] = useState(args.range)
   const [granularity, setGranularity] = useState(args.granularity)
-  const [customer, setCustomer] = useState(args.customer)
   useEffect(() => setRange(args.range), [args.range])
   useEffect(() => setGranularity(args.granularity), [args.granularity])
-  useEffect(() => setCustomer(args.customer), [args.customer])
 
   const rangeLabel = (
     RANGE_OPTIONS.find((option) => option.id === range)?.label ?? range
@@ -125,9 +118,6 @@ function HomePage(args: HomePageProps) {
         granularityOptions={GRANULARITY_OPTIONS}
         granularity={granularity}
         onGranularityChange={setGranularity}
-        customerOptions={CUSTOMER_OPTIONS}
-        customer={customer}
-        onCustomerChange={setCustomer}
         rangeLabel={rangeLabel}
         {...makePanels(args)}
         onNavigate={fn()}
@@ -145,7 +135,6 @@ const meta = {
     status: 'ready',
     range: '7d',
     granularity: 'daily',
-    customer: 'all',
     dayCount: 7,
     eventsPerDay: 750_000,
     plansShown: 4,
@@ -161,7 +150,6 @@ const meta = {
       control: 'inline-radio',
       options: GRANULARITY_OPTIONS.map((option) => option.id),
     },
-    customer: { control: 'inline-radio', options: CUSTOMER_OPTIONS.map((option) => option.id) },
     dayCount: { control: { type: 'range', min: 0, max: 30, step: 1 } },
     eventsPerDay: { control: { type: 'number', min: 0, max: 5_000_000, step: 50_000 } },
     plansShown: { control: { type: 'range', min: 0, max: PLAN_POOL.length, step: 1 } },

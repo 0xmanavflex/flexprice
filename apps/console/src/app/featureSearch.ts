@@ -5,6 +5,9 @@ import {
   FeatureStatus,
   FeatureType,
   FeatureView,
+  FEATURE_FILTERS,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -55,7 +58,11 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
 
   return {
     page: positiveInt(raw['page'], DEFAULT_FEATURE_QUERY.page),
-    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_FEATURE_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(
+      param(raw, 'size', 'pageSize'),
+      DEFAULT_FEATURE_QUERY.pageSize,
+      MAX_PAGE_SIZE,
+    ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     types: [...new Set(types)],
     statuses: [...new Set(statuses)],
@@ -65,10 +72,9 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
       ? (String(param(raw, 'sort', 'sortBy')) as FeatureSortField)
       : DEFAULT_FEATURE_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc'
-        ? 'desc'
-        : DEFAULT_FEATURE_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_FEATURE_QUERY.sortDirection,
     // A layout, not a filter. `cards` persists; anything else is the table.
     view: param(raw, 'view', 'view') === FeatureView.Cards ? FeatureView.Cards : FeatureView.Table,
+    filters: runnableFilters(decodeListFilters(raw['filters']), FEATURE_FILTERS),
   }
 }

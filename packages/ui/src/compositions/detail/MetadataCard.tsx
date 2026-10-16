@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { PencilIcon, PlusIcon, Trash2Icon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { provenance } from '@ui/provenance'
@@ -8,7 +8,7 @@ import { Section } from '../layout/Section'
 export const MetadataCardProvenance = provenance({
   source: 'composition',
   composes: ['compositions/section', 'ui/input', 'ui/button'],
-  note: 'A key/value card with an Edit button in the header: rows become inputs with add and remove, and Save and Cancel replace Edit in the header.',
+  note: 'A key/value card with a pencil icon button at the top right of the header: rows become inputs with add and remove, and Save and Cancel replace Edit in the header.',
 })
 
 export interface MetadataCardProps {
@@ -27,13 +27,13 @@ interface DraftRow {
 }
 
 /**
- * Free-form key/value fields on a record. One Edit button in the card header
- * turns the rows into inputs; blank rows are dropped and duplicate keys are
+ * Free-form key/value fields on a record. One pencil button at the top right of
+ * the card turns the rows into inputs; blank rows are dropped and duplicate keys are
  * refused, so what is saved is exactly what is shown.
  */
 export function MetadataCard({
   title = 'Metadata',
-  description = 'Your own key/value fields, returned with this record in the API.',
+  description,
   metadata,
   onSave,
   className,
@@ -95,19 +95,20 @@ export function MetadataCard({
     </>
   ) : onSave ? (
     <Button
-      variant="outline"
-      size="sm"
+      variant="ghost"
+      size="icon"
       onClick={start}
       aria-label={`Edit ${title.toLowerCase()}`}
+      title={`Edit ${title.toLowerCase()}`}
     >
-      Edit
+      <PencilIcon aria-hidden className="size-4" />
     </Button>
   ) : undefined
 
   return (
     <Section
       title={title}
-      description={description}
+      {...(description ? { description } : {})}
       actions={actions}
       flush
       {...(className ? { className } : {})}

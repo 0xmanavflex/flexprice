@@ -7,9 +7,12 @@ name: Lint
 # story test are different problems with different owners, and one combined
 # red check makes you open the run to find out which you have.
 on:
+  # Called by `pipeline.yml` on a push to main, so main runs these in order
+  # rather than all at once. The triggers below still fire on their own for
+  # every other branch and every pull request.
+  workflow_call:
   push:
     branches:
-      - main
       - develop
       - feat/v2-foundation
       # A change to CI should prove itself on its own branch, before it reaches
@@ -51,6 +54,9 @@ jobs:
 
       - name: Vendored UI is unmodified
         run: node scripts/check-vendor.mjs
+
+      - name: Console calls only what the SDK has
+        run: node scripts/check-sdk.mjs --check
 
       - name: UI page matrix is current
         run: node scripts/ui-page-matrix.mjs --check

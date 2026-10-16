@@ -77,7 +77,7 @@ export function CouponFormPage(props: CouponFormPageProps) {
       summary={{ code: coupon.code, discount: discountText(coupon) }}
       trail={[
         { label: 'Coupons', onClick: onNavigateToList },
-        { label: coupon.name, onClick: () => props.onDone(coupon.id) },
+        { label: 'Coupon details', onClick: () => props.onDone(coupon.id) },
         { label: 'Edit' },
       ]}
       onCancel={onCancel}

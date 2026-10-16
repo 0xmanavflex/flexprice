@@ -11,10 +11,12 @@ import {
   type CreateCoupon,
   type EditCoupon,
   moneyOr,
+  COUPON_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter } from './search'
+import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Coupons: the translation between product vocabulary and the API.
@@ -102,8 +104,25 @@ export function toCouponFilter(query: CouponQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
-    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
+    /*
+     * Status, server-side.
+     *
+     * It used to narrow the fetched page in the browser, which is a different
+     * and wrong thing: the request returns one page, rows are dropped from
+     * *that* page, and the pager still reports the server's unfiltered total.
+     * `status` is a declared field on this filter model and a real column the
+     * backend accepts, so there was never a reason not to send it.
+     */
+    ...statusFilterField(query.statuses, Object.values(CouponStatus)),
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
+    ...(query.search || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search ? nameContainsFilter(query.search) : []),
+            ...toFilterConditions(query.filters ?? [], COUPON_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 
@@ -117,12 +136,7 @@ export async function fetchCoupons(client: Flexprice, query: CouponQuery): Promi
   const coupons = (response.items ?? []).map((item) => toCoupon(item as CouponWire))
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page —
-    // the same split add-ons use.
-    coupons:
-      query.statuses.length > 0
-        ? coupons.filter((coupon) => query.statuses.includes(coupon.status))
-        : coupons,
+    coupons,
     total: response.pagination?.total ?? 0,
   }
 }
@@ -158,11 +172,11 @@ export function useCoupon(id: string) {
  * A coupon's edit is a rename.
  *
  * `UpdateCouponRequest` accepts only `name` and `metadata`; the discount and
- * its cadence are immutable once created. The draft carries the one editable
- * field, so this is the whole request.
+ * its cadence are immutable once created. Metadata is sent only when the draft
+ * carries it, so a rename leaves it alone.
  */
 export function toUpdateCouponRequest(draft: EditCoupon): Record<string, unknown> {
-  return { name: draft.name }
+  return { name: draft.name, ...(draft.metadata ? { metadata: draft.metadata } : {}) }
 }
 
 export function useUpdateCoupon() {
@@ -296,6 +310,67 @@ export function useCreateCoupon() {
       call(() => client.coupons.createCoupon(toCreateCouponRequest(draft) as never)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.coupons.all() })
+    },
+  })
+}
+
+/** One contract a coupon is applied to, named for the redemptions table. */
+export interface CouponRedemptionRow {
+  id: string
+  contractId: string
+  customer: string
+  plan: string
+  startDate: Date | null
+  endDate: Date | null
+  status: string
+}
+
+/**
+ * Where a coupon is applied, by customer and plan: its associations, then
+ * those contracts read back by id through the subscription search.
+ */
+export function useCouponRedemptions(couponId: string) {
+  const client = useFlexprice()
+  const associations = useCouponAssociations(couponId)
+  const rows = associations.data?.associations ?? []
+  const ids = [...new Set(rows.map((row) => row.subscriptionId).filter(Boolean))]
+
+  return useQuery({
+    queryKey: [...queryKeys.coupons.associations(couponId), 'contracts', ids],
+    enabled: associations.isSuccess,
+    queryFn: async (): Promise<CouponRedemptionRow[]> => {
+      const byId = new Map<string, { customer: string; plan: string }>()
+      if (ids.length > 0) {
+        const response = await call(() =>
+          client.subscriptions.querySubscription({
+            subscriptionIds: ids,
+            limit: ids.length,
+            expand: 'customer,plan',
+          } as never),
+        )
+        for (const item of (response.items ?? []) as Array<{
+          id?: string
+          customerId?: string
+          customer?: { name?: string; email?: string }
+          plan?: { name?: string }
+          planId?: string
+        }>) {
+          if (!item.id) continue
+          byId.set(item.id, {
+            customer: item.customer?.name || item.customer?.email || item.customerId || 'Unknown',
+            plan: item.plan?.name || item.planId || '—',
+          })
+        }
+      }
+      return rows.map((row) => ({
+        id: row.id,
+        contractId: row.subscriptionId,
+        customer: byId.get(row.subscriptionId)?.customer ?? row.subscriptionId,
+        plan: byId.get(row.subscriptionId)?.plan ?? '—',
+        startDate: row.startDate,
+        endDate: row.endDate,
+        status: row.endDate && row.endDate.getTime() < Date.now() ? 'Ended' : 'Active',
+      }))
     },
   })
 }

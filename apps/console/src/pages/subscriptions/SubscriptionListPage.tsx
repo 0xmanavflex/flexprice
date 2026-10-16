@@ -1,9 +1,16 @@
-import { type SubscriptionQuery } from '@fp/domain'
-import { ApiError, useSubscriptions } from '@fp/query'
-import { SubscriptionGrid } from '@fp/ui/pages'
-import { ListState, PageBody } from '@fp/ui/compositions'
-import { RefreshCwIcon } from 'lucide-react'
+import { useState } from 'react'
+import {
+  DEFAULT_CUSTOMER_QUERY,
+  DEFAULT_PLAN_QUERY,
+  type Subscription,
+  type SubscriptionCancellationType,
+  type SubscriptionQuery,
+} from '@fp/domain'
+import { useCancelSubscription, useCustomers, usePlans, useSubscriptions } from '@fp/query'
+import { SubscriptionGrid, Toaster, toast } from '@fp/ui/pages'
+import { ConfirmDialog, ListState, OptionSelect, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
+import { toListFailure } from '../shared/listFailure'
 
 export interface SubscriptionListPageProps {
   query: SubscriptionQuery
@@ -29,10 +36,27 @@ export function SubscriptionListPage({
   onOpenPlan,
 }: SubscriptionListPageProps) {
   const subscriptions = useSubscriptions(query)
+  // The choices behind the Customer and Plan filters: the first hundred of each,
+  // the same picker page the create form uses.
+  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
+  const plans = usePlans({ ...DEFAULT_PLAN_QUERY, page: 1, pageSize: 100 })
+  const filterOptions = {
+    customer_id: (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
+    plan_id: (plans.data?.plans ?? []).map((p) => ({ value: p.id, label: p.name })),
+  }
 
-  const failure = toFailure(subscriptions.error)
+  const cancel = useCancelSubscription()
+  const [cancelling, setCancelling] = useState<Subscription | null>(null)
+  const [when, setWhen] = useState<SubscriptionCancellationType>('end_of_period')
+  const closeCancel = () => {
+    setCancelling(null)
+    cancel.reset()
+  }
+
+  const failure = toListFailure(subscriptions.error, 'contracts')
   const rows = subscriptions.data?.subscriptions ?? []
-  const isFiltered = query.search.length > 0 || query.statuses.length > 0
+  const isFiltered =
+    query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
 
   return (
     <>
@@ -40,12 +64,18 @@ export function SubscriptionListPage({
         <ListState
           isLoading={subscriptions.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (subscriptions.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={subscriptions.isFetching && !subscriptions.isPending}
+          isProvisional={subscriptions.isPlaceholderData}
+          isRetrying={subscriptions.isFetching && subscriptions.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void subscriptions.refetch()}
-          onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+          onClearFilters={() =>
+            onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
+          }
           createAction={<Button onClick={onCreate}>New contract</Button>}
-          emptyIcon={<RefreshCwIcon aria-hidden />}
           emptyTitle="No contracts yet"
           emptyDescription="A contract puts a customer on a plan and starts their billing cycle."
         >
@@ -54,34 +84,66 @@ export function SubscriptionListPage({
             total={subscriptions.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            filterOptions={filterOptions}
             onCreate={onCreate}
             {...(onOpen ? { onSubscriptionClick: (subscription) => onOpen(subscription.id) } : {})}
             {...(onOpenCustomer ? { onOpenCustomer } : {})}
             {...(onOpenPlan ? { onOpenPlan } : {})}
-            onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+            onCancelSubscription={(subscription) => {
+              setWhen('end_of_period')
+              setCancelling(subscription)
+            }}
+            onClearFilters={() =>
+              onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
+            }
           />
         </ListState>
       </PageBody>
+      <ConfirmDialog
+        open={cancelling !== null}
+        onOpenChange={(open) => (open ? undefined : closeCancel())}
+        title="Cancel this contract?"
+        description={
+          <span className="flex flex-col gap-3 pt-2 text-left">
+            <span>
+              {cancelling
+                ? `${cancelling.customerName || 'This customer'} on ${cancelling.planName || 'this plan'}.`
+                : null}{' '}
+              Open the contract for proration, a date or a final invoice.
+            </span>
+            <label htmlFor="list-cancel-when" className="flex flex-col gap-1.5 text-sm">
+              When
+              <OptionSelect
+                id="list-cancel-when"
+                value={when}
+                onValueChange={(value) => setWhen(value as SubscriptionCancellationType)}
+                options={[
+                  { value: 'end_of_period', label: 'At the end of the current period' },
+                  { value: 'immediate', label: 'Immediately' },
+                ]}
+              />
+            </label>
+          </span>
+        }
+        confirmLabel="Cancel contract"
+        cancelLabel="Keep contract"
+        destructive
+        isPending={cancel.isPending}
+        error={cancel.isError ? 'The contract could not be cancelled. Try again.' : null}
+        onConfirm={() => {
+          if (!cancelling) return
+          cancel.mutate(
+            { id: cancelling.id, draft: { cancellationType: when, reason: '' } },
+            {
+              onSuccess: () => {
+                closeCancel()
+                toast('Contract cancelled')
+              },
+            },
+          )
+        }}
+      />
+      <Toaster />
     </>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to contracts here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading contracts.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading contracts.', canRetry: true }
 }

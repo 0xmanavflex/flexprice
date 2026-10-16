@@ -34,9 +34,20 @@ interface SearchBody {
    * name-search field, so their search goes through this instead — see
    * `packages/query/src/search.ts`.
    */
-  filters?: { field?: string; operator?: string; value?: { string?: string } }[]
+  filters?: {
+    field?: string
+    operator?: string
+    data_type?: string
+    value?: { string?: string; number?: number; date?: string; array?: string[] }
+  }[]
   subscription_ids?: string[]
   subscriptionIds?: string[]
+  /** A group's price members, read back by id. */
+  price_ids?: string[]
+  priceIds?: string[]
+  /** The customer list's contract counts: every contract of these customers. */
+  customer_ids?: string[]
+  customerIds?: string[]
   /** How the contract detail page scopes the invoice search to one contract. */
   subscription_id?: string
   subscriptionId?: string
@@ -68,6 +79,41 @@ function readString(row: Record<string, unknown>, key: string): string {
  * the grid's page count, so returning the page length here would silently cap
  * every list at one page.
  */
+/** One filter-DSL condition against a corpus row. Unknown operators match everything. */
+function matchesCondition(
+  row: Record<string, unknown>,
+  condition: NonNullable<SearchBody['filters']>[number],
+): boolean {
+  const field = condition.field ?? ''
+  const raw = row[field]
+  const value = condition.value ?? {}
+  const text = raw === undefined || raw === null ? '' : String(raw)
+  switch (condition.operator) {
+    case 'contains':
+      return text.toLowerCase().includes((value.string ?? '').toLowerCase())
+    case 'not_contains':
+      return !text.toLowerCase().includes((value.string ?? '').toLowerCase())
+    case 'eq':
+      return value.number !== undefined
+        ? Number(raw) === value.number
+        : text.toLowerCase() === (value.string ?? '').toLowerCase()
+    case 'gt':
+      return Number(raw) > (value.number ?? Number.NaN)
+    case 'lt':
+      return Number(raw) < (value.number ?? Number.NaN)
+    case 'in':
+      return (value.array ?? []).includes(text)
+    case 'not_in':
+      return !(value.array ?? []).includes(text)
+    case 'before':
+      return text !== '' && new Date(text) < new Date(value.date ?? '')
+    case 'after':
+      return text !== '' && new Date(text) > new Date(value.date ?? '')
+    default:
+      return true
+  }
+}
+
 function page(source: Corpus, body: SearchBody) {
   let rows = [...source.items]
 
@@ -86,18 +132,28 @@ function page(source: Corpus, body: SearchBody) {
   // have the field) or a `contains` condition in the filter DSL (plans,
   // add-ons, coupons, price units, which do not). Both are honoured so the mock
   // matches the real API rather than being laxer than it.
-  const dsl = body.filters?.find(
-    (condition) => condition.field === 'name' && condition.operator === 'contains',
-  )
-  const search = body.name_contains ?? body.nameContains ?? dsl?.value?.string
+  const search = body.name_contains ?? body.nameContains
   if (search) {
     const needle = search.toLowerCase()
     rows = rows.filter((row) => readString(row, 'name').toLowerCase().includes(needle))
   }
 
+  // The generic filter DSL, evaluated the way the backend does: every
+  // condition must hold (AND), on the row's snake_case field.
+  for (const condition of body.filters ?? []) {
+    rows = rows.filter((row) => matchesCondition(row, condition))
+  }
+
   const subscriptionIds = body.subscription_ids ?? body.subscriptionIds
   if (subscriptionIds?.length)
     rows = rows.filter((row) => subscriptionIds.includes(readString(row, 'id')))
+
+  const customerIds = body.customer_ids ?? body.customerIds
+  if (customerIds?.length)
+    rows = rows.filter((row) => customerIds.includes(readString(row, 'customer_id')))
+
+  const priceIds = body.price_ids ?? body.priceIds
+  if (priceIds?.length) rows = rows.filter((row) => priceIds.includes(readString(row, 'id')))
 
   const ids = body.feature_ids ?? body.featureIds
   if (ids?.length) rows = rows.filter((row) => ids.includes(readString(row, 'id')))
@@ -148,13 +204,26 @@ function page(source: Corpus, body: SearchBody) {
     )
   }
 
-  const sort = body.sort?.[0]
-  if (sort) {
-    const { field, direction } = sort
+  /*
+   * Every sort entry, not just the first.
+   *
+   * The console sends a tie-break after the primary key (`sortWithTieBreak`),
+   * because sorting on a timestamp alone is not a total order and the real API
+   * is free to return tied rows in any order. A mock that read `sort[0]` and
+   * stopped would sort tied rows by corpus position instead — stable, so the
+   * tests would pass, and the one thing the tie-break exists to prevent would
+   * be the one thing they could never catch.
+   */
+  const sorts = body.sort ?? []
+  if (sorts.length > 0) {
     rows.sort((a, b) => {
-      const left = readString(a, field)
-      const right = readString(b, field)
-      return direction === 'desc' ? right.localeCompare(left) : left.localeCompare(right)
+      for (const { field, direction } of sorts) {
+        const left = readString(a, field)
+        const right = readString(b, field)
+        const order = direction === 'desc' ? right.localeCompare(left) : left.localeCompare(right)
+        if (order !== 0) return order
+      }
+      return 0
     })
   }
 
@@ -184,12 +253,186 @@ function applyFeatureExpand(result: ReturnType<typeof page>, expand: string | un
   }
 }
 
+/**
+ * The environment's connections. Mutable so the integrations page can connect,
+ * edit and disconnect, and so customers pick the change up: a customer shows a
+ * provider only while that provider has a published connection. QuickBooks has
+ * a draft, which must not count.
+ */
+const connectionRows: Record<string, unknown>[] = [
+  {
+    id: 'conn_stripe',
+    name: 'Stripe',
+    provider_type: 'stripe',
+    connection_status: 'published',
+    metadata: {},
+    sync_config: { invoice: { outbound: true }, payment: { inbound: true } },
+    created_at: '2026-08-12T09:30:00Z',
+  },
+  { id: 'conn_qb', name: 'QuickBooks', provider_type: 'quickbooks', connection_status: 'draft' },
+]
+let connectionSeq = 0
+const pendingOAuth = new Map<string, { name: unknown; provider: string; metadata: unknown }>()
+
+function publishedProviders(): string[] {
+  return connectionRows
+    .filter((row) => row['connection_status'] === 'published')
+    .map((row) => String(row['provider_type']))
+}
+
+/**
+ * Per-customer provider mappings once someone has linked or unlinked one.
+ * Until then a customer's mappings are the demo slice below; the first write
+ * freezes that slice into this map so the list marks, the contract header and
+ * the link/unlink calls all read the same rows.
+ */
+const customerMappings = new Map<string, Record<string, unknown>[]>()
+
+function demoMappingRows(customerId: string): Record<string, unknown>[] {
+  const row = (corpus['customers'] as Corpus).items.find(
+    (item) => readString(item, 'id') === customerId,
+  )
+  const demo: Record<string, unknown> = seedDemoIntegrations({ id: customerId, ...(row ?? {}) })
+  const integrations = (demo['integrations'] as Record<string, unknown>[] | undefined) ?? []
+  return integrations.map((integration) => ({
+    id: `intmap_${customerId}_${String(integration['provider_type'])}`,
+    entity_id: customerId,
+    entity_type: 'customer',
+    status: 'published',
+    created_at: '2026-08-12T09:45:00Z',
+    updated_at: '2026-09-02T14:10:00Z',
+    ...integration,
+  }))
+}
+
+const otherEntityMappings = new Map<string, Record<string, unknown>[]>()
+function mappingsForEntity(type: string, id: string): Record<string, unknown>[] {
+  if (type === 'customer') return mappingsFor(id)
+  const key = `${type}:${id}`
+  if (!otherEntityMappings.has(key)) otherEntityMappings.set(key, [])
+  return otherEntityMappings.get(key)!
+}
+
+function mappingsFor(customerId: string): Record<string, unknown>[] {
+  const existing = customerMappings.get(customerId)
+  if (existing) return existing
+  const rows = demoMappingRows(customerId)
+  customerMappings.set(customerId, rows)
+  return rows
+}
+
+/**
+ * The corpus has no per-customer integration mappings. A stable slice of the
+ * connected providers is attached so the list column and the detail page can
+ * show the same marks the integrations page uses. Rows that already carry
+ * mappings are left alone.
+ */
+function withDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
+  const edited = customerMappings.get(typeof row['id'] === 'string' ? row['id'] : '')
+  return edited ? { ...row, integrations: edited } : seedDemoIntegrations(row)
+}
+
+function seedDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
+  const id = typeof row['id'] === 'string' ? row['id'] : ''
+  if (Array.isArray(row['integrations'])) return row
+  let hash = 0
+  for (const char of id) hash += char.charCodeAt(0)
+  // Provider ids differ per customer, as the real mappings do.
+  const suffix = id
+    .replace(/[^a-z0-9]/gi, '')
+    .slice(-14)
+    .toLowerCase()
+  const prefix: Record<string, string> = { stripe: 'cus_', quickbooks: 'qb_', hubspot: 'hs_' }
+  const integrations = publishedProviders()
+    .filter((_, index) => (hash + index) % 3 !== 2)
+    .map((provider) => ({
+      provider_type: provider,
+      status: 'published',
+      provider_entity_id: `${prefix[provider] ?? `${provider}_`}${suffix}`,
+    }))
+  return integrations.length > 0 ? { ...row, integrations } : row
+}
+
+/**
+ * The payment an invoice's `amount_paid` stands for: one card payment, taken
+ * through Stripe when the invoice was issued. Unpaid invoices have none.
+ */
+function invoicePayments(invoiceId: string): Record<string, unknown>[] {
+  const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === invoiceId)
+  if (!invoice) return []
+  const paid = Number(readString(invoice, 'amount_paid') || 0)
+  if (!(paid > 0)) return []
+  const at = readString(invoice, 'issue_date') || readString(invoice, 'created_at')
+  return [
+    {
+      id: `pay_${invoiceId}`,
+      destination_id: invoiceId,
+      destination_type: 'INVOICE',
+      invoice_number: readString(invoice, 'invoice_number'),
+      amount: readString(invoice, 'amount_paid'),
+      currency: readString(invoice, 'currency') || 'USD',
+      payment_status: 'SUCCEEDED',
+      payment_method_type: 'CARD',
+      payment_gateway: 'stripe',
+      created_at: at,
+      succeeded_at: at,
+    },
+  ]
+}
+
+/*
+ * The expands a route will refuse, as the live API refuses them.
+ *
+ * Only `/prices/search` is listed, and only because it was checked against
+ * production: it answers `400 validation_error` naming the field. That is how
+ * `plan,addon,meter` shipped — the values are plural, `addons` and `meters`,
+ * and a mock that accepted anything could not say so.
+ *
+ * Other routes are deliberately absent rather than guessed at. `/entitlements/search`
+ * accepts an unknown expand and quietly ignores it (checked: `plan,addon`
+ * returns 200 and changes nothing), and the live-API audit found the same of
+ * `/subscriptions/search`. Enforcing a stricter rule here than the API has
+ * would fail CI for a request production would accept, which is the same
+ * class of lie as the laxness it replaced — just pointing the other way.
+ */
+const ALLOWED_EXPANDS: Record<string, string[]> = {
+  prices: ['meters', 'priceunit', 'plan', 'addons', 'groups', 'features'],
+}
+
+/** The API's own refusal, for an expand the route does not offer. */
+function rejectUnknownExpand(key: string, expand: string | undefined) {
+  const allowed = ALLOWED_EXPANDS[key]
+  if (!allowed || !expand) return null
+  const bad = expand
+    .split(',')
+    .map((f) => f.trim())
+    .filter((f) => f.length > 0 && !allowed.includes(f))
+  if (bad.length === 0) return null
+  return HttpResponse.json(
+    {
+      code: 'validation_error',
+      message: 'Field is not allowed to be expanded',
+      http_status_code: 400,
+      details: { field: bad[0] },
+    },
+    { status: 400 },
+  )
+}
+
 const search = (path: string, key: string) =>
   http.post(`${BASE}${path}`, async ({ request }) => {
     const body = ((await request.json().catch(() => ({}))) ?? {}) as SearchBody
+    const refused = rejectUnknownExpand(key, body.expand)
+    if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
     const result = page(sourceFor(key), body)
-    return HttpResponse.json(key === 'features' ? applyFeatureExpand(result, body.expand) : result)
+    const payload =
+      key === 'features'
+        ? applyFeatureExpand(result, body.expand)
+        : key === 'customers'
+          ? { ...result, items: result.items.map(withDemoIntegrations) }
+          : result
+    return HttpResponse.json(payload)
   })
 
 /** Finds one row in a corpus by id — the by-id GET endpoints read it. */
@@ -923,6 +1166,28 @@ const scheduledTasks: Record<string, unknown>[] = [
 /** Tax rates attached to entities, mutated by the association handlers. */
 const taxAssociations: Record<string, unknown>[] = []
 
+/**
+ * What the contract page's "add" dialogs have created, per subscription, so the
+ * tabs show the new row on the refetch. Entitlements and grants are the wire
+ * rows the dialogs posted; add-ons and coupons are the association rows the
+ * contract page reads back.
+ */
+const contractAdditions = {
+  entitlements: new Map<string, Record<string, unknown>[]>(),
+  grants: new Map<string, Record<string, unknown>[]>(),
+  addons: new Map<string, Record<string, unknown>[]>(),
+  coupons: new Map<string, Record<string, unknown>[]>(),
+}
+
+function additionsFor(
+  kind: keyof typeof contractAdditions,
+  subscriptionId: string,
+): Record<string, unknown>[] {
+  const rows = contractAdditions[kind].get(subscriptionId) ?? []
+  contractAdditions[kind].set(subscriptionId, rows)
+  return rows
+}
+
 const taxRates: Record<string, unknown>[] = [
   {
     id: 'tax_01M38QTAX00000000000001',
@@ -1435,8 +1700,65 @@ function recordWalletCredit(
     credit_amount: String(Math.abs(credits)),
     amount: String(Math.abs(credits) * rate),
     currency: wallet['currency'],
+    // A fresh credit is wholly unspent; a debit has nothing left to spend.
+    credits_available: credits < 0 ? '0' : String(credits),
     created_at: new Date().toISOString(),
   })
+}
+
+/**
+ * One wallet with history, authored for the second customer so the first stays
+ * empty (the wallet e2e starts from "No wallet yet"). It shows every column of
+ * the top-ups table: spent-down credits, ones that never expire, and one that
+ * lapses in five days. The API sends no per-product breakdown, so none is seeded.
+ */
+{
+  const day = 86_400_000
+  const ago = (days: number) => new Date(Date.now() - days * day).toISOString()
+  const ahead = (days: number) => new Date(Date.now() + days * day).toISOString()
+  walletStore.push({
+    id: 'wal_demo_01',
+    customer_id: 'cus_synth_0001',
+    currency: 'usd',
+    description: 'Prepaid credits',
+    conversion_rate: '0.01',
+    topup_conversion_rate: '0.009',
+    wallet_status: 'active',
+    wallet_type: 'PRE_PAID',
+    credit_balance: '126000',
+    balance: '1260',
+    real_time_credit_balance: '118000',
+    real_time_balance: '1180',
+    auto_topup: { enabled: true, threshold: 20000, amount: 100000, invoicing: true },
+    created_at: ago(90),
+  })
+  const topUp = (
+    id: string,
+    reason: string,
+    description: string,
+    credits: number,
+    available: number,
+    createdDaysAgo: number,
+    expiresInDays: number | null,
+  ) => ({
+    id,
+    wallet_id: 'wal_demo_01',
+    type: 'credit',
+    transaction_reason: reason,
+    description,
+    credit_amount: String(credits),
+    credits_available: String(available),
+    amount: String(credits * 0.01),
+    currency: 'usd',
+    created_at: ago(createdDaysAgo),
+    ...(expiresInDays === null ? {} : { expiry_date: ahead(expiresInDays) }),
+  })
+  walletTransactionStore.push(
+    topUp('wtx_demo_4', 'FREE_CREDIT_GRANT', 'Launch promotion', 25000, 25000, 3, 5),
+    topUp('wtx_demo_3', 'PURCHASED_CREDIT_INVOICED', 'Invoice INV-0042', 100000, 93000, 12, null),
+    topUp('wtx_demo_2', 'SUBSCRIPTION_CREDIT_GRANT', 'Annual commit', 100000, 8000, 45, 60),
+    topUp('wtx_demo_1', 'CREDIT_NOTE', 'Billing correction', 20000, 0, 80, null),
+  )
 }
 
 const contractLineStore = new Map<string, Record<string, unknown>[]>()
@@ -1511,6 +1833,54 @@ function patchRow(rows: Record<string, unknown>[], id: string, patch: Record<str
   if (index < 0) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
   rows[index] = { ...rows[index], ...patch, id }
   return HttpResponse.json(rows[index])
+}
+
+/**
+ * An invoice as the edit routes see it: its lines materialised (generated rows
+ * carry none, and the detail read invents one), and — like the backend — a
+ * finalized invoice voided and replaced by a draft copy before it is changed.
+ */
+function invoiceForEdit(id: string): Record<string, unknown> | null {
+  const rows = sourceFor('invoices').items
+  const invoice = rows.find((row) => readString(row, 'id') === id)
+  if (!invoice) return null
+  if (!Array.isArray(invoice['line_items']) || (invoice['line_items'] as unknown[]).length === 0) {
+    invoice['line_items'] = [
+      {
+        id: `${id}_line_1`,
+        display_name: 'Platform subscription',
+        amount: String(invoice['total'] ?? '0'),
+        quantity: '1',
+        currency: 'usd',
+      },
+    ]
+  }
+  if (readString(invoice, 'invoice_status') !== 'FINALIZED') return invoice
+  invoice['invoice_status'] = 'VOIDED'
+  const copy = {
+    ...invoice,
+    id: `${id}_draft`,
+    invoice_status: 'DRAFT',
+    invoice_number: '',
+    line_items: (invoice['line_items'] as Record<string, unknown>[]).map((line, index) => ({
+      ...line,
+      id: `${id}_draft_line_${index + 1}`,
+    })),
+  }
+  invoice['recalculated_invoice_id'] = copy.id
+  rows.unshift(copy)
+  return copy
+}
+
+/** Totals from what the lines now charge, as the backend recomputes them. */
+function recomputeInvoice(invoice: Record<string, unknown>) {
+  const lines = (invoice['line_items'] as Record<string, unknown>[] | undefined) ?? []
+  const total = lines.reduce((sum, line) => sum + Number(readString(line, 'amount') || '0'), 0)
+  const paid = Number(readString(invoice, 'amount_paid') || '0')
+  invoice['subtotal'] = total.toFixed(2)
+  invoice['total'] = total.toFixed(2)
+  invoice['amount_due'] = total.toFixed(2)
+  invoice['amount_remaining'] = Math.max(0, total - paid).toFixed(2)
 }
 
 /** The embedded meter a usage price carries under `expand=meters`, from the features that own it. */
@@ -1630,6 +2000,33 @@ const WINDOW_MS: Record<string, number> = {
   DAY: DAY_MS,
   WEEK: 7 * DAY_MS,
 }
+
+/**
+ * Billed revenue for the overview: each of the first few customers bills a
+ * fixed fee spread evenly over the days and a wobbling usage amount per day,
+ * in USD. Both revenue routes read this one generator, so the dashboard's
+ * totals and the daily series always agree.
+ */
+const REVENUE_CUSTOMERS = 6
+
+function revenueDays(start: Date, end: Date) {
+  const customers = (corpus['customers'] as Corpus).items.slice(0, REVENUE_CUSTOMERS)
+  const days: { day: string; customer: Record<string, unknown>; fixed: number; usage: number }[] =
+    []
+  const first = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())
+  for (let cursor = first; cursor < end.getTime() && days.length < 4000; cursor += DAY_MS) {
+    const day = new Date(cursor).toISOString().slice(0, 10)
+    customers.forEach((customer, index) => {
+      const fixed = Math.round(((200 + index * 150) / 30) * 100) / 100
+      const usage =
+        Math.round((40 + index * 25) * (0.6 + 0.8 * noise(`rev:${index}:${day}`)) * 100) / 100
+      days.push({ day, customer, fixed, usage })
+    })
+  }
+  return days
+}
+
+const cents = (value: number) => (Math.round(value * 100) / 100).toFixed(2)
 
 /**
  * The analytics response for one window.
@@ -1933,6 +2330,26 @@ export const handlers = [
   // shape `messageForSignInError` collapses to "That email and password do not
   // match." Under mocks the fixtures are served regardless of the bearer token,
   // so any valid session is all the route guard needs — this just mints one.
+  /*
+   * `GET /auth/capabilities` — what this deployment offers at sign-in.
+   *
+   * The fixture answers password-only, which is also what `fetchAuthCapabilities`
+   * falls back to when the call fails. The two agreeing is deliberate: the mock
+   * build and a live backend that has not shipped the endpoint yet must show the
+   * same sign-in screen, or the fixtures would be demonstrating a console nobody
+   * can actually run.
+   */
+  http.get(`${BASE}/auth/capabilities`, () =>
+    HttpResponse.json({
+      provider: 'flexprice',
+      password: { enabled: true, min_length: 8 },
+      signup: { enabled: true },
+      password_reset: { enabled: false },
+      saml: { enabled: false },
+      oauth: { google: false },
+    }),
+  ),
+
   http.post(`${BASE}/auth/login`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as {
       email?: string
@@ -1949,6 +2366,92 @@ export const handlers = [
       { code: 'permission_denied', message: 'Failed to get user', http_status_code: 403 },
       { status: 403 },
     )
+  }),
+
+  // Sign-up mints the same demo session, so a new account lands in the fixtures.
+  // The demo address is taken, which is how the "already exists" answer is reached.
+  http.post(`${BASE}/auth/signup`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { email?: string }
+    if (body.email === 'demo@flexprice.io') {
+      return HttpResponse.json({ error: { message: 'user already exists' } }, { status: 409 })
+    }
+    return HttpResponse.json({
+      token: 'mock_demo_token',
+      user_id: 'user_demo',
+      tenant_id: 'tenant_demo',
+    })
+  }),
+
+  /*
+   * Billed revenue: `POST /dashboard/revenue-dashboard` (totals per currency
+   * and customer) and `POST /analytics/revenue` (net revenue per day, grouped
+   * by currency), both read from `revenueDays`.
+   */
+  http.post(`${BASE}/dashboard/revenue-dashboard`, async ({ request }) => {
+    if (demoEmpty()) return HttpResponse.json({ summaries: {}, items: [] })
+    const body = (await request.json().catch(() => ({}))) as {
+      period_start?: string
+      period_end?: string
+    }
+    const days = revenueDays(
+      new Date(body.period_start ?? Date.now() - 7 * DAY_MS),
+      new Date(body.period_end ?? Date.now()),
+    )
+    const byCustomer = new Map<
+      string,
+      { customer: Record<string, unknown>; fixed: number; usage: number }
+    >()
+    for (const row of days) {
+      const id = readString(row.customer, 'id')
+      const entry = byCustomer.get(id) ?? { customer: row.customer, fixed: 0, usage: 0 }
+      entry.fixed += row.fixed
+      entry.usage += row.usage
+      byCustomer.set(id, entry)
+    }
+    const items = [...byCustomer.values()].map(({ customer, fixed, usage }) => ({
+      customer_id: readString(customer, 'id'),
+      customer_name: readString(customer, 'name'),
+      external_customer_id: readString(customer, 'external_id'),
+      currency: 'usd',
+      total_revenue: cents(fixed + usage),
+      total_usage_revenue: cents(usage),
+      total_fixed_revenue: cents(fixed),
+    }))
+    const fixed = [...byCustomer.values()].reduce((sum, entry) => sum + entry.fixed, 0)
+    const usage = [...byCustomer.values()].reduce((sum, entry) => sum + entry.usage, 0)
+    return HttpResponse.json({
+      summaries:
+        items.length > 0
+          ? {
+              usd: {
+                total_revenue: cents(fixed + usage),
+                total_usage_revenue: cents(usage),
+                total_fixed_revenue: cents(fixed),
+              },
+            }
+          : {},
+      items,
+    })
+  }),
+  http.post(`${BASE}/analytics/revenue`, async ({ request }) => {
+    if (demoEmpty()) return HttpResponse.json({ rows: [] })
+    const body = (await request.json().catch(() => ({}))) as {
+      start_time?: string
+      end_time?: string
+    }
+    const days = revenueDays(
+      new Date(body.start_time ?? Date.now() - 7 * DAY_MS),
+      new Date(body.end_time ?? Date.now()),
+    )
+    const byDay = new Map<string, number>()
+    for (const row of days) byDay.set(row.day, (byDay.get(row.day) ?? 0) + row.fixed + row.usage)
+    return HttpResponse.json({
+      rows: [...byDay.entries()].map(([day, amount]) => ({
+        day,
+        group: { currency: 'usd', revenue_source: 'all' },
+        net_amount: Math.round(amount * 100) / 100,
+      })),
+    })
   }),
 
   /*
@@ -2005,7 +2508,7 @@ export const handlers = [
   http.get(`${BASE}/customers/:id`, ({ params }) => {
     const customer = byId('customers', String(params['id']))
     return customer
-      ? HttpResponse.json(customer)
+      ? HttpResponse.json(withDemoIntegrations(customer))
       : HttpResponse.json({ message: 'Customer not found' }, { status: 404 })
   }),
 
@@ -2051,6 +2554,17 @@ export const handlers = [
       offset: Number(url.searchParams.get('offset') ?? 0),
     }
     if (demoEmpty()) return HttpResponse.json(emptyPage(window))
+    const destinationId = url.searchParams.get('destination_id')
+    if (destinationId) {
+      const items = [
+        ...paymentStore.filter((row) => readString(row, 'destination_id') === destinationId),
+        ...invoicePayments(destinationId),
+      ]
+      return HttpResponse.json({
+        items,
+        pagination: { total: items.length, limit: window.limit, offset: window.offset },
+      })
+    }
     const base = page(corpus['invoices'] as Corpus, window) as {
       items: Record<string, unknown>[]
       pagination: { total: number }
@@ -2151,7 +2665,11 @@ export const handlers = [
       tenant: TENANT_REF,
     }
     users.push(created)
-    return HttpResponse.json(created, { status: 201 })
+    // A person gets a one-time password, returned once; a service account does not.
+    return HttpResponse.json(
+      type === 'user' ? { ...created, password: `Tmp-${Date.now().toString(36)}!` } : created,
+      { status: 201 },
+    )
   }),
 
   http.put(`${BASE}/users/me`, async ({ request }) => {
@@ -2307,6 +2825,7 @@ export const handlers = [
   http.post(`${BASE}/alerts/setting/search`, async ({ request }) => {
     const body = ((await request.json().catch(() => ({}))) ?? {}) as {
       entity_type?: string
+      parent_entity_id?: string
       entity_id?: string
       enabled?: boolean
       limit?: number
@@ -2316,6 +2835,8 @@ export const handlers = [
     if (body.entity_type) {
       rows = rows.filter((row) => readString(row, 'entity_type') === body.entity_type)
     }
+    if (body.parent_entity_id)
+      rows = rows.filter((row) => readString(row, 'parent_entity_id') === body.parent_entity_id)
     if (body.entity_id) {
       rows = rows.filter((row) => readString(row, 'entity_id') === body.entity_id)
     }
@@ -2532,7 +3053,7 @@ export const handlers = [
       total_amount: String(total),
       invoice_id: invoiceId,
       invoice: {
-        invoice_number: invoice ? (readString(invoice, 'invoice_number') ?? invoiceId) : invoiceId,
+        invoice_number: invoice ? readString(invoice, 'invoice_number') : '',
       },
       customer_id: invoice ? readString(invoice, 'customer_id') : undefined,
       customer: { id: 'cust_0', name: 'Acme Corp' },
@@ -2580,18 +3101,96 @@ export const handlers = [
   }),
 
   /*
-   * `GET /connections` — which integrations the environment has connected.
-   * Stripe is published, QuickBooks has a draft (which must not count).
+   * `/connections` and the OAuth pair — connect, edit and disconnect a
+   * provider. Like the real API: one published connection per provider, a
+   * duplicate is refused, secrets are accepted and never echoed, and DELETE
+   * archives.
    */
   http.get(`${BASE}/connections`, () =>
     HttpResponse.json({
-      connections: [
-        { id: 'conn_stripe', provider_type: 'stripe', connection_status: 'published' },
-        { id: 'conn_qb', provider_type: 'quickbooks', connection_status: 'draft' },
-      ],
-      pagination: { total: 2, limit: 100, offset: 0 },
+      connections: connectionRows.filter((row) => row['connection_status'] !== 'archived'),
+      pagination: { total: connectionRows.length, limit: 100, offset: 0 },
     }),
   ),
+
+  http.post(`${BASE}/connections`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const provider = String(body['provider_type'] ?? '')
+    if (publishedProviders().includes(provider) && provider !== 's3' && provider !== 'gcs') {
+      return HttpResponse.json(
+        { message: `A connection for ${provider} already exists in this environment` },
+        { status: 409 },
+      )
+    }
+    const row = {
+      id: `conn_mock_${++connectionSeq}`,
+      name: body['name'],
+      provider_type: provider,
+      connection_status: 'published',
+      metadata: body['metadata'] ?? {},
+      sync_config: body['sync_config'] ?? {},
+      created_at: new Date().toISOString(),
+    }
+    connectionRows.push(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+
+  http.put(`${BASE}/connections/:id`, async ({ params, request }) => {
+    const row = connectionRows.find((item) => item['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Connection not found' }, { status: 404 })
+    const body = (await request.json()) as Record<string, unknown>
+    if (typeof body['name'] === 'string') row['name'] = body['name']
+    if (body['metadata']) row['metadata'] = body['metadata']
+    if (body['sync_config']) row['sync_config'] = body['sync_config']
+    return HttpResponse.json(row)
+  }),
+
+  http.delete(`${BASE}/connections/:id`, ({ params }) => {
+    const row = connectionRows.find((item) => item['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Connection not found' }, { status: 404 })
+    row['connection_status'] = 'archived'
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.post(`${BASE}/oauth/init`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const provider = String(body['provider'] ?? '')
+    if (publishedProviders().includes(provider)) {
+      return HttpResponse.json(
+        { message: `A connection for ${provider} already exists in this environment` },
+        { status: 409 },
+      )
+    }
+    const sessionId = `oauth_mock_${++connectionSeq}`
+    // The real flow leaves the reader at the provider; the mock sends them
+    // straight back to the console's callback with a code.
+    const callback = new URL('/tools/integrations/oauth/callback', new URL(request.url).origin)
+    callback.searchParams.set('code', 'mock-code')
+    callback.searchParams.set('state', sessionId)
+    if (provider === 'quickbooks') callback.searchParams.set('realmId', 'mock-realm')
+    pendingOAuth.set(sessionId, { name: body['name'], provider, metadata: body['metadata'] })
+    return HttpResponse.json({ oauth_url: callback.toString(), session_id: sessionId })
+  }),
+
+  http.post(`${BASE}/oauth/complete`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const pending = pendingOAuth.get(String(body['session_id']))
+    if (!pending) {
+      return HttpResponse.json({ message: 'OAuth session expired' }, { status: 400 })
+    }
+    pendingOAuth.delete(String(body['session_id']))
+    const row = {
+      id: `conn_mock_${++connectionSeq}`,
+      name: pending.name,
+      provider_type: pending.provider,
+      connection_status: 'published',
+      metadata: pending.metadata ?? {},
+      sync_config: {},
+      created_at: new Date().toISOString(),
+    }
+    connectionRows.push(row)
+    return HttpResponse.json({ success: true, connection_id: row.id })
+  }),
 
   /*
    * `GET /tasks/scheduled` — the Exports list. `enabled` is the server-side
@@ -2697,6 +3296,17 @@ export const handlers = [
     )
     return HttpResponse.json({ wallet, wallet_transaction: walletTransactionStore[0] })
   }),
+  http.put(`${BASE}/wallets/:id`, async ({ request, params }) => {
+    const wallet = walletStore.find((w) => w['id'] === String(params['id']))
+    if (!wallet) return HttpResponse.json({ message: 'Wallet not found' }, { status: 404 })
+    const body = await readBody(request)
+    const next = body['auto_topup'] as Record<string, unknown> | undefined
+    if (next) {
+      const current = (wallet['auto_topup'] ?? {}) as Record<string, unknown>
+      wallet['auto_topup'] = { ...current, ...next }
+    }
+    return HttpResponse.json(wallet)
+  }),
   http.post(`${BASE}/wallets/:id/terminate`, ({ params }) => {
     const wallet = walletStore.find((w) => w['id'] === String(params['id']))
     if (!wallet) return HttpResponse.json({ message: 'Wallet not found' }, { status: 404 })
@@ -2720,6 +3330,12 @@ export const handlers = [
       pagination: { total: groupStore.length, limit: 25, offset: 0 },
     }),
   ),
+  http.get(`${BASE}/groups/:id`, ({ params }) => {
+    const row = groupStore.find((item) => readString(item, 'id') === params['id'])
+    return row
+      ? HttpResponse.json(row)
+      : HttpResponse.json({ error: { message: 'group not found' } }, { status: 404 })
+  }),
   http.post(`${BASE}/costs/search`, () =>
     HttpResponse.json({
       items: costSheetStore,
@@ -2790,6 +3406,160 @@ export const handlers = [
     HttpResponse.json({ success: true, id: params['id'] }),
   ),
 
+  /*
+   * The bulk list, which the plans grid counts grants with.
+   *
+   * `plan_ids` is repeatable and is the filter the real route honours;
+   * `plan_id` singular is accepted there and silently ignored, so it is
+   * ignored here too rather than being made to work — a mock that is kinder
+   * than the API hides the bug it would cause. Checked live, not assumed.
+   */
+  /*
+   * The pricing parser, answering a fixed schema.
+   *
+   * The real route proxies a model, so the mock cannot reproduce what it
+   * would say — what it can do is answer the *shape* the screen has to
+   * render, with a metered feature, a hybrid plan and a grant, so the review
+   * and the apply path are exercised without a model in the loop.
+   */
+  /*
+   * One event's trace.
+   *
+   * The id is a query parameter, not a path segment, because event ids may
+   * contain `/`. The fixture walks all five stages for most events and fails
+   * at the meter for one of them, so the failure path is reachable under
+   * mocks — it is the branch people actually open the debugger to see.
+   */
+  http.get(`${BASE}/events/lookup`, ({ request }) => {
+    const url = new URL(request.url)
+    const id = url.searchParams.get('id') ?? ''
+    const externalCustomerId = url.searchParams.get('external_customer_id') ?? ''
+    const unmatched = id.endsWith('3')
+
+    return HttpResponse.json({
+      status: unmatched ? 'failed' : 'processed',
+      event: { id, idempotency_key: unmatched ? '' : `idem_${id}` },
+      events: [
+        {
+          id,
+          external_customer_id: externalCustomerId,
+          timestamp: '2026-10-11T16:20:48.685Z',
+          ingested_at: '2026-10-11T16:20:48Z',
+          source: 'api',
+          properties: { value: 1 },
+        },
+      ],
+      debug_tracker: {
+        customer_lookup: {
+          status: 'found',
+          customer: { id: 'cust_mock', external_id: externalCustomerId, name: 'Northwind' },
+        },
+        meter_matching: unmatched
+          ? { status: 'not_found', error: { message: 'No meter listens for this event name.' } }
+          : {
+              status: 'found',
+              matched_meters: [
+                { meter_id: 'meter_mock', event_name: 'api.calls', meter: { name: 'API Calls' } },
+              ],
+            },
+        price_lookup: unmatched
+          ? { status: 'skipped' }
+          : {
+              status: 'found',
+              matched_prices: [
+                {
+                  price_id: 'price_mock',
+                  meter_id: 'meter_mock',
+                  status: 'published',
+                  price: { amount: '0.01', currency: 'usd' },
+                },
+              ],
+            },
+        subscription_line_item_lookup: unmatched
+          ? { status: 'skipped' }
+          : {
+              status: 'found',
+              matched_line_items: [
+                {
+                  sub_line_item_id: 'subs_line_mock',
+                  subscription_id: 'subs_synth_0000',
+                  price_id: 'price_mock',
+                  is_active_for_event: true,
+                  timestamp_within_range: true,
+                },
+              ],
+            },
+        attributed_to_customer: unmatched
+          ? { status: 'skipped' }
+          : {
+              status: 'attributed',
+              meter_usage: {
+                meter_id: 'meter_mock',
+                external_customer_id: externalCustomerId,
+                qty_total: '1',
+              },
+            },
+        failure_point: unmatched ? { failure_point_type: 'meter_lookup' } : null,
+      },
+    })
+  }),
+
+  http.post(`${BASE}/ai/pricing/parse-gemini`, () =>
+    HttpResponse.json({
+      features: [
+        {
+          name: 'API Calls',
+          key: 'api_calls',
+          type: 'metered',
+          unit_singular: 'call',
+          unit_plural: 'calls',
+          meter_event_name: 'api.calls',
+          aggregation: 'count',
+        },
+        {
+          name: 'Seats',
+          key: 'seats',
+          type: 'static',
+          unit_singular: 'seat',
+          unit_plural: 'seats',
+        },
+      ],
+      plans: [
+        {
+          name: 'Starter',
+          description: 'Entry tier, monthly',
+          prices: [{ amount: 29, currency: 'USD', billing_period: 'monthly' }],
+          entitlements: [
+            { feature_key: 'api_calls', is_unlimited: false, value: 10000 },
+            { feature_key: 'seats', is_unlimited: false, value: 3 },
+          ],
+          usage_charges: [
+            {
+              feature_key: 'api_calls',
+              amount_per_unit: 0.01,
+              currency: 'USD',
+              billing_period: 'monthly',
+            },
+          ],
+        },
+      ],
+      credit_grants: [
+        { plan_name: 'Starter', name: 'Welcome credits', credits: 5000, cadence: 'onetime' },
+      ],
+    }),
+  ),
+
+  http.get(`${BASE}/creditgrants`, ({ request }) => {
+    const planIds = new URL(request.url).searchParams.getAll('plan_ids')
+    const all = (corpus['creditgrants'] as Corpus).items
+    const rows =
+      planIds.length > 0 ? all.filter((row) => planIds.includes(readString(row, 'plan_id'))) : all
+    return HttpResponse.json({
+      items: rows,
+      pagination: { total: rows.length, limit: 1000, offset: 0 },
+    })
+  }),
+
   // Credit grants have no search — only the scoped list endpoints — so the plan
   // and add-on tabs read from these, filtered by the id in the path.
   http.get(`${BASE}/plans/:id/creditgrants`, ({ params }) => {
@@ -2812,10 +3582,14 @@ export const handlers = [
   }),
   http.post(`${BASE}/creditgrants`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json(
-      { ...body, id: `cg_new_${Date.now()}`, status: 'published' },
-      { status: 201 },
-    )
+    const row = { ...body, id: `cg_new_${Date.now()}`, status: 'published' }
+    if (body['scope'] === 'SUBSCRIPTION') {
+      additionsFor('grants', String(body['subscription_id'] ?? '')).push({
+        ...row,
+        created_at: new Date().toISOString(),
+      })
+    }
+    return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/creditgrants/:id`, async ({ request, params }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
@@ -2891,7 +3665,15 @@ export const handlers = [
   http.get(`${BASE}/coupons/associations`, ({ request }) => {
     const url = new URL(request.url)
     const couponIds = url.searchParams.getAll('coupon_ids').flatMap((value) => value.split(','))
-    const items = couponIds.includes(DEMO_ASSOCIATION_COUPON) ? couponAssociations() : []
+    const subscriptionIds = url.searchParams
+      .getAll('subscription_ids')
+      .flatMap((value) => value.split(','))
+    const items =
+      subscriptionIds.length > 0
+        ? subscriptionIds.flatMap((id) => additionsFor('coupons', id))
+        : couponIds.includes(DEMO_ASSOCIATION_COUPON)
+          ? couponAssociations()
+          : []
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 100, offset: 0 } })
   }),
   http.get(`${BASE}/coupons/:id`, ({ params }) => {
@@ -2969,6 +3751,90 @@ export const handlers = [
       ],
     })
   }),
+  /*
+   * `PUT /invoices/{id}` — the narrow edit the API actually allows.
+   *
+   * Its whole body is `invoice_pdf_url`, `due_date`, `metadata` and
+   * `apply_discount`; the customer, the amounts and the lines are fixed once
+   * an invoice exists. The handler honours exactly those, so a request that
+   * tries to edit anything else is as ignored here as it is in production.
+   */
+  http.put(`${BASE}/invoices/:id`, async ({ request, params }) => {
+    const id = String(params['id'])
+    const body = (await request.json()) as Record<string, unknown>
+    const patch: Record<string, unknown> = {}
+    if (body['metadata']) patch['metadata'] = body['metadata']
+    const dueDate = body['due_date'] ?? body['dueDate']
+    if (dueDate !== undefined) {
+      // The API refuses a date in the past; the form does too, so a request
+      // carrying one is a bug worth failing on rather than quietly accepting.
+      if (typeof dueDate === 'string' && new Date(dueDate) < new Date()) {
+        return HttpResponse.json(
+          { message: 'due_date cannot be in the past', http_status_code: 400 },
+          { status: 400 },
+        )
+      }
+      patch['due_date'] = dueDate
+    }
+    // Re-applying discounts on a finalized invoice lands on a draft copy, as in the API.
+    const target = body['apply_discount'] ? invoiceForEdit(id) : null
+    const targetId = target ? readString(target, 'id') : id
+    if (Object.keys(patch).length > 0) patchRow(sourceFor('invoices').items, targetId, patch)
+    const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === targetId)
+    if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+    return HttpResponse.json(invoice)
+  }),
+  /*
+   * `POST /invoices/{id}/modify/execute` — the only route that changes what an
+   * invoice charges for.
+   *
+   * One action per call, like the API: add (bulk), update (one line, and the
+   * edit versions it so the id changes) and remove (bulk). The id change on
+   * update is mirrored here deliberately — it is the behaviour the client has
+   * to thread through a batch, so a mock that kept the id stable would hide
+   * the bug it is most likely to have.
+   */
+  http.post(`${BASE}/invoices/:id/modify/execute`, async ({ request, params }) => {
+    const id = String(params['id'])
+    const body = (await request.json()) as {
+      line_item_params?: Record<string, unknown>
+      lineItemParams?: Record<string, unknown>
+    }
+    const p = body.line_item_params ?? body.lineItemParams ?? {}
+    const invoice = invoiceForEdit(id)
+    if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+
+    const lines = (invoice['line_items'] as Record<string, unknown>[] | undefined) ?? []
+    const action = String(p['action'] ?? '')
+
+    if (action === 'remove') {
+      const ids = new Set((p['line_item_ids'] ?? p['lineItemIds'] ?? []) as string[])
+      invoice['line_items'] = lines.filter((l) => !ids.has(readString(l, 'id')))
+    } else if (action === 'update') {
+      const target = String(p['line_item_id'] ?? p['lineItemId'] ?? '')
+      const patch = (p['update'] ?? {}) as Record<string, unknown>
+      invoice['line_items'] = lines.map((l) =>
+        readString(l, 'id') === target
+          ? // The edit is versioned: the line comes back under a new id.
+            { ...l, ...patch, id: `${target}_v2` }
+          : l,
+      )
+    } else if (action === 'add') {
+      const items = ((p['items'] ?? []) as Record<string, unknown>[]).map((item, i) => ({
+        ...item,
+        id: `li_new_${lines.length + i}`,
+      }))
+      invoice['line_items'] = [...lines, ...items]
+    } else {
+      return HttpResponse.json(
+        { message: `unknown line item action: ${action}`, http_status_code: 400 },
+        { status: 400 },
+      )
+    }
+
+    recomputeInvoice(invoice)
+    return HttpResponse.json({ invoice })
+  }),
   http.post(`${BASE}/invoices/:id/finalize`, ({ params }) => {
     patchRow(sourceFor('invoices').items, String(params['id']), {
       invoice_status: 'FINALIZED',
@@ -2983,6 +3849,33 @@ export const handlers = [
     })
     return HttpResponse.json({ message: 'ok' })
   }),
+  http.put(`${BASE}/invoices/:id/payment`, async ({ request, params }) => {
+    const id = String(params['id'])
+    const body = (await request.json().catch(() => ({}))) as {
+      payment_status?: string
+      amount?: string
+    }
+    const current = sourceFor('invoices').items.find((item) => readString(item, 'id') === id)
+    if (body.payment_status && current) {
+      // What the backend does to the balance for each manual status.
+      const due = readString(current, 'amount_due') || '0'
+      const paid =
+        body.payment_status === 'SUCCEEDED' || body.payment_status === 'OVERPAID'
+          ? due
+          : body.payment_status === 'FAILED'
+            ? '0'
+            : (body.amount ?? readString(current, 'amount_paid')) || '0'
+      patchRow(sourceFor('invoices').items, id, {
+        payment_status: body.payment_status,
+        amount_paid: paid,
+        amount_remaining: String(Math.max(0, Number(due) - Number(paid))),
+      })
+    }
+    const row = sourceFor('invoices').items.find((item) => readString(item, 'id') === id)
+    return row
+      ? HttpResponse.json(row)
+      : HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+  }),
   http.post(`${BASE}/invoices/:id/payment/attempt`, () => HttpResponse.json({ message: 'ok' })),
   http.post(`${BASE}/invoices`, async ({ request }) => {
     const body = await readBody(request)
@@ -2995,6 +3888,9 @@ export const handlers = [
       ...body,
       id: `inv_new_${Date.now()}`,
       status: 'published',
+      // Lists open on the most recently updated, so a new invoice leads them.
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
     sourceFor('invoices').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
@@ -3022,11 +3918,145 @@ export const handlers = [
       ],
     }),
   ),
+  // The next invoice, computed by the API. Authored: a fixed fee, metered usage, and a zero line
+  // that "Hide zero charges" removes.
+  http.post(`${BASE}/invoices/preview`, async ({ request }) => {
+    const body = await readBody(request)
+    const hideZero = body['hide_zero_charges_line_items'] === true
+    const lines = [
+      {
+        id: 'pv_1',
+        display_name: 'Platform fee',
+        quantity: '1',
+        amount: '99.00',
+        price_type: 'FIXED',
+      },
+      {
+        id: 'pv_2',
+        display_name: 'API usage',
+        meter_display_name: 'API calls',
+        quantity: '92250',
+        amount: '184.50',
+        price_type: 'USAGE',
+      },
+      { id: 'pv_3', display_name: 'Extra seats', quantity: '0', amount: '0', price_type: 'FIXED' },
+    ]
+      .filter((line) => !hideZero || Number(line.amount) !== 0)
+      .map((line) => ({
+        ...line,
+        period_start: '2026-10-01T00:00:00Z',
+        period_end: '2026-11-01T00:00:00Z',
+      }))
+    return HttpResponse.json({
+      id: '',
+      subscription_id: String(body['subscription_id'] ?? ''),
+      currency: 'usd',
+      period_start: '2026-10-01T00:00:00Z',
+      period_end: '2026-11-01T00:00:00Z',
+      subtotal: '283.50',
+      total_discount: '28.35',
+      total_tax: '20.41',
+      total_prepaid_credits_applied: '0',
+      total: '275.56',
+      amount_due: '275.56',
+      amount_remaining: '275.56',
+      line_items: lines,
+    })
+  }),
+  http.get(`${BASE}/subscriptions/:id/addons/associations`, ({ params }) => {
+    const items = [
+      {
+        id: 'sa_demo_1',
+        addon_id: 'addon_priority',
+        addon_status: 'active',
+        start_date: '2026-03-01T00:00:00Z',
+        addon: { name: 'Priority support' },
+      },
+      ...additionsFor('addons', String(params['id'])),
+    ]
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: 50, offset: 0 },
+    })
+  }),
+  http.delete(`${BASE}/subscriptions/addon`, () => HttpResponse.json({ message: 'ok' })),
+  http.post(`${BASE}/subscriptions/addon`, async ({ request }) => {
+    const body = await readBody(request)
+    const subscriptionId = String(body['subscription_id'] ?? '')
+    const addonId = String(body['addon_id'] ?? '')
+    const addon = byId('addons', addonId)
+    const row = {
+      id: `sa_new_${Date.now()}`,
+      subscription_id: subscriptionId,
+      addon_id: addonId,
+      addon_status: 'active',
+      start_date: new Date().toISOString(),
+      addon: { name: readString(addon ?? {}, 'name') || addonId },
+    }
+    additionsFor('addons', subscriptionId).push(row)
+    return HttpResponse.json({ id: row.id, subscription_id: subscriptionId }, { status: 201 })
+  }),
+  http.post(`${BASE}/entitlements`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = { ...body, id: `ent_new_${Date.now()}`, status: 'published' }
+    if (body['entity_type'] === 'SUBSCRIPTION') {
+      additionsFor('entitlements', String(body['entity_id'] ?? '')).push(row)
+    }
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.get(`${BASE}/integrations/mappings`, ({ request }) => {
+    const url = new URL(request.url)
+    const entityId = url.searchParams.get('entity_id') ?? ''
+    const items = entityId
+      ? mappingsForEntity(url.searchParams.get('entity_type') ?? '', entityId)
+      : []
+    return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
+  }),
+  http.post(`${BASE}/integrations/link`, async ({ request }) => {
+    const body = await readBody(request)
+    const customerId = String(body['entity_id'] ?? '')
+    const providerType = String(body['provider_type'] ?? '')
+    const entityType = String(body['entity_type'] ?? 'customer')
+    const rows = mappingsForEntity(entityType, customerId)
+    const now = new Date().toISOString()
+    const existing = rows.find((row) => row['provider_type'] === providerType)
+    if (existing) {
+      existing['provider_entity_id'] = body['provider_entity_id']
+      existing['updated_at'] = now
+      return HttpResponse.json({ mapping: existing })
+    }
+    const row = {
+      id: `intmap_new_${Date.now()}`,
+      entity_id: customerId,
+      entity_type: entityType,
+      provider_type: providerType,
+      provider_entity_id: body['provider_entity_id'],
+      status: 'published',
+      created_at: now,
+      updated_at: now,
+    }
+    rows.push(row)
+    return HttpResponse.json({ mapping: row })
+  }),
+  http.delete(`${BASE}/integrations/link`, async ({ request }) => {
+    const body = await readBody(request)
+    const rows = mappingsForEntity(
+      String(body['entity_type'] ?? 'customer'),
+      String(body['entity_id'] ?? ''),
+    )
+    const index = rows.findIndex((row) => row['provider_type'] === body['provider_type'])
+    if (index >= 0) rows.splice(index, 1)
+    return HttpResponse.json({ success: true })
+  }),
   // Nothing queued by default; the page renders no banner.
   http.get(`${BASE}/subscriptions/:id/schedules`, () => HttpResponse.json({ schedules: [] })),
-  http.get(`${BASE}/subscriptions/:id/entitlements`, () =>
+  http.get(`${BASE}/subscriptions/:id/entitlements`, ({ params }) =>
     HttpResponse.json({
       features: [
+        ...additionsFor('entitlements', String(params['id'])).map((row) => ({
+          feature: { id: row['feature_id'], name: String(row['feature_id']) },
+          entitlement: row,
+        })),
         {
           feature: { id: 'feat_api_calls', name: 'API calls' },
           entitlement: {
@@ -3043,12 +4073,33 @@ export const handlers = [
       ],
     }),
   ),
+  // Like the live API: the update request has no `metadata` field, so the
+  // record comes back unchanged and the console reports the edit as unsaved.
+  http.put(`${BASE}/subscriptions/:id`, ({ params }) => {
+    const row = sourceFor('subscriptions').items.find(
+      (item) => readString(item, 'id') === params['id'],
+    )
+    if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    return HttpResponse.json(row)
+  }),
   http.get(`${BASE}/subscriptions/:id`, ({ params }) => {
     const row = sourceFor('subscriptions').items.find(
       (item) => readString(item, 'id') === params['id'],
     )
     if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
-    return HttpResponse.json({ ...row, line_items: contractLines(String(row['id']), row) })
+    const granted = additionsFor('grants', String(row['id']))
+    return HttpResponse.json({
+      ...row,
+      line_items: contractLines(String(row['id']), row),
+      ...(granted.length > 0
+        ? {
+            credit_grants: [
+              ...(Array.isArray(row['credit_grants']) ? row['credit_grants'] : []),
+              ...granted,
+            ],
+          }
+        : {}),
+    })
   }),
   http.post(`${BASE}/subscriptions/:id/lineitems`, async ({ request, params }) => {
     const id = String(params['id'])
@@ -3090,6 +4141,30 @@ export const handlers = [
     const row = sourceFor('subscriptions').items.find((item) => readString(item, 'id') === id)
     if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
     const body = await readBody(request)
+    if (body['type'] === 'coupon') {
+      const params = (body['coupon_params'] ?? {}) as Record<string, unknown>
+      const code = String(params['coupon_code'] ?? '')
+      const known = sourceFor('coupons').items.find(
+        (item) => readString(item, 'coupon_code') === code,
+      )
+      const coupon = known ?? {
+        id: `coupon_mock_${code}`,
+        name: code,
+        coupon_code: code,
+        type: 'percentage',
+        percentage_off: '10',
+      }
+      const association = {
+        id: `cpasc_new_${Date.now()}`,
+        coupon_id: readString(coupon, 'id'),
+        subscription_id: id,
+        status: 'published',
+        start_date: new Date().toISOString(),
+        coupon,
+      }
+      if (mode === 'execute') additionsFor('coupons', id).push(association)
+      return HttpResponse.json({ changed_resources: {} })
+    }
     const change = ((
       body['line_item_change_params'] as { line_items?: Record<string, unknown>[] } | undefined
     )?.line_items ?? [])[0]
@@ -3179,8 +4254,17 @@ export const handlers = [
     const row = {
       ...body,
       id: `sub_new_${Date.now()}`,
-      subscription_status: start > Date.now() ? 'incomplete' : 'active',
+      // A draft stays a draft; a future start waits to be activated.
+      subscription_status:
+        body['subscription_status'] === 'draft'
+          ? 'draft'
+          : start > Date.now()
+            ? 'incomplete'
+            : 'active',
       status: 'published',
+      // Lists open on the most recently updated, so a new contract leads them.
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
     sourceFor('subscriptions').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })

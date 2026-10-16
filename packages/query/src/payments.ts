@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Flexprice } from '@fp/api'
 import { call } from '@fp/api'
 import {
@@ -40,6 +40,7 @@ export interface PaymentWire {
   invoiceNumber?: string | undefined
   createdAt?: Date | undefined
   succeededAt?: Date | undefined
+  gatewayPaymentId?: string | undefined
 }
 
 /**
@@ -64,6 +65,7 @@ export function toPayment(wire: PaymentWire): Payment {
     invoiceNumber: wire.invoiceNumber ?? '',
     createdAt: wire.createdAt ?? null,
     succeededAt: wire.succeededAt ?? null,
+    ...(wire.gatewayPaymentId ? { gatewayPaymentId: wire.gatewayPaymentId } : {}),
   }
 }
 
@@ -88,8 +90,15 @@ export interface PaymentPage {
   total: number
 }
 
-export async function fetchPayments(client: Flexprice, query: PaymentQuery): Promise<PaymentPage> {
-  const response = await call(() => client.payments.listPayments(toPaymentFilter(query) as never))
+export async function fetchPayments(
+  client: Flexprice,
+  query: PaymentQuery,
+  signal?: AbortSignal,
+): Promise<PaymentPage> {
+  const response = await call(
+    (options) => client.payments.listPayments(toPaymentFilter(query) as never, options),
+    signal,
+  )
   const payments = (response.items ?? []).map((item) => toPayment(item as PaymentWire))
 
   // Neither status nor search is a server-side filter on this endpoint, so both
@@ -121,7 +130,7 @@ export function usePayments(query: PaymentQuery) {
 
   return useQuery({
     queryKey: queryKeys.payments.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchPayments(client, query),
+    queryFn: ({ signal }) => fetchPayments(client, query, signal),
     // Keeps the previous page on screen while the next one loads, so paging does
     // not blank the grid. TanStack's replacement for keepPreviousData.
     placeholderData: (previous) => previous,
@@ -158,6 +167,37 @@ export function useInvoicePayments(invoiceId: string) {
     queryKey: queryKeys.payments.list({ invoiceId }),
     queryFn: () => fetchInvoicePayments(client, invoiceId),
     enabled: invoiceId.length > 0,
+  })
+}
+
+/**
+ * A customer's recent payments, for the Overview.
+ *
+ * `GET /payments` has no customer filter, but every payment is collected
+ * against an invoice and the invoice list *is* scoped to the customer. So this
+ * reads the payments of the customer's most recent invoices and merges them,
+ * newest first. Older invoices are not read: the result is "recent", not a
+ * complete ledger, and the caller says so.
+ */
+export function useCustomerPayments(invoiceIds: readonly string[]) {
+  const client = useFlexprice()
+
+  return useQueries({
+    queries: invoiceIds.map((invoiceId) => ({
+      queryKey: queryKeys.payments.list({ invoiceId }),
+      queryFn: () => fetchInvoicePayments(client, invoiceId),
+    })),
+    combine: (results) => ({
+      payments: results
+        .flatMap((result) => result.data ?? [])
+        .sort(
+          (left, right) => (right.createdAt?.getTime() ?? 0) - (left.createdAt?.getTime() ?? 0),
+        ),
+      isLoading: results.some((result) => result.isLoading),
+      // Failed only when nothing arrived: one bad invoice should not blank the rest.
+      isError: results.length > 0 && results.every((result) => result.isError),
+      refetch: () => results.forEach((result) => void result.refetch()),
+    }),
   })
 }
 
@@ -204,8 +244,13 @@ export function usePayment(id: string) {
 
   return useQuery({
     queryKey: queryKeys.payments.detail(id),
-    queryFn: async () =>
-      toPaymentDetail((await call(() => client.payments.getPayment(id))) as PaymentDetailWire),
+    queryFn: async ({ signal }) =>
+      toPaymentDetail(
+        (await call(
+          (options) => client.payments.getPayment(id, options),
+          signal,
+        )) as PaymentDetailWire,
+      ),
   })
 }
 

@@ -1,5 +1,6 @@
+import { integrationColumn, type IntegrationMappings } from '../../shared/integrationColumn'
 import { useMemo } from 'react'
-import { BanknoteIcon, CopyIcon, CreditCardIcon, ReceiptIcon } from 'lucide-react'
+import { BanknoteIcon, CopyIcon, CreditCardIcon, InfoIcon, ReceiptIcon } from '@ui/icons'
 import {
   DEFAULT_PAYMENT_QUERY,
   PAYMENT_SORT_LABEL,
@@ -14,8 +15,6 @@ import { provenance } from '@ui/provenance'
 import {
   type EntityColumn,
   type PillTone,
-  EmDash,
-  Tag,
   dateColumn,
   idColumn,
   moneyColumn,
@@ -28,29 +27,17 @@ import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared
 /**
  * The payment list, on the shared `EntityList`.
  *
- * ## Customer is not here
+ * ## No customer or receipt column
  *
- * The redesign asks for it, and it is the column a collections desk would
- * most like. `PaymentResponse` does not carry a customer: not a name, not
- * even a `customer_id`. What it carries is `destination_id` plus
- * `destination_type` — the thing the money was paid *against*, which for
- * every payment this list shows is an invoice. Resolving a name therefore
- * means fetching each row's invoice and reading the customer off that: a
- * join, per row, per page.
+ * `PaymentResponse` carries neither a customer nor a receipt number — only the
+ * invoice it was paid against — so the list shows what V1 showed: when, which
+ * invoice, how much, how, and the gateway's own reference for the charge.
  *
- * Omitted rather than dashed, on the rule the billing grids share — a column
- * no row can ever fill is removed, because a column of em dashes reads as
- * "these payments happen to have no customer" rather than "we cannot tell you
- * yet". The **Invoice** column is here instead, and it is the honest version
- * of the same lookup: it is a real field, and it is the thing you would click
- * to find the customer anyway.
+ * ## Method is the customer's, not the processor's
  *
- * ## Gateway is here, and was not before
- *
- * `paymentGateway` has been on `PaymentResponse` all along and the read model
- * simply was not asking for it. It is a different fact from **Method**:
- * "card" is what the customer presented, Stripe is who charged it, and a
- * failure you are chasing needs the second to know where to go and look.
+ * "Card" is what the customer presented; who charged it (Stripe, Razorpay) is
+ * `paymentGateway`, still on the payment and its detail page but not a column
+ * here.
  */
 export const PaymentGridProvenance = provenance({
   source: 'composition',
@@ -118,6 +105,7 @@ const GUIDES: EntityGuide[] = [
 ]
 
 export interface PaymentGridProps {
+  integrationMappings?: IntegrationMappings
   payments: Payment[]
   /** Server-side total. Drives the record count and page count. */
   total: number
@@ -127,6 +115,12 @@ export interface PaymentGridProps {
   /** Already a message; the grid does not know what an ApiError is. */
   error?: string | null
   onRetry?: () => void
+  /** A retry is in flight. */
+  isRetrying?: boolean
+  /** A background refetch is updating the rows on screen. */
+  isRefreshing?: boolean
+  /** The rows belong to the previous page or filter. */
+  isProvisional?: boolean
   onPaymentClick?: (payment: Payment) => void
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
@@ -136,6 +130,7 @@ export interface PaymentGridProps {
 }
 
 export function PaymentGrid({
+  integrationMappings,
   payments,
   total,
   query,
@@ -143,6 +138,9 @@ export function PaymentGrid({
   isLoading = false,
   error = null,
   onRetry,
+  isRetrying = false,
+  isRefreshing = false,
+  isProvisional = false,
   onPaymentClick,
   onCreate,
   onClearFilters,
@@ -150,42 +148,31 @@ export function PaymentGrid({
 }: PaymentGridProps) {
   const columns = useMemo<EntityColumn<Payment>[]>(
     () => [
-      idColumn<Payment>('id', 'Payment ID', (row) => row.id, {
-        width: 200,
-        // The only thing that identifies the row at all.
+      dateColumn<Payment>('date', 'Date', (row) => row.succeededAt ?? row.createdAt, {
+        width: 140,
+        ...(locale ? { locale } : {}),
+      }),
+      idColumn<Payment>('invoice', 'Invoice number', (row) => row.invoiceNumber, {
+        width: 160,
         hideable: false,
       }),
       moneyColumn<Payment>('amount', 'Amount', (row) => row.amount, {
         width: 150,
         ...(locale ? { locale } : {}),
       }),
+      textColumn<Payment>('method', 'Payment method', (row) => humanise(row.methodType), {
+        width: 150,
+      }),
       pillColumn<Payment>('status', 'Status', (row) => ({
         label: PAYMENT_STATUS_LABEL[row.status],
         tone: STATUS_TONE[row.status],
       })),
-      textColumn<Payment>('method', 'Method', (row) => humanise(row.methodType), { width: 130 }),
-      {
-        id: 'gateway',
-        header: 'Gateway',
-        cell: (row) => {
-          const gateway = humanise(row.gateway)
-          return gateway ? <Tag>{gateway}</Tag> : <EmDash />
-        },
-        text: (row) => humanise(row.gateway) ?? '',
-        width: 130,
-      },
-      idColumn<Payment>('invoice', 'Invoice', (row) => row.invoiceNumber, { width: 160 }),
-      // When it was taken, not when it landed: `succeededAt` is null for
-      // everything still in flight and for everything that failed, which is
-      // exactly the half of this list anyone is looking for.
-      dateColumn<Payment>('createdAt', 'Date', (row) => row.createdAt, {
-        width: 140,
-        sortable: true,
-        sortValue: PaymentSortField.CreatedAt,
-        ...(locale ? { locale } : {}),
+      integrationColumn<Payment>(integrationMappings, 'payment', 'Integration'),
+      idColumn<Payment>('reference', 'Gateway reference', (row) => row.gatewayPaymentId ?? '', {
+        width: 180,
       }),
     ],
-    [locale],
+    [locale, integrationMappings],
   )
 
   const isDefaultSort =
@@ -209,66 +196,96 @@ export function PaymentGrid({
     return actions
   }
 
+  /*
+   * `GET /payments` filters neither status nor search, so both narrow only the
+   * page that came back. That is true whenever either is set, and it changes
+   * what an empty result and the record count mean: "none on this page", and a
+   * count of every payment rather than the matching ones.
+   */
+  const isFiltered = query.search.length > 0 || query.statuses.length > 0
+
   return (
-    <EntityList<Payment>
-      label="Payments"
-      noun="payments"
-      rows={payments}
-      total={total}
-      columns={columns}
-      getRowId={(payment) => payment.id}
-      page={query.page}
-      pageSize={query.pageSize}
-      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
-      search={query.search}
-      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search by invoice number…"
-      /*
-       * Every real state, not the redesign's five. `Overpaid` and `Voided`
-       * are values the domain can hold and rows can arrive in; leaving them
-       * out of the dropdown would make those rows visible in the list but
-       * unreachable from the control that exists to find them.
-       *
-       * No counts: `GET /payments` filters neither status nor search, so
-       * `fetchPayments` narrows the page it received. There is no per-status
-       * server total to read, and counting the rows on screen would be a
-       * number about this page dressed up as a number about the ledger.
-       */
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
-      })}
-      sort={{
-        options: SORT_OPTIONS,
-        field: query.sortBy,
-        direction: query.sortDirection,
-        activeCount: isDefaultSort ? 0 : 1,
-        onChange: (sortBy, sortDirection) =>
-          onQueryChange({
-            ...query,
-            sortBy: sortBy as PaymentSortField,
-            sortDirection,
-            page: 1,
-          }),
-      }}
-      rowActions={rowActions}
-      exportFileName="payments"
-      {...(onCreate ? { primaryAction: <Button onClick={onCreate}>Record payment</Button> } : {})}
-      {...(onPaymentClick ? { onRowClick: onPaymentClick } : {})}
-      isLoading={isLoading}
-      error={error}
-      {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
-      {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No payments match these filters"
-      empty={{
-        title: 'No money has moved yet',
-        description:
-          'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>Record payment</Button> } : {}),
-        guides: GUIDES,
-      }}
-    />
+    <div className="flex min-w-0 flex-col gap-3">
+      {isFiltered ? (
+        <p
+          role="status"
+          className="text-muted-foreground flex items-start gap-2 text-xs leading-relaxed"
+        >
+          <InfoIcon aria-hidden className="mt-px size-3.5 shrink-0" />
+          <span>
+            <span className="text-foreground font-medium">Filtered within the loaded rows.</span>{' '}
+            Showing {payments.length} matching on this page. Search and status are applied to the
+            payments already loaded, not asked of the server; the count below is every payment, not
+            only matching ones. Page through to see the rest.
+          </span>
+        </p>
+      ) : null}
+      <EntityList<Payment>
+        label="Payments"
+        noun="payments"
+        rows={payments}
+        total={total}
+        columns={columns}
+        getRowId={(payment) => payment.id}
+        page={query.page}
+        pageSize={query.pageSize}
+        onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+        search={query.search}
+        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+        searchPlaceholder="Search loaded rows by invoice number…"
+        /*
+         * Every real state, not the redesign's five. `Overpaid` and `Voided`
+         * are values the domain can hold and rows can arrive in; leaving them
+         * out of the dropdown would make those rows visible in the list but
+         * unreachable from the control that exists to find them.
+         *
+         * No counts: `GET /payments` filters neither status nor search, so
+         * `fetchPayments` narrows the page it received. There is no per-status
+         * server total to read, and counting the rows on screen would be a
+         * number about this page dressed up as a number about the ledger.
+         */
+        filter={statusFilter({
+          values: query.statuses,
+          choices: STATUS_CHOICES,
+          onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+        })}
+        sort={{
+          options: SORT_OPTIONS,
+          field: query.sortBy,
+          direction: query.sortDirection,
+          activeCount: isDefaultSort ? 0 : 1,
+          onChange: (sortBy, sortDirection) =>
+            onQueryChange({
+              ...query,
+              sortBy: sortBy as PaymentSortField,
+              sortDirection,
+              page: 1,
+            }),
+        }}
+        rowActions={rowActions}
+        exportFileName="payments"
+        {...(onCreate ? { primaryAction: <Button onClick={onCreate}>Record payment</Button> } : {})}
+        {...(onPaymentClick ? { onRowClick: onPaymentClick } : {})}
+        isLoading={isLoading}
+        error={error}
+        {...(onRetry ? { onRetry } : {})}
+        isRetrying={isRetrying}
+        isRefreshing={isRefreshing}
+        isProvisional={isProvisional}
+        isPageLocalFilter={isFiltered}
+        isFiltered={isFiltered}
+        {...(onClearFilters ? { onClearFilters } : {})}
+        filteredEmptyTitle="No matching payments on this page"
+        filteredEmptyDescription="Search and status only narrow the payments loaded on this page. Other pages may have matches; go to another page, or clear the filters."
+        empty={{
+          scene: 'payments',
+          title: 'No money has moved yet',
+          description:
+            'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
+          ...(onCreate ? { actions: <Button onClick={onCreate}>Record payment</Button> } : {}),
+          guides: GUIDES,
+        }}
+      />
+    </div>
   )
 }

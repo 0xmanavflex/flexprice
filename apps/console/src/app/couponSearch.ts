@@ -4,6 +4,9 @@ import {
   CouponStatus,
   CouponView,
   DEFAULT_COUPON_QUERY,
+  COUPON_FILTERS,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -36,7 +39,11 @@ export function parseCouponSearch(raw: Record<string, unknown>): CouponQuery {
 
   return {
     page: positiveInt(raw['page'], DEFAULT_COUPON_QUERY.page),
-    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_COUPON_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(
+      param(raw, 'size', 'pageSize'),
+      DEFAULT_COUPON_QUERY.pageSize,
+      MAX_PAGE_SIZE,
+    ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
@@ -45,5 +52,6 @@ export function parseCouponSearch(raw: Record<string, unknown>): CouponQuery {
     sortDirection:
       param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_COUPON_QUERY.sortDirection,
     view: param(raw, 'view', 'view') === CouponView.Cards ? CouponView.Cards : CouponView.Table,
+    filters: runnableFilters(decodeListFilters(raw['filters']), COUPON_FILTERS),
   }
 }

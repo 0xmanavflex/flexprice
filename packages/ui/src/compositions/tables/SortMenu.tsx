@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowDownIcon, ArrowUpIcon, ArrowUpDownIcon } from 'lucide-react'
+import { ArrowDownIcon, ArrowUpIcon, ArrowUpDownIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,

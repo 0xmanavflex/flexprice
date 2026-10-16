@@ -10,7 +10,8 @@ import {
   SubscriptionStatus,
   money,
 } from '@fp/domain'
-import { AppFailure, LoadingRows, PageBody } from '@ui/compositions'
+import { ErrorState, PageBody, PageLoadingState } from '@ui/compositions'
+import { Button } from '@ui/components/primitives/button'
 import { CUSTOMER_TABS, CustomerDetail, type CustomerTab } from '@ui/pages/customers/CustomerDetail'
 import { PAGE_STORY_PARAMETERS, PageShell } from '../shared/shellFixtures'
 
@@ -32,6 +33,7 @@ const CUSTOMER: CustomerDetailModel = {
   taxTreatment: 'taxable',
   metadata: { segment: 'enterprise' },
   status: 'published',
+  integrations: [{ id: 'stripe', name: 'Stripe', providerType: 'stripe' }],
   createdAt: new Date('2025-04-19T00:00:00Z'),
   updatedAt: new Date('2026-09-01T00:00:00Z'),
 }
@@ -62,7 +64,8 @@ function makeInvoices(count: number, status: InvoiceStatus): Invoice[] {
     const paid = status === InvoiceStatus.Paid
     return {
       id: `inv_${index + 1}`,
-      number: `INV-2026-${String(1000 + index).padStart(5, '0')}`,
+      number:
+        status === InvoiceStatus.Draft ? '' : `INV-2026-${String(1000 + index).padStart(5, '0')}`,
       customerId: CUSTOMER.id,
       customerName: CUSTOMER.name,
       status,
@@ -91,6 +94,8 @@ interface CustomerDetailPageProps {
   isLoading: boolean
   /** The customer request failed. */
   hasError: boolean
+  /** The customer does not exist (a 404): not found with a way back, never a retry. */
+  notFound: boolean
   /** The contracts and invoices sections are still loading. */
   sectionsLoading: boolean
   /** Wires the inline edit and billing-details actions. */
@@ -107,6 +112,7 @@ function CustomerDetailPage({
   invoiceStatus,
   isLoading,
   hasError,
+  notFound,
   sectionsLoading,
   editable,
 }: CustomerDetailPageProps) {
@@ -115,16 +121,31 @@ function CustomerDetailPage({
   useEffect(() => setTab(activeTab), [activeTab])
 
   return (
-    <PageShell activeItemId="customers" trail={['Customers', customerName]}>
+    <PageShell activeItemId="customers" trail={['Customers', 'Customer details']}>
       {isLoading ? (
-        <div className="p-6">
-          <LoadingRows />
-        </div>
+        <PageBody>
+          <PageLoadingState variant="detail" label="Loading this customer" />
+        </PageBody>
+      ) : notFound ? (
+        <PageBody>
+          <ErrorState
+            variant="page"
+            kind="unavailable"
+            title="Customer not found"
+            description="It may have been deleted, or the link may be wrong."
+            action={
+              <Button variant="outline" size="sm" onClick={fn()}>
+                Back to customers
+              </Button>
+            }
+          />
+        </PageBody>
       ) : hasError ? (
         <PageBody>
-          <AppFailure
-            title="Flexprice had a problem loading this customer"
-            detail="The rest of the console still works. Try again, or go back to the list."
+          <ErrorState
+            variant="page"
+            kind="server"
+            title="Flexprice had a problem loading this customer."
             onRetry={fn()}
           />
         </PageBody>
@@ -164,6 +185,7 @@ const meta = {
     invoiceStatus: InvoiceStatus.Paid,
     isLoading: false,
     hasError: false,
+    notFound: false,
     sectionsLoading: false,
     editable: true,
   },
@@ -176,6 +198,7 @@ const meta = {
     invoiceStatus: { control: 'select', options: Object.values(InvoiceStatus) },
     isLoading: { control: 'boolean' },
     hasError: { control: 'boolean' },
+    notFound: { control: 'boolean' },
     sectionsLoading: { control: 'boolean' },
     editable: { control: 'boolean' },
   },
@@ -193,9 +216,9 @@ export const Playground: Story = {
   },
 }
 
-/** `/customers/$customerId?tab=subscriptions`, opened and switched from the tab strip. */
-export const ContractsTab: Story = {
-  args: { activeTab: 'subscriptions' },
+/** `/customers/$customerId?tab=invoices`, switched to from the tab strip. */
+export const InvoicesTab: Story = {
+  args: { activeTab: 'overview' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('tab', { name: /Invoices/ }))
@@ -216,12 +239,31 @@ export const Empty: Story = {
 /** `/customers/$customerId` while the customer is loading. */
 export const Loading: Story = {
   args: { isLoading: true },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText('Loading this customer'),
+    ).toBeInTheDocument()
+  },
+}
+
+/** `/customers/$customerId` for a customer that does not exist: not found, with a way back and no retry. */
+export const NotFound: Story = {
+  args: { notFound: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Customer not found')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Back to customers' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: /try again/i })).toBeNull()
+    await expect(canvas.queryByText(/could not be loaded/i)).toBeNull()
+  },
 }
 
 /** `/customers/$customerId` when the customer request failed. */
 export const Failed: Story = {
   args: { hasError: true },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByRole('alert')).toBeVisible()
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('alert')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: /try again/i })).toBeVisible()
   },
 }

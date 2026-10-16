@@ -15,8 +15,9 @@ describe('parseSubscriptionSearch', () => {
       pageSize: 50,
       search: 'acme',
       statuses: [SubscriptionStatus.Paused],
-      sortBy: 'startDate',
+      sortBy: DEFAULT_SUBSCRIPTION_QUERY.sortBy,
       sortDirection: 'asc',
+      filters: [],
     })
   })
 
@@ -45,11 +46,11 @@ describe('parseSubscriptionSearch', () => {
     expect(parseSubscriptionSearch({ size: '99999' }).pageSize).toBe(100)
   })
 
-  it('defaults the sort to newest-started first, and reads ascending', () => {
-    expect(parseSubscriptionSearch({}).sortBy).toBe('startDate')
+  it('defaults the sort to most recently changed first, and reads ascending', () => {
+    expect(parseSubscriptionSearch({}).sortBy).toBe('updatedAt')
     expect(parseSubscriptionSearch({}).sortDirection).toBe('desc')
-    expect(parseSubscriptionSearch({ sort: 'createdAt' }).sortBy).toBe('createdAt')
-    expect(parseSubscriptionSearch({ sort: 'nonsense' }).sortBy).toBe('startDate')
+    expect(parseSubscriptionSearch({ sort: 'startDate' }).sortBy).toBe('startDate')
+    expect(parseSubscriptionSearch({ sort: 'nonsense' }).sortBy).toBe('updatedAt')
     expect(parseSubscriptionSearch({ dir: 'asc' }).sortDirection).toBe('asc')
   })
 

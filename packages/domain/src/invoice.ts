@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import type { Money } from './money'
 import type { PaymentStatus } from './payment'
@@ -22,7 +23,7 @@ import type { TenantAddress } from './tenant'
  */
 export interface Invoice {
   id: string
-  /** Human-facing number. Falls back to the id when the API has not issued one. */
+  /** Human-facing number. Empty when the API has not issued one. */
   number: string
   customerId: string
   /** Display name, already resolved. The UI never joins data. */
@@ -162,9 +163,12 @@ export interface InvoiceQuery {
   /** Empty means no filter, not "match nothing". */
   statuses: InvoiceStatus[]
   search: string
+  /** Granular field filters, applied by the search endpoint. See `INVOICE_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const InvoiceSortField = {
+  UpdatedAt: 'updatedAt',
   IssuedAt: 'issuedAt',
   DueDate: 'dueDate',
   Total: 'total',
@@ -176,11 +180,57 @@ export type InvoiceSortField = (typeof InvoiceSortField)[keyof typeof InvoiceSor
 export const DEFAULT_INVOICE_QUERY: InvoiceQuery = {
   page: 1,
   pageSize: 25,
-  sortBy: InvoiceSortField.IssuedAt,
+  sortBy: InvoiceSortField.UpdatedAt,
   sortDirection: 'desc',
   statuses: [],
   search: '',
+  filters: [],
 }
+/**
+ * What the invoice list can filter on — V1's fields, by their wire names.
+ * Customer choices are the account's own records; the page fills them in.
+ */
+export const INVOICE_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'invoice_number', label: 'Invoice number', kind: 'text' },
+  { field: 'customer_id', label: 'Customer', kind: 'options', options: [] },
+  {
+    field: 'invoice_status',
+    label: 'Invoice status',
+    kind: 'options',
+    options: [
+      { value: 'DRAFT', label: 'Draft' },
+      { value: 'FINALIZED', label: 'Finalized' },
+      { value: 'VOIDED', label: 'Voided' },
+      { value: 'SKIPPED', label: 'Skipped' },
+    ],
+  },
+  {
+    field: 'payment_status',
+    label: 'Payment status',
+    kind: 'options',
+    options: [
+      { value: 'PENDING', label: 'Pending' },
+      { value: 'PROCESSING', label: 'Processing' },
+      { value: 'SUCCEEDED', label: 'Succeeded' },
+      { value: 'FAILED', label: 'Failed' },
+      { value: 'OVERPAID', label: 'Overpaid' },
+      { value: 'REFUNDED', label: 'Refunded' },
+      { value: 'PARTIALLY_REFUNDED', label: 'Partially refunded' },
+    ],
+  },
+  {
+    field: 'invoice_type',
+    label: 'Invoice type',
+    kind: 'options',
+    options: [
+      { value: 'SUBSCRIPTION', label: 'Subscription' },
+      { value: 'ONE_OFF', label: 'One-off' },
+      { value: 'CREDIT', label: 'Credit' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+  { field: 'due_date', label: 'Due date', kind: 'date' },
+]
 
 /** One line of an invoice, as the detail page shows it. Amounts stay exact strings. */
 export interface InvoiceDetailLine {
@@ -192,6 +242,11 @@ export interface InvoiceDetailLine {
   amount: string
   /** How the line is priced: metered usage or a fixed charge. `null` when the API does not say. */
   priceType: InvoiceLinePriceType | null
+  /** The free-text note on the line (`metadata.description`), which the PDF prints. */
+  note?: string
+  /** The service period the line covers, when it has one. */
+  periodStart?: Date | null
+  periodEnd?: Date | null
 }
 
 export const InvoiceLinePriceType = {
@@ -253,38 +308,83 @@ export function sumLineAmounts(amounts: readonly string[]): string | null {
   return `${whole}.${fraction}`
 }
 
+/** A day as `YYYY-MM-DD`, or blank. */
+const optionalDay = z
+  .string()
+  .trim()
+  .refine((value) => value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value), 'Pick a date')
+
+/** A tax rate applied to a new invoice — `tax_rate_overrides`, as V1 prefills them from the customer. */
+export interface InvoiceTax {
+  taxRateCode: string
+  /** For display: the rate's name and percentage. */
+  name: string
+  percentage: string
+  taxBehavior: 'exclusive' | 'inclusive'
+  priority: number
+  autoApply: boolean
+}
+
 /**
- * A manual (one-off) invoice.
+ * A manual (one-off) invoice, as V1 raises it: issue and due dates, currency,
+ * lines (name, quantity, amount, a note and a service period), the customer's
+ * taxes, a memo and metadata.
  *
  * The API requires `subtotal`, `total` and `amount_due`, so the form sends the
  * exact sum of the lines ({@link sumLineAmounts}) — the total is derived from
- * the line items, never typed separately, so the two cannot disagree.
+ * the line items, never typed separately, so the two cannot disagree. Taxes are
+ * applied by Flexprice on top of that from the rates sent.
  */
 export const createInvoiceSchema = z.object({
   customerId: z.string().min(1, 'Choose a customer'),
   currency: z.string().trim().length(3, 'Choose a currency'),
+  /** Optional: Flexprice numbers the invoice when left blank. */
+  invoiceNumber: z.string().trim().max(100, 'Keep the number under 100 characters'),
   description: z.string().trim().max(500, 'Keep it under 500 characters'),
+  /** `YYYY-MM-DD`; blank means today. */
+  issueDate: optionalDay,
   /** `YYYY-MM-DD`, or empty for no due date. */
-  dueDate: z.string(),
+  dueDate: optionalDay,
   total: z
     .string()
     .trim()
     .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount like 120 or 120.50'),
   /** Finalize on creation instead of leaving a draft. */
   finalize: z.boolean(),
+  metadata: z.record(z.string(), z.string()),
+  taxes: z.array(
+    z.object({
+      taxRateCode: z.string().min(1),
+      name: z.string(),
+      percentage: z.string(),
+      taxBehavior: z.enum(['exclusive', 'inclusive']),
+      priority: z.number().int(),
+      autoApply: z.boolean(),
+    }),
+  ),
   lines: z
     .array(
-      z.object({
-        description: z.string().trim().min(1, 'Describe the line'),
-        quantity: z
-          .string()
-          .trim()
-          .regex(/^\d+(\.\d+)?$/, 'Enter a quantity'),
-        amount: z
-          .string()
-          .trim()
-          .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount'),
-      }),
+      z
+        .object({
+          description: z.string().trim().min(1, 'Name the line'),
+          quantity: z
+            .string()
+            .trim()
+            .regex(/^\d+(\.\d+)?$/, 'Enter a quantity'),
+          /** The line total: quantity × unit price. */
+          amount: z
+            .string()
+            .trim()
+            .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount'),
+          /** Printed under the line on the PDF. */
+          note: z.string().trim().max(500, 'Keep the note under 500 characters'),
+          periodStart: optionalDay,
+          periodEnd: optionalDay,
+        })
+        .refine(
+          (line) => !line.periodStart || !line.periodEnd || line.periodEnd >= line.periodStart,
+          { message: 'The period ends before it starts', path: ['periodEnd'] },
+        ),
     )
     .min(1, 'Add at least one line'),
 })
@@ -295,10 +395,16 @@ export function emptyInvoice(): CreateInvoice {
   return {
     customerId: '',
     currency: '',
+    invoiceNumber: '',
     description: '',
+    issueDate: '',
     dueDate: '',
     total: '',
     finalize: false,
-    lines: [{ description: '', quantity: '1', amount: '' }],
+    metadata: {},
+    taxes: [],
+    lines: [
+      { description: '', quantity: '1', amount: '', note: '', periodStart: '', periodEnd: '' },
+    ],
   }
 }

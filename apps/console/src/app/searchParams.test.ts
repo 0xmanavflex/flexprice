@@ -9,7 +9,14 @@ describe('parseInvoiceSearch', () => {
 
   it('reads a full query', () => {
     expect(
-      parseInvoiceSearch({ page: '3', size: '50', sort: 'total', dir: 'asc', status: 'overdue', q: 'acme' }),
+      parseInvoiceSearch({
+        page: '3',
+        size: '50',
+        sort: 'total',
+        dir: 'asc',
+        status: 'overdue',
+        q: 'acme',
+      }),
     ).toEqual({
       page: 3,
       pageSize: 50,
@@ -17,6 +24,7 @@ describe('parseInvoiceSearch', () => {
       sortDirection: 'asc',
       statuses: [InvoiceStatus.Overdue],
       search: 'acme',
+      filters: [],
     })
   })
 

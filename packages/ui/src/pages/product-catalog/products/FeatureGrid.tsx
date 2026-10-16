@@ -9,20 +9,19 @@ import {
   ScrollTextIcon,
   SquareStackIcon,
   Trash2Icon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   aggregationFormula,
   DEFAULT_FEATURE_QUERY,
   FEATURE_SORT_LABEL,
+  FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   type Feature,
   type FeatureQuery,
   FeatureSortField,
-  FeatureType,
+  FEATURE_FILTERS,
 } from '@fp/domain'
-import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
-import type { FilterField, FilterNode } from '@ui/components/reui/filters/filters-types'
-import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'
@@ -33,7 +32,10 @@ import {
   FeatureTypePill,
   Formula,
   Pill,
+  Status,
+  Tag,
   type EntityColumn,
+  dateColumn,
   idColumn,
   textColumn,
 } from '../../shared/cells'
@@ -72,31 +74,6 @@ const SORT_OPTIONS = Object.values(FeatureSortField).map((value) => ({
   label: FEATURE_SORT_LABEL[value],
 }))
 
-const TYPE_OPTIONS = Object.values(FeatureType).map((value) => ({
-  value,
-  label: FEATURE_TYPE_LABEL[value],
-}))
-
-/**
- * What the filter builder offers.
- *
- * `is_any_of` only: it is the one operator whose flattened result maps onto
- * the query and survives a URL round trip, and offering operators the URL
- * cannot carry is offering a filter that vanishes when the page is shared.
- */
-const FILTER_FIELDS: FilterField[] = [
-  {
-    id: 'type',
-    label: 'Type',
-    type: 'select',
-    options: TYPE_OPTIONS,
-    operators: [{ value: 'is_any_of', label: 'is any of', arity: 'many' }],
-    defaultOperator: 'is_any_of',
-  },
-]
-
-const TYPES = new Set<string>(Object.values(FeatureType))
-
 /**
  * The three cards under the first-run empty state.
  *
@@ -110,34 +87,34 @@ const TYPES = new Set<string>(Object.values(FeatureType))
  */
 const GUIDES: EntityGuide[] = [
   {
-    title: 'What a product is',
-    description: 'Metered, boolean and static products, and when to reach for each.',
+    title: 'What a feature is',
+    description: 'Metered, boolean and static features, and when to reach for each.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/features/use-cases',
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Sending usage events',
-    description: 'How a metered product turns raw events into something billable.',
+    description: 'How a metered feature turns raw events into something billable.',
     href: 'https://docs.flexprice.io/api-reference/events/ingest-event',
     icon: <ScrollTextIcon aria-hidden className="size-4" />,
   },
   {
-    title: 'Pricing a product',
-    description: 'Attach a product to a plan with a charge and an entitlement.',
+    title: 'Pricing a feature',
+    description: 'Attach a feature to a plan with a charge and an entitlement.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/features/linking-to-plans',
     icon: <SquareStackIcon aria-hidden className="size-4" />,
   },
 ]
 
 /**
- * How a product is wired into the catalogue, as the grid shows it.
+ * How a feature is wired into the catalogue, as the grid shows it.
  *
  * Read from elsewhere (entitlements, plans, subscriptions) and handed in per
- * product id, so the grid stays a table and never becomes a data loader. A
- * product with no entry is still loading its linkage; `subscriptions` is
+ * feature id, so the grid stays a table and never becomes a data loader. A
+ * feature with no entry is still loading its linkage; `subscriptions` is
  * undefined when it could not be counted, which is not the same as zero.
  */
-export interface ProductLinkage {
+export interface FeatureLinkage {
   plans: { id: string; name: string }[]
   entitlements: number
   subscriptions: number | undefined
@@ -148,11 +125,19 @@ const VISIBLE_PLAN_CHIPS = 2
 
 export interface FeatureGridProps {
   features: Feature[]
-  /** Plans, entitlements and subscriptions per product id. */
-  linkage?: ReadonlyMap<string, ProductLinkage>
+  /**
+   * A group id as its name, for the Group chip.
+   *
+   * Resolved by the page: `POST /features/search` refuses `expand=groups`
+   * (checked — it answers 400 "Field is not allowed to be expanded"), so the
+   * feature carries only `groupId` and the names are fetched alongside.
+   */
+  groupName?: ((groupId: string) => string | undefined) | undefined
+  /** Plans, entitlements and subscriptions per feature id. */
+  linkage?: ReadonlyMap<string, FeatureLinkage>
   /** The linkage is still being read; its three columns show a placeholder. */
   linkageLoading?: boolean
-  /** The "Add entitlement" action on a product no plan grants yet. */
+  /** The "Add entitlement" action on a feature no plan grants yet. */
   onCreateEntitlement?: (feature: Feature) => void
   total: number
   query: FeatureQuery
@@ -161,7 +146,7 @@ export interface FeatureGridProps {
   error?: string | null
   onRetry?: () => void
   onFeatureClick?: (feature: Feature) => void
-  /** The primary create action; renders a "New product" CTA at the toolbar's end. */
+  /** The primary create action; renders a "New feature" CTA at the toolbar's end. */
   onCreate?: () => void
   /** Row-menu Edit; opens the editor dialog. */
   onEdit?: ((feature: Feature) => void) | undefined
@@ -176,6 +161,7 @@ export interface FeatureGridProps {
 
 export function FeatureGrid({
   features,
+  groupName,
   linkage,
   linkageLoading = false,
   onCreateEntitlement,
@@ -191,6 +177,7 @@ export function FeatureGrid({
   onClone,
   onDelete,
   onClearFilters,
+  locale,
 }: FeatureGridProps) {
   /*
    * Widths are shares, not pixels: `EntityList` scales every column so the set
@@ -202,7 +189,7 @@ export function FeatureGrid({
     () => [
       {
         ...textColumn<Feature>('name', 'Name', (row) => row.name, {
-          width: 220,
+          width: 200,
           sortable: true,
           sortValue: FeatureSortField.Name,
           // The column the list is *for*. Hiding it leaves a table of
@@ -211,29 +198,70 @@ export function FeatureGrid({
         }),
         cell: (row) => <EntityCell name={row.name} />,
       },
+      // The lookup key, as the redesign lists it: the stable handle code uses.
+      // Off by default in the handoff's column set; still one click away.
+      idColumn<Feature>('lookupKey', 'Key', (row) => row.lookupKey, {
+        width: 180,
+        sortable: true,
+        sortValue: FeatureSortField.LookupKey,
+        hiddenByDefault: true,
+      }),
       {
         // The glyph depends on the row, so the cell is written here rather
         // than through `pillColumn`, which takes one spec per row.
         id: 'type',
         header: 'Type',
-        width: 120,
+        width: 110,
+        sortable: true,
+        sortValue: FeatureSortField.Type,
         text: (row) => FEATURE_TYPE_LABEL[row.type],
         cell: (row) => <FeatureTypePill type={row.type} label={FEATURE_TYPE_LABEL[row.type]} />,
         skeleton: <Skeleton className="h-5 w-20 rounded-full" />,
       },
-      idColumn<Feature>('eventName', 'Event name', (row) => row.eventName, { width: 170 }),
+      idColumn<Feature>('eventName', 'Event name', (row) => row.eventName, { width: 200 }),
       {
         id: 'aggregation',
         header: 'Aggregation',
-        width: 170,
+        width: 210,
         text: (row) => aggregationFormula(row) ?? '',
         cell: (row) => <Formula value={aggregationFormula(row)} />,
         skeleton: <Skeleton className="h-6 w-32 rounded-md" />,
       },
       {
+        // The label the feature is filed under, as a chip.
+        id: 'group',
+        header: 'Group',
+        width: 140,
+        text: (row) => (row.groupId ? (groupName?.(row.groupId) ?? row.groupId) : ''),
+        cell: (row) => {
+          if (!row.groupId) return <EmDash />
+          const name = groupName?.(row.groupId)
+          // The id until the names arrive — never a blank cell for a feature
+          // that does have a group.
+          return <Tag>{name ?? row.groupId}</Tag>
+        },
+        skeleton: <Skeleton className="h-6 w-20 rounded-full" />,
+      },
+      // The unit a metered feature counts in; non-metered features have none.
+      {
+        id: 'unit',
+        header: 'Unit',
+        width: 100,
+        hiddenByDefault: true,
+        text: (row) => row.unitSingular,
+        cell: (row) =>
+          row.unitSingular ? (
+            <span className="text-muted-foreground">{row.unitSingular}</span>
+          ) : (
+            <EmDash />
+          ),
+        skeleton: <Skeleton className="h-4 w-12" />,
+      },
+      {
         id: 'plans',
-        header: 'Plans',
+        header: 'Used in',
         width: 200,
+        hiddenByDefault: true,
         text: (row) => (linkage?.get(row.id)?.plans ?? []).map((plan) => plan.name).join(', '),
         cell: (row) => {
           const entry = linkage?.get(row.id)
@@ -269,16 +297,17 @@ export function FeatureGrid({
         id: 'entitlements',
         header: 'Entitlements',
         width: 160,
-        text: (row) => String(linkage?.get(row.id)?.entitlements ?? 0),
+        align: 'center',
+        text: (row) => String(linkage?.get(row.id)?.entitlements ?? ''),
         cell: (row) => {
           const entry = linkage?.get(row.id)
           if (!entry)
             return linkageLoading ? <Skeleton className="h-6 w-20 rounded-full" /> : <EmDash />
           if (entry.entitlements > 0) {
             return (
-              <Pill tone="success">
-                {entry.entitlements} {entry.entitlements === 1 ? 'entitlement' : 'entitlements'}
-              </Pill>
+              <span className="tabular-nums">
+                {new Intl.NumberFormat(locale).format(entry.entitlements)}
+              </span>
             )
           }
           if (!onCreateEntitlement) return <EmDash />
@@ -307,27 +336,45 @@ export function FeatureGrid({
         id: 'subscriptions',
         header: 'Contracts',
         width: 120,
+        align: 'center',
         text: (row) => String(linkage?.get(row.id)?.subscriptions ?? ''),
         cell: (row) => {
           const entry = linkage?.get(row.id)
           if (!entry) return linkageLoading ? <Skeleton className="h-4 w-8" /> : <EmDash />
-          if (entry.subscriptions === undefined) return <EmDash />
+          if (!entry.subscriptions) return <EmDash />
           return <span className="tabular-nums">{entry.subscriptions.toLocaleString()}</span>
         },
         skeleton: <Skeleton className="h-4 w-8" />,
       },
+      {
+        id: 'status',
+        header: 'Status',
+        width: 110,
+        // Removed from the default set by the handoff; status is a filter.
+        hiddenByDefault: true,
+        text: (row) => FEATURE_STATUS_LABEL[row.status],
+        cell: (row) => <Status value={FEATURE_STATUS_LABEL[row.status]} />,
+        skeleton: <Skeleton className="h-6 w-20 rounded-full" />,
+      },
+      // Real, and off by default exactly as the redesign has them — the layout
+      // does not spend a column on either, but both stay in the `⋯` menu.
+      dateColumn<Feature>('createdAt', 'Created', (row) => row.createdAt, {
+        width: 130,
+        sortable: true,
+        sortValue: FeatureSortField.CreatedAt,
+        hiddenByDefault: true,
+        ...(locale ? { locale } : {}),
+      }),
+      dateColumn<Feature>('updatedAt', 'Updated', (row) => row.updatedAt, {
+        width: 130,
+        sortable: true,
+        sortValue: FeatureSortField.UpdatedAt,
+        hiddenByDefault: true,
+        ...(locale ? { locale } : {}),
+      }),
     ],
-    [linkage, linkageLoading, onCreateEntitlement],
+    [linkage, linkageLoading, onCreateEntitlement, locale, groupName],
   )
-
-  /* --- the filter builder's tree, rebuilt from the query every render, so
-         the chips and the URL cannot drift --- */
-  const filterRules: FilterNode[] = []
-  if (query.types.length > 0) {
-    filterRules.push(
-      createFilterRule({ id: 'type', path: ['type'], operator: 'is_any_of', value: query.types }),
-    )
-  }
 
   const isDefaultSort =
     query.sortBy === DEFAULT_FEATURE_QUERY.sortBy &&
@@ -337,33 +384,41 @@ export function FeatureGrid({
     const actions: EntityRowAction[] = []
     if (onFeatureClick) {
       actions.push({
-        label: 'View product',
+        label: 'View feature',
         icon: <GaugeIcon aria-hidden className="size-4" />,
         onSelect: () => onFeatureClick(feature),
       })
     }
     if (onEdit) {
       actions.push({
-        label: 'Edit product',
+        label: 'Edit feature',
         icon: <PencilIcon aria-hidden className="size-4" />,
         onSelect: () => onEdit(feature),
       })
     }
+    if (onCreateEntitlement) {
+      // Keep Add entitlement available for features that already have grants.
+      actions.push({
+        label: 'Add entitlement',
+        icon: <PlusIcon aria-hidden className="size-4" />,
+        onSelect: () => onCreateEntitlement(feature),
+      })
+    }
     if (onClone) {
       actions.push({
-        label: 'Clone product',
+        label: 'Clone feature',
         icon: <CopyPlusIcon aria-hidden className="size-4" />,
         onSelect: () => onClone(feature),
       })
     }
     actions.push({
-      label: 'Copy product ID',
+      label: 'Copy feature ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(feature.id),
     })
     if (onDelete) {
       actions.push({
-        label: 'Delete product',
+        label: 'Delete feature',
         icon: <Trash2Icon aria-hidden className="size-4" />,
         onSelect: () => onDelete(feature),
         destructive: true,
@@ -374,8 +429,8 @@ export function FeatureGrid({
 
   return (
     <EntityList<Feature>
-      label="Products"
-      noun="products"
+      label="Features"
+      noun="features"
       rows={features}
       total={total}
       columns={columns}
@@ -385,18 +440,12 @@ export function FeatureGrid({
       onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search products…"
-      filter={{
-        fields: FILTER_FIELDS,
-        query: createFilterQuery(filterRules),
-        activeCount: query.types.length > 0 ? 1 : 0,
-        onQueryChange: (_next, flat: FlatFilter[]) => {
-          const types = (flat.find((entry) => entry.field === 'type')?.values ?? [])
-            .map(String)
-            .filter((value): value is FeatureType => TYPES.has(value))
-          onQueryChange({ ...query, types, page: 1 })
-        },
-      }}
+      searchPlaceholder="Search features…"
+      filter={granularFilter({
+        specs: FEATURE_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,
@@ -411,12 +460,12 @@ export function FeatureGrid({
           }),
       }}
       rowActions={rowActions}
-      exportFileName="products"
+      exportFileName="features"
       primaryAction={
         onCreate ? (
           <Button onClick={onCreate}>
             <PlusIcon aria-hidden />
-            New product
+            New feature
           </Button>
         ) : undefined
       }
@@ -424,19 +473,25 @@ export function FeatureGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 ||
+        query.types.length > 0 ||
+        query.statuses.length > 0 ||
+        (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No products match these filters"
+      filteredEmptyTitle="No features match these filters"
       empty={{
+        scene: 'catalog',
         title: 'Nothing is being measured yet',
         description:
-          'A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
+          'A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
         ...(onCreate
           ? {
               actions: (
                 <Button onClick={onCreate}>
                   <PlusIcon aria-hidden />
-                  New product
+                  New feature
                 </Button>
               ),
             }

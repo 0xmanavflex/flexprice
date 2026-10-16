@@ -1,6 +1,13 @@
-import { useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { type CreateCostSheet, createCostSheetSchema, emptyCostSheet } from '@fp/domain'
+import {
+  type CreateCostSheet,
+  createCostSheetSchema,
+  emptyCostSheet,
+  KEY_PREFIX,
+  suggestKey,
+} from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -45,14 +52,24 @@ export function CostSheetForm({
   isSubmitting = false,
   submitError = null,
 }: CostSheetFormProps) {
-  const form = useForm<CreateCostSheet>({
+  const form = useCalmForm<CreateCostSheet>({
     resolver: standardSchemaResolver(createCostSheetSchema) as Resolver<CreateCostSheet>,
     defaultValues: defaultValue ?? emptyCostSheet(),
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors
   const isEdit = mode === 'edit'
+
+  const nameField = form.register('name', {
+    onChange: (event: { target: { value: string } }) => {
+      // The lookupKey follows the name until the person types one of their own.
+      if (!isEdit && !form.getFieldState('lookupKey').isDirty) {
+        form.setValue('lookupKey', suggestKey(KEY_PREFIX.costSheet, event.target.value), {
+          shouldValidate: form.formState.isSubmitted,
+        })
+      }
+    },
+  })
 
   const formEl = (
     <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
@@ -64,7 +81,7 @@ export function CostSheetForm({
           error={errors.name?.message}
         >
           {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            <Input id={id} disabled={isSubmitting} {...field} {...nameField} />
           )}
         </FormRow>
 

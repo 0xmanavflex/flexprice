@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { LayersIcon, PencilIcon, RefreshCwIcon } from 'lucide-react'
+import { LayersIcon, PencilIcon, RefreshCwIcon } from '@ui/icons'
 import { PLAN_STATUS_LABEL, PlanStatus } from '@fp/domain'
 import {
   AppFailure,
@@ -14,9 +14,9 @@ import {
   Section,
 } from '@ui/compositions'
 import { Status, Tag } from '@ui/pages'
+import { PlanCustomerPreview } from '@ui/pages/product-catalog/plans/PlanCustomerPreview'
 import { PlanChargesView } from '@ui/pages/product-catalog/plans/PlanChargesView'
 import { PlanCreditGrantsView } from '@ui/pages/product-catalog/plans/PlanCreditGrantsView'
-import { PlanCustomerPreview } from '@ui/pages/product-catalog/plans/PlanCustomerPreview'
 import { PlanEntitlementsView } from '@ui/pages/product-catalog/plans/PlanEntitlementsView'
 import {
   makeCharges,
@@ -26,9 +26,9 @@ import {
 } from '@ui/pages/product-catalog/plans/planDetailFixtures'
 import { PAGE_STORY_PARAMETERS, PageShell } from '../../shared/shellFixtures'
 
-type PlanTab = 'overview' | 'entitlements' | 'credit-grants' | 'information'
+type PlanTab = 'overview' | 'information'
 
-const TABS: PlanTab[] = ['overview', 'entitlements', 'credit-grants', 'information']
+const TABS: PlanTab[] = ['overview', 'information']
 const CREATED = new Date('2026-01-10T00:00:00Z')
 const UPDATED = new Date('2026-03-02T00:00:00Z')
 const DATE = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
@@ -129,45 +129,41 @@ function PlanDetailPage({
           value={tab}
           onChange={(next) => setTab(next as PlanTab)}
           tabs={[
-            { value: 'overview', label: 'Charges', count: charges.length },
-            { value: 'entitlements', label: 'Entitlements', count: entitlements.length },
-            { value: 'credit-grants', label: 'Credit grants', count: grants.length },
+            { value: 'overview', label: 'Overview' },
             { value: 'information', label: 'Information' },
           ]}
         />
 
         {tab === 'overview' ? (
-          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <PlanChargesView
-              charges={charges}
-              readOnly={archived}
-              meterUnit={meterUnitOf}
-              onAdd={fn()}
-              onEdit={fn()}
-              onTerminate={fn()}
-            />
+          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="flex min-w-0 flex-col gap-5">
+              <PlanChargesView
+                charges={charges}
+                readOnly={archived}
+                meterUnit={meterUnitOf}
+                onAdd={fn()}
+                onEdit={fn()}
+                onTerminate={fn()}
+              />
+              <PlanEntitlementsView
+                entitlements={entitlements}
+                usagePrice={() => null}
+                onAdd={fn()}
+                onEdit={fn()}
+                onDelete={fn()}
+                onOpenFeature={fn()}
+              />
+              <PlanCreditGrantsView grants={grants} onAdd={fn()} onEdit={fn()} onDelete={fn()} />
+            </div>
+            {/* What a customer would be shown, beside what is being edited. */}
             <PlanCustomerPreview
+              className="lg:sticky lg:top-6"
               charges={charges}
               entitlements={entitlements}
               grants={grants}
               meterUnit={meterUnitOf}
             />
           </div>
-        ) : null}
-
-        {tab === 'entitlements' ? (
-          <PlanEntitlementsView
-            entitlements={entitlements}
-            usagePrice={() => null}
-            onAdd={fn()}
-            onEdit={fn()}
-            onDelete={fn()}
-            onOpenFeature={fn()}
-          />
-        ) : null}
-
-        {tab === 'credit-grants' ? (
-          <PlanCreditGrantsView grants={grants} onAdd={fn()} onEdit={fn()} onDelete={fn()} />
         ) : null}
 
         {tab === 'information' ? (
@@ -221,7 +217,7 @@ function PlanDetailPage({
   }
 
   return (
-    <PageShell activeItemId="plans" trail={['Product catalog', 'Plans', planName]}>
+    <PageShell activeItemId="plans" trail={['Product catalog', 'Plans', 'Plan details']}>
       {body}
     </PageShell>
   )
@@ -263,19 +259,31 @@ type Story = StoryObj<typeof meta>
 export const Playground: Story = {
   play: async ({ canvasElement }) => {
     await expect(
-      (await within(canvasElement).findAllByText('Fixed charges')).length,
-    ).toBeGreaterThan(0)
+      await within(canvasElement).findByRole('region', { name: 'Charges table' }),
+    ).toBeVisible()
   },
 }
 
-/** `/plans/$planId` on the Entitlements tab. */
-export const Entitlements: Story = {
-  args: { activeTab: 'entitlements' },
-}
+/**
+ * All three tables on Overview, which is the whole point of two tabs.
+ *
+ * Charges, entitlements and credit grants each had a tab holding one table,
+ * so "what is in this plan?" cost three clicks and a memory. These
+ * assertions are what stops them being split up again.
+ */
+export const OverviewHoldsEveryTable: Story = {
+  args: { activeTab: 'overview' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const tabs = canvas.getAllByRole('tab').map((tab) => tab.textContent?.trim())
+    await expect(tabs).toEqual(['Overview', 'Information'])
 
-/** `/plans/$planId` on the Credit grants tab. */
-export const CreditGrants: Story = {
-  args: { activeTab: 'credit-grants' },
+    await expect(await canvas.findByRole('region', { name: 'Charges table' })).toBeVisible()
+    await expect(canvas.getByRole('region', { name: 'Entitlements table' })).toBeVisible()
+    await expect(canvas.getByRole('region', { name: 'Credit grants table' })).toBeVisible()
+    // And the customer's-eye rail beside them.
+    await expect(canvas.getByRole('complementary', { name: 'Plan preview' })).toBeVisible()
+  },
 }
 
 /** `/plans/$planId` on the Information tab, with the editable details card. */
@@ -305,5 +313,33 @@ export const Failed: Story = {
     await expect(
       await within(canvasElement).findByText('This plan could not be loaded'),
     ).toBeInTheDocument()
+  },
+}
+
+/**
+ * The preview is a pricing card, and its titles go to the tables.
+ *
+ * It was a left-ruled rail, matching the earlier prototype; the handoff asks
+ * for "a live pricing card … its section titles jump to the matching table".
+ * The jump is the reason the card can stay short: a block summarises a table
+ * and takes you to it rather than repeating it.
+ */
+export const PreviewIsACardThatJumps: Story = {
+  args: { activeTab: 'overview' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const preview = await canvas.findByRole('complementary', { name: 'Plan preview' })
+
+    // The ids come from each table's own Section heading.
+    await expect(within(preview).getByRole('link', { name: 'Usage' })).toHaveAttribute(
+      'href',
+      '#section-charges',
+    )
+    await expect(within(preview).getByRole('link', { name: 'Included' })).toHaveAttribute(
+      'href',
+      '#section-entitlements',
+    )
+    // And the targets exist, so the links are not dead.
+    await expect(canvas.getByRole('region', { name: 'Charges table' })).toBeVisible()
   },
 }

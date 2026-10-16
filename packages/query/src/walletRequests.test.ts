@@ -2,9 +2,16 @@ import { describe, expect, it } from 'vitest'
 import {
   CreateWalletRequest$outboundSchema,
   TopUpWalletRequest$outboundSchema,
+  UpdateWalletRequest$outboundSchema,
 } from '@flexprice/sdk/sdk/models'
-import { emptyTopUp, emptyWallet } from '@fp/domain'
-import { toCreateWalletRequest, toTopUpRequest, toWallet, toWalletTransaction } from './wallets'
+import { autoTopupSchema, emptyAutoTopup, emptyTopUp, emptyWallet } from '@fp/domain'
+import {
+  toCreateWalletRequest,
+  toTopUpRequest,
+  toUpdateAutoTopupRequest,
+  toWallet,
+  toWalletTransaction,
+} from './wallets'
 
 describe('wallet requests', () => {
   it('maps a create form to a valid CreateWalletRequest', () => {
@@ -13,6 +20,21 @@ describe('wallet requests', () => {
     expect(parsed.customer_id).toBe('cust_1')
     expect(parsed.currency).toBe('USD')
     expect(parsed.initial_credits_to_load).toBe('500')
+  })
+
+  it('sends a postpaid wallet with its top-up rate and initial-credit expiry', () => {
+    const parsed = CreateWalletRequest$outboundSchema.parse(
+      toCreateWalletRequest('c', {
+        ...emptyWallet(),
+        walletType: 'POST_PAID',
+        topupConversionRate: '2',
+        initialCredits: '10',
+        initialCreditsExpiry: '2030-01-31',
+      }),
+    )
+    expect(parsed.wallet_type).toBe('POST_PAID')
+    expect(parsed.topup_conversion_rate).toBe('2')
+    expect(parsed.initial_credits_expiry_date_utc).toBe('2030-01-31T00:00:00Z')
   })
 
   it('omits initial credits when blank', () => {
@@ -30,6 +52,81 @@ describe('wallet requests', () => {
     expect(purchased.credits_to_add).toBe('100')
     expect(free.transaction_reason).toBe('FREE_CREDIT_GRANT')
   })
+
+  it('sends an invoiced top-up with its expiry, priority and reference', () => {
+    const body = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest({
+        ...emptyTopUp(),
+        credits: '100',
+        invoice: true,
+        expiryDate: '2030-01-31',
+        priority: '2',
+        referenceId: 'po-77',
+      }),
+    )
+    expect(body.transaction_reason).toBe('PURCHASED_CREDIT_INVOICED')
+    expect(body.expiry_date_utc).toBe('2030-01-31T00:00:00Z')
+    expect(body.priority).toBe(2)
+    expect(body.idempotency_key).toBe('po-77')
+  })
+
+  it('leaves blank options out of a top-up', () => {
+    const body = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest({ ...emptyTopUp(), credits: '1' }),
+    )
+    expect(body).not.toHaveProperty('expiry_date_utc')
+    expect(body).not.toHaveProperty('priority')
+    expect(body).not.toHaveProperty('idempotency_key')
+  })
+})
+
+describe('auto top-up', () => {
+  it('sends the threshold, amount and invoicing when on', () => {
+    const body = UpdateWalletRequest$outboundSchema.parse(
+      toUpdateAutoTopupRequest({
+        enabled: true,
+        threshold: '100',
+        amount: '500',
+        invoicing: false,
+      }),
+    )
+    expect(body.auto_topup).toMatchObject({
+      enabled: true,
+      threshold: 100,
+      amount: 500,
+      invoicing: false,
+    })
+  })
+
+  it('sends only the switch when off, so saved values survive', () => {
+    expect(
+      toUpdateAutoTopupRequest({ ...emptyAutoTopup(), threshold: '10', amount: '20' }),
+    ).toEqual({ autoTopup: { enabled: false } })
+  })
+
+  it('requires a threshold and an amount only when on', () => {
+    expect(autoTopupSchema.safeParse(emptyAutoTopup()).success).toBe(true)
+    expect(autoTopupSchema.safeParse({ ...emptyAutoTopup(), enabled: true }).success).toBe(false)
+    expect(
+      autoTopupSchema.safeParse({ ...emptyAutoTopup(), enabled: true, threshold: '0', amount: '5' })
+        .success,
+    ).toBe(false)
+    expect(
+      autoTopupSchema.safeParse({
+        ...emptyAutoTopup(),
+        enabled: true,
+        threshold: '50',
+        amount: '5',
+      }).success,
+    ).toBe(true)
+  })
+
+  it('reads the saved settings off a wallet', () => {
+    expect(
+      toWallet({ id: 'w', autoTopup: { enabled: true, threshold: 100, amount: 500 } }).autoTopup,
+    ).toEqual({ enabled: true, threshold: '100', amount: '500', invoicing: true })
+    expect(toWallet({ id: 'w' }).autoTopup.enabled).toBe(false)
+  })
 })
 
 describe('wallet mapping', () => {
@@ -45,5 +142,24 @@ describe('wallet mapping', () => {
       toWalletTransaction({ type: 'debit', transactionReason: 'CREDIT_EXPIRED' }).direction,
     ).toBe('out')
     expect(toWalletTransaction({ type: 'credit' }).reason).toBe('Wallet activity')
+  })
+
+  it('carries what is left of a top-up and when it expires, null when unsent', () => {
+    const expiry = new Date('2026-10-17T00:00:00Z')
+    const topUp = toWalletTransaction({
+      type: 'credit',
+      creditAmount: '1000',
+      creditsAvailable: '250',
+      expiryDate: expiry,
+    })
+    expect(topUp.creditsAvailable).toBe('250')
+    expect(topUp.expiresAt).toBe(expiry)
+    const bare = toWalletTransaction({ type: 'credit', creditAmount: '1000' })
+    expect(bare.creditsAvailable).toBeNull()
+    expect(bare.expiresAt).toBeNull()
+  })
+
+  it('shows the wallet currency in capitals', () => {
+    expect(toWallet({ id: 'w1', currency: 'usd' }).currency).toBe('USD')
   })
 })

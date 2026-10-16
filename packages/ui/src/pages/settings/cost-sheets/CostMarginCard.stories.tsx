@@ -35,7 +35,18 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   render: ({ currency, revenue, cost }) => <CostMarginCard margin={{ currency, revenue, cost }} />,
 }
 
+/** No margin source exists yet: the card says so instead of showing sample numbers. */
 export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Margin is not available yet')).toBeInTheDocument()
+    await expect(canvas.queryByText(/%/)).toBeNull()
+  },
+}
+
+/** A real margin, once a source exists. */
+export const WithMargin: Story = {
+  args: { margin: { currency: 'USD', revenue: 12400, cost: 4650 } },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('62.5%')).toBeInTheDocument()
   },

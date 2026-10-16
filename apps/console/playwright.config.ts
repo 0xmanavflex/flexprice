@@ -35,8 +35,23 @@ export default defineConfig({
   // A flaky test is a broken test (`e2e/AGENTS.md`), so a retry is not allowed
   // to turn one green. If a test needs a retry to pass, that is the finding.
   retries: 0,
-  // A cold first load of the mocked console on a 2-worker runner takes 10-15s, so
-  // Playwright's 5s default fails a different healthy journey on each run.
+  /*
+   * Longer in CI, and only in CI.
+   *
+   * The suite runs against the Vite dev server, which compiles a route the
+   * first time it is asked for. With two workers on a shared runner that
+   * cold compile can eat most of Playwright's default 30s, and three
+   * journeys timed out on it — one inside `page.goto` itself, which is the
+   * giveaway: a navigation does not take thirty seconds unless something is
+   * building. The visual config already carries the same note about cold
+   * compiles.
+   *
+   * This buys wall-clock, not leniency: `expect` still gives up after 15s,
+   * so a genuinely missing element fails as fast as it ever did.
+   */
+  timeout: process.env.CI ? 60_000 : 30_000,
+  // A cold first load of the mocked console on a 2-worker runner takes 10-15s,
+  // so Playwright's 5s default fails a different healthy journey on each run.
   expect: { timeout: 15_000 },
   forbidOnly: !!process.env.CI,
   fullyParallel: true,

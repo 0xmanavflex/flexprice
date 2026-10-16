@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
+import { SceneIllustration, type EmptyScene } from './SceneIllustration'
 
 /**
  * The empty body of a card on a detail page: a title, one line of guidance and
@@ -13,19 +14,22 @@ import { provenance } from '@ui/provenance'
  */
 export const SectionEmptyProvenance = provenance({
   source: 'composition',
-  composes: [],
-  note: 'Centred title, description and action for an empty card body on a detail page.',
+  composes: ['compositions/feedback/SceneIllustration'],
+  note: 'Centred drawing, title, description and action for an empty card body on a detail page.',
 })
 
 export interface SectionEmptyProps {
   title: string
   description?: string | undefined
   action?: ReactNode
+  /** The area of the product this card is in; draws the same figure as its list page. */
+  scene?: EmptyScene | undefined
 }
 
-export function SectionEmpty({ title, description, action }: SectionEmptyProps) {
+export function SectionEmpty({ title, description, action, scene }: SectionEmptyProps) {
   return (
     <div role="status" className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+      {scene ? <SceneIllustration scene={scene} size="sm" className="w-32" /> : null}
       <p className="text-sm font-medium">{title}</p>
       {description ? (
         <p className="text-muted-foreground max-w-md text-[13px] text-balance">{description}</p>

@@ -69,6 +69,8 @@ export interface DetailTableProps<T> {
   compact?: boolean
   /** `false` leaves out the search row, for a short list that needs none. */
   toolbar?: boolean
+  /** `false` leaves out the page-size picker and range footer, for a set that is always shown whole. */
+  footer?: boolean
   /** Draws a rounded outline around the rows. Off when a surrounding `Section` already frames it. */
   border?: boolean
   /** Skeleton rows while the set is still loading; `empty` waits until it has arrived. */
@@ -99,6 +101,7 @@ export function DetailTable<T extends object>({
   empty,
   compact = false,
   toolbar = true,
+  footer = true,
   border = false,
   isLoading = false,
   className,
@@ -216,6 +219,7 @@ export function DetailTable<T extends object>({
         border={border}
         isLoading={isLoading}
         hideToolbar={!toolbar}
+        hideFooter={!footer}
         label={`${label} table`}
         noun={noun}
         rows={slice}

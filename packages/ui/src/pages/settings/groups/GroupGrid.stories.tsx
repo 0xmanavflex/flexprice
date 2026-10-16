@@ -115,19 +115,15 @@ export const Populated: Story = {
 }
 
 /**
- * The entity filter is not offered.
- *
- * `GroupQuery` has no `entityTypes` field and `toGroupFilter` sends none, so a
- * filter could only narrow the twenty-five rows already fetched while the
- * footer kept reporting the server's total.
+ * Filters run on the server through the search endpoint's filter conditions,
+ * so the button is there and the type stays a column too.
  */
-export const NoEntityFilter: Story = {
+export const EntityFilter: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('Enterprise prices')
 
-    await expect(canvas.queryByRole('button', { name: /filter/i })).toBeNull()
-    // The type is still a column, which is where it can be read honestly.
+    await expect(canvas.getByRole('button', { name: /filter/i })).toBeInTheDocument()
     await expect(canvas.getByRole('columnheader', { name: /entity type/i })).toBeInTheDocument()
   },
 }

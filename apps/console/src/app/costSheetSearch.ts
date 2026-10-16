@@ -4,6 +4,9 @@ import {
   CostSheetStatus,
   CostSheetView,
   DEFAULT_COST_SHEET_QUERY,
+  COST_SHEET_FILTERS,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -47,7 +50,13 @@ export function parseCostSheetSearch(raw: Record<string, unknown>): CostSheetQue
       ? (String(param(raw, 'sort', 'sortBy')) as CostSheetSortField)
       : DEFAULT_COST_SHEET_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_COST_SHEET_QUERY.sortDirection,
-    view: param(raw, 'view', 'view') === CostSheetView.Cards ? CostSheetView.Cards : CostSheetView.Table,
+      param(raw, 'dir', 'sortDirection') === 'desc'
+        ? 'desc'
+        : DEFAULT_COST_SHEET_QUERY.sortDirection,
+    view:
+      param(raw, 'view', 'view') === CostSheetView.Cards
+        ? CostSheetView.Cards
+        : CostSheetView.Table,
+    filters: runnableFilters(decodeListFilters(raw['filters']), COST_SHEET_FILTERS),
   }
 }

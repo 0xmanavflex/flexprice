@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { WebhookActivity } from './WebhookActivity'
 import { DEMO_WEBHOOK_ACTIVITY } from './webhookFixtures'
 
@@ -25,3 +25,19 @@ export const Default: Story = {
 export const NoActivity: Story = { args: { points: [] } }
 
 export const Loading: Story = { args: { points: [], isLoading: true } }
+
+/** A failed read is an error with a retry, not an empty chart. */
+export const Failed: Story = {
+  args: {
+    points: [],
+    error: 'We could not reach Flexprice.',
+    errorKind: 'network',
+    onRetry: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Activity could not be loaded')
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
+  },
+}

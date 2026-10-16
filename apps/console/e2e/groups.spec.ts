@@ -33,7 +33,7 @@ test.describe('the groups list', () => {
 
     await page.getByRole('button', { name: 'New group' }).first().click()
     await expect(page).toHaveURL(/\/groups\/new$/)
-    await expect(page.getByRole('heading', { name: 'Create group' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Group details' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Create group' }).click()
     await expect(page.getByText('Enter a name')).toBeVisible()

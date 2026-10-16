@@ -8,15 +8,18 @@ describe('parseCostSheetSearch', () => {
   })
 
   it('reads a full query', () => {
-    expect(parseCostSheetSearch({ page: '2', size: '50', q: 'infra', status: 'archived' })).toEqual({
-      page: 2,
-      pageSize: 50,
-      search: 'infra',
-      statuses: [CostSheetStatus.Archived],
-      sortBy: 'name',
-      sortDirection: 'asc',
-      view: 'table',
-    })
+    expect(parseCostSheetSearch({ page: '2', size: '50', q: 'infra', status: 'archived' })).toEqual(
+      {
+        page: 2,
+        pageSize: 50,
+        search: 'infra',
+        statuses: [CostSheetStatus.Archived],
+        sortBy: DEFAULT_COST_SHEET_QUERY.sortBy,
+        sortDirection: DEFAULT_COST_SHEET_QUERY.sortDirection,
+        view: 'table',
+        filters: [],
+      },
+    )
   })
 
   it('accepts statuses as a repeated param or a comma list', () => {
@@ -51,7 +54,11 @@ describe('parseCostSheetSearch', () => {
   })
 
   it('is stable across a parse of its own output', () => {
-    const once = parseCostSheetSearch({ status: ['archived'], sortBy: 'name', sortDirection: 'desc' })
+    const once = parseCostSheetSearch({
+      status: ['archived'],
+      sortBy: 'name',
+      sortDirection: 'desc',
+    })
     expect(parseCostSheetSearch({ ...once })).toEqual(once)
   })
 })

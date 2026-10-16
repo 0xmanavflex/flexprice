@@ -19,7 +19,7 @@ test.describe('price unit create', () => {
     await page.goto('/price-units')
     await page.getByRole('button', { name: 'New price unit' }).first().click()
     await expect(page).toHaveURL(/\/price-units\/new$/)
-    await expect(page.getByRole('heading', { name: 'Create price unit' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Price unit' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Create price unit' }).click()
     await expect(page.getByText('Enter a name')).toBeVisible()

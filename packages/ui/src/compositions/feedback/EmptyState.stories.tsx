@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { ArrowUpRightIcon, BotIcon, KeyRoundIcon } from 'lucide-react'
+import { ArrowUpRightIcon } from '@ui/icons'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { EmptyState, ListOfferProvider } from './EmptyState'
@@ -22,7 +22,7 @@ const meta = {
     action: { control: false },
     secondaryAction: { control: false },
     onClearFilters: { control: false },
-    icon: { control: false },
+    scene: { control: 'select', options: ['table', 'developers', 'settings', 'home'] },
     guides: { control: false },
   },
 } satisfies Meta<typeof EmptyState>
@@ -279,7 +279,7 @@ async function expectCentredFirstRun(canvasElement: HTMLElement, create: string,
 export const ApiKeysFirstRun: Story = {
   args: {
     size: 'page',
-    icon: <KeyRoundIcon aria-hidden />,
+    scene: 'settings',
     title: 'No API keys yet',
     description:
       'An API key lets your servers send usage events and call the Flexprice API without a person signing in.',
@@ -298,7 +298,7 @@ export const ApiKeysFirstRun: Story = {
 export const ServiceAccountsFirstRun: Story = {
   args: {
     size: 'page',
-    icon: <BotIcon aria-hidden />,
+    scene: 'developers',
     title: 'No service accounts yet',
     description:
       'A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key.',

@@ -11,35 +11,65 @@
  * Still presentation. These take props and render; they do not fetch.
  */
 
-export { DashboardHome, DashboardHomeProvenance } from './home/DashboardHome'
+export { CUSTOM_RANGE_ID, DashboardHome, DashboardHomeProvenance } from './home/DashboardHome'
 export type {
   ApiPanel,
   CustomersPanel,
   DashboardHomeProps,
+  DayRange,
   EventPoint,
   EventsPanel,
   FilterOption,
   InvoicesPanel,
+  PanelMeta,
   PanelStatus,
+  RevenueCustomerRow,
+  RevenuePanel,
   SubscriptionDay,
   SubscriptionsPanel,
   UsagePanel,
   UsageRow,
 } from './home/DashboardHome'
 export { RevenueDashboard, RevenueDashboardProvenance } from './revenue/RevenueDashboard'
-export type { RevenueDashboardProps } from './revenue/RevenueDashboard'
-export { CUSTOMER_TABS, CustomerDetail, CustomerDetailProvenance } from './customers/CustomerDetail'
-export type { CustomerDetailProps, CustomerTab } from './customers/CustomerDetail'
+export type { RevenueDashboardProps, RevenuePanelMeta } from './revenue/RevenueDashboard'
+export {
+  CUSTOMER_INVOICES_LIMIT,
+  CUSTOMER_TABS,
+  CustomerDetail,
+  CustomerDetailProvenance,
+} from './customers/CustomerDetail'
+export type { CustomerDetailProps, CustomerTab, InvoiceRowAction } from './customers/CustomerDetail'
+export {
+  InvoiceLinesEditor,
+  InvoiceLinesEditorProvenance,
+} from './billing/invoices/InvoiceLinesEditor'
+export type { EditableLine, InvoiceLinesEditorProps } from './billing/invoices/InvoiceLinesEditor'
 export { InvoiceGrid, InvoiceGridProvenance } from './billing/invoices/InvoiceGrid'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
-export { InvoiceForm, InvoiceFormProvenance } from './billing/invoices/InvoiceForm'
-export type { InvoiceFormProps } from './billing/invoices/InvoiceForm'
+export { InvoiceForm, InvoiceFormProvenance, linesChanged } from './billing/invoices/InvoiceForm'
+export type {
+  EditableInvoice,
+  InvoiceCustomerOption,
+  InvoiceEditDraft,
+  InvoiceFormProps,
+  InvoiceLifecycleStep,
+  InvoiceFormParty,
+  InvoiceTaxRateOption,
+} from './billing/invoices/InvoiceForm'
 export { InvoiceBillingDetailBlock } from './billing/invoices/InvoiceBillingDetailBlock'
 export {
   InvoiceDetailView,
   InvoiceDetailViewProvenance,
 } from './billing/invoices/InvoiceDetailView'
-export type { InvoiceDetailViewProps } from './billing/invoices/InvoiceDetailView'
+export type {
+  InvoiceDetailViewProps,
+  InvoicePendingAction,
+} from './billing/invoices/InvoiceDetailView'
+export {
+  PaymentStatusDialog,
+  PaymentStatusDialogProvenance,
+} from './billing/invoices/PaymentStatusDialog'
+export type { PaymentStatusDialogProps } from './billing/invoices/PaymentStatusDialog'
 export {
   DEMO_INVOICE,
   displayStatus,
@@ -109,7 +139,7 @@ export type {
   FeatureDetailViewProps,
 } from './product-catalog/products/FeatureDetailView'
 export { FeatureGrid, FeatureGridProvenance } from './product-catalog/products/FeatureGrid'
-export type { FeatureGridProps, ProductLinkage } from './product-catalog/products/FeatureGrid'
+export type { FeatureGridProps, FeatureLinkage } from './product-catalog/products/FeatureGrid'
 export { PlanGrid, PlanGridProvenance } from './product-catalog/plans/PlanGrid'
 export type { PlanGridProps } from './product-catalog/plans/PlanGrid'
 export { PlanForm, PlanFormProvenance } from './product-catalog/plans/PlanForm'
@@ -128,6 +158,8 @@ export { AddChargeDialog } from './product-catalog/plans/AddChargeDialog'
 export type { AddChargeDialogProps } from './product-catalog/plans/AddChargeDialog'
 export { PlanChargesView } from './product-catalog/plans/PlanChargesView'
 export { PlanCustomerPreview } from './product-catalog/plans/PlanCustomerPreview'
+export { PlanAiSetupView } from './product-catalog/plans/PlanAiSetupView'
+export type { PlanAiSetupViewProps } from './product-catalog/plans/PlanAiSetupView'
 export { PlanCreditGrantsView } from './product-catalog/plans/PlanCreditGrantsView'
 export { PlanEntitlementsView } from './product-catalog/plans/PlanEntitlementsView'
 export { EntityHeader } from './shared/EntityHeader'
@@ -182,6 +214,7 @@ export type { GroupGridProps } from './settings/groups/GroupGrid'
 export { CostSheetGrid, CostSheetGridProvenance } from './settings/cost-sheets/CostSheetGrid'
 export type { CostSheetGridProps } from './settings/cost-sheets/CostSheetGrid'
 export { CustomerGrid, CustomerGridProvenance } from './customers/CustomerGrid'
+export { IntegrationMark } from './customers/IntegrationMark'
 export type { CustomerGridProps } from './customers/CustomerGrid'
 export { SubscriptionForm, SubscriptionFormProvenance } from './contracts/SubscriptionForm'
 export type { SubscriptionFormProps, SubscriptionPlanContext } from './contracts/SubscriptionForm'
@@ -262,8 +295,18 @@ export { SignInForm, SignInFormProvenance } from './auth/SignInForm'
 export type { SignInFormProps } from './auth/SignInForm'
 export { SignInScreen, SignInScreenProvenance } from './auth/SignInScreen'
 export type { SignInScreenProps } from './auth/SignInScreen'
+export { SignUpScreen, SignUpScreenProvenance } from './auth/SignUpScreen'
+export { RegionField, RegionFieldProvenance } from './auth/RegionField'
+export type { RegionFieldProps, RegionId, RegionOption } from './auth/RegionField'
+export type { SignUpScreenProps } from './auth/SignUpScreen'
+export { SignUpConfirmScreen, SignUpConfirmScreenProvenance } from './auth/SignUpConfirmScreen'
+export type { SignUpConfirmScreenProps } from './auth/SignUpConfirmScreen'
 export { ForgotPasswordForm, ForgotPasswordFormProvenance } from './auth/ForgotPasswordForm'
 export type { ForgotPasswordFormProps } from './auth/ForgotPasswordForm'
+export { AuthFrame } from './auth/AuthFrame'
+export type { AuthFrameProps } from './auth/AuthFrame'
+export { SetPasswordForm, SetPasswordFormProvenance } from './auth/SetPasswordForm'
+export type { SetPasswordFormProps } from './auth/SetPasswordForm'
 export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/AcceptInvitationForm'
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './settings/environments/EnvironmentForm'
@@ -352,10 +395,26 @@ export { CustomerForm, CustomerFormProvenance } from './customers/CustomerForm'
 export type { CustomerFormProps } from './customers/CustomerForm'
 export { DataExportGrid, DataExportGridProvenance } from './developers/exports/DataExportGrid'
 export type { DataExportGridProps } from './developers/exports/DataExportGrid'
-export { IntegrationsBlock } from './integrations/IntegrationsBlock'
+export { IntegrationsBlock, IntegrationLogo } from './integrations/IntegrationsBlock'
+export type { IntegrationsFailure, IntegrationsBlockProps } from './integrations/IntegrationsBlock'
+export {
+  ConnectIntegrationSheet,
+  ConnectIntegrationSheetProvenance,
+} from './integrations/ConnectIntegrationSheet'
+export type {
+  ConnectionContext,
+  ConnectIntegrationSheetProps,
+} from './integrations/ConnectIntegrationSheet'
+export {
+  ManageConnectionSheet,
+  ManageConnectionSheetProvenance,
+} from './integrations/ManageConnectionSheet'
+export type { ManageConnectionSheetProps } from './integrations/ManageConnectionSheet'
 export { PricingCatalogBlock } from './product-catalog/pricing-widget/PricingCatalogBlock'
 export { toast, Toaster } from 'sonner'
 
+export { CUSTOMER_EVENTS_LIMIT, CustomerEventsGrid } from './customers/CustomerEventsGrid'
+export type { CustomerEvent, CustomerEventsGridProps } from './customers/CustomerEventsGrid'
 export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
 export { CustomerTaxSection } from './customers/CustomerTaxSection'
@@ -372,18 +431,12 @@ export type {
   CatalogDetailFrameProps,
   CatalogMenuItem,
 } from './product-catalog/catalog-detail/CatalogDetailFrame'
-export {
-  CouponRedemptionsView,
-  DEMO_COUPON_REDEMPTIONS,
-} from './settings/discounts/CouponRedemptionsView'
+export { CouponRedemptionsView } from './settings/discounts/CouponRedemptionsView'
 export { CouponRedemptionMeter } from './settings/discounts/CouponRedemptionMeter'
 export type { CouponRedemptionMeterProps } from './settings/discounts/CouponRedemptionMeter'
-export {
-  AddonSubscriptionsView,
-  DEMO_ADDON_SUBSCRIPTIONS,
-} from './product-catalog/addons/AddonSubscriptionsView'
-export { CostMarginCard, DEMO_COST_MARGIN } from './settings/cost-sheets/CostMarginCard'
-export { GroupMembersView, DEMO_GROUP_MEMBERS } from './settings/groups/GroupMembersView'
+export { AddonSubscriptionsView } from './product-catalog/addons/AddonSubscriptionsView'
+export { CostMarginCard } from './settings/cost-sheets/CostMarginCard'
+export { GroupMembersView } from './settings/groups/GroupMembersView'
 
 /*
  * Webhooks — the Svix consumer app portal, in the console's grammar: endpoint
@@ -436,3 +489,11 @@ export {
 export type { WebhookEventTypePickerProps } from './developers/webhooks/WebhookEventTypePicker'
 export { WebhookActivity, WebhookActivityProvenance } from './developers/webhooks/WebhookActivity'
 export type { WebhookActivityProps } from './developers/webhooks/WebhookActivity'
+
+export { CreditNoteDetailView } from './billing/credit-notes/CreditNoteDetailView'
+export { CreditSettlement } from './billing/credit-notes/creditNoteDocument'
+export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocument'
+
+export { ContractIntegrations } from './contracts/ContractIntegrations'
+
+export type { ContractIntegrationsProps } from './contracts/ContractIntegrations'

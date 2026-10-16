@@ -6,7 +6,9 @@ import {
   LayersIcon,
   RepeatIcon,
   PlusIcon,
-} from 'lucide-react'
+  UserIcon,
+  XCircleIcon,
+} from '@ui/icons'
 import {
   DEFAULT_SUBSCRIPTION_QUERY,
   SUBSCRIPTION_SORT_LABEL,
@@ -15,10 +17,12 @@ import {
   type SubscriptionQuery,
   SubscriptionSortField,
   SubscriptionStatus,
+  SUBSCRIPTION_FILTERS,
+  withFilterOptions,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import {
   type EntityColumn,
@@ -72,11 +76,6 @@ const SORT_OPTIONS = Object.values(SubscriptionSortField).map((value) => ({
   label: SUBSCRIPTION_SORT_LABEL[value],
 }))
 
-const STATUS_CHOICES = Object.values(SubscriptionStatus).map((value) => ({
-  value,
-  label: SUBSCRIPTION_STATUS_LABEL[value],
-}))
-
 /** How each lifecycle state reads at a glance. Only `active` is a success and
  *  only `cancelled` is a dead end; the rest are states you watch, not states
  *  you celebrate or mourn. */
@@ -121,8 +120,12 @@ export interface SubscriptionGridProps {
   error?: string | null
   onRetry?: () => void
   onSubscriptionClick?: (subscription: Subscription) => void
+  /** Choices for the customer and plan filters, keyed by wire field (`customer_id`, `plan_id`). */
+  filterOptions?: Readonly<Record<string, readonly { value: string; label: string }[]>>
   onOpenCustomer?: (customerId: string) => void
   onOpenPlan?: (planId: string) => void
+  /** Asks to cancel a contract that is still running; the page confirms it. */
+  onCancelSubscription?: (subscription: Subscription) => void
   /** The primary create action; renders a "New contract" button beside the filter. */
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
@@ -140,8 +143,10 @@ export function SubscriptionGrid({
   error = null,
   onRetry,
   onSubscriptionClick,
+  filterOptions,
   onOpenCustomer,
   onOpenPlan,
+  onCancelSubscription,
   onCreate,
   onClearFilters,
   locale,
@@ -214,18 +219,40 @@ export function SubscriptionGrid({
         onSelect: () => onSubscriptionClick(subscription),
       })
     }
+    if (onOpenCustomer && subscription.customerId) {
+      actions.push({
+        label: 'View customer',
+        icon: <UserIcon aria-hidden className="size-4" />,
+        onSelect: () => onOpenCustomer(subscription.customerId),
+      })
+    }
+    if (onOpenPlan && subscription.planId) {
+      actions.push({
+        label: 'View plan',
+        icon: <LayersIcon aria-hidden className="size-4" />,
+        onSelect: () => onOpenPlan(subscription.planId),
+      })
+    }
     actions.push({
       label: 'Copy contract ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(subscription.id),
     })
+    if (onCancelSubscription && subscription.status !== SubscriptionStatus.Cancelled) {
+      actions.push({
+        label: 'Cancel contract',
+        icon: <XCircleIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onCancelSubscription(subscription),
+      })
+    }
     return actions
   }
 
   return (
     <EntityList<Subscription>
       label="Contracts"
-      noun="subscriptions"
+      noun="contracts"
       rows={subscriptions}
       total={total}
       columns={columns}
@@ -247,10 +274,10 @@ export function SubscriptionGrid({
        * the fetch sends it — until then the dropdown shows no number rather
        * than counting the rows it happens to hold.
        */
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: withFilterOptions(SUBSCRIPTION_FILTERS, filterOptions ?? {}),
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -279,7 +306,9 @@ export function SubscriptionGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No contracts match these filters"
       empty={{

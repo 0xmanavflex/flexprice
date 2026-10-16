@@ -7,10 +7,12 @@ import {
   type PlanQuery,
   PlanSortField,
   PlanStatus,
+  PLAN_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter } from './search'
+import { nameContainsFilter, toFilterConditions } from './search'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Plans: the translation between product vocabulary and the API.
@@ -32,6 +34,7 @@ export interface PlanWire {
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
   prices?: unknown[] | undefined
+  metadata?: Record<string, string> | null | undefined
 }
 
 const PLAN_STATUSES = new Set<string>(Object.values(PlanStatus))
@@ -57,6 +60,9 @@ function toHeadline(prices: unknown[] | undefined): PlanHeadline | null {
 }
 
 export function toPlan(wire: PlanWire): Plan {
+  const prices: Array<Record<string, unknown>> = Array.isArray(wire.prices)
+    ? (wire.prices as Array<Record<string, unknown>>)
+    : []
   const status = PLAN_STATUSES.has(wire.status ?? '')
     ? (wire.status as PlanStatus)
     : // An unknown status is the API ahead of this client. Treating it as
@@ -69,8 +75,14 @@ export function toPlan(wire: PlanWire): Plan {
     lookupKey: wire.lookupKey ?? '',
     description: wire.description ?? '',
     status,
-    chargeCount: Array.isArray(wire.prices) ? wire.prices.length : 0,
+    chargeCount: prices.length,
+    // `type` is `FIXED` or `USAGE` on the wire. Anything else is counted as a
+    // charge but as neither kind, so a future price type shows the plan as
+    // having charges rather than silently inflating one of the two figures.
+    fixedChargeCount: prices.filter((price) => price['type'] === 'FIXED').length,
+    usageChargeCount: prices.filter((price) => price['type'] === 'USAGE').length,
     headline: toHeadline(wire.prices),
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -88,9 +100,16 @@ export function toPlanFilter(query: PlanQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'prices',
-    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
+    ...(query.search || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search ? nameContainsFilter(query.search) : []),
+            ...toFilterConditions(query.filters ?? [], PLAN_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 
@@ -99,8 +118,15 @@ export interface PlanPage {
   total: number
 }
 
-export async function fetchPlans(client: Flexprice, query: PlanQuery): Promise<PlanPage> {
-  const response = await call(() => client.plans.queryPlan(toPlanFilter(query) as never))
+export async function fetchPlans(
+  client: Flexprice,
+  query: PlanQuery,
+  signal?: AbortSignal,
+): Promise<PlanPage> {
+  const response = await call(
+    (options) => client.plans.queryPlan(toPlanFilter(query) as never, options),
+    signal,
+  )
   const plans = (response.items ?? []).map((item) => toPlan(item as PlanWire))
 
   return {
@@ -122,7 +148,7 @@ export function usePlans(query: PlanQuery, options: { enabled?: boolean } = {}) 
 
   return useQuery({
     queryKey: queryKeys.plans.list({ ...key, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchPlans(client, query),
+    queryFn: ({ signal }) => fetchPlans(client, query, signal),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -149,6 +175,7 @@ export function toUpdatePlanRequest(draft: CreatePlan): Record<string, unknown> 
     name: draft.name,
     lookupKey: draft.lookupKey ?? '',
     description: draft.description ?? '',
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
   }
 }
 
@@ -190,8 +217,8 @@ export function usePlan(id: string) {
 
   return useQuery({
     queryKey: queryKeys.plans.detail(id),
-    queryFn: async () => {
-      const wire = await call(() => client.plans.getPlan(id))
+    queryFn: async ({ signal }) => {
+      const wire = await call((options) => client.plans.getPlan(id, options), signal)
       return toPlan(wire as PlanWire)
     },
     enabled: id.length > 0,
@@ -223,8 +250,27 @@ export function useClonePlan() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) =>
-      call(() => client.plans.clonePlan(id, { name } as never)),
+    mutationFn: ({
+      id,
+      name,
+      lookupKey,
+      description,
+      metadata,
+    }: {
+      id: string
+      name: string
+      lookupKey?: string
+      description?: string
+      metadata?: Record<string, string>
+    }) =>
+      call(() =>
+        client.plans.clonePlan(id, {
+          name,
+          ...(lookupKey ? { lookupKey } : {}),
+          ...(description ? { description } : {}),
+          ...(metadata && Object.keys(metadata).length > 0 ? { metadata } : {}),
+        } as never),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.plans.all() })
     },

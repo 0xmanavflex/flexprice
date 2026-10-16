@@ -1,4 +1,5 @@
-import { useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type EditCoupon, editCouponSchema } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
@@ -47,10 +48,9 @@ export function CouponForm({
   isSubmitting = false,
   submitError = null,
 }: CouponFormProps) {
-  const form = useForm<EditCoupon>({
+  const form = useCalmForm<EditCoupon>({
     resolver: standardSchemaResolver(editCouponSchema) as Resolver<EditCoupon>,
     defaultValues: defaultValue,
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { InfoIcon } from 'lucide-react'
+import { InfoIcon } from '@ui/icons'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'

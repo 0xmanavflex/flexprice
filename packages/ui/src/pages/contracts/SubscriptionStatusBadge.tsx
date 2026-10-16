@@ -5,7 +5,7 @@ import {
   type CircleIcon,
   CirclePauseIcon,
   CircleSlashIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { SUBSCRIPTION_STATUS_LABEL, SubscriptionStatus } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { GlyphBadge } from '../shared/StatusBadge'

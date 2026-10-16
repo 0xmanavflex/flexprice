@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GaugeIcon, RepeatIcon } from 'lucide-react'
+import { GaugeIcon, RepeatIcon } from '@ui/icons'
 import {
   BillingModel,
   type Charge,
@@ -20,6 +20,8 @@ export interface AddChargeDialogProps {
   editing?: Charge | null
   meters: MeterOption[]
   priceUnits: PriceUnitOption[]
+  /** The account's price groups a new charge may join. */
+  priceGroups?: readonly { value: string; label: string }[]
   onSubmit: (draft: CreateCharge) => void
   isSubmitting: boolean
   submitError: string | null
@@ -35,6 +37,7 @@ export function AddChargeDialog({
   editing = null,
   meters,
   priceUnits,
+  priceGroups = [],
   onSubmit,
   isSubmitting,
   submitError,
@@ -43,7 +46,10 @@ export function AddChargeDialog({
   const [chosen, setChosen] = useState(false)
 
   const handleOpenChange = (next: boolean) => {
-    if (!next) setChosen(false)
+    if (!next) {
+      setChosen(false)
+      setType(PriceType.Fixed)
+    }
     onOpenChange(next)
   }
 
@@ -64,6 +70,7 @@ export function AddChargeDialog({
           lockType
           meters={meters}
           priceUnits={priceUnits}
+          priceOptions={{ groups: priceGroups }}
           onSubmit={onSubmit}
           onCancel={() => handleOpenChange(false)}
           isSubmitting={isSubmitting}

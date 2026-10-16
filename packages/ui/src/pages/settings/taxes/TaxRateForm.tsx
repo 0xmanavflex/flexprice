@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   type CreateTaxRate,
@@ -10,6 +11,7 @@ import {
   createTaxRateSchema,
   editTaxRateSchema,
   emptyTaxRate,
+  suggestTaxCode,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
@@ -68,10 +70,20 @@ export function TaxRateCreateForm({
   submitError = null,
   trail,
 }: TaxRateCreateFormProps) {
-  const form = useForm<CreateTaxRate>({
+  const form = useCalmForm<CreateTaxRate>({
     resolver: standardSchemaResolver(createTaxRateSchema) as Resolver<CreateTaxRate>,
     defaultValues: defaultValue ?? emptyTaxRate(),
-    mode: 'onTouched',
+  })
+
+  const nameField = form.register('name', {
+    onChange: (event: { target: { value: string } }) => {
+      // The code follows the name until the person types one of their own.
+      if (!form.getFieldState('code').isDirty) {
+        form.setValue('code', suggestTaxCode(event.target.value), {
+          shouldValidate: form.formState.isSubmitted,
+        })
+      }
+    },
   })
 
   const errors = form.formState.errors
@@ -103,7 +115,7 @@ export function TaxRateCreateForm({
             error={errors.name?.message}
           >
             {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+              <Input id={id} disabled={isSubmitting} {...field} {...nameField} />
             )}
           </FormRow>
           <FormRow
@@ -183,10 +195,9 @@ export function TaxRateEditForm({
   submitError = null,
   trail,
 }: TaxRateEditFormProps) {
-  const form = useForm<EditTaxRate>({
+  const form = useCalmForm<EditTaxRate>({
     resolver: standardSchemaResolver(editTaxRateSchema) as Resolver<EditTaxRate>,
     defaultValues: defaultValue,
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors

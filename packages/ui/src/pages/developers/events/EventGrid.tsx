@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, ScrollTextIcon, SendIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, ScrollTextIcon, SendIcon } from '@ui/icons'
 import { DEFAULT_RAW_EVENT_QUERY, type RawEvent, type RawEventQuery } from '@fp/domain'
+import { EMPTY_CATALOGUE } from '@ui/compositions/feedback/emptyCatalogue'
 import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import type { FilterField, FilterNode } from '@ui/components/reui/filters/filters-types'
@@ -129,7 +130,9 @@ export function EventGrid({
         header: 'Event',
         cell: (row) =>
           row.eventName ? (
-            <code className="text-foreground/80 block truncate font-mono text-xs">{row.eventName}</code>
+            <code className="text-foreground/80 block truncate font-mono text-xs">
+              {row.eventName}
+            </code>
           ) : (
             <EmDash />
           ),
@@ -171,7 +174,12 @@ export function EventGrid({
   const filterRules: FilterNode[] = []
   if (query.customer) {
     filterRules.push(
-      createFilterRule({ id: 'customer', path: ['customer'], operator: 'is', value: query.customer }),
+      createFilterRule({
+        id: 'customer',
+        path: ['customer'],
+        operator: 'is',
+        value: query.customer,
+      }),
     )
   }
   if (query.source) {
@@ -216,7 +224,8 @@ export function EventGrid({
         query: createFilterQuery(filterRules),
         activeCount: (query.customer ? 1 : 0) + (query.source ? 1 : 0),
         onQueryChange: (_next, flat: FlatFilter[]) => {
-          const read = (field: string) => String(flat.find((e) => e.field === field)?.values?.[0] ?? '').trim()
+          const read = (field: string) =>
+            String(flat.find((e) => e.field === field)?.values?.[0] ?? '').trim()
           onQueryChange({ ...query, customer: read('customer'), source: read('source'), page: 1 })
         },
       }}
@@ -237,7 +246,8 @@ export function EventGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No events match these filters"
       empty={{
-        title: 'No events received yet',
+        scene: 'developers',
+        title: EMPTY_CATALOGUE.events.title,
         description:
           'Usage events sent by your systems appear here as they arrive, so a bill can be traced to what caused it.',
         guides: GUIDES,

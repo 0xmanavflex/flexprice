@@ -1,4 +1,5 @@
-import { get, useFieldArray, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { get, useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   AGGREGATION_LABEL,
@@ -14,7 +15,7 @@ import {
   type EditFeature,
   type Feature,
 } from '@fp/domain'
-import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { PlusIcon, Trash2Icon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
@@ -54,7 +55,7 @@ type FeatureFormProps = {
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
-  /** The labels (groups) a feature can be filed under; the field is hidden when there are none. */
+  /** The labels (groups) a feature can be filed under. Empty disables the picker, never hides it. */
   groups?: readonly Option[]
   trail: DetailCrumb[]
 } & (
@@ -199,8 +200,12 @@ const splitValues = (text: string): string[] =>
     .map((v) => v.trim())
     .filter(Boolean)
 
-/** Whether a type has a quantity, and so a unit and a reporting unit. A boolean is on or off. */
-const hasUnits = (type: FeatureType) => type !== FeatureType.Boolean
+/**
+ * Whether a type is measured, and so has a usage unit and a reporting unit.
+ * Only a metered feature counts usage: a boolean is on or off, and a static
+ * feature is a fixed quantity set on the plan, with nothing to count.
+ */
+const hasUnits = (type: FeatureType) => type === FeatureType.Metered
 
 /**
  * The schema candidate: anything hidden or blank is left out rather than sent stale.
@@ -266,12 +271,11 @@ export function FeatureForm(props: FeatureFormProps) {
     return schemaResolver(candidate, context, options)
   }
 
-  const form = useForm<FormValues>({
+  const form = useCalmForm<FormValues>({
     resolver,
     defaultValues: feature
       ? fromFeature(feature)
       : fromCreate(props.mode === 'create' ? props.defaultValue : undefined),
-    mode: 'onTouched',
   })
   const filters = useFieldArray({ control: form.control, name: 'filters' })
 
@@ -304,7 +308,7 @@ export function FeatureForm(props: FeatureFormProps) {
     <>
       <FormRow
         label="Name"
-        hint="What the product is called in the console and on plans."
+        hint="What the feature is called in the console and on plans."
         required
         error={message('name')}
       >
@@ -331,7 +335,7 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
       <FormRow
         label="Description"
-        hint="What the product measures or unlocks. Optional."
+        hint="What the feature measures or unlocks. Optional."
         align="start"
         error={message('description')}
       >
@@ -345,21 +349,35 @@ export function FeatureForm(props: FeatureFormProps) {
           />
         )}
       </FormRow>
-      {groups.length > 0 ? (
-        <FormRow label="Label" hint="File the product under a label." error={message('groupId')}>
-          {({ id, ...field }) => (
-            <OptionSelect
-              id={id}
-              aria-describedby={field['aria-describedby']}
-              value={form.watch('groupId')}
-              options={groups}
-              placeholder="No label"
-              disabled={isSubmitting}
-              onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
-            />
-          )}
-        </FormRow>
-      ) : null}
+      {/*
+        Always drawn, even with no labels to choose.
+        Hiding the field when the environment has none meant the question was
+        never asked: people filed nothing under a label because they never
+        learned the field was there, and reported the dropdown as missing. An
+        empty picker says what it is and that there is nothing in it yet,
+        which is information; an absent one is not.
+      */}
+      <FormRow
+        label="Label"
+        hint={
+          groups.length > 0
+            ? 'File the feature under a label.'
+            : 'File the feature under a label. None exist yet — create one under Groups.'
+        }
+        error={message('groupId')}
+      >
+        {({ id, ...field }) => (
+          <OptionSelect
+            id={id}
+            aria-describedby={field['aria-describedby']}
+            value={form.watch('groupId')}
+            options={groups}
+            placeholder="No label"
+            disabled={isSubmitting || groups.length === 0}
+            onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
+          />
+        )}
+      </FormRow>
     </>
   )
 
@@ -369,12 +387,12 @@ export function FeatureForm(props: FeatureFormProps) {
       align="start"
       hint={
         isEdit
-          ? 'The type is fixed once the product exists.'
-          : 'What kind of product this is decides what you configure next.'
+          ? 'The type is fixed once the feature exists.'
+          : 'What kind of feature this is decides what you configure next.'
       }
     >
       <RadioGroup
-        aria-label="Product type"
+        aria-label="Feature type"
         value={type}
         disabled={isSubmitting || isEdit}
         className="grid gap-3"
@@ -566,7 +584,7 @@ export function FeatureForm(props: FeatureFormProps) {
     </>
   )
 
-  /* A boolean is on or off: it has no quantity, so no unit and no reporting unit. */
+  /* Only a metered feature is counted, so only it has units. */
   const unitRows = hasUnits(type) ? (
     <>
       <FormRow
@@ -599,7 +617,7 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
       <FormRow
         label="Reporting unit (singular)"
-        hint="How usage is displayed in reports: the product unit times a conversion rate. Fill all three or none."
+        hint="How usage is displayed in reports: the feature unit times a conversion rate. Fill all three or none."
         error={message('reportingUnit.unitSingular')}
       >
         {({ id, ...field }) => (
@@ -617,7 +635,7 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
       <FormRow
         label="Conversion rate"
-        hint="How many product units make one reporting unit."
+        hint="How many feature units make one reporting unit."
         error={message('reportingUnit.conversionRate')}
       >
         {({ id, ...field }) => (
@@ -633,14 +651,14 @@ export function FeatureForm(props: FeatureFormProps) {
   ) : null
 
   /*
-   * Two sections: what the product *is* (Details), then how it is counted
-   * (Metering for a metered product, Usage for a static one). A boolean has
-   * nothing to count, so it is Details alone.
+   * What the feature *is* (Details), then, for a metered feature only, how it
+   * is counted (Metering). Boolean and static features have no usage to count,
+   * so they are Details alone.
    */
   const formEl = (
     <form id={FORM_ID} onSubmit={submitAll} noValidate>
       <fieldset className="flex min-w-0 flex-col gap-6 border-0 p-0" disabled={isSubmitting}>
-        <legend className="sr-only">Product</legend>
+        <legend className="sr-only">Feature</legend>
         <FormCard title="Details">
           {typeRows}
           {detailsRows}
@@ -651,8 +669,6 @@ export function FeatureForm(props: FeatureFormProps) {
             {aggregationRows}
             {unitRows}
           </FormCard>
-        ) : unitRows ? (
-          <FormCard title="Usage">{unitRows}</FormCard>
         ) : null}
       </fieldset>
     </form>
@@ -660,11 +676,11 @@ export function FeatureForm(props: FeatureFormProps) {
 
   return (
     <FormPage
-      title={isEdit ? `Edit ${feature?.name ?? 'product'}` : 'Create product'}
+      title={isEdit ? `Edit ${feature?.name ?? 'feature'}` : 'Create feature'}
       trail={trail}
       toolbar={{
         mode,
-        noun: 'product',
+        noun: 'feature',
         formId: FORM_ID,
         onCancel,
         isSubmitting,

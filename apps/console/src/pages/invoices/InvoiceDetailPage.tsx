@@ -1,22 +1,39 @@
-import { useState } from 'react'
-import { formatMoney } from '@fp/domain'
+import { useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   ApiError,
   useAttemptInvoicePayment,
   useFinalizeInvoice,
   useInvoice,
+  useEntityIntegrationControls,
   useInvoiceCreditNotes,
   useInvoicePayments,
   useRecalculateInvoice,
-  useRecordPayment,
   useSendInvoice,
   useTenant,
+  useUpdateInvoiceMetadata,
+  useUpdateInvoicePaymentStatus,
   useUserInfo,
   useVoidInvoice,
+  serverReason,
 } from '@fp/query'
-import { InvoiceDetailView, Toaster, toast } from '@fp/ui/pages'
-import { AppFailure, ConfirmDialog, LoadingRows, PageBody } from '@fp/ui/compositions'
+import {
+  PAYMENT_STATUS_LABEL,
+  PaymentStatus,
+  manualPaymentStatusBlocked,
+  manualPaymentStatusChoices,
+  moneyOr,
+} from '@fp/domain'
+import {
+  InvoiceDetailView,
+  PaymentStatusDialog,
+  Toaster,
+  toast,
+  type InvoicePendingAction,
+} from '@fp/ui/pages'
+import { ConfirmDialog } from '@fp/ui/compositions'
+import { detailGate } from '../shared/detailGate'
+import { subTab } from '../shared/subTab'
 import { toInvoiceDocument } from './invoiceDocumentAdapter'
 
 export interface InvoiceDetailPageProps {
@@ -26,11 +43,11 @@ export interface InvoiceDetailPageProps {
   onOpenCustomer: (customerId: string) => void
 }
 
-type Dialog = 'void' | 'record-payment' | null
+type Dialog = 'void' | 'payment-status' | null
 
 /**
  * One invoice, read through `useInvoice`, with its issuer (`useTenant`),
- * payments and credit notes (filtered to this invoice). Every action — finalize,
+ * payments and credit memos (filtered to this invoice). Every action — finalize,
  * record payment, recalculate, void, send, retry — runs here, outside the view.
  */
 export function InvoiceDetailPage({
@@ -41,6 +58,7 @@ export function InvoiceDetailPage({
 }: InvoiceDetailPageProps) {
   const navigate = useNavigate()
   const invoice = useInvoice(invoiceId)
+  const mappings = useEntityIntegrationControls('invoice', invoiceId)
   // "Bill from" is the signed-in tenant: `GET /tenants/{id}` only answers for
   // one's own tenant, which is also the invoice's issuer. The invoice's own
   // `tenant_id` stands in until the user record has loaded.
@@ -49,63 +67,80 @@ export function InvoiceDetailPage({
   const payments = useInvoicePayments(invoiceId)
   const creditNotes = useInvoiceCreditNotes(invoiceId)
   const finalize = useFinalizeInvoice()
+  const saveMetadata = useUpdateInvoiceMetadata()
+  const setPaymentStatus = useUpdateInvoicePaymentStatus()
   const voidInvoice = useVoidInvoice()
   const attempt = useAttemptInvoicePayment()
   const recalculate = useRecalculateInvoice()
   const send = useSendInvoice()
-  const recordPayment = useRecordPayment()
   const [dialog, setDialog] = useState<Dialog>(null)
+  const inFlight = useRef(false)
+  const [pendingAction, setPendingAction] = useState<InvoicePendingAction | null>(null)
 
-  if (invoice.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (invoice.error || !invoice.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={invoice.error ? 'This invoice could not be loaded' : 'Invoice not found'}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={invoice.error ? () => void invoice.refetch() : onBack}
-        />
-      </PageBody>
-    )
+  if (!invoice.data) {
+    return detailGate(invoice, { noun: 'this invoice', listName: 'invoices', onBack })
   }
 
   const data = invoice.data
-  const run = (action: typeof finalize, done: string) =>
+
+  // One action at a time. The ref closes the gap between a click and the
+  // re-render that disables the control, so a double click cannot send twice.
+  // No optimistic update: the invoice refetches when the mutation settles.
+  const run = (kind: InvoicePendingAction, action: typeof finalize, done: string, verb: string) => {
+    if (inFlight.current) return
+    inFlight.current = true
+    setPendingAction(kind)
     action.mutate(data.id, {
       onSuccess: () => toast(done),
-      onError: (error) => toast(failure(error)),
+      onError: (error) => toast(failure(error, verb)),
+      onSettled: () => {
+        inFlight.current = false
+        setPendingAction(null)
+      },
     })
-  const amountDue = data.amountRemaining
+  }
 
   return (
     <>
       <InvoiceDetailView
+        integrationLinks={mappings.data}
+        integrationControls={mappings.controls}
+        integrationsError={mappings.isError}
+        onRetryIntegrations={() => {
+          void mappings.refetch()
+        }}
         invoice={toInvoiceDocument(data, {
           tenant: tenant.data,
           payments: payments.data,
           creditNotes: creditNotes.data,
         })}
-        paymentsLoading={payments.isLoading}
-        creditNotesLoading={creditNotes.isLoading}
+        payments={subTab(payments, 'payments')}
+        creditNotes={subTab(creditNotes, 'credit memos')}
+        pendingAction={pendingAction}
         onBack={onBack}
         {...(onEdit ? { onEdit } : {})}
-        isFinalizing={finalize.isPending}
-        onFinalize={() => run(finalize, 'Invoice finalized')}
-        onRecordPayment={() => setDialog('record-payment')}
-        onRecalculate={() => run(recalculate, 'Invoice recalculated')}
+        onFinalize={() => run('finalize', finalize, 'Invoice finalized', 'finalize the invoice')}
+        onRecordPayment={() => void navigate({ to: '/payments/new', search: { invoice: data.id } })}
+        onRecalculate={() =>
+          run('recalculate', recalculate, 'Invoice recalculated', 'recalculate the invoice')
+        }
         onVoid={() => setDialog('void')}
-        onIssueCreditNote={() => void navigate({ to: '/credit-notes/new' })}
-        onSend={() => run(send, 'Invoice sent to the customer')}
-        onRetryPayment={() => run(attempt, 'Payment attempt started')}
+        onUpdatePaymentStatus={() => setDialog('payment-status')}
+        paymentStatusBlocked={manualPaymentStatusBlocked({
+          status: data.status,
+          paymentStatus: data.paymentStatus,
+          succeededPayments: (payments.data ?? []).filter(
+            (payment) => payment.status === PaymentStatus.Succeeded,
+          ).length,
+        })}
+        onSaveMetadata={(metadata) => saveMetadata.mutateAsync({ id: data.id, metadata })}
+        onIssueCreditNote={() =>
+          void navigate({ to: '/credit-memos/new', search: { invoice: data.id } })
+        }
+        onSend={() => run('send', send, 'Invoice sent to the customer', 'send the invoice')}
+        onRetryPayment={() =>
+          run('retry-payment', attempt, 'Payment attempt started', 'retry the payment')
+        }
         {...(data.invoicePdfUrl
           ? { onDownload: () => window.open(data.invoicePdfUrl ?? '', '_blank', 'noopener') }
           : {})}
@@ -114,7 +149,7 @@ export function InvoiceDetailPage({
           ? {
               onOpenSubscription: () =>
                 void navigate({
-                  to: '/subscriptions/$subscriptionId',
+                  to: '/contracts/$subscriptionId',
                   params: { subscriptionId: data.subscriptionId ?? '' },
                 }),
             }
@@ -123,12 +158,15 @@ export function InvoiceDetailPage({
           void navigate({ to: '/payments/$paymentId', params: { paymentId } })
         }
         onOpenCreditNote={(creditNoteId) =>
-          void navigate({ to: '/credit-notes/$creditNoteId', params: { creditNoteId } })
+          void navigate({ to: '/credit-memos/$creditNoteId', params: { creditNoteId } })
         }
       />
       <ConfirmDialog
         open={dialog === 'void'}
-        onOpenChange={(open) => setDialog(open ? 'void' : null)}
+        onOpenChange={(open) => {
+          if (!open) voidInvoice.reset()
+          setDialog(open ? 'void' : null)
+        }}
         title="Void this invoice?"
         description="A voided invoice can no longer be collected. This cannot be undone."
         confirmLabel="Void invoice"
@@ -137,27 +175,26 @@ export function InvoiceDetailPage({
         error={voidInvoice.error ? failure(voidInvoice.error) : null}
         onConfirm={() => voidInvoice.mutate(data.id, { onSuccess: () => setDialog(null) })}
       />
-      <ConfirmDialog
-        open={dialog === 'record-payment'}
-        onOpenChange={(open) => setDialog(open ? 'record-payment' : null)}
-        title="Record a payment?"
-        description={`Records an offline payment of ${formatMoney(amountDue)} against this invoice, settling the amount due.`}
-        confirmLabel="Record payment"
-        isPending={recordPayment.isPending}
-        error={recordPayment.error ? failure(recordPayment.error) : null}
-        onConfirm={() =>
-          recordPayment.mutate(
-            {
-              invoiceId: data.id,
-              currency: amountDue.currency || data.currency,
-              amount: amountDue.amount,
-              methodType: 'OFFLINE',
-              processNow: true,
-            },
+      <PaymentStatusDialog
+        open={dialog === 'payment-status'}
+        onOpenChange={(open) => {
+          if (!open) setPaymentStatus.reset()
+          setDialog(open ? 'payment-status' : null)
+        }}
+        current={data.paymentStatus}
+        choices={manualPaymentStatusChoices(data.paymentStatus)}
+        amountDue={data.amountDue}
+        amountPaid={moneyOr(data.amountPaid, data.currency)}
+        amountRemaining={data.amountRemaining}
+        isPending={setPaymentStatus.isPending}
+        error={setPaymentStatus.error ? failure(setPaymentStatus.error) : null}
+        onSubmit={(change) =>
+          setPaymentStatus.mutate(
+            { id: data.id, ...change },
             {
               onSuccess: () => {
                 setDialog(null)
-                toast('Payment recorded')
+                toast(`Payment status set to ${PAYMENT_STATUS_LABEL[change.status].toLowerCase()}`)
               },
             },
           )
@@ -168,10 +205,28 @@ export function InvoiceDetailPage({
   )
 }
 
-function failure(error: unknown): string {
-  if (error instanceof ApiError && error.kind === 'forbidden')
-    return 'You do not have permission to change invoices here.'
-  if (error instanceof ApiError && error.kind === 'invalid')
-    return error.message || 'The invoice could not be changed.'
-  return 'Could not complete that. Try again.'
+function failure(error: unknown, verb = 'change the invoice'): string {
+  if (error instanceof ApiError) {
+    switch (error.kind) {
+      case 'forbidden':
+        return serverReason(error) ?? `Your role does not include permission to ${verb}.`
+      case 'unauthorized':
+        return 'Your session has expired. Sign in again, then retry.'
+      case 'not_found':
+        return `Could not ${verb}: this invoice no longer exists.`
+      case 'invalid':
+        return error.message ? `Could not ${verb}: ${error.message}` : `Could not ${verb}.`
+      case 'network':
+        return `Could not ${verb}: Flexprice was unreachable. Nothing was changed; try again.`
+      case 'timeout':
+        return `Could not ${verb}: the request timed out. Check the invoice before trying again.`
+      case 'rate_limited':
+        return `Could not ${verb}: too many requests. Wait a moment and try again.`
+      default:
+        return (
+          serverReason(error) ?? `Could not ${verb}: Flexprice had a problem. Try again shortly.`
+        )
+    }
+  }
+  return `Could not ${verb}. Try again.`
 }

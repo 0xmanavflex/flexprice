@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from 'react'
-import { PlusIcon } from 'lucide-react'
+import { PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,

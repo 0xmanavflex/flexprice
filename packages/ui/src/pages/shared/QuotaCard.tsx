@@ -251,7 +251,7 @@ export function QuotaCard({
       <div className="text-muted-foreground flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-[13px]">
         <span>Quota renews on</span>
         <span className="text-foreground font-medium tabular-nums">
-          {resetsOn
+          {resetsOn && !Number.isNaN(resetsOn.getTime())
             ? new Intl.DateTimeFormat(locale, {
                 day: 'numeric',
                 month: 'long',

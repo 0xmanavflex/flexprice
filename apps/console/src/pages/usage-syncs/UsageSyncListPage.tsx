@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { WaypointsIcon } from 'lucide-react'
 import { type UsageSync, type UsageSyncQuery } from '@fp/domain'
-import { ApiError, useUsageSyncs } from '@fp/query'
+import { useUsageSyncs } from '@fp/query'
 import { UsageSyncDetailSheet, UsageSyncGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
+import { toListFailure } from '../shared/listFailure'
 
 export interface UsageSyncListPageProps {
   query: UsageSyncQuery
@@ -16,6 +16,7 @@ export interface UsageSyncListPageProps {
  */
 export function UsageSyncListPage({ query, onQueryChange }: UsageSyncListPageProps) {
   const usageSyncs = useUsageSyncs(query)
+  const failure = toListFailure(usageSyncs.error, 'usage syncs')
   const [selected, setSelected] = useState<UsageSync | null>(null)
 
   const rows = usageSyncs.data?.usageSyncs ?? []
@@ -26,12 +27,16 @@ export function UsageSyncListPage({ query, onQueryChange }: UsageSyncListPagePro
     <PageBody>
       <ListState
         isLoading={usageSyncs.isPending}
-        error={toFailure(usageSyncs.error)}
-        isEmpty={rows.length === 0 && !isFiltered}
+        error={failure}
+        isEmpty={rows.length === 0 && (usageSyncs.data?.total ?? 0) === 0 && !isFiltered}
+        hasRows={rows.length > 0}
+        isRefreshing={usageSyncs.isFetching && !usageSyncs.isPending}
+        isProvisional={usageSyncs.isPlaceholderData}
+        isRetrying={usageSyncs.isFetching && usageSyncs.isError}
+        {...(failure ? { failureKind: failure.kind } : {})}
         isFiltered={isFiltered}
         onRetry={() => void usageSyncs.refetch()}
         onClearFilters={clearFilters}
-        emptyIcon={<WaypointsIcon aria-hidden />}
         emptyTitle="No usage has been recorded yet"
         emptyDescription="Usage that bills through a cloud marketplace is recorded per billing period, and where it was reported shows here."
       >
@@ -48,24 +53,4 @@ export function UsageSyncListPage({ query, onQueryChange }: UsageSyncListPagePro
       <UsageSyncDetailSheet usageSync={selected} onClose={() => setSelected(null)} />
     </PageBody>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to usage syncs here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading usage syncs.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading usage syncs.', canRetry: true }
 }

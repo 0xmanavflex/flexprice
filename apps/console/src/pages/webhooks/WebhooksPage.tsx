@@ -20,7 +20,7 @@ import {
 import type { WebhookHubTab } from '@/app/webhookSearch'
 import { WebhookMessagePanel } from './WebhookMessagePanel'
 import { WebhookPortalGate } from './WebhookPortalGate'
-import { toWebhookFailure } from './webhookFailure'
+import { type Failure, toWebhookFailure } from './webhookFailure'
 
 export interface WebhooksPageProps {
   tab: WebhookHubTab
@@ -83,7 +83,9 @@ function Hub({
           endpoints={rows}
           ids={ids}
           isLoading={endpoints.isPending}
-          error={toWebhookFailure(endpoints.error, 'your endpoints')}
+          // A failed refresh keeps the endpoints already on screen.
+          error={endpoints.data ? null : toWebhookFailure(endpoints.error, 'your endpoints')}
+          isRetrying={endpoints.isFetching}
           onRetry={() => void endpoints.refetch()}
           onOpenEndpoint={onOpenEndpoint}
           onCreate={onCreate}
@@ -114,6 +116,7 @@ function EndpointsView({
   ids,
   isLoading,
   error,
+  isRetrying,
   onRetry,
   onOpenEndpoint,
   onCreate,
@@ -123,7 +126,8 @@ function EndpointsView({
   endpoints: WebhookEndpoint[]
   ids: string[]
   isLoading: boolean
-  error: { message: string; canRetry: boolean } | null
+  error: Failure | null
+  isRetrying: boolean
   onRetry: () => void
   onOpenEndpoint: (id: string) => void
   onCreate: () => void
@@ -141,6 +145,8 @@ function EndpointsView({
         {...(stats.data ? { stats: stats.data } : {})}
         isLoading={isLoading}
         error={error?.message ?? null}
+        {...(error ? { errorKind: error.kind } : {})}
+        isRetrying={isRetrying}
         {...(error?.canRetry ? { onRetry } : {})}
         onOpen={(endpoint) => onOpenEndpoint(endpoint.id)}
         onCreate={onCreate}
@@ -187,11 +193,15 @@ function EndpointsView({
 
 function CatalogView({ environmentId }: { environmentId: string }) {
   const eventTypes = useWebhookEventTypes(environmentId)
+  const failure = eventTypes.data ? null : toWebhookFailure(eventTypes.error, 'the event catalog')
   return (
     <WebhookEventCatalog
       eventTypes={eventTypes.data ?? []}
       isLoading={eventTypes.isPending}
-      error={toWebhookFailure(eventTypes.error, 'the event catalog')?.message ?? null}
+      error={failure?.message ?? null}
+      {...(failure ? { errorKind: failure.kind } : {})}
+      isRetrying={eventTypes.isFetching}
+      {...(failure?.canRetry ? { onRetry: () => void eventTypes.refetch() } : {})}
     />
   )
 }
@@ -208,7 +218,8 @@ function LogsView({
   const [eventType, setEventType] = useState('')
   const messages = useWebhookMessages(environmentId, eventType)
   const eventTypes = useWebhookEventTypes(environmentId)
-  const failure = toWebhookFailure(messages.error, 'the message log')
+  // A failed refresh keeps the messages already on screen.
+  const failure = messages.data ? null : toWebhookFailure(messages.error, 'the message log')
   const rows = messages.data ?? []
 
   return (
@@ -220,6 +231,9 @@ function LogsView({
         onEventTypeChange={setEventType}
         isLoading={messages.isPending}
         error={failure?.message ?? null}
+        {...(failure ? { errorKind: failure.kind } : {})}
+        isRetrying={messages.isFetching}
+        isRefreshing={messages.isFetching && messages.data !== undefined}
         {...(failure?.canRetry ? { onRetry: () => void messages.refetch() } : {})}
         onRefresh={() => void messages.refetch()}
         onOpen={(message) => onMessageChange(message.id)}
@@ -244,11 +258,15 @@ function ActivityView({
   endpointsLoading: boolean
 }) {
   const activity = useWebhookActivity(environmentId, ids)
+  const failure = activity.data ? null : toWebhookFailure(activity.error, 'webhook activity')
   return (
     <WebhookActivity
       points={activity.data ?? []}
       isLoading={endpointsLoading || (ids.length > 0 && activity.isPending)}
-      error={toWebhookFailure(activity.error, 'webhook activity')?.message ?? null}
+      error={failure?.message ?? null}
+      {...(failure ? { errorKind: failure.kind } : {})}
+      isRetrying={activity.isFetching}
+      {...(failure?.canRetry ? { onRetry: () => void activity.refetch() } : {})}
       truncated={ids.length > 25}
     />
   )

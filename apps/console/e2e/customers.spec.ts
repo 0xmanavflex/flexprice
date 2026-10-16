@@ -33,7 +33,7 @@ test.describe('the customers list', () => {
 
     await page.getByRole('button', { name: 'New customer' }).first().click()
     await expect(page).toHaveURL(/\/customers\/new/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Create customer' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Customer details' })).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
     // Submit is gated on the required fields.
@@ -48,6 +48,8 @@ test.describe('the customers list', () => {
     await expect(page.getByLabel('Phone')).toHaveCount(0)
 
     await page.getByLabel('Name', { exact: false }).first().fill('Acme Robotics')
+    // The external ID is filled from the name until you type your own.
+    await expect(page.getByLabel('External ID')).toHaveValue('cust-acme-robotics')
     await page.getByLabel('External ID').fill('acme_robotics')
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/customers$/))
@@ -105,6 +107,31 @@ test.describe('a customer detail page', () => {
     await expect(page).toHaveURL(/\/customers\/[^/]+$/)
   }
 
+  test('unlinking from Related refreshes both the rail and header', async ({ page }) => {
+    await openFirstCustomer(page)
+    const rail = page.getByRole('complementary', { name: 'Customer details' })
+    const mapping = rail.getByRole('button', { name: /^Manage .+ integration$/ }).first()
+    await expect(mapping).toBeVisible()
+    const label = await mapping.getAttribute('aria-label')
+    const provider = label!.replace(/^Manage /, '').replace(/ integration$/, '')
+    await expect(
+      page.getByRole('button', { name: `${provider} integration`, exact: true }),
+    ).toBeVisible()
+    await mapping.click()
+    await page.getByRole('menuitem', { name: `Unlink ${provider}`, exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: `Unlink ${provider}?`, exact: true })
+    const request = page.waitForRequest(isWrite('DELETE', /\/v1\/integrations\/link$/))
+    await dialog.getByRole('button', { name: 'Unlink', exact: true }).click()
+    await request
+    await expect(dialog).toBeHidden()
+    await expect(
+      rail.getByRole('button', { name: `Manage ${provider} integration`, exact: true }),
+    ).toHaveCount(0)
+    await expect(
+      page.getByRole('button', { name: `${provider} integration`, exact: true }),
+    ).toHaveCount(0)
+  })
+
   test('edits phone inline on the Information tab', async ({ page }) => {
     await openFirstCustomer(page)
     await page.getByRole('tab', { name: 'Information' }).click()
@@ -119,7 +146,7 @@ test.describe('a customer detail page', () => {
   test('opens the billing edit page from the header', async ({ page }) => {
     await openFirstCustomer(page)
     await page.getByRole('button', { name: 'Customer actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit billing details' }).click()
+    await page.getByRole('menuitem', { name: 'Edit customer' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
   })
 })

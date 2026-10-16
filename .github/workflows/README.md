@@ -1,6 +1,6 @@
 # CI
 
-Eleven workflows, each answering one question, so a red check names the problem
+Thirteen workflows, each answering one question, so a red check names the problem
 before you open it.
 
 | Workflow | Gates | Roughly |
@@ -15,6 +15,8 @@ before you open it.
 | `deploy.yml` | Vercel. **Skips until its secrets exist** | — |
 | `storybook-deploy.yml` | Publishes Storybook to its own Vercel project. **Skips until its secrets exist** | 4–8 min |
 | `deploy-develop.yml` | Deploys the `develop` branch to its own Vercel project. **Skips until `VERCEL_DEVELOP_PROJECT_ID` exists** | — |
+| `deploy-regions.yml` | Deploys `main` to the India and Canada console projects. **Each region skips until its project ID secret exists** | 4–8 min |
+| `sdk-watch.yml` | Weekly: is a newer `@flexprice/sdk` out, or does the backend spec have operations or fields the installed one lacks? Opens one `sdk-update` issue. Dependabot opens the upgrade PR | 1–2 min |
 | `storybook-deploy-develop.yml` | Publishes the `develop` branch's Storybook to its own Vercel project. **Skips until `VERCEL_STORYBOOK_DEVELOP_PROJECT_ID` exists** | 4–8 min |
 
 They were split rather than left as one job because the failures have different
@@ -98,3 +100,11 @@ Every check above also runs on pushes to `develop` (and on pull requests into it
 3. Set the develop project's own Environment Variables (every `VITE_*`), so it points at the develop API.
 
 `storybook-deploy-develop.yml` publishes `develop`'s Storybook to a separate Vercel project (empty, framework **Other**) whose ID goes in `VERCEL_STORYBOOK_DEVELOP_PROJECT_ID`. The production Storybook (`storybook-deploy.yml`) deploys from `main` only.
+
+## Regions: India and Canada
+
+`deploy-regions.yml` deploys every push to `main` to a Vercel project per region. The code is the same everywhere; a region is its project's Environment Variables (`VITE_FLEXPRICE_API_URL` and the other `VITE_*`), so set those in each project.
+
+1. In Vercel, create a project for each region and copy its **Project ID**.
+2. Add the repository secrets `VERCEL_INDIA_PROJECT_ID` and `VERCEL_CANADA_PROJECT_ID`. `VERCEL_TOKEN` and `VERCEL_ORG_ID` are the ones `deploy.yml` already uses.
+3. A region without its secret is skipped with a warning; the other still deploys. Run the workflow by hand to redeploy one region.

@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useEffect, useRef } from 'react'
-import { useFieldArray, useForm, type Resolver } from 'react-hook-form'
+import { useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   BILLING_MODEL_LABEL,
@@ -94,13 +95,12 @@ export function PriceOverrideForm({
   hideActions = false,
   onStartedChange,
 }: PriceOverrideFormProps) {
-  const form = useForm<PriceOverride>({
+  const form = useCalmForm<PriceOverride>({
     resolver: standardSchemaResolver(priceOverrideSchema) as Resolver<PriceOverride>,
     defaultValues: defaultValue ?? emptyOverride(priceId, BillingModel.FlatFee),
     // Validate once a field has been touched, not on every keystroke from the
     // start: telling someone their empty field is invalid before they have
     // typed in it is noise, and noise is what gets ignored.
-    mode: 'onTouched',
   })
 
   const billingModel = form.watch('billingModel')

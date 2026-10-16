@@ -82,6 +82,13 @@ describe('subscription detail additions', () => {
     expect(detail.lookupKey).toBe('acme-pro')
   })
 
+  it('keeps a latest invoice with no number', () => {
+    const detail = toSubscriptionDetail({
+      latestInvoice: { id: 'inv_1' },
+    })
+    expect(detail.latestInvoice).toEqual({ id: 'inv_1', number: '' })
+  })
+
   it('treats a zero or absent commitment and invoice as none', () => {
     const detail = toSubscriptionDetail({ commitmentAmount: '0' })
     expect(detail.commitmentAmount).toBeNull()
@@ -446,5 +453,39 @@ describe('line item change', () => {
     expect(editable('FIXED', 'FLAT_FEE', 'CUSTOM')).toBe(false)
     expect(editable('FIXED', 'PACKAGE', 'FIAT')).toBe(false)
     expect(editable('USAGE', 'FLAT_FEE', 'FIAT')).toBe(false)
+  })
+})
+
+describe('the price a line carries', () => {
+  it('is the embedded price, read as a charge', () => {
+    const line = toSubscriptionLine({
+      priceId: 'price_api',
+      priceType: 'USAGE',
+      price: {
+        id: 'ignored_in_favour_of_price_id',
+        amount: '0.002',
+        displayAmount: '$0.002',
+        currency: 'usd',
+        billingModel: 'TIERED',
+        tierMode: 'SLAB',
+        billingPeriod: 'MONTHLY',
+        invoiceCadence: 'ARREAR',
+      },
+    })
+
+    expect(line.charge?.id).toBe('price_api')
+    expect(line.charge?.displayAmount).toBe('$0.002')
+    expect(line.charge?.billingModel).toBe('TIERED')
+  })
+
+  it('has no charge when the API sent no price', () => {
+    expect(toSubscriptionLine({ priceId: 'price_x' }).charge).toBeNull()
+  })
+
+  it('reports the plan price it overrides, and nothing when it overrides none', () => {
+    expect(
+      toSubscriptionLine({ price: { amount: '1', parentPriceId: 'price_plan' } }).overridesPriceId,
+    ).toBe('price_plan')
+    expect(toSubscriptionLine({ price: { amount: '1' } }).overridesPriceId).toBe('')
   })
 })

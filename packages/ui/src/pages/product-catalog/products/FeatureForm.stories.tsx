@@ -21,10 +21,10 @@ async function chooseOption(label: string, optionName: string) {
 }
 
 async function submit(canvas: ReturnType<typeof within>) {
-  await userEvent.click(canvas.getByRole('button', { name: /create product/i }))
+  await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
 }
 
-const trail: { label: string }[] = [{ label: 'Products' }, { label: 'Create product' }]
+const trail: { label: string }[] = [{ label: 'Features' }, { label: 'Create feature' }]
 
 const withHeight: Decorator = (Story) => (
   <div className="flex h-[720px] flex-col">
@@ -33,7 +33,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'App/Product catalog/Products/Product form',
+  title: 'App/Product catalog/Features/Feature form',
   component: FeatureForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
@@ -108,7 +108,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   },
   render: ({ mode, type, isSubmitting, submitError, showGroups }) => {
     const shared = {
-      trail: mode === 'edit' ? [{ label: 'Products' }, { label: 'Edit product' }] : trail,
+      trail: mode === 'edit' ? [{ label: 'Features' }, { label: 'Edit feature' }] : trail,
       isSubmitting,
       submitError: submitError || null,
       onCancel: fn(),
@@ -191,7 +191,7 @@ export const ValidationFromDomain: Story = {
   },
 }
 
-/** Two sections, centred on their own: what the product is, then how it is metered. */
+/** Two sections, centred on their own: what the feature is, then how it is metered. */
 export const DetailsThenMetering: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -214,10 +214,25 @@ export const BooleanHasNoUnits: Story = {
     await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Event name/)).not.toBeInTheDocument()
     await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+  },
+}
 
-    await userEvent.click(canvas.getByRole('radio', { name: /Static/ }))
-    await expect(await canvas.findByRole('heading', { name: 'Usage' })).toBeInTheDocument()
-    await expect(canvas.getByLabelText(/^Unit \(singular\)/)).toBeInTheDocument()
+/** A static feature is a fixed quantity on the plan: nothing is counted, so no usage section or units. */
+export const StaticHasNoUsage: Story = {
+  args: {
+    defaultValue: { name: 'Support tier', lookupKey: 'support-tier', type: FeatureType.Static },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    await expect(canvas.queryByRole('heading', { name: 'Usage' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Unit/)).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
+
+    // Units belong to metered features, where usage is counted.
+    await userEvent.click(canvas.getByRole('radio', { name: /Metered/ }))
+    await expect(await canvas.findByLabelText(/^Unit \(singular\)/)).toBeInTheDocument()
   },
 }
 
@@ -365,5 +380,22 @@ export const LookupKeyFollowsName: Story = {
     await userEvent.type(canvas.getByLabelText(/^Lookup key/), 'mine')
     await userEvent.type(canvas.getByLabelText(/^Name/), ' more')
     await expect(canvas.getByLabelText(/^Lookup key/)).toHaveValue('mine')
+  },
+}
+
+/**
+ * No labels yet: the field is still there, saying so.
+ *
+ * It used to be hidden when the environment had no groups, so the question
+ * was never asked and the dropdown was reported as missing. An empty picker
+ * is information; an absent one is not.
+ */
+export const NoLabelsYet: Story = {
+  args: { groups: [] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Label')).toBeVisible()
+    await expect(canvas.getByText(/none exist yet/i)).toBeVisible()
+    await expect(canvas.getByRole('combobox', { name: /label/i })).toBeDisabled()
   },
 }

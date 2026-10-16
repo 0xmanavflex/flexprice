@@ -1,4 +1,5 @@
-import { ArrowUpRightIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { ArrowUpRightIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 import { Section } from '../layout/Section'
 
@@ -23,6 +24,10 @@ export interface RelatedItem {
 
 export interface RelatedCardProps {
   items: RelatedItem[]
+  /** Connected integrations or other record relationships. */
+  children?: ReactNode
+  /** Link an integration or another relationship, after the existing rows. */
+  action?: ReactNode
   title?: string
   className?: string
 }
@@ -34,9 +39,15 @@ export interface RelatedCardProps {
  * Renders nothing when there is nothing to link to, so a page never shows an
  * empty Related card. Items without a destination are dropped for the same reason.
  */
-export function RelatedCard({ items, title = 'Related', className }: RelatedCardProps) {
+export function RelatedCard({
+  items,
+  children,
+  action,
+  title = 'Related',
+  className,
+}: RelatedCardProps) {
   const links = items.filter((item) => item.value && (item.onOpen || item.href))
-  if (links.length === 0) return null
+  if (links.length === 0 && !children && !action) return null
   return (
     <Section title={title} flush {...(className ? { className } : {})}>
       <dl className="flex flex-col divide-y text-sm">
@@ -81,6 +92,8 @@ export function RelatedCard({ items, title = 'Related', className }: RelatedCard
           </div>
         ))}
       </dl>
+      {children}
+      {action ? <div className="border-t px-6 py-3">{action}</div> : null}
     </Section>
   )
 }

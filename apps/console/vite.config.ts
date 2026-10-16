@@ -13,6 +13,9 @@ export default defineConfig({
       // `@ui/`. The alias has to exist here too, because the app is what
       // actually bundles those files.
       '@ui/': fileURLToPath(new URL('../../packages/ui/src/', import.meta.url)),
+      // Vendored ReUI code imports icons from `lucide-react`. Resolve that to
+      // the ReUI icon barrel so nothing renders a lucide glyph.
+      'lucide-react': fileURLToPath(new URL('../../packages/ui/src/icons/index.ts', import.meta.url)),
     },
   },
   server: { port: 3000 },

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, DownloadIcon, RefreshCwIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, DownloadIcon, RefreshCwIcon } from '@ui/icons'
 import {
   DEFAULT_WORKFLOW_QUERY,
   WORKFLOW_STATUS_LABEL,
@@ -11,7 +11,13 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
-import { type EntityColumn, type PillTone, idColumn, pillColumn, textColumn } from '../../shared/cells'
+import {
+  type EntityColumn,
+  type PillTone,
+  idColumn,
+  pillColumn,
+  textColumn,
+} from '../../shared/cells'
 
 /**
  * The Workflows list, on the shared `EntityList`.
@@ -197,6 +203,7 @@ export function WorkflowGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No workflows match these filters"
       empty={{
+        scene: 'developers',
         title: 'No workflows have run yet',
         description:
           'Background work such as syncs, exports and billing runs is recorded here as it happens, so a stuck or failed job can be found.',

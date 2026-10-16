@@ -94,6 +94,8 @@ export interface Payment {
   createdAt: Date | null
   /** When it landed. Null until (and unless) it does. */
   succeededAt: Date | null
+  /** The gateway's own id for the charge (`pi_…`), when it went through one. */
+  gatewayPaymentId?: string
 }
 
 /**

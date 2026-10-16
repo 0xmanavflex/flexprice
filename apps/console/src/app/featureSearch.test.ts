@@ -14,9 +14,10 @@ describe('parseFeatureSearch', () => {
       search: 'api',
       types: [FeatureType.Metered],
       statuses: [],
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy: DEFAULT_FEATURE_QUERY.sortBy,
+      sortDirection: DEFAULT_FEATURE_QUERY.sortDirection,
       view: 'table',
+      filters: [],
     })
   })
 
@@ -78,6 +79,7 @@ describe('round-trips what the router writes', () => {
       sortBy: 'updatedAt',
       sortDirection: 'desc',
       view: 'table',
+      filters: [],
     })
   })
 

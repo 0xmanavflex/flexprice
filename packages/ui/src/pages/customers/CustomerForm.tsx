@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   CUSTOMER_TAX_TREATMENT_LABEL,
@@ -6,6 +7,9 @@ import {
   CustomerTaxTreatment,
   createCustomerSchema,
   emptyCustomer,
+  KEY_PREFIX,
+  countryOptions,
+  suggestKey,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -14,6 +18,7 @@ import { FormPage } from '@ui/compositions/forms/FormPage'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
+import { TimezoneCombobox } from '@ui/compositions/forms/TimezoneCombobox'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -30,6 +35,7 @@ export const CustomerFormProvenance = provenance({
     'compositions/form-page',
     'compositions/option-select',
     'compositions/option-combobox',
+    'compositions/timezone-combobox',
     'compositions/form-disclosure',
   ],
   note: 'RHF + the domain schema, one page: name, external ID and email up front, the rest folded under More details, no preview rail. Create and edit share it. Lineage: compositions/field.',
@@ -60,48 +66,11 @@ const OPTIONAL_FIELDS = [
   'taxTreatment',
 ] as const satisfies readonly (keyof CreateCustomer)[]
 
-/**
- * Used when the runtime cannot list its IANA zones (`Intl.supportedValuesOf`
- * is missing on older engines). A short list of the common ones.
- */
-const FALLBACK_TIMEZONES = [
-  'UTC',
-  'America/Los_Angeles',
-  'America/Denver',
-  'America/Chicago',
-  'America/New_York',
-  'America/Sao_Paulo',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Africa/Johannesburg',
-  'Asia/Dubai',
-  'Asia/Kolkata',
-  'Asia/Singapore',
-  'Asia/Shanghai',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-  'Pacific/Auckland',
-] as const
-
-function listTimezones(): readonly string[] {
-  try {
-    const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }
-    const zones = intl.supportedValuesOf?.('timeZone')
-    if (zones && zones.length > 0) return zones.includes('UTC') ? zones : ['UTC', ...zones]
-  } catch {
-    // fall through to the fixed list
-  }
-  return FALLBACK_TIMEZONES
-}
-
-const TIMEZONES = listTimezones()
-
-/** The IANA zones as options; a saved value the runtime does not know is kept, not dropped. */
-function timezoneOptions(current: string | undefined) {
-  const zones = current && !TIMEZONES.includes(current) ? [current, ...TIMEZONES] : TIMEZONES
-  return zones.map((zone) => ({ value: zone, label: zone }))
-}
+/** Countries, named in the viewer's language and found by name or code. */
+const COUNTRY_CHOICES = countryOptions().map((option) => ({
+  value: option.code,
+  label: option.label,
+}))
 
 const TAX_OPTIONS = Object.values(CustomerTaxTreatment).map((value) => ({
   value,
@@ -119,10 +88,20 @@ export function CustomerForm({
   trail,
 }: CustomerFormProps) {
   const isEdit = mode === 'edit'
-  const form = useForm<CreateCustomer>({
+  const form = useCalmForm<CreateCustomer>({
     resolver: standardSchemaResolver(createCustomerSchema) as Resolver<CreateCustomer>,
     defaultValues: defaultValue ?? emptyCustomer(),
-    mode: 'onTouched',
+  })
+
+  const nameField = form.register('name', {
+    onChange: (event: { target: { value: string } }) => {
+      // The externalId follows the name until the person types one of their own.
+      if (!isEdit && !form.getFieldState('externalId').isDirty) {
+        form.setValue('externalId', suggestKey(KEY_PREFIX.customer, event.target.value), {
+          shouldValidate: form.formState.isSubmitted,
+        })
+      }
+    },
   })
 
   const errors = form.formState.errors
@@ -137,9 +116,7 @@ export function CustomerForm({
         required
         error={errors.name?.message}
       >
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-        )}
+        {({ id, ...field }) => <Input id={id} disabled={isSubmitting} {...field} {...nameField} />}
       </FormRow>
       <FormRow
         label="External ID"
@@ -219,16 +196,26 @@ export function CustomerForm({
       </FormRow>
       <FormRow
         label="Country"
-        hint="Two-letter code, e.g. GB."
+        hint="Stored as the two-letter code; search by name."
         error={errors.addressCountry?.message}
       >
         {({ id, ...field }) => (
-          <Input
-            id={id}
-            maxLength={2}
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('addressCountry')}
+          <Controller
+            control={form.control}
+            name="addressCountry"
+            render={({ field: control }) => (
+              <OptionCombobox
+                id={id}
+                {...field}
+                searchable
+                value={control.value || undefined}
+                onValueChange={(value) => control.onChange(value)}
+                options={COUNTRY_CHOICES}
+                placeholder="Search countries…"
+                emptyText="No matching country."
+                disabled={isSubmitting}
+              />
+            )}
           />
         )}
       </FormRow>
@@ -247,14 +234,11 @@ export function CustomerForm({
             control={form.control}
             name="timezone"
             render={({ field: control }) => (
-              <OptionCombobox
+              <TimezoneCombobox
                 id={id}
                 {...field}
                 value={control.value || undefined}
                 onValueChange={(value) => control.onChange(value)}
-                options={timezoneOptions(control.value)}
-                placeholder="Search time zones…"
-                emptyText="No matching time zone."
                 disabled={isSubmitting}
               />
             )}

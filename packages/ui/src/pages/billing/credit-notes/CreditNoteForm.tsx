@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useEffect } from 'react'
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   CREDIT_NOTE_REASON_LABEL,
@@ -48,6 +49,8 @@ export interface CreditNoteFormProps {
   invoiceLines: readonly CreditNoteInvoiceLine[]
   linesLoading?: boolean
   onInvoiceChange: (invoiceId: string) => void
+  /** The invoice chosen when the form opens. */
+  defaultInvoiceId?: string
   trail: DetailCrumb[]
   onSubmit: (creditNote: CreateCreditNote) => void
   onCancel?: () => void
@@ -66,11 +69,13 @@ export function CreditNoteForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  defaultInvoiceId,
 }: CreditNoteFormProps) {
-  const form = useForm<CreateCreditNote>({
+  const form = useCalmForm<CreateCreditNote>({
     resolver: standardSchemaResolver(createCreditNoteSchema) as Resolver<CreateCreditNote>,
-    defaultValues: emptyCreditNote(),
-    mode: 'onTouched',
+    defaultValues: defaultInvoiceId
+      ? { ...emptyCreditNote(), invoiceId: defaultInvoiceId }
+      : emptyCreditNote(),
   })
   const errors = form.formState.errors
   const lines = form.watch('lines')
@@ -90,12 +95,12 @@ export function CreditNoteForm({
 
   return (
     <FormPage
-      title="New credit note"
+      title="New credit memo"
       trail={trail}
       width="narrow"
       toolbar={{
         mode: 'create',
-        noun: 'credit note',
+        noun: 'credit memo',
         formId: 'credit-note-create-form',
         onCancel,
         isSubmitting,
@@ -107,10 +112,10 @@ export function CreditNoteForm({
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
       >
-        <FormCard title="Credit note details" status="required">
+        <FormCard title="Credit memo details" status="required">
           <FormRow
             label="Invoice"
-            hint="The invoice this credit note reduces."
+            hint="The invoice this credit memo reduces."
             required
             error={errors.invoiceId?.message}
           >
@@ -221,7 +226,7 @@ export function CreditNoteForm({
           </FormRow>
           <FormRow
             label="Memo"
-            hint="A note shown to the customer on the credit note."
+            hint="A note shown to the customer on the credit memo."
             align="start"
             error={errors.memo?.message}
           >

@@ -126,3 +126,11 @@ export const TruncatedInANarrowColumn: Story = {
     await expect(el.scrollWidth).toBeGreaterThan(el.clientWidth)
   },
 }
+
+/** A currency code Intl does not know falls back to the plain number and the code. It never throws. */
+export const InvalidCurrencyFallsBack: Story = {
+  args: { value: money('12.50', 'ZZZZZZ') },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('12.50 ZZZZZZ')).toBeInTheDocument()
+  },
+}

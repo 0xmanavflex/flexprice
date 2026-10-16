@@ -37,7 +37,9 @@ export const Create: Story = {
     await expect(args.onSubmit).not.toHaveBeenCalled()
 
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'VAT standard')
-    await userEvent.type(canvas.getByRole('textbox', { name: /^code/i }), 'VAT20')
+    const code = canvas.getByRole('textbox', { name: /^code/i })
+    await userEvent.clear(code)
+    await userEvent.type(code, 'VAT20')
     await userEvent.type(canvas.getByRole('textbox', { name: /rate/i }), '20')
     await userEvent.click(canvas.getByRole('button', { name: /create tax rate/i }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
@@ -49,7 +51,7 @@ export const Create: Story = {
 export const Edit: Story = {
   render: (args) => (
     <TaxRateEditForm
-      trail={[{ label: 'Tax rates' }, { label: 'VAT standard' }, { label: 'Edit' }]}
+      trail={[{ label: 'Tax rates' }, { label: 'Tax rate details' }, { label: 'Edit' }]}
       defaultValue={{ name: 'VAT standard', code: 'VAT20', description: '', status: 'published' }}
       onSubmit={fn()}
       {...(args.onCancel ? { onCancel: args.onCancel } : {})}
@@ -90,6 +92,22 @@ interface PlaygroundArgs {
 }
 
 /** Switch between create (value and scope) and edit (rename, recode, archive); flip submitting or a server error. */
+/** The code is filled from the name until the person types their own. */
+export const CodeFollowsName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const field = canvas.getByRole('textbox', { name: /^code/i })
+
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Pro')
+    await expect(field).toHaveValue('taxacmepro')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, 'mine')
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Plus')
+    await expect(field).toHaveValue('mine')
+  },
+}
+
 export const Playground: StoryObj<PlaygroundArgs> = {
   parameters: { controls: { exclude: /^on[A-Z].*$/ } },
   args: {
@@ -134,7 +152,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       <TaxRateEditForm
         key={`edit|${name}|${code}|${description}|${status}`}
         {...rest}
-        trail={[{ label: 'Tax rates' }, { label: name || 'Tax rate' }, { label: 'Edit' }]}
+        trail={[{ label: 'Tax rates' }, { label: 'Tax rate details' }, { label: 'Edit' }]}
         defaultValue={{ name, code, description, status }}
         submitError={submitError || null}
       />

@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # The SDK is the console's only contract with the backend, so a release of it
+  # gets its own pull request the day it is published. CI on that PR (types,
+  # unit tests, stories) is what shows what the new version breaks; the SDK
+  # watch workflow explains what moved. Nothing else is bumped automatically.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    allow:
+      - dependency-name: '@flexprice/sdk'
+    groups:
+      flexprice-sdk:
+        patterns:
+          - '@flexprice/sdk'
+    labels:
+      - sdk-update
+    commit-message:
+      prefix: 'deps(sdk)'

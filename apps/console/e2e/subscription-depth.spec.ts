@@ -13,18 +13,65 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('contract detail shows pricing and entitlements', async ({ page }) => {
-  await page.goto('/subscriptions')
+test('contract detail overview shows the upcoming invoice and entitlements', async ({ page }) => {
+  await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()
-  await expect(page).toHaveURL(/\/subscriptions\/[^/]+$/)
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
 
-  await page.getByRole('tab', { name: 'Pricing' }).click()
+  await expect(page.getByRole('heading', { name: 'Contract', exact: true })).toBeVisible()
+
+  await expect(page.getByRole('heading', { name: 'Billing & collection' })).toBeVisible()
+
+  const invoice = page.locator('section', {
+    has: page.getByRole('heading', { name: 'Upcoming invoice' }),
+  })
+  await expect(invoice.getByText('Platform fee')).toBeVisible()
+  await expect(invoice.getByText('API usage')).toBeVisible()
+  await expect(invoice.getByText('Amount due')).toBeVisible()
+  await expect(invoice.getByText('$275.56')).toBeVisible()
+  // Zero-amount lines never reach the preview, and there is no switch to bring them back.
+  await expect(invoice.getByText('Extra seats')).toHaveCount(0)
+  await expect(page.getByRole('switch', { name: 'Hide zero charges' })).toHaveCount(0)
+
+  await expect(page.getByText('API calls', { exact: true })).toBeVisible()
+  await expect(page.getByText('Single sign-on')).toBeVisible()
+  await expect(page.getByText('Unlimited')).toBeVisible()
+})
+
+test('contract detail charges tab lists the contract charges', async ({ page }) => {
+  await page.goto('/contracts')
+  await page.getByRole('row').nth(1).click()
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
+
+  await page.getByRole('tab', { name: 'Charges' }).click()
   await expect(page.getByText('Platform fee')).toBeVisible()
   await expect(page.getByText('API usage')).toBeVisible()
   await expect(page.getByText(/99\.00/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Manage pricing' })).toBeVisible()
+})
 
-  await page.getByRole('tab', { name: 'Entitlements' }).click()
-  await expect(page.getByText('API calls')).toBeVisible()
-  await expect(page.getByText('Single sign-on')).toBeVisible()
-  await expect(page.getByText('Unlimited')).toBeVisible()
+test('contract detail overview keeps every add section and adds a coupon', async ({ page }) => {
+  await page.goto('/contracts')
+  await page.getByRole('row').nth(1).click()
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
+
+  for (const name of ['Entitlements', 'Credit grants', 'Add-ons', 'Coupons', 'Taxes']) {
+    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
+  }
+  for (const name of [
+    'Add entitlement',
+    'Add credit grant',
+    'Add add-on',
+    'Add coupon',
+    'Add tax',
+  ]) {
+    await expect(page.getByRole('button', { name })).toBeVisible()
+  }
+
+  await page.getByRole('button', { name: 'Add coupon' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('combobox', { name: /Coupon/ }).click()
+  await page.getByRole('option').first().click()
+  await dialog.getByRole('button', { name: 'Add coupon' }).click()
+  await expect(dialog).toHaveCount(0)
 })

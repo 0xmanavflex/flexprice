@@ -1,34 +1,56 @@
 import { useMemo, useState } from 'react'
-import { SubscriptionStatus, type SubscriptionCancellationType } from '@fp/domain'
+import {
+  DEFAULT_ADDON_QUERY,
+  DEFAULT_COUPON_QUERY,
+  DEFAULT_TAX_RATE_QUERY,
+  SubscriptionStatus,
+  type SubscriptionCancellationType,
+} from '@fp/domain'
 import {
   ApiError,
   useActivateSubscription,
+  useCancelSubscriptionCreditGrant,
+  useRemoveSubscriptionAddon,
+  useRemoveSubscriptionTax,
+  useAddons,
+  useAddSubscriptionAddon,
+  useAddSubscriptionCoupon,
   useCancelSubscription,
+  useCoupons,
+  useCreateSubscriptionCreditGrant,
+  useCreateSubscriptionEntitlement,
+  useCreateSubscriptionTax,
+  useCustomerIntegrationLinks,
+  useIntegrations,
+  useLinkCustomerIntegration,
+  useTaxRates,
+  useUnlinkCustomerIntegration,
   useCreateSubscriptionLineItem,
   useDeleteSubscriptionLineItem,
   useExecuteLineChange,
   usePreviewLineChange,
   useSubscription,
+  useContractChargeAlerts,
+  useSubscriptionAddons,
+  useSubscriptionCoupons,
   useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
+  useSubscriptionInvoicePreview,
   useSubscriptionInvoices,
   useSubscriptionLines,
   useSubscriptionSchedules,
+  useSubscriptionTaxes,
   useSubscriptionUsage,
+  useUpdateAlertSetting,
   useUpdateSubscriptionLineItem,
+  serverReason,
 } from '@fp/query'
 import { SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
-import {
-  AppFailure,
-  ConfirmDialog,
-  DateInput,
-  LoadingRows,
-  OptionSelect,
-  PageBody,
-} from '@fp/ui/compositions'
-import { Input } from '@fp/ui/primitives'
+import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
+import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions } from '../plans/planFormOptions'
-import { mockSubscriptionActivity } from './subscriptionActivityMock'
+import { subscriptionLifecycle } from './subscriptionLifecycle'
+import { detailGate } from '../shared/detailGate'
 
 export interface SubscriptionDetailPageProps {
   subscriptionId: string
@@ -41,6 +63,7 @@ export interface SubscriptionDetailPageProps {
 const CANCEL_OPTIONS = [
   { value: 'end_of_period', label: 'At the end of the current period' },
   { value: 'immediate', label: 'Immediately' },
+  { value: 'scheduled_date', label: 'On a date' },
 ]
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -75,54 +98,78 @@ export function SubscriptionDetailPage({
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
   const lines = useSubscriptionLines(subscriptionId)
+  const chargeAlerts = useContractChargeAlerts(subscriptionId)
   const entitlements = useSubscriptionEntitlements(subscriptionId)
   const creditGrants = useSubscriptionCreditGrants(subscriptionId)
   const usage = useSubscriptionUsage(subscriptionId)
   const invoices = useSubscriptionInvoices(subscriptionId)
   const schedules = useSubscriptionSchedules(subscriptionId)
+  const addons = useSubscriptionAddons(subscriptionId)
+  const coupons = useSubscriptionCoupons(subscriptionId)
+  const taxes = useSubscriptionTaxes(subscriptionId)
+  const status = subscription.data?.status
+  const preview = useSubscriptionInvoicePreview(subscriptionId, {
+    hideZeroCharges: true,
+    enabled: status === SubscriptionStatus.Active || status === SubscriptionStatus.Paused,
+  })
   const cancel = useCancelSubscription()
   const activate = useActivateSubscription()
+  const removeAddon = useRemoveSubscriptionAddon()
+  const removeTax = useRemoveSubscriptionTax()
+  const endGrant = useCancelSubscriptionCreditGrant()
   const addLine = useCreateSubscriptionLineItem()
   const editLine = useUpdateSubscriptionLineItem()
   const endLine = useDeleteSubscriptionLineItem()
   const previewChange = usePreviewLineChange()
   const executeChange = useExecuteLineChange()
   const formOptions = usePlanFormOptions()
+  const customerId = subscription.data?.customerId ?? ''
+  const integrationLinks = useCustomerIntegrationLinks(customerId)
+  const integrations = useIntegrations()
+  const linkIntegration = useLinkCustomerIntegration(customerId)
+  const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
+  const createEntitlement = useCreateSubscriptionEntitlement(subscriptionId)
+  const createCreditGrant = useCreateSubscriptionCreditGrant(subscriptionId)
+  const addAddon = useAddSubscriptionAddon(subscriptionId)
+  const addCoupon = useAddSubscriptionCoupon(subscriptionId)
+  const updateAlert = useUpdateAlertSetting()
+  const createTax = useCreateSubscriptionTax(subscriptionId)
+  const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
+  const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
+  const taxRateCatalogue = useTaxRates({
+    ...DEFAULT_TAX_RATE_QUERY,
+    pageSize: 100,
+    statuses: ['published'],
+  })
 
   const [dialog, setDialog] = useState<'cancel' | 'activate' | null>(null)
   const [cancellationType, setCancellationType] =
     useState<SubscriptionCancellationType>('end_of_period')
   const [reason, setReason] = useState('')
+  const [cancelAt, setCancelAt] = useState('')
+  const [prorate, setProrate] = useState(false)
+  const [finalInvoice, setFinalInvoice] = useState(false)
+  const [cancelProblem, setCancelProblem] = useState<string | null>(null)
   const [startDate, setStartDate] = useState(today())
 
   const activity = useMemo(
-    () => (subscription.data ? mockSubscriptionActivity(subscription.data) : []),
+    () => (subscription.data ? subscriptionLifecycle(subscription.data) : []),
     [subscription.data],
   )
 
-  if (subscription.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (subscription.error || !subscription.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={subscription.error ? 'This contract could not be loaded' : 'Contract not found'}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={subscription.error ? () => void subscription.refetch() : onNavigateToList}
-        />
-      </PageBody>
-    )
+  if (!subscription.data) {
+    return detailGate(subscription, {
+      noun: 'this contract',
+      listName: 'contracts',
+      onBack: onNavigateToList,
+    })
   }
 
   const data = subscription.data
+  const linkedTypes = new Set((integrationLinks.data ?? []).map((link) => link.providerType))
+  const linkableProviders = (integrations.data ?? [])
+    .filter((integration) => integration.connection && !linkedTypes.has(integration.providerType))
+    .map((integration) => ({ providerType: integration.providerType, name: integration.name }))
   const close = () => setDialog(null)
 
   return (
@@ -130,11 +177,46 @@ export function SubscriptionDetailPage({
       <SubscriptionDetailView
         subscription={data}
         lines={part(lines)}
+        chargeAlerts={part(chargeAlerts)}
         entitlements={part(entitlements)}
         creditGrants={part(creditGrants)}
         usage={part(usage)}
         invoices={part(invoices)}
         schedules={part(schedules)}
+        preview={part(preview)}
+        addons={part(addons)}
+        coupons={part(coupons)}
+        taxes={part(taxes)}
+        integrationLinks={integrationLinks.data ?? []}
+        linkableProviders={linkableProviders}
+        onLinkIntegration={(input) => linkIntegration.mutateAsync(input)}
+        onUnlinkIntegration={(input) => unlinkIntegration.mutateAsync(input)}
+        onAddEntitlement={(draft) => createEntitlement.mutateAsync(draft)}
+        onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
+        onAddAddon={(draft) => addAddon.mutateAsync(draft)}
+        onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
+        onSaveChargeAlert={({ settingId, config }) =>
+          updateAlert.mutateAsync({ id: settingId, config })
+        }
+        onAddTax={(draft) => createTax.mutateAsync(draft)}
+        onRemoveAddon={(addon) => removeAddon.mutateAsync(addon.id)}
+        onRemoveTax={(tax) => removeTax.mutateAsync(tax.id)}
+        onCancelCreditGrant={(grant) => endGrant.mutateAsync(grant.id)}
+        sectionOptions={{
+          features: formOptions.featureOptions,
+          addons: (addonCatalogue.data?.addons ?? [])
+            .filter((addon) => addon.status === 'published')
+            .map((addon) => ({ id: addon.id, name: addon.name })),
+          coupons: (couponCatalogue.data?.coupons ?? [])
+            .filter((coupon) => coupon.code !== '')
+            .map((coupon) => ({ code: coupon.code, name: coupon.name })),
+          taxRates: (taxRateCatalogue.data?.taxRates ?? [])
+            .filter((rate) => rate.code !== '')
+            .map((rate) => ({
+              code: rate.code,
+              label: `${rate.name}${rate.percentageValue ? ` (${rate.percentageValue}%)` : ''}`,
+            })),
+        }}
         activity={activity}
         onBack={onNavigateToList}
         onOpenCustomer={() => onOpenCustomer(data.customerId)}
@@ -173,12 +255,40 @@ export function SubscriptionDetailPage({
               <OptionSelect
                 id="cancel-when"
                 value={cancellationType}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   setCancellationType(value as SubscriptionCancellationType)
-                }
+                  setCancelProblem(null)
+                }}
                 options={CANCEL_OPTIONS}
               />
             </label>
+            {cancellationType === 'scheduled_date' ? (
+              <label htmlFor="cancel-at" className="flex flex-col gap-1.5 text-sm">
+                Cancel on
+                <DateInput
+                  id="cancel-at"
+                  value={cancelAt}
+                  onValueChange={(value) => {
+                    setCancelAt(value)
+                    setCancelProblem(null)
+                  }}
+                />
+              </label>
+            ) : null}
+            <span className="flex items-center justify-between gap-4 text-sm">
+              <label htmlFor="cancel-prorate">Prorate the current period</label>
+              <Switch id="cancel-prorate" checked={prorate} onCheckedChange={setProrate} />
+            </span>
+            {cancellationType === 'immediate' ? (
+              <span className="flex items-center justify-between gap-4 text-sm">
+                <label htmlFor="cancel-invoice">Raise a final invoice now</label>
+                <Switch
+                  id="cancel-invoice"
+                  checked={finalInvoice}
+                  onCheckedChange={setFinalInvoice}
+                />
+              </span>
+            ) : null}
             <label htmlFor="cancel-reason" className="flex flex-col gap-1.5 text-sm">
               Reason (optional)
               <Input
@@ -193,10 +303,30 @@ export function SubscriptionDetailPage({
         cancelLabel="Keep contract"
         destructive
         isPending={cancel.isPending}
-        error={toError(cancel.error, 'cancel')}
-        onConfirm={() =>
-          cancel.mutate({ id: data.id, draft: { cancellationType, reason } }, { onSuccess: close })
-        }
+        error={cancelProblem ?? toError(cancel.error, 'cancel')}
+        onConfirm={() => {
+          if (cancellationType === 'scheduled_date' && !cancelAt) {
+            setCancelProblem('Pick the day the contract ends.')
+            return
+          }
+          if (cancellationType === 'scheduled_date' && cancelAt < today()) {
+            setCancelProblem('The cancellation date cannot be in the past.')
+            return
+          }
+          cancel.mutate(
+            {
+              id: data.id,
+              draft: {
+                cancellationType,
+                reason,
+                prorate,
+                ...(cancellationType === 'scheduled_date' ? { cancelAt } : {}),
+                ...(cancellationType === 'immediate' ? { generateInvoice: finalInvoice } : {}),
+              },
+            },
+            { onSuccess: close },
+          )
+        }}
       />
       <ConfirmDialog
         open={dialog === 'activate'}
@@ -227,7 +357,7 @@ export function SubscriptionDetailPage({
 function toError(error: unknown, verb: 'cancel' | 'activate'): string | null {
   if (!error) return null
   if (error instanceof ApiError && error.kind === 'forbidden')
-    return `You do not have permission to ${verb} contracts here.`
+    return serverReason(error) ?? `You do not have permission to ${verb} contracts here.`
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
   return `Could not ${verb} the contract. Try again.`

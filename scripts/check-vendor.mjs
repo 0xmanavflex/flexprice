@@ -10,9 +10,13 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 const lockPath = join(root, 'packages/ui/vendor.lock.json')
-const dirs = ['primitives', 'reui', 'blocks', 'examples', 'ui'].map((d) =>
-  join(root, 'packages/ui/src/components', d),
-)
+const dirs = [
+  ...['primitives', 'reui', 'blocks', 'examples', 'ui'].map((d) =>
+    join(root, 'packages/ui/src/components', d),
+  ),
+  // ReUI Motion Icons, installed by packages/ui/scripts/icons-sync.mjs.
+  join(root, 'packages/ui/src/reui'),
+]
 
 function walk(dir) {
   let entries

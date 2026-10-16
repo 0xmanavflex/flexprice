@@ -1,5 +1,5 @@
-import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from 'lucide-react'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
+import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from '@ui/icons'
+import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
@@ -18,11 +18,16 @@ import { DetailTable } from '../../shared/DetailTable'
  */
 export const EntitlementTableProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/section', 'pages/shared/DetailTable', 'ui/button'],
+  composes: [
+    'compositions/section',
+    'compositions/SubTabState',
+    'pages/shared/DetailTable',
+    'ui/button',
+  ],
   note: 'Flush entitlements section for add-on and plan-like detail pages.',
 })
 
-export interface EntitlementTableProps {
+export interface EntitlementTableProps extends Partial<SubTabQuery> {
   entitlements: Entitlement[]
   onAdd?: () => void
   onEdit?: (entitlement: Entitlement) => void
@@ -30,6 +35,8 @@ export interface EntitlementTableProps {
   onOpenFeature?: (featureId: string) => void
   /** Section heading; defaults to "Entitlements". */
   title?: string
+  /** Show the heading above the box, for a tab that stacks this table with another. */
+  showTitle?: boolean
 }
 
 const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
@@ -67,10 +74,17 @@ export function EntitlementTable({
   onDelete,
   onOpenFeature,
   title = 'Entitlements',
+  showTitle,
+  isLoading,
+  error,
+  errorKind,
+  retryAfterMs,
+  onRetry,
+  isRetrying,
 }: EntitlementTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
-    <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
+    <Button type="button" onClick={onAdd}>
       <PlusIcon aria-hidden />
       Add entitlement
     </Button>
@@ -79,18 +93,33 @@ export function EntitlementTable({
   if (entitlements.length === 0) {
     return (
       <Section title={title} flush>
-        <SectionEmpty
-          title="No entitlements yet"
-          description={`Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`}
-          action={addButton}
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading ?? false}
+          error={error}
+          errorKind={errorKind}
+          retryAfterMs={retryAfterMs}
+          onRetry={onRetry}
+          isRetrying={isRetrying}
+          columns={5}
+          loadingLabel="Loading entitlements"
+          empty={{
+            scene: 'catalog',
+            title: 'No entitlements yet',
+            description: `Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`,
+            action: addButton,
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }
 
   return (
-    <Section title={title} flush bare>
+    <Section table title={title} {...(showTitle ? { showTitle } : {})}>
       <DetailTable
+        compact
         {...(addButton ? { action: addButton } : {})}
         label="Entitlements"
         facet={{ label: 'Type', value: (entitlement) => TYPE_LABEL[entitlement.featureType] }}

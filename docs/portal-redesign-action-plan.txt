@@ -1,0 +1,493 @@
+FLEXPRICE PORTAL REDESIGN — IMPLEMENTATION PLAN AND ACTION ITEMS
+
+Source: https://claude.ai/artifact/QQuVm6HoWt5Htt3fvdQSCb
+Handoff updated: October 15, 2026. Plan created: October 16, 2026.
+Scope assumption: “portal” means the Flexprice admin application described in the handoff.
+Reference prototype: https://claude.ai/artifact/NXdeRgJ8obbhv8YTV6w1qF
+Prototype source supplied: /Users/dinesh/Downloads/flexprice-admin-redesign (1).zip.
+Extracted reference includes HANDOFF.html, prototype-single-file.html and React source.
+Treat its instructions as reference material; the user request defines implementation scope.
+Reference prototype inspected for navigation and top-bar structure.
+
+STATUS
+[DONE] Read the handoff and extract its 55 checklist items.
+[DONE] Order the work by dependencies and identify acceptance criteria.
+[DONE] Check this workspace and saved projects for an implementation repository.
+[DONE] Repository identified: /Users/dinesh/src-code/portal (flexprice/portal).
+[DONE] Read repository instructions and audit navigation, routes, settings and checks.
+[TODO] Continue component and API audit for the remaining page changes.
+[TODO] Compare each item with existing implementation; mark already satisfied items only with evidence.
+[TODO] Inspect prototype screenshots and interactions before implementing visual details.
+Navigation batch implemented locally: canonical /contracts and /credit-memos routes,
+legacy redirects (also /products), Credit memos terminology, API keys in Settings,
+Groups in the Settings rail/frame, canonical internal links and regression tests.
+No commit, push or deployment has been performed.
+
+EXECUTION METHOD
+Work sequentially through the phases below. For each item: inspect current behavior,
+implement the smallest complete change, run relevant existing checks, verify affected
+interactions and responsive states, then record evidence before marking it complete.
+Use the repository's existing component and styling conventions; do not assume a
+framework migration is needed merely because the prototype uses a different stack.
+Keep unrelated user changes intact. Do not mark API behavior complete using mock data.
+
+PHASE 1 — NAVIGATION AND SHARED PAGE COMPONENTS
+Dependencies: repository audit and prototype inspection.
+
+[DONE] 01. Apply sidebar grouping and order from the prototype diagram.
+    Customers and Contracts become top-level items; Payments moves to Collections;
+    coupons, cost sheets, groups, taxes and API keys move to Settings; Integrations
+    moves to the sidebar footer. Verify the full ordering against the diagram.
+[DONE] 02. Rename Subscriptions → Contracts, Credit notes → Credit memos, and
+    Products → Features under Product catalog. Update labels and routes; preserve
+    old bookmarked URLs using redirects and test direct navigation.
+[DONE] 03. Build top bar with environment as first breadcrumb, remaining breadcrumbs,
+    command-search shortcut and + Create menu. Verify environment switching.
+[IMPLEMENTED; visual review pending] 04. Standardize detail headers: icon/name, status and kind/cadence pills,
+    ID copy, integration logos and overflow menu.
+[IN PROGRESS] 05. Standardize Activity → Metadata → Related sidebar on applicable detail pages.
+    Honor explicit Plan and Feature exceptions described in Phase 4.
+[IN PROGRESS] 06. Replace body integration mapping cards with header logos and Related rows.
+    Include external-ID copy/open/unlink interactions and link integration entry.
+[IN PROGRESS] 07. Keep sub-table titles/Add actions above their box; keep empty messages
+    inside the same box without changing the surrounding layout.
+[IN PROGRESS] 08. Implement shared list-table styling and behavior: grey header, borderless
+    rows, row navigation, search/filter/sort/columns, centred counts, muted dash for
+    zero, short copyable IDs and integration logos. Prevent copy/menu clicks from
+    also navigating. Status is a filter rather than list-page tabs.
+[IN PROGRESS] 09. Add list empty states with illustration, primary/secondary actions and
+    three guide cards; verify useful destinations for every action.
+
+PHASE 2 — LIST TABLES
+Dependencies: item 08; coordinate catalog counts with item 54.
+
+[IMPLEMENTED; live count validation pending] 10. Customers: Name, Email, External ID, Integrations, Contracts, Created on.
+[IMPLEMENTED; live count validation pending] 11. Contracts: Customer, Plan, Billing, Status, Current period, Started.
+    Remove MRR; display period as a range.
+[IMPLEMENTED; live mapping verification pending] 12. Invoices: Invoice number, Customer, Invoice date, Due date, Amount,
+    Amount due, Payment status, Integrations. Invoice status becomes a filter.
+[DONE] 13. Credit memos: Credit memo, Customer, Invoice number, Date, Amount, Status.
+    Remove Reason/Type columns; connect row navigation when item 39 is implemented.
+[IN PROGRESS; receipt/customer API blocked] 14. Payments: Receipt number, Invoice number, Customer, Amount,
+    Payment method, Status, Integration.
+[IMPLEMENTED; live count validation pending] 15. Features: Name, Type, Event name, Aggregation, Group, Entitlements,
+    Contracts. Render aggregation as a formula and Group as a chip; remove
+    Status, Updated and Charges columns.
+[IMPLEMENTED; live count validation pending] 16. Plans: Plan, Type, Charges, Entitlements, Credit grants, Contracts,
+    Status, Lookup key. Type is Hybrid / Usage-based / Flat-rate; centre counts.
+[IN PROGRESS; contract-count API blocked] 17. Add-ons: Add-on, Type, Charges, Entitlements, Contracts, Status,
+    Lookup key. Use the same Type pill and count formatting as Plans.
+[ ] 18. Resolve proposed plan count display before changing it: combined Includes
+    column (“6 features · 2 grants”), “6 active” contracts, charge names on hover.
+    This is a proposal, not an implemented prototype requirement.
+
+PHASE 3 — SHARED CHARGES SYSTEM
+Dependencies: shared components; validate available API contracts early.
+Implement this before completing pages that consume the charges table.
+
+[IMPLEMENTED; visual review pending] 30. Build one charges table for contracts, plans, features, add-ons and groups.
+    Contract Overview shows changed charges; Charges tab shows all with
+    Active / Changed / Ended filtering. Feature rows navigate to their plan.
+[IN PROGRESS] 31. Render Charge / Price / Flags, optional Quantity on wide tables,
+    short grey model description and tier count. No row expansion or nested table.
+[IMPLEMENTED; live coupon/alert coverage pending] 32. Render flags in this order: Price changed, Discount, Commitment, Alerts,
+    History. Neutral chips, coloured icons, no values in labels. Provisional narrow
+    behavior: first two labelled, remaining flags icon-only with tooltips.
+[IMPLEMENTED; broader keyboard journey review pending] 33. Open the charge side sheet at the section corresponding to the clicked flag.
+    Verify keyboard access, focus handling, scrolling and closing behavior.
+[IMPLEMENTED; live coupon/alert coverage pending] 34. Render only applicable sheet sections; show current price prominently and
+    plan price in grey without strikethrough. Fix the stated prototype quirks:
+    derive Discount flag and section from the same coupon data and align section
+    order with flag order: Price, Discount, Commitment, Alerts, History.
+[ ] 35. Support commitment states: per billing period/duration; every minute/hour
+    all day; and minute/hour windows with their own commitment and tiers.
+    For windows show UTC time range, commitment, tiers and Rest of the day;
+    do not add a 24-hour bar.
+[IMPLEMENTED; API coverage pending] 36. Display versions newest first with Start, End, Last updated and author;
+    highlight the current version.
+[ ] 37. Offer Revert only on the immediately previous version with confirmation.
+    Verify success/error handling and data refresh after a successful revert.
+[ ] 38. Integrate actual line-item version listing and revert endpoints.
+    Depends on backend contract in item 51; mock behavior cannot complete this item.
+
+PHASE 4 — CONTRACT, CATALOG AND CUSTOMER DETAIL PAGES
+Dependencies: Phases 1 and 3.
+
+[IMPLEMENTED with preserved Usage tab] 19. Contract: title “{Customer} on {Plan}”, status/cadence pills and
+    Overview / Charges / Invoices tabs with appropriate counts.
+[IMPLEMENTED; visual baseline review pending] 20. Place Contract and Billing & collection cards side by side, followed
+    by Upcoming invoice above Charges.
+[IMPLEMENTED] 21. Show only changed charges in Overview and link Show all charges to
+    the complete Charges tab.
+[IMPLEMENTED for supported actions] 22. Move Commitments, Entitlements, Credit grants, Add-ons and Coupons
+    into consistent sub-table frames below the contract overview content.
+[IMPLEMENTED; visual review pending] 23. Apply Activity → Metadata → Related to the contract sidebar.
+[IMPLEMENTED; visual baseline review pending] 24. Plan: Overview / Information tabs; stack Charges, Entitlements and
+    Credit grants on Overview. Information contains plan details and
+    Metadata/Related side by side. Update Type pill when charges change.
+[IMPLEMENTED; visual baseline pending] 25. Keep live What customers see pricing card on both Plan tabs;
+    make its section headings jump to matching tables.
+[IMPLEMENTED; live mapping verification pending] 26. Move Plan Link integration into the overflow menu.
+[ ] 27. Feature: Overview / Information tabs; show charges by billing plan
+    and entitlements on Overview; present the create form read-only on Information.
+[IMPLEMENTED; visual review pending] 28. Feature sidebar: Send a test event with Copy cURL and Metadata;
+    remove usage chart. Verify the existing test-event workflow still works.
+[ ] 29. Customer: Overview, Invoices, Wallet, Analytics, Events, Information;
+    remove Tax tab while identifying the destination of existing tax functionality.
+    Overview: ARR, days sales outstanding, last invoice, next invoice, then
+    Contracts, Recent invoices, Recent payments. Wallet: Real-time balance first,
+    Last invoiced balance second; group the ledger by top-up.
+
+PHASE 5 — CREDIT MEMOS
+Dependencies: shared detail components and existing invoice/credit APIs.
+
+[IMPLEMENTED; metadata API unavailable] 39. Build credit memo detail page patterned on the invoice document layout:
+    amount credited, memo number/date, linked invoice, credited party, reason,
+    memo, plus Activity → Metadata → Related sidebar.
+[IMPLEMENTED for exposed data; settlement detail API pending] 40. Render Invoiced vs Credited line amounts and totals. Settlement footer
+    must reflect refund, reduced invoice amount due, or void state from real data.
+[DONE] 41. Connect list rows to memo details; verify direct links and missing records.
+
+PHASE 6 — REVENUE
+Dependencies: verify revenue API capabilities in item 53.
+
+[ ] 42. Default to Last 90 days with no comparison; weekly buckets for short
+    ranges and monthly buckets for yearly ranges, subject to API contract.
+[ ] 43. Show four summary cards: Revenue, ARPU, Outstanding, Overdue.
+[ ] 44. Show change indicators only for Revenue/ARPU when comparison is selected.
+    Outstanding/Overdue are as-of-today metrics and never display comparison change.
+[ ] 45. Match overview panels: Revenue over time, Receivables aging,
+    Days to pay over time, Top 5 customers, Credit consumption vs. top-ups.
+    Use the prototype's plain bar/line charts and verify metric definitions.
+[ ] 46. Implement loading, error with Try again, and empty states.
+[ ] 47. Ensure every Revenue tab reads the same selected date range;
+    preserve existing functionality on the other tabs.
+[ ] 48. Prepare chart/figure evidence for Agrim's sign-off.
+    External sign-off remains pending until actually supplied; do not infer approval.
+
+PHASE 7 — HOME AND PRICING WIDGET
+Dependencies: existing data flows and Plan pricing card from item 25.
+
+[ ] 49. Home: one shared granularity/range row, metric chart tabs for Events /
+    Revenue / Processing lag, Recent contracts and half-donut Invoice payment status.
+[ ] 50. Pricing widget: compact What customers see plan cards, one shared
+    Monthly / Annual switch and working embed code below.
+
+PHASE 8 — BACKEND CONTRACTS AND OPEN DECISIONS
+Discover these during the initial repository audit; resolve blockers before dependent
+UI items. Backend implementation requires access to its owning repository if separate.
+
+[ ] 51. Define/verify charge-version list and revert APIs including re-rating,
+    eligible prior version, returned fields, errors and post-revert refresh behavior.
+[ ] 52. Provide coupon and alert settings together with charges so flags do not
+    require per-row requests. Ensure flag/section presence uses the same data.
+[ ] 53. Verify revenue API supports the 90-day default, optional comparison and
+    weekly/monthly buckets; establish exact date/time boundaries and response shape.
+[ ] 54. Verify catalog endpoints provide charge, entitlement, grant and contract
+    counts with clear definitions and acceptable list-request performance.
+[ ] 55. Resolve and record all four open design decisions:
+    - Narrow charge flags: two labelled flags or icons only?
+    - Link integration: overflow on every detail page or Plan only?
+    - Adopt the proposed combined Plans count presentation?
+    - Where should contract Phases and Tax associations live?
+    Pending decisions: follow documented current prototype behavior for the first
+    three; preserve existing Phases/Tax functionality until its destination is decided.
+
+TRACEABILITY NOTE
+The handoff has 55 original checklist entries. This plan retains those entries:
+01–55. Each item has a unique identifier.
+Their execution order differs to build shared Charges before dependent detail pages.
+
+VALIDATION AND COMPLETION
+- Run repository-required lint/type/build checks appropriate to changes.
+- Use meaningful existing or new tests for redirects, data mapping, version/revert
+  eligibility, date-range/comparison behavior and error handling.
+- Visually verify affected pages at desktop and narrow widths against the prototype.
+- Check keyboard navigation, focus, row/action click separation and empty/error states.
+- Record changed files, checks/results and remaining dependencies per completed batch.
+- Report UI work, backend work and stakeholder sign-off separately and accurately.
+
+NEXT EXECUTABLE STEP
+Complete remaining shared page patterns (05–09): audit other applicable detail rails,
+wire supported integration mappings, and move remaining nested table Add actions
+above the table frame. Validate real external provider URLs before enabling Open.
+
+NAVIGATION BATCH — VERIFICATION
+- Console unit tests: 29 files, 321 tests passed.
+- Navigation redirects, memo lifecycle and API-key Settings tests: 6 passed.
+- Shell, contract creation/detail/depth and credit memo lists: 15 passed.
+- Credit memo form/grid and invoice detail Storybook: 3 files, 37 tests passed.
+- Console and UI TypeScript checks passed.
+- Production build passed (existing chunk-size and Vite config warnings remain).
+- Console and UI ESLint checks passed.
+- Vendor integrity: all 380 protected files match baseline.
+- Visually verified Settings/API keys with mock data; screenshot: portal-settings.png.
+- Live backend verification, narrow-width visual review and remaining 52 items are pending.
+- Concurrent edits to timezone/customer-form code were preserved and are not part of this batch.
+
+SHARED LAYOUT BATCH — IMPLEMENTATION
+- DetailShell and EntityHeader now compose DetailHeader: one title/pill/copy/menu layout.
+- Integration marks follow ID/email and precede the overflow menu.
+- Customer Overview rail now Activity, Metadata, Related. Existing Plan/Feature exceptions preserved.
+- Customer and contract header/Related integration controls share query-backed link/unlink callbacks.
+- Section table headings/actions default above a stable bordered frame.
+- Customer contract counts are centred; zero renders a muted dash without changing export values.
+- Guided empty states with one primary action add a documentation secondary action.
+- Not complete: all detail rails, invoice/plan integration controls, validated external Open URLs,
+  every nested subtable action migration, and full list-column audit.
+- Prototype related.tsx explicitly calls its external URLs placeholders; not copied into production.
+- Customer/contract journey test added to verify unlink refreshes header and Related together.
+- Concurrent SubscriptionForm changes preserved; repaired an incomplete conditional preventing compilation.
+
+SHARED LAYOUT BATCH — VALIDATION
+- Affected Storybook reruns: 7 files, 123 tests passed (including narrow header).
+- Customer/contract journeys: 10 passed, including Related unlink/query refresh.
+- Console TypeScript and affected ESLint checks passed.
+- Page matrix current; 380 protected vendor files unchanged.
+- Full visual suite: 40 passed, 17 screenshot comparisons failed on macOS.
+- Reviewed all 17 diff images. Customer/contract rail changes and Settings navigation
+  explain some structural differences; other diffs include text rendering, date/data,
+  cost-sheet empty state and sign-in carousel differences. These are not all established
+  as regressions from this batch. Linux baseline verification remains required.
+- No visual baselines were rewritten. Not ready to mark visual validation complete.
+- Desktop customer preview inspected; evidence: portal-customer-layout.png.
+- Runtime/API checks used mocks; live backend behavior remains unverified.
+
+HTML REFERENCE FOLLOW-UP — OCTOBER 16
+- Item 07: stable header/Add placement applied to contract PartSection, Plan charges,
+  entitlements and grants, Feature charges, and Customer taxes. Loading/error frames preserved.
+  Hidden table headings no longer suppress their actions. Remaining shared table consumers need audit.
+- Item 13: credit-memo columns match billing.tsx reference; type removed from list.
+  Navigation and status/search behavior retained.
+- Item 12: invoice date, due date, amount, amount due and payment status align with reference.
+  Document status is an optional column and existing filter; integrations still pending.
+- Item 11 audited: contract list already has Customer/Plan/Billing/Status/Current period/Started
+  and no MRR column. Storybook coverage passed.
+- Item 14 API gap: current Payment read model lacks customer and receipt number.
+  Do not rename payment ID or gateway reference to receipt number.
+- Validation: 7 billing/contract journeys passed; TypeScript and scoped lint passed before
+  final Plan-charge/Customer-tax follow-up. Storybook and final checks recorded below.
+- Targeted visual run: 2 passed, 5 expected-baseline mismatches. Reviewed received screenshots
+  for Plan, contract, invoice and memo layouts. Baselines unchanged; Linux review pending.
+
+FINAL CHECKS FOR HTML FOLLOW-UP
+- 146 affected Storybook tests passed across 10 files (after updating renamed-column
+  assertions and keeping Add charge disabled while loading).
+- 7 assembled billing/contract journeys passed.
+- TypeScript, scoped ESLint, production build, diff whitespace and page matrix checks passed.
+- Vendor integrity: 380 protected files match.
+- Build retains existing large-chunk and Vite config-loader warnings.
+- Visual baselines remain pending Linux verification; no snapshots were rewritten.
+- Next: finish remaining detail rails/integration mapping contracts, then shared charges
+  and the outstanding list fields with verified backend data.
+
+DETAIL RAIL AND SHARED CHARGES FOLLOW-UP
+- Credit memo Activity/Related rail implemented from existing lifecycle timestamps and links.
+  Metadata is not in the current credit-memo model; full document layout remains pending.
+- Plan charges now use shared ChargeTable and ChargeSheet, joining contracts/add-ons/catalog consumers.
+  Feature/group migration is still pending; no claim that all consumers are migrated.
+- Charge/Price/Flags layout replaces Plan's bespoke columns and inline tier lists.
+  Tier details open in the shared sheet; known quantities appear in wide tables.
+- Stable table controls across empty/full states; formatted Plan prices preserved in sheet.
+- Version history sorted newest first with end and last-updated dates; author remains when supplied.
+  Revert and backend version endpoint integration remain pending (37/38/51).
+- Validation: 91 unique affected Storybook tests passed; 6 credit-memo/contract journeys passed.
+  TypeScript, scoped lint, build, vendor integrity and whitespace checks passed.
+- Targeted visuals: 2 passed / 3 baseline mismatches; received Plan/contract screenshots reviewed.
+  Linux baseline validation remains pending, no baselines changed.
+- Existing staged changes retained. No commit, push or deployment performed in this batch.
+
+FEATURE AND GROUP CHARGES FOLLOW-UP
+- Feature Overview now uses ChargeTable with Plan / add-on, Price and Flags;
+  row selection navigates to its real plan, add-on or cost sheet. Parent status
+  remains available as a filter. Loading/error states and retry are preserved.
+- Price groups now preserve the mapped Charge from the price API and render the
+  shared table/sheet. Missing members remain listed separately by ID; failures
+  show an error rather than an empty group. Feature groups keep their member table.
+- Confirmed existing contract rail order Activity → Metadata → Related and Feature
+  exception Send a test event → Metadata. Credit memo rail added in this batch
+  remains Activity → Related because its domain/API exposes no metadata.
+- Validation: 31 Feature/shared-table stories, 7 group stories, 18 group/price
+  query tests; TypeScript, scoped lint, production build, vendor and matrix checks.
+- Feature route screenshot reviewed: 2% mismatch from existing baseline; no
+  baseline rewritten. Linux visual verification remains pending.
+- Remaining: credit memo full document layout/metadata API; version/revert API
+  coverage; outstanding layout and integration interactions from the main list.
+
+CREDIT MEMO DOCUMENT — OCTOBER 16
+- Connected the existing CreditNoteDetailView to the real route and retained
+  finalize/void confirmations, query invalidation and navigation.
+- Document now shows amount, memo number/issue date, invoice link, credited party,
+  reason and memo; Invoiced/Credited lines join the original invoice by line ID.
+- Monetary strings stay exact. Totals use API values; no summed credit lines,
+  fabricated tax, or second subtraction from the invoice amount due.
+- Draft/void/adjustment states have explicit footer text. Refunds display the
+  recorded status without claiming an unverified destination or successful transfer.
+- Missing source invoices/lines render unknown amounts; the memo stays readable.
+  Metadata remains omitted because the memo API read model does not expose it.
+- Verified: 7 browser/a11y stories, 3 mapping tests, 4 assembled journeys including
+  direct reload and create/finalize/void; scoped lint, TypeScript, production build,
+  page matrix and vendor checks passed. No baselines changed.
+- Desktop and 390px screenshots reviewed. Narrow line comparison scrolls with
+  keyboard access. Existing targeted visual command passed; Linux baseline audit
+  remains pending given the previously recorded broader suite differences.
+
+CATALOG LISTS AND PLAN INFORMATION FOLLOW-UP
+- Audited Customers (Name/Email/External ID/Integrations/Contracts/Created on),
+  Contracts (Customer/Plan/Billing/Status/Current period/Started) and Plan column
+  order against the shared reference; existing default columns match.
+- Feature Entitlements now uses plain localized counts, preserving zero-state
+  Add entitlement and its row-menu action. Unknown export values stay blank;
+  zero Contracts uses the shared muted dash. Formula/group/default columns retained.
+- Plan and Add-on Type cells now share Hybrid / Usage-based / Flat-rate labels;
+  detail headings retain their entity nouns. Existing count columns remain centered.
+- Plan Information now retains the same live pricing card as Overview. Its links
+  switch to Overview and scroll/focus the corresponding Charges/Entitlements/Grants
+  heading. Query-backed edits and URL-addressable tabs remain intact.
+- Remaining list/API gaps: Add-on Contracts cannot be counted by the existing
+  subscription API (see addonLinkage.ts evidence); Payment lacks receipt/customer
+  fields; Invoice integration mappings still need verified data wiring.
+- Plan Related/integration controls remain pending; no placeholder integrations
+  or provider URLs added to fill the reference's empty slots.
+- Validation: 48 affected browser/a11y stories; TypeScript, scoped lint and build
+  pass. Three list visual comparisons pass; Plan Information differs by 2% after
+  retaining the pricing rail. Received screenshot reviewed; baselines unchanged.
+- Final assembled validation: all 9 Plan journeys pass across the final runs,
+  including Information reload, pricing update after adding a charge, and preview
+  navigation back to a focused Charges heading. Grant-based navigation fixture
+  setup was replaced because the first listed plan's mock grant read did not return
+  the created grant; no backend claim is made from that fixture.
+- Separate concurrent FormCard/SubscriptionForm edits were preserved untouched.
+
+
+INTEGRATION COLUMNS AND DETAIL LAYOUTS — OCTOBER 16
+- Items 06/12: invoice list integrations now read entity-specific SDK mappings;
+  invoice header and Related share link/unlink controls and query invalidation.
+  Provider ID copy/tooltip labels identify the invoice rather than the customer.
+- Item 14: Payments now has an Integration column from payment mappings. Receipt
+  number and customer remain unavailable in its read model; gateway reference
+  keeps its real label. Loading, retry and empty states use the shared column.
+- Items 24/26: Plan Information places Metadata/Related side by side at desktop,
+  retains the pricing preview, and shows actual provider mappings. Link integration
+  lives in the overflow menu; header and Related support copy/unlink.
+- SDK confirms plan/invoice/payment entity types and generic mapping endpoints.
+  List reads are limited to current-page IDs with a shared 60-second cache and
+  cancellation. No batch mapping endpoint was verified; request count scales with
+  page size. Live backend support/performance still requires verification.
+- Mock mappings now isolate entity type plus ID and return the SDK's documented
+  HTTP 200 link response. Non-customer entities do not inherit customer fixtures.
+- Verified external Open URLs remain pending; prototype placeholder URLs omitted.
+- Validation: 3 query unit tests, 111 component/a11y tests and 3 assembled journeys
+  pass (invoice link/list refresh/unlink, Plan overflow link/unlink, customer
+  unlink regression). TypeScript, scoped ESLint and production build passed.
+- Four visual comparisons differ from existing baselines. Received screenshots
+  reviewed; invoice default columns narrowed so Integrations fits desktop width.
+  Baselines unchanged; Linux visual baseline verification remains pending.
+- Concurrent SubscriptionForm, its stories and generated anatomy edits preserved.
+- Next: continue outstanding shared detail/charge actions (19–22, 31–38), with
+  version/revert and coupon/alert backend contracts verified before wiring actions.
+
+
+CONTRACT LAYOUT AND CHARGE ACTION FOLLOW-UP — OCTOBER 16
+- Contract and Billing & collection now use side-by-side shared Sections and
+  two-column Properties, stacking on narrow screens. Customer/Plan links remain;
+  lifecycle dates, lookup key, billing cadence, commitment and usage facts are
+  retained beyond the prototype's minimal four fields. Existing Usage tab retained.
+- Upcoming invoice stays above changed-charge summary. Overview summary now
+  uses compact flags and keeps its section during loading, empty and error states.
+  Retry is tested. Show all charges continues to open the full Charges tab.
+- Charge tab count now reflects active charges, excluding ended lines, matching
+  the table's default Active view. Existing charge edit/end handlers are retained.
+- Shared charge sheet moves keyboard focus to the requested section after it
+  mounts and scrolls it into view without a fixed animation delay. History is a
+  named focusable section too. Missing sections do not trigger an endless retry.
+- Audited shared flag/section order: Price, Discount, Commitment, Alerts, History;
+  Discount flag and section both use detail.coupon. Narrow flags retain first two
+  labels. These patterns already existed; no parallel implementation added.
+- Version list/revert API is still unverified: SDK subscriptions expose no matching
+  version/revert methods in this audit. No simulated Revert action was introduced.
+  Coupon/alert read coverage and window-specific tier rendering remain pending.
+- Validation: 80 component/a11y tests passed, including section focus and Overview
+  error retry; 3 contract journeys passed. TypeScript, scoped ESLint and production
+  build passed. Contract desktop screenshot reviewed; 2% baseline difference,
+  baseline unchanged. Build retains existing chunk/config warnings.
+- Prior staged work and concurrent form/anatomy changes remain untouched.
+
+
+SHARED CHARGE ACTIONS, DISCOUNTS AND ALERTS — OCTOBER 16
+- Price and usage-commitment Edit actions now open the existing contract billing
+  forms from the shared sheet. The sheet closes first. Ended/cancelled/read-only
+  lines have no edit action; coupon/alert editing and Revert remain unavailable.
+- Coupon associations retain subscriptionLineItemId; active line-specific coupons
+  join that exact line. Whole-contract/phase coupons are not copied onto every row.
+  Archived, future and expired associations are excluded from active discounts.
+  Multiple discounts render in the same section; flags and section use the same data.
+  Coupon reads now paginate beyond the first 100 associations.
+- Alert settings read via a parent-contract search, paginated in batches of 100,
+  with no per-charge requests. Only matching line entities and enabled records
+  are displayed. Config-disabled and archived settings are omitted defensively.
+  Percentage/absolute thresholds and above/below conditions are preserved; no
+  currency or unit is guessed for absolute values. Errors expose Retry rather
+  than silently displaying an empty configuration. Existing mutation invalidation
+  covers this query through the alert-settings cache prefix.
+- API verification: installed @flexprice/sdk 2.1.35 plus current published schema
+  retrieved from https://raw.githubusercontent.com/flexprice/flexprice/main/docs/swagger/swagger.json
+  on October 16, 2026. Schema SHA256: 6cb88a2f6caea3e69d23c582ca4c2a7d6b7ecd29a203e13caf64bb24ca7ba59c.
+  Relevant paths found:
+  /alerts/setting
+  /alerts/setting/search
+  /alerts/setting/{id}
+  /coupons/associations
+  /coupons/associations/{id}
+  /subscriptions/lineitems/search
+  /subscriptions/lineitems/{id}
+  /subscriptions/{id}/lineitems
+  /subscriptions/{id}/modify/execute
+  /subscriptions/{id}/modify/preview
+  /webhook-events/subscription.line_item_spend.threshold_reached
+  /webhook-events/subscription.line_item_spend.threshold_recovered
+- No dedicated charge-version listing or revert path found in either source.
+  Generic line-item search/update and modify preview/execute do not establish
+  version ancestry, revert eligibility or re-rating semantics. Items 37/38/51
+  remain blocked on that backend contract; the prototype's toast-only Revert
+  is not wired to a different billing operation.
+- Live tenant API calls were not made. Published schema and SDK verification are
+  contract evidence, not evidence that every deployment supports these operations.
+- Remaining: coupon/alert mutations within the sheet, window-specific commitment
+  tiers, live API/performance checks, and validated version/revert semantics.
+- Validation: 82 component/a11y tests and 3 assembled contract journeys passed;
+  TypeScript, scoped ESLint and production build passed. Additional pagination
+  and error-retry checks are recorded after the final run below.
+- Final checks: 30 query tests pass, including alert pagination and coupon scope;
+  additional alert-retry browser/a11y story passes (83 unique component checks
+  across final runs). Vendor integrity, page matrix and whitespace checks pass.
+
+
+CHARGE SHEET COUPON AND ALERT EDITS — OCTOBER 16
+- Discount Edit is "Change coupon". It uses POST /subscriptions/{id}/modify/execute.
+  A line coupon sends subscription_line_item_id and omits subscription_id (the
+  SDK treats those scopes as mutually exclusive). The new association is added
+  first; each current association on that line is then removed by
+  coupon_association_id. Coupon association CRUD is list/get only, so there is
+  no association patch. Contract-wide Add coupon is unchanged and still sends
+  subscription_id. Choosing the line's only current code does not call the API.
+- Alerts Edit is "Alert settings". It appears only when the fetched setting has
+  an id. The form is seeded from that setting's thresholds and saves with
+  PATCH /alerts/setting/{id} (config only; the watched line cannot change).
+  An update that omits a severity leaves that severity stored. Create-from-empty
+  is not this action. Alert reads now carry settingId, thresholdType and the
+  raw threshold so the form can start from the stored number.
+- The console page wires both: the existing add-coupon mutation, and
+  useUpdateAlertSetting. Invalidation still uses the alert-settings cache prefix.
+- Revert stays unwired. Items 37, 38 and 51 stay blocked: no charge-version list
+  or revert path in SDK 2.1.35 or the published swagger recorded above.
+- Live tenant API calls were not made.
+- Validation: coupon and alert query tests pass (21). Domain, query, UI and
+  console typechecks pass for these edits. Scoped ESLint passes. Storybook plays
+  for Change coupon, Alert settings and the line discount/alert sheet pass in
+  the browser. The alert form accepts a typed threshold (verified by filling 90
+  into the seeded 80).
+- Next: item 35. The sheet already shows the three commitment states, UTC window
+  ranges and Rest of the day. A window's own price (CommitmentBucketRequest.price,
+  where tiers would live) is not on ChargeCommitmentWindow, so window tiers are
+  not rendered yet.

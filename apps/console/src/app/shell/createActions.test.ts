@@ -18,7 +18,7 @@ describe('the Create menu', () => {
   // A "New invoice" that lands on the invoice list advertised a flow it did
   // not open.
   it('opens each create flow rather than a list page', () => {
-    expect(pathForCreateAction('subscription')).toBe('/subscriptions/new')
+    expect(pathForCreateAction('subscription')).toBe('/contracts/new')
     expect(pathForCreateAction('customer')).toBe('/customers/new')
     expect(pathForCreateAction('invoice')).toBe('/invoices/new')
     expect(pathForCreateAction('payment')).toBe('/payments/new')

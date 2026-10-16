@@ -38,6 +38,22 @@ const editValue = {
 }
 
 /** Flip create/edit, submitting and a server error from the controls. */
+/** The lookup key is filled from the name until the person types their own. */
+export const LookupKeyFollowsName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const field = canvas.getByRole('textbox', { name: /^lookup key/i })
+
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Acme Pro')
+    await expect(field).toHaveValue('cost-sheet-acme-pro')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, 'mine')
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), ' Plus')
+    await expect(field).toHaveValue('mine')
+  },
+}
+
 export const Playground: Story = {
   args: { isSubmitting: false, submitError: '' },
   render: ({ mode, submitError, ...args }) => (

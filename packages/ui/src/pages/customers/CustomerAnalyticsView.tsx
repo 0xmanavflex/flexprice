@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarIcon, ChevronDownIcon, LayersIcon } from 'lucide-react'
+import { CalendarIcon, ChevronDownIcon, LayersIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,

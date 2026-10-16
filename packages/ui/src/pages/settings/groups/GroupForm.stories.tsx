@@ -35,7 +35,9 @@ export const Submits: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'EU region')
-    await userEvent.type(canvas.getByRole('textbox', { name: /^Lookup key/ }), 'eu-region')
+    const lookupKey = canvas.getByRole('textbox', { name: /^Lookup key/ })
+    await userEvent.clear(lookupKey)
+    await userEvent.type(lookupKey, 'eu-region')
     await userEvent.click(canvas.getByRole('button', { name: 'Create group' }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'EU region', lookupKey: 'eu-region' }),
@@ -63,6 +65,22 @@ export const SubmitError: Story = {
   args: { submitError: 'A group with that lookup key already exists.' },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('alert')).toBeInTheDocument()
+  },
+}
+
+/** The lookup key is filled from the name until the person types their own. */
+export const LookupKeyFollowsName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const field = canvas.getByRole('textbox', { name: /^lookup key/i })
+
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Acme Pro')
+    await expect(field).toHaveValue('group-acme-pro')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, 'mine')
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), ' Plus')
+    await expect(field).toHaveValue('mine')
   },
 }
 

@@ -88,8 +88,8 @@ export const DEFAULT_TAX_RATE_QUERY: TaxRateQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: TaxRateSortField.Name,
-  sortDirection: 'asc',
+  sortBy: TaxRateSortField.UpdatedAt,
+  sortDirection: 'desc',
 }
 
 const percentage = z

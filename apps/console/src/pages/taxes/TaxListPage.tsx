@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { type TaxRate, type TaxRateQuery } from '@fp/domain'
-import { ApiError, useDeleteTaxRate, useTaxRates } from '@fp/query'
+import { ApiError, useDeleteTaxRate, useTaxRates, serverReason } from '@fp/query'
 import { TaxRateGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { PercentIcon } from 'lucide-react'
+import { toListFailure } from '../shared/listFailure'
 
 export interface TaxListPageProps {
   query: TaxRateQuery
@@ -32,7 +32,7 @@ export function TaxListPage({
 
   const [deleting, setDeleting] = useState<TaxRate | null>(null)
 
-  const failure = toFailure(taxRates.error)
+  const failure = toListFailure(taxRates.error, 'tax rates')
   const rows = taxRates.data?.taxRates ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
@@ -48,12 +48,16 @@ export function TaxListPage({
         <ListState
           isLoading={taxRates.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (taxRates.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={taxRates.isFetching && !taxRates.isPending}
+          isProvisional={taxRates.isPlaceholderData}
+          isRetrying={taxRates.isFetching && taxRates.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void taxRates.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateTaxRate}>Add tax</Button>}
-          emptyIcon={<PercentIcon aria-hidden />}
           emptyTitle="No taxes set up yet"
           emptyDescription="Taxes are the percentages added on top of an invoice, like VAT or GST. Add a tax, then attach it to the customers, plans or charges it applies to."
         >
@@ -89,26 +93,6 @@ export function TaxListPage({
   )
 }
 
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to tax rates here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading tax rates.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading tax rates.', canRetry: true }
-}
-
 /** A save failure, as a sentence the form can show inline. */
 function toSubmitError(error: unknown): string | null {
   if (!error) return null
@@ -118,11 +102,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change tax rates here.'
+        return serverReason(error) ?? 'You do not have permission to change tax rates here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the tax rate. Try again.'
+        return serverReason(error) ?? 'Could not save the tax rate. Try again.'
     }
   }
   return 'Could not save the tax rate. Try again.'

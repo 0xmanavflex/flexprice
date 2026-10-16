@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { FlexpriceProviderProps } from '@fp/query'
 import { env } from '@/env'
+import { getActiveEnvironmentId } from './activeEnvironment'
 import { useSessionRef } from './SessionProvider'
 
 /** The `AuthSource` shape, reached through `@fp/query` rather than `@fp/api`. */
@@ -31,7 +32,10 @@ export function useAuthSource(): AuthSource {
   return useMemo<AuthSource>(
     () => ({
       getToken: async () => env.apiKey ?? session.current.session?.token ?? null,
-      getEnvironmentId: async () => session.current.environmentId,
+      // Not `session.current.environmentId`: that ref is only refreshed by a
+      // render, and a request fired between a switch and its re-render would go
+      // out naming the environment the user just left.
+      getEnvironmentId: async () => getActiveEnvironmentId(),
     }),
     // `session` is a ref: its identity never changes, so this builds once.
     [session],

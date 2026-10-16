@@ -224,3 +224,65 @@
 :root:not(.dark) .text-success {
   color: #047857;
 }
+
+/*
+ * Data-experience motion (see compositions/feedback). Everything here is
+ * decoration or a loading cue, so `prefers-reduced-motion` removes all of it
+ * and the interface reads the same, just still.
+ */
+.fp-figure-layer {
+  transition: transform 220ms ease-out;
+}
+.fp-figure[data-motion='interactive'] .fp-figure-layer[data-depth='back'] {
+  transform: translate(calc(var(--fx) * -2px), calc(var(--fy) * -2px));
+}
+.fp-figure[data-motion='interactive'] .fp-figure-layer[data-depth='front'] {
+  transform: translate(calc(var(--fx) * 4px), calc(var(--fy) * 3px));
+}
+.fp-figure:not([data-motion='static']) .fp-figure-layer[data-depth='front'] {
+  animation: fp-figure-drift 7s ease-in-out infinite;
+}
+@keyframes fp-figure-drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+/* A slim indeterminate bar for "updating, and the data you see is still valid". */
+@keyframes fp-refresh-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+.fp-refresh-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  border-radius: inherit;
+  background: currentColor;
+  animation: fp-refresh-slide 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='skeleton'] {
+    animation: none;
+  }
+  .fp-figure-layer {
+    transition: none;
+    transform: none !important;
+    animation: none !important;
+  }
+  .fp-refresh-bar::after {
+    width: 100%;
+    animation: none;
+    opacity: 0.5;
+  }
+}

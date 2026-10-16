@@ -1,41 +1,80 @@
 import { useMemo, useState } from 'react'
-import { DEFAULT_CUSTOMER_QUERY, type CreateInvoice, type InvoiceDetail } from '@fp/domain'
-import { ApiError, useCreateInvoice, useCustomers, useInvoice } from '@fp/query'
-import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
+import {
+  DEFAULT_CUSTOMER_QUERY,
+  DEFAULT_TAX_RATE_QUERY,
+  type InvoiceTax,
+  TaxRateStatus,
+  emptyInvoice,
+} from '@fp/domain'
+import {
+  ApiError,
+  serverReason,
+  useCreateInvoice,
+  useCustomer,
+  useCustomerTaxAssociations,
+  useCustomers,
+  useTaxRates,
+  useTenant,
+  useUserInfo,
+} from '@fp/query'
+import { LoadingRows, PageBody } from '@fp/ui/compositions'
 import { InvoiceForm } from '@fp/ui/pages'
+import { customerParty, tenantParty } from './invoiceParties'
 
 export interface InvoiceFormPageProps {
-  /** Set when this page edits an existing invoice. Create leaves it out. */
-  invoiceId?: string
+  /** Start with this customer chosen — the customer page's "Create invoice", as in V1. */
+  customerId?: string
   onCancel: () => void
   onDone: (invoiceId: string) => void
 }
 
 /**
- * Create or edit an invoice on its own page.
+ * Raise a one-off invoice — `POST /invoices`, as V1's create page does.
  *
- * Create is `/invoices/new` and saves through `POST /invoices`. Edit is
- * `/invoices/:id/edit` and uses the same Form 3 layout, filled from the
- * invoice. There is no update call on the API, so edit explains that saving
- * changes is not available yet.
+ * Feeds the shared invoice form what V1 shows around the fields: who it is
+ * from (the tenant), who it bills (the chosen customer's address), and the
+ * customer's tax rates, which a new invoice starts with.
  */
-export function InvoiceFormPage({ invoiceId, onCancel, onDone }: InvoiceFormPageProps) {
-  const editing = Boolean(invoiceId)
+export function InvoiceFormPage({ customerId, onCancel, onDone }: InvoiceFormPageProps) {
   const create = useCreateInvoice()
-  const invoice = useInvoice(invoiceId ?? '', { enabled: editing })
+  const [chosen, setChosen] = useState(customerId ?? '')
   const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
-  const [editNotice, setEditNotice] = useState<string | null>(null)
+  const customer = useCustomer(chosen)
+  const associations = useCustomerTaxAssociations(chosen)
+  const rates = useTaxRates({
+    ...DEFAULT_TAX_RATE_QUERY,
+    pageSize: 100,
+    statuses: [TaxRateStatus.Published],
+  })
+  const me = useUserInfo()
+  const tenant = useTenant(me.data?.tenantId ?? '')
+
   const options = useMemo(
     () =>
-      (customers.data?.customers ?? []).map((customer) => ({
-        id: customer.id,
-        name: customer.name,
-        email: customer.email,
+      (customers.data?.customers ?? []).map((item) => ({
+        id: item.id,
+        name: item.name,
+        email: item.email,
       })),
     [customers.data],
   )
+  const customerTaxes = useMemo<InvoiceTax[] | null>(
+    () =>
+      associations.data
+        ? associations.data.map((association) => ({
+            taxRateCode: association.taxRateCode,
+            name: association.taxRateName,
+            percentage: association.percentage,
+            taxBehavior: association.taxBehavior,
+            priority: association.priority,
+            autoApply: association.autoApply,
+          }))
+        : null,
+    [associations.data],
+  )
 
-  if (editing && invoice.isPending) {
+  // A preset customer can only be shown once the list it is picked from has arrived.
+  if (customerId && customers.isPending) {
     return (
       <PageBody>
         <div className="pt-4">
@@ -45,77 +84,37 @@ export function InvoiceFormPage({ invoiceId, onCancel, onDone }: InvoiceFormPage
     )
   }
 
-  if (editing && (invoice.error || !invoice.data)) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={invoice.error ? 'This invoice could not be loaded' : 'Invoice not found'}
-          detail="The rest of the console still works. Try again, or go back."
-          onRetry={invoice.error ? () => void invoice.refetch() : onCancel}
-        />
-      </PageBody>
-    )
-  }
-
-  const existing = invoice.data
-
   return (
     <InvoiceForm
-      key={existing?.id ?? 'new'}
-      mode={editing ? 'edit' : 'create'}
       customers={options}
-      trail={[
-        { label: 'Invoices', onClick: onCancel },
-        { label: editing ? 'Edit invoice' : 'New invoice' },
-      ]}
-      {...(existing
-        ? { defaultValue: toDraft(existing), invoiceNumber: existing.number }
-        : {})}
+      trail={[{ label: 'Invoices', onClick: onCancel }, { label: 'New invoice' }]}
+      {...(customerId ? { defaultValue: { ...emptyInvoice(), customerId } } : {})}
+      onCustomerChange={setChosen}
+      billFrom={tenantParty(tenant.data)}
+      billTo={chosen ? customerParty(customer.data) : null}
+      taxRates={(rates.data?.taxRates ?? []).map((rate) => ({
+        code: rate.code,
+        name: rate.name,
+        percentage: rate.percentageValue,
+      }))}
+      customerTaxes={chosen ? customerTaxes : null}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={editing ? editNotice : toSubmitError(create.error)}
-      onSubmit={(draft) => {
-        if (editing) {
-          setEditNotice('Saving changes to an invoice is not available yet.')
-          return
-        }
+      submitError={toSubmitError(create.error)}
+      onSubmit={(draft) =>
         create.mutate(draft, { onSuccess: (created) => onDone(created.id ?? '') })
-      }}
+      }
     />
   )
-}
-
-function toDraft(invoice: InvoiceDetail): CreateInvoice {
-  return {
-    customerId: invoice.customerId,
-    currency: invoice.currency,
-    description: invoice.description,
-    dueDate: invoice.dueDate ? day(invoice.dueDate) : '',
-    total: invoice.total.amount,
-    finalize: false,
-    lines:
-      invoice.lines.length > 0
-        ? invoice.lines.map((line) => ({
-            description: line.description,
-            quantity: line.quantity || '1',
-            amount: line.amount,
-          }))
-        : [{ description: '', quantity: '1', amount: '' }],
-  }
-}
-
-function day(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const dateOfMonth = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${dateOfMonth}`
 }
 
 function toSubmitError(error: unknown): string | null {
   if (!error) return null
   if (error instanceof ApiError) {
     if (error.kind === 'invalid') return error.message || 'Check the details and try again.'
-    if (error.kind === 'forbidden') return 'You do not have permission to create invoices here.'
+    if (error.kind === 'forbidden')
+      return serverReason(error) ?? 'You do not have permission to create invoices here.'
     if (error.kind === 'network') return 'Could not reach Flexprice. Check your connection.'
   }
-  return 'Could not create the invoice. Try again.'
+  return serverReason(error) ?? 'Could not create the invoice. Try again.'
 }

@@ -8,14 +8,17 @@ describe('parsePriceUnitSearch', () => {
   })
 
   it('reads a full query', () => {
-    expect(parsePriceUnitSearch({ page: '2', size: '50', q: 'credits', status: 'archived' })).toEqual({
+    expect(
+      parsePriceUnitSearch({ page: '2', size: '50', q: 'credits', status: 'archived' }),
+    ).toEqual({
       page: 2,
       pageSize: 50,
       search: 'credits',
       statuses: [PriceUnitStatus.Archived],
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy: DEFAULT_PRICE_UNIT_QUERY.sortBy,
+      sortDirection: DEFAULT_PRICE_UNIT_QUERY.sortDirection,
       view: 'table',
+      filters: [],
     })
   })
 
@@ -55,7 +58,11 @@ describe('parsePriceUnitSearch', () => {
   })
 
   it('is stable across a parse of its own output', () => {
-    const once = parsePriceUnitSearch({ status: ['archived'], sortBy: 'code', sortDirection: 'desc' })
+    const once = parsePriceUnitSearch({
+      status: ['archived'],
+      sortBy: 'code',
+      sortDirection: 'desc',
+    })
     expect(parsePriceUnitSearch({ ...once })).toEqual(once)
   })
 })

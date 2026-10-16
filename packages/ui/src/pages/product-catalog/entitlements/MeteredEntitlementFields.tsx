@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRightIcon, InfoIcon } from 'lucide-react'
+import { ChevronRightIcon, InfoIcon } from '@ui/icons'
 import { USAGE_RESET_PERIOD_LABEL, UsageResetPeriod } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'

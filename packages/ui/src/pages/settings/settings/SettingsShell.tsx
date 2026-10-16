@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { DetailTabs } from '@ui/compositions/detail/DetailKit'
@@ -6,7 +6,7 @@ import { Source, provenance } from '@ui/provenance'
 
 /**
  * Settings, laid out as the ReUI `settings-7` block lays out its account
- * settings: a flat vertical rail of sections on the left, and the active
+ * settings: a flat vertical rail of sections on the left (a scrolling strip above the content on narrow screens), and the active
  * section's content in a column on the right. There is no visible page or
  * section title and no subtitle: each section opens straight onto its table
  * or form. The headings are still there, `sr-only`, so the page has an outline
@@ -75,14 +75,26 @@ export function SettingsShell({
   const sectionUnavailable = tabs.length > 0 && tabs.every((tab) => tab.unavailable)
   const tabUnavailable = activeTab?.unavailable ?? false
 
+  // Below `lg` the rail is a scrolling strip; keep the open section in view.
+  const rail = useRef<HTMLElement>(null)
+  useEffect(() => {
+    rail.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'center' })
+  }, [section?.id])
+
   return (
     <div className="flex min-w-0 flex-1 items-start justify-center px-4 py-8 sm:px-6 md:px-10 md:pb-16">
       <div className="w-full max-w-6xl">
         <h1 className="sr-only">Settings</h1>
 
         <div className="flex w-full flex-col gap-4 lg:flex-row lg:gap-8">
-          <nav aria-label="Settings" className="w-full min-w-0 lg:w-56 lg:shrink-0">
-            <ul className="flex flex-col gap-1">
+          <nav
+            ref={rail}
+            aria-label="Settings"
+            className="w-full min-w-0 overflow-x-auto lg:w-56 lg:shrink-0 lg:overflow-visible"
+          >
+            <ul className="flex gap-1 lg:flex-col">
               {sections
                 .filter((entry) => !entry.hidden)
                 .map((entry) => {
@@ -94,7 +106,7 @@ export function SettingsShell({
                         aria-current={active ? 'page' : undefined}
                         onClick={() => onSectionChange(entry.id)}
                         className={cn(
-                          'hover:bg-muted focus-visible:ring-ring/50 flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm font-medium outline-none focus-visible:ring-3 [&_svg]:size-4 [&_svg]:shrink-0',
+                          'hover:bg-muted focus-visible:ring-ring/50 flex shrink-0 items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap outline-none lg:w-full focus-visible:ring-3 [&_svg]:size-4 [&_svg]:shrink-0',
                           active ? 'bg-muted' : 'text-muted-foreground',
                         )}
                       >
@@ -143,6 +155,7 @@ export function SettingsShell({
 function Unavailable({ title, reason }: { title: string; reason?: string }) {
   return (
     <EmptyState
+      scene="settings"
       size="inline"
       title={title}
       description={reason ?? 'It cannot be opened from here yet.'}

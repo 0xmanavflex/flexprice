@@ -1,11 +1,14 @@
-import { useId } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useId, useState } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
-import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react'
+import { TrendingDownIcon, TrendingUpIcon } from '@ui/icons'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@ui/components/primitives/chart'
 import type { ChartConfig } from '@ui/components/primitives/chart'
+import { RetryAction } from '@ui/compositions/feedback/RetryAction'
+import { SceneIllustration, type EmptyScene } from '@ui/compositions/feedback/SceneIllustration'
+import { ChartSkeleton, ValuePlaceholder } from '@ui/compositions/feedback/Skeletons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -32,7 +35,12 @@ import { provenance } from '@ui/provenance'
  */
 export const ChartsProvenance = provenance({
   source: 'composition',
-  composes: ['ui/chart', 'ui/button'],
+  composes: [
+    'ui/chart',
+    'ui/button',
+    'compositions/feedback/RetryAction',
+    'compositions/feedback/Skeletons',
+  ],
   note: 'MetricChart (chart-6 metric tabs over chart-18’s gradient area) and BlurredEmpty. Also the ChartTone vocabulary the rest of the chart library paints with. Lineage: @reui/chart-6, @reui/chart-18.',
 })
 
@@ -172,6 +180,24 @@ export function TrendBadge({ percent }: { percent: number }) {
 
 /* ---- MetricChart -------------------------------------------------------- */
 
+/** `true` when the viewer has asked their system for less motion. Read once, kept live. */
+export function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false,
+  )
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const onChange = () => setReduced(query.matches)
+    onChange()
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
+  return reduced
+}
+
 /** One bucket of a metric series. */
 export interface MetricPoint {
   /** Axis label, already formatted for the chosen granularity by the page. */
@@ -187,6 +213,8 @@ export interface MetricPoint {
  * has the domain type; this component does not, and should not start
  * formatting currency.
  */
+export type MetricTabStatus = 'ready' | 'loading' | 'unavailable'
+
 export interface MetricTab {
   /** Stable id. What `onTabChange` reports and what `activeTab` is matched against. */
   id: string
@@ -200,6 +228,21 @@ export interface MetricTab {
   points: MetricPoint[]
   /** Formats a point for the tooltip. Defaults to a locale-grouped integer. */
   format?: ((value: number) => string) | undefined
+  /**
+   * Whether the figure is known. `loading` draws a placeholder bar and a chart
+   * skeleton; `unavailable` says so (with a retry when `onRetry` is given).
+   * Neither ever shows a dash or a zero, which would read as "no value".
+   * Omitted, the tab is `ready`.
+   */
+  status?: MetricTabStatus | undefined
+  /** Retry for an `unavailable` tab. */
+  onRetry?: (() => void) | undefined
+  /**
+   * What a `ready` tab with no points says in place of the plot. Defaults to
+   * "No {label} in this period", which is only true when the window is empty:
+   * pass something else for a metric that simply has no series.
+   */
+  emptyMessage?: string | undefined
 }
 
 export interface MetricChartProps {
@@ -250,6 +293,32 @@ export function MetricChart({
   // equal cells and never three-and-one. Below `md` they sit two to a row.
   const columns = { '--tab-cols': tabs.length } as CSSProperties
 
+  // WAI-ARIA tabs: one tab stop (the selected one), arrows move between tabs,
+  // Home/End jump to the ends. Selection follows focus, as the panel is cheap.
+  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = tabs.length - 1
+    const next =
+      event.key === 'ArrowRight'
+        ? index === last
+          ? 0
+          : index + 1
+        : event.key === 'ArrowLeft'
+          ? index === 0
+            ? last
+            : index - 1
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? last
+              : null
+    if (next === null) return
+    event.preventDefault()
+    const target = tabs[next]
+    if (!target) return
+    onTabChange(target.id)
+    document.getElementById(`${uid}-tab-${target.id}`)?.focus()
+  }
+
   return (
     <div className={cn('bg-muted/40 rounded-xl border p-1', className)}>
       <div
@@ -266,7 +335,9 @@ export function MetricChart({
             role="tab"
             aria-selected={tab.id === active.id}
             aria-controls={`${uid}-panel`}
+            tabIndex={tab.id === active.id ? 0 : -1}
             onClick={() => onTabChange(tab.id)}
+            onKeyDown={(event) => onTabKeyDown(event, index)}
             className={cn(
               'relative flex min-w-0 flex-col items-start gap-1 px-4 py-3 text-left transition-colors',
               index > 0 && 'md:border-l',
@@ -277,8 +348,18 @@ export function MetricChart({
           >
             <span className="text-xs">{tab.label}</span>
             <span className="text-foreground flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base font-medium tabular-nums">
-              {tab.value}
-              {tab.changePercent === undefined ? null : <TrendBadge percent={tab.changePercent} />}
+              {tab.status === 'loading' ? (
+                <ValuePlaceholder width={7} label={`Loading ${tab.label}`} />
+              ) : tab.status === 'unavailable' ? (
+                <span className="text-muted-foreground text-sm font-normal">Unavailable</span>
+              ) : (
+                tab.value
+              )}
+              {tab.status === 'loading' ||
+              tab.status === 'unavailable' ||
+              tab.changePercent === undefined ? null : (
+                <TrendBadge percent={tab.changePercent} />
+              )}
             </span>
             {tab.id === active.id ? (
               <span
@@ -311,6 +392,7 @@ function MetricSeries({
   caption?: string | undefined
 }) {
   const format = tab.format ?? formatWhole
+  const reducedMotion = usePrefersReducedMotion()
   // Namespaces the gradient: two MetricCharts on one page would otherwise
   // define the same SVG id, and the second silently repaints the first.
   const chartId = useId().replace(/:/g, '')
@@ -322,6 +404,30 @@ function MetricSeries({
     },
   } satisfies ChartConfig
 
+  if (tab.status === 'loading') {
+    return (
+      <div className="flex flex-col gap-2">
+        <ChartSkeleton height={height} label={`Loading ${tab.label.toLowerCase()}`} />
+      </div>
+    )
+  }
+
+  if (tab.status === 'unavailable') {
+    return (
+      <div className="flex flex-col gap-2">
+        <div
+          role="alert"
+          className="border-border text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 text-sm"
+          style={{ height }}
+        >
+          <span>{tab.label} couldn’t be loaded.</span>
+          {tab.onRetry ? <RetryAction onRetry={tab.onRetry} /> : null}
+        </div>
+        {caption ? <p className="text-muted-foreground text-xs">{caption}</p> : null}
+      </div>
+    )
+  }
+
   if (tab.points.length === 0) {
     return (
       <div className="flex flex-col gap-2">
@@ -329,9 +435,9 @@ function MetricSeries({
           className="border-border text-muted-foreground flex items-center justify-center rounded-lg border border-dashed px-4 text-sm"
           style={{ height }}
           role="img"
-          aria-label={`${tab.label}: no data for this period`}
+          aria-label={tab.emptyMessage ?? `${tab.label}: no data for this period`}
         >
-          No {tab.label.toLowerCase()} in this period
+          {tab.emptyMessage ?? `No ${tab.label.toLowerCase()} in this period`}
         </div>
         {caption ? <p className="text-muted-foreground text-xs">{caption}</p> : null}
       </div>
@@ -393,6 +499,7 @@ function MetricSeries({
             stroke="var(--color-value)"
             strokeWidth={1.5}
             fill={`url(#${chartId}-fill)`}
+            isAnimationActive={!reducedMotion}
           />
         </AreaChart>
       </ChartContainer>
@@ -419,6 +526,8 @@ export interface BlurredEmptyProps {
   action?: BlurredEmptyAction | undefined
   /** Beside the primary — docs, an import, a sample. */
   secondaryAction?: BlurredEmptyAction | undefined
+  /** A small drawing above the message. Omit it on a page that is mostly chart. */
+  scene?: EmptyScene | undefined
   className?: string | undefined
 }
 
@@ -449,6 +558,7 @@ export function BlurredEmpty({
   description,
   action,
   secondaryAction,
+  scene,
   className,
 }: BlurredEmptyProps) {
   return (
@@ -463,6 +573,7 @@ export function BlurredEmpty({
 
       <div className="absolute inset-0 flex items-center justify-center p-6">
         <div className="bg-background/95 flex max-w-sm flex-col items-center gap-4 rounded-xl border px-7 py-6 text-center shadow-[0_8px_24px_-12px_rgba(15,42,61,0.18)]">
+          {scene ? <SceneIllustration scene={scene} className="w-36" /> : null}
           <div className="space-y-1">
             <p className="text-sm font-medium">{title}</p>
             <p className="text-muted-foreground text-[13px]/relaxed">{description}</p>

@@ -138,3 +138,30 @@ export const Empty: Story = {
     await expect(await within(canvasElement).findByText('No credit grants yet')).toBeInTheDocument()
   },
 }
+
+/** Loading is a skeleton, never "No credit grants yet". */
+export const Loading: Story = {
+  args: { grants: [], isLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Loading credit grants')).toBeInTheDocument()
+    await expect(canvas.queryByText('No credit grants yet')).toBeNull()
+  },
+}
+
+/** A failed load says so and offers a retry; it never reads as "No credit grants yet". */
+export const SubTabError: Story = {
+  args: {
+    grants: [],
+    error: 'Could not load the credit grants.',
+    errorKind: 'server',
+    onRetry: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Could not load the credit grants.')).toBeInTheDocument()
+    await expect(canvas.queryByText('No credit grants yet')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
+  },
+}

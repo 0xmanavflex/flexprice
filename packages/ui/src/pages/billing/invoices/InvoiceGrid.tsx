@@ -1,5 +1,6 @@
+import { integrationColumn, type IntegrationMappings } from '../../shared/integrationColumn'
 import { useMemo } from 'react'
-import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from 'lucide-react'
+import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from '@ui/icons'
 import {
   DEFAULT_INVOICE_QUERY,
   type Invoice,
@@ -9,8 +10,10 @@ import {
   PAYMENT_STATUS_LABEL,
   PaymentStatus,
   isStoredInvoiceStatus,
+  INVOICE_FILTERS,
+  withFilterOptions,
 } from '@fp/domain'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
@@ -26,22 +29,9 @@ import {
 /**
  * The invoice list, on the shared `EntityList`.
  *
- * ## Two statuses, two columns, one dropdown
- *
- * The redesign's tab list — Draft, Outstanding, Overdue, Paid, Voided — mixes
- * two different things. `Draft` and `Voided` are what the *document* is;
- * `Paid` is what the *money* did. The API keeps them apart (`invoice_status`
- * and `payment_status`) and so, now, does this table: the **Status** column
- * is the document, the **Payment** column is the collection.
- *
- * They are not redundant. A finalized invoice nobody has tried to collect and
- * one whose only payment attempt failed are both `open` in the first column
- * and tell you nothing; in the second they are "—" and "Failed", and only one
- * of them needs a phone call today.
- *
- * The dropdown and the advanced filter both write `query.statuses` — the
- * domain's fold of document and payment — so a choice in either place is the
- * same list. The skipped-invoice case is one of those options.
+ * Invoice date, due date, amounts and payment status lead the default table.
+ * Document status is a filter and remains available as an optional column.
+ * The API's document and payment states stay distinct in the data model.
  *
  * ## Which of those the server can answer
  *
@@ -60,7 +50,7 @@ import {
 export const InvoiceGridProvenance = provenance({
   source: 'composition',
   composes: ['pages/shared/EntityList'],
-  note: 'Invoice columns and actions over the shared list table. Document status and payment status as separate columns.',
+  note: 'Invoice columns and actions over the shared list table. Payment status visible; document status available through filtering and optional columns.',
 })
 
 /**
@@ -100,6 +90,7 @@ const PAYMENT_TONE: Record<PaymentStatus, PillTone> = {
 }
 
 const SORT_LABEL: Record<InvoiceSortField, string> = {
+  [InvoiceSortField.UpdatedAt]: 'Updated',
   [InvoiceSortField.IssuedAt]: 'Issued',
   [InvoiceSortField.DueDate]: 'Due date',
   [InvoiceSortField.Total]: 'Total',
@@ -109,21 +100,6 @@ const SORT_LABEL: Record<InvoiceSortField, string> = {
 const SORT_OPTIONS = Object.values(InvoiceSortField).map((value) => ({
   value,
   label: SORT_LABEL[value],
-}))
-
-/** The order the dropdown offers, which is the order a collections desk works
- *  in: what needs attention first, what is finished last. */
-const STATUS_ORDER: InvoiceStatus[] = [
-  InvoiceStatus.Draft,
-  InvoiceStatus.Open,
-  InvoiceStatus.Overdue,
-  InvoiceStatus.Paid,
-  InvoiceStatus.Void,
-  InvoiceStatus.Skipped,
-]
-const STATUS_CHOICES = STATUS_ORDER.map((value) => ({
-  value,
-  label: STATUS_LABEL[value],
 }))
 
 /** Every URL requested and confirmed 200. */
@@ -158,51 +134,85 @@ function hasDerivedStatus(statuses: InvoiceStatus[]): boolean {
 }
 
 export interface InvoiceGridProps {
+  integrationMappings?: IntegrationMappings
   invoices: Invoice[]
   /** Server-side total. Drives the record count and page count. */
   total: number
   query: InvoiceQuery
   onQueryChange: (query: InvoiceQuery) => void
+  /** Choices for the customer filter, keyed by wire field (`customer_id`). */
+  filterOptions?: Readonly<Record<string, readonly { value: string; label: string }[]>>
   isLoading?: boolean
   /** Already a message; the grid does not know what an ApiError is. */
   error?: string | null
   onRetry?: () => void
   onInvoiceClick?: (invoice: Invoice) => void
+  /** More row-menu items after View and Copy: finalize, void, record payment… chosen per invoice. */
+  extraActions?: (invoice: Invoice) => EntityRowAction[]
   onOpenCustomer?: (customerId: string) => void
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
+  /**
+   * Set when `invoices` is a page-local narrowing of the page fetched (the
+   * derived paid/overdue statuses). `total` is then still the server's count
+   * of every invoice, and an empty result means "none on this page", never
+   * "none in the ledger".
+   */
+  pageLocal?: { fetchedCount: number } | undefined
+  /** A background refetch is updating the rows on screen. */
+  isRefreshing?: boolean
+  /** The rows belong to the previous page or filter. */
+  isProvisional?: boolean
   /** Locale for dates and amounts. Supplied by the app, never read from a global. */
   locale?: string
 }
 
 export function InvoiceGrid({
+  integrationMappings,
   invoices,
   total,
   query,
   onQueryChange,
+  filterOptions,
   isLoading = false,
   error = null,
   onRetry,
   onInvoiceClick,
+  extraActions,
   onOpenCustomer,
   onCreate,
   onClearFilters,
+  pageLocal,
+  isRefreshing = false,
+  isProvisional = false,
   locale,
 }: InvoiceGridProps) {
   const columns = useMemo<EntityColumn<Invoice>[]>(
     () => [
-      textColumn<Invoice>('number', 'Invoice', (row) => row.number, {
-        width: 210,
+      textColumn<Invoice>('number', 'Invoice number', (row) => row.number, {
+        width: 180,
         // The document's own identity. A row without it is unciteable.
         hideable: false,
       }),
       textColumn<Invoice>('customer', 'Customer', (row) => row.customerName, {
-        width: 200,
+        width: 180,
         onOpen: onOpenCustomer ? (row) => onOpenCustomer(row.customerId) : undefined,
       }),
-      moneyColumn<Invoice>('total', 'Total', (row) => row.total, {
-        width: 150,
+      dateColumn<Invoice>('issuedAt', 'Invoice date', (row) => row.issuedAt, {
+        width: 120,
+        sortable: true,
+        sortValue: InvoiceSortField.IssuedAt,
+        ...(locale ? { locale } : {}),
+      }),
+      dateColumn<Invoice>('dueDate', 'Due date', (row) => row.dueDate, {
+        width: 120,
+        sortable: true,
+        sortValue: InvoiceSortField.DueDate,
+        ...(locale ? { locale } : {}),
+      }),
+      moneyColumn<Invoice>('total', 'Amount', (row) => row.total, {
+        width: 120,
         sortable: true,
         sortValue: InvoiceSortField.Total,
         ...(locale ? { locale } : {}),
@@ -211,15 +221,20 @@ export function InvoiceGrid({
       // collections view is actually reading. Zero is muted so a column of
       // settled invoices does not shout.
       moneyColumn<Invoice>('amountDue', 'Amount due', (row) => row.amountRemaining, {
-        width: 150,
+        width: 120,
         muteZero: true,
         ...(locale ? { locale } : {}),
       }),
-      pillColumn<Invoice>('status', 'Status', (row) => ({
-        label: STATUS_LABEL[row.status],
-        tone: STATUS_TONE[row.status],
-      })),
-      pillColumn<Invoice>('paymentStatus', 'Payment', (row) =>
+      pillColumn<Invoice>(
+        'status',
+        'Status',
+        (row) => ({
+          label: STATUS_LABEL[row.status],
+          tone: STATUS_TONE[row.status],
+        }),
+        { hiddenByDefault: true },
+      ),
+      pillColumn<Invoice>('paymentStatus', 'Payment status', (row) =>
         row.paymentStatus
           ? {
               label: PAYMENT_STATUS_LABEL[row.paymentStatus],
@@ -227,6 +242,7 @@ export function InvoiceGrid({
             }
           : null,
       ),
+      integrationColumn<Invoice>(integrationMappings, 'invoice'),
       // Off by default and switched on from the `⋯` menu, as in the reference.
       textColumn<Invoice>(
         'period',
@@ -237,14 +253,8 @@ export function InvoiceGrid({
             : null,
         { width: 220, muted: true, hiddenByDefault: true },
       ),
-      dateColumn<Invoice>('dueDate', 'Due', (row) => row.dueDate, {
-        width: 130,
-        sortable: true,
-        sortValue: InvoiceSortField.DueDate,
-        ...(locale ? { locale } : {}),
-      }),
     ],
-    [locale, onOpenCustomer],
+    [locale, onOpenCustomer, integrationMappings],
   )
 
   const isDefaultSort =
@@ -260,15 +270,19 @@ export function InvoiceGrid({
         onSelect: () => onInvoiceClick(invoice),
       })
     }
-    actions.push({
-      label: 'Copy invoice number',
-      icon: <CopyIcon aria-hidden className="size-4" />,
-      onSelect: () => void navigator.clipboard?.writeText(invoice.number),
-    })
+    if (invoice.number) {
+      actions.push({
+        label: 'Copy invoice number',
+        icon: <CopyIcon aria-hidden className="size-4" />,
+        onSelect: () => void navigator.clipboard?.writeText(invoice.number),
+      })
+    }
+    if (extraActions) actions.push(...extraActions(invoice))
     return actions
   }
 
   const derived = hasDerivedStatus(query.statuses)
+  const isPageLocal = derived && pageLocal !== undefined
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -284,10 +298,13 @@ export function InvoiceGrid({
         >
           <InfoIcon aria-hidden className="mt-px size-3.5 shrink-0" />
           <span>
+            <span className="text-foreground font-medium">Filtered within this page.</span>{' '}
+            {pageLocal
+              ? `Showing ${invoices.length} of ${pageLocal.fetchedCount} invoices on this page. `
+              : ''}
             Paid and overdue are worked out from each invoice&rsquo;s balance and due date rather
-            than stored, so the API cannot be asked for them. This narrows the invoices already
-            loaded, not the whole ledger — page through, or sort by due date, to be sure you have
-            seen everything.
+            than stored, so the API cannot be asked for them. The count below is every invoice, not
+            only matching ones; page through to see the rest.
           </span>
         </p>
       ) : null}
@@ -313,11 +330,10 @@ export function InvoiceGrid({
          * every option can be counted honestly or none of them shows a
          * number.
          */
-        filter={statusFilter({
-          values: query.statuses,
-          choices: STATUS_CHOICES,
-          inline: true,
-          onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+        filter={granularFilter({
+          specs: withFilterOptions(INVOICE_FILTERS, filterOptions ?? {}),
+          filters: query.filters ?? [],
+          onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
         })}
         sort={{
           options: SORT_OPTIONS,
@@ -346,10 +362,24 @@ export function InvoiceGrid({
         isLoading={isLoading}
         error={error}
         {...(onRetry ? { onRetry } : {})}
-        isFiltered={query.search.length > 0 || query.statuses.length > 0}
+        isRefreshing={isRefreshing}
+        isProvisional={isProvisional}
+        isPageLocalFilter={isPageLocal}
+        isFiltered={
+          query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+        }
         {...(onClearFilters ? { onClearFilters } : {})}
-        filteredEmptyTitle="No invoices match these filters"
+        filteredEmptyTitle={
+          isPageLocal ? 'No matching invoices on this page' : 'No invoices match these filters'
+        }
+        {...(isPageLocal
+          ? {
+              filteredEmptyDescription:
+                'Paid and overdue are filtered within this page only. Other pages may have matches; go to another page, or clear the filter.',
+            }
+          : {})}
         empty={{
+          scene: 'billing',
           title: 'No invoices yet',
           description:
             'Invoices are produced when a contract’s billing period closes. Put a customer on a plan and the first one will appear here on its own.',

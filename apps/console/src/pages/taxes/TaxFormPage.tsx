@@ -4,7 +4,7 @@ import {
   type CreateTaxRate,
   type EditTaxRate,
 } from '@fp/domain'
-import { ApiError, useCreateTaxRate, useTaxRates, useUpdateTaxRate } from '@fp/query'
+import { ApiError, useCreateTaxRate, useTaxRates, useUpdateTaxRate, serverReason } from '@fp/query'
 import { TaxRateCreateForm, TaxRateEditForm } from '@fp/ui/pages'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 
@@ -66,7 +66,7 @@ export function TaxFormPage(props: TaxFormPageProps) {
     <TaxRateEditForm
       trail={[
         { label: 'Tax rates', onClick: onCancel },
-        { label: taxRate.name },
+        { label: 'Tax rate details' },
         { label: 'Edit' },
       ]}
       defaultValue={taxRateToEdit(taxRate)}
@@ -89,11 +89,11 @@ export function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change tax rates here.'
+        return serverReason(error) ?? 'You do not have permission to change tax rates here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the tax rate. Try again.'
+        return serverReason(error) ?? 'Could not save the tax rate. Try again.'
     }
   }
   return 'Could not save the tax rate. Try again.'

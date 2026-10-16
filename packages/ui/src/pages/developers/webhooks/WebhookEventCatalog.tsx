@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { SearchIcon } from 'lucide-react'
+import { SearchIcon } from '@ui/icons'
 import { type WebhookEventType, groupWebhookEventTypes } from '@fp/domain'
 import {
   CodeBlock,
@@ -10,6 +10,7 @@ import {
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
 import { Section } from '@ui/compositions/layout/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -30,6 +31,7 @@ export const WebhookEventCatalogProvenance = provenance({
     'ui/input-group',
     'compositions/Section',
     'compositions/EmptyState',
+    'compositions/feedback/States',
     'reui/code-block',
   ],
   note: 'Svix event catalog: grouped rail, event types with description and example payload.',
@@ -39,12 +41,18 @@ export interface WebhookEventCatalogProps {
   eventTypes: WebhookEventType[]
   isLoading?: boolean
   error?: string | null
+  errorKind?: ErrorKind | undefined
+  onRetry?: (() => void) | undefined
+  isRetrying?: boolean | undefined
 }
 
 export function WebhookEventCatalog({
   eventTypes,
   isLoading = false,
   error = null,
+  errorKind,
+  onRetry,
+  isRetrying,
 }: WebhookEventCatalogProps) {
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState<string | null>(null)
@@ -66,13 +74,20 @@ export function WebhookEventCatalog({
 
   if (error) {
     return (
-      <EmptyState size="inline" title="The event catalog could not be loaded" description={error} />
+      <ErrorState
+        title="The event catalog could not be loaded"
+        description={error}
+        {...(errorKind ? { kind: errorKind } : {})}
+        {...(onRetry ? { onRetry } : {})}
+        {...(isRetrying !== undefined ? { isRetrying } : {})}
+      />
     )
   }
 
   if (!isLoading && eventTypes.length === 0) {
     return (
       <EmptyState
+        scene="developers"
         size="inline"
         title="No event types yet"
         description="Event types appear here once Flexprice registers them for this environment."
@@ -130,6 +145,7 @@ export function WebhookEventCatalog({
           Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-32 w-full" />)
         ) : visible.length === 0 ? (
           <EmptyState
+            scene="developers"
             size="inline"
             isFiltered
             title="No event types match"

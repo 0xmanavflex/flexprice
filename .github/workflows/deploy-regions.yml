@@ -1,0 +1,137 @@
+name: Deploy regions
+
+# Deploys `main` to each regional console — India and Canada — as separate
+# Vercel projects, so every region has its own URL, domain and API.
+#
+# The console is the same code everywhere. What makes a region is its Vercel
+# project's own Environment Variables (`VITE_FLEXPRICE_API_URL` and the rest of
+# the `VITE_*` set), which `vercel pull` fetches at build time. Set those in
+# each project, not here.
+#
+# Each region is gated on its own: a missing project ID skips that region with
+# a warning and the other still deploys. Nothing fails because a region has not
+# been set up yet.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#
+#   VERCEL_TOKEN               shared with deploy.yml
+#   VERCEL_ORG_ID              shared with deploy.yml
+#   VERCEL_INDIA_PROJECT_ID    Vercel → the India project → Settings → General
+#   VERCEL_CANADA_PROJECT_ID   Vercel → the Canada project → Settings → General
+#
+# A push to `main` is each region's production deployment. Start it by hand from
+# the Actions tab to redeploy a single commit or a single region.
+on:
+  # Called by `pipeline.yml` after the gate passes. Run it by hand from the
+  # Actions tab to redeploy a single commit or a single region.
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: Region to deploy
+        type: choice
+        default: all
+        options:
+          - all
+          - india
+          - canada
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Vercel (${{ matrix.region }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # One region failing must not cancel the other.
+      fail-fast: false
+      matrix:
+        include:
+          - region: india
+            project_id: VERCEL_INDIA_PROJECT_ID
+          - region: canada
+            project_id: VERCEL_CANADA_PROJECT_ID
+    # Separate queues per region; a newer push replaces a deploy still running.
+    concurrency:
+      group: deploy-${{ matrix.region }}
+      cancel-in-progress: true
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ matrix.region == 'india' && secrets.VERCEL_INDIA_PROJECT_ID || secrets.VERCEL_CANADA_PROJECT_ID }}
+    steps:
+      - name: Decide whether this region can deploy
+        id: gate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          REGION: ${{ matrix.region }}
+          PROJECT_SECRET: ${{ matrix.project_id }}
+          REQUESTED: ${{ github.event.inputs.region || 'all' }}
+        run: |
+          if [ "$REQUESTED" != "all" ] && [ "$REQUESTED" != "$REGION" ]; then
+            reason="only $REQUESTED was requested"
+          elif [ -z "$VERCEL_TOKEN" ]; then
+            reason="the VERCEL_TOKEN repository secret is not set"
+          elif [ -z "$VERCEL_ORG_ID" ]; then
+            reason="the VERCEL_ORG_ID repository secret is not set"
+          elif [ -z "$VERCEL_PROJECT_ID" ]; then
+            reason="the $PROJECT_SECRET repository secret is not set"
+          else
+            reason=""
+          fi
+
+          if [ -n "$reason" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::$REGION deploy skipped — $reason. The secrets are listed at the top of .github/workflows/deploy-regions.yml."
+            echo "$REGION deploy skipped — $reason." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.enabled == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          HUSKY: 0
+
+      # Pinned to a major so a CLI release cannot change the build underneath
+      # us. Bump deliberately.
+      - name: Install the Vercel CLI
+        if: steps.gate.outputs.enabled == 'true'
+        run: npm install --global vercel@59
+
+      - name: Pull the Vercel environment
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=production
+
+      - name: Build
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --prod
+
+      - name: Deploy
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          REGION: ${{ matrix.region }}
+        run: |
+          url=$(vercel deploy --prebuilt --prod)
+          echo "Deployed $REGION to production — $url" >> "$GITHUB_STEP_SUMMARY"

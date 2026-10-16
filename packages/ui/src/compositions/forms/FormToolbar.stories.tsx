@@ -60,7 +60,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 export const Create: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { level: 1, name: 'Create group' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Create group' })).toBeNull()
     await expect(canvas.getByRole('button', { name: 'Create group' })).toHaveAttribute(
       'form',
       'demo-form',

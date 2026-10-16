@@ -47,21 +47,36 @@ export interface FormCardProps {
   title?: string
   /** Whether the card holds fields the form cannot be submitted without. */
   status?: 'required' | 'optional'
+  /**
+   * Anything else for the title row's right side — a count, an Edit link, a
+   * qualifier like "2 overridden". Sits after the status badge.
+   */
+  adornment?: ReactNode
+  /** Sits to the left of the title, so a long form can be scanned by section. */
+  icon?: ReactNode
   children: ReactNode
   className?: string
 }
 
-export function FormCard({ title, status, children, className }: FormCardProps) {
+export function FormCard({ title, status, adornment, icon, children, className }: FormCardProps) {
   const rows = flattenRows(children)
   return (
     <section className={cn('bg-background flex w-full flex-col rounded-xl border', className)}>
       {title ? (
         <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6">
-          <h2 className="text-sm font-medium">{title}</h2>
-          {status ? (
-            <Badge variant={status === 'required' ? 'primary-light' : 'secondary'} size="sm">
-              {status === 'required' ? 'Required' : 'Optional'}
-            </Badge>
+          <div className="flex min-w-0 items-center gap-2">
+            {icon}
+            <h2 className="text-sm font-medium">{title}</h2>
+          </div>
+          {status || adornment ? (
+            <div className="flex shrink-0 items-center gap-2">
+              {status ? (
+                <Badge variant={status === 'required' ? 'primary-light' : 'secondary'} size="sm">
+                  {status === 'required' ? 'Required' : 'Optional'}
+                </Badge>
+              ) : null}
+              {adornment}
+            </div>
           ) : null}
         </div>
       ) : null}

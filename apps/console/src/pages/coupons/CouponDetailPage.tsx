@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { useState } from 'react'
 import {
   COUPON_CADENCE_LABEL,
   type Coupon,
@@ -7,7 +7,14 @@ import {
   CouponType,
   formatMoney,
 } from '@fp/domain'
-import { ApiError, useArchiveCoupon, useCoupon, useUpdateCoupon } from '@fp/query'
+import {
+  ApiError,
+  useArchiveCoupon,
+  useCoupon,
+  useCouponRedemptions,
+  useUpdateCoupon,
+  serverReason,
+} from '@fp/query'
 import {
   CatalogDetailFrame,
   CatalogStatusBadge,
@@ -16,15 +23,9 @@ import {
   Money,
   Pill,
 } from '@fp/ui/pages'
-import {
-  AppFailure,
-  ConfirmDialog,
-  Properties,
-  EditableCard,
-  LoadingRows,
-  Section,
-} from '@fp/ui/compositions'
-import { TicketPercentIcon } from 'lucide-react'
+import { ConfirmDialog, EditableCard, MetadataCard, Properties, Section } from '@fp/ui/compositions'
+import { ArchiveIcon, PencilIcon, TicketPercentIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
 
 type CouponTab = 'overview' | 'redemptions' | 'information'
 
@@ -33,8 +34,8 @@ export interface CouponDetailPageProps {
   onBack: () => void
   /** Open with the details already in edit mode. */
   startEditing?: boolean
-  /** Open the full edit form. */
-  onEdit?: () => void
+  /** Open a contract the coupon is applied to. */
+  onOpenContract?: (contractId: string) => void
 }
 
 /**
@@ -57,32 +58,18 @@ export function CouponDetailPage({
   couponId,
   onBack,
   startEditing = false,
-  onEdit,
+  onOpenContract,
 }: CouponDetailPageProps) {
   const coupon = useCoupon(couponId)
+  const redemptions = useCouponRedemptions(couponId)
   const update = useUpdateCoupon()
   const archive = useArchiveCoupon()
 
   const [archiving, setArchiving] = useState(false)
   const [tab, setTab] = useState<CouponTab>(startEditing ? 'information' : 'overview')
 
-  if (coupon.isPending) {
-    return (
-      <div className="p-6">
-        <LoadingRows />
-      </div>
-    )
-  }
-
-  if (coupon.error || !coupon.data) {
-    const failure = toFailure(coupon.error)
-    return (
-      <AppFailure
-        title="This coupon could not be loaded"
-        detail={failure.message}
-        {...(failure.canRetry ? { onRetry: () => void coupon.refetch() } : {})}
-      />
-    )
+  if (!coupon.data) {
+    return detailGate(coupon, { noun: 'this coupon', listName: 'coupons', onBack })
   }
 
   const record = coupon.data
@@ -100,22 +87,27 @@ export function CouponDetailPage({
       title={record.name}
       badges={
         <>
+          <CatalogStatusBadge status={record.status} />
           <Pill>{discountText(record)}</Pill>
           <Pill>{cadenceText(record)}</Pill>
-          {isArchived ? <CatalogStatusBadge status={record.status} /> : null}
         </>
       }
       id={record.code || record.id}
       menuLabel="Coupon actions"
       menu={[
-        { id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') },
+        {
+          id: 'edit-details',
+          label: 'Edit details',
+          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setTab('information'),
+        },
         ...(isArchived
           ? []
           : [
-              ...(onEdit ? [{ id: 'edit', label: 'Edit coupon', onSelect: onEdit }] : []),
               {
                 id: 'archive',
                 label: 'Archive',
+                icon: <ArchiveIcon aria-hidden />,
                 destructive: true,
                 onSelect: () => setArchiving(true),
               },
@@ -133,7 +125,24 @@ export function CouponDetailPage({
           value: 'redemptions',
           label: 'Redemptions',
           count: record.totalRedemptions,
-          content: <CouponRedemptionsView />,
+          content: (
+            <CouponRedemptionsView
+              {...(redemptions.data
+                ? {
+                    redemptions: redemptions.data.map((row) => ({
+                      id: row.id,
+                      contractId: row.contractId,
+                      customer: row.customer,
+                      plan: row.plan,
+                      appliedAt: formatDay(row.startDate),
+                      ...(row.endDate ? { endsAt: formatDay(row.endDate) } : {}),
+                      status: row.status,
+                    })),
+                  }
+                : {})}
+              {...(onOpenContract ? { onOpenContract } : {})}
+            />
+          ),
         },
         {
           value: 'information',
@@ -142,7 +151,7 @@ export function CouponDetailPage({
             <div className="grid gap-5 xl:grid-cols-3">
               <EditableCard
                 className="xl:col-span-2"
-                title="General"
+                title="Coupon details"
                 locked={isArchived}
                 fields={[
                   { key: 'name', label: 'Name', value: record.name, required: true },
@@ -151,13 +160,6 @@ export function CouponDetailPage({
                     label: 'Coupon ID',
                     value: record.id,
                     display: <span className="font-mono text-[13px]">{record.id}</span>,
-                    readOnly: true,
-                  },
-                  {
-                    key: 'status',
-                    label: 'Status',
-                    value: record.status,
-                    display: <CatalogStatusBadge status={record.status} />,
                     readOnly: true,
                   },
                   {
@@ -180,13 +182,18 @@ export function CouponDetailPage({
                   })
                 }
               />
-              <Section title="Metadata">
-                {record.metadata ? (
-                  <Properties columns={2} items={metadataItems(record.metadata)} />
-                ) : (
-                  <p className="text-muted-foreground text-sm">This coupon carries no metadata.</p>
-                )}
-              </Section>
+              <MetadataCard
+                metadata={record.metadata ?? {}}
+                {...(isArchived
+                  ? {}
+                  : {
+                      onSave: (metadata: Record<string, string>) =>
+                        update.mutateAsync({
+                          id: record.id,
+                          draft: { name: record.name, metadata },
+                        }),
+                    })}
+              />
             </div>
           ),
         },
@@ -275,34 +282,6 @@ function formatDay(value: Date | null): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
 }
 
-/** Metadata as readable rows, not a raw JSON dump. */
-function metadataItems(metadata: Record<string, string>): { label: string; value: ReactNode }[] {
-  return Object.entries(metadata).map(([key, value]) => ({
-    label: key,
-    value: <span className="break-words">{value}</span>,
-  }))
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'not_found':
-        return { message: 'This coupon does not exist, or was deleted.', canRetry: false }
-      case 'forbidden':
-        return { message: 'You do not have access to this coupon.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading this coupon.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading this coupon.', canRetry: true }
-}
-
 function toSubmitError(error: unknown): string | null {
   if (!error) return null
 
@@ -311,11 +290,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change coupons here.'
+        return serverReason(error) ?? 'You do not have permission to change coupons here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the coupon. Try again.'
+        return serverReason(error) ?? 'Could not save the coupon. Try again.'
     }
   }
   return 'Could not save the coupon. Try again.'

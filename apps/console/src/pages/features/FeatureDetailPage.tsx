@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { type CloneFeature, FeatureType } from '@fp/domain'
+import { type CloneFeature, FeatureType, PriceEntityType } from '@fp/domain'
 import {
-  ApiError,
   useCloneFeature,
   useDeleteFeature,
   useFeature,
@@ -11,8 +10,10 @@ import {
   useUpdateFeature,
 } from '@fp/query'
 import { FeatureCloneDialog, FeatureDetailView, type FeatureTab } from '@fp/ui/pages'
-import { AppFailure, ConfirmDialog, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { ConfirmDialog } from '@fp/ui/compositions'
 import { toSubmitError } from './featureMessages'
+import { detailGate } from '../shared/detailGate'
+import { subTab } from '../shared/subTab'
 
 export interface FeatureDetailPageProps {
   onEdit: (featureId: string) => void
@@ -27,7 +28,7 @@ export interface FeatureDetailPageProps {
  * Edit, which opens Information). "Edit configuration" opens the stepped form.
  * Charges and entitlements are the prices and grants that reference this
  * feature; both are added on a plan, so their CTAs go to the plan flows. The
- * usage chart is still demo: there is no per-feature series wired here yet.
+ * overview says usage is not available yet: there is no per-feature series.
  */
 export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
@@ -43,38 +44,12 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
   const [cloning, setCloning] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  if (feature.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (feature.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(feature.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void feature.refetch()}
-        />
-      </PageBody>
-    )
-  }
-
   if (!feature.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This feature no longer exists"
-          detail="It may have been deleted. Everything else in the catalogue still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(feature, {
+      noun: 'this feature',
+      listName: 'features',
+      onBack: onNavigateToList,
+    })
   }
 
   const data = feature.data
@@ -87,6 +62,8 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
     setDeleting(false)
     remove.reset()
   }
+  const chargesState = subTab(charges, 'charges')
+  const entitlementsState = subTab(entitlements, 'entitlements')
   const submitClone = (draft: CloneFeature) =>
     clone.mutate({ id: data.id, draft }, { onSuccess: closeClone })
 
@@ -102,26 +79,36 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
         onDelete={() => setDeleting(true)}
         charges={charges.data ?? []}
         chargesLoading={charges.isLoading}
-        chargesError={charges.error ? 'Charges could not be loaded.' : null}
+        chargesError={chargesState.error ?? null}
+        {...(chargesState.errorKind ? { chargesErrorKind: chargesState.errorKind } : {})}
+        {...(chargesState.onRetry ? { onRetryCharges: chargesState.onRetry } : {})}
         entitlements={entitlements.data ?? []}
         entitlementsLoading={entitlements.isLoading}
-        entitlementsError={entitlements.error ? 'Entitlements could not be loaded.' : null}
+        entitlementsError={entitlementsState.error ?? null}
+        {...(entitlementsState.errorKind
+          ? { entitlementsErrorKind: entitlementsState.errorKind }
+          : {})}
+        {...(entitlementsState.onRetry ? { onRetryEntitlements: entitlementsState.onRetry } : {})}
+        onOpenChargeParent={(charge) => {
+          if (charge.entityType === PriceEntityType.Addon) {
+            void navigate({ to: '/addons/$addonId', params: { addonId: charge.entityId } })
+          } else if (charge.entityType === PriceEntityType.CostSheet) {
+            void navigate({
+              to: '/cost-sheets/$costSheetId',
+              params: { costSheetId: charge.entityId },
+            })
+          } else if (charge.entityType === PriceEntityType.Plan) {
+            void navigate({
+              to: '/plans/$planId',
+              params: { planId: charge.entityId },
+              search: {} as never,
+            })
+          }
+        }}
         // A charge is priced on a plan: start a new one.
         onAddPlan={() => void navigate({ to: '/plans/new' })}
-        // An entitlement is granted on a plan: pick the plan from the list,
-        // as the product list's "Add entitlement" does.
-        onAddEntitlement={() => void navigate({ to: '/plans', search: {} as never })}
         onSaveMetadata={(metadata) =>
           update.mutateAsync({ id: data.id, draft: { name: data.name, metadata } })
-        }
-        onSave={(changes) =>
-          update.mutateAsync({
-            id: data.id,
-            draft: {
-              name: changes.name ?? data.name,
-              ...(changes.description !== undefined ? { description: changes.description } : {}),
-            },
-          })
         }
       />
       <FeatureCloneDialog
@@ -139,9 +126,9 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
         onOpenChange={(open) => {
           if (!open) closeDelete()
         }}
-        title="Delete feature"
-        description={`Delete ${data.name}? Plans and entitlements that use it lose it.`}
-        confirmLabel="Delete feature"
+        title="Archive feature"
+        description={`Archive ${data.name}? Plans and entitlements that use it lose it.`}
+        confirmLabel="Archive feature"
         destructive
         isPending={remove.isPending}
         error={toSubmitError(remove.error, 'delete')}
@@ -156,20 +143,4 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
       />
     </>
   )
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this feature.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This feature could not be loaded.'
-    }
-  }
-  return 'This feature could not be loaded.'
 }

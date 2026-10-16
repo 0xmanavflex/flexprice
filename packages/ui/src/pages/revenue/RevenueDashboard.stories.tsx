@@ -381,8 +381,8 @@ export const MeteredRevenueIsTheOnlyMoney: Story = {
   args: ready,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('$9,417.32')).toBeInTheDocument()
-    await expect(canvas.getByText(/plots volume, not money/)).toBeInTheDocument()
+    // No caption under the chart: explanatory notes appeared and vanished and moved the page.
+    await expect(canvas.queryByText(/plots volume, not money/)).toBeNull()
   },
 }
 
@@ -391,7 +391,7 @@ export const NoPricedSubtotal: Story = {
   args: { ...ready, meteredRevenue: null },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText(/no priced subtotal/)).toBeInTheDocument()
+    await expect(canvas.queryByText(/no priced subtotal/)).toBeNull()
     await expect(canvas.queryByText(/\$/)).not.toBeInTheDocument()
   },
 }
@@ -458,7 +458,7 @@ export const Empty: Story = {
     // By text, not by heading role: `EmptyState`'s inline title is ReUI's
     // `EmptyTitle`, which is a styled div. Asserting a heading here would be
     // testing a role the composition does not claim to give it.
-    await expect(canvas.getByText('No revenue yet')).toBeInTheDocument()
+    await expect(canvas.getByText('No usage or invoices in the last 30 days')).toBeInTheDocument()
     // The blurred chart behind it is decoration, and stays out of the tree.
     await expect(canvas.queryByRole('tab')).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'Create a plan' }))
@@ -466,19 +466,144 @@ export const Empty: Story = {
   },
 }
 
-/** The requests failed. Named, and told apart from "there is nothing yet". */
+/** The requests failed. Named, retryable, and told apart from "there is nothing yet". */
 export const Unavailable: Story = {
   args: {
     ...ready,
-    chart: { status: 'unavailable' as const, tabs: [], activeTab: 'usage', onTabChange: fn() },
+    chart: {
+      status: 'unavailable' as const,
+      tabs: [],
+      activeTab: 'usage',
+      onTabChange: fn(),
+      onRetry: fn(),
+    },
     meteredRevenue: null,
-    mix: { status: 'unavailable' as const, slices: [], total: 0 },
-    collections: { status: 'unavailable' as const, paid: 0, open: 0, overdue: 0 },
+    mix: { status: 'unavailable' as const, slices: [], total: 0, onRetry: fn() },
+    collections: {
+      status: 'unavailable' as const,
+      paid: 0,
+      open: 0,
+      overdue: 0,
+      onRetry: fn(),
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Invoices couldn’t be loaded.')).toBeInTheDocument()
+    // The chart, the donut and the collections panel each offer their own retry.
+    const retries = canvas.getAllByRole('button', { name: /try again/i })
+    await expect(retries.length).toBeGreaterThanOrEqual(3)
+    // A failure is not the first-run invitation, and not a count of nothing.
+    await expect(canvas.queryByText(/no metered events/i)).not.toBeInTheDocument()
+    await expect(canvas.queryByText(/no invoices were finalised/i)).not.toBeInTheDocument()
+    await userEvent.click(retries[retries.length - 1]!)
+    await expect(args.collections.onRetry).toHaveBeenCalled()
+  },
+}
+
+/**
+ * Still loading. Revenue mix and Collections must not say "no events" or "no
+ * invoices" about a window whose answer has not arrived, and nothing here is a
+ * zero.
+ */
+export const Loading: Story = {
+  args: {
+    ...ready,
+    chart: { status: 'loading' as const, tabs: [], activeTab: 'usage', onTabChange: fn() },
+    meteredRevenue: null,
+    mix: { status: 'loading' as const, slices: [], total: 0 },
+    collections: { status: 'loading' as const, paid: 0, open: 0, overdue: 0 },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getAllByRole('status').length).toBeGreaterThan(2)
-    await expect(canvas.getByText('Invoices could not be loaded.')).toBeInTheDocument()
+    await expect(canvas.getByText('Loading collections')).toBeInTheDocument()
+    await expect(canvas.queryByText(/no metered events/i)).not.toBeInTheDocument()
+    await expect(canvas.queryByText(/no invoices were finalised/i)).not.toBeInTheDocument()
+    await expect(canvas.queryByText('0%')).not.toBeInTheDocument()
+    await expect(canvas.queryByText(/no priced subtotal/i)).not.toBeInTheDocument()
+    // The tab strip is there to be read, each tab saying it is loading.
+    await expect(canvas.getAllByRole('tab')).toHaveLength(3)
+  },
+}
+
+/**
+ * Usage loaded, the invoice list failed. The strip stays and the invoice tab
+ * alone says so, with its own retry; the usage figures are not discarded.
+ */
+export const InvoicesFailed: Story = {
+  args: {
+    ...ready,
+    chart: {
+      status: 'ready' as const,
+      tabs: TABS.map((tab) =>
+        tab.id === 'invoices'
+          ? {
+              id: tab.id,
+              label: tab.label,
+              value: '',
+              points: [],
+              status: 'unavailable' as const,
+              onRetry: fn(),
+            }
+          : tab,
+      ),
+      activeTab: 'invoices',
+      onTabChange: fn(),
+    },
+    collections: {
+      status: 'unavailable' as const,
+      paid: 0,
+      open: 0,
+      overdue: 0,
+      onRetry: fn(),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const alerts = canvas.getAllByRole('alert')
+    await expect(
+      alerts.some((alert) => /invoices issued couldn.t be loaded/i.test(alert.textContent ?? '')),
+    ).toBe(true)
+    // The usage tab keeps its headline.
+    await expect(canvas.getByRole('tab', { name: /Metered usage/ })).toHaveTextContent(
+      compact.format(sum(USAGE)),
+    )
+    await expect(canvas.queryByText(/no invoices were finalised/i)).not.toBeInTheDocument()
+  },
+}
+
+/**
+ * The invoice list is capped (the API has no date filter), so a count over it
+ * is a floor. The panels say so rather than present it as the whole window.
+ */
+export const TruncatedInvoices: Story = {
+  args: {
+    ...ready,
+    chart: {
+      ...ready.chart,
+      basedOn: 'Based on the latest 200 invoices.',
+    },
+    collections: { ...ready.collections, basedOn: 'Based on the latest 200 invoices.' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Sampling notes are not drawn under the panels.
+    await expect(canvas.queryAllByText('Based on the latest 200 invoices.')).toHaveLength(0)
+  },
+}
+
+/** A refresh failed over figures already on screen: they stay, and say how old they are. */
+export const StaleKeepsData: Story = {
+  args: {
+    ...ready,
+    chart: { ...ready.chart, stale: true, updatedAt: Date.now() - 5 * 60_000, onRetry: fn() },
+    mix: { ...ready.mix, stale: true, updatedAt: Date.now() - 5 * 60_000, onRetry: fn() },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText(/couldn.t refresh/i).length).toBe(2)
+    await expect(canvas.getByText('516.4K')).toBeInTheDocument()
+    await expect(canvas.getByRole('tab', { name: /Metered usage/ })).toBeInTheDocument()
   },
 }
 

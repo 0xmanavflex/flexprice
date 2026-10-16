@@ -8,6 +8,11 @@ import {
   createGroupSchema,
   createTaxRateSchema,
   defaultFeatureLookupKey,
+  createAddonSchema,
+  createPlanSchema,
+  suggestKey,
+  suggestTaxCode,
+  KEY_PREFIX,
   editCreditGrantSchema,
   editEntitlementSchema,
   editFeatureSchema,
@@ -22,6 +27,34 @@ import {
 
 const messages = (result: { success: boolean; error?: { issues: { message: string }[] } }) =>
   result.error?.issues.map((i) => i.message) ?? []
+
+describe('keys suggested from a name', () => {
+  it('prefixes, lowercases and hyphenates like V1', () => {
+    expect(suggestKey(KEY_PREFIX.customer, 'Acme Corp')).toBe('cust-acme-corp')
+    expect(suggestKey(KEY_PREFIX.plan, '  Pro / Annual  ')).toBe('plan-pro-annual')
+    expect(suggestKey(KEY_PREFIX.addon, 'Extra Seats')).toBe('addon-extra-seats')
+    expect(suggestKey(KEY_PREFIX.group, 'Add-ons')).toBe('group-add-ons')
+    expect(suggestKey(KEY_PREFIX.costSheet, 'Q4 Costs')).toBe('cost-sheet-q4-costs')
+  })
+
+  it('leaves the field empty for a blank name', () => {
+    expect(suggestKey(KEY_PREFIX.customer, '   ')).toBe('')
+    expect(suggestKey(KEY_PREFIX.customer, '()')).toBe('')
+    expect(suggestTaxCode('')).toBe('')
+  })
+
+  it('gives a tax code letters and numbers only', () => {
+    expect(suggestTaxCode('GST 18%')).toBe('taxgst18')
+    expect(createTaxRateSchema.shape.code.safeParse(suggestTaxCode('GST 18%')).success).toBe(true)
+  })
+
+  it('produces keys the plan and add-on rules accept', () => {
+    const plan = suggestKey(KEY_PREFIX.plan, 'Pro Annual')
+    const addon = suggestKey(KEY_PREFIX.addon, 'Extra Seats')
+    expect(createPlanSchema.shape.lookupKey.safeParse(plan).success).toBe(true)
+    expect(createAddonSchema.shape.lookupKey.safeParse(addon).success).toBe(true)
+  })
+})
 
 describe('feature create/edit/clone', () => {
   it('derives the default lookup key from the name', () => {

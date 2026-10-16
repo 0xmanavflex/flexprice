@@ -6,10 +6,12 @@ import {
   type PriceUnitQuery,
   PriceUnitSortField,
   PriceUnitStatus,
+  PRICE_UNIT_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter } from './search'
+import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Price units: the translation between product vocabulary and the API.
@@ -32,6 +34,7 @@ export interface PriceUnitWire {
   status?: string | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
+  metadata?: Record<string, string> | null | undefined
 }
 
 /**
@@ -57,6 +60,7 @@ export function toPriceUnit(wire: PriceUnitWire): PriceUnit {
     // round, and nothing above this layer does arithmetic on it.
     conversionRate: wire.conversionRate ?? '0',
     status: toStatus(wire.status),
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -73,8 +77,25 @@ export function toPriceUnitFilter(query: PriceUnitQuery): Record<string, unknown
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
-    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
+    /*
+     * Status, server-side.
+     *
+     * It used to narrow the fetched page in the browser, which is a different
+     * and wrong thing: the request returns one page, rows are dropped from
+     * *that* page, and the pager still reports the server's unfiltered total.
+     * `status` is a declared field on this filter model and a real column the
+     * backend accepts, so there was never a reason not to send it.
+     */
+    ...statusFilterField(query.statuses, Object.values(PriceUnitStatus)),
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
+    ...(query.search || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search ? nameContainsFilter(query.search) : []),
+            ...toFilterConditions(query.filters ?? [], PRICE_UNIT_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 
@@ -93,12 +114,7 @@ export async function fetchPriceUnits(
   const priceUnits = (response.items ?? []).map((item) => toPriceUnit(item as PriceUnitWire))
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page —
-    // the same split add-ons and coupons use.
-    priceUnits:
-      query.statuses.length > 0
-        ? priceUnits.filter((unit) => query.statuses.includes(unit.status))
-        : priceUnits,
+    priceUnits,
     total: response.pagination?.total ?? 0,
   }
 }
@@ -122,8 +138,8 @@ export function usePriceUnits(query: PriceUnitQuery) {
  * Create sends the whole record — the rate stringified, because the API stores
  * it as a string. Update sends **only the name**: the backend rejects a change
  * to the code, symbol, base currency or rate, so sending them would be an error
- * the form has already prevented by rendering them read-only. Metadata is left
- * untouched (absent) rather than blanked.
+ * the form has already prevented by rendering them read-only. Metadata is sent
+ * only when the draft carries it, so a rename leaves it untouched.
  */
 export function toCreatePriceUnitRequest(draft: CreatePriceUnit): Record<string, unknown> {
   return {
@@ -136,7 +152,7 @@ export function toCreatePriceUnitRequest(draft: CreatePriceUnit): Record<string,
 }
 
 export function toUpdatePriceUnitRequest(draft: CreatePriceUnit): Record<string, unknown> {
-  return { name: draft.name }
+  return { name: draft.name, ...(draft.metadata ? { metadata: draft.metadata } : {}) }
 }
 
 export function useCreatePriceUnit() {

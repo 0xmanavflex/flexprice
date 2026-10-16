@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, PencilIcon, PlusIcon, PuzzleIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, PencilIcon, PlusIcon, PuzzleIcon, ArchiveIcon } from '@ui/icons'
 import {
   ADDON_SORT_LABEL,
   ADDON_STATUS_LABEL,
@@ -8,12 +8,30 @@ import {
   AddonSortField,
   AddonStatus,
   DEFAULT_ADDON_QUERY,
+  ADDON_FILTERS,
+  planKind,
+  planKindLabel,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
+import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
-import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../../shared/cells'
+import {
+  EmDash,
+  Tag,
+  type EntityColumn,
+  dateColumn,
+  idColumn,
+  pillColumn,
+  textColumn,
+} from '../../shared/cells'
+
+/** A figure, or a dash — zero and unknown read the same, as on the plans grid. */
+function count(value: number | undefined, locale: string | undefined) {
+  if (!value) return <EmDash />
+  return <span className="tabular-nums">{new Intl.NumberFormat(locale).format(value)}</span>
+}
 
 /**
  * The add-on list, over the shared `EntityList`.
@@ -47,11 +65,6 @@ const SORT_OPTIONS = Object.values(AddonSortField).map((value) => ({
   label: ADDON_SORT_LABEL[value],
 }))
 
-const STATUS_CHOICES = Object.values(AddonStatus).map((value) => ({
-  value,
-  label: ADDON_STATUS_LABEL[value],
-}))
-
 /** Every URL requested and returned 200; all three are in the docs sitemap. */
 const GUIDES: EntityGuide[] = [
   {
@@ -74,8 +87,22 @@ const GUIDES: EntityGuide[] = [
   },
 ]
 
+/**
+ * What an add-on contains, as the grid shows it.
+ *
+ * Contracts are absent on purpose — see `useAddonLinkage`; the subscriptions
+ * search ignores an add-on filter, so the figure cannot be read.
+ */
+export interface AddonLinkage {
+  entitlements: number | undefined
+}
+
 export interface AddonGridProps {
   addons: Addon[]
+  /** Entitlement counts per add-on id. */
+  linkage?: ReadonlyMap<string, AddonLinkage>
+  /** The linkage is still being read; its column shows a placeholder. */
+  linkageLoading?: boolean
   total: number
   query: AddonQuery
   onQueryChange: (query: AddonQuery) => void
@@ -87,6 +114,8 @@ export interface AddonGridProps {
   onCreate?: () => void
   /** Row menu: open the add-on's editor. Left out of the menu when absent. */
   onEdit?: ((addon: Addon) => void) | undefined
+  /** Row menu: archive. Rendered destructive, last. */
+  onArchive?: ((addon: Addon) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   locale?: string
@@ -103,22 +132,55 @@ export function AddonGrid({
   onAddonClick,
   onCreate,
   onEdit,
+  onArchive,
   onClearFilters,
   locale,
+  linkage,
+  linkageLoading = false,
 }: AddonGridProps) {
   const columns = useMemo<EntityColumn<Addon>[]>(
     () => [
       textColumn<Addon>('name', 'Add-on', (row) => row.name, {
-        width: 240,
+        width: 200,
         sortable: true,
         sortValue: AddonSortField.Name,
         hideable: false,
       }),
-      idColumn<Addon>('lookupKey', 'Key', (row) => row.lookupKey, { width: 180 }),
-      textColumn<Addon>('description', 'Description', (row) => row.description, {
-        width: 280,
-        muted: true,
-      }),
+      {
+        // Read off the charge mix, as on plans — the same question, a
+        // different noun, so "Hybrid add-on" rather than "Hybrid plan".
+        id: 'kind',
+        header: 'Type',
+        width: 170,
+        text: (row) => planKindLabel(planKind(row), ''),
+        cell: (row) => <Tag>{planKindLabel(planKind(row), '')}</Tag>,
+        skeleton: <Skeleton className="h-6 w-28 rounded-full" />,
+      },
+      {
+        id: 'charges',
+        header: 'Charges',
+        width: 100,
+        align: 'center',
+        text: (row) => String(row.chargeCount),
+        cell: (row) => count(row.chargeCount, locale),
+        skeleton: <Skeleton className="h-4 w-8" />,
+      },
+      {
+        id: 'entitlements',
+        header: 'Entitlements',
+        width: 120,
+        align: 'center',
+        text: (row) => {
+          const value = linkage?.get(row.id)?.entitlements
+          return value === undefined ? '' : String(value)
+        },
+        cell: (row) => {
+          const value = linkage?.get(row.id)?.entitlements
+          if (value === undefined && linkageLoading) return <Skeleton className="h-4 w-8" />
+          return count(value, locale)
+        },
+        skeleton: <Skeleton className="h-4 w-8" />,
+      },
       pillColumn<Addon>(
         'status',
         'Status',
@@ -126,15 +188,22 @@ export function AddonGrid({
           label: ADDON_STATUS_LABEL[row.status],
           tone: row.status === AddonStatus.Published ? 'success' : 'neutral',
         }),
-        { width: 130 },
+        { width: 110 },
       ),
+      idColumn<Addon>('lookupKey', 'Lookup key', (row) => row.lookupKey, { width: 180 }),
+      // Real, and on the old grid, but not in the redesign's default layout.
+      textColumn<Addon>('description', 'Description', (row) => row.description, {
+        width: 280,
+        muted: true,
+        hiddenByDefault: true,
+      }),
       dateColumn<Addon>('updatedAt', 'Updated', (row) => row.updatedAt, {
         width: 140,
         sortable: true,
         sortValue: AddonSortField.UpdatedAt,
+        hiddenByDefault: true,
         ...(locale ? { locale } : {}),
       }),
-      // Real, and on the old grid, but not in the redesign's default layout.
       dateColumn<Addon>('createdAt', 'Created', (row) => row.createdAt, {
         width: 140,
         sortable: true,
@@ -143,7 +212,7 @@ export function AddonGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale],
+    [locale, linkage, linkageLoading],
   )
 
   const isDefaultSort =
@@ -171,6 +240,14 @@ export function AddonGrid({
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(addon.id),
     })
+    if (onArchive && addon.status !== AddonStatus.Archived) {
+      actions.push({
+        label: 'Archive add-on',
+        icon: <ArchiveIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onArchive(addon),
+      })
+    }
     return actions
   }
 
@@ -188,10 +265,10 @@ export function AddonGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search add-ons…"
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: ADDON_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -215,10 +292,13 @@ export function AddonGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No add-ons match these filters"
       empty={{
+        scene: 'catalog',
         title: 'No add-ons yet',
         description:
           'An add-on is a priced extra sold alongside a plan — extra seats, a support tier, a burst of capacity. Create the shell here, then give it charges.',

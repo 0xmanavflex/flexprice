@@ -1,7 +1,7 @@
 import { type Tier } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
-import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { PlusIcon, Trash2Icon } from '@ui/icons'
 import { SimpleTable } from '../../../compositions/detail/DetailKit'
 import { provenance } from '@ui/provenance'
 

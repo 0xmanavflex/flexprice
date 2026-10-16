@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon } from '@ui/icons'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 
+import { DataFreshness, DataRegion } from '@ui/compositions/feedback/DataBoundary'
+import { RetryAction } from '@ui/compositions/feedback/RetryAction'
+import { Bone, SkeletonRegion, ValuePlaceholder } from '@ui/compositions/feedback/Skeletons'
 import { Panel } from '@ui/compositions/layout/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -10,7 +13,6 @@ import { ArcGauge } from '../shared/ArcGauge'
 import { BlurredEmpty, MetricChart, seriesTone } from '../shared/charts'
 import type { MetricTab } from '../shared/charts'
 import { HalfDonut } from '../shared/HalfDonut'
-import { Money } from '../shared/Money'
 import { SplitMeter } from '../shared/SplitMeter'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 
@@ -40,8 +42,8 @@ import { DetailTable, type DetailColumn } from '../shared/DetailTable'
  *     sheets record the cost side, but nothing in the API aggregates the two,
  *     and `Money` has no `add` by design (`@fp/domain/money`), so the browser
  *     cannot do it either. The panel keeps its place and shows an em-dash with
- *     the reason — the same choice `DashboardHome` makes for processing lag and
- *     request latency, and for the same reason: deleting the panel would make
+ *     the reason — the same choice `DashboardHome` makes for request latency,
+ *     and for the same reason: deleting the panel would make
  *     "we do not measure this" and "this is not a thing" look identical.
  *
  * Presentational, and holding no queries, so its story can exercise the ready,
@@ -56,9 +58,11 @@ export const RevenueDashboardProvenance = provenance({
     'pages/shared/HalfDonut',
     'pages/shared/SplitMeter',
     'pages/shared/ArcGauge',
-    'pages/shared/Money',
     'compositions/Section',
     'pages/shared/DetailTable',
+    'compositions/feedback/DataBoundary',
+    'compositions/feedback/RetryAction',
+    'compositions/feedback/Skeletons',
   ],
   note: 'Revenue: metered volume over time, the usage mix by feature, collections by invoice state, and gross margin shown as unavailable. Every figure is API-sourced or explicitly absent.',
 })
@@ -78,6 +82,29 @@ export const RevenueDashboardProvenance = provenance({
  */
 export type RevenuePanelStatus = 'loading' | 'ready' | 'empty' | 'unavailable'
 
+/**
+ * What a panel can say about the *quality* of its figures, beyond its status.
+ * All optional, so a story that passes none gets the plain panel.
+ *
+ * Data on screen beats a spinner or an error: a refetch that fails over good
+ * data is `status: 'ready'` with `stale: true`, never `unavailable`.
+ */
+export interface RevenuePanelMeta {
+  /** Re-ask the question. Offered on `unavailable` and `stale` panels. */
+  onRetry?: (() => void) | undefined
+  isRetrying?: boolean | undefined
+  /** A refetch is running over data already on screen. */
+  refreshing?: boolean | undefined
+  /** The figures belong to a previous window and are held until the new ones arrive. */
+  provisional?: boolean | undefined
+  /** The last refresh failed and the figures are the previous good copy. */
+  stale?: boolean | undefined
+  /** When the figures were fetched, epoch milliseconds. */
+  updatedAt?: number | undefined
+  /** What the figures are computed from, when that is not everything, e.g. "Based on the latest 200 invoices." */
+  basedOn?: string | undefined
+}
+
 /** One categorical slice of the mix. The tone is assigned here, not by the page. */
 export interface RevenueMixSlice {
   id: string
@@ -95,7 +122,13 @@ export interface RevenueDashboardProps {
    * Fully controlled from the page, because which metric you are reading is the
    * kind of thing that belongs in the URL.
    */
-  chart: {
+  chart: RevenuePanelMeta & {
+    /**
+     * `ready` means the strip is drawn, and each tab then carries its own
+     * `status`: usage can be loaded while invoices have failed. `loading` and
+     * `unavailable` mean no tab has anything, and force every tab to say so.
+     * `empty` is the first-run message.
+     */
     status: RevenuePanelStatus
     tabs: MetricTab[]
     activeTab: string
@@ -111,7 +144,7 @@ export interface RevenueDashboardProps {
   meteredRevenue: MoneyValue | null
 
   /** Metered volume by feature. Categorical, so `series-*` tones in fixed order. */
-  mix: {
+  mix: RevenuePanelMeta & {
     status: RevenuePanelStatus
     slices: RevenueMixSlice[]
     /** Events across every feature in the window — the centre figure. */
@@ -134,7 +167,7 @@ export interface RevenueDashboardProps {
   }
 
   /** Invoices finalised in the window, by the state the domain derives. */
-  collections: {
+  collections: RevenuePanelMeta & {
     status: RevenuePanelStatus
     paid: number
     open: number
@@ -276,84 +309,36 @@ const PLACEHOLDER_POINTS = [18, 26, 21, 34, 29, 41, 38, 52, 47, 61, 55, 68, 74, 
   (value) => ({ label: '', value }),
 )
 
-/**
- * The caption under the plot: the one money figure on this page, and why it is
- * not the line above it.
- *
- * `<Money>` rather than a formatted string, because the component is where
- * currency presentation lives — and `MetricChart.caption` takes a string, which
- * is why this is rendered beside the chart rather than passed into it.
- */
-function MeteredRevenueNote({
-  revenue,
-  rangeLabel,
-}: {
-  revenue: MoneyValue | null
-  rangeLabel: string
-}) {
-  return (
-    <p className="text-muted-foreground text-xs">
-      {revenue === null ? (
-        <>
-          The analytics API returned no priced subtotal for the {rangeLabel}, so there is no revenue
-          figure for this window.
-        </>
-      ) : (
-        <>
-          Metered usage in the {rangeLabel} priced at{' '}
-          <span className="text-foreground font-medium tabular-nums">
-            <Money value={revenue} />
-          </span>
-          . The API prices the window as a whole and returns no per-period figure, so the line above
-          plots volume, not money.
-        </>
-      )}
-    </p>
-  )
-}
+/** The strip's tabs when the page sent none because nothing has loaded. */
+const FALLBACK_TABS: Pick<MetricTab, 'id' | 'label'>[] = [
+  { id: 'usage', label: 'Metered usage' },
+  { id: 'events', label: 'Events ingested' },
+  { id: 'invoices', label: 'Invoices issued' },
+]
 
 function MetricPanel({
   chart,
-  meteredRevenue,
   rangeLabel,
   onGetStarted,
   onSeePlans,
 }: {
   chart: RevenueDashboardProps['chart']
-  meteredRevenue: MoneyValue | null
   rangeLabel: string
   onGetStarted: () => void
   onSeePlans: () => void
 }) {
-  if (chart.status !== 'ready') {
+  if (chart.status === 'empty') {
     const placeholder: MetricTab[] = [
       { id: 'placeholder', label: 'Metered usage', value: NOTHING, points: PLACEHOLDER_POINTS },
     ]
-    const unavailable = chart.status === 'unavailable'
-    const loading = chart.status === 'loading'
 
     return (
       <BlurredEmpty
-        title={
-          unavailable
-            ? 'Usage analytics unavailable'
-            : loading
-              ? 'Loading revenue'
-              : 'No revenue yet'
-        }
-        description={
-          unavailable
-            ? 'Usage analytics could not be loaded for this window. Try again in a moment.'
-            : loading
-              ? 'Fetching usage analytics for this window.'
-              : 'Price a plan and send your first usage events — this chart then plots the volume behind every invoice.'
-        }
-        action={
-          chart.status === 'empty' ? { label: 'Create a plan', onClick: onSeePlans } : undefined
-        }
-        secondaryAction={
-          chart.status === 'empty' ? { label: 'Add a feature', onClick: onGetStarted } : undefined
-        }
+        scene="revenue"
+        title={`No usage or invoices in the ${rangeLabel}`}
+        description="This report covers that window only; earlier periods are unchanged. Price a plan and send usage events to fill it."
+        action={{ label: 'Create a plan', onClick: onSeePlans }}
+        secondaryAction={{ label: 'Add a feature', onClick: onGetStarted }}
       >
         <MetricChart
           tabs={placeholder}
@@ -365,15 +350,47 @@ function MetricPanel({
     )
   }
 
+  /*
+   * Loading and unavailable are claims about every tab, so they are forced onto
+   * all of them whatever the page handed over: a tab strip that shows last
+   * time's numbers under an "unavailable" status is the contradiction to avoid.
+   * Each tab then draws its own placeholder or retry instead of a dash.
+   */
+  const forced = chart.status === 'loading' || chart.status === 'unavailable'
+  const tabs: MetricTab[] = forced
+    ? (chart.tabs.length > 0 ? chart.tabs : FALLBACK_TABS).map((tab) => ({
+        id: tab.id,
+        label: tab.label,
+        value: '',
+        points: [],
+        status: chart.status === 'loading' ? 'loading' : 'unavailable',
+        onRetry: chart.onRetry,
+      }))
+    : chart.tabs
+
   return (
     <div className="flex flex-col gap-2">
-      <MetricChart
-        tabs={chart.tabs}
-        activeTab={chart.activeTab}
-        onTabChange={chart.onTabChange}
-        height={260}
-      />
-      <MeteredRevenueNote revenue={meteredRevenue} rangeLabel={rangeLabel} />
+      <DataRegion
+        state={{
+          refreshing: Boolean(chart.refreshing),
+          provisional: Boolean(chart.provisional),
+        }}
+      >
+        <MetricChart
+          tabs={tabs}
+          activeTab={chart.activeTab}
+          onTabChange={chart.onTabChange}
+          height={260}
+        />
+      </DataRegion>
+      {chart.stale && !forced ? (
+        <DataFreshness
+          updatedAt={chart.updatedAt}
+          stale
+          refreshing={Boolean(chart.isRetrying)}
+          {...(chart.onRetry ? { onRefresh: chart.onRetry } : {})}
+        />
+      ) : null}
     </div>
   )
 }
@@ -407,30 +424,57 @@ function MixPanel({
       title="Revenue mix"
       action={<PanelButton onClick={onViewFeatures}>All features</PanelButton>}
     >
-      <div className="flex flex-1 flex-col justify-center p-6">
-        {mix.status === 'ready' && mix.slices.length > 0 ? (
-          <HalfDonut
+      <DataRegion
+        className="flex flex-1 flex-col"
+        state={{ refreshing: Boolean(mix.refreshing), provisional: Boolean(mix.provisional) }}
+      >
+        <div className="flex flex-1 flex-col justify-center gap-3 p-6">
+          {mix.status === 'ready' && mix.slices.length > 0 ? (
+            <HalfDonut
+              /*
+               * Categorical tones in fixed order, except the folded tail: a
+               * remainder is not a category, so it takes `neutral` — the tone
+               * `charts.tsx` reserves for exactly that — rather than borrowing a
+               * series slot and reading as one more feature.
+               */
+              slices={mix.slices.map((slice, index) => ({
+                ...slice,
+                tone: slice.id === 'other' ? ('neutral' as const) : seriesTone(index),
+              }))}
+              centerLabel="Events"
+              centerValue={compact.format(mix.total)}
+              format={(value) => compact.format(value)}
+              label={`Metered events by feature, ${rangeLabel}`}
+            />
+          ) : mix.status === 'loading' || mix.status === 'unavailable' ? (
             /*
-             * Categorical tones in fixed order, except the folded tail: a
-             * remainder is not a category, so it takes `neutral` — the tone
-             * `charts.tsx` reserves for exactly that — rather than borrowing a
-             * series slot and reading as one more feature.
+             * Neither is a claim about the window. The donut draws its own
+             * figureless ring for both, so a window still loading never reads
+             * "No metered events".
              */
-            slices={mix.slices.map((slice, index) => ({
-              ...slice,
-              tone: slice.id === 'other' ? ('neutral' as const) : seriesTone(index),
-            }))}
-            centerLabel="Events"
-            centerValue={compact.format(mix.total)}
-            format={(value) => compact.format(value)}
-            label={`Metered events by feature, ${rangeLabel}`}
-          />
-        ) : mix.status === 'unavailable' ? (
-          <AbsentFigure caption="Usage analytics could not be loaded for this window." />
-        ) : (
-          <AbsentFigure caption={`No metered events were ingested in the ${rangeLabel}.`} />
-        )}
-      </div>
+            <HalfDonut
+              slices={[]}
+              centerLabel="Events"
+              centerValue={NOTHING}
+              label={`Metered events by feature, ${rangeLabel}`}
+              status={mix.status === 'loading' ? 'loading' : 'error'}
+              onRetry={mix.onRetry}
+              isRetrying={mix.isRetrying}
+            />
+          ) : (
+            <AbsentFigure caption={`No metered events were ingested in the ${rangeLabel}.`} />
+          )}
+          {mix.stale ? (
+            <DataFreshness
+              updatedAt={mix.updatedAt}
+              stale
+              refreshing={Boolean(mix.isRetrying)}
+              {...(mix.onRetry ? { onRefresh: mix.onRetry } : {})}
+              className="justify-center"
+            />
+          ) : null}
+        </div>
+      </DataRegion>
     </Panel>
   )
 }
@@ -558,7 +602,7 @@ const BY_CUSTOMER_COLUMNS: DetailColumn<RevenueByCustomerRow>[] = [
   },
   {
     key: 'contract',
-    header: 'Contract',
+    header: 'Fixed',
     cell: (row) => <span className="text-muted-foreground tabular-nums">{row.contract}</span>,
   },
   {
@@ -586,6 +630,17 @@ function RevenueByCustomerPanel({
   onViewCustomers: () => void
 }) {
   const rows = byCustomer.rows ?? []
+  // A column no row has a figure for (cost and margin today) is left out rather
+  // than drawn as a column of dashes, which would read as zeros.
+  const field: Record<string, keyof RevenueByCustomerRow> = { net: 'netRevenue' }
+  const columns = BY_CUSTOMER_COLUMNS.filter(
+    (column) =>
+      column.key === 'customer' ||
+      rows.some((row) => {
+        const value = row[field[column.key] ?? (column.key as keyof RevenueByCustomerRow)]
+        return value !== '' && value !== NOTHING
+      }),
+  )
 
   return (
     <section aria-labelledby="revenue-by-customer" className="flex flex-col gap-4">
@@ -607,7 +662,7 @@ function RevenueByCustomerPanel({
           <DetailTable
             label="Revenue by customer"
             noun="customers"
-            columns={BY_CUSTOMER_COLUMNS}
+            columns={columns}
             rows={rows}
             getRowId={(row) => row.id}
             action={
@@ -671,6 +726,7 @@ function CollectionsPanel({
   onViewInvoices: () => void
 }) {
   const total = collections.paid + collections.open + collections.overdue
+  // Only reached when `ready` and non-empty; a loading panel never divides.
   const paidShare = total > 0 ? Math.round((collections.paid / total) * 100) : 0
 
   return (
@@ -678,25 +734,61 @@ function CollectionsPanel({
       title="Collections"
       action={<PanelButton onClick={onViewInvoices}>View invoices</PanelButton>}
     >
-      <div className="flex flex-1 flex-col gap-6 p-6">
-        {collections.status === 'ready' && total > 0 ? (
-          <SplitMeter
-            parts={[
-              { id: 'paid', label: 'Paid', value: collections.paid, tone: 'good' },
-              { id: 'open', label: 'Open', value: collections.open, tone: 'warning' },
-              { id: 'overdue', label: 'Overdue', value: collections.overdue, tone: 'critical' },
-            ]}
-            value={`${paidShare}%`}
-            title="of invoices paid"
-            format={(value) => whole.format(value)}
-            label={`Collections: ${total} invoices finalised ${rangeLabel}, by state`}
-          />
-        ) : collections.status === 'unavailable' ? (
-          <AbsentFigure caption="Invoices could not be loaded." />
-        ) : (
-          <AbsentFigure caption={`No invoices were finalised in the ${rangeLabel}.`} />
-        )}
-      </div>
+      <DataRegion
+        className="flex flex-1 flex-col"
+        state={{
+          refreshing: Boolean(collections.refreshing),
+          provisional: Boolean(collections.provisional),
+        }}
+      >
+        <div className="flex flex-1 flex-col gap-4 p-6">
+          {collections.status === 'loading' ? (
+            /*
+             * No figures and no meter shape: a "0% paid" or an empty bar read
+             * mid-load is a claim that nothing has been collected.
+             */
+            <SkeletonRegion label="Loading collections" className="flex flex-col gap-4 py-4">
+              <ValuePlaceholder width={6} label="Loading share of invoices paid" />
+              <Bone className="h-2 w-full rounded-full" />
+              <Bone className="h-3 w-2/3" />
+            </SkeletonRegion>
+          ) : collections.status === 'unavailable' ? (
+            <div role="alert" className="flex flex-col items-center gap-3 py-8 text-center text-sm">
+              <span className="text-muted-foreground">Invoices couldn’t be loaded.</span>
+              {collections.onRetry ? (
+                <RetryAction
+                  onRetry={collections.onRetry}
+                  {...(collections.isRetrying !== undefined
+                    ? { isRetrying: collections.isRetrying }
+                    : {})}
+                />
+              ) : null}
+            </div>
+          ) : collections.status === 'ready' && total > 0 ? (
+            <SplitMeter
+              parts={[
+                { id: 'paid', label: 'Paid', value: collections.paid, tone: 'good' },
+                { id: 'open', label: 'Open', value: collections.open, tone: 'warning' },
+                { id: 'overdue', label: 'Overdue', value: collections.overdue, tone: 'critical' },
+              ]}
+              value={`${paidShare}%`}
+              title="of invoices paid"
+              format={(value) => whole.format(value)}
+              label={`Collections: ${total} invoices finalised in the ${rangeLabel}, by state`}
+            />
+          ) : (
+            <AbsentFigure caption={`No invoices were finalised in the ${rangeLabel}.`} />
+          )}
+          {collections.stale ? (
+            <DataFreshness
+              updatedAt={collections.updatedAt}
+              stale
+              refreshing={Boolean(collections.isRetrying)}
+              {...(collections.onRetry ? { onRefresh: collections.onRetry } : {})}
+            />
+          ) : null}
+        </div>
+      </DataRegion>
     </Panel>
   )
 }
@@ -706,7 +798,6 @@ function CollectionsPanel({
 export function RevenueDashboard({
   rangeLabel,
   chart,
-  meteredRevenue,
   mix,
   margin,
   collections,
@@ -728,7 +819,6 @@ export function RevenueDashboard({
 
       <MetricPanel
         chart={chart}
-        meteredRevenue={meteredRevenue}
         rangeLabel={rangeLabel}
         onGetStarted={() => go('/features')}
         onSeePlans={() => go('/plans')}

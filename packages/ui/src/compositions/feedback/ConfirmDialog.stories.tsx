@@ -55,7 +55,11 @@ const meta = {
     confirmLabel: { control: 'text' },
     cancelLabel: { control: 'text' },
     destructive: { control: 'boolean', description: 'Destructive button weight.' },
-    isPending: { control: 'boolean', description: 'Request in flight: locks both buttons.' },
+    isPending: {
+      control: 'boolean',
+      description: 'Request in flight: locks both buttons and blocks Escape and overlay dismissal.',
+    },
+    pendingLabel: { control: 'text', description: 'Confirm button text while pending.' },
     error: { control: 'text', description: 'Inline failure message; empty for none.' },
     onOpenChange: { control: false },
     onConfirm: { control: false },
@@ -125,6 +129,27 @@ export const Pending: Story = {
     const confirm = await screen.findByRole('button', { name: 'Working…' })
     await expect(confirm).toBeDisabled()
     await expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+  },
+}
+
+/** Escape cannot dismiss a dialog with a request in flight; the caller is never told it closed. */
+export const PendingBlocksDismissal: Story = {
+  args: { isPending: true, pendingLabel: 'Archiving…' },
+  play: async ({ args }) => {
+    await expect(await screen.findByRole('button', { name: 'Archiving…' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    await expect(args.onOpenChange).not.toHaveBeenCalled()
+    await expect(screen.getByRole('dialog', { name: 'Archive coupon?' })).toBeInTheDocument()
+    await expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+  },
+}
+
+/** A fast double click reports one confirmation, even before the caller has rendered `isPending`. */
+export const DoubleClickConfirmsOnce: Story = {
+  play: async ({ args }) => {
+    const confirm = await screen.findByRole('button', { name: 'Archive' })
+    await userEvent.dblClick(confirm)
+    await expect(args.onConfirm).toHaveBeenCalledOnce()
   },
 }
 

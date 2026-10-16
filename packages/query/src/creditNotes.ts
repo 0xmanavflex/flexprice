@@ -54,7 +54,7 @@ export function toCreditNote(wire: CreditNoteWire): CreditNote {
       wire.total_amount === undefined ? undefined : String(wire.total_amount),
       wire.currency,
     ),
-    invoiceNumber: wire.invoice?.invoice_number || (wire.invoice_id ?? '').slice(0, 8),
+    invoiceNumber: wire.invoice?.invoice_number?.trim() || '',
     customerName: wire.customer?.name || wire.customer?.external_id || '',
     createdAt: created && !Number.isNaN(created.getTime()) ? created : null,
   }
@@ -177,7 +177,7 @@ export function toCreditNoteDetail(wire: CreditNoteDetailWire): CreditNoteDetail
     status: STATUS_FROM_WIRE[wire.creditNoteStatus ?? ''] ?? CreditNoteStatus.Draft,
     type: TYPE_FROM_WIRE[wire.creditNoteType ?? ''] ?? null,
     amount: moneyOr(wire.totalAmount, wire.currency),
-    invoiceNumber: wire.invoice?.invoiceNumber || (wire.invoiceId ?? '').slice(0, 8),
+    invoiceNumber: wire.invoice?.invoiceNumber?.trim() || '',
     customerName: wire.customer?.name || wire.customer?.externalId || '',
     createdAt: wire.createdAt ?? null,
     invoiceId: wire.invoiceId ?? '',

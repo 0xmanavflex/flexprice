@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * A coupon, as the list reads it.
  *
@@ -110,6 +111,8 @@ export interface CouponQuery {
   sortBy: CouponSortField
   sortDirection: 'asc' | 'desc'
   view: CouponView
+  /** Granular field filters, applied by the search endpoint. See `COUPON_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_COUPON_QUERY: CouponQuery = {
@@ -117,10 +120,34 @@ export const DEFAULT_COUPON_QUERY: CouponQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: CouponSortField.Name,
-  sortDirection: 'asc',
+  sortBy: CouponSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: CouponView.Table,
+  filters: [],
 }
+/** What the coupon list can filter on — V1's fields, by their wire names. */
+export const COUPON_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  {
+    field: 'type',
+    label: 'Type',
+    kind: 'options',
+    options: [
+      { value: 'fixed', label: 'Fixed amount' },
+      { value: 'percentage', label: 'Percentage' },
+    ],
+  },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * The rules for editing a coupon.
@@ -134,6 +161,7 @@ export const DEFAULT_COUPON_QUERY: CouponQuery = {
  */
 export const editCouponSchema = z.object({
   name: z.string().trim().min(1, 'Enter a name'),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type EditCoupon = z.infer<typeof editCouponSchema>
@@ -173,7 +201,11 @@ export const createCouponSchema = z
     currency: z.string().trim().optional(),
     percentageOff: z.string().trim().optional(),
     cadence: z.enum([CouponCadence.Once, CouponCadence.Repeated, CouponCadence.Forever]),
-    durationInPeriods: z.number().int('Must be a whole number').positive('Must be greater than zero').optional(),
+    durationInPeriods: z
+      .number()
+      .int('Must be a whole number')
+      .positive('Must be greater than zero')
+      .optional(),
     redeemAfter: z.date().optional(),
     redeemBefore: z.date().optional(),
     maxRedemptions: z

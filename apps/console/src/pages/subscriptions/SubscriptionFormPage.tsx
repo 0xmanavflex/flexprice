@@ -1,14 +1,34 @@
 import { useMemo, useState } from 'react'
 import {
   ApiError,
+  useAddons,
+  useCoupons,
   useCreateSubscription,
+  useCreditGrants,
+  useCustomerTaxAssociations,
   useCustomers,
   usePlanEntitlements,
   usePlans,
   usePrices,
+  useTaxRates,
+  serverReason,
 } from '@fp/query'
-import { DEFAULT_CUSTOMER_QUERY, DEFAULT_PLAN_QUERY, PriceEntityType } from '@fp/domain'
+import {
+  AddonStatus,
+  CouponStatus,
+  type CreateSubscription,
+  CreditGrantScope,
+  creditGrantToDraft,
+  DEFAULT_ADDON_QUERY,
+  DEFAULT_COUPON_QUERY,
+  DEFAULT_CUSTOMER_QUERY,
+  DEFAULT_PLAN_QUERY,
+  DEFAULT_TAX_RATE_QUERY,
+  PriceEntityType,
+  TaxRateStatus,
+} from '@fp/domain'
 import { SubscriptionForm } from '@fp/ui/pages'
+import { usePlanFormOptions } from '../plans/planFormOptions'
 
 export interface SubscriptionFormPageProps {
   /** Set when opened from a customer's own page: the Customer step is dropped. */
@@ -38,11 +58,45 @@ export function SubscriptionFormPage({
 }: SubscriptionFormPageProps) {
   const create = useCreateSubscription()
   const [planId, setPlanId] = useState('')
+  const [chosenCustomer, setChosenCustomer] = useState(customerId ?? '')
 
   const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, ...PICKER_PAGE })
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, ...PICKER_PAGE })
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = usePlanEntitlements(planId ? [planId] : [])
+  const planGrants = useCreditGrants(CreditGrantScope.Plan, planId)
+  // The metered features and price units a charge added to this contract alone can use.
+  const formOptions = usePlanFormOptions()
+  const coupons = useCoupons({
+    ...DEFAULT_COUPON_QUERY,
+    ...PICKER_PAGE,
+    statuses: [CouponStatus.Published],
+  })
+  const addons = useAddons({
+    ...DEFAULT_ADDON_QUERY,
+    ...PICKER_PAGE,
+    statuses: [AddonStatus.Published],
+  })
+  const taxRates = useTaxRates({
+    ...DEFAULT_TAX_RATE_QUERY,
+    ...PICKER_PAGE,
+    statuses: [TaxRateStatus.Published],
+  })
+  const associations = useCustomerTaxAssociations(chosenCustomer)
+  const customerTaxes = useMemo<CreateSubscription['taxes'] | null>(
+    () =>
+      associations.data
+        ? associations.data.map((association) => ({
+            taxRateCode: association.taxRateCode,
+            name: association.taxRateName,
+            percentage: association.percentage,
+            taxBehavior: association.taxBehavior,
+            priority: association.priority,
+            autoApply: association.autoApply,
+          }))
+        : null,
+    [associations.data],
+  )
 
   const customerOptions = useMemo(
     () =>
@@ -68,11 +122,26 @@ export function SubscriptionFormPage({
           ? {
               charges: charges.data ?? [],
               entitlements: entitlements.data ?? [],
+              creditGrants: planGrants.data?.map(creditGrantToDraft),
               isLoading: charges.isPending || entitlements.isPending,
             }
           : undefined
       }
       onPlanChange={setPlanId}
+      onCustomerChange={setChosenCustomer}
+      meters={formOptions.meters}
+      priceUnits={formOptions.units}
+      coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
+        value: coupon.id,
+        label: coupon.code ? `${coupon.name} · ${coupon.code}` : coupon.name,
+      }))}
+      addons={(addons.data?.addons ?? []).map((addon) => ({ value: addon.id, label: addon.name }))}
+      taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
+        code: rate.code,
+        name: rate.name,
+        percentage: rate.percentageValue,
+      }))}
+      customerTaxes={chosenCustomer ? customerTaxes : null}
       trail={[{ label: 'Contracts', onClick: onCancel }, { label: 'New contract' }]}
       {...(step ? { step } : {})}
       onStepChange={onStepChange}
@@ -96,11 +165,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to create contracts here.'
+        return serverReason(error) ?? 'You do not have permission to create contracts here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not create the contract. Try again.'
+        return serverReason(error) ?? 'Could not create the contract. Try again.'
     }
   }
   return 'Could not create the contract. Try again.'

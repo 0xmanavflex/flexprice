@@ -1,8 +1,8 @@
-import { type Payment, type PaymentQuery, formatMoney } from '@fp/domain'
-import { ApiError, useCollectionsSummary, usePayments } from '@fp/query'
-import { CollectionsSummary, PaymentGrid } from '@fp/ui/pages'
+import type { Payment, PaymentQuery } from '@fp/domain'
+import { usePayments, useEntityIntegrationColumns } from '@fp/query'
+import { PaymentGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { CreditCardIcon } from 'lucide-react'
+import { toListFailure } from '../shared/listFailure'
 
 export interface PaymentListPageProps {
   query: PaymentQuery
@@ -25,100 +25,49 @@ export function PaymentListPage({
   onPaymentClick,
 }: PaymentListPageProps) {
   const payments = usePayments(query)
-  const collections = useCollectionsSummary()
 
-  const failure = toFailure(payments.error)
+  const failure = toListFailure(payments.error, 'payments')
   const rows = payments.data?.payments ?? []
+  const integrationMappings = useEntityIntegrationColumns(
+    'payment',
+    rows.map((payment) => payment.id),
+  )
+  const total = payments.data?.total ?? 0
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
+  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
 
   return (
     <>
       <PageBody>
-        <CollectionsSummary
-          isLoading={collections.isPending}
-          cells={collectionsCells(collections.data)}
-        />
         <ListState
           isLoading={payments.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          // The filters narrow the page fetched, so an empty page under a filter
+          // says nothing about the ledger; only the server's total does.
+          isEmpty={rows.length === 0 && total === 0 && !isFiltered}
           isFiltered={isFiltered}
+          hasRows={payments.data !== undefined}
+          isRefreshing={payments.isFetching && !payments.isPending}
+          isProvisional={payments.isPlaceholderData}
+          isRetrying={payments.isFetching && payments.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           onRetry={() => void payments.refetch()}
-          onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-          emptyIcon={<CreditCardIcon aria-hidden />}
+          onClearFilters={clearFilters}
           emptyTitle="No payments yet"
           emptyDescription="Payments appear here as they are collected against invoices, successful or failed."
         >
           <PaymentGrid
+            integrationMappings={integrationMappings}
             payments={rows}
-            total={payments.data?.total ?? 0}
+            total={total}
             query={query}
             onQueryChange={onQueryChange}
             {...(onCreate ? { onCreate } : {})}
             {...(onPaymentClick ? { onPaymentClick } : {})}
-            onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+            onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
     </>
   )
-}
-
-function plural(count: number, noun: string) {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`
-}
-
-function collectionsCells(summary: ReturnType<typeof useCollectionsSummary>['data']) {
-  const floor = summary?.isPartial ? 'at least ' : ''
-  const elsewhere = summary?.otherCurrencies
-    ? ` · ${plural(summary.otherCurrencies, 'invoice')} in other currencies`
-    : ''
-  return [
-    {
-      label: 'Total outstanding',
-      value: summary?.outstanding
-        ? formatMoney(summary.outstanding)
-        : summary
-          ? formatMoney({ amount: '0', currency: 'USD' })
-          : null,
-      hint: `${floor}${plural(summary?.unpaidCount ?? 0, 'unpaid invoice')}${elsewhere}`,
-    },
-    {
-      label: 'Total overdue',
-      value: summary?.overdue
-        ? formatMoney(summary.overdue)
-        : summary
-          ? formatMoney({ amount: '0', currency: 'USD' })
-          : null,
-      hint: `${floor}${plural(summary?.overdueCount ?? 0, 'invoice')} past their due date or failed`,
-      ...((summary?.overdueCount ?? 0) > 0 ? { tone: 'danger' as const } : {}),
-    },
-  ]
-}
-
-/**
- * Turns a failure into something a person can act on.
- *
- * `ListState` takes a message and whether a retry can help; it has no business
- * knowing what an `ApiError` is. A permission error cannot be retried, so it
- * says so rather than inviting someone to keep pressing a button that fails.
- */
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to payments here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading payments.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading payments.', canRetry: true }
 }

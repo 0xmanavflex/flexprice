@@ -1,0 +1,217 @@
+import { useState } from 'react'
+import {
+  emptyTaxAssociation,
+  type AddContractAddon,
+  type AddContractCoupon,
+  type CreateCreditGrant,
+  type CreateEntitlement,
+  type CreateTaxAssociation,
+} from '@fp/domain'
+import { Composer } from '@ui/compositions/detail/DetailKit'
+import { FormDialog } from '@ui/compositions/forms/FormDialog'
+import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
+import { provenance } from '@ui/provenance'
+import { TaxDialog, type TaxRateOption } from '../customers/CustomerTaxSection'
+import { CreditGrantCreateForm } from '../product-catalog/credit-grants/CreditGrantForm'
+import {
+  EntitlementCreateForm,
+  type FeatureOption,
+} from '../product-catalog/entitlements/EntitlementForm'
+
+/**
+ * The five "add" dialogs behind the Overview sections of a contract. Each opens
+ * from the section's create button, submits through the page's callback, and
+ * stays open with the failure shown when the request is rejected.
+ */
+export const ContractSectionDialogsProvenance = provenance({
+  source: 'composition',
+  composes: ['compositions/FormDialog', 'pages/product-catalog/entitlements/EntitlementForm'],
+  note: 'Add entitlement, credit grant, add-on, coupon and tax to one contract, each as a FormDialog.',
+})
+
+export type ContractSectionKind = 'entitlement' | 'creditGrant' | 'addon' | 'coupon' | 'tax'
+
+export interface ContractSectionOptions {
+  features: FeatureOption[]
+  addons: { id: string; name: string }[]
+  coupons: { code: string; name: string }[]
+  taxRates: TaxRateOption[]
+}
+
+export interface ContractSectionActions {
+  onAddEntitlement?: ((draft: CreateEntitlement) => Promise<unknown> | void) | undefined
+  onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
+  onAddAddon?: ((draft: AddContractAddon) => Promise<unknown> | void) | undefined
+  onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
+  onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
+}
+
+export function ContractSectionDialogs({
+  kind,
+  options,
+  actions,
+  pending,
+  error,
+  onRun,
+  onClose,
+  couponCopy,
+}: {
+  kind: ContractSectionKind | null
+  options: ContractSectionOptions
+  actions: ContractSectionActions
+  pending: boolean
+  error: string | null
+  /** Runs one submit with the page's pending and error handling. */
+  onRun: (action: Promise<unknown> | void) => void
+  onClose: () => void
+  /** Overrides the coupon dialog when it is changing one charge rather than the contract. */
+  couponCopy?: { title: string; hint: string; submitLabel: string } | undefined
+}) {
+  return (
+    <>
+      <FormDialog
+        open={kind === 'entitlement'}
+        onOpenChange={(next) => (next ? undefined : onClose())}
+        title="Add entitlement"
+        isPending={pending}
+      >
+        <EntitlementCreateForm
+          features={options.features}
+          submitLabel="Add entitlement"
+          isSubmitting={pending}
+          submitError={error}
+          onSubmit={(draft) => onRun(actions.onAddEntitlement?.(draft))}
+        />
+      </FormDialog>
+
+      <FormDialog
+        open={kind === 'creditGrant'}
+        onOpenChange={(next) => (next ? undefined : onClose())}
+        title="Add credit grant"
+        isPending={pending}
+      >
+        <CreditGrantCreateForm
+          submitLabel="Add credit grant"
+          isSubmitting={pending}
+          submitError={error}
+          onSubmit={(draft) => onRun(actions.onAddCreditGrant?.(draft))}
+        />
+      </FormDialog>
+
+      <PickDialog
+        open={kind === 'addon'}
+        title="Add add-on"
+        label="Add-on"
+        hint="The add-on to attach to this contract."
+        submitLabel="Add add-on"
+        emptyNote="No add-ons are available to attach."
+        options={options.addons.map((a) => ({ value: a.id, label: a.name }))}
+        pending={pending}
+        error={error}
+        onClose={onClose}
+        onSubmit={(addonId) => onRun(actions.onAddAddon?.({ addonId }))}
+      />
+
+      <PickDialog
+        key={couponCopy?.title ?? 'add-coupon'}
+        open={kind === 'coupon'}
+        title={couponCopy?.title ?? 'Add coupon'}
+        label="Coupon"
+        hint={couponCopy?.hint ?? 'The coupon to apply to this contract.'}
+        submitLabel={couponCopy?.submitLabel ?? 'Add coupon'}
+        emptyNote="No coupons are available to apply."
+        options={options.coupons.map((c) => ({ value: c.code, label: c.name }))}
+        pending={pending}
+        error={error}
+        onClose={onClose}
+        onSubmit={(couponCode) => onRun(actions.onAddCoupon?.({ couponCode }))}
+      />
+
+      <TaxDialog
+        open={kind === 'tax'}
+        mode="add"
+        subject="contract"
+        taxRates={options.taxRates}
+        initial={emptyTaxAssociation()}
+        pending={pending}
+        error={error}
+        onClose={onClose}
+        onSubmit={(draft) => onRun(actions.onAddTax?.(draft))}
+      />
+    </>
+  )
+}
+
+function PickDialog({
+  open,
+  title,
+  label,
+  hint,
+  submitLabel,
+  emptyNote,
+  options,
+  pending,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean
+  title: string
+  label: string
+  hint: string
+  submitLabel: string
+  emptyNote: string
+  options: { value: string; label: string }[]
+  pending: boolean
+  error: string | null
+  onClose: () => void
+  onSubmit: (value: string) => void
+}) {
+  const [value, setValue] = useState('')
+  const [problem, setProblem] = useState<string | null>(null)
+  const id = `pick-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+
+  return (
+    <FormDialog
+      open={open}
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      title={title}
+      size="sm"
+      isPending={pending}
+    >
+      <Composer
+        submitLabel={submitLabel}
+        onCancel={onClose}
+        submitting={pending}
+        disabled={options.length === 0}
+        onSubmit={() => {
+          if (!value) return setProblem(`Choose a ${label.toLowerCase()}`)
+          setProblem(null)
+          onSubmit(value)
+        }}
+      >
+        <div className="flex flex-col gap-2">
+          <LabelWithHint htmlFor={id} hint={hint}>
+            {label}
+          </LabelWithHint>
+          <OptionSelect
+            id={id}
+            value={value || undefined}
+            onValueChange={setValue}
+            options={options}
+            placeholder={`Select ${label.toLowerCase()}`}
+          />
+          {options.length === 0 ? (
+            <p className="text-muted-foreground text-[13px]">{emptyNote}</p>
+          ) : null}
+        </div>
+        {problem || error ? (
+          <p role="alert" className="text-destructive text-sm">
+            {problem ?? error}
+          </p>
+        ) : null}
+      </Composer>
+    </FormDialog>
+  )
+}

@@ -1,4 +1,4 @@
-import { BracesIcon, GaugeIcon, HashIcon, ToggleRightIcon, type CircleIcon } from 'lucide-react'
+import { BracesIcon, GaugeIcon, HashIcon, ToggleRightIcon, type CircleIcon } from '@ui/icons'
 import { FEATURE_TYPE_LABEL, FeatureType, InvoiceStatus, needsAttention } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { Pill, type PillTone } from './cells'

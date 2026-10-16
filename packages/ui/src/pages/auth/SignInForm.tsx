@@ -1,12 +1,18 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useEffect, useId, useRef } from 'react'
-import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
-import { useForm, type Resolver } from 'react-hook-form'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { EyeIcon, EyeOffIcon } from 'lucide-react'
+import { EyeIcon, EyeOffIcon } from '@ui/icons'
 import { useState } from 'react'
 import { type SignInCredentials, signInSchema } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { Field as FieldRoot, FieldError, FieldGroup } from '@ui/components/primitives/field'
+import {
+  Field as FieldRoot,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@ui/components/primitives/field'
+import { Separator } from '@ui/components/primitives/separator'
 import { Input } from '@ui/components/primitives/input'
 import {
   InputGroup,
@@ -16,6 +22,7 @@ import {
 } from '@ui/components/primitives/input-group'
 import { Field } from '@ui/compositions/forms/Field'
 import { provenance } from '@ui/provenance'
+import { FormHead } from './AuthFrame'
 
 /**
  * Sign in.
@@ -52,6 +59,10 @@ export interface SignInFormProps {
    * on mount, the same as react-hook-form's own defaults.
    */
   defaultValues?: { email?: string; password?: string }
+  /** Drawn first in the fields, e.g. the data-region picker. */
+  region?: React.ReactNode
+  /** A note above the fields — under mocks, that the demo credentials are filled in. */
+  hint?: React.ReactNode
 }
 
 export function SignInForm({
@@ -61,17 +72,18 @@ export function SignInForm({
   error = null,
   alternatives,
   defaultValues,
+  region,
+  hint,
 }: SignInFormProps) {
   const [revealed, setRevealed] = useState(false)
   const passwordRef = useRef<HTMLInputElement | null>(null)
 
-  const form = useForm<SignInCredentials>({
+  const form = useCalmForm<SignInCredentials>({
     resolver: standardSchemaResolver(signInSchema) as Resolver<SignInCredentials>,
     defaultValues: {
       email: defaultValues?.email ?? '',
       password: defaultValues?.password ?? '',
     },
-    mode: 'onTouched',
   })
 
   // Keep what they got right, clear what they did not, and put the cursor
@@ -102,14 +114,22 @@ export function SignInForm({
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
       noValidate
       aria-labelledby="sign-in-heading"
-      className="flex w-full max-w-sm flex-col gap-7"
+      className="flex w-full flex-col gap-6"
     >
-      <div className="space-y-1.5">
-        <h1 id="sign-in-heading" className="text-2xl font-medium tracking-tight">
-          Sign in to Flexprice
-        </h1>
-        <p className="text-muted-foreground text-sm">Billing and usage for your product.</p>
-      </div>
+      <FormHead
+        id="sign-in-heading"
+        title="Sign in to Flexprice"
+        description="Monetization infrastructure for AI-native companies"
+      />
+
+      {hint ? (
+        <p
+          role="note"
+          className="border-primary/30 bg-primary/5 text-muted-foreground rounded-lg border px-3 py-2 text-xs leading-relaxed"
+        >
+          {hint}
+        </p>
+      ) : null}
 
       {error ? (
         <p
@@ -121,11 +141,8 @@ export function SignInForm({
       ) : null}
 
       <FieldGroup className="gap-4">
-        <Field
-          label="Email"
-          hint="The email address of your Flexprice account."
-          error={errors.email?.message}
-        >
+        {region}
+        <Field label="Email" error={errors.email?.message}>
           {({ id, ...field }) => (
             <Input
               id={id}
@@ -137,6 +154,7 @@ export function SignInForm({
               // field the user never touched.
               autoFocus={!error}
               disabled={isSubmitting}
+              placeholder="you@company.com"
               className="h-9"
               {...field}
               {...form.register('email')}
@@ -146,19 +164,14 @@ export function SignInForm({
 
         <FieldRoot data-invalid={errors.password ? true : undefined}>
           <div className="flex items-center justify-between">
-            <LabelWithHint
-              htmlFor={passwordId}
-              hint="The password you chose when you created your account."
-            >
-              Password
-            </LabelWithHint>
+            <FieldLabel htmlFor={passwordId}>Password</FieldLabel>
             {onForgotPassword ? (
               <button
                 type="button"
                 onClick={onForgotPassword}
                 className="text-muted-foreground hover:text-foreground text-xs"
               >
-                Forgot password?
+                Forgot your password?
               </button>
             ) : null}
           </div>
@@ -167,6 +180,7 @@ export function SignInForm({
               id={passwordId}
               type={revealed ? 'text' : 'password'}
               autoComplete="current-password"
+              placeholder="Enter your password"
               disabled={isSubmitting}
               aria-invalid={errors.password ? true : undefined}
               aria-describedby={passwordErrorId}
@@ -202,9 +216,9 @@ export function SignInForm({
       {alternatives ? (
         <>
           <div className="text-muted-foreground flex items-center gap-3 text-xs">
-            <span className="bg-border h-px flex-1" />
+            <Separator className="flex-1" />
             or
-            <span className="bg-border h-px flex-1" />
+            <Separator className="flex-1" />
           </div>
           {alternatives}
         </>

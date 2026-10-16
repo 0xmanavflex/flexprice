@@ -19,7 +19,7 @@ const meta = {
     as: { control: 'inline-radio', options: ['h1', 'h2', 'h3'], description: 'Heading level.' },
     flush: { control: 'boolean', description: 'No body padding.' },
     bare: { control: 'boolean', description: 'No header band.' },
-    table: { control: 'boolean', description: 'No title row; the name stays for assistive tech.' },
+    table: { control: 'boolean', description: 'Title and actions above the stable table frame.' },
     actions: { control: false },
     action: { control: false },
     children: { control: false },
@@ -143,4 +143,22 @@ export const PanelTray: StoryObj = {
       <p className="text-muted-foreground p-5 text-sm">Panel content.</p>
     </Panel>
   ),
+}
+
+export const EmptyTableFrame: Story = {
+  args: {
+    table: true,
+    title: 'Charges',
+    action: <Button>Add charge</Button>,
+    children: <p className="p-6 text-sm">No charges yet.</p>,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const action = canvas.getByRole('button', { name: 'Add charge' })
+    const message = canvas.getByText('No charges yet.')
+    await expect(canvas.getByRole('heading', { name: 'Charges' })).toBeVisible()
+    await expect(action.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      message.getBoundingClientRect().top,
+    )
+  },
 }

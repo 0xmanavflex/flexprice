@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { InfoIcon } from 'lucide-react'
+import { InfoIcon } from '@ui/icons'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'

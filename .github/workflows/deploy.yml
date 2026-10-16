@@ -25,9 +25,12 @@ name: Deploy
 # own Environment Variables, not here — `vercel pull` fetches it at build time,
 # so the bundle is built with exactly the configuration Vercel would use.
 on:
+  # Called by `pipeline.yml` on a push to main, so main runs these in order
+  # rather than all at once. The triggers below still fire on their own for
+  # every other branch and every pull request.
+  workflow_call:
   push:
     branches:
-      - main
       - feat/v2-foundation
       # A change to CI should prove itself on its own branch, before it reaches
       # one where a mistake blocks everyone.

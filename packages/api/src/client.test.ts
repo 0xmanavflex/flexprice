@@ -14,8 +14,11 @@ function harness(
   options: {
     token?: string | null
     environmentId?: string | null
-    respond?: (request: Request) => Response
+    respond?: (request: Request) => Response | Promise<Response>
     onUnauthorized?: () => void
+    timeoutMs?: number
+    /** Replaces the stub outright, e.g. to hang until aborted. */
+    fetcher?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   } = {},
 ) {
   const { token = 'jwt-abc', environmentId = 'env_123' } = options
@@ -28,26 +31,38 @@ function harness(
       getEnvironmentId: async () => environmentId,
     },
     ...(options.onUnauthorized ? { onUnauthorized: options.onUnauthorized } : {}),
-    fetcher: async (input, init) => {
-      const request = input instanceof Request ? input : new Request(input, init)
-      seen.push(request)
-      return (
-        options.respond?.(request) ??
-        new Response(JSON.stringify({ items: [] }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      )
-    },
+    ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
+    fetcher:
+      options.fetcher ??
+      (async (input, init) => {
+        const request = input instanceof Request ? input : new Request(input, init)
+        seen.push(request)
+        return (
+          (await options.respond?.(request)) ??
+          new Response(JSON.stringify({ items: [] }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      }),
   })
 
   return { client, seen }
 }
 
-function apiFailure(status: number, body: unknown): Response {
+function apiFailure(status: number, body: unknown, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
+  })
+}
+
+/** A fetcher that never answers, but honours its signal the way `fetch` does. */
+function hangUntilAborted(_input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return new Promise((_resolve, reject) => {
+    const signal = init?.signal
+    if (!signal) return
+    signal.addEventListener('abort', () => reject(signal.reason), { once: true })
   })
 }
 
@@ -207,5 +222,141 @@ describe('call', () => {
       kind: ErrorKind.Network,
       retryable: true,
     })
+  })
+})
+
+describe('deadline and cancellation', () => {
+  // A hung connection must become a retryable "took too long", not a skeleton
+  // that never resolves and not an "offline" banner.
+  it('fails as a Timeout when the API does not answer in time', async () => {
+    const { client } = harness({ timeoutMs: 20, fetcher: hangUntilAborted })
+
+    await expect(call(() => client.customers.queryCustomer({}))).rejects.toMatchObject({
+      kind: ErrorKind.Timeout,
+      retryable: true,
+    })
+  })
+
+  it('does not time out a request that answers inside the deadline', async () => {
+    const { client } = harness({ timeoutMs: 200 })
+
+    await expect(call(() => client.customers.queryCustomer({}))).resolves.toBeDefined()
+  })
+
+  // A cancelled query is the user moving on, not something to show.
+  it('reports a caller abort as Cancelled, not as a network failure or a timeout', async () => {
+    const { client } = harness({ timeoutMs: 5_000, fetcher: hangUntilAborted })
+    const controller = new AbortController()
+
+    const pending = call(
+      (options) => client.customers.queryCustomer({}, options),
+      controller.signal,
+    )
+    controller.abort()
+
+    await expect(pending).rejects.toMatchObject({ kind: ErrorKind.Cancelled, retryable: false })
+  })
+
+  it('rejects at once when the signal was already aborted', async () => {
+    const { client, seen } = harness({ fetcher: hangUntilAborted })
+    const controller = new AbortController()
+    controller.abort()
+
+    await expect(
+      call((options) => client.customers.queryCustomer({}, options), controller.signal),
+    ).rejects.toMatchObject({ kind: ErrorKind.Cancelled })
+    expect(seen).toHaveLength(0)
+  })
+
+  it('can switch the deadline off', async () => {
+    const { client } = harness({
+      timeoutMs: 0,
+      respond: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 40))
+        return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
+      },
+    })
+
+    await expect(call(() => client.customers.queryCustomer({}))).resolves.toBeDefined()
+  })
+})
+
+describe('rate limiting', () => {
+  it('maps 429 to RateLimited and reads Retry-After in seconds', async () => {
+    const { client } = harness({
+      respond: () =>
+        apiFailure(
+          429,
+          { success: false, error: { message: 'slow down' } },
+          { 'Retry-After': '7' },
+        ),
+    })
+
+    await expect(call(() => client.customers.queryCustomer({}))).rejects.toMatchObject({
+      kind: ErrorKind.RateLimited,
+      status: 429,
+      retryAfterMs: 7000,
+      retryable: false,
+    })
+  })
+
+  it('reads Retry-After given as an HTTP date', async () => {
+    const at = new Date(Date.now() + 10_000).toUTCString()
+    const { client } = harness({
+      respond: () =>
+        apiFailure(429, { success: false, error: { message: 'slow' } }, { 'Retry-After': at }),
+    })
+
+    const error = await call(() => client.customers.queryCustomer({})).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).retryAfterMs).toBeGreaterThan(7_000)
+    expect((error as ApiError).retryAfterMs).toBeLessThanOrEqual(10_000)
+  })
+
+  it('leaves retryAfterMs unset when the header is absent', async () => {
+    const { client } = harness({
+      respond: () => apiFailure(429, { success: false, error: { message: 'slow' } }),
+    })
+
+    const error = await call(() => client.customers.queryCustomer({})).catch((e: unknown) => e)
+
+    expect((error as ApiError).retryAfterMs).toBeUndefined()
+  })
+})
+
+describe('401 handling', () => {
+  // Twelve parallel requests with one dead token must end the session once.
+  it('reports a burst of 401s for one credential only once', async () => {
+    const onUnauthorized = vi.fn()
+    const { client } = harness({
+      onUnauthorized,
+      respond: () => apiFailure(401, { success: false, error: { message: 'expired' } }),
+    })
+
+    await Promise.allSettled(
+      Array.from({ length: 6 }, () => call(() => client.customers.queryCustomer({}))),
+    )
+
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports again once a different credential is rejected', async () => {
+    const onUnauthorized = vi.fn()
+    const tokens = ['old', 'old', 'new']
+    const client = createFlexpriceClient({
+      serverURL: SERVER,
+      auth: { getToken: async () => tokens.shift() ?? null, getEnvironmentId: async () => 'env_1' },
+      onUnauthorized,
+      fetcher: async () => apiFailure(401, { success: false, error: { message: 'expired' } }),
+    })
+
+    await Promise.allSettled([
+      call(() => client.customers.queryCustomer({})),
+      call(() => client.customers.queryCustomer({})),
+      call(() => client.customers.queryCustomer({})),
+    ])
+
+    expect(onUnauthorized).toHaveBeenCalledTimes(2)
   })
 })

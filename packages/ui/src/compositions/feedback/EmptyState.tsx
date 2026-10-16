@@ -1,5 +1,4 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { IconStack } from '@ui/components/reui/icon-stack'
 import {
   Empty,
   EmptyContent,
@@ -10,6 +9,8 @@ import {
 } from '@ui/components/primitives/empty'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { Figure, type FigureMotion, type FigureName } from './Figures'
+import { SceneIllustration, type EmptyScene } from './SceneIllustration'
 
 /**
  * Nothing here — and what to do about it.
@@ -20,11 +21,11 @@ import { provenance } from '@ui/provenance'
  * "Create your first feature" to someone who just typed a search is the
  * failure this exists to prevent.
  *
- * Built on `Empty` with `@reui/icon-stack` for the illustration, following
- * `@reui/empty-state-1`: media, title, description, actions, and an optional
- * row of guides underneath. The layered stack is deliberately abstract — a
- * literal drawing of an invoice would be wrong on six of the pages that use
- * this, and a bespoke illustration per surface is a cost nobody signed up for.
+ * Built on `Empty`, following `@reui/empty-state-1`: media, title,
+ * description, actions, and an optional row of guides underneath. The media is
+ * always a drawing: a named `figure` when the emptiness has a specific meaning
+ * (a search that found nothing, an error), otherwise the hairline `scene` for
+ * the area of the product the reader is in.
  *
  * `size` is the real decision. A whole blank page earns an illustration and
  * space; an empty table body inside a page that already has a heading and a
@@ -41,8 +42,8 @@ import { provenance } from '@ui/provenance'
  */
 export const EmptyStateProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/icon-stack', 'ui/empty'],
-  note: 'Empty + IconStack, after empty-state-1. Distinguishes "none yet" from "none matching".',
+  composes: ['ui/empty'],
+  note: 'Empty with a drawing, after empty-state-1. Distinguishes "none yet" from "none matching".',
 })
 
 /**
@@ -71,7 +72,6 @@ export interface ListOffer {
   isFirstRun: boolean
   title: string
   description?: string | undefined
-  icon?: ReactNode
   /** Usually "New thing" — the same node the toolbar pins at its end. */
   action?: ReactNode
   secondaryAction?: ReactNode
@@ -98,8 +98,8 @@ export interface EmptyStateProps {
   /** Shown instead when a filter is responsible for the emptiness. */
   isFiltered?: boolean
   onClearFilters?: ReactNode
-  /** The glyph inside the stack. Falls back to the stack's own default. */
-  icon?: ReactNode
+  /** Which area of the product this is in; picks the hairline drawing. Defaults to `table`. */
+  scene?: EmptyScene
   /**
    * `page` fills a blank screen — illustration, room to breathe.
    * `inline` sits inside a table body that already has a heading above it.
@@ -107,6 +107,13 @@ export interface EmptyStateProps {
   size?: 'page' | 'inline'
   /** A short row of links under the actions, as `empty-state-1` has it. */
   guides?: ReactNode
+  /**
+   * A line drawing in place of the layered glyph. See `EMPTY_CATALOGUE` for
+   * which figure and motion each kind of emptiness uses.
+   */
+  figure?: FigureName
+  /** Defaults to `interactive` on a page and `static` inline. */
+  motion?: FigureMotion
 }
 
 export function EmptyState({
@@ -116,9 +123,11 @@ export function EmptyState({
   secondaryAction,
   isFiltered = false,
   onClearFilters,
-  icon,
+  scene = 'table',
   size = 'page',
   guides,
+  figure,
+  motion,
 }: EmptyStateProps) {
   const isPage = size === 'page'
 
@@ -133,7 +142,7 @@ export function EmptyState({
   const offer = useListOffer()
   const firstRun = isFiltered && offer?.isFirstRun ? offer : null
 
-  const shown = firstRun ?? { title, description, icon, action, secondaryAction }
+  const shown = firstRun ?? { title, description, action, secondaryAction }
   /* A first-run offer is not a filtered miss, whatever slot it renders in. */
   const showsFilterMiss = isFiltered && firstRun === null
   const actions = showsFilterMiss ? onClearFilters : shown.action
@@ -164,13 +173,17 @@ export function EmptyState({
       )}
     >
       <EmptyHeader className={cn('max-w-[27rem]', isPage ? 'gap-4' : 'gap-2')}>
-        {isPage ? (
-          <EmptyMedia className="mb-0">
-            <IconStack aria-hidden>{shown.icon}</IconStack>
-          </EmptyMedia>
-        ) : shown.icon ? (
-          <EmptyMedia className="text-muted-foreground mb-0">{shown.icon}</EmptyMedia>
-        ) : null}
+        <EmptyMedia className="mb-0">
+          {figure ? (
+            <Figure
+              name={figure}
+              motion={motion ?? (isPage ? 'interactive' : 'static')}
+              className={isPage ? 'w-40' : 'w-24'}
+            />
+          ) : (
+            <SceneIllustration scene={scene} size="sm" className={cn(!isPage && 'w-32')} />
+          )}
+        </EmptyMedia>
 
         <div className="flex flex-col items-center gap-1.5">
           <EmptyTitle

@@ -7,9 +7,12 @@ name: Build
 # `VITE_` variable read at module scope that is undefined at build time. None
 # of those show up in a test run.
 on:
+  # Called by `pipeline.yml` on a push to main, so main runs these in order
+  # rather than all at once. The triggers below still fire on their own for
+  # every other branch and every pull request.
+  workflow_call:
   push:
     branches:
-      - main
       - develop
       - feat/v2-foundation
       # A change to CI should prove itself on its own branch, before it reaches

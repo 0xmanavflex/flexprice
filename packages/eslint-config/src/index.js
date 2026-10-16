@@ -27,6 +27,8 @@ const VENDORED = [
   'packages/ui/src/components/blocks/**',
   'packages/ui/src/components/examples/**',
   'packages/ui/src/hooks/**',
+  // ReUI Motion Icons installed by `pnpm icons:sync`. Each file carries @ts-nocheck.
+  'packages/ui/src/reui/**',
 ]
 
 export const config = [
@@ -43,6 +45,7 @@ export const config = [
       '**/test-results/**',
       '**/playwright-report/**',
       '**/storybook-static/**',
+      '**/.agents/**',
     ],
   },
   js.configs.recommended,
@@ -96,6 +99,7 @@ export const config = [
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
       '@typescript-eslint/consistent-type-imports': 'off',
       'react-hooks/exhaustive-deps': 'off',
       'no-useless-assignment': 'off',

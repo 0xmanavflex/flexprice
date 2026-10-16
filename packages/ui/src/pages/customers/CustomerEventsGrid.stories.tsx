@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, screen, userEvent, within } from 'storybook/test'
-import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS, type CustomerEvent } from './CustomerEventsGrid'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { CustomerEventsGrid, type CustomerEvent } from './CustomerEventsGrid'
 
 const NAMES = ['api_call', 'storage_write', 'seat_added', 'image_generated']
 const SOURCES = ['sdk', 'api', 'webhook']
@@ -21,7 +21,7 @@ const meta = {
   title: 'App/Customers/Customer events',
   component: CustomerEventsGrid,
   parameters: { layout: 'padded' },
-  args: { events: DEMO_CUSTOMER_EVENTS },
+  args: { events: makeEvents(6) },
 } satisfies Meta<typeof CustomerEventsGrid>
 
 export default meta
@@ -53,5 +53,42 @@ export const OpensEventSheet: Story = {
     if (!row) throw new Error('no event row')
     await userEvent.click(row)
     await expect(await screen.findByText(/Received Today, 09:14 via sdk/)).toBeInTheDocument()
+  },
+}
+
+/** The read is in flight: a shaped skeleton, never "No events yet". */
+export const Loading: Story = {
+  args: { events: [], isLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Loading events')).toBeInTheDocument()
+    await expect(canvas.queryByText(/No events yet/)).not.toBeInTheDocument()
+  },
+}
+
+/** The read failed: an inline error with retry, never an empty list. */
+export const SubTabError: Story = {
+  args: {
+    events: [],
+    error: 'Flexprice had a problem loading events.',
+    errorKind: 'server',
+    onRetry: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/problem loading events/)).toBeInTheDocument()
+    await expect(canvas.queryByText(/No events yet/)).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetry).toHaveBeenCalledTimes(1)
+  },
+}
+
+/** The newest 50 of a longer log: the cap is stated. */
+export const Truncated: Story = {
+  args: { events: makeEvents(50), total: 1204 },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(/Showing the latest 50 of 1204 events/),
+    ).toBeInTheDocument()
   },
 }

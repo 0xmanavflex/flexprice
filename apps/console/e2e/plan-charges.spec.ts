@@ -16,6 +16,32 @@ test.beforeEach(async ({ context }) => {
 })
 
 test.describe('plan charges, entitlements and credit grants', () => {
+  test('keeps pricing on Information and jumps back to its Overview section', async ({ page }) => {
+    await page.goto('/plans')
+    await page.getByRole('row').nth(1).click()
+    await expect(page.getByRole('tab', { name: 'Information' })).toBeVisible()
+    await page.getByRole('tab', { name: 'Information' }).click()
+    await expect(page).toHaveURL(/[?&]tab=information/)
+    await page.reload()
+    await expect(page.getByText('What customers see', { exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Plan details', exact: true })).toBeVisible()
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    await page.getByRole('button', { name: 'Add charge', exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('radio', { name: /Fixed/ }).click()
+    await dialog.getByRole('button', { name: 'Continue' }).click()
+    await dialog.getByLabel('Amount').fill('49.00')
+    await dialog.getByRole('button', { name: 'Create charge', exact: true }).click()
+    await expect(dialog).toBeHidden()
+    await page.getByRole('tab', { name: 'Information' }).click()
+    await page.getByRole('link', { name: 'Also billed', exact: true }).click()
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await expect(page.getByRole('heading', { name: 'Charges', exact: true })).toBeFocused()
+  })
+
   test('adds then edits a charge in place', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()
@@ -48,6 +74,11 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await expect(plan.main.getByRole('heading', { name: 'Add entitlement' })).toBeVisible()
     await plan.main.getByRole('combobox', { name: 'Feature' }).click()
     await page.getByRole('option').first().click()
+    // A metered feature needs an allowance; a boolean one has no Value field.
+    // Which kind sorts first is not this test's business, so it fills the
+    // field when the chosen feature asks for one.
+    const value = plan.main.getByRole('textbox', { name: 'Value' })
+    if (await value.isVisible()) await value.fill('25')
     await plan.main.getByRole('button', { name: /^Create entitlement$/ }).click()
     await expect(plan.main).toBeHidden()
 
@@ -81,7 +112,7 @@ test.describe('plan charges, entitlements and credit grants', () => {
 
   test('creates a plan on a full page, staging a charge', async ({ page }) => {
     await page.goto('/plans/new')
-    await expect(page.getByRole('heading', { name: 'Create plan' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Plan details' })).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
     await page.getByLabel(/^Name/).fill('Scale')

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, RefreshCwIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, RefreshCwIcon } from '@ui/icons'
 import { type DataExport, type DataExportQuery, EXPORT_STATE, type ExportState } from '@fp/domain'
 import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
@@ -145,6 +145,7 @@ export function DataExportGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No exports match these filters"
       empty={{
+        scene: 'developers',
         title: 'No exports yet',
         description:
           'Exports send billing data to your own storage on a schedule, so it can be joined with the rest of your data.',

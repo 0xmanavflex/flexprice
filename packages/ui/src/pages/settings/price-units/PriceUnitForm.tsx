@@ -1,4 +1,5 @@
-import { useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   PRICE_UNIT_CURRENCIES,
@@ -69,10 +70,9 @@ export function PriceUnitForm({
   submitError = null,
   trail,
 }: PriceUnitFormProps) {
-  const form = useForm<CreatePriceUnit>({
+  const form = useCalmForm<CreatePriceUnit>({
     resolver: standardSchemaResolver(createPriceUnitSchema) as Resolver<CreatePriceUnit>,
     defaultValues: defaultValue ?? emptyPriceUnit(),
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors

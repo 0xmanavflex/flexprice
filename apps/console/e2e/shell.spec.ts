@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 
+import { CatalogListPage } from './pages/catalog'
 import { ShellPage } from './pages/shell'
 
 /** Seed the mock demo session (see catalog.spec.ts) — the guard now requires a
@@ -32,7 +33,7 @@ test.beforeEach(async ({ context }) => {
  * `(\?|$)` rather than an end-anchored path.
  */
 const CATALOG = [
-  { name: 'Products', path: '/features' },
+  { name: 'Features', path: '/features' },
   { name: 'Plans', path: '/plans' },
   { name: 'Add-ons', path: '/addons' },
   { name: 'Pricing widgets', path: '/pricing-widget' },
@@ -96,8 +97,10 @@ test.describe('the shell', () => {
 
     await shell.go('Integrations')
     await expect(page).toHaveURL(atPath('/integrations'))
-    await shell.go('Documentation')
-    await expect(page).toHaveURL(atPath('/docs'))
+    // Documentation leaves the console: a link to Flexprice's own docs, new tab.
+    const docs = page.getByRole('link', { name: 'Documentation' })
+    await expect(docs).toHaveAttribute('href', /^https:\/\/docs\.flexprice\.io\//)
+    await expect(docs).toHaveAttribute('target', '_blank')
 
     // Documentation has one home: the footer, not the account menu as well.
     await page.getByRole('button', { name: /^account:/i }).click()
@@ -138,6 +141,30 @@ test.describe('the shell', () => {
 
     await expect(dialog).toBeHidden()
     await expect(shell.environment).toContainText(`${before} renamed`)
+  })
+
+  test('switching environment leaves an id-addressed page for its list', async ({ page }) => {
+    const shell = new ShellPage(page)
+    await shell.goto('/customers')
+    await expect(shell.environment).not.toContainText('Loading environments')
+    const current = await shell.currentEnvironment()
+    const other = current.includes('Production') ? 'Sandbox' : 'Production'
+
+    const list = new CatalogListPage(page, {
+      heading: 'Customers',
+      searchLabel: 'Search customers',
+    })
+    await expect(list.rows().first()).toBeVisible({ timeout: 20_000 })
+    // The Email cell is plain text; the External ID cell beside it is a copy button.
+    await list.rows().first().getByRole('cell').nth(1).click()
+    await expect(page).toHaveURL(/\/customers\/(?!new)[^/]+$/)
+
+    await shell.switchEnvironment(other)
+    await expect(page).toHaveURL(atPath('/customers'))
+
+    // A page with no id in its address is valid in every environment and stays.
+    await shell.switchEnvironment(current)
+    await expect(page).toHaveURL(atPath('/customers'))
   })
 
   test('a Product Catalogue parent routes to its first child rather than a dead end', async ({

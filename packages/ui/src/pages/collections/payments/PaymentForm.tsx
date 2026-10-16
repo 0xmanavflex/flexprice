@@ -1,10 +1,12 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   PAYMENT_METHOD_LABEL,
   type RecordPayment,
   emptyPayment,
   recordPaymentSchema,
+  currencyCodes,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
@@ -20,7 +22,7 @@ export const PaymentFormProvenance = provenance({
   note: 'RHF + recordPaymentSchema; the same FormPage shell as the other create forms.',
 })
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR'].map((code) => ({ value: code, label: code }))
+const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
 const METHODS = Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => ({ value, label }))
 
 export interface PaymentFormProps {
@@ -43,10 +45,9 @@ export function PaymentForm({
   isSubmitting = false,
   submitError = null,
 }: PaymentFormProps) {
-  const form = useForm<RecordPayment>({
+  const form = useCalmForm<RecordPayment>({
     resolver: standardSchemaResolver(recordPaymentSchema) as Resolver<RecordPayment>,
     defaultValues: defaultValue ?? emptyPayment(),
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
 

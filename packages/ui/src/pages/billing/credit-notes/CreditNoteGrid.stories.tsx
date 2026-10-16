@@ -58,7 +58,7 @@ function manyCreditNotes(count: number): CreditNote[] {
 }
 
 const meta = {
-  title: 'App/Billing/Credit notes/Credit note table',
+  title: 'App/Billing/Credit memos/Credit memo table',
   component: CreditNoteGrid,
   parameters: { layout: 'padded' },
   args: {
@@ -106,7 +106,7 @@ function CreditNoteGridPlayground({ rows, hasError, page, pageSize, ...args }: P
         setQuery(next)
         args.onQueryChange(next)
       }}
-      error={hasError ? 'You do not have access to credit notes in this environment.' : null}
+      error={hasError ? 'You do not have access to credit memos in this environment.' : null}
     />
   )
 }
@@ -128,6 +128,9 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('CN-0001')).toBeInTheDocument()
     await expect(canvas.getByText('INV-1042')).toBeInTheDocument()
+    await expect(
+      canvas.getAllByRole('columnheader').map((cell) => cell.textContent?.trim()),
+    ).toEqual(['Credit memo', 'Customer', 'Invoice number', 'Date', 'Amount', 'Status', 'Actions'])
   },
 }
 
@@ -136,7 +139,7 @@ export const Empty: Story = { args: { creditNotes: [], total: 0 } }
 export const Searching: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.type(await canvas.findByLabelText('Search credit notes'), 'glob')
+    await userEvent.type(await canvas.findByLabelText('Search credit memos'), 'glob')
     await waitFor(() =>
       expect(args.onQueryChange).toHaveBeenCalledWith(
         expect.objectContaining({ search: expect.stringContaining('g') }),

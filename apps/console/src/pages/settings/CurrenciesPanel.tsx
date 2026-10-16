@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PlusIcon, XIcon } from 'lucide-react'
+import { PlusIcon, XIcon } from '@fp/ui/icons'
 import {
   type CustomCurrencyConfig,
   customCurrencyConfigSchema,
@@ -11,13 +11,7 @@ import {
   useResetCustomCurrencyConfig,
   useUpdateCustomCurrencyConfig,
 } from '@fp/query'
-import {
-  ConfirmDialog,
-  EmptyState,
-  LoadingRows,
-  SettingRow,
-  SettingsFieldGroup,
-} from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
 import {
@@ -28,6 +22,9 @@ import {
   PanelError,
   mutationMessage,
   toFailure,
+  PanelLoading,
+  PanelUnavailable,
+  queryPhase,
   SettingsBlock,
 } from './panelKit'
 import { useDraft } from './useDraft'
@@ -100,13 +97,9 @@ export function CurrenciesPanel() {
     )
   }
 
-  if (config.isPending || !config.data) {
-    return (
-      <Panel>
-        <LoadingRows rows={4} columns={3} />
-      </Panel>
-    )
-  }
+  const phase = queryPhase(config)
+  if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
+  if (phase === 'loading' || !config.data) return <PanelLoading rows={4} />
 
   return <CurrencyForm key={environmentId} environmentId={environmentId} config={config.data} />
 }
@@ -620,7 +613,6 @@ function CurrencyField({
             ),
           }
         : {})}
-
     >
       <div className="flex w-full flex-col gap-1">
         <Input

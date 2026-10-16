@@ -8,6 +8,7 @@ import {
   TaxRateScope,
   TaxRateStatus,
 } from '@fp/domain'
+import { statusFilterField } from './search'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -72,10 +73,16 @@ export function toTaxRate(wire: TaxRateWire): TaxRate {
  * but no sort *field* and no name search, so only paging is sent here. Search
  * and status are applied on the page — the same split coupons use.
  */
-export function toTaxRateFilter(query: TaxRateQuery): Record<string, unknown> {
+export function toTaxRateFilter(query: TaxRateQuery) {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
+    /*
+     * `status` is a declared parameter on `GET /taxes/rates`, so the facet is
+     * the server's. It used to narrow the fetched page instead, which left the
+     * pager counting every tax rate above the few that matched.
+     */
+    ...statusFilterField(query.statuses, Object.values(TaxRateStatus)),
   }
 }
 
@@ -85,20 +92,27 @@ export interface TaxRatePage {
 }
 
 export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Promise<TaxRatePage> {
-  const response = await call(() => client.taxRates.getTaxRates(toTaxRateFilter(query) as never))
+  const response = await call(() => client.taxRates.getTaxRates(toTaxRateFilter(query)))
   const taxRates = (response.items ?? []).map((item) => toTaxRate(item as TaxRateWire))
 
-  // Neither status nor search is a server-side filter here, so both are applied
-  // on the page — the same split coupons use.
+  /*
+   * Search still narrows the fetched page, and here that is the endpoint's
+   * limit rather than a shortcut.
+   *
+   * `GET /taxes/rates` is not one of the `/search` routes: it takes `limit`,
+   * `offset`, `status`, `scope`, codes and ids, and has neither the filter DSL
+   * nor any name field. So there is nothing to push a name or code search down
+   * to. Status *is* a declared parameter and has moved server-side.
+   *
+   * The consequence is worth being precise about: with a search term, the
+   * matches shown are the matches **on this page**, and `total` counts every
+   * tax rate rather than every match. Closing that needs a server-side search
+   * on this route — it cannot be fixed from here.
+   */
   const search = query.search.trim().toLowerCase()
-  const filtered = taxRates.filter((taxRate) => {
-    if (query.statuses.length > 0 && !query.statuses.includes(taxRate.status)) return false
-    if (search) {
-      const haystack = `${taxRate.name} ${taxRate.code}`.toLowerCase()
-      if (!haystack.includes(search)) return false
-    }
-    return true
-  })
+  const filtered = search
+    ? taxRates.filter((taxRate) => `${taxRate.name} ${taxRate.code}`.toLowerCase().includes(search))
+    : taxRates
 
   return {
     taxRates: filtered,

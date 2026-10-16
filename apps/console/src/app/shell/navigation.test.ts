@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DOCS_URL,
   FOOTER_NAV,
   NAV,
   SECONDARY,
@@ -20,7 +21,7 @@ describe('navEntryForPath', () => {
     ['/customers', 'customers'],
     ['/customers/new', 'customers'],
     ['/customers/cus_1/edit', 'customers'],
-    ['/subscriptions', 'subscriptions'],
+    ['/contracts', 'subscriptions'],
     ['/coupons', 'settings-discounts'],
     ['/taxes', 'settings-taxes'],
     ['/cost-sheets', 'settings-cost-tracking'],
@@ -74,9 +75,9 @@ describe('toNavGroups', () => {
 })
 
 describe('the tree itself', () => {
-  it('gives every entry either a path or children, never neither', () => {
+  it('gives every entry a path, a link out, or children, never none', () => {
     for (const entry of [...NAV, ...FOOTER_NAV]) {
-      expect(entry.path ?? entry.children, entry.id).toBeDefined()
+      expect(entry.path ?? entry.external ?? entry.children, entry.id).toBeDefined()
     }
   })
 
@@ -101,7 +102,7 @@ describe('the sidebar layout', () => {
     // Children of the two money groups, so a reorder cannot quietly move a page.
     expect(NAV.find((entry) => entry.id === 'billing')?.children?.map((c) => c.label)).toEqual([
       'Invoices',
-      'Credit notes',
+      'Credit memos',
     ])
     expect(NAV.find((entry) => entry.id === 'collections')?.children?.map((c) => c.label)).toEqual([
       'Payments',
@@ -122,9 +123,11 @@ describe('the sidebar layout', () => {
   // Not in the rail, but still real routes: the command palette and the
   // breadcrumb resolve against them.
   it('keeps unlisted pages reachable', () => {
-    expect(pathForNavId('docs')).toBe('/docs')
+    expect(pathForNavId('docs')).toBeUndefined()
+    expect(hrefForNavId('docs')).toBe(DOCS_URL)
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
       'settings',
+      'api-keys',
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',
@@ -147,7 +150,7 @@ describe('breadcrumbForPath', () => {
   it('names the group before the page', () => {
     expect(breadcrumbForPath('/features')).toEqual([
       { label: 'Product catalog' },
-      { label: 'Products' },
+      { label: 'Features' },
     ])
   })
 
@@ -192,10 +195,10 @@ describe('every destination resolves', () => {
     '/groups',
     '/cost-sheets',
     '/customers',
-    '/subscriptions',
+    '/contracts',
     '/invoices',
     '/payments',
-    '/credit-notes',
+    '/credit-memos',
     '/taxes',
     '/events',
     '/workflows',

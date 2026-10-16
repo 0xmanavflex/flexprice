@@ -1,24 +1,29 @@
 import { useMemo, useState } from 'react'
-import { type CloneFeature, type Feature, type FeatureQuery } from '@fp/domain'
 import {
-  ApiError,
+  DEFAULT_GROUP_QUERY,
+  GroupEntityType,
+  type CloneFeature,
+  type Feature,
+  type FeatureQuery,
+} from '@fp/domain'
+import {
   useCloneFeature,
   useDeleteFeature,
   useFeatureLinkage,
   useFeatures,
+  useGroups,
 } from '@fp/query'
-import { FeatureCloneDialog, FeatureGrid, type ProductLinkage } from '@fp/ui/pages'
+import { FeatureCloneDialog, FeatureGrid, type FeatureLinkage } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
-import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
 import { toSubmitError } from './featureMessages'
+import { FeatureEntitlementDialog } from './FeatureEntitlementDialog'
+import { toListFailure } from '../shared/listFailure'
 
 export interface FeatureListPageProps {
   query: FeatureQuery
   onQueryChange: (query: FeatureQuery) => void
   onCreateFeature: () => void
-  /** Entitlements are granted by plans, so this goes to where one is added. */
-  onCreateEntitlement: (feature: Feature) => void
   onEditFeature: (feature: Feature) => void
   onOpenFeature: (feature: Feature) => void
 }
@@ -31,7 +36,6 @@ export function FeatureListPage({
   query,
   onQueryChange,
   onCreateFeature,
-  onCreateEntitlement,
   onEditFeature,
   onOpenFeature,
 }: FeatureListPageProps) {
@@ -41,6 +45,7 @@ export function FeatureListPage({
 
   const [cloning, setCloning] = useState<Feature | null>(null)
   const [deleting, setDeleting] = useState<Feature | null>(null)
+  const [entitling, setEntitling] = useState<Feature | null>(null)
 
   const onCreate = onCreateFeature
   const closeClone = () => {
@@ -55,19 +60,37 @@ export function FeatureListPage({
   const submitClone = (draft: CloneFeature) => {
     if (cloning) clone.mutate({ id: cloning.id, draft }, { onSuccess: closeClone })
   }
-  const failure = toFailure(features.error)
+  const failure = toListFailure(features.error, 'features')
   const rows = useMemo(() => features.data?.features ?? [], [features.data])
 
   /*
-   * Plans, entitlements and subscriptions per product, for the rows on screen.
-   * A plan counts when it grants the product (an entitlement) *or* prices it
+   * Group names for the Group chip.
+   *
+   * The feature carries only `groupId`: `POST /features/search` refuses
+   * `expand=groups` with a 400, so the names are a second read. Narrowed to
+   * feature groups server-side, so a hundred price groups cannot crowd them
+   * out of the page.
+   */
+  const groups = useGroups({
+    ...DEFAULT_GROUP_QUERY,
+    pageSize: 100,
+    entityType: GroupEntityType.Feature,
+  })
+  const groupNames = useMemo(
+    () => new Map((groups.data?.groups ?? []).map((group) => [group.id, group.name])),
+    [groups.data],
+  )
+
+  /*
+   * Plans, entitlements and subscriptions per feature, for the rows on screen.
+   * A plan counts when it grants the feature (an entitlement) *or* prices it
    * (a charge on its meter), and its name is read for exactly the plans found
    * — not looked up in the first page of plans, which left any plan past it
    * showing as a raw id.
    */
   const linked = useFeatureLinkage(rows)
   const linkage = useMemo(() => {
-    const out = new Map<string, ProductLinkage>()
+    const out = new Map<string, FeatureLinkage>()
     for (const [featureId, entry] of linked.byFeature) {
       out.set(featureId, {
         plans: entry.plans,
@@ -77,9 +100,13 @@ export function FeatureListPage({
     }
     return out
   }, [linked.byFeature])
-  const isFiltered = query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0
+  const isFiltered =
+    query.search.length > 0 ||
+    query.types.length > 0 ||
+    query.statuses.length > 0 ||
+    (query.filters?.length ?? 0) > 0
   const clearFilters = () =>
-    onQueryChange({ ...query, search: '', types: [], statuses: [], page: 1 })
+    onQueryChange({ ...query, search: '', types: [], statuses: [], filters: [], page: 1 })
 
   return (
     <>
@@ -99,25 +126,25 @@ export function FeatureListPage({
         <ListState
           isLoading={features.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (features.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={features.isFetching && !features.isPending}
+          isProvisional={features.isPlaceholderData}
+          isRetrying={features.isFetching && features.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void features.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={onCreate}>New product</Button>}
-          emptyIcon={<GaugeIcon aria-hidden />}
+          createAction={<Button onClick={onCreate}>New feature</Button>}
           emptyTitle="Nothing is being measured yet"
-          emptyDescription="A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
+          emptyDescription="A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
         >
-          {/*
-            No onFeatureClick: the feature detail page is not built yet, and a
-            row that navigates nowhere useful — the old behaviour dropped the
-            name into the search box — is worse than a row that does nothing.
-          */}
           <FeatureGrid
             features={rows}
+            groupName={(groupId) => groupNames.get(groupId)}
             linkage={linkage}
             linkageLoading={linked.isPending}
-            onCreateEntitlement={onCreateEntitlement}
+            onCreateEntitlement={setEntitling}
             total={features.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
@@ -130,6 +157,8 @@ export function FeatureListPage({
           />
         </ListState>
       </PageBody>
+
+      <FeatureEntitlementDialog feature={entitling} onClose={() => setEntitling(null)} />
 
       <FeatureCloneDialog
         open={cloning !== null}
@@ -147,9 +176,9 @@ export function FeatureListPage({
         onOpenChange={(open) => {
           if (!open) closeDelete()
         }}
-        title="Delete product"
-        description={`Delete ${deleting?.name ?? 'this product'}? Plans and entitlements that use it lose it.`}
-        confirmLabel="Delete product"
+        title="Delete feature"
+        description={`Delete ${deleting?.name ?? 'this feature'}? Plans and entitlements that use it lose it.`}
+        confirmLabel="Delete feature"
         destructive
         isPending={remove.isPending}
         error={toSubmitError(remove.error, 'delete')}
@@ -159,30 +188,4 @@ export function FeatureListPage({
       />
     </>
   )
-}
-
-/**
- * A failure, as a sentence and a judgement about whether retrying can help.
- *
- * `canRetry` is the important half: a permission error offers no retry, because
- * pressing the button again cannot change the answer.
- */
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to products here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading products.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading products.', canRetry: true }
 }

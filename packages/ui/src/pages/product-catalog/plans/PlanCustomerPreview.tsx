@@ -10,7 +10,21 @@ export interface PlanCustomerPreviewProps {
   meterUnit?: (meterId: string) => string | undefined
   /** Plural unit of a feature ("tokens"), shown after a metered allowance. */
   featureUnit?: (featureId: string) => string | undefined
+  className?: string
+  onJump?: ((target: string) => void) | undefined
 }
+
+/**
+ * Where each block of the preview jumps to.
+ *
+ * `Section` derives its heading id from its title, so these are the ids of
+ * the Charges, Entitlements and Credit grants tables stacked beside this.
+ */
+const JUMP_TARGETS = {
+  charges: 'section-charges',
+  included: 'section-entitlements',
+  credits: 'section-credit-grants',
+} as const
 
 /**
  * "What customers see" for a saved plan: adapts the plan's persisted charges,
@@ -23,10 +37,17 @@ export function PlanCustomerPreview({
   trialDays,
   meterUnit,
   featureUnit,
+  className,
+  onJump,
 }: PlanCustomerPreviewProps) {
   const meterNames = new Map(charges.map((c) => [c.meterId, c.meterName] as const))
   return (
     <PlanPreviewCard
+      // A saved plan's preview is a pricing card, not a form rail.
+      variant="card"
+      jumpTargets={JUMP_TARGETS}
+      onJump={onJump}
+      {...(className ? { className } : {})}
       charges={charges.map(chargeToDraft)}
       meterLabel={(id) => meterNames.get(id) ?? id}
       {...(meterUnit ? { meterUnit } : {})}

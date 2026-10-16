@@ -1,5 +1,7 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { alertSettingConfigSchema } from './alertSetting'
+import { KEY_PREFIX, suggestKey } from './suggestKey'
 
 /**
  * A feature, and the rules for creating one.
@@ -212,18 +214,9 @@ export function emptyFeature(type: FeatureType): CreateFeature {
   return { ...base, type }
 }
 
-/**
- * The lookup key V1 derives from a name: `feat-` plus the name, lowercased and
- * hyphenated. Anything the key's alphabet does not allow collapses to a hyphen.
- * Returns `''` for a blank name so the create form can leave the field empty.
- */
+/** The lookup key V1 derives from a feature's name (`feat-api-calls`). */
 export function defaultFeatureLookupKey(name: string): string {
-  const slug = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  return slug ? `feat-${slug}` : ''
+  return suggestKey(KEY_PREFIX.feature, name)
 }
 
 /**
@@ -296,6 +289,15 @@ export interface Feature {
   reportingUnit?: ReportingUnitDraft | null
   /** The meter's event filters (metered features only). */
   meterFilters?: MeterFilterDraft[]
+  /**
+   * The meter's own usage window, when it has one.
+   *
+   * A price may set a window of its own *only* when the meter does not: the
+   * API refuses the second source rather than letting one shadow the other.
+   * Carried on the read model so the charge form can say why the field is
+   * unavailable instead of failing on save.
+   */
+  meterBucketSize?: string | null
   /** The meter's aggregation target and options, for prefilling an edit. */
   aggregationField?: string | null
   aggregationGroupBy?: string | null
@@ -359,8 +361,22 @@ export const AGGREGATION_LABEL: Record<AggregationType, string> = {
  * product terms, mapped to wire field names in `@fp/query` — a screen should
  * never have to know that "Created" is `created_at`.
  */
+/**
+ * What the list can be ordered by.
+ *
+ * These five, and no more, because `/features/search` validates the sort field
+ * against the feature table's own columns and answers an unknown one with
+ * `400 Unknown field name '<x>' in feature query` — it does not fall back.
+ *
+ * Checked against the live API: `event_name` and `aggregation` are rejected
+ * (they belong to the meter, not the feature) and so are `plans` and
+ * `contracts` (derived counts, not columns). Sorting by any of those needs the
+ * backend to support it first.
+ */
 export const FeatureSortField = {
   Name: 'name',
+  LookupKey: 'lookupKey',
+  Type: 'type',
   CreatedAt: 'createdAt',
   UpdatedAt: 'updatedAt',
 } as const
@@ -368,6 +384,8 @@ export type FeatureSortField = (typeof FeatureSortField)[keyof typeof FeatureSor
 
 export const FEATURE_SORT_LABEL: Record<FeatureSortField, string> = {
   [FeatureSortField.Name]: 'Name',
+  [FeatureSortField.LookupKey]: 'Key',
+  [FeatureSortField.Type]: 'Type',
   [FeatureSortField.CreatedAt]: 'Created',
   [FeatureSortField.UpdatedAt]: 'Updated',
 }
@@ -394,6 +412,8 @@ export interface FeatureQuery {
   sortDirection: 'asc' | 'desc'
   /** Table or cards. Lives in the URL like the rest of the query. */
   view: FeatureView
+  /** Granular field filters, applied by the search endpoint. See `FEATURE_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
@@ -404,7 +424,35 @@ export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   statuses: [],
   // Alphabetical, because a catalogue is looked *up* more often than it is
   // scanned for what changed.
-  sortBy: FeatureSortField.Name,
-  sortDirection: 'asc',
+  sortBy: FeatureSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: FeatureView.Table,
+  filters: [],
 }
+
+/** What the product list can filter on — V1's fields, by their wire names. */
+export const FEATURE_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'type',
+    label: 'Type',
+    kind: 'options',
+    options: [
+      { value: 'metered', label: 'Metered' },
+      { value: 'boolean', label: 'Boolean' },
+      { value: 'static', label: 'Static' },
+      { value: 'config', label: 'Config' },
+    ],
+  },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]

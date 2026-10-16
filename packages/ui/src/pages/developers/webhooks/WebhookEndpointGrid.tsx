@@ -8,10 +8,11 @@ import {
   ShieldCheckIcon,
   Trash2Icon,
   WebhookIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { type WebhookEndpoint, type WebhookEndpointStats, webhookErrorRate } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
+import type { ErrorKind } from '@ui/compositions/feedback/States'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { EntityCell, type EntityColumn, dateColumn, pillColumn } from '../../shared/cells'
@@ -58,7 +59,10 @@ export interface WebhookEndpointGridProps {
   stats?: Record<string, WebhookEndpointStats> | undefined
   isLoading?: boolean
   error?: string | null
+  /** Why `error` happened; picks the figure and withholds retry for `denied`. */
+  errorKind?: ErrorKind | undefined
   onRetry?: () => void
+  isRetrying?: boolean | undefined
   onOpen: (endpoint: WebhookEndpoint) => void
   onCreate: () => void
   onViewCatalog?: () => void
@@ -74,7 +78,9 @@ export function WebhookEndpointGrid({
   stats,
   isLoading = false,
   error = null,
+  errorKind,
   onRetry,
+  isRetrying,
   onOpen,
   onCreate,
   onViewCatalog,
@@ -138,7 +144,15 @@ export function WebhookEndpointGrid({
           const rate = webhookErrorRate(entry)
           return (
             <span className="text-muted-foreground tabular-nums">
-              {rate === null ? '0%' : `${Number(rate.toFixed(1))}%`}
+              {rate === null ? (
+                // No deliveries is not a 0% error rate: nothing was measured.
+                <span title="No deliveries yet">
+                  <span aria-hidden>—</span>
+                  <span className="sr-only">No deliveries yet</span>
+                </span>
+              ) : (
+                `${Number(rate.toFixed(1))}%`
+              )}
             </span>
           )
         },
@@ -221,12 +235,15 @@ export function WebhookEndpointGrid({
       rowActions={rowActions}
       isLoading={isLoading}
       error={error}
+      {...(errorKind ? { errorKind } : {})}
       {...(onRetry ? { onRetry } : {})}
+      {...(isRetrying !== undefined ? { isRetrying } : {})}
       isFiltered={search.trim().length > 0}
       onClearFilters={() => setSearch('')}
       filteredEmptyTitle="No endpoints match this search"
       headingAs="h3"
       empty={{
+        scene: 'developers',
         title: 'No endpoints yet',
         description:
           'An endpoint is a URL Flexprice sends events to. Add one to start receiving invoice, payment and subscription events as they happen.',

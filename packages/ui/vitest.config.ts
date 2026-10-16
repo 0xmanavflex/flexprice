@@ -6,7 +6,11 @@ import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import { fileURLToPath } from 'node:url'
 
 // `@fp/ui` resolves its own internals through `@ui/`; see components.json.
-const alias = { '@ui/': fileURLToPath(new URL('./src/', import.meta.url)) }
+const alias = {
+  '@ui/': fileURLToPath(new URL('./src/', import.meta.url)),
+  // Vendored ReUI code imports `lucide-react`; it gets the ReUI icon barrel.
+  'lucide-react': fileURLToPath(new URL('./src/icons/index.ts', import.meta.url)),
+}
 
 export default defineConfig({
   resolve: { alias },

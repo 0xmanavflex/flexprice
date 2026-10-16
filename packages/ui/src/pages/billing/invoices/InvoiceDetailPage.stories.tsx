@@ -77,10 +77,7 @@ function InvoiceDetailPage(props: InvoiceDetailPageProps) {
   const invoice = makeInvoice(props)
 
   return (
-    <PageShell
-      activeItemId="invoices"
-      trail={['Billing', 'Invoices', invoice.number ?? 'Draft invoice']}
-    >
+    <PageShell activeItemId="invoices" trail={['Billing', 'Invoices', 'Invoice details']}>
       {props.isLoading ? (
         <PageBody>
           <div className="pt-4">

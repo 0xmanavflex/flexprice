@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChevronRightIcon } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { ArrowUpRightIcon, ChevronRightIcon } from '@ui/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,7 +70,7 @@ function CollapsedParent({
             />
           }
         >
-          {item.icon}
+          <NavIcon>{item.icon}</NavIcon>
           <span>{item.label}</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-48">
@@ -88,6 +88,21 @@ function CollapsedParent({
   )
 }
 
+/**
+ * Gives every row's icon the same small motion, so the rail feels alive even
+ * where ReUI ships no animated variant of the glyph (it animates 57 of 667).
+ * The row drives it, not the glyph: hover tilts and enlarges the icon, and the
+ * active row keeps it enlarged. Animated icons run their own motion on top.
+ */
+function NavIcon({ children }: { children: ReactNode }) {
+  if (!children) return null
+  return (
+    <span className="inline-flex shrink-0 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-hover/menu-button:-rotate-6 group-data-active/menu-button:scale-110 motion-reduce:transform-none motion-reduce:transition-none">
+      {children}
+    </span>
+  )
+}
+
 function Leaf({
   item,
   isActive,
@@ -102,14 +117,24 @@ function Leaf({
       <SidebarMenuButton
         tooltip={item.label}
         isActive={isActive}
-        onClick={() => onNavigate(item.id)}
+        {...(item.href
+          ? {
+              render: <a href={item.href} target="_blank" rel="noopener noreferrer" />,
+            }
+          : { onClick: () => onNavigate(item.id) })}
         aria-current={isActive ? 'page' : undefined}
         // Always named from the item, never inferred from its text: in the icon
         // rail the label is clipped away entirely.
         aria-label={item.label}
       >
-        {item.icon}
+        <NavIcon>{item.icon}</NavIcon>
         <span>{item.label}</span>
+        {item.href ? (
+          <ArrowUpRightIcon
+            aria-hidden="true"
+            className="text-muted-foreground ml-auto size-3.5 in-data-[state=collapsed]:hidden"
+          />
+        ) : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
@@ -143,7 +168,7 @@ function ExpandedParent({
         aria-expanded={open}
         aria-controls={`subnav-${item.id}`}
       >
-        {item.icon}
+        <NavIcon>{item.icon}</NavIcon>
         <span className="truncate">{item.label}</span>
         <ChevronRightIcon
           aria-hidden

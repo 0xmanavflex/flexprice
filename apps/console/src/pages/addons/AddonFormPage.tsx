@@ -75,7 +75,7 @@ export function AddonFormPage(props: AddonFormPageProps) {
       }}
       trail={[
         { label: 'Add-ons', onClick: onNavigateToList },
-        { label: addon.name, onClick: () => props.onDone(addon.id) },
+        { label: 'Add-on details', onClick: () => props.onDone(addon.id) },
         { label: 'Edit' },
       ]}
       onCancel={onCancel}

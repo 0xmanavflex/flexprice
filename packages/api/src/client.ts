@@ -1,5 +1,6 @@
 import { type Fetcher, Flexprice, HTTPClient } from '@flexprice/sdk'
 import { toApiError } from './errors'
+import { DEFAULT_REQUEST_TIMEOUT_MS, withTimeout } from './timeout'
 
 /**
  * How a request proves who it is.
@@ -23,8 +24,18 @@ export interface ClientOptions {
   /** Regional base URL, e.g. https://api.cloud.flexprice.io/v1 */
   serverURL: string
   auth: AuthSource
-  /** Called on every 401 so the app can end the session in exactly one place. */
+  /**
+   * Called when a credential is rejected with a 401, so the app can end the
+   * session in exactly one place. Called once per rejected credential: a screen
+   * firing a dozen parallel requests with one expired token reports it once,
+   * not a dozen times.
+   */
   onUnauthorized?: () => void
+  /**
+   * How long a request may wait for the API to start answering before it fails
+   * as a `Timeout`. Defaults to 20 seconds; `0` disables the deadline.
+   */
+  timeoutMs?: number
   /**
    * Replaces `fetch`. The seam for tests and for instrumentation; production
    * leaves it unset.
@@ -63,9 +74,12 @@ export function createFlexpriceClient({
   serverURL,
   auth,
   onUnauthorized,
+  timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
   fetcher,
 }: ClientOptions): Flexprice {
-  const httpClient = new HTTPClient(fetcher ? { fetcher } : {})
+  // Every request goes through the deadline, including ones from a test's stub.
+  const base: Fetcher = fetcher ?? ((input, init) => fetch(input, init))
+  const httpClient = new HTTPClient({ fetcher: withTimeout(base, timeoutMs) })
 
   httpClient.addHook('beforeRequest', async (request) => {
     // A Request's headers are immutable once it exists, so build a new one.
@@ -82,11 +96,27 @@ export function createFlexpriceClient({
     return new Request(request, { headers })
   })
 
-  httpClient.addHook('response', (response) => {
-    if (response.status === 401) onUnauthorized?.()
+  /*
+   * A burst of parallel requests carrying one expired token all come back 401,
+   * and ending the session once is enough — a second sign-out would race the
+   * redirect already under way. The credential that was rejected is the dedupe
+   * key, so signing in again (a different token) re-arms it.
+   */
+  let rejectedCredential: string | undefined
+  httpClient.addHook('response', (response, request) => {
+    if (response.status !== 401) return
+    const credential = request.headers.get('Authorization') ?? ''
+    if (credential === rejectedCredential) return
+    rejectedCredential = credential
+    onUnauthorized?.()
   })
 
   return new Flexprice({ serverURL, httpClient })
+}
+
+/** What an SDK method accepts as its last argument that this layer fills in. */
+export interface CallOptions {
+  signal?: AbortSignal
 }
 
 /**
@@ -96,10 +126,21 @@ export function createFlexpriceClient({
  * that reject with something consistent. Wrapping here means no caller repeats
  * the same `instanceof FlexPriceError` branch, and no SDK error class leaks
  * past this package.
+ *
+ * Pass the query context's `signal` as the second argument and hand the
+ * options the operation receives to the SDK method, and a query that is
+ * cancelled — a filter changed, a page unmounted — cancels its request instead
+ * of leaving it to finish for nobody. The rejection is `ErrorKind.Cancelled`,
+ * which TanStack Query discards.
+ *
+ *     queryFn: ({ signal }) => call((options) => client.customers.getCustomer(id, options), signal)
  */
-export async function call<T>(operation: () => Promise<T>): Promise<T> {
+export async function call<T>(
+  operation: (options: CallOptions) => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
   try {
-    return await operation()
+    return await operation(signal ? { signal } : {})
   } catch (cause) {
     throw toApiError(cause)
   }

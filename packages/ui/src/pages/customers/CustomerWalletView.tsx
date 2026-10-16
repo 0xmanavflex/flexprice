@@ -1,32 +1,36 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
+import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
-  ArrowDownRightIcon,
   ArrowUpRightIcon,
   InfoIcon,
   MoreHorizontalIcon,
   PlusIcon,
+  RepeatIcon,
   WalletIcon,
   XCircleIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
+  type AutoTopup,
   type CreateWallet,
   type TopUpWallet,
   type Wallet,
   type WalletTransaction,
   WALLET_STATUS_LABEL,
   WalletStatus,
+  autoTopupSchema,
   createWalletSchema,
   emptyTopUp,
   emptyWallet,
   formatMoney,
   topUpWalletSchema,
+  currencyCodes,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
+import { Switch } from '@ui/components/primitives/switch'
 import { Field } from '@ui/components/primitives/field'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
-import { cn } from '@ui/lib/cn'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +56,16 @@ import {
   Section,
 } from '../../compositions'
 import { ChoiceCards, Composer, SplitMeter } from '../../compositions/detail/DetailKit'
+import { Pill, type PillTone } from '../shared/cells'
+import {
+  WalletLedgerTable,
+  WalletTransactionsTable,
+  expiringSoon,
+  formatCredits,
+  formatDay,
+} from './WalletLedgerTable'
+import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
+import type { ErrorKind } from '../../compositions/feedback/States'
 
 export interface CustomerWalletViewProps {
   wallets: Wallet[]
@@ -61,7 +75,13 @@ export interface CustomerWalletViewProps {
   selectedId: string | null
   onSelect: (walletId: string) => void
   transactions: WalletTransaction[]
+  /** The moment expiries are measured from; defaults to now. */
+  now?: Date
   transactionsLoading?: boolean
+  /** The ledger read failed: the Top-ups section shows it with a retry, never "No top-ups yet". */
+  transactionsError?: string | null
+  transactionsErrorKind?: ErrorKind
+  onRetryTransactions?: () => void
   /** Each action resolves when done and rejects on failure; the matching error is a sentence. */
   onCreateWallet: (draft: CreateWallet) => Promise<unknown>
   createError?: string | null
@@ -69,20 +89,33 @@ export interface CustomerWalletViewProps {
   topUpError?: string | null
   onTerminate: () => Promise<unknown>
   terminateError?: string | null
+  onSaveAutoTopup: (draft: AutoTopup) => Promise<unknown>
+  autoTopupError?: string | null
   /** Called when a dialog opens, so a stale error from the last attempt is cleared. */
   onResetErrors?: () => void
 }
 
-type Dialog = 'create' | 'top-up' | 'terminate' | null
+type Dialog = 'create' | 'top-up' | 'auto-topup' | 'terminate' | null
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR'].map((code) => ({ value: code, label: code }))
+const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
 
-// `Intl.NumberFormat` formats a decimal string exactly; the cast bridges a lib typing gap.
-const credits = (value: string) =>
-  new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(value as unknown as number)
+const credits = formatCredits
 
-const day = (value: Date | null) =>
-  value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value) : ''
+/** A per-credit rate keeps its small decimals: 0.009 is "$0.009", not "$0.01". */
+function rate(value: string, currency: string): string {
+  if (toNumber(value) === null) return '—'
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currencyDisplay: 'narrowSymbol',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    }).format(value as unknown as number)
+  } catch {
+    return `${value} ${currency}`
+  }
+}
 
 export function CustomerWalletView({
   wallets,
@@ -92,21 +125,30 @@ export function CustomerWalletView({
   selectedId,
   onSelect,
   transactions,
+  now,
   transactionsLoading = false,
+  transactionsError = null,
+  transactionsErrorKind,
+  onRetryTransactions,
   onCreateWallet,
   createError = null,
   onTopUp,
   topUpError = null,
   onTerminate,
   terminateError = null,
+  onSaveAutoTopup,
+  autoTopupError = null,
   onResetErrors,
 }: CustomerWalletViewProps) {
   const [dialog, setDialog] = useState<Dialog>(null)
   const [pending, setPending] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'in' | 'out'>('all')
+  // Every open remounts the dialogs (their `key`), so a draft or a validation
+  // message from the last time never greets the next one.
+  const [opens, setOpens] = useState(0)
 
   const open = (next: Exclude<Dialog, null>) => {
     onResetErrors?.()
+    setOpens((count) => count + 1)
     setDialog(next)
   }
   const close = () => setDialog(null)
@@ -122,8 +164,8 @@ export function CustomerWalletView({
     }
   }
 
-  if (isLoading) return <LoadingRows />
-  if (failed) {
+  // Wallets on screen win over a failed refetch; with none, error beats loading.
+  if (failed && wallets.length === 0) {
     return (
       <AppFailure
         title="Wallets could not be loaded"
@@ -132,9 +174,11 @@ export function CustomerWalletView({
       />
     )
   }
+  if (isLoading && wallets.length === 0) return <LoadingRows />
 
   const createDialog = (
     <CreateWalletDialog
+      key={`create:${opens}`}
       open={dialog === 'create'}
       onClose={close}
       pending={pending}
@@ -148,6 +192,7 @@ export function CustomerWalletView({
     return (
       <>
         <EmptyState
+          scene="customers"
           size="inline"
           title="No wallet yet"
           description="A wallet holds prepaid credits this customer's usage draws down."
@@ -159,42 +204,45 @@ export function CustomerWalletView({
   }
 
   const closed = wallet.status === WalletStatus.Closed
-  const rows = transactions.filter((t) => filter === 'all' || t.direction === filter)
-  const current = Number(wallet.creditBalance) || 0
-  const ongoing = Number(wallet.realTimeCreditBalance) || 0
-  const pendingUsage = Math.max(0, current - ongoing)
+  const currency = wallet.currency.toUpperCase()
+  const asOf = now ?? new Date()
+  const topUps = transactions
+    .filter((t) => t.direction === 'in')
+    .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
+  // An unreadable balance is "unknown", never a 0: the meter is left out rather
+  // than drawn as an untouched wallet.
+  const current = toNumber(wallet.creditBalance)
+  const ongoing = toNumber(wallet.realTimeCreditBalance)
+  const meterKnown = current !== null && ongoing !== null
+  const pendingUsage = meterKnown ? Math.max(0, current - ongoing) : 0
   const usedShare =
-    current > 0 ? Math.min(100, Math.round((pendingUsage / current) * 1000) / 10) : 0
+    meterKnown && current > 0 ? Math.min(100, Math.round((pendingUsage / current) * 1000) / 10) : 0
+  const availableNow = meterKnown ? Math.max(0, ongoing) : 0
+  const expiring = expiringSoon(topUps, asOf)
+  const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {wallets.length > 1 ? (
-          <Select value={wallet.id} onValueChange={(value) => value !== null && onSelect(value)}>
-            <SelectTrigger className="h-9 w-64" aria-label="Wallet">
-              <SelectValue>
-                {(value) => {
-                  const chosen = wallets.find((candidate) => candidate.id === value)
-                  return chosen
-                    ? `${chosen.description || 'Prepaid credits'} · ${chosen.currency}`
-                    : value
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="start">
-              {wallets.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.description || 'Prepaid credits'} · {candidate.currency}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">{wallet.description || 'Prepaid credits'}</p>
-            <p className="text-muted-foreground text-xs">{wallet.currency}</p>
-          </div>
-        )}
+        <Select value={wallet.id} onValueChange={(value) => value !== null && onSelect(value)}>
+          <SelectTrigger className="h-9 w-64" aria-label="Wallet">
+            <SelectValue>
+              {(value) => {
+                const chosen = wallets.find((candidate) => candidate.id === value)
+                return chosen
+                  ? `${chosen.description || 'Prepaid credits'} · ${chosen.currency.toUpperCase()}`
+                  : value
+              }}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start">
+            {wallets.map((candidate) => (
+              <SelectItem key={candidate.id} value={candidate.id}>
+                {candidate.description || 'Prepaid credits'} · {candidate.currency.toUpperCase()}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2">
           <Button className="h-8 px-3.5" onClick={() => open('top-up')} disabled={closed}>
             <PlusIcon aria-hidden="true" />
@@ -214,6 +262,10 @@ export function CustomerWalletView({
               <MoreHorizontalIcon aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem disabled={closed} onClick={() => open('auto-topup')}>
+                <RepeatIcon className="text-muted-foreground" aria-hidden="true" />
+                Auto top-up settings
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => open('create')}>
                 <WalletIcon className="text-muted-foreground" aria-hidden="true" />
                 Create wallet
@@ -238,106 +290,155 @@ export function CustomerWalletView({
           <div className="grid grid-cols-2 divide-x">
             <div className="p-6">
               <Balance
-                label="Current balance"
+                label="Real-time balance"
+                hint="Last invoiced balance minus usage recorded since the last invoice. This is what the next charge draws from."
+                credits={wallet.realTimeCreditBalance}
+                value={formatMoney(wallet.realTimeBalance)}
+              />
+            </div>
+            <div className="p-6">
+              <Balance
+                label="Last invoiced balance"
                 hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
                 credits={wallet.creditBalance}
                 value={formatMoney(wallet.balance)}
               />
             </div>
-            <div className="p-6">
-              <Balance
-                label="Ongoing balance"
-                hint="Current balance minus usage recorded since the last invoice. This is what the next charge draws from."
-                credits={wallet.realTimeCreditBalance}
-                value={formatMoney(wallet.realTimeBalance)}
-              />
-            </div>
           </div>
           <div className="flex flex-col justify-center gap-3 border-t p-6 lg:border-t-0">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-muted-foreground text-xs">Since the last invoice</p>
-              <p className="text-muted-foreground text-xs tabular-nums">{usedShare}% used</p>
-            </div>
-            <SplitMeter
-              segments={56}
-              parts={[
-                { value: pendingUsage, color: 'bg-success', label: 'Used, not yet invoiced' },
-                { value: Math.max(0, ongoing), color: 'bg-muted', label: 'Available' },
-              ]}
-            />
-            <div className="text-muted-foreground flex flex-wrap gap-x-5 gap-y-1 text-xs">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="bg-success size-2 rounded-full" aria-hidden="true" />
-                {credits(String(pendingUsage))} used, not yet invoiced
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="bg-muted-foreground/30 size-2 rounded-full" aria-hidden="true" />
-                {credits(String(Math.max(0, ongoing)))} available
-              </span>
-            </div>
+            {meterKnown ? (
+              <>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-muted-foreground text-xs">Since the last invoice</p>
+                  <p className="text-muted-foreground text-xs tabular-nums">{usedShare}% used</p>
+                </div>
+                <SplitMeter
+                  segments={56}
+                  parts={[
+                    { value: pendingUsage, color: 'bg-success', label: 'Used, not yet invoiced' },
+                    { value: availableNow, color: 'bg-muted', label: 'Available' },
+                  ]}
+                />
+                <div className="text-muted-foreground flex flex-wrap gap-x-5 gap-y-1 text-xs">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="bg-success size-2 rounded-full" aria-hidden="true" />
+                    {credits(String(pendingUsage))} used, not yet invoiced
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="bg-muted-foreground/30 size-2 rounded-full"
+                      aria-hidden="true"
+                    />
+                    {credits(String(availableNow))} available
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground text-xs">Since the last invoice</p>
+                <p className="text-muted-foreground text-sm">
+                  Usage since the last invoice is unavailable: a balance could not be read.
+                </p>
+              </>
+            )}
           </div>
         </div>
-        <dl className="text-muted-foreground grid gap-4 border-t px-6 py-4 text-xs sm:grid-cols-4">
-          {[
-            ['Status', WALLET_STATUS_LABEL[wallet.status]],
-            ['Conversion', `1 credit = ${wallet.conversionRate} ${wallet.currency}`],
-            ['Top-up rate', `1 credit = ${wallet.topupConversionRate} ${wallet.currency}`],
-            ['Auto top-up', wallet.autoTopup ? 'On' : 'Off'],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd className="text-foreground mt-0.5 text-[13px]">{value}</dd>
-            </div>
-          ))}
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-t px-6 py-4 sm:grid-cols-3 lg:flex lg:flex-wrap lg:gap-x-12">
+          <Detail label="Status">
+            <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+          </Detail>
+          <Detail label="Consumption rate">
+            1 credit = {rate(wallet.conversionRate, currency)}
+          </Detail>
+          <Detail label="Top-up rate">
+            1 credit = {rate(wallet.topupConversionRate, currency)}
+          </Detail>
+          <Detail label="Auto top-up">
+            <button
+              type="button"
+              disabled={closed}
+              onClick={() => open('auto-topup')}
+              aria-label={`Auto top-up ${wallet.autoTopup.enabled ? 'on' : 'off'}. Edit settings`}
+              className="focus-visible:ring-ring/50 rounded-sm text-left underline-offset-4 outline-none hover:underline focus-visible:ring-3 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+            >
+              {wallet.autoTopup.enabled
+                ? `Below ${credits(wallet.autoTopup.threshold)} credits, add ${credits(wallet.autoTopup.amount)}`
+                : 'Off'}
+            </button>
+          </Detail>
+          {expiring ? (
+            <Detail label="Expiring soon">
+              <span className="text-warning-foreground dark:text-warning">
+                {credits(expiring.credits)} credits on {formatDay(expiring.date, false)}
+              </span>
+            </Detail>
+          ) : null}
         </dl>
       </section>
 
-      <Section
-        title="Transactions"
-        flush
-        action={
-          <Select
-            value={filter}
-            onValueChange={(value) => value !== null && setFilter(value as 'all' | 'in' | 'out')}
-          >
-            <SelectTrigger className="h-8 w-40" aria-label="Filter transactions">
-              <SelectValue>
-                {(value) =>
-                  ({ all: 'All activity', in: 'Credits in', out: 'Debits out' })[value as 'all'] ??
-                  value
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="all">All activity</SelectItem>
-              <SelectItem value="in">Credits in</SelectItem>
-              <SelectItem value="out">Debits out</SelectItem>
-            </SelectContent>
-          </Select>
-        }
-      >
-        {transactionsLoading ? (
-          <LoadingRows />
-        ) : rows.length === 0 ? (
-          <p className="text-muted-foreground px-6 py-10 text-center text-sm">
-            No transactions yet.
-          </p>
-        ) : (
-          <ul className="divide-border/50 divide-y">
-            {rows.map((row) => (
-              <LedgerRow key={row.id} row={row} />
-            ))}
-          </ul>
-        )}
+      <Section table title="Top-ups">
+        <SubTabState
+          hasData={topUps.length > 0}
+          isLoading={transactionsLoading}
+          error={transactionsError}
+          errorKind={transactionsErrorKind}
+          onRetry={onRetryTransactions}
+          columns={5}
+          loadingLabel="Loading top-ups"
+          truncation={ledgerCapped}
+          empty={{
+            scene: 'customers',
+            title: ledgerCapped ? 'No top-ups in the latest transactions' : 'No top-ups yet',
+            description: ledgerCapped
+              ? 'Older transactions are not listed here.'
+              : 'Credits added to this wallet appear here.',
+          }}
+        >
+          <WalletLedgerTable topUps={topUps} now={asOf} />
+        </SubTabState>
       </Section>
+
+      {/* A failed ledger read is reported once, in Top-ups above. */}
+      {transactionsError ? null : (
+        <Section table title="All transactions">
+          <SubTabState
+            hasData={transactions.length > 0}
+            isLoading={transactionsLoading}
+            error={transactionsError}
+            errorKind={transactionsErrorKind}
+            onRetry={onRetryTransactions}
+            columns={5}
+            loadingLabel="Loading transactions"
+            truncation={ledgerCapped}
+            empty={{
+              scene: 'customers',
+              title: 'No transactions yet',
+              description: 'Credits added and usage drawn from this wallet appear here.',
+            }}
+          >
+            <WalletTransactionsTable transactions={transactions} />
+          </SubTabState>
+        </Section>
+      )}
 
       {createDialog}
       <TopUpDialog
+        key={`top-up:${opens}`}
         open={dialog === 'top-up'}
         onClose={close}
         pending={pending}
         error={topUpError}
         onSubmit={(draft) => run(() => onTopUp(draft))}
+      />
+      <AutoTopupDialog
+        key={`${wallet.id}:${opens}`}
+        open={dialog === 'auto-topup'}
+        onClose={close}
+        pending={pending}
+        error={autoTopupError}
+        initial={wallet.autoTopup}
+        currency={currency}
+        onSubmit={(draft) => run(() => onSaveAutoTopup(draft))}
       />
       <ConfirmDialog
         open={dialog === 'terminate'}
@@ -354,46 +455,20 @@ export function CustomerWalletView({
   )
 }
 
-/** list-5 row: tone tile, reason and detail, date, signed amount with credits underneath. */
-function LedgerRow({ row }: { row: WalletTransaction }) {
-  const credit = row.direction === 'in'
-  const sign = credit ? '+' : '−'
-  return (
-    <li className="flex items-center gap-4 px-6 py-4">
-      <span
-        aria-hidden="true"
-        className={cn(
-          'border-background flex size-9 shrink-0 items-center justify-center rounded-lg border-2 shadow-[0_1px_3px_0_rgba(0,0,0,0.12)] [&_svg]:size-4',
-          credit ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive',
-        )}
-      >
-        {credit ? <ArrowUpRightIcon /> : <ArrowDownRightIcon />}
-      </span>
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-sm font-medium">{row.reason}</p>
-        {row.description ? (
-          <p className="text-muted-foreground truncate text-xs">{row.description}</p>
-        ) : null}
-      </div>
-      <span className="text-muted-foreground hidden w-28 text-xs sm:block">
-        {day(row.createdAt)}
-      </span>
-      <div className="w-32 space-y-0.5">
-        <p
-          className={cn(
-            'text-[15px] font-medium tabular-nums',
-            credit ? 'text-success' : 'text-destructive',
-          )}
-        >
-          {sign} {formatMoney(row.amount)}
-        </p>
-        <p className="text-muted-foreground text-xs tabular-nums">
-          {sign}
-          {credits(row.credits)} credits
-        </p>
-      </div>
-    </li>
-  )
+const STATUS_TONE: Record<WalletStatus, PillTone> = {
+  [WalletStatus.Active]: 'success',
+  [WalletStatus.Frozen]: 'warning',
+  [WalletStatus.Closed]: 'neutral',
+}
+
+/** How many ledger rows the wallet panel asks for; at this count older entries are cut off. */
+export const TRANSACTIONS_LIMIT = 200
+
+/** A decimal string as a number, or null when it is blank or unreadable. */
+function toNumber(value: string): number | null {
+  if (value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function CreateWalletDialog({
@@ -431,6 +506,25 @@ function CreateWalletDialog({
           onSubmit(parsed.data)
         }}
       >
+        <ChoiceCards
+          label="Wallet type"
+          value={draft.walletType}
+          onChange={(walletType) => set({ walletType })}
+          choices={[
+            {
+              value: 'PRE_PAID',
+              title: 'Prepaid',
+              description: 'Credits are bought up front; usage draws them down in real time.',
+              icon: <WalletIcon aria-hidden="true" />,
+            },
+            {
+              value: 'POST_PAID',
+              title: 'Postpaid',
+              description: 'Credits are applied to invoices at the end of the billing cycle.',
+              icon: <RepeatIcon aria-hidden="true" />,
+            },
+          ]}
+        />
         <div className="grid gap-5 sm:grid-cols-2">
           <Field>
             <LabelWithHint
@@ -463,6 +557,25 @@ function CreateWalletDialog({
           </Field>
           <Field>
             <LabelWithHint
+              htmlFor="wallet-topup-rate"
+              hint="What one credit costs when it is bought, if that differs from the conversion rate. Optional."
+            >
+              Top-up rate
+            </LabelWithHint>
+            <InputGroup className="h-9">
+              <InputGroupAddon align="inline-start">1 credit =</InputGroupAddon>
+              <InputGroupInput
+                id="wallet-topup-rate"
+                inputMode="decimal"
+                placeholder={draft.conversionRate}
+                value={draft.topupConversionRate}
+                onChange={(event) => set({ topupConversionRate: event.target.value })}
+              />
+              <InputGroupAddon align="inline-end">{draft.currency}</InputGroupAddon>
+            </InputGroup>
+          </Field>
+          <Field>
+            <LabelWithHint
               htmlFor="wallet-initial"
               hint="Credits added as soon as the wallet is created. Optional."
             >
@@ -474,6 +587,21 @@ function CreateWalletDialog({
               inputMode="decimal"
               value={draft.initialCredits}
               onChange={(event) => set({ initialCredits: event.target.value })}
+            />
+          </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="wallet-initial-expiry"
+              hint="The initial credits lapse on this day if they are not used. Optional."
+            >
+              Initial credits expire on
+            </LabelWithHint>
+            <DateInput
+              id="wallet-initial-expiry"
+              value={draft.initialCreditsExpiry}
+              onValueChange={(initialCreditsExpiry) => set({ initialCreditsExpiry })}
+              placeholder="Never"
+              disabled={draft.initialCredits.trim() === ''}
             />
           </Field>
           <Field>
@@ -579,6 +707,182 @@ function TopUpDialog({
               onChange={(event) => set({ description: event.target.value })}
             />
           </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="topup-expiry"
+              hint="The credits lapse on this day if they are not used. Optional."
+            >
+              Expires on
+            </LabelWithHint>
+            <DateInput
+              id="topup-expiry"
+              value={draft.expiryDate}
+              onValueChange={(expiryDate) => set({ expiryDate })}
+              placeholder="Never"
+            />
+          </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="topup-priority"
+              hint="Which credits are used first. A lower number is used sooner. Optional."
+            >
+              Priority
+            </LabelWithHint>
+            <Input
+              id="topup-priority"
+              className="h-9"
+              inputMode="numeric"
+              value={draft.priority}
+              onChange={(event) => set({ priority: event.target.value })}
+            />
+          </Field>
+          <Field className="sm:col-span-2">
+            <LabelWithHint
+              htmlFor="topup-reference"
+              hint="A unique reference, such as a purchase order number. The same reference is never applied twice. Optional."
+            >
+              Reference ID
+            </LabelWithHint>
+            <Input
+              id="topup-reference"
+              className="h-9"
+              value={draft.referenceId}
+              onChange={(event) => set({ referenceId: event.target.value })}
+            />
+          </Field>
+        </div>
+        {draft.kind === 'purchased' ? (
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <label htmlFor="topup-invoice" className="text-sm font-medium">
+                Invoice the customer
+              </label>
+              <p className="text-muted-foreground text-xs">
+                Raise an invoice for these credits. Off records them as already paid.
+              </p>
+            </div>
+            <Switch
+              id="topup-invoice"
+              checked={draft.invoice}
+              onCheckedChange={(invoice) => set({ invoice })}
+            />
+          </div>
+        ) : null}
+        {problem || error ? (
+          <p role="alert" className="text-destructive text-sm">
+            {problem ?? error}
+          </p>
+        ) : null}
+      </Composer>
+    </FormDialog>
+  )
+}
+
+function AutoTopupDialog({
+  open,
+  onClose,
+  pending,
+  error,
+  initial,
+  currency,
+  onSubmit,
+}: {
+  open: boolean
+  onClose: () => void
+  pending: boolean
+  error: string | null
+  initial: AutoTopup
+  currency: string
+  onSubmit: (draft: AutoTopup) => void
+}) {
+  const [draft, setDraft] = useState<AutoTopup>(initial)
+  const [problem, setProblem] = useState<string | null>(null)
+  const set = (patch: Partial<AutoTopup>) => setDraft((current) => ({ ...current, ...patch }))
+
+  return (
+    <FormDialog
+      open={open}
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      title="Auto top-up"
+    >
+      <Composer
+        submitLabel="Save"
+        onCancel={onClose}
+        submitting={pending}
+        onSubmit={() => {
+          const parsed = autoTopupSchema.safeParse(draft)
+          if (!parsed.success)
+            return setProblem(parsed.error.issues[0]?.message ?? 'Check the form')
+          setProblem(null)
+          onSubmit(parsed.data)
+        }}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <label htmlFor="auto-topup-enabled" className="text-sm font-medium">
+              Top up automatically
+            </label>
+            <p className="text-muted-foreground text-xs">
+              Add credits whenever the balance runs low, so usage is never cut off.
+            </p>
+          </div>
+          <Switch
+            id="auto-topup-enabled"
+            checked={draft.enabled}
+            onCheckedChange={(enabled) => set({ enabled })}
+          />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field>
+            <LabelWithHint
+              htmlFor="auto-topup-threshold"
+              hint="When the balance falls to this many credits, a top-up is triggered."
+            >
+              Below
+            </LabelWithHint>
+            <InputGroup className="h-9">
+              <InputGroupInput
+                id="auto-topup-threshold"
+                inputMode="decimal"
+                value={draft.threshold}
+                onChange={(event) => set({ threshold: event.target.value })}
+              />
+              <InputGroupAddon align="inline-end">credits</InputGroupAddon>
+            </InputGroup>
+          </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="auto-topup-amount"
+              hint="How many credits each automatic top-up adds."
+            >
+              Add
+            </LabelWithHint>
+            <InputGroup className="h-9">
+              <InputGroupInput
+                id="auto-topup-amount"
+                inputMode="decimal"
+                value={draft.amount}
+                onChange={(event) => set({ amount: event.target.value })}
+              />
+              <InputGroupAddon align="inline-end">credits</InputGroupAddon>
+            </InputGroup>
+          </Field>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <label htmlFor="auto-topup-invoicing" className="text-sm font-medium">
+              Invoice each top-up
+            </label>
+            <p className="text-muted-foreground text-xs">
+              Charge the customer in {currency} for the credits. Off grants them as free credits.
+            </p>
+          </div>
+          <Switch
+            id="auto-topup-invoicing"
+            checked={draft.invoicing}
+            disabled={!draft.enabled}
+            onCheckedChange={(invoicing) => set({ invoicing })}
+          />
         </div>
         {problem || error ? (
           <p role="alert" className="text-destructive text-sm">
@@ -587,6 +891,15 @@ function TopUpDialog({
         ) : null}
       </Composer>
     </FormDialog>
+  )
+}
+
+function Detail({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="text-sm">{children}</dd>
+    </div>
   )
 }
 
@@ -612,8 +925,11 @@ function Balance({
           <TooltipContent className="max-w-60">{hint}</TooltipContent>
         </Tooltip>
       </p>
-      <p className="text-3xl font-medium tabular-nums">{value}</p>
-      <p className="text-muted-foreground text-xs tabular-nums">{credits(creditValue)} credits</p>
+      <p className="text-3xl font-medium tabular-nums">
+        {credits(creditValue)}{' '}
+        <span className="text-muted-foreground text-base font-normal">credits</span>
+      </p>
+      <p className="text-muted-foreground text-sm tabular-nums">{value}</p>
     </div>
   )
 }

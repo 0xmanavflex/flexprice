@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
-import { PlusIcon } from 'lucide-react'
+import { PlusIcon } from '@ui/icons'
 import {
   type CreateTaxAssociation,
   type EditTaxAssociation,
@@ -94,10 +94,9 @@ export function CustomerTaxSection({
       <PlusIcon aria-hidden /> Add tax rate
     </Button>
   )
-  const showTable = !isLoading && !failed && associations.length > 0
 
   return (
-    <Section title="Taxes" flush bare={showTable} {...(showTable ? {} : { actions: addTaxRate })}>
+    <Section table showTitle title="Taxes" action={addTaxRate}>
       {isLoading ? (
         <div className="p-6">
           <LoadingRows />
@@ -113,6 +112,7 @@ export function CustomerTaxSection({
       ) : associations.length === 0 ? (
         <div className="p-6">
           <EmptyState
+            scene="settings"
             size="inline"
             title="No tax rates attached"
             description="Add a rate to have it applied when this customer is invoiced."
@@ -121,7 +121,6 @@ export function CustomerTaxSection({
       ) : (
         <DetailTable
           label="Tax rates"
-          action={addTaxRate}
           noun="tax rates"
           rows={associations}
           getRowId={(a) => a.id}
@@ -212,9 +211,10 @@ export function CustomerTaxSection({
   )
 }
 
-function TaxDialog({
+export function TaxDialog({
   open,
   mode,
+  subject = 'customer',
   taxRates,
   initial,
   pending,
@@ -224,6 +224,8 @@ function TaxDialog({
 }: {
   open: boolean
   mode: 'add' | 'edit'
+  /** What the rate is applied to, for the hint. */
+  subject?: string
   taxRates: TaxRateOption[]
   initial: CreateTaxAssociation
   pending: boolean
@@ -258,7 +260,7 @@ function TaxDialog({
         }}
       >
         <div className="flex flex-col gap-2">
-          <LabelWithHint htmlFor="tax-rate" hint="The tax rate to apply to this customer.">
+          <LabelWithHint htmlFor="tax-rate" hint={`The tax rate to apply to this ${subject}.`}>
             Tax rate
           </LabelWithHint>
           <OptionSelect

@@ -34,11 +34,18 @@ export interface SectionProps {
   /** No header band: the title stays as a screen-reader heading and the body (a table) leads with its own search. */
   bare?: boolean
   /**
-   * For a table: no title row. The name stays for assistive tech, and a create
-   * action belongs on the table toolbar beside the filter, not above the box.
+   * For a table: title and actions stay above the bordered body.
+   * Empty, loading and populated content share that same frame.
    */
   table?: boolean
-  /** A line under the title. */
+  /**
+   * With `table`: defaults to a visible title and action above the box.
+   * Set false only when the surrounding context already supplies the heading.
+   */
+  showTitle?: boolean
+  /** With `table` and `showTitle`: sits on the title's line, right after it ("View all"). */
+  titleAction?: ReactNode
+  /** A line under the title. With `table`, needs `showTitle` to be visible. */
   description?: string
   /** Heading level, so a page's outline stays correct. */
   as?: 'h1' | 'h2' | 'h3'
@@ -54,6 +61,8 @@ export function Section({
   flush,
   bare,
   table,
+  showTitle = true,
+  titleAction,
   description,
   as: Heading = 'h2',
 }: SectionProps) {
@@ -63,10 +72,34 @@ export function Section({
   if (table) {
     return (
       <section aria-labelledby={id} className={cn('flex flex-col gap-3', className)}>
-        <Heading id={id} className="sr-only">
-          {title}
-        </Heading>
-        <div className={cn('bg-background overflow-hidden rounded-xl border', bodyClassName)}>
+        {showTitle ? (
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-3">
+                <Heading id={id} className="text-sm font-medium">
+                  {title}
+                </Heading>
+                {titleAction}
+              </div>
+              {description ? (
+                <p className="text-muted-foreground mt-0.5 text-[13px]">{description}</p>
+              ) : null}
+            </div>
+            {headerAction ? (
+              <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            <Heading id={id} className="sr-only">
+              {title}
+            </Heading>
+            {headerAction ? <div className="flex justify-end gap-2">{headerAction}</div> : null}
+          </>
+        )}
+        <div
+          className={cn('bg-background min-w-0 overflow-hidden rounded-xl border', bodyClassName)}
+        >
           {children}
         </div>
       </section>

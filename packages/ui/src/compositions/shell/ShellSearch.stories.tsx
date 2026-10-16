@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { FileSignatureIcon, UsersIcon } from 'lucide-react'
+import { FileSignatureIcon, UsersIcon } from '@ui/icons'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { ShellSearch } from './ShellSearch'
 
@@ -32,6 +32,11 @@ const meta = {
     },
     results: { control: 'object', description: 'Server results shown beneath `items`.' },
     isSearching: { control: 'boolean', description: 'Shows the searching state in the dialog.' },
+    hasError: {
+      control: 'boolean',
+      description: 'The server lookup failed: says so instead of "No results".',
+    },
+    onRetry: { control: false },
     placeholder: { control: 'text' },
     onSelect: { control: false },
     onTermChange: { control: false },
@@ -48,6 +53,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   args: {
     enabled: true,
     isSearching: false,
+    hasError: false,
     placeholder: 'Search…',
     items: [
       { id: 'page:customers', label: 'Customers', group: 'Pages' },
@@ -166,5 +172,48 @@ export const NotAvailableYet: Story = {
     await waitFor(() => expect(dialog.getByText(/available yet/)).toBeVisible())
     // Nothing that could swallow a query.
     await expect(dialog.queryByRole('combobox')).not.toBeInTheDocument()
+  },
+}
+
+/** The count is announced politely, so typing is answered without moving focus. */
+export const AnnouncesResultCount: Story = {
+  args: {
+    results: [{ id: 'customer:acme', label: 'Acme Corp', group: 'Customers' }],
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByRole('combobox', { name: 'Search' }), 'c')
+    const status = await dialog.findByRole('status')
+    await expect(status).toHaveAttribute('aria-live', 'polite')
+    await waitFor(() => expect(status).toHaveTextContent('2 results'))
+  },
+}
+
+/** A failed lookup is not "No results": it says search is unavailable and offers a retry. */
+export const SearchUnavailable: Story = {
+  args: { items: [], results: [], hasError: true, onRetry: fn() },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByRole('combobox', { name: 'Search' }), 'acme')
+    await waitFor(() =>
+      expect(dialog.getAllByText('Search is unavailable. Try again.').length).toBeGreaterThan(0),
+    )
+    await expect(dialog.queryByText(/No results/)).not.toBeInTheDocument()
+    await userEvent.click(dialog.getByRole('button', { name: 'Retry' }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
+  },
+}
+
+/** Pages still match locally when the record lookup fails; the gap is named rather than hidden. */
+export const PartialFailure: Story = {
+  args: { results: [], hasError: true, onRetry: fn() },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByRole('combobox', { name: 'Search' }), 'cust')
+    await expect(await dialog.findByRole('option', { name: /Customers/ })).toBeVisible()
+    await expect(dialog.getByText('Some results could not be loaded.')).toBeVisible()
   },
 }

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { call } from '@fp/api'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
@@ -23,7 +23,13 @@ import { useFlexprice } from './provider'
  *     to contain them);
  *   - one `limit: 1` subscription count per distinct plan found, read for its
  *     `pagination.total` (the subscription filter takes a single `planId`, so a
- *     feature's figure is the sum across its plans).
+ *     feature's figure is the sum across its plans). These cannot be batched
+ *     into one request, so they run as ONE query that works through the plans
+ *     {@link COUNT_CONCURRENCY} at a time, each under its own cache entry. A
+ *     page of products linked to thirty plans is thirty requests either way;
+ *     what changes is that they no longer all leave the browser at once, one
+ *     failing count does not fail the rest, and a plan counted a minute ago is
+ *     not counted again.
  *
  * A count that could not be read is `undefined`, not zero — "we could not find
  * out" and "there are none" must not render the same.
@@ -64,11 +70,37 @@ interface PlanRow {
   name?: string
 }
 
+/** How many per-plan counts are in flight at once. */
+export const COUNT_CONCURRENCY = 4
+
+/**
+ * Runs `work` over `items`, at most `limit` at a time, results in input order.
+ * Stops starting new work once `signal` aborts.
+ */
+export async function mapBounded<T, R>(
+  items: readonly T[],
+  limit: number,
+  work: (item: T) => Promise<R>,
+  signal?: AbortSignal,
+): Promise<(R | undefined)[]> {
+  const results: (R | undefined)[] = new Array<R | undefined>(items.length).fill(undefined)
+  let next = 0
+  const lane = async () => {
+    while (next < items.length && !signal?.aborted) {
+      const index = next++
+      results[index] = await work(items[index] as T)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane))
+  return results
+}
+
 export function useFeatureLinkage(features: readonly LinkedFeature[]): {
   byFeature: ReadonlyMap<string, FeatureLinkage>
   isPending: boolean
 } {
   const client = useFlexprice()
+  const queryClient = useQueryClient()
   const ids = useMemo(() => features.map((feature) => feature.id), [features])
   const meterIds = useMemo(
     () => [
@@ -81,14 +113,19 @@ export function useFeatureLinkage(features: readonly LinkedFeature[]): {
 
   const entitlements = useQuery({
     queryKey: queryKeys.entitlements.list({ entityType: 'PLAN', featureIds: ids }),
-    queryFn: async () => {
-      const response = await call(() =>
-        client.entitlements.queryEntitlement({
-          entityType: 'PLAN',
-          featureIds: ids,
-          limit: 1000,
-          offset: 0,
-        } as never),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.entitlements.queryEntitlement(
+            {
+              entityType: 'PLAN',
+              featureIds: ids,
+              limit: 1000,
+              offset: 0,
+            } as never,
+            options,
+          ),
+        signal,
       )
       return (response.items ?? []) as EntitlementRow[]
     },
@@ -172,18 +209,43 @@ export function useFeatureLinkage(features: readonly LinkedFeature[]): {
     staleTime: 5 * 60_000,
   })
 
-  const counts = useQueries({
-    queries: planIds.map((planId) => ({
-      queryKey: [...queryKeys.counts.of('subscriptions'), 'plan', planId] as const,
-      queryFn: async () => {
-        const response = (await call(() =>
-          client.subscriptions.querySubscription({ planId, limit: 1 } as never),
-        )) as { pagination?: { total?: number } }
-        return response.pagination?.total ?? 0
-      },
-      staleTime: 5 * 60_000,
-      retry: false,
-    })),
+  const sortedPlanIds = useMemo(() => [...planIds].sort(), [planIds])
+  const counts = useQuery({
+    queryKey: [...queryKeys.counts.of('subscriptions'), 'plans', sortedPlanIds] as const,
+    queryFn: async ({ signal }) => {
+      const totals = await mapBounded(
+        sortedPlanIds,
+        COUNT_CONCURRENCY,
+        async (planId) => {
+          try {
+            return await queryClient.fetchQuery({
+              queryKey: [...queryKeys.counts.of('subscriptions'), 'plan', planId] as const,
+              queryFn: async () => {
+                const response = (await call(
+                  (options) =>
+                    client.subscriptions.querySubscription({ planId, limit: 1 } as never, options),
+                  signal,
+                )) as { pagination?: { total?: number } }
+                return response.pagination?.total ?? 0
+              },
+              staleTime: 5 * 60_000,
+            })
+          } catch {
+            // Unknown, not zero: this plan's figure stays undefined and the
+            // feature's total with it, rather than quietly omitting the plan.
+            return undefined
+          }
+        },
+        signal,
+      )
+      return new Map(sortedPlanIds.map((planId, index) => [planId, totals[index]] as const))
+    },
+    enabled: sortedPlanIds.length > 0,
+    staleTime: 60_000,
+    retry: false,
+    // Counts are looked up by plan id, so a previous plan set's map is safe to
+    // keep on screen: a plan it lacks reads as unknown, never as zero.
+    placeholderData: (previous) => previous,
   })
 
   const byFeature = useMemo(() => {
@@ -191,9 +253,8 @@ export function useFeatureLinkage(features: readonly LinkedFeature[]): {
     for (const plan of plans.data ?? []) {
       if (plan.id && plan.name) names.set(plan.id, plan.name)
     }
-    const subscriptionsByPlan = new Map<string, number | undefined>(
-      planIds.map((planId, index) => [planId, counts[index]?.data]),
-    )
+    const subscriptionsByPlan: ReadonlyMap<string, number | undefined> =
+      counts.data ?? new Map<string, number | undefined>()
     const out = new Map<string, FeatureLinkage>()
     for (const feature of features) {
       const own = rows.filter((row) => row.featureId === feature.id)
@@ -218,7 +279,7 @@ export function useFeatureLinkage(features: readonly LinkedFeature[]): {
       })
     }
     return out
-  }, [features, rows, priceRows, planIds, counts, expandedNames, plans.data])
+  }, [features, rows, priceRows, counts.data, expandedNames, plans.data])
 
   const isPending =
     (entitlements.isPending && ids.length > 0) ||

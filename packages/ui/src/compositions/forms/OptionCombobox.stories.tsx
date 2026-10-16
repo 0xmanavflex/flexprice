@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { GaugeIcon } from 'lucide-react'
+import { GaugeIcon } from '@ui/icons'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { OptionCombobox, type OptionComboboxProps } from './OptionCombobox'
 import type { Option } from './OptionSelect'
@@ -222,5 +222,22 @@ export const Invalid: Story = {
       'aria-invalid',
       'true',
     )
+  },
+}
+
+/**
+ * A picker over a catalogue says it is a search.
+ *
+ * The control has always filtered as you type; with the trigger hidden it read
+ * as a plain select, so people opened it, saw no search box and scrolled. The
+ * magnifier is the whole fix, and typing still filters.
+ */
+export const Searchable: Story = {
+  args: { searchable: true, placeholder: 'Search currencies…' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const input = canvas.getByPlaceholderText('Search currencies…')
+    await userEvent.type(input, 'eur')
+    await expect(await within(document.body).findByText(/EUR/)).toBeInTheDocument()
   },
 }

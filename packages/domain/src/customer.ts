@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 
 /**
@@ -21,8 +22,35 @@ export const CustomerStatus = {
 export type CustomerStatus = (typeof CustomerStatus)[keyof typeof CustomerStatus]
 
 export const CUSTOMER_STATUS_LABEL: Record<CustomerStatus, string> = {
-  [CustomerStatus.Published]: 'Published',
+  [CustomerStatus.Published]: 'Active',
   [CustomerStatus.Archived]: 'Archived',
+}
+
+/**
+ * An integration this customer is connected to.
+ *
+ * `id` is the catalogue id (the logo key). `name` is what a reader sees.
+ * `providerType` is the wire value, kept so two mappings of one provider
+ * collapse to one mark.
+ */
+export interface CustomerIntegration {
+  id: string
+  name: string
+  providerType: string
+  /** The customer's id at the provider (`cus_…`). Absent when the mapping carries none. */
+  providerEntityId?: string | undefined
+}
+
+/**
+ * A customer's mapping to one provider as the contract header shows it: the
+ * mark, the provider-side id, and when the link was made and last changed.
+ */
+export interface IntegrationLink extends CustomerIntegration {
+  /** The mapping's own id. */
+  mappingId: string
+  providerEntityId: string
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 /** The read model the list renders. */
@@ -36,6 +64,8 @@ export interface Customer {
   /** ISO 3166-1 alpha-2 country of the customer's address. Empty when unset. */
   addressCountry: string
   status: CustomerStatus
+  /** Integrations this customer is connected to. Empty when none are. */
+  integrations: CustomerIntegration[]
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -44,8 +74,7 @@ export const CustomerTaxTreatment = {
   Taxable: 'taxable',
   Exempt: 'exempt',
 } as const
-export type CustomerTaxTreatment =
-  (typeof CustomerTaxTreatment)[keyof typeof CustomerTaxTreatment]
+export type CustomerTaxTreatment = (typeof CustomerTaxTreatment)[keyof typeof CustomerTaxTreatment]
 
 export const CUSTOMER_TAX_TREATMENT_LABEL: Record<CustomerTaxTreatment, string> = {
   [CustomerTaxTreatment.Taxable]: 'Taxable',
@@ -104,6 +133,8 @@ export interface CustomerQuery {
   statuses: CustomerStatus[]
   sortBy: CustomerSortField
   sortDirection: 'asc' | 'desc'
+  /** Granular field filters, applied by the search endpoint. See `CUSTOMER_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_CUSTOMER_QUERY: CustomerQuery = {
@@ -111,9 +142,27 @@ export const DEFAULT_CUSTOMER_QUERY: CustomerQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: CustomerSortField.Name,
-  sortDirection: 'asc',
+  sortBy: CustomerSortField.UpdatedAt,
+  sortDirection: 'desc',
+  filters: [],
 }
+
+/** What the customer list can filter on — V1's fields, by their wire names. */
+export const CUSTOMER_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'external_id', label: 'External ID', kind: 'text' },
+  { field: 'email', label: 'Email', kind: 'text' },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: CustomerStatus.Published, label: 'Active' },
+      { value: CustomerStatus.Archived, label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} characters or fewer`)
 
@@ -126,9 +175,13 @@ const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} cha
  */
 export const createCustomerSchema = z.object({
   externalId: z.string().trim().min(1, 'Enter an external ID').max(255),
-  name: z.string().trim().min(1, 'Enter a name'),
+  // 255 and 20 are the API's own limits (`CreateCustomerRequest`: `max=255` on
+  // name, `max=20` on contact). A form that accepts more does not accept more —
+  // it collects a value the save then rejects, with a server message about a
+  // field the person has already stopped looking at.
+  name: z.string().trim().min(1, 'Enter a name').max(255, 'Use 255 characters or fewer'),
   email: z.union([z.literal(''), z.email('Enter a valid email address')]).optional(),
-  phone: optionalText(50).optional(),
+  phone: optionalText(20).optional(),
   timezone: optionalText(100).optional(),
   taxTreatment: z.enum([CustomerTaxTreatment.Taxable, CustomerTaxTreatment.Exempt]).optional(),
   addressLine1: optionalText(255).optional(),

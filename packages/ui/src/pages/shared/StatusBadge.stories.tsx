@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
-import { GaugeIcon } from 'lucide-react'
+import { GaugeIcon } from '@ui/icons'
 import { FeatureType, InvoiceStatus } from '@fp/domain'
 import { CatalogStatusBadge, FeatureTypeBadge, GlyphBadge, InvoiceStatusBadge } from './StatusBadge'
 import type { CatalogStatus } from './StatusBadge'

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { CopyIcon, FileJsonIcon, RefreshCwIcon } from 'lucide-react'
+import { CopyIcon, FileJsonIcon, RefreshCwIcon } from '@ui/icons'
 import type { WebhookMessage } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
+import type { ErrorKind } from '@ui/compositions/feedback/States'
 import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityRowAction } from '../../shared/EntityList'
@@ -29,7 +30,11 @@ export interface WebhookMessageLogProps {
   onEventTypeChange: (eventType: string) => void
   isLoading?: boolean
   error?: string | null
+  errorKind?: ErrorKind | undefined
   onRetry?: () => void
+  isRetrying?: boolean | undefined
+  /** A background request is updating the rows on screen. */
+  isRefreshing?: boolean | undefined
   onRefresh?: () => void
   onOpen: (message: WebhookMessage) => void
   locale?: string
@@ -44,7 +49,10 @@ export function WebhookMessageLog({
   onEventTypeChange,
   isLoading = false,
   error = null,
+  errorKind,
   onRetry,
+  isRetrying,
+  isRefreshing,
   onRefresh,
   onOpen,
   locale,
@@ -147,7 +155,10 @@ export function WebhookMessageLog({
       exportFileName="webhook-messages"
       isLoading={isLoading}
       error={error}
+      {...(errorKind ? { errorKind } : {})}
       {...(onRetry ? { onRetry } : {})}
+      {...(isRetrying !== undefined ? { isRetrying } : {})}
+      {...(isRefreshing !== undefined ? { isRefreshing } : {})}
       isFiltered={search.trim().length > 0 || eventType.length > 0}
       onClearFilters={() => {
         setSearch('')
@@ -156,6 +167,7 @@ export function WebhookMessageLog({
       filteredEmptyTitle="No messages match these filters"
       headingAs="h3"
       empty={{
+        scene: 'developers',
         title: 'No messages yet',
         description:
           'Every event Flexprice sends to your endpoints is logged here, with its payload and each delivery attempt.',

@@ -1,7 +1,13 @@
-import { ApiError, useCreateCustomer, useCustomer, useUpdateCustomer } from '@fp/query'
+import {
+  ApiError,
+  useCreateCustomer,
+  useCustomer,
+  useUpdateCustomer,
+  serverReason,
+} from '@fp/query'
 import { customerToEdit, type CreateCustomer } from '@fp/domain'
 import { CustomerForm } from '@fp/ui/pages'
-import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { detailGate } from '../shared/detailGate'
 
 export type CustomerFormPageProps = {
   onCancel: () => void
@@ -33,32 +39,22 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
         submitError={toSubmitError(create.error)}
         onSubmit={(draft: CreateCustomer) =>
           create.mutate(draft, {
-            onSuccess: (created) => props.onDone((created as { id?: string }).id ?? ''),
+            // A created customer with no id cannot be opened: land on the list instead of /customers/.
+            onSuccess: (created) => {
+              const id = (created as { id?: string }).id
+              if (id) props.onDone(id)
+              else onCancel()
+            },
           })
         }
       />
     )
   }
 
-  if (existing.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-  if (existing.error || !existing.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This customer could not be loaded"
-          detail="Try again, or go back."
-          onRetry={existing.error ? () => void existing.refetch() : onCancel}
-        />
-      </PageBody>
-    )
+  if (!existing.data) {
+    // A disabled query (empty id) never leaves "pending": show not-found instead of loading forever.
+    const gate = props.customerId ? existing : { ...existing, isPending: false, error: null }
+    return detailGate(gate, { noun: 'this customer', listName: 'customers', onBack: onCancel })
   }
 
   const customer = existing.data
@@ -69,7 +65,7 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
       defaultValue={customerToEdit(customer)}
       trail={[
         { label: 'Customers', onClick: onCancel },
-        { label: customer.name, onClick: () => props.onDone(customer.id) },
+        { label: 'Customer details', onClick: () => props.onDone(customer.id) },
         { label: 'Edit' },
       ]}
       onCancel={onCancel}
@@ -91,11 +87,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change customers here.'
+        return serverReason(error) ?? 'You do not have permission to change customers here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the customer. Try again.'
+        return serverReason(error) ?? 'Could not save the customer. Try again.'
     }
   }
   return 'Could not save the customer. Try again.'

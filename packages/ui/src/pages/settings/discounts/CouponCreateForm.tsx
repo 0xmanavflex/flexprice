@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   COUPON_CADENCE_LABEL,
@@ -75,10 +76,9 @@ export function CouponCreateForm({
   isSubmitting = false,
   submitError = null,
 }: CouponCreateFormProps) {
-  const form = useForm<CreateCoupon>({
+  const form = useCalmForm<CreateCoupon>({
     resolver: standardSchemaResolver(createCouponSchema) as Resolver<CreateCoupon>,
     defaultValues: defaultValue ?? emptyCoupon(),
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors

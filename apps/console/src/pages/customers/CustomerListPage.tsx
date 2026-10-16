@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import { type Customer, type CustomerQuery } from '@fp/domain'
-import { ApiError, useCustomers, useDeleteCustomer } from '@fp/query'
+import {
+  ApiError,
+  useCustomerContractCounts,
+  useCustomers,
+  useDeleteCustomer,
+  serverReason,
+} from '@fp/query'
 import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { UsersIcon } from 'lucide-react'
+import { toListFailure } from '../shared/listFailure'
 
 export interface CustomerListPageProps {
   query: CustomerQuery
@@ -35,10 +41,13 @@ export function CustomerListPage({
 
   const [deleting, setDeleting] = useState<Customer | null>(null)
 
-  const failure = toFailure(customers.error)
+  const failure = toListFailure(customers.error, 'customers')
   const rows = customers.data?.customers ?? []
-  const isFiltered = query.search.length > 0 || query.statuses.length > 0
-  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+  const contractCounts = useCustomerContractCounts(rows.map((customer) => customer.id))
+  const isFiltered =
+    query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
   const closeDelete = () => {
     setDeleting(null)
@@ -51,12 +60,16 @@ export function CustomerListPage({
         <ListState
           isLoading={customers.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (customers.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={customers.isFetching && !customers.isPending}
+          isProvisional={customers.isPlaceholderData}
+          isRetrying={customers.isFetching && customers.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void customers.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateCustomer}>New customer</Button>}
-          emptyIcon={<UsersIcon aria-hidden />}
           emptyTitle="No customers yet"
           emptyDescription="Customers are who you bill. Each carries contracts, invoices and a payment history."
         >
@@ -65,6 +78,7 @@ export function CustomerListPage({
             total={customers.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            {...(contractCounts.data ? { contractCounts: contractCounts.data } : {})}
             {...(onOpenCustomer
               ? { onCustomerClick: (customer) => onOpenCustomer(customer.id) }
               : {})}
@@ -95,26 +109,6 @@ export function CustomerListPage({
   )
 }
 
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to customers here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading customers.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading customers.', canRetry: true }
-}
-
 /** A save failure, as a sentence the form can show inline. */
 function toSubmitError(error: unknown): string | null {
   if (!error) return null
@@ -124,11 +118,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change customers here.'
+        return serverReason(error) ?? 'You do not have permission to change customers here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the customer. Try again.'
+        return serverReason(error) ?? 'Could not save the customer. Try again.'
     }
   }
   return 'Could not save the customer. Try again.'

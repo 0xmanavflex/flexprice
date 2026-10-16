@@ -1,3 +1,8 @@
+import type { IntegrationLink } from '@fp/domain'
+import {
+  ContractIntegrations,
+  type ContractIntegrationsProps,
+} from '../../contracts/ContractIntegrations'
 import { useState, type ReactNode } from 'react'
 import {
   CalculatorIcon,
@@ -12,7 +17,7 @@ import {
   SendIcon,
   WalletIcon,
   XCircleIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { toast } from 'sonner'
 import { InvoiceStatus, PaymentStatus } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -24,21 +29,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { ScrollArea } from '@ui/components/primitives/scroll-area'
-import { Switch } from '@ui/components/primitives/switch'
 import { Badge } from '@ui/components/reui/badge'
-import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
-import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { DetailShell } from '../../../compositions/detail/DetailShell'
+import { ActivitySection } from '../../../compositions/detail/ActivityLog'
 import { DetailTabs } from '../../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../../compositions/detail/RelatedCard'
 import { Section } from '../../../compositions/layout/Section'
-import { SectionEmpty } from '../../../compositions/feedback/SectionEmpty'
-import { LoadingRows } from '../../../compositions/feedback/States'
+import {
+  SubTabState,
+  knownCount,
+  truncationNote,
+  type SubTabQuery,
+} from '../../../compositions/detail/SubTabState'
+import { Spinner } from '@ui/components/primitives/spinner'
 import { DetailTable } from '../../shared/DetailTable'
-import { Status } from '../../shared/cells'
+import { Pill, Status } from '../../shared/cells'
 import {
   invoiceTotals,
   statusChips,
@@ -55,13 +62,19 @@ export const InvoiceDetailViewProvenance = provenance({
     'compositions/DetailShell',
     'compositions/MetadataCard',
     'compositions/RelatedCard',
+    'compositions/ActivityLog',
+    'compositions/SubTabState',
+    'ui/spinner',
     '@reui/badge',
-    'blocks/solution-billing-4',
   ],
-  note: 'Invoice detail: DetailShell header (status chips, ID, More), the invoice document with Payments / Credit notes tabs, and an Activity, Metadata, Related rail.',
+  note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit memos tabs. Entity-specific integration controls share header and Related mappings, following the supplied HTML reference.',
 })
 
 export interface InvoiceDetailViewProps {
+  integrationControls?: ContractIntegrationsProps | undefined
+  integrationLinks?: IntegrationLink[] | undefined
+  integrationsError?: boolean
+  onRetryIntegrations?: () => void
   invoice: InvoiceDocument
   onBack?: () => void
   /** Drafts only: open the edit page. */
@@ -75,6 +88,15 @@ export interface InvoiceDetailViewProps {
   /** Drafts only: recompute lines, credits and taxes in place. */
   onRecalculate?: () => void
   onVoid?: () => void
+  /** Set the payment status by hand, for money that moved outside Flexprice. */
+  onUpdatePaymentStatus?: () => void
+  /**
+   * Why the payment status cannot be set by hand right now (void, payments
+   * recorded…) — `manualPaymentStatusBlocked`. Shown as the disabled item's hint.
+   */
+  paymentStatusBlocked?: string | null
+  /** Saves the invoice's metadata map. Omitted, the metadata card is read-only. */
+  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   onIssueCreditNote?: () => void
   /** Finalized invoices: send the invoice to the customer. */
   onSend?: () => void
@@ -83,22 +105,39 @@ export interface InvoiceDetailViewProps {
   onOpenSubscription?: () => void
   onOpenPayment?: (paymentId: string) => void
   onOpenCreditNote?: (creditNoteId: string) => void
-  paymentsLoading?: boolean
-  creditNotesLoading?: boolean
-  /** Starts with zero-amount lines shown; the switch above the items still toggles it. */
-  showZeroAmounts?: boolean
+  /** Payments sub-query. Omitted: treated as loaded. */
+  payments?: SubTabQuery
+  /** Credit memos sub-query. Omitted: treated as loaded. */
+  creditNotes?: SubTabQuery
+  /**
+   * The action in flight, if any. Its menu item and button disable and say what
+   * is happening ("Sending…"), so a second press has nothing to land on.
+   */
+  pendingAction?: InvoicePendingAction | null
 }
 
-type InvoiceTab = 'payments' | 'credit-notes'
+export type InvoicePendingAction = 'finalize' | 'recalculate' | 'send' | 'retry-payment'
+
+/** The most the payments and credit-note reads ask for; at the cap the list may be cut. */
+const SUB_LIST_LIMIT = 100
+
+const optionalCount = (count: number | undefined): { count?: number } =>
+  count === undefined ? {} : { count }
+
+type InvoiceTab = 'details' | 'payments' | 'credit-notes'
 
 /**
  * One invoice (reference `invoice-detail`). The header is the plain word
- * "Invoice" with the status chips, ID chip and one More menu on the right; every
- * action, Download PDF and Copy link included, lives in that menu. The main column is the
- * invoice as a document, then Payments and Credit notes tabs; the rail is
- * Activity, Metadata, Related.
+ * "Invoice" with the status pills under it, the ID chip and one More menu on the right; every
+ * action, Download PDF and Copy link included, lives in that menu. Tabs sit under
+ * the header: Invoice details (the invoice as a document, with the Activity,
+ * Metadata, Related rail beside it), Payments and Credit memos.
  */
 export function InvoiceDetailView({
+  integrationLinks,
+  integrationControls,
+  integrationsError,
+  onRetryIntegrations,
   invoice,
   onBack,
   onEdit,
@@ -108,6 +147,9 @@ export function InvoiceDetailView({
   onRecordPayment,
   onRecalculate,
   onVoid,
+  onUpdatePaymentStatus,
+  paymentStatusBlocked = null,
+  onSaveMetadata,
   onIssueCreditNote,
   onSend,
   onRetryPayment,
@@ -115,12 +157,11 @@ export function InvoiceDetailView({
   onOpenSubscription,
   onOpenPayment,
   onOpenCreditNote,
-  paymentsLoading = false,
-  creditNotesLoading = false,
-  showZeroAmounts = false,
+  payments: paymentsQuery = { isLoading: false },
+  creditNotes: creditNotesQuery = { isLoading: false },
+  pendingAction = null,
 }: InvoiceDetailViewProps) {
-  const [tab, setTab] = useState<InvoiceTab>('payments')
-  const [showZero, setShowZero] = useState(showZeroAmounts)
+  const [tab, setTab] = useState<InvoiceTab>('details')
   const totals = invoiceTotals(invoice)
   const money = (value: number) =>
     new Intl.NumberFormat('en-US', {
@@ -138,7 +179,9 @@ export function InvoiceDetailView({
   const isDraft = invoice.status === InvoiceStatus.Draft
   const isOpen = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
   const paymentFailed = isOpen && invoice.paymentStatus === PaymentStatus.Failed
-  const lines = showZero ? invoice.lines : invoice.lines.filter((line) => line.amount !== 0)
+  const lines = invoice.lines.filter((line) => line.amount !== 0)
+  const canRecordPayment = isOpen && totals.due > 0
+  const canIssueCreditNote = !isDraft && invoice.status !== InvoiceStatus.Void
   const hostedUrl = invoice.hostedUrl ?? null
 
   const copyLink = () => {
@@ -169,15 +212,22 @@ export function InvoiceDetailView({
     <DetailShell
       trail={[
         { label: 'Invoices', ...(onBack ? { onClick: onBack } : {}) },
-        { label: invoice.number ?? 'Invoice' },
+        { label: 'Invoice details' },
       ]}
       icon={<ReceiptIcon />}
       title="Invoice"
       id={invoice.id}
+      leading={
+        integrationControls ? (
+          <ContractIntegrations {...integrationControls} entityLabel="invoice" showLink={false} />
+        ) : integrationLinks?.length ? (
+          <ContractIntegrations links={integrationLinks} linkable={[]} entityLabel="invoice" />
+        ) : undefined
+      }
       badges={statusChips(invoice).map((chip) => (
-        <Badge key={chip.label} variant={chip.variant} size="lg" radius="full">
+        <Pill key={chip.label} tone={chip.tone}>
           {chip.label}
-        </Badge>
+        </Pill>
       ))}
       actions={
         <DropdownMenu>
@@ -206,24 +256,31 @@ export function InvoiceDetailView({
                 <MenuAction
                   icon={<CheckCircle2Icon />}
                   label="Finalize invoice"
-                  disabled={isFinalizing}
+                  disabled={isFinalizing || pendingAction === 'finalize'}
+                  pending={isFinalizing || pendingAction === 'finalize'}
+                  pendingLabel="Finalizing…"
                   onSelect={onFinalize}
                 />
               ) : null}
-              {isDraft && onEdit ? (
+              {onEdit &&
+              invoice.status !== InvoiceStatus.Void &&
+              invoice.status !== InvoiceStatus.Skipped ? (
                 <MenuAction icon={<PencilIcon />} label="Edit invoice" onSelect={onEdit} />
               ) : null}
               <MenuAction
                 icon={<WalletIcon />}
                 label="Record payment"
                 onSelect={onRecordPayment}
-                disabled={!isOpen || totals.due <= 0}
+                disabled={!canRecordPayment}
                 hint={!isOpen ? 'Finalized, unpaid invoices only' : undefined}
               />
               {paymentFailed && onRetryPayment ? (
                 <MenuAction
                   icon={<RefreshCwIcon />}
                   label="Retry payment"
+                  disabled={pendingAction === 'retry-payment'}
+                  pending={pendingAction === 'retry-payment'}
+                  pendingLabel="Retrying…"
                   onSelect={onRetryPayment}
                 />
               ) : null}
@@ -231,21 +288,36 @@ export function InvoiceDetailView({
                 icon={<CalculatorIcon />}
                 label="Recalculate"
                 onSelect={onRecalculate}
-                disabled={!isDraft}
+                disabled={!isDraft || pendingAction === 'recalculate'}
+                pending={pendingAction === 'recalculate'}
+                pendingLabel="Recalculating…"
                 hint={isDraft ? undefined : 'Drafts only'}
               />
               <MenuAction
                 icon={<FileMinusIcon />}
-                label="Issue credit note"
+                label="Issue credit memo"
                 onSelect={onIssueCreditNote}
-                disabled={isDraft || invoice.status === InvoiceStatus.Void}
+                disabled={!canIssueCreditNote}
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
+              {onUpdatePaymentStatus ? (
+                <MenuAction
+                  icon={<WalletIcon />}
+                  label="Update payment status"
+                  onSelect={onUpdatePaymentStatus}
+                  disabled={paymentStatusBlocked !== null}
+                  hint={paymentStatusBlocked ?? undefined}
+                />
+              ) : null}
               <MenuAction
                 icon={<SendIcon />}
                 label="Send invoice"
                 onSelect={onSend}
-                disabled={isDraft || invoice.status === InvoiceStatus.Void}
+                disabled={
+                  isDraft || invoice.status === InvoiceStatus.Void || pendingAction === 'send'
+                }
+                pending={pendingAction === 'send'}
+                pendingLabel="Sending…"
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
             </DropdownMenuGroup>
@@ -262,145 +334,202 @@ export function InvoiceDetailView({
         </DropdownMenu>
       }
     >
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <InvoiceDocumentArticle
-            invoice={invoice}
-            lines={lines}
-            showZero={showZero}
-            onShowZero={setShowZero}
-            money={money}
-            unitMoney={unitMoney}
-            totals={totals}
-            paymentFailed={paymentFailed}
-            isDraft={isDraft}
-            {...(onRetryPayment ? { onRetryPayment } : {})}
-          />
+      <div className="flex min-w-0 flex-col gap-6">
+        <DetailTabs
+          value={tab}
+          onChange={(next) => setTab(next as InvoiceTab)}
+          tabs={[
+            { value: 'details', label: 'Invoice details' },
+            {
+              value: 'payments',
+              label: 'Payments',
+              ...optionalCount(knownCount(invoice.payments.length, paymentsQuery)),
+            },
+            {
+              value: 'credit-notes',
+              label: 'Credit memos',
+              ...optionalCount(knownCount(invoice.creditNotes.length, creditNotesQuery)),
+            },
+          ]}
+        />
 
-          <DetailTabs
-            value={tab}
-            onChange={(next) => setTab(next as InvoiceTab)}
-            tabs={[
-              {
-                value: 'payments',
-                label: 'Payments',
-                ...(paymentsLoading ? {} : { count: invoice.payments.length }),
-              },
-              {
-                value: 'credit-notes',
-                label: 'Credit notes',
-                ...(creditNotesLoading ? {} : { count: invoice.creditNotes.length }),
-              },
-            ]}
-          />
-
-          {tab === 'payments' ? (
-            <Section title="Payments" flush bare={invoice.payments.length > 0}>
-              {paymentsLoading ? (
-                <div className="p-4">
-                  <LoadingRows />
-                </div>
-              ) : invoice.payments.length === 0 ? (
-                <SectionEmpty
-                  title="No payments yet"
-                  description="No payments recorded for this invoice yet."
-                />
-              ) : (
-                <DetailTable<InvoicePaymentRow>
-                  label="Payments"
-                  noun="payments"
-                  rows={invoice.payments}
-                  {...(onOpenPayment ? { onRowClick: (row) => onOpenPayment(row.id) } : {})}
-                  columns={[
-                    {
-                      key: 'id',
-                      header: 'Payment',
-                      cell: (row) => <span className="font-mono text-xs">{row.id}</span>,
-                    },
-                    { key: 'method', header: 'Method', cell: (row) => row.method || '—' },
-                    {
-                      key: 'date',
-                      header: 'Date',
-                      cell: (row) => <span className="text-muted-foreground">{row.date}</span>,
-                    },
-                    {
-                      key: 'status',
-                      header: 'Status',
-                      cell: (row) => <Status value={row.status} />,
-                    },
-                    {
-                      key: 'amount',
-                      header: 'Amount',
-                      cell: (row) => <span className="tabular-nums">{money(row.amount)}</span>,
-                    },
-                  ]}
-                />
-              )}
-            </Section>
-          ) : null}
-
-          {tab === 'credit-notes' ? (
-            <Section title="Credit notes" flush bare={invoice.creditNotes.length > 0}>
-              {creditNotesLoading ? (
-                <div className="p-4">
-                  <LoadingRows />
-                </div>
-              ) : invoice.creditNotes.length === 0 ? (
-                <SectionEmpty
-                  title="No credit notes yet"
-                  description="No credit notes issued against this invoice."
-                />
-              ) : (
-                <DetailTable<InvoiceCreditNoteRow>
-                  label="Credit notes"
-                  noun="credit notes"
-                  rows={invoice.creditNotes}
-                  {...(onOpenCreditNote ? { onRowClick: (row) => onOpenCreditNote(row.id) } : {})}
-                  columns={[
-                    {
-                      key: 'number',
-                      header: 'Credit note',
-                      cell: (row) => <span className="font-mono text-xs">{row.number}</span>,
-                    },
-                    {
-                      key: 'status',
-                      header: 'Status',
-                      cell: (row) => (row.status ? <Status value={row.status} /> : '—'),
-                    },
-                    {
-                      key: 'date',
-                      header: 'Date',
-                      cell: (row) => <span className="text-muted-foreground">{row.date}</span>,
-                    },
-                    {
-                      key: 'amount',
-                      header: 'Amount',
-                      cell: (row) => <span className="tabular-nums">{money(row.amount)}</span>,
-                    },
-                  ]}
-                />
-              )}
-            </Section>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-5 xl:sticky xl:top-6">
-          <Section title="Activity" flush>
-            {invoice.events.length === 0 ? (
-              <p className="text-muted-foreground px-6 py-5 text-[13px]">No activity yet.</p>
-            ) : (
-              <ScrollArea className="max-h-[420px]">
-                <div className="p-5">
-                  <AccountActivityRail
-                    events={invoice.events.map((event) => ({ ...event, labels: [] }))}
+        {tab === 'details' ? (
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <InvoiceDocumentArticle
+              invoice={invoice}
+              lines={lines}
+              money={money}
+              unitMoney={unitMoney}
+              totals={totals}
+              paymentFailed={paymentFailed}
+              isDraft={isDraft}
+              retryPending={pendingAction === 'retry-payment'}
+              {...(onRetryPayment ? { onRetryPayment } : {})}
+            />
+            <div className="flex flex-col gap-5 xl:sticky xl:top-6">
+              <ActivitySection
+                entries={invoice.events.map((event) => ({
+                  id: event.id,
+                  title: event.title,
+                  at: event.at,
+                  summary: event.summary,
+                }))}
+                emptyText="No dates recorded yet."
+              />
+              <MetadataCard
+                metadata={invoice.metadata ?? {}}
+                {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
+              />
+              <RelatedCard items={related}>
+                {integrationControls ? (
+                  <ContractIntegrations
+                    {...integrationControls}
+                    entityLabel="invoice"
+                    layout="rows"
                   />
-                </div>
-              </ScrollArea>
-            )}
+                ) : integrationLinks?.length ? (
+                  <ContractIntegrations
+                    layout="rows"
+                    links={integrationLinks}
+                    linkable={[]}
+                    entityLabel="invoice"
+                  />
+                ) : integrationsError ? (
+                  <button
+                    type="button"
+                    className="px-6 py-3 text-sm underline"
+                    onClick={onRetryIntegrations}
+                  >
+                    Retry integrations
+                  </button>
+                ) : null}
+              </RelatedCard>
+            </div>
+          </div>
+        ) : null}
+
+        {tab === 'payments' ? (
+          <Section table title="Payments">
+            <SubTabState
+              hasData={invoice.payments.length > 0}
+              isLoading={paymentsQuery.isLoading}
+              error={paymentsQuery.error}
+              errorKind={paymentsQuery.errorKind}
+              retryAfterMs={paymentsQuery.retryAfterMs}
+              onRetry={paymentsQuery.onRetry}
+              isRetrying={paymentsQuery.isRetrying}
+              truncation={truncationNote(invoice.payments.length, SUB_LIST_LIMIT)}
+              loadingLabel="Loading payments"
+              columns={[{ width: '2fr' }, { kind: 'money' }, { kind: 'short' }, { kind: 'badge' }]}
+              empty={{
+                scene: 'billing',
+                title: 'No payments yet',
+                description: 'No payments recorded for this invoice yet.',
+                action:
+                  onRecordPayment && canRecordPayment ? (
+                    <Button size="sm" onClick={onRecordPayment}>
+                      Record payment
+                    </Button>
+                  ) : undefined,
+              }}
+            >
+              <DetailTable<InvoicePaymentRow>
+                compact
+                label="Payments"
+                noun="payments"
+                rows={invoice.payments}
+                {...(onOpenPayment ? { onRowClick: (row) => onOpenPayment(row.id) } : {})}
+                columns={[
+                  {
+                    key: 'id',
+                    header: 'Payment ID',
+                    cell: (row) => <span className="font-mono text-xs">{row.id}</span>,
+                  },
+                  {
+                    key: 'invoice',
+                    header: 'Invoice number',
+                    text: () => invoice.number ?? '',
+                    cell: () =>
+                      invoice.number ? (
+                        <span className="font-mono text-xs">{invoice.number}</span>
+                      ) : (
+                        '—'
+                      ),
+                  },
+                  {
+                    key: 'amount',
+                    header: 'Amount',
+                    cell: (row) => <span className="tabular-nums">{money(row.amount)}</span>,
+                  },
+                  { key: 'method', header: 'Payment method', cell: (row) => row.method || '—' },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    cell: (row) => <Status value={row.status} />,
+                  },
+                ]}
+              />
+            </SubTabState>
           </Section>
-          <MetadataCard metadata={invoice.metadata ?? {}} />
-          <RelatedCard items={related} />
-        </div>
+        ) : null}
+
+        {tab === 'credit-notes' ? (
+          <Section table title="Credit memos">
+            <SubTabState
+              hasData={invoice.creditNotes.length > 0}
+              isLoading={creditNotesQuery.isLoading}
+              error={creditNotesQuery.error}
+              errorKind={creditNotesQuery.errorKind}
+              retryAfterMs={creditNotesQuery.retryAfterMs}
+              onRetry={creditNotesQuery.onRetry}
+              isRetrying={creditNotesQuery.isRetrying}
+              truncation={truncationNote(invoice.creditNotes.length, SUB_LIST_LIMIT)}
+              loadingLabel="Loading credit memos"
+              columns={[{ width: '2fr' }, { kind: 'money' }, { kind: 'short' }, { kind: 'badge' }]}
+              empty={{
+                scene: 'billing',
+                title: 'No credit memos yet',
+                description: 'No credit memos issued against this invoice.',
+                action:
+                  onIssueCreditNote && canIssueCreditNote ? (
+                    <Button size="sm" onClick={onIssueCreditNote}>
+                      Issue credit memo
+                    </Button>
+                  ) : undefined,
+              }}
+            >
+              <DetailTable<InvoiceCreditNoteRow>
+                compact
+                label="Credit memos"
+                noun="credit memos"
+                rows={invoice.creditNotes}
+                {...(onOpenCreditNote ? { onRowClick: (row) => onOpenCreditNote(row.id) } : {})}
+                columns={[
+                  {
+                    key: 'number',
+                    header: 'Credit memo',
+                    cell: (row) => <span className="font-mono text-xs">{row.number}</span>,
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    cell: (row) => (row.status ? <Status value={row.status} /> : '—'),
+                  },
+                  {
+                    key: 'date',
+                    header: 'Date',
+                    cell: (row) => <span className="text-muted-foreground">{row.date}</span>,
+                  },
+                  {
+                    key: 'amount',
+                    header: 'Amount',
+                    cell: (row) => <span className="tabular-nums">{money(row.amount)}</span>,
+                  },
+                ]}
+              />
+            </SubTabState>
+          </Section>
+        ) : null}
       </div>
     </DetailShell>
   )
@@ -413,20 +542,29 @@ function MenuAction({
   onSelect,
   disabled = false,
   hint,
+  pending = false,
+  pendingLabel,
 }: {
   icon: ReactNode
   label: string
   onSelect: (() => void) | undefined
   disabled?: boolean
   hint?: string | undefined
+  /** The action is running: spinner, `pendingLabel`, not selectable. */
+  pending?: boolean
+  pendingLabel?: string | undefined
 }) {
   return (
-    <DropdownMenuItem disabled={disabled || !onSelect} onClick={onSelect}>
+    <DropdownMenuItem
+      disabled={disabled || pending || !onSelect}
+      onClick={onSelect}
+      {...(pending ? { 'aria-busy': true } : {})}
+    >
       <span className="text-muted-foreground [&_svg]:size-4" aria-hidden="true">
-        {icon}
+        {pending ? <Spinner /> : icon}
       </span>
       <span className="flex flex-col">
-        <span>{label}</span>
+        <span>{pending && pendingLabel ? pendingLabel : label}</span>
         {hint && (disabled || !onSelect) ? (
           <span className="text-muted-foreground text-xs">{hint}</span>
         ) : null}
@@ -443,58 +581,41 @@ function MenuAction({
 function InvoiceDocumentArticle({
   invoice,
   lines,
-  showZero,
-  onShowZero,
   money,
   unitMoney,
   totals,
   paymentFailed,
   isDraft,
+  retryPending = false,
   onRetryPayment,
 }: {
   invoice: InvoiceDocument
   lines: InvoiceLine[]
-  showZero: boolean
-  onShowZero: (value: boolean) => void
   money: (value: number) => string
   unitMoney: (value: number) => string
   totals: ReturnType<typeof invoiceTotals>
   paymentFailed: boolean
   isDraft: boolean
+  retryPending?: boolean
   onRetryPayment?: () => void
 }) {
   const settled = totals.due <= 0 && invoice.paid > 0
-  const note = isDraft
-    ? 'Finalizing assigns the invoice number and sends it to the customer.'
-    : paymentFailed
-      ? 'The last payment attempt failed. Retry, or send the customer a payment link.'
-      : settled || invoice.status === InvoiceStatus.Paid
-        ? 'Paid in full.'
-        : invoice.dueAt
-          ? `Payment is due on ${invoice.dueAt}.`
-          : 'Payment is due on receipt.'
+  const note = paymentFailed
+    ? 'The last payment attempt failed. Retry, or send the customer a payment link.'
+    : settled || invoice.status === InvoiceStatus.Paid
+      ? 'Paid in full.'
+      : invoice.dueAt
+        ? `Payment is due on ${invoice.dueAt}.`
+        : 'Payment is due on receipt.'
 
   return (
     <article className="bg-background w-full overflow-hidden rounded-xl border shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-6 px-8 pt-8">
         <div className="space-y-2">
-          <p className="text-3xl font-medium tracking-tight tabular-nums">
-            {money(settled ? totals.total : totals.due)}
-          </p>
-          <p className="text-muted-foreground text-[13px]">
-            {settled ? 'Paid in full' : 'Amount due'}
-          </p>
+          <p className="text-3xl font-medium tracking-tight tabular-nums">{money(totals.due)}</p>
+          <p className="text-muted-foreground text-[13px]">Amount due</p>
         </div>
         <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1 text-[13px]">
-          <dt className="text-muted-foreground">Invoice number</dt>
-          <dd
-            className={cn(
-              'leading-5',
-              invoice.number ? 'font-mono text-xs' : 'text-muted-foreground',
-            )}
-          >
-            {invoice.number ?? 'On finalize'}
-          </dd>
           <dt className="text-muted-foreground">Date of issue</dt>
           <dd className="tabular-nums">{invoice.issuedAt ?? 'On finalize'}</dd>
           <dt className="text-muted-foreground">Date due</dt>
@@ -516,18 +637,7 @@ function InvoiceDocumentArticle({
         ) : null}
       </div>
 
-      <div className="mx-8 flex flex-col gap-3 border-t">
-        <div className="flex items-center justify-between pt-3">
-          <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Items</p>
-          <label className="text-muted-foreground flex items-center gap-2 text-xs">
-            Show zero amounts
-            <Switch
-              checked={showZero}
-              onCheckedChange={onShowZero}
-              aria-label="Show zero amounts"
-            />
-          </label>
-        </div>
+      <div className="mx-8 border-t pt-3">
         <div role="table" aria-label="Line items" className="text-sm">
           <div
             role="row"
@@ -550,19 +660,9 @@ function InvoiceDocumentArticle({
               role="row"
               className="border-border/50 grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] items-start gap-4 border-b py-4 last:border-b-0"
             >
-              <div role="cell" className="min-w-0 space-y-0.5">
-                <p className="flex flex-wrap items-center gap-2 font-medium">
-                  {line.description}
-                  {line.kind ? (
-                    <Badge variant="outline" size="sm" radius="full" className="font-normal">
-                      {line.kind === 'usage' ? 'Usage' : 'Fixed'}
-                    </Badge>
-                  ) : null}
-                </p>
-                {line.detail ? (
-                  <p className="text-muted-foreground text-xs">{line.detail}</p>
-                ) : null}
-              </div>
+              <p role="cell" className="min-w-0 font-medium">
+                {line.description}
+              </p>
               <span role="cell" className="text-muted-foreground text-right tabular-nums">
                 {line.quantity || '—'}
               </span>
@@ -598,14 +698,24 @@ function InvoiceDocumentArticle({
         </dl>
       </div>
 
-      <div className="bg-muted/40 flex flex-wrap items-center justify-between gap-3 border-t px-8 py-4 text-[13px]">
-        <span className="text-muted-foreground">{note}</span>
-        {paymentFailed && onRetryPayment ? (
-          <Button size="sm" variant="outline" className="h-8 px-3" onClick={onRetryPayment}>
-            Retry payment
-          </Button>
-        ) : null}
-      </div>
+      {isDraft ? null : (
+        <div className="bg-muted/40 flex flex-wrap items-center justify-between gap-3 border-t px-8 py-4 text-[13px]">
+          <span className="text-muted-foreground">{note}</span>
+          {paymentFailed && onRetryPayment ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-3"
+              disabled={retryPending}
+              aria-busy={retryPending || undefined}
+              onClick={onRetryPayment}
+            >
+              {retryPending ? <Spinner aria-hidden="true" /> : null}
+              {retryPending ? 'Retrying…' : 'Retry payment'}
+            </Button>
+          ) : null}
+        </div>
+      )}
     </article>
   )
 }

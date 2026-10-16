@@ -1,11 +1,12 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { BracesIcon, PencilIcon, GaugeIcon, HashIcon, ToggleRightIcon } from 'lucide-react'
-import type { CircleIcon } from 'lucide-react'
+import { BracesIcon, PencilIcon, GaugeIcon, HashIcon, ToggleRightIcon } from '@ui/icons'
+import type { CircleIcon } from '@ui/icons'
 import { type Money as MoneyValue, formatMoney } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { usePillSize } from '../../compositions/detail/pillSize'
 import { Money } from './Money'
 
 /**
@@ -28,7 +29,8 @@ import { Money } from './Money'
  *   column only pays off when you are summing a column by eye, which nobody
  *   does in a list of invoices; what it actually does is put the amount an
  *   arm's length from the row it belongs to. Numbers get `tabular-nums` so the
- *   digits still line up.
+ *   digits still line up. The one exception is `align: 'center'`, for a narrow
+ *   column that is nothing but a count — see the prop.
  *
  *   **Medium is the heaviest weight.** Nothing here is bold. In a table, weight
  *   is the strongest signal there is, and a bold name column spends it on the
@@ -95,6 +97,17 @@ export interface EntityColumn<T> {
   hiddenByDefault?: boolean | undefined
   /** Extra classes on the `<td>`. Layout only — the helpers own the type. */
   cellClassName?: string | undefined
+  /**
+   * `center` centres the header and the cell. Left is the default and the
+   * rule; see the note at the top of this file for why amounts stay left.
+   *
+   * The exception is a narrow column of counts — Charges, Entitlements,
+   * Credit grants, Contracts on the catalogue lists. There the number *is*
+   * the column: there is no label beside it for the eye to start from, so
+   * left-aligning a one or two digit figure under a wider header leaves it
+   * adrift. The redesign asks for these centred and it is right about them.
+   */
+  align?: 'start' | 'center' | undefined
 }
 
 /* ------------------------------------------------------------------ *
@@ -139,11 +152,18 @@ export interface PillProps {
  * dot in it can be found without reading. The label is always spelled out beside
  * the dot, so the tone is never the only thing saying what the status is.
  */
-export function Pill({ tone = 'neutral', size = 'default', icon, children, className }: PillProps) {
+export function Pill({ tone = 'neutral', size, icon, children, className }: PillProps) {
+  const inherited = usePillSize()
+  size ??= inherited
+  // A long label (a plan key, an imported status) truncates inside a capped
+  // pill instead of pushing its column wider; the full text is the tooltip.
+  const label =
+    typeof children === 'string' || typeof children === 'number' ? String(children) : undefined
   return (
     <span
+      {...(label ? { title: label } : {})}
       className={cn(
-        'border-border bg-background text-foreground inline-flex items-center rounded-full border font-medium whitespace-nowrap shadow-[0_1px_1px_rgba(0,0,0,0.03)] [&_svg]:size-3 [&_svg]:opacity-60',
+        'border-border bg-background text-foreground inline-flex max-w-64 min-w-0 items-center rounded-full border font-medium whitespace-nowrap shadow-[0_1px_1px_rgba(0,0,0,0.03)] [&_svg]:size-3 [&_svg]:opacity-60',
         size === 'sm' ? 'h-5 gap-1 px-2 text-[11px]' : 'h-6 gap-1.5 px-2.5 text-xs',
         className,
       )}
@@ -151,7 +171,7 @@ export function Pill({ tone = 'neutral', size = 'default', icon, children, class
       {icon ?? (
         <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', DOT_TONE[tone])} />
       )}
-      {children}
+      {label ? <span className="min-w-0 truncate">{children}</span> : children}
     </span>
   )
 }
@@ -213,9 +233,11 @@ export function Tag({ children, icon }: { children: ReactNode; icon?: ReactNode 
 export function Formula({ value }: { value: string | null }) {
   if (!value) return <EmDash />
   return (
-    <span className="bg-muted/60 text-foreground/80 inline-flex h-6 max-w-full items-center gap-1 rounded-md border px-1.5 font-mono text-xs">
+    <span className="bg-muted/60 text-foreground/80 inline-flex h-6 max-w-full min-w-0 items-center gap-1 rounded-md border px-1.5 font-mono text-xs">
       <span className="text-muted-foreground font-sans italic">fx</span>
-      <span className="truncate">{value}</span>
+      <span title={value} className="min-w-0 truncate">
+        {value}
+      </span>
     </span>
   )
 }
@@ -235,7 +257,7 @@ const NAME_TEXT = 'text-foreground text-[15px] font-medium'
 export function EntityCell({ name, sub }: { name: string; sub?: ReactNode }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <span title={name} className={cn('truncate', NAME_TEXT)}>
+      <span title={name} className={cn('min-w-0 truncate', NAME_TEXT)}>
         {name}
       </span>
       {sub ? (
@@ -444,7 +466,7 @@ export function EntityLink({
       type="button"
       title={label}
       className={cn(
-        'block max-w-full truncate text-left underline-offset-4 hover:underline focus-visible:underline',
+        'block max-w-full min-w-0 truncate text-left underline-offset-4 hover:underline focus-visible:underline',
         primary && NAME_TEXT,
         muted && 'text-muted-foreground',
       )}
@@ -496,7 +518,7 @@ export function textColumn<T>(
           />
         )
       }
-      if (!value) return <EmDash />
+      if (!value?.trim()) return <EmDash />
       if (onOpen) {
         return (
           <EntityLink
@@ -511,7 +533,7 @@ export function textColumn<T>(
       return (
         <span
           title={value}
-          className={cn('block truncate', options?.muted && 'text-muted-foreground')}
+          className={cn('block min-w-0 truncate', options?.muted && 'text-muted-foreground')}
         >
           {value}
         </span>
@@ -541,9 +563,12 @@ export function idColumn<T>(
     ...textColumn<T>(id, header, get, options),
     cell: (row) => {
       const value = get(row)
-      if (!value) return <EmDash />
+      if (!value?.trim()) return <EmDash />
       return (
-        <span title={value} className="text-muted-foreground block truncate font-mono text-xs">
+        <span
+          title={value}
+          className="text-muted-foreground block min-w-0 truncate font-mono text-xs"
+        >
           {value}
         </span>
       )
@@ -571,14 +596,17 @@ export function dateColumn<T>(
     header,
     cell: (row) => {
       const value = get(row)
-      if (!value) return <EmDash />
+      if (!value || Number.isNaN(value.getTime())) return <EmDash />
+      const text = format(value)
       return (
-        <span className="text-muted-foreground block truncate tabular-nums">{format(value)}</span>
+        <span title={text} className="text-muted-foreground block min-w-0 truncate tabular-nums">
+          {text}
+        </span>
       )
     },
     text: (row) => {
       const value = get(row)
-      return value ? format(value) : ''
+      return value && !Number.isNaN(value.getTime()) ? format(value) : ''
     },
     width: 140,
     skeleton: <Skeleton className="h-4 w-24" />,
@@ -629,7 +657,11 @@ export function numberColumn<T>(
   id: string,
   header: string,
   get: (row: T) => number | null | undefined,
-  options?: ColumnOptions & { locale?: string | undefined },
+  options?: ColumnOptions & {
+    locale?: string | undefined
+    zeroAsDash?: boolean
+    align?: 'start' | 'center'
+  },
 ): EntityColumn<T> {
   const format = (value: number) => new Intl.NumberFormat(options?.locale).format(value)
   return {
@@ -637,13 +669,25 @@ export function numberColumn<T>(
     header,
     cell: (row) => {
       const value = get(row)
-      if (value === null || value === undefined) return <EmDash />
-      return <span className="block truncate tabular-nums">{format(value)}</span>
+      if (
+        value === null ||
+        value === undefined ||
+        Number.isNaN(value) ||
+        (options?.zeroAsDash && value === 0)
+      )
+        return <EmDash />
+      const text = format(value)
+      return (
+        <span title={text} className="block min-w-0 truncate tabular-nums">
+          {text}
+        </span>
+      )
     },
     text: (row) => {
       const value = get(row)
       return value === null || value === undefined ? '' : format(value)
     },
+    align: options?.align,
     width: 120,
     skeleton: <Skeleton className="h-4 w-16" />,
     ...spreadOptions(options),

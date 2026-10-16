@@ -9,11 +9,11 @@ import {
 
 describe('parseStep', () => {
   it('reads a known step', () => {
-    expect(parseStep('benefits')).toBe('benefits')
+    expect(parseStep('phases')).toBe('phases')
   })
 
   // A mistyped URL should start the flow over, not break it.
-  it.each([undefined, null, '', 'nonsense', '3', 'BENEFITS'])(
+  it.each([undefined, null, '', 'nonsense', '3', 'PHASES'])(
     'falls back to the first step for %p',
     (raw) => {
       expect(parseStep(raw)).toBe(DEFAULT_STEP)
@@ -27,40 +27,58 @@ describe('toStepSearch', () => {
   })
 
   it('names any other step', () => {
-    expect(toStepSearch('benefits')).toEqual({ step: 'benefits' })
+    expect(toStepSearch('billing')).toEqual({ step: 'billing' })
   })
 
   it('round-trips', () => {
-    for (const step of ['customer', 'benefits', 'review'] as const) {
+    for (const step of ['plan', 'phases', 'commitments', 'billing', 'review'] as const) {
       expect(parseStep(toStepSearch(step)['step'])).toBe(step)
     }
+  })
+
+  /*
+   * `customer` was the first step until it was merged into `plan`. A link
+   * already shared, or a back button into history, still carries it — landing
+   * those on the merged step is the whole point of keeping the id around.
+   */
+  it('sends the retired customer step to the step that absorbed it', () => {
+    expect(parseStep('customer')).toBe('plan')
+  })
+
+  it('sends the retired benefits step to commitments & benefits', () => {
+    expect(parseStep('benefits')).toBe('commitments')
+  })
+
+  it('still falls back for a step that never existed', () => {
+    expect(parseStep('nonsense')).toBe('plan')
+    expect(parseStep(undefined)).toBe('plan')
   })
 })
 
 describe('toWorkflowSteps', () => {
   it('marks exactly one step current', () => {
-    const steps = toWorkflowSteps('benefits')
+    const steps = toWorkflowSteps('phases')
     expect(steps.filter((s) => s.status === 'current')).toHaveLength(1)
-    expect(steps.find((s) => s.status === 'current')?.id).toBe('benefits')
+    expect(steps.find((s) => s.status === 'current')?.id).toBe('phases')
   })
 
   // You cannot skip ahead: the next step stays locked until this one is done.
   it('locks everything past where the user has actually been', () => {
-    const steps = toWorkflowSteps('customer')
-    expect(steps.map((s) => s.status)).toEqual(['current', 'locked', 'locked', 'locked'])
+    const steps = toWorkflowSteps('plan')
+    expect(steps.map((s) => s.status)).toEqual(['current', 'locked', 'locked', 'locked', 'locked'])
   })
 
   // Back-navigation is the reason the flow is a route at all.
   it('leaves visited steps revisitable when the user goes back', () => {
-    const steps = toWorkflowSteps('customer', 'benefits')
-    expect(steps.find((s) => s.id === 'plan')?.status).toBe('complete')
-    expect(steps.find((s) => s.id === 'benefits')?.status).toBe('upcoming')
+    const steps = toWorkflowSteps('plan', 'phases')
+    expect(steps.find((s) => s.id === 'plan')?.status).toBe('current')
+    expect(steps.find((s) => s.id === 'phases')?.status).toBe('upcoming')
     expect(steps.find((s) => s.id === 'review')?.status).toBe('locked')
   })
 
   it('never reports progress behind the current step', () => {
     // Deep-linking straight to a later step must not lock the step you are on.
-    const steps = toWorkflowSteps('review', 'customer')
+    const steps = toWorkflowSteps('review', 'plan')
     expect(steps.find((s) => s.id === 'review')?.status).toBe('current')
     expect(steps.every((s) => s.status !== 'locked')).toBe(true)
   })
@@ -68,12 +86,12 @@ describe('toWorkflowSteps', () => {
 
 describe('furthestOf', () => {
   it('keeps the later step', () => {
-    expect(furthestOf('customer', 'benefits')).toBe('benefits')
-    expect(furthestOf('benefits', 'customer')).toBe('benefits')
+    expect(furthestOf('plan', 'phases')).toBe('phases')
+    expect(furthestOf('phases', 'plan')).toBe('phases')
   })
 
   // Going back must not re-lock what was already reached.
   it('is stable when both are the same', () => {
-    expect(furthestOf('benefits', 'benefits')).toBe('benefits')
+    expect(furthestOf('phases', 'phases')).toBe('phases')
   })
 })

@@ -16,6 +16,8 @@ import {
   writeEnvironmentId,
   writeSession,
 } from './storage'
+import { clearListMemory } from '../listMemory'
+import { setActiveEnvironmentId } from './activeEnvironment'
 
 /** The credentials a signed-in console holds. */
 export interface Session {
@@ -87,6 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const previous = latest.current
     if (previous && previous.tenantId !== next.tenantId) {
       clearEnvironmentId()
+      setActiveEnvironmentId(null)
       setEnvironmentIdState(null)
     }
     latest.current = next
@@ -96,10 +99,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     latest.current = null
+    setActiveEnvironmentId(null)
     setSession(null)
     setEnvironmentIdState(null)
     clearSession()
     clearEnvironmentId()
+    // The remembered list filters are this person's view of this tenant's
+    // data. They say what someone was looking for, which is not the next
+    // user's business.
+    clearListMemory(globalThis.sessionStorage)
     /*
      * The cache is the other half of signing out.
      *
@@ -125,20 +133,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       const previous = latestEnvironmentId.current
       /*
-       * A real switch — from one environment to a different one — has to refetch
-       * everything, because nothing is keyed by the environment: the id rides in
-       * the `X-Environment-ID` header the SDK reads per request, not in any query
-       * key. Without this the header would change while plans, customers and
-       * invoices kept serving the previous environment's cached rows — the exact
-       * "I switched and the data didn't" bug. Invalidating marks every query
-       * stale and refetches the mounted ones under the new environment.
+       * First, and synchronously: the header and the cache key both read this,
+       * and everything below must already see the new environment.
+       */
+      setActiveEnvironmentId(id)
+      /*
+       * A real switch — from one environment to a different one.
+       *
+       * Cached rows are keyed by environment (see `createQueryClient`), so the
+       * new environment can never be served the old one's data. What remains is
+       * the old environment's requests still in flight: left alone they would
+       * finish, or retry, with the *new* header while filed under the *old*
+       * key. They are cancelled. Everything already cached is marked stale
+       * without refetching it — an unmounted old-environment page has no
+       * business spending requests, and if the user switches back it is shown
+       * and refreshed.
        *
        * Guarded on a real change: the initial null→id defaulting (a fresh tab
-       * choosing its first environment) is not a switch, and firing here would
-       * make every page on first load fetch twice.
+       * choosing its first environment) is not a switch.
        */
       if (previous !== null && previous !== id) {
-        void queryClient.invalidateQueries()
+        void queryClient.cancelQueries()
+        void queryClient.invalidateQueries({ refetchType: 'none' })
+        // Filters name rows — a customer, a plan, a status that exists here
+        // and not there. Carried across a switch they would silently empty
+        // every list in the new environment.
+        clearListMemory(globalThis.sessionStorage)
       }
       latestEnvironmentId.current = id
       setEnvironmentIdState(id)

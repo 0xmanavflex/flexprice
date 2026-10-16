@@ -1,6 +1,7 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { FlaskConicalIcon } from 'lucide-react'
+import { FlaskConicalIcon } from '@ui/icons'
 import {
   type CreateWebhookEndpoint,
   type WebhookEventType,
@@ -61,12 +62,11 @@ export function WebhookEndpointForm({
   submitError = null,
   trail,
 }: WebhookEndpointFormProps) {
-  const form = useForm<CreateWebhookEndpoint>({
+  const form = useCalmForm<CreateWebhookEndpoint>({
     resolver: standardSchemaResolver(
       createWebhookEndpointSchema,
     ) as Resolver<CreateWebhookEndpoint>,
     defaultValues: emptyWebhookEndpoint(),
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
 

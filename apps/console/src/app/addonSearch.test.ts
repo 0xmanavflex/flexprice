@@ -13,9 +13,10 @@ describe('parseAddonSearch', () => {
       pageSize: 50,
       search: 'seats',
       statuses: [AddonStatus.Archived],
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy: DEFAULT_ADDON_QUERY.sortBy,
+      sortDirection: DEFAULT_ADDON_QUERY.sortDirection,
       view: 'table',
+      filters: [],
     })
   })
 

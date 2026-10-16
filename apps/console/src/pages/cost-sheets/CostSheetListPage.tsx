@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { type CostSheet, type CostSheetQuery } from '@fp/domain'
-import { ApiError, useCostSheets, useDeleteCostSheet } from '@fp/query'
+import { ApiError, useCostSheets, useDeleteCostSheet, serverReason } from '@fp/query'
 import { CostSheetGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { SheetIcon } from 'lucide-react'
+import { toListFailure } from '../shared/listFailure'
 
 export interface CostSheetListPageProps {
   query: CostSheetQuery
@@ -32,10 +32,11 @@ export function CostSheetListPage({
 
   const [deleting, setDeleting] = useState<CostSheet | null>(null)
 
-  const failure = toFailure(costSheets.error)
+  const failure = toListFailure(costSheets.error, 'cost sheets')
   const rows = costSheets.data?.costSheets ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
-  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
   const closeDelete = () => {
     setDeleting(null)
@@ -48,12 +49,16 @@ export function CostSheetListPage({
         <ListState
           isLoading={costSheets.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (costSheets.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={costSheets.isFetching && !costSheets.isPending}
+          isProvisional={costSheets.isPlaceholderData}
+          isRetrying={costSheets.isFetching && costSheets.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void costSheets.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateCostSheet}>New cost sheet</Button>}
-          emptyIcon={<SheetIcon aria-hidden />}
           emptyTitle="No cost sheets yet"
           emptyDescription="Cost sheets record what usage costs you, so margin can be measured against what you charge. Create the first to start."
         >
@@ -90,26 +95,6 @@ export function CostSheetListPage({
   )
 }
 
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to cost sheets here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading cost sheets.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading cost sheets.', canRetry: true }
-}
-
 /** A save failure, as a sentence the form can show inline. */
 function toSubmitError(error: unknown): string | null {
   if (!error) return null
@@ -119,11 +104,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change cost sheets here.'
+        return serverReason(error) ?? 'You do not have permission to change cost sheets here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the cost sheet. Try again.'
+        return serverReason(error) ?? 'Could not save the cost sheet. Try again.'
     }
   }
   return 'Could not save the cost sheet. Try again.'

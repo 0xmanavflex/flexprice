@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
-import { DEMO_GROUP_MEMBERS, GroupMembersView, type GroupMember } from './GroupMembersView'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { makeCharges } from '../../product-catalog/plans/planDetailFixtures'
+import { GroupMembersView, type GroupMember } from './GroupMembersView'
 
 const KINDS = ['Metered feature', 'Static feature', 'Boolean feature', 'Config feature']
 
@@ -31,11 +32,20 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The default demo rows the console shows today. */
+/** No member-entities read exists: the tab says so instead of listing sample rows. */
 export const Default: Story = {
-  args: { members: DEMO_GROUP_MEMBERS },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('API requests')).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Loading the features in this group')).toBeInTheDocument()
+    await expect(canvas.queryByText('API requests')).toBeNull()
+  },
+}
+
+/** Real members, once a source exists. */
+export const WithMembers: Story = {
+  args: { members: makeMembers(3) },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('Feature 01')).toBeInTheDocument()
   },
 }
 
@@ -61,4 +71,36 @@ export const Empty: Story = {
 
 export const Long: Story = {
   args: { members: makeMembers(40) },
+}
+
+export const PriceGroup: Story = {
+  args: {
+    kind: 'charges',
+    priceGroup: true,
+    members: [
+      ...makeCharges(1, 0).map((charge) => ({
+        id: charge.id,
+        name: 'Platform charge',
+        detail: 'Fixed price',
+        charge,
+      })),
+      { id: 'missing-price', name: 'missing-price', detail: 'Not found' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('columnheader', { name: 'Price', exact: true })).toBeVisible()
+    await expect(canvas.getByText('Unavailable members')).toBeVisible()
+    await userEvent.click(canvas.getByText('Platform charge', { exact: true }))
+    await waitFor(() => expect(within(document.body).getByRole('dialog')).toBeVisible())
+  },
+}
+
+export const FailedPriceGroup: Story = {
+  args: { kind: 'charges', priceGroup: true, error: 'Could not load group charges.' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Could not load group charges.')).toBeVisible()
+    await expect(canvas.queryByText('No charges yet')).toBeNull()
+  },
 }

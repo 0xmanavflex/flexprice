@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
-import { ApiError, useGroup } from '@fp/query'
+import { GROUP_ENTITY_TYPE_LABEL, GroupEntityType } from '@fp/domain'
+import { useDeleteGroup, useGroup, useGroupMembers } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView, Pill } from '@fp/ui/pages'
-import { AppFailure, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
-import { LayersIcon } from 'lucide-react'
+import { ConfirmDialog, EditableCard } from '@fp/ui/compositions'
+import { LayersIcon, Trash2Icon } from '@fp/ui/icons'
+import { subTab } from '../shared/subTab'
+import { detailGate } from '../shared/detailGate'
 
 export interface GroupDetailPageProps {
   groupId: string
@@ -11,54 +13,19 @@ export interface GroupDetailPageProps {
 }
 
 /**
- * One group, in full.
- *
- * A group exists to show its contents, so the page leads with the one number it
- * can honestly derive — how many members it holds, from the `entityIds` the
- * group model carries as a count — then lists the record and, where the members
- * themselves would go, an honest empty state.
- *
- * The members are a genuine empty state, not a stub dressed as one: V2 has no
- * member-entities read hook, so there is no way to enumerate them yet. The count
- * is real (it rides on the group), so it earns the rail; the list of who they
- * are is not, so the section says so plainly rather than inventing rows.
+ * One group, in full: what it holds (its `entityIds`, named through the
+ * feature or price search) and its record. The record is read-only because the
+ * API has no group update; a group can be deleted.
  */
 export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPageProps) {
   const group = useGroup(groupId)
+  const members = useGroupMembers(group.data)
+  const remove = useDeleteGroup()
   const [tab, setTab] = useState('members')
-
-  if (group.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (group.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(group.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void group.refetch()}
-        />
-      </PageBody>
-    )
-  }
+  const [deleting, setDeleting] = useState(false)
 
   if (!group.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This group no longer exists"
-          detail="It may have been deleted. Everything else in the catalogue still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(group, { noun: 'this group', listName: 'groups', onBack: onNavigateToList })
   }
 
   const data = group.data
@@ -74,15 +41,26 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
       title={data.name}
       badges={
         <>
-          <Pill>{noun} group</Pill>
+          <CatalogStatusBadge status={data.status} />
+          <Pill>{noun.replace(/s$/, '')}</Pill>
           <Pill>
-            {new Intl.NumberFormat().format(data.entityCount)} {kind}
+            {new Intl.NumberFormat().format(data.entityCount)}{' '}
+            {data.entityCount === 1 ? 'member' : 'members'}
           </Pill>
         </>
       }
       id={data.lookupKey || data.id}
       menuLabel="Group actions"
-      menu={[{ id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') }]}
+      // No edit item: the API has no group update, so the record is read-only.
+      menu={[
+        {
+          id: 'delete',
+          label: 'Delete group',
+          icon: <Trash2Icon aria-hidden />,
+          destructive: true,
+          onSelect: () => setDeleting(true),
+        },
+      ]}
       tab={tab}
       onTabChange={setTab}
       tabs={[
@@ -90,7 +68,14 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           value: 'members',
           label: noun,
           count: data.entityCount,
-          content: <GroupMembersView kind={kind} />,
+          content: (
+            <GroupMembersView
+              kind={kind}
+              priceGroup={data.entityType === GroupEntityType.Price}
+              {...subTab(members, kind)}
+              {...(members.data ? { members: members.data } : {})}
+            />
+          ),
         },
         {
           value: 'information',
@@ -110,13 +95,6 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
                   readOnly: true,
                 },
                 { key: 'holds', label: 'Holds', value: noun, readOnly: true },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  value: data.status,
-                  display: <CatalogStatusBadge status={data.status} />,
-                  readOnly: true,
-                },
                 {
                   key: 'id',
                   label: 'Group ID',
@@ -142,27 +120,28 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           ),
         },
       ]}
-    />
+    >
+      <ConfirmDialog
+        open={deleting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleting(false)
+            remove.reset()
+          }
+        }}
+        title={`Delete ${data.name}?`}
+        description="The group is removed and its members are no longer grouped. The features or prices themselves are not changed."
+        confirmLabel="Delete group"
+        destructive
+        isPending={remove.isPending}
+        error={remove.isError ? 'Could not delete the group. Try again.' : null}
+        onConfirm={() => remove.mutate(data.id, { onSuccess: onNavigateToList })}
+      />
+    </CatalogDetailFrame>
   )
 }
 
 function formatDate(value: Date | null): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this group.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This group could not be loaded.'
-    }
-  }
-  return 'This group could not be loaded.'
 }

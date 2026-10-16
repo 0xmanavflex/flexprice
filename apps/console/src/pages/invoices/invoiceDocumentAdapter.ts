@@ -9,7 +9,7 @@ import {
   formatAddress,
 } from '@fp/domain'
 import type { InvoiceDocument, InvoiceLine } from '@fp/ui/pages'
-import { mockInvoiceActivity } from './invoiceActivityMock'
+import { invoiceLifecycle } from './invoiceLifecycle'
 
 const day = (date: Date | null) =>
   date
@@ -46,9 +46,9 @@ export interface InvoiceDocumentSources {
  * Maps the invoice read model onto the document the detail view renders.
  *
  * Figures come from the API (`totals`), not from the lines. The issuer comes
- * from the tenant record, payments and credit notes from their own lists
- * filtered to this invoice. The activity log is mock data — see
- * `invoiceActivityMock.ts`.
+ * from the tenant record, payments and credit memos from their own lists
+ * filtered to this invoice. The activity rail lists the invoice's own lifecycle
+ * timestamps (`invoiceLifecycle.ts`), not an audit log.
  */
 export function toInvoiceDocument(
   invoice: InvoiceDetail,
@@ -59,7 +59,7 @@ export function toInvoiceDocument(
 
   return {
     id: invoice.id,
-    number: invoice.number === invoice.id ? null : invoice.number,
+    number: invoice.number.trim() ? invoice.number : null,
     status: invoice.status,
     paymentStatus: invoice.paymentStatus,
     currency: invoice.currency || 'USD',
@@ -120,6 +120,6 @@ export function toInvoiceDocument(
       date: day(note.createdAt) ?? '—',
       status: CREDIT_NOTE_STATUS_LABEL[note.status],
     })),
-    events: mockInvoiceActivity(invoice),
+    events: invoiceLifecycle(invoice),
   }
 }

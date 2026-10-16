@@ -13,9 +13,18 @@
  * Off-limits to components — import from `@fp/query`. ESLint enforces it.
  */
 export { call, createFlexpriceClient } from './client'
-export type { AuthSource, ClientOptions } from './client'
+export type { AuthSource, CallOptions, ClientOptions } from './client'
+export { DEFAULT_REQUEST_TIMEOUT_MS } from './timeout'
 
-export { ApiError, ErrorKind, kindForStatus, readErrorBody, toApiError } from './errors'
+export {
+  ApiError,
+  ErrorKind,
+  kindForStatus,
+  parseRetryAfter,
+  readErrorBody,
+  serverReason,
+  toApiError,
+} from './errors'
 
 /**
  * Session bootstrap — the four routes missing from the OpenAPI document, and
@@ -33,6 +42,13 @@ export {
 export type { CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
 
 /**
+ * Which sign-in methods the deployment offers, asked at runtime rather than
+ * compiled in. See `authCapabilities.ts` for why, and why it fails open.
+ */
+export { PASSWORD_ONLY, fetchAuthCapabilities, toAuthCapabilities } from './authCapabilities'
+export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
+
+/**
  * Tenant settings, the webhook portal, and the tenant's own bill — three more
  * live routes the OpenAPI document does not describe (or, for the bill,
  * describes one character wrong). See `settings.ts`, which is a sibling of
@@ -48,11 +64,37 @@ export {
 } from './settings'
 export type { WebhookDashboard } from './settings'
 
+/** `POST /dashboard/revenue-dashboard`, live but absent from the SDK. See `revenue.ts`. */
+export { fetchRevenueDashboard } from './revenue'
+export type { RevenueDashboardWire } from './revenue'
+
+/** `PUT /subscriptions/{id}` with `{metadata}`, which the SDK strips. See `subscriptionMetadata.ts`. */
+export { updateSubscriptionMetadata } from './subscriptionMetadata'
+
 /**
  * `GET /creditnotes`, live but absent from the SDK. See `creditNotes.ts`.
  */
 export { listCreditNotes } from './creditNotes'
 export type { ListCreditNotesParams } from './creditNotes'
+
+/**
+ * `GET /creditgrants`, live but absent from the SDK. See `creditGrants.ts`.
+ */
+export { listCreditGrants } from './creditGrants'
+export type { ListCreditGrantsParams } from './creditGrants'
+
+/**
+ * `POST /ai/pricing/parse-gemini`, live but absent from the SDK. See
+ * `aiPricing.ts`.
+ */
+export { parsePricing } from './aiPricing'
+export type { ParsePricingParams } from './aiPricing'
+
+/**
+ * `GET /events/lookup`, live but absent from the SDK. See `eventDebug.ts`.
+ */
+export { fetchEventDebug } from './eventDebug'
+export type { EventDebugParams } from './eventDebug'
 
 /**
  * The SDK's request and response models, re-exported so the rest of the
@@ -66,7 +108,21 @@ export type * as FlexpriceModels from '@flexprice/sdk/sdk/models'
 export type { Flexprice } from '@flexprice/sdk'
 export { searchUsageRecords } from './usageRecords'
 export type { SearchUsageRecordsParams } from './usageRecords'
-export { listConnections } from './connections'
+export {
+  listConnections,
+  createConnection,
+  getConnection,
+  updateConnection,
+  deleteConnection,
+  oauthInit,
+  oauthComplete,
+} from './connections'
+export type {
+  ConnectionRequest,
+  ConnectionUpdate,
+  OAuthInitRequest,
+  OAuthCompleteRequest,
+} from './connections'
 
 /**
  * The tenant's Svix webhook portal, called directly with the app-portal token

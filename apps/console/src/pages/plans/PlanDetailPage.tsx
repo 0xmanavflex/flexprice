@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   type CreateEntitlement,
   type EditEntitlement,
@@ -14,6 +14,7 @@ import {
   type Entitlement,
   EntitlementEntityType,
   FeatureType,
+  PLAN_KIND_LABEL,
   PLAN_STATUS_LABEL,
   PriceEntityType,
   PriceType,
@@ -21,10 +22,10 @@ import {
   chargeToDraft,
   creditGrantToEdit,
   entitlementToEdit,
+  planKind,
 } from '@fp/domain'
 import {
   useArchivePlan,
-  useClonePlan,
   useCreateBulkEntitlements,
   useCreateBulkPrices,
   useCreateCreditGrant,
@@ -33,9 +34,10 @@ import {
   useDeleteEntitlement,
   useEntitlements,
   usePlan,
+  useEntityIntegrationControls,
+  useEntityIntegrationLinks,
   usePrices,
   useSyncPlanPrices,
-  useTerminatePrice,
   useUpdateCreditGrant,
   useUpdateEntitlement,
   useUpdatePlan,
@@ -52,21 +54,22 @@ import {
   type FeatureOption,
   PlanChargesView,
   PlanCustomerPreview,
+  ContractIntegrations,
+  type ContractIntegrationsProps,
   PlanEntitlementsView,
   Pill,
   Status,
   pricingSummary,
 } from '@fp/ui/pages'
 import {
-  AppFailure,
   ConfirmDialog,
+  DetailBreadcrumb,
   DetailHeader,
   DetailTabs,
   EditableCard,
   FormDialog,
-  LoadingRows,
-  Properties,
-  Section,
+  MetadataCard,
+  RelatedCard,
 } from '@fp/ui/compositions'
 import {
   Button,
@@ -83,17 +86,19 @@ import {
   MoreHorizontalIcon,
   PencilIcon,
   RefreshCwIcon,
-} from 'lucide-react'
+} from '@fp/ui/icons'
 import { usePlanFormOptions } from './planFormOptions'
+import { DuplicatePlanDialog } from './DuplicatePlanDialog'
+import { TerminateChargeDialog } from '../shared/TerminateChargeDialog'
+import { detailGate } from '../shared/detailGate'
+import { subTab } from '../shared/subTab'
 
 /**
  * A plan's detail page — the hub where a plan is completed.
  *
  * Header: icon tile, name, lookup key as a copyable id, badges and one ⋯ menu
  * holding every action on the plan as a whole (sync, edit, duplicate, archive). Tabs: Charges,
- * Entitlements, Credit grants, Information. Beside the tabs, a persistent
- * "What customers see" preview reads the same charges, entitlements and grants.
- * Add and edit happen in dialogs; every destructive action goes through a
+ * Entitlements, Credit grants, Information. Add and edit happen in dialogs; every destructive action goes through a
  * `ConfirmDialog` first.
  *
  * The page fetches and composes; every piece it renders is a presentational
@@ -101,14 +106,34 @@ import { usePlanFormOptions } from './planFormOptions'
  */
 
 /**
- * The tabs, in order. The first id stays `overview` (the router strips it as the
- * default, so `/plans/:id` lands there) but it is labelled "Charges".
+ * Two tabs, not four.
+ *
+ * Charges, Entitlements and Credit grants were a tab each, holding one table
+ * apiece, so seeing what a plan actually contains meant three clicks and
+ * remembering the first two. They are all on Overview now, beside the
+ * customer's-eye rail — the same shape the feature detail page uses, and what
+ * the redesign shows.
  */
-export const PLAN_TABS = ['overview', 'entitlements', 'credit-grants', 'information'] as const
+export const PLAN_TABS = ['overview', 'information'] as const
 export type PlanTab = (typeof PLAN_TABS)[number]
 
+/**
+ * The tabs that used to exist, and where their links go now.
+ *
+ * `/plans/:id?tab=entitlements` is a link someone may have bookmarked or
+ * pasted in a ticket. It still opens the plan, on the tab that now holds
+ * entitlements, rather than silently falling back as if the parameter were
+ * a typo.
+ */
+const RETIRED_TABS: Record<string, PlanTab> = {
+  charges: 'overview',
+  entitlements: 'overview',
+  'credit-grants': 'overview',
+}
+
 export function parsePlanTab(value: unknown): PlanTab {
-  return PLAN_TABS.includes(value as PlanTab) ? (value as PlanTab) : 'overview'
+  if (PLAN_TABS.includes(value as PlanTab)) return value as PlanTab
+  return (typeof value === 'string' ? RETIRED_TABS[value] : undefined) ?? 'overview'
 }
 
 export interface PlanDetailPageProps {
@@ -136,36 +161,35 @@ export function PlanDetailPage({
   onArchived,
   onDuplicated,
   onEdit,
+  onNavigateToList,
 }: PlanDetailPageProps) {
+  const [linkingIntegration, setLinkingIntegration] = useState(false)
+  const [jumpTarget, setJumpTarget] = useState<string | null>(null)
+  useEffect(() => {
+    if (tab !== 'overview' || !jumpTarget) return
+    const target = document.getElementById(jumpTarget)
+    if (target) {
+      target.scrollIntoView({ block: 'start' })
+      target.tabIndex = -1
+      target.focus({ preventScroll: true })
+    }
+    setJumpTarget(null)
+  }, [tab, jumpTarget])
   const plan = usePlan(planId)
+  const mappings = useEntityIntegrationControls('plan', planId)
   const update = useUpdatePlan()
   const archive = useArchivePlan()
-  const clone = useClonePlan()
   const sync = useSyncPlanPrices()
 
-  // The tabs and the preview read the same keys, so react-query serves each once.
+  // The header's kind badge is read off the charges. The Overview sections
+  // read the same key, so react-query serves them from this one fetch.
   const charges = usePrices(PriceEntityType.Plan, planId)
-  const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
-  const grants = useCreditGrants(CreditGrantScope.Plan, planId)
 
   const [archiving, setArchiving] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
 
-  if (plan.isPending) {
-    return (
-      <div className="px-10 pt-8 pb-16 2xl:px-14">
-        <LoadingRows />
-      </div>
-    )
-  }
-
-  if (plan.error || !plan.data) {
-    return (
-      <AppFailure
-        title="This plan could not be loaded"
-        detail="It may have been archived, or the link may be out of date."
-        onRetry={() => void plan.refetch()}
-      />
-    )
+  if (!plan.data) {
+    return detailGate(plan, { noun: 'this plan', listName: 'plans', onBack: onNavigateToList })
   }
 
   const record = plan.data
@@ -176,14 +200,30 @@ export function PlanDetailPage({
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       <DetailHeader
+        breadcrumb={
+          <DetailBreadcrumb
+            trail={[{ label: 'Plans', onClick: onNavigateToList }, { label: 'Plan details' }]}
+          />
+        }
         icon={<LayersIcon />}
         title={record.name}
         id={record.lookupKey || record.id}
+        leading={
+          mappings.controls ? (
+            <ContractIntegrations
+              {...mappings.controls}
+              entityLabel="plan"
+              showLink={false}
+              linkOpen={linkingIntegration}
+              onLinkOpenChange={setLinkingIntegration}
+            />
+          ) : undefined
+        }
         badges={
           <>
-            {charges.isSuccess ? <Pill>{planKind(charged)}</Pill> : null}
+            <Status value={PLAN_STATUS_LABEL[record.status]} />
+            {charges.isSuccess ? <Pill>{planKindLabel(charged)}</Pill> : null}
             {billedLabel(charged) ? <Pill>{billedLabel(charged)}</Pill> : null}
-            {isArchived ? <Status value={PLAN_STATUS_LABEL[record.status]} /> : null}
           </>
         }
         actions={
@@ -202,6 +242,11 @@ export function PlanDetailPage({
                 <MoreHorizontalIcon aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                {mappings.controls?.linkable.length ? (
+                  <DropdownMenuItem onClick={() => setLinkingIntegration(true)}>
+                    Link integration
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
                   disabled={sync.isPending || isArchived}
                   onClick={() => sync.mutate(planId)}
@@ -213,19 +258,7 @@ export function PlanDetailPage({
                   <PencilIcon className="text-muted-foreground" aria-hidden />
                   Edit details
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    clone.mutate(
-                      { id: planId, name: `${record.name} (copy)` },
-                      {
-                        onSuccess: (result) => {
-                          const id = (result as { id?: string }).id
-                          if (id) onDuplicated(id)
-                        },
-                      },
-                    )
-                  }
-                >
+                <DropdownMenuItem onClick={() => setDuplicating(true)}>
                   <CopyIcon className="text-muted-foreground" aria-hidden />
                   Duplicate plan
                 </DropdownMenuItem>
@@ -248,40 +281,53 @@ export function PlanDetailPage({
         value={tab}
         onChange={(next) => onTabChange(parsePlanTab(next))}
         tabs={[
-          { value: 'overview', label: 'Charges', ...count(charges.data) },
-          { value: 'entitlements', label: 'Entitlements', ...count(entitlements.data) },
-          { value: 'credit-grants', label: 'Credit grants', ...count(grants.data) },
+          { value: 'overview', label: 'Overview' },
           { value: 'information', label: 'Information' },
         ]}
       />
 
-      {tab === 'overview' ? <ChargesTab planId={planId} readOnly={isArchived} /> : null}
-      {tab === 'entitlements' ? <EntitlementsTab planId={planId} /> : null}
-      {tab === 'credit-grants' ? <CreditGrantsTab planId={planId} /> : null}
-      {tab === 'information' ? (
-        <InformationTab
-          name={record.name}
-          lookupKey={record.lookupKey}
-          planId={record.id}
-          description={record.description}
-          status={PLAN_STATUS_LABEL[record.status]}
-          createdAt={record.createdAt}
-          updatedAt={record.updatedAt}
-          readOnly={isArchived}
-          onSave={(patch) =>
-            update.mutateAsync({
-              id: planId,
-              draft: {
-                name: record.name,
-                lookupKey: record.lookupKey,
-                description: record.description,
-                ...patch,
-              },
-            })
-          }
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-5">
+          {tab === 'overview' ? <OverviewTab planId={planId} readOnly={isArchived} /> : null}
+          {tab === 'information' ? (
+            <InformationTab
+              integrationControls={mappings.controls}
+              planId={planId}
+              name={record.name}
+              lookupKey={record.lookupKey}
+              description={record.description}
+              metadata={record.metadata}
+              createdAt={record.createdAt}
+              updatedAt={record.updatedAt}
+              readOnly={isArchived}
+              onSave={(patch) =>
+                update.mutateAsync({
+                  id: planId,
+                  draft: {
+                    name: record.name,
+                    lookupKey: record.lookupKey,
+                    description: record.description,
+                    ...patch,
+                  },
+                })
+              }
+            />
+          ) : null}
+        </div>
+        <SavedPlanPreview
+          planId={planId}
+          onJump={(target) => {
+            setJumpTarget(target)
+            onTabChange('overview')
+          }}
         />
-      ) : null}
+      </div>
 
+      <DuplicatePlanDialog
+        plan={duplicating ? record : null}
+        onClose={() => setDuplicating(false)}
+        onDuplicated={onDuplicated}
+      />
       <ConfirmDialog
         open={archiving}
         onOpenChange={setArchiving}
@@ -305,18 +351,61 @@ export function PlanDetailPage({
 }
 
 /**
- * Charges — what the plan bills, grouped by when it bills. "Add charge" opens a
+ * Charges — what the plan bills, as one searchable table. "Add charge" opens a
  * dialog that asks Fixed or Usage first; a row's Edit opens the form directly.
  * An edit is saved as a new price version; terminate ends a charge behind a confirm.
  */
-function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
+/**
+ * Everything a plan contains, on one screen.
+ *
+ * Charges, entitlements and credit grants were a tab each, holding one table
+ * apiece — so the answer to "what is in this plan?" was spread across three
+ * clicks. They stack here instead, beside the customer's-eye rail, which is
+ * the whole point of the rail: the price being edited and the price a
+ * customer would be shown, side by side.
+ *
+ * Each section fetches its own rows. They are the same queries, under the same
+ * keys, so react-query serves the second and third reader from cache.
+ */
+function OverviewTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
+  return (
+    <>
+      <ChargesSection planId={planId} readOnly={readOnly} />
+      <EntitlementsSection planId={planId} />
+      <CreditGrantsSection planId={planId} />
+    </>
+  )
+}
+
+function SavedPlanPreview({
+  planId,
+  onJump,
+}: {
+  planId: string
+  onJump: (target: string) => void
+}) {
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
-  const { meters, units, featureOptions } = usePlanFormOptions()
+  const { meters, allFeatures } = usePlanFormOptions()
+  return (
+    <PlanCustomerPreview
+      className="lg:sticky lg:top-6"
+      charges={charges.data ?? []}
+      entitlements={entitlements.data ?? []}
+      grants={grants.data ?? []}
+      meterUnit={(id) => meters.find((meter) => meter.id === id)?.unit}
+      featureUnit={(id) => allFeatures.find((feature) => feature.id === id)?.unitPlural}
+      onJump={onJump}
+    />
+  )
+}
+
+function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolean }) {
+  const charges = usePrices(PriceEntityType.Plan, planId)
+  const { meters, units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
-  const terminate = useTerminatePrice()
   const [form, setForm] = useState<'add' | Charge | null>(null)
   const [terminating, setTerminating] = useState<Charge | null>(null)
 
@@ -347,28 +436,17 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
 
   return (
     <>
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <PlanChargesView
-          charges={rows}
-          readOnly={readOnly}
-          loading={loading}
-          error={failed}
-          onRetry={() => void charges.refetch()}
-          meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-          onAdd={() => setForm('add')}
-          onEdit={(charge) => setForm(charge)}
-          onTerminate={(charge) => setTerminating(charge)}
-        />
-        {charges.isSuccess ? (
-          <PlanCustomerPreview
-            charges={rows}
-            entitlements={entitlements.data ?? []}
-            grants={grants.data ?? []}
-            meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-            featureUnit={(id) => featureOptions.find((f) => f.id === id)?.unit}
-          />
-        ) : null}
-      </div>
+      <PlanChargesView
+        charges={rows}
+        readOnly={readOnly}
+        loading={loading}
+        error={failed}
+        onRetry={() => void charges.refetch()}
+        meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+        onAdd={() => setForm('add')}
+        onEdit={(charge) => setForm(charge)}
+        onTerminate={(charge) => setTerminating(charge)}
+      />
 
       <AddChargeDialog
         open={form !== null}
@@ -378,6 +456,7 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
         editing={editing}
         meters={meters}
         priceUnits={units}
+        priceGroups={priceGroups}
         onSubmit={submit}
         isSubmitting={create.isPending || updatePrice.isPending}
         submitError={
@@ -391,25 +470,10 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
         }
       />
 
-      <ConfirmDialog
-        open={terminating !== null}
-        onOpenChange={(open) => {
-          if (!open) setTerminating(null)
-        }}
-        title="Terminate this charge?"
-        description={
-          terminating
-            ? `“${terminating.displayName || terminating.meterName || 'This charge'}” stops billing on this plan. Past invoices that referenced it are unaffected.`
-            : undefined
-        }
-        confirmLabel="Terminate charge"
-        destructive
-        isPending={terminate.isPending}
-        error={terminate.isError ? 'Could not terminate the charge. Try again.' : null}
-        onConfirm={() => {
-          if (terminating)
-            terminate.mutate({ id: terminating.id }, { onSuccess: () => setTerminating(null) })
-        }}
+      <TerminateChargeDialog
+        charge={terminating}
+        noun="plan"
+        onClose={() => setTerminating(null)}
       />
     </>
   )
@@ -420,7 +484,7 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
  * the plan's usage price for a metered feature, found by matching the feature's
  * meter to a usage charge; usage beyond the value bills at that price.
  */
-function EntitlementsTab({ planId }: { planId: string }) {
+function EntitlementsSection({ planId }: { planId: string }) {
   const navigate = useNavigate()
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const charges = usePrices(PriceEntityType.Plan, planId)
@@ -444,8 +508,6 @@ function EntitlementsTab({ planId }: { planId: string }) {
       })
     : undefined
 
-  if (entitlements.isPending) return <LoadingRows />
-
   const usagePrice = (entitlement: Entitlement): string | null => {
     if (entitlement.featureType !== FeatureType.Metered) return null
     const meterId = allFeatures.find((f) => f.id === entitlement.featureId)?.meterId
@@ -468,6 +530,7 @@ function EntitlementsTab({ planId }: { planId: string }) {
     <>
       <PlanEntitlementsView
         entitlements={entitlements.data ?? []}
+        {...subTab(entitlements, 'entitlements')}
         usagePrice={usagePrice}
         onAdd={() => setForm('add')}
         onEdit={(entitlement) => setForm(entitlement)}
@@ -544,15 +607,13 @@ function EntitlementsTab({ planId }: { planId: string }) {
 }
 
 /** Credit grants — the balances the plan hands its subscribers. */
-function CreditGrantsTab({ planId }: { planId: string }) {
+function CreditGrantsSection({ planId }: { planId: string }) {
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
   const create = useCreateCreditGrant()
   const updateGrant = useUpdateCreditGrant()
   const remove = useDeleteCreditGrant()
   const [form, setForm] = useState<'add' | CreditGrant | null>(null)
   const [removing, setRemoving] = useState<CreditGrant | null>(null)
-
-  if (grants.isPending) return <LoadingRows />
 
   const editing = form !== null && form !== 'add' ? form : null
   const close = () => {
@@ -565,6 +626,7 @@ function CreditGrantsTab({ planId }: { planId: string }) {
     <>
       <PlanCreditGrantsView
         grants={grants.data ?? []}
+        {...subTab(grants, 'credit grants')}
         onAdd={() => setForm('add')}
         onEdit={(grant) => setForm(grant)}
         onDelete={(grant) => setRemoving(grant)}
@@ -627,32 +689,42 @@ function CreditGrantsTab({ planId }: { planId: string }) {
   )
 }
 
-/** Information — the plan record. One pencil on the card edits its fields in place. */
+/**
+ * Information — the plan record. One pencil on the card edits its fields in
+ * place; the metadata card on the right edits, adds and removes key/value fields.
+ */
 function InformationTab({
+  planId,
+  integrationControls,
   name,
   lookupKey,
-  planId,
   description,
-  status,
+  metadata,
   createdAt,
   updatedAt,
   readOnly,
   onSave,
 }: {
+  integrationControls?: ContractIntegrationsProps | undefined
+  planId: string
   name: string
   lookupKey: string
-  planId: string
   description: string
-  status: string
+  metadata: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
   readOnly: boolean
-  onSave: (patch: { name?: string; lookupKey?: string; description?: string }) => Promise<unknown>
+  onSave: (patch: {
+    name?: string
+    lookupKey?: string
+    description?: string
+    metadata?: Record<string, string>
+  }) => Promise<unknown>
 }) {
+  const mappings = useEntityIntegrationLinks('plan', planId)
   return (
-    <div className="grid gap-5 xl:grid-cols-3">
+    <div className="flex min-w-0 flex-col gap-5">
       <EditableCard
-        className="xl:col-span-2"
         title="Plan details"
         locked={readOnly}
         fields={[
@@ -664,11 +736,10 @@ function InformationTab({
             placeholder: 'No lookup key',
             display: <span className="font-mono text-[13px]">{lookupKey || '—'}</span>,
             validate: (next) =>
-              next === '' || /^[a-z0-9_]+$/.test(next)
+              next === '' || /^[a-z0-9_-]+$/.test(next)
                 ? null
-                : 'Use lowercase letters, numbers and underscores',
+                : 'Use lowercase letters, numbers, hyphens and underscores',
           },
-          { key: 'status', label: 'Status', value: status, readOnly: true },
           { key: 'created', label: 'Created', value: formatDate(createdAt), readOnly: true },
           { key: 'updated', label: 'Updated', value: formatDate(updatedAt), readOnly: true },
           {
@@ -681,30 +752,67 @@ function InformationTab({
         ]}
         onSave={(changes) => onSave(changes)}
       />
-      <div className="flex flex-col gap-5">
-        <Section title="Metadata">
-          <Properties
-            columns={2}
-            items={[
-              { label: 'Plan ID', value: <span className="font-mono text-[13px]">{planId}</span> },
-            ]}
-          />
-        </Section>
+      <div className="grid gap-5 xl:grid-cols-2">
+        <MetadataCard
+          metadata={metadata}
+          {...(readOnly
+            ? {}
+            : { onSave: (next: Record<string, string>) => onSave({ metadata: next }) })}
+        />
+        <RelatedCard items={[]}>
+          {integrationControls?.links.length ? (
+            <ContractIntegrations
+              {...integrationControls}
+              layout="rows"
+              entityLabel="plan"
+              showLink={false}
+            />
+          ) : mappings.data?.length ? (
+            <ContractIntegrations
+              layout="rows"
+              links={mappings.data}
+              linkable={[]}
+              entityLabel="plan"
+            />
+          ) : (
+            <div className="text-muted-foreground px-6 py-4 text-sm">
+              {mappings.isPending ? (
+                'Loading integrations…'
+              ) : mappings.isError ? (
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => {
+                    void mappings.refetch()
+                  }}
+                >
+                  Retry integrations
+                </button>
+              ) : (
+                'No linked integrations.'
+              )}
+            </div>
+          )}
+        </RelatedCard>
       </div>
     </div>
   )
 }
 
-function count(rows: readonly unknown[] | undefined): { count?: number } {
-  return rows ? { count: rows.length } : {}
-}
-
-function planKind(charges: Charge[]): string {
-  const hasFixed = charges.some((c) => c.type === PriceType.Fixed)
-  const hasUsage = charges.some((c) => c.type === PriceType.Usage)
-  if (charges.length === 0) return 'No charges yet'
-  if (hasFixed && hasUsage) return 'Hybrid plan'
-  return hasUsage ? 'Usage-based plan' : 'Flat-rate plan'
+/**
+ * The same label the Type column shows in the plans grid.
+ *
+ * The grid reads the split off the plan's expanded prices; here the charges
+ * are already loaded, so they are counted directly. Both go through
+ * `planKind`, so the badge and the column cannot drift apart.
+ */
+function planKindLabel(charges: Charge[]): string {
+  return PLAN_KIND_LABEL[
+    planKind({
+      fixedChargeCount: charges.filter((c) => c.type === PriceType.Fixed).length,
+      usageChargeCount: charges.filter((c) => c.type === PriceType.Usage).length,
+    })
+  ]
 }
 
 function billedLabel(charges: Charge[]): string | null {

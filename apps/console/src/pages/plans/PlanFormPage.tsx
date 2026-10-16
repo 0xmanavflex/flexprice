@@ -7,6 +7,7 @@ import {
   usePlan,
   useUpdatePlan,
   useCreatePlan,
+  serverReason,
 } from '@fp/query'
 import {
   CreditGrantScope,
@@ -43,7 +44,7 @@ export function PlanFormPage(props: PlanFormPageProps) {
   const createEntitlements = useCreateBulkEntitlements()
   const createGrant = useCreateCreditGrant()
   const existing = usePlan(props.mode === 'edit' ? props.planId : '')
-  const { meters, units, featureOptions } = usePlanFormOptions()
+  const { meters, units, priceGroups, featureOptions } = usePlanFormOptions()
   const progress = useRef<{
     planId: string
     charges: boolean
@@ -111,6 +112,7 @@ export function PlanFormPage(props: PlanFormPageProps) {
         {...stepProps}
         meters={meters}
         priceUnits={units}
+        priceGroups={priceGroups}
         features={featureOptions}
         isSubmitting={busy}
         submitError={failure}
@@ -148,7 +150,7 @@ export function PlanFormPage(props: PlanFormPageProps) {
       defaultValue={{ name: plan.name, lookupKey: plan.lookupKey, description: plan.description }}
       trail={[
         { label: 'Plans', onClick: onCancel },
-        { label: plan.name, onClick: () => props.onDone(plan.id) },
+        { label: 'Plan details', onClick: () => props.onDone(plan.id) },
         { label: 'Edit' },
       ]}
       {...stepProps}
@@ -169,11 +171,11 @@ export function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change plans here.'
+        return serverReason(error) ?? 'You do not have permission to change plans here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the plan. Try again.'
+        return serverReason(error) ?? 'Could not save the plan. Try again.'
     }
   }
   return 'Could not save the plan. Try again.'

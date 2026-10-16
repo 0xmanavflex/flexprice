@@ -1,0 +1,41 @@
+{
+  "sdkVersion": "2.1.35",
+  "castCount": 108,
+  "missingOps": [
+    "getActivity (GET /activity/{id})",
+    "listActivity (POST /activity)"
+  ],
+  "missingFields": [
+    "AddAddonRef.coupons",
+    "AddAddonRequest.coupons *",
+    "AddAddonToSubscriptionRequest.coupons *",
+    "CancelSubscriptionRequest.cancel_immediately_invoice_policy *",
+    "ChangedAddonAssociation.subscription_id *",
+    "ChangedLineItem.subscription_id *",
+    "CheckoutConfiguration.add_addon_batch_params",
+    "CreateCreditGrantRequest.proration_behavior *",
+    "CreateCustomerRequest.contact_persons *",
+    "Customer.contact_persons *",
+    "CustomerResponse.contact_persons *",
+    "Invoice.fx_conversion",
+    "InvoiceLineItem.fx_conversion",
+    "LineItemChange.coupons *",
+    "ModifySubscriptionLineItem.coupons",
+    "SubModifyGroupedInvoicingParams.changes *",
+    "TaxApplied.external_tax_details",
+    "TaxApplied.provider",
+    "TaxApplied.tax_transaction_type",
+    "TaxAppliedResponse.external_tax_details *",
+    "TaxAppliedResponse.provider *",
+    "TaxAppliedResponse.tax_transaction_id *",
+    "TaxAppliedResponse.tax_transaction_type *",
+    "TopUpWalletRequest.coupons *",
+    "UpdateCustomerRequest.contact_persons *",
+    "WalletTransaction.consumption_breakdown",
+    "WalletTransaction.source_id",
+    "WalletTransaction.source_type",
+    "WalletTransactionResponse.consumption_breakdown *",
+    "WalletTransactionResponse.source_id *",
+    "WalletTransactionResponse.source_type *"
+  ]
+}

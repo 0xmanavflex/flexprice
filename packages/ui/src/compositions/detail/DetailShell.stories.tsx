@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { MoreHorizontalIcon } from 'lucide-react'
+import { MoreHorizontalIcon } from '@ui/icons'
 import { expect, within } from 'storybook/test'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
@@ -140,9 +140,9 @@ export const HeaderCluster: Story = {
     await expect(canvas.queryByText('plan_scale_monthly')).not.toBeInTheDocument()
     const edit = canvas.getByRole('button', { name: 'Edit' })
     const chip = canvas.getByText('Published')
-    // Document order: primary action, then chip, then the id chip.
-    await expect(edit.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    await expect(chip.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Document order: the status pill under the title, then the primary action, then the id chip.
+    await expect(chip.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await expect(edit.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   },
 }
 

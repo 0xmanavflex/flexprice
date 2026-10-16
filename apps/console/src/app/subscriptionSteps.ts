@@ -8,20 +8,34 @@ import type { WorkflowStep } from '@fp/ui/compositions'
  * The stepper renders whatever it is handed.
  *
  * The ids mirror the form's own steps (`SUBSCRIPTION_FORM_STEPS` in
- * `@fp/ui`): customer, plan & charges, benefits, review.
+ * `@fp/ui`): customer & plan, phases, commitments & benefits, billing, review.
  */
 export const SUBSCRIPTION_STEPS = [
-  { id: 'customer', title: 'Customer' },
-  { id: 'plan', title: 'Plan & charges' },
-  { id: 'benefits', title: 'Benefits' },
+  { id: 'plan', title: 'Customer & plan' },
+  { id: 'phases', title: 'Phases' },
+  { id: 'commitments', title: 'Commitments & benefits' },
+  { id: 'billing', title: 'Billing' },
   { id: 'review', title: 'Review' },
 ] as const
+
+/**
+ * `?step=customer` used to be the first step and is now part of `plan`.
+ *
+ * Kept as a redirect rather than dropped: the old id is in people's history
+ * and in any link already shared, and `parseStep` would otherwise answer an
+ * honest-looking URL by silently restarting the flow.
+ */
+const RETIRED_STEPS: Record<string, SubscriptionStepId> = {
+  customer: 'plan',
+  // Benefits became "Commitments & benefits" when phases and billing got steps of their own.
+  benefits: 'commitments',
+}
 
 export type SubscriptionStepId = (typeof SUBSCRIPTION_STEPS)[number]['id']
 
 const IDS = SUBSCRIPTION_STEPS.map((s) => s.id) as readonly string[]
 
-export const DEFAULT_STEP: SubscriptionStepId = 'customer'
+export const DEFAULT_STEP: SubscriptionStepId = 'plan'
 
 /**
  * Reads the step from the URL, totally.
@@ -32,11 +46,12 @@ export const DEFAULT_STEP: SubscriptionStepId = 'customer'
  */
 export function parseStep(raw: unknown): SubscriptionStepId {
   const value = String(raw ?? '').trim()
-  return (IDS.includes(value) ? value : DEFAULT_STEP) as SubscriptionStepId
+  if (IDS.includes(value)) return value as SubscriptionStepId
+  return RETIRED_STEPS[value] ?? DEFAULT_STEP
 }
 
 export function toStepSearch(step: SubscriptionStepId): Record<string, string> {
-  // The first step is the canonical `/subscriptions/new`, so it is not spelled out.
+  // The first step is the canonical `/contracts/new`, so it is not spelled out.
   return step === DEFAULT_STEP ? {} : { step }
 }
 

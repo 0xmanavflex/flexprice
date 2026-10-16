@@ -40,12 +40,16 @@ export function toTaxAssociation(wire: TaxAssociationWire): TaxAssociation {
   }
 }
 
+/** What a tax association can be attached to, on the wire. */
+export type TaxAssociationEntityType = 'customer' | 'subscription'
+
 export function toCreateTaxAssociationRequest(
   entityId: string,
   draft: CreateTaxAssociation,
+  entityType: TaxAssociationEntityType = 'customer',
 ): Record<string, unknown> {
   return {
-    entityType: 'customer',
+    entityType,
     entityId,
     taxRateCode: draft.taxRateCode,
     taxBehavior: draft.taxBehavior,
@@ -73,6 +77,8 @@ export function useCustomerTaxAssociations(customerId: string) {
       )
       return (response.items ?? []).map((item) => toTaxAssociation(item as TaxAssociationWire))
     },
+    // No customer chosen yet (a new invoice) means nothing to ask for.
+    enabled: customerId.length > 0,
   })
 }
 
