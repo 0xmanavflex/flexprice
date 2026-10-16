@@ -55,6 +55,7 @@ export function ContractSectionDialogs({
   error,
   onRun,
   onClose,
+  couponCopy,
 }: {
   kind: ContractSectionKind | null
   options: ContractSectionOptions
@@ -64,6 +65,8 @@ export function ContractSectionDialogs({
   /** Runs one submit with the page's pending and error handling. */
   onRun: (action: Promise<unknown> | void) => void
   onClose: () => void
+  /** Overrides the coupon dialog when it is changing one charge rather than the contract. */
+  couponCopy?: { title: string; hint: string; submitLabel: string } | undefined
 }) {
   return (
     <>
@@ -111,11 +114,12 @@ export function ContractSectionDialogs({
       />
 
       <PickDialog
+        key={couponCopy?.title ?? 'add-coupon'}
         open={kind === 'coupon'}
-        title="Add coupon"
+        title={couponCopy?.title ?? 'Add coupon'}
         label="Coupon"
-        hint="The coupon to apply to this contract."
-        submitLabel="Add coupon"
+        hint={couponCopy?.hint ?? 'The coupon to apply to this contract.'}
+        submitLabel={couponCopy?.submitLabel ?? 'Add coupon'}
         emptyNote="No coupons are available to apply."
         options={options.coupons.map((c) => ({ value: c.code, label: c.name }))}
         pending={pending}

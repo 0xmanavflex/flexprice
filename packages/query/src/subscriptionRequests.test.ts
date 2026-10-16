@@ -24,6 +24,7 @@ import { toEntitlementRequest } from './entitlements'
 import {
   toAddAddonRequest,
   toAddCouponRequest,
+  toRemoveCouponRequest,
   toCancelSubscriptionRequest,
   toCreateSubscriptionRequest,
 } from './subscriptions'
@@ -393,6 +394,24 @@ describe('contract-scoped creators', () => {
     expect(ExecuteSubscriptionModifyRequest$outboundSchema.parse(request)).toEqual({
       type: 'coupon',
       coupon_params: { action: 'add', coupon_code: 'WELCOME10', subscription_id: 'sub_1' },
+    })
+  })
+
+  it('applies a coupon to one charge and removes an association by id', () => {
+    const added = toAddCouponRequest('sub_1', { couponCode: 'LINE', lineItemId: 'line_2' })
+    expect(ExecuteSubscriptionModifyRequest$outboundSchema.parse(added)).toEqual({
+      type: 'coupon',
+      coupon_params: {
+        action: 'add',
+        coupon_code: 'LINE',
+        subscription_line_item_id: 'line_2',
+      },
+    })
+    expect(added.couponParams).not.toHaveProperty('subscriptionId')
+    const removed = toRemoveCouponRequest('assoc_1')
+    expect(ExecuteSubscriptionModifyRequest$outboundSchema.parse(removed)).toEqual({
+      type: 'coupon',
+      coupon_params: { action: 'remove', coupon_association_id: 'assoc_1' },
     })
   })
 })

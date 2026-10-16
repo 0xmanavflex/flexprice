@@ -34,7 +34,18 @@ describe('contract charge coverage', () => {
       expect.anything(),
     )
     expect([...result]).toEqual([
-      ['line-1', [{ level: 'Warning', condition: 'below', value: '80%' }]],
+      [
+        'line-1',
+        [
+          {
+            level: 'Warning',
+            condition: 'below',
+            value: '80%',
+            thresholdType: 'percentage',
+            threshold: '80',
+          },
+        ],
+      ],
     ])
   })
   it('reads all alert pages without issuing per-line requests', async () => {

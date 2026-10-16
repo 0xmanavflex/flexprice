@@ -16,6 +16,7 @@ import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabSta
 import { ArrowRightIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { ButtonGroup } from '@ui/components/primitives/button-group'
+import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Section } from '@ui/compositions/layout/Section'
 
 import { provenance } from '@ui/provenance'
@@ -300,7 +301,6 @@ export function ChargeTable({
         showTitle
         title={title}
         {...(sectionDescription ? { description: sectionDescription } : {})}
-        action={addButton}
       >
         <SubTabState
           hasData={false}
@@ -316,6 +316,7 @@ export function ChargeTable({
             scene: 'catalog',
             title: 'No charges yet',
             description: emptyText,
+            ...(addButton ? { action: addButton } : {}),
           }}
         >
           {null}
@@ -442,13 +443,16 @@ export function ChargeTable({
       </ButtonGroup>
     ) : null
 
-  const titleAction =
-    variant === 'summary' && onShowAll ? (
-      <Button variant="outline" size="sm" className="h-7 px-2.5" onClick={onShowAll}>
-        Show all charges
-        <ArrowRightIcon aria-hidden />
-      </Button>
-    ) : undefined
+  const showAllButton = onShowAll ? (
+    <Button variant="outline" size="sm" className="h-8 px-3" onClick={onShowAll}>
+      Show all charges
+      <ArrowRightIcon aria-hidden />
+    </Button>
+  ) : null
+  // While the summary has nothing to list, the way through sits in the empty
+  // body. Once a change appears, it moves up beside the title.
+  const summaryEmpty = variant === 'summary' && rows.length === 0
+  const titleAction = variant === 'summary' && !summaryEmpty ? showAllButton : undefined
 
   const toolbarAction =
     variant === 'full' && (viewSwitch || addButton) ? (
@@ -476,13 +480,22 @@ export function ChargeTable({
         action={variant === 'summary' ? titleAction : toolbarAction}
       >
         {rows.length === 0 ? (
-          <p className="text-muted-foreground px-6 py-8 text-center text-[13px]">
-            {variant === 'summary'
-              ? 'Every charge is billed as the plan sets it. Changed charges show here.'
-              : view === 'ended'
-                ? 'No charges have ended.'
-                : 'No charges yet.'}
-          </p>
+          <SectionEmpty
+            scene="catalog"
+            title={
+              variant === 'summary'
+                ? 'No changes'
+                : view === 'ended'
+                  ? 'No charges have ended'
+                  : 'No charges yet'
+            }
+            description={
+              variant === 'summary'
+                ? 'Every charge is billed as the plan sets it. Changed charges show here.'
+                : undefined
+            }
+            {...(summaryEmpty && showAllButton ? { action: showAllButton } : {})}
+          />
         ) : (
           <DetailTable
             compact

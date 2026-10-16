@@ -266,6 +266,7 @@ export {
   useCreateSubscriptionLineItem,
   toAddAddonRequest,
   toAddCouponRequest,
+  toRemoveCouponRequest,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
   useCreateSubscriptionCreditGrant,

@@ -692,7 +692,21 @@ export interface AddContractAddon {
   addonId: string
 }
 
-/** Apply a coupon to one contract, by its code. */
+/** Apply a coupon to one contract, or replace the coupons on one of its charges. */
 export interface AddContractCoupon {
   couponCode: string
+  /**
+   * Apply to this charge only.
+   *
+   * The modify API treats a line and the whole contract as mutually exclusive
+   * scopes, so a line coupon never also sends the contract id.
+   */
+  lineItemId?: string
+  /**
+   * Associations removed after the new one is added.
+   *
+   * A charge's Edit replaces its current coupons. The new one is added first,
+   * so a rejected add leaves the existing coupons in place.
+   */
+  replaceAssociationIds?: string[]
 }

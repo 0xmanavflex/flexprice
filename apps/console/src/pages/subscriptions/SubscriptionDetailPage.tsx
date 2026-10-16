@@ -41,6 +41,7 @@ import {
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
+  useUpdateAlertSetting,
   useUpdateSubscriptionLineItem,
   serverReason,
 } from '@fp/query'
@@ -131,6 +132,7 @@ export function SubscriptionDetailPage({
   const createCreditGrant = useCreateSubscriptionCreditGrant(subscriptionId)
   const addAddon = useAddSubscriptionAddon(subscriptionId)
   const addCoupon = useAddSubscriptionCoupon(subscriptionId)
+  const updateAlert = useUpdateAlertSetting()
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
@@ -193,6 +195,9 @@ export function SubscriptionDetailPage({
         onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
         onAddAddon={(draft) => addAddon.mutateAsync(draft)}
         onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
+        onSaveChargeAlert={({ settingId, config }) =>
+          updateAlert.mutateAsync({ id: settingId, config })
+        }
         onAddTax={(draft) => createTax.mutateAsync(draft)}
         onRemoveAddon={(addon) => removeAddon.mutateAsync(addon.id)}
         onRemoveTax={(tax) => removeTax.mutateAsync(tax.id)}

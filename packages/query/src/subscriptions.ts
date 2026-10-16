@@ -1483,14 +1483,27 @@ export function toAddAddonRequest(
   return { subscriptionId, addonId: draft.addonId }
 }
 
-/** A coupon applied to one contract, as a `coupon` modification. */
+/** A coupon applied to one contract, or to one of its charges, as a `coupon` modification. */
 export function toAddCouponRequest(
   subscriptionId: string,
   draft: AddContractCoupon,
 ): FlexpriceModels.ExecuteSubscriptionModifyRequest {
+  const couponCode = draft.couponCode.trim()
   return {
     type: 'coupon',
-    couponParams: { action: 'add', couponCode: draft.couponCode.trim(), subscriptionId },
+    couponParams: draft.lineItemId
+      ? { action: 'add', couponCode, subscriptionLineItemId: draft.lineItemId }
+      : { action: 'add', couponCode, subscriptionId },
+  }
+}
+
+/** Take one coupon association off — `action: remove` on the same modify call. */
+export function toRemoveCouponRequest(
+  associationId: string,
+): FlexpriceModels.ExecuteSubscriptionModifyRequest {
+  return {
+    type: 'coupon',
+    couponParams: { action: 'remove', couponAssociationId: associationId },
   }
 }
 
@@ -1517,13 +1530,23 @@ export function useAddSubscriptionCoupon(subscriptionId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (draft: AddContractCoupon) =>
-      call(() =>
+    mutationFn: async (draft: AddContractCoupon) => {
+      const added = await call(() =>
         client.subscriptions.executeSubscriptionModify(
           subscriptionId,
           toAddCouponRequest(subscriptionId, draft),
         ),
-      ),
+      )
+      for (const associationId of draft.replaceAssociationIds ?? []) {
+        await call(() =>
+          client.subscriptions.executeSubscriptionModify(
+            subscriptionId,
+            toRemoveCouponRequest(associationId),
+          ),
+        )
+      }
+      return added
+    },
     onSuccess: () => invalidateContract(queryClient),
   })
 }

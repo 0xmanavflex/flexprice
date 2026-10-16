@@ -42,10 +42,15 @@ export async function fetchContractChargeAlerts(
       for (const level of ['info', 'warning', 'critical'] as const) {
         const threshold = item.config?.[level]
         if (!threshold?.threshold) continue
+        const thresholdType =
+          item.config?.alertThresholdType === 'absolute' ? 'absolute' : 'percentage'
         values.push({
           level: level[0]!.toUpperCase() + level.slice(1),
           condition: threshold.condition ?? 'above',
-          value: `${threshold.threshold}${item.config?.alertThresholdType === 'percentage' ? '%' : ' (absolute)'}`,
+          value: `${threshold.threshold}${thresholdType === 'percentage' ? '%' : ' (absolute)'}`,
+          thresholdType,
+          threshold: threshold.threshold,
+          ...(item.id ? { settingId: item.id } : {}),
         })
       }
       result.set(item.entityId, values)

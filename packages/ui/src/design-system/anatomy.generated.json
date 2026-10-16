@@ -794,6 +794,7 @@
         "PlusIcon",
         "RowActionsMenu",
         "Section",
+        "SectionEmpty",
         "SubTabState"
       ],
       "usedBy": [
@@ -3470,8 +3471,7 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
-        "CustomerGrid",
-        "InvoiceGrid"
+        "CustomerGrid"
       ],
       "story": null
     },
@@ -3602,7 +3602,6 @@
       "composes": [
         "CopyIcon",
         "EntityList",
-        "IntegrationChips",
         "PlusIcon",
         "WalletIcon"
       ],
@@ -5355,6 +5354,7 @@
         "SceneIllustration"
       ],
       "usedBy": [
+        "ChargeTable",
         "SubTabState",
         "SubscriptionDetailView"
       ],

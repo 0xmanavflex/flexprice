@@ -401,8 +401,10 @@ export const Empty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('No charges yet')).toBeInTheDocument()
-    // With an add flow wired, the copy may ask for a charge.
+    // With an add flow wired, the copy may ask for a charge, and the button
+    // sits in the empty body rather than the header.
     await expect(canvas.getByText(/add a fixed base or a usage charge/i)).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: /add charges/i })).toBeInTheDocument()
   },
 }
 

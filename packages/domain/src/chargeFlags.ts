@@ -92,6 +92,12 @@ export interface ChargeAlert {
   level: string
   /** The threshold, formatted ("80%", "1,000,000 units"). */
   value: string
+  /** The alert setting this threshold belongs to, when the page can edit it. */
+  settingId?: string | undefined
+  /** `percentage` or `absolute`, shared by every threshold of the setting. */
+  thresholdType?: 'percentage' | 'absolute' | undefined
+  /** The unformatted threshold, so Edit starts from the stored number. */
+  threshold?: string | undefined
 }
 
 /**

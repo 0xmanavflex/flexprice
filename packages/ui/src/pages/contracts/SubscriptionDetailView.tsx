@@ -16,9 +16,13 @@ import {
   CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
   SUBSCRIPTION_SCHEDULE_LABEL,
+  AlertCondition,
+  AlertSeverity,
+  AlertThresholdType,
   PriceType,
   SubscriptionStatus,
   formatMoney,
+  type AlertSettingConfig,
   type AddContractCharge,
   type CreateCreditGrant,
   type CreateEntitlement,
@@ -70,6 +74,7 @@ import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../compositions/detail/RelatedCard'
 import { Section } from '../../compositions/layout/Section'
 import { ConfirmDialog } from '../../compositions/feedback/ConfirmDialog'
+import { FormDialog } from '../../compositions/forms/FormDialog'
 import type { EmptyScene } from '../../compositions/feedback/SceneIllustration'
 import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
 import { LoadingRows } from '../../compositions/feedback/States'
@@ -87,6 +92,7 @@ import {
   type ContractSectionOptions,
 } from './ContractSectionDialogs'
 import { ContractQuantityDialog } from './ContractQuantityDialog'
+import { ChargeAlertForm } from './ChargeAlertForm'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
@@ -144,6 +150,15 @@ export interface SubscriptionDetailViewProps {
   onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
   onAddAddon?: ((draft: AddContractAddon) => Promise<unknown> | void) | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
+  /**
+   * Save the thresholds of an alert already watching one charge.
+   *
+   * The sheet's Alerts edit only appears when the setting id is known, because
+   * an update cannot create a setting or move it to another line.
+   */
+  onSaveChargeAlert?:
+    | ((draft: { settingId: string; config: AlertSettingConfig }) => Promise<unknown> | void)
+    | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
   /** Row menus: take an add-on off, stop a tax, end a credit grant. Each resolves when done. */
   onRemoveAddon?: ((addon: SubscriptionAddon) => Promise<unknown>) | undefined
@@ -296,6 +311,7 @@ export function SubscriptionDetailView({
   onAddCreditGrant,
   onAddAddon,
   onAddCoupon,
+  onSaveChargeAlert,
   onAddTax,
   onRemoveAddon,
   onRemoveTax,
@@ -324,6 +340,12 @@ export function SubscriptionDetailView({
   const [commitmentCharge, setCommitmentCharge] = useState<Charge | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [section, setSection] = useState<ContractSectionKind | null>(null)
+  /** Set while Change coupon is open, so the submit is scoped to that charge. */
+  const [couponLineId, setCouponLineId] = useState<string | null>(null)
+  const [alertEdit, setAlertEdit] = useState<{
+    settingId: string
+    config: AlertSettingConfig
+  } | null>(null)
   // One confirm for every removal on the page: what it says, and what it runs.
   const [removal, setRemoval] = useState<{
     title: string
@@ -404,6 +426,7 @@ export function SubscriptionDetailView({
   const closeSection = () => {
     setSection(null)
     setSaveError(null)
+    setCouponLineId(null)
   }
   const runSection = async (action: Promise<unknown> | void) => {
     setSaving(true)
@@ -411,6 +434,7 @@ export function SubscriptionDetailView({
     try {
       await action
       setSection(null)
+      setCouponLineId(null)
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'The change could not be saved.')
     } finally {
@@ -419,6 +443,7 @@ export function SubscriptionDetailView({
   }
   const open = (kind: ContractSectionKind) => () => {
     setSaveError(null)
+    if (kind === 'coupon') setCouponLineId(null)
     setSection(kind)
   }
   const canModify = !isCancelled
@@ -452,13 +477,35 @@ export function SubscriptionDetailView({
   const editableChargeSections = (charge: Charge): ChargeSection[] => {
     const line = chargeRows.lineOf.get(charge.id)
     if (!canEditCharges || charge.endDate || !line || !canEditLine(line)) return []
-    return line.kind === 'fixed'
-      ? [ChargeSection.Price]
-      : [ChargeSection.Price, ChargeSection.Commitment]
+    const sections =
+      line.kind === 'fixed'
+        ? [ChargeSection.Price]
+        : [ChargeSection.Price, ChargeSection.Commitment]
+    if (onAddCoupon) sections.push(ChargeSection.Discount)
+    const alerts = chargeRows.details.get(charge.id)?.alerts
+    if (onSaveChargeAlert && alerts?.some((alert) => alert.settingId)) {
+      sections.push(ChargeSection.Alerts)
+    }
+    return sections
   }
-  const editCharge = (charge: Charge) => {
+  const editCharge = (charge: Charge, part?: ChargeSection) => {
     const line = chargeRows.lineOf.get(charge.id)
-    if (line) editLine(line)
+    if (!line) return
+    if (part === ChargeSection.Discount && onAddCoupon) {
+      setSaveError(null)
+      setCouponLineId(line.id)
+      setSection('coupon')
+      return
+    }
+    if (part === ChargeSection.Alerts && onSaveChargeAlert) {
+      const draft = chargeAlertDraft(chargeRows.details.get(charge.id)?.alerts ?? [])
+      if (draft) {
+        setSaveError(null)
+        setAlertEdit(draft)
+        return
+      }
+    }
+    editLine(line)
   }
   const endCharge = (charge: Charge) => {
     const line = chargeRows.lineOf.get(charge.id)
@@ -647,7 +694,7 @@ export function SubscriptionDetailView({
               */}
               <ChargeTable
                 title="Charges"
-                onEditSection={(charge) => editCharge(charge)}
+                onEditSection={(charge, part) => editCharge(charge, part)}
                 editableSections={editableChargeSections}
                 variant="summary"
                 layout="narrow"
@@ -1062,7 +1109,7 @@ export function SubscriptionDetailView({
             emptyDescription="This contract has no priced lines."
             {...(canAddCharge ? { onAdd: () => setDialog({ mode: 'add' }) } : {})}
             addLabel="Manage pricing"
-            onEditSection={(charge) => editCharge(charge)}
+            onEditSection={(charge, part) => editCharge(charge, part)}
             editableSections={editableChargeSections}
             {...(canEditCharges ? { onEdit: (charge: Charge) => editCharge(charge) } : {})}
             canEdit={(charge) => {
@@ -1290,12 +1337,78 @@ export function SubscriptionDetailView({
           coupons: sectionOptions?.coupons ?? [],
           taxRates: sectionOptions?.taxRates ?? [],
         }}
-        actions={{ onAddEntitlement, onAddCreditGrant, onAddAddon, onAddCoupon, onAddTax }}
+        actions={{
+          onAddEntitlement,
+          onAddCreditGrant,
+          onAddAddon,
+          onAddCoupon: onAddCoupon
+            ? (draft) => {
+                if (!couponLineId) return onAddCoupon(draft)
+                const current = (coupons?.data ?? []).filter(
+                  (coupon) => coupon.active && coupon.lineItemId === couponLineId,
+                )
+                if (current.length === 1 && current[0]?.code === draft.couponCode) return
+                return onAddCoupon({
+                  couponCode: draft.couponCode,
+                  lineItemId: couponLineId,
+                  ...(current.length
+                    ? { replaceAssociationIds: current.map((coupon) => coupon.id) }
+                    : {}),
+                })
+              }
+            : undefined,
+          onAddTax,
+        }}
+        {...(couponLineId
+          ? {
+              couponCopy: {
+                title: 'Change coupon',
+                hint: 'Replaces the coupons on this charge.',
+                submitLabel: 'Change coupon',
+              },
+            }
+          : {})}
         pending={saving}
         error={saveError}
         onRun={(action) => void runSection(action)}
         onClose={closeSection}
       />
+      <FormDialog
+        open={alertEdit !== null}
+        onOpenChange={(next) => {
+          if (next) return
+          setAlertEdit(null)
+          setSaveError(null)
+        }}
+        title="Alert settings"
+        isPending={saving}
+      >
+        {alertEdit ? (
+          <ChargeAlertForm
+            key={alertEdit.settingId}
+            initial={alertEdit.config}
+            pending={saving}
+            error={saveError}
+            onCancel={() => {
+              setAlertEdit(null)
+              setSaveError(null)
+            }}
+            onSubmit={(config) => {
+              if (!onSaveChargeAlert) return
+              setSaving(true)
+              setSaveError(null)
+              Promise.resolve(onSaveChargeAlert({ settingId: alertEdit.settingId, config }))
+                .then(() => setAlertEdit(null))
+                .catch((error: unknown) =>
+                  setSaveError(
+                    error instanceof Error ? error.message : 'The change could not be saved.',
+                  ),
+                )
+                .finally(() => setSaving(false))
+            }}
+          />
+        ) : null}
+      </FormDialog>
       {/*
         The Commitments section's own sheet. The charges table owns one for
         its own rows; this opens the same surface from the other direction,
