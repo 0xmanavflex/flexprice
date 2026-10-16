@@ -2,7 +2,16 @@ import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Controller, type FieldErrors, type Resolver, type UseFormRegister } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { XIcon } from '@ui/icons'
+import {
+  CoinsIcon,
+  KeyRoundIcon,
+  PencilIcon,
+  PuzzleIcon,
+  ReceiptIcon,
+  ScaleIcon,
+  TicketPercentIcon,
+  XIcon,
+} from '@ui/icons'
 import {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
@@ -54,6 +63,7 @@ import { useFormSteps } from '@ui/compositions/forms/useFormSteps'
 import { CreditGrantCreateForm } from '@ui/pages/product-catalog/credit-grants/CreditGrantForm'
 import { PriceOverrideForm } from '@ui/pages/product-catalog/charges/PriceOverrideForm'
 import type { MeterOption, PriceUnitOption } from '@ui/pages/product-catalog/charges/ChargeForm'
+import { RowActionsMenu } from '@ui/pages/shared/RowActionsMenu'
 import { ContractChargeDialog } from './ContractChargeDialog'
 import { provenance } from '@ui/provenance'
 
@@ -62,13 +72,14 @@ import { provenance } from '@ui/provenance'
  *
  * 1. **Customer & plan** — the customer, the plan, its billing period and
  *    currency, and the contract's start and end dates and trial.
- * 2. **Phases** — each phase's dates, then its charges. A usage charge's minimum
- *    sits on that charge. Discounts and charges added for this contract alone
- *    follow, then a button to add the next phase. Phase 1 is the contract
- *    itself; each later phase starts where the previous ends.
- * 3. **Commitments & benefits** — the contract's minimum spend (across every
- *    charge), entitlement overrides, credit grants, taxes (starting from the
- *    customer's), and add-ons.
+ * 2. **Phases** — each phase's dates, then its charges. A usage charge's
+ *    commitment opens on that charge, in the same card. Discounts follow, then
+ *    a button to add the next phase, which collapses the ones before it.
+ *    Phase 1 is the contract itself; each later phase starts where the
+ *    previous ends.
+ * 3. **Commitments & benefits** — the contract-wide commitment (period,
+ *    overage, and true-up shown up front), entitlement overrides, credit
+ *    grants, taxes (starting from the customer's), and add-ons.
  * 4. **Billing** — billing cycle and anchor, payment terms, proration, the
  *    auto-invoice threshold, and whether to create it as a draft.
  * 5. **Review** — everything above, with the charges priced as they will bill
@@ -919,98 +930,114 @@ function OtherCadences({
 }
 
 /**
- * A usage charge's own minimum. It lives on the charge, not on a later step:
- * the minimum is a property of that charge, and a second list of the same
- * charges asked the question again after the person had left them.
+ * A usage charge's commitment, opened from that charge's menu and kept in the
+ * charges list. Every option is shown at once — including true-up — so none
+ * of them has to be discovered by filling in another field first.
  *
  * Only a single-phase contract can carry these — the API takes them on the
  * contract's charges, not on a phase's.
  */
 function ChargeMinimum({
+  priceId,
   name,
   commitment,
   error,
   onChange,
 }: {
+  priceId: string
   name: string
   commitment: ChargeCommitment | undefined
   error: string | undefined
   onChange: (next: Partial<ChargeCommitment> | null) => void
 }) {
+  const draft = commitment ?? {
+    type: CommitmentType.Amount,
+    value: '',
+    overageFactor: '',
+    trueUp: false,
+  }
   return (
     <div className="flex flex-col gap-3 border-t border-dashed pt-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm">Minimum on this charge</span>
-        <Switch
-          aria-label={`Minimum on ${name}`}
-          checked={Boolean(commitment)}
-          onCheckedChange={(on) => onChange(on ? {} : null)}
-        />
+      <div className="flex items-center gap-2">
+        <ScaleIcon aria-hidden className="text-primary size-4 shrink-0" />
+        <span className="text-sm font-medium">Commitment</span>
       </div>
-      {commitment ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor={`commitment-type-${commitment.priceId}`} className="text-muted-foreground text-xs">
-              Measured as
-            </label>
-            <OptionSelect
-              id={`commitment-type-${commitment.priceId}`}
-              value={commitment.type}
-              onValueChange={(type) => onChange({ type: type as CommitmentType })}
-              options={[
-                { value: CommitmentType.Amount, label: 'Spend' },
-                { value: CommitmentType.Quantity, label: 'Units' },
-              ]}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor={`commitment-value-${commitment.priceId}`} className="text-muted-foreground text-xs">
-              Minimum
-            </label>
-            <Input
-              id={`commitment-value-${commitment.priceId}`}
-              inputMode="decimal"
-              placeholder={commitment.type === CommitmentType.Amount ? 'Amount' : 'Units'}
-              value={commitment.value}
-              aria-invalid={error ? true : undefined}
-              onChange={(event) => onChange({ value: event.target.value })}
-            />
-            {error ? (
-              <p className="text-destructive text-xs" role="alert">
-                {error}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor={`commitment-overage-${commitment.priceId}`}
-              className="text-muted-foreground text-xs"
-            >
-              Overage factor
-            </label>
-            <Input
-              id={`commitment-overage-${commitment.priceId}`}
-              inputMode="decimal"
-              placeholder="1"
-              value={commitment.overageFactor}
-              onChange={(event) => onChange({ overageFactor: event.target.value })}
-            />
-          </div>
-          <label className="flex items-center gap-2 self-end pb-2 text-sm">
-            <Switch
-              aria-label={`True-up on ${name}`}
-              checked={commitment.trueUp}
-              onCheckedChange={(trueUp) => onChange({ trueUp })}
-            />
-            True-up the shortfall
+      <p className="text-muted-foreground text-xs">
+        The least {name} bills. Usage past it is multiplied by the overage factor; 1 is the normal
+        rate. True-up bills the shortfall when usage stays under it.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`commitment-type-${priceId}`} className="text-muted-foreground text-xs">
+            Measured as
           </label>
+          <OptionSelect
+            id={`commitment-type-${priceId}`}
+            value={draft.type}
+            onValueChange={(type) => onChange({ type: type as CommitmentType })}
+            options={[
+              { value: CommitmentType.Amount, label: 'Spend' },
+              { value: CommitmentType.Quantity, label: 'Units' },
+            ]}
+          />
         </div>
-      ) : (
-        <p className="text-muted-foreground text-xs">
-          The least this charge bills. Usage past it is multiplied by the overage factor; 1 is the
-          normal rate.
-        </p>
-      )}
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`commitment-value-${priceId}`} className="text-muted-foreground text-xs">
+            Minimum
+          </label>
+          <Input
+            id={`commitment-value-${priceId}`}
+            inputMode="decimal"
+            placeholder={draft.type === CommitmentType.Amount ? 'Amount' : 'Units'}
+            value={draft.value}
+            aria-invalid={error ? true : undefined}
+            onChange={(event) => onChange({ value: event.target.value })}
+          />
+          {error ? (
+            <p className="text-destructive text-xs" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`commitment-overage-${priceId}`} className="text-muted-foreground text-xs">
+            Overage factor
+          </label>
+          <Input
+            id={`commitment-overage-${priceId}`}
+            inputMode="decimal"
+            placeholder="1"
+            value={draft.overageFactor}
+            onChange={(event) => onChange({ overageFactor: event.target.value })}
+          />
+        </div>
+        <label className="flex items-center gap-2 self-end pb-2 text-sm">
+          <Switch
+            aria-label={`True-up on ${name}`}
+            checked={draft.trueUp}
+            onCheckedChange={(trueUp) => onChange({ trueUp })}
+          />
+          True-up
+        </label>
+      </div>
+    </div>
+  )
+}
+
+/** A colored mark to the left of a section title, matching the charges table. */
+function SectionTitle({
+  icon: Icon,
+  tone,
+  children,
+}: {
+  icon: typeof ScaleIcon
+  tone: string
+  children: string
+}) {
+  return (
+    <div className="flex items-center gap-2 px-5 pt-4 sm:px-6">
+      <Icon aria-hidden className={`size-4 shrink-0 ${tone}`} />
+      <h3 className="text-sm font-medium">{children}</h3>
     </div>
   )
 }

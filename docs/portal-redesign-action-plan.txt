@@ -61,8 +61,8 @@ Dependencies: repository audit and prototype inspection.
 PHASE 2 — LIST TABLES
 Dependencies: item 08; coordinate catalog counts with item 54.
 
-[ ] 10. Customers: Name, Email, External ID, Integrations, Contracts, Created on.
-[ ] 11. Contracts: Customer, Plan, Billing, Status, Current period, Started.
+[IMPLEMENTED; live count validation pending] 10. Customers: Name, Email, External ID, Integrations, Contracts, Created on.
+[IMPLEMENTED; live count validation pending] 11. Contracts: Customer, Plan, Billing, Status, Current period, Started.
     Remove MRR; display period as a range.
 [IN PROGRESS] 12. Invoices: Invoice number, Customer, Invoice date, Due date, Amount,
     Amount due, Payment status, Integrations. Invoice status becomes a filter.
@@ -70,12 +70,12 @@ Dependencies: item 08; coordinate catalog counts with item 54.
     Remove Reason/Type columns; connect row navigation when item 39 is implemented.
 [ ] 14. Payments: Receipt number, Invoice number, Customer, Amount,
     Payment method, Status, Integration.
-[ ] 15. Features: Name, Type, Event name, Aggregation, Group, Entitlements,
+[IMPLEMENTED; live count validation pending] 15. Features: Name, Type, Event name, Aggregation, Group, Entitlements,
     Contracts. Render aggregation as a formula and Group as a chip; remove
     Status, Updated and Charges columns.
-[ ] 16. Plans: Plan, Type, Charges, Entitlements, Credit grants, Contracts,
+[IMPLEMENTED; live count validation pending] 16. Plans: Plan, Type, Charges, Entitlements, Credit grants, Contracts,
     Status, Lookup key. Type is Hybrid / Usage-based / Flat-rate; centre counts.
-[ ] 17. Add-ons: Add-on, Type, Charges, Entitlements, Contracts, Status,
+[IN PROGRESS; contract-count API blocked] 17. Add-ons: Add-on, Type, Charges, Entitlements, Contracts, Status,
     Lookup key. Use the same Type pill and count formatting as Plans.
 [ ] 18. Resolve proposed plan count display before changing it: combined Includes
     column (“6 features · 2 grants”), “6 active” contracts, charge names on hover.
@@ -122,10 +122,10 @@ Dependencies: Phases 1 and 3.
 [ ] 22. Move Commitments, Entitlements, Credit grants, Add-ons and Coupons
     into consistent sub-table frames below the contract overview content.
 [IMPLEMENTED; visual review pending] 23. Apply Activity → Metadata → Related to the contract sidebar.
-[ ] 24. Plan: Overview / Information tabs; stack Charges, Entitlements and
+[IN PROGRESS] 24. Plan: Overview / Information tabs; stack Charges, Entitlements and
     Credit grants on Overview. Information contains plan details and
     Metadata/Related side by side. Update Type pill when charges change.
-[ ] 25. Keep live What customers see pricing card on both Plan tabs;
+[IMPLEMENTED; visual baseline pending] 25. Keep live What customers see pricing card on both Plan tabs;
     make its section headings jump to matching tables.
 [ ] 26. Move Plan Link integration into the overflow menu.
 [ ] 27. Feature: Overview / Information tabs; show charges by billing plan
@@ -331,3 +331,30 @@ CREDIT MEMO DOCUMENT — OCTOBER 16
 - Desktop and 390px screenshots reviewed. Narrow line comparison scrolls with
   keyboard access. Existing targeted visual command passed; Linux baseline audit
   remains pending given the previously recorded broader suite differences.
+
+CATALOG LISTS AND PLAN INFORMATION FOLLOW-UP
+- Audited Customers (Name/Email/External ID/Integrations/Contracts/Created on),
+  Contracts (Customer/Plan/Billing/Status/Current period/Started) and Plan column
+  order against the shared reference; existing default columns match.
+- Feature Entitlements now uses plain localized counts, preserving zero-state
+  Add entitlement and its row-menu action. Unknown export values stay blank;
+  zero Contracts uses the shared muted dash. Formula/group/default columns retained.
+- Plan and Add-on Type cells now share Hybrid / Usage-based / Flat-rate labels;
+  detail headings retain their entity nouns. Existing count columns remain centered.
+- Plan Information now retains the same live pricing card as Overview. Its links
+  switch to Overview and scroll/focus the corresponding Charges/Entitlements/Grants
+  heading. Query-backed edits and URL-addressable tabs remain intact.
+- Remaining list/API gaps: Add-on Contracts cannot be counted by the existing
+  subscription API (see addonLinkage.ts evidence); Payment lacks receipt/customer
+  fields; Invoice integration mappings still need verified data wiring.
+- Plan Related/integration controls remain pending; no placeholder integrations
+  or provider URLs added to fill the reference's empty slots.
+- Validation: 48 affected browser/a11y stories; TypeScript, scoped lint and build
+  pass. Three list visual comparisons pass; Plan Information differs by 2% after
+  retaining the pricing rail. Received screenshot reviewed; baselines unchanged.
+- Final assembled validation: all 9 Plan journeys pass across the final runs,
+  including Information reload, pricing update after adding a charge, and preview
+  navigation back to a focused Charges heading. Grant-based navigation fixture
+  setup was replaced because the first listed plan's mock grant read did not return
+  the created grant; no backend claim is made from that fixture.
+- Separate concurrent FormCard/SubscriptionForm edits were preserved untouched.

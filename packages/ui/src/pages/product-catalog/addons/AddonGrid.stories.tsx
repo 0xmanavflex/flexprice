@@ -218,7 +218,7 @@ export const ColumnsMatchPlans: Story = {
     ])
     await expect(canvas.queryByRole('columnheader', { name: /contracts/i })).toBeNull()
 
-    // The pill names an add-on, not a plan.
-    await expect(canvas.getAllByText(/add-on$/).length).toBeGreaterThan(0)
+    // Both catalogs use the same concise Type labels.
+    await expect(canvas.getAllByText(/^(Flat-rate|Usage-based|Hybrid)$/).length).toBeGreaterThan(0)
   },
 }

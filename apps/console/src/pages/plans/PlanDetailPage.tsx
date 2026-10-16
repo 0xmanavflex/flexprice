@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   type CreateEntitlement,
   type EditEntitlement,
@@ -158,6 +158,17 @@ export function PlanDetailPage({
   onEdit,
   onNavigateToList,
 }: PlanDetailPageProps) {
+  const [jumpTarget, setJumpTarget] = useState<string | null>(null)
+  useEffect(() => {
+    if (tab !== 'overview' || !jumpTarget) return
+    const target = document.getElementById(jumpTarget)
+    if (target) {
+      target.scrollIntoView({ block: 'start' })
+      target.tabIndex = -1
+      target.focus({ preventScroll: true })
+    }
+    setJumpTarget(null)
+  }, [tab, jumpTarget])
   const plan = usePlan(planId)
   const update = useUpdatePlan()
   const archive = useArchivePlan()
@@ -252,29 +263,40 @@ export function PlanDetailPage({
         ]}
       />
 
-      {tab === 'overview' ? <OverviewTab planId={planId} readOnly={isArchived} /> : null}
-      {tab === 'information' ? (
-        <InformationTab
-          name={record.name}
-          lookupKey={record.lookupKey}
-          description={record.description}
-          metadata={record.metadata}
-          createdAt={record.createdAt}
-          updatedAt={record.updatedAt}
-          readOnly={isArchived}
-          onSave={(patch) =>
-            update.mutateAsync({
-              id: planId,
-              draft: {
-                name: record.name,
-                lookupKey: record.lookupKey,
-                description: record.description,
-                ...patch,
-              },
-            })
-          }
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-5">
+          {tab === 'overview' ? <OverviewTab planId={planId} readOnly={isArchived} /> : null}
+          {tab === 'information' ? (
+            <InformationTab
+              name={record.name}
+              lookupKey={record.lookupKey}
+              description={record.description}
+              metadata={record.metadata}
+              createdAt={record.createdAt}
+              updatedAt={record.updatedAt}
+              readOnly={isArchived}
+              onSave={(patch) =>
+                update.mutateAsync({
+                  id: planId,
+                  draft: {
+                    name: record.name,
+                    lookupKey: record.lookupKey,
+                    description: record.description,
+                    ...patch,
+                  },
+                })
+              }
+            />
+          ) : null}
+        </div>
+        <SavedPlanPreview
+          planId={planId}
+          onJump={(target) => {
+            setJumpTarget(target)
+            onTabChange('overview')
+          }}
         />
-      ) : null}
+      </div>
 
       <DuplicatePlanDialog
         plan={duplicating ? record : null}
@@ -321,31 +343,36 @@ export function PlanDetailPage({
  * keys, so react-query serves the second and third reader from cache.
  */
 function OverviewTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
+  return (
+    <>
+      <ChargesSection planId={planId} readOnly={readOnly} />
+      <EntitlementsSection planId={planId} />
+      <CreditGrantsSection planId={planId} />
+    </>
+  )
+}
+
+function SavedPlanPreview({
+  planId,
+  onJump,
+}: {
+  planId: string
+  onJump: (target: string) => void
+}) {
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
   const { meters, allFeatures } = usePlanFormOptions()
-
-  const meterUnit = (id: string) => meters.find((m) => m.id === id)?.unit
-  const featureUnit = (id: string) => allFeatures.find((f) => f.id === id)?.unitPlural
-
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="flex min-w-0 flex-col gap-5">
-        <ChargesSection planId={planId} readOnly={readOnly} />
-        <EntitlementsSection planId={planId} />
-        <CreditGrantsSection planId={planId} />
-      </div>
-      <PlanCustomerPreview
-        // Follows the sections down; the grid is `items-start` so it can.
-        className="lg:sticky lg:top-6"
-        charges={charges.data ?? []}
-        entitlements={entitlements.data ?? []}
-        grants={grants.data ?? []}
-        meterUnit={meterUnit}
-        featureUnit={featureUnit}
-      />
-    </div>
+    <PlanCustomerPreview
+      className="lg:sticky lg:top-6"
+      charges={charges.data ?? []}
+      entitlements={entitlements.data ?? []}
+      grants={grants.data ?? []}
+      meterUnit={(id) => meters.find((meter) => meter.id === id)?.unit}
+      featureUnit={(id) => allFeatures.find((feature) => feature.id === id)?.unitPlural}
+      onJump={onJump}
+    />
   )
 }
 
@@ -666,9 +693,8 @@ function InformationTab({
   }) => Promise<unknown>
 }) {
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-3">
+    <div className="flex min-w-0 flex-col gap-5">
       <EditableCard
-        className="xl:col-span-2"
         title="Plan details"
         locked={readOnly}
         fields={[

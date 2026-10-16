@@ -115,10 +115,12 @@ export function PreviewAmount({
 export function PreviewSection({
   title,
   jumpTo,
+  onJump,
   children,
 }: {
   title: string
   jumpTo?: string | undefined
+  onJump?: ((target: string) => void) | undefined
   children: ReactNode
 }) {
   return (
@@ -126,6 +128,14 @@ export function PreviewSection({
       {jumpTo ? (
         <a
           href={`#${jumpTo}`}
+          onClick={
+            onJump
+              ? (event) => {
+                  event.preventDefault()
+                  onJump(jumpTo)
+                }
+              : undefined
+          }
           className="focus-visible:ring-ring/50 w-fit rounded-sm text-sm leading-5 font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3"
         >
           {title}

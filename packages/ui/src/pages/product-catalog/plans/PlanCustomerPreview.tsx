@@ -11,6 +11,7 @@ export interface PlanCustomerPreviewProps {
   /** Plural unit of a feature ("tokens"), shown after a metered allowance. */
   featureUnit?: (featureId: string) => string | undefined
   className?: string
+  onJump?: ((target: string) => void) | undefined
 }
 
 /**
@@ -37,6 +38,7 @@ export function PlanCustomerPreview({
   meterUnit,
   featureUnit,
   className,
+  onJump,
 }: PlanCustomerPreviewProps) {
   const meterNames = new Map(charges.map((c) => [c.meterId, c.meterName] as const))
   return (
@@ -44,6 +46,7 @@ export function PlanCustomerPreview({
       // A saved plan's preview is a pricing card, not a form rail.
       variant="card"
       jumpTargets={JUMP_TARGETS}
+      onJump={onJump}
       {...(className ? { className } : {})}
       charges={charges.map(chargeToDraft)}
       meterLabel={(id) => meterNames.get(id) ?? id}

@@ -54,6 +54,7 @@ export interface PlanPreviewCardProps {
    * tables it summarises. Omitted on a form, where there is nothing to jump
    * to — the tables do not exist yet.
    */
+  onJump?: ((target: string) => void) | undefined
   jumpTargets?: { charges?: string; included?: string; credits?: string }
 }
 
@@ -186,6 +187,7 @@ export function PlanPreviewCard({
   className,
   variant = 'rail',
   jumpTargets,
+  onJump,
 }: PlanPreviewCardProps) {
   const currency = (charges.find((c) => c.currency)?.currency ?? 'USD').toUpperCase()
   const usageCharges = charges.filter((c) => c.type === PriceType.Usage)
@@ -235,6 +237,7 @@ export function PlanPreviewCard({
 
           {extras.length > 0 ? (
             <PreviewSection
+              onJump={onJump}
               title="Also billed"
               {...(jumpTargets?.charges ? { jumpTo: jumpTargets.charges } : {})}
             >
@@ -256,6 +259,7 @@ export function PlanPreviewCard({
 
           {usageCharges.length > 0 ? (
             <PreviewSection
+              onJump={onJump}
               title="Usage"
               {...(jumpTargets?.charges ? { jumpTo: jumpTargets.charges } : {})}
             >
@@ -280,6 +284,7 @@ export function PlanPreviewCard({
 
           {included.length > 0 ? (
             <PreviewSection
+              onJump={onJump}
               title="Included"
               {...(jumpTargets?.included ? { jumpTo: jumpTargets.included } : {})}
             >
@@ -302,6 +307,7 @@ export function PlanPreviewCard({
 
           {credits.length > 0 ? (
             <PreviewSection
+              onJump={onJump}
               title="Credits"
               {...(jumpTargets?.credits ? { jumpTo: jumpTargets.credits } : {})}
             >

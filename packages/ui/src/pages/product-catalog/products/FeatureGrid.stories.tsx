@@ -168,6 +168,9 @@ export const Linkage: Story = {
     // "Used in" is not, so the plan chips are behind the `⋯` menu.
     await expect(canvas.queryByRole('columnheader', { name: 'Used in' })).toBeNull()
     await expect(canvas.queryByText('+1')).toBeNull()
+    const row = canvas.getByRole('row', { name: /API calls/ })
+    await expect(within(row).getByText('3', { exact: true })).toBeVisible()
+    await expect(within(row).queryByText('3 entitlements')).toBeNull()
   },
 }
 

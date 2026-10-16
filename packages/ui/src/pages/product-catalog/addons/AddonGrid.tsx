@@ -152,8 +152,8 @@ export function AddonGrid({
         id: 'kind',
         header: 'Type',
         width: 170,
-        text: (row) => planKindLabel(planKind(row), 'add-on'),
-        cell: (row) => <Tag>{planKindLabel(planKind(row), 'add-on')}</Tag>,
+        text: (row) => planKindLabel(planKind(row), ''),
+        cell: (row) => <Tag>{planKindLabel(planKind(row), '')}</Tag>,
         skeleton: <Skeleton className="h-6 w-28 rounded-full" />,
       },
       {

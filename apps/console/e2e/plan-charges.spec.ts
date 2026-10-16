@@ -16,6 +16,32 @@ test.beforeEach(async ({ context }) => {
 })
 
 test.describe('plan charges, entitlements and credit grants', () => {
+  test('keeps pricing on Information and jumps back to its Overview section', async ({ page }) => {
+    await page.goto('/plans')
+    await page.getByRole('row').nth(1).click()
+    await expect(page.getByRole('tab', { name: 'Information' })).toBeVisible()
+    await page.getByRole('tab', { name: 'Information' }).click()
+    await expect(page).toHaveURL(/[?&]tab=information/)
+    await page.reload()
+    await expect(page.getByText('What customers see', { exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Plan details', exact: true })).toBeVisible()
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    await page.getByRole('button', { name: 'Add charge', exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('radio', { name: /Fixed/ }).click()
+    await dialog.getByRole('button', { name: 'Continue' }).click()
+    await dialog.getByLabel('Amount').fill('49.00')
+    await dialog.getByRole('button', { name: 'Create charge', exact: true }).click()
+    await expect(dialog).toBeHidden()
+    await page.getByRole('tab', { name: 'Information' }).click()
+    await page.getByRole('link', { name: 'Also billed', exact: true }).click()
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await expect(page.getByRole('heading', { name: 'Charges', exact: true })).toBeFocused()
+  })
+
   test('adds then edits a charge in place', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()

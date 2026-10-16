@@ -13,7 +13,7 @@ import {
 import {
   BILLING_PERIOD_SHORT,
   DEFAULT_PLAN_QUERY,
-  PLAN_KIND_LABEL,
+  planKindLabel,
   PLAN_SORT_LABEL,
   PLAN_STATUS_LABEL,
   type Plan,
@@ -239,8 +239,8 @@ export function PlanGrid({
         id: 'kind',
         header: 'Type',
         width: 150,
-        text: (row) => PLAN_KIND_LABEL[planKind(row)],
-        cell: (row) => <Tag>{PLAN_KIND_LABEL[planKind(row)]}</Tag>,
+        text: (row) => planKindLabel(planKind(row), ''),
+        cell: (row) => <Tag>{planKindLabel(planKind(row), '')}</Tag>,
         skeleton: <Skeleton className="h-6 w-28 rounded-full" />,
       },
       {

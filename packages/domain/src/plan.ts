@@ -90,7 +90,7 @@ export function planKindLabel(kind: PlanKind, noun = 'plan'): string {
   if (kind === PlanKind.Empty) return 'No charges yet'
   const shape =
     kind === PlanKind.Hybrid ? 'Hybrid' : kind === PlanKind.Usage ? 'Usage-based' : 'Flat-rate'
-  return `${shape} ${noun}`
+  return noun ? `${shape} ${noun}` : shape
 }
 
 export function planKind(plan: Pick<Plan, 'fixedChargeCount' | 'usageChargeCount'>): PlanKind {

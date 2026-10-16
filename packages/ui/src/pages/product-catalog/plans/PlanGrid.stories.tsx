@@ -57,9 +57,9 @@ export const Populated: Story = {
 
     // Type is read off the charge mix, not stored: all four shapes are here.
     // Two fixtures are flat-rate, hence getAllByText for that one.
-    await expect(canvas.getAllByText('Flat-rate plan').length).toBe(2)
-    await expect(canvas.getByText('Hybrid plan')).toBeInTheDocument()
-    await expect(canvas.getByText('Usage-based plan')).toBeInTheDocument()
+    await expect(canvas.getAllByText('Flat-rate').length).toBe(2)
+    await expect(canvas.getByText('Hybrid')).toBeInTheDocument()
+    await expect(canvas.getByText('Usage-based')).toBeInTheDocument()
     await expect(canvas.getByText('No charges yet')).toBeInTheDocument()
 
     await expect(canvas.getAllByText('Published').length).toBeGreaterThan(0)

@@ -298,16 +298,16 @@ export function FeatureGrid({
         header: 'Entitlements',
         width: 160,
         align: 'center',
-        text: (row) => String(linkage?.get(row.id)?.entitlements ?? 0),
+        text: (row) => String(linkage?.get(row.id)?.entitlements ?? ''),
         cell: (row) => {
           const entry = linkage?.get(row.id)
           if (!entry)
             return linkageLoading ? <Skeleton className="h-6 w-20 rounded-full" /> : <EmDash />
           if (entry.entitlements > 0) {
             return (
-              <Pill tone="success">
-                {entry.entitlements} {entry.entitlements === 1 ? 'entitlement' : 'entitlements'}
-              </Pill>
+              <span className="tabular-nums">
+                {new Intl.NumberFormat(locale).format(entry.entitlements)}
+              </span>
             )
           }
           if (!onCreateEntitlement) return <EmDash />
@@ -341,7 +341,7 @@ export function FeatureGrid({
         cell: (row) => {
           const entry = linkage?.get(row.id)
           if (!entry) return linkageLoading ? <Skeleton className="h-4 w-8" /> : <EmDash />
-          if (entry.subscriptions === undefined) return <EmDash />
+          if (!entry.subscriptions) return <EmDash />
           return <span className="tabular-nums">{entry.subscriptions.toLocaleString()}</span>
         },
         skeleton: <Skeleton className="h-4 w-8" />,
@@ -397,9 +397,7 @@ export function FeatureGrid({
       })
     }
     if (onCreateEntitlement) {
-      // The redesign's layout has no entitlements column, and that column was
-      // the only way to reach this. Moved to the row menu rather than lost,
-      // which is also where the redesign puts its own "Add to plan".
+      // Keep Add entitlement available for features that already have grants.
       actions.push({
         label: 'Add entitlement',
         icon: <PlusIcon aria-hidden className="size-4" />,
