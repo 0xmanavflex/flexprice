@@ -55,10 +55,15 @@ export function ChargeAlertForm({
   const [problem, setProblem] = useState<string | null>(null)
   const severities = ALERT_SEVERITY_ORDER.filter((severity) => initial[severity])
 
-  const setSeverity = (severity: AlertSeverity, patch: Partial<NonNullable<AlertSettingConfig[AlertSeverity]>>) => {
-    const current = config[severity]
-    if (!current) return
-    setConfig({ ...config, [severity]: { ...current, ...patch } })
+  const setSeverity = (
+    severity: AlertSeverity,
+    patch: Partial<NonNullable<AlertSettingConfig[AlertSeverity]>>,
+  ) => {
+    setConfig((current) => {
+      const value = current[severity]
+      if (!value) return current
+      return { ...current, [severity]: { ...value, ...patch } }
+    })
   }
 
   return (

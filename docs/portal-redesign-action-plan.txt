@@ -461,3 +461,33 @@ SHARED CHARGE ACTIONS, DISCOUNTS AND ALERTS — OCTOBER 16
 - Final checks: 30 query tests pass, including alert pagination and coupon scope;
   additional alert-retry browser/a11y story passes (83 unique component checks
   across final runs). Vendor integrity, page matrix and whitespace checks pass.
+
+
+CHARGE SHEET COUPON AND ALERT EDITS — OCTOBER 16
+- Discount Edit is "Change coupon". It uses POST /subscriptions/{id}/modify/execute.
+  A line coupon sends subscription_line_item_id and omits subscription_id (the
+  SDK treats those scopes as mutually exclusive). The new association is added
+  first; each current association on that line is then removed by
+  coupon_association_id. Coupon association CRUD is list/get only, so there is
+  no association patch. Contract-wide Add coupon is unchanged and still sends
+  subscription_id. Choosing the line's only current code does not call the API.
+- Alerts Edit is "Alert settings". It appears only when the fetched setting has
+  an id. The form is seeded from that setting's thresholds and saves with
+  PATCH /alerts/setting/{id} (config only; the watched line cannot change).
+  An update that omits a severity leaves that severity stored. Create-from-empty
+  is not this action. Alert reads now carry settingId, thresholdType and the
+  raw threshold so the form can start from the stored number.
+- The console page wires both: the existing add-coupon mutation, and
+  useUpdateAlertSetting. Invalidation still uses the alert-settings cache prefix.
+- Revert stays unwired. Items 37, 38 and 51 stay blocked: no charge-version list
+  or revert path in SDK 2.1.35 or the published swagger recorded above.
+- Live tenant API calls were not made.
+- Validation: coupon and alert query tests pass (21). Domain, query, UI and
+  console typechecks pass for these edits. Scoped ESLint passes. Storybook plays
+  for Change coupon, Alert settings and the line discount/alert sheet pass in
+  the browser. The alert form accepts a typed threshold (verified by filling 90
+  into the seeded 80).
+- Next: item 35. The sheet already shows the three commitment states, UTC window
+  ranges and Rest of the day. A window's own price (CommitmentBucketRequest.price,
+  where tiers would live) is not on ChargeCommitmentWindow, so window tiers are
+  not rendered yet.

@@ -737,6 +737,18 @@
       "usedBy": [],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
     },
+    "ChargeAlertForm": {
+      "file": "src/pages/contracts/ChargeAlertForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
+      "story": null
+    },
     "ChargeFlags": {
       "file": "src/pages/product-catalog/charges/ChargeFlags.tsx",
       "layer": "surface",
@@ -1132,6 +1144,7 @@
         "CopyIcon"
       ],
       "usedBy": [
+        "ChargeAlertForm",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
@@ -3041,6 +3054,7 @@
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
         "PaymentStatusDialog",
+        "SubscriptionDetailView",
         "TaxDialog",
         "WebhookEndpointDetail"
       ],
@@ -4277,6 +4291,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ChargeAlertForm",
         "ChargeForm",
         "ContractAddChargeForm",
         "ContractIntegrations",
@@ -5890,6 +5905,7 @@
       "layer": "surface",
       "composes": [
         "ActivitySection",
+        "ChargeAlertForm",
         "ChargeSheet",
         "ChargeTable",
         "ConfirmDialog",
@@ -5902,6 +5918,7 @@
         "DetailTable",
         "DetailTabs",
         "EntityLink",
+        "FormDialog",
         "InvoiceStatusBadge",
         "LoadingRows",
         "MetadataCard",

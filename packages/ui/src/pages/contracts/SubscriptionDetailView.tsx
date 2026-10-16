@@ -477,7 +477,7 @@ export function SubscriptionDetailView({
   const editableChargeSections = (charge: Charge): ChargeSection[] => {
     const line = chargeRows.lineOf.get(charge.id)
     if (!canEditCharges || charge.endDate || !line || !canEditLine(line)) return []
-    const sections =
+    const sections: ChargeSection[] =
       line.kind === 'fixed'
         ? [ChargeSection.Price]
         : [ChargeSection.Price, ChargeSection.Commitment]
@@ -1876,4 +1876,35 @@ function PartSection<T>({
     )
   }
   return <Section {...frame}>{children(data)}</Section>
+}
+
+/** The stored thresholds of one charge, ready for the alert settings form. */
+function chargeAlertDraft(
+  alerts: readonly ChargeAlert[],
+): { settingId: string; config: AlertSettingConfig } | null {
+  const settingId = alerts.find((alert) => alert.settingId)?.settingId
+  if (!settingId) return null
+  const config: AlertSettingConfig = {
+    alertEnabled: true,
+    thresholdType:
+      alerts.find((alert) => alert.thresholdType)?.thresholdType === AlertThresholdType.Absolute
+        ? AlertThresholdType.Absolute
+        : AlertThresholdType.Percentage,
+  }
+  for (const alert of alerts) {
+    if (alert.settingId !== settingId || !alert.threshold) continue
+    const severity = alert.level.toLowerCase()
+    if (
+      severity !== AlertSeverity.Info &&
+      severity !== AlertSeverity.Warning &&
+      severity !== AlertSeverity.Critical
+    ) {
+      continue
+    }
+    config[severity] = {
+      condition: alert.condition === 'below' ? AlertCondition.Below : AlertCondition.Above,
+      threshold: alert.threshold,
+    }
+  }
+  return { settingId, config }
 }

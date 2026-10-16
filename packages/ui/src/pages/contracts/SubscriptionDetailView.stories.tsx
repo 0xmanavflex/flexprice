@@ -1649,7 +1649,90 @@ export const LineDiscountsAndAlerts: Story = {
     await expect(dialog.getByText('Warning, below')).toBeInTheDocument()
     await expect(dialog.getByText('80%')).toBeInTheDocument()
     const discount = within(dialog.getByRole('region', { name: 'Discount' }))
-    await expect(discount.queryByRole('button', { name: 'Edit' })).toBeNull()
+    await expect(discount.getByRole('button', { name: 'Edit' })).toBeVisible()
+    const alerts = within(dialog.getByRole('region', { name: 'Alerts' }))
+    await expect(alerts.queryByRole('button', { name: 'Edit' })).toBeNull()
+  },
+}
+
+/** Discount Edit replaces the coupons on that charge and leaves the contract-wide add alone. */
+export const ChangesALineCoupon: Story = {
+  parameters: menuA11y,
+  args: {
+    ...BASE,
+    coupons: ready([
+      { ...COUPONS[0]!, id: 'line', lineItemId: 'line_2', code: 'LINE', active: true },
+      { ...COUPONS[0]!, id: 'line-second', lineItemId: 'line_2', code: 'SECOND', active: true },
+    ]),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(canvas.getByRole('button', { name: 'Discount: open API requests' }))
+    const sheet = within(body.getByRole('dialog'))
+    await userEvent.click(
+      within(sheet.getByRole('region', { name: 'Discount' })).getByRole('button', { name: 'Edit' }),
+    )
+    const dialog = within(await body.findByRole('dialog', { name: 'Change coupon' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Coupon/ }))
+    await userEvent.click(await body.findByRole('option', { name: 'Launch 10% off' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Change coupon' }))
+    await waitFor(() =>
+      expect(args.onAddCoupon).toHaveBeenCalledWith({
+        couponCode: 'LAUNCH10',
+        lineItemId: 'line_2',
+        replaceAssociationIds: ['line', 'line-second'],
+      }),
+    )
+  },
+}
+
+/** Alerts Edit updates the existing setting. It stays hidden until the setting id is known. */
+export const EditsChargeAlerts: Story = {
+  args: {
+    ...BASE,
+    onSaveChargeAlert: fn(async () => undefined),
+    chargeAlerts: ready(
+      new Map([
+        [
+          'line_2',
+          [
+            {
+              level: 'Warning',
+              condition: 'below',
+              value: '80%',
+              settingId: 'set_1',
+              thresholdType: 'percentage' as const,
+              threshold: '80',
+            },
+          ],
+        ],
+      ]),
+    ),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(canvas.getByRole('button', { name: 'Alerts: open API requests' }))
+    const sheet = within(body.getByRole('dialog'))
+    await userEvent.click(
+      within(sheet.getByRole('region', { name: 'Alerts' })).getByRole('button', { name: 'Edit' }),
+    )
+    const dialog = within(await body.findByRole('dialog', { name: 'Alert settings' }))
+    await expect(dialog.getByRole('textbox', { name: 'Threshold' })).toHaveValue('80')
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Warning' }))
+    await userEvent.click(await body.findByRole('option', { name: 'Rises above' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save alerts' }))
+    await waitFor(() =>
+      expect(args.onSaveChargeAlert).toHaveBeenCalledWith({
+        settingId: 'set_1',
+        config: {
+          alertEnabled: true,
+          thresholdType: 'percentage',
+          warning: { condition: 'above', threshold: '80' },
+        },
+      }),
+    )
   },
 }
 
