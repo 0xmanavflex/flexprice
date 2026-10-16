@@ -173,10 +173,14 @@ function Box({
  * range is built from the one before rather than stored.
  */
 function TierRows({ charge }: { charge: Charge }) {
+  return <TierList tiers={charge.tiers} />
+}
+
+function TierList({ tiers }: { tiers: Charge['tiers'] }) {
   let floor = 0
   return (
     <ul className="divide-border/60 divide-y rounded-md border text-[13px]">
-      {charge.tiers.map((tier, index) => {
+      {tiers.map((tier, index) => {
         const from = floor
         floor = tier.upTo ?? floor
         return (
@@ -251,12 +255,14 @@ function CommitmentBody({
                   {window.value} every {every}
                 </span>
               </div>
+              {window.tiers && window.tiers.length > 0 ? <TierList tiers={window.tiers} /> : null}
             </li>
           ))}
           <li className="text-muted-foreground flex items-baseline justify-between gap-3 rounded-md border border-dashed px-3 py-2 text-xs">
             <span>Rest of the day</span>
             <span className="tabular-nums">
               {commitment.value} every {every}
+              {charge.displayAmount ? ` · ${charge.displayAmount}` : ''}
             </span>
           </li>
         </ul>

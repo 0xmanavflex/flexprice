@@ -382,6 +382,47 @@ describe('toPendingSchedules', () => {
     expect(toSubscriptionLine({ id: 'l2' }).pricing).toBeNull()
   })
 
+  it('reads a windowed commitment’s UTC windows', () => {
+    const line = toSubscriptionLine({
+      priceType: 'USAGE',
+      commitmentType: 'quantity',
+      commitmentQuantity: '10',
+      commitmentWindowed: true,
+      commitmentDuration: 'MONTHLY',
+      price: { billingModel: 'FLAT_FEE', amount: '0.02' },
+      commitmentTimeBuckets: [
+        {
+          id: 'morning',
+          commitmentValue: '30',
+          start: { hour: 0, minute: 0 },
+          end: { hour: 8, minute: 30 },
+          overageFactor: 1.5,
+          trueUpEnabled: false,
+          priceId: 'price_window',
+        },
+      ],
+    })
+    expect(line.pricing?.terms.commitment).toEqual({
+      kind: 'quantity',
+      value: '10',
+      windowed: true,
+      overageFactor: '1',
+      trueUp: false,
+      duration: 'MONTHLY',
+      windows: [
+        {
+          id: 'morning',
+          start: '00:00',
+          end: '08:30',
+          value: '30',
+          overageFactor: '1.5',
+          trueUp: false,
+          priceId: 'price_window',
+        },
+      ],
+    })
+  })
+
   it('reads a custom price unit’s amounts, not the currency ones', () => {
     const line = toSubscriptionLine({
       priceType: 'USAGE',

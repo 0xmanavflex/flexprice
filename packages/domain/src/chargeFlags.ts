@@ -1,4 +1,4 @@
-import type { BillingPeriod } from './price'
+import type { BillingPeriod, Tier } from './price'
 import type { CommitmentType } from './subscription'
 
 /**
@@ -45,6 +45,13 @@ export interface ChargeCommitmentWindow {
   value: string
   overageFactor: number
   trueUp: boolean
+  /**
+   * The window's own price bands, when the line included them.
+   *
+   * `TimeOfDayBucket` returns `priceId` and not the price, so this is empty
+   * until a response embeds the bands. An id is not rendered as a tier.
+   */
+  tiers?: Tier[]
 }
 
 /**

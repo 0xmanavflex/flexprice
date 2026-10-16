@@ -160,6 +160,10 @@ export const CommitmentWindowed: Story = {
             value: '30 units',
             overageFactor: 1,
             trueUp: true,
+            tiers: [
+              { upTo: 30, unitAmount: '$0.0800' },
+              { upTo: null, unitAmount: '$0.0600' },
+            ],
           },
           {
             id: 'w2',
@@ -177,7 +181,11 @@ export const CommitmentWindowed: Story = {
     const screen = within(canvasElement.ownerDocument.body)
     await expect(await screen.findByText('00:00 – 08:00 UTC')).toBeInTheDocument()
     await expect(screen.getByText('08:00 – 20:00 UTC')).toBeInTheDocument()
-    await expect(screen.getByText('Rest of the day')).toBeInTheDocument()
+    const commitment = within(screen.getByRole('region', { name: 'Commitment' }))
+    await expect(commitment.getByText('Rest of the day')).toBeInTheDocument()
+    await expect(commitment.getByText('10 units every month · From $0.045')).toBeInTheDocument()
+    await expect(commitment.getByText('0 – 30')).toBeInTheDocument()
+    await expect(commitment.getByText('$0.0800')).toBeInTheDocument()
     await expect(screen.getByText('Per month')).toBeInTheDocument()
   },
 }

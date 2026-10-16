@@ -256,14 +256,18 @@ function chargesOfLines(lines: SubscriptionLine[]): {
               type: commitment.kind,
               // The figure as the line states it; the unit is the charge's own.
               value: commitment.value,
-              duration: null,
+              duration: commitment.duration ?? null,
               overageFactor: Number(commitment.overageFactor) || 1,
               trueUp: commitment.trueUp,
               windowed: commitment.windowed,
-              // `commitment_time_buckets` is not on the line read model yet, so
-              // a windowed commitment reads as "every bucket, all day" — which
-              // is what it is until the windows are read, not a guess at them.
-              windows: [],
+              windows: (commitment.windows ?? []).map((window) => ({
+                id: window.id,
+                start: window.start,
+                end: window.end,
+                value: window.value,
+                overageFactor: Number(window.overageFactor) || 1,
+                trueUp: window.trueUp,
+              })),
             },
           }
         : {}),

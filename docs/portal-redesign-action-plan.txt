@@ -99,7 +99,7 @@ Implement this before completing pages that consume the charges table.
     plan price in grey without strikethrough. Fix the stated prototype quirks:
     derive Discount flag and section from the same coupon data and align section
     order with flag order: Price, Discount, Commitment, Alerts, History.
-[ ] 35. Support commitment states: per billing period/duration; every minute/hour
+[IMPLEMENTED; window price bands pending an embedded price] 35. Support commitment states: per billing period/duration; every minute/hour
     all day; and minute/hour windows with their own commitment and tiers.
     For windows show UTC time range, commitment, tiers and Rest of the day;
     do not add a 24-hour bar.
@@ -487,7 +487,21 @@ CHARGE SHEET COUPON AND ALERT EDITS — OCTOBER 16
   for Change coupon, Alert settings and the line discount/alert sheet pass in
   the browser. The alert form accepts a typed threshold (verified by filling 90
   into the seeded 80).
-- Next: item 35. The sheet already shows the three commitment states, UTC window
-  ranges and Rest of the day. A window's own price (CommitmentBucketRequest.price,
-  where tiers would live) is not on ChargeCommitmentWindow, so window tiers are
-  not rendered yet.
+- Next: item 35 was the following gap. Window price bands still need the price
+  body; TimeOfDayBucket returns priceId only.
+
+
+COMMITMENT WINDOWS — OCTOBER 16
+- A line item's commitment_time_buckets are now read. Each bucket becomes a UTC
+  window (HH:MM from hour and minute) with its commitment, overage and true-up.
+  commitment_duration is kept when the line sets one. Empty buckets stay "every
+  bucket, all day".
+- The sheet lists each window's range and commitment, then its tiers when the
+  window carries bands, then Rest of the day with the line commitment and the
+  charge's displayed price. No 24-hour bar.
+- TimeOfDayBucket.priceId is an id, not a price. Tiers render when a window has
+  bands; the line read does not include them, so a live window shows its
+  commitment without invented tiers. No extra price request was added.
+- Validation: subscription detail mapper tests pass (29), including a UTC window
+  at 00:00–08:30. The windowed charge-sheet story expects the range, the tier
+  band, and Rest of the day with the charge price.
