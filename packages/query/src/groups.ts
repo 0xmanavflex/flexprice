@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  type Charge,
   type CreateGroup,
   type Group,
   type GroupQuery,
@@ -9,6 +10,7 @@ import {
   GroupStatus,
   GROUP_FILTERS,
 } from '@fp/domain'
+import { toCharge, type ChargeWire } from './prices'
 import { queryKeys } from './keys'
 import { statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
@@ -170,6 +172,7 @@ export function useDeleteGroup() {
 
 /** One thing a group holds, named for the members table. */
 export interface GroupMemberRow {
+  charge?: Charge
   id: string
   name: string
   detail: string
@@ -215,18 +218,13 @@ export function useGroupMembers(group: Group | undefined) {
             client.prices.queryPrice({ priceIds: ids, limit: ids.length } as never, options),
           signal,
         )
-        for (const item of (response.items ?? []) as Array<{
-          id?: string
-          displayName?: string
-          lookupKey?: string
-          type?: string
-          meter?: { name?: string }
-        }>) {
+        for (const item of (response.items ?? []) as ChargeWire[]) {
           if (!item.id) continue
           found.set(item.id, {
             id: item.id,
             name: item.displayName || item.meter?.name || item.lookupKey || item.id,
             detail: item.type === 'USAGE' ? 'Usage price' : 'Fixed price',
+            charge: toCharge(item),
           })
         }
       }

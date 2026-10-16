@@ -289,7 +289,7 @@ export const Views: Story = {
     // The full table is the whole body of a tab already called Charges, so
     // its heading is there for assistive tech and not said twice on screen;
     // the views live in the toolbar instead, beside the search.
-    await expect(canvas.getByRole('heading', { name: 'Charges' })).toHaveClass('sr-only')
+    await expect(canvas.getByRole('heading', { name: 'Charges' })).not.toHaveClass('sr-only')
     await expect(canvas.queryByText('Legacy seat fee')).not.toBeInTheDocument()
 
     await userEvent.click(canvas.getByRole('button', { name: 'Ended 1' }))

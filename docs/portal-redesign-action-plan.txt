@@ -85,10 +85,10 @@ PHASE 3 — SHARED CHARGES SYSTEM
 Dependencies: shared components; validate available API contracts early.
 Implement this before completing pages that consume the charges table.
 
-[ ] 30. Build one charges table for contracts, plans, features, add-ons and groups.
+[IMPLEMENTED; visual review pending] 30. Build one charges table for contracts, plans, features, add-ons and groups.
     Contract Overview shows changed charges; Charges tab shows all with
     Active / Changed / Ended filtering. Feature rows navigate to their plan.
-[ ] 31. Render Charge / Price / Flags, optional Quantity on wide tables,
+[IN PROGRESS] 31. Render Charge / Price / Flags, optional Quantity on wide tables,
     short grey model description and tier count. No row expansion or nested table.
 [ ] 32. Render flags in this order: Price changed, Discount, Commitment, Alerts,
     History. Neutral chips, coloured icons, no values in labels. Provisional narrow
@@ -103,7 +103,7 @@ Implement this before completing pages that consume the charges table.
     all day; and minute/hour windows with their own commitment and tiers.
     For windows show UTC time range, commitment, tiers and Rest of the day;
     do not add a 24-hour bar.
-[ ] 36. Display versions newest first with Start, End, Last updated and author;
+[IMPLEMENTED; API coverage pending] 36. Display versions newest first with Start, End, Last updated and author;
     highlight the current version.
 [ ] 37. Offer Revert only on the immediately previous version with confirmation.
     Verify success/error handling and data refresh after a successful revert.
@@ -121,7 +121,7 @@ Dependencies: Phases 1 and 3.
     the complete Charges tab.
 [ ] 22. Move Commitments, Entitlements, Credit grants, Add-ons and Coupons
     into consistent sub-table frames below the contract overview content.
-[ ] 23. Apply Activity → Metadata → Related to the contract sidebar.
+[IMPLEMENTED; visual review pending] 23. Apply Activity → Metadata → Related to the contract sidebar.
 [ ] 24. Plan: Overview / Information tabs; stack Charges, Entitlements and
     Credit grants on Overview. Information contains plan details and
     Metadata/Related side by side. Update Type pill when charges change.
@@ -130,7 +130,7 @@ Dependencies: Phases 1 and 3.
 [ ] 26. Move Plan Link integration into the overflow menu.
 [ ] 27. Feature: Overview / Information tabs; show charges by billing plan
     and entitlements on Overview; present the create form read-only on Information.
-[ ] 28. Feature sidebar: Send a test event with Copy cURL and Metadata;
+[IMPLEMENTED; visual review pending] 28. Feature sidebar: Send a test event with Copy cURL and Metadata;
     remove usage chart. Verify the existing test-event workflow still works.
 [ ] 29. Customer: Overview, Invoices, Wallet, Analytics, Events, Information;
     remove Tax tab while identifying the destination of existing tax functionality.
@@ -280,3 +280,36 @@ FINAL CHECKS FOR HTML FOLLOW-UP
 - Visual baselines remain pending Linux verification; no snapshots were rewritten.
 - Next: finish remaining detail rails/integration mapping contracts, then shared charges
   and the outstanding list fields with verified backend data.
+
+DETAIL RAIL AND SHARED CHARGES FOLLOW-UP
+- Credit memo Activity/Related rail implemented from existing lifecycle timestamps and links.
+  Metadata is not in the current credit-memo model; full document layout remains pending.
+- Plan charges now use shared ChargeTable and ChargeSheet, joining contracts/add-ons/catalog consumers.
+  Feature/group migration is still pending; no claim that all consumers are migrated.
+- Charge/Price/Flags layout replaces Plan's bespoke columns and inline tier lists.
+  Tier details open in the shared sheet; known quantities appear in wide tables.
+- Stable table controls across empty/full states; formatted Plan prices preserved in sheet.
+- Version history sorted newest first with end and last-updated dates; author remains when supplied.
+  Revert and backend version endpoint integration remain pending (37/38/51).
+- Validation: 91 unique affected Storybook tests passed; 6 credit-memo/contract journeys passed.
+  TypeScript, scoped lint, build, vendor integrity and whitespace checks passed.
+- Targeted visuals: 2 passed / 3 baseline mismatches; received Plan/contract screenshots reviewed.
+  Linux baseline validation remains pending, no baselines changed.
+- Existing staged changes retained. No commit, push or deployment performed in this batch.
+
+FEATURE AND GROUP CHARGES FOLLOW-UP
+- Feature Overview now uses ChargeTable with Plan / add-on, Price and Flags;
+  row selection navigates to its real plan, add-on or cost sheet. Parent status
+  remains available as a filter. Loading/error states and retry are preserved.
+- Price groups now preserve the mapped Charge from the price API and render the
+  shared table/sheet. Missing members remain listed separately by ID; failures
+  show an error rather than an empty group. Feature groups keep their member table.
+- Confirmed existing contract rail order Activity → Metadata → Related and Feature
+  exception Send a test event → Metadata. Credit memo rail added in this batch
+  remains Activity → Related because its domain/API exposes no metadata.
+- Validation: 31 Feature/shared-table stories, 7 group stories, 18 group/price
+  query tests; TypeScript, scoped lint, production build, vendor and matrix checks.
+- Feature route screenshot reviewed: 2% mismatch from existing baseline; no
+  baseline rewritten. Linux visual verification remains pending.
+- Remaining: credit memo full document layout/metadata API; version/revert API
+  coverage; outstanding layout and integration interactions from the main list.

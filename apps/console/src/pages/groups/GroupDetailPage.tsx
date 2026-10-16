@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
+import { GROUP_ENTITY_TYPE_LABEL, GroupEntityType } from '@fp/domain'
 import { useDeleteGroup, useGroup, useGroupMembers } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView, Pill } from '@fp/ui/pages'
 import { ConfirmDialog, EditableCard } from '@fp/ui/compositions'
 import { LayersIcon, Trash2Icon } from '@fp/ui/icons'
+import { subTab } from '../shared/subTab'
 import { detailGate } from '../shared/detailGate'
 
 export interface GroupDetailPageProps {
@@ -68,7 +69,12 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           label: noun,
           count: data.entityCount,
           content: (
-            <GroupMembersView kind={kind} {...(members.data ? { members: members.data } : {})} />
+            <GroupMembersView
+              kind={kind}
+              priceGroup={data.entityType === GroupEntityType.Price}
+              {...subTab(members, kind)}
+              {...(members.data ? { members: members.data } : {})}
+            />
           ),
         },
         {

@@ -29,6 +29,24 @@ test.describe('credit memos', () => {
     await expect(notes.rows().first()).toContainText('INV-1000')
   })
 
+  test('opens a memo and recovers from a missing Related invoice', async ({ page }) => {
+    await page.goto('/credit-memos')
+    const row = list(page).rows().first()
+    await expect(row).toBeVisible()
+    await row.click()
+    await expect(page).toHaveURL(/\/credit-memos\/[^/?]+/)
+    const rail = page.getByRole('complementary', { name: 'Credit memo details' })
+    await expect(rail.getByRole('heading', { name: 'Activity', exact: true })).toBeVisible()
+    const related = rail.getByRole('region', { name: 'Related', exact: true })
+    await related.getByRole('button').first().click()
+    await expect(page).toHaveURL(/\/invoices\/[^/?]+/)
+    // This fixture's invoice is missing: the link still resolves through the normal detail gate.
+    await expect(page.getByRole('alert')).toContainText('Invoice not found')
+    await page.getByRole('button', { name: 'Back to invoices' }).click()
+    await expect(page).toHaveURL(/\/invoices$/)
+    await expect(page.getByRole('table')).toBeVisible()
+  })
+
   test('puts the search in the URL and survives a reload', async ({ page }) => {
     const notes = list(page)
     await page.goto('/credit-memos')

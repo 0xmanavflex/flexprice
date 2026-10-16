@@ -738,9 +738,9 @@ function currencyFormat(currency: string): (value: number) => string {
  */
 function RevenueBreakdown({
   revenue,
-  onViewRevenue,
 }: {
   revenue: RevenuePanel
+  /** Wired to "View revenue" on Top customers. That panel is commented out. */
   onViewRevenue: () => void
 }) {
   const ready = revenue.status === 'ready'
@@ -763,14 +763,15 @@ function RevenueBreakdown({
           },
         ]
       : []
-  const top: SegmentMeterRow[] = ready
-    ? revenue.topCustomers.map((row) => ({
-        id: row.id || row.name,
-        label: row.name,
-        value: Number(row.total.amount),
-        display: formatMoney(row.total),
-      }))
-    : []
+  // Top customers by revenue is parked. Restore the panel below and this list.
+  // const top: SegmentMeterRow[] = ready
+  //   ? revenue.topCustomers.map((row) => ({
+  //       id: row.id || row.name,
+  //       label: row.name,
+  //       value: Number(row.total.amount),
+  //       display: formatMoney(row.total),
+  //     }))
+  //   : []
 
   const body = (rows: SegmentMeterRow[], label: string, empty: string) =>
     revenue.status === 'loading' ? (
@@ -781,33 +782,14 @@ function RevenueBreakdown({
       <SegmentMeter rows={rows} label={label} emptyMessage={empty} />
     )
 
-  // Invoiced revenue carries no fixed/usage split; then the row is top customers alone.
+  // Invoiced revenue carries no fixed/usage split. With top customers parked,
+  // that case has nothing to draw here.
   const hasMix = revenue.fixed !== null && revenue.usage !== null
+  if (!hasMix) return null
 
   return (
-    <div className={cn('grid grid-cols-1 gap-5', hasMix && 'lg:grid-cols-2')}>
-      {hasMix ? (
-        <Panel title="Revenue mix">
-          <DataRegion
-            state={{
-              refreshing: Boolean(revenue.refreshing),
-              provisional: Boolean(revenue.provisional),
-            }}
-          >
-            <div className="flex flex-1 flex-col justify-center p-6">
-              {body(mix, 'Revenue by type', 'Nothing was billed in this period.')}
-            </div>
-          </DataRegion>
-        </Panel>
-      ) : null}
-      <Panel
-        title="Top customers by revenue"
-        action={
-          <Button variant="outline" size="sm" onClick={onViewRevenue}>
-            View revenue
-          </Button>
-        }
-      >
+    <div className="grid grid-cols-1 gap-5">
+      <Panel title="Revenue mix">
         <DataRegion
           state={{
             refreshing: Boolean(revenue.refreshing),
@@ -815,10 +797,34 @@ function RevenueBreakdown({
           }}
         >
           <div className="flex flex-1 flex-col justify-center p-6">
-            {body(top, 'Top customers by revenue', 'No customer was billed in this period.')}
+            {body(mix, 'Revenue by type', 'Nothing was billed in this period.')}
           </div>
         </DataRegion>
       </Panel>
+      {/*
+       * Top customers by revenue is parked. The list (`top`) and the
+       * "View revenue" action (`onViewRevenue`) come back with it.
+       *
+       * <Panel
+       *   title="Top customers by revenue"
+       *   action={
+       *     <Button variant="outline" size="sm" onClick={onViewRevenue}>
+       *       View revenue
+       *     </Button>
+       *   }
+       * >
+       *   <DataRegion
+       *     state={{
+       *       refreshing: Boolean(revenue.refreshing),
+       *       provisional: Boolean(revenue.provisional),
+       *     }}
+       *   >
+       *     <div className="flex flex-1 flex-col justify-center p-6">
+       *       {body(top, 'Top customers by revenue', 'No customer was billed in this period.')}
+       *     </div>
+       *   </DataRegion>
+       * </Panel>
+       */}
     </div>
   )
 }

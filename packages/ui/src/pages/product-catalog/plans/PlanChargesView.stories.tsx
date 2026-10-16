@@ -107,7 +107,7 @@ export const Loading: Story = {
   args: { loading: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Loading')).toBeInTheDocument()
+    await expect(canvas.getByText('Loading charges')).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: 'Add charge' })).toBeDisabled()
   },
 }
@@ -168,21 +168,15 @@ export const TerminatesACharge: Story = {
   },
 }
 
-/**
- * A tiered charge shows its bands.
- *
- * The summary line ("3 tiers, from …") was all the row had, so checking a
- * tiered price meant opening the edit form for every one in turn. The bands
- * are few and short; they belong on the row.
- */
-export const TieredChargeShowsItsBands: Story = {
+/** Tier details move from inline lists into the shared charge sheet. */
+export const TieredChargeOpensSheet: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const tiered = (await canvas.findAllByText(/tiers, from/i))[0] as HTMLElement
-    const cell = tiered.closest('td') as HTMLElement
-    const bands = within(cell).getAllByRole('listitem')
-    await expect(bands.length).toBeGreaterThan(1)
-    // The last band is the unbounded one, written with a +.
-    await expect(bands[bands.length - 1]?.textContent).toMatch(/\+/)
+    const price = (await canvas.findAllByText(/tiers, from/i))[0] as HTMLElement
+    const row = price.closest('tr')!
+    await expect(within(row).queryAllByRole('listitem')).toHaveLength(0)
+    await userEvent.click(price)
+    const sheet = await screen.findByRole('dialog')
+    await expect(within(sheet).getByText('Price', { exact: true })).toBeVisible()
   },
 }

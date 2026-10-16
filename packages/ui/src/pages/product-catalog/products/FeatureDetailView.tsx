@@ -1,22 +1,16 @@
 import { toast } from 'sonner'
 import {
   type AggregationType,
-  BILLING_MODEL_LABEL,
-  BILLING_PERIOD_LABEL,
-  BillingModel,
-  type BillingPeriod,
   type Charge,
   type Entitlement,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   FeatureType,
-  InvoiceCadence,
   needsAggregationTarget,
-  TierMode,
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon, PlusIcon } from '@ui/icons'
+import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
 import { DetailBreadcrumb } from '../../../compositions/detail/DetailShell'
@@ -32,6 +26,7 @@ import {
   type DetailMenuItem,
 } from '../../../compositions/detail/DetailKit'
 import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../../shared/cells'
+import { ChargeTable } from '../charges/ChargeTable'
 import { DetailTable } from '../../shared/DetailTable'
 
 /**
@@ -85,6 +80,7 @@ export interface FeatureDetailViewProps {
   onRetryEntitlements?: (() => void) | undefined
   /** Charges tab CTA: price this feature on a plan. Omitted, no button is shown. */
   onAddPlan?: () => void
+  onOpenChargeParent?: (charge: Charge) => void
   /** Saves the whole metadata map. Omitted, the Metadata section is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
 }
@@ -140,36 +136,6 @@ function statusLabel(status: string): string {
   return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown'
 }
 
-/** "Flat fee", "Volume tiered", "Slab tiered", "Package". */
-function modelLabel(charge: Charge): string {
-  if (charge.billingModel === BillingModel.Tiered) {
-    return charge.tierMode === TierMode.Slab ? 'Slab tiered' : 'Volume tiered'
-  }
-  return BILLING_MODEL_LABEL[charge.billingModel]
-}
-
-/** "Monthly, in arrears". */
-function billedLabel(charge: Charge): string {
-  const period = BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? charge.billingPeriod
-  return `${period}, ${charge.invoiceCadence === InvoiceCadence.Advance ? 'in advance' : 'in arrears'}`
-}
-
-function priceLabel(charge: Charge): string {
-  const display = charge.displayAmount || charge.amount
-  switch (charge.billingModel) {
-    case BillingModel.FlatFee:
-      return display || '—'
-    case BillingModel.Package:
-      return `${display || '0'} per ${charge.transformQuantity?.divideBy?.toLocaleString() ?? '?'}`
-    case BillingModel.Tiered: {
-      const count = charge.tiers.length
-      const first = charge.tiers[0]?.unitAmount
-      const from = first ? `, from ${first}` : ''
-      return `${count} tier${count === 1 ? '' : 's'}${from}`
-    }
-  }
-}
-
 function allowanceOf(entitlement: Entitlement): string {
   if (entitlement.featureType === FeatureType.Metered) {
     return entitlement.usageLimit == null ? 'Unlimited' : entitlement.usageLimit.toLocaleString()
@@ -202,6 +168,7 @@ export function FeatureDetailView({
   entitlementsErrorKind,
   onRetryEntitlements,
   onAddPlan,
+  onOpenChargeParent,
   onSaveMetadata,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
@@ -279,6 +246,7 @@ export function FeatureDetailView({
           chargesErrorKind={chargesErrorKind}
           onRetryCharges={onRetryCharges}
           {...(onAddPlan ? { onAddPlan } : {})}
+          {...(onOpenChargeParent ? { onOpenChargeParent } : {})}
           entitlements={entitlements}
           entitlementsLoading={entitlementsLoading}
           entitlementsError={entitlementsError}
@@ -290,139 +258,6 @@ export function FeatureDetailView({
         <InformationTab feature={feature} isMetered={isMetered} />
       )}
     </div>
-  )
-}
-
-/** A tab's create button      ) : null}
-    </div>
-  )
-}
-
-/** A tab's create button: the same small outline button in the empty state and the toolbar. */
-function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <Button variant="outline" size="sm" onClick={onClick}>
-      <PlusIcon aria-hidden />
-      {label}
-    </Button>
-  )
-}
-
-function ChargesSection({
-  rows,
-  isLoading,
-  error,
-  errorKind,
-  onRetry,
-  onAdd,
-}: {
-  rows: FeatureChargeLink[]
-  isLoading: boolean
-  error: string | null
-  errorKind?: ErrorKind | undefined
-  onRetry?: (() => void) | undefined
-  onAdd?: () => void
-}) {
-  const add = onAdd ? <AddButton label="Add plan" onClick={onAdd} /> : undefined
-  if (rows.length === 0) {
-    return (
-      <Section
-        title="Charges"
-        description="Every plan and add-on that bills for this feature"
-        table
-        showTitle
-        action={add}
-      >
-        <SubTabState
-          hasData={false}
-          isLoading={isLoading}
-          error={error}
-          errorKind={errorKind}
-          onRetry={onRetry}
-          columns={5}
-          loadingLabel="Loading charges"
-          empty={{
-            scene: 'catalog',
-            title: 'No charges yet',
-            description: 'No plan or add-on prices this feature yet.',
-          }}
-        >
-          {null}
-        </SubTabState>
-      </Section>
-    )
-  }
-  return (
-    <Section
-      table
-      showTitle
-      action={add}
-      title="Charges"
-      description="Every plan and add-on that bills for this feature"
-    >
-      <DetailTable
-        compact
-        label="Charges"
-        noun="charges"
-        rows={rows}
-        getRowId={(row) => row.charge.id}
-        facets={[
-          { id: 'model', label: 'Billing model', value: (row) => modelLabel(row.charge) },
-          { id: 'status', label: 'Plan status', value: (row) => statusLabel(row.parentStatus) },
-        ]}
-        searchText={(row) =>
-          [
-            row.parentName,
-            modelLabel(row.charge),
-            billedLabel(row.charge),
-            priceLabel(row.charge),
-            statusLabel(row.parentStatus),
-          ].join(' ')
-        }
-        columns={[
-          {
-            key: 'plan',
-            header: 'Plan / add-on',
-            width: 200,
-            sortBy: (row) => row.parentName,
-            text: (row) => row.parentName,
-            cell: (row) => <span className="font-medium">{row.parentName}</span>,
-          },
-          {
-            key: 'model',
-            header: 'Billing model',
-            width: 130,
-            sortBy: (row) => modelLabel(row.charge),
-            text: (row) => modelLabel(row.charge),
-            cell: (row) => muted(modelLabel(row.charge)),
-          },
-          {
-            key: 'billed',
-            header: 'Billed',
-            width: 150,
-            sortBy: (row) => billedLabel(row.charge),
-            text: (row) => billedLabel(row.charge),
-            cell: (row) => muted(billedLabel(row.charge)),
-          },
-          {
-            key: 'price',
-            header: 'Price',
-            width: 130,
-            sortBy: (row) => Number(row.charge.amount) || 0,
-            text: (row) => priceLabel(row.charge),
-            cell: (row) => <span className="tabular-nums">{priceLabel(row.charge)}</span>,
-          },
-          {
-            key: 'status',
-            header: 'Plan status',
-            width: 110,
-            sortBy: (row) => statusLabel(row.parentStatus),
-            text: (row) => statusLabel(row.parentStatus),
-            cell: (row) => <Status value={statusLabel(row.parentStatus)} />,
-          },
-        ]}
-      />
-    </Section>
   )
 }
 
@@ -548,6 +383,7 @@ function OverviewTab({
   chargesErrorKind,
   onRetryCharges,
   onAddPlan,
+  onOpenChargeParent,
   entitlements,
   entitlementsLoading,
   entitlementsError,
@@ -564,6 +400,7 @@ function OverviewTab({
   chargesErrorKind?: ErrorKind | undefined
   onRetryCharges?: (() => void) | undefined
   onAddPlan?: (() => void) | undefined
+  onOpenChargeParent?: ((charge: Charge) => void) | undefined
   entitlements: FeatureEntitlementLink[]
   entitlementsLoading: boolean
   entitlementsError: string | null
@@ -575,8 +412,29 @@ function OverviewTab({
     <div className="grid gap-5 xl:grid-cols-3">
       <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
         {isMetered ? (
-          <ChargesSection
-            rows={charges}
+          <ChargeTable
+            charges={
+              chargesLoading || chargesError
+                ? []
+                : charges.map(({ charge, parentName }) => ({ ...charge, displayName: parentName }))
+            }
+            chargeColumnLabel="Plan / add-on"
+            description="Every plan and add-on that bills for this feature"
+            emptyDescription="No plan or add-on prices this feature yet."
+            layout="narrow"
+            hideRowActions
+            addLabel="Add plan"
+            facets={[
+              {
+                id: 'parent-status',
+                label: 'Plan status',
+                value: (charge) =>
+                  statusLabel(
+                    charges.find((row) => row.charge.id === charge.id)?.parentStatus ?? '',
+                  ),
+              },
+            ]}
+            {...(onOpenChargeParent ? { onRowClick: onOpenChargeParent } : {})}
             isLoading={chargesLoading}
             error={chargesError}
             errorKind={chargesErrorKind}

@@ -64,6 +64,7 @@ export interface ChargeSheetProps {
   /** Wires each box's "Edit". A box with no handler shows no button. */
   onEdit?: ((section: ChargeSection) => void) | undefined
   locale?: string
+  priceLabel?: string | undefined
 }
 
 function modelLabel(charge: Charge): string {
@@ -270,6 +271,7 @@ export function ChargeSheet({
   onClose,
   onEdit,
   locale,
+  priceLabel,
 }: ChargeSheetProps) {
   const body = useRef<HTMLDivElement>(null)
 
@@ -289,20 +291,29 @@ export function ChargeSheet({
   }
 
   const name = charge.displayName || charge.meterName || 'Charge'
-  const price = charge.displayAmount || charge.amount || '—'
+  const price = priceLabel || charge.displayAmount || charge.amount || '—'
   const dates = new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   })
-  const versions = detail?.versions ?? []
+  const versions = [...(detail?.versions ?? [])].sort(
+    (a, b) =>
+      (b.startDate?.getTime() ?? b.updatedAt?.getTime() ?? 0) -
+      (a.startDate?.getTime() ?? a.updatedAt?.getTime() ?? 0),
+  )
 
   const history: ActivityLogEntry[] = versions.map((version, index) => ({
     id: version.id,
     title: version.price,
     at: version.startDate ? dates.format(version.startDate) : '—',
     ...(index === 0 ? { record: 'Current' } : {}),
-    summary: version.endDate ? `until ${dates.format(version.endDate)}` : 'still billing',
+    summary: [
+      version.endDate ? `Ends ${dates.format(version.endDate)}` : 'No end date',
+      version.updatedAt ? `Last updated ${dates.format(version.updatedAt)}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · '),
     ...(version.actor ? { by: version.actor } : {}),
   }))
 

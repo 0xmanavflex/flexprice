@@ -51,7 +51,7 @@ export const ChargeTableProvenance = provenance({
     'pages/shared/DetailTable',
     'ui/button',
   ],
-  note: 'Flush charges section with flags, shared by plan, add-on, contract and cost-sheet pages.',
+  note: 'Flush charges section with flags, shared by plan, feature, group, add-on, contract and cost-sheet pages.',
 })
 
 /** Which charges the table is showing. */
@@ -95,6 +95,8 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   source?: (charge: Charge) => string | undefined
   /** Extra facet filters beside the billing-model one, e.g. Source. */
   facets?: Array<{ id: string; label: string; value: (charge: Charge) => string }>
+  priceLabel?: (charge: Charge) => string
+  hideRowActions?: boolean
   onAdd?: () => void
   /** The add button's wording; a contract calls it "Manage pricing". */
   addLabel?: string
@@ -120,6 +122,8 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   locale?: string
   /** Section heading; defaults to "Charges". */
   title?: string
+  description?: string
+  chargeColumnLabel?: string
   /**
    * The sentence shown when there are no charges, in the caller's own noun.
    *
@@ -216,6 +220,8 @@ export function ChargeTable({
   facets,
   onAdd,
   addLabel = 'Add charges',
+  priceLabel = valueOf,
+  hideRowActions = false,
   onEdit,
   canEdit,
   onTerminate,
@@ -227,6 +233,8 @@ export function ChargeTable({
   emptyDescription,
   locale,
   title = 'Charges',
+  description: sectionDescription,
+  chargeColumnLabel = 'Charge',
   isLoading,
   error,
   errorKind,
@@ -238,7 +246,7 @@ export function ChargeTable({
   // The sheet the rows and flags open, unless the page took the click instead.
   const [open, setOpen] = useState<{ charge: Charge; section?: ChargeSection } | null>(null)
   const narrow = layout === 'narrow'
-  const hasActions = Boolean(onEdit || onTerminate || !onRowClick)
+  const hasActions = !hideRowActions && Boolean(onEdit || onTerminate || !onRowClick)
 
   const openAt = (charge: Charge, section?: ChargeSection) =>
     setOpen(section ? { charge, section } : { charge })
@@ -263,7 +271,13 @@ export function ChargeTable({
           : active
 
   const addButton = onAdd ? (
-    <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
+    <Button
+      type="button"
+      size="sm"
+      className="h-8 px-3"
+      onClick={onAdd}
+      disabled={Boolean(isLoading || error)}
+    >
       <PlusIcon aria-hidden />
       {addLabel}
     </Button>
@@ -279,7 +293,13 @@ export function ChargeTable({
         : 'Nothing is billed until there is a charge.')
 
     return (
-      <Section title={title} flush>
+      <Section
+        table
+        showTitle
+        title={title}
+        {...(sectionDescription ? { description: sectionDescription } : {})}
+        action={addButton}
+      >
         <SubTabState
           hasData={false}
           isLoading={isLoading ?? false}
@@ -294,7 +314,6 @@ export function ChargeTable({
             scene: 'catalog',
             title: 'No charges yet',
             description: emptyText,
-            action: addButton,
           }}
         >
           {null}
@@ -306,7 +325,7 @@ export function ChargeTable({
   const columns: DetailColumn<Charge>[] = [
     {
       key: 'name',
-      header: 'Charge',
+      header: chargeColumnLabel,
       width: narrow ? 220 : 280,
       sortBy: (charge) => nameOf(charge),
       text: (charge) => `${nameOf(charge)} ${kindLine(charge, period, locale, source?.(charge))}`,
@@ -325,7 +344,7 @@ export function ChargeTable({
       width: narrow ? 160 : 200,
       cell: (charge) => (
         <span className="block min-w-0">
-          <span className="block tabular-nums">{valueOf(charge)}</span>
+          <span className="block tabular-nums">{priceLabel(charge)}</span>
           {charge.tiers.length > 0 && (
             <span className="text-muted-foreground block text-xs">
               {charge.tiers.length} tier{charge.tiers.length === 1 ? '' : 's'}
@@ -336,7 +355,7 @@ export function ChargeTable({
     },
     {
       key: 'flags',
-      header: '',
+      header: 'Flags',
       width: narrow ? 230 : 360,
       cell: (charge) => (
         <ChargeFlags
@@ -348,6 +367,18 @@ export function ChargeTable({
       ),
     },
   ]
+
+  if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
+    columns.splice(2, 0, {
+      key: 'quantity',
+      header: 'Quantity',
+      width: 100,
+      text: (charge) => details?.get(charge.id)?.quantity ?? '',
+      cell: (charge) => (
+        <span className="tabular-nums">{details?.get(charge.id)?.quantity ?? '—'}</span>
+      ),
+    })
+  }
 
   if (hasActions) {
     columns.push({
@@ -390,16 +421,7 @@ export function ChargeTable({
     ...(ended.length > 0 ? [{ id: 'ended' as const, label: `Ended ${ended.length}` }] : []),
   ]
 
-  /**
-   * `summary` is one of several sections stacked on an Overview, so it keeps
-   * the title row the redesign asks a sub-table to keep — and "Show all
-   * charges" lives on it.
-   *
-   * `full` is the whole body of a tab that is already called Charges, so the
-   * visible title would only say it twice. The heading stays for assistive
-   * tech (`Section table` without `showTitle`) and the views move into the
-   * toolbar, next to the search and the add button they belong with.
-   */
+  // The section controls stay above the table in every view.
   const viewSwitch =
     views.length > 1 ? (
       <ButtonGroup>
@@ -440,16 +462,16 @@ export function ChargeTable({
       ? changed.length > 0
         ? `${changed.length} of ${charge(active.length)} ${changed.length === 1 ? 'is' : 'are'} changed here`
         : `${charge(active.length)}, all as the plan sets them`
-      : undefined
+      : sectionDescription
 
   return (
     <>
       <Section
         table
-        {...(variant === 'summary' ? { showTitle: true } : {})}
+        showTitle
         title={title}
         {...(description ? { description } : {})}
-        {...(titleAction ? { action: titleAction } : {})}
+        action={variant === 'summary' ? titleAction : toolbarAction}
       >
         {rows.length === 0 ? (
           <p className="text-muted-foreground px-6 py-8 text-center text-[13px]">
@@ -463,7 +485,6 @@ export function ChargeTable({
           <DetailTable
             compact
             label="Charges"
-            {...(toolbarAction ? { action: toolbarAction } : {})}
             toolbar={variant === 'full'}
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
@@ -486,6 +507,7 @@ export function ChargeTable({
 
       <ChargeSheet
         charge={open?.charge ?? null}
+        priceLabel={open ? priceLabel(open.charge) : undefined}
         {...(open ? { detail: details?.get(open.charge.id) } : {})}
         {...(open?.section ? { section: open.section } : {})}
         {...(onEditSection && open

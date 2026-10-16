@@ -284,3 +284,22 @@ export const OneVersionIsNotHistory: Story = {
     await expect(screen.queryByText('History')).not.toBeInTheDocument()
   },
 }
+
+/** API ordering cannot put an older version above the current price. */
+export const HistoryNewestFirst: Story = {
+  args: {
+    ...OpenedAtASection.args,
+    detail: {
+      ...OpenedAtASection.args!.detail,
+      versions: [...OpenedAtASection.args!.detail!.versions!].reverse(),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    const current = await screen.findByText('Current')
+    const row = current.closest('li')!
+    await expect(within(row).getByText('$0.0450')).toBeVisible()
+    await expect(within(row).getByText(/Last updated Mar 1, 2026/)).toBeVisible()
+    await expect(row.parentElement!.firstElementChild).toBe(row)
+  },
+}

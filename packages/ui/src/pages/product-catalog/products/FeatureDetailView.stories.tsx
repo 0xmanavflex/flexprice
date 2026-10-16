@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { FeatureStatus, FeatureType, type Feature } from '@fp/domain'
+import { FeatureStatus, FeatureType, type Feature, type Charge } from '@fp/domain'
 import { makeCharges, makeEntitlements } from '../plans/planDetailFixtures'
 import { featureFixtures } from './featureFixtures'
 import {
@@ -30,6 +30,7 @@ interface HarnessProps {
   onSave: (changes: Record<string, string>) => Promise<unknown>
   onDuplicate: () => void
   onDelete: () => void
+  onOpenChargeParent: (charge: Charge) => void
 }
 
 /** One fixture feature of the requested type, with the status overridden. */
@@ -122,6 +123,7 @@ const meta = {
     onSave: fn(() => Promise.resolve()),
     onDuplicate: fn(),
     onDelete: fn(),
+    onOpenChargeParent: fn(),
   },
   argTypes: {
     featureType: { control: 'select', options: Object.values(FeatureType) },
@@ -333,5 +335,18 @@ export const EditFromMenu: Story = {
       }),
     )
     await expect(args.onEditConfiguration).toHaveBeenCalled()
+  },
+}
+
+export const ChargeOpensParent: Story = {
+  args: { tab: 'overview', chargeCount: 1, entitlementCount: 0 },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('columnheader', { name: 'Plan / add-on' })).toBeVisible()
+    await userEvent.click(canvas.getByText('Starter', { exact: true }))
+    await expect(args.onOpenChargeParent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: chargeLinks(1)[0]!.charge.id }),
+    )
+    await expect(within(document.body).queryByRole('dialog')).toBeNull()
   },
 }

@@ -8,6 +8,12 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-16
 
+- Feature charges and price-group members now use the shared ChargeTable. Feature rows open their parent plan/add-on/cost sheet; group rows open ChargeSheet, retaining missing-member IDs and query errors. Shared table accepts contextual column labels and descriptions. Source: supplied HTML charges-table.tsx, Feature context.
+
+
+- Shared charges: PlanChargesView now composes ChargeTable/ChargeSheet, preserving add/edit/terminate and loading/error states. Tier rows move into the sheet. Wide tables show supplied quantities; all views keep controls above the frame. Table price labels carry into the sheet. History sorts newest first and shows last-updated dates.
+- Credit memo detail: adds a responsive Activity/Related rail from real lifecycle timestamps and invoice/customer links. Metadata remains unavailable in the current read model.
+
 - Reference HTML follow-up: contract subtable, Plan charges/entitlements/grants, Feature charges and Customer tax headings/Add controls stay above their bordered body in empty and populated states. Section preserves actions when its table title is visually hidden.
 - Billing tables: credit memos now show memo, customer, invoice number, date, amount and status. Invoices now lead with invoice/due dates and amounts; payment status remains visible and document status remains an optional column plus filter. Invoice integration mappings remain pending API support.
 

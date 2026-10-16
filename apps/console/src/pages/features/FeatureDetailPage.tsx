@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { type CloneFeature, FeatureType } from '@fp/domain'
+import { type CloneFeature, FeatureType, PriceEntityType } from '@fp/domain'
 import {
   useCloneFeature,
   useDeleteFeature,
@@ -89,6 +89,22 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
           ? { entitlementsErrorKind: entitlementsState.errorKind }
           : {})}
         {...(entitlementsState.onRetry ? { onRetryEntitlements: entitlementsState.onRetry } : {})}
+        onOpenChargeParent={(charge) => {
+          if (charge.entityType === PriceEntityType.Addon) {
+            void navigate({ to: '/addons/$addonId', params: { addonId: charge.entityId } })
+          } else if (charge.entityType === PriceEntityType.CostSheet) {
+            void navigate({
+              to: '/cost-sheets/$costSheetId',
+              params: { costSheetId: charge.entityId },
+            })
+          } else if (charge.entityType === PriceEntityType.Plan) {
+            void navigate({
+              to: '/plans/$planId',
+              params: { planId: charge.entityId },
+              search: {} as never,
+            })
+          }
+        }}
         // A charge is priced on a plan: start a new one.
         onAddPlan={() => void navigate({ to: '/plans/new' })}
         onSaveMetadata={(metadata) =>

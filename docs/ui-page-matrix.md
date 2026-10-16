@@ -25,7 +25,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | coupons | `CouponDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, MetricRail, Properties, Section | ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CouponRedemptionMeter, CouponRedemptionsView, EditableCard, MetadataCard, Money, PencilIcon, Pill, TicketPercentIcon |
 | coupons | `CouponFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, CouponCreateForm, CouponForm, LoadingRows, PageBody |
 | coupons | `CouponListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CouponGrid, ListState, PageBody |
-| credit-notes | `CreditNoteDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, MetricRail, Section | CatalogDetailFrame, EditableCard, EntityLink, FileMinusIcon, Pill, Status |
+| credit-notes | `CreditNoteDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, MetricRail, Section | ActivitySection, CatalogDetailFrame, EditableCard, EntityLink, FileMinusIcon, Pill, RelatedCard, Status |
 | credit-notes | `CreditNoteFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | CreditNoteForm |
 | credit-notes | `CreditNoteListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | CreditNoteGrid, ListState, PageBody |
 | customers | `CustomerDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EmptyState, EntityList, FormDialog, RowActionsMenu, Section | AppFailure, CUSTOMER_TABS, CustomerDetail, CustomerTab, LoadingRows, QuotaCard, Toaster |
@@ -35,10 +35,10 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | environments | `EnvironmentRenameFormPage` | Form | Field, FormDialog | EnvironmentRenameForm |
 | events | `EventListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | DataFreshness, EMPTY_CATALOGUE, EventDetailSheet, EventGrid, ListState, PageBody |
 | exports | `ExportListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | DataExportGrid, ListState, PageBody |
-| features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, MetricRail, Properties, Section | FeatureCloneDialog, FeatureDetailView, FeatureTab |
+| features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, MetricRail, Properties, RowActionsMenu, Section | FeatureCloneDialog, FeatureDetailView, FeatureTab |
 | features | `FeatureFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, FeatureForm, LoadingRows, PageBody |
 | features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, FeatureLinkage, ListState, PageBody |
-| groups | `GroupDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, MetricRail, Section | CatalogDetailFrame, CatalogStatusBadge, EditableCard, GroupMembersView, LayersIcon, Pill, Trash2Icon |
+| groups | `GroupDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, MetricRail, RowActionsMenu, Section | CatalogDetailFrame, CatalogStatusBadge, EditableCard, GroupMembersView, LayersIcon, Pill, Trash2Icon |
 | groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | GroupForm |
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |
 | home | `HomePage` | Dashboard | Panel | CUSTOM_RANGE_ID, DashboardHome |
