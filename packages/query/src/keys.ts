@@ -234,6 +234,10 @@ export const queryKeys = {
     of: (environmentId: string, ...parts: readonly unknown[]) =>
       ['webhooks', environmentId, 'data', ...parts] as const,
   },
+  activity: {
+    all: () => ['activity'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['activity', 'list', filter] as const,
+  },
   alertSettings: {
     all: () => ['alertSettings'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) =>

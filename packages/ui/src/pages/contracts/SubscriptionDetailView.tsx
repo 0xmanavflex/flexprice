@@ -128,6 +128,10 @@ export interface SubscriptionDetailViewProps {
   invoices: SubscriptionPart<Invoice[]>
   schedules: SubscriptionPart<SubscriptionSchedule[]>
   activity: SubscriptionActivity[]
+  /** Shown under an empty rail, for example while the audit trail is loading. */
+  activityEmptyText?: string | undefined
+  /** A change just landed and the new activity row is still being written. */
+  activityAwaiting?: boolean | undefined
   /** The next invoice as it would be created now. Leave out to hide the section. */
   preview?: SubscriptionPart<InvoicePreview> | undefined
   addons?: SubscriptionPart<SubscriptionAddon[]> | undefined
@@ -256,14 +260,18 @@ function chargesOfLines(lines: SubscriptionLine[]): {
               type: commitment.kind,
               // The figure as the line states it; the unit is the charge's own.
               value: commitment.value,
-              duration: null,
+              duration: commitment.duration ?? null,
               overageFactor: Number(commitment.overageFactor) || 1,
               trueUp: commitment.trueUp,
               windowed: commitment.windowed,
-              // `commitment_time_buckets` is not on the line read model yet, so
-              // a windowed commitment reads as "every bucket, all day" — which
-              // is what it is until the windows are read, not a guess at them.
-              windows: [],
+              windows: (commitment.windows ?? []).map((window) => ({
+                id: window.id,
+                start: window.start,
+                end: window.end,
+                value: window.value,
+                overageFactor: Number(window.overageFactor) || 1,
+                trueUp: window.trueUp,
+              })),
             },
           }
         : {}),
@@ -298,6 +306,8 @@ export function SubscriptionDetailView({
   invoices,
   schedules,
   activity,
+  activityEmptyText,
+  activityAwaiting = false,
   preview,
   addons,
   coupons,
@@ -574,6 +584,8 @@ export function SubscriptionDetailView({
     title: event.title,
     at: event.at,
     summary: event.summary,
+    ...(event.record ? { record: event.record } : {}),
+    ...(event.by ? { by: event.by } : {}),
   }))
 
   return (
@@ -1061,7 +1073,11 @@ export function SubscriptionDetailView({
             </div>
 
             <div className="flex flex-col gap-5 xl:sticky xl:top-6">
-              <ActivitySection entries={activityEntries} />
+              <ActivitySection
+                entries={activityEntries}
+                {...(activityEmptyText ? { emptyText: activityEmptyText } : {})}
+                awaiting={activityAwaiting}
+              />
               <MetadataCard
                 metadata={s.metadata}
                 {...(onSaveMetadata

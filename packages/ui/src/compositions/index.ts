@@ -210,3 +210,4 @@ export { CheckboxRow, CheckboxRowProvenance } from './forms/CheckboxRow'
 export type { CheckboxRowProps } from './forms/CheckboxRow'
 
 export { ActivitySection } from './detail/ActivityLog'
+export type { ActivityLogEntry } from './detail/ActivityLog'

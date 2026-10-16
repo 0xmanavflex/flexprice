@@ -14,5 +14,7 @@ allowBuilds:
   nx: true
   msw: true
 
+# The activity client shipped in 2.1.39 (15 Oct 2026). The supply-chain
+# age check compares the package name, and a versioned id does not match.
 minimumReleaseAgeExclude:
-  - '@flexprice/sdk@2.1.35'
+  - '@flexprice/sdk'

@@ -54,6 +54,25 @@ export const COMMITMENT_KIND_LABEL: Record<CommitmentKind, string> = {
 }
 
 /** A minimum a customer commits to on a metered charge; usage past it is overage. */
+/** One UTC window of a windowed commitment, as the line item returns it. */
+export interface LineCommitmentWindow {
+  id: string
+  /** `HH:MM`, UTC. */
+  start: string
+  /** `HH:MM`, UTC. */
+  end: string
+  value: string
+  overageFactor: string
+  trueUp: boolean
+  /**
+   * The window's own price, when the line item included it.
+   *
+   * The read returns `priceId` only. Tiers stay empty until that price is
+   * embedded; the id is not shown in place of them.
+   */
+  priceId?: string
+}
+
 export interface LineCommitment {
   kind: CommitmentKind
   /** Decimal string: money for `amount`, units for `quantity`. */
@@ -64,6 +83,10 @@ export interface LineCommitment {
   overageFactor: string
   /** Bill the unused part of the commitment at the end of the period. */
   trueUp: boolean
+  /** `commitment_duration`, when the line sets one instead of the billing period. */
+  duration?: BillingPeriod | null
+  /** `commitment_time_buckets`. Absent when the commitment covers the whole day. */
+  windows?: LineCommitmentWindow[]
 }
 
 /** What a metered charge adds to its price on a contract. */

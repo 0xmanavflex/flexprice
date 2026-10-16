@@ -217,6 +217,18 @@ export interface SubscriptionLineWire {
   commitmentWindowed?: boolean | undefined
   commitmentOverageFactor?: string | undefined
   commitmentTrueUpEnabled?: boolean | undefined
+  commitmentDuration?: string | undefined
+  commitmentTimeBuckets?:
+    | Array<{
+        id?: string | undefined
+        commitmentValue?: string | undefined
+        start?: { hour?: number | undefined; minute?: number | undefined } | undefined
+        end?: { hour?: number | undefined; minute?: number | undefined } | undefined
+        overageFactor?: number | undefined
+        trueUpEnabled?: boolean | undefined
+        priceId?: string | undefined
+      }>
+    | undefined
   startDate?: Date | undefined
   endDate?: Date | undefined
 }
@@ -240,14 +252,38 @@ function toLineCommitment(wire: SubscriptionLineWire): LineCommitment | null {
         : null
   const value = kind === CommitmentKind.Quantity ? wire.commitmentQuantity : wire.commitmentAmount
   if (!kind || !value || Number(value) <= 0) return null
+  const windows = (wire.commitmentTimeBuckets ?? []).flatMap((bucket, index) => {
+    const bucketValue = bucket.commitmentValue?.trim()
+    if (!bucketValue) return []
+    return [
+      {
+        id: bucket.id || `window_${index}`,
+        start: clock(bucket.start),
+        end: clock(bucket.end),
+        value: bucketValue,
+        overageFactor: String(bucket.overageFactor ?? wire.commitmentOverageFactor ?? '1'),
+        trueUp: bucket.trueUpEnabled ?? wire.commitmentTrueUpEnabled ?? false,
+        ...(bucket.priceId ? { priceId: bucket.priceId } : {}),
+      },
+    ]
+  })
+  const duration =
+    wire.commitmentDuration && wire.commitmentDuration in BILLING_PERIOD_LABEL
+      ? (wire.commitmentDuration as BillingPeriod)
+      : null
   return {
     kind,
     value,
     windowed: wire.commitmentWindowed ?? false,
     overageFactor: wire.commitmentOverageFactor || '1',
     trueUp: wire.commitmentTrueUpEnabled ?? false,
+    ...(duration ? { duration } : {}),
+    ...(windows.length ? { windows } : {}),
   }
 }
+
+const clock = (bucket?: { hour?: number | undefined; minute?: number | undefined }) =>
+  `${String(bucket?.hour ?? 0).padStart(2, '0')}:${String(bucket?.minute ?? 0).padStart(2, '0')}`
 
 /** The price of a line as the edit form needs it, in the unit it is written in. */
 function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {

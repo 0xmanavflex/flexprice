@@ -1,0 +1,53 @@
+import {
+  activityByline,
+  activitySourceLabel,
+  describeActivity,
+  type ActivityEntry,
+} from '@fp/domain'
+import type { ActivityLogEntry } from '@fp/ui/compositions'
+
+const stamp = (date: Date) =>
+  new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+
+/** One rail row: title, local time, the type-specific sentence, and the person. */
+export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
+  const facts = describeActivity(entry)
+  const who = activityByline(entry)
+  const source = activitySourceLabel(entry.source)
+  const by =
+    entry.actorType === 'user' || !who
+      ? [who, source].filter(Boolean).join(' · ')
+      : who
+  return {
+    id: entry.id,
+    title: entry.title,
+    at: entry.occurredAt ? stamp(entry.occurredAt) : '',
+    ...(facts.record ? { record: facts.record } : {}),
+    ...(facts.summary ? { summary: facts.summary } : {}),
+    ...(by ? { by } : {}),
+  }
+}
+
+/** Contract and invoice documents still number their rows. */
+export function railActivity(entries: ActivityEntry[]): Array<{
+  id: number
+  title: string
+  at: string
+  status: 'completed'
+  summary: string
+  record?: string
+  by?: string
+}> {
+  return entries.map((entry, index) => {
+    const row = toActivityLogEntry(entry)
+    return {
+      id: index + 1,
+      title: row.title,
+      at: row.at,
+      status: 'completed' as const,
+      summary: row.summary ?? '',
+      ...(row.record ? { record: row.record } : {}),
+      ...(row.by ? { by: row.by } : {}),
+    }
+  })
+}

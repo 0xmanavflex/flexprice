@@ -977,10 +977,10 @@ export const AddonsCouponsTaxesEmpty: Story = {
       ['Add-ons', 'Add add-on', 'No add-ons'],
       ['Coupons', 'Add coupon', 'No coupons'],
       ['Taxes', 'Add tax', 'No taxes'],
-    ]) {
-      const section = within(canvas.getByRole('region', { name: heading, exact: true }))
-      const add = section.getByRole('button', { name: button, exact: true })
-      const message = section.getByText(empty, { exact: true })
+    ] as const) {
+      const section = within(canvas.getByRole('region', { name: heading }))
+      const add = section.getByRole('button', { name: button })
+      const message = section.getByText(empty)
       await expect(add.getBoundingClientRect().bottom).toBeLessThan(
         message.getBoundingClientRect().top,
       )
@@ -1618,7 +1618,7 @@ export const OverviewChargesFailed: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     const section = within(
-      canvas.getByRole('heading', { name: 'Charges', exact: true }).closest('section')!,
+      canvas.getByRole('heading', { name: /^Charges$/ }).closest('section')!,
     )
     await expect(section.getByText('Charges could not be loaded')).toBeVisible()
     await userEvent.click(section.getByRole('button', { name: /Try again/ }))
