@@ -343,7 +343,7 @@ describe('toCancelSubscriptionRequest', () => {
     )
     expect(now).toMatchObject({
       proration_behavior: 'none',
-      cancel_immediately_inovice_policy: 'generate_invoice',
+      cancel_immediately_invoice_policy: 'generate_invoice',
     })
   })
 })

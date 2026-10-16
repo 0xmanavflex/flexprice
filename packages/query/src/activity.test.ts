@@ -111,9 +111,15 @@ describe('toActivityEntry', () => {
     expect(describeActivity(entry).summary).not.toContain('999')
   })
 
-  it('falls back to the entity id when no label was stored', () => {
-    expect(toActivityEntry({ id: 'act_3', entity: { id: 'plan_1', type: 'plan' } }).entityLabel).toBe(
-      'plan_1',
-    )
+  it('leaves the label empty when the API sent only an id', () => {
+    const entry = toActivityEntry({
+      id: 'act_3',
+      action: 'payment.succeeded',
+      entity: { id: 'pay_01M527PK3Q8150WXNHNY7H5RT', type: 'payment' },
+      state: { amount: '1000', currency: 'usd' },
+    })
+    expect(entry.entityLabel).toBe('')
+    expect(describeActivity(entry).record).toBeUndefined()
+    expect(describeActivity(entry).summary).toContain('1,000')
   })
 })
