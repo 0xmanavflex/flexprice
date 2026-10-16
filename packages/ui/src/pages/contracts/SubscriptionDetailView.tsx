@@ -32,6 +32,7 @@ import {
   type Charge,
   type ChargeCommitmentDetail,
   type ChargeDetail,
+  type ChargeAlert,
   type CreditGrant,
   type EditContractCharge,
   type IntegrationLink,
@@ -125,6 +126,7 @@ export interface SubscriptionDetailViewProps {
   preview?: SubscriptionPart<InvoicePreview> | undefined
   addons?: SubscriptionPart<SubscriptionAddon[]> | undefined
   coupons?: SubscriptionPart<SubscriptionCoupon[]> | undefined
+  chargeAlerts?: SubscriptionPart<Map<string, ChargeAlert[]>> | undefined
   taxes?: SubscriptionPart<SubscriptionTax[]> | undefined
   /** The customer's integration mappings, shown as marks in the header. */
   integrationLinks?: IntegrationLink[] | undefined
@@ -284,6 +286,7 @@ export function SubscriptionDetailView({
   preview,
   addons,
   coupons,
+  chargeAlerts,
   taxes,
   integrationLinks,
   linkableProviders = [],
@@ -428,6 +431,31 @@ export function SubscriptionDetailView({
 
   const usageData = usage.data
   const chargeRows = chargesOfLines(lines.data ?? [])
+  for (const [chargeId, line] of chargeRows.lineOf) {
+    const discounts = (coupons?.data ?? []).filter(
+      (coupon) => coupon.active && coupon.lineItemId === line.id,
+    )
+    const alerts = chargeAlerts?.data?.get(line.id)
+    if (discounts.length || alerts?.length) {
+      chargeRows.details.set(chargeId, {
+        ...chargeRows.details.get(chargeId),
+        coupons: discounts.map((coupon) => ({
+          code: coupon.code,
+          name: coupon.name,
+          discount: coupon.discount,
+          endsAt: coupon.endDate,
+        })),
+        ...(alerts ? { alerts } : {}),
+      })
+    }
+  }
+  const editableChargeSections = (charge: Charge): ChargeSection[] => {
+    const line = chargeRows.lineOf.get(charge.id)
+    if (!canEditCharges || charge.endDate || !line || !canEditLine(line)) return []
+    return line.kind === 'fixed'
+      ? [ChargeSection.Price]
+      : [ChargeSection.Price, ChargeSection.Commitment]
+  }
   const editCharge = (charge: Charge) => {
     const line = chargeRows.lineOf.get(charge.id)
     if (line) editLine(line)
@@ -555,6 +583,22 @@ export function SubscriptionDetailView({
       }
     >
       <div className="flex min-w-0 flex-col gap-6">
+        {chargeAlerts?.isError ? (
+          <div role="alert" className="text-muted-foreground text-sm">
+            Charge alerts could not be loaded.{' '}
+            <Button variant="link" onClick={chargeAlerts.onRetry}>
+              Retry charge alerts
+            </Button>
+          </div>
+        ) : null}
+        {coupons?.isError ? (
+          <div role="alert" className="text-muted-foreground text-sm">
+            Charge discounts could not be loaded.{' '}
+            <Button variant="link" onClick={coupons.onRetry}>
+              Retry charge discounts
+            </Button>
+          </div>
+        ) : null}
         <DetailTabs
           value={tab}
           onChange={(next) => setTab(next as SubscriptionTab)}
@@ -603,6 +647,8 @@ export function SubscriptionDetailView({
               */}
               <ChargeTable
                 title="Charges"
+                onEditSection={(charge) => editCharge(charge)}
+                editableSections={editableChargeSections}
                 variant="summary"
                 layout="narrow"
                 charges={chargeRows.charges}
@@ -1016,6 +1062,8 @@ export function SubscriptionDetailView({
             emptyDescription="This contract has no priced lines."
             {...(canAddCharge ? { onAdd: () => setDialog({ mode: 'add' }) } : {})}
             addLabel="Manage pricing"
+            onEditSection={(charge) => editCharge(charge)}
+            editableSections={editableChargeSections}
             {...(canEditCharges ? { onEdit: (charge: Charge) => editCharge(charge) } : {})}
             canEdit={(charge) => {
               const line = chargeRows.lineOf.get(charge.id)

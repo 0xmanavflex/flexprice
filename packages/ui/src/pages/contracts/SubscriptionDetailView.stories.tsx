@@ -1625,3 +1625,54 @@ export const OverviewChargesFailed: Story = {
     await expect(args.lines.onRetry).toHaveBeenCalled()
   },
 }
+
+export const LineDiscountsAndAlerts: Story = {
+  args: {
+    ...BASE,
+    coupons: ready([
+      { ...COUPONS[0]!, id: 'whole', code: 'WHOLE', active: true },
+      { ...COUPONS[0]!, id: 'line', lineItemId: 'line_2', code: 'LINE', active: true },
+      { ...COUPONS[0]!, id: 'line-second', lineItemId: 'line_2', code: 'SECOND', active: true },
+    ]),
+    chargeAlerts: ready(
+      new Map([['line_2', [{ level: 'Warning', condition: 'below', value: '80%' }]]]),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Discount: open API requests' }))
+    const screen = within(canvasElement.ownerDocument.body)
+    const dialog = within(screen.getByRole('dialog'))
+    await waitFor(() => expect(dialog.getByText('LINE')).toBeVisible())
+    await expect(dialog.getByText('SECOND')).toBeInTheDocument()
+    await expect(dialog.queryByText('WHOLE')).toBeNull()
+    await expect(dialog.getByText('Warning, below')).toBeInTheDocument()
+    await expect(dialog.getByText('80%')).toBeInTheDocument()
+    const discount = within(dialog.getByRole('region', { name: 'Discount' }))
+    await expect(discount.queryByRole('button', { name: 'Edit' })).toBeNull()
+  },
+}
+
+export const EditCommitmentFromFlag: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Commitment: open API requests' }))
+    const screen = within(canvasElement.ownerDocument.body)
+    const commitment = await screen.findByRole('region', { name: 'Commitment' })
+    await waitFor(() => expect(commitment).toHaveFocus())
+    await userEvent.click(within(commitment).getByRole('button', { name: 'Edit' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(await dialog.findByText('Only this contract changes')).toBeVisible()
+    await expect(dialog.getByLabelText(/^Commitment/)).toHaveValue('500')
+  },
+}
+
+export const ChargeAlertsFailed: Story = {
+  args: { ...BASE, chargeAlerts: { data: undefined, isError: true, onRetry: fn() } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Charge alerts could not be loaded.')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Retry charge alerts' }))
+    await expect(args.chargeAlerts?.onRetry).toHaveBeenCalled()
+  },
+}

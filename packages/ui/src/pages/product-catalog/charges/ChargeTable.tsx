@@ -117,6 +117,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   onRowClick?: (charge: Charge) => void
   /** Wires the sheet's per-part "Edit". A part with no handler shows no button. */
   onEditSection?: (charge: Charge, section: ChargeSection) => void
+  editableSections?: (charge: Charge) => readonly ChargeSection[]
   /** The summary variant's "Show all charges". */
   onShowAll?: () => void
   locale?: string
@@ -229,6 +230,7 @@ export function ChargeTable({
   extraActions,
   onRowClick,
   onEditSection,
+  editableSections,
   onShowAll,
   emptyDescription,
   locale,
@@ -507,11 +509,17 @@ export function ChargeTable({
 
       <ChargeSheet
         charge={open?.charge ?? null}
+        {...(open && editableSections ? { editableSections: editableSections(open.charge) } : {})}
         priceLabel={open ? priceLabel(open.charge) : undefined}
         {...(open ? { detail: details?.get(open.charge.id) } : {})}
         {...(open?.section ? { section: open.section } : {})}
         {...(onEditSection && open
-          ? { onEdit: (part: ChargeSection) => onEditSection(open.charge, part) }
+          ? {
+              onEdit: (part: ChargeSection) => {
+                setOpen(null)
+                onEditSection(open.charge, part)
+              },
+            }
           : {})}
         {...(locale ? { locale } : {})}
         onClose={() => setOpen(null)}

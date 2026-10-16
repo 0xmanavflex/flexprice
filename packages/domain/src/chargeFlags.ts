@@ -88,6 +88,7 @@ export interface ChargeCoupon {
 /** One usage alert threshold set on this line. */
 export interface ChargeAlert {
   /** What it is called ("Warning", "Critical"). */
+  condition?: string | undefined
   level: string
   /** The threshold, formatted ("80%", "1,000,000 units"). */
   value: string
@@ -136,6 +137,7 @@ export interface ChargeDetail {
   /** What the line bills, when it is not simply one of something. */
   quantity?: string | undefined
   coupon?: ChargeCoupon | undefined
+  coupons?: readonly ChargeCoupon[] | undefined
   commitment?: ChargeCommitmentDetail | undefined
   alerts?: readonly ChargeAlert[] | undefined
   /** Every version, newest first. One entry is the charge itself, not history. */
@@ -160,7 +162,8 @@ export function chargeFlags(detail: ChargeDetail | undefined): ChargeFlag[] {
   if (detail.overridden || detail.overriddenFrom) {
     flags.push({ section: ChargeSection.Price, label: 'Price changed' })
   }
-  if (detail.coupon) flags.push({ section: ChargeSection.Discount, label: 'Discount' })
+  if (detail.coupon || detail.coupons?.length)
+    flags.push({ section: ChargeSection.Discount, label: 'Discount' })
   if (detail.commitment) flags.push({ section: ChargeSection.Commitment, label: 'Commitment' })
   if (detail.alerts && detail.alerts.length > 0) {
     flags.push({ section: ChargeSection.Alerts, label: 'Alerts' })

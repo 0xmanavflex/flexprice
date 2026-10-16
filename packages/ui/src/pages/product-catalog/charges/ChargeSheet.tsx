@@ -65,6 +65,7 @@ export interface ChargeSheetProps {
   onEdit?: ((section: ChargeSection) => void) | undefined
   locale?: string
   priceLabel?: string | undefined
+  editableSections?: readonly ChargeSection[] | undefined
 }
 
 function modelLabel(charge: Charge): string {
@@ -273,6 +274,7 @@ export function ChargeSheet({
   onEdit,
   locale,
   priceLabel,
+  editableSections,
 }: ChargeSheetProps) {
   const body = useRef<HTMLDivElement>(null)
 
@@ -330,7 +332,11 @@ export function ChargeSheet({
     ...(version.actor ? { by: version.actor } : {}),
   }))
 
-  const editAt = (part: ChargeSection) => (onEdit ? () => onEdit(part) : undefined)
+  const coupons = detail?.coupons ?? (detail?.coupon ? [detail.coupon] : [])
+  const editAt = (part: ChargeSection) =>
+    onEdit && (!editableSections || editableSections.includes(part))
+      ? () => onEdit(part)
+      : undefined
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -377,7 +383,7 @@ export function ChargeSheet({
             />
           </Box>
 
-          {detail?.coupon ? (
+          {coupons.length > 0 ? (
             <Box
               section={ChargeSection.Discount}
               icon={<TicketPercentIcon aria-hidden className="text-success-foreground" />}
@@ -385,13 +391,17 @@ export function ChargeSheet({
               onEdit={editAt(ChargeSection.Discount)}
               focused={section === ChargeSection.Discount}
             >
-              <Lead value={detail.coupon.discount} label={detail.coupon.name} />
-              <Facts
-                items={[
-                  ['Code', <span className="font-mono text-xs">{detail.coupon.code}</span>],
-                  ['Ends', detail.coupon.endsAt ? dates.format(detail.coupon.endsAt) : 'Never'],
-                ]}
-              />
+              {coupons.map((coupon, index) => (
+                <div key={`${coupon.code}-${index}`} className="space-y-3">
+                  <Lead value={coupon.discount} label={coupon.name} />
+                  <Facts
+                    items={[
+                      ['Code', <span className="font-mono text-xs">{coupon.code}</span>],
+                      ['Ends', coupon.endsAt ? dates.format(coupon.endsAt) : 'Never'],
+                    ]}
+                  />
+                </div>
+              ))}
             </Box>
           ) : null}
 
@@ -415,7 +425,12 @@ export function ChargeSheet({
               onEdit={editAt(ChargeSection.Alerts)}
               focused={section === ChargeSection.Alerts}
             >
-              <Facts items={detail.alerts.map((alert) => [`${alert.level}, above`, alert.value])} />
+              <Facts
+                items={detail.alerts.map((alert) => [
+                  `${alert.level}, ${alert.condition ?? 'above'}`,
+                  alert.value,
+                ])}
+              />
             </Box>
           ) : null}
 

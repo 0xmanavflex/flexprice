@@ -2825,6 +2825,7 @@ export const handlers = [
   http.post(`${BASE}/alerts/setting/search`, async ({ request }) => {
     const body = ((await request.json().catch(() => ({}))) ?? {}) as {
       entity_type?: string
+      parent_entity_id?: string
       entity_id?: string
       enabled?: boolean
       limit?: number
@@ -2834,6 +2835,8 @@ export const handlers = [
     if (body.entity_type) {
       rows = rows.filter((row) => readString(row, 'entity_type') === body.entity_type)
     }
+    if (body.parent_entity_id)
+      rows = rows.filter((row) => readString(row, 'parent_entity_id') === body.parent_entity_id)
     if (body.entity_id) {
       rows = rows.filter((row) => readString(row, 'entity_id') === body.entity_id)
     }

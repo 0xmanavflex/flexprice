@@ -30,6 +30,7 @@ import {
   useExecuteLineChange,
   usePreviewLineChange,
   useSubscription,
+  useContractChargeAlerts,
   useSubscriptionAddons,
   useSubscriptionCoupons,
   useSubscriptionCreditGrants,
@@ -96,6 +97,7 @@ export function SubscriptionDetailPage({
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
   const lines = useSubscriptionLines(subscriptionId)
+  const chargeAlerts = useContractChargeAlerts(subscriptionId)
   const entitlements = useSubscriptionEntitlements(subscriptionId)
   const creditGrants = useSubscriptionCreditGrants(subscriptionId)
   const usage = useSubscriptionUsage(subscriptionId)
@@ -173,6 +175,7 @@ export function SubscriptionDetailPage({
       <SubscriptionDetailView
         subscription={data}
         lines={part(lines)}
+        chargeAlerts={part(chargeAlerts)}
         entitlements={part(entitlements)}
         creditGrants={part(creditGrants)}
         usage={part(usage)}

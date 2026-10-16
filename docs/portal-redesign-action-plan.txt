@@ -412,3 +412,52 @@ CONTRACT LAYOUT AND CHARGE ACTION FOLLOW-UP — OCTOBER 16
   build passed. Contract desktop screenshot reviewed; 2% baseline difference,
   baseline unchanged. Build retains existing chunk/config warnings.
 - Prior staged work and concurrent form/anatomy changes remain untouched.
+
+
+SHARED CHARGE ACTIONS, DISCOUNTS AND ALERTS — OCTOBER 16
+- Price and usage-commitment Edit actions now open the existing contract billing
+  forms from the shared sheet. The sheet closes first. Ended/cancelled/read-only
+  lines have no edit action; coupon/alert editing and Revert remain unavailable.
+- Coupon associations retain subscriptionLineItemId; active line-specific coupons
+  join that exact line. Whole-contract/phase coupons are not copied onto every row.
+  Archived, future and expired associations are excluded from active discounts.
+  Multiple discounts render in the same section; flags and section use the same data.
+  Coupon reads now paginate beyond the first 100 associations.
+- Alert settings read via a parent-contract search, paginated in batches of 100,
+  with no per-charge requests. Only matching line entities and enabled records
+  are displayed. Config-disabled and archived settings are omitted defensively.
+  Percentage/absolute thresholds and above/below conditions are preserved; no
+  currency or unit is guessed for absolute values. Errors expose Retry rather
+  than silently displaying an empty configuration. Existing mutation invalidation
+  covers this query through the alert-settings cache prefix.
+- API verification: installed @flexprice/sdk 2.1.35 plus current published schema
+  retrieved from https://raw.githubusercontent.com/flexprice/flexprice/main/docs/swagger/swagger.json
+  on October 16, 2026. Schema SHA256: 6cb88a2f6caea3e69d23c582ca4c2a7d6b7ecd29a203e13caf64bb24ca7ba59c.
+  Relevant paths found:
+  /alerts/setting
+  /alerts/setting/search
+  /alerts/setting/{id}
+  /coupons/associations
+  /coupons/associations/{id}
+  /subscriptions/lineitems/search
+  /subscriptions/lineitems/{id}
+  /subscriptions/{id}/lineitems
+  /subscriptions/{id}/modify/execute
+  /subscriptions/{id}/modify/preview
+  /webhook-events/subscription.line_item_spend.threshold_reached
+  /webhook-events/subscription.line_item_spend.threshold_recovered
+- No dedicated charge-version listing or revert path found in either source.
+  Generic line-item search/update and modify preview/execute do not establish
+  version ancestry, revert eligibility or re-rating semantics. Items 37/38/51
+  remain blocked on that backend contract; the prototype's toast-only Revert
+  is not wired to a different billing operation.
+- Live tenant API calls were not made. Published schema and SDK verification are
+  contract evidence, not evidence that every deployment supports these operations.
+- Remaining: coupon/alert mutations within the sheet, window-specific commitment
+  tiers, live API/performance checks, and validated version/revert semantics.
+- Validation: 82 component/a11y tests and 3 assembled contract journeys passed;
+  TypeScript, scoped ESLint and production build passed. Additional pagination
+  and error-retry checks are recorded after the final run below.
+- Final checks: 30 query tests pass, including alert pagination and coupon scope;
+  additional alert-retry browser/a11y story passes (83 unique component checks
+  across final runs). Vendor integrity, page matrix and whitespace checks pass.

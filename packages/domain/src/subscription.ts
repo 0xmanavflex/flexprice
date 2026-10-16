@@ -664,6 +664,8 @@ export interface SubscriptionAddon {
 
 /** A coupon applied to a contract. */
 export interface SubscriptionCoupon {
+  /** Only this line receives the discount; absent means contract/phase scope. */
+  lineItemId?: string | undefined
   id: string
   name: string
   code: string

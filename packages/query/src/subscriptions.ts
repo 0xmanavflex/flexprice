@@ -1304,6 +1304,8 @@ export function useSubscriptionAddons(id: string) {
 }
 
 interface SubscriptionCouponWire {
+  subscriptionLineItemId?: string | undefined
+  status?: string | undefined
   id?: string | undefined
   couponId?: string | undefined
   startDate?: Date | undefined
@@ -1330,6 +1332,7 @@ export function toSubscriptionCoupon(
   const endDate = realDate(wire.endDate)
   return {
     id: wire.id ?? wire.couponId ?? '',
+    lineItemId: wire.subscriptionLineItemId,
     name: coupon?.name || wire.couponId || 'Coupon',
     code: coupon?.couponCode ?? '',
     discount: percentage
@@ -1337,7 +1340,10 @@ export function toSubscriptionCoupon(
       : off
         ? `${formatMoney(off)} off`
         : '',
-    active: endDate === null || endDate > now,
+    active:
+      wire.status !== 'archived' &&
+      (!realDate(wire.startDate) || realDate(wire.startDate)! <= now) &&
+      (endDate === null || endDate > now),
     startDate: realDate(wire.startDate),
     endDate,
   }
@@ -1350,17 +1356,22 @@ export function useSubscriptionCoupons(id: string) {
   return useQuery({
     queryKey: queryKeys.subscriptions.coupons(id),
     queryFn: async ({ signal }) => {
-      const response = await call(
-        (options) =>
-          client.couponAssociations.listCouponAssociations(
-            { subscriptionIds: [id], expand: 'coupon', limit: 100, offset: 0 },
-            options,
-          ),
-        signal,
-      )
-      return ((response.items ?? []) as SubscriptionCouponWire[]).map((item) =>
-        toSubscriptionCoupon(item),
-      )
+      const coupons: SubscriptionCoupon[] = []
+      for (let offset = 0; ; offset += 100) {
+        const response = await call(
+          (options) =>
+            client.couponAssociations.listCouponAssociations(
+              { subscriptionIds: [id], expand: 'coupon', limit: 100, offset },
+              options,
+            ),
+          signal,
+        )
+        const items = response.items ?? []
+        coupons.push(...items.map((item) => toSubscriptionCoupon(item)))
+        if (items.length < 100 || offset + items.length >= (response.pagination?.total ?? Infinity))
+          break
+      }
+      return coupons
     },
     enabled: id.length > 0,
   })
