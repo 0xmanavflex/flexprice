@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
-import { ChevronLeftIcon, ChevronRightIcon } from '@ui/icons'
 import { AUTH_IMAGES } from '@ui/assets/auth'
 import { Badge } from '@ui/components/reui/badge'
 import { cn } from '@ui/lib/cn'
@@ -110,8 +109,6 @@ function ReviewCarousel({ start }: { start: number }) {
     return () => window.clearTimeout(id)
   }, [reduce, paused, index, n])
 
-  const go = (step: number) => setIndex((i) => (i + step + n) % n)
-
   // The review's width follows the panel, leaving room for the next one to peek in.
   const rowRef = useRef<HTMLDivElement>(null)
   const [rowW, setRowW] = useState(MAX_W + PEEK)
@@ -174,7 +171,13 @@ function ReviewCarousel({ start }: { start: number }) {
         })}
       </div>
 
-      <div className="mt-4 flex items-center gap-5">
+      {/*
+        The dots are the whole control. The chevrons that sat beside them were
+        a second way to do what the dots already do, on a panel that also
+        advances on its own — and each dot names the review it goes to, which
+        a chevron cannot.
+      */}
+      <div className="mt-4 flex items-center">
         <div className="flex gap-1.5">
           {TESTIMONIALS.map((q, i) => (
             <button
@@ -188,24 +191,6 @@ function ReviewCarousel({ start }: { start: number }) {
                 i === index ? 'bg-foreground w-7' : 'bg-foreground/20 hover:bg-foreground/40 w-3.5',
               )}
             />
-          ))}
-        </div>
-        <div className="flex gap-1">
-          {(
-            [
-              [-1, 'Previous review', ChevronLeftIcon],
-              [1, 'Next review', ChevronRightIcon],
-            ] as const
-          ).map(([step, label, Icon]) => (
-            <button
-              key={label}
-              type="button"
-              aria-label={label}
-              onClick={() => go(step)}
-              className="border-border bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-8 items-center justify-center rounded-[4px] border backdrop-blur transition-colors"
-            >
-              <Icon className="size-4" aria-hidden="true" />
-            </button>
           ))}
         </div>
       </div>
