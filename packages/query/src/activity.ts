@@ -27,7 +27,7 @@ interface ActivityWire {
 
 export function toActivityEntry(item: ActivityWire): ActivityEntry {
   const entityId = item.entity?.id ?? ''
-  const entityLabel = item.entity?.label?.trim() ? item.entity.label : entityId
+  const entityLabel = item.entity?.label?.trim() ?? ''
   const occurredAt = item.occurred_at ? new Date(item.occurred_at) : null
   return {
     id: item.id ?? '',

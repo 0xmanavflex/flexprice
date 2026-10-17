@@ -4,9 +4,10 @@ import {
   TopUpWalletRequest$outboundSchema,
   UpdateWalletRequest$outboundSchema,
 } from '@flexprice/sdk/sdk/models'
-import { autoTopupSchema, emptyAutoTopup, emptyTopUp, emptyWallet } from '@fp/domain'
+import { autoTopupSchema, emptyAutoTopup, emptyDebit, emptyTopUp, emptyWallet } from '@fp/domain'
 import {
   toCreateWalletRequest,
+  toDebitRequest,
   toTopUpRequest,
   toUpdateAutoTopupRequest,
   toWallet,
@@ -14,6 +15,16 @@ import {
 } from './wallets'
 
 describe('wallet requests', () => {
+  it('sends a manual debit with the credits and a required reference', () => {
+    expect(
+      toDebitRequest({ ...emptyDebit(), credits: '25', idempotencyKey: 'debit-1', description: 'Adjustment' }),
+    ).toEqual({
+      credits: '25',
+      idempotencyKey: 'debit-1',
+      description: 'Adjustment',
+    })
+  })
+
   it('maps a create form to a valid CreateWalletRequest', () => {
     const body = toCreateWalletRequest('cust_1', { ...emptyWallet('usd'), initialCredits: '500' })
     const parsed = CreateWalletRequest$outboundSchema.parse(body)

@@ -375,6 +375,7 @@ export function InvoiceDetailView({
                   summary: event.summary,
                   ...(event.record ? { record: event.record } : {}),
                   ...(event.by ? { by: event.by } : {}),
+                  ...(event.href ? { href: event.href } : {}),
                 }))}
                 emptyText={invoice.activityEmptyText ?? 'No dates recorded yet.'}
                 awaiting={invoice.activityAwaiting ?? false}

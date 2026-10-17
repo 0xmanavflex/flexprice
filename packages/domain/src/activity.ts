@@ -169,7 +169,14 @@ function presentGeneric(entry: ActivityEntry): ActivityFacts {
 }
 
 function label(entry: ActivityEntry): string | undefined {
-  return entry.entityLabel || undefined
+  const name = entry.entityLabel.trim()
+  if (!name || name === entry.entityId || isOpaqueId(name)) return undefined
+  return name
+}
+
+/** `pay_01M5…` and `cust_01M5…` are ids, not names. */
+function isOpaqueId(value: string): boolean {
+  return /^[a-z][a-z0-9]*_[0-9A-Za-z]{8,}$/.test(value)
 }
 
 function join(parts: Array<string | undefined>): string | undefined {

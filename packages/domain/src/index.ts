@@ -638,6 +638,8 @@ export {
   autoTopupSchema,
   createWalletSchema,
   emptyAutoTopup,
+  debitWalletSchema,
+  emptyDebit,
   emptyTopUp,
   emptyWallet,
   topUpWalletSchema,
@@ -645,6 +647,7 @@ export {
 export type {
   AutoTopup,
   CreateWallet,
+  DebitWallet,
   TopUpWallet,
   Wallet,
   WalletConsumption,

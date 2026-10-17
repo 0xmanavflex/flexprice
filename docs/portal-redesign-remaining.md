@@ -71,7 +71,7 @@ Record a decision before changing the current behavior.
 - **31.** Finish Charge / Price / Flags, optional Quantity on wide tables, the short grey model line, and the tier count, on every consumer. No row expansion.
 - **32 and 34.** Flags and sheet sections already share coupon and alert data, in the order Price, Discount, Commitment, Alerts, History. Live tenant coverage of those reads is still open. Narrow-flag behavior waits on item 55.
 - **33.** Sheet focus and scroll are in place. A broader keyboard pass (open, move, close) is still open.
-- **35.** Window layout is in place except the price bands noted under blocked work. “Every minute/hour” should follow the charge’s bucket when one is set; a charge with no bucket still uses the billing period.
+- **35.** Window layout is in place except the price bands noted under blocked work. “Every …” follows the charge’s bucket when `bucketSize` is set, and the billing period when it is not.
 - **36.** Versions are newest first, with start, end, and last updated, and the current version is highlighted. Author shows when the payload includes it. A dedicated version list endpoint is still unverified.
 - **37 and 38.** Blocked, above.
 - Coupon change and alert edit on the sheet are implemented. They have not been exercised against a live tenant. Creating an alert on a charge that has none is not the Edit action.

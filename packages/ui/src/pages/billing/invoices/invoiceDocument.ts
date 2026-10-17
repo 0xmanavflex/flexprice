@@ -32,6 +32,8 @@ export interface InvoiceActivity {
   record?: string
   /** The person who acted. Omitted when the system did. */
   by?: string
+  /** Page for this entity. */
+  href?: string
 }
 
 export interface InvoicePaymentRow {

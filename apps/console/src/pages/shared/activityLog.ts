@@ -9,6 +9,22 @@ import type { ActivityLogEntry } from '@fp/ui/compositions'
 const stamp = (date: Date) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
 
+const ENTITY_PATH: Record<string, string> = {
+  customer: '/customers',
+  subscription: '/contracts',
+  invoice: '/invoices',
+  payment: '/payments',
+  credit_note: '/credit-memos',
+  plan: '/plans',
+  feature: '/features',
+}
+
+function entityHref(entry: ActivityEntry): string | undefined {
+  const prefix = ENTITY_PATH[entry.entityType]
+  if (!prefix || !entry.entityId) return undefined
+  return `${prefix}/${encodeURIComponent(entry.entityId)}`
+}
+
 /** One rail row: title, local time, the type-specific sentence, and the person. */
 export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
   const facts = describeActivity(entry)
@@ -18,6 +34,7 @@ export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
     entry.actorType === 'user' || !who
       ? [who, source].filter(Boolean).join(' · ')
       : who
+  const href = entityHref(entry)
   return {
     id: entry.id,
     title: entry.title,
@@ -25,6 +42,7 @@ export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
     ...(facts.record ? { record: facts.record } : {}),
     ...(facts.summary ? { summary: facts.summary } : {}),
     ...(by ? { by } : {}),
+    ...(href ? { href } : {}),
   }
 }
 
@@ -37,6 +55,7 @@ export function railActivity(entries: ActivityEntry[]): Array<{
   summary: string
   record?: string
   by?: string
+  href?: string
 }> {
   return entries.map((entry, index) => {
     const row = toActivityLogEntry(entry)
@@ -48,6 +67,7 @@ export function railActivity(entries: ActivityEntry[]): Array<{
       summary: row.summary ?? '',
       ...(row.record ? { record: row.record } : {}),
       ...(row.by ? { by: row.by } : {}),
+      ...(row.href ? { href: row.href } : {}),
     }
   })
 }

@@ -794,7 +794,7 @@ export function toCancelSubscriptionRequest(draft: CancelSubscription): Record<s
       ? { prorationBehavior: draft.prorate ? 'create_prorations' : 'none' }
       : {}),
     ...(draft.cancellationType === 'immediate' && draft.generateInvoice !== undefined
-      ? { cancelImmediatelyInovicePolicy: draft.generateInvoice ? 'generate_invoice' : 'skip' }
+      ? { cancelImmediatelyInvoicePolicy: draft.generateInvoice ? 'generate_invoice' : 'skip' }
       : {}),
   }
 }

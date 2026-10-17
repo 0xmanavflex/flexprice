@@ -283,6 +283,7 @@ const RevenuePage = lazy(() =>
  */
 import { SignInPage } from '@/pages/auth/SignInPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
+import { AuthCallbackPage } from '@/pages/auth/AuthCallbackPage'
 import { SignUpConfirmPage } from '@/pages/auth/SignUpConfirmPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
@@ -504,6 +505,24 @@ const signUpRoute = createRoute({
     if (hasSession()) throw redirect({ to: '/' })
   },
   component: SignUpPage,
+})
+
+/**
+ * Where a SAML assertion lands.
+ *
+ * The backend's `auth.saml.dashboard_url` points here and arrives with the
+ * token in the URL fragment. No `validateSearch`: a fragment is not a search
+ * string and never reaches the router — the page reads `location.hash`
+ * itself and clears it.
+ *
+ * It does not step aside for an existing session. Someone already signed in
+ * to one tenant who completes an SSO login to another must land on the new
+ * session, not be bounced to the old one's dashboard.
+ */
+const authCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth/callback',
+  component: AuthCallbackPage,
 })
 
 /**
@@ -2291,6 +2310,7 @@ export const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
   signUpConfirmRoute,
+  authCallbackRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
   shellRoute.addChildren([

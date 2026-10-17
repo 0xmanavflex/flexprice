@@ -18,6 +18,8 @@ export interface ActivityLogEntry {
   summary?: string | undefined
   /** Who did it. Omitted when the system did. */
   by?: string | undefined
+  /** Page for this entity. Set only when the id maps to a route. */
+  href?: string | undefined
 }
 
 /**
@@ -38,12 +40,26 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
             className="border-muted-foreground/50 bg-background relative mt-1.5 size-2 shrink-0 rounded-full border"
           />
           <div className="min-w-0 space-y-0.5">
-            <p className="text-sm leading-5 font-medium">{entry.title}</p>
+            <p className="text-sm leading-5 font-medium">
+              {entry.href ? (
+                <a href={entry.href} className="hover:underline">
+                  {entry.title}
+                </a>
+              ) : (
+                entry.title
+              )}
+            </p>
             <p className="text-muted-foreground text-xs tabular-nums">{entry.at}</p>
             {entry.record || entry.summary ? (
               <p className="text-muted-foreground pt-0.5 text-[13px] leading-5">
                 {entry.record ? (
-                  <span className="text-foreground font-medium">{entry.record}</span>
+                  entry.href ? (
+                    <a href={entry.href} className="text-foreground font-medium hover:underline">
+                      {entry.record}
+                    </a>
+                  ) : (
+                    <span className="text-foreground font-medium">{entry.record}</span>
+                  )
                 ) : null}
                 {entry.record && entry.summary ? ' ' : null}
                 {entry.summary}

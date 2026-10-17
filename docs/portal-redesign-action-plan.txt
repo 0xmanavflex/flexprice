@@ -99,7 +99,7 @@ Implement this before completing pages that consume the charges table.
     plan price in grey without strikethrough. Fix the stated prototype quirks:
     derive Discount flag and section from the same coupon data and align section
     order with flag order: Price, Discount, Commitment, Alerts, History.
-[IMPLEMENTED; window price bands pending an embedded price] 35. Support commitment states: per billing period/duration; every minute/hour
+[IMPLEMENTED; window price bands pending an embedded price; bucket wording follows bucketSize] 35. Support commitment states: per billing period/duration; every minute/hour
     all day; and minute/hour windows with their own commitment and tiers.
     For windows show UTC time range, commitment, tiers and Rest of the day;
     do not add a 24-hour bar.
@@ -128,8 +128,9 @@ Dependencies: Phases 1 and 3.
 [IMPLEMENTED; visual baseline pending] 25. Keep live What customers see pricing card on both Plan tabs;
     make its section headings jump to matching tables.
 [IMPLEMENTED; live mapping verification pending] 26. Move Plan Link integration into the overflow menu.
-[ ] 27. Feature: Overview / Information tabs; show charges by billing plan
+[DONE] 27. Feature: Overview / Information tabs; show charges by billing plan
     and entitlements on Overview; present the create form read-only on Information.
+    Audited October 17; evidence recorded below.
 [IMPLEMENTED; visual review pending] 28. Feature sidebar: Send a test event with Copy cURL and Metadata;
     remove usage chart. Verify the existing test-event workflow still works.
 [ ] 29. Customer: Overview, Invoices, Wallet, Analytics, Events, Information;
@@ -505,3 +506,76 @@ COMMITMENT WINDOWS — OCTOBER 16
 - Validation: subscription detail mapper tests pass (29), including a UTC window
   at 00:00–08:30. The windowed charge-sheet story expects the range, the tier
   band, and Rest of the day with the charge price.
+
+
+BACKEND CONTRACT VERIFICATION FOR CONTRACT-CREATION UX — OCTOBER 17
+Source: https://raw.githubusercontent.com/flexprice/flexprice/main/docs/swagger/swagger.json
+retrieved October 17, 2026. SHA256 6cb88a2f6caea3e69d23c582ca4c2a7d6b7ecd29a203e13caf64bb24ca7ba59c
+— identical to the schema recorded on October 16, so both audits describe the
+same contract. 236 paths. No live tenant calls were made.
+
+- Estimated first invoice on the creation Review step: NOT AVAILABLE.
+  /invoices/preview exists and states "No invoice is created", but
+  GetPreviewInvoiceRequest requires subscription_id, and no create request
+  carries a dry-run, preview or simulate field. Nothing prices a contract that
+  does not exist yet. /subscriptions/{id}/change/preview,
+  /subscriptions/{id}/change/v2/preview and /subscriptions/{id}/modify/preview
+  all likewise need an existing subscription.
+  DECISION: the Review step shows only figures the console already holds exactly
+  — recurring charges per period, one-time charges, discounts and the
+  commitment, all from the selected plan's prices and the overrides just
+  entered. The estimated first invoice line is dropped, because it is the one
+  figure that needs the proration and billing-cycle maths the backend owns.
+  Offer the real /invoices/preview after creation instead.
+
+- First-invoice dates and proration wording: PARTLY AVAILABLE.
+  types.BillingCycle documents "anniversary = start_date; calendar = period
+  boundary", so the first period's dates follow from billing_cycle,
+  billing_anchor, billing_period and start_date. The prorated amount does not.
+  DECISION: state the period and whether it prorates ("First invoice on Nov 1,
+  covering Oct 15-31, prorated") and never the amount.
+
+- Settings that do not apply: types.ProrationBehavior documents "Ignored for
+  anniversary billing". That is a documented applicability rule, so proration
+  can be hidden or disabled when billing_cycle is anniversary rather than
+  guessed at.
+
+- Commitment against usual charges: PARTLY AVAILABLE.
+  /customers/usage (customer usage summary) and /customers/{id}/invoices/summary
+  (totals with multi-currency breakdown) exist for a customer with history.
+  DECISION: compare the commitment with the plan's own fixed recurring charges,
+  which are exact, and add the customer's recent average only where the summary
+  returns one. A new customer gets no comparison rather than an invented one.
+
+- Charge flag showing the price difference ("$99 -> $79"): REJECTED.
+  Item 32 requires neutral chips with no values in labels, so that a flag is
+  read as a pointer to the sheet rather than instead of it. The sheet's Price
+  box already carries the comparison, with the plan price in grey. If the delta
+  needs to be more prominent it belongs there, not on the chip.
+
+ITEM 53 — REVENUE API VERIFICATION
+- /analytics/revenue (POST, RevenueAnalyticsRequest, start_time required) takes
+  start_time/end_time, currency, customer_ids, subscription_ids, meter_ids,
+  price_ids, group_by, include_adjustments, allocation_policy and status.
+- Granularity is day | period | total. There is NO weekly or monthly bucket, and
+  "period" means the billing period, which is not a calendar month. Item 42's
+  weekly and monthly buckets must therefore be summed by the console from day
+  granularity. That is exact arithmetic over returned values, not an estimate.
+- There is no comparison parameter: a comparison is a second request over the
+  prior range.
+- Two request fields change the numbers materially and need an owner's decision
+  before the cards are built, because no default is self-evidently right:
+  status PROVISIONAL vs FINAL, and allocation_policy billed vs amortized.
+- Revenue and ARPU can come from this endpoint (ARPU as revenue over the
+  customer count). Outstanding and Overdue are receivables and are not in it;
+  their source still needs verifying, so items 43 and 45 are not yet unblocked
+  in full.
+
+ITEM 27 — AUDIT, NOW SATISFIED
+- Feature detail already has Overview / Information tabs.
+- Overview shows charges by billing plan through the shared ChargeTable, with
+  the parent's name as the row and row selection opening that plan, add-on or
+  cost sheet; entitlements sit below it.
+- Information presents the create form's own cards read-only, in the form's
+  order, with editing in the header's overflow menu.
+- Evidence: 66 feature browser/a11y stories and 6 feature journeys pass.

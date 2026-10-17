@@ -190,6 +190,20 @@ export const CommitmentWindowed: Story = {
   },
 }
 
+/** A windowed commitment whose charge is bucketed by the hour, not the billing period. */
+export const CommitmentWindowedHourly: Story = {
+  args: {
+    ...CommitmentWindowed.args,
+    charge: { ...usage, bucketSize: 'HOUR' },
+  },
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    const commitment = within(await screen.findByRole('region', { name: 'Commitment' }))
+    await expect(commitment.getByText('10 units every hour · From $0.045')).toBeInTheDocument()
+    await expect(screen.getByText('Per hour')).toBeInTheDocument()
+  },
+}
+
 /**
  * Every part at once, opened at the commitment.
  *

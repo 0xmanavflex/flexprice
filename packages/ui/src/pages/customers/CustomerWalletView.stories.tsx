@@ -129,6 +129,7 @@ const meta = {
     now: NOW,
     onCreateWallet: asyncOk(),
     onTopUp: asyncOk(),
+    onDebit: asyncOk(),
     onTerminate: asyncOk(),
     onSaveAutoTopup: asyncOk(),
     onRetry: fn(),
@@ -142,6 +143,7 @@ const meta = {
     onRetry: { control: false },
     onCreateWallet: { control: false },
     onTopUp: { control: false },
+    onDebit: { control: false },
     onTerminate: { control: false },
     onSaveAutoTopup: { control: false },
     onResetErrors: { control: false },
@@ -215,6 +217,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       onRetry={fn()}
       onCreateWallet={asyncOk()}
       onTopUp={asyncOk()}
+      onDebit={asyncOk()}
       onTerminate={asyncOk()}
       onSaveAutoTopup={asyncOk()}
       onResetErrors={fn()}
