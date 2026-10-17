@@ -505,3 +505,108 @@ COMMITMENT WINDOWS — OCTOBER 16
 - Validation: subscription detail mapper tests pass (29), including a UTC window
   at 00:00–08:30. The windowed charge-sheet story expects the range, the tier
   band, and Rest of the day with the charge price.
+
+
+REVIEW CALL — OCTOBER 17
+Source: live walkthrough of the console (Sudeep's changes already sent). This
+records what was asked. It does not mark the work done.
+
+SHIP TODAY, THEN POLISH
+- Make the build functional, dogfood it, and collect bugs. Visual polish from
+  this call follows. Forms and the contract-creation flow stay for a later pass
+  (Sudeep will sit with an artifact). Time-based commitment windows stay on the
+  existing item 35 work.
+
+WALLET
+- Remove "since the last invoice". That figure is not available. Drop the
+  section rather than invent it.
+- Remove the status block, consumption rate, and top-up rate from the wallet
+  header. Keep two facts as chips: wallet state, and whether auto top-up is on.
+- Auto top-up stays settable from the wallet. Turning the chip off must not
+  dead-end; the settings dialog remains the place to turn it on.
+- Drop the sections the page cannot calculate (expiry that was not set, and
+  the other derived blocks called out on the call).
+- Top-ups use the nested ledger Sudeep designed. Do not show two parallel
+  tables (Top-ups and All transactions). One ledger.
+- Debit wallet is required in the product UI. The API route is
+  POST /wallets/{id}/debit (not in the published SDK). A debit control was
+  added on the customer wallet after this call; the e2e journey still only
+  creates, tops up, and terminates.
+
+CATALOG ORDER
+- Product catalog order is Plan, then Feature, then Add-on.
+
+CONTRACT CHARGES
+- On the contract charges table, remove the subtitle and the Active/Changed
+  chips. Those filters belong with the table filter, not as chips above it.
+- "Show all charges" stays outside only when the overview has no search. On
+  the charges tab, the add action sits inside the table frame, consistent with
+  other tables. The heading is not repeated as "Charges, Charges".
+- Add charge, not "Manage pricing".
+- Charge row menu: Edit first, then Copy price id, then End charge. Remove
+  "Edit on plan". Sending someone to the plan is "Go to plan", not an edit of
+  this contract charge.
+- Show the charge start date. An ended charge must say when it ended. The same
+  charge must not appear twice without a timeline.
+- Upcoming-invoice preview should match the invoice document: amounts
+  right-aligned, the preview object as returned. Remove the copy control and
+  the "API does not support editing yet" line.
+- Usage terms and bucket size must not read as two headers. Bucket size must
+  not default to Month. Effective date must be visible on the charge form.
+- Drop "expire at a set duration". That control was already removed from the UI.
+- Price stacking is a simple table plus history, not a stacked table. A
+  commitment, once added, appears in the same place as the other charge parts.
+
+CUSTOMER AND INVOICE
+- Invoice draft status is yellow or orange (in progress). Void stays grey
+  (terminal). Finalized stays purple so it does not collide with a green paid chip.
+- "Pay with credits" was removed; that removal was accepted.
+- Credit-note presence on an invoice needs a visible cue, not only a trip to
+  the credit-memo page.
+- A 10% discount entered on the form was not carried onto the invoice (zeros).
+  Trace the create payload.
+- Edit customer stays the first header action. Do not add a second edit path.
+- Customer external id is the important id. Label it "External ID" and keep a
+  separate copy for the internal id.
+- Feature test-event snippet must include the property the feature aggregates
+  ("your property"), not an empty properties object.
+- That snippet must call the environment's API host (api-dev on staging), not
+  production.
+- Alerts and banners use one status treatment: info, success, warning, error,
+  each with its icon. A warning is not a sentence with no icon.
+- Developer: Events debugger is the first tab, not Service accounts. API keys
+  move back under Developer (the earlier Settings placement is reversed).
+- Event rows need a reload control and a copyable id. Source is a chip.
+- Webhook list sits up with the rest of the page. A gap must not look like an
+  empty page. An empty first reply is a loading or empty state, not a blank.
+
+NAVIGATION AND LISTS
+- Clicking a contracts-list row must not open the customer. Row navigation and
+  filters stay on the contract.
+- Groups do not need their own detail page. Copy the group id from the row.
+- Coupons are named Coupon everywhere, not Discount in one place and Coupon
+  inside it.
+- Revenue still has no page. Call the revenue API (Agrim's, expected live
+  Monday) instead of an empty route. Item 53 still governs the contract.
+- Customer analytics reuses the existing four summary tiles and table, not a
+  new layout.
+- Home at 90% width was an open-at-90% shortcut. The intended result is spacing
+  that feels like 90% when the layout is at 100%.
+- Forms that are half cards were a trial. Long flows stay steppers. Revisit
+  forms before treating them as done. Create-from-scratch at the bottom of a
+  picker (new feature while creating a charge) is wanted, not required for the
+  first live cut.
+
+ACTIVITY
+- Activity is on the API and accepted. Ids must not render as labels. A missing
+  label is omitted. Rows link to the entity page by id.
+- "Payment succeeded" reads as Paid.
+- Entries can arrive a moment after the mutation. The rail already waits and
+  refetches. Loading still needs to feel intentional, not late.
+
+NOT THIS PASS
+- Child-parent customer flows: keep today's behavior.
+- Contract creation and commitment-creation forms: Sudeep reviews the structure.
+- Metadata edit only where the API already accepts it (customer does; several
+  other detail pages do not).
+- Related stays empty until the customer has an integration.
