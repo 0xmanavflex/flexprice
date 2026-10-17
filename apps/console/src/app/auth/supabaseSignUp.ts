@@ -61,6 +61,32 @@ export async function startSignUp(region: string, email: string, password: strin
   if (error) throw new Error(error.message)
 }
 
+/**
+ * Start Google sign-in, and say where to send the browser.
+ *
+ * The same two-halves shape as email sign-up, with Google standing in for the
+ * inbox: Supabase authenticates, then the browser comes back to
+ * `/sign-up/confirm` with a session in the fragment, and that page either
+ * creates the Flexprice account or — when the user already has one, so the
+ * session's `app_metadata` already names a tenant — simply signs them in.
+ * Nothing new is needed there; it already distinguishes the two.
+ *
+ * Returns the URL rather than navigating, so the caller owns the page
+ * transition and this stays testable. `scopes` are the two V1 asks for: an
+ * email to key the account on and a profile to name it.
+ */
+export async function startGoogleSignIn(region: string): Promise<string> {
+  const { data, error } = await clientFor(configFor(region)).auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: signUpConfirmURL(), scopes: 'email profile' },
+  })
+  if (error) throw new Error(error.message)
+  // supabase-js returns the provider URL for the caller to navigate to; with
+  // no URL there is nowhere to send the browser and nothing happened.
+  if (!data?.url) throw new Error('Google sign-in is unavailable right now.')
+  return data.url
+}
+
 /** Sends the confirmation email again. */
 export async function resendConfirmation(region: string, email: string): Promise<void> {
   const { error } = await clientFor(configFor(region)).auth.resend({
