@@ -1800,6 +1800,7 @@
         "FormDialog",
         "LabelWithHint",
         "LoadingRows",
+        "MinusIcon",
         "OptionSelect",
         "Pill",
         "PlusIcon",
@@ -4150,6 +4151,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CustomerWalletView",
         "EventTrace"
       ],
       "story": null
@@ -8369,6 +8371,14 @@
         "ConfirmDialog",
         "ListState",
         "PageBody"
+      ]
+    },
+    "AuthCallbackPage": {
+      "file": "apps/console/src/pages/auth/AuthCallbackPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "AuthFrame"
       ]
     },
     "ForgotPasswordPage": {

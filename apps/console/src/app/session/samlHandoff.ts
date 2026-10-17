@@ -19,6 +19,12 @@
  * one tenant can be planted on a browser part-way through signing in to
  * another. {@link rememberTenant} records the tenant when the flow starts and
  * {@link takeTenant} reads it back exactly once.
+ *
+ * Storage is passed in rather than reached for, as `listMemory` does next
+ * door. It keeps the one security decision here testable without a browser or
+ * a stubbed global — and the global is not dependable anyway: it is absent
+ * under SSR, absent in Node 24 (which CI runs) and throws outright in a
+ * private window.
  */
 
 /** Where the started-login tenant waits. Session-scoped: a login is one tab's. */
@@ -64,32 +70,24 @@ export function parseFragment(hash: string): SamlHandoff | null {
   return { token, tenantId, ...(state ? { state } : {}) }
 }
 
-function storage(): Storage | null {
-  try {
-    // Touching the property is what throws in a blocked-storage browser, so
-    // it has to be inside the try rather than guarded by a truthiness check.
-    return globalThis.sessionStorage ?? null
-  } catch {
-    return null
-  }
-}
+/** Absent under SSR and in Node, and throws in a private window; neither is an error here. */
+export type MaybeStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | undefined
 
 /** Record the tenant whose SSO this browser is starting. */
-export function rememberTenant(tenantId: string): void {
+export function rememberTenant(tenantId: string, storage: MaybeStorage): void {
   try {
-    storage()?.setItem(PENDING_TENANT_KEY, tenantId)
+    storage?.setItem(PENDING_TENANT_KEY, tenantId)
   } catch {
     /* A browser that cannot store it will refuse the callback. See below. */
   }
 }
 
 /** Read the started-login tenant and forget it. One login, one use. */
-export function takeTenant(): string | null {
-  const store = storage()
-  if (!store) return null
+export function takeTenant(storage: MaybeStorage): string | null {
+  if (!storage) return null
   try {
-    const value = store.getItem(PENDING_TENANT_KEY)
-    store.removeItem(PENDING_TENANT_KEY)
+    const value = storage.getItem(PENDING_TENANT_KEY)
+    storage.removeItem(PENDING_TENANT_KEY)
     return value
   } catch {
     return null
@@ -106,11 +104,11 @@ export function takeTenant(): string | null {
  * flow has no recorded tenant to agree with, so it is refused rather than
  * trusted for want of something to compare against.
  */
-export function readHandoff(hash: string): HandoffResult {
+export function readHandoff(hash: string, storage: MaybeStorage): HandoffResult {
   const handoff = parseFragment(hash)
   if (!handoff) return { ok: false, reason: 'missing' }
 
-  const started = takeTenant()
+  const started = takeTenant(storage)
   if (started === null || started !== handoff.tenantId) {
     return { ok: false, reason: 'rejected' }
   }

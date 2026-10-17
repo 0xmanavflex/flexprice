@@ -37,7 +37,15 @@ export function AuthCallbackPage() {
     consumed.current = true
 
     const hash = globalThis.location?.hash ?? ''
-    const result = readHandoff(hash)
+    // Reading the property is itself what throws in a blocked-storage
+    // browser, so it happens here and the refusal below handles the rest.
+    let storage
+    try {
+      storage = globalThis.sessionStorage
+    } catch {
+      storage = undefined
+    }
+    const result = readHandoff(hash, storage)
 
     /*
      * Clear the fragment before anything else, and whatever the verdict.
