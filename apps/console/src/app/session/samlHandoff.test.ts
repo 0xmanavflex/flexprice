@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  newNonce,
   parseFragment,
   readHandoff,
-  rememberTenant,
-  takeTenant,
+  startLogin,
+  takeStarted,
   type MaybeStorage,
 } from './samlHandoff'
 
@@ -62,20 +63,49 @@ describe('parseFragment', () => {
   })
 })
 
-describe('the started-login tenant', () => {
+describe('the started login', () => {
   it('is readable once and then forgotten', () => {
-    rememberTenant('ten_1', storage)
-    expect(takeTenant(storage)).toBe('ten_1')
-    expect(takeTenant(storage)).toBeNull()
+    const nonce = startLogin('ten_1', storage)
+    expect(takeStarted(storage)).toEqual({ tenantId: 'ten_1', nonce })
+    expect(takeStarted(storage)).toEqual({ tenantId: null, nonce: null })
+  })
+
+  it('mints a fresh nonce each time, short enough for RelayState', () => {
+    const nonces = new Set(Array.from({ length: 50 }, () => newNonce()))
+    expect(nonces.size).toBe(50)
+    for (const nonce of nonces) expect(nonce.length).toBeLessThanOrEqual(80)
   })
 })
 
 describe('readHandoff', () => {
   it('accepts a callback that answers the login this browser started', () => {
-    rememberTenant('ten_1', storage)
-    expect(readHandoff('#token=abc&tenant_id=ten_1', storage)).toEqual({
+    const nonce = startLogin('ten_1', storage)
+    expect(readHandoff(`#token=abc&tenant_id=ten_1&state=${nonce}`, storage)).toEqual({
       ok: true,
-      handoff: { token: 'abc', tenantId: 'ten_1' },
+      handoff: { token: 'abc', tenantId: 'ten_1', state: nonce },
+    })
+  })
+
+  /*
+   * The tenant alone cannot tell one login from another, because every login
+   * to a tenant carries the same value — which is the whole reason the nonce
+   * travels as RelayState. A second login to the same tenant, started
+   * elsewhere, must not be accepted here.
+   */
+  it('refuses a callback for a different login to the same tenant', () => {
+    startLogin('ten_1', storage)
+    const elsewhere = newNonce()
+    expect(readHandoff(`#token=abc&tenant_id=ten_1&state=${elsewhere}`, storage)).toEqual({
+      ok: false,
+      reason: 'rejected',
+    })
+  })
+
+  it('refuses a callback that carries no state at all', () => {
+    startLogin('ten_1', storage)
+    expect(readHandoff('#token=abc&tenant_id=ten_1', storage)).toEqual({
+      ok: false,
+      reason: 'rejected',
     })
   })
 
@@ -84,8 +114,8 @@ describe('readHandoff', () => {
    * tenant, planted on a browser part-way through signing in to another.
    */
   it('refuses a token for a tenant other than the one being signed in to', () => {
-    rememberTenant('ten_1', storage)
-    expect(readHandoff('#token=abc&tenant_id=ten_evil', storage)).toEqual({
+    const nonce = startLogin('ten_1', storage)
+    expect(readHandoff(`#token=abc&tenant_id=ten_evil&state=${nonce}`, storage)).toEqual({
       ok: false,
       reason: 'rejected',
     })
@@ -98,13 +128,11 @@ describe('readHandoff', () => {
     })
   })
 
-  it('spends the remembered tenant, so a replayed callback is refused', () => {
-    rememberTenant('ten_1', storage)
-    expect(readHandoff('#token=abc&tenant_id=ten_1', storage).ok).toBe(true)
-    expect(readHandoff('#token=abc&tenant_id=ten_1', storage)).toEqual({
-      ok: false,
-      reason: 'rejected',
-    })
+  it('spends the started login, so a replayed callback is refused', () => {
+    const nonce = startLogin('ten_1', storage)
+    const url = `#token=abc&tenant_id=ten_1&state=${nonce}`
+    expect(readHandoff(url, storage).ok).toBe(true)
+    expect(readHandoff(url, storage)).toEqual({ ok: false, reason: 'rejected' })
   })
 
   /*
@@ -116,17 +144,17 @@ describe('readHandoff', () => {
    * comparison to anyone who can make the check impossible.
    */
   it('refuses when the browser cannot remember which login it started', () => {
-    rememberTenant('ten_1', undefined)
-    expect(readHandoff('#token=abc&tenant_id=ten_1', undefined)).toEqual({
+    const nonce = startLogin('ten_1', undefined)
+    expect(readHandoff(`#token=abc&tenant_id=ten_1&state=${nonce}`, undefined)).toEqual({
       ok: false,
       reason: 'rejected',
     })
   })
 
   it('says only that it was refused, never which half was wrong', () => {
-    rememberTenant('ten_1', storage)
-    const wrongTenant = readHandoff('#token=abc&tenant_id=ten_evil', storage)
-    const noneStarted = readHandoff('#token=abc&tenant_id=ten_1', storage)
+    const nonce = startLogin('ten_1', storage)
+    const wrongTenant = readHandoff(`#token=abc&tenant_id=ten_evil&state=${nonce}`, storage)
+    const noneStarted = readHandoff(`#token=abc&tenant_id=ten_1&state=${nonce}`, storage)
     expect(wrongTenant).toEqual(noneStarted)
   })
 })

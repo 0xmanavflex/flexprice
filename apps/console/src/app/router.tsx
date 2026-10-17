@@ -470,7 +470,8 @@ const shellRoute = createRoute({
    */
   beforeLoad: ({ location }) => {
     if (needsSignIn()) {
-      throw redirect({ to: '/sign-in', search: { redirect: location.href } })
+      // `sso` is part of the sign-in search now; the guard names no tenant.
+      throw redirect({ to: '/sign-in', search: { redirect: location.href, sso: undefined } })
     }
   },
   component: ShellLayout,
@@ -488,8 +489,13 @@ const shellRoute = createRoute({
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-in',
-  validateSearch: (search: Record<string, unknown>): { redirect: string | undefined } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { redirect: string | undefined; sso: string | undefined } => ({
     redirect: typeof search['redirect'] === 'string' ? search['redirect'] : undefined,
+    // The tenant whose identity provider should handle this login. SSO is
+    // per tenant, so it arrives in the link an administrator hands out.
+    sso: typeof search['sso'] === 'string' ? search['sso'] : undefined,
   }),
   beforeLoad: () => {
     if (hasSession()) throw redirect({ to: '/' })
@@ -559,8 +565,8 @@ const resetPasswordRoute = createRoute({
 })
 
 function SignInRouteComponent() {
-  const { redirect: target } = signInRoute.useSearch()
-  return <SignInPage redirect={target} />
+  const { redirect: target, sso } = signInRoute.useSearch()
+  return <SignInPage redirect={target} ssoTenantId={sso} />
 }
 
 /**

@@ -30,6 +30,18 @@
 /** Where the started-login tenant waits. Session-scoped: a login is one tab's. */
 const PENDING_TENANT_KEY = 'fp.saml.pendingTenant'
 
+/**
+ * Where the nonce for the login in progress waits.
+ *
+ * The tenant says a login to this tenant began; it cannot say *which* one,
+ * because every login to a tenant carries the same value — the backend's own
+ * note makes exactly this point about RelayState. The nonce can: one per
+ * sign-in, out as RelayState, back with the assertion, compared here. A token
+ * from any other login to the same tenant, including one in flight, does not
+ * carry it.
+ */
+const PENDING_STATE_KEY = 'fp.saml.pendingState'
+
 export interface SamlHandoff {
   token: string
   tenantId: string
@@ -73,24 +85,50 @@ export function parseFragment(hash: string): SamlHandoff | null {
 /** Absent under SSR and in Node, and throws in a private window; neither is an error here. */
 export type MaybeStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | undefined
 
-/** Record the tenant whose SSO this browser is starting. */
-export function rememberTenant(tenantId: string, storage: MaybeStorage): void {
-  try {
-    storage?.setItem(PENDING_TENANT_KEY, tenantId)
-  } catch {
-    /* A browser that cannot store it will refuse the callback. See below. */
-  }
+/**
+ * Random, unguessable, and short enough for RelayState.
+ *
+ * Well under the 80 bytes the SAML profile allows (SAMLProfiles 3.6.3.1);
+ * identity providers may reject or truncate anything longer.
+ */
+export function newNonce(): string {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
-/** Read the started-login tenant and forget it. One login, one use. */
-export function takeTenant(storage: MaybeStorage): string | null {
-  if (!storage) return null
+/**
+ * Record that this browser is starting an SSO login, and with what nonce.
+ *
+ * Returns the nonce to send as RelayState. A browser that cannot store it
+ * gets one anyway — the callback will refuse, which is the safe direction,
+ * and refusing here instead would be the same outcome with a worse message.
+ */
+export function startLogin(tenantId: string, storage: MaybeStorage): string {
+  const nonce = newNonce()
   try {
-    const value = storage.getItem(PENDING_TENANT_KEY)
-    storage.removeItem(PENDING_TENANT_KEY)
-    return value
+    storage?.setItem(PENDING_TENANT_KEY, tenantId)
+    storage?.setItem(PENDING_STATE_KEY, nonce)
   } catch {
-    return null
+    /* See above: the callback refuses rather than this throwing. */
+  }
+  return nonce
+}
+
+/** Read what the started login recorded, and forget it. One login, one use. */
+export function takeStarted(storage: MaybeStorage): {
+  tenantId: string | null
+  nonce: string | null
+} {
+  if (!storage) return { tenantId: null, nonce: null }
+  try {
+    const tenantId = storage.getItem(PENDING_TENANT_KEY)
+    const nonce = storage.getItem(PENDING_STATE_KEY)
+    storage.removeItem(PENDING_TENANT_KEY)
+    storage.removeItem(PENDING_STATE_KEY)
+    return { tenantId, nonce }
+  } catch {
+    return { tenantId: null, nonce: null }
   }
 }
 
@@ -108,8 +146,13 @@ export function readHandoff(hash: string, storage: MaybeStorage): HandoffResult 
   const handoff = parseFragment(hash)
   if (!handoff) return { ok: false, reason: 'missing' }
 
-  const started = takeTenant(storage)
-  if (started === null || started !== handoff.tenantId) {
+  const started = takeStarted(storage)
+  // Both must agree. The tenant says a login to this tenant began here; the
+  // nonce says it was *this* login and not another to the same tenant.
+  if (started.tenantId === null || started.tenantId !== handoff.tenantId) {
+    return { ok: false, reason: 'rejected' }
+  }
+  if (started.nonce === null || started.nonce !== handoff.state) {
     return { ok: false, reason: 'rejected' }
   }
   return { ok: true, handoff }
