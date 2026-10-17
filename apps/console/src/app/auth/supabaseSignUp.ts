@@ -219,9 +219,27 @@ export async function completeAccount(
     token: string
     metadata: Record<string, string>
   }) => Promise<{ userId: string; tenantId: string }>,
+  /** Injected like `create`, so both branches are testable without a client. */
+  refresh: (region: string) => Promise<string> = refreshedToken,
 ): Promise<NewSession> {
   if (confirmed.tenantId) {
-    return { token: confirmed.accessToken, userId: confirmed.userId, tenantId: confirmed.tenantId }
+    /*
+     * Refresh before handing the token on, even though this account exists.
+     *
+     * The API reads the tenant from the token's `app_metadata.tenant_id`, and
+     * `ValidateToken` returns an empty tenant rather than an error when it is
+     * missing — the middleware then refuses with "Invalid token claims". The
+     * session *object* can carry a tenant the *token* does not, because the
+     * token was minted earlier; `confirmed.tenantId` is read from the former.
+     * Refreshing mints one from the current metadata, which is what V1 does
+     * after every signup for the same reason.
+     *
+     * A refresh that fails is not fatal: the token in hand may well be fine,
+     * and refusing the sign-in over it would turn a working login into a dead
+     * button. Try, and fall back to what we have.
+     */
+    const token = await refresh(region).catch(() => confirmed.accessToken)
+    return { token, userId: confirmed.userId, tenantId: confirmed.tenantId }
   }
   const created = await create({
     email: confirmed.email,
@@ -229,7 +247,7 @@ export async function completeAccount(
     metadata: SIGN_UP_METADATA,
   })
   return {
-    token: await refreshedToken(region),
+    token: await refresh(region),
     userId: created.userId || confirmed.userId,
     tenantId: created.tenantId,
   }
