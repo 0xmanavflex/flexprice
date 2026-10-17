@@ -154,6 +154,20 @@ export const topUpWalletSchema = z.object({
 })
 export type TopUpWallet = z.infer<typeof topUpWalletSchema>
 
+export const debitWalletSchema = z.object({
+  credits: z.string().trim().refine(positive, 'Enter a positive number of credits'),
+  description: z.string().trim().max(200, 'Keep the note under 200 characters'),
+  /** Generated when the dialog opens, so a double submit is one debit. */
+  idempotencyKey: z.string().trim().min(1, 'A reference is required'),
+})
+export type DebitWallet = z.infer<typeof debitWalletSchema>
+
+export const emptyDebit = (): DebitWallet => ({
+  credits: '',
+  description: '',
+  idempotencyKey: '',
+})
+
 export const emptyTopUp = (): TopUpWallet => ({
   kind: 'purchased',
   credits: '',

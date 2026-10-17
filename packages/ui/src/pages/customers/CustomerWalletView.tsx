@@ -4,6 +4,7 @@ import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
   ArrowUpRightIcon,
   InfoIcon,
+  MinusIcon,
   MoreHorizontalIcon,
   PlusIcon,
   RepeatIcon,
@@ -13,6 +14,7 @@ import {
 import {
   type AutoTopup,
   type CreateWallet,
+  type DebitWallet,
   type TopUpWallet,
   type Wallet,
   type WalletTransaction,
@@ -20,6 +22,8 @@ import {
   WalletStatus,
   autoTopupSchema,
   createWalletSchema,
+  debitWalletSchema,
+  emptyDebit,
   emptyTopUp,
   emptyWallet,
   formatMoney,
@@ -87,6 +91,8 @@ export interface CustomerWalletViewProps {
   createError?: string | null
   onTopUp: (draft: TopUpWallet) => Promise<unknown>
   topUpError?: string | null
+  onDebit: (draft: DebitWallet) => Promise<unknown>
+  debitError?: string | null
   onTerminate: () => Promise<unknown>
   terminateError?: string | null
   onSaveAutoTopup: (draft: AutoTopup) => Promise<unknown>
@@ -95,7 +101,7 @@ export interface CustomerWalletViewProps {
   onResetErrors?: () => void
 }
 
-type Dialog = 'create' | 'top-up' | 'auto-topup' | 'terminate' | null
+type Dialog = 'create' | 'top-up' | 'debit' | 'auto-topup' | 'terminate' | null
 
 const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
 
@@ -134,6 +140,8 @@ export function CustomerWalletView({
   createError = null,
   onTopUp,
   topUpError = null,
+  onDebit,
+  debitError = null,
   onTerminate,
   terminateError = null,
   onSaveAutoTopup,
@@ -247,6 +255,15 @@ export function CustomerWalletView({
           <Button className="h-8 px-3.5" onClick={() => open('top-up')} disabled={closed}>
             <PlusIcon aria-hidden="true" />
             Top up wallet
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 px-3.5"
+            onClick={() => open('debit')}
+            disabled={closed}
+          >
+            <MinusIcon aria-hidden="true" />
+            Debit wallet
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -429,6 +446,14 @@ export function CustomerWalletView({
         pending={pending}
         error={topUpError}
         onSubmit={(draft) => run(() => onTopUp(draft))}
+      />
+      <DebitDialog
+        key={`debit:${opens}`}
+        open={dialog === 'debit'}
+        onClose={close}
+        pending={pending}
+        error={debitError}
+        onSubmit={(draft) => run(() => onDebit(draft))}
       />
       <AutoTopupDialog
         key={`${wallet.id}:${opens}`}
@@ -613,6 +638,79 @@ function CreateWalletDialog({
             </LabelWithHint>
             <Input
               id="wallet-description"
+              className="h-9"
+              value={draft.description}
+              onChange={(event) => set({ description: event.target.value })}
+            />
+          </Field>
+        </div>
+        {problem || error ? (
+          <p role="alert" className="text-destructive text-sm">
+            {problem ?? error}
+          </p>
+        ) : null}
+      </Composer>
+    </FormDialog>
+  )
+}
+
+function DebitDialog({
+  open,
+  onClose,
+  pending,
+  error,
+  onSubmit,
+}: {
+  open: boolean
+  onClose: () => void
+  pending: boolean
+  error: string | null
+  onSubmit: (draft: DebitWallet) => void
+}) {
+  const [draft, setDraft] = useState<DebitWallet>(() => ({
+    ...emptyDebit(),
+    idempotencyKey: crypto.randomUUID(),
+  }))
+  const [problem, setProblem] = useState<string | null>(null)
+  const set = (patch: Partial<DebitWallet>) => setDraft((current) => ({ ...current, ...patch }))
+
+  return (
+    <FormDialog
+      open={open}
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      title="Debit wallet"
+    >
+      <Composer
+        submitLabel="Debit"
+        onCancel={onClose}
+        submitting={pending}
+        onSubmit={() => {
+          const parsed = debitWalletSchema.safeParse(draft)
+          if (!parsed.success)
+            return setProblem(parsed.error.issues[0]?.message ?? 'Check the form')
+          setProblem(null)
+          onSubmit(parsed.data)
+        }}
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field>
+            <LabelWithHint htmlFor="debit-credits" hint="How many credits to remove from the wallet.">
+              Credits
+            </LabelWithHint>
+            <Input
+              id="debit-credits"
+              className="h-9"
+              inputMode="decimal"
+              value={draft.credits}
+              onChange={(event) => set({ credits: event.target.value })}
+            />
+          </Field>
+          <Field>
+            <LabelWithHint htmlFor="debit-note" hint="Why the credits are being removed. Optional.">
+              Note
+            </LabelWithHint>
+            <Input
+              id="debit-note"
               className="h-9"
               value={draft.description}
               onChange={(event) => set({ description: event.target.value })}

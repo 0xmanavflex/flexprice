@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   ApiError,
   useCreateWallet,
+  useDebitWallet,
   useCustomerWallets,
   useTerminateWallet,
   useTopUpWallet,
@@ -33,6 +34,7 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
 
   const create = useCreateWallet(customerId)
   const topUp = useTopUpWallet(selected?.id ?? '')
+  const debit = useDebitWallet(selected?.id ?? '')
   const autoTopup = useUpdateAutoTopup(selected?.id ?? '')
   const terminate = useTerminateWallet()
 
@@ -60,6 +62,13 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
         })
       }
       topUpError={failure(topUp.error, 'top up the wallet')}
+      onDebit={(draft) =>
+        debit.mutateAsync(draft).then((result) => {
+          toast.success('Wallet debited')
+          return result
+        })
+      }
+      debitError={failure(debit.error, 'debit the wallet')}
       onSaveAutoTopup={(draft) =>
         autoTopup.mutateAsync(draft).then((result) => {
           toast.success(draft.enabled ? 'Auto top-up saved' : 'Auto top-up turned off')
@@ -77,6 +86,7 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
       onResetErrors={() => {
         create.reset()
         topUp.reset()
+        debit.reset()
         autoTopup.reset()
         terminate.reset()
       }}

@@ -559,12 +559,14 @@ export {
 export type { ConnectionWire, OAuthStart } from './integrations'
 export {
   toCreateWalletRequest,
+  toDebitRequest,
   toTopUpRequest,
   toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
   useCreateWallet,
   useCustomerWallets,
+  useDebitWallet,
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,

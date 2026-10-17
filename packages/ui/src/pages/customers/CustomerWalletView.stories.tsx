@@ -215,6 +215,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       onRetry={fn()}
       onCreateWallet={asyncOk()}
       onTopUp={asyncOk()}
+      onDebit={asyncOk()}
       onTerminate={asyncOk()}
       onSaveAutoTopup={asyncOk()}
       onResetErrors={fn()}

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { call } from '@fp/api'
+import { ApiError, ErrorKind, call, debitWallet } from '@fp/api'
 import {
   type AutoTopup,
   type CreateWallet,
+  type DebitWallet,
   type TopUpWallet,
   type Wallet,
   type WalletTransaction,
@@ -10,7 +11,7 @@ import {
   moneyOr,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
  * Prepaid wallets: read per customer, create, top up, terminate.
@@ -208,6 +209,36 @@ export function useCreateWallet(customerId: string) {
   return useMutation({
     mutationFn: (draft: CreateWallet) =>
       call(() => client.wallets.createWallet(toCreateWalletRequest(customerId, draft) as never)),
+    onSuccess: invalidate,
+  })
+}
+
+/** Builds `POST /wallets/{id}/debit`. The reason is fixed: a manual debit. */
+export function toDebitRequest(draft: DebitWallet): {
+  credits: string
+  idempotencyKey: string
+  description?: string
+} {
+  const description = draft.description.trim()
+  return {
+    credits: draft.credits,
+    idempotencyKey: draft.idempotencyKey,
+    ...(description ? { description } : {}),
+  }
+}
+
+export function useDebitWallet(walletId: string) {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const invalidate = useInvalidateWallets()
+
+  return useMutation({
+    mutationFn: async (draft: DebitWallet) => {
+      const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+      if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to debit a wallet.')
+      if (!environmentId) throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
+      return debitWallet(serverURL, token, environmentId, walletId, toDebitRequest(draft))
+    },
     onSuccess: invalidate,
   })
 }

@@ -99,7 +99,7 @@ Implement this before completing pages that consume the charges table.
     plan price in grey without strikethrough. Fix the stated prototype quirks:
     derive Discount flag and section from the same coupon data and align section
     order with flag order: Price, Discount, Commitment, Alerts, History.
-[IMPLEMENTED; window price bands pending an embedded price] 35. Support commitment states: per billing period/duration; every minute/hour
+[IMPLEMENTED; window price bands pending an embedded price; bucket wording follows bucketSize] 35. Support commitment states: per billing period/duration; every minute/hour
     all day; and minute/hour windows with their own commitment and tiers.
     For windows show UTC time range, commitment, tiers and Rest of the day;
     do not add a 24-hour bar.

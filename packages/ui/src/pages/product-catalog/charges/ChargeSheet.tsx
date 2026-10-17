@@ -11,6 +11,7 @@ import {
   CommitmentType,
   InvoiceCadence,
   PriceType,
+  PriceWindowSize,
   TierMode,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
@@ -208,6 +209,27 @@ function TierList({ tiers }: { tiers: Charge['tiers'] }) {
  * row says what the rest of the day does — which is the question a reader asks
  * the moment they see a window, and the prototype answers in the same place.
  */
+/** "every hour" when the charge has a bucket; otherwise the billing period ("every month"). */
+const WINDOW_EVERY: Record<PriceWindowSize, string> = {
+  [PriceWindowSize.Minute]: 'minute',
+  [PriceWindowSize.FifteenMin]: '15 minutes',
+  [PriceWindowSize.ThirtyMin]: '30 minutes',
+  [PriceWindowSize.Hour]: 'hour',
+  [PriceWindowSize.ThreeHour]: '3 hours',
+  [PriceWindowSize.SixHour]: '6 hours',
+  [PriceWindowSize.TwelveHour]: '12 hours',
+  [PriceWindowSize.Day]: 'day',
+}
+
+function windowEvery(charge: Charge): string {
+  if (charge.bucketSize && charge.bucketSize in WINDOW_EVERY) {
+    return WINDOW_EVERY[charge.bucketSize as PriceWindowSize]
+  }
+  return (BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? 'period')
+    .toLowerCase()
+    .replace(/ly$/, '')
+}
+
 function CommitmentBody({
   commitment,
   charge,
@@ -233,9 +255,7 @@ function CommitmentBody({
     )
   }
 
-  const every = (BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? 'period')
-    .toLowerCase()
-    .replace(/ly$/, '')
+  const every = windowEvery(charge)
 
   return (
     <>
