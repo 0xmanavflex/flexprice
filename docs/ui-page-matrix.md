@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-62 route pages.
+63 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -14,6 +14,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, Field, FormActions, FormDialog, MetricRail, RowActionsMenu, Section | AddonSubscriptionsView, ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, MetadataCard, PencilIcon, Pill, PuzzleIcon |
 | addons | `AddonFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AddonForm, AppFailure, LoadingRows, PageBody |
 | addons | `AddonListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | AddonGrid, Button, ListState, PageBody |
+| auth | `AuthCallbackPage` | Other | — | AuthFrame, Button |
 | auth | `ForgotPasswordPage` | Other | Field | AuthFrame, ForgotPasswordForm |
 | auth | `ResetPasswordPage` | Other | Field | AuthFrame, SetPasswordForm |
 | auth | `SignInPage` | Other | Field | RegionField, SignInScreen |
