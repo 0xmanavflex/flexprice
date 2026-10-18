@@ -40,6 +40,7 @@ Not spread evenly. They cluster on exactly the surfaces V2 needs first:
 | `auth.go` | 2 | **0** | 2 |
 | `dashboard.go` | 2 | **0** | 2 |
 | `onboarding.go` | 2 | **0** | 2 |
+| `hosted_invoice.go` | 3 | **0** | 3 |
 
 Three consequences, in order of severity:
 
@@ -138,3 +139,7 @@ layer. That package:
 - **is deleted when it reaches zero**
 
 It currently holds **zero shims**, and the foundation does not depend on one.
+
+The hosted invoice page's three `/public/v1` routes (`hosted_invoice.go`: view,
+download, pay) are called with plain `fetch` from `packages/api/src/hostedInvoice.ts`,
+like `settings.ts`: one file, so annotating the handlers makes deleting it a diff.

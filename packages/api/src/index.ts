@@ -103,6 +103,8 @@ export type { ListActivityParams } from './activity'
 export { fetchEventDebug } from './eventDebug'
 export type { EventDebugParams } from './eventDebug'
 
+export { getHostedInvoice, getHostedInvoiceDownload, payHostedInvoice } from './hostedInvoice'
+
 /**
  * The SDK's request and response models, re-exported so the rest of the
  * workspace has one import path for them and the SDK can be swapped or pinned

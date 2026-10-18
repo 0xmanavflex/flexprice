@@ -262,4 +262,7 @@ export const queryKeys = {
       ['alertSettings', 'list', filter] as const,
     detail: (id: string) => ['alertSettings', 'detail', id] as const,
   },
+  hostedInvoice: {
+    detail: (apiOrigin: string, token: string) => ['hostedInvoice', apiOrigin, token] as const,
+  },
 } as const

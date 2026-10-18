@@ -8,6 +8,7 @@
     "prepare": "husky",
     "dev": "pnpm --filter console dev",
     "dev:portal": "pnpm --filter portal dev",
+    "dev:hosted-invoice": "pnpm --filter hosted-invoice dev",
     "build": "nx run-many -t build",
     "typecheck": "nx run-many -t typecheck",
     "lint": "nx run-many -t lint",
