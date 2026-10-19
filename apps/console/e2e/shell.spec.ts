@@ -176,7 +176,7 @@ test.describe('the shell', () => {
     await shell.goto('/')
 
     await shell.go('Product catalog')
-    await expect(page).toHaveURL(atPath('/features'))
+    await expect(page).toHaveURL(atPath('/plans'))
     await expect(shell.home).toBeVisible()
   })
 })

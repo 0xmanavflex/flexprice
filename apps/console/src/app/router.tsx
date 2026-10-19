@@ -14,7 +14,7 @@ import {
   useRouterState,
   useSearch,
 } from '@tanstack/react-router'
-import { Outlet } from '@tanstack/react-router'
+import { Navigate, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense, type ReactNode } from 'react'
 import { AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { useCurrentUser } from '@fp/query'
@@ -2084,12 +2084,14 @@ const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings',
   // API keys, service accounts and webhooks have their own Developer pages.
-  beforeLoad: ({ location }) => {
-    const raw = (location.search as Record<string, unknown>)['section']
-    const moved = typeof raw === 'string' ? MOVED_SECTIONS[raw] : undefined
-    if (moved) throw redirect({ to: moved, search: {} as never })
+  // A moved section survives validation so the component can send it on;
+  // parsing would otherwise rewrite it to the default section first.
+  validateSearch: (search: Record<string, unknown>): SettingsQuery => {
+    const raw = search['section']
+    return typeof raw === 'string' && MOVED_SECTIONS[raw]
+      ? ({ section: raw, tab: raw } as SettingsQuery)
+      : parseSettingsSearch(search)
   },
-  validateSearch: (search: Record<string, unknown>): SettingsQuery => parseSettingsSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_SETTINGS_QUERY)] },
   component: SettingsRouteComponent,
 })
@@ -2116,6 +2118,8 @@ function SettingsListFrame({ sectionId, children }: { sectionId: string; childre
 function SettingsRouteComponent() {
   const { section, tab } = useSearch({ from: settingsRoute.id })
   const navigate = useNavigate()
+  const moved = MOVED_SECTIONS[section]
+  if (moved) return <Navigate to={moved} search={{} as never} replace />
 
   return (
     <SettingsPage
