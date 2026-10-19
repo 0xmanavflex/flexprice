@@ -1630,11 +1630,13 @@ function InvoicePreviewSection({
               {
                 key: 'quantity',
                 header: 'Quantity',
+                align: 'end',
                 cell: (line) => <Muted className="tabular-nums">{line.quantity || '—'}</Muted>,
               },
               {
                 key: 'amount',
                 header: 'Amount',
+                align: 'end',
                 cell: (line) => (
                   <Strong className="tabular-nums">{formatMoney(line.amount)}</Strong>
                 ),

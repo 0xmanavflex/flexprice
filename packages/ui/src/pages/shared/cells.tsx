@@ -107,7 +107,11 @@ export interface EntityColumn<T> {
    * left-aligning a one or two digit figure under a wider header leaves it
    * adrift. The redesign asks for these centred and it is right about them.
    */
-  align?: 'start' | 'center' | undefined
+  /**
+   * `end` right-aligns header and cell — only for a document-shaped table, such
+   * as an invoice preview, that must read like the invoice it previews.
+   */
+  align?: 'start' | 'center' | 'end' | undefined
 }
 
 /* ------------------------------------------------------------------ *
