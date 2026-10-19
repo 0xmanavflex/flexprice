@@ -18,7 +18,7 @@ import { provenance } from '@ui/provenance'
 
 export const ChargeAlertFormProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/Composer', 'compositions/option-select', 'ui/input', 'ui/switch'],
+  composes: ['compositions/detail/DetailKit', 'compositions/option-select', 'ui/input', 'ui/switch'],
   note: 'Edit the thresholds of one charge alert setting. The watched line cannot be changed.',
 })
 
