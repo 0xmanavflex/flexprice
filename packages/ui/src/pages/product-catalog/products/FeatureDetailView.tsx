@@ -14,7 +14,7 @@ import { ArchiveIcon, CopyIcon, PencilIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
 import { DetailBreadcrumb } from '../../../compositions/detail/DetailShell'
-import { FormCard, FormRow } from '../../../compositions/forms/FormCard'
+import { EditableCard } from '../../../compositions/forms/EditableCard'
 import { SubTabState } from '../../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../../compositions/feedback/States'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
@@ -234,7 +234,7 @@ export function FeatureDetailView({
 
       {/* One page: only the left column changes between tabs. The test event and
           metadata stay put on the right in both. */}
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         {tab === 'overview' ? (
           <OverviewTab
             isMetered={isMetered}
@@ -254,7 +254,7 @@ export function FeatureDetailView({
         ) : (
           <InformationTab feature={feature} isMetered={isMetered} groupName={groupName} />
         )}
-        <div className="flex min-w-0 flex-col gap-5 xl:sticky xl:top-6">
+        <div className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-6">
           {isMetered ? (
             <TestEventPanel feature={feature} {...(apiBaseUrl ? { apiBaseUrl } : {})} />
           ) : null}
@@ -494,53 +494,117 @@ function InformationTab({
   isMetered: boolean
   groupName?: string | undefined
 }) {
-  const none = <span className="text-muted-foreground">None</span>
   const filters = feature.meterFilters ?? []
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <FormCard title="Details">
-        <FormRow label="Type" hint="The type is fixed once the feature exists.">
-          {FEATURE_TYPE_LABEL[feature.type]}
-        </FormRow>
-        <FormRow label="Name">{feature.name}</FormRow>
-        <FormRow label="Lookup key" hint="Fixed once set — integrations key off it.">
-          {feature.lookupKey ? mono(feature.lookupKey) : none}
-        </FormRow>
-        <FormRow label="Description">{feature.description || none}</FormRow>
-        <FormRow label="Label" hint="The label the feature is filed under.">
-          {groupName || none}
-        </FormRow>
-      </FormCard>
+      {/* The same locked card the Plan page uses, so the rows read at one size. */}
+      <EditableCard
+        title="Details"
+        locked
+        onSave={noSave}
+        fields={[
+          {
+            key: 'type',
+            label: 'Type',
+            value: FEATURE_TYPE_LABEL[feature.type],
+            hint: 'The type is fixed once the feature exists.',
+            readOnly: true,
+          },
+          { key: 'name', label: 'Name', value: feature.name, readOnly: true },
+          {
+            key: 'lookupKey',
+            label: 'Lookup key',
+            value: feature.lookupKey,
+            ...(feature.lookupKey ? { display: mono(feature.lookupKey) } : {}),
+            placeholder: 'None',
+            hint: 'Fixed once set — integrations key off it.',
+            readOnly: true,
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            value: feature.description,
+            placeholder: 'None',
+            readOnly: true,
+          },
+          {
+            key: 'label',
+            label: 'Label',
+            value: groupName ?? '',
+            placeholder: 'None',
+            hint: 'The label the feature is filed under.',
+            readOnly: true,
+          },
+        ]}
+      />
 
       {isMetered ? (
-        <FormCard title="Metering">
-          <FormRow label="Event name" hint="The event whose usage is measured.">
-            {feature.eventName ? mono(feature.eventName) : none}
-          </FormRow>
-          <FormRow
-            label="Event filters"
-            hint="Only events whose property matches one of the values are counted."
-          >
-            {filters.length > 0
-              ? mono(
-                  filters.map((filter) => `${filter.key} = ${filter.values.join(', ')}`).join(', '),
-                )
-              : none}
-          </FormRow>
-          <FormRow label="Aggregation" hint="How events are combined into a usage number.">
-            {feature.aggregationType ? AGGREGATION_LABEL[feature.aggregationType] : none}
-          </FormRow>
-          {/* Only when the aggregation has one — the form hides it too. */}
-          {feature.aggregationField ? (
-            <FormRow label="Event field" hint="The property on the event to aggregate.">
-              {mono(feature.aggregationField)}
-            </FormRow>
-          ) : null}
-          <FormRow label="Unit name" hint="Shown after a quantity of one, for example call.">
-            {feature.unitSingular || none}
-          </FormRow>
-        </FormCard>
+        <EditableCard
+          title="Metering"
+          locked
+          onSave={noSave}
+          fields={[
+            {
+              key: 'event',
+              label: 'Event name',
+              value: feature.eventName ?? '',
+              ...(feature.eventName ? { display: mono(feature.eventName) } : {}),
+              placeholder: 'None',
+              hint: 'The event whose usage is measured.',
+              readOnly: true,
+            },
+            {
+              key: 'filters',
+              label: 'Event filters',
+              value: filters.length ? 'set' : '',
+              ...(filters.length
+                ? {
+                    display: mono(
+                      filters
+                        .map((filter) => `${filter.key} = ${filter.values.join(', ')}`)
+                        .join(', '),
+                    ),
+                  }
+                : {}),
+              placeholder: 'None',
+              hint: 'Only events whose property matches one of the values are counted.',
+              readOnly: true,
+            },
+            {
+              key: 'aggregation',
+              label: 'Aggregation',
+              value: feature.aggregationType ? AGGREGATION_LABEL[feature.aggregationType] : '',
+              placeholder: 'None',
+              hint: 'How events are combined into a usage number.',
+              readOnly: true,
+            },
+            // Only when the aggregation has one — the form hides it too.
+            ...(feature.aggregationField
+              ? [
+                  {
+                    key: 'field',
+                    label: 'Event field',
+                    value: feature.aggregationField,
+                    display: mono(feature.aggregationField),
+                    hint: 'The property on the event to aggregate.',
+                    readOnly: true,
+                  },
+                ]
+              : []),
+            {
+              key: 'unit',
+              label: 'Unit name',
+              value: feature.unitSingular,
+              placeholder: 'None',
+              hint: 'Shown after a quantity of one, for example call.',
+              readOnly: true,
+            },
+          ]}
+        />
       ) : null}
     </div>
   )
 }
+
+/** A locked card never saves; `EditableCard` wants the prop regardless. */
+const noSave = async () => undefined
