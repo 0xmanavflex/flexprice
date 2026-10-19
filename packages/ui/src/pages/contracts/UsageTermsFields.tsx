@@ -67,7 +67,8 @@ export function UsageTermsFields({
 
   return (
     <fieldset disabled={disabled} className="flex flex-col gap-4">
-      <legend className="mb-1 text-sm font-medium">Usage terms</legend>
+      {/* Named for assistive tech only: a visible legend above the Bucket size label read as two headers. */}
+      <legend className="sr-only">Usage terms</legend>
 
       <div className="max-w-sm">
         <Field
