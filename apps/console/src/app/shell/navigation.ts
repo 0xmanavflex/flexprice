@@ -109,7 +109,7 @@ export const SECONDARY: NavEntry[] = [
     path: '/settings',
     query: { section: 'api-keys', tab: 'api-keys' },
   },
-  { id: 'settings-discounts', label: 'Discounts', path: '/coupons' },
+  { id: 'settings-discounts', label: 'Coupons', path: '/coupons' },
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
   {

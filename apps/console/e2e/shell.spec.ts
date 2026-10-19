@@ -86,7 +86,7 @@ test.describe('the shell', () => {
     const rail = page.getByRole('navigation', { name: 'Settings' })
     await rail.getByRole('button', { name: 'Invoicing' }).click()
     await expect(page).toHaveURL(/\/settings\?section=invoicing/)
-    await rail.getByRole('button', { name: 'Discounts' }).click()
+    await rail.getByRole('button', { name: 'Coupons' }).click()
     await expect(page).toHaveURL(atPath('/coupons'))
     await expect(shell.home).toBeVisible()
   })

@@ -70,7 +70,7 @@ export const SETTINGS_SECTIONS = [
   },
   {
     id: 'discounts',
-    label: 'Discounts',
+    label: 'Coupons',
     href: '/coupons',
     tabs: [],
   },

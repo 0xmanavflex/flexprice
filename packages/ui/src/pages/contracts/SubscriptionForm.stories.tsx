@@ -319,7 +319,7 @@ export const PhaseCharges: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'Phase 1' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Discounts' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Coupons' })).toBeVisible()
     await expect(canvas.getByText('Immediately')).toBeVisible()
     await expect(canvas.queryByText('Minimum on this charge')).toBeNull()
     const [menu] = canvas.getAllByRole('button', { name: /^Actions for / })

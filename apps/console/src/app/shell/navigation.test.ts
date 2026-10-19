@@ -155,7 +155,7 @@ describe('breadcrumbForPath', () => {
   })
 
   it('names Settings before a Settings child, wherever the page lives', () => {
-    expect(breadcrumbForPath('/coupons')).toEqual([{ label: 'Settings' }, { label: 'Discounts' }])
+    expect(breadcrumbForPath('/coupons')).toEqual([{ label: 'Settings' }, { label: 'Coupons' }])
     expect(breadcrumbForPath('/settings', '?section=team&tab=members')).toEqual([
       { label: 'Settings' },
     ])
