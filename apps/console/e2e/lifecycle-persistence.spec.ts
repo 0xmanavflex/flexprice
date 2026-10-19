@@ -136,7 +136,9 @@ test('finalize now creates an open invoice that can be voided from the detail', 
   await page.getByRole('button', { name: 'More actions' }).click()
   await voidItem(page).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Void invoice' }).click()
-  await expect(page.getByText('The invoice was voided.')).toBeVisible()
+  // The header chip is the state a reader sees; the activity rail now reads the
+  // activity log, so its wording is not the invoice's own lifecycle line.
+  await expect(page.getByText('Void', { exact: true }).first()).toBeVisible()
   await page.getByRole('button', { name: 'More actions' }).click()
   await expect(voidItem(page)).toBeHidden()
 })
