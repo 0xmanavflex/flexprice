@@ -77,6 +77,7 @@ function shareOf(total: WalletTransaction['amount'], part: number, whole: number
 
 type LedgerRow =
   | { kind: 'topup'; id: string; tx: WalletTransaction }
+  | { kind: 'debit'; id: string; tx: WalletTransaction }
   | { kind: 'child'; id: string; tx: WalletTransaction; line: WalletConsumption }
 
 const hasBreakdown = (tx: WalletTransaction) => (tx.consumption?.length ?? 0) > 0
@@ -132,16 +133,23 @@ function Expires({ date, now }: { date: Date | null; now: Date }) {
   )
 }
 
-/** Top-ups newest first; a row opens to the products that drew it down when the API says so. */
+/**
+ * The wallet's one ledger, newest first. Credits in are top-ups: they carry
+ * remaining, consumed and expiry, and open to the products that drew them down
+ * when the API says so. Credits out are debits, shown as a plain negative row.
+ */
 export function WalletLedgerTable({
-  topUps,
+  transactions,
   now,
-  noun = 'top-ups',
+  noun = 'transactions',
 }: {
-  topUps: WalletTransaction[]
+  transactions: readonly WalletTransaction[]
   now: Date
   noun?: string
 }) {
+  const ordered = [...transactions].sort(
+    (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+  )
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
   const toggle = (id: string) =>
     setOpen((current) => {
@@ -150,8 +158,8 @@ export function WalletLedgerTable({
       return next
     })
 
-  const rows: LedgerRow[] = topUps.flatMap((tx): LedgerRow[] => [
-    { kind: 'topup', id: tx.id, tx },
+  const rows: LedgerRow[] = ordered.flatMap((tx): LedgerRow[] => [
+    tx.direction === 'out' ? { kind: 'debit', id: tx.id, tx } : { kind: 'topup', id: tx.id, tx },
     ...(open.has(tx.id)
       ? (tx.consumption ?? []).map((line): LedgerRow => ({
           kind: 'child',
@@ -161,6 +169,7 @@ export function WalletLedgerTable({
         }))
       : []),
   ])
+  const topUps = ordered.filter((tx) => tx.direction !== 'out')
   const anyBreakdown = topUps.some(hasBreakdown)
 
   /** Children sort and search with their top-up, so they stay beneath it. */
@@ -170,10 +179,10 @@ export function WalletLedgerTable({
     <>
       <DetailTable<LedgerRow>
         compact
-        label="Top-ups"
+        label="Transactions"
         noun={noun}
         rows={rows}
-        empty="No top-ups yet."
+        empty="No transactions yet."
         searchText={(row) =>
           row.kind === 'child'
             ? `${row.tx.reason} ${row.line.product} ${row.line.contract}`
@@ -182,7 +191,7 @@ export function WalletLedgerTable({
         columns={[
           {
             key: 'topup',
-            header: 'Top-up',
+            header: 'Transaction',
             width: 280,
             cell: (row) =>
               row.kind === 'child' ? (
@@ -194,7 +203,7 @@ export function WalletLedgerTable({
                 </div>
               ) : (
                 <div className="flex min-w-0 items-center gap-2">
-                  {hasBreakdown(row.tx) ? (
+                  {row.kind === 'topup' && hasBreakdown(row.tx) ? (
                     <button
                       type="button"
                       aria-expanded={open.has(row.tx.id)}
@@ -216,7 +225,9 @@ export function WalletLedgerTable({
                     <p className="text-muted-foreground truncate text-xs">
                       {[
                         row.tx.description,
-                        row.tx.createdAt ? `added ${formatDay(row.tx.createdAt)}` : '',
+                        row.tx.createdAt
+                          ? `${row.kind === 'debit' ? 'debited' : 'added'} ${formatDay(row.tx.createdAt)}`
+                          : '',
                       ]
                         .filter(Boolean)
                         .join(' · ')}
@@ -242,6 +253,16 @@ export function WalletLedgerTable({
                     {formatMoney(row.line.amount)}
                   </p>
                 </div>
+              ) : row.kind === 'debit' ? (
+                <div>
+                  <p className="text-sm font-medium tabular-nums">
+                    {'−'}
+                    {formatCredits(row.tx.credits)}
+                  </p>
+                  <p className="text-muted-foreground text-xs tabular-nums">
+                    {formatMoney(row.tx.amount)}
+                  </p>
+                </div>
               ) : (
                 <div>
                   <p className="text-success-foreground dark:text-success text-sm font-medium tabular-nums">
@@ -259,7 +280,7 @@ export function WalletLedgerTable({
             width: 130,
             sortBy: sortKey((tx) => toNumber(tx.creditsAvailable) ?? -1),
             cell: (row) => {
-              if (row.kind === 'child') return null
+              if (row.kind !== 'topup') return null
               const left = toNumber(row.tx.creditsAvailable)
               if (left === null) return <span className="text-muted-foreground text-sm">{'—'}</span>
               return (
@@ -292,6 +313,7 @@ export function WalletLedgerTable({
                   />
                 )
               }
+              if (row.kind === 'debit') return null
               const left = toNumber(row.tx.creditsAvailable)
               const total = Number(row.tx.credits)
               return (
@@ -308,91 +330,16 @@ export function WalletLedgerTable({
             width: 150,
             sortBy: sortKey((tx) => tx.expiresAt?.getTime() ?? Number.MAX_SAFE_INTEGER),
             cell: (row) =>
-              row.kind === 'child' ? null : <Expires date={row.tx.expiresAt} now={now} />,
+              row.kind === 'topup' ? <Expires date={row.tx.expiresAt} now={now} /> : null,
           },
         ]}
       />
-      {anyBreakdown ? null : (
+      {anyBreakdown || topUps.length === 0 ? null : (
         <p className="text-muted-foreground border-t px-6 py-3 text-xs">
           Flexprice does not report which products drew down each top-up, so rows cannot be
           expanded.
         </p>
       )}
     </>
-  )
-}
-
-/**
- * Every movement on a wallet — credits in and debits out, newest first — with
- * search, a type filter and paging. The top-ups table above it answers "what
- * is left of each grant"; this one answers "what happened".
- */
-export function WalletTransactionsTable({
-  transactions,
-}: {
-  transactions: readonly WalletTransaction[]
-}) {
-  const rows = [...transactions].sort(
-    (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
-  )
-  const typeOf = (t: WalletTransaction) => (t.direction === 'out' ? 'Debit' : 'Credit')
-  return (
-    <DetailTable<WalletTransaction>
-      compact
-      label="Wallet transactions"
-      noun="transactions"
-      rows={rows}
-      facet={{ label: 'Type', value: typeOf }}
-      columns={[
-        {
-          key: 'date',
-          header: 'Date',
-          sortBy: (t) => t.createdAt?.getTime() ?? 0,
-          cell: (t) => (
-            <span className="text-muted-foreground">
-              {t.createdAt ? formatDay(t.createdAt) : '—'}
-            </span>
-          ),
-        },
-        {
-          key: 'type',
-          header: 'Type',
-          sortBy: typeOf,
-          cell: (t) => (
-            <span className={cn(t.direction === 'out' ? 'text-muted-foreground' : 'font-medium')}>
-              {typeOf(t)}
-            </span>
-          ),
-        },
-        {
-          key: 'reason',
-          header: 'Reason',
-          text: (t) => `${t.reason} ${t.description}`,
-          cell: (t) => (
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate">{t.reason}</span>
-              {t.description ? (
-                <span className="text-muted-foreground truncate text-xs">{t.description}</span>
-              ) : null}
-            </span>
-          ),
-        },
-        {
-          key: 'credits',
-          header: 'Credits',
-          cell: (t) => (
-            <span className="tabular-nums">
-              {t.direction === 'out' ? '−' : '+'}
-              {formatCredits(t.credits)}
-            </span>
-          ),
-        },
-        {
-          key: 'amount',
-          header: 'Amount',
-          cell: (t) => <span className="tabular-nums">{formatMoney(t.amount)}</span>,
-        },
-      ]}
-    />
   )
 }

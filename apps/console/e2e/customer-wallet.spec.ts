@@ -38,10 +38,8 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await topUp.getByLabel('Credits').fill('250')
   await topUp.getByRole('button', { name: 'Top up' }).click()
   await expect(page.getByText('1,250 credits').first()).toBeVisible()
-  // The top-up now shows in two places — the top-ups table and the newer
-  // wallet transactions ledger — so the assertion names which one it means.
   await expect(
-    page.getByRole('region', { name: 'Top-ups table' }).getByText('Purchased credits'),
+    page.getByRole('region', { name: 'Transactions table' }).getByText('Purchased credits'),
   ).toBeVisible()
 
   await page.getByRole('button', { name: /auto top-up off/i }).click()

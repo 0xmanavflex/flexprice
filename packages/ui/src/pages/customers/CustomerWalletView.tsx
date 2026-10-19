@@ -63,7 +63,6 @@ import { ChoiceCards, Composer } from '../../compositions/detail/DetailKit'
 import { Pill, type PillTone } from '../shared/cells'
 import {
   WalletLedgerTable,
-  WalletTransactionsTable,
   formatCredits,
 } from './WalletLedgerTable'
 import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
@@ -80,7 +79,7 @@ export interface CustomerWalletViewProps {
   /** The moment expiries are measured from; defaults to now. */
   now?: Date
   transactionsLoading?: boolean
-  /** The ledger read failed: the Top-ups section shows it with a retry, never "No top-ups yet". */
+  /** The ledger read failed: the Transactions section shows it with a retry, never "No transactions yet". */
   transactionsError?: string | null
   transactionsErrorKind?: ErrorKind
   onRetryTransactions?: () => void
@@ -196,9 +195,6 @@ export function CustomerWalletView({
   const closed = wallet.status === WalletStatus.Closed
   const currency = wallet.currency.toUpperCase()
   const asOf = now ?? new Date()
-  const topUps = transactions
-    .filter((t) => t.direction === 'in')
-    .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
   const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
 
   return (
@@ -309,50 +305,25 @@ export function CustomerWalletView({
         </div>
       </section>
 
-      <Section table title="Top-ups">
+      <Section table title="Transactions">
         <SubTabState
-          hasData={topUps.length > 0}
+          hasData={transactions.length > 0}
           isLoading={transactionsLoading}
           error={transactionsError}
           errorKind={transactionsErrorKind}
           onRetry={onRetryTransactions}
           columns={5}
-          loadingLabel="Loading top-ups"
+          loadingLabel="Loading transactions"
           truncation={ledgerCapped}
           empty={{
             scene: 'customers',
-            title: ledgerCapped ? 'No top-ups in the latest transactions' : 'No top-ups yet',
-            description: ledgerCapped
-              ? 'Older transactions are not listed here.'
-              : 'Credits added to this wallet appear here.',
+            title: 'No transactions yet',
+            description: 'Credits added and usage drawn from this wallet appear here.',
           }}
         >
-          <WalletLedgerTable topUps={topUps} now={asOf} />
+          <WalletLedgerTable transactions={transactions} now={asOf} />
         </SubTabState>
       </Section>
-
-      {/* A failed ledger read is reported once, in Top-ups above. */}
-      {transactionsError ? null : (
-        <Section table title="All transactions">
-          <SubTabState
-            hasData={transactions.length > 0}
-            isLoading={transactionsLoading}
-            error={transactionsError}
-            errorKind={transactionsErrorKind}
-            onRetry={onRetryTransactions}
-            columns={5}
-            loadingLabel="Loading transactions"
-            truncation={ledgerCapped}
-            empty={{
-              scene: 'customers',
-              title: 'No transactions yet',
-              description: 'Credits added and usage drawn from this wallet appear here.',
-            }}
-          >
-            <WalletTransactionsTable transactions={transactions} />
-          </SubTabState>
-        </Section>
-      )}
 
       {createDialog}
       <TopUpDialog
