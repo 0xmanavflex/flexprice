@@ -1785,6 +1785,18 @@
       "usedBy": [],
       "story": "./src/pages/customers/CustomerTaxSection.stories.tsx"
     },
+    "CustomerUsageSummary": {
+      "file": "src/pages/customers/CustomerUsageSummary.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "OverviewTiles",
+        "Section",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerUsageSummary.stories.tsx"
+    },
     "CustomerWalletView": {
       "file": "src/pages/customers/CustomerWalletView.tsx",
       "layer": "surface",
@@ -1805,11 +1817,9 @@
         "Pill",
         "PlusIcon",
         "Section",
-        "SplitMeter",
         "SubTabState",
         "WalletIcon",
-        "WalletLedgerTable",
-        "WalletTransactionsTable"
+        "WalletLedgerTable"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerWalletView.stories.tsx"
@@ -2055,6 +2065,7 @@
         "CustomerDetail",
         "CustomerEventsGrid",
         "CustomerTaxSection",
+        "CustomerUsageSummary",
         "EntitlementTable",
         "FeatureDetailView",
         "GroupMembersView",
@@ -2065,7 +2076,6 @@
         "SubscriptionDetailView",
         "TaxDialog",
         "WalletLedgerTable",
-        "WalletTransactionsTable",
         "WebhookEndpointDetail"
       ],
       "story": "./src/pages/shared/DetailTable.stories.tsx"
@@ -4331,6 +4341,7 @@
       ],
       "usedBy": [
         "CustomerDetail",
+        "CustomerUsageSummary",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -5345,6 +5356,7 @@
         "CustomerDetail",
         "CustomerEventsGrid",
         "CustomerTaxSection",
+        "CustomerUsageSummary",
         "CustomerWalletView",
         "EditableCard",
         "EntitlementTable",
@@ -5804,7 +5816,6 @@
         "CopyIcon"
       ],
       "usedBy": [
-        "CustomerWalletView",
         "RevenueDashboard",
         "WebhookEndpointDetail"
       ],
@@ -5995,6 +6006,7 @@
         "CreditGrantTable",
         "CustomerDetail",
         "CustomerEventsGrid",
+        "CustomerUsageSummary",
         "CustomerWalletView",
         "EntitlementTable",
         "FeatureDetailView",
@@ -6510,17 +6522,6 @@
       "story": null
     },
     "WalletLedgerTable": {
-      "file": "src/pages/customers/WalletLedgerTable.tsx",
-      "layer": "surface",
-      "composes": [
-        "DetailTable"
-      ],
-      "usedBy": [
-        "CustomerWalletView"
-      ],
-      "story": null
-    },
-    "WalletTransactionsTable": {
       "file": "src/pages/customers/WalletLedgerTable.tsx",
       "layer": "surface",
       "composes": [
@@ -7583,6 +7584,13 @@
         "CustomerTaxSection"
       ]
     },
+    "./src/pages/customers/CustomerUsageSummary.stories.tsx": {
+      "title": "App/Customers/Usage summary",
+      "component": "CustomerUsageSummary",
+      "uses": [
+        "CustomerUsageSummary"
+      ]
+    },
     "./src/pages/customers/CustomerWalletView.stories.tsx": {
       "title": "App/Customers/Customer wallet",
       "component": "CustomerWalletView",
@@ -8636,19 +8644,6 @@
         "FeatureGrid",
         "ListState",
         "PageBody"
-      ]
-    },
-    "GroupDetailPage": {
-      "file": "apps/console/src/pages/groups/GroupDetailPage.tsx",
-      "pattern": "Detail",
-      "route": "/groups/$groupId",
-      "uses": [
-        "CatalogDetailFrame",
-        "CatalogStatusBadge",
-        "ConfirmDialog",
-        "EditableCard",
-        "GroupMembersView",
-        "Pill"
       ]
     },
     "GroupFormPage": {
