@@ -40,10 +40,13 @@ export function supabaseSignUpFor(region: string): boolean {
 export const SIGN_UP_CONFIRM_PATH = '/auth/signup/confirmation'
 
 /**
- * Where the confirmation link and Google sign-in come back to. Built from the
- * live origin, so it must be listed in the Supabase project's Redirect URLs.
+ * Where the confirmation link and Google sign-in come back to: the live origin,
+ * or `VITE_AUTH_REDIRECT_ORIGIN` where one is set (staging, see `env`). Either
+ * way it must be listed in the Supabase project's Redirect URLs.
  */
-export function signUpConfirmURL(origin: string = globalThis.location.origin): string {
+export function signUpConfirmURL(
+  origin: string = env.authRedirectOrigin ?? globalThis.location.origin,
+): string {
   return `${origin}${SIGN_UP_CONFIRM_PATH}`
 }
 
