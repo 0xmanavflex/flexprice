@@ -59,7 +59,7 @@ import {
   OptionSelect,
   Section,
 } from '../../compositions'
-import { ChoiceCards, Composer, SplitMeter } from '../../compositions/detail/DetailKit'
+import { ChoiceCards, Composer } from '../../compositions/detail/DetailKit'
 import { Pill, type PillTone } from '../shared/cells'
 import {
   WalletLedgerTable,
@@ -217,15 +217,6 @@ export function CustomerWalletView({
   const topUps = transactions
     .filter((t) => t.direction === 'in')
     .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
-  // An unreadable balance is "unknown", never a 0: the meter is left out rather
-  // than drawn as an untouched wallet.
-  const current = toNumber(wallet.creditBalance)
-  const ongoing = toNumber(wallet.realTimeCreditBalance)
-  const meterKnown = current !== null && ongoing !== null
-  const pendingUsage = meterKnown ? Math.max(0, current - ongoing) : 0
-  const usedShare =
-    meterKnown && current > 0 ? Math.min(100, Math.round((pendingUsage / current) * 1000) / 10) : 0
-  const availableNow = meterKnown ? Math.max(0, ongoing) : 0
   const expiring = expiringSoon(topUps, asOf)
   const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
 
@@ -302,62 +293,22 @@ export function CustomerWalletView({
       </div>
 
       <section className="bg-background rounded-xl border">
-        {/* Balances on the left, usage since the last invoice on the right: one row, equal halves. */}
-        <div className="grid lg:grid-cols-2 lg:divide-x">
-          <div className="grid grid-cols-2 divide-x">
-            <div className="p-6">
-              <Balance
-                label="Real-time balance"
-                hint="Last invoiced balance minus usage recorded since the last invoice. This is what the next charge draws from."
-                credits={wallet.realTimeCreditBalance}
-                value={formatMoney(wallet.realTimeBalance)}
-              />
-            </div>
-            <div className="p-6">
-              <Balance
-                label="Last invoiced balance"
-                hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
-                credits={wallet.creditBalance}
-                value={formatMoney(wallet.balance)}
-              />
-            </div>
+        <div className="grid grid-cols-2 divide-x">
+          <div className="p-6">
+            <Balance
+              label="Real-time balance"
+              hint="Last invoiced balance minus usage recorded since the last invoice. This is what the next charge draws from."
+              credits={wallet.realTimeCreditBalance}
+              value={formatMoney(wallet.realTimeBalance)}
+            />
           </div>
-          <div className="flex flex-col justify-center gap-3 border-t p-6 lg:border-t-0">
-            {meterKnown ? (
-              <>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-muted-foreground text-xs">Since the last invoice</p>
-                  <p className="text-muted-foreground text-xs tabular-nums">{usedShare}% used</p>
-                </div>
-                <SplitMeter
-                  segments={56}
-                  parts={[
-                    { value: pendingUsage, color: 'bg-success', label: 'Used, not yet invoiced' },
-                    { value: availableNow, color: 'bg-muted', label: 'Available' },
-                  ]}
-                />
-                <div className="text-muted-foreground flex flex-wrap gap-x-5 gap-y-1 text-xs">
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="bg-success size-2 rounded-full" aria-hidden="true" />
-                    {credits(String(pendingUsage))} used, not yet invoiced
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className="bg-muted-foreground/30 size-2 rounded-full"
-                      aria-hidden="true"
-                    />
-                    {credits(String(availableNow))} available
-                  </span>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-muted-foreground text-xs">Since the last invoice</p>
-                <p className="text-muted-foreground text-sm">
-                  Usage since the last invoice is unavailable: a balance could not be read.
-                </p>
-              </>
-            )}
+          <div className="p-6">
+            <Balance
+              label="Last invoiced balance"
+              hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
+              credits={wallet.creditBalance}
+              value={formatMoney(wallet.balance)}
+            />
           </div>
         </div>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-t px-6 py-4 sm:grid-cols-3 lg:flex lg:flex-wrap lg:gap-x-12">

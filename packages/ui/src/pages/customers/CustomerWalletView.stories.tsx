@@ -289,7 +289,7 @@ export const TransactionsFailed: Story = {
   },
 }
 
-/** An unreadable balance is shown as unknown: no meter, no 0% used, no 0 credits. */
+/** An unreadable balance is shown as unknown — a dash, never 0 credits. */
 export const UnreadableBalance: Story = {
   args: {
     wallets: makeWallets(1, WalletStatus.Active, 10000, 7500).map((wallet) => ({
@@ -299,8 +299,8 @@ export const UnreadableBalance: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText(/balance could not be read/)).toBeVisible()
-    await expect(canvas.queryByText(/% used/)).toBeNull()
+    await expect(canvas.getByText('Real-time balance')).toBeVisible()
+    await expect(canvas.queryByText(/since the last invoice/i)).toBeNull()
   },
 }
 
