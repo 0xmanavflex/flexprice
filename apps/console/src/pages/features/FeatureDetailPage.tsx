@@ -8,6 +8,7 @@ import {
   useFeatureCharges,
   useFeatureEntitlements,
   useUpdateFeature,
+  useFlexpriceServerURL,
 } from '@fp/query'
 import { FeatureCloneDialog, FeatureDetailView, type FeatureTab } from '@fp/ui/pages'
 import { ConfirmDialog } from '@fp/ui/compositions'
@@ -32,6 +33,7 @@ export interface FeatureDetailPageProps {
  */
 export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
+  const apiBaseUrl = useFlexpriceServerURL()
   const navigate = useNavigate()
   const charges = useFeatureCharges(
     feature.data?.type === FeatureType.Metered ? feature.data.meterId : null,
@@ -71,6 +73,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
     <>
       <FeatureDetailView
         feature={data}
+        apiBaseUrl={apiBaseUrl}
         tab={tab}
         onTabChange={setTab}
         onBack={onNavigateToList}
