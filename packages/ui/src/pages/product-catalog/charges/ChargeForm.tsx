@@ -320,6 +320,33 @@ export function ChargeForm({
         />
       )}
 
+      {/* The date a change starts is the first thing an edit decides, so it leads. */}
+      {isEdit ? (
+        <div className="max-w-xs">
+          <Field
+            label="Effective from"
+            hint="Leave empty to start the new price now. Earlier invoices keep the old price."
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <Controller
+                control={form.control}
+                name={'effectiveFrom' as never}
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={(field.value as string | undefined) ?? ''}
+                    onValueChange={field.onChange}
+                    placeholder="Now"
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {isUsage ? (
           <Field
@@ -756,32 +783,6 @@ export function ChargeForm({
               )}
             </Field>
           ) : null}
-        </div>
-      ) : null}
-
-      {isEdit ? (
-        <div className="max-w-xs">
-          <Field
-            label="Effective from"
-            hint="Leave empty to start the new price now. Earlier invoices keep the old price."
-          >
-            {({ id, 'aria-describedby': describedBy }) => (
-              <Controller
-                control={form.control}
-                name={'effectiveFrom' as never}
-                render={({ field }) => (
-                  <DateInput
-                    id={id}
-                    value={(field.value as string | undefined) ?? ''}
-                    onValueChange={field.onChange}
-                    placeholder="Now"
-                    disabled={isSubmitting}
-                    aria-describedby={describedBy}
-                  />
-                )}
-              />
-            )}
-          </Field>
         </div>
       ) : null}
 
