@@ -182,6 +182,9 @@ export function InvoiceDetailView({
   const lines = invoice.lines.filter((line) => line.amount !== 0)
   const canRecordPayment = isOpen && totals.due > 0
   const canIssueCreditNote = !isDraft && invoice.status !== InvoiceStatus.Void
+  const liveCreditNotes = invoice.creditNotes.filter(
+    (note) => (note.status ?? '').toUpperCase() !== 'VOIDED',
+  ).length
   const hostedUrl = invoice.hostedUrl ?? null
 
   const copyLink = () => {
@@ -224,11 +227,30 @@ export function InvoiceDetailView({
           <ContractIntegrations links={integrationLinks} linkable={[]} entityLabel="invoice" />
         ) : undefined
       }
-      badges={statusChips(invoice).map((chip) => (
-        <Pill key={chip.label} tone={chip.tone}>
-          {chip.label}
-        </Pill>
-      ))}
+      badges={[
+        ...statusChips(invoice).map((chip) => (
+          <Pill key={chip.label} tone={chip.tone}>
+            {chip.label}
+          </Pill>
+        )),
+        // A credit memo changes what is owed, so it is visible from the header
+        // and leads to the memos rather than waiting for someone to look there.
+        ...(liveCreditNotes > 0
+          ? [
+              <button
+                key="credit-notes"
+                type="button"
+                onClick={() => setTab('credit-notes')}
+                aria-label={`${liveCreditNotes} credit memo${liveCreditNotes === 1 ? '' : 's'} issued. Show credit memos`}
+                className="focus-visible:ring-ring/50 rounded-full outline-none focus-visible:ring-3"
+              >
+                <Pill tone="info">
+                  {liveCreditNotes === 1 ? 'Credit memo' : `${liveCreditNotes} credit memos`}
+                </Pill>
+              </button>,
+            ]
+          : []),
+      ]}
       actions={
         <DropdownMenu>
           <DropdownMenuTrigger

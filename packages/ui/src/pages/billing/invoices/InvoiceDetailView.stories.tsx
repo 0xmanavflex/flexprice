@@ -517,3 +517,15 @@ export const ProviderInvoiceMapping: Story = {
     await expect(screen.queryByRole('menuitem', { name: 'Unlink Stripe' })).toBeNull()
   },
 }
+
+/** A credit memo is visible from the header, and the chip leads to the memos. */
+export const CreditMemoCue: Story = {
+  args: { creditNoteCount: 2 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const chip = await canvas.findByRole('button', { name: /2 credit memos issued/ })
+    await expect(chip).toHaveTextContent('2 credit memos')
+    await userEvent.click(chip)
+    await expect(await canvas.findByText('CN-1000')).toBeVisible()
+  },
+}
