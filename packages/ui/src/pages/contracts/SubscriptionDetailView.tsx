@@ -1081,12 +1081,7 @@ export function SubscriptionDetailView({
               />
               <MetadataCard
                 metadata={s.metadata}
-                {...(onSaveMetadata
-                  ? { onSave: onSaveMetadata }
-                  : {
-                      description:
-                        'Set when the contract is created. The API does not support editing it yet.',
-                    })}
+                {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
               />
               <RelatedCard items={related}>
                 {integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
@@ -1106,6 +1101,8 @@ export function SubscriptionDetailView({
         {tab === 'charges' ? (
           <ChargeTable
             title="Charges"
+            showTitle={false}
+            showDates
             charges={chargeRows.charges}
             details={chargeRows.details}
             source={sourceOf}
@@ -1125,7 +1122,7 @@ export function SubscriptionDetailView({
             ]}
             emptyDescription="This contract has no priced lines."
             {...(canAddCharge ? { onAdd: () => setDialog({ mode: 'add' }) } : {})}
-            addLabel="Manage pricing"
+            addLabel="Add charge"
             onEditSection={(charge, part) => editCharge(charge, part)}
             editableSections={editableChargeSections}
             {...(canEditCharges ? { onEdit: (charge: Charge) => editCharge(charge) } : {})}
@@ -1139,7 +1136,7 @@ export function SubscriptionDetailView({
             removeLabel="End charge"
             extraActions={(charge) =>
               chargeRows.lineOf.get(charge.id)?.source === 'plan' && onOpenPlan
-                ? [{ label: 'Edit on plan', onSelect: onOpenPlan }]
+                ? [{ label: 'Go to plan', onSelect: onOpenPlan }]
                 : []
             }
             isLoading={lines.isLoading ?? false}

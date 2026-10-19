@@ -15,7 +15,6 @@ import {
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { ArrowRightIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
-import { ButtonGroup } from '@ui/components/primitives/button-group'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Section } from '@ui/compositions/layout/Section'
 
@@ -55,9 +54,6 @@ export const ChargeTableProvenance = provenance({
   note: 'Flush charges section with flags, shared by plan, feature, group, add-on, contract and cost-sheet pages.',
 })
 
-/** Which charges the table is showing. */
-type View = 'active' | 'changed' | 'ended'
-
 export interface ChargeTableProps extends Partial<SubTabQuery> {
   charges: Charge[]
   /**
@@ -78,8 +74,8 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   period?: BillingPeriod | string
   /**
    * `summary` shows only the changed charges and a link to the rest — the
-   * contract Overview. `full` shows every charge with the Active / Changed /
-   * Ended views — the Charges tab.
+   * contract Overview. `full` shows every charge, narrowed by the Status filter
+   * (Active, Changed, Ended) beside the billing model — the Charges tab.
    */
   variant?: 'summary' | 'full'
   /** `narrow` is the table beside a side rail: no quantity column, flags compact. */
@@ -99,7 +95,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   priceLabel?: (charge: Charge) => string
   hideRowActions?: boolean
   onAdd?: () => void
-  /** The add button's wording; a contract calls it "Manage pricing". */
+  /** The add button's wording, e.g. "Add charge" on a contract. */
   addLabel?: string
   onEdit?: (charge: Charge) => void
   /** `false` leaves a row's Edit out — a contract cannot reprice every line. */
@@ -107,7 +103,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   onTerminate?: (charge: Charge) => void
   /** The destructive item's wording; "Terminate" on a catalogue, "End charge" on a contract. */
   removeLabel?: string
-  /** Extra row-menu items, e.g. a contract's "Edit on plan". */
+  /** Extra row-menu items, e.g. a contract's "Go to plan". */
   extraActions?: (charge: Charge) => Array<{ label: string; onSelect: () => void }>
   /**
    * Replaces opening the sheet.
@@ -124,6 +120,10 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   locale?: string
   /** Section heading; defaults to "Charges". */
   title?: string
+  /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
+  showTitle?: boolean
+  /** Adds a Dates column: when each charge started and, once ended, when it ended. */
+  showDates?: boolean
   description?: string
   chargeColumnLabel?: string
   /**
@@ -236,6 +236,8 @@ export function ChargeTable({
   emptyDescription,
   locale,
   title = 'Charges',
+  showTitle = true,
+  showDates = false,
   description: sectionDescription,
   chargeColumnLabel = 'Charge',
   isLoading,
@@ -245,7 +247,6 @@ export function ChargeTable({
   onRetry,
   isRetrying,
 }: ChargeTableProps) {
-  const [view, setView] = useState<View>('active')
   // The sheet the rows and flags open, unless the page took the click instead.
   const [open, setOpen] = useState<{ charge: Charge; section?: ChargeSection } | null>(null)
   const narrow = layout === 'narrow'
@@ -264,14 +265,10 @@ export function ChargeTable({
     }
   }, [charges, details])
 
-  const rows =
-    variant === 'summary'
-      ? changed
-      : view === 'changed'
-        ? changed
-        : view === 'ended'
-          ? ended
-          : active
+  // The full table lists every charge, live first; Status narrows it.
+  const rows = variant === 'summary' ? changed : [...active, ...ended]
+  const statusOf = (charge: Charge) =>
+    charge.endDate ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
 
   const addButton = onAdd ? (
     <Button
@@ -298,7 +295,7 @@ export function ChargeTable({
     return (
       <Section
         table
-        showTitle
+        showTitle={showTitle}
         title={title}
         {...(sectionDescription ? { description: sectionDescription } : {})}
       >
@@ -371,6 +368,32 @@ export function ChargeTable({
     },
   ]
 
+  if (showDates) {
+    const format = locale
+      ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
+      : DATE
+    columns.splice(2, 0, {
+      key: 'dates',
+      header: 'Dates',
+      width: 200,
+      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
+      text: (charge) =>
+        `${charge.startDate ? format.format(charge.startDate) : ''} ${charge.endDate ? format.format(charge.endDate) : ''}`,
+      cell: (charge) => (
+        <span className="block min-w-0">
+          <span className="block tabular-nums">
+            {charge.startDate ? `From ${format.format(charge.startDate)}` : '—'}
+          </span>
+          {charge.endDate ? (
+            <span className="text-muted-foreground block text-xs tabular-nums">
+              Ended {format.format(charge.endDate)}
+            </span>
+          ) : null}
+        </span>
+      ),
+    })
+  }
+
   if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
     columns.splice(2, 0, {
       key: 'quantity',
@@ -396,12 +419,12 @@ export function ChargeTable({
           <RowActionsMenu
             label={nameOf(charge)}
             extra={[
-              ...(onRowClick ? [] : [{ label: 'View details', onSelect: () => openAt(charge) }]),
-              ...(extraActions?.(charge) ?? []),
               {
                 label: 'Copy price ID',
                 onSelect: () => void navigator.clipboard?.writeText(charge.id),
               },
+              ...(extraActions?.(charge) ?? []),
+              ...(onRowClick ? [] : [{ label: 'View details', onSelect: () => openAt(charge) }]),
             ]}
             onEdit={
               onEdit && !charge.endDate && (canEdit?.(charge) ?? true)
@@ -416,33 +439,6 @@ export function ChargeTable({
     })
   }
 
-  // The views only exist where there is something to switch to: a plan whose
-  // charges are all active and all as set has one button, which is not a choice.
-  const views: Array<{ id: View; label: string }> = [
-    { id: 'active', label: `Active ${active.length}` },
-    ...(changed.length > 0 ? [{ id: 'changed' as const, label: `Changed ${changed.length}` }] : []),
-    ...(ended.length > 0 ? [{ id: 'ended' as const, label: `Ended ${ended.length}` }] : []),
-  ]
-
-  // The section controls stay above the table in every view.
-  const viewSwitch =
-    views.length > 1 ? (
-      <ButtonGroup>
-        {views.map((option) => (
-          <Button
-            key={option.id}
-            type="button"
-            size="sm"
-            variant={view === option.id ? 'secondary' : 'outline'}
-            aria-pressed={view === option.id}
-            onClick={() => setView(option.id)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </ButtonGroup>
-    ) : null
-
   const showAllButton = onShowAll ? (
     <Button variant="outline" size="sm" className="h-8 px-3" onClick={onShowAll}>
       Show all charges
@@ -454,30 +450,17 @@ export function ChargeTable({
   const summaryEmpty = variant === 'summary' && rows.length === 0
   const titleAction = variant === 'summary' && !summaryEmpty ? showAllButton : undefined
 
-  const toolbarAction =
-    variant === 'full' && (viewSwitch || addButton) ? (
-      <span className="flex items-center gap-2">
-        {viewSwitch}
-        {addButton}
-      </span>
-    ) : undefined
-
-  const charge = (count: number) => `${count} active charge${count === 1 ? '' : 's'}`
-  const description =
-    variant === 'summary'
-      ? changed.length > 0
-        ? `${changed.length} of ${charge(active.length)} ${changed.length === 1 ? 'is' : 'are'} changed here`
-        : `${charge(active.length)}, all as the plan sets them`
-      : sectionDescription
+  // The add action sits inside the table frame, beside its filter, as on every other table.
+  const description = variant === 'summary' ? undefined : sectionDescription
 
   return (
     <>
       <Section
         table
-        showTitle
+        showTitle={showTitle}
         title={title}
         {...(description ? { description } : {})}
-        action={variant === 'summary' ? titleAction : toolbarAction}
+        {...(titleAction ? { action: titleAction } : {})}
       >
         {rows.length === 0 ? (
           <SectionEmpty
@@ -485,9 +468,7 @@ export function ChargeTable({
             title={
               variant === 'summary'
                 ? 'No changes'
-                : view === 'ended'
-                  ? 'No charges have ended'
-                  : 'No charges yet'
+                : 'No charges yet'
             }
             description={
               variant === 'summary'
@@ -501,6 +482,7 @@ export function ChargeTable({
             compact
             label="Charges"
             toolbar={variant === 'full'}
+            {...(variant === 'full' && addButton ? { action: addButton } : {})}
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
             // filter keeps it.
@@ -510,6 +492,9 @@ export function ChargeTable({
                 label: 'Billing model',
                 value: (charge: Charge) => modelLabel(charge),
               },
+              ...(variant === 'full' && (changed.length > 0 || ended.length > 0)
+                ? [{ id: 'status', label: 'Status', value: statusOf }]
+                : []),
               ...(facets ?? []),
             ]}
             noun="charges"

@@ -283,29 +283,43 @@ export const Views: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('button', { name: 'Active 3' })).toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'Changed 1' })).toBeInTheDocument()
-
-    // The full table is the whole body of a tab already called Charges, so
-    // its heading is there for assistive tech and not said twice on screen;
-    // the views live in the toolbar instead, beside the search.
+    // Status is a filter beside the billing model, not a row of chips above the table.
+    await expect(canvas.queryByRole('button', { name: 'Active 3' })).not.toBeInTheDocument()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).not.toHaveClass('sr-only')
-    await expect(canvas.queryByText('Legacy seat fee')).not.toBeInTheDocument()
-
-    await userEvent.click(canvas.getByRole('button', { name: 'Ended 1' }))
-    await expect(await canvas.findByText('Legacy seat fee')).toBeInTheDocument()
+    // Every charge is listed, live first; an ended one says when it ended.
+    await expect(canvas.getByText('Legacy seat fee')).toBeInTheDocument()
     await expect(canvas.getByText('Fixed · Ended Feb 1, 2026')).toBeInTheDocument()
+    await expect(canvas.getByText('Platform base')).toBeInTheDocument()
+  },
+}
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Changed 1' }))
-    await expect(await canvas.findByText('Platform base')).toBeInTheDocument()
-    await expect(canvas.queryByText('Included storage')).not.toBeInTheDocument()
+/** The contract's Charges tab: a Dates column says when each charge started and ended. */
+export const WithDates: Story = {
+  args: {
+    charges: [
+      { ...(chargeFixtures[0] as Charge), startDate: new Date('2026-01-01T00:00:00Z') },
+      {
+        ...(chargeFixtures[0] as Charge),
+        id: 'price_old',
+        displayName: 'Legacy seat fee',
+        startDate: new Date('2025-06-01T00:00:00Z'),
+        endDate: new Date('2026-02-01T00:00:00Z'),
+      },
+    ],
+    showDates: true,
+    locale: 'en-US',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('columnheader', { name: 'Dates' })).toBeInTheDocument()
+    await expect(canvas.getByText('From Jan 1, 2026')).toBeInTheDocument()
+    await expect(canvas.getByText('Ended Feb 1, 2026')).toBeInTheDocument()
   },
 }
 
 /**
  * The summary a contract's Overview shows: the changed charges only, and a way
- * to the rest. It says how many of how many, so "three rows" is not mistaken
- * for "three charges".
+ * to the rest, with no subtitle above it.
  */
 export const Summary: Story = {
   args: {
@@ -316,7 +330,7 @@ export const Summary: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('1 of 3 active charges is changed here')).toBeInTheDocument()
+    await expect(canvas.queryByText(/active charges/)).not.toBeInTheDocument()
     await expect(canvas.queryByText('Included storage')).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: /show all charges/i }))
     await expect(args.onShowAll).toHaveBeenCalled()
@@ -328,9 +342,6 @@ export const SummaryUnchanged: Story = {
   args: { charges: chargeFixtures, variant: 'summary', onShowAll: fn() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      canvas.getByText('3 active charges, all as the plan sets them'),
-    ).toBeInTheDocument()
     await expect(
       canvas.getByText('Every charge is billed as the plan sets it. Changed charges show here.'),
     ).toBeInTheDocument()
