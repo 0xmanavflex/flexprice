@@ -2083,7 +2083,7 @@ function EventsRouteComponent() {
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings',
-  // Service accounts and webhooks retain their standalone destinations.
+  // API keys, service accounts and webhooks have their own Developer pages.
   beforeLoad: ({ location }) => {
     const raw = (location.search as Record<string, unknown>)['section']
     const moved = typeof raw === 'string' ? MOVED_SECTIONS[raw] : undefined
@@ -2143,14 +2143,19 @@ function SettingsRouteComponent() {
 }
 
 /**
- * Service accounts remains a standalone Developer destination.
- * API keys lives in Settings; webhooks has its own routes below.
+ * API keys and service accounts are Developer destinations, each a page of
+ * its own; webhooks has its own routes below.
  */
 const DeveloperPanels = lazy(() =>
   import('@/pages/settings/DeveloperPanels').then((m) => ({ default: m.DeveloperPanels })),
 )
 
-const developerRedirects = ([['/service-accounts', 'service-accounts']] as const).map(
+const developerRedirects = (
+  [
+    ['/api-keys', 'api-keys'],
+    ['/service-accounts', 'service-accounts'],
+  ] as const
+).map(
   ([path, panel]) =>
     createRoute({
       getParentRoute: () => shellRoute,
@@ -2285,18 +2290,6 @@ const legacyRoutes = ['/subscriptions', '/credit-notes', '/products'].flatMap((p
   ),
 )
 
-const apiKeysRedirect = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/api-keys',
-  beforeLoad: () => {
-    throw redirect({
-      to: '/settings',
-      search: { section: 'api-keys', tab: 'api-keys' },
-      replace: true,
-    })
-  },
-})
-
 const customerContractRedirect = createRoute({
   getParentRoute: () => shellRoute,
   path: '/customers/$customerId/subscriptions/new',
@@ -2320,7 +2313,6 @@ export const routeTree = rootRoute.addChildren([
   resetPasswordRoute,
   shellRoute.addChildren([
     ...legacyRoutes,
-    apiKeysRedirect,
     customerContractRedirect,
     homeRoute,
     revenueRoute,

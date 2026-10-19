@@ -418,14 +418,6 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     ready: { text: 'Invite member' },
   },
   {
-    name: 'settings-developers',
-    route: '/api-keys',
-
-    reference: 'pages/settings.tsx',
-    pattern: 'settings',
-    ready: { text: 'Create API key' },
-  },
-  {
     name: 'sign-in',
     route: '/sign-in',
     reference: 'pages/auth.tsx',

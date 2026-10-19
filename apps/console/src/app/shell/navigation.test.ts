@@ -127,7 +127,6 @@ describe('the sidebar layout', () => {
     expect(hrefForNavId('docs')).toBe(DOCS_URL)
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
       'settings',
-      'api-keys',
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',

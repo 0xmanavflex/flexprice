@@ -34,11 +34,12 @@ test('a legacy contract record bookmark opens the same record', async ({ page })
   await expect(page.getByRole('button', { name: 'Contract actions' })).toBeVisible()
 })
 
-test('API keys bookmarks open the Settings section', async ({ page }) => {
+test('API keys live under Developers, and the old Settings link still lands there', async ({
+  page,
+}) => {
   await page.goto('/api-keys')
-  await expect(page).toHaveURL(/\/settings\?.*section=api-keys/)
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Create API key', exact: true })).toBeVisible()
-  await page.reload()
+  await page.goto('/settings?section=api-keys&tab=api-keys')
+  await expect(page).toHaveURL(/\/api-keys/)
   await expect(page.getByRole('button', { name: 'Create API key', exact: true })).toBeVisible()
 })

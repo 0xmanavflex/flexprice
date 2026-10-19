@@ -118,11 +118,6 @@ export const SETTINGS_SECTIONS = [
     tabs: [{ id: 'tags', label: 'Tags' }],
   },
   {
-    id: 'api-keys',
-    label: 'API keys',
-    tabs: [{ id: 'api-keys', label: 'API keys' }],
-  },
-  {
     id: 'customer-experience',
     label: 'Customer experience',
     tabs: [
@@ -149,9 +144,10 @@ export const SECTION_ALIASES: Readonly<Record<string, { section: string; tab: st
 
 /**
  * Sections that moved out of Settings to a page of their own, under the
- * Developers area of the nav. API keys now remains inside Settings.
+ * Developers area of the nav.
  */
 export const MOVED_SECTIONS: Readonly<Record<string, string>> = {
+  'api-keys': '/api-keys',
   'service-accounts': '/service-accounts',
   webhooks: '/webhooks',
 }

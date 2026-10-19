@@ -4,7 +4,6 @@ import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BadgeDollarSignIcon,
   BellIcon,
-  KeyRoundIcon,
   Building2Icon,
   CoinsIcon,
   PaletteIcon,
@@ -16,7 +15,6 @@ import {
   TicketPercentIcon,
   UsersIcon,
 } from '@fp/ui/icons'
-import { ApiKeysPanel } from './ApiKeysPanel'
 import { AppearancePanel } from './AppearancePanel'
 import { CurrenciesPanel } from './CurrenciesPanel'
 import { InvoicesPanel } from './InvoicesPanel'
@@ -76,7 +74,6 @@ export interface SettingsPageProps {
  * JSX in it would pull React into a test that parses strings.
  */
 const SECTION_ICONS: Record<string, ReactNode> = {
-  'api-keys': <KeyRoundIcon aria-hidden className="size-4" />,
   team: <UsersIcon aria-hidden className="size-4" />,
   organization: <Building2Icon aria-hidden className="size-4" />,
   discounts: <TicketPercentIcon aria-hidden className="size-4" />,
@@ -212,8 +209,6 @@ function SettingsPanel({
   }
 
   switch (key) {
-    case 'api-keys/api-keys':
-      return <ApiKeysPanel />
     case 'organization/profile':
       return <ProfilePanel />
     case 'team/members':
