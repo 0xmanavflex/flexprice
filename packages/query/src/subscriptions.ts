@@ -14,6 +14,7 @@ import {
   BILLING_PERIOD_LABEL,
   BillingModel,
   type BillingPeriod,
+  BucketSize as BucketSizes,
   type BucketSize,
   CommitmentKind,
   type CancelSubscription,
@@ -285,6 +286,30 @@ function toLineCommitment(wire: SubscriptionLineWire): LineCommitment | null {
 const clock = (bucket?: { hour?: number | undefined; minute?: number | undefined }) =>
   `${String(bucket?.hour ?? 0).padStart(2, '0')}:${String(bucket?.minute ?? 0).padStart(2, '0')}`
 
+const LINE_BUCKETS = new Set<string>(Object.values(BucketSizes))
+
+/**
+ * The window a line's usage is summed in, as the form offers it.
+ *
+ * A bucket as long as the billing period is the whole period, so a monthly
+ * charge whose price reports MONTH reads as "Whole billing period" — the form
+ * must not open on Month as though someone had chosen it. Unknown values read
+ * as unset rather than as a value the select cannot show.
+ */
+export function toLineBucket(
+  value: string | undefined,
+  period: string | undefined,
+): BucketSize | '' {
+  if (!value || !LINE_BUCKETS.has(value)) return ''
+  if (
+    (value === BucketSizes.Month && period === 'MONTHLY') ||
+    (value === BucketSizes.Week && period === 'WEEKLY')
+  ) {
+    return ''
+  }
+  return value as BucketSize
+}
+
 /** The price of a line as the edit form needs it, in the unit it is written in. */
 function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
   const price = wire.price
@@ -307,7 +332,7 @@ function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
         : null,
     currency: (price.currency || wire.currency || '').toUpperCase(),
     terms: {
-      bucketSize: (price.bucketSize ?? '') as BucketSize | '',
+      bucketSize: toLineBucket(price.bucketSize, wire.billingPeriod ?? price.billingPeriod),
       commitment: toLineCommitment(wire),
     },
   }
