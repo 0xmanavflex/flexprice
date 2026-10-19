@@ -532,11 +532,24 @@ const authCallbackRoute = createRoute({
 })
 
 /**
- * The far end of the sign-up confirmation email. Does not step aside for an
- * existing session: the link must be consumed wherever it lands, or the
- * account it confirms is never created.
+ * The far end of the sign-up confirmation email and of Google sign-in. Does not
+ * step aside for an existing session: the link must be consumed wherever it
+ * lands, or the account it confirms is never created.
+ *
+ * The path is V1's, because it is the one the Supabase Redirect URLs allow —
+ * see `SIGN_UP_CONFIRM_PATH`.
  */
 const signUpConfirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth/signup/confirmation',
+  component: SignUpConfirmPage,
+})
+
+/**
+ * The address V2 sent before it adopted V1's path. Confirmation emails already
+ * sent still point here, so it renders the same page rather than a 404.
+ */
+const legacySignUpConfirmRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-up/confirm',
   component: SignUpConfirmPage,
@@ -2316,6 +2329,7 @@ export const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
   signUpConfirmRoute,
+  legacySignUpConfirmRoute,
   authCallbackRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
