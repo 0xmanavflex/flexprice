@@ -68,24 +68,44 @@ test.describe('plan charges, entitlements and credit grants', () => {
   test('a repriced charge keeps its old price as an inactive version', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()
-    const rows = page.getByRole('region', { name: 'Charges table' }).getByRole('row')
+    const table = page.getByRole('region', { name: 'Charges table' })
+    const rows = table.getByRole('row')
+    // Wait for real rows, not the loading skeleton.
+    const firstActions = rows.nth(1).getByRole('button', { name: /^Actions for/ })
+    await expect(firstActions).toBeVisible()
     const before = await rows.count()
+    // Follow one charge by name: other journeys add charges to this plan.
+    const name = ((await firstActions.getAttribute('aria-label')) ?? '').replace(/^Actions for /, '')
+    const row = rows.filter({ has: page.getByRole('button', { name: `Actions for ${name}` }) })
 
-    await plan.chooseRowAction(0, 'Edit')
-    await expect(plan.main.getByRole('heading', { name: 'Edit charge' })).toBeVisible()
-    await plan.main.getByLabel('Amount').fill('123.45')
-    await plan.main.getByRole('button', { name: 'Save new version' }).click()
-    await expect(plan.main).toBeHidden()
+    // Two edits with known prices, so the revert has a known price to return to.
+    const reprice = async (amount: string) => {
+      await row.getByRole('button', { name: `Actions for ${name}` }).click()
+      await page.getByRole('menuitem', { name: 'Edit' }).click()
+      await expect(plan.main.getByRole('heading', { name: 'Edit charge' })).toBeVisible()
+      await plan.main.getByLabel('Amount').fill(amount)
+      await plan.main.getByRole('button', { name: 'Save new version' }).click()
+      await expect(plan.main).toBeHidden()
+      await expect(row).toContainText(amount)
+    }
+    await reprice('123.45')
+    await reprice('150.00')
 
-    // Still one row per charge: the old price is history, not a second row and not gone.
+    // Still one row per charge: the old prices are history, not extra rows and not gone.
     await expect(rows).toHaveCount(before)
-    const history = page.getByRole('button', { name: /History/ }).first()
-    await expect(history).toBeVisible()
-    await history.click()
+    await row.getByRole('button', { name: /History/ }).click()
     const sheet = page.getByRole('dialog')
     // At least the old price and the new one; a reused mock may hold more.
     await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
     await expect(sheet.getByText('Inactive').first()).toBeVisible()
+
+    // Reverting brings the earlier price back as a new version.
+    await sheet.getByRole('button', { name: 'Revert to this version' }).click()
+    const confirm = page.getByRole('dialog', { name: /^Revert to the/ })
+    await confirm.getByRole('button', { name: 'Revert' }).click()
+    await expect(confirm).toBeHidden()
+    await expect(rows).toHaveCount(before)
+    await expect(row).toContainText('123.45')
   })
 
   test('adds then edits an entitlement', async ({ page }) => {

@@ -18,6 +18,8 @@ export interface PlanChargesViewProps {
   meterUnit?: (meterId: string) => string | undefined
   /** Per charge: what else is known, such as its earlier price versions. */
   details?: ReadonlyMap<string, ChargeDetail> | undefined
+  /** Brings back a charge's previous price version. */
+  onRevert?: ((charge: Charge, versionId: string) => Promise<unknown>) | undefined
 }
 
 /** Plan actions and pricing labels composed over the shared charges table and sheet. */
@@ -32,6 +34,7 @@ export function PlanChargesView({
   onRetry,
   meterUnit,
   details,
+  onRevert,
 }: PlanChargesViewProps) {
   const meterName = (id: string) => charges.find((charge) => charge.meterId === id)?.meterName ?? id
   return (
@@ -46,6 +49,7 @@ export function PlanChargesView({
       }
       layout="narrow"
       {...(details ? { details } : {})}
+      {...(onRevert && !readOnly ? { onRevert } : {})}
       isLoading={loading ?? false}
       error={error ? 'Charges could not be loaded' : null}
       onRetry={onRetry}

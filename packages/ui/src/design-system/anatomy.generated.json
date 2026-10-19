@@ -788,6 +788,7 @@
       "layer": "surface",
       "composes": [
         "ActivityLog",
+        "ConfirmDialog",
         "PencilIcon",
         "Sheet"
       ],
@@ -1166,6 +1167,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ChargeSheet",
         "ContractIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",

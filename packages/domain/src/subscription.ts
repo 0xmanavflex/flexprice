@@ -1,11 +1,11 @@
 import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
-import { type AddContractCharge, type LinePricing } from './contractCharge'
+import { type AddContractCharge, type EditContractCharge, type LinePricing } from './contractCharge'
 import { type Charge } from './price'
 import { type Money } from './money'
-import { BILLING_PERIOD_LABEL, BillingPeriod } from './price'
-import { priceOverrideSchema } from './priceOverride'
+import { BILLING_PERIOD_LABEL, BillingModel, BillingPeriod, TierMode } from './price'
+import { priceOverrideSchema, type PriceOverride } from './priceOverride'
 
 /**
  * A subscription, as the list reads it.
@@ -764,4 +764,37 @@ export interface AddContractCoupon {
    * so a rejected add leaves the existing coupons in place.
    */
   replaceAssociationIds?: string[]
+}
+
+/**
+ * The edit that brings a contract charge back to an earlier version: the old
+ * line's price and terms, sent against the current line. The API has no
+ * revert; this starts a new version, from now, priced as the old one was, so
+ * the current price is kept as history too. Null when the old line's pricing
+ * was not reported, as there is then nothing exact to send.
+ */
+export function lineRevertDraft(
+  previous: SubscriptionLine,
+  currentPriceId: string,
+): EditContractCharge | null {
+  const pricing = previous.pricing
+  if (!pricing) return null
+  const amount = previous.amount.amount || '0'
+  const price: PriceOverride =
+    pricing.billingModel === BillingModel.Package
+      ? {
+          priceId: currentPriceId,
+          billingModel: BillingModel.Package,
+          amount,
+          divideBy: pricing.divideBy ?? 1,
+        }
+      : pricing.billingModel === BillingModel.Tiered
+        ? {
+            priceId: currentPriceId,
+            billingModel: BillingModel.Tiered,
+            tierMode: pricing.tierMode ?? TierMode.Volume,
+            tiers: pricing.tiers,
+          }
+        : { priceId: currentPriceId, billingModel: BillingModel.FlatFee, amount }
+  return { price, priceUnit: pricing.priceUnit, effectiveFrom: '', terms: pricing.terms }
 }

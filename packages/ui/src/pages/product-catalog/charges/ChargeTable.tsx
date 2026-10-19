@@ -115,6 +115,8 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** Wires the sheet's per-part "Edit". A part with no handler shows no button. */
   onEditSection?: (charge: Charge, section: ChargeSection) => void
   editableSections?: (charge: Charge) => readonly ChargeSection[]
+  /** Brings back a charge's previous price version, from its sheet's History. */
+  onRevert?: ((charge: Charge, versionId: string) => Promise<unknown>) | undefined
   /** The summary variant's "Show all charges". */
   onShowAll?: () => void
   locale?: string
@@ -237,6 +239,7 @@ export function ChargeTable({
   onRowClick,
   onEditSection,
   editableSections,
+  onRevert,
   onShowAll,
   emptyDescription,
   locale,
@@ -525,6 +528,9 @@ export function ChargeTable({
             }
           : {})}
         {...(locale ? { locale } : {})}
+        {...(onRevert && open
+          ? { onRevert: (versionId: string) => onRevert(open.charge, versionId) }
+          : {})}
         onClose={() => setOpen(null)}
       />
     </>

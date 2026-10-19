@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
 import { Section } from '../layout/Section'
 
@@ -20,6 +21,8 @@ export interface ActivityLogEntry {
   by?: string | undefined
   /** Page for this entity. Set only when the id maps to a route. */
   href?: string | undefined
+  /** One action on this entry, e.g. reverting to a price version. */
+  action?: ReactNode
 }
 
 /**
@@ -66,6 +69,7 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
               </p>
             ) : null}
             {entry.by ? <p className="text-muted-foreground text-xs">By {entry.by}</p> : null}
+            {entry.action ? <div className="pt-2">{entry.action}</div> : null}
           </div>
         </li>
       ))}

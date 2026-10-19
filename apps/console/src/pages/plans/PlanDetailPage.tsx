@@ -442,6 +442,16 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
       <PlanChargesView
         charges={rows}
         details={details}
+        onRevert={(charge, versionId) => {
+          // No revert endpoint: the earlier price is saved as a new version from now.
+          const previous = (charges.data ?? []).find((price) => price.id === versionId)
+          return previous
+            ? updatePrice.mutateAsync({
+                id: charge.id,
+                body: toUpdatePriceRequest(chargeToDraft(previous)),
+              })
+            : Promise.reject(new Error('That version is no longer on this plan.'))
+        }}
         readOnly={readOnly}
         loading={loading}
         error={failed}

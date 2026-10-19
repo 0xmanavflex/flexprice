@@ -318,6 +318,7 @@ export {
   BillingCycle,
   validateLineChange,
   lineLineages,
+  lineRevertDraft,
   type LineLineage,
 } from './subscription'
 export type {

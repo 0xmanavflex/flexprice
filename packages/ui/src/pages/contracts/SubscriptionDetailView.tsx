@@ -129,6 +129,12 @@ export interface SubscriptionDetailViewProps {
    * kept as inactive versions in its history rather than dropping out.
    */
   lineHistory?: SubscriptionLine[] | undefined
+  /**
+   * Bring a charge back to an earlier version: `line` is the version billing
+   * now, `previous` the one to return to. Offered on the version just before
+   * the current one, in the charge's History.
+   */
+  onRevertLine?: ((line: SubscriptionLine, previous: SubscriptionLine) => Promise<unknown>) | undefined
   entitlements: SubscriptionPart<SubscriptionEntitlement[]>
   creditGrants: SubscriptionPart<CreditGrant[]>
   usage: SubscriptionPart<SubscriptionUsage>
@@ -308,6 +314,7 @@ export function SubscriptionDetailView({
   subscription,
   lines,
   lineHistory,
+  onRevertLine,
   entitlements,
   creditGrants,
   usage,
@@ -516,6 +523,17 @@ export function SubscriptionDetailView({
       })
     }
   }
+  // From a charge's History: find its lineage and the version picked.
+  const revertCharge =
+    onRevertLine && lineages && canEditCharges
+      ? (charge: Charge, versionId: string) => {
+          const lineage = lineages.find((candidate) => candidate.current.charge?.id === charge.id)
+          const previous = lineage?.versions.find((version) => version.id === versionId)
+          return lineage && previous
+            ? onRevertLine(lineage.current, previous)
+            : Promise.reject(new Error('That version is no longer on this contract.'))
+        }
+      : undefined
   const editableChargeSections = (charge: Charge): ChargeSection[] => {
     const line = chargeRows.lineOf.get(charge.id)
     if (!canEditCharges || charge.endDate || !line || !canEditLine(line)) return []
@@ -742,6 +760,7 @@ export function SubscriptionDetailView({
                 onEditSection={(charge, part) => editCharge(charge, part)}
                 editableSections={editableChargeSections}
                 variant="summary"
+                {...(revertCharge ? { onRevert: revertCharge } : {})}
                 layout="narrow"
                 charges={chargeRows.charges}
                 details={chargeRows.details}
@@ -1166,6 +1185,7 @@ export function SubscriptionDetailView({
               ? { onTerminate: (charge: Charge) => endCharge(charge) }
               : {})}
             removeLabel="End charge"
+            {...(revertCharge ? { onRevert: revertCharge } : {})}
             extraActions={(charge) =>
               chargeRows.lineOf.get(charge.id)?.source === 'plan' && onOpenPlan
                 ? [{ label: 'Go to plan', onSelect: onOpenPlan }]
