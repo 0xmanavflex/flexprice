@@ -149,6 +149,19 @@ export const Layout: Story = {
   },
 }
 
+/** A click on the customer name opens the contract, not the customer. */
+export const RowOpensContract: Story = {
+  args: { onSubscriptionClick: fn(), onOpenCustomer: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByText('Acme Robotics'))
+    await expect(args.onSubscriptionClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sub_01' }),
+    )
+    await expect(args.onOpenCustomer).not.toHaveBeenCalled()
+  },
+}
+
 /** A running contract's menu reaches its customer and plan, and can cancel it. */
 export const RowActionsCancel: Story = {
   args: { onCancelSubscription: fn(), onOpenCustomer: fn(), onOpenPlan: fn() },

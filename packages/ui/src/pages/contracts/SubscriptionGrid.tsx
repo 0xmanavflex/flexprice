@@ -175,15 +175,15 @@ export function SubscriptionGrid({
 
   const columns = useMemo<EntityColumn<Subscription>[]>(
     () => [
+      // Plain text, not links: a click anywhere on the row opens the contract.
+      // The customer and the plan are one step away in the row menu.
       textColumn<Subscription>('customer', 'Customer', (row) => row.customerName, {
         width: 220,
         // Who is being billed. Hiding it leaves a list of anonymous plans.
         hideable: false,
-        onOpen: onOpenCustomer ? (row) => onOpenCustomer(row.customerId) : undefined,
       }),
       textColumn<Subscription>('plan', 'Plan', (row) => row.planName, {
         width: 180,
-        onOpen: onOpenPlan ? (row) => onOpenPlan(row.planId) : undefined,
       }),
       textColumn<Subscription>('billing', 'Billing', (row) => row.billingPeriodLabel, {
         width: 120,
@@ -203,7 +203,7 @@ export function SubscriptionGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [formatPeriod, locale, onOpenCustomer, onOpenPlan],
+    [formatPeriod, locale],
   )
 
   const isDefaultSort =
