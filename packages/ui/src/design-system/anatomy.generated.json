@@ -2185,8 +2185,9 @@
       "file": "src/compositions/forms/EditableCard.tsx",
       "layer": "composition",
       "composes": [
-        "PencilIcon",
-        "Section"
+        "FormCard",
+        "FormRow",
+        "PencilIcon"
       ],
       "usedBy": [
         "CustomerDetail",
@@ -3063,6 +3064,7 @@
         "CouponForm",
         "CreditNoteForm",
         "CustomerForm",
+        "EditableCard",
         "FeatureDetailView",
         "FeatureForm",
         "FormDisclosure",
@@ -3186,6 +3188,7 @@
         "CouponForm",
         "CreditNoteForm",
         "CustomerForm",
+        "EditableCard",
         "FeatureDetailView",
         "FeatureForm",
         "GroupForm",
@@ -5390,7 +5393,6 @@
         "CustomerTaxSection",
         "CustomerUsageSummary",
         "CustomerWalletView",
-        "EditableCard",
         "EntitlementTable",
         "FeatureDetailView",
         "FormPage",

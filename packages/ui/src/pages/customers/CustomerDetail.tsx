@@ -1099,7 +1099,15 @@ function InformationTab({
           locked={!onUpdateField}
           fields={[
             { key: 'name', label: 'Name', value: customer.name, required: true },
-            { key: 'externalId', label: 'External ID', value: customer.externalId, readOnly: true },
+            {
+              key: 'externalId',
+              label: 'External ID',
+              value: customer.externalId,
+              display: customer.externalId ? (
+                <span className="font-mono text-[13px]">{customer.externalId}</span>
+              ) : undefined,
+              readOnly: true,
+            },
             {
               key: 'email',
               label: 'Email',
@@ -1127,7 +1135,13 @@ function InformationTab({
               value: formatDate(customer.createdAt),
               readOnly: true,
             },
-            { key: 'id', label: 'Customer ID', value: customer.id, readOnly: true },
+            {
+              key: 'id',
+              label: 'Customer ID',
+              value: customer.id,
+              display: <span className="font-mono text-[13px]">{customer.id}</span>,
+              readOnly: true,
+            },
           ]}
           onSave={(changes) => onUpdateField?.(changes)}
         />

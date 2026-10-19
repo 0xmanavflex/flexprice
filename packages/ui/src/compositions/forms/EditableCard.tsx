@@ -4,13 +4,14 @@ import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { provenance } from '@ui/provenance'
-import { Section } from '../layout/Section'
+import { cn } from '@ui/lib/cn'
+import { FormCard, FormRow } from './FormCard'
 import type { EditableFieldDef } from './EditableFields'
 
 export const EditableCardProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/section', 'ui/input', 'ui/textarea', 'ui/button'],
-  note: 'A card whose header pencil turns its own fields into inputs, with Save and Cancel in place.',
+  composes: ['compositions/forms/FormCard', 'ui/input', 'ui/textarea', 'ui/button'],
+  note: 'A form card of label/value rows whose header pencil turns its own fields into inputs, with Save and Cancel in place.',
 })
 
 export interface EditableCardProps {
@@ -87,6 +88,7 @@ export function EditableCard({
       <Button
         variant="ghost"
         size="icon"
+        className="text-muted-foreground size-8"
         aria-label={`Edit ${title.toLowerCase()}`}
         onClick={start}
       >
@@ -94,65 +96,66 @@ export function EditableCard({
       </Button>
     )
 
+  /*
+   * The create form's own rows, as on the feature page: the label and its hint
+   * on the left, the value on the right, ruled apart. Editing swaps each value
+   * for its input in place, so the card never changes shape.
+   */
   return (
-    <Section
-      title={title}
-      {...(description ? { description } : {})}
-      actions={pencil}
-      {...(className ? { className } : {})}
-    >
-      <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-5">
-        <dl className="grid grid-cols-1 gap-x-10 gap-y-5 text-sm md:grid-cols-3">
-          {fields.map((field) => {
-            const id = `edit-${title}-${field.key}`.replace(/\s+/g, '-').toLowerCase()
-            const error = errors[field.key]
-            const wide = field.multiline ? 'md:col-span-3' : ''
-            if (!editing || field.readOnly) {
-              return (
-                <div key={field.key} className={`flex min-w-0 flex-col gap-1 ${wide}`}>
-                  <dt className="text-muted-foreground text-xs">{field.label}</dt>
-                  <dd className="min-w-0 font-normal break-words">
-                    {field.display ??
-                      (field.value || (
-                        <span className="text-muted-foreground font-normal">
-                          {field.placeholder ?? '—'}
-                        </span>
-                      ))}
-                  </dd>
-                </div>
-              )
-            }
-            const Control = field.multiline ? Textarea : Input
+    <form onSubmit={(event) => void submit(event)} className={cn('flex flex-col', className)}>
+      <FormCard title={title} {...(pencil ? { adornment: pencil } : {})}>
+        {description ? (
+          <p className="text-muted-foreground px-5 pb-4 text-[13px] sm:px-6">{description}</p>
+        ) : null}
+        {fields.map((field) => {
+          const error = errors[field.key]
+          const value =
+            field.display ??
+            (field.value || (
+              <span className="text-muted-foreground">{field.placeholder ?? '—'}</span>
+            ))
+          if (!editing || field.readOnly) {
             return (
-              <div key={field.key} className={`flex flex-col gap-1 ${wide}`}>
-                <label htmlFor={id} className="text-muted-foreground text-xs">
-                  {field.label}
-                </label>
+              <FormRow
+                key={field.key}
+                label={field.label}
+                {...(field.hint ? { hint: field.hint } : {})}
+                align={field.multiline ? 'start' : 'center'}
+              >
+                <div className="min-w-0 text-sm break-words">{value}</div>
+              </FormRow>
+            )
+          }
+          const Control = field.multiline ? Textarea : Input
+          return (
+            <FormRow
+              key={field.key}
+              label={field.label}
+              {...(field.hint ? { hint: field.hint } : {})}
+              {...(error ? { error } : {})}
+              align={field.multiline ? 'start' : 'center'}
+            >
+              {({ id, ...aria }) => (
                 <Control
                   id={id}
+                  {...aria}
                   value={draft[field.key] ?? ''}
                   disabled={pending}
                   placeholder={field.placeholder}
-                  aria-invalid={error ? true : undefined}
                   onChange={(event) => setDraft({ ...draft, [field.key]: event.target.value })}
                 />
-                {error ? (
-                  <p role="alert" className="text-destructive text-xs">
-                    {error}
-                  </p>
-                ) : null}
-              </div>
-            )
-          })}
-        </dl>
-        {children}
+              )}
+            </FormRow>
+          )
+        })}
+        {children ? <div className="px-5 py-4 sm:px-6">{children}</div> : null}
         {formError ? (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-destructive px-5 py-4 text-sm sm:px-6">
             {formError}
           </p>
         ) : null}
         {editing ? (
-          <div className="flex justify-end gap-2 border-t pt-4">
+          <div className="flex justify-end gap-2 px-5 py-4 sm:px-6">
             <Button
               type="button"
               variant="ghost"
@@ -166,7 +169,7 @@ export function EditableCard({
             </Button>
           </div>
         ) : null}
-      </form>
-    </Section>
+      </FormCard>
+    </form>
   )
 }
