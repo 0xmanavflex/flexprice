@@ -44,8 +44,9 @@ export const NAV: NavEntry[] = [
     id: 'catalog',
     label: 'Product catalog',
     children: [
-      { id: 'features', label: 'Features', path: '/features' },
+      // Plan, then Feature, then Add-on: the order the catalogue is built and read in.
       { id: 'plans', label: 'Plans', path: '/plans' },
+      { id: 'features', label: 'Features', path: '/features' },
       { id: 'addons', label: 'Add-ons', path: '/addons' },
       { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },
     ],

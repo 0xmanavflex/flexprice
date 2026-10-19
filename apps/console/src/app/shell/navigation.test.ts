@@ -59,8 +59,8 @@ describe('toNavGroups', () => {
     const [group] = toNavGroups()
     const catalog = group?.items.find((item) => item.id === 'catalog')
     expect(catalog?.items?.map((child) => child.id)).toEqual([
-      'features',
       'plans',
+      'features',
       'addons',
       'pricing-widget',
     ])
