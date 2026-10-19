@@ -88,14 +88,14 @@ export function CopyChip({
 }
 
 /** The record id as "ID" plus a copy icon; hover shows the full id, click copies it. */
-export function CopyId({ value }: { value: string }) {
+export function CopyId({ value, label = 'ID' }: { value: string; label?: string }) {
   return (
     <CopyChip
       value={value}
-      label="ID"
+      label={label}
       icon={<CopyIcon className="size-3.5" aria-hidden="true" />}
-      ariaLabel={`Copy ID ${value}`}
-      copiedMessage="ID copied"
+      ariaLabel={`Copy ${label} ${value}`}
+      copiedMessage={`${label} copied`}
     />
   )
 }
@@ -178,6 +178,7 @@ export function DetailMoreMenu({
 export function DetailHeaderCluster({
   primary,
   leading,
+  externalId,
   id,
   email,
   more,
@@ -186,15 +187,18 @@ export function DetailHeaderCluster({
   primary?: ReactNode
   /** Connected integration marks, after the copy chips and before the menu. */
   leading?: ReactNode
+  /** The id the customer's own systems use, as an "External ID" chip before the internal one. */
+  externalId?: string | undefined
   id?: string | undefined
   email?: string | undefined
   /** The overflow ("More") menu, always last. */
   more?: ReactNode
 }) {
-  if (!primary && !leading && !id && !email && !more) return null
+  if (!primary && !leading && !externalId && !id && !email && !more) return null
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {primary}
+      {externalId ? <CopyId value={externalId} label="External ID" /> : null}
       {id ? <CopyId value={id} /> : null}
       {email ? <CopyEmail value={email} /> : null}
       {leading}
