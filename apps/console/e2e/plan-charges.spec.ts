@@ -65,6 +65,29 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await expect(plan.main).toBeHidden()
   })
 
+  test('a repriced charge keeps its old price as an inactive version', async ({ page }) => {
+    const plan = new PlanDetailPage(page)
+    await plan.open()
+    const rows = page.getByRole('region', { name: 'Charges table' }).getByRole('row')
+    const before = await rows.count()
+
+    await plan.chooseRowAction(0, 'Edit')
+    await expect(plan.main.getByRole('heading', { name: 'Edit charge' })).toBeVisible()
+    await plan.main.getByLabel('Amount').fill('123.45')
+    await plan.main.getByRole('button', { name: 'Save new version' }).click()
+    await expect(plan.main).toBeHidden()
+
+    // Still one row per charge: the old price is history, not a second row and not gone.
+    await expect(rows).toHaveCount(before)
+    const history = page.getByRole('button', { name: /History/ }).first()
+    await expect(history).toBeVisible()
+    await history.click()
+    const sheet = page.getByRole('dialog')
+    // At least the old price and the new one; a reused mock may hold more.
+    await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
+    await expect(sheet.getByText('Inactive').first()).toBeVisible()
+  })
+
   test('adds then edits an entitlement', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()

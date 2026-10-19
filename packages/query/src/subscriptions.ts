@@ -787,6 +787,42 @@ export function useSubscriptionLines(id: string) {
   )
 }
 
+/**
+ * Every line the contract has had, ended ones included —
+ * `POST /subscriptions/lineitems/search` with `active_filter: false`.
+ *
+ * `GET /subscriptions/{id}` returns only the lines billing now, so a charge
+ * whose price was changed loses its earlier version from that read: the API
+ * ended the old line and started a new one, it did not delete it. This read
+ * keeps both, with their prices (expired ones too), so the page can show the
+ * old price as an inactive version of the charge instead of as gone.
+ */
+export function useSubscriptionLineHistory(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.lineHistory(id),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.subscriptions.querySubscriptionLineItems(
+            {
+              subscriptionIds: [id],
+              activeFilter: false,
+              expand: 'prices',
+              limit: 500,
+              offset: 0,
+            },
+            options,
+          ),
+        signal,
+      )
+      return ((response.items ?? []) as SubscriptionLineWire[]).map(toSubscriptionLine)
+    },
+    enabled: id.length > 0,
+  })
+}
+
 /** The credit grants this contract was given, from the same read as the lines. */
 export function useSubscriptionCreditGrants(id: string) {
   return useSubscriptionFull(id, (response): CreditGrant[] =>

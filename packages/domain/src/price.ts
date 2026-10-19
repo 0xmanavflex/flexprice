@@ -333,6 +333,12 @@ export interface Charge {
    * numbers them. A charge whose sequence is above 1 has history worth a flag.
    */
   sequence: number | null
+  /**
+   * The first version of this charge (`parent_price_id`), when this is a later
+   * one. An edit ends the old price and creates a new one pointing back here,
+   * so every version of a charge shares it.
+   */
+  parentPriceId?: string | null
   createdAt: Date | null
 }
 
@@ -519,4 +525,36 @@ export function chargeToDraft(charge: Charge): CreateCharge {
     case BillingModel.FlatFee:
       return { ...base, billingModel: BillingModel.FlatFee, amount: charge.amount || '0' }
   }
+}
+
+/** One charge across its versions. */
+export interface ChargeLineage {
+  /** The version that bills now, or the last one when the charge has ended. */
+  current: Charge
+  /** Every version, newest first; `current` is the first. */
+  versions: Charge[]
+}
+
+/**
+ * A catalogue record's prices grouped into the charges they are versions of.
+ *
+ * Editing a charge's price never rewrites it: the API ends the price and
+ * creates a new one whose `parent_price_id` names the first version. Grouping
+ * on that keeps the ended prices as what they are — earlier, inactive
+ * versions of one charge — instead of rows of their own or nothing at all.
+ */
+export function chargeLineages(charges: readonly Charge[]): ChargeLineage[] {
+  const groups = new Map<string, Charge[]>()
+  for (const charge of charges) {
+    const root = charge.parentPriceId || charge.id
+    groups.set(root, [...(groups.get(root) ?? []), charge])
+  }
+  const newestFirst = (a: Charge, b: Charge) =>
+    (b.startDate?.getTime() ?? 0) - (a.startDate?.getTime() ?? 0) ||
+    (a.endDate ? 1 : 0) - (b.endDate ? 1 : 0) ||
+    (b.sequence ?? 0) - (a.sequence ?? 0)
+  return [...groups.values()].map((group) => {
+    const versions = [...group].sort(newestFirst)
+    return { current: versions[0] as Charge, versions }
+  })
 }

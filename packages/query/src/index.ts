@@ -286,6 +286,7 @@ export {
   useSubscriptionCoupons,
   useSubscriptionInvoicePreview,
   useSubscriptionLines,
+  useSubscriptionLineHistory,
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
@@ -351,6 +352,7 @@ export {
   useCreateBulkPrices,
   useFeatureCharges,
   usePrices,
+  usePriceHistory,
   useTerminatePrice,
   useUpdatePrice,
 } from './prices'

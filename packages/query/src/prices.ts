@@ -59,6 +59,7 @@ export interface ChargeWire {
   startDate?: Date | undefined
   endDate?: Date | undefined
   sequence?: number | undefined
+  parentPriceId?: string | undefined
   createdAt?: Date | undefined
 }
 
@@ -152,6 +153,7 @@ export function toCharge(wire: ChargeWire): Charge {
     startDate: wire.startDate ?? null,
     endDate: wire.endDate ?? null,
     sequence: typeof wire.sequence === 'number' ? wire.sequence : null,
+    ...(wire.parentPriceId ? { parentPriceId: wire.parentPriceId } : {}),
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -318,6 +320,36 @@ export function usePrices(entityType: PriceEntityType, entityId: string) {
       return (response.items ?? []).map((item) => toCharge(item as ChargeWire))
     },
     // A plan with no id yet (a create in flight) has no charges to fetch.
+    enabled: entityId.length > 0,
+  })
+}
+
+/**
+ * Every price an entity has had, ended ones included — `allow_expired_prices`.
+ *
+ * The plain list leaves out a price once it ends, so editing a charge made its
+ * earlier price vanish: the API had ended it and created a new version, not
+ * deleted it. The charges tables read this instead and fold each charge's
+ * versions together (`chargeLineages`), so the old price shows as history.
+ */
+export function usePriceHistory(entityType: PriceEntityType, entityId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.prices.history({ entityType, entityId }),
+    queryFn: async () => {
+      const response = await call(() =>
+        client.prices.queryPrice({
+          entityType,
+          entityIds: [entityId],
+          expand: 'meters',
+          allowExpiredPrices: true,
+          limit: 500,
+          offset: 0,
+        } as never),
+      )
+      return (response.items ?? []).map((item) => toCharge(item as ChargeWire))
+    },
     enabled: entityId.length > 0,
   })
 }

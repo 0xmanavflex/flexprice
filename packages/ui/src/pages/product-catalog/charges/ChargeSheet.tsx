@@ -348,9 +348,12 @@ export function ChargeSheet({
     id: version.id,
     title: version.price,
     at: version.startDate ? dates.format(version.startDate) : '—',
-    ...(index === 0 ? { record: 'Current' } : {}),
+    // The newest is the price billing now; every earlier one is kept, inactive.
+    record: index === 0 ? 'Current' : 'Inactive',
     summary: [
-      version.endDate ? `Ends ${dates.format(version.endDate)}` : 'No end date',
+      version.endDate
+        ? `${index === 0 ? 'Ends' : 'Ended'} ${dates.format(version.endDate)}`
+        : 'No end date',
       version.updatedAt ? `Last updated ${dates.format(version.updatedAt)}` : null,
     ]
       .filter(Boolean)

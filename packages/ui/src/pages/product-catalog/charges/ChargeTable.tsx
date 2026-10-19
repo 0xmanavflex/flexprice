@@ -140,6 +140,11 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
 }
 
 /** The "value" a charge bills, summarised for the table. */
+/** A charge's price as one line, e.g. "$0.002 per call" — the table's Price cell. */
+export function chargePriceLabel(charge: Charge): string {
+  return valueOf(charge)
+}
+
 function valueOf(charge: Charge): string {
   const display = charge.displayAmount || charge.amount
   switch (charge.billingModel) {

@@ -181,7 +181,11 @@ export type {
 } from './product-catalog/charges/ChargeForm'
 export { RowActionsMenu, RowActionsMenuProvenance } from './shared/RowActionsMenu'
 export type { RowActionsMenuProps } from './shared/RowActionsMenu'
-export { ChargeTable, ChargeTableProvenance } from './product-catalog/charges/ChargeTable'
+export {
+  ChargeTable,
+  ChargeTableProvenance,
+  chargePriceLabel,
+} from './product-catalog/charges/ChargeTable'
 export type { ChargeTableProps } from './product-catalog/charges/ChargeTable'
 export {
   EntitlementCreateForm,

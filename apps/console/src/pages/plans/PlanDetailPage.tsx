@@ -37,6 +37,7 @@ import {
   useEntityIntegrationControls,
   useEntityIntegrationLinks,
   usePrices,
+  usePriceHistory,
   useSyncPlanPrices,
   useUpdateCreditGrant,
   useUpdateEntitlement,
@@ -90,6 +91,7 @@ import {
 import { usePlanFormOptions } from './planFormOptions'
 import { DuplicatePlanDialog } from './DuplicatePlanDialog'
 import { TerminateChargeDialog } from '../shared/TerminateChargeDialog'
+import { priceHistoryRows } from '@/pages/shared/priceHistory'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 
@@ -402,14 +404,15 @@ function SavedPlanPreview({
 }
 
 function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolean }) {
-  const charges = usePrices(PriceEntityType.Plan, planId)
+  // Ended prices too, so an edited charge keeps its earlier price as history.
+  const charges = usePriceHistory(PriceEntityType.Plan, planId)
   const { meters, units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const [form, setForm] = useState<'add' | Charge | null>(null)
   const [terminating, setTerminating] = useState<Charge | null>(null)
 
-  const rows = charges.data ?? []
+  const { charges: rows, details } = priceHistoryRows(charges.data ?? [])
   const loading = charges.isPending || (charges.isError && charges.isFetching)
   const failed = charges.isError && !charges.isFetching
   const editing = form !== null && form !== 'add' ? form : null
@@ -438,6 +441,7 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
     <>
       <PlanChargesView
         charges={rows}
+        details={details}
         readOnly={readOnly}
         loading={loading}
         error={failed}

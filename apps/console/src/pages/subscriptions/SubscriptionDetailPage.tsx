@@ -38,6 +38,7 @@ import {
   useSubscriptionInvoicePreview,
   useSubscriptionInvoices,
   useSubscriptionLines,
+  useSubscriptionLineHistory,
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
@@ -99,6 +100,9 @@ export function SubscriptionDetailPage({
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
   const lines = useSubscriptionLines(subscriptionId)
+  // Ended lines too, so a changed price stays visible as an inactive version.
+  // If it fails, the page falls back to the lines billing now.
+  const lineHistory = useSubscriptionLineHistory(subscriptionId)
   const chargeAlerts = useContractChargeAlerts(subscriptionId)
   const entitlements = useSubscriptionEntitlements(subscriptionId)
   const creditGrants = useSubscriptionCreditGrants(subscriptionId)
@@ -176,6 +180,7 @@ export function SubscriptionDetailPage({
       <SubscriptionDetailView
         subscription={data}
         lines={part(lines)}
+        {...(lineHistory.data ? { lineHistory: lineHistory.data } : {})}
         chargeAlerts={part(chargeAlerts)}
         entitlements={part(entitlements)}
         creditGrants={part(creditGrants)}

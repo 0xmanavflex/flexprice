@@ -1,4 +1,4 @@
-import { BillingModel, type Charge, chargeToDraft } from '@fp/domain'
+import { BillingModel, type Charge, type ChargeDetail, chargeToDraft } from '@fp/domain'
 import { ChargeTable } from '../charges/ChargeTable'
 import { chargeLabel, pricingSummary } from './PlanPreviewCard'
 
@@ -16,6 +16,8 @@ export interface PlanChargesViewProps {
   onRetry?: () => void
   /** Singular unit of a meter ("call"), for "per call" wording. */
   meterUnit?: (meterId: string) => string | undefined
+  /** Per charge: what else is known, such as its earlier price versions. */
+  details?: ReadonlyMap<string, ChargeDetail> | undefined
 }
 
 /** Plan actions and pricing labels composed over the shared charges table and sheet. */
@@ -29,6 +31,7 @@ export function PlanChargesView({
   error,
   onRetry,
   meterUnit,
+  details,
 }: PlanChargesViewProps) {
   const meterName = (id: string) => charges.find((charge) => charge.meterId === id)?.meterName ?? id
   return (
@@ -42,6 +45,7 @@ export function PlanChargesView({
             }))
       }
       layout="narrow"
+      {...(details ? { details } : {})}
       isLoading={loading ?? false}
       error={error ? 'Charges could not be loaded' : null}
       onRetry={onRetry}

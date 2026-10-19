@@ -51,6 +51,7 @@ import {
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
+  lineLineages,
   type SubscriptionSchedule,
   type SubscriptionTax,
   type SubscriptionUsage,
@@ -68,7 +69,7 @@ import {
 } from '../../compositions/detail/DetailKit'
 import { ActivitySection, type ActivityLogEntry } from '../../compositions/detail/ActivityLog'
 import { ChargeSheet } from '../product-catalog/charges/ChargeSheet'
-import { ChargeTable } from '../product-catalog/charges/ChargeTable'
+import { ChargeTable, chargePriceLabel } from '../product-catalog/charges/ChargeTable'
 import { DetailShell } from '../../compositions/detail/DetailShell'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../compositions/detail/RelatedCard'
@@ -122,6 +123,12 @@ export type SubscriptionActivity = InvoiceActivity
 export interface SubscriptionDetailViewProps {
   subscription: SubscriptionDetail
   lines: SubscriptionPart<SubscriptionLine[]>
+  /**
+   * Every line the contract has had, ended ones included. When present, each
+   * charge is shown once — its current version — and its earlier prices are
+   * kept as inactive versions in its history rather than dropping out.
+   */
+  lineHistory?: SubscriptionLine[] | undefined
   entitlements: SubscriptionPart<SubscriptionEntitlement[]>
   creditGrants: SubscriptionPart<CreditGrant[]>
   usage: SubscriptionPart<SubscriptionUsage>
@@ -300,6 +307,7 @@ const words = (value: string) => value.replaceAll('_', ' ').toLowerCase()
 export function SubscriptionDetailView({
   subscription,
   lines,
+  lineHistory,
   entitlements,
   creditGrants,
   usage,
@@ -465,7 +473,31 @@ export function SubscriptionDetailView({
     canModify && handler ? { label, onClick: open(kind) } : undefined
 
   const usageData = usage.data
-  const chargeRows = chargesOfLines(lines.data ?? [])
+  // With the full history, a charge is its newest version and the rest are history.
+  const lineages = lineHistory ? lineLineages(lineHistory) : null
+  const chargeRows = chargesOfLines(
+    lineages ? lineages.map((lineage) => lineage.current) : (lines.data ?? []),
+  )
+  for (const lineage of lineages ?? []) {
+    const chargeId = lineage.current.charge?.id
+    if (!chargeId || lineage.versions.length < 2) continue
+    chargeRows.details.set(chargeId, {
+      ...chargeRows.details.get(chargeId),
+      versions: lineage.versions.flatMap((version) =>
+        version.charge
+          ? [
+              {
+                id: version.id,
+                price: chargePriceLabel(version.charge),
+                startDate: version.startDate,
+                endDate: version.endDate,
+                updatedAt: version.charge.createdAt,
+              },
+            ]
+          : [],
+      ),
+    })
+  }
   for (const [chargeId, line] of chargeRows.lineOf) {
     const discounts = (coupons?.data ?? []).filter(
       (coupon) => coupon.active && coupon.lineItemId === line.id,

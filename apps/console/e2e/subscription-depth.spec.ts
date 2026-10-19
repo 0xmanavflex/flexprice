@@ -75,3 +75,31 @@ test('contract detail overview keeps every add section and adds a coupon', async
   await dialog.getByRole('button', { name: 'Add coupon' }).click()
   await expect(dialog).toHaveCount(0)
 })
+
+test('a changed contract price stays as an inactive version, not gone', async ({ page }) => {
+  await page.goto('/contracts')
+  await page.getByRole('row').nth(1).click()
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
+  await page.getByRole('tab', { name: 'Charges' }).click()
+
+  await page.getByRole('button', { name: 'Actions for API usage' }).click()
+  await page.getByRole('menuitem', { name: 'Edit' }).click()
+  const dialog = page.getByRole('dialog')
+  const amount = dialog.getByLabel(/^Amount/).first()
+  await amount.fill('0.003')
+  await dialog.getByRole('button', { name: 'Save charge' }).click()
+  await expect(dialog).toBeHidden()
+
+  // One row for the charge, now at its new price, flagged as having history.
+  const rows = page.getByRole('row').filter({ hasText: 'API usage' })
+  await expect(rows).toHaveCount(1)
+  await expect(rows.getByRole('button', { name: /History/ })).toBeVisible()
+
+  // The old price is a version of the charge, kept inactive.
+  await rows.getByRole('button', { name: /History/ }).click()
+  const sheet = page.getByRole('dialog')
+  // At least the old price and the new one; a reused mock may hold more.
+    await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
+  await expect(sheet.getByText('Current')).toBeVisible()
+  await expect(sheet.getByText('Inactive').first()).toBeVisible()
+})

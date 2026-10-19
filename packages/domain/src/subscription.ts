@@ -523,6 +523,61 @@ export interface SubscriptionLine {
 
 export type SubscriptionLineSource = 'plan' | 'addon' | 'contract'
 
+/** One charge on a contract across its versions. */
+export interface LineLineage {
+  /** The version that bills now, or the last one when the charge has ended. */
+  current: SubscriptionLine
+  /** Every version, newest first; `current` is the first. */
+  versions: SubscriptionLine[]
+}
+
+/**
+ * A contract's lines grouped into the charges they are versions of.
+ *
+ * Changing a charge's price on a contract never edits it in place: the API ends
+ * the line (its `end_date`) and starts a new one whose price points back to the
+ * one it replaced (`parent_price_id`). Linking those ids end to end turns the
+ * ended lines back into what they are — earlier versions of one charge, kept
+ * inactive, not deleted — so the table shows each charge once and its history
+ * lists every price it has had.
+ */
+export function lineLineages(lines: readonly SubscriptionLine[]): LineLineage[] {
+  const parent = new Map<string, string>()
+  const find = (id: string): string => {
+    let root = id
+    while (parent.has(root) && parent.get(root) !== root) root = parent.get(root) as string
+    parent.set(id, root)
+    return root
+  }
+  const union = (a: string, b: string) => {
+    const rootA = find(a)
+    const rootB = find(b)
+    if (rootA !== rootB) parent.set(rootA, rootB)
+  }
+  const keyOf = (line: SubscriptionLine) => line.priceId || `line:${line.id}`
+
+  for (const line of lines) {
+    find(keyOf(line))
+    if (line.overridesPriceId) union(keyOf(line), line.overridesPriceId)
+  }
+
+  const groups = new Map<string, SubscriptionLine[]>()
+  for (const line of lines) {
+    const root = find(keyOf(line))
+    groups.set(root, [...(groups.get(root) ?? []), line])
+  }
+
+  // Newest first: a later start wins; at the same start, the open-ended line.
+  const newestFirst = (a: SubscriptionLine, b: SubscriptionLine) =>
+    (b.startDate?.getTime() ?? 0) - (a.startDate?.getTime() ?? 0) ||
+    (a.endDate ? 1 : 0) - (b.endDate ? 1 : 0)
+
+  return [...groups.values()].map((group) => {
+    const versions = [...group].sort(newestFirst)
+    return { current: versions[0] as SubscriptionLine, versions }
+  })
+}
+
 /** End a charge. `effectiveFrom` empty means now. */
 export interface EndContractCharge {
   effectiveFrom: string
