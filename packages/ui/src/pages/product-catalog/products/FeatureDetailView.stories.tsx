@@ -173,6 +173,12 @@ export const Information: Story = {
     await expect(canvas.getByText('Metering')).toBeVisible()
     await expect(canvas.queryByText('Event and aggregation')).toBeNull()
 
+    // The form's own rows, read-only, beside the shared rail.
+    await expect(canvas.getByText('Event filters')).toBeVisible()
+    await expect(canvas.getByText('Unit name')).toBeVisible()
+    await expect(canvas.getByText('Send a test event')).toBeVisible()
+    await expect(canvas.queryByText('Identifiers')).toBeNull()
+
     // Read-only: there is no pencil, because editing is the header's
     // "Edit details", which opens the real form.
     await expect(canvas.queryByRole('button', { name: /^Edit details$/i })).toBeNull()
@@ -319,7 +325,8 @@ export const SwitchesTabs: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: /Information/ }))
     await expect(args.onTabChange).toHaveBeenCalledWith('information')
-    await expect(canvas.queryByText('Send a test event')).toBeNull()
+    // The right-hand rail is shared: the test event stays in both tabs.
+    await expect(canvas.getByText('Send a test event')).toBeVisible()
   },
 }
 
