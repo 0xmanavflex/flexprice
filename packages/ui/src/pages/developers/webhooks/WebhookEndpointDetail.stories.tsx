@@ -124,6 +124,14 @@ export const Disabled: Story = {
   },
 }
 
+/** Before the first delivery, the Delivery card is a setup checklist with a way to send one now. */
 export const NoDeliveriesYet: Story = {
   args: { stats: { succeeded: 0, failed: 0, pending: 0, sending: 0 } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('No deliveries yet')).toBeVisible()
+    await expect(canvas.getByRole('list', { name: 'Delivery setup' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Send example event' }))
+    await waitFor(() => expect(args.onTabChange).toHaveBeenCalledWith('testing'))
+  },
 }

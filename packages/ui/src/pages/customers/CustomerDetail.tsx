@@ -292,7 +292,9 @@ export function CustomerDetail({
         icon={<span className="text-xs font-medium">{initials}</span>}
         title={customer.name}
         badges={<Status value={CUSTOMER_STATUS_LABEL[customer.status]} />}
-        id={customer.externalId || customer.id}
+        // The external id is what the customer's systems know them by, so it leads.
+        {...(customer.externalId ? { externalId: customer.externalId } : {})}
+        id={customer.id}
         leading={
           integrationControls ? (
             <ContractIntegrations {...integrationControls} showLink={false} />

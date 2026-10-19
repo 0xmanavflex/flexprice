@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-63 route pages.
+62 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -39,7 +39,6 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, MetricRail, Properties, RowActionsMenu, Section | FeatureCloneDialog, FeatureDetailView, FeatureTab |
 | features | `FeatureFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, FeatureForm, LoadingRows, PageBody |
 | features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, FeatureLinkage, ListState, PageBody |
-| groups | `GroupDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, MetricRail, RowActionsMenu, Section | CatalogDetailFrame, CatalogStatusBadge, EditableCard, GroupMembersView, LayersIcon, Pill, Trash2Icon |
 | groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | GroupForm |
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |
 | home | `HomePage` | Dashboard | Panel | CUSTOM_RANGE_ID, DashboardHome |
@@ -61,7 +60,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | price-units | `PriceUnitListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |
 | pricing-widget | `PricingWidgetPage` | Other | EmptyState | PricingCatalogBlock |
 | revenue | `RevenuePage` | Dashboard | EntityList, Panel | RevenueDashboard |
-| settings | `SettingsPage` | Settings | DetailTabs, EmptyState | BadgeDollarSignIcon, BellIcon, Building2Icon, CoinsIcon, EmbeddedPageContext, KeyRoundIcon, PaletteIcon, PercentIcon, ReceiptTextIcon, RepeatIcon, SettingsSection, SettingsShell, SmileIcon, TagIcon, TicketPercentIcon, UsersIcon |
+| settings | `SettingsPage` | Settings | DetailTabs, EmptyState | BadgeDollarSignIcon, BellIcon, Building2Icon, CoinsIcon, EmbeddedPageContext, PaletteIcon, PercentIcon, ReceiptTextIcon, RepeatIcon, SettingsSection, SettingsShell, SmileIcon, TagIcon, TicketPercentIcon, UsersIcon |
 | subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
 | subscriptions | `SubscriptionDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FormDialog, MetricRail, Properties, RowActionsMenu, Section | DateInput, Input, OptionSelect, SubscriptionDetailView, SubscriptionPart, Switch |
 | subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, Field, FormActions, FormCard, FormDialog, FormPage, RowActionsMenu, Section, SimpleTable, WorkflowStepper | SubscriptionForm |

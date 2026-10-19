@@ -119,6 +119,8 @@ export function EventListPage({ query, onQueryChange, onOpenSubscription }: Even
           onQueryChange={onQueryChange}
           onEventClick={setSelected}
           onClearFilters={clearFilters}
+          onReload={() => void events.refetch()}
+          isReloading={events.isFetching}
         />
       </ListState>
       <EventDetailSheet

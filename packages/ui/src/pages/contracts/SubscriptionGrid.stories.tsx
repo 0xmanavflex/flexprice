@@ -12,7 +12,11 @@ import { SubscriptionGrid } from './SubscriptionGrid'
 const meta = {
   title: 'App/Contracts/Contract table',
   component: SubscriptionGrid,
-  parameters: { layout: 'padded' },
+  parameters: {
+    layout: 'padded',
+    // Base UI's menu portal focus guards — see FilterBar.stories.tsx.
+    a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
+  },
   args: {
     subscriptions: subscriptionFixtures(),
     total: 4,
@@ -146,6 +150,19 @@ export const Layout: Story = {
 
     const cell = canvasElement.querySelector('tbody td') as HTMLElement
     await expect(Math.round(cell.getBoundingClientRect().height)).toBe(60)
+  },
+}
+
+/** A click on the customer name opens the contract, not the customer. */
+export const RowOpensContract: Story = {
+  args: { onSubscriptionClick: fn(), onOpenCustomer: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByText('Acme Robotics'))
+    await expect(args.onSubscriptionClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sub_01' }),
+    )
+    await expect(args.onOpenCustomer).not.toHaveBeenCalled()
   },
 }
 

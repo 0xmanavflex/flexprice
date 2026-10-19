@@ -276,10 +276,21 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value as Record<string, unknown>
 }
 
+/**
+ * Actions whose literal reading is not how billing talks. A payment that
+ * succeeded is money received, so it reads "Paid", the word on the invoice.
+ */
+const ACTION_TITLE: Record<string, string> = {
+  'payment.succeeded': 'Paid',
+  'invoice.payment_succeeded': 'Invoice paid',
+}
+
 /** `invoice.refunded` → "Invoice refunded". Unknown actions stay readable. */
 export function activityTitle(action: string): string {
   const trimmed = action.trim()
   if (trimmed === '') return 'Activity'
+  const known = ACTION_TITLE[trimmed]
+  if (known) return known
   const [entity = '', ...rest] = trimmed.split('.')
   const name = entity.replace(/_/g, ' ')
   const titled = name.charAt(0).toUpperCase() + name.slice(1)

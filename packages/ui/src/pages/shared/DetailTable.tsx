@@ -42,6 +42,8 @@ export interface DetailColumn<T> {
   width?: number
   /** Extra classes on the cell. */
   className?: string
+  /** `end` right-aligns the header and the cell, for a document-shaped table. */
+  align?: 'end'
 }
 
 export interface DetailTableProps<T> {
@@ -129,6 +131,7 @@ export function DetailTable<T extends object>({
         ...(column.width && column.header ? { width: column.width } : {}),
         ...(column.sortBy ? { sortable: true } : {}),
         ...(column.className ? { cellClassName: column.className } : {}),
+        ...(column.align ? { align: column.align } : {}),
       })),
     [columns],
   )

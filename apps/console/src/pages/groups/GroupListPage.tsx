@@ -9,7 +9,6 @@ import { toListFailure } from '../shared/listFailure'
 export interface GroupListPageProps {
   query: GroupQuery
   onQueryChange: (query: GroupQuery) => void
-  onOpenGroup: (group: Group) => void
   onCreateGroup: () => void
 }
 
@@ -23,7 +22,6 @@ export interface GroupListPageProps {
 export function GroupListPage({
   query,
   onQueryChange,
-  onOpenGroup,
   onCreateGroup,
 }: GroupListPageProps) {
   const groups = useGroups(query)
@@ -66,7 +64,6 @@ export function GroupListPage({
             total={groups.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
-            onGroupClick={onOpenGroup}
             onCreate={onCreateGroup}
             onDelete={setDeleting}
             onClearFilters={clearFilters}

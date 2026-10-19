@@ -14,7 +14,7 @@ import {
   useRouterState,
   useSearch,
 } from '@tanstack/react-router'
-import { Outlet } from '@tanstack/react-router'
+import { Navigate, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense, type ReactNode } from 'react'
 import { AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { useCurrentUser } from '@fp/query'
@@ -258,9 +258,6 @@ const GroupFormPage = lazy(() =>
 )
 const TaxFormPage = lazy(() =>
   import('@/pages/taxes/TaxFormPage').then((m) => ({ default: m.TaxFormPage })),
-)
-const GroupDetailPage = lazy(() =>
-  import('@/pages/groups/GroupDetailPage').then((m) => ({ default: m.GroupDetailPage })),
 )
 const CostSheetDetailPage = lazy(() =>
   import('@/pages/cost-sheets/CostSheetDetailPage').then((m) => ({
@@ -532,11 +529,24 @@ const authCallbackRoute = createRoute({
 })
 
 /**
- * The far end of the sign-up confirmation email. Does not step aside for an
- * existing session: the link must be consumed wherever it lands, or the
- * account it confirms is never created.
+ * The far end of the sign-up confirmation email and of Google sign-in. Does not
+ * step aside for an existing session: the link must be consumed wherever it
+ * lands, or the account it confirms is never created.
+ *
+ * The path is V1's, because it is the one the Supabase Redirect URLs allow —
+ * see `SIGN_UP_CONFIRM_PATH`.
  */
 const signUpConfirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth/signup/confirmation',
+  component: SignUpConfirmPage,
+})
+
+/**
+ * The address V2 sent before it adopted V1's path. Confirmation emails already
+ * sent still point here, so it renders the same page rather than a 404.
+ */
+const legacySignUpConfirmRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-up/confirm',
   component: SignUpConfirmPage,
@@ -1360,9 +1370,6 @@ function GroupsRouteComponent() {
       <GroupListPage
         query={query}
         onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
-        onOpenGroup={(group) =>
-          void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })
-        }
         onCreateGroup={() => void navigate({ to: '/groups/new' })}
       />
     </SettingsListFrame>
@@ -1383,9 +1390,7 @@ function GroupCreateRouteComponent() {
   return (
     <GroupFormPage
       onCancel={toList}
-      onDone={(id) =>
-        id ? void navigate({ to: '/groups/$groupId', params: { groupId: id } }) : toList()
-      }
+      onDone={toList}
     />
   )
 }
@@ -1403,24 +1408,17 @@ const environmentCreateRoute = createRoute({
   },
 })
 
-/** The group detail page. `/groups/$groupId` — a read-only view for now. */
+/**
+ * Groups have no page of their own: a group is a name and its members, and the
+ * list already shows both, with the id one copy away. An old link lands on it.
+ */
 const groupDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/groups/$groupId',
-  component: GroupDetailRouteComponent,
+  beforeLoad: () => {
+    throw redirect({ to: '/groups', search: {} as never })
+  },
 })
-
-function GroupDetailRouteComponent() {
-  const { groupId } = groupDetailRoute.useParams()
-  const navigate = useNavigate()
-
-  return (
-    <GroupDetailPage
-      groupId={groupId}
-      onNavigateToList={() => void navigate({ to: '/groups', search: {} as never })}
-    />
-  )
-}
 
 const costSheetsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -2085,13 +2083,15 @@ function EventsRouteComponent() {
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings',
-  // Service accounts and webhooks retain their standalone destinations.
-  beforeLoad: ({ location }) => {
-    const raw = (location.search as Record<string, unknown>)['section']
-    const moved = typeof raw === 'string' ? MOVED_SECTIONS[raw] : undefined
-    if (moved) throw redirect({ to: moved, search: {} as never })
+  // API keys, service accounts and webhooks have their own Developer pages.
+  // A moved section survives validation so the component can send it on;
+  // parsing would otherwise rewrite it to the default section first.
+  validateSearch: (search: Record<string, unknown>): SettingsQuery => {
+    const raw = search['section']
+    return typeof raw === 'string' && MOVED_SECTIONS[raw]
+      ? ({ section: raw, tab: raw } as SettingsQuery)
+      : parseSettingsSearch(search)
   },
-  validateSearch: (search: Record<string, unknown>): SettingsQuery => parseSettingsSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_SETTINGS_QUERY)] },
   component: SettingsRouteComponent,
 })
@@ -2118,6 +2118,8 @@ function SettingsListFrame({ sectionId, children }: { sectionId: string; childre
 function SettingsRouteComponent() {
   const { section, tab } = useSearch({ from: settingsRoute.id })
   const navigate = useNavigate()
+  const moved = MOVED_SECTIONS[section]
+  if (moved) return <Navigate to={moved} search={{} as never} replace />
 
   return (
     <SettingsPage
@@ -2145,14 +2147,19 @@ function SettingsRouteComponent() {
 }
 
 /**
- * Service accounts remains a standalone Developer destination.
- * API keys lives in Settings; webhooks has its own routes below.
+ * API keys and service accounts are Developer destinations, each a page of
+ * its own; webhooks has its own routes below.
  */
 const DeveloperPanels = lazy(() =>
   import('@/pages/settings/DeveloperPanels').then((m) => ({ default: m.DeveloperPanels })),
 )
 
-const developerRedirects = ([['/service-accounts', 'service-accounts']] as const).map(
+const developerRedirects = (
+  [
+    ['/api-keys', 'api-keys'],
+    ['/service-accounts', 'service-accounts'],
+  ] as const
+).map(
   ([path, panel]) =>
     createRoute({
       getParentRoute: () => shellRoute,
@@ -2287,18 +2294,6 @@ const legacyRoutes = ['/subscriptions', '/credit-notes', '/products'].flatMap((p
   ),
 )
 
-const apiKeysRedirect = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/api-keys',
-  beforeLoad: () => {
-    throw redirect({
-      to: '/settings',
-      search: { section: 'api-keys', tab: 'api-keys' },
-      replace: true,
-    })
-  },
-})
-
 const customerContractRedirect = createRoute({
   getParentRoute: () => shellRoute,
   path: '/customers/$customerId/subscriptions/new',
@@ -2316,12 +2311,12 @@ export const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
   signUpConfirmRoute,
+  legacySignUpConfirmRoute,
   authCallbackRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
   shellRoute.addChildren([
     ...legacyRoutes,
-    apiKeysRedirect,
     customerContractRedirect,
     homeRoute,
     revenueRoute,

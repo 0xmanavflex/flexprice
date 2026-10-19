@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
@@ -59,14 +59,11 @@ import {
   OptionSelect,
   Section,
 } from '../../compositions'
-import { ChoiceCards, Composer, SplitMeter } from '../../compositions/detail/DetailKit'
+import { ChoiceCards, Composer } from '../../compositions/detail/DetailKit'
 import { Pill, type PillTone } from '../shared/cells'
 import {
   WalletLedgerTable,
-  WalletTransactionsTable,
-  expiringSoon,
   formatCredits,
-  formatDay,
 } from './WalletLedgerTable'
 import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
@@ -82,7 +79,7 @@ export interface CustomerWalletViewProps {
   /** The moment expiries are measured from; defaults to now. */
   now?: Date
   transactionsLoading?: boolean
-  /** The ledger read failed: the Top-ups section shows it with a retry, never "No top-ups yet". */
+  /** The ledger read failed: the Transactions section shows it with a retry, never "No transactions yet". */
   transactionsError?: string | null
   transactionsErrorKind?: ErrorKind
   onRetryTransactions?: () => void
@@ -106,22 +103,6 @@ type Dialog = 'create' | 'top-up' | 'debit' | 'auto-topup' | 'terminate' | null
 const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
 
 const credits = formatCredits
-
-/** A per-credit rate keeps its small decimals: 0.009 is "$0.009", not "$0.01". */
-function rate(value: string, currency: string): string {
-  if (toNumber(value) === null) return '—'
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currencyDisplay: 'narrowSymbol',
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6,
-    }).format(value as unknown as number)
-  } catch {
-    return `${value} ${currency}`
-  }
-}
 
 export function CustomerWalletView({
   wallets,
@@ -214,19 +195,6 @@ export function CustomerWalletView({
   const closed = wallet.status === WalletStatus.Closed
   const currency = wallet.currency.toUpperCase()
   const asOf = now ?? new Date()
-  const topUps = transactions
-    .filter((t) => t.direction === 'in')
-    .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
-  // An unreadable balance is "unknown", never a 0: the meter is left out rather
-  // than drawn as an untouched wallet.
-  const current = toNumber(wallet.creditBalance)
-  const ongoing = toNumber(wallet.realTimeCreditBalance)
-  const meterKnown = current !== null && ongoing !== null
-  const pendingUsage = meterKnown ? Math.max(0, current - ongoing) : 0
-  const usedShare =
-    meterKnown && current > 0 ? Math.min(100, Math.round((pendingUsage / current) * 1000) / 10) : 0
-  const availableNow = meterKnown ? Math.max(0, ongoing) : 0
-  const expiring = expiringSoon(topUps, asOf)
   const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
 
   return (
@@ -302,141 +270,60 @@ export function CustomerWalletView({
       </div>
 
       <section className="bg-background rounded-xl border">
-        {/* Balances on the left, usage since the last invoice on the right: one row, equal halves. */}
-        <div className="grid lg:grid-cols-2 lg:divide-x">
-          <div className="grid grid-cols-2 divide-x">
-            <div className="p-6">
-              <Balance
-                label="Real-time balance"
-                hint="Last invoiced balance minus usage recorded since the last invoice. This is what the next charge draws from."
-                credits={wallet.realTimeCreditBalance}
-                value={formatMoney(wallet.realTimeBalance)}
-              />
-            </div>
-            <div className="p-6">
-              <Balance
-                label="Last invoiced balance"
-                hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
-                credits={wallet.creditBalance}
-                value={formatMoney(wallet.balance)}
-              />
-            </div>
+        <div className="grid grid-cols-2 divide-x">
+          <div className="p-6">
+            <Balance
+              label="Real-time balance"
+              hint="Last invoiced balance minus usage recorded since the last invoice. This is what the next charge draws from."
+              credits={wallet.realTimeCreditBalance}
+              value={formatMoney(wallet.realTimeBalance)}
+            />
           </div>
-          <div className="flex flex-col justify-center gap-3 border-t p-6 lg:border-t-0">
-            {meterKnown ? (
-              <>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-muted-foreground text-xs">Since the last invoice</p>
-                  <p className="text-muted-foreground text-xs tabular-nums">{usedShare}% used</p>
-                </div>
-                <SplitMeter
-                  segments={56}
-                  parts={[
-                    { value: pendingUsage, color: 'bg-success', label: 'Used, not yet invoiced' },
-                    { value: availableNow, color: 'bg-muted', label: 'Available' },
-                  ]}
-                />
-                <div className="text-muted-foreground flex flex-wrap gap-x-5 gap-y-1 text-xs">
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="bg-success size-2 rounded-full" aria-hidden="true" />
-                    {credits(String(pendingUsage))} used, not yet invoiced
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className="bg-muted-foreground/30 size-2 rounded-full"
-                      aria-hidden="true"
-                    />
-                    {credits(String(availableNow))} available
-                  </span>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-muted-foreground text-xs">Since the last invoice</p>
-                <p className="text-muted-foreground text-sm">
-                  Usage since the last invoice is unavailable: a balance could not be read.
-                </p>
-              </>
-            )}
+          <div className="p-6">
+            <Balance
+              label="Last invoiced balance"
+              hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
+              credits={wallet.creditBalance}
+              value={formatMoney(wallet.balance)}
+            />
           </div>
         </div>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-t px-6 py-4 sm:grid-cols-3 lg:flex lg:flex-wrap lg:gap-x-12">
-          <Detail label="Status">
-            <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
-          </Detail>
-          <Detail label="Consumption rate">
-            1 credit = {rate(wallet.conversionRate, currency)}
-          </Detail>
-          <Detail label="Top-up rate">
-            1 credit = {rate(wallet.topupConversionRate, currency)}
-          </Detail>
-          <Detail label="Auto top-up">
-            <button
-              type="button"
-              disabled={closed}
-              onClick={() => open('auto-topup')}
-              aria-label={`Auto top-up ${wallet.autoTopup.enabled ? 'on' : 'off'}. Edit settings`}
-              className="focus-visible:ring-ring/50 rounded-sm text-left underline-offset-4 outline-none hover:underline focus-visible:ring-3 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
-            >
-              {wallet.autoTopup.enabled
-                ? `Below ${credits(wallet.autoTopup.threshold)} credits, add ${credits(wallet.autoTopup.amount)}`
-                : 'Off'}
-            </button>
-          </Detail>
-          {expiring ? (
-            <Detail label="Expiring soon">
-              <span className="text-warning-foreground dark:text-warning">
-                {credits(expiring.credits)} credits on {formatDay(expiring.date, false)}
-              </span>
-            </Detail>
-          ) : null}
-        </dl>
+        <div className="flex flex-wrap items-center gap-2 border-t px-6 py-4">
+          <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+          {/* The chip is also the way in: off never dead-ends, it opens the settings. */}
+          <button
+            type="button"
+            disabled={closed}
+            onClick={() => open('auto-topup')}
+            aria-label={`Auto top-up ${wallet.autoTopup.enabled ? 'on' : 'off'}. Edit settings`}
+            className="focus-visible:ring-ring/50 rounded-full outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Pill tone={wallet.autoTopup.enabled ? 'success' : 'neutral'}>
+              {wallet.autoTopup.enabled ? 'Auto top-up on' : 'Auto top-up off'}
+            </Pill>
+          </button>
+        </div>
       </section>
 
-      <Section table title="Top-ups">
+      <Section table title="Transactions">
         <SubTabState
-          hasData={topUps.length > 0}
+          hasData={transactions.length > 0}
           isLoading={transactionsLoading}
           error={transactionsError}
           errorKind={transactionsErrorKind}
           onRetry={onRetryTransactions}
           columns={5}
-          loadingLabel="Loading top-ups"
+          loadingLabel="Loading transactions"
           truncation={ledgerCapped}
           empty={{
             scene: 'customers',
-            title: ledgerCapped ? 'No top-ups in the latest transactions' : 'No top-ups yet',
-            description: ledgerCapped
-              ? 'Older transactions are not listed here.'
-              : 'Credits added to this wallet appear here.',
+            title: 'No transactions yet',
+            description: 'Credits added and usage drawn from this wallet appear here.',
           }}
         >
-          <WalletLedgerTable topUps={topUps} now={asOf} />
+          <WalletLedgerTable transactions={transactions} now={asOf} />
         </SubTabState>
       </Section>
-
-      {/* A failed ledger read is reported once, in Top-ups above. */}
-      {transactionsError ? null : (
-        <Section table title="All transactions">
-          <SubTabState
-            hasData={transactions.length > 0}
-            isLoading={transactionsLoading}
-            error={transactionsError}
-            errorKind={transactionsErrorKind}
-            onRetry={onRetryTransactions}
-            columns={5}
-            loadingLabel="Loading transactions"
-            truncation={ledgerCapped}
-            empty={{
-              scene: 'customers',
-              title: 'No transactions yet',
-              description: 'Credits added and usage drawn from this wallet appear here.',
-            }}
-          >
-            <WalletTransactionsTable transactions={transactions} />
-          </SubTabState>
-        </Section>
-      )}
 
       {createDialog}
       <TopUpDialog
@@ -488,13 +375,6 @@ const STATUS_TONE: Record<WalletStatus, PillTone> = {
 
 /** How many ledger rows the wallet panel asks for; at this count older entries are cut off. */
 export const TRANSACTIONS_LIMIT = 200
-
-/** A decimal string as a number, or null when it is blank or unreadable. */
-function toNumber(value: string): number | null {
-  if (value.trim() === '') return null
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
 
 function CreateWalletDialog({
   open,
@@ -989,15 +869,6 @@ function AutoTopupDialog({
         ) : null}
       </Composer>
     </FormDialog>
-  )
-}
-
-function Detail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="text-sm">{children}</dd>
-    </div>
   )
 }
 

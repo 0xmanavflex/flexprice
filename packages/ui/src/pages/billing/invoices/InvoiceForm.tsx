@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { CheckIcon, PlusIcon, ReceiptIcon, SaveIcon, Trash2Icon, XIcon } from '@ui/icons'
+import { CheckIcon, InfoIcon, PlusIcon, ReceiptIcon, SaveIcon, Trash2Icon, XIcon } from '@ui/icons'
 import type { z } from 'zod'
 import {
   type CreateInvoice,
@@ -613,6 +613,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
             <CardContent className="flex flex-col gap-7 px-5 py-5 sm:px-6 sm:py-6">
               {edit && !isDraft ? (
                 <Alert>
+                  <InfoIcon aria-hidden="true" />
                   <AlertTitle>This invoice is finalized</AlertTitle>
                   <AlertDescription>
                     The due date, metadata and statuses change in place. Changing lines or

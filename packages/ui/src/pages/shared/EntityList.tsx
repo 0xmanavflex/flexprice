@@ -673,10 +673,11 @@ export function EntityList<T extends object>({
         meta: {
           headerTitle: column.header,
           skeleton: column.skeleton ?? <Skeleton className="h-4 w-24" />,
-          ...(column.cellClassName || column.align === 'center'
+          ...(column.cellClassName || column.align === 'center' || column.align === 'end'
             ? {
                 cellClassName: cn(
                   column.align === 'center' && 'text-center [&>*]:mx-auto',
+                  column.align === 'end' && 'text-right [&>*]:ml-auto',
                   column.cellClassName,
                 ),
               }
@@ -698,7 +699,11 @@ export function EntityList<T extends object>({
           ) : column.header ? (
             <HeaderLabel
               title={column.header}
-              {...(column.align === 'center' ? { className: 'justify-center' } : {})}
+              {...(column.align === 'center'
+                ? { className: 'justify-center' }
+                : column.align === 'end'
+                  ? { className: 'justify-end' }
+                  : {})}
             />
           ) : (
             <span className="sr-only">Actions</span>

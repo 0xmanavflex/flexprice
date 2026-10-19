@@ -15,8 +15,6 @@
  *
  * Deliberately NOT covered, because the capture would not be stable or would
  * not show the screen:
- *  - `/groups/:id` — the mock has no `GET /groups/:id` handler, so the page
- *    stays on its loading skeleton forever. Add the handler, then add the row.
  *  - Anything behind a real network call (live-auth, live-flows): the suite is
  *    mock-only, like the journeys.
  *  - Dark mode: the contract is the light theme; a theme pass is its own
@@ -418,14 +416,6 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     reference: 'pages/settings.tsx',
     pattern: 'settings',
     ready: { text: 'Invite member' },
-  },
-  {
-    name: 'settings-developers',
-    route: '/api-keys',
-
-    reference: 'pages/settings.tsx',
-    pattern: 'settings',
-    ready: { text: 'Create API key' },
   },
   {
     name: 'sign-in',

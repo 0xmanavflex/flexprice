@@ -47,7 +47,7 @@ test('contract detail charges tab lists the contract charges', async ({ page }) 
   await expect(page.getByText('Platform fee')).toBeVisible()
   await expect(page.getByText('API usage')).toBeVisible()
   await expect(page.getByText(/99\.00/)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Manage pricing' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add charge' })).toBeVisible()
 })
 
 test('contract detail overview keeps every add section and adds a coupon', async ({ page }) => {

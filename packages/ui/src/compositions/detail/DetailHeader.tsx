@@ -25,6 +25,8 @@ export interface DetailHeaderProps {
   badges?: ReactNode
   /** The record id, rendered as an "ID" copy chip. */
   id?: string | undefined
+  /** The id in the customer's own systems, as an "External ID" chip before the ID. */
+  externalId?: string | undefined
   /** Alias of `id`. */
   identifier?: string
   /** An email, rendered as a mail-icon copy chip beside the id. */
@@ -43,6 +45,7 @@ export function DetailHeader({
   icon,
   badges,
   id,
+  externalId,
   identifier,
   email,
   primary,
@@ -68,6 +71,7 @@ export function DetailHeader({
         <DetailHeaderCluster
           primary={primary}
           leading={leading}
+          externalId={externalId}
           id={id ?? identifier}
           email={email}
           more={actions}

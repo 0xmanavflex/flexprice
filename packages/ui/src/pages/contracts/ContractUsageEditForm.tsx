@@ -1,3 +1,4 @@
+import { CircleAlertIcon, InfoIcon } from '@ui/icons'
 import { useState } from 'react'
 import {
   BillingModel,
@@ -117,6 +118,7 @@ export function ContractUsageEditForm({
   if (!draft) {
     return (
       <Alert variant="destructive">
+        <CircleAlertIcon aria-hidden="true" />
         <AlertTitle>This charge cannot be edited here</AlertTitle>
         <AlertDescription>
           The API did not say how it is priced. Reload the contract and try again.
@@ -141,6 +143,7 @@ export function ContractUsageEditForm({
       submitLabel="Save charge"
       notice={
         <Alert>
+          <InfoIcon aria-hidden="true" />
           <AlertTitle>Only this contract changes</AlertTitle>
           <AlertDescription>
             {line.source === 'plan'

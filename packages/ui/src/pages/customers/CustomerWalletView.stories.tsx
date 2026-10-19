@@ -230,12 +230,9 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Real-time balance')).toBeInTheDocument()
     await expect(canvas.getByText('Last invoiced balance')).toBeInTheDocument()
-    await expect(canvas.getByText('Status')).toBeInTheDocument()
     await expect(canvas.getByText('Active')).toBeInTheDocument()
-    await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
-    await expect(canvas.getByText('Top-up rate')).toBeInTheDocument()
-    await expect(canvas.getAllByText(/1 credit = \$0\.01/)).toHaveLength(2)
-    await expect(canvas.getByText('Expiring soon')).toBeInTheDocument()
+    await expect(canvas.queryByText('Consumption rate')).toBeNull()
+    await expect(canvas.queryByText('Expiring soon')).toBeNull()
     await expect(canvas.getByRole('button', { name: /auto top-up off/i })).toBeEnabled()
     await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /top up wallet/i })).toBeEnabled()
@@ -262,17 +259,17 @@ export const NoWallet: Story = {
   },
 }
 
-/** The ledger is loading: a shaped skeleton, never "No top-ups yet". */
+/** The ledger is loading: a shaped skeleton, never "No transactions yet". */
 export const TransactionsLoading: Story = {
   args: { transactions: [], transactionsLoading: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('Loading top-ups')).toBeInTheDocument()
-    await expect(canvas.queryByText('No top-ups yet')).toBeNull()
+    await expect(await canvas.findByText('Loading transactions')).toBeInTheDocument()
+    await expect(canvas.queryByText('No transactions yet')).toBeNull()
   },
 }
 
-/** The ledger read failed: an error with retry in the Top-ups section, never "No top-ups yet". */
+/** The ledger read failed: an error with retry in the Transactions section, never "No transactions yet". */
 export const TransactionsFailed: Story = {
   args: {
     transactions: [],
@@ -283,13 +280,13 @@ export const TransactionsFailed: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText(/problem loading wallet transactions/)).toBeVisible()
-    await expect(canvas.queryByText('No top-ups yet')).toBeNull()
+    await expect(canvas.queryByText('No transactions yet')).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
     await expect(args.onRetryTransactions).toHaveBeenCalledOnce()
   },
 }
 
-/** An unreadable balance is shown as unknown: no meter, no 0% used, no 0 credits. */
+/** An unreadable balance is shown as unknown — a dash, never 0 credits. */
 export const UnreadableBalance: Story = {
   args: {
     wallets: makeWallets(1, WalletStatus.Active, 10000, 7500).map((wallet) => ({
@@ -299,15 +296,15 @@ export const UnreadableBalance: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText(/balance could not be read/)).toBeVisible()
-    await expect(canvas.queryByText(/% used/)).toBeNull()
+    await expect(canvas.getByText('Real-time balance')).toBeVisible()
+    await expect(canvas.queryByText(/since the last invoice/i)).toBeNull()
   },
 }
 
 export const NoTransactions: Story = {
   args: { transactions: [] },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('No top-ups yet')).toBeInTheDocument()
+    await expect(await within(canvasElement).findByText('No transactions yet')).toBeInTheDocument()
   },
 }
 
@@ -440,7 +437,7 @@ export const AutoTopupOn: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole('button', { name: /auto top-up on/i }),
-    ).toHaveTextContent('Below 100 credits, add 500')
+    ).toHaveTextContent('Auto top-up on')
   },
 }
 

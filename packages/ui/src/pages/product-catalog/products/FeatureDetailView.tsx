@@ -83,6 +83,11 @@ export interface FeatureDetailViewProps {
   onOpenChargeParent?: (charge: Charge) => void
   /** Saves the whole metadata map. Omitted, the Metadata section is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
+  /**
+   * The API base URL this environment talks to, e.g. `https://api-dev.cloud.flexprice.io/v1`.
+   * The test-event snippet calls it, so staging never prints a production URL.
+   */
+  apiBaseUrl?: string
 }
 
 /**
@@ -101,15 +106,23 @@ const AGGREGATION_TYPE_NAME: Record<AggregationType, string> = {
   WEIGHTED_SUM: 'Weighted sum',
 }
 
-/** Builds the ingest cURL from the feature's event name and aggregation. */
-export function buildIngestCurl(feature: Feature): string {
+export const DEFAULT_API_BASE_URL = 'https://api.cloud.flexprice.io/v1'
+
+/**
+ * Builds the ingest cURL from the feature's event name and aggregation, against
+ * the environment's own API host. The property is the one the feature
+ * aggregates, so the event it sends is one the meter will count.
+ */
+export function buildIngestCurl(feature: Feature, apiBaseUrl = DEFAULT_API_BASE_URL): string {
   const eventName = feature.eventName || 'your_event_name'
   const needsField =
     feature.aggregationType != null && needsAggregationTarget(feature.aggregationType)
-  const properties = needsField ? '{ "your_property": "<value>" }' : '{}'
+  const field = feature.aggregationField?.trim() || 'your_property'
+  const properties = needsField ? `{ "${field}": "<value>" }` : '{}'
+  const base = (apiBaseUrl || DEFAULT_API_BASE_URL).replace(/\/+$/, '')
   return [
     `curl --request POST \\`,
-    `  --url https://api.cloud.flexprice.io/v1/events \\`,
+    `  --url ${base}/events \\`,
     `  --header 'Content-Type: application/json' \\`,
     `  --header 'x-api-key: <your_api_key>' \\`,
     `  --data '{`,
@@ -170,6 +183,7 @@ export function FeatureDetailView({
   onAddPlan,
   onOpenChargeParent,
   onSaveMetadata,
+  apiBaseUrl,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
   const Glyph = FEATURE_TYPE_GLYPH[feature.type]
@@ -240,6 +254,7 @@ export function FeatureDetailView({
           feature={feature}
           isMetered={isMetered}
           archived={archived}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
           charges={charges}
           chargesLoading={chargesLoading}
           chargesError={chargesError}
@@ -390,10 +405,12 @@ function OverviewTab({
   entitlementsErrorKind,
   onRetryEntitlements,
   onSaveMetadata,
+  apiBaseUrl,
 }: {
   feature: Feature
   isMetered: boolean
   archived: boolean
+  apiBaseUrl?: string
   charges: FeatureChargeLink[]
   chargesLoading: boolean
   chargesError: string | null
@@ -451,7 +468,9 @@ function OverviewTab({
         />
       </div>
       <div className="flex min-w-0 flex-col gap-5">
-        {isMetered ? <TestEventPanel feature={feature} /> : null}
+        {isMetered ? (
+          <TestEventPanel feature={feature} {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+        ) : null}
         <MetadataCard
           metadata={feature.metadata ?? {}}
           {...(onSaveMetadata && !archived ? { onSave: onSaveMetadata } : {})}
@@ -461,8 +480,8 @@ function OverviewTab({
   )
 }
 
-function TestEventPanel({ feature }: { feature: Feature }) {
-  const command = buildIngestCurl(feature)
+function TestEventPanel({ feature, apiBaseUrl }: { feature: Feature; apiBaseUrl?: string }) {
+  const command = buildIngestCurl(feature, apiBaseUrl)
   const copy = () => {
     const done = navigator.clipboard?.writeText(command)
     if (done) void done.then(() => toast.success('cURL copied'))

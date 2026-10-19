@@ -8,6 +8,7 @@ import {
   toSubscriptionEntitlement,
   toLineChangePreview,
   toLineItemChangeRequest,
+  toLineBucket,
   toSubscriptionLine,
   toSubscriptionUsage,
   toUpdateLineItemRequest,
@@ -528,5 +529,19 @@ describe('the price a line carries', () => {
       toSubscriptionLine({ price: { amount: '1', parentPriceId: 'price_plan' } }).overridesPriceId,
     ).toBe('price_plan')
     expect(toSubscriptionLine({ price: { amount: '1' } }).overridesPriceId).toBe('')
+  })
+})
+
+describe('toLineBucket', () => {
+  it('reads a bucket as long as the billing period as the whole period', () => {
+    expect(toLineBucket('MONTH', 'MONTHLY')).toBe('')
+    expect(toLineBucket('WEEK', 'WEEKLY')).toBe('')
+  })
+
+  it('keeps a real window, and drops values the form cannot show', () => {
+    expect(toLineBucket('DAY', 'MONTHLY')).toBe('DAY')
+    expect(toLineBucket('MONTH', 'ANNUAL')).toBe('MONTH')
+    expect(toLineBucket('FORTNIGHT', 'MONTHLY')).toBe('')
+    expect(toLineBucket(undefined, 'MONTHLY')).toBe('')
   })
 })

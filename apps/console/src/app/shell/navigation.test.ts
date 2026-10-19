@@ -59,8 +59,8 @@ describe('toNavGroups', () => {
     const [group] = toNavGroups()
     const catalog = group?.items.find((item) => item.id === 'catalog')
     expect(catalog?.items?.map((child) => child.id)).toEqual([
-      'features',
       'plans',
+      'features',
       'addons',
       'pricing-widget',
     ])
@@ -127,7 +127,6 @@ describe('the sidebar layout', () => {
     expect(hrefForNavId('docs')).toBe(DOCS_URL)
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
       'settings',
-      'api-keys',
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',
@@ -155,7 +154,7 @@ describe('breadcrumbForPath', () => {
   })
 
   it('names Settings before a Settings child, wherever the page lives', () => {
-    expect(breadcrumbForPath('/coupons')).toEqual([{ label: 'Settings' }, { label: 'Discounts' }])
+    expect(breadcrumbForPath('/coupons')).toEqual([{ label: 'Settings' }, { label: 'Coupons' }])
     expect(breadcrumbForPath('/settings', '?section=team&tab=members')).toEqual([
       { label: 'Settings' },
     ])

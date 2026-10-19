@@ -1,3 +1,4 @@
+import { CircleAlertIcon } from '@ui/icons'
 import type { ReactNode } from 'react'
 import { FieldGroup, FieldSet } from '@ui/components/primitives/field'
 import { cn } from '@ui/lib/cn'
@@ -138,6 +139,7 @@ export function FormPage({
         <PageBody width="wide" className="self-center pt-6">
           {submitError ? (
             <Alert variant="destructive">
+              <CircleAlertIcon aria-hidden="true" />
               <AlertDescription>{submitError}</AlertDescription>
             </Alert>
           ) : null}

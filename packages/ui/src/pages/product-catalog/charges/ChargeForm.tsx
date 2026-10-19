@@ -1,3 +1,4 @@
+import { InfoIcon } from '@ui/icons'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { type ReactNode } from 'react'
 import { Controller, type Resolver } from 'react-hook-form'
@@ -294,6 +295,7 @@ export function ChargeForm({
         notice
       ) : isEdit ? (
         <Alert>
+          <InfoIcon aria-hidden="true" />
           <AlertTitle>Changing the price creates a new version</AlertTitle>
           <AlertDescription>
             The current price keeps billing until the effective date, so past invoices are
@@ -319,6 +321,33 @@ export function ChargeForm({
           ]}
         />
       )}
+
+      {/* The date a change starts is the first thing an edit decides, so it leads. */}
+      {isEdit ? (
+        <div className="max-w-xs">
+          <Field
+            label="Effective from"
+            hint="Leave empty to start the new price now. Earlier invoices keep the old price."
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <Controller
+                control={form.control}
+                name={'effectiveFrom' as never}
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={(field.value as string | undefined) ?? ''}
+                    onValueChange={field.onChange}
+                    placeholder="Now"
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {isUsage ? (
@@ -756,32 +785,6 @@ export function ChargeForm({
               )}
             </Field>
           ) : null}
-        </div>
-      ) : null}
-
-      {isEdit ? (
-        <div className="max-w-xs">
-          <Field
-            label="Effective from"
-            hint="Leave empty to start the new price now. Earlier invoices keep the old price."
-          >
-            {({ id, 'aria-describedby': describedBy }) => (
-              <Controller
-                control={form.control}
-                name={'effectiveFrom' as never}
-                render={({ field }) => (
-                  <DateInput
-                    id={id}
-                    value={(field.value as string | undefined) ?? ''}
-                    onValueChange={field.onChange}
-                    placeholder="Now"
-                    disabled={isSubmitting}
-                    aria-describedby={describedBy}
-                  />
-                )}
-              />
-            )}
-          </Field>
         </div>
       ) : null}
 

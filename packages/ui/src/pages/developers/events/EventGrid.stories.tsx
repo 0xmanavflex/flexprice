@@ -1,6 +1,6 @@
 import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { DEFAULT_RAW_EVENT_QUERY, type RawEvent } from '@fp/domain'
 import { EventGrid } from './EventGrid'
 
@@ -143,4 +143,14 @@ export const FilteredEmpty: Story = {
 
 export const Failed: Story = {
   args: { events: [], total: 0, error: 'Could not reach Flexprice.', onRetry: fn() },
+}
+
+/** Events land a moment after they are sent, so the table can be reloaded in place. */
+export const Reload: Story = {
+  args: { onReload: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Reload' }))
+    await expect(args.onReload).toHaveBeenCalledOnce()
+  },
 }

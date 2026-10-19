@@ -123,3 +123,13 @@ describe('toActivityEntry', () => {
     expect(describeActivity(entry).summary).toContain('1,000')
   })
 })
+
+describe('activity titles', () => {
+  it('reads a succeeded payment as Paid, the word on the invoice', () => {
+    expect(toActivityEntry({ id: 'a', action: 'payment.succeeded' }).title).toBe('Paid')
+  })
+
+  it('keeps every other action readable from its name', () => {
+    expect(toActivityEntry({ id: 'b', action: 'invoice.refunded' }).title).toBe('Invoice refunded')
+  })
+})

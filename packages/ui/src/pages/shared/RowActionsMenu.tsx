@@ -53,12 +53,13 @@ export function RowActionsMenu({
           <MoreHorizontalIcon aria-hidden className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-40">
+          {/* Edit leads, then the row's own items, then the destructive one. */}
+          {onEdit ? <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem> : null}
           {extra?.map((item) => (
             <DropdownMenuItem key={item.label} onClick={item.onSelect}>
               {item.label}
             </DropdownMenuItem>
           ))}
-          {onEdit ? <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem> : null}
           {onRemove ? (
             <DropdownMenuItem variant="destructive" onClick={onRemove}>
               {removeLabel}

@@ -44,8 +44,9 @@ export const NAV: NavEntry[] = [
     id: 'catalog',
     label: 'Product catalog',
     children: [
-      { id: 'features', label: 'Features', path: '/features' },
+      // Plan, then Feature, then Add-on: the order the catalogue is built and read in.
       { id: 'plans', label: 'Plans', path: '/plans' },
+      { id: 'features', label: 'Features', path: '/features' },
       { id: 'addons', label: 'Add-ons', path: '/addons' },
       { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },
     ],
@@ -69,8 +70,10 @@ export const NAV: NavEntry[] = [
     id: 'developers',
     label: 'Developers',
     children: [
-      { id: 'service-accounts', label: 'Service accounts', path: '/service-accounts' },
+      // Events debugger leads: it is where a developer starts. API keys sit beside it.
       { id: 'events', label: 'Events debugger', path: '/events' },
+      { id: 'api-keys', label: 'API keys', path: '/api-keys' },
+      { id: 'service-accounts', label: 'Service accounts', path: '/service-accounts' },
       { id: 'webhooks', label: 'Webhooks', path: '/webhooks' },
       { id: 'usage-syncs', label: 'Usage sync', path: '/usage-syncs' },
       { id: 'exports', label: 'Exports', path: '/exports' },
@@ -102,13 +105,7 @@ export const FOOTER_NAV: NavEntry[] = [
  */
 export const SECONDARY: NavEntry[] = [
   { id: 'settings', label: 'Settings', path: '/settings' },
-  {
-    id: 'api-keys',
-    label: 'API keys',
-    path: '/settings',
-    query: { section: 'api-keys', tab: 'api-keys' },
-  },
-  { id: 'settings-discounts', label: 'Discounts', path: '/coupons' },
+  { id: 'settings-discounts', label: 'Coupons', path: '/coupons' },
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
   {
@@ -186,7 +183,7 @@ export function labelForNavId(id: string): string | undefined {
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
   // Discounts, Taxes, Cost Tracking and Tags are rows of Settings that keep their own routes.
-  if (id.startsWith('settings-') || id === 'api-keys' || id === 'groups')
+  if (id.startsWith('settings-') || id === 'groups')
     return SECONDARY.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),

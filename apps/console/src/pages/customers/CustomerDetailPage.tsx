@@ -16,6 +16,7 @@ import {
   useUpdateCustomer,
 } from '@fp/query'
 import { CUSTOMER_TABS, CustomerDetail, QuotaCard, Toaster, type CustomerTab } from '@fp/ui/pages'
+import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
@@ -194,14 +195,18 @@ export function CustomerDetailPage({
         taxes={<CustomerTaxPanel customerId={customer.data.id} />}
         usage={
           <div className="flex flex-col gap-8">
-            <Section title="Analytics">
-              <EmptyState
-                scene="customers"
-                size="inline"
-                title="Revenue and cost by feature are not available yet"
-                description="Flexprice does not report revenue or cost per feature for a customer, so none is shown. Allowances and consumption are below."
-              />
-            </Section>
+            {customer.data.externalId ? (
+              <CustomerAnalyticsPanel externalId={customer.data.externalId} />
+            ) : (
+              <Section title="Analytics">
+                <EmptyState
+                  scene="customers"
+                  size="inline"
+                  title="No external ID"
+                  description="Usage is matched to a customer by external ID, and this customer has none. Allowances and consumption are below."
+                />
+              </Section>
+            )}
             <UsageSection
               features={usage.data?.features ?? []}
               isLoading={usage.isLoading}

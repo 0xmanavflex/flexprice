@@ -348,10 +348,17 @@ export const CreatesInvoiceFromMenu: Story = {
   },
 }
 
-/** The header shows the id and email as copy chips, never as text under the name. */
+/**
+ * The header shows the ids and email as copy chips, never as text under the
+ * name. The external id leads — it is what the customer's systems use — and
+ * the internal id has its own chip beside it.
+ */
 export const HeaderCopyChips: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /^Copy External ID / })).toHaveTextContent(
+      'External ID',
+    )
     await expect(canvas.getByRole('button', { name: /^Copy ID / })).toHaveTextContent('ID')
     await expect(canvas.getByRole('button', { name: /^Copy email / })).toBeVisible()
   },

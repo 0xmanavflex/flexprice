@@ -12,6 +12,8 @@ export interface EntityHeaderProps {
   badges?: ReactNode
   /** Copyable identifier, shown as an "ID" copy chip. */
   id?: string
+  /** The id in the customer's own systems, shown first as an "External ID" chip. */
+  externalId?: string
   /** Drawn immediately before the copy-ID chip. */
   leading?: ReactNode
   /** Copyable email, shown as a mail-icon copy chip beside the id. */
@@ -36,6 +38,7 @@ export function EntityHeader({
   title,
   badges,
   id,
+  externalId,
   leading,
   email,
   menuLabel = 'More actions',
@@ -49,6 +52,7 @@ export function EntityHeader({
         title={title}
         badges={badges}
         id={id}
+        {...(externalId ? { externalId } : {})}
         leading={leading}
         email={email}
         actions={<DetailMoreMenu label={menuLabel} items={menu} />}

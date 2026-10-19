@@ -1,3 +1,4 @@
+import { CircleAlertIcon } from '@ui/icons'
 import type { ReactNode } from 'react'
 import { Button } from '@ui/components/primitives/button'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
@@ -47,6 +48,7 @@ export function FormActions({
     <div className="flex flex-col gap-3 pt-2">
       {submitError ? (
         <Alert variant="destructive">
+          <CircleAlertIcon aria-hidden="true" />
           <AlertDescription>{submitError}</AlertDescription>
         </Alert>
       ) : null}

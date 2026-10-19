@@ -52,11 +52,8 @@ describe('parseSettingsSearch', () => {
     })
   })
 
-  it('opens API keys in Settings and leaves service accounts and environments separate', () => {
-    expect(parseSettingsSearch({ section: 'api-keys' })).toEqual({
-      section: 'api-keys',
-      tab: 'api-keys',
-    })
+  it('keeps API keys, service accounts and environments out of Settings', () => {
+    expect(parseSettingsSearch({ section: 'api-keys' })).toEqual(DEFAULT_SETTINGS_QUERY)
     expect(parseSettingsSearch({ section: 'service-accounts' })).toEqual(DEFAULT_SETTINGS_QUERY)
     expect(parseSettingsSearch({ section: 'organization', tab: 'environments' })).toEqual({
       section: 'organization',

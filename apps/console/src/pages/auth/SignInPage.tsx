@@ -145,7 +145,7 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
    *
    * There is no Flexprice route for this. Google goes through Supabase, as it
    * does in V1 and as sign-up already does here, and comes back to
-   * `/sign-up/confirm` — which creates the account or, when the session
+   * `/auth/signup/confirmation` — which creates the account or, when the session
    * already names a tenant, just signs the person in.
    */
   const googleAvailable = supabaseSignUpFor(region)

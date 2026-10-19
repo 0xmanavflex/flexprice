@@ -1309,7 +1309,7 @@ function PhaseDiscounts({
     <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
       <div className="flex items-center gap-2">
         <TicketPercentIcon aria-hidden className="text-success-foreground size-4 shrink-0" />
-        <h3 className="text-sm font-medium">Discounts</h3>
+        <h3 className="text-sm font-medium">Coupons</h3>
       </div>
       <p className="text-muted-foreground text-xs">
         Apply a coupon to this phase, or to one of its charges.
@@ -2425,13 +2425,13 @@ function ReviewStep({
       ) : null}
 
       <ReviewCard
-        title="Discounts"
+        title="Coupons"
         step="phases"
         onEdit={onEdit}
         count={values.phases.reduce((n, phase) => n + phase.discounts.length, 0)}
       >
         {values.phases.every((phase) => phase.discounts.length === 0) ? (
-          <ReviewRow label="Discounts" value="None" />
+          <ReviewRow label="Coupons" value="None" />
         ) : (
           values.phases.flatMap((phase, index) =>
             phase.discounts.map((discount, i) => (

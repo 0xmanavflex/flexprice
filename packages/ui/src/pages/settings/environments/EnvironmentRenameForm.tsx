@@ -1,3 +1,4 @@
+import { CircleAlertIcon } from '@ui/icons'
 import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -97,6 +98,7 @@ export function EnvironmentRenameForm({
 
         {submitError ? (
           <Alert variant="destructive">
+            <CircleAlertIcon aria-hidden="true" />
             <AlertDescription>{submitError}</AlertDescription>
           </Alert>
         ) : null}

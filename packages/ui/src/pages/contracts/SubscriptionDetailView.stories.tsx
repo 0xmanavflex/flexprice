@@ -683,7 +683,7 @@ export const ChargesTab: Story = {
     await userEvent.click(canvas.getByRole('tab', { name: /Charges/ }))
     await expect(await canvas.findByText('Platform fee')).toBeVisible()
     await expect(canvas.getByText('$1,500.00')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Manage pricing' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Add charge' })).toBeVisible()
     await expect(canvas.getByRole('textbox', { name: /^Search/ })).toBeVisible()
     // Each charge says where it comes from, in the line under its name.
     await expect(canvas.getByText('Fixed · From Scale')).toBeVisible()
@@ -780,7 +780,7 @@ export const ContractSpecificCharges: Story = {
     const section = within(
       (await canvas.findByRole('heading', { name: 'Charges' })).closest('section')!,
     )
-    await expect(section.getByText('2 of 3 active charges are changed here')).toBeVisible()
+    await expect(section.queryByText(/active charges/)).toBeNull()
     await expect(section.getByText('Onboarding')).toBeVisible()
     await expect(section.queryByText('Platform fee')).toBeNull()
   },
@@ -803,7 +803,6 @@ export const NoContractSpecificCharges: Story = {
     const section = within(
       (await canvas.findByRole('heading', { name: 'Charges' })).closest('section')!,
     )
-    await expect(section.getByText('1 active charge, all as the plan sets them')).toBeVisible()
     await expect(
       section.getByText('Every charge is billed as the plan sets it. Changed charges show here.'),
     ).toBeVisible()
@@ -1200,13 +1199,13 @@ export const LinkIntegration: Story = {
   },
 }
 
-/** A plan charge's menu offers "Edit on plan", the way to change it for every contract. */
+/** A plan charge's menu offers "Go to plan", where it is changed for every contract. */
 export const EditPlanLink: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit on plan' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Go to plan' }))
     await expect(args.onOpenPlan).toHaveBeenCalledOnce()
   },
 }
@@ -1216,7 +1215,7 @@ export const AddCharge: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Manage pricing' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
     // Fixed or usage first, then the form for that type.
     await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
     const dialog = within(await screen.findByRole('dialog'))
@@ -1259,7 +1258,7 @@ export const AddUsageCharge: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Manage pricing' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
     await userEvent.click(await screen.findByRole('radio', { name: /Usage/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
     const dialog = within(await screen.findByRole('dialog'))
@@ -1441,7 +1440,7 @@ export const ChargeSaveFails: Story = {
  *
  * The row menu stays, because "View details" and "Copy price ID" are not
  * edits and someone reconciling a cancelled contract needs both. What goes is
- * every way to change it: no Manage pricing, no Edit, no End charge.
+ * every way to change it: no Add charge, no Edit, no End charge.
  */
 export const CancelledPricingIsReadOnly: Story = {
   parameters: menuA11y,
@@ -1451,7 +1450,7 @@ export const CancelledPricingIsReadOnly: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
-    await expect(canvas.queryByRole('button', { name: 'Manage pricing' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
 
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for Onboarding' }))
     const menu = within(await screen.findByRole('menu'))
@@ -1469,7 +1468,7 @@ export const TrialingCannotAddCharge: Story = {
   args: withSubscription({ status: SubscriptionStatus.Trialing }),
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
-    await expect(canvas.queryByRole('button', { name: 'Manage pricing' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
     await expect(canvas.getByRole('button', { name: 'Actions for Platform fee' })).toBeVisible()
   },
 }
@@ -1479,7 +1478,7 @@ export const PricingWithoutEditing: Story = {
   args: { onAddCharge: undefined, onEditCharge: undefined, onEndCharge: undefined },
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
-    await expect(canvas.queryByRole('button', { name: 'Manage pricing' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
   },
 }
 
