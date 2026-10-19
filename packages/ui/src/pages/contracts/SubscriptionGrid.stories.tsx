@@ -12,7 +12,11 @@ import { SubscriptionGrid } from './SubscriptionGrid'
 const meta = {
   title: 'App/Contracts/Contract table',
   component: SubscriptionGrid,
-  parameters: { layout: 'padded' },
+  parameters: {
+    layout: 'padded',
+    // Base UI's menu portal focus guards — see FilterBar.stories.tsx.
+    a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
+  },
   args: {
     subscriptions: subscriptionFixtures(),
     total: 4,
