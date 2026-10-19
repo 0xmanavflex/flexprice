@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
+import { revealTruncated } from '@ui/lib/revealTruncated'
 import { provenance } from '@ui/provenance'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -417,7 +418,7 @@ export function SimpleTable<T>({
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" onMouseOver={revealTruncated}>
           <thead>
             <tr className="bg-muted/60">
               {columns.map((column, index) => (
