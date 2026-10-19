@@ -1,3 +1,4 @@
+import { InfoIcon } from '@ui/icons'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { type ReactNode } from 'react'
 import { Controller, type Resolver } from 'react-hook-form'
@@ -294,6 +295,7 @@ export function ChargeForm({
         notice
       ) : isEdit ? (
         <Alert>
+          <InfoIcon aria-hidden="true" />
           <AlertTitle>Changing the price creates a new version</AlertTitle>
           <AlertDescription>
             The current price keeps billing until the effective date, so past invoices are

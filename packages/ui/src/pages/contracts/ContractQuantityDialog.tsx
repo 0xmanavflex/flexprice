@@ -1,3 +1,4 @@
+import { CircleAlertIcon } from '@ui/icons'
 import { useState } from 'react'
 import {
   formatMoney,
@@ -160,6 +161,7 @@ function QuantityFlow({
         </div>
         {error ? (
           <Alert variant="destructive">
+            <CircleAlertIcon aria-hidden="true" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
@@ -234,11 +236,13 @@ function QuantityFlow({
 
       {touched && errors.form ? (
         <Alert variant="destructive">
+          <CircleAlertIcon aria-hidden="true" />
           <AlertDescription>{errors.form}</AlertDescription>
         </Alert>
       ) : null}
       {error ? (
         <Alert variant="destructive">
+          <CircleAlertIcon aria-hidden="true" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}

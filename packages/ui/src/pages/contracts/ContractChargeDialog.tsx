@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GaugeIcon, RepeatIcon } from '@ui/icons'
+import { CircleAlertIcon, GaugeIcon, RepeatIcon } from '@ui/icons'
 import {
   type AddContractCharge,
   type BillingPeriod,
@@ -245,6 +245,7 @@ function EndForm({
       </FieldGroup>
       {submitError ? (
         <Alert variant="destructive">
+          <CircleAlertIcon aria-hidden="true" />
           <AlertDescription>{submitError}</AlertDescription>
         </Alert>
       ) : null}

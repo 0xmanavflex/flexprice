@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { InfoIcon } from '@ui/icons'
+import { CircleAlertIcon, InfoIcon } from '@ui/icons'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -212,6 +212,7 @@ export function EnvironmentForm({
 
         {submitError ? (
           <Alert variant="destructive">
+            <CircleAlertIcon aria-hidden="true" />
             <AlertDescription>{submitError}</AlertDescription>
           </Alert>
         ) : null}
