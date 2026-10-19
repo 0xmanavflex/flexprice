@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, ScrollTextIcon, SendIcon } from '@ui/icons'
+import { BookOpenIcon, CopyIcon, RefreshCwIcon, ScrollTextIcon, SendIcon } from '@ui/icons'
+import { Button } from '@ui/components/primitives/button'
+import { cn } from '@ui/lib/cn'
 import { DEFAULT_RAW_EVENT_QUERY, type RawEvent, type RawEventQuery } from '@fp/domain'
 import { EMPTY_CATALOGUE } from '@ui/compositions/feedback/emptyCatalogue'
 import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
@@ -92,6 +94,9 @@ export interface EventGridProps {
   /** Opens the event. Also wired to the row's "View event" action. */
   onEventClick?: (event: RawEvent) => void
   onClearFilters?: () => void
+  /** Fetches the newest events again. Events land a moment after they are sent. */
+  onReload?: () => void
+  isReloading?: boolean
   locale?: string
 }
 
@@ -105,6 +110,8 @@ export function EventGrid({
   onRetry,
   onEventClick,
   onClearFilters,
+  onReload,
+  isReloading = false,
   locale,
 }: EventGridProps) {
   const columns = useMemo<EntityColumn<RawEvent>[]>(
@@ -237,6 +244,23 @@ export function EventGrid({
         onChange: (_field, sortDirection) => onQueryChange({ ...query, sortDirection, page: 1 }),
       }}
       rowActions={rowActions}
+      {...(onReload
+        ? {
+            primaryAction: (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-3"
+                onClick={onReload}
+                disabled={isReloading}
+              >
+                <RefreshCwIcon aria-hidden className={cn(isReloading && 'animate-spin')} />
+                Reload
+              </Button>
+            ),
+          }
+        : {})}
       exportFileName="events"
       {...(onEventClick ? { onRowClick: onEventClick } : {})}
       isLoading={isLoading}
