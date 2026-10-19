@@ -259,9 +259,6 @@ const GroupFormPage = lazy(() =>
 const TaxFormPage = lazy(() =>
   import('@/pages/taxes/TaxFormPage').then((m) => ({ default: m.TaxFormPage })),
 )
-const GroupDetailPage = lazy(() =>
-  import('@/pages/groups/GroupDetailPage').then((m) => ({ default: m.GroupDetailPage })),
-)
 const CostSheetDetailPage = lazy(() =>
   import('@/pages/cost-sheets/CostSheetDetailPage').then((m) => ({
     default: m.CostSheetDetailPage,
@@ -1373,9 +1370,6 @@ function GroupsRouteComponent() {
       <GroupListPage
         query={query}
         onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
-        onOpenGroup={(group) =>
-          void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })
-        }
         onCreateGroup={() => void navigate({ to: '/groups/new' })}
       />
     </SettingsListFrame>
@@ -1396,9 +1390,7 @@ function GroupCreateRouteComponent() {
   return (
     <GroupFormPage
       onCancel={toList}
-      onDone={(id) =>
-        id ? void navigate({ to: '/groups/$groupId', params: { groupId: id } }) : toList()
-      }
+      onDone={toList}
     />
   )
 }
@@ -1416,24 +1408,17 @@ const environmentCreateRoute = createRoute({
   },
 })
 
-/** The group detail page. `/groups/$groupId` — a read-only view for now. */
+/**
+ * Groups have no page of their own: a group is a name and its members, and the
+ * list already shows both, with the id one copy away. An old link lands on it.
+ */
 const groupDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/groups/$groupId',
-  component: GroupDetailRouteComponent,
+  beforeLoad: () => {
+    throw redirect({ to: '/groups', search: {} as never })
+  },
 })
-
-function GroupDetailRouteComponent() {
-  const { groupId } = groupDetailRoute.useParams()
-  const navigate = useNavigate()
-
-  return (
-    <GroupDetailPage
-      groupId={groupId}
-      onNavigateToList={() => void navigate({ to: '/groups', search: {} as never })}
-    />
-  )
-}
 
 const costSheetsRoute = createRoute({
   getParentRoute: () => shellRoute,
