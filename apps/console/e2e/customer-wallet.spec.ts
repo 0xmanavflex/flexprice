@@ -44,7 +44,6 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
     page.getByRole('region', { name: 'Top-ups table' }).getByText('Purchased credits'),
   ).toBeVisible()
 
-  await expect(page.getByText('Consumption rate')).toBeVisible()
   await page.getByRole('button', { name: /auto top-up off/i }).click()
   const auto = page.getByRole('dialog', { name: 'Auto top-up' })
   await auto.getByRole('switch', { name: 'Top up automatically' }).click()
@@ -54,7 +53,7 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await auto.getByLabel('Add').fill('500')
   await auto.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByRole('button', { name: /auto top-up on/i })).toContainText(
-    'Below 100 credits, add 500',
+    'Auto top-up on',
   )
 
   await page.getByRole('button', { name: 'Wallet actions' }).click()

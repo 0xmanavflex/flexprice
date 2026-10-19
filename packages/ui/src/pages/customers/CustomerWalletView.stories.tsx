@@ -230,12 +230,9 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Real-time balance')).toBeInTheDocument()
     await expect(canvas.getByText('Last invoiced balance')).toBeInTheDocument()
-    await expect(canvas.getByText('Status')).toBeInTheDocument()
     await expect(canvas.getByText('Active')).toBeInTheDocument()
-    await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
-    await expect(canvas.getByText('Top-up rate')).toBeInTheDocument()
-    await expect(canvas.getAllByText(/1 credit = \$0\.01/)).toHaveLength(2)
-    await expect(canvas.getByText('Expiring soon')).toBeInTheDocument()
+    await expect(canvas.queryByText('Consumption rate')).toBeNull()
+    await expect(canvas.queryByText('Expiring soon')).toBeNull()
     await expect(canvas.getByRole('button', { name: /auto top-up off/i })).toBeEnabled()
     await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /top up wallet/i })).toBeEnabled()
@@ -440,7 +437,7 @@ export const AutoTopupOn: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole('button', { name: /auto top-up on/i }),
-    ).toHaveTextContent('Below 100 credits, add 500')
+    ).toHaveTextContent('Auto top-up on')
   },
 }
 

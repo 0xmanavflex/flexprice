@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
@@ -64,9 +64,7 @@ import { Pill, type PillTone } from '../shared/cells'
 import {
   WalletLedgerTable,
   WalletTransactionsTable,
-  expiringSoon,
   formatCredits,
-  formatDay,
 } from './WalletLedgerTable'
 import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
@@ -106,22 +104,6 @@ type Dialog = 'create' | 'top-up' | 'debit' | 'auto-topup' | 'terminate' | null
 const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
 
 const credits = formatCredits
-
-/** A per-credit rate keeps its small decimals: 0.009 is "$0.009", not "$0.01". */
-function rate(value: string, currency: string): string {
-  if (toNumber(value) === null) return '—'
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currencyDisplay: 'narrowSymbol',
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6,
-    }).format(value as unknown as number)
-  } catch {
-    return `${value} ${currency}`
-  }
-}
 
 export function CustomerWalletView({
   wallets,
@@ -217,7 +199,6 @@ export function CustomerWalletView({
   const topUps = transactions
     .filter((t) => t.direction === 'in')
     .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
-  const expiring = expiringSoon(topUps, asOf)
   const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
 
   return (
@@ -311,37 +292,21 @@ export function CustomerWalletView({
             />
           </div>
         </div>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-t px-6 py-4 sm:grid-cols-3 lg:flex lg:flex-wrap lg:gap-x-12">
-          <Detail label="Status">
-            <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
-          </Detail>
-          <Detail label="Consumption rate">
-            1 credit = {rate(wallet.conversionRate, currency)}
-          </Detail>
-          <Detail label="Top-up rate">
-            1 credit = {rate(wallet.topupConversionRate, currency)}
-          </Detail>
-          <Detail label="Auto top-up">
-            <button
-              type="button"
-              disabled={closed}
-              onClick={() => open('auto-topup')}
-              aria-label={`Auto top-up ${wallet.autoTopup.enabled ? 'on' : 'off'}. Edit settings`}
-              className="focus-visible:ring-ring/50 rounded-sm text-left underline-offset-4 outline-none hover:underline focus-visible:ring-3 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
-            >
-              {wallet.autoTopup.enabled
-                ? `Below ${credits(wallet.autoTopup.threshold)} credits, add ${credits(wallet.autoTopup.amount)}`
-                : 'Off'}
-            </button>
-          </Detail>
-          {expiring ? (
-            <Detail label="Expiring soon">
-              <span className="text-warning-foreground dark:text-warning">
-                {credits(expiring.credits)} credits on {formatDay(expiring.date, false)}
-              </span>
-            </Detail>
-          ) : null}
-        </dl>
+        <div className="flex flex-wrap items-center gap-2 border-t px-6 py-4">
+          <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+          {/* The chip is also the way in: off never dead-ends, it opens the settings. */}
+          <button
+            type="button"
+            disabled={closed}
+            onClick={() => open('auto-topup')}
+            aria-label={`Auto top-up ${wallet.autoTopup.enabled ? 'on' : 'off'}. Edit settings`}
+            className="focus-visible:ring-ring/50 rounded-full outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Pill tone={wallet.autoTopup.enabled ? 'success' : 'neutral'}>
+              {wallet.autoTopup.enabled ? 'Auto top-up on' : 'Auto top-up off'}
+            </Pill>
+          </button>
+        </div>
       </section>
 
       <Section table title="Top-ups">
@@ -439,13 +404,6 @@ const STATUS_TONE: Record<WalletStatus, PillTone> = {
 
 /** How many ledger rows the wallet panel asks for; at this count older entries are cut off. */
 export const TRANSACTIONS_LIMIT = 200
-
-/** A decimal string as a number, or null when it is blank or unreadable. */
-function toNumber(value: string): number | null {
-  if (value.trim() === '') return null
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
 
 function CreateWalletDialog({
   open,
@@ -940,15 +898,6 @@ function AutoTopupDialog({
         ) : null}
       </Composer>
     </FormDialog>
-  )
-}
-
-function Detail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="text-sm">{children}</dd>
-    </div>
   )
 }
 
