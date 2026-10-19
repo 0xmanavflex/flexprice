@@ -284,6 +284,16 @@ export const env = {
    */
   legacyConsoleUrl: clean(import.meta.env.VITE_LEGACY_CONSOLE_URL) ?? null,
   /**
+   * The origin Supabase sends Google sign-in and confirmation emails back to,
+   * when it must not be the one the console is running on.
+   *
+   * Staging shares prod's Supabase project, which does not allow staging's
+   * origin. Supabase then falls back to its Site URL — the V1 dashboard — so
+   * staging sets this to the V2 production origin instead. Unset everywhere
+   * else: the console's own origin is used.
+   */
+  authRedirectOrigin: clean(import.meta.env.VITE_AUTH_REDIRECT_ORIGIN)?.replace(/\/+$/, '') ?? null,
+  /**
    * A raw Flexprice API key, used in place of a signed-in JWT.
    *
    * Always `null` in a production build. When set, the session surface steps
