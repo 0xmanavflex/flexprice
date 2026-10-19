@@ -30,7 +30,7 @@ export function messageForSignUpError(error: unknown): string {
  *
  * On the hosted regions this is the first half of a two-step sign-up: the email
  * and password go to Supabase, which emails a confirmation link, and the screen
- * says to check the inbox. The account itself is created on `/sign-up/confirm`
+ * says to check the inbox. The account itself is created on `/auth/signup/confirmation`
  * (see `supabaseSignUp`), because the backend creates one only for a confirmed
  * email.
  *

@@ -15,7 +15,7 @@ export { ConfirmationLinkInvalid, EmailNotConfirmed }
  *   1. {@link startSignUp} registers the email and password with Supabase from
  *      the browser. Supabase emails a confirmation link; nothing exists in
  *      Flexprice yet.
- *   2. The link lands on `/sign-up/confirm` with a session in the URL fragment.
+ *   2. The link lands on `/auth/signup/confirmation` with a session in the URL fragment.
  *      {@link readConfirmedSession} reads it, the page calls `POST /auth/signup`
  *      with its token, and {@link refreshedToken} swaps that token for one
  *      carrying the new tenant — the backend puts `tenant_id` into the user's
@@ -31,11 +31,20 @@ export function supabaseSignUpFor(region: string): boolean {
 }
 
 /**
- * Where the confirmation link comes back to. Built from the live origin, so it
- * must be listed in the Supabase project's Redirect URLs (see `passwordReset`).
+ * V1's confirmation path, kept on purpose. The Supabase projects' Redirect URLs
+ * already allow it on every origin V1 runs on, localhost included. Anything not
+ * on that list is not refused: GoTrue silently sends the browser to the
+ * project's Site URL — prod — instead. That is how Google sign-in from a local
+ * V2 ended up on the production dashboard while it returned to `/sign-up/confirm`.
  */
-export function signUpConfirmURL(): string {
-  return `${globalThis.location.origin}/sign-up/confirm`
+export const SIGN_UP_CONFIRM_PATH = '/auth/signup/confirmation'
+
+/**
+ * Where the confirmation link and Google sign-in come back to. Built from the
+ * live origin, so it must be listed in the Supabase project's Redirect URLs.
+ */
+export function signUpConfirmURL(origin: string = globalThis.location.origin): string {
+  return `${origin}${SIGN_UP_CONFIRM_PATH}`
 }
 
 /** What the signup tells the backend about where it came from. */
@@ -66,7 +75,7 @@ export async function startSignUp(region: string, email: string, password: strin
  *
  * The same two-halves shape as email sign-up, with Google standing in for the
  * inbox: Supabase authenticates, then the browser comes back to
- * `/sign-up/confirm` with a session in the fragment, and that page either
+ * `/auth/signup/confirmation` with a session in the fragment, and that page either
  * creates the Flexprice account or — when the user already has one, so the
  * session's `app_metadata` already names a tenant — simply signs them in.
  * Nothing new is needed there; it already distinguishes the two.
