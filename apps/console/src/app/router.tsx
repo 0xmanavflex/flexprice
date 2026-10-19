@@ -283,6 +283,7 @@ const RevenuePage = lazy(() =>
  */
 import { SignInPage } from '@/pages/auth/SignInPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
+import { AuthCallbackPage } from '@/pages/auth/AuthCallbackPage'
 import { SignUpConfirmPage } from '@/pages/auth/SignUpConfirmPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
@@ -469,7 +470,8 @@ const shellRoute = createRoute({
    */
   beforeLoad: ({ location }) => {
     if (needsSignIn()) {
-      throw redirect({ to: '/sign-in', search: { redirect: location.href } })
+      // `sso` is part of the sign-in search now; the guard names no tenant.
+      throw redirect({ to: '/sign-in', search: { redirect: location.href, sso: undefined } })
     }
   },
   component: ShellLayout,
@@ -487,8 +489,13 @@ const shellRoute = createRoute({
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-in',
-  validateSearch: (search: Record<string, unknown>): { redirect: string | undefined } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { redirect: string | undefined; sso: string | undefined } => ({
     redirect: typeof search['redirect'] === 'string' ? search['redirect'] : undefined,
+    // The tenant whose identity provider should handle this login. SSO is
+    // per tenant, so it arrives in the link an administrator hands out.
+    sso: typeof search['sso'] === 'string' ? search['sso'] : undefined,
   }),
   beforeLoad: () => {
     if (hasSession()) throw redirect({ to: '/' })
@@ -504,6 +511,24 @@ const signUpRoute = createRoute({
     if (hasSession()) throw redirect({ to: '/' })
   },
   component: SignUpPage,
+})
+
+/**
+ * Where a SAML assertion lands.
+ *
+ * The backend's `auth.saml.dashboard_url` points here and arrives with the
+ * token in the URL fragment. No `validateSearch`: a fragment is not a search
+ * string and never reaches the router — the page reads `location.hash`
+ * itself and clears it.
+ *
+ * It does not step aside for an existing session. Someone already signed in
+ * to one tenant who completes an SSO login to another must land on the new
+ * session, not be bounced to the old one's dashboard.
+ */
+const authCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth/callback',
+  component: AuthCallbackPage,
 })
 
 /**
@@ -540,8 +565,8 @@ const resetPasswordRoute = createRoute({
 })
 
 function SignInRouteComponent() {
-  const { redirect: target } = signInRoute.useSearch()
-  return <SignInPage redirect={target} />
+  const { redirect: target, sso } = signInRoute.useSearch()
+  return <SignInPage redirect={target} ssoTenantId={sso} />
 }
 
 /**
@@ -2291,6 +2316,7 @@ export const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
   signUpConfirmRoute,
+  authCallbackRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
   shellRoute.addChildren([

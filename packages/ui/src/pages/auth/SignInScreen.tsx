@@ -27,6 +27,16 @@ export interface SignInScreenProps extends SignInFormProps {
   /** Start Google sign-in. Omitted — and the button not drawn — when the
    * deployment does not offer it. */
   onProvider?: (providerId: string) => void
+  /**
+   * Start single sign-on.
+   *
+   * Separate from `onProvider`, which is Google and draws Google's mark. SSO
+   * is per tenant and the screen is not told which identity provider is
+   * behind it, so the button names the method rather than a brand.
+   */
+  onSso?: (() => void) | undefined
+  /** The SSO button shows a pending state while the login is being started. */
+  ssoPending?: boolean | undefined
   /** "Don't have an account? Sign up". Omitted, the line is not shown. */
   onSignUp?: () => void
   /** Footer links after the copyright. */
@@ -65,6 +75,8 @@ function FooterLink({ label, onClick }: { label: string; onClick: () => void }) 
 
 export function SignInScreen({
   onProvider,
+  onSso,
+  ssoPending = false,
   onSignUp,
   onTerms,
   onPrivacy,
@@ -85,6 +97,17 @@ export function SignInScreen({
         alternatives={
           <>
             {onProvider ? <GoogleButton onClick={() => onProvider('google')} /> : null}
+            {onSso ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 w-full"
+                disabled={ssoPending}
+                onClick={onSso}
+              >
+                {ssoPending ? 'Starting…' : 'Continue with SSO'}
+              </Button>
+            ) : null}
             {onSignUp ? (
               <SwitchLine>
                 Don&apos;t have an account?{' '}

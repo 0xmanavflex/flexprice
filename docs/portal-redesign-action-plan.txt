@@ -128,8 +128,9 @@ Dependencies: Phases 1 and 3.
 [IMPLEMENTED; visual baseline pending] 25. Keep live What customers see pricing card on both Plan tabs;
     make its section headings jump to matching tables.
 [IMPLEMENTED; live mapping verification pending] 26. Move Plan Link integration into the overflow menu.
-[ ] 27. Feature: Overview / Information tabs; show charges by billing plan
+[DONE] 27. Feature: Overview / Information tabs; show charges by billing plan
     and entitlements on Overview; present the create form read-only on Information.
+    Audited October 17; evidence recorded below.
 [IMPLEMENTED; visual review pending] 28. Feature sidebar: Send a test event with Copy cURL and Metadata;
     remove usage chart. Verify the existing test-event workflow still works.
 [ ] 29. Customer: Overview, Invoices, Wallet, Analytics, Events, Information;

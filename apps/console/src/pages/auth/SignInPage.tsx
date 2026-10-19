@@ -12,10 +12,12 @@ import { useSession } from '@/app/session'
 import { useRegion } from '@/app/region'
 import { resetAvailableFor } from '@/app/auth/passwordReset'
 import { env } from '@/env'
+import { resolveSsoTenant, startSamlLogin } from './samlLogin'
 import {
   EmailNotConfirmed,
   completeAccount,
   forgetConfirmation,
+  startGoogleSignIn,
   supabaseSignUpFor,
   unfinishedSignUp,
 } from '@/app/auth/supabaseSignUp'
@@ -57,9 +59,15 @@ export function safeRedirect(target: string | undefined): string {
 export interface SignInPageProps {
   /** Where to go once signed in. Defaults to the console's home. */
   redirect?: string | undefined
+  /**
+   * The tenant whose identity provider should handle this login, from
+   * `?sso=`. Its presence is what offers the SSO button — SSO is configured
+   * per tenant, and without one there is no provider to send the browser to.
+   */
+  ssoTenantId?: string | undefined
 }
 
-export function SignInPage({ redirect }: SignInPageProps) {
+export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
   const navigate = useNavigate()
   const session = useSession()
   const signIn = useSignIn()
@@ -88,12 +96,71 @@ export function SignInPage({ redirect }: SignInPageProps) {
   const demoProps = env.useMocks ? { defaultValues: DEMO_CREDENTIALS, hint: DEMO_HINT } : {}
 
   /*
-   * No `onProvider` is passed, so no Google button is drawn. There is no Google
-   * flow to start: the backend's only OAuth routes (`/oauth/init`,
-   * `/oauth/complete`) are the QuickBooks and Zoho integration consent flows,
-   * not user sign-in. When a brokered Google flow lands, pass `onProvider`
-   * behind `capabilities.oauth.google`.
+   * SSO is offered when the link names a tenant, and not otherwise.
+   *
+   * Deliberately not gated on `capabilities.saml.enabled`: that reads
+   * password-only on every deployment until the backend grows
+   * `/auth/capabilities`, which would hide SSO from every tenant that has it.
+   * It is safe to offer to a tenant without SSO — `startSamlLogin` asks the
+   * endpoint first and says so on a 404 rather than navigating the browser
+   * onto a JSON error body.
    */
+  const tenantForSso = resolveSsoTenant(ssoTenantId)
+  const [ssoPending, setSsoPending] = useState(false)
+  const [ssoError, setSsoError] = useState<string | null>(null)
+  const [providerError, setProviderError] = useState<string | null>(null)
+
+  const beginSso = async (tenant: string) => {
+    setSsoError(null)
+    setSsoPending(true)
+    try {
+      let storage
+      try {
+        storage = globalThis.sessionStorage
+      } catch {
+        storage = undefined
+      }
+      const started = await startSamlLogin(tenant, env.apiUrl, storage)
+      if (!started.ok) {
+        setSsoError('Single sign-on is not set up for this organisation yet.')
+        return
+      }
+      // A full page navigation, not a fetch: the browser carries its own
+      // session to the identity provider, and the assertion is posted back
+      // through the browser.
+      globalThis.location.assign(started.url)
+    } finally {
+      setSsoPending(false)
+    }
+  }
+
+  /*
+   * Google is offered wherever this region has Supabase configured.
+   *
+   * Not behind `capabilities.oauth.google`: that reads false on every
+   * deployment until the backend serves `/auth/capabilities`, which returns
+   * 404 today — so gating on it hides a Google sign-in that works. The honest
+   * test is whether the thing it needs is actually present, which is exactly
+   * what `supabaseSignUpFor` already answers for sign-up.
+   *
+   * There is no Flexprice route for this. Google goes through Supabase, as it
+   * does in V1 and as sign-up already does here, and comes back to
+   * `/sign-up/confirm` — which creates the account or, when the session
+   * already names a tenant, just signs the person in.
+   */
+  const googleAvailable = supabaseSignUpFor(region)
+  const [providerPending, setProviderPending] = useState(false)
+
+  const beginGoogle = async () => {
+    setProviderError(null)
+    setProviderPending(true)
+    try {
+      globalThis.location.assign(await startGoogleSignIn(region))
+    } catch (cause) {
+      setProviderError(cause instanceof Error ? cause.message : 'Could not start Google sign-in.')
+      setProviderPending(false)
+    }
+  }
   return (
     <main className="bg-background min-h-svh">
       <SignInScreen
@@ -122,8 +189,12 @@ export function SignInPage({ redirect }: SignInPageProps) {
                 void navigate({ to: '/forgot-password', search: {} as never }),
             }
           : {})}
+        {...(googleAvailable && !providerPending ? { onProvider: () => void beginGoogle() } : {})}
+        {...(tenantForSso ? { onSso: () => void beginSso(tenantForSso), ssoPending } : {})}
         isSubmitting={signIn.isPending || recovering}
         error={
+          providerError ??
+          ssoError ??
           recoveryError ??
           (signIn.error && !recovering ? messageForSignInError(signIn.error) : null)
         }

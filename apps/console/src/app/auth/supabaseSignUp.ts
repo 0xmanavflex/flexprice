@@ -61,6 +61,32 @@ export async function startSignUp(region: string, email: string, password: strin
   if (error) throw new Error(error.message)
 }
 
+/**
+ * Start Google sign-in, and say where to send the browser.
+ *
+ * The same two-halves shape as email sign-up, with Google standing in for the
+ * inbox: Supabase authenticates, then the browser comes back to
+ * `/sign-up/confirm` with a session in the fragment, and that page either
+ * creates the Flexprice account or — when the user already has one, so the
+ * session's `app_metadata` already names a tenant — simply signs them in.
+ * Nothing new is needed there; it already distinguishes the two.
+ *
+ * Returns the URL rather than navigating, so the caller owns the page
+ * transition and this stays testable. `scopes` are the two V1 asks for: an
+ * email to key the account on and a profile to name it.
+ */
+export async function startGoogleSignIn(region: string): Promise<string> {
+  const { data, error } = await clientFor(configFor(region)).auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: signUpConfirmURL(), scopes: 'email profile' },
+  })
+  if (error) throw new Error(error.message)
+  // supabase-js returns the provider URL for the caller to navigate to; with
+  // no URL there is nowhere to send the browser and nothing happened.
+  if (!data?.url) throw new Error('Google sign-in is unavailable right now.')
+  return data.url
+}
+
 /** Sends the confirmation email again. */
 export async function resendConfirmation(region: string, email: string): Promise<void> {
   const { error } = await clientFor(configFor(region)).auth.resend({
@@ -193,9 +219,27 @@ export async function completeAccount(
     token: string
     metadata: Record<string, string>
   }) => Promise<{ userId: string; tenantId: string }>,
+  /** Injected like `create`, so both branches are testable without a client. */
+  refresh: (region: string) => Promise<string> = refreshedToken,
 ): Promise<NewSession> {
   if (confirmed.tenantId) {
-    return { token: confirmed.accessToken, userId: confirmed.userId, tenantId: confirmed.tenantId }
+    /*
+     * Refresh before handing the token on, even though this account exists.
+     *
+     * The API reads the tenant from the token's `app_metadata.tenant_id`, and
+     * `ValidateToken` returns an empty tenant rather than an error when it is
+     * missing — the middleware then refuses with "Invalid token claims". The
+     * session *object* can carry a tenant the *token* does not, because the
+     * token was minted earlier; `confirmed.tenantId` is read from the former.
+     * Refreshing mints one from the current metadata, which is what V1 does
+     * after every signup for the same reason.
+     *
+     * A refresh that fails is not fatal: the token in hand may well be fine,
+     * and refusing the sign-in over it would turn a working login into a dead
+     * button. Try, and fall back to what we have.
+     */
+    const token = await refresh(region).catch(() => confirmed.accessToken)
+    return { token, userId: confirmed.userId, tenantId: confirmed.tenantId }
   }
   const created = await create({
     email: confirmed.email,
@@ -203,7 +247,7 @@ export async function completeAccount(
     metadata: SIGN_UP_METADATA,
   })
   return {
-    token: await refreshedToken(region),
+    token: await refresh(region),
     userId: created.userId || confirmed.userId,
     tenantId: created.tenantId,
   }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { SignInScreen } from './SignInScreen'
 
 /**
@@ -49,6 +49,31 @@ interface PlaygroundArgs {
 }
 
 /** Flip submitting, a failure or a notice, and light up each optional part of the page. */
+/**
+ * Single sign-on, offered when the link names a tenant.
+ *
+ * It names the method rather than a brand: SSO is per tenant and the screen
+ * is not told which identity provider is behind it.
+ */
+export const WithSso: Story = {
+  args: { onSso: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const button = canvas.getByRole('button', { name: 'Continue with SSO' })
+    await userEvent.click(button)
+    await expect(args.onSso).toHaveBeenCalled()
+  },
+}
+
+/** While the login is being started the button says so and refuses a second press. */
+export const SsoStarting: Story = {
+  args: { onSso: fn(), ssoPending: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Starting…' })).toBeDisabled()
+  },
+}
+
 export const Playground = {
   args: {
     isSubmitting: false,

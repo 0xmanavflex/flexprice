@@ -3,11 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { TimezoneCombobox, type TimezoneComboboxProps } from './TimezoneCombobox'
 
-function Controlled({
-  value: initial,
-  onValueChange,
-  ...props
-}: TimezoneComboboxProps) {
+function Controlled({ value: initial, onValueChange, ...props }: TimezoneComboboxProps) {
   const [value, setValue] = useState(initial)
   useEffect(() => setValue(initial), [initial])
   return (
@@ -62,7 +58,7 @@ export const FindsByAbbreviation: Story = {
     const option = await screen.findByRole('option', { name: /Asia\/Kolkata/ })
     await userEvent.click(option)
     await expect(args.onValueChange).toHaveBeenCalledWith('Asia/Kolkata')
-    await waitFor(() => expect(input).toHaveValue(expect.stringContaining('Asia/Kolkata')))
+    await waitFor(() => expect((input as HTMLInputElement).value).toContain('Asia/Kolkata'))
   },
 }
 
@@ -70,8 +66,9 @@ export const FindsByAbbreviation: Story = {
 export const KeepsUnknownValue: Story = {
   args: { value: 'Mars/Olympus_Mons' },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('combobox', { name: 'Timezone' })).toHaveValue(
-      expect.stringContaining('Mars/Olympus_Mons'),
-    )
+    const combobox = within(canvasElement).getByRole('combobox', {
+      name: 'Timezone',
+    }) as HTMLInputElement
+    await expect(combobox.value).toContain('Mars/Olympus_Mons')
   },
 }
