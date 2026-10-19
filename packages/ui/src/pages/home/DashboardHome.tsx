@@ -344,7 +344,7 @@ function Unavailable({ what, className }: { what: string; className?: string }) 
 
 /* ---- 1. Filters --------------------------------------------------------- */
 
-interface Filter {
+export interface Filter {
   label: string
   value: string
   options: FilterOption[]
@@ -352,7 +352,7 @@ interface Filter {
   icon?: ReactNode
 }
 
-function FilterSelect({ filter }: { filter: Filter }) {
+export function FilterSelect({ filter }: { filter: Filter }) {
   return (
     <Select
       value={filter.value}

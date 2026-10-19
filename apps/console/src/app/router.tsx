@@ -207,6 +207,7 @@ const SettingsPage = lazy(() =>
 )
 import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from './settingsSearch'
 import { MOVED_SECTIONS } from '@/pages/settings/sections'
+import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
 )
@@ -1387,12 +1388,7 @@ function GroupCreateRouteComponent() {
   const navigate = useNavigate()
   const toList = () => void navigate({ to: '/groups', search: {} as never })
 
-  return (
-    <GroupFormPage
-      onCancel={toList}
-      onDone={toList}
-    />
-  )
+  return <GroupFormPage onCancel={toList} onDone={toList} />
 }
 
 /**
@@ -1489,17 +1485,27 @@ const homeRoute = createRoute({
 })
 
 /**
- * Revenue — a report page, not a list.
- *
- * The contract/usage mix, revenue by customer and margin by feature, from the
- * `RevenueDashboard` surface. It carries no query state yet; the surface renders
- * representative data until the revenue queries land.
+ * Revenue — a report page, not a list. The tab, range, comparison and
+ * currency live in the URL, so a report can be shared as it is on screen.
  */
 const revenueRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/revenue',
-  component: RevenuePage,
+  validateSearch: (search: Record<string, unknown>): RevenueSearch => parseRevenueSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_REVENUE_SEARCH)] },
+  component: RevenueRouteComponent,
 })
+
+function RevenueRouteComponent() {
+  const search = useSearch({ from: revenueRoute.id })
+  const navigate = useNavigate()
+  return (
+    <RevenuePage
+      search={search}
+      onSearchChange={(next) => void navigate({ to: '/revenue', search: next, replace: true })}
+    />
+  )
+}
 
 /**
  * Billing lists — customers, subscriptions, payments and taxes. The same
@@ -2159,17 +2165,16 @@ const developerRedirects = (
     ['/api-keys', 'api-keys'],
     ['/service-accounts', 'service-accounts'],
   ] as const
-).map(
-  ([path, panel]) =>
-    createRoute({
-      getParentRoute: () => shellRoute,
-      path,
-      component: () => (
-        <Suspense fallback={null}>
-          <DeveloperPanels panel={panel} />
-        </Suspense>
-      ),
-    }),
+).map(([path, panel]) =>
+  createRoute({
+    getParentRoute: () => shellRoute,
+    path,
+    component: () => (
+      <Suspense fallback={null}>
+        <DeveloperPanels panel={panel} />
+      </Suspense>
+    ),
+  }),
 )
 
 /**

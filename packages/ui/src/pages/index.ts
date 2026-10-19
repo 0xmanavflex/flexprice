@@ -30,8 +30,18 @@ export type {
   UsagePanel,
   UsageRow,
 } from './home/DashboardHome'
-export { RevenueDashboard, RevenueDashboardProvenance } from './revenue/RevenueDashboard'
-export type { RevenueDashboardProps, RevenuePanelMeta } from './revenue/RevenueDashboard'
+export { RevenueReport, RevenueReportProvenance } from './revenue/RevenueReport'
+export type {
+  AgingBucket,
+  CustomerRevenueRow,
+  OverdueCustomerRow,
+  PayerRow,
+  ReportFigure,
+  ReportStatus,
+  RevenuePoint,
+  RevenueReportProps,
+  RevenueView,
+} from './revenue/RevenueReport'
 export {
   CUSTOMER_INVOICES_LIMIT,
   CUSTOMER_TABS,
@@ -370,7 +380,6 @@ export type { QuotaCardAction, QuotaCardProps } from './shared/QuotaCard'
 
 /* The billing grids' migration onto EntityList. Appended — the grids and their
    props were already exported above; this is the one new type the move added. */
-export type { RevenueByCustomerGap, RevenueByCustomerRow } from './revenue/RevenueDashboard'
 export { WorkflowGrid, WorkflowGridProvenance } from './developers/workflows/WorkflowGrid'
 export type { WorkflowGridProps } from './developers/workflows/WorkflowGrid'
 export { UsageSyncGrid, UsageSyncGridProvenance } from './developers/usage-syncs/UsageSyncGrid'

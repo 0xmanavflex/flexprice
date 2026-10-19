@@ -76,7 +76,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/revenue',
     reference: 'pages/revenue.tsx',
     pattern: 'dashboard',
-    ready: { heading: 'Revenue mix' },
+    ready: { text: 'Receivables aging' },
   },
 
   // Product catalogue
