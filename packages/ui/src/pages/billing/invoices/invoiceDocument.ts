@@ -99,7 +99,7 @@ export interface StatusChip {
 export function statusChips(
   doc: Pick<InvoiceDocument, 'status' | 'paymentStatus' | 'paid'>,
 ): StatusChip[] {
-  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'neutral' }]
+  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'warning' }]
   if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', tone: 'neutral' }]
   if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', tone: 'neutral' }]
   const chips: StatusChip[] = [{ label: 'Finalized', tone: 'neutral' }]
