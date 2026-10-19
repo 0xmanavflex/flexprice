@@ -1,6 +1,8 @@
 import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 import {
+  CircleCheckIcon,
+  CircleDashedIcon,
   CopyIcon,
   EyeIcon,
   EyeOffIcon,
@@ -289,7 +291,7 @@ export function WebhookEndpointDetail({
                 {stats === null ? (
                   <p className="text-muted-foreground text-sm">Loading delivery stats…</p>
                 ) : stats.succeeded + stats.failed + stats.pending + stats.sending === 0 ? (
-                  <p className="text-muted-foreground text-sm">Nothing has been delivered yet.</p>
+                  <FirstDelivery endpoint={endpoint} onSendExample={() => onTabChange('testing')} />
                 ) : (
                   <SplitMeter
                     label="Delivery outcomes"
@@ -454,6 +456,72 @@ export function WebhookEndpointDetail({
 }
 
 /* ---- the facts rail ----------------------------------------------------- */
+
+/**
+ * What the Delivery card says before anything has been delivered.
+ *
+ * A bare "nothing yet" left the overview's main column short of the facts
+ * rail beside it, so the page read as a gap above an empty attempts table.
+ * This turns the same space into the three things that decide whether the
+ * first delivery happens, and the one action that makes it happen now.
+ */
+function FirstDelivery({
+  endpoint,
+  onSendExample,
+}: {
+  endpoint: WebhookEndpoint
+  onSendExample: () => void
+}) {
+  const events = endpoint.filterTypes.length
+  const steps = [
+    { id: 'url', label: 'Endpoint URL added', done: true },
+    {
+      id: 'events',
+      label:
+        events === 0
+          ? 'Subscribed to every event'
+          : `Subscribed to ${events} ${events === 1 ? 'event' : 'events'}`,
+      done: true,
+    },
+    {
+      id: 'enabled',
+      label: endpoint.disabled
+        ? 'Endpoint is disabled — enable it to receive events'
+        : 'Endpoint is enabled',
+      done: !endpoint.disabled,
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium">No deliveries yet</p>
+        <p className="text-muted-foreground text-sm">
+          Success and failure counts appear here after the first message. Send an example event to
+          check your receiver now.
+        </p>
+      </div>
+      <ul className="flex flex-col gap-2" aria-label="Delivery setup">
+        {steps.map((step) => (
+          <li key={step.id} className="flex items-center gap-2 text-sm">
+            {step.done ? (
+              <CircleCheckIcon aria-hidden className="text-success size-4 shrink-0" />
+            ) : (
+              <CircleDashedIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />
+            )}
+            <span className={step.done ? undefined : 'text-muted-foreground'}>{step.label}</span>
+          </li>
+        ))}
+      </ul>
+      <div>
+        <Button variant="outline" size="sm" onClick={onSendExample} disabled={endpoint.disabled}>
+          <SendIcon aria-hidden />
+          Send example event
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 function SubscribedEvents({
   endpoint,
