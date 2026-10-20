@@ -88,11 +88,26 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Nothing typed yet: the only action is disabled, so it cannot be run empty. */
+/**
+ * Nothing typed yet: sending does nothing but put the caret in the box, as the
+ * ai-chat-5 composer does, and a starter chip offers an example to begin from.
+ */
 export const Empty: Story = {
-  play: async ({ canvasElement }) => {
+  args: { onParse: fn() },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('button', { name: /read my pricing/i })).toBeDisabled()
+    await expect(canvas.getByRole('heading', { name: 'Create with AI' })).toBeVisible()
+    const send = canvas.getByRole('button', { name: /read my pricing/i })
+    await expect(send).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(send)
+    await expect(args.onParse).not.toHaveBeenCalled()
+    await expect(canvas.getByLabelText('Describe your pricing')).toHaveFocus()
+
+    await userEvent.click(canvas.getByText('Per seat'))
+    await userEvent.click(canvas.getByRole('button', { name: /use this example/i }))
+    await expect(
+      (canvas.getByLabelText('Describe your pricing') as HTMLTextAreaElement).value,
+    ).toContain('per seat')
   },
 }
 

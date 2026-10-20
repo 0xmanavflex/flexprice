@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, RefreshCwIcon } from '@ui/icons'
+import { type ReactNode, useMemo } from 'react'
+import { BookOpenIcon, CopyIcon, EyeIcon, RefreshCwIcon, Trash2Icon } from '@ui/icons'
 import { type DataExport, type DataExportQuery, EXPORT_STATE, type ExportState } from '@fp/domain'
 import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
@@ -50,6 +50,12 @@ export interface DataExportGridProps {
   onRetry?: () => void
   onRefresh?: () => void
   onClearFilters?: () => void
+  /** Opens an export's detail; rows become links. */
+  onOpen?: (row: DataExport) => void
+  /** Offers Delete in each row's menu. */
+  onDelete?: (row: DataExport) => void
+  /** Replaces Refresh as the header action, e.g. "New export". */
+  primaryAction?: ReactNode
   locale?: string
 }
 
@@ -63,6 +69,9 @@ export function DataExportGrid({
   onRetry,
   onRefresh,
   onClearFilters,
+  onOpen,
+  onDelete,
+  primaryAction,
   locale,
 }: DataExportGridProps) {
   const columns = useMemo<EntityColumn<DataExport>[]>(
@@ -94,11 +103,30 @@ export function DataExportGrid({
   )
 
   const rowActions = (row: DataExport): EntityRowAction[] => [
+    ...(onOpen
+      ? [
+          {
+            label: 'View export',
+            icon: <EyeIcon aria-hidden className="size-4" />,
+            onSelect: () => onOpen(row),
+          },
+        ]
+      : []),
     {
       label: 'Copy export ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(row.id),
     },
+    ...(onDelete
+      ? [
+          {
+            label: 'Delete export',
+            icon: <Trash2Icon aria-hidden className="size-4" />,
+            destructive: true,
+            onSelect: () => onDelete(row),
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -128,16 +156,19 @@ export function DataExportGrid({
       })}
       rowActions={rowActions}
       exportFileName="exports"
-      {...(onRefresh
-        ? {
-            primaryAction: (
-              <Button variant="outline" onClick={onRefresh}>
-                <RefreshCwIcon aria-hidden />
-                Refresh
-              </Button>
-            ),
-          }
-        : {})}
+      {...(onOpen ? { onRowClick: onOpen } : {})}
+      {...(primaryAction
+        ? { primaryAction }
+        : onRefresh
+          ? {
+              primaryAction: (
+                <Button variant="outline" onClick={onRefresh}>
+                  <RefreshCwIcon aria-hidden />
+                  Refresh
+                </Button>
+              ),
+            }
+          : {})}
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}

@@ -324,7 +324,7 @@ export type { SetPasswordFormProps } from './auth/SetPasswordForm'
 export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/AcceptInvitationForm'
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './settings/environments/EnvironmentForm'
-export type { EnvironmentFormProps } from './settings/environments/EnvironmentForm'
+export type { EnvironmentContact, EnvironmentFormProps } from './settings/environments/EnvironmentForm'
 export {
   EnvironmentRenameForm,
   EnvironmentRenameFormProvenance,
@@ -408,6 +408,33 @@ export { CustomerForm, CustomerFormProvenance } from './customers/CustomerForm'
 export type { CustomerFormProps } from './customers/CustomerForm'
 export { DataExportGrid, DataExportGridProvenance } from './developers/exports/DataExportGrid'
 export type { DataExportGridProps } from './developers/exports/DataExportGrid'
+export {
+  ConnectionExports,
+  DataExportDetail,
+  ExportFlowProvenance,
+  ExportRunList,
+  ExportsOverview,
+  S3ConnectionList,
+} from './developers/exports/ExportFlow'
+export type {
+  ConnectionExportsProps,
+  DataExportDetailProps,
+  DataExportTab,
+  ExportRunListProps,
+  ExportsOverviewProps,
+  S3ConnectionListProps,
+} from './developers/exports/ExportFlow'
+export {
+  DataExportDialog,
+  ExportFormsProvenance,
+  RunExportDialog,
+  S3ConnectionDialog,
+} from './developers/exports/ExportForms'
+export type {
+  DataExportDialogProps,
+  RunExportDialogProps,
+  S3ConnectionDialogProps,
+} from './developers/exports/ExportForms'
 export { IntegrationsBlock, IntegrationLogo } from './integrations/IntegrationsBlock'
 export type { IntegrationsFailure, IntegrationsBlockProps } from './integrations/IntegrationsBlock'
 export {

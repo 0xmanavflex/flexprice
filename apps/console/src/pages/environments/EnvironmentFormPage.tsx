@@ -1,6 +1,6 @@
 import { type CreateEnvironment } from '@fp/domain'
 import { useCreateEnvironment } from '@fp/query'
-import { EnvironmentForm } from '@fp/ui/pages'
+import { EnvironmentForm, type EnvironmentContact } from '@fp/ui/pages'
 import { env } from '@/env'
 import { useSession } from '@/app/session'
 import { mutationMessage } from '../settings/panelKit'
@@ -9,13 +9,18 @@ import { mutationMessage } from '../settings/panelKit'
 const MOCK_TOKEN = 'mock-session-token'
 
 /**
- * Where "Contact us" goes when someone asks for a production environment.
- *
- * The Flexprice community Slack, as linked from the V1 dashboard and the docs.
- * TODO(checkout): production becomes a self-serve paid upgrade; this link is
+ * How someone asks for a production environment: V1's contact details
+ * (`config/contact.ts`) — the community Slack invite, support email, and a
+ * booked call.
+ * TODO(checkout): production becomes a self-serve paid upgrade; these are
  * replaced by the checkout flow then.
  */
-export const PRODUCTION_CONTACT_HREF = 'https://flexpricecommunity.slack.com'
+export const PRODUCTION_CONTACT: EnvironmentContact = {
+  slackUrl:
+    'https://join.slack.com/t/flexpricecommunity/shared_invite/zt-39uat51l0-n8JmSikHZP~bHJNXladeaQ',
+  email: 'support@flexprice.io',
+  bookCallUrl: 'https://calendly.com/nikhil-flexprice/30min',
+}
 
 export interface EnvironmentFormPageProps {
   open: boolean
@@ -40,7 +45,7 @@ export function EnvironmentFormPage({ open, onOpenChange }: EnvironmentFormPageP
       open={open}
       onOpenChange={onOpenChange}
       canCreateProduction={false}
-      contactHref={PRODUCTION_CONTACT_HREF}
+      contact={PRODUCTION_CONTACT}
       isSubmitting={create.isPending}
       submitError={
         create.error ? mutationMessage(create.error, 'The environment could not be created.') : null

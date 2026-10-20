@@ -177,6 +177,19 @@ const IntegrationListPage = lazy(() =>
 const ExportListPage = lazy(() =>
   import('@/pages/exports/ExportListPage').then((m) => ({ default: m.ExportListPage })),
 )
+const S3ConnectionsPage = lazy(() =>
+  import('@/pages/exports/S3ConnectionsPage').then((m) => ({ default: m.S3ConnectionsPage })),
+)
+const ConnectionExportsPage = lazy(() =>
+  import('@/pages/exports/ConnectionExportsPage').then((m) => ({
+    default: m.ConnectionExportsPage,
+  })),
+)
+const DataExportDetailPage = lazy(() =>
+  import('@/pages/exports/DataExportDetailPage').then((m) => ({
+    default: m.DataExportDetailPage,
+  })),
+)
 import { parseDataExportSearch } from './dataExportSearch'
 import { DEFAULT_DATA_EXPORT_QUERY, type DataExportQuery } from '@fp/domain'
 const UsageSyncListPage = lazy(() =>
@@ -208,6 +221,7 @@ const SettingsPage = lazy(() =>
 import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from './settingsSearch'
 import { MOVED_SECTIONS } from '@/pages/settings/sections'
 import { SupportChat } from '@/app/supportChat/SupportChat'
+import { VersionCheck } from '@/app/versionCheck/VersionCheck'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
@@ -354,7 +368,12 @@ function ShellLayout() {
         void navigate({ to: '/sign-in', search: {} as never })
       }}
       // Help: the support chat, when a provider is configured (as in V1).
-      headerActions={<SupportChat />}
+      headerActions={
+        <>
+          <SupportChat />
+          <VersionCheck />
+        </>
+      }
     >
       {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
       {/*
@@ -1903,9 +1922,112 @@ function ExportsRouteComponent() {
     <ExportListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/exports', search: next, replace: true })}
+      onOpenS3={() => void navigate({ to: '/exports/s3' })}
+      onOpenExport={(row) =>
+        void navigate({
+          to: '/exports/s3/$connectionId/$exportId',
+          params: { connectionId: row.connectionId, exportId: row.id },
+          search: {},
+        })
+      }
     />
   )
 }
+
+/** V1's S3 connections page (`/tools/exports/s3`). */
+const s3ExportsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/exports/s3',
+  component: function S3ExportsRouteComponent() {
+    const navigate = useNavigate()
+    return (
+      <S3ConnectionsPage
+        onBack={() => void navigate({ to: '/exports', search: {} as never })}
+        onOpen={(connection) =>
+          void navigate({
+            to: '/exports/s3/$connectionId',
+            params: { connectionId: connection.id },
+            search: {} as never,
+          })
+        }
+      />
+    )
+  },
+})
+
+/** One connection's exports (V1's `/tools/exports/s3/:connectionId/export`). */
+const connectionExportsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/exports/s3/$connectionId',
+  validateSearch: (search: Record<string, unknown>): DataExportQuery =>
+    parseDataExportSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_DATA_EXPORT_QUERY)] },
+  component: function ConnectionExportsRouteComponent() {
+    const { connectionId } = connectionExportsRoute.useParams()
+    const query = connectionExportsRoute.useSearch()
+    const navigate = useNavigate()
+    return (
+      <ConnectionExportsPage
+        connectionId={connectionId}
+        query={query}
+        onQueryChange={(next) =>
+          void navigate({
+            to: '/exports/s3/$connectionId',
+            params: { connectionId },
+            search: next,
+            replace: true,
+          })
+        }
+        onBack={() => void navigate({ to: '/exports/s3' })}
+        onBackToExports={() => void navigate({ to: '/exports', search: {} as never })}
+        onOpenExport={(row) =>
+          void navigate({
+            to: '/exports/s3/$connectionId/$exportId',
+            params: { connectionId, exportId: row.id },
+            search: {},
+          })
+        }
+      />
+    )
+  },
+})
+
+/** One export (V1's `/tools/exports/s3/:connectionId/export/:exportId`). */
+const dataExportRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/exports/s3/$connectionId/$exportId',
+  validateSearch: (search: Record<string, unknown>): { tab?: 'runs' } =>
+    search['tab'] === 'runs' ? { tab: 'runs' } : {},
+  component: function DataExportRouteComponent() {
+    const { connectionId, exportId } = dataExportRoute.useParams()
+    const { tab } = dataExportRoute.useSearch()
+    const navigate = useNavigate()
+    const toConnection = () =>
+      void navigate({
+        to: '/exports/s3/$connectionId',
+        params: { connectionId },
+        search: {} as never,
+      })
+    return (
+      <DataExportDetailPage
+        connectionId={connectionId}
+        exportId={exportId}
+        tab={tab ?? 'overview'}
+        onTabChange={(next) =>
+          void navigate({
+            to: '/exports/s3/$connectionId/$exportId',
+            params: { connectionId, exportId },
+            search: next === 'runs' ? { tab: 'runs' } : {},
+            replace: true,
+          })
+        }
+        onBackToExports={() => void navigate({ to: '/exports', search: {} as never })}
+        onBackToS3={() => void navigate({ to: '/exports/s3' })}
+        onBackToConnection={toConnection}
+      />
+    )
+  },
+})
 
 const invoiceCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -2380,6 +2502,9 @@ export const routeTree = rootRoute.addChildren([
     creditNoteDetailRoute,
     workflowsRoute,
     exportsRoute,
+    s3ExportsRoute,
+    connectionExportsRoute,
+    dataExportRoute,
     integrationsRoute,
     oauthCallbackRoute,
     pricingWidgetRoute,

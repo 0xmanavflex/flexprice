@@ -40,11 +40,7 @@ export const createEnvironmentSchema = z.object({
    * and in the header of every page, so "EU staging" is worth more than
    * "Environment 4" on the one occasion it matters.
    */
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Enter a name')
-    .max(60, 'Keep the name under 60 characters'),
+  name: z.string().trim().min(1, 'Enter a name').max(60, 'Keep the name under 60 characters'),
   type: z.enum([EnvironmentType.Production, EnvironmentType.Sandbox]),
 })
 export type CreateEnvironment = z.infer<typeof createEnvironmentSchema>
@@ -59,3 +55,9 @@ export const emptyEnvironment: CreateEnvironment = {
 export function environmentKind(type: EnvironmentType): 'production' | 'sandbox' {
   return type === EnvironmentType.Production ? 'production' : 'sandbox'
 }
+
+/**
+ * Subscriptions in a sandbox are cancelled this many days after they start,
+ * so test data does not bill forever. V1's `SANDBOX_AUTO_CANCELLATION_DAYS`.
+ */
+export const SANDBOX_AUTO_CANCELLATION_DAYS = 45
