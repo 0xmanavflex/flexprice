@@ -91,6 +91,8 @@ export {
   nonNegativeAmount,
   priceTierSchema,
   tiersSchema,
+  chargeLineages,
+  type ChargeLineage,
 } from './price'
 export type { Charge, CreateCharge, PriceTier, Tier } from './price'
 export { ChargeSection, chargeFlags, isChargeCustomised } from './chargeFlags'
@@ -315,6 +317,9 @@ export {
   PAYMENT_TERMS_LABEL,
   BillingCycle,
   validateLineChange,
+  lineLineages,
+  lineRevertDraft,
+  type LineLineage,
 } from './subscription'
 export type {
   ChangeLineQuantity,
@@ -471,6 +476,9 @@ export {
   isOverLimit,
   toUpdateTenantDraft,
   updateTenantSchema,
+  TenantMetadataKey,
+  TenantMetadataFlag,
+  isTenantOnboarded,
 } from './tenant'
 export type {
   Tenant,
@@ -729,6 +737,7 @@ export type {
   EventDebugStage,
   EventDebugStageResult,
   EventVersion,
+  ProcessedUsage,
 } from './eventDebug'
 
 export { COUNTRY_CODES, countryName, countryOptions } from './countries'

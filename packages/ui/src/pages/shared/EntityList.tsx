@@ -60,6 +60,7 @@ import type { EmptyScene } from '@ui/compositions/feedback/SceneIllustration'
 import { FilterBar, type FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { SortMenu, type SortOption } from '@ui/compositions/tables/SortMenu'
 import { cn } from '@ui/lib/cn'
+import { revealTruncated } from '@ui/lib/revealTruncated'
 import { provenance } from '@ui/provenance'
 import type { EntityColumn } from './cells'
 
@@ -985,6 +986,8 @@ export function EntityList<T extends object>({
       role="region"
       aria-label={label}
       className={cn('flex w-full min-w-0 flex-col', compact ? 'gap-0' : 'gap-5', className)}
+      // A cell cut off with an ellipsis shows its full text on hover.
+      onMouseOver={revealTruncated}
     >
       <Heading className="sr-only">{label}</Heading>
       {/* A list with nothing in it has nothing to search, filter or sort: the

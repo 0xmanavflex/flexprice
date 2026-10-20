@@ -1,3 +1,9 @@
 # Push is refused unless the same static checks CI runs have passed:
-# types, lint, and the production build.
-pnpm typecheck && pnpm lint && pnpm build
+# types, lint, the Lint job's repo checks, the Storybook component map, and
+# the production build.
+pnpm typecheck && pnpm lint \
+  && node scripts/check-vendor.mjs \
+  && node scripts/check-sdk.mjs --check \
+  && node scripts/ui-page-matrix.mjs --check \
+  && node scripts/storybook-anatomy.mjs --check \
+  && pnpm build

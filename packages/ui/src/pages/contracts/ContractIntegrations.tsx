@@ -88,7 +88,17 @@ export function ContractIntegrations({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (links.length === 0 && linkable.length === 0) return null
+  const canLink = showLink && Boolean(onLink) && linkable.length > 0
+  const none = `No integrations linked to this ${entityLabel}.`
+
+  // In the Related card the rows are the card's whole body, so rendering nothing
+  // left a bare "Related" heading over an empty box. Say so instead. The header
+  // marks have nowhere to put a sentence, so they still render nothing.
+  if (links.length === 0 && !canLink) {
+    return layout === 'rows' ? (
+      <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
+    ) : null
+  }
 
   const run = async (action: () => Promise<unknown>, done: () => void) => {
     setPending(true)
@@ -175,7 +185,10 @@ export function ContractIntegrations({
           </DropdownMenuContent>
         </DropdownMenu>
       ))}
-      {showLink && onLink && linkable.length > 0 ? (
+      {layout === 'rows' && links.length === 0 ? (
+        <p className="text-muted-foreground text-sm">{none}</p>
+      ) : null}
+      {canLink ? (
         <Tooltip>
           <TooltipTrigger
             render={

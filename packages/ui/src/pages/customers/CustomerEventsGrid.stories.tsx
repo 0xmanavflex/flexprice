@@ -56,6 +56,19 @@ export const OpensEventSheet: Story = {
   },
 }
 
+/** With `onOpenEvent`, a row opens the page's own detail view instead of the minimal sheet. */
+export const HandsRowToPage: Story = {
+  args: { onOpenEvent: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const row = (await canvas.findAllByText('api_call'))[0]
+    if (!row) throw new Error('no event row')
+    await userEvent.click(row)
+    await expect(args.onOpenEvent).toHaveBeenCalledOnce()
+    await expect(screen.queryByText(/Received .* via sdk/)).toBeNull()
+  },
+}
+
 /** The read is in flight: a shaped skeleton, never "No events yet". */
 export const Loading: Story = {
   args: { events: [], isLoading: true },

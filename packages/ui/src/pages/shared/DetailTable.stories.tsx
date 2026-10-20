@@ -206,3 +206,35 @@ export const Borderless: Story = {
     await expect(frame).not.toHaveAttribute('data-border')
   },
 }
+
+const LONG_NAME =
+  'Enterprise platform fee for the EU region, including premium support and dedicated onboarding'
+
+/** A value cut off with an ellipsis shows its full text on hover; one that fits does not. */
+export const TruncatedTextOnHover: Story = {
+  args: {
+    rows: INVOICES.slice(0, 2).map((row, index) => ({
+      ...row,
+      number: index === 0 ? LONG_NAME : row.number,
+    })),
+    columns: [
+      {
+        key: 'number',
+        header: 'Invoice',
+        width: 160,
+        cell: (row) => <span className="block truncate">{row.number}</span>,
+      },
+      { key: 'payment', header: 'Payment', cell: (row) => row.payment },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const long = canvas.getByText(LONG_NAME)
+    await userEvent.hover(long)
+    await expect(long).toHaveAttribute('title', LONG_NAME)
+
+    const short = canvas.getByText('Paid')
+    await userEvent.hover(short)
+    await expect(short).not.toHaveAttribute('title')
+  },
+}

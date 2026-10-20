@@ -60,8 +60,25 @@ export interface Tenant {
   helpEmail: string
   phone: string
   address: TenantAddress
+  /** Free-form key/value fields, as the API returns them. */
+  metadata: Readonly<Record<string, string>>
   createdAt: Date | null
   updatedAt: Date | null
+}
+
+/** Keys the console reads from a tenant's metadata. */
+export const TenantMetadataKey = {
+  /** Set when the tenant is done onboarding; the support chat stops auto-opening. */
+  OnboardingCompleted: 'onboarding_completed',
+} as const
+export type TenantMetadataKey = (typeof TenantMetadataKey)[keyof typeof TenantMetadataKey]
+
+/** Metadata is a string map, so a flag is the string `'true'`. */
+export const TenantMetadataFlag = { True: 'true', False: 'false' } as const
+
+/** True when the tenant's metadata says onboarding is done. */
+export function isTenantOnboarded(tenant: Pick<Tenant, 'metadata'> | null | undefined): boolean {
+  return tenant?.metadata[TenantMetadataKey.OnboardingCompleted] === TenantMetadataFlag.True
 }
 
 const optionalEmail = z

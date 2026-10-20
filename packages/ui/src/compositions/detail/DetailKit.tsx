@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
+import { revealTruncated } from '@ui/lib/revealTruncated'
 import { provenance } from '@ui/provenance'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -323,28 +324,55 @@ export interface OverviewTile {
   value: ReactNode
   /** A muted line under the value. */
   detail?: ReactNode
+  /** A change badge beside the value, e.g. against the previous period. */
+  delta?: ReactNode
 }
 
 /**
- * One bordered box of figures in a 2 x 2 grid split by hairlines: a label, a
- * large value and a muted detail line per tile. It is the first thing in an
- * Overview (or Usage) tab, never above the tabs.
+ * One bordered box of figures split by hairlines: a label, a large value and a
+ * muted detail line per tile.
+ *
+ * - `grid` (default): a 2 x 2 box, the first thing in an Overview or Usage tab.
+ * - `row`: every tile on one line — a report's headline figures.
+ * - `flush`: the same row with no frame of its own, along the top of a panel's
+ *   surface, ruled off from the chart under it.
  */
-export function OverviewTiles({ tiles, className }: { tiles: OverviewTile[]; className?: string }) {
+export function OverviewTiles({
+  tiles,
+  variant = 'grid',
+  className,
+}: {
+  tiles: OverviewTile[]
+  variant?: 'grid' | 'row' | 'flush'
+  className?: string
+}) {
+  const line = variant !== 'grid'
   return (
     <dl
       className={cn(
-        'bg-background grid grid-cols-1 overflow-hidden rounded-xl border sm:grid-cols-2',
-        '[&>div]:border-b sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-last-child(-n+2)]:border-b-0',
-        '[&>div:last-child]:border-b-0',
+        'grid grid-cols-1 overflow-hidden',
+        variant !== 'flush' && 'bg-background rounded-xl border',
+        variant === 'flush' && 'border-b',
+        line
+          ? 'sm:grid-cols-2 lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none [&>div]:border-b sm:[&>div:nth-child(odd)]:border-r lg:[&>div]:border-b-0 lg:[&>div:not(:last-child)]:border-r [&>div:last-child]:border-b-0'
+          : 'sm:grid-cols-2 [&>div]:border-b sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-last-child(-n+2)]:border-b-0 [&>div:last-child]:border-b-0',
         className,
       )}
     >
       {tiles.map((tile) => (
-        <div key={tile.label} className="min-w-0 space-y-1 px-6 py-5">
+        <div
+          key={tile.label}
+          className={cn('min-w-0 space-y-1', variant === 'flush' ? 'px-5 py-4' : 'px-6 py-5')}
+        >
           <dt className="text-muted-foreground text-xs">{tile.label}</dt>
-          <dd className="truncate text-2xl font-medium tracking-tight tabular-nums">
-            {tile.value}
+          <dd
+            className={cn(
+              'flex min-w-0 items-center gap-2 font-medium tracking-tight tabular-nums',
+              variant === 'flush' ? 'text-xl' : 'text-2xl',
+            )}
+          >
+            <span className="truncate">{tile.value}</span>
+            {tile.delta ?? null}
           </dd>
           {tile.detail ? (
             <dd className="text-muted-foreground truncate text-[13px]">{tile.detail}</dd>
@@ -390,7 +418,7 @@ export function SimpleTable<T>({
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" onMouseOver={revealTruncated}>
           <thead>
             <tr className="bg-muted/60">
               {columns.map((column, index) => (

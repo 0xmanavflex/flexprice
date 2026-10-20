@@ -59,6 +59,7 @@ export interface ChargeWire {
   startDate?: Date | undefined
   endDate?: Date | undefined
   sequence?: number | undefined
+  parentPriceId?: string | undefined
   createdAt?: Date | undefined
 }
 
@@ -152,6 +153,7 @@ export function toCharge(wire: ChargeWire): Charge {
     startDate: wire.startDate ?? null,
     endDate: wire.endDate ?? null,
     sequence: typeof wire.sequence === 'number' ? wire.sequence : null,
+    ...(wire.parentPriceId ? { parentPriceId: wire.parentPriceId } : {}),
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -294,6 +296,30 @@ export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknow
 }
 
 /**
+ * One entity's charges, through the one `queryPrice` call `usePrices` and
+ * `usePriceHistory` share, so the filter's `as never` is written once rather
+ * than once per caller (`scripts/check-sdk.mjs` counts them).
+ */
+async function fetchEntityCharges(
+  client: ReturnType<typeof useFlexprice>,
+  entityType: PriceEntityType,
+  entityId: string,
+  options: { limit: number; allowExpiredPrices?: boolean },
+): Promise<Charge[]> {
+  const response = await call(() =>
+    client.prices.queryPrice({
+      entityType,
+      entityIds: [entityId],
+      expand: 'meters',
+      ...(options.allowExpiredPrices ? { allowExpiredPrices: true } : {}),
+      limit: options.limit,
+      offset: 0,
+    } as never),
+  )
+  return (response.items ?? []).map((item) => toCharge(item as ChargeWire))
+}
+
+/**
  * The charges a plan (or add-on, or cost-sheet) carries.
  *
  * `expand: 'meters'` so a usage charge's row can name the feature it meters
@@ -305,19 +331,27 @@ export function usePrices(entityType: PriceEntityType, entityId: string) {
 
   return useQuery({
     queryKey: queryKeys.prices.list({ entityType, entityId }),
-    queryFn: async () => {
-      const response = await call(() =>
-        client.prices.queryPrice({
-          entityType,
-          entityIds: [entityId],
-          expand: 'meters',
-          limit: 100,
-          offset: 0,
-        } as never),
-      )
-      return (response.items ?? []).map((item) => toCharge(item as ChargeWire))
-    },
+    queryFn: () => fetchEntityCharges(client, entityType, entityId, { limit: 100 }),
     // A plan with no id yet (a create in flight) has no charges to fetch.
+    enabled: entityId.length > 0,
+  })
+}
+
+/**
+ * Every price an entity has had, ended ones included — `allow_expired_prices`.
+ *
+ * The plain list leaves out a price once it ends, so editing a charge made its
+ * earlier price vanish: the API had ended it and created a new version, not
+ * deleted it. The charges tables read this instead and fold each charge's
+ * versions together (`chargeLineages`), so the old price shows as history.
+ */
+export function usePriceHistory(entityType: PriceEntityType, entityId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.prices.history({ entityType, entityId }),
+    queryFn: () =>
+      fetchEntityCharges(client, entityType, entityId, { limit: 500, allowExpiredPrices: true }),
     enabled: entityId.length > 0,
   })
 }

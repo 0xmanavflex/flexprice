@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { type Charge, type CreateCharge, type PriceEntityType } from '@fp/domain'
-import { toUpdatePriceRequest, useCreateBulkPrices, usePrices, useUpdatePrice } from '@fp/query'
+import { type Charge, type CreateCharge, type PriceEntityType, chargeToDraft } from '@fp/domain'
+import { toUpdatePriceRequest, useCreateBulkPrices, usePriceHistory, useUpdatePrice } from '@fp/query'
 import { AddChargeDialog, ChargeTable } from '@fp/ui/pages'
 import { usePlanFormOptions } from '../plans/planFormOptions'
+import { priceHistoryRows } from './priceHistory'
 import { subTab } from './subTab'
 import { TerminateChargeDialog } from './TerminateChargeDialog'
 
@@ -27,7 +28,9 @@ export function CatalogCharges({
   title,
   emptyDescription,
 }: CatalogChargesProps) {
-  const charges = usePrices(entityType, entityId)
+  // Ended prices too, so an edited charge keeps its earlier price as history.
+  const charges = usePriceHistory(entityType, entityId)
+  const rows = priceHistoryRows(charges.data ?? [])
   const { meters, units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
@@ -55,7 +58,18 @@ export function CatalogCharges({
   return (
     <>
       <ChargeTable
-        charges={charges.data ?? []}
+        charges={rows.charges}
+        details={rows.details}
+        onRevert={(charge, versionId) => {
+          // No revert endpoint: the earlier price is saved as a new version from now.
+          const previous = (charges.data ?? []).find((price) => price.id === versionId)
+          return previous
+            ? updatePrice.mutateAsync({
+                id: charge.id,
+                body: toUpdatePriceRequest(chargeToDraft(previous)),
+              })
+            : Promise.reject(new Error(`That version is no longer on this ${noun}.`))
+        }}
         {...subTab(charges, 'charges')}
         {...(title ? { title } : {})}
         emptyDescription={emptyDescription}

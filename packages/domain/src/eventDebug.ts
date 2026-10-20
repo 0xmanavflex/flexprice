@@ -83,12 +83,31 @@ export interface EventDebug {
   attributedQuantity: string | null
   /** The customer it was matched to. */
   customer: { id: string; externalId: string; name: string } | null
+  /**
+   * Where the event was billed: one entry per subscription line item it was
+   * counted against (`processed_events`). Empty until it has been processed,
+   * and more than one when it matches several line items.
+   */
+  processedUsage: ProcessedUsage[]
   /** Every raw row stored under this event id, newest first. */
   versions: EventVersion[]
   /** Set when the sender supplied one, so replays can be explained. */
   idempotencyKey: string | null
   /** When the event reached Flexprice, which is where the trace starts. */
   ingestedAt: Date | null
+}
+
+/** One line item an event was counted against, as `processed_events` reports it. */
+export interface ProcessedUsage {
+  customerId: string
+  subscriptionId: string
+  lineItemId: string
+  priceId: string
+  meterId: string
+  featureId: string
+  /** The quantity counted, as the decimal string the API sent. */
+  quantity: string
+  processedAt: Date | null
 }
 
 export interface EventVersion {
@@ -270,6 +289,16 @@ export function toEventDebug(wire: unknown): EventDebug {
           name: text(customerRaw['name']),
         }
       : null,
+    processedUsage: list(body['processed_events']).map((row) => ({
+      customerId: text(row['customer_id']),
+      subscriptionId: text(row['subscription_id']),
+      lineItemId: text(row['sub_line_item_id']),
+      priceId: text(row['price_id']),
+      meterId: text(row['meter_id']),
+      featureId: text(row['feature_id']),
+      quantity: text(row['qty_total']) || '0',
+      processedAt: date(row['processed_at']),
+    })),
     versions: list(body['events']).map((row) => ({
       id: text(row['id']),
       ingestedAt: date(row['ingested_at']),

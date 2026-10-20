@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import {
-  type AggregationType,
+  AGGREGATION_LABEL,
   type Charge,
   type Entitlement,
   FEATURE_STATUS_LABEL,
@@ -10,7 +10,7 @@ import {
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon } from '@ui/icons'
+import { ArchiveIcon, CopyIcon, PencilIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
 import { DetailBreadcrumb } from '../../../compositions/detail/DetailShell'
@@ -22,7 +22,6 @@ import { Section } from '../../../compositions/layout/Section'
 import {
   DetailMoreMenu,
   DetailTabs,
-  Properties,
   type DetailMenuItem,
 } from '../../../compositions/detail/DetailKit'
 import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../../shared/cells'
@@ -88,22 +87,8 @@ export interface FeatureDetailViewProps {
    * The test-event snippet calls it, so staging never prints a production URL.
    */
   apiBaseUrl?: string
-}
-
-/**
- * The aggregation, named for what it is and nothing more: "Sum", not "Sum of
- * a field" or `SUM(tokens)`. The field and the unit are shown beside it as
- * their own values, so the label does not need to restate them.
- */
-const AGGREGATION_TYPE_NAME: Record<AggregationType, string> = {
-  COUNT: 'Count',
-  COUNT_UNIQUE: 'Count unique',
-  SUM: 'Sum',
-  SUM_WITH_MULTIPLIER: 'Sum with multiplier',
-  AVG: 'Average',
-  MAX: 'Max',
-  LATEST: 'Latest',
-  WEIGHTED_SUM: 'Weighted sum',
+  /** The label (group) the feature is filed under, by name. */
+  groupName?: string
 }
 
 export const DEFAULT_API_BASE_URL = 'https://api.cloud.flexprice.io/v1'
@@ -132,10 +117,6 @@ export function buildIngestCurl(feature: Feature, apiBaseUrl = DEFAULT_API_BASE_
     `    "source": "api"`,
     `  }'`,
   ].join('\n')
-}
-
-function formatDate(value: Date | null): string {
-  return value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value) : '—'
 }
 
 const mono = (value: string | null | undefined) =>
@@ -184,6 +165,7 @@ export function FeatureDetailView({
   onOpenChargeParent,
   onSaveMetadata,
   apiBaseUrl,
+  groupName,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
   const Glyph = FEATURE_TYPE_GLYPH[feature.type]
@@ -242,6 +224,7 @@ export function FeatureDetailView({
           <>
             <Status value={FEATURE_STATUS_LABEL[feature.status]} />
             <FeatureTypePill type={feature.type} label={FEATURE_TYPE_LABEL[feature.type]} />
+            {groupName ? <Pill size="sm">{groupName}</Pill> : null}
           </>
         }
         actions={<DetailMoreMenu label="More actions" items={menu} />}
@@ -249,29 +232,38 @@ export function FeatureDetailView({
 
       <DetailTabs tabs={tabs} value={tab} onChange={(next) => onTabChange(next as FeatureTab)} />
 
-      {tab === 'overview' ? (
-        <OverviewTab
-          feature={feature}
-          isMetered={isMetered}
-          archived={archived}
-          {...(apiBaseUrl ? { apiBaseUrl } : {})}
-          charges={charges}
-          chargesLoading={chargesLoading}
-          chargesError={chargesError}
-          chargesErrorKind={chargesErrorKind}
-          onRetryCharges={onRetryCharges}
-          {...(onAddPlan ? { onAddPlan } : {})}
-          {...(onOpenChargeParent ? { onOpenChargeParent } : {})}
-          entitlements={entitlements}
-          entitlementsLoading={entitlementsLoading}
-          entitlementsError={entitlementsError}
-          entitlementsErrorKind={entitlementsErrorKind}
-          onRetryEntitlements={onRetryEntitlements}
-          {...(onSaveMetadata ? { onSaveMetadata } : {})}
-        />
-      ) : (
-        <InformationTab feature={feature} isMetered={isMetered} />
-      )}
+      {/* One page: only the left column changes between tabs. The test event and
+          metadata stay put on the right in both. */}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {tab === 'overview' ? (
+          <OverviewTab
+            isMetered={isMetered}
+            charges={charges}
+            chargesLoading={chargesLoading}
+            chargesError={chargesError}
+            chargesErrorKind={chargesErrorKind}
+            onRetryCharges={onRetryCharges}
+            {...(onAddPlan ? { onAddPlan } : {})}
+            {...(onOpenChargeParent ? { onOpenChargeParent } : {})}
+            entitlements={entitlements}
+            entitlementsLoading={entitlementsLoading}
+            entitlementsError={entitlementsError}
+            entitlementsErrorKind={entitlementsErrorKind}
+            onRetryEntitlements={onRetryEntitlements}
+          />
+        ) : (
+          <InformationTab feature={feature} isMetered={isMetered} groupName={groupName} />
+        )}
+        <div className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-6">
+          {isMetered ? (
+            <TestEventPanel feature={feature} {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          ) : null}
+          <MetadataCard
+            metadata={feature.metadata ?? {}}
+            {...(onSaveMetadata && !archived ? { onSave: onSaveMetadata } : {})}
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -389,9 +381,7 @@ function EntitlementsSection({
  * entitlements table and the metadata card, and neither of the other two.
  */
 function OverviewTab({
-  feature,
   isMetered,
-  archived,
   charges,
   chargesLoading,
   chargesError,
@@ -404,13 +394,8 @@ function OverviewTab({
   entitlementsError,
   entitlementsErrorKind,
   onRetryEntitlements,
-  onSaveMetadata,
-  apiBaseUrl,
 }: {
-  feature: Feature
   isMetered: boolean
-  archived: boolean
-  apiBaseUrl?: string
   charges: FeatureChargeLink[]
   chargesLoading: boolean
   chargesError: string | null
@@ -423,59 +408,45 @@ function OverviewTab({
   entitlementsError: string | null
   entitlementsErrorKind?: ErrorKind | undefined
   onRetryEntitlements?: (() => void) | undefined
-  onSaveMetadata?: ((metadata: Record<string, string>) => Promise<unknown>) | undefined
 }) {
   return (
-    <div className="grid gap-5 xl:grid-cols-3">
-      <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
-        {isMetered ? (
-          <ChargeTable
-            charges={
-              chargesLoading || chargesError
-                ? []
-                : charges.map(({ charge, parentName }) => ({ ...charge, displayName: parentName }))
-            }
-            chargeColumnLabel="Plan / add-on"
-            description="Every plan and add-on that bills for this feature"
-            emptyDescription="No plan or add-on prices this feature yet."
-            layout="narrow"
-            hideRowActions
-            addLabel="Add plan"
-            facets={[
-              {
-                id: 'parent-status',
-                label: 'Plan status',
-                value: (charge) =>
-                  statusLabel(
-                    charges.find((row) => row.charge.id === charge.id)?.parentStatus ?? '',
-                  ),
-              },
-            ]}
-            {...(onOpenChargeParent ? { onRowClick: onOpenChargeParent } : {})}
-            isLoading={chargesLoading}
-            error={chargesError}
-            errorKind={chargesErrorKind}
-            onRetry={onRetryCharges}
-            {...(onAddPlan ? { onAdd: onAddPlan } : {})}
-          />
-        ) : null}
-        <EntitlementsSection
-          rows={entitlements}
-          isLoading={entitlementsLoading}
-          error={entitlementsError}
-          errorKind={entitlementsErrorKind}
-          onRetry={onRetryEntitlements}
+    <div className="flex min-w-0 flex-col gap-5">
+      {isMetered ? (
+        <ChargeTable
+          charges={
+            chargesLoading || chargesError
+              ? []
+              : charges.map(({ charge, parentName }) => ({ ...charge, displayName: parentName }))
+          }
+          chargeColumnLabel="Plan / add-on"
+          description="Every plan and add-on that bills for this feature"
+          emptyDescription="No plan or add-on prices this feature yet."
+          layout="narrow"
+          hideRowActions
+          addLabel="Add plan"
+          facets={[
+            {
+              id: 'parent-status',
+              label: 'Plan status',
+              value: (charge) =>
+                statusLabel(charges.find((row) => row.charge.id === charge.id)?.parentStatus ?? ''),
+            },
+          ]}
+          {...(onOpenChargeParent ? { onRowClick: onOpenChargeParent } : {})}
+          isLoading={chargesLoading}
+          error={chargesError}
+          errorKind={chargesErrorKind}
+          onRetry={onRetryCharges}
+          {...(onAddPlan ? { onAdd: onAddPlan } : {})}
         />
-      </div>
-      <div className="flex min-w-0 flex-col gap-5">
-        {isMetered ? (
-          <TestEventPanel feature={feature} {...(apiBaseUrl ? { apiBaseUrl } : {})} />
-        ) : null}
-        <MetadataCard
-          metadata={feature.metadata ?? {}}
-          {...(onSaveMetadata && !archived ? { onSave: onSaveMetadata } : {})}
-        />
-      </div>
+      ) : null}
+      <EntitlementsSection
+        rows={entitlements}
+        isLoading={entitlementsLoading}
+        error={entitlementsError}
+        errorKind={entitlementsErrorKind}
+        onRetry={onRetryEntitlements}
+      />
     </div>
   )
 }
@@ -488,7 +459,6 @@ function TestEventPanel({ feature, apiBaseUrl }: { feature: Feature; apiBaseUrl?
   }
   return (
     <Section
-      className="xl:col-span-2"
       title="Send a test event"
       bodyClassName="flex flex-col"
       action={
@@ -498,7 +468,7 @@ function TestEventPanel({ feature, apiBaseUrl }: { feature: Feature; apiBaseUrl?
         </Button>
       }
     >
-      <pre className="border-border bg-invert text-invert-foreground flex-1 overflow-x-auto rounded-lg border p-4 font-mono text-[12px]/relaxed">
+      <pre className="border-border bg-invert text-invert-foreground flex-1 rounded-lg border p-3.5 font-mono text-[11.5px]/relaxed break-words whitespace-pre-wrap">
         <code>{command}</code>
       </pre>
     </Section>
@@ -506,157 +476,132 @@ function TestEventPanel({ feature, apiBaseUrl }: { feature: Feature; apiBaseUrl?
 }
 
 /**
- * The meter's event filters, one row per event property.
+ * The create form, shown read-only: **Details** then **Metering**, the same
+ * cards with the same rows, labels and hints in the same order, so someone
+ * who just filled the form finds each field where they left it. Editing stays
+ * in one place — "Edit details" in the header's ⋯ menu opens the real form.
  *
- * Collapsed, a row is the property name and how many values it lets through;
- * expanded, it lists those values. A native `<details>` does the disclosure, so
- * keyboard and screen-reader behaviour come for free.
+ * Ids and timestamps are not create-form fields: the header's ID chip carries
+ * the id, and the right-hand rail (test event, metadata) is shared with
+ * Overview.
  */
-function EventProperties({ filters }: { filters: { key: string; values: string[] }[] }) {
-  if (filters.length === 0) {
-    return (
-      <p className="text-muted-foreground text-[13px]">No event filters: every event counts.</p>
-    )
-  }
+function InformationTab({
+  feature,
+  isMetered,
+  groupName,
+}: {
+  feature: Feature
+  isMetered: boolean
+  groupName?: string | undefined
+}) {
+  const filters = feature.meterFilters ?? []
   return (
-    <ul className="divide-border/60 flex flex-col divide-y rounded-lg border">
-      {filters.map((filter) => (
-        <li key={filter.key}>
-          <details className="group">
-            <summary className="hover:bg-muted/40 flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-sm [&::-webkit-details-marker]:hidden">
-              <ChevronRightIcon
-                aria-hidden
-                className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-90"
-              />
-              <span className="min-w-0 flex-1 truncate font-mono text-[13px]">{filter.key}</span>
-              <span className="text-muted-foreground shrink-0 text-xs">
-                {filter.values.length} {filter.values.length === 1 ? 'value' : 'values'}
-              </span>
-            </summary>
-            <div className="flex flex-wrap gap-1.5 px-4 ps-10 pt-1 pb-3">
-              {filter.values.map((value) => (
-                <span
-                  key={value}
-                  className="bg-muted/70 text-muted-foreground rounded-md px-2 py-0.5 font-mono text-xs"
-                >
-                  {value}
-                </span>
-              ))}
-            </div>
-          </details>
-        </li>
-      ))}
-    </ul>
-  )
-}
+    <div className="flex min-w-0 flex-col gap-6">
+      {/* The same locked card the Plan page uses, so the rows read at one size. */}
+      <EditableCard
+        title="Details"
+        locked
+        onSave={noSave}
+        fields={[
+          {
+            key: 'type',
+            label: 'Type',
+            value: FEATURE_TYPE_LABEL[feature.type],
+            hint: 'The type is fixed once the feature exists.',
+            readOnly: true,
+          },
+          { key: 'name', label: 'Name', value: feature.name, readOnly: true },
+          {
+            key: 'lookupKey',
+            label: 'Lookup key',
+            value: feature.lookupKey,
+            ...(feature.lookupKey ? { display: mono(feature.lookupKey) } : {}),
+            placeholder: 'None',
+            hint: 'Fixed once set — integrations key off it.',
+            readOnly: true,
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            value: feature.description,
+            placeholder: 'None',
+            readOnly: true,
+          },
+          {
+            key: 'label',
+            label: 'Label',
+            value: groupName ?? '',
+            placeholder: 'None',
+            hint: 'The label the feature is filed under.',
+            readOnly: true,
+          },
+        ]}
+      />
 
-/**
- * The create form, shown read-only.
- *
- * It used to be a mix: an editable card holding a few fields, an "Event and
- * aggregation" panel built out of `Properties`, and identifiers in a third
- * box — three idioms for one thing, in an order that matched nothing. Someone
- * who had just filled the create form could not find the field they had
- * filled.
- *
- * So this is the form's own shape: **Details** then **Metering**, the same
- * cards with the same labels in the same order, locked. Editing is the one
- * place it was always meant to be — "Edit details" in the header's ⋯ menu
- * opens the real form — so nothing here becomes unreachable, and there is no
- * longer a second, smaller editor that knows about four of the fields.
- */
-function InformationTab({ feature, isMetered }: { feature: Feature; isMetered: boolean }) {
-  const unit =
-    feature.unitSingular || feature.unitPlural
-      ? [feature.unitSingular, feature.unitPlural].filter(Boolean).join(' / ')
-      : ''
-
-  return (
-    <div className="grid gap-5 xl:grid-cols-3">
-      <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
+      {isMetered ? (
         <EditableCard
-          title="Details"
+          title="Metering"
           locked
+          onSave={noSave}
           fields={[
             {
-              key: 'type',
-              label: 'Type',
-              value: FEATURE_TYPE_LABEL[feature.type],
-              display: (
-                <FeatureTypePill type={feature.type} label={FEATURE_TYPE_LABEL[feature.type]} />
-              ),
-              readOnly: true,
-            },
-            { key: 'name', label: 'Name', value: feature.name, readOnly: true },
-            {
-              key: 'lookupKey',
-              label: 'Lookup key',
-              value: feature.lookupKey,
-              display: mono(feature.lookupKey),
+              key: 'event',
+              label: 'Event name',
+              value: feature.eventName ?? '',
+              ...(feature.eventName ? { display: mono(feature.eventName) } : {}),
+              placeholder: 'None',
+              hint: 'The event whose usage is measured.',
               readOnly: true,
             },
             {
-              key: 'description',
-              label: 'Description',
-              value: feature.description,
-              placeholder: 'No description',
-              multiline: true,
+              key: 'filters',
+              label: 'Event filters',
+              value: filters.length ? 'set' : '',
+              ...(filters.length
+                ? {
+                    display: mono(
+                      filters
+                        .map((filter) => `${filter.key} = ${filter.values.join(', ')}`)
+                        .join(', '),
+                    ),
+                  }
+                : {}),
+              placeholder: 'None',
+              hint: 'Only events whose property matches one of the values are counted.',
+              readOnly: true,
+            },
+            {
+              key: 'aggregation',
+              label: 'Aggregation',
+              value: feature.aggregationType ? AGGREGATION_LABEL[feature.aggregationType] : '',
+              placeholder: 'None',
+              hint: 'How events are combined into a usage number.',
+              readOnly: true,
+            },
+            // Only when the aggregation has one — the form hides it too.
+            ...(feature.aggregationField
+              ? [
+                  {
+                    key: 'field',
+                    label: 'Event field',
+                    value: feature.aggregationField,
+                    display: mono(feature.aggregationField),
+                    hint: 'The property on the event to aggregate.',
+                    readOnly: true,
+                  },
+                ]
+              : []),
+            {
+              key: 'unit',
+              label: 'Unit name',
+              value: feature.unitSingular,
+              placeholder: 'None',
+              hint: 'Shown after a quantity of one, for example call.',
               readOnly: true,
             },
           ]}
-          onSave={noSave}
         />
-
-        {isMetered ? (
-          <Section title="Metering">
-            <Properties
-              items={[
-                { label: 'Event name', value: mono(feature.eventName) },
-                {
-                  label: 'Aggregation',
-                  value: feature.aggregationType ? (
-                    <Pill size="sm">{AGGREGATION_TYPE_NAME[feature.aggregationType]}</Pill>
-                  ) : (
-                    '—'
-                  ),
-                },
-                // Only when the aggregation has one — the form hides it too.
-                ...(feature.aggregationField
-                  ? [{ label: 'Event field', value: mono(feature.aggregationField) }]
-                  : []),
-                ...(unit ? [{ label: 'Unit', value: unit }] : []),
-              ]}
-            />
-            <div className="mt-6 space-y-2 border-t pt-5">
-              <p className="text-muted-foreground text-xs">Event filters</p>
-              <EventProperties filters={feature.meterFilters ?? []} />
-            </div>
-          </Section>
-        ) : null}
-      </div>
-      <div className="flex min-w-0 flex-col gap-5">
-        {/* Not create-form fields: the ids people paste into API calls, and
-            when the record changed. Metadata is on Overview, beside the event
-            it annotates. */}
-        <Section title="Identifiers">
-          <Properties
-            columns={2}
-            items={[
-              { label: 'Feature ID', value: mono(feature.id) },
-              { label: 'Meter ID', value: mono(feature.meterId) },
-            ]}
-          />
-        </Section>
-        <Section title="History">
-          <Properties
-            columns={2}
-            items={[
-              { label: 'Created', value: formatDate(feature.createdAt) },
-              { label: 'Updated', value: formatDate(feature.updatedAt) },
-            ]}
-          />
-        </Section>
-      </div>
+      ) : null}
     </div>
   )
 }

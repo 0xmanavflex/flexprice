@@ -286,6 +286,7 @@ export {
   useSubscriptionCoupons,
   useSubscriptionInvoicePreview,
   useSubscriptionLines,
+  useSubscriptionLineHistory,
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
@@ -351,6 +352,7 @@ export {
   useCreateBulkPrices,
   useFeatureCharges,
   usePrices,
+  usePriceHistory,
   useTerminatePrice,
   useUpdatePrice,
 } from './prices'
@@ -437,6 +439,7 @@ export {
   useTenant,
   useTenantBillingUsage,
   useUpdateTenant,
+  useUpdateTenantMetadata,
 } from './tenant'
 export type { TenantBillingUsageWire, TenantWire } from './tenant'
 
@@ -624,3 +627,7 @@ export {
 } from './entityIntegrationLinks'
 
 export { useContractChargeAlerts } from './contractChargeAlerts'
+export { SAMPLE_EVENT_DURATION_SECONDS, useGenerateSampleEvents } from './sampleEvents'
+export { useFetchSupportChatHash } from './supportChat'
+export { useCustomerNames, useFeatureNames } from './entityNames'
+export type { NameMap } from './entityNames'

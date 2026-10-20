@@ -1768,6 +1768,11 @@ function contractLines(id: string, row: Record<string, unknown>): Record<string,
   const existing = contractLineStore.get(id)
   if (existing) return existing
   const currency = String(row['currency'] ?? 'USD')
+  // A real meter from the corpus, so the usage line can be edited like a live one.
+  const meterId =
+    (corpus['features'] as Corpus).items
+      .map((feature) => readString(feature, 'meter_id'))
+      .find(Boolean) ?? ''
   const lines: Record<string, unknown>[] = [
     {
       id: `${id}_line_1`,
@@ -1777,7 +1782,8 @@ function contractLines(id: string, row: Record<string, unknown>): Record<string,
       quantity: '1',
       billing_period: 'MONTHLY',
       currency,
-      price: { amount: '99.00', currency, billing_model: 'FLAT_FEE' },
+      price_id: `${id}_price_1`,
+      price: { id: `${id}_price_1`, amount: '99.00', currency, billing_model: 'FLAT_FEE' },
       // The real API emits Go's zero time for an open-ended line.
       end_date: '0001-01-01T00:00:00Z',
     },
@@ -1789,12 +1795,29 @@ function contractLines(id: string, row: Record<string, unknown>): Record<string,
       quantity: '0',
       billing_period: 'MONTHLY',
       currency,
-      price: { amount: '0.002', currency },
+      price_id: `${id}_price_2`,
+      meter_id: meterId,
+      price: {
+        id: `${id}_price_2`,
+        meter_id: meterId,
+        type: 'USAGE',
+        amount: '0.002',
+        currency,
+        billing_model: 'FLAT_FEE',
+        billing_period: 'MONTHLY',
+        invoice_cadence: 'ARREAR',
+      },
       end_date: '0001-01-01T00:00:00Z',
     },
   ]
   contractLineStore.set(id, lines)
   return lines
+}
+
+/** A line still billing: open-ended (Go's zero time) or ending in the future. */
+function lineIsActive(line: Record<string, unknown>): boolean {
+  const end = typeof line['end_date'] === 'string' ? Date.parse(line['end_date']) : NaN
+  return Number.isNaN(end) || end <= 0 || end > Date.now()
 }
 
 const COMMITMENT_KEYS = [
@@ -2540,7 +2563,24 @@ export const handlers = [
 
   search('/plans/search', 'plans'),
   search('/features/search', 'features'),
-  search('/prices/search', 'prices'),
+  // Like the API, an ended price is left out unless `allow_expired_prices` asks for it.
+  http.post(`${BASE}/prices/search`, async ({ request }) => {
+    const body = ((await request.json().catch(() => ({}))) ?? {}) as SearchBody & {
+      allow_expired_prices?: boolean
+    }
+    const refused = rejectUnknownExpand('prices', body.expand)
+    if (refused) return refused
+    if (demoEmpty()) return HttpResponse.json(emptyPage(body))
+    const source = sourceFor('prices')
+    const live = (row: Record<string, unknown>) => {
+      const end = Date.parse(readString(row, 'end_date'))
+      return Number.isNaN(end) || end <= 0 || end > Date.now()
+    }
+    const items = body.allow_expired_prices ? source.items : source.items.filter(live)
+    return HttpResponse.json(
+      page({ ...source, items, pagination: { ...source.pagination, total: items.length } }, body),
+    )
+  }),
   search('/invoices/search', 'invoices'),
   search('/subscriptions/search', 'subscriptions'),
   search('/addons/search', 'addons'),
@@ -3371,9 +3411,35 @@ export const handlers = [
   }),
   http.put(`${BASE}/prices/:id`, async ({ request, params }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
-    const { effective_from: _effectiveFrom, ...patch } = body
+    const { effective_from: effectiveFrom, ...patch } = body
     const amount = readString(patch, 'amount')
     const existing = byId('prices', String(params['id']))
+    const repriced = ['amount', 'billing_model', 'tiers', 'tier_mode', 'transform_quantity'].some(
+      (key) => patch[key] !== undefined,
+    )
+    if (existing && repriced) {
+      // As the API does: end this price and start a new version where it stops,
+      // pointing back at the first version. Nothing is deleted.
+      const at = typeof effectiveFrom === 'string' ? effectiveFrom : new Date().toISOString()
+      existing['end_date'] = at
+      const next = {
+        ...existing,
+        ...patch,
+        id: `${String(existing['id'])}_v${Date.now()}`,
+        parent_price_id: readString(existing, 'parent_price_id') || existing['id'],
+        sequence: Number(existing['sequence'] ?? 1) + 1,
+        start_date: at,
+        end_date: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...(amount
+          ? { display_amount: formatMoney(amount, readString(existing, 'currency')) }
+          : {}),
+      }
+      priceCorpus.items.push(next)
+      priceCorpus.pagination.total = priceCorpus.items.length
+      return HttpResponse.json(next)
+    }
     return patchRow(priceCorpus.items, String(params['id']), {
       ...patch,
       updated_at: new Date().toISOString(),
@@ -3382,9 +3448,14 @@ export const handlers = [
         : {}),
     })
   }),
-  http.delete(`${BASE}/prices/:id`, ({ params }) => {
-    removeRow(priceCorpus.items, String(params['id']))
-    priceCorpus.pagination.total = priceCorpus.items.length
+  // Terminating a price ends it (`end_date`); the API keeps the row.
+  http.delete(`${BASE}/prices/:id`, async ({ request, params }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const existing = byId('prices', String(params['id']))
+    if (existing) {
+      existing['end_date'] =
+        typeof body['end_date'] === 'string' ? body['end_date'] : new Date().toISOString()
+    }
     return HttpResponse.json({ success: true, id: params['id'] })
   }),
 
@@ -4090,7 +4161,8 @@ export const handlers = [
     const granted = additionsFor('grants', String(row['id']))
     return HttpResponse.json({
       ...row,
-      line_items: contractLines(String(row['id']), row),
+      // Like the API, the subscription read carries only the lines billing now.
+      line_items: contractLines(String(row['id']), row).filter(lineIsActive),
       ...(granted.length > 0
         ? {
             credit_grants: [
@@ -4204,6 +4276,23 @@ export const handlers = [
       },
     })
   }),
+  /** Every line of the listed contracts; `active_filter: false` keeps the ended ones. */
+  http.post(`${BASE}/subscriptions/lineitems/search`, async ({ request }) => {
+    const body = await readBody(request)
+    const ids = Array.isArray(body['subscription_ids'])
+      ? (body['subscription_ids'] as string[])
+      : []
+    const items = ids.flatMap((id) => {
+      const row = sourceFor('subscriptions').items.find((item) => readString(item, 'id') === id)
+      if (!row) return []
+      const lines = contractLines(id, row)
+      return body['active_filter'] === false ? lines : lines.filter(lineIsActive)
+    })
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: items.length, offset: 0 },
+    })
+  }),
   http.put(`${BASE}/subscriptions/lineitems/:lineId`, async ({ request, params }) => {
     const line = findContractLine(String(params['lineId']))
     if (!line) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
@@ -4220,9 +4309,36 @@ export const handlers = [
     )
       .filter((key) => body[key] !== undefined)
       .reduce<Record<string, unknown>>((acc, key) => ({ ...acc, [key]: body[key] }), {})
-    line['price'] = { ...(line['price'] as object), ...priced }
-    Object.assign(line, commitmentOf(body))
-    return HttpResponse.json(line)
+    if (Object.keys(priced).length === 0) {
+      Object.assign(line, commitmentOf(body))
+      return HttpResponse.json(line)
+    }
+    // As the API does: the line is ended, not edited, and a new one starts
+    // where it stops, its price pointing back at the one it replaced.
+    const at =
+      typeof body['effective_from'] === 'string' ? body['effective_from'] : new Date().toISOString()
+    const previous = (line['price'] ?? {}) as Record<string, unknown>
+    line['end_date'] = at
+    const store = [...contractLineStore.values()].find((lines) => lines.includes(line))
+    const version = (store?.length ?? 0) + 1
+    const priceId = `${String(line['id'])}_price_v${version}`
+    const next: Record<string, unknown> = {
+      ...line,
+      ...commitmentOf(body),
+      id: `${String(line['id'])}_v${version}`,
+      price_id: priceId,
+      price: {
+        ...previous,
+        ...priced,
+        id: priceId,
+        parent_price_id: previous['parent_price_id'] ?? previous['id'],
+        created_at: new Date().toISOString(),
+      },
+      start_date: at,
+      end_date: '0001-01-01T00:00:00Z',
+    }
+    store?.push(next)
+    return HttpResponse.json(next)
   }),
   http.delete(`${BASE}/subscriptions/lineitems/:lineId`, async ({ request, params }) => {
     const line = findContractLine(String(params['lineId']))

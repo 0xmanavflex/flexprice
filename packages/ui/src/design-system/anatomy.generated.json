@@ -206,7 +206,7 @@
       "usedBy": [
         "ApiCard",
         "DashboardHome",
-        "RevenueDashboard",
+        "FilterSelect",
         "UsageCard"
       ],
       "story": "./src/pages/shared/ArcGauge.stories.tsx"
@@ -413,6 +413,8 @@
         "ConnectorCard",
         "CustomerWalletView",
         "DashboardHome",
+        "EventDetailSheet",
+        "FilterSelect",
         "RelatedCard",
         "ShellNav",
         "UsageCard"
@@ -565,7 +567,7 @@
       "usedBy": [
         "ApiCard",
         "DashboardHome",
-        "RevenueDashboard",
+        "FilterSelect",
         "UsageCard"
       ],
       "story": "./src/pages/shared/BlurredEmpty.stories.tsx"
@@ -579,8 +581,7 @@
         "IntegrationLogo",
         "IntegrationsBlock",
         "ListState",
-        "LoadingRows",
-        "RevenueDashboard"
+        "LoadingRows"
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
@@ -682,6 +683,7 @@
         "DashboardHome",
         "DateInput",
         "FilterBar",
+        "FilterSelect",
         "UsageCard"
       ],
       "story": null
@@ -709,7 +711,8 @@
         "CustomerAnalyticsView",
         "DashboardHome",
         "DateInput",
-        "RevenueDashboard",
+        "FilterSelect",
+        "RevenueReport",
         "UsageCard"
       ],
       "story": null
@@ -786,6 +789,7 @@
       "layer": "surface",
       "composes": [
         "ActivityLog",
+        "ConfirmDialog",
         "PencilIcon",
         "Sheet"
       ],
@@ -862,6 +866,7 @@
         "ApiCard",
         "BlurredEmpty",
         "DashboardHome",
+        "FilterSelect",
         "MetricChart",
         "TrendBadge",
         "UsageCard",
@@ -1163,6 +1168,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ChargeSheet",
         "ContractIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
@@ -1263,7 +1269,7 @@
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
-      "story": null
+      "story": "./src/pages/contracts/ContractIntegrations.stories.tsx"
     },
     "ContractQuantityDialog": {
       "file": "src/pages/contracts/ContractQuantityDialog.tsx",
@@ -1713,6 +1719,7 @@
         "Pill",
         "PlusIcon",
         "RelatedCard",
+        "RocketIcon",
         "RowActionsMenu",
         "Section",
         "Status",
@@ -1884,7 +1891,7 @@
         "ApiCard",
         "CollectionsSummary",
         "DashboardHome",
-        "RevenueDashboard",
+        "FilterSelect",
         "UsageCard"
       ],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
@@ -1900,9 +1907,9 @@
         "DashboardHome",
         "EntityList",
         "ErrorState",
+        "FilterSelect",
         "ListState",
         "LoadingRows",
-        "RevenueDashboard",
         "UsageCard"
       ],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
@@ -2072,7 +2079,7 @@
         "InvoiceDetailView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
-        "RevenueDashboard",
+        "RevenueReport",
         "SubscriptionDetailView",
         "TaxDialog",
         "WalletLedgerTable",
@@ -2092,6 +2099,7 @@
         "CustomerDetail",
         "FeatureDetailView",
         "InvoiceDetailView",
+        "RevenueReport",
         "SettingsShell",
         "SubscriptionDetailView"
       ],
@@ -2181,8 +2189,9 @@
       "file": "src/compositions/forms/EditableCard.tsx",
       "layer": "composition",
       "composes": [
-        "PencilIcon",
-        "Section"
+        "FormCard",
+        "FormRow",
+        "PencilIcon"
       ],
       "usedBy": [
         "CustomerDetail",
@@ -2475,6 +2484,7 @@
       "file": "src/pages/developers/events/EventDetailSheet.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowUpRightIcon",
         "DetailList",
         "EventTrace",
         "Sheet"
@@ -2613,7 +2623,6 @@
         "MetadataCard",
         "PencilIcon",
         "Pill",
-        "Properties",
         "Section",
         "Status",
         "SubTabState"
@@ -2938,6 +2947,33 @@
       "usedBy": [],
       "story": null
     },
+    "FilterSelect": {
+      "file": "src/pages/home/DashboardHome.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArcGauge",
+        "ArrowUpRightIcon",
+        "BlurredEmpty",
+        "Calendar",
+        "CalendarIcon",
+        "ChartSkeleton",
+        "DataFreshness",
+        "DataRegion",
+        "HalfDonut",
+        "MeterTrack",
+        "MetricChart",
+        "Money",
+        "Panel",
+        "PillColumns",
+        "RetryAction",
+        "SegmentMeter",
+        "ValuePlaceholder"
+      ],
+      "usedBy": [
+        "RevenueReport"
+      ],
+      "story": "./src/pages/home/DashboardHome.stories.tsx"
+    },
     "FilterSelectEditor": {
       "file": "src/components/reui/filters/filters-editors.tsx",
       "layer": "vendor/reui",
@@ -3033,6 +3069,7 @@
         "CouponForm",
         "CreditNoteForm",
         "CustomerForm",
+        "EditableCard",
         "FeatureForm",
         "FormDisclosure",
         "GroupForm",
@@ -3155,6 +3192,7 @@
         "CouponForm",
         "CreditNoteForm",
         "CustomerForm",
+        "EditableCard",
         "FeatureForm",
         "GroupForm",
         "PaymentForm",
@@ -3359,7 +3397,7 @@
       "usedBy": [
         "ApiCard",
         "DashboardHome",
-        "RevenueDashboard",
+        "FilterSelect",
         "UsageCard"
       ],
       "story": "./src/pages/shared/HalfDonut.stories.tsx"
@@ -4098,6 +4136,7 @@
       "usedBy": [
         "ApiCard",
         "DashboardHome",
+        "FilterSelect",
         "UsageCard"
       ],
       "story": "./src/pages/shared/SegmentMeter.stories.tsx"
@@ -4131,7 +4170,7 @@
         "ApiCard",
         "CustomerAnalyticsView",
         "DashboardHome",
-        "RevenueDashboard",
+        "FilterSelect",
         "UsageCard",
         "WebhookActivity"
       ],
@@ -4179,6 +4218,7 @@
         "EntityLink",
         "FeatureTypeGlyph",
         "FeatureTypePill",
+        "FilterSelect",
         "Formula",
         "Pill",
         "Status",
@@ -4342,6 +4382,7 @@
       "usedBy": [
         "CustomerDetail",
         "CustomerUsageSummary",
+        "RevenueReport",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -4433,7 +4474,8 @@
         "ApiCard",
         "ChartBox",
         "DashboardHome",
-        "RevenueDashboard",
+        "FilterSelect",
+        "RevenueReport",
         "UsageCard"
       ],
       "story": "./src/compositions/layout/Section.stories.tsx"
@@ -4649,6 +4691,7 @@
       "usedBy": [
         "ApiCard",
         "DashboardHome",
+        "FilterSelect",
         "UsageCard"
       ],
       "story": "./src/pages/shared/PillColumns.stories.tsx"
@@ -5029,7 +5072,6 @@
         "CopyIcon"
       ],
       "usedBy": [
-        "FeatureDetailView",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -5165,39 +5207,35 @@
         "DataRegion",
         "Deferred",
         "ErrorState",
+        "FilterSelect",
         "HalfDonut",
         "ListState",
         "LoadingRows",
         "MetricChart",
         "PartialDataNotice",
         "RefreshingIndicator",
-        "RevenueDashboard",
+        "RevenueReport",
         "TrendBadge",
         "UsageCard"
       ],
       "story": null
     },
-    "RevenueDashboard": {
-      "file": "src/pages/revenue/RevenueDashboard.tsx",
+    "RevenueReport": {
+      "file": "src/pages/revenue/RevenueReport.tsx",
       "layer": "surface",
       "composes": [
-        "ArcGauge",
-        "BlurredEmpty",
-        "Bone",
         "CalendarIcon",
-        "DataFreshness",
-        "DataRegion",
         "DetailTable",
-        "HalfDonut",
-        "MetricChart",
+        "DetailTabs",
+        "FilterSelect",
+        "OverviewTiles",
         "Panel",
         "RetryAction",
-        "SkeletonRegion",
-        "SplitMeter",
-        "ValuePlaceholder"
+        "SectionEmpty",
+        "TrendBadge"
       ],
       "usedBy": [],
-      "story": "./src/pages/revenue/RevenueDashboard.stories.tsx"
+      "story": "./src/pages/revenue/RevenueReport.stories.tsx"
     },
     "ReviewPanel": {
       "file": "src/pages/auth/ReviewPanel.tsx",
@@ -5220,7 +5258,9 @@
       "file": "src/reui/icons/default/outline/rocket.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "CustomerDetail"
+      ],
       "story": null
     },
     "RoleTree": {
@@ -5358,7 +5398,6 @@
         "CustomerTaxSection",
         "CustomerUsageSummary",
         "CustomerWalletView",
-        "EditableCard",
         "EntitlementTable",
         "FeatureDetailView",
         "FormPage",
@@ -5384,6 +5423,7 @@
       ],
       "usedBy": [
         "ChargeTable",
+        "RevenueReport",
         "SubTabState",
         "SubscriptionDetailView"
       ],
@@ -5407,6 +5447,7 @@
         "ApiCard",
         "CustomerAnalyticsView",
         "DashboardHome",
+        "FilterSelect",
         "UsageCard"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -5702,8 +5743,7 @@
         "IntegrationLogo",
         "IntegrationsBlock",
         "ListState",
-        "LoadingRows",
-        "RevenueDashboard"
+        "LoadingRows"
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
@@ -5816,7 +5856,6 @@
         "CopyIcon"
       ],
       "usedBy": [
-        "RevenueDashboard",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -6305,7 +6344,9 @@
         "SceneIllustration",
         "ValuePlaceholder"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "RevenueReport"
+      ],
       "story": "./src/pages/shared/TrendBadge.stories.tsx"
     },
     "TrendingDown": {
@@ -6493,9 +6534,9 @@
         "BlurredEmpty",
         "CollectionsSummary",
         "DashboardHome",
+        "FilterSelect",
         "HalfDonut",
         "MetricChart",
-        "RevenueDashboard",
         "TrendBadge",
         "UsageCard"
       ],
@@ -7483,6 +7524,14 @@
         "PaymentStatusBadge"
       ]
     },
+    "./src/pages/contracts/ContractIntegrations.stories.tsx": {
+      "title": "App/Contracts/Contract integrations",
+      "component": "ContractIntegrations",
+      "uses": [
+        "ContractIntegrations",
+        "RelatedCard"
+      ]
+    },
     "./src/pages/contracts/SubscriptionDetailView.stories.tsx": {
       "title": "Renews",
       "component": "SubscriptionDetailView",
@@ -8001,11 +8050,11 @@
         "PageShell"
       ]
     },
-    "./src/pages/revenue/RevenueDashboard.stories.tsx": {
-      "title": "App/Revenue/Revenue dashboard",
-      "component": "RevenueDashboard",
+    "./src/pages/revenue/RevenueReport.stories.tsx": {
+      "title": "App/Revenue/Revenue report",
+      "component": null,
       "uses": [
-        "RevenueDashboard"
+        "RevenueReport"
       ]
     },
     "./src/pages/settings/cost-sheets/CostMarginCard.stories.tsx": {
@@ -8880,9 +8929,9 @@
     "RevenuePage": {
       "file": "apps/console/src/pages/revenue/RevenuePage.tsx",
       "pattern": "Dashboard",
-      "route": null,
+      "route": "/revenue",
       "uses": [
-        "RevenueDashboard"
+        "RevenueReport"
       ]
     },
     "SettingsPage": {

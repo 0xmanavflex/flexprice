@@ -7,6 +7,7 @@ import {
   useFeature,
   useFeatureCharges,
   useFeatureEntitlements,
+  useGroup,
   useUpdateFeature,
   useFlexpriceServerURL,
 } from '@fp/query'
@@ -34,6 +35,8 @@ export interface FeatureDetailPageProps {
 export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
   const apiBaseUrl = useFlexpriceServerURL()
+  // The label the feature is filed under, by name; no request when it has none.
+  const group = useGroup(feature.data?.groupId ?? '')
   const navigate = useNavigate()
   const charges = useFeatureCharges(
     feature.data?.type === FeatureType.Metered ? feature.data.meterId : null,
@@ -74,6 +77,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
       <FeatureDetailView
         feature={data}
         apiBaseUrl={apiBaseUrl}
+        {...(group.data?.name ? { groupName: group.data.name } : {})}
         tab={tab}
         onTabChange={setTab}
         onBack={onNavigateToList}

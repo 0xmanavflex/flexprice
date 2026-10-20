@@ -5,6 +5,7 @@ import {
   DEFAULT_TAX_RATE_QUERY,
   SubscriptionStatus,
   type SubscriptionCancellationType,
+  lineRevertDraft,
 } from '@fp/domain'
 import {
   ApiError,
@@ -38,6 +39,7 @@ import {
   useSubscriptionInvoicePreview,
   useSubscriptionInvoices,
   useSubscriptionLines,
+  useSubscriptionLineHistory,
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
@@ -99,6 +101,9 @@ export function SubscriptionDetailPage({
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
   const lines = useSubscriptionLines(subscriptionId)
+  // Ended lines too, so a changed price stays visible as an inactive version.
+  // If it fails, the page falls back to the lines billing now.
+  const lineHistory = useSubscriptionLineHistory(subscriptionId)
   const chargeAlerts = useContractChargeAlerts(subscriptionId)
   const entitlements = useSubscriptionEntitlements(subscriptionId)
   const creditGrants = useSubscriptionCreditGrants(subscriptionId)
@@ -176,6 +181,14 @@ export function SubscriptionDetailPage({
       <SubscriptionDetailView
         subscription={data}
         lines={part(lines)}
+        {...(lineHistory.data ? { lineHistory: lineHistory.data } : {})}
+        onRevertLine={(line, previous) => {
+          // No revert endpoint: the old price goes out as a new version from now.
+          const draft = lineRevertDraft(previous, line.priceId)
+          return draft
+            ? editLine.mutateAsync({ lineItemId: line.id, draft })
+            : Promise.reject(new Error('The earlier price was not reported, so it cannot be restored.'))
+        }}
         chargeAlerts={part(chargeAlerts)}
         entitlements={part(entitlements)}
         creditGrants={part(creditGrants)}

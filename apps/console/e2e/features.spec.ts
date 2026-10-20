@@ -136,7 +136,8 @@ test.describe('the features list', () => {
     const url = page.url()
     await page.getByRole('tab', { name: 'Information' }).click()
     await expect(page.getByRole('heading', { name: 'Details' })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^Edit/ })).toHaveCount(0)
+    // The shared rail's metadata card keeps its own Edit; the form cards have none.
+    await expect(page.getByRole('button', { name: /^Edit (?!metadata)/ })).toHaveCount(0)
     await expect(page).toHaveURL(url)
 
     // Editing is the one place it was always meant to be.

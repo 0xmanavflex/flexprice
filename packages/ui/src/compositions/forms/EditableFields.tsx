@@ -34,6 +34,8 @@ export interface EditableFieldDef {
   placeholder?: string
   validate?: (next: string) => string | null
   readOnly?: boolean
+  /** A short explanation, shown as an info hint beside the label. */
+  hint?: string
 }
 
 export interface EditableFieldsProps {

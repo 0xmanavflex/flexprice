@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
@@ -25,7 +25,15 @@ import {
   SheetTitle,
 } from '@ui/components/primitives/sheet'
 import { ActivityLog, type ActivityLogEntry } from '@ui/compositions/detail/ActivityLog'
-import { BellIcon, ClockIcon, PencilIcon, ScaleIcon, TicketPercentIcon } from '@ui/icons'
+import {
+  BellIcon,
+  ClockIcon,
+  PencilIcon,
+  RotateCcwIcon,
+  ScaleIcon,
+  TicketPercentIcon,
+} from '@ui/icons'
+import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -67,6 +75,11 @@ export interface ChargeSheetProps {
   locale?: string
   priceLabel?: string | undefined
   editableSections?: readonly ChargeSection[] | undefined
+  /**
+   * Bring back the version just before the current one. Resolves when saved;
+   * rejects with an Error whose message is shown. Omitted, no revert is offered.
+   */
+  onRevert?: ((versionId: string) => Promise<unknown>) | undefined
 }
 
 function modelLabel(charge: Charge): string {
@@ -301,8 +314,14 @@ export function ChargeSheet({
   locale,
   priceLabel,
   editableSections,
+  onRevert,
 }: ChargeSheetProps) {
   const body = useRef<HTMLDivElement>(null)
+  const [reverting, setReverting] = useState<{ id: string; price: string; from: string } | null>(
+    null,
+  )
+  const [revertPending, setRevertPending] = useState(false)
+  const [revertError, setRevertError] = useState<string | null>(null)
 
   // Opened from a flag: bring that box into view once the sheet has settled.
   useEffect(() => {
@@ -348,14 +367,40 @@ export function ChargeSheet({
     id: version.id,
     title: version.price,
     at: version.startDate ? dates.format(version.startDate) : '—',
-    ...(index === 0 ? { record: 'Current' } : {}),
+    // The newest is the price billing now; every earlier one is kept, inactive.
+    record: index === 0 ? 'Current' : 'Inactive',
     summary: [
-      version.endDate ? `Ends ${dates.format(version.endDate)}` : 'No end date',
+      version.endDate
+        ? `${index === 0 ? 'Ends' : 'Ended'} ${dates.format(version.endDate)}`
+        : 'No end date',
       version.updatedAt ? `Last updated ${dates.format(version.updatedAt)}` : null,
     ]
       .filter(Boolean)
       .join(' · '),
     ...(version.actor ? { by: version.actor } : {}),
+    // Only the version just before the current one can be brought back.
+    ...(index === 1 && onRevert
+      ? {
+          action: (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-3"
+              onClick={() => {
+                setRevertError(null)
+                setReverting({
+                  id: version.id,
+                  price: version.price,
+                  from: version.startDate ? dates.format(version.startDate) : '',
+                })
+              }}
+            >
+              <RotateCcwIcon aria-hidden />
+              Revert to this version
+            </Button>
+          ),
+        }
+      : {}),
   }))
 
   const coupons = detail?.coupons ?? (detail?.coupon ? [detail.coupon] : [])
@@ -479,6 +524,36 @@ export function ChargeSheet({
           ) : null}
         </div>
       </SheetContent>
+      <ConfirmDialog
+        open={reverting !== null}
+        onOpenChange={(open) => (open ? undefined : setReverting(null))}
+        title={
+          reverting?.from
+            ? `Revert to the version from ${reverting.from}?`
+            : 'Revert to the earlier version?'
+        }
+        description={`${name} goes back to ${reverting?.price ?? 'its previous price'}, as a new version starting now. The current price is kept in the history as inactive, and invoices already issued keep the price they were billed at.`}
+        confirmLabel="Revert"
+        isPending={revertPending}
+        error={revertError}
+        onConfirm={() => {
+          if (!reverting || !onRevert) return
+          setRevertPending(true)
+          onRevert(reverting.id)
+            .then(() => {
+              setReverting(null)
+              onClose()
+            })
+            .catch((caught: unknown) =>
+              setRevertError(
+                caught instanceof Error && caught.message
+                  ? caught.message
+                  : 'The price could not be reverted. Try again.',
+              ),
+            )
+            .finally(() => setRevertPending(false))
+        }}
+      />
     </Sheet>
   )
 }
