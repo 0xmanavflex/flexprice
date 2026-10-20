@@ -166,11 +166,14 @@ export function useDataExportCounts() {
   })
 }
 
+type CreateScheduledTaskBody = Parameters<Flexprice['scheduledTasks']['createScheduledTask']>[0]
+type ListTasksBody = NonNullable<Parameters<Flexprice['tasks']['listTasks']>[0]>
+
 /** The request body for a new export: a managed bucket sends no bucket details. */
 export function toCreateDataExportRequest(
   draft: CreateDataExport,
   { flexpriceManaged }: { flexpriceManaged: boolean },
-): Record<string, unknown> {
+): CreateScheduledTaskBody {
   const metadata = draft.metadataFields.map((field) => ({
     entityType: field.entity,
     fieldKey: field.fieldKey.trim(),
@@ -219,7 +222,7 @@ export function useCreateDataExport() {
       toDataExport(
         (await call(() =>
           client.scheduledTasks.createScheduledTask(
-            toCreateDataExportRequest(draft, { flexpriceManaged }) as never,
+            toCreateDataExportRequest(draft, { flexpriceManaged }),
           ),
         )) as DataExportWire,
       ),
@@ -305,15 +308,14 @@ export function useExportRuns(exportId: string, query: ExportRunQuery) {
   return useQuery({
     queryKey: queryKeys.dataExports.runs(exportId, { ...query }),
     queryFn: async () => {
-      const response = await call(() =>
-        client.tasks.listTasks({
-          scheduledTaskId: exportId,
-          taskType: 'EXPORT',
-          limit: query.pageSize,
-          offset: (query.page - 1) * query.pageSize,
-          ...(query.status === EXPORT_RUN_STATUS.All ? {} : { taskStatus: query.status }),
-        } as never),
-      )
+      const request: ListTasksBody = {
+        scheduledTaskId: exportId,
+        taskType: 'EXPORT',
+        limit: query.pageSize,
+        offset: (query.page - 1) * query.pageSize,
+        ...(query.status === EXPORT_RUN_STATUS.All ? {} : { taskStatus: query.status }),
+      }
+      const response = await call(() => client.tasks.listTasks(request))
       return {
         runs: (response.items ?? []).map((item) => toExportRun(item as ExportRunWire)),
         total: response.pagination?.total ?? response.items?.length ?? 0,
