@@ -147,6 +147,13 @@ export const queryKeys = {
   dataExports: {
     all: () => ['dataExports'] as const,
     list: (filter: Record<string, unknown>) => ['dataExports', 'list', filter] as const,
+    detail: (id: string) => ['dataExports', 'detail', id] as const,
+    runs: (id: string, filter: Record<string, unknown>) =>
+      ['dataExports', 'runs', id, filter] as const,
+    counts: () => ['dataExports', 'counts'] as const,
+  },
+  s3Connections: {
+    all: () => ['s3Connections'] as const,
   },
   workflowRuns: {
     all: () => ['workflowRuns'] as const,

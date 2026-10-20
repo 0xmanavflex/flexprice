@@ -17,7 +17,12 @@ function fixtures(): DataExport[] {
       bucket: 'acme-billing',
       region: 'us-east-1',
       keyPrefix: 'flexprice/invoices/',
+      compression: 'gzip',
+      encryption: 'AES256',
+      endpointUrl: '',
+      metadataFields: [],
       createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-02T00:00:00Z'),
     },
     {
       id: 'task_02',
@@ -30,7 +35,12 @@ function fixtures(): DataExport[] {
       bucket: 'acme-usage',
       region: 'eu-west-1',
       keyPrefix: '',
+      compression: 'none',
+      encryption: 'AES256',
+      endpointUrl: '',
+      metadataFields: [],
       createdAt: new Date('2026-02-10T00:00:00Z'),
+      updatedAt: null,
     },
   ]
 }

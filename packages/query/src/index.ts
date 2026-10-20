@@ -545,8 +545,27 @@ export { fetchWorkflowRuns, toWorkflowFilter, toWorkflowRun, useWorkflowRuns } f
 export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'
-export { fetchDataExports, toDataExport, toDataExportFilter, useDataExports } from './dataExports'
-export type { DataExportPage, DataExportWire } from './dataExports'
+export {
+  fetchDataExports,
+  toCreateDataExportRequest,
+  toCreateS3ConnectionRequest,
+  toDataExport,
+  toDataExportFilter,
+  toExportRun,
+  toS3Connection,
+  useCreateDataExport,
+  useCreateS3Connection,
+  useDataExport,
+  useDataExportCounts,
+  useDataExports,
+  useDeleteDataExport,
+  useDownloadExportRun,
+  useExportRuns,
+  useRunDataExport,
+  useS3Connections,
+  useSetDataExportEnabled,
+} from './dataExports'
+export type { DataExportPage, DataExportWire, ExportRunWire, S3ConnectionWire } from './dataExports'
 export {
   countConnections,
   fetchIntegrations,

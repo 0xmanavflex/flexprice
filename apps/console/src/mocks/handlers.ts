@@ -270,13 +270,34 @@ const connectionRows: Record<string, unknown>[] = [
     created_at: '2026-08-12T09:30:00Z',
   },
   { id: 'conn_qb', name: 'QuickBooks', provider_type: 'quickbooks', connection_status: 'draft' },
+  // Export destinations. Storage is not a billing provider, so customers never show it.
+  {
+    id: 'conn_s3_01',
+    name: 'Acme data lake',
+    provider_type: 's3',
+    connection_status: 'published',
+    metadata: {},
+    sync_config: { s3: { is_flexprice_managed: false } },
+    created_at: '2026-01-20T10:00:00Z',
+  },
+  {
+    id: 'conn_s3_02',
+    name: 'Flexprice-managed bucket',
+    provider_type: 's3',
+    connection_status: 'published',
+    metadata: {},
+    sync_config: { s3: { is_flexprice_managed: true } },
+    created_at: '2026-03-02T10:00:00Z',
+  },
 ]
+const STORAGE_PROVIDERS = new Set(['s3', 'gcs'])
 let connectionSeq = 0
 const pendingOAuth = new Map<string, { name: unknown; provider: string; metadata: unknown }>()
 
 function publishedProviders(): string[] {
   return connectionRows
     .filter((row) => row['connection_status'] === 'published')
+    .filter((row) => !STORAGE_PROVIDERS.has(String(row['provider_type'])))
     .map((row) => String(row['provider_type']))
 }
 
@@ -1136,9 +1157,49 @@ const scheduledTasks: Record<string, unknown>[] = [
   interval,
   enabled,
   status: 'published',
-  job_config: { bucket, region, key_prefix: prefix },
+  job_config: {
+    bucket,
+    region,
+    key_prefix: prefix,
+    compression: index % 2 ? 'gzip' : 'none',
+    encryption: 'AES256',
+    ...(entity === 'credit_usage'
+      ? { export_metadata_fields: [{ entity_type: 'customer', field_key: 'account_manager' }] }
+      : {}),
+  },
   created_at: new Date(Date.UTC(2026, 1, 1 + index)).toISOString(),
+  updated_at: new Date(Date.UTC(2026, 1, 3 + index)).toISOString(),
 }))
+let scheduledTaskSeq = scheduledTasks.length
+
+/** Each export's runs, newest first: hourly windows for hourly exports, days for daily. */
+function exportRuns(task: Record<string, unknown>): Record<string, unknown>[] {
+  const hourly = task['interval'] === 'hourly'
+  const step = hourly ? 3_600_000 : 86_400_000
+  const end = Date.UTC(2026, 9, 20, 0)
+  return Array.from({ length: 23 }, (_, index) => {
+    const windowEnd = end - index * step
+    const status = index === 0 ? 'PROCESSING' : index === 4 ? 'FAILED' : 'COMPLETED'
+    return {
+      id: `run_${String(task['id'])}_${String(index + 1).padStart(3, '0')}`,
+      task_type: 'EXPORT',
+      entity_type: task['entity_type'],
+      scheduled_task_id: task['id'],
+      task_status: status,
+      file_url: status === 'COMPLETED' ? `s3://export/${String(task['id'])}/${index}.csv` : '',
+      total_records: status === 'COMPLETED' ? 1200 + ((index * 137) % 900) : 0,
+      error_summary: status === 'FAILED' ? 'Access denied writing to the bucket' : '',
+      metadata: {
+        start_time: new Date(windowEnd - step).toISOString(),
+        end_time: new Date(windowEnd).toISOString(),
+      },
+      started_at: new Date(windowEnd + 60_000).toISOString(),
+      created_at: new Date(windowEnd + 60_000).toISOString(),
+      status: 'published',
+    }
+  })
+}
+const manualRuns = new Map<string, Record<string, unknown>[]>()
 
 /**
  * `GET /taxes/rates`, the one settings panel with no handler at all.
@@ -3241,14 +3302,101 @@ export const handlers = [
     const limit = Number(url.searchParams.get('limit') ?? 25)
     const offset = Number(url.searchParams.get('offset') ?? 0)
     const enabled = url.searchParams.get('enabled')
-    const matches = scheduledTasks.filter(
-      (task) => enabled === null || String(task['enabled']) === enabled,
-    )
+    const connection = url.searchParams.get('connection_id')
+    const matches = scheduledTasks
+      .filter((task) => task['status'] !== 'deleted')
+      .filter((task) => enabled === null || String(task['enabled']) === enabled)
+      .filter((task) => !connection || task['connection_id'] === connection)
     return HttpResponse.json({
       items: matches.slice(offset, offset + limit),
       pagination: { total: matches.length, limit, offset },
     })
   }),
+
+  http.post(`${BASE}/tasks/scheduled`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const row = {
+      id: `task_mock_${++scheduledTaskSeq}`,
+      connection_id: body['connection_id'],
+      entity_type: body['entity_type'],
+      interval: body['interval'],
+      enabled: body['enabled'] ?? true,
+      status: 'published',
+      job_config: body['job_config'] ?? {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    scheduledTasks.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+
+  http.get(`${BASE}/tasks/scheduled/:id`, ({ params }) => {
+    const row = scheduledTasks.find((task) => task['id'] === params['id'])
+    if (!row || row['status'] === 'deleted')
+      return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
+    return HttpResponse.json(row)
+  }),
+
+  http.put(`${BASE}/tasks/scheduled/:id`, async ({ params, request }) => {
+    const row = scheduledTasks.find((task) => task['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
+    const body = (await request.json()) as Record<string, unknown>
+    if (typeof body['enabled'] === 'boolean') row['enabled'] = body['enabled']
+    row['updated_at'] = new Date().toISOString()
+    return HttpResponse.json(row)
+  }),
+
+  http.delete(`${BASE}/tasks/scheduled/:id`, ({ params }) => {
+    const row = scheduledTasks.find((task) => task['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
+    row['status'] = 'deleted'
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  /** `POST /tasks/scheduled/{id}/run` — a manual run, listed first among the runs. */
+  http.post(`${BASE}/tasks/scheduled/:id/run`, async ({ params, request }) => {
+    const row = scheduledTasks.find((task) => task['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const now = new Date()
+    const runs = manualRuns.get(String(row['id'])) ?? []
+    const run = {
+      id: `run_manual_${String(row['id'])}_${runs.length + 1}`,
+      task_type: 'EXPORT',
+      scheduled_task_id: row['id'],
+      task_status: 'PENDING',
+      total_records: 0,
+      metadata: {
+        start_time: body['start_time'] ?? new Date(now.getTime() - 3_600_000).toISOString(),
+        end_time: body['end_time'] ?? now.toISOString(),
+      },
+      started_at: now.toISOString(),
+      created_at: now.toISOString(),
+      status: 'published',
+    }
+    manualRuns.set(String(row['id']), [run, ...runs])
+    return HttpResponse.json({ workflow_id: `wf_${run.id}`, message: 'started' })
+  }),
+
+  /** `GET /tasks` — an export's runs, by `scheduled_task_id` and `task_status`. */
+  http.get(`${BASE}/tasks`, ({ request }) => {
+    const url = new URL(request.url)
+    const limit = Number(url.searchParams.get('limit') ?? 10)
+    const offset = Number(url.searchParams.get('offset') ?? 0)
+    const taskId = url.searchParams.get('scheduled_task_id')
+    const status = url.searchParams.get('task_status')
+    const task = scheduledTasks.find((row) => row['id'] === taskId)
+    const all = task ? [...(manualRuns.get(String(task['id'])) ?? []), ...exportRuns(task)] : []
+    const matches = all.filter((run) => !status || run['task_status'] === status)
+    return HttpResponse.json({
+      items: matches.slice(offset, offset + limit),
+      pagination: { total: matches.length, limit, offset },
+    })
+  }),
+
+  http.get(`${BASE}/tasks/:id/download`, ({ params }) =>
+    HttpResponse.json({ download_url: `https://example.com/exports/${String(params['id'])}.csv` }),
+  ),
 
   /*
    * `POST /workflows/search` — the Workflows list. The body is snake_case;

@@ -16,12 +16,7 @@
  * would recreate the 53 hand-written DTO files this architecture removes; the
  * SDK already has them, and they are only interesting once something renders.
  */
-export {
-  activityByline,
-  activitySourceLabel,
-  activityTitle,
-  describeActivity,
-} from './activity'
+export { activityByline, activitySourceLabel, activityTitle, describeActivity } from './activity'
 export type { ActivityEntry, ActivityFacts } from './activity'
 export {
   InvalidMoneyError,
@@ -629,13 +624,42 @@ export type { WorkflowQuery, WorkflowRun } from './workflowRun'
 export { DEFAULT_USAGE_SYNC_QUERY, USAGE_SYNC_STATE, USAGE_SYNC_STATE_LABEL } from './usageSync'
 export type { UsageSync, UsageSyncEntry, UsageSyncQuery, UsageSyncState } from './usageSync'
 export {
+  ALLOWED_METADATA_ENTITIES,
   DEFAULT_DATA_EXPORT_QUERY,
+  DEFAULT_EXPORT_RUN_QUERY,
   EXPORT_ENTITY,
   EXPORT_ENTITY_LABEL,
+  EXPORT_INTERVAL,
   EXPORT_INTERVAL_LABEL,
+  EXPORT_METADATA_ENTITY,
+  EXPORT_METADATA_ENTITY_LABEL,
+  EXPORT_RUN_STATUS,
+  EXPORT_RUN_STATUS_LABEL,
   EXPORT_STATE,
+  clampMetadataFields,
+  emptyDataExport,
+  emptyS3Connection,
+  validateDataExport,
+  validateS3Connection,
 } from './dataExport'
-export type { DataExport, DataExportQuery, ExportEntity, ExportState } from './dataExport'
+export type {
+  CreateDataExport,
+  CreateS3Connection,
+  DataExport,
+  DataExportErrors,
+  DataExportQuery,
+  ExportEntity,
+  ExportInterval,
+  ExportMetadataEntity,
+  ExportMetadataField,
+  ExportRun,
+  ExportRunQuery,
+  ExportRunRequest,
+  ExportRunStatus,
+  ExportState,
+  S3Connection,
+  S3ConnectionErrors,
+} from './dataExport'
 export { INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './integrationConnect'
