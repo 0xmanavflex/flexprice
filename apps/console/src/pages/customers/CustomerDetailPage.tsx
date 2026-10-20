@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import type { TenantFeatureUsage } from '@fp/domain'
+import { SubscriptionStatus, type TenantFeatureUsage } from '@fp/domain'
 import {
   useCustomer,
   useCustomerIntegrationLinks,
@@ -13,9 +13,19 @@ import {
   useActivityLog,
   useCustomerUsageSummary,
   useDeleteCustomer,
+  useGenerateSampleEvents,
   useUpdateCustomer,
+  SAMPLE_EVENT_DURATION_SECONDS,
 } from '@fp/query'
-import { CUSTOMER_TABS, CustomerDetail, QuotaCard, Toaster, type CustomerTab } from '@fp/ui/pages'
+import {
+  CUSTOMER_TABS,
+  CustomerDetail,
+  QuotaCard,
+  Toaster,
+  toast,
+  type CustomerTab,
+} from '@fp/ui/pages'
+import { useEnvironments } from '@/app/shell/useEnvironments'
 import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
@@ -83,6 +93,32 @@ export function CustomerDetailPage({
   const update = useUpdateCustomer()
   const remove = useDeleteCustomer()
   const [archiving, setArchiving] = useState(false)
+  const environments = useEnvironments()
+  const sampleEvents = useGenerateSampleEvents()
+  /*
+   * Sample events are for trying the product out, so, as in V1, they are only
+   * offered outside production, and only for a subscription that can bill
+   * them. The first live one is used; V1 asks for exactly one as well.
+   */
+  const streamTarget =
+    environments.current.kind === 'sandbox' && environments.current.id
+      ? (subscriptions.data ?? []).find(
+          (subscription) =>
+            subscription.status === SubscriptionStatus.Active ||
+            subscription.status === SubscriptionStatus.Trialing,
+        )
+      : undefined
+  const streamEvents = (subscriptionId: string, planName: string) => {
+    sampleEvents.mutate(subscriptionId, {
+      onSuccess: () =>
+        toast.success('Streaming sample events', {
+          description: `For the next ${SAMPLE_EVENT_DURATION_SECONDS} seconds, on ${planName}. They show in Events as they are ingested.`,
+          action: { label: 'View events', onClick: () => onTabChange('events') },
+        }),
+      onError: (cause) =>
+        toast.error(cause instanceof Error ? cause.message : 'Could not start streaming events.'),
+    })
+  }
   const navigate = useNavigate()
   // The customer is already on screen, so the menu leaves out "View customer".
   const invoiceRows = useInvoiceRowActions({
@@ -143,6 +179,9 @@ export function CustomerDetailPage({
         }
         onEdit={() => onEdit(customer.data.id)}
         onArchive={() => setArchiving(true)}
+        {...(streamTarget && !sampleEvents.isPending
+          ? { onStreamEvents: () => streamEvents(streamTarget.id, streamTarget.planName) }
+          : {})}
         onOpenInvoice={(invoiceId) =>
           void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
         }
