@@ -608,6 +608,7 @@ export {
   ENVIRONMENT_TYPE_DESCRIPTION,
   ENVIRONMENT_TYPE_LABEL,
   EnvironmentType,
+  SANDBOX_AUTO_CANCELLATION_DAYS,
   createEnvironmentSchema,
   emptyEnvironment,
   environmentKind,

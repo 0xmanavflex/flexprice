@@ -1,22 +1,25 @@
 import { useEffect, useRef } from 'react'
-import { CircleAlertIcon, InfoIcon } from '@ui/icons'
+import { CalendarIcon, CircleAlertIcon, InfoIcon, MailIcon, TriangleAlertIcon } from '@ui/icons'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   ENVIRONMENT_TYPE_LABEL,
   EnvironmentType,
+  SANDBOX_AUTO_CANCELLATION_DAYS,
   type CreateEnvironment,
   createEnvironmentSchema,
   emptyEnvironment,
 } from '@fp/domain'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
-import { buttonVariants } from '@ui/components/primitives/button'
+import { Button } from '@ui/components/primitives/button'
+import { ButtonGroup } from '@ui/components/primitives/button-group'
+import { Slack } from '@ui/components/primitives/svgs/slack'
 import { Field, FieldError, FieldGroup } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
-import { Alert, AlertAction, AlertDescription } from '@ui/components/reui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -29,8 +32,11 @@ import { provenance } from '@ui/provenance'
  *
  * Production is self-serve for almost nobody, so when it cannot be created here
  * the card stays selectable — choosing it is how someone asks for it — but
- * "Create environment" is disabled and a short "contact us" note with a Slack
- * link takes its place as the way forward.
+ * "Create environment" is disabled and V1's "requires an approval" note takes
+ * its place, with V1's three ways to reach us: Slack, email, or a booked call.
+ *
+ * A sandbox carries V1's warning: its subscriptions are cancelled after
+ * `SANDBOX_AUTO_CANCELLATION_DAYS` days.
  *
  * The chrome is the shared `FormDialog` with a `Composer` footer. It opens over
  * the page the person is already on.
@@ -41,6 +47,7 @@ export const EnvironmentFormProvenance = provenance({
     'compositions/form-dialog',
     'compositions/detail-kit',
     'ui/button',
+    'ui/button-group',
     'ui/input',
     'ui/radio-group',
     'ui/field',
@@ -62,8 +69,14 @@ export interface EnvironmentFormProps {
    * contact note instead.
    */
   canCreateProduction?: boolean
-  /** Where "Contact us" goes when production cannot be self-served. */
-  contactHref?: string
+  /** How to reach us when production cannot be self-served (V1's Slack, email and call). */
+  contact?: EnvironmentContact
+}
+
+export interface EnvironmentContact {
+  slackUrl: string
+  email: string
+  bookCallUrl: string
 }
 
 /** Two lines at most each: what the environment is for, and what it costs to get wrong. */
@@ -82,7 +95,7 @@ export function EnvironmentForm({
   isSubmitting = false,
   submitError = null,
   canCreateProduction = true,
-  contactHref,
+  contact,
 }: EnvironmentFormProps) {
   const form = useForm<CreateEnvironment>({
     resolver: standardSchemaResolver(createEnvironmentSchema),
@@ -187,25 +200,57 @@ export function EnvironmentForm({
           </Field>
         </FieldGroup>
 
+        {type === EnvironmentType.Sandbox ? (
+          <Alert variant="warning">
+            <TriangleAlertIcon aria-hidden />
+            <AlertDescription>
+              Sandbox subscriptions are automatically cancelled after{' '}
+              {SANDBOX_AUTO_CANCELLATION_DAYS} days.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {productionWithheld ? (
           // TODO(checkout): production becomes a paid upgrade. Replace this
           // contact note with the checkout flow and enable create once paid.
           <Alert>
             <InfoIcon aria-hidden className="text-muted-foreground" />
-            <AlertDescription>
-              Production is set up with our team. Contact us and we will enable it for you.
-            </AlertDescription>
-            {contactHref ? (
-              <AlertAction>
-                <a
-                  href={contactHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            <AlertTitle>Production environments require an approval.</AlertTitle>
+            <AlertDescription>Contact us to get started:</AlertDescription>
+            {contact ? (
+              <ButtonGroup aria-label="Contact us" className="col-start-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={
+                    <a href={contact.slackUrl} target="_blank" rel="noreferrer" role="link" />
+                  }
                 >
-                  Contact us on Slack
-                </a>
-              </AlertAction>
+                  <Slack aria-hidden className="size-4" />
+                  Slack
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<a href={`mailto:${contact.email}`} role="link" />}
+                >
+                  <MailIcon aria-hidden />
+                  Email
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={
+                    <a href={contact.bookCallUrl} target="_blank" rel="noreferrer" role="link" />
+                  }
+                >
+                  <CalendarIcon aria-hidden />
+                  Book a call
+                </Button>
+              </ButtonGroup>
             ) : null}
           </Alert>
         ) : null}

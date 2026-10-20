@@ -342,4 +342,9 @@ export const env = {
   pylon,
   /** A production build — config warnings stay quiet there, as in V1. */
   isProd: import.meta.env.PROD,
+  /**
+   * This build's version (its commit), stamped by `app-version.ts`; the same
+   * value is published at `/meta.json`. `null` when nothing stamped it.
+   */
+  appVersion: clean(import.meta.env.VITE_APP_VERSION) ?? null,
 } as const

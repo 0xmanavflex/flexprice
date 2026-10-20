@@ -221,6 +221,7 @@ const SettingsPage = lazy(() =>
 import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from './settingsSearch'
 import { MOVED_SECTIONS } from '@/pages/settings/sections'
 import { SupportChat } from '@/app/supportChat/SupportChat'
+import { VersionCheck } from '@/app/versionCheck/VersionCheck'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
@@ -367,7 +368,12 @@ function ShellLayout() {
         void navigate({ to: '/sign-in', search: {} as never })
       }}
       // Help: the support chat, when a provider is configured (as in V1).
-      headerActions={<SupportChat />}
+      headerActions={
+        <>
+          <SupportChat />
+          <VersionCheck />
+        </>
+      }
     >
       {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
       {/*

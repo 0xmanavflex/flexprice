@@ -711,6 +711,7 @@
         "CustomerAnalyticsView",
         "DashboardHome",
         "DateInput",
+        "EnvironmentForm",
         "FilterSelect",
         "RevenueReport",
         "UsageCard"
@@ -2544,6 +2545,7 @@
       "file": "src/pages/settings/environments/EnvironmentForm.tsx",
       "layer": "surface",
       "composes": [
+        "CalendarIcon",
         "Composer",
         "Field",
         "FormDialog",

@@ -18,7 +18,10 @@ const meta = {
     isSubmitting: { control: 'boolean' },
     submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
     canCreateProduction: { control: 'boolean' },
-    contactHref: { control: 'text', description: 'Slack link shown when production is withheld.' },
+    contact: {
+      control: 'object',
+      description: 'Slack, email and call shown when production is withheld.',
+    },
     defaultValue: { control: false },
     onOpenChange: { control: false },
     onSubmit: { control: false },
@@ -60,7 +63,11 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     isSubmitting: false,
     submitError: '',
     canCreateProduction: true,
-    contactHref: 'https://example.com/slack',
+    contact: {
+      slackUrl: 'https://example.com/slack',
+      email: 'support@example.com',
+      bookCallUrl: 'https://example.com/call',
+    },
   },
   argTypes: {
     startName: { control: 'text' },
@@ -119,17 +126,32 @@ export const SideBySideCards: Story = {
   },
 }
 
+/** V1's sandbox warning: its subscriptions are cancelled after 45 days. */
+export const SandboxWarning: Story = {
+  play: async () => {
+    await waitFor(() =>
+      expect(
+        dialog().getByText(/sandbox subscriptions are automatically cancelled after 45 days/i),
+      ).toBeVisible(),
+    )
+  },
+}
+
 /**
  * Production withheld: still selectable, but create is disabled.
  *
  * Choosing Production is how someone asks for it, so the card is not greyed
  * out. What changes is the way forward — "Create environment" is disabled and
- * a short contact note with a Slack link takes its place.
+ * V1's approval note takes its place, with Slack, email and a booked call.
  */
 export const ProductionUnavailable: Story = {
   args: {
     canCreateProduction: false,
-    contactHref: 'https://example.com/slack',
+    contact: {
+      slackUrl: 'https://example.com/slack',
+      email: 'support@example.com',
+      bookCallUrl: 'https://example.com/call',
+    },
   },
   play: async () => {
     const canvas = dialog()
@@ -142,11 +164,21 @@ export const ProductionUnavailable: Story = {
     await expect(canvas.getByRole('button', { name: 'Create environment' })).toBeDisabled()
     // Waited for, not asserted once: the dialog fades in, and `toBeVisible`
     // correctly says no while its panel is still at opacity 0.
-    await waitFor(() => expect(canvas.getByText(/set up with our team/i)).toBeVisible())
+    await waitFor(() => expect(canvas.getByText(/require an approval/i)).toBeVisible())
     await expect(canvas.getByRole('link', { name: /slack/i })).toHaveAttribute(
       'href',
       'https://example.com/slack',
     )
+    await expect(canvas.getByRole('link', { name: /email/i })).toHaveAttribute(
+      'href',
+      'mailto:support@example.com',
+    )
+    await expect(canvas.getByRole('link', { name: /book a call/i })).toHaveAttribute(
+      'href',
+      'https://example.com/call',
+    )
+    // The sandbox warning belongs to Sandbox only.
+    await expect(canvas.queryByText(/automatically cancelled/i)).toBeNull()
 
     // Back to Sandbox, and create is available again.
     await userEvent.click(canvas.getByRole('radio', { name: /sandbox/i }))
@@ -167,7 +199,11 @@ export const Submitting: Story = {
 export const Failed: Story = {
   args: { submitError: 'An environment with that name already exists.' },
   play: async () => {
-    await expect(dialog().getByRole('alert')).toHaveTextContent(/already exists/i)
+    // The sandbox warning is an alert too; the failure is the one that says so.
+    const failure = dialog()
+      .getAllByRole('alert')
+      .find((alert) => /already exists/i.test(alert.textContent ?? ''))
+    await expect(failure).toBeDefined()
   },
 }
 
