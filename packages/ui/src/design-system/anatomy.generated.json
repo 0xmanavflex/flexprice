@@ -127,6 +127,13 @@
       "usedBy": [],
       "story": null
     },
+    "AiChat": {
+      "file": "src/components/blocks/ai-chat-5/components/ai-chat.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "AlertCircle": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -392,6 +399,7 @@
       "composes": [],
       "usedBy": [
         "EntityList",
+        "PlanAiSetupView",
         "SortMenu"
       ],
       "story": null
@@ -2908,6 +2916,7 @@
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
         "PaymentStatusDialog",
+        "PlanAiSetupView",
         "PriceOverrideForm",
         "RegionField",
         "RunExportDialog",
@@ -3252,7 +3261,6 @@
         "FormDisclosure",
         "GroupForm",
         "PaymentForm",
-        "PlanAiSetupView",
         "PlanForm",
         "PriceUnitForm",
         "SubscriptionForm",
@@ -3750,6 +3758,13 @@
       "usedBy": [
         "CustomerDetail"
       ],
+      "story": null
+    },
+    "Integrations": {
+      "file": "src/components/blocks/ai-chat-5/components/integrations.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
       "story": null
     },
     "IntegrationsBlock": {
@@ -4387,6 +4402,13 @@
       ],
       "story": null
     },
+    "ModeChips": {
+      "file": "src/components/blocks/ai-chat-5/components/mode-chips.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Money": {
       "file": "src/pages/shared/Money.tsx",
       "layer": "surface",
@@ -4589,7 +4611,7 @@
       "story": null
     },
     "Page": {
-      "file": "src/components/blocks/app-shell-3/page.tsx",
+      "file": "src/components/blocks/ai-chat-5/page.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [
@@ -4924,12 +4946,14 @@
       "layer": "surface",
       "composes": [
         "AppFailure",
+        "ArrowUpIcon",
         "CheckIcon",
         "EmDash",
-        "FormCard",
+        "Field",
         "Pill",
-        "Section",
-        "Tag"
+        "PlusIcon",
+        "Tag",
+        "UsersIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanAiSetupView.stories.tsx"
@@ -5125,6 +5149,7 @@
         "InvoiceGrid",
         "Mark",
         "MetadataCard",
+        "PlanAiSetupView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "PlanForm",
@@ -5542,6 +5567,13 @@
       ],
       "story": "./src/pages/developers/exports/ExportForms.stories.tsx"
     },
+    "RunPanel": {
+      "file": "src/components/blocks/ai-chat-5/components/run-panel.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "S3ConnectionDialog": {
       "file": "src/pages/developers/exports/ExportForms.tsx",
       "layer": "surface",
@@ -5680,7 +5712,6 @@
         "GroupMembersView",
         "InvoiceDetailView",
         "MetadataCard",
-        "PlanAiSetupView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "RelatedCard",
@@ -6815,6 +6846,7 @@
       "composes": [],
       "usedBy": [
         "PageShell",
+        "PlanAiSetupView",
         "ShellSearch",
         "SubscriptionForm"
       ],
@@ -7046,6 +7078,13 @@
         "WebhookEndpointDetail",
         "WebhookMessageSheet"
       ],
+      "story": null
+    },
+    "Welcome": {
+      "file": "src/components/blocks/ai-chat-5/components/welcome.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
       "story": null
     },
     "Workflow": {
