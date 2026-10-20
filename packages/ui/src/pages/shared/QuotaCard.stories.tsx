@@ -15,7 +15,6 @@ const meta = {
     percentUsed: 40,
     resetPeriodLabel: 'Monthly',
     resetsOn: new Date('2026-10-01T00:00:00Z'),
-    overageNote: 'Flexprice does not price a per-feature overage.',
     locale: 'en-GB',
   },
   argTypes: {
@@ -28,7 +27,6 @@ const meta = {
     resetPeriodLabel: { control: 'select', options: ['Monthly', 'Weekly', 'Daily', 'Yearly'] },
     resetsOn: { control: false },
     overage: { control: false },
-    overageNote: { control: 'text' },
     action: { control: false },
     locale: { control: 'select', options: ['en-GB', 'en-US', 'de-DE', 'fr-FR', 'en-IN'] },
     className: { control: false },
@@ -55,7 +53,6 @@ interface PlaygroundArgs {
   state: 'limited' | 'unlimited' | 'not-reported'
   resetPeriodLabel: string
   showAction: boolean
-  showOverageNote: boolean
 }
 
 /** Pick the entitlement state, then drag used past included to see the over-quota treatment. */
@@ -68,7 +65,6 @@ export const Playground = {
     state: 'limited',
     resetPeriodLabel: 'Monthly',
     showAction: true,
-    showOverageNote: true,
   },
   argTypes: {
     feature: { control: 'text' },
@@ -78,32 +74,13 @@ export const Playground = {
     state: { control: 'inline-radio', options: ['limited', 'unlimited', 'not-reported'] },
     resetPeriodLabel: { control: 'select', options: ['Monthly', 'Weekly', 'Daily', 'Yearly'] },
     showAction: { control: 'boolean' },
-    showOverageNote: { control: 'boolean' },
   },
   parameters: {
     controls: {
-      include: [
-        'feature',
-        'unit',
-        'used',
-        'included',
-        'state',
-        'resetPeriodLabel',
-        'showAction',
-        'showOverageNote',
-      ],
+      include: ['feature', 'unit', 'used', 'included', 'state', 'resetPeriodLabel', 'showAction'],
     },
   },
-  render: ({
-    feature,
-    unit,
-    used,
-    included,
-    state,
-    resetPeriodLabel,
-    showAction,
-    showOverageNote,
-  }) => (
+  render: ({ feature, unit, used, included, state, resetPeriodLabel, showAction }) => (
     <div className="mx-auto max-w-sm">
       <QuotaCard
         feature={feature}
@@ -116,9 +93,6 @@ export const Playground = {
         }
         resetPeriodLabel={resetPeriodLabel}
         resetsOn={state === 'not-reported' ? null : new Date('2026-10-01T00:00:00Z')}
-        overageNote={
-          showOverageNote ? 'Flexprice does not price a per-feature overage.' : undefined
-        }
         action={showAction ? { label: 'View usage', onClick: fn() } : undefined}
         locale="en-GB"
       />
@@ -149,67 +123,42 @@ export const EveryReadingIsText: Story = {
 }
 
 /**
- * The regression guard for the rule this card exists to keep: the overage slot
- * has no source, so it is a dash with the reason beside it — never a figure
- * this component computed.
+ * Nothing prices a per-feature overage, so there is no cost slot: no
+ * "Overage —" beside "Over by", and never a figure this component computed.
  */
-export const OverageStaysADash: Story = {
+export const NoOverageSlotWithoutAPrice: Story = {
+  args: { used: 6200, percentUsed: 124 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      canvas.getByText('Flexprice does not price a per-feature overage.'),
-    ).toBeInTheDocument()
-    // The slot names itself, so the dash reads as an answer and not a glitch.
-    await expect(canvas.getByText(/Overage/)).toBeInTheDocument()
-    await expect(canvas.getByText('—')).toBeInTheDocument()
-    // Nothing invented a currency to fill the slot with.
+    await expect(canvas.queryByText(/Overage/)).not.toBeInTheDocument()
     await expect(canvas.queryByText(/[$£€]/)).not.toBeInTheDocument()
+    await expect(canvas.getByText('Over by 1,200 calls')).toBeInTheDocument()
   },
 }
 
-/**
- * In a grid the reason is stated once beneath it, not once per card, so the
- * note is opt-in. The slot is still labelled, so the dash is still legible.
- */
-export const NoteOmittedInAGrid: Story = {
-  args: { overageNote: undefined },
+/** A priced overage, when a caller has one, takes the slot. */
+export const PricedOverage: Story = {
+  args: { used: 6200, percentUsed: 124, overage: '$12.00' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.queryByText(/does not price/)).not.toBeInTheDocument()
     await expect(canvas.getByText(/Overage/)).toBeInTheDocument()
-    await expect(canvas.getByText('—')).toBeInTheDocument()
+    await expect(canvas.getByText('$12.00')).toBeInTheDocument()
   },
 }
 
 /**
- * `included: null` is unlimited. Not a full bar, not an empty one — no bar at
- * all, because there is no denominator to draw one against.
+ * The bar follows the counts, not the API's percentage. 291 used of 10 is a
+ * full, destructive bar even when `usage_percent` says 29.1.
  */
-export const Unlimited: Story = {
-  args: { included: null, used: 128_400, percentUsed: undefined },
+export const BarFollowsTheCounts: Story = {
+  args: { feature: 'AI Messages', unit: undefined, used: 291, included: 10, percentUsed: 29.1 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Unlimited')).toBeInTheDocument()
-    await expect(canvas.getByText('no included limit')).toBeInTheDocument()
-    await expect(canvas.queryByRole('progressbar')).not.toBeInTheDocument()
-    // The bug this story exists for: a `?? 0` rendering "0 of 0".
-    await expect(canvas.queryByText(/of 0/)).not.toBeInTheDocument()
-    await expect(canvas.getByText('128,400 calls')).toBeInTheDocument()
-  },
-}
-
-/** Nothing used yet. An honest zero, and a bar that is genuinely empty. */
-export const Zero: Story = {
-  args: { used: 0, percentUsed: 0 },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByText('0 calls')).toBeInTheDocument()
-    await expect(canvas.getByText('5,000 calls left')).toBeInTheDocument()
-    await expect(
-      canvas.getByRole('progressbar', {
-        name: 'API calls this period: 0 calls of 5,000 used (0%)',
-      }),
-    ).toBeInTheDocument()
+    const bar = canvas.getByRole('progressbar', {
+      name: 'API calls this period: 291 of 10 used (2,910%)',
+    })
+    await expect(bar).toHaveAttribute('aria-valuenow', '100')
+    await expect(canvas.getByText('Over by 281')).toBeInTheDocument()
   },
 }
 
