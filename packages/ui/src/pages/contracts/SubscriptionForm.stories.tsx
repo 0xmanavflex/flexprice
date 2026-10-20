@@ -15,7 +15,11 @@ import {
   makeCharges,
   makeEntitlements,
 } from '../product-catalog/plans/planDetailFixtures'
-import { SubscriptionForm, type SubscriptionPlanContext } from './SubscriptionForm'
+import {
+  SubscriptionForm,
+  type SubscriptionCustomerOption,
+  type SubscriptionPlanContext,
+} from './SubscriptionForm'
 
 const STEPS = ['plan', 'phases', 'commitments', 'billing', 'review'] as const
 
@@ -38,11 +42,12 @@ const CUSTOMER_NAMES = [
 const withName = (names: string[], index: number) =>
   `${names[index % names.length]}${index >= names.length ? ` ${index}` : ''}`
 
-const makeCustomers = (count: number): Option[] =>
+const makeCustomers = (count: number): SubscriptionCustomerOption[] =>
   Array.from({ length: count }, (_, i) => ({
     value: `cus_${i}`,
     label: withName(CUSTOMER_NAMES, i),
     hint: `cus_${i}`,
+    externalId: `ext_${i}`,
   }))
 
 const makePlans = (count: number): Option[] =>
@@ -165,6 +170,8 @@ function SubscriptionFormPlayground({
 
   return (
     <SubscriptionForm
+      // A fixed day, so the timeline and the first invoice read the same every run.
+      today="2026-10-20"
       // A different seed is a different form, so react-hook-form's defaults reset.
       key={`${prefilled}-${customerLocked}`}
       {...(prefilled
@@ -319,12 +326,20 @@ export const PhaseCharges: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'Phase 1' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Coupons' })).toBeVisible()
-    await expect(canvas.getByText('Immediately')).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Discounts' })).toBeVisible()
+    await expect(canvas.getByText('No discounts on Phase 1.')).toBeVisible()
+    await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
     await expect(canvas.queryByText('Minimum on this charge')).toBeNull()
-    const [menu] = canvas.getAllByRole('button', { name: /^Actions for / })
-    await userEvent.click(menu!)
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Configure commitment' }))
+    // Every row has a menu; a usage charge's holds its commitment.
+    for (const menu of canvas.getAllByRole('button', { name: /^Actions for / })) {
+      await userEvent.click(menu)
+      const item = screen.queryByRole('menuitem', { name: 'Configure commitment' })
+      if (item) {
+        await userEvent.click(item)
+        break
+      }
+      await userEvent.keyboard('{Escape}')
+    }
     await expect(canvas.getByText('True-up')).toBeVisible()
     await expect(canvas.getByText('Overage factor')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
@@ -374,7 +389,7 @@ export const SetsAFixedChargeQuantity: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
-    await expect(await canvas.findByText(/× 25$/)).toBeVisible()
+    await expect(await canvas.findByText(/Phase 1/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -397,8 +412,8 @@ export const PlanCreditGrants: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('Welcome credits')).toBeVisible()
-    await expect(canvas.getByText('From the plan')).toBeVisible()
-    await userEvent.click(canvas.getByRole('button', { name: 'Remove Welcome credits' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Welcome credits' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove Welcome credits' }))
     await expect(
       await canvas.findByText("All of the plan's grants are removed from this contract."),
     ).toBeVisible()
@@ -433,7 +448,7 @@ export const AddsAChargeForThisContract: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
-    await expect(await canvas.findByText('Charges for this contract (1)')).toBeVisible()
+    await expect(await canvas.findByText(/1 added/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -453,16 +468,16 @@ export const AddsAChargeForThisContract: Story = {
   },
 }
 
-/** A contract that would end before it starts is stopped on the first step, where the end date is. */
-export const EndDateCheckedOnTheFirstStep: Story = {
-  args: { prefilled: true, step: 'plan', endDate: '2000-01-01' },
+/** A contract that would end before it starts is stopped on the timeline step, where the end date is. */
+export const EndDateCheckedOnTheTimeline: Story = {
+  args: { prefilled: true, step: 'phases', endDate: '2000-01-01' },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await expect(
       await canvas.findByText('The contract starts today, so it must end after today'),
     ).toBeVisible()
-    await expect(args.onStepChange).not.toHaveBeenCalledWith('phases')
+    await expect(args.onStepChange).not.toHaveBeenCalledWith('commitments')
   },
 }
 
@@ -494,18 +509,25 @@ export const AddsAPhaseWithItsOwnDiscount: Story = {
     await expect(canvas.queryByRole('combobox', { name: 'Coupon for Phase 1' })).toBeNull()
     await expect(canvas.getByRole('button', { name: /Phase 1/ })).toBeVisible()
 
+    await userEvent.click(canvas.getByRole('button', { name: 'Add a coupon to Phase 2' }))
     await userEvent.click(canvas.getByRole('combobox', { name: 'Coupon for Phase 2' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Launch 20%' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Add discount' }))
-    await expect(canvas.getByText('On the whole phase')).toBeVisible()
+    await expect(canvas.getByText('On all of Phase 2')).toBeVisible()
   },
 }
-/** The benefits step: the contract's minimum spend, then entitlements, grants, taxes and add-ons. */
+/** Add-ons & benefits: add-ons, the contract's commitment, then entitlements, grants and taxes. */
 export const CommitmentsStep: Story = {
   args: { prefilled: true, step: 'commitments', chargeCount: 4, entitlementCount: 12 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    for (const title of ['Commitment', 'Entitlements', 'Credit grants', 'Taxes', 'Add-ons']) {
+    for (const title of [
+      'Add-ons',
+      'Contract commitment',
+      'Entitlements',
+      'Credit grants',
+      'Taxes',
+    ]) {
       await expect(await canvas.findByRole('heading', { name: title })).toBeVisible()
     }
     await expect(canvas.queryByText('Charge commitments')).toBeNull()
@@ -514,7 +536,8 @@ export const CommitmentsStep: Story = {
     await expect(canvas.getByText('True-up')).toBeVisible()
     // The customer's tax rate is applied for them.
     await expect(canvas.getByText('VAT · 20%')).toBeVisible()
-    await userEvent.type(canvas.getByLabelText(/^Minimum commitment/), '1000')
+    await expect(canvas.getByRole('columnheader', { name: 'Allowance' })).toBeVisible()
+    await userEvent.type(canvas.getByLabelText(/^Commitment amount/), '1000')
   },
 }
 
@@ -522,12 +545,15 @@ export const BillingStep: Story = {
   args: { prefilled: true, step: 'billing' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Billing configuration')).toBeVisible()
+    for (const title of ['Payment', 'Who pays', 'Other settings']) {
+      await expect(canvas.getByRole('heading', { name: title })).toBeVisible()
+    }
     for (const label of [
-      'Billing cycle',
-      'Billing anchor',
       'Payment terms',
-      'Prorate',
+      'Billing customer',
+      'Inherited customers',
+      'Prorate changes',
+      'Billing anchor',
       'Auto-invoice threshold',
       'Create as draft',
     ]) {
@@ -572,29 +598,25 @@ export const SubmitError: Story = {
 }
 
 /**
- * The review shows the whole contract, not a list of the bits that differ.
- *
- * The old version named the overrides and said "As the plan" for the rest, so
- * answering "what does this customer actually get?" meant stepping back
- * through the wizard. These assertions are what stops it being summarised
- * away again: every charge and every entitlement has a row, whether or not it
- * was changed.
+ * The review is one card per step, each with its Edit, and closes on the
+ * first invoice — the reference's summary, not a second copy of each step.
  */
-export const ReviewShowsEverything: Story = {
+export const ReviewByStep: Story = {
   args: { prefilled: true, step: 'review', chargeCount: 4, entitlementCount: 3 },
-  play: async ({ canvasElement }) => {
+  play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-
-    // Counted in the card titles, so the page says how much there is to read.
-    await expect(canvas.getByText('Charges (4)')).toBeVisible()
-    await expect(canvas.getByText('Entitlements (3)')).toBeVisible()
-
-    // Unchanged rows are present and say so, rather than being left out.
-    await expect(canvas.getAllByText('As the plan').length).toBeGreaterThan(0)
-
-    // The plan's own terms are on the page, not one step back.
-    await expect(canvas.getByText('Billing period')).toBeVisible()
+    for (const title of [
+      'Customer & plan',
+      'Phases & charges (1)',
+      'Add-ons & benefits',
+      'Billing',
+    ]) {
+      await expect(canvas.getByRole('heading', { name: title })).toBeVisible()
+    }
     await expect(canvas.getByText('14 days')).toBeVisible()
-    await expect(canvas.getByText('Immediately')).toBeVisible()
+    await expect(canvas.getByText(/^3, from the plan/)).toBeVisible()
+    await expect(canvas.getByText('First invoice')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit billing' }))
+    await expect(args.onStepChange).toHaveBeenLastCalledWith('billing')
   },
 }

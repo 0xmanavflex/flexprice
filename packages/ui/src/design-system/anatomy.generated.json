@@ -997,7 +997,8 @@
         "CreditGrantEditForm",
         "CustomerWalletView",
         "PaymentStatusDialog",
-        "PriceOverrideForm"
+        "PriceOverrideForm",
+        "SubscriptionForm"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -1300,6 +1301,19 @@
         "SubscriptionDetailView"
       ],
       "story": null
+    },
+    "ContractSummary": {
+      "file": "src/pages/contracts/ContractSummary.tsx",
+      "layer": "surface",
+      "composes": [
+        "FormPreview",
+        "PreviewRow",
+        "PreviewRows"
+      ],
+      "usedBy": [
+        "SubscriptionForm"
+      ],
+      "story": "./src/pages/contracts/ContractSummary.stories.tsx"
     },
     "ContractUsageEditForm": {
       "file": "src/pages/contracts/ContractUsageEditForm.tsx",
@@ -3174,6 +3188,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ContractSummary",
         "PlanPreviewCard"
       ],
       "story": "./src/compositions/forms/FormPreview.stories.tsx"
@@ -4933,6 +4948,7 @@
         "ShellCreateMenu",
         "ShellSearch",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "SubscriptionGrid",
         "TaxDialog",
         "TaxRateGrid",
@@ -4960,14 +4976,18 @@
       "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "ContractSummary"
+      ],
       "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "PreviewRows": {
       "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "ContractSummary"
+      ],
       "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "PreviewSection": {
@@ -5729,6 +5749,7 @@
       ],
       "usedBy": [
         "PriceOverrideForm",
+        "SubscriptionForm",
         "TierTable"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -5992,7 +6013,9 @@
       "file": "src/pages/contracts/SubscriptionForm.tsx",
       "layer": "surface",
       "composes": [
+        "ChoiceCards",
         "ContractChargeDialog",
+        "ContractSummary",
         "CreditGrantCreateForm",
         "DateInput",
         "EmptyState",
@@ -6002,8 +6025,12 @@
         "OptionCombobox",
         "OptionSelect",
         "PencilIcon",
+        "PlusIcon",
         "PriceOverrideForm",
-        "RowActionsMenu"
+        "RowActionsMenu",
+        "SimpleTable",
+        "UsersIcon",
+        "WalletIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionForm.stories.tsx"
@@ -6521,7 +6548,8 @@
       "composes": [],
       "usedBy": [
         "PageShell",
-        "ShellSearch"
+        "ShellSearch",
+        "SubscriptionForm"
       ],
       "story": null
     },
@@ -6558,7 +6586,8 @@
         "CustomerWalletView",
         "InvoiceDetailView",
         "InvoiceGrid",
-        "PageShell"
+        "PageShell",
+        "SubscriptionForm"
       ],
       "story": null
     },
@@ -7530,6 +7559,13 @@
       "uses": [
         "ContractIntegrations",
         "RelatedCard"
+      ]
+    },
+    "./src/pages/contracts/ContractSummary.stories.tsx": {
+      "title": "App/Contracts/Contract summary",
+      "component": "ContractSummary",
+      "uses": [
+        "ContractSummary"
       ]
     },
     "./src/pages/contracts/SubscriptionDetailView.stories.tsx": {

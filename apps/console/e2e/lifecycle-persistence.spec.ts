@@ -171,11 +171,14 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
     await currency.click()
     await page.getByRole('option').first().click()
   }
-  await page.getByLabel('Start date').click()
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page).toHaveURL(/step=phases/, { timeout: 15_000 })
+  // The start date is Phase 1's, on the contract timeline.
+  await page.getByLabel('Starts').click()
   await page.getByRole('button', { name: /next month/i }).click()
   await page.getByRole('gridcell', { name: '15' }).getByRole('button').click()
   await page.keyboard.press('Escape')
-  for (const step of ['phases', 'commitments', 'billing', 'review']) {
+  for (const step of ['commitments', 'billing', 'review']) {
     await page.getByRole('button', { name: 'Next', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
   }
