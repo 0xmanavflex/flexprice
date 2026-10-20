@@ -93,6 +93,7 @@ function Harness({
   onOpenPlan,
   onBack,
   onEdit,
+  onStreamEvents,
   onUpdateField,
   subscriptionsLoading = false,
   subscriptionsError = false,
@@ -112,6 +113,7 @@ function Harness({
   onOpenPlan?: (planId: string) => void
   onBack?: () => void
   onEdit?: () => void
+  onStreamEvents?: () => void
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
   subscriptionsLoading?: boolean
   subscriptionsError?: boolean
@@ -144,6 +146,7 @@ function Harness({
         {...(onOpenContract ? { onOpenContract } : {})}
         {...(onOpenPlan ? { onOpenPlan } : {})}
         {...(onEdit ? { onEdit } : {})}
+        {...(onStreamEvents ? { onStreamEvents } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
       />
     </div>
@@ -345,6 +348,29 @@ export const CreatesInvoiceFromMenu: Story = {
     await userEvent.click(await body.findByRole('menuitem', { name: 'Create invoice' }))
     await expect(args.onCreateInvoice).toHaveBeenCalledOnce()
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
+  },
+}
+
+/** "Stream sample events" is in the actions menu only when the page offers it. */
+export const StreamsSampleEventsFromMenu: Story = {
+  args: { onStreamEvents: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await body.findByRole('menuitem', { name: 'Stream sample events' }))
+    await expect(args.onStreamEvents).toHaveBeenCalledOnce()
+  },
+}
+
+/** Without `onStreamEvents` (production, or no live subscription) the item is absent. */
+export const NoSampleEventsWithoutHandler: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
+    const body = within(canvasElement.ownerDocument.body)
+    await body.findByRole('menuitem', { name: 'Top up wallet' })
+    await expect(body.queryByRole('menuitem', { name: 'Stream sample events' })).toBeNull()
   },
 }
 
