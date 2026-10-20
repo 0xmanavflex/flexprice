@@ -73,10 +73,11 @@ export interface EnvironmentFormProps {
   contact?: EnvironmentContact
 }
 
+/** Each option is shown only when it has a value; a deployment can hide any of them. */
 export interface EnvironmentContact {
-  slackUrl: string
-  email: string
-  bookCallUrl: string
+  slackUrl?: string | null | undefined
+  email?: string | null | undefined
+  bookCallUrl?: string | null | undefined
 }
 
 /** Two lines at most each: what the environment is for, and what it costs to get wrong. */
@@ -112,6 +113,7 @@ export function EnvironmentForm({
   const type = form.watch('type')
   const typeError = form.formState.errors.type?.message
   const productionWithheld = type === EnvironmentType.Production && !canCreateProduction
+  const hasContact = Boolean(contact?.slackUrl || contact?.email || contact?.bookCallUrl)
 
   const submit = form.handleSubmit((value) => {
     // The disabled button is the lock; this is the bolt behind it, for a
@@ -216,40 +218,50 @@ export function EnvironmentForm({
           <Alert>
             <InfoIcon aria-hidden className="text-muted-foreground" />
             <AlertTitle>Production environments require an approval.</AlertTitle>
-            <AlertDescription>Contact us to get started:</AlertDescription>
-            {contact ? (
+            <AlertDescription>
+              {hasContact
+                ? 'Contact us to get started:'
+                : 'Contact your administrator to get started.'}
+            </AlertDescription>
+            {hasContact ? (
               <ButtonGroup aria-label="Contact us" className="col-start-2 mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  nativeButton={false}
-                  render={
-                    <a href={contact.slackUrl} target="_blank" rel="noreferrer" role="link" />
-                  }
-                >
-                  <Slack aria-hidden className="size-4" />
-                  Slack
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  nativeButton={false}
-                  render={<a href={`mailto:${contact.email}`} role="link" />}
-                >
-                  <MailIcon aria-hidden />
-                  Email
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  nativeButton={false}
-                  render={
-                    <a href={contact.bookCallUrl} target="_blank" rel="noreferrer" role="link" />
-                  }
-                >
-                  <CalendarIcon aria-hidden />
-                  Book a call
-                </Button>
+                {contact?.slackUrl ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={
+                      <a href={contact.slackUrl} target="_blank" rel="noreferrer" role="link" />
+                    }
+                  >
+                    <Slack aria-hidden className="size-4" />
+                    Slack
+                  </Button>
+                ) : null}
+                {contact?.email ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={<a href={`mailto:${contact.email}`} role="link" />}
+                  >
+                    <MailIcon aria-hidden />
+                    Email
+                  </Button>
+                ) : null}
+                {contact?.bookCallUrl ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={
+                      <a href={contact.bookCallUrl} target="_blank" rel="noreferrer" role="link" />
+                    }
+                  >
+                    <CalendarIcon aria-hidden />
+                    Book a call
+                  </Button>
+                ) : null}
               </ButtonGroup>
             ) : null}
           </Alert>

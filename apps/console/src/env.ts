@@ -295,6 +295,51 @@ const pylon = {
   identityVerificationEnabled: flag(import.meta.env.VITE_PYLON_IDENTITY_VERIFICATION_ENABLED),
 }
 
+/**
+ * How people reach us — the Create environment dialog's Slack, Email and
+ * Book a call, as V1's `config/contact.ts`.
+ *
+ * Each is one variable. Unset uses Flexprice's own; `none` hides that option,
+ * for a white-label deployment that has no Slack or no booking page.
+ */
+export const DEFAULT_CONTACT = {
+  slackUrl:
+    'https://join.slack.com/t/flexpricecommunity/shared_invite/zt-39uat51l0-n8JmSikHZP~bHJNXladeaQ',
+  email: 'support@flexprice.io',
+  bookCallUrl: 'https://calendly.com/nikhil-flexprice/30min',
+} as const
+
+export interface ContactConfig {
+  /** `null` when hidden. */
+  slackUrl: string | null
+  email: string | null
+  bookCallUrl: string | null
+}
+
+function contactValue(raw: string | undefined, fallback: string): string | null {
+  if (raw === undefined) return fallback
+  return raw.trim().toLowerCase() === 'none' ? null : raw.trim()
+}
+
+/** The contact options from their variables (already `clean`ed). */
+export function resolveContact(raw: {
+  slackUrl?: string | undefined
+  email?: string | undefined
+  bookCallUrl?: string | undefined
+}): ContactConfig {
+  return {
+    slackUrl: contactValue(raw.slackUrl, DEFAULT_CONTACT.slackUrl),
+    email: contactValue(raw.email, DEFAULT_CONTACT.email),
+    bookCallUrl: contactValue(raw.bookCallUrl, DEFAULT_CONTACT.bookCallUrl),
+  }
+}
+
+const contact = resolveContact({
+  slackUrl: clean(import.meta.env.VITE_CONTACT_SLACK_URL),
+  email: clean(import.meta.env.VITE_CONTACT_EMAIL),
+  bookCallUrl: clean(import.meta.env.VITE_CONTACT_BOOK_CALL_URL),
+})
+
 export const env = {
   useMocks,
   problem,
@@ -340,6 +385,8 @@ export const env = {
   /** Support chat providers. */
   intercom,
   pylon,
+  /** Slack, email and booked-call contact options (`VITE_CONTACT_*`). */
+  contact,
   /** A production build — config warnings stay quiet there, as in V1. */
   isProd: import.meta.env.PROD,
   /**

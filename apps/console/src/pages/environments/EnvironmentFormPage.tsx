@@ -1,26 +1,12 @@
 import { type CreateEnvironment } from '@fp/domain'
 import { useCreateEnvironment } from '@fp/query'
-import { EnvironmentForm, type EnvironmentContact } from '@fp/ui/pages'
+import { EnvironmentForm } from '@fp/ui/pages'
 import { env } from '@/env'
 import { useSession } from '@/app/session'
 import { mutationMessage } from '../settings/panelKit'
 
 /** The token the mocked build signs every request with — the same one `useEnvironments` uses. */
 const MOCK_TOKEN = 'mock-session-token'
-
-/**
- * How someone asks for a production environment: V1's contact details
- * (`config/contact.ts`) — the community Slack invite, support email, and a
- * booked call.
- * TODO(checkout): production becomes a self-serve paid upgrade; these are
- * replaced by the checkout flow then.
- */
-export const PRODUCTION_CONTACT: EnvironmentContact = {
-  slackUrl:
-    'https://join.slack.com/t/flexpricecommunity/shared_invite/zt-39uat51l0-n8JmSikHZP~bHJNXladeaQ',
-  email: 'support@flexprice.io',
-  bookCallUrl: 'https://calendly.com/nikhil-flexprice/30min',
-}
 
 export interface EnvironmentFormPageProps {
   open: boolean
@@ -45,7 +31,8 @@ export function EnvironmentFormPage({ open, onOpenChange }: EnvironmentFormPageP
       open={open}
       onOpenChange={onOpenChange}
       canCreateProduction={false}
-      contact={PRODUCTION_CONTACT}
+      // Slack, email and booked call, configured in `env.ts` (`VITE_CONTACT_*`).
+      contact={env.contact}
       isSubmitting={create.isPending}
       submitError={
         create.error ? mutationMessage(create.error, 'The environment could not be created.') : null
