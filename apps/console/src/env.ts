@@ -271,6 +271,30 @@ if (apiKey !== null) {
   )
 }
 
+/** `'true'` exactly, as V1 reads its feature flags. */
+const flag = (value: unknown) => value === 'true'
+
+/**
+ * Support chat, exactly as V1 configures it: at most one provider is meant to
+ * be on, and when both are, Intercom wins (see `app/supportChat/config.ts`).
+ * None of these is a secret — the app ids are public widget ids.
+ */
+const intercom = {
+  enabled: flag(import.meta.env.VITE_INTERCOM_ENABLED),
+  // V1 still accepts its older name as a fallback.
+  appId:
+    clean(import.meta.env.VITE_INTERCOM_APP_ID) ??
+    clean(import.meta.env.VITE_APP_INTERCOM_APP_ID) ??
+    '',
+}
+
+const pylon = {
+  enabled: flag(import.meta.env.VITE_PYLON_ENABLED),
+  appId: clean(import.meta.env.VITE_PYLON_APP_ID) ?? '',
+  /** Fetch the HMAC email hash from `POST /users/chat/verify` and pass it as `email_hash`. */
+  identityVerificationEnabled: flag(import.meta.env.VITE_PYLON_IDENTITY_VERIFICATION_ENABLED),
+}
+
 export const env = {
   useMocks,
   problem,
@@ -313,4 +337,9 @@ export const env = {
   region,
   /** Each region's dashboard origin, after any `VITE_FLEXPRICE_REGION_URLS` override. */
   regionUrls,
+  /** Support chat providers. */
+  intercom,
+  pylon,
+  /** A production build — config warnings stay quiet there, as in V1. */
+  isProd: import.meta.env.PROD,
 } as const

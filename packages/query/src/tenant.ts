@@ -51,6 +51,7 @@ export interface TenantWire {
   name?: string | undefined
   status?: string | undefined
   billingDetails?: BillingDetailsWire | undefined
+  metadata?: Record<string, string> | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
 }
@@ -83,6 +84,7 @@ export function toTenant(wire: TenantWire): Tenant {
           country: address.addressCountry ?? '',
         }
       : emptyAddress(),
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -156,6 +158,30 @@ export function useUpdateTenant() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.tenant.all() })
       // The tenant's name is rendered in the session header.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.session.all() })
+    },
+  })
+}
+
+/**
+ * Replace a tenant's metadata, leaving everything else alone —
+ * `PUT /tenants/update` with only `name` and `metadata`, as V1 sends it.
+ *
+ * Separate from `useUpdateTenant` on purpose: that one always sends the
+ * billing details, so using it to set one flag would overwrite them with
+ * whatever the caller happened to hold.
+ */
+export function useUpdateTenantMetadata() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ name, metadata }: { name: string; metadata: Record<string, string> }) => {
+      const wire = await call(() => client.tenants.updateTenant({ name, metadata }))
+      return toTenant(wire as TenantWire)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tenant.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.session.all() })
     },
   })

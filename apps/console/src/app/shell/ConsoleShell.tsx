@@ -32,7 +32,8 @@ import {
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
-import { searchableDestinations, useGlobalSearch } from './useGlobalSearch'
+import { SUPPORT_CHAT_ACTION_ID, searchableDestinations, useGlobalSearch } from './useGlobalSearch'
+import { openSupportChat } from '@/app/supportChat/SupportChat'
 import {
   breadcrumbForPath,
   FOOTER_NAV,
@@ -268,6 +269,7 @@ export function ConsoleShell({
           onRetry: found.retry,
           onTermChange: setSearchTerm,
           onSelect: (item) => {
+            if (item.id === SUPPORT_CHAT_ACTION_ID) return openSupportChat()
             const path = destinations.paths.get(item.id) ?? found.paths.get(item.id)
             if (path) open(path)
           },

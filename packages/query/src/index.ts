@@ -439,6 +439,7 @@ export {
   useTenant,
   useTenantBillingUsage,
   useUpdateTenant,
+  useUpdateTenantMetadata,
 } from './tenant'
 export type { TenantBillingUsageWire, TenantWire } from './tenant'
 
