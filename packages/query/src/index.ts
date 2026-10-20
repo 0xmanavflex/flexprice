@@ -626,3 +626,4 @@ export {
 } from './entityIntegrationLinks'
 
 export { useContractChargeAlerts } from './contractChargeAlerts'
+export { SAMPLE_EVENT_DURATION_SECONDS, useGenerateSampleEvents } from './sampleEvents'

@@ -6,6 +6,7 @@ import {
   PencilIcon,
   PlusIcon,
   ReceiptIcon,
+  RocketIcon,
   WalletIcon,
 } from '@ui/icons'
 import {
@@ -100,6 +101,12 @@ export interface CustomerDetailProps {
   onEdit?: () => void
   /** Adds "Archive customer" to the header menu; the caller confirms and acts. */
   onArchive?: () => void
+  /**
+   * Adds "Stream sample events" to the header menu: the backend generates a
+   * minute of usage events for one of this customer's subscriptions. Omitted
+   * (production, or no live subscription), the item is not shown.
+   */
+  onStreamEvents?: () => void
   /**
    * Save one of the simple fields in place (name, email, phone). Omitted, the
    * Information tab is read-only. Resolve to commit; reject with an Error to
@@ -199,6 +206,7 @@ export function CustomerDetail({
   onCreateContract,
   onEdit,
   onArchive,
+  onStreamEvents,
   onUpdateField,
   onUpdateMetadata,
   onOpenInvoice,
@@ -263,6 +271,16 @@ export function CustomerDetail({
             label: 'Edit customer',
             icon: <PencilIcon className="text-muted-foreground" aria-hidden="true" />,
             onSelect: onEdit,
+          },
+        ]
+      : []),
+    ...(onStreamEvents
+      ? [
+          {
+            id: 'stream-events',
+            label: 'Stream sample events',
+            icon: <RocketIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: onStreamEvents,
           },
         ]
       : []),
