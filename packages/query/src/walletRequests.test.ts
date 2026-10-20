@@ -174,3 +174,21 @@ describe('wallet mapping', () => {
     expect(toWallet({ id: 'w1', currency: 'usd' }).currency).toBe('USD')
   })
 })
+
+describe('toWallet on the real-time balance response', () => {
+  // GET /wallets/{id}/balance/real-time nets usage since the last invoice off
+  // the stored balance, so it can be negative while the stored one is not.
+  it('keeps the real-time figures apart from the stored balance', () => {
+    const wallet = toWallet({
+      id: 'wallet_01',
+      currency: 'usd',
+      creditBalance: '10',
+      balance: '10',
+      realTimeCreditBalance: '-122.5',
+      realTimeBalance: '-122.5',
+    })
+    expect(wallet.creditBalance).toBe('10')
+    expect(wallet.realTimeCreditBalance).toBe('-122.5')
+    expect(wallet.realTimeBalance).toEqual({ amount: '-122.5', currency: 'USD' })
+  })
+})

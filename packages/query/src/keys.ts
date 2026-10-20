@@ -109,6 +109,7 @@ export const queryKeys = {
     all: () => ['wallets'] as const,
     forCustomer: (customerId: string) => ['wallets', 'customer', customerId] as const,
     transactions: (walletId: string) => ['wallets', 'transactions', walletId] as const,
+    balance: (walletId: string) => ['wallets', 'balance', walletId] as const,
   },
   invoices: {
     all: () => ['invoices'] as const,

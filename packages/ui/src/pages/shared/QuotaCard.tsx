@@ -28,12 +28,11 @@ import { provenance } from '@ui/provenance'
  * - **The block's green "3000 free calls left" is coloured text.** It uses the
  *   `-foreground` token in light mode and the base token in dark, the pairing
  *   the light badge variants use, because bare `text-success` fails contrast.
- * - **The cost slot is labelled "Overage" and renders `—`.** Nothing in the API
- *   prices a per-feature overage, and `money.ts` forbids computing one here. A
- *   card that filled that slot with a plausible figure would be the exact
- *   failure this repo spent a day removing. The block leaves its "$4.00"
- *   unlabelled, which a demo can afford; an unlabelled dash cannot, so the slot
- *   says what is missing even when it has nothing to show.
+ * - **The cost slot appears only with a cost.** Nothing in the API prices a
+ *   per-feature overage, and `money.ts` forbids computing one here, so the slot
+ *   is drawn only when `overage` is passed. An empty "Overage —" beside
+ *   "Over by 281" read as a contradiction, and the over-quota quantity already
+ *   has its own line.
  *
  * Fully controlled and presentational: every figure arrives as a prop, and any
  * prop left `undefined` renders the dash with its reason rather than a zero.
@@ -73,11 +72,12 @@ export interface QuotaCardProps {
    */
   included?: number | null | undefined
   /**
-   * The percentage the API itself reported, 0–100.
+   * The percentage the API itself reported.
    *
-   * Preferred over dividing here, so the card and the API cannot disagree about
-   * rounding. Omitted, it is derived from `used` and `included` when both are
-   * known and there is a non-zero denominator.
+   * Used only when the card cannot work it out: with both `used` and a
+   * non-zero `included`, the figure comes from those, so the bar always
+   * agrees with the numbers printed beside it. The API's `usage_percent` has
+   * been seen to disagree (291 of 10 drawn as a third of a bar).
    */
   percentUsed?: number | undefined
   /** How often the allowance resets, as a word — "Monthly". Captions the denominator. */
@@ -87,20 +87,11 @@ export interface QuotaCardProps {
   /**
    * What the overage has been charged at, already formatted (a `<Money>`).
    *
-   * There is no endpoint for this today, so it is normally omitted and the slot
-   * renders a dash. It is a prop rather than a hardcoded dash so that the day an
-   * API prices an overage, this card does not have to change shape.
+   * There is no endpoint for this today, so it is normally omitted and the
+   * slot is not drawn. It is a prop so that the day an API prices an overage,
+   * this card does not have to change shape.
    */
   overage?: ReactNode | undefined
-  /**
-   * Why the overage slot is empty, as a sentence under the card.
-   *
-   * No default, because a grid of these would otherwise repeat one sentence
-   * once per card. The slot is labelled "Overage" either way, so an unexplained
-   * dash still says *what* is missing; a caller showing a single card passes
-   * this, and a caller showing a grid says it once beneath the grid instead.
-   */
-  overageNote?: string | undefined
   /** The footer action — "View usage". */
   action?: QuotaCardAction | undefined
   locale?: string | undefined
@@ -117,7 +108,6 @@ export function QuotaCard({
   resetPeriodLabel,
   resetsOn,
   overage,
-  overageNote,
   action,
   locale,
   className,
@@ -134,9 +124,9 @@ export function QuotaCard({
 
   const percent = (() => {
     if (unlimited || included === undefined) return undefined
+    if (measurable) return ((used as number) / (included as number)) * 100
     if (percentUsed !== undefined) return Math.max(0, percentUsed)
-    if (!measurable) return undefined
-    return ((used as number) / (included as number)) * 100
+    return undefined
   })()
 
   // Capped for the bar, uncapped for the reading — 120% must still say 120%.
@@ -187,16 +177,14 @@ export function QuotaCard({
               {typeof used === 'number' ? withUnit(used) : NOTHING}
             </span>
           </p>
-          {/*
-            The slot is named even when it is empty. A bare dash on a real card
-            just reads as a glitch, and "Overage —" reads as the answer it is.
-          */}
-          <p className="text-muted-foreground shrink-0 text-[13px]">
-            Overage{' '}
-            <span className="text-foreground text-[15px] font-medium tabular-nums">
-              {overage ?? <span className="text-muted-foreground font-normal">{NOTHING}</span>}
-            </span>
-          </p>
+          {overage ? (
+            <p className="text-muted-foreground shrink-0 text-[13px]">
+              Overage{' '}
+              <span className="text-foreground text-[15px] font-medium tabular-nums">
+                {overage}
+              </span>
+            </p>
+          ) : null}
         </div>
 
         {/*
@@ -260,16 +248,6 @@ export function QuotaCard({
             : NOTHING}
         </span>
       </div>
-
-      {/*
-        The reason a dash is a dash, stated rather than left to be guessed.
-        `role="status"` so it is announced.
-      */}
-      {overage || overageNote === undefined ? null : (
-        <p role="status" className="text-muted-foreground text-xs">
-          {overageNote}
-        </p>
-      )}
     </section>
   )
 }

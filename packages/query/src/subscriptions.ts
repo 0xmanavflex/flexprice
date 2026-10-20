@@ -707,6 +707,20 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
     prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
     ...(draft.autoInvoiceThreshold ? { autoInvoiceThreshold: draft.autoInvoiceThreshold } : {}),
     ...(draft.draft ? { subscriptionStatus: 'draft' } : {}),
+    // Who pays: invoices routed to another customer, and the customers that
+    // inherit this contract. Both are by external id, as the API takes them.
+    ...(draft.invoicingCustomerExternalId || draft.inheritedCustomerExternalIds.length > 0
+      ? {
+          inheritance: {
+            ...(draft.invoicingCustomerExternalId
+              ? { invoicingCustomerExternalId: draft.invoicingCustomerExternalId }
+              : {}),
+            ...(draft.inheritedCustomerExternalIds.length > 0
+              ? { externalCustomerIdsToInheritSubscription: draft.inheritedCustomerExternalIds }
+              : {}),
+          },
+        }
+      : {}),
   }
 }
 

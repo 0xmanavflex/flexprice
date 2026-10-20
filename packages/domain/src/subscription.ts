@@ -343,6 +343,17 @@ export const createSubscriptionSchema = z
     autoInvoiceThreshold: optionalAmount('Enter an amount like 500'),
     /** Create as a draft to activate later, rather than starting it. */
     draft: z.boolean(),
+    /**
+     * Who pays: another customer's external id to send this contract's
+     * invoices to (`inheritance.invoicing_customer_external_id`), or empty for
+     * the contract's own customer.
+     */
+    invoicingCustomerExternalId: z.string(),
+    /**
+     * Child customers (external ids) that inherit this contract
+     * (`inheritance.external_customer_ids_to_inherit_subscription`).
+     */
+    inheritedCustomerExternalIds: z.array(z.string().min(1)),
   })
   .superRefine((value, ctx) => {
     // Each phase but the last needs an end, and every end follows its start.
@@ -422,6 +433,8 @@ export function emptySubscription(): CreateSubscription {
     prorate: true,
     autoInvoiceThreshold: '',
     draft: false,
+    invoicingCustomerExternalId: '',
+    inheritedCustomerExternalIds: [],
   }
 }
 

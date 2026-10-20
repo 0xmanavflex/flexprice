@@ -299,8 +299,8 @@ export function CustomerDetailPage({
  * the monetary commitment overage on `GET /subscriptions/usage`, which is keyed
  * by meter and line item, not by entitlement, and is a different concept. A
  * priced one cannot be computed here either — `money.ts` forbids client-side
- * money arithmetic. So the card's cost slot stays a dash with the reason
- * printed beside it.
+ * money arithmetic. So the card draws no cost slot at all; its "Over by"
+ * line already says how far past the quota usage is.
  *
  * Units are absent for the same kind of reason: the wire sends `unit_plural`
  * but `TenantFeatureUsage` does not keep it, so the readings are bare counts
@@ -365,15 +365,6 @@ function UsageSection({
           />
         ))}
       </div>
-      {/*
-        Said once for the grid rather than once per card. Every card labels its
-        own empty Overage slot, so this explains the dashes without repeating
-        itself five times down the page.
-      */}
-      <p role="status" className="text-muted-foreground mt-3 text-xs">
-        Overage is shown as — for every feature: Flexprice reports whether a limit is soft or hard,
-        but does not report an overage quantity or price it per feature.
-      </p>
     </Section>
   )
 }

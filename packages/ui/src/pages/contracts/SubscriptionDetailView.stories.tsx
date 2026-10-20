@@ -926,19 +926,19 @@ export const ContractDetails: Story = {
     await expect(section.getByText('Start date')).toBeVisible()
     await expect(section.getByText('Mar 1, 2026')).toBeVisible()
     await expect(section.getByText('Current period')).toBeVisible()
+    // Four facts a side: no "Renews" (the period already ends there) or "Created".
+    await expect(section.queryByText('Renews')).toBeNull()
+    await expect(section.queryByText('Created')).toBeNull()
     const billing = within(
       within(canvasElement)
         .getByRole('heading', { name: 'Billing & collection' })
         .closest('section')!,
     )
-    for (const label of [
-      'Collection',
-      'Billing cycle',
-      'Payment terms',
-      'Time zone',
-      'Commitment',
-    ]) {
+    for (const label of ['Payment terms', 'Currency', 'Billing cycle', 'Commitment']) {
       await expect(billing.getByText(label)).toBeVisible()
+    }
+    for (const label of ['Collection', 'Time zone', 'Usage this period']) {
+      await expect(billing.queryByText(label)).toBeNull()
     }
     await expect(billing.getByText(/\$2,500\.00/)).toBeVisible()
   },
@@ -1616,9 +1616,7 @@ export const OverviewChargesFailed: Story = {
   args: { ...BASE, lines: { data: undefined, isError: true, onRetry: fn() } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    const section = within(
-      canvas.getByRole('heading', { name: /^Charges$/ }).closest('section')!,
-    )
+    const section = within(canvas.getByRole('heading', { name: /^Charges$/ }).closest('section')!)
     await expect(section.getByText('Charges could not be loaded')).toBeVisible()
     await userEvent.click(section.getByRole('button', { name: /Try again/ }))
     await expect(args.lines.onRetry).toHaveBeenCalled()

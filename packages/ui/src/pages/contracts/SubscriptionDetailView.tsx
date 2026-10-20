@@ -134,7 +134,8 @@ export interface SubscriptionDetailViewProps {
    * now, `previous` the one to return to. Offered on the version just before
    * the current one, in the charge's History.
    */
-  onRevertLine?: ((line: SubscriptionLine, previous: SubscriptionLine) => Promise<unknown>) | undefined
+  onRevertLine?:
+    ((line: SubscriptionLine, previous: SubscriptionLine) => Promise<unknown>) | undefined
   entitlements: SubscriptionPart<SubscriptionEntitlement[]>
   creditGrants: SubscriptionPart<CreditGrant[]>
   usage: SubscriptionPart<SubscriptionUsage>
@@ -1556,7 +1557,9 @@ function ContractDetails({
               label: 'Current period',
               value: `${day(s.currentPeriodStart)} – ${day(s.currentPeriodEnd)}`,
             },
-            { label: endLabel, value: day(endsOn) },
+            // "Renews" repeats the end of the current period; "Ends" / "Ended" is
+            // the only place a cancellation date shows, so that one stays.
+            ...(endLabel === 'Renews' ? [] : [{ label: endLabel, value: day(endsOn) }]),
             ...(s.trialStart || s.trialEnd
               ? [{ label: 'Trial', value: `${day(s.trialStart)} – ${day(s.trialEnd)}` }]
               : []),
@@ -1569,7 +1572,6 @@ function ContractDetails({
                   },
                 ]
               : []),
-            { label: 'Created', value: day(s.createdAt) },
           ]}
         />
       </Section>
@@ -1581,11 +1583,6 @@ function ContractDetails({
               label: 'Payment terms',
               value: sentence(s.paymentTerms ? words(s.paymentTerms) : ''),
             },
-            {
-              label: 'Collection',
-              value: sentence(s.collectionMethod ? words(s.collectionMethod) : ''),
-            },
-            { label: 'Time zone', value: s.timezone || '—' },
             { label: 'Currency', value: s.currency || '—' },
             {
               label: 'Billing cycle',
@@ -1600,7 +1597,6 @@ function ContractDetails({
                 ? `${formatMoney(s.commitmentAmount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
                 : 'None',
             },
-            { label: 'Usage this period', value: usage ? formatMoney(usage.total) : '—' },
           ]}
         />
       </Section>

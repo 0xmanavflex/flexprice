@@ -7,6 +7,7 @@ import {
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,
+  useWalletBalance,
   useWalletTransactions,
   serverReason,
 } from '@fp/query'
@@ -23,6 +24,21 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
   const [chosen, setChosen] = useState<string | null>(null)
   const selected = wallets.data?.find((wallet) => wallet.id === chosen) ?? wallets.data?.[0] ?? null
   const transactions = useWalletTransactions(selected?.id ?? null)
+  /*
+   * The list only knows the balance as of the last invoice. The real-time
+   * figure (usage since then netted off) comes from its own read, for the
+   * wallet on screen; until it answers, the stored balance stands in.
+   */
+  const live = useWalletBalance(selected?.id ?? null)
+  const shown = (wallets.data ?? []).map((wallet) =>
+    wallet.id === selected?.id && live.data
+      ? {
+          ...wallet,
+          realTimeBalance: live.data.realTimeBalance,
+          realTimeCreditBalance: live.data.realTimeCreditBalance,
+        }
+      : wallet,
+  )
 
   const ledger = subTab(transactions, 'wallet transactions')
   const transactionProps = {
@@ -40,7 +56,7 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
 
   return (
     <CustomerWalletView
-      wallets={wallets.data ?? []}
+      wallets={shown}
       isLoading={wallets.isPending}
       failed={wallets.error !== null && !wallets.data}
       onRetry={() => void wallets.refetch()}

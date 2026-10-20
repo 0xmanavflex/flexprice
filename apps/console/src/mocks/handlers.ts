@@ -3353,6 +3353,14 @@ export const handlers = [
     wallet['wallet_status'] = 'closed'
     return HttpResponse.json(wallet)
   }),
+  // The real-time balance read. The mock store keeps one balance, so it answers
+  // with the stored wallet; real_time_* are set on create and top-up.
+  http.get(`${BASE}/wallets/:id/balance/real-time`, ({ params }) => {
+    const wallet = walletStore.find((w) => w['id'] === String(params['id']))
+    return wallet
+      ? HttpResponse.json(wallet)
+      : HttpResponse.json({ error: { message: 'Wallet not found' } }, { status: 404 })
+  }),
   http.get(`${BASE}/wallets/:id/transactions`, ({ params }) => {
     const items = walletTransactionStore.filter((t) => t['wallet_id'] === String(params['id']))
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })

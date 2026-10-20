@@ -182,6 +182,28 @@ export function useCustomerWallets(customerId: string) {
 }
 
 /** One wallet's ledger, newest first — `GET /wallets/{id}/transactions`. */
+/**
+ * One wallet's real-time balance: `GET /wallets/{id}/balance/real-time`.
+ *
+ * The wallet list carries only the stored balance — what was left at the last
+ * invoice — so a wallet read from it looks untouched until the next invoice,
+ * however much usage has run since. This read nets that pending usage off,
+ * which is V1's "Ongoing balance" and the figure that can go negative.
+ *
+ * Under the `wallets` key, so a top-up, debit or terminate refreshes it with
+ * everything else.
+ */
+export function useWalletBalance(walletId: string | null) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.wallets.balance(walletId ?? ''),
+    queryFn: async () =>
+      toWallet(await call(() => client.wallets.getWalletBalance(walletId ?? ''))),
+    enabled: Boolean(walletId),
+  })
+}
+
 export function useWalletTransactions(walletId: string | null) {
   const client = useFlexprice()
 
