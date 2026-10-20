@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useEventDebug, useRawEvents } from '@fp/query'
+import { useCustomerNames, useEventDebug, useFeatureNames, useRawEvents } from '@fp/query'
 import {
   CUSTOMER_EVENTS_LIMIT,
   CustomerEventsGrid,
@@ -33,6 +33,9 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const selected = events.data?.events.find((event) => event.id === openId) ?? null
   const debug = useEventDebug(selected)
+  const processed = debug.data?.processedUsage ?? []
+  const customerNames = useCustomerNames(processed.map((usage) => usage.customerId))
+  const featureNames = useFeatureNames(processed.map((usage) => usage.featureId))
   const navigate = useNavigate()
 
   return (
@@ -50,6 +53,8 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
         debugPending={debug.isPending}
         debugError={debug.error ? toTraceError(debug.error) : null}
         onRetryDebug={debug.refetch}
+        customerNames={customerNames.data}
+        featureNames={featureNames.data}
         onOpenSubscription={(subscriptionId) =>
           void navigate({ to: '/contracts/$subscriptionId', params: { subscriptionId } })
         }

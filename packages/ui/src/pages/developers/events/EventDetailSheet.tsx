@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { EventDebug, ProcessedUsage, RawEvent } from '@fp/domain'
 import { ArrowUpRightIcon, CircleCheckIcon, ClockIcon } from '@ui/icons'
 import {
@@ -49,6 +50,10 @@ export interface EventDetailSheetProps {
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
   /** Opens the feature an event was counted for. */
   onOpenFeature?: ((featureId: string) => void) | undefined
+  /** Customer id → name, for the processed usage cards. Unknown ids show as ids. */
+  customerNames?: Readonly<Record<string, string>> | undefined
+  /** Feature id → name, for the processed usage cards. */
+  featureNames?: Readonly<Record<string, string>> | undefined
 }
 
 export function EventDetailSheet({
@@ -61,11 +66,23 @@ export function EventDetailSheet({
   onRetryDebug,
   onOpenSubscription,
   onOpenFeature,
+  customerNames = {},
+  featureNames = {},
 }: EventDetailSheetProps) {
   const payload = event ? JSON.stringify(event.properties, null, 2) : ''
-  const showTrace = debug !== undefined || debugPending || debugError !== null
   const versions = debug?.versions ?? []
   const processed = debug?.processedUsage ?? []
+  /*
+   * Once an event has been billed the lookup answers with `processed_events`,
+   * and the stage tracker is no longer filled in: every stage would read "Not
+   * reached" under a summary saying it went through all of them. V1 shows only
+   * the processed usage in that case, and so does this.
+   */
+  const showTrace =
+    processed.length === 0 && (debug !== undefined || debugPending || debugError !== null)
+  /** The event row often carries no internal customer id; billing knows it. */
+  const flexpriceCustomer =
+    event?.customerId || processed[0]?.customerId || debug?.customer?.id || ''
   const stamp = (value: Date | null) =>
     value
       ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'medium' }).format(value)
@@ -104,7 +121,11 @@ export function EventDetailSheet({
                   {
                     label: 'Flexprice customer',
                     value: (
-                      <span className="font-mono text-xs">{event.customerId || 'Not matched'}</span>
+                      <span className="font-mono text-xs">
+                        {flexpriceCustomer
+                          ? (customerNames[flexpriceCustomer] ?? flexpriceCustomer)
+                          : 'Not matched'}
+                      </span>
                     ),
                   },
                 ]}
@@ -131,7 +152,14 @@ export function EventDetailSheet({
 
               {processed.length > 0 ? (
                 <section className="flex flex-col gap-3">
-                  <h3 className="text-sm font-medium">Processed usage</h3>
+                  <div className="flex flex-col gap-0.5">
+                    <h3 className="text-sm font-medium">Processed usage</h3>
+                    <p className="text-muted-foreground text-xs">
+                      {processed.length === 1
+                        ? 'Billed against one contract line item.'
+                        : `Billed against ${processed.length} contract line items.`}
+                    </p>
+                  </div>
                   {processed.map((usage, index) => (
                     <ProcessedUsageCard
                       key={`${usage.lineItemId}-${index}`}
@@ -139,10 +167,10 @@ export function EventDetailSheet({
                       index={index + 1}
                       processedAt={stamp(usage.processedAt)}
                       customerName={
-                        debug?.customer && debug.customer.id === usage.customerId
-                          ? debug.customer.name
-                          : ''
+                        customerNames[usage.customerId] ??
+                        (debug?.customer?.id === usage.customerId ? debug.customer.name : '')
                       }
+                      featureName={featureNames[usage.featureId] ?? ''}
                       {...(onOpenSubscription ? { onOpenSubscription } : {})}
                       {...(onOpenFeature ? { onOpenFeature } : {})}
                     />
@@ -203,13 +231,17 @@ export function EventDetailSheet({
 
 /**
  * One line item the event was billed against: V1's "Processed usage #n" card.
- * Every id is copyable text, and the two with a page in the console link to it.
+ *
+ * One label/value row per field, so a 30-character id sits on one line
+ * instead of wrapping mid-id in half a column. A known name leads, with its id
+ * underneath; the contract and the feature link to their pages.
  */
 function ProcessedUsageCard({
   usage,
   index,
   processedAt,
   customerName,
+  featureName,
   onOpenSubscription,
   onOpenFeature,
 }: {
@@ -217,24 +249,63 @@ function ProcessedUsageCard({
   index: number
   processedAt: string
   customerName: string
+  featureName: string
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
   onOpenFeature?: ((featureId: string) => void) | undefined
 }) {
-  const id = (value: string) => <span className="font-mono text-xs break-all">{value || '—'}</span>
-  const link = (value: string, open: ((value: string) => void) | undefined, label: string) =>
+  const id = (value: string) => (
+    <span className="block truncate font-mono text-xs" title={value || undefined}>
+      {value || '—'}
+    </span>
+  )
+  const named = (name: string, value: string) =>
+    name ? (
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate">{name}</span>
+        <span className="text-muted-foreground block truncate font-mono text-xs" title={value}>
+          {value}
+        </span>
+      </span>
+    ) : (
+      id(value)
+    )
+  const link = (
+    content: ReactNode,
+    value: string,
+    open: ((value: string) => void) | undefined,
+    label: string,
+  ) =>
     value && open ? (
       <button
         type="button"
         onClick={() => open(value)}
         aria-label={`Open ${label} ${value}`}
-        className="hover:text-primary inline-flex max-w-full items-center gap-1 text-left underline-offset-2 hover:underline"
+        className="hover:text-primary flex max-w-full min-w-0 items-center gap-1 text-left underline-offset-2 hover:underline"
       >
-        {id(value)}
+        <span className="min-w-0">{content}</span>
         <ArrowUpRightIcon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
       </button>
     ) : (
-      id(value)
+      content
     )
+  const rows: { label: string; value: ReactNode }[] = [
+    { label: 'Customer', value: named(customerName, usage.customerId) },
+    {
+      label: 'Contract',
+      value: link(id(usage.subscriptionId), usage.subscriptionId, onOpenSubscription, 'contract'),
+    },
+    {
+      label: 'Feature',
+      value: link(named(featureName, usage.featureId), usage.featureId, onOpenFeature, 'feature'),
+    },
+    { label: 'Line item', value: id(usage.lineItemId) },
+    { label: 'Meter', value: id(usage.meterId) },
+    { label: 'Price', value: id(usage.priceId) },
+    {
+      label: 'Quantity',
+      value: <span className="font-medium tabular-nums">{usage.quantity}</span>,
+    },
+  ]
 
   return (
     <article
@@ -251,35 +322,14 @@ function ProcessedUsageCard({
           {processedAt}
         </span>
       </header>
-      <div className="px-4 py-3">
-        <DetailList
-          items={[
-            {
-              label: 'Customer',
-              value: customerName ? (
-                <span className="flex flex-col">
-                  <span>{customerName}</span>
-                  {id(usage.customerId)}
-                </span>
-              ) : (
-                id(usage.customerId)
-              ),
-            },
-            {
-              label: 'Contract',
-              value: link(usage.subscriptionId, onOpenSubscription, 'contract'),
-            },
-            { label: 'Feature', value: link(usage.featureId, onOpenFeature, 'feature') },
-            { label: 'Line item', value: id(usage.lineItemId) },
-            { label: 'Meter', value: id(usage.meterId) },
-            { label: 'Price', value: id(usage.priceId) },
-            {
-              label: 'Quantity',
-              value: <span className="font-medium tabular-nums">{usage.quantity}</span>,
-            },
-          ]}
-        />
-      </div>
+      <dl className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 px-4 py-3">
+        {rows.map((row) => (
+          <div key={row.label} className="contents">
+            <dt className="text-muted-foreground text-xs">{row.label}</dt>
+            <dd className="min-w-0">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
     </article>
   )
 }

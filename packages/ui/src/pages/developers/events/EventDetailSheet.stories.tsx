@@ -248,12 +248,21 @@ const PROCESSED = toEventDebug({
 })
 
 export const ProcessedUsage: Story = {
-  args: { debug: PROCESSED, onOpenSubscription: fn(), onOpenFeature: fn() },
+  args: {
+    debug: PROCESSED,
+    onOpenSubscription: fn(),
+    onOpenFeature: fn(),
+    featureNames: { feat_01M5294: 'API calls' },
+  },
   play: async ({ canvasElement, args }) => {
     const sheet = within(canvasElement.ownerDocument.body)
     await expect(sheet.getByRole('heading', { name: 'Processed usage' })).toBeVisible()
     const first = sheet.getByRole('article', { name: 'Processed usage 1' })
+    // A processed event has no stage tracker; the empty trace is not shown.
+    await expect(sheet.queryByText('What happened to this event')).toBeNull()
+    await expect(sheet.getByText('Billed against 2 contract line items.')).toBeVisible()
     await expect(within(first).getByText('Dinesh')).toBeVisible()
+    await expect(within(first).getByText('API calls')).toBeVisible()
     await expect(within(first).getByText('subs_line_01M5299J76')).toBeVisible()
     await expect(within(first).getByText('price_01M5299J6N0')).toBeVisible()
     await expect(sheet.getByRole('article', { name: 'Processed usage 2' })).toBeVisible()
