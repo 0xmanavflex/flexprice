@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-62 route pages.
+65 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -35,7 +35,10 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | environments | `EnvironmentFormPage` | Form | Field, FormDialog | EnvironmentForm |
 | environments | `EnvironmentRenameFormPage` | Form | Field, FormDialog | EnvironmentRenameForm |
 | events | `EventListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | DataFreshness, EMPTY_CATALOGUE, EventDetailSheet, EventGrid, ListState, PageBody |
-| exports | `ExportListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | DataExportGrid, ListState, PageBody |
+| exports | `ConnectionExportsPage` | Other | ChoiceCards, ConfirmDialog, DetailHeader, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SimpleTable, SortMenu | ConnectionExports, DataExportGrid, ErrorState, ListState, PageLoadingState |
+| exports | `DataExportDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SimpleTable, SortMenu | DataExportDetail, DataExportTab, ErrorState, ExportRunList, PageLoadingState |
+| exports | `ExportListPage` | List | ChoiceCards, ConfirmDialog, DetailHeader, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SimpleTable, SortMenu | DataExportGrid, ExportsOverview, ListState |
+| exports | `S3ConnectionsPage` | Other | ChoiceCards, ConfirmDialog, DetailHeader, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SimpleTable, SortMenu | S3ConnectionList |
 | features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormCard, FormDialog, MetricRail, RowActionsMenu, Section | FeatureCloneDialog, FeatureDetailView, FeatureTab |
 | features | `FeatureFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, FeatureForm, LoadingRows, PageBody |
 | features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, FeatureLinkage, ListState, PageBody |
