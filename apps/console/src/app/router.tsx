@@ -2073,6 +2073,12 @@ function EventsRouteComponent() {
     <EventListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/events', search: next, replace: true })}
+      onOpenSubscription={(subscriptionId) =>
+        void navigate({ to: '/contracts/$subscriptionId', params: { subscriptionId } })
+      }
+      onOpenFeature={(featureId) =>
+        void navigate({ to: '/features/$featureId', params: { featureId } })
+      }
     />
   )
 }

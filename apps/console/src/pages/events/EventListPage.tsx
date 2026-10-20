@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { type RawEvent, type RawEventQuery } from '@fp/domain'
-import { ApiError, ErrorKind, serverReason, useEventDebug, useRawEvents } from '@fp/query'
+import {
+  ApiError,
+  ErrorKind,
+  serverReason,
+  useCustomerNames,
+  useEventDebug,
+  useFeatureNames,
+  useRawEvents,
+} from '@fp/query'
 import { EventDetailSheet, EventGrid } from '@fp/ui/pages'
 import {
   DataFreshness,
@@ -16,6 +24,7 @@ export interface EventListPageProps {
   onQueryChange: (query: RawEventQuery) => void
   /** Opens a contract the opened event was matched to. */
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
+  onOpenFeature?: ((featureId: string) => void) | undefined
 }
 
 /**
@@ -25,7 +34,7 @@ export interface EventListPageProps {
  * window around the event and says so, which is worth repeating rather than
  * flattening into "not found".
  */
-function toTraceError(error: unknown): string {
+export function toTraceError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.kind === ErrorKind.NotFound) {
       return (
@@ -53,7 +62,12 @@ function isEventQueryFiltered(query: RawEventQuery): boolean {
  * both draw a loader. Rows already on screen stay through a refetch, a page
  * change and a failed refresh.
  */
-export function EventListPage({ query, onQueryChange, onOpenSubscription }: EventListPageProps) {
+export function EventListPage({
+  query,
+  onQueryChange,
+  onOpenSubscription,
+  onOpenFeature,
+}: EventListPageProps) {
   const events = useRawEvents(query)
   const [selected, setSelected] = useState<RawEvent | null>(null)
   /*
@@ -64,6 +78,9 @@ export function EventListPage({ query, onQueryChange, onOpenSubscription }: Even
    * lookup running for a row nobody is looking at.
    */
   const debug = useEventDebug(selected)
+  const processed = debug.data?.processedUsage ?? []
+  const customerNames = useCustomerNames(processed.map((usage) => usage.customerId))
+  const featureNames = useFeatureNames(processed.map((usage) => usage.featureId))
 
   const rows = events.data?.events ?? []
   const hasData = events.data !== undefined
@@ -130,7 +147,10 @@ export function EventListPage({ query, onQueryChange, onOpenSubscription }: Even
         debugPending={debug.isPending}
         debugError={debug.error ? toTraceError(debug.error) : null}
         onRetryDebug={debug.refetch}
+        customerNames={customerNames.data}
+        featureNames={featureNames.data}
         {...(onOpenSubscription ? { onOpenSubscription } : {})}
+        {...(onOpenFeature ? { onOpenFeature } : {})}
       />
     </PageBody>
   )
