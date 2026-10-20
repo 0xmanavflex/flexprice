@@ -13,7 +13,10 @@ import {
 
 /** Behaviour knobs for the messenger. */
 export interface SupportChatFlowConfig {
-  /** Hide the provider's floating launcher; the header Help button opens it instead. */
+  /**
+   * Hide the provider's floating launcher. Off: the launcher is the way in —
+   * it stays in the bottom-left corner, and there is no header Help button.
+   */
   hideDefaultLauncher: boolean
   /** Idle time before auto-opening the messenger for tenants not yet onboarded (ms). */
   inactivityOpenDelayMs: number
@@ -38,7 +41,7 @@ const SUPPORT_CHAT_INACTIVITY_TIMEOUT_MS = 1000 * 60 * 15 // 15 minutes
 
 /** Knobs that are identical for every provider. */
 const SHARED_FLOW = {
-  hideDefaultLauncher: true,
+  hideDefaultLauncher: false,
   inactivityOpenDelayMs: SUPPORT_CHAT_INACTIVITY_TIMEOUT_MS,
   statePollIntervalMs: 1000,
   activityEvents: [

@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFetchSupportChatHash } from '@fp/query'
-import { Button } from '@fp/ui/primitives'
-import { BotIcon } from '@fp/ui/icons'
 import { useSession } from '@/app/session'
 import { createSupportChatAdapter } from './adapters'
 import { SUPPORT_CHAT_FLOW, getActiveSupportChatProvider } from './config'
@@ -23,19 +21,16 @@ function SupportChatImpl({ provider }: { provider: SupportChatProvider }) {
     () => createSupportChatAdapter(provider, flow, () => fetchRef.current()),
     [provider, flow],
   )
-  const { open } = useSupportChat(adapter, flow)
+  useSupportChat(adapter, flow)
 
-  return (
-    <Button size="sm" variant="outline" className="h-8 px-3" onClick={open}>
-      <BotIcon aria-hidden />
-      Help
-    </Button>
-  )
+  // Nothing of our own to draw: the provider's launcher, bottom-left, opens it.
+  return null
 }
 
 /**
- * The header's Help button, which opens the support chat. Renders nothing when
- * no provider is enabled or its app id is missing — as V1.
+ * Boots the support chat. The provider's own launcher stays in the bottom-left
+ * corner and opens it; ⌘K and the idle auto-open still work. Nothing is
+ * mounted when no provider is enabled or its app id is missing — as V1.
  */
 export function SupportChat() {
   const provider = getActiveSupportChatProvider()

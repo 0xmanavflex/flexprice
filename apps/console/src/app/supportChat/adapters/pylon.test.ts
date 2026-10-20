@@ -120,8 +120,20 @@ describe('pylon adapter', () => {
     expect(document.querySelectorAll('script[src*="widget.usepylon.com"]')).toHaveLength(1)
   })
 
-  it('hides the chat bubble once the widget has loaded', async () => {
+  it('keeps the chat bubble, the way the chat is opened, by default', async () => {
     const adapter = createPylonAdapter('app-123', fetchEmailHash)
+    const pending = adapter.init(USER)
+    await vi.waitFor(() =>
+      expect(document.querySelector('script[src*="widget.usepylon.com"]')).not.toBeNull(),
+    )
+    completeScriptLoad()
+    await pending
+
+    expect(globals().Pylon?.q ?? []).not.toContainEqual(['hideChatBubble'])
+  })
+
+  it('hides the chat bubble once the widget has loaded, when asked to', async () => {
+    const adapter = createPylonAdapter('app-123', fetchEmailHash, true)
     const pending = adapter.init(USER)
     await vi.waitFor(() =>
       expect(document.querySelector('script[src*="widget.usepylon.com"]')).not.toBeNull(),

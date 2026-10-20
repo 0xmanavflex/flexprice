@@ -5,7 +5,6 @@ import type { SupportChatUser } from '../SupportChatAdapter'
 const { intercomSdk } = vi.hoisted(() => ({ intercomSdk: vi.fn() }))
 
 vi.mock('@intercom/messenger-js-sdk', () => ({ default: intercomSdk }))
-vi.mock('./intercom.css', () => ({}))
 
 const USER: SupportChatUser = {
   id: 'user_1',
@@ -33,7 +32,7 @@ describe('intercom adapter', () => {
     vi.restoreAllMocks()
   })
 
-  it('boots the SDK with the identified user and a hidden launcher', async () => {
+  it('boots the SDK with the identified user, its launcher bottom-left', async () => {
     const { createIntercomAdapter } = await import('./intercom')
     const adapter = createIntercomAdapter('abc123', 1000, true)
 
@@ -46,6 +45,7 @@ describe('intercom adapter', () => {
       email: 'ada@example.com',
       created_at: 1_700_000_000, // Unix seconds, not the epoch-ms USER.createdAt
       hide_default_launcher: true,
+      alignment: 'left',
     })
   })
 

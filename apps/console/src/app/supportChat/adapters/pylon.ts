@@ -97,6 +97,8 @@ export type FetchPylonEmailHash = () => Promise<string>
 export function createPylonAdapter(
   appId: string,
   fetchEmailHash?: FetchPylonEmailHash,
+  /** Hide Pylon's chat bubble. Off by default: the bubble is how the chat is opened. */
+  hideChatBubble = false,
 ): SupportChatAdapter {
   let disposed = false
   let handlers: SupportChatVisibilityHandlers | null = null
@@ -132,7 +134,7 @@ export function createPylonAdapter(
       }
       await loadWidgetScript(appId)
 
-      if (disposed) return
+      if (disposed || !hideChatBubble) return
       target.Pylon?.(PylonCommand.HideChatBubble)
     },
 

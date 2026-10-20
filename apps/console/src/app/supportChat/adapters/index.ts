@@ -25,6 +25,7 @@ export function createSupportChatAdapter(
       return createPylonAdapter(
         env.pylon.appId,
         env.pylon.identityVerificationEnabled ? fetchEmailHash : undefined,
+        flow.hideDefaultLauncher,
       )
   }
 }

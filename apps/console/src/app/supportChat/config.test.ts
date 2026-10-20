@@ -62,7 +62,8 @@ describe('support chat provider resolution (as V1)', () => {
   it("keeps V1's behaviour knobs, event names and storage keys", () => {
     const pylon = SUPPORT_CHAT_FLOW[SupportChatProvider.Pylon]
     expect(pylon).toMatchObject({
-      hideDefaultLauncher: true,
+      // The provider's launcher stays visible, bottom-left: there is no Help button.
+      hideDefaultLauncher: false,
       inactivityOpenDelayMs: 15 * 60 * 1000,
       autoOpenOnInactivity: true,
       markCompletedOnClose: true,

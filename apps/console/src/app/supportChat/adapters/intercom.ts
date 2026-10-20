@@ -4,7 +4,6 @@
  * postMessage events.
  */
 import Intercom from '@intercom/messenger-js-sdk'
-import './intercom.css'
 import type {
   SupportChatAdapter,
   SupportChatUser,
@@ -89,6 +88,8 @@ export function createIntercomAdapter(
         // Intercom expects Unix seconds; SupportChatUser.createdAt is epoch ms.
         ...(user.createdAt ? { created_at: Math.floor(user.createdAt / 1000) } : {}),
         hide_default_launcher: hideDefaultLauncher,
+        // The launcher sits in the bottom-left corner, where Pylon's bubble does.
+        alignment: 'left',
       })
     },
 
