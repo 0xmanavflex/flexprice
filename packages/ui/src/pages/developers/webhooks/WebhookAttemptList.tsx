@@ -89,6 +89,7 @@ export function WebhookAttemptList({
   const rowActions = (row: WebhookEndpointMessage): EntityRowAction[] => [
     {
       label: 'View message',
+      readOnly: true,
       icon: <FileJsonIcon aria-hidden className="size-4" />,
       onSelect: () => onOpen(row),
     },
@@ -105,6 +106,7 @@ export function WebhookAttemptList({
 
   return (
     <EntityList<WebhookEndpointMessage>
+      primaryActionReadOnly
       label="Messages sent to this endpoint"
       noun="messages"
       rows={filtered.slice((page - 1) * pageSize, page * pageSize)}

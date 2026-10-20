@@ -15,6 +15,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { useInFormDialog } from '../forms/formDialogContext'
+import type { RbacEntity } from '@fp/domain'
+import { useWriteCheck } from '../access/Access'
 
 /*
  * Shared grammar for every detail page, ported 1:1 from the reference kit
@@ -122,6 +124,13 @@ export interface DetailMenuItem {
   /** Destructive items are set apart below a divider, last in the menu. */
   destructive?: boolean
   disabled?: boolean
+  /**
+   * Does not write (Copy, Download, Open): stays enabled when the page's
+   * `AccessScope` denies write. Every other item is disabled then.
+   */
+  readOnly?: boolean
+  /** The entity this item writes, when not the page's (Create invoice on a customer). */
+  entity?: RbacEntity
 }
 
 /**
@@ -137,13 +146,18 @@ export function DetailMoreMenu({
   label: string
   items: DetailMenuItem[]
 }) {
+  const check = useWriteCheck()
   if (items.length === 0) return null
+  const denied = (item: DetailMenuItem) => !item.readOnly && !check(item.entity).allowed
+  const reason = items
+    .map((item) => (denied(item) ? check(item.entity).reason : null))
+    .find(Boolean)
   const regular = items.filter((item) => !item.destructive)
   const destructive = items.filter((item) => item.destructive)
   const renderItem = (item: DetailMenuItem) => (
     <DropdownMenuItem
       key={item.id}
-      disabled={item.disabled ?? false}
+      disabled={(item.disabled ?? false) || denied(item)}
       {...(item.destructive ? { variant: 'destructive' as const } : {})}
       onClick={item.onSelect}
     >
@@ -162,6 +176,7 @@ export function DetailMoreMenu({
         {regular.map(renderItem)}
         {regular.length > 0 && destructive.length > 0 ? <DropdownMenuSeparator /> : null}
         {destructive.map(renderItem)}
+        {reason ? <p className="text-muted-foreground px-2 py-1.5 text-xs">{reason}</p> : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -354,8 +369,8 @@ export function OverviewTiles({
         variant !== 'flush' && 'bg-background rounded-xl border',
         variant === 'flush' && 'border-b',
         line
-          ? 'sm:grid-cols-2 lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none [&>div]:border-b sm:[&>div:nth-child(odd)]:border-r lg:[&>div]:border-b-0 lg:[&>div:not(:last-child)]:border-r [&>div:last-child]:border-b-0'
-          : 'sm:grid-cols-2 [&>div]:border-b sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-last-child(-n+2)]:border-b-0 [&>div:last-child]:border-b-0',
+          ? 'sm:grid-cols-2 lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none [&>div]:border-b lg:[&>div]:border-b-0 [&>div:last-child]:border-b-0 lg:[&>div:not(:last-child)]:border-r sm:[&>div:nth-child(odd)]:border-r'
+          : 'sm:grid-cols-2 [&>div]:border-b [&>div:last-child]:border-b-0 sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-last-child(-n+2)]:border-b-0',
         className,
       )}
     >

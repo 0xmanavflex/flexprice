@@ -312,6 +312,7 @@ export function PlanGrid({
     if (onPlanClick) {
       actions.push({
         label: 'View plan',
+        readOnly: true,
         icon: <LayersIcon aria-hidden className="size-4" />,
         onSelect: () => onPlanClick(plan),
       })
@@ -339,6 +340,7 @@ export function PlanGrid({
     }
     actions.push({
       label: 'Copy plan ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(plan.id),
     })

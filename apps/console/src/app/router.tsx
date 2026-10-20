@@ -16,8 +16,8 @@ import {
 } from '@tanstack/react-router'
 import { Navigate, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense, type ReactNode } from 'react'
-import { AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
-import { useCurrentUser } from '@fp/query'
+import { AccessProvider, AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
+import { useAccessControl, useCurrentUser } from '@fp/query'
 import { toListFailure } from '@/pages/shared/listFailure'
 import { ConsoleShell } from './shell/ConsoleShell'
 import { useListMemory } from './shell/useListMemory'
@@ -222,6 +222,7 @@ import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from 
 import { MOVED_SECTIONS } from '@/pages/settings/sections'
 import { SupportChat } from '@/app/supportChat/SupportChat'
 import { VersionCheck } from '@/app/versionCheck/VersionCheck'
+import { RouteAccessGate } from '@/app/access/RouteAccessGate'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
@@ -328,65 +329,73 @@ function ShellLayout() {
    */
   const currentUser = useCurrentUser(session?.token ?? null)
   const user = currentUser.data
+  // What the signed-in principal may see and do: roles from `/users/me`,
+  // resolved against the role catalogue (V1's `useCurrentUserPermissions`).
+  const access = useAccessControl(session?.token ?? null)
 
   // Each list's filters, kept across a trip into a detail page and back.
   useListMemory()
 
   return (
-    <ConsoleShell
-      pathname={pathname}
-      search={searchStr}
-      onNavigate={(path) => {
-        // A row may carry the search that selects it (a Settings tab).
-        const [to = path, query = ''] = path.split('?')
-        void navigate({
-          to,
-          search: Object.fromEntries(new URLSearchParams(query)) as never,
-        })
-      }}
-      environment={environments.current}
-      environments={environments.environments}
-      onEnvironmentChange={(id) => {
-        if (id === environments.current.id) return
-        environments.select(id)
-        // An id from the old environment does not exist in the new one.
-        const list = listPathAfterEnvironmentSwitch(pathname, params)
-        if (list) void navigate({ to: list, search: {} as never })
-      }}
-      /*
-       * The email is the name until `/users/me` says otherwise: it is the one
-       * thing the person definitely recognises as theirs, and it is what they
-       * just typed. Inventing a display name would be worse than showing none.
-       */
-      user={{
-        name: user?.email ?? 'Signed in',
-        email: user?.email ?? '',
-        ...(user?.tenantName ? { organization: user.tenantName } : {}),
-      }}
-      onSignOut={() => {
-        signOut()
-        void navigate({ to: '/sign-in', search: {} as never })
-      }}
-      // Help: the support chat, when a provider is configured (as in V1).
-      headerActions={
-        <>
-          <SupportChat />
-          <VersionCheck />
-        </>
-      }
-    >
-      {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
-      {/*
+    <AccessProvider value={access}>
+      <ConsoleShell
+        pathname={pathname}
+        search={searchStr}
+        onNavigate={(path) => {
+          // A row may carry the search that selects it (a Settings tab).
+          const [to = path, query = ''] = path.split('?')
+          void navigate({
+            to,
+            search: Object.fromEntries(new URLSearchParams(query)) as never,
+          })
+        }}
+        environment={environments.current}
+        environments={environments.environments}
+        onEnvironmentChange={(id) => {
+          if (id === environments.current.id) return
+          environments.select(id)
+          // An id from the old environment does not exist in the new one.
+          const list = listPathAfterEnvironmentSwitch(pathname, params)
+          if (list) void navigate({ to: list, search: {} as never })
+        }}
+        /*
+         * The email is the name until `/users/me` says otherwise: it is the one
+         * thing the person definitely recognises as theirs, and it is what they
+         * just typed. Inventing a display name would be worse than showing none.
+         */
+        user={{
+          name: user?.email ?? 'Signed in',
+          email: user?.email ?? '',
+          ...(user?.tenantName ? { organization: user.tenantName } : {}),
+        }}
+        onSignOut={() => {
+          signOut()
+          void navigate({ to: '/sign-in', search: {} as never })
+        }}
+        // Help: the support chat, when a provider is configured (as in V1).
+        headerActions={
+          <>
+            <SupportChat />
+            <VersionCheck />
+          </>
+        }
+      >
+        {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
+        {/*
         Keyed by environment, so switching remounts the page. Cached rows are
         already kept apart by environment; what the key protects is page state —
         a half-filled form or an open dialog that belongs to an entity of the
         environment just left must not survive into one where that entity does
         not exist, and be saved there.
       */}
-      <Suspense key={environments.current.id} fallback={<PageLoadingState />}>
-        <Outlet />
-      </Suspense>
-    </ConsoleShell>
+        <Suspense key={environments.current.id} fallback={<PageLoadingState />}>
+          {/* Each route's access, from one table (`app/access/routeAccess.ts`). */}
+          <RouteAccessGate>
+            <Outlet />
+          </RouteAccessGate>
+        </Suspense>
+      </ConsoleShell>
+    </AccessProvider>
   )
 }
 

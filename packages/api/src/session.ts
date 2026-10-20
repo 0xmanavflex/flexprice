@@ -41,6 +41,8 @@ export interface CurrentUser {
   id: string
   email: string
   roles: string[]
+  /** `user` or `service_account`: which role catalogue the roles come from. */
+  type: string
   tenantId: string
   tenantName: string
 }
@@ -216,6 +218,7 @@ export async function fetchCurrentUser(serverURL: string, token: string): Promis
     id: str(body, 'id'),
     email: str(body, 'email'),
     roles,
+    type: str(body, 'type') || 'user',
     tenantId: str(tenant, 'id'),
     tenantName: str(tenant, 'name'),
   }

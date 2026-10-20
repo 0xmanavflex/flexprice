@@ -1,3 +1,4 @@
+import { RBAC_ENTITY } from '@fp/domain'
 import type { ShellCreateAction } from '@fp/ui/compositions'
 
 /**
@@ -19,10 +20,16 @@ export interface CreateAction extends ShellCreateAction {
 }
 
 export const CREATE_ACTIONS: CreateAction[] = [
-  { id: 'subscription', label: 'New contract', path: '/contracts/new' },
-  { id: 'customer', label: 'New customer', path: '/customers/new' },
-  { id: 'invoice', label: 'New invoice', path: '/invoices/new' },
-  { id: 'payment', label: 'Record a payment', path: '/payments/new' },
+  // `entity` is what each creates: the menu disables an item without write on it.
+  {
+    id: 'subscription',
+    label: 'New contract',
+    path: '/contracts/new',
+    entity: RBAC_ENTITY.Subscription,
+  },
+  { id: 'customer', label: 'New customer', path: '/customers/new', entity: RBAC_ENTITY.Customer },
+  { id: 'invoice', label: 'New invoice', path: '/invoices/new', entity: RBAC_ENTITY.Invoice },
+  { id: 'payment', label: 'Record a payment', path: '/payments/new', entity: RBAC_ENTITY.Payment },
 ]
 
 export function pathForCreateAction(id: string): string | undefined {

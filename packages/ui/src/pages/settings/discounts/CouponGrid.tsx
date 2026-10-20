@@ -201,6 +201,7 @@ export function CouponGrid({
     if (onCouponClick) {
       actions.push({
         label: 'View coupon',
+        readOnly: true,
         icon: <TicketPercentIcon aria-hidden className="size-4" />,
         onSelect: () => onCouponClick(coupon),
       })
@@ -214,6 +215,7 @@ export function CouponGrid({
     }
     actions.push({
       label: 'Copy coupon ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(coupon.id),
     })

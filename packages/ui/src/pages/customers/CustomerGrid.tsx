@@ -237,6 +237,7 @@ export function CustomerGrid({
     if (onCustomerClick) {
       actions.push({
         label: 'View customer',
+        readOnly: true,
         icon: <UserIcon aria-hidden className="size-4" />,
         onSelect: () => onCustomerClick(customer),
       })
@@ -250,6 +251,7 @@ export function CustomerGrid({
     }
     actions.push({
       label: 'Copy customer ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(customer.id),
     })

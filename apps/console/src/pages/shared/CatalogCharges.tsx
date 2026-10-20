@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { type Charge, type CreateCharge, type PriceEntityType, chargeToDraft } from '@fp/domain'
-import { toUpdatePriceRequest, useCreateBulkPrices, usePriceHistory, useUpdatePrice } from '@fp/query'
+import {
+  toUpdatePriceRequest,
+  useCreateBulkPrices,
+  usePriceHistory,
+  useUpdatePrice,
+} from '@fp/query'
 import { AddChargeDialog, ChargeTable } from '@fp/ui/pages'
+import { AccessScope } from '@fp/ui/compositions'
+import { RBAC_ENTITY } from '@fp/domain'
 import { usePlanFormOptions } from '../plans/planFormOptions'
 import { priceHistoryRows } from './priceHistory'
 import { subTab } from './subTab'
@@ -55,8 +62,9 @@ export function CatalogCharges({
     create.mutate({ entityType, entityId, charges: [draft] }, { onSuccess: closeForm })
   }
 
+  // A catalog's charges are prices: V1 gates them on price write.
   return (
-    <>
+    <AccessScope entity={RBAC_ENTITY.Price}>
       <ChargeTable
         charges={rows.charges}
         details={rows.details}
@@ -99,6 +107,6 @@ export function CatalogCharges({
         }
       />
       <TerminateChargeDialog charge={target} noun={noun} onClose={() => setTarget(null)} />
-    </>
+    </AccessScope>
   )
 }

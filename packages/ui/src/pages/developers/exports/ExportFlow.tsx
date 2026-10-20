@@ -728,6 +728,7 @@ export function ExportRunList({
   const rowActions = (run: ExportRun): EntityRowAction[] => [
     {
       label: 'Download file',
+      readOnly: true,
       icon: <DownloadIcon aria-hidden className="size-4" />,
       disabled: !run.hasFile,
       onSelect: () => void download(run),

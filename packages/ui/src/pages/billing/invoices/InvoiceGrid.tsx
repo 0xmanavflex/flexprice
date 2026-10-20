@@ -266,6 +266,7 @@ export function InvoiceGrid({
     if (onInvoiceClick) {
       actions.push({
         label: 'View invoice',
+        readOnly: true,
         icon: <ReceiptIcon aria-hidden className="size-4" />,
         onSelect: () => onInvoiceClick(invoice),
       })
@@ -273,6 +274,7 @@ export function InvoiceGrid({
     if (invoice.number) {
       actions.push({
         label: 'Copy invoice number',
+        readOnly: true,
         icon: <CopyIcon aria-hidden className="size-4" />,
         onSelect: () => void navigator.clipboard?.writeText(invoice.number),
       })

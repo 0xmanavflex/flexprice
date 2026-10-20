@@ -87,6 +87,9 @@ export function useCurrentUser(token: string | null): UseQueryResult<CurrentUser
     enabled: enabledFor(token),
     // A signed-in user's identity does not change while they look at a grid.
     staleTime: 5 * 60_000,
+    // Roles can change mid-session (an admin edits them); re-read like V1 does,
+    // so access follows within a minute without a sign-out.
+    refetchInterval: 60_000,
   })
 }
 

@@ -188,12 +188,14 @@ export function GroupGrid({
     if (onGroupClick) {
       actions.push({
         label: 'View group',
+        readOnly: true,
         icon: <LayersIcon aria-hidden className="size-4" />,
         onSelect: () => onGroupClick(group),
       })
     }
     actions.push({
       label: 'Copy group ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(group.id),
     })
