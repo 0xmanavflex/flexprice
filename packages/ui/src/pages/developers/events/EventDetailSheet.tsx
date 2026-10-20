@@ -1,4 +1,5 @@
-import type { EventDebug, RawEvent } from '@fp/domain'
+import type { EventDebug, ProcessedUsage, RawEvent } from '@fp/domain'
+import { ArrowUpRightIcon, CircleCheckIcon, ClockIcon } from '@ui/icons'
 import {
   CodeBlock,
   CodeBlockCopyButton,
@@ -46,6 +47,8 @@ export interface EventDetailSheetProps {
   onRetryDebug?: (() => void) | undefined
   /** Opens a contract the event was matched to. */
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
+  /** Opens the feature an event was counted for. */
+  onOpenFeature?: ((featureId: string) => void) | undefined
 }
 
 export function EventDetailSheet({
@@ -57,10 +60,16 @@ export function EventDetailSheet({
   debugError = null,
   onRetryDebug,
   onOpenSubscription,
+  onOpenFeature,
 }: EventDetailSheetProps) {
   const payload = event ? JSON.stringify(event.properties, null, 2) : ''
   const showTrace = debug !== undefined || debugPending || debugError !== null
   const versions = debug?.versions ?? []
+  const processed = debug?.processedUsage ?? []
+  const stamp = (value: Date | null) =>
+    value
+      ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'medium' }).format(value)
+      : '—'
 
   return (
     <Sheet open={event !== null} onOpenChange={(open) => !open && onClose()}>
@@ -120,6 +129,27 @@ export function EventDetailSheet({
                 />
               ) : null}
 
+              {processed.length > 0 ? (
+                <section className="flex flex-col gap-3">
+                  <h3 className="text-sm font-medium">Processed usage</h3>
+                  {processed.map((usage, index) => (
+                    <ProcessedUsageCard
+                      key={`${usage.lineItemId}-${index}`}
+                      usage={usage}
+                      index={index + 1}
+                      processedAt={stamp(usage.processedAt)}
+                      customerName={
+                        debug?.customer && debug.customer.id === usage.customerId
+                          ? debug.customer.name
+                          : ''
+                      }
+                      {...(onOpenSubscription ? { onOpenSubscription } : {})}
+                      {...(onOpenFeature ? { onOpenFeature } : {})}
+                    />
+                  ))}
+                </section>
+              ) : null}
+
               <CodeBlock code={payload} language="json" showLineNumbers label="Event properties">
                 <CodeBlockHeader>
                   <CodeBlockTitle>Properties</CodeBlockTitle>
@@ -128,31 +158,36 @@ export function EventDetailSheet({
               </CodeBlock>
 
               {/*
-                Every row stored under this id.
-                More than one means the same event was sent again — a replay,
-                or a retry that lost its idempotency key. Seeing two here is
-                usually the explanation for a doubled quantity.
+                Every row stored under this id, newest first. More than one
+                means the same event was sent again — a replay, or a retry that
+                lost its idempotency key — which is usually the explanation for
+                a doubled quantity, so the heading says so.
               */}
-              {versions.length > 1 ? (
+              {versions.length > 0 ? (
                 <section className="flex flex-col gap-2">
-                  <h3 className="text-sm font-medium">Ingested {versions.length} times</h3>
+                  <h3 className="text-sm font-medium">
+                    {versions.length > 1
+                      ? `Ingested ${versions.length} times`
+                      : 'Ingested versions'}
+                  </h3>
                   <ul className="divide-border/60 flex flex-col divide-y rounded-lg border text-[13px]">
                     {versions.map((version, index) => (
                       <li
                         key={`${version.id}-${index}`}
-                        className="flex items-baseline justify-between gap-3 px-4 py-2"
+                        className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3"
                       >
-                        <span className="text-muted-foreground">
-                          {version.source || 'No source'}
+                        <span className="flex flex-col">
+                          <span className="font-medium">Version {versions.length - index}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {version.source || 'No source'}
+                          </span>
                         </span>
-                        <span className="tabular-nums">
-                          {version.ingestedAt
-                            ? new Intl.DateTimeFormat(locale, {
-                                dateStyle: 'medium',
-                                timeStyle: 'medium',
-                              }).format(version.ingestedAt)
-                            : '—'}
-                        </span>
+                        <dl className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 text-xs">
+                          <dt className="text-muted-foreground">Ingested at</dt>
+                          <dd className="tabular-nums">{stamp(version.ingestedAt)}</dd>
+                          <dt className="text-muted-foreground">Timestamp</dt>
+                          <dd className="tabular-nums">{stamp(version.timestamp)}</dd>
+                        </dl>
                       </li>
                     ))}
                   </ul>
@@ -163,5 +198,88 @@ export function EventDetailSheet({
         ) : null}
       </SheetContent>
     </Sheet>
+  )
+}
+
+/**
+ * One line item the event was billed against: V1's "Processed usage #n" card.
+ * Every id is copyable text, and the two with a page in the console link to it.
+ */
+function ProcessedUsageCard({
+  usage,
+  index,
+  processedAt,
+  customerName,
+  onOpenSubscription,
+  onOpenFeature,
+}: {
+  usage: ProcessedUsage
+  index: number
+  processedAt: string
+  customerName: string
+  onOpenSubscription?: ((subscriptionId: string) => void) | undefined
+  onOpenFeature?: ((featureId: string) => void) | undefined
+}) {
+  const id = (value: string) => <span className="font-mono text-xs break-all">{value || '—'}</span>
+  const link = (value: string, open: ((value: string) => void) | undefined, label: string) =>
+    value && open ? (
+      <button
+        type="button"
+        onClick={() => open(value)}
+        aria-label={`Open ${label} ${value}`}
+        className="hover:text-primary inline-flex max-w-full items-center gap-1 text-left underline-offset-2 hover:underline"
+      >
+        {id(value)}
+        <ArrowUpRightIcon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
+      </button>
+    ) : (
+      id(value)
+    )
+
+  return (
+    <article
+      aria-label={`Processed usage ${index}`}
+      className="flex flex-col rounded-lg border text-[13px]"
+    >
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+        <span className="flex items-center gap-2 font-medium">
+          <CircleCheckIcon aria-hidden className="text-success size-4" />
+          Processed usage #{index}
+        </span>
+        <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
+          <ClockIcon aria-hidden className="size-3.5" />
+          {processedAt}
+        </span>
+      </header>
+      <div className="px-4 py-3">
+        <DetailList
+          items={[
+            {
+              label: 'Customer',
+              value: customerName ? (
+                <span className="flex flex-col">
+                  <span>{customerName}</span>
+                  {id(usage.customerId)}
+                </span>
+              ) : (
+                id(usage.customerId)
+              ),
+            },
+            {
+              label: 'Contract',
+              value: link(usage.subscriptionId, onOpenSubscription, 'contract'),
+            },
+            { label: 'Feature', value: link(usage.featureId, onOpenFeature, 'feature') },
+            { label: 'Line item', value: id(usage.lineItemId) },
+            { label: 'Meter', value: id(usage.meterId) },
+            { label: 'Price', value: id(usage.priceId) },
+            {
+              label: 'Quantity',
+              value: <span className="font-medium tabular-nums">{usage.quantity}</span>,
+            },
+          ]}
+        />
+      </div>
+    </article>
   )
 }

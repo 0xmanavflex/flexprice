@@ -205,6 +205,70 @@ export const FailedAtTheMeter: Story = {
   },
 }
 
+/** Where the event was billed: one card per line item it was counted against, as in V1. */
+const PROCESSED = toEventDebug({
+  status: 'processed',
+  event: { id: 'evt_01' },
+  events: [
+    {
+      id: 'evt_01',
+      source: 'onboarding',
+      ingested_at: '2026-10-20T00:46:41Z',
+      timestamp: '2026-10-20T00:46:40Z',
+    },
+  ],
+  processed_events: [
+    {
+      customer_id: 'cust_01',
+      subscription_id: 'subs_01M5297YHKP',
+      sub_line_item_id: 'subs_line_01M5299J76',
+      price_id: 'price_01M5299J6N0',
+      meter_id: 'meter_01M52951BXM',
+      feature_id: 'feat_01M5294',
+      qty_total: '1',
+      processed_at: '2026-10-20T00:46:41Z',
+    },
+    {
+      customer_id: 'cust_01',
+      subscription_id: 'subs_01M5297YHKP',
+      sub_line_item_id: 'subs_line_01M5297YK3K',
+      price_id: 'price_01M52967D4G',
+      meter_id: 'meter_01M52951BXM',
+      feature_id: 'feat_01M5294',
+      qty_total: '1',
+      processed_at: '2026-10-20T00:46:41Z',
+    },
+  ],
+  debug_tracker: {
+    customer_lookup: {
+      status: 'found',
+      customer: { id: 'cust_01', external_id: 'dinesh', name: 'Dinesh' },
+    },
+  },
+})
+
+export const ProcessedUsage: Story = {
+  args: { debug: PROCESSED, onOpenSubscription: fn(), onOpenFeature: fn() },
+  play: async ({ canvasElement, args }) => {
+    const sheet = within(canvasElement.ownerDocument.body)
+    await expect(sheet.getByRole('heading', { name: 'Processed usage' })).toBeVisible()
+    const first = sheet.getByRole('article', { name: 'Processed usage 1' })
+    await expect(within(first).getByText('Dinesh')).toBeVisible()
+    await expect(within(first).getByText('subs_line_01M5299J76')).toBeVisible()
+    await expect(within(first).getByText('price_01M5299J6N0')).toBeVisible()
+    await expect(sheet.getByRole('article', { name: 'Processed usage 2' })).toBeVisible()
+    await userEvent.click(
+      within(first).getByRole('button', { name: 'Open contract subs_01M5297YHKP' }),
+    )
+    await expect(args.onOpenSubscription).toHaveBeenCalledWith('subs_01M5297YHKP')
+    await userEvent.click(within(first).getByRole('button', { name: 'Open feature feat_01M5294' }))
+    await expect(args.onOpenFeature).toHaveBeenCalledWith('feat_01M5294')
+    // One ingestion still lists its version, with both times.
+    await expect(sheet.getByRole('heading', { name: 'Ingested versions' })).toBeVisible()
+    await expect(sheet.getByText('Version 1')).toBeVisible()
+  },
+}
+
 /** A replayed event shows every ingestion, which is usually the explanation. */
 export const IngestedTwice: Story = {
   args: { debug: TRACED },

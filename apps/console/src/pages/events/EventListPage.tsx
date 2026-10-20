@@ -25,7 +25,7 @@ export interface EventListPageProps {
  * window around the event and says so, which is worth repeating rather than
  * flattening into "not found".
  */
-function toTraceError(error: unknown): string {
+export function toTraceError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.kind === ErrorKind.NotFound) {
       return (

@@ -737,6 +737,7 @@ export type {
   EventDebugStage,
   EventDebugStageResult,
   EventVersion,
+  ProcessedUsage,
 } from './eventDebug'
 
 export { COUNTRY_CODES, countryName, countryOptions } from './countries'

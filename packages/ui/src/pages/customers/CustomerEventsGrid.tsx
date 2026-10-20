@@ -32,6 +32,12 @@ export interface CustomerEventsGridProps extends Partial<SubTabQuery> {
   events: CustomerEvent[]
   /** Events the customer has in all, when the read reports it; shown beside the cap. */
   total?: number | undefined
+  /**
+   * Opens one event in the page's own detail view (the Events debugger sheet,
+   * with its trace and processed usage). Omitted, the grid shows a minimal
+   * sheet of the event's properties itself.
+   */
+  onOpenEvent?: ((eventId: string) => void) | undefined
 }
 
 export function CustomerEventsGrid({
@@ -43,6 +49,7 @@ export function CustomerEventsGrid({
   retryAfterMs,
   onRetry,
   isRetrying,
+  onOpenEvent,
 }: CustomerEventsGridProps) {
   const [selected, setSelected] = useState<CustomerEvent | null>(null)
   const capped =
@@ -75,7 +82,7 @@ export function CustomerEventsGrid({
             noun="events"
             rows={events}
             getRowId={(event) => event.id}
-            onRowClick={setSelected}
+            onRowClick={(event) => (onOpenEvent ? onOpenEvent(event.id) : setSelected(event))}
             columns={[
               {
                 key: 'name',

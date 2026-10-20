@@ -234,3 +234,59 @@ describe('eventDebugSummary', () => {
     expect(at('attributed_to_customer')).toMatch(/not added to the customer/i)
   })
 })
+
+describe('toEventDebug processed usage', () => {
+  it('reads each line item the event was counted against from processed_events', () => {
+    const debug = toEventDebug({
+      ...LIVE,
+      processed_events: [
+        {
+          customer_id: 'cust_01',
+          subscription_id: 'subs_01',
+          sub_line_item_id: 'subs_line_01',
+          price_id: 'price_01',
+          meter_id: 'meter_01',
+          feature_id: 'feat_01',
+          qty_total: '1',
+          processed_at: '2026-10-20T00:46:41Z',
+        },
+        {
+          customer_id: 'cust_01',
+          subscription_id: 'subs_01',
+          sub_line_item_id: 'subs_line_02',
+          price_id: 'price_02',
+          meter_id: 'meter_01',
+          feature_id: 'feat_01',
+          qty_total: '2.5',
+        },
+      ],
+    })
+
+    expect(debug.processedUsage).toEqual([
+      {
+        customerId: 'cust_01',
+        subscriptionId: 'subs_01',
+        lineItemId: 'subs_line_01',
+        priceId: 'price_01',
+        meterId: 'meter_01',
+        featureId: 'feat_01',
+        quantity: '1',
+        processedAt: new Date('2026-10-20T00:46:41Z'),
+      },
+      {
+        customerId: 'cust_01',
+        subscriptionId: 'subs_01',
+        lineItemId: 'subs_line_02',
+        priceId: 'price_02',
+        meterId: 'meter_01',
+        featureId: 'feat_01',
+        quantity: '2.5',
+        processedAt: null,
+      },
+    ])
+  })
+
+  it('is empty before the event has been processed', () => {
+    expect(toEventDebug(LIVE).processedUsage).toEqual([])
+  })
+})
