@@ -100,8 +100,8 @@ import { provenance } from '@ui/provenance'
  * (`ContractSummary`); the review is the summary, so it drops the rail.
  *
  * One react-hook-form draft over the domain schema, walked by `useFormSteps`.
- * The toolbar carries the title, the stepper, Previous / Next and, on the last
- * step, Create.
+ * The toolbar carries the stepper, Previous / Next and, on the last step,
+ * Create; the breadcrumb names the page, so the toolbar has no title.
  *
  * The form never fetches: the page hands it the customers and plans to choose
  * from and, once a plan is chosen (reported through `onPlanChange`), that
@@ -735,7 +735,6 @@ export function SubscriptionForm({
         onCancel,
         isSubmitting,
         submitError,
-        showTitle: true,
       }}
       stepper={{ flow, label: 'Contract steps' }}
       preview={
