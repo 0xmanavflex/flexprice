@@ -439,6 +439,7 @@ export {
   useTenant,
   useTenantBillingUsage,
   useUpdateTenant,
+  useUpdateTenantMetadata,
 } from './tenant'
 export type { TenantBillingUsageWire, TenantWire } from './tenant'
 
@@ -626,3 +627,4 @@ export {
 } from './entityIntegrationLinks'
 
 export { useContractChargeAlerts } from './contractChargeAlerts'
+export { useFetchSupportChatHash } from './supportChat'

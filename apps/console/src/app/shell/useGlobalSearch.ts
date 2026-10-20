@@ -8,6 +8,7 @@ import {
 import { useCustomers, useFeatures, useInvoices, usePlans } from '@fp/query'
 import type { ShellSearchItem } from '@fp/ui/compositions'
 import { CREATE_ACTIONS } from './createActions'
+import { getSupportChatCommandLabel, isSupportChatAvailable } from '@/app/supportChat/config'
 import { FOOTER_NAV, hrefForNavId, NAV, SECONDARY } from './navigation'
 
 const MIN_TERM = 2
@@ -40,8 +41,20 @@ export function searchableDestinations(): { items: ShellSearchItem[]; paths: Map
     paths.set(id, action.path)
   }
 
+  // "Open Pylon" / "Open Intercom", only when a provider is configured — as V1's palette.
+  if (isSupportChatAvailable()) {
+    items.push({
+      id: SUPPORT_CHAT_ACTION_ID,
+      label: getSupportChatCommandLabel(),
+      group: 'Actions',
+    })
+  }
+
   return { items, paths }
 }
+
+/** The palette item that opens the support chat rather than navigating. */
+export const SUPPORT_CHAT_ACTION_ID = 'action:open-support-chat'
 
 /**
  * Records matching `rawTerm`, fetched only once the dialog has a term worth

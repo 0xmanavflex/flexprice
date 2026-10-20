@@ -476,6 +476,9 @@ export {
   isOverLimit,
   toUpdateTenantDraft,
   updateTenantSchema,
+  TenantMetadataKey,
+  TenantMetadataFlag,
+  isTenantOnboarded,
 } from './tenant'
 export type {
   Tenant,

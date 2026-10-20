@@ -60,6 +60,11 @@ Three consequences, in order of severity:
    anyone it was outside the contract. The drift the generated layer exists to
    expose is already present.
 
+`POST /users/chat/verify` (the support chat's identity hash, `CreateSupportChatToken`)
+is another live route outside the document. The console reaches it through
+`fetchSupportChatToken` in `@fp/api`, the way it reaches the revenue dashboard,
+and only when `VITE_PYLON_IDENTITY_VERIFICATION_ENABLED` is on.
+
 ## Sequencing
 
 ```

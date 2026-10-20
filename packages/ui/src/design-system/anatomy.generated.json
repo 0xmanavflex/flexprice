@@ -1268,7 +1268,7 @@
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
-      "story": null
+      "story": "./src/pages/contracts/ContractIntegrations.stories.tsx"
     },
     "ContractQuantityDialog": {
       "file": "src/pages/contracts/ContractQuantityDialog.tsx",
@@ -7517,6 +7517,14 @@
       "component": "PaymentStatusBadge",
       "uses": [
         "PaymentStatusBadge"
+      ]
+    },
+    "./src/pages/contracts/ContractIntegrations.stories.tsx": {
+      "title": "App/Contracts/Contract integrations",
+      "component": "ContractIntegrations",
+      "uses": [
+        "ContractIntegrations",
+        "RelatedCard"
       ]
     },
     "./src/pages/contracts/SubscriptionDetailView.stories.tsx": {
