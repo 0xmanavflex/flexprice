@@ -103,6 +103,7 @@ export function SubscriptionFormPage({
       (customers.data?.customers ?? []).map((c) => ({
         value: c.id,
         label: c.email ? `${c.name} · ${c.email}` : c.name,
+        externalId: c.externalId || undefined,
       })),
     [customers.data],
   )

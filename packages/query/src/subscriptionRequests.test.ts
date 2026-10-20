@@ -82,6 +82,27 @@ describe('toCreateSubscriptionRequest', () => {
     expect(parsed['override_entitlements']).toHaveLength(1)
   })
 
+  it('routes invoices to another customer and names the inheriting customers, by external id', () => {
+    expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('inheritance')
+    const request = toCreateSubscriptionRequest({
+      ...base,
+      invoicingCustomerExternalId: 'parent_ext',
+      inheritedCustomerExternalIds: ['child_a', 'child_b'],
+    })
+    expect(request['inheritance']).toEqual({
+      invoicingCustomerExternalId: 'parent_ext',
+      externalCustomerIdsToInheritSubscription: ['child_a', 'child_b'],
+    })
+    const parsed = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<
+      string,
+      unknown
+    >
+    expect(parsed['inheritance']).toEqual({
+      invoicing_customer_external_id: 'parent_ext',
+      external_customer_ids_to_inherit_subscription: ['child_a', 'child_b'],
+    })
+  })
+
   it("leaves the plan's grants alone until they are changed, then sends the whole list", () => {
     const grant = {
       name: 'Plan credits',

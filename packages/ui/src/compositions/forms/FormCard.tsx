@@ -54,19 +54,34 @@ export interface FormCardProps {
   adornment?: ReactNode
   /** Sits to the left of the title, so a long form can be scanned by section. */
   icon?: ReactNode
+  /** A muted line under the title: what the card is for, or a short status. */
+  description?: ReactNode
   children: ReactNode
   className?: string
 }
 
-export function FormCard({ title, status, adornment, icon, children, className }: FormCardProps) {
+export function FormCard({
+  title,
+  status,
+  adornment,
+  icon,
+  description,
+  children,
+  className,
+}: FormCardProps) {
   const rows = flattenRows(children)
   return (
     <section className={cn('bg-background flex w-full flex-col rounded-xl border', className)}>
       {title ? (
         <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
-            {icon}
-            <h2 className="text-sm font-medium">{title}</h2>
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex min-w-0 items-center gap-2">
+              {icon}
+              <h2 className="text-sm font-medium">{title}</h2>
+            </div>
+            {description ? (
+              <p className="text-muted-foreground text-[13px]/relaxed">{description}</p>
+            ) : null}
           </div>
           {status || adornment ? (
             <div className="flex shrink-0 items-center gap-2">

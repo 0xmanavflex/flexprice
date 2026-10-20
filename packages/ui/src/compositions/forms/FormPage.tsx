@@ -68,9 +68,8 @@ export type FormPageProps = FormPageBaseProps &
         /** Optional. Draws the steps in the toolbar, between the title and the actions; omit for a plain single-page form. */
         stepper?: FormPageStepper | undefined
         /**
-         * @deprecated Create forms no longer carry a preview rail. A preview
-         * returns only on a future checkout review screen.
-         * TODO(checkout-review): remove once no form passes it.
+         * A rail beside the fields, e.g. a staged flow's running summary.
+         * Pass it only on the steps that want it; the fields widen without it.
          */
         preview?: ReactNode | undefined
       }

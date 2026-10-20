@@ -45,6 +45,11 @@ export interface FormToolbarProps {
   onNext?: (() => void) | undefined
   /** Secondary actions drawn before the primary, e.g. "Save draft". */
   actions?: ReactNode
+  /**
+   * Show the title on a create form too. A staged create flow (the contract
+   * wizard) names itself beside the close, as edit does.
+   */
+  showTitle?: boolean
 }
 
 export function FormToolbar({
@@ -60,6 +65,7 @@ export function FormToolbar({
   onPrevious,
   onNext,
   actions,
+  showTitle = false,
 }: FormToolbarProps) {
   const label =
     submitLabel ?? (mode === 'create' ? `Create${noun ? ` ${noun}` : ''}` : 'Save changes')
@@ -82,7 +88,7 @@ export function FormToolbar({
             <Separator orientation="vertical" className="my-auto mr-4 ml-2 h-4 shrink-0" />
           </>
         ) : null}
-        {mode === 'edit' ? (
+        {mode === 'edit' || showTitle ? (
           <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
         ) : null}
       </div>
