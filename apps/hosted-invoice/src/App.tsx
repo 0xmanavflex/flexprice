@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ApiError, useHostedInvoice, useHostedInvoiceDownload, usePayHostedInvoice } from '@fp/query'
+import {
+  ApiError,
+  useHostedInvoice,
+  useHostedInvoiceDownload,
+  usePayHostedInvoice,
+} from '@fp/query'
 import { HostedInvoiceView } from '@fp/ui/pages'
 import { env } from './env'
 import { type HostedInvoiceLink, parseHostedInvoiceLink } from './link'
@@ -18,16 +23,30 @@ export function App({ pathname }: { pathname: string }) {
 function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
   const { data, error, isPending, refetch } = useHostedInvoice(link.apiOrigin, link.token)
   const { pay, isPending: isPaying } = usePayHostedInvoice(link.apiOrigin, link.token)
-  const { download, isPending: isDownloading } = useHostedInvoiceDownload(link.apiOrigin, link.token)
+  const { download, isPending: isDownloading } = useHostedInvoiceDownload(
+    link.apiOrigin,
+    link.token,
+  )
   const [payError, setPayError] = useState<string | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (data) document.title = data.tenant.name ? `Invoice ${data.number} · ${data.tenant.name}` : `Invoice ${data.number}`
+    if (data)
+      document.title = data.tenant.name
+        ? `Invoice ${data.number} · ${data.tenant.name}`
+        : `Invoice ${data.number}`
   }, [data])
 
   const kind = pageKind({ data, error, isPending })
-  if (kind === 'invalid') return <HostedInvoiceView kind="invalid" message={(error as ApiError).message} />
+  if (kind === 'invalid') {
+    // A 404 with no message from the API (a proxy, a CDN) is a plain not-found page, not our fallback text.
+    const notFound = error as ApiError
+    return notFound.fromServer ? (
+      <HostedInvoiceView kind="invalid" message={notFound.message} />
+    ) : (
+      <HostedInvoiceView kind="not-found" />
+    )
+  }
   if (kind === 'failed') return <HostedInvoiceView kind="failed" onRetry={refetch} />
   if (kind === 'loading' || !data) return <HostedInvoiceView kind="loading" />
 

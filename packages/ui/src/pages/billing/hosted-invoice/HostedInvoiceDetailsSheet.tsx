@@ -26,7 +26,11 @@ export interface HostedInvoiceDetailsSheetProps {
   locale?: string
 }
 
-export function HostedInvoiceDetailsSheet({ invoice, onClose, locale }: HostedInvoiceDetailsSheetProps) {
+export function HostedInvoiceDetailsSheet({
+  invoice,
+  onClose,
+  locale,
+}: HostedInvoiceDetailsSheetProps) {
   // Keep the last invoice so the drawer keeps its title and content while it animates closed.
   const shown = useRef(invoice)
   if (invoice) shown.current = invoice
@@ -34,15 +38,27 @@ export function HostedInvoiceDetailsSheet({ invoice, onClose, locale }: HostedIn
   return (
     <Sheet open={invoice !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent showCloseButton={false}>
-        {shown.current ? <Details invoice={shown.current} onClose={onClose} locale={locale} /> : null}
+        {shown.current ? (
+          <Details invoice={shown.current} onClose={onClose} locale={locale} />
+        ) : null}
       </SheetContent>
     </Sheet>
   )
 }
 
-function Details({ invoice, onClose, locale }: { invoice: HostedInvoice; onClose: () => void; locale: string | undefined }) {
+function Details({
+  invoice,
+  onClose,
+  locale,
+}: {
+  invoice: HostedInvoice
+  onClose: () => void
+  locale: string | undefined
+}) {
   const date = (value: Date) => formatHostedDate(value, locale)
-  const money = (value: HostedInvoice['total']) => <Money value={value} {...(locale ? { locale } : {})} />
+  const money = (value: HostedInvoice['total']) => (
+    <Money value={value} {...(locale ? { locale } : {})} />
+  )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -55,7 +71,7 @@ function Details({ invoice, onClose, locale }: { invoice: HostedInvoice; onClose
 
       <div className="flex flex-col gap-8 px-6 pt-4 pb-8">
         <div className="space-y-1">
-          <SheetTitle className="text-2xl font-medium">{titleOf(invoice, date)}</SheetTitle>
+          <SheetTitle className="text-2xl font-medium">{titleOf(invoice, locale)}</SheetTitle>
           <SheetDescription className="sr-only">Invoice {invoice.number}</SheetDescription>
         </div>
 
@@ -74,10 +90,15 @@ function Details({ invoice, onClose, locale }: { invoice: HostedInvoice; onClose
           ) : (
             <ul className="divide-y">
               {invoice.lines.map((line) => (
-                <li key={line.id || line.name} className="flex items-start justify-between gap-4 py-3 text-sm">
+                <li
+                  key={line.id || line.name}
+                  className="flex items-start justify-between gap-4 py-3 text-sm"
+                >
                   <div className="min-w-0">
                     <p className="font-medium break-words">{line.name}</p>
-                    {line.quantity ? <p className="text-muted-foreground text-xs">Qty {line.quantity}</p> : null}
+                    {line.quantity ? (
+                      <p className="text-muted-foreground text-xs">Qty {line.quantity}</p>
+                    ) : null}
                   </div>
                   <span className="shrink-0 tabular-nums">{money(line.amount)}</span>
                 </li>
@@ -106,17 +127,26 @@ function Details({ invoice, onClose, locale }: { invoice: HostedInvoice; onClose
           <Block title="Payment history">
             <ul className="divide-y">
               {invoice.payments.map((payment) => (
-                <li key={payment.id} className="flex items-start justify-between gap-4 py-3 text-sm">
+                <li
+                  key={payment.id}
+                  className="flex items-start justify-between gap-4 py-3 text-sm"
+                >
                   <div className="min-w-0 space-y-1">
                     <p className="tabular-nums">{money(payment.amount)}</p>
                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
                       <span>{payment.method}</span>
                       {payment.status !== 'SUCCEEDED' ? (
-                        <Pill tone={payment.status === 'FAILED' ? 'danger' : 'neutral'}>{statusLabel(payment.status)}</Pill>
+                        <Pill tone={payment.status === 'FAILED' ? 'danger' : 'neutral'}>
+                          {statusLabel(payment.status)}
+                        </Pill>
                       ) : null}
                     </div>
                   </div>
-                  {payment.at ? <span className="text-muted-foreground shrink-0 text-xs">{date(payment.at)}</span> : null}
+                  {payment.at ? (
+                    <span className="text-muted-foreground shrink-0 text-xs">
+                      {date(payment.at)}
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -126,7 +156,10 @@ function Details({ invoice, onClose, locale }: { invoice: HostedInvoice; onClose
         {invoice.tenant.contactEmail ? (
           <p className="text-muted-foreground text-sm">
             Questions? Contact{' '}
-            <a className="text-foreground underline underline-offset-4" href={`mailto:${invoice.tenant.contactEmail}`}>
+            <a
+              className="text-foreground underline underline-offset-4"
+              href={`mailto:${invoice.tenant.contactEmail}`}
+            >
               {invoice.tenant.name || invoice.tenant.contactEmail}
             </a>
           </p>
@@ -136,16 +169,16 @@ function Details({ invoice, onClose, locale }: { invoice: HostedInvoice; onClose
   )
 }
 
-function titleOf(invoice: HostedInvoice, date: (value: Date) => string): string {
+function titleOf(invoice: HostedInvoice, locale: string | undefined): string {
   switch (invoice.state) {
     case 'paid':
-      return invoice.paidAt ? `Paid on ${date(invoice.paidAt)}` : 'Invoice paid'
+      return invoice.paidAt ? `Paid on ${formatHostedDate(invoice.paidAt, locale)}` : 'Invoice paid'
     case 'voided':
       return 'Invoice voided'
     case 'processing':
       return 'Payment processing'
     case 'open':
-      return invoice.dueAt ? `Due ${date(invoice.dueAt)}` : 'Amount due'
+      return invoice.dueAt ? `Due ${formatHostedDate(invoice.dueAt, locale, 'UTC')}` : 'Amount due'
   }
 }
 
@@ -157,7 +190,9 @@ function statusLabel(status: string): string {
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-muted-foreground border-b pb-2 text-xs font-medium tracking-wide uppercase">{title}</h3>
+      <h3 className="text-muted-foreground border-b pb-2 text-xs font-medium tracking-wide uppercase">
+        {title}
+      </h3>
       {children}
     </section>
   )
@@ -172,9 +207,19 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function Total({ label, strong = false, children }: { label: string; strong?: boolean; children: ReactNode }) {
+function Total({
+  label,
+  strong = false,
+  children,
+}: {
+  label: string
+  strong?: boolean
+  children: ReactNode
+}) {
   return (
-    <div className={strong ? 'flex justify-between gap-4 font-medium' : 'flex justify-between gap-4'}>
+    <div
+      className={strong ? 'flex justify-between gap-4 font-medium' : 'flex justify-between gap-4'}
+    >
       <dt>{label}</dt>
       <dd className="tabular-nums">{children}</dd>
     </div>

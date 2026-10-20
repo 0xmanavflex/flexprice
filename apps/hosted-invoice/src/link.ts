@@ -1,4 +1,4 @@
-import type { ApiUrls, RegionId } from './env'
+import { type ApiUrls, REGION_IDS, type RegionId } from './env'
 
 export interface HostedInvoiceLink {
   region: RegionId
@@ -11,7 +11,10 @@ export interface HostedInvoiceLink {
  * anything else, or a region the deployment has no API for, is not a link.
  * The token is passed through untouched.
  */
-export function parseHostedInvoiceLink(pathname: string, apiUrls: ApiUrls): HostedInvoiceLink | null {
+export function parseHostedInvoiceLink(
+  pathname: string,
+  apiUrls: ApiUrls,
+): HostedInvoiceLink | null {
   const path = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
   const segments = path.split('/')
   if (segments.length !== 3 || segments[0] !== '') return null
@@ -19,6 +22,8 @@ export function parseHostedInvoiceLink(pathname: string, apiUrls: ApiUrls): Host
   const [, region, token] = segments
   if (!region || !token) return null
 
+  // Only known regions: a plain object also answers `constructor`, `toString` and the like.
+  if (!(REGION_IDS as readonly string[]).includes(region)) return null
   const apiOrigin = apiUrls[region as RegionId]
   if (!apiOrigin) return null
   return { region: region as RegionId, token, apiOrigin }

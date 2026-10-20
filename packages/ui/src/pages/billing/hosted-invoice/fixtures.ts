@@ -24,7 +24,13 @@ export const DEMO_HOSTED_INVOICE: HostedInvoice = {
     { id: 'li_2', name: 'API calls', quantity: '4000', amount: inr('800') },
   ],
   payments: [
-    { id: 'pay_1', amount: inr('8800'), status: 'FAILED', method: 'Card', at: new Date('2026-10-13T08:01:00Z') },
+    {
+      id: 'pay_1',
+      amount: inr('8800'),
+      status: 'FAILED',
+      method: 'Card',
+      at: new Date('2026-10-13T08:01:00Z'),
+    },
   ],
   payEnabled: true,
 }
@@ -38,7 +44,13 @@ export const DEMO_PAID_HOSTED_INVOICE: HostedInvoice = {
   paidWith: 'Stripe',
   payments: [
     ...DEMO_HOSTED_INVOICE.payments,
-    { id: 'pay_2', amount: inr('8800'), status: 'SUCCEEDED', method: 'Stripe', at: new Date('2026-10-14T08:01:00Z') },
+    {
+      id: 'pay_2',
+      amount: inr('8800'),
+      status: 'SUCCEEDED',
+      method: 'Stripe',
+      at: new Date('2026-10-14T08:01:00Z'),
+    },
   ],
   payEnabled: false,
 }

@@ -61,7 +61,9 @@ export const Paying: Story = {
 export const PayError: Story = {
   args: { payError: "This invoice can't be paid right now." },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('alert')).toHaveTextContent("This invoice can't be paid right now.")
+    await expect(within(canvasElement).getByRole('alert')).toHaveTextContent(
+      "This invoice can't be paid right now.",
+    )
   },
 }
 
@@ -117,14 +119,16 @@ export const Sparse: Story = {
 export const Invalid: Story = {
   args: { kind: 'invalid', message: 'This link is no longer valid, contact Paras.' },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('This link is no longer valid, contact Paras.')).toBeVisible()
+    await expect(
+      within(canvasElement).getByText('This link is no longer valid, contact Paras.'),
+    ).toBeVisible()
   },
 }
 
 export const NotFound: Story = {
   args: { kind: 'not-found' },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('Page not found')).toBeVisible()
+    await expect(within(canvasElement).getByText('Invoice not found')).toBeVisible()
   },
 }
 

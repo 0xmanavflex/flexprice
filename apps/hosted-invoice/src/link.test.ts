@@ -20,10 +20,19 @@ describe('parseHostedInvoiceLink', () => {
     expect(parseHostedInvoiceLink('/staging/t', urls)?.region).toBe('staging')
   })
 
-  it.each(['/', '', '/us', '/us/', '/eu/t', '/in/t', '/us/t/extra', '//t', '/us//'])(
-    '%s is not a link',
-    (path) => {
-      expect(parseHostedInvoiceLink(path, urls)).toBeNull()
-    },
-  )
+  it.each([
+    '/',
+    '',
+    '/us',
+    '/us/',
+    '/eu/t',
+    '/in/t',
+    '/us/t/extra',
+    '//t',
+    '/us//',
+    '/constructor/t',
+    '/toString/t',
+  ])('%s is not a link', (path) => {
+    expect(parseHostedInvoiceLink(path, urls)).toBeNull()
+  })
 })
