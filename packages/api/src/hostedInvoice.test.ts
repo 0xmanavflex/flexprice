@@ -47,7 +47,7 @@ describe('hosted invoice public API', () => {
 
     await getHostedInvoiceDownload(ORIGIN, TOKEN)
 
-    expect(seen[0]?.url).toBe('https://us.api.test/public/v1/invoices/download')
+    expect(seen[0]?.url).toBe('https://us.api.test/public/v1/invoices/pdf')
   })
 
   it('pays with the idempotency key in the body', async () => {

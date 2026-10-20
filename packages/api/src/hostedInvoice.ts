@@ -16,7 +16,7 @@ export function getHostedInvoice(apiOrigin: string, token: string): Promise<unkn
 }
 
 export function getHostedInvoiceDownload(apiOrigin: string, token: string): Promise<unknown> {
-  return publicRequest(apiOrigin, '/public/v1/invoices/download', { method: 'GET', token })
+  return publicRequest(apiOrigin, '/public/v1/invoices/pdf', { method: 'GET', token })
 }
 
 export function payHostedInvoice(apiOrigin: string, token: string, idempotencyKey: string): Promise<unknown> {
