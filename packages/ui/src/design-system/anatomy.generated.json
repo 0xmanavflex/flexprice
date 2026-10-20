@@ -413,6 +413,7 @@
         "ConnectorCard",
         "CustomerWalletView",
         "DashboardHome",
+        "EventDetailSheet",
         "FilterSelect",
         "RelatedCard",
         "ShellNav",
@@ -1718,6 +1719,7 @@
         "Pill",
         "PlusIcon",
         "RelatedCard",
+        "RocketIcon",
         "RowActionsMenu",
         "Section",
         "Status",
@@ -2482,6 +2484,7 @@
       "file": "src/pages/developers/events/EventDetailSheet.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowUpRightIcon",
         "DetailList",
         "EventTrace",
         "Sheet"
@@ -5255,7 +5258,9 @@
       "file": "src/reui/icons/default/outline/rocket.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "CustomerDetail"
+      ],
       "story": null
     },
     "RoleTree": {
