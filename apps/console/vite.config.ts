@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
 import { pxToRem } from './px-to-rem'
+import { appVersion } from './app-version'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), pxToRem()],
+  plugins: [react(), tailwindcss(), pxToRem(), appVersion()],
   resolve: {
     alias: {
       '@/': fileURLToPath(new URL('./src/', import.meta.url)),
@@ -15,7 +16,9 @@ export default defineConfig({
       '@ui/': fileURLToPath(new URL('../../packages/ui/src/', import.meta.url)),
       // Vendored ReUI code imports icons from `lucide-react`. Resolve that to
       // the ReUI icon barrel so nothing renders a lucide glyph.
-      'lucide-react': fileURLToPath(new URL('../../packages/ui/src/icons/index.ts', import.meta.url)),
+      'lucide-react': fileURLToPath(
+        new URL('../../packages/ui/src/icons/index.ts', import.meta.url),
+      ),
     },
   },
   server: { port: 3000 },

@@ -82,6 +82,23 @@ test.describe('environment create', () => {
     const dialog = page.getByRole('dialog', { name: 'Create environment' })
     await expect(dialog).toBeVisible()
     await expect(dialog.getByRole('radio', { name: /sandbox/i })).toBeChecked()
+    // V1's sandbox warning, then V1's way to ask for production.
+    await expect(dialog.getByText(/automatically cancelled after 45 days/i)).toBeVisible()
+    await dialog.getByRole('radio', { name: /production/i }).click()
+    await expect(dialog.getByText(/require an approval/i)).toBeVisible()
+    await expect(dialog.getByRole('link', { name: /slack/i })).toHaveAttribute(
+      'href',
+      /join\.slack\.com\/t\/flexpricecommunity/,
+    )
+    await expect(dialog.getByRole('link', { name: /email/i })).toHaveAttribute(
+      'href',
+      'mailto:support@flexprice.io',
+    )
+    await expect(dialog.getByRole('link', { name: /book a call/i })).toHaveAttribute(
+      'href',
+      /calendly\.com/,
+    )
+    await expect(dialog.getByRole('button', { name: 'Create environment' })).toBeDisabled()
 
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await expect(dialog).toBeHidden()
