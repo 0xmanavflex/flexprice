@@ -177,7 +177,7 @@ export function useUpdateTenantMetadata() {
 
   return useMutation({
     mutationFn: async ({ name, metadata }: { name: string; metadata: Record<string, string> }) => {
-      const wire = await call(() => client.tenants.updateTenant({ name, metadata } as never))
+      const wire = await call(() => client.tenants.updateTenant({ name, metadata }))
       return toTenant(wire as TenantWire)
     },
     onSuccess: () => {
