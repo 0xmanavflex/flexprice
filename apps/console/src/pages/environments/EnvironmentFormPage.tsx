@@ -30,9 +30,9 @@ export function EnvironmentFormPage({ open, onOpenChange }: EnvironmentFormPageP
     <EnvironmentForm
       open={open}
       onOpenChange={onOpenChange}
-      canCreateProduction={false}
-      // Slack, email and booked call, configured in `env.ts` (`VITE_CONTACT_*`).
-      contact={env.contact}
+      // Both from `VITE_PLATFORM_CONFIG` in `env.ts`.
+      canCreateProduction={env.platform.production.enabled}
+      contact={env.platform.contact}
       isSubmitting={create.isPending}
       submitError={
         create.error ? mutationMessage(create.error, 'The environment could not be created.') : null

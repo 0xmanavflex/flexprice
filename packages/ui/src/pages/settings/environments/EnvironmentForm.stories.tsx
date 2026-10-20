@@ -188,7 +188,7 @@ export const ProductionUnavailable: Story = {
   },
 }
 
-/** A deployment that hides Slack and the booking page (`VITE_CONTACT_*=none`) shows email alone. */
+/** A deployment that hides Slack and the booking page (`"slack_url": ""` and `"book_call_url": ""` in `VITE_PLATFORM_CONFIG`) shows email alone. */
 export const ProductionEmailOnly: Story = {
   args: {
     canCreateProduction: false,
