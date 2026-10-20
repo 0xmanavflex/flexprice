@@ -573,6 +573,7 @@ export {
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,
+  useWalletBalance,
   useWalletTransactions,
 } from './wallets'
 export type { WalletTransactionWire, WalletWire } from './wallets'
