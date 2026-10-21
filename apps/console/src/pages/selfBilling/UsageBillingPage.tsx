@@ -47,7 +47,19 @@ export function UsageBillingPage({ onUpgrade }: { onUpgrade: () => void }) {
       />
     )
   }
-  if (summary.isPending || !summary.data) return <PanelLoading rows={6} />
+  if (summary.isPending) return <PanelLoading rows={6} />
+  // On, but no account yet: the summary answers 404 until this workspace has a
+  // Flexprice Cloud customer (signup provisions it in the background, and a
+  // workspace from before self-billing gets one on the hourly sync).
+  if (!summary.data) {
+    return (
+      <PanelUnavailable
+        reason="unavailable"
+        title="Your billing account is being set up"
+        description="Usage & billing appears here once your Flexprice account is ready. Check back in a few minutes."
+      />
+    )
+  }
 
   return (
     <Panel>
