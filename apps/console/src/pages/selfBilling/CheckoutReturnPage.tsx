@@ -7,7 +7,12 @@ import {
   useSelfBillingSummary,
 } from '@fp/query'
 import { CheckoutReturnView, type NextStep } from '@fp/ui/pages'
-import { forgetCheckout, recalledCheckout, useOrganization } from './organization'
+import {
+  forgetCheckout,
+  recalledCheckout,
+  recalledCheckoutEmail,
+  useOrganization,
+} from './organization'
 
 /**
  * The page Stripe returns to: `/billing/checkout/success` or
@@ -84,7 +89,7 @@ export function CheckoutReturnPage({
   return (
     <CheckoutReturnView
       outcome={outcome}
-      billingEmail={organization.tenant?.billingEmail ?? ''}
+      billingEmail={recalledCheckoutEmail() || organization.userEmail}
       paidInvoice={paid ? { number: paid.number, pdfUrl: paid.pdfUrl } : null}
       nextInvoiceOn={summary.data?.period?.end ?? null}
       onBilling={onBilling}

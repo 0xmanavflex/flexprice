@@ -10,7 +10,6 @@ const meta = {
   args: {
     summary: ACCOUNTS.trial,
     today: TODAY,
-    billingEmail: 'ola@flexprice.io',
     onUpgrade: fn(),
     onOpenPortal: fn(),
   },
@@ -40,6 +39,8 @@ export const Trial: Story = {
     await expect(canvas.getByText('No fee during the trial')).toBeVisible()
     await expect(canvas.getByText('No invoices yet')).toBeVisible()
     await expect(canvas.getByText('Added when you upgrade')).toBeVisible()
+    // Not reported by the API: no Billing email row rather than the wrong address.
+    await expect(canvas.queryByText('Billing email')).toBeNull()
     await expect(canvas.queryByRole('alert')).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Upgrade' }))
     await expect(args.onUpgrade).toHaveBeenCalled()
@@ -96,6 +97,8 @@ export const Live: Story = {
     await expect(canvas.getByText('0.5% fee so far: $921.00')).toBeVisible()
     await expect(canvas.getByRole('link', { name: 'Download FP-0003' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: /Manage billing/ })).toBeEnabled()
+    await expect(canvas.getByText('billing@acme.io')).toBeVisible()
+    await expect(canvas.getByText('Managed in the billing portal')).toBeVisible()
   },
 }
 
