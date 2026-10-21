@@ -94,11 +94,13 @@ export function WebhookMessageLog({
   const rowActions = (row: WebhookMessage): EntityRowAction[] => [
     {
       label: 'View message',
+      readOnly: true,
       icon: <FileJsonIcon aria-hidden className="size-4" />,
       onSelect: () => onOpen(row),
     },
     {
       label: 'Copy message ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(row.id),
     },
@@ -111,6 +113,7 @@ export function WebhookMessageLog({
 
   return (
     <EntityList<WebhookMessage>
+      primaryActionReadOnly
       label="Message log"
       noun="messages"
       rows={filtered.slice((page - 1) * pageSize, page * pageSize)}

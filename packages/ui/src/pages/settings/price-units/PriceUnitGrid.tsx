@@ -169,6 +169,7 @@ export function PriceUnitGrid({
     if (onPriceUnitClick) {
       actions.push({
         label: 'View price unit',
+        readOnly: true,
         icon: <CoinsIcon aria-hidden className="size-4" />,
         onSelect: () => onPriceUnitClick(priceUnit),
       })
@@ -182,6 +183,7 @@ export function PriceUnitGrid({
     }
     actions.push({
       label: 'Copy price unit ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(priceUnit.id),
     })

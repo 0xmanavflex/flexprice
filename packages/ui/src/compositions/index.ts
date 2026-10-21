@@ -211,3 +211,15 @@ export type { CheckboxRowProps } from './forms/CheckboxRow'
 
 export { ActivitySection } from './detail/ActivityLog'
 export type { ActivityLogEntry } from './detail/ActivityLog'
+export {
+  AccessProvenance,
+  AccessProvider,
+  AccessScope,
+  RequireAccess,
+  WriteGate,
+  useAccess,
+  useCan,
+  useWriteAccess,
+  useWriteCheck,
+} from './access/Access'
+export type { AccessStatus, AccessValue, WriteAccess } from './access/Access'

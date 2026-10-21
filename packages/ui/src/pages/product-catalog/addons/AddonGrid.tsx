@@ -224,6 +224,7 @@ export function AddonGrid({
     if (onAddonClick) {
       actions.push({
         label: 'View add-on',
+        readOnly: true,
         icon: <PuzzleIcon aria-hidden className="size-4" />,
         onSelect: () => onAddonClick(addon),
       })
@@ -237,6 +238,7 @@ export function AddonGrid({
     }
     actions.push({
       label: 'Copy add-on ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(addon.id),
     })

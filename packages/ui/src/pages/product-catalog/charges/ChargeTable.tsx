@@ -1,3 +1,4 @@
+import { WriteGate } from '@ui/compositions/access/Access'
 import { useMemo, useState } from 'react'
 import {
   BILLING_MODEL_LABEL,
@@ -279,16 +280,19 @@ export function ChargeTable({
     charge.endDate ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
 
   const addButton = onAdd ? (
-    <Button
-      type="button"
-      size="sm"
-      className="h-8 px-3"
-      onClick={onAdd}
-      disabled={Boolean(isLoading || error)}
-    >
-      <PlusIcon aria-hidden />
-      {addLabel}
-    </Button>
+    // Follows the surrounding AccessScope (price on a plan, subscription on a contract).
+    <WriteGate>
+      <Button
+        type="button"
+        size="sm"
+        className="h-8 px-3"
+        onClick={onAdd}
+        disabled={Boolean(isLoading || error)}
+      >
+        <PlusIcon aria-hidden />
+        {addLabel}
+      </Button>
+    </WriteGate>
   ) : null
 
   if (charges.length === 0) {
@@ -429,10 +433,13 @@ export function ChargeTable({
             extra={[
               {
                 label: 'Copy price ID',
+                readOnly: true,
                 onSelect: () => void navigator.clipboard?.writeText(charge.id),
               },
               ...(extraActions?.(charge) ?? []),
-              ...(onRowClick ? [] : [{ label: 'View details', onSelect: () => openAt(charge) }]),
+              ...(onRowClick
+                ? []
+                : [{ label: 'View details', readOnly: true, onSelect: () => openAt(charge) }]),
             ]}
             onEdit={
               onEdit && !charge.endDate && (canEdit?.(charge) ?? true)
@@ -473,11 +480,7 @@ export function ChargeTable({
         {rows.length === 0 ? (
           <SectionEmpty
             scene="catalog"
-            title={
-              variant === 'summary'
-                ? 'No changes'
-                : 'No charges yet'
-            }
+            title={variant === 'summary' ? 'No changes' : 'No charges yet'}
             description={
               variant === 'summary'
                 ? 'Every charge is billed as the plan sets it. Changed charges show here.'

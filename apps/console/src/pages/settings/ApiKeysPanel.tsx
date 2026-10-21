@@ -11,9 +11,10 @@ import {
   createApiKeySchema,
   emptyApiKey,
   isExpired,
+  RBAC_ENTITY,
 } from '@fp/domain'
 import { DEFAULT_API_KEY_QUERY, useApiKeys, useCreateApiKey, useDeleteApiKey } from '@fp/query'
-import { ConfirmDialog, Field, FormDialog, LoadingRows } from '@fp/ui/compositions'
+import { ConfirmDialog, Field, FormDialog, LoadingRows, WriteGate } from '@fp/ui/compositions'
 import { Badge, Button, Input } from '@fp/ui/primitives'
 import { CheckIcon, CopyIcon } from '@fp/ui/icons'
 import {
@@ -87,7 +88,13 @@ export function ApiKeysPanel() {
             scene="developers"
             title="No API keys yet"
             description="An API key lets your servers send usage events and call the Flexprice API without a person signing in."
-            action={<Button onClick={() => setIsCreating(true)}>Create API key</Button>}
+            action={
+              <WriteGate entity={RBAC_ENTITY.Secret}>
+                <WriteGate entity={RBAC_ENTITY.Secret}>
+                  <Button onClick={() => setIsCreating(true)}>Create API key</Button>
+                </WriteGate>
+              </WriteGate>
+            }
             docsHref={API_DOCS_URL}
             docsLabel="API docs"
           />
@@ -193,9 +200,12 @@ function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) 
         </span>
       </div>
       <CopySnippet value={apiKey.displayId || apiKey.id} display={maskedKey(apiKey)} label={name} />
-      <Button size="sm" variant="ghost" onClick={onRevoke}>
-        Revoke
-      </Button>
+      {/* Revoking needs secret write (V1). */}
+      <WriteGate entity={RBAC_ENTITY.Secret}>
+        <Button size="sm" variant="ghost" onClick={onRevoke}>
+          Revoke
+        </Button>
+      </WriteGate>
     </li>
   )
 }

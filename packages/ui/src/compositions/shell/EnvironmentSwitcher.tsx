@@ -9,6 +9,8 @@ import {
 } from '@ui/components/primitives/dropdown-menu'
 import { cn } from '@ui/lib/cn'
 import type { ShellEnvironment } from './types'
+import { RBAC_ENTITY } from '@fp/domain'
+import { useWriteAccess } from '../access/Access'
 
 export interface EnvironmentSwitcherProps {
   current: ShellEnvironment
@@ -56,6 +58,8 @@ export function EnvironmentSwitcher({
   onRename,
   onDelete,
 }: EnvironmentSwitcherProps) {
+  // Creating and renaming environments need environment write (V1).
+  const write = useWriteAccess(RBAC_ENTITY.Environment)
   // Production first, so the consequential environment leads the list; the rest
   // follow in the order the server returned them. One flat list, no headings.
   const production = environments.filter((e) => e.kind === 'production')
@@ -96,6 +100,7 @@ export function EnvironmentSwitcher({
                     <DropdownMenuItem
                       className={ROW_ACTION}
                       aria-label={`Rename ${environment.name}`}
+                      disabled={!write.allowed}
                       onClick={() => onRename(environment.id)}
                     >
                       <PencilIcon aria-hidden className="text-muted-foreground size-3.5" />
@@ -106,6 +111,7 @@ export function EnvironmentSwitcher({
                       variant="destructive"
                       className={ROW_ACTION}
                       aria-label={`Delete ${environment.name}`}
+                      disabled={!write.allowed}
                       onClick={() => onDelete(environment.id)}
                     >
                       <Trash2Icon aria-hidden className="size-3.5" />
@@ -123,11 +129,14 @@ export function EnvironmentSwitcher({
                 environment list is. */}
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={onCreate}>
+              <DropdownMenuItem disabled={!write.allowed} onClick={onCreate}>
                 <PlusIcon className="text-muted-foreground" aria-hidden />
                 New environment
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            {write.reason ? (
+              <p className="text-muted-foreground px-2 py-1.5 text-xs">{write.reason}</p>
+            ) : null}
           </>
         ) : null}
       </DropdownMenuContent>

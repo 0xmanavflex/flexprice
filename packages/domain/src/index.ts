@@ -777,3 +777,16 @@ export type { TimezoneOption } from './timezones'
 
 export { cadenceAllowed, selectContractCharges } from './contractCharges'
 export type { ContractChargeSelection } from './contractCharges'
+export {
+  RBAC_ACTION,
+  RBAC_ENTITY,
+  accessDeniedReason,
+  canAccess,
+  canDeleteMember,
+  canEditMemberRoles,
+  canRemoveMember,
+  isSuperAdmin,
+  meetsRequirement,
+  resolveGrants,
+} from './access'
+export type { AccessGrants, AccessRequirement, RbacAction, RbacEntity } from './access'

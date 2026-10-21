@@ -183,6 +183,7 @@ export function CostSheetGrid({
     if (onCostSheetClick) {
       actions.push({
         label: 'View cost sheet',
+        readOnly: true,
         icon: <SheetIcon aria-hidden className="size-4" />,
         onSelect: () => onCostSheetClick(costSheet),
       })
@@ -196,6 +197,7 @@ export function CostSheetGrid({
     }
     actions.push({
       label: 'Copy cost sheet ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(costSheet.id),
     })

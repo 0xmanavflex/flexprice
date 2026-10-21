@@ -1,3 +1,5 @@
+import { RBAC_ENTITY } from '@fp/domain'
+import { AccessScope } from '@ui/compositions/access/Access'
 import { BillingModel, type Charge, type ChargeDetail, chargeToDraft } from '@fp/domain'
 import { ChargeTable } from '../charges/ChargeTable'
 import { chargeLabel, pricingSummary } from './PlanPreviewCard'
@@ -23,7 +25,7 @@ export interface PlanChargesViewProps {
 }
 
 /** Plan actions and pricing labels composed over the shared charges table and sheet. */
-export function PlanChargesView({
+function PlanChargesViewInner({
   charges,
   onAdd,
   onEdit,
@@ -67,5 +69,14 @@ export function PlanChargesView({
             )
       }
     />
+  )
+}
+
+/** `PlanChargesView`, scoped to the entity it writes (Price). */
+export function PlanChargesView(props: Parameters<typeof PlanChargesViewInner>[0]) {
+  return (
+    <AccessScope entity={RBAC_ENTITY.Price}>
+      <PlanChargesViewInner {...props} />
+    </AccessScope>
   )
 }

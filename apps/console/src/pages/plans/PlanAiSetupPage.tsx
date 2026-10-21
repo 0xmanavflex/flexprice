@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PricingSchema } from '@fp/domain'
-import { APPLY_STEP_LABEL, useApplyPricingSchema, useParsePricing } from '@fp/query'
+import { useApplyPricingSchema, useParsePricing } from '@fp/query'
 import type { ApplyStep } from '@fp/query'
 import { PlanAiSetupView, Toaster, toast } from '@fp/ui/pages'
-import { PageBody } from '@fp/ui/compositions'
 import { toSubmitError } from './planMessages'
+
+/** How long "Your pricing has been created" stays up before Plans, as the reference. */
+const CREATED_HOLD_MS = 1600
 
 export interface PlanAiSetupPageProps {
   /** Back to the plans list, on cancel or once everything is created. */
@@ -18,17 +20,31 @@ export interface PlanAiSetupPageProps {
  * nothing, and what it answers is shown in full before the second runs. The
  * schema is held here rather than refetched, so reading it again is a
  * deliberate act and not something a re-render can trigger.
+ *
+ * The view fills the content area itself (its prompt ground and review
+ * canvas run edge to edge), so there is no `PageBody` around it.
  */
 export function PlanAiSetupPage({ onDone }: PlanAiSetupPageProps) {
   const [description, setDescription] = useState('')
   const [schema, setSchema] = useState<PricingSchema | null>(null)
   const [step, setStep] = useState<ApplyStep | null>(null)
+  const [created, setCreated] = useState<string | null>(null)
 
   const parse = useParsePricing()
   const apply = useApplyPricingSchema()
 
+  // Hold the success card for a moment, then go to Plans with a toast.
+  useEffect(() => {
+    if (!created) return
+    const timer = setTimeout(() => {
+      toast.success('Your pricing has been created', { description: created })
+      onDone()
+    }, CREATED_HOLD_MS)
+    return () => clearTimeout(timer)
+  }, [created, onDone])
+
   return (
-    <PageBody>
+    <>
       <Toaster />
       <PlanAiSetupView
         description={description}
@@ -38,8 +54,9 @@ export function PlanAiSetupPage({ onDone }: PlanAiSetupPageProps) {
           // changed description would invite creating the wrong thing.
           if (schema) setSchema(null)
         }}
-        onParse={() => {
-          parse.mutate(description, { onSuccess: setSchema })
+        onParse={(text) => {
+          setSchema(null)
+          parse.mutate(text, { onSuccess: setSchema })
         }}
         isParsing={parse.isPending}
         parseError={parse.isError ? toSubmitError(parse.error, 'read') : null}
@@ -54,10 +71,20 @@ export function PlanAiSetupPage({ onDone }: PlanAiSetupPageProps) {
           apply.mutate(
             { schema, onStep: setStep },
             {
-              onSuccess: (result) => {
-                const plans = Object.keys(result.planIds).length
-                toast(plans === 1 ? 'Your plan is ready.' : `${plans} plans are ready.`)
-                onDone()
+              onSuccess: () => {
+                const n = (count: number, noun: string) =>
+                  `${count} ${noun}${count === 1 ? '' : 's'}`
+                setCreated(
+                  [
+                    n(schema.features.length, 'feature'),
+                    n(schema.plans.length, 'plan'),
+                    schema.creditGrants.length
+                      ? n(schema.creditGrants.length, 'credit grant')
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · '),
+                )
               },
               onSettled: () => setStep(null),
             },
@@ -65,9 +92,10 @@ export function PlanAiSetupPage({ onDone }: PlanAiSetupPageProps) {
         }}
         isApplying={apply.isPending}
         applyError={apply.isError ? toSubmitError(apply.error, 'create') : null}
-        applyStep={step ? APPLY_STEP_LABEL[step] : null}
+        createStep={step}
+        created={created !== null}
         onCancel={onDone}
       />
-    </PageBody>
+    </>
   )
 }

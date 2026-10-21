@@ -385,6 +385,7 @@ export function FeatureGrid({
     if (onFeatureClick) {
       actions.push({
         label: 'View feature',
+        readOnly: true,
         icon: <GaugeIcon aria-hidden className="size-4" />,
         onSelect: () => onFeatureClick(feature),
       })
@@ -413,6 +414,7 @@ export function FeatureGrid({
     }
     actions.push({
       label: 'Copy feature ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(feature.id),
     })
