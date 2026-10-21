@@ -216,7 +216,7 @@ const withHeight: Decorator = (Story) => (
   </div>
 )
 
-/** Start a contract in V1's order: customer & plan, phases (charges then discounts), commitments & benefits, billing, review. */
+/** Start a contract: the contract, charges & add-ons, commitments & benefits, billing, review. */
 const meta = {
   title: 'App/Contracts/Contract form',
   component: SubscriptionFormPlayground,
@@ -369,15 +369,19 @@ async function openCommitment(canvas: ReturnType<typeof within>) {
   throw new Error('No usage charge to commit on')
 }
 
-/** The phases step lists the plan's charges. A usage charge's commitment opens in a dialog. */
+/**
+ * A contract of one phase lists the plan's charges in one Charges card, with
+ * no phase chrome; proration sits under them. A usage charge's commitment
+ * opens in a dialog.
+ */
 export const PhaseCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 6 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { name: 'Phase 1' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Phase 1' })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Discounts' })).toBeVisible()
-    await expect(canvas.getByText('No discounts on Phase 1.')).toBeVisible()
+    await expect(canvas.getByRole('switch', { name: /^Proration/ })).toBeChecked()
+    await expect(canvas.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
     const dialog = await openCommitment(canvas)
     await expect(dialog.getByRole('heading', { name: 'Configure commitment' })).toBeVisible()
@@ -500,13 +504,12 @@ export const SetsAFixedChargeQuantity: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 2 },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    const [quantity] = canvas.getAllByLabelText(/^Quantity of .* in Phase 1$/)
+    const [quantity] = canvas.getAllByLabelText(/^Quantity of /)
     await userEvent.type(quantity!, '25')
     for (const step of ['commitments', 'billing', 'review']) {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
-    await expect(await canvas.findByText(/Phase 1/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -553,7 +556,7 @@ export const AddsAChargeForThisContract: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 2 },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Add a charge to Phase 1' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.type(await dialog.findByLabelText('Display name'), 'Onboarding')
@@ -585,16 +588,16 @@ export const AddsAChargeForThisContract: Story = {
   },
 }
 
-/** A contract that would end before it starts is stopped on the timeline step, where the end date is. */
-export const EndDateCheckedOnTheTimeline: Story = {
-  args: { prefilled: true, step: 'phases', endDate: '2000-01-01' },
+/** A contract that would end before it starts is stopped on the first step, where the end date is. */
+export const EndDateCheckedOnTheFirstStep: Story = {
+  args: { prefilled: true, step: 'plan', endDate: '2000-01-01' },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await expect(
       await canvas.findByText('The contract starts today, so it must end after today'),
     ).toBeVisible()
-    await expect(args.onStepChange).not.toHaveBeenCalledWith('commitments')
+    await expect(args.onStepChange).not.toHaveBeenCalledWith('phases')
   },
 }
 
@@ -611,15 +614,14 @@ export const PhaseLoading: Story = {
   },
 }
 
-/** A phase gets an end date, then a second phase starts where it ends, with its own discounts. */
+/**
+ * A contract with an end date can be split: a second phase starts where it
+ * ends, with its own discounts, and the step becomes a timeline of phases.
+ */
 export const AddsAPhaseWithItsOwnDiscount: Story = {
-  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  args: { prefilled: true, step: 'phases', chargeCount: 2, endDate: '2027-04-20' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /^Ends/ }))
-    const days = await screen.findAllByRole('gridcell')
-    await userEvent.click(within(days[20]!).getByRole('button'))
-    await userEvent.keyboard('{Escape}')
     await userEvent.click(canvas.getByRole('button', { name: 'Add phase' }))
     await expect(await canvas.findByRole('heading', { name: 'Phase 2' })).toBeVisible()
     // The phase just left is folded, so the form stays on the new one.
@@ -633,20 +635,22 @@ export const AddsAPhaseWithItsOwnDiscount: Story = {
     await expect(canvas.getByText('On all of Phase 2')).toBeVisible()
   },
 }
-/** Add-ons & benefits: add-ons, the contract's commitment, then entitlements, grants and taxes. */
+/** Commitments & benefits: the contract's commitment first, then entitlements, grants and taxes. */
 export const CommitmentsStep: Story = {
   args: { prefilled: true, step: 'commitments', chargeCount: 4, entitlementCount: 12 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    for (const title of [
-      'Add-ons',
-      'Contract commitment',
-      'Entitlements',
-      'Credit grants',
-      'Taxes',
-    ]) {
+    const titles = ['Contract commitment', 'Entitlements', 'Credit grants', 'Taxes']
+    for (const title of titles) {
       await expect(await canvas.findByRole('heading', { name: title })).toBeVisible()
     }
+    // In that order, the commitment leading; add-ons moved to the charges step.
+    const headings = canvas
+      .getAllByRole('heading')
+      .map((h) => h.textContent ?? '')
+      .filter((text) => titles.includes(text))
+    await expect(headings).toEqual(titles)
+    await expect(canvas.queryByRole('heading', { name: 'Add-ons' })).toBeNull()
     await expect(canvas.queryByText('Charge commitments')).toBeNull()
     // Period, overage, and true-up are visible before an amount is entered.
     await expect(canvas.getByText('Commitment period')).toBeVisible()
@@ -669,12 +673,25 @@ export const BillingStep: Story = {
       'Payment terms',
       'Billing customer',
       'Inherited customers',
-      'Prorate changes',
       'Auto-invoice threshold',
-      'Create as draft',
     ]) {
       await expect(canvas.getByText(label, { exact: true })).toBeVisible()
     }
+    // Proration moved to the charges; draft is the header's Save as draft.
+    await expect(canvas.queryByText('Prorate changes')).toBeNull()
+    await expect(canvas.queryByText('Create as draft')).toBeNull()
+  },
+}
+
+/** Save as draft sits in the header on every step and creates the contract as a draft. */
+export const SavesAsDraft: Story = {
+  args: { prefilled: true, step: 'plan' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ draft: true })),
+    )
   },
 }
 /** Entitlements come from the plan, so with none chosen the step says so. */
@@ -714,24 +731,21 @@ export const SubmitError: Story = {
 }
 
 /**
- * The review is one card per step, each with its Edit, and closes on the
- * first invoice — the reference's summary, not a second copy of each step.
+ * The review is one card per step, each with its Edit — the reference's
+ * summary, not a second copy of each step. There is no first-invoice estimate:
+ * nothing in the API can make one.
  */
 export const ReviewByStep: Story = {
   args: { prefilled: true, step: 'review', chargeCount: 4, entitlementCount: 3 },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    for (const title of [
-      'Customer & plan',
-      'Phases & charges (1)',
-      'Add-ons & benefits',
-      'Billing',
-    ]) {
+    for (const title of ['Contract', 'Charges & add-ons', 'Commitments & benefits', 'Billing']) {
       await expect(canvas.getByRole('heading', { name: title })).toBeVisible()
     }
     await expect(canvas.getByText('14 days')).toBeVisible()
     await expect(canvas.getByText(/^3, from the plan/)).toBeVisible()
-    await expect(canvas.getByText('First invoice')).toBeVisible()
+    await expect(canvas.queryByText('First invoice')).toBeNull()
+    await expect(canvas.queryByRole('complementary', { name: 'Summary' })).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Edit billing' }))
     await expect(args.onStepChange).toHaveBeenLastCalledWith('billing')
   },

@@ -70,7 +70,7 @@ export function localToday(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-function addDays(day: string, days: number): string {
+export function addDays(day: string, days: number): string {
   const date = new Date(`${day}T00:00:00`)
   date.setDate(date.getDate() + days)
   const pad = (n: number) => String(n).padStart(2, '0')

@@ -755,6 +755,7 @@
         "EnvironmentForm",
         "FilterSelect",
         "RevenueReport",
+        "SubscriptionForm",
         "UsageCard"
       ],
       "story": null
@@ -1401,9 +1402,7 @@
         "PreviewRow",
         "PreviewRows"
       ],
-      "usedBy": [
-        "SubscriptionForm"
-      ],
+      "usedBy": [],
       "story": "./src/pages/contracts/ContractSummary.stories.tsx"
     },
     "ContractUsageEditForm": {
@@ -6404,10 +6403,10 @@
       "file": "src/pages/contracts/SubscriptionForm.tsx",
       "layer": "surface",
       "composes": [
+        "CalendarIcon",
         "ChargeCommitmentDialog",
         "ChoiceCards",
         "ContractChargeDialog",
-        "ContractSummary",
         "CreditGrantCreateForm",
         "DateInput",
         "EmptyState",
@@ -6421,6 +6420,7 @@
         "PriceOverrideForm",
         "RowActionsMenu",
         "SimpleTable",
+        "UserIcon",
         "UsersIcon",
         "WalletIcon"
       ],
@@ -6917,6 +6917,7 @@
       "usedBy": [
         "CustomerGrid",
         "ShellAccount",
+        "SubscriptionForm",
         "SubscriptionGrid"
       ],
       "story": null

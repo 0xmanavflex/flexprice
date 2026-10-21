@@ -45,24 +45,23 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
     await page.getByRole('option').first().click()
   }
 
-  // The rail sums up the choices and the first invoice beside every step but the review.
-  const summary = page.getByRole('complementary', { name: 'Summary' })
-  await expect(summary).toBeVisible()
-  await expect(page.getByRole('region', { name: 'First invoice' })).toBeVisible()
+  // No summary rail and no first-invoice estimate: the API has none to give.
+  await expect(page.getByRole('complementary', { name: 'Summary' })).toHaveCount(0)
+  // Save as draft sits in the header on every step.
+  await expect(page.getByRole('button', { name: 'Save as draft' })).toBeVisible()
 
   const titles: Record<string, string> = {
-    phases: 'Contract timeline',
+    phases: 'Charges',
     commitments: 'Contract commitment',
     billing: 'Who pays',
-    review: 'Add-ons & benefits',
+    review: 'Commitments & benefits',
   }
   for (const step of ['phases', 'commitments', 'billing', 'review']) {
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
-    await expect(page.getByRole('heading', { name: titles[step] })).toBeVisible()
+    await expect(page.getByRole('heading', { name: titles[step], exact: true })).toBeVisible()
   }
   await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0)
-  await expect(summary).toHaveCount(0)
 
   const request = page.waitForRequest(
     (r) => r.method() === 'POST' && /\/v1\/subscriptions$/.test(new URL(r.url()).pathname),
