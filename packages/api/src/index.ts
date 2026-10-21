@@ -178,3 +178,24 @@ export type {
   SelfBillingStatusWire,
   SelfBillingSummaryWire,
 } from './selfBilling'
+
+export {
+  addPortalPaymentMethod,
+  deletePortalPaymentMethod,
+  getPortalConfig,
+  getPortalCustomer,
+  getPortalIntegrations,
+  getPortalInvoice,
+  getPortalInvoicePdf,
+  getPortalInvoices,
+  getPortalPaymentMethods,
+  getPortalSubscriptions,
+  getPortalUsageAnalytics,
+  getPortalUsageSummary,
+  getPortalWalletTransactions,
+  getPortalWallets,
+  payPortalInvoice,
+  setDefaultPortalPaymentMethod,
+  topUpPortalWallet,
+} from './customerPortal'
+export type { PortalAuth } from './customerPortal'

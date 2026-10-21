@@ -668,3 +668,24 @@ export {
   useSelfBillingSummary,
   useStartSelfBillingCheckout,
 } from './selfBilling'
+export {
+  useAddPortalPaymentMethod,
+  usePayPortalInvoice,
+  usePortalConfig,
+  usePortalCustomer,
+  usePortalGateways,
+  usePortalInvoice,
+  usePortalInvoicePdf,
+  usePortalInvoices,
+  usePortalPaymentMethods,
+  usePortalQuotas,
+  usePortalSpend,
+  usePortalSubscriptions,
+  usePortalWalletTransactions,
+  usePortalWallets,
+  useRemovePortalPaymentMethod,
+  useSetDefaultPortalPaymentMethod,
+  useTopUpPortalWallet,
+} from './customerPortal'
+export type { PortalAction, PortalQuery } from './customerPortal'
+export type { PortalAuth } from '@fp/api'
