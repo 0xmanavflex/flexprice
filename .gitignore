@@ -15,3 +15,6 @@ storybook-static/
 
 # Agent worktrees (ephemeral, never commit)
 .claude/worktrees/
+
+# Mocked bundle the CI journeys build and serve (apps/console/playwright.config.ts)
+dist-e2e/
