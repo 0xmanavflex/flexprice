@@ -411,7 +411,7 @@ export const BillOnLeavesTheDateBehind: Story = {
 
 /** Opens the first usage charge's commitment dialog from its row menu. */
 async function openCommitment(canvas: ReturnType<typeof within>) {
-  for (const menu of canvas.getAllByRole('button', { name: /^Actions for / })) {
+  for (const menu of canvas.getAllByRole('button', { name: /^More for / })) {
     await userEvent.click(menu)
     const item = screen.queryByRole('menuitem', { name: 'Add commitment' })
     if (item) {
@@ -531,11 +531,11 @@ export const ChargesAtOtherCadences: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Charges at other cadences')).toBeVisible()
     await expect(canvas.getByText(/Not billed on this contract: Weekly report/)).toBeVisible()
-    // Not opted in: the phase does not list it as billed.
-    await expect(canvas.queryByRole('button', { name: /Override Quarterly review/ })).toBeNull()
+    // Not opted in: the charges table does not list it as billed.
+    await expect(canvas.queryByRole('button', { name: 'More for Quarterly review' })).toBeNull()
     await userEvent.click(canvas.getByRole('switch', { name: 'Also bill Quarterly review' }))
     await expect(
-      await canvas.findByRole('button', { name: /Override Quarterly review/ }),
+      await canvas.findByRole('button', { name: 'More for Quarterly review' }),
     ).toBeVisible()
 
     for (const step of ['commitments', 'billing', 'review']) {
@@ -559,6 +559,9 @@ export const SetsAFixedChargeQuantity: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     const [quantity] = canvas.getAllByLabelText(/^Quantity of /)
+    // A fixed charge bills one until the contract says otherwise.
+    await expect(quantity).toHaveValue('1')
+    await userEvent.clear(quantity!)
     await userEvent.type(quantity!, '25')
     for (const step of ['commitments', 'billing', 'review']) {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
@@ -611,12 +614,20 @@ export const AddsAChargeForThisContract: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
-    const dialog = within(await screen.findByRole('dialog'))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add a charge' }))
+    await expect(
+      dialog.getByText("It bills on this contract only, on top of the plan's charges."),
+    ).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Continue' }))
     await userEvent.type(await dialog.findByLabelText('Display name'), 'Onboarding')
     await userEvent.type(dialog.getByLabelText(/^Amount/), '250')
     await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    // Added charges lead the table, marked Added, and can be removed from their menu.
     await expect(await canvas.findByText('Onboarding')).toBeVisible()
+    await expect(canvas.getByText('Added')).toBeVisible()
+    const [firstRow] = canvas.getAllByRole('row').slice(1)
+    await expect(firstRow).toHaveTextContent(/Onboarding/)
+    await expect(canvas.getByText(/1 changed on this contract/)).toBeVisible()
 
     for (const step of ['commitments', 'billing', 'review']) {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
@@ -650,6 +661,57 @@ export const EndDateCheckedOnTheFirstStep: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await expect(await canvas.findByText('The end has to come after the start')).toBeVisible()
     await expect(args.onStepChange).not.toHaveBeenCalledWith('phases')
+  },
+}
+
+/**
+ * The charges table as the reference has it: how many charges and how many
+ * changed, search and filters, a fixed charge billing one by default and a
+ * usage charge no quantity at all. Override price opens in a dialog; the row
+ * then shows the new price over the plan's struck-through one and a "Price
+ * changed" chip, and Reset to plan puts it back.
+ */
+export const OverridesAndResetsACharge: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 6 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByText(
+        /^6 charges from the Pro plan\. Search for one to override its price, set a commitment or apply a coupon\.$/,
+      ),
+    ).toBeVisible()
+    await expect(canvas.getByLabelText('Quantity of Platform base')).toHaveValue('1')
+    await expect(canvas.queryByLabelText('Quantity of API calls')).toBeNull()
+    await expect(canvas.queryByText('Pay as you go')).toBeNull()
+
+    const search = canvas.getByPlaceholderText('Search charges…')
+    await userEvent.type(search, 'Seat')
+    await waitFor(() => expect(canvas.queryByText('Platform base')).toBeNull())
+    await expect(canvas.getByText('Seat licence')).toBeVisible()
+    await userEvent.clear(search)
+
+    await userEvent.click(canvas.getByRole('button', { name: 'More for Platform base' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Override price' }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Override price · Platform base' }),
+    )
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '7')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save override' }))
+
+    await expect(
+      await canvas.findByRole('button', { name: 'Price changed: edit on Platform base' }),
+    ).toBeVisible()
+    await expect(canvas.getByText('$9.00')).toHaveClass('line-through')
+    await expect(canvas.getByText(/1 changed on this contract/)).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'More for Platform base' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Reset to plan' }))
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole('button', { name: 'Price changed: edit on Platform base' }),
+      ).toBeNull(),
+    )
+    await expect(canvas.queryByText(/changed on this contract/)).toBeNull()
   },
 }
 

@@ -2254,6 +2254,7 @@
         "PlanEntitlementsView",
         "RevenueReport",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "TaxDialog",
         "WalletLedgerTable",
         "WebhookEndpointDetail"
@@ -3355,6 +3356,7 @@
         "RunExportDialog",
         "S3ConnectionDialog",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "TaxDialog",
         "WebhookEndpointDetail"
       ],
@@ -6409,8 +6411,10 @@
         "ContractChargeDialog",
         "CreditGrantCreateForm",
         "DateInput",
+        "DetailTable",
         "EmptyState",
         "FormCard",
+        "FormDialog",
         "FormPage",
         "FormRow",
         "OptionCombobox",

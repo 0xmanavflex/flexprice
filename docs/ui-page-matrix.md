@@ -66,7 +66,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | settings | `SettingsPage` | Settings | DetailTabs, EmptyState | BadgeDollarSignIcon, BellIcon, Building2Icon, CoinsIcon, EmbeddedPageContext, PaletteIcon, PercentIcon, ReceiptTextIcon, RepeatIcon, SettingsSection, SettingsShell, SmileIcon, TagIcon, TicketPercentIcon, UsersIcon, WriteGate |
 | subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
 | subscriptions | `SubscriptionDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FormDialog, MetricRail, Properties, RowActionsMenu, Section | DateInput, Input, OptionSelect, SubscriptionDetailView, SubscriptionPart, Switch |
-| subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, Field, FormActions, FormCard, FormDialog, FormPage, RowActionsMenu, Section, SimpleTable, WorkflowStepper | SubscriptionForm |
+| subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, EntityList, Field, FormActions, FormCard, FormDialog, FormPage, RowActionsMenu, Section, SimpleTable, WorkflowStepper | SubscriptionForm |
 | subscriptions | `SubscriptionListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, OptionSelect, PageBody, SubscriptionGrid, Toaster |
 | taxes | `TaxFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, TaxRateCreateForm, TaxRateEditForm |
 | taxes | `TaxListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, TaxRateGrid |

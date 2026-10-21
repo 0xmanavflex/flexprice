@@ -7,12 +7,14 @@ import {
   CoinsIcon,
   KeyRoundIcon,
   LayersIcon,
+  MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
   PuzzleIcon,
   ReceiptIcon,
   ScaleIcon,
   Settings2Icon,
+  TicketPercentIcon,
   UserIcon,
   UsersIcon,
   WalletIcon,
@@ -74,6 +76,16 @@ import { CreditGrantCreateForm } from '@ui/pages/product-catalog/credit-grants/C
 import { PriceOverrideForm } from '@ui/pages/product-catalog/charges/PriceOverrideForm'
 import type { MeterOption, PriceUnitOption } from '@ui/pages/product-catalog/charges/ChargeForm'
 import { RowActionsMenu } from '@ui/pages/shared/RowActionsMenu'
+import { DetailTable, type DetailColumn } from '@ui/pages/shared/DetailTable'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@ui/components/primitives/dropdown-menu'
+import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { ContractChargeDialog } from './ContractChargeDialog'
 import { addDays, everyPeriod, formatDay, localToday, periodNoun } from './ContractSummary'
 import { ChargeCommitmentDialog, commitmentText } from './ChargeCommitmentDialog'
@@ -119,6 +131,9 @@ export const SubscriptionFormProvenance = provenance({
     'compositions/date-input',
     'compositions/detail-kit',
     'pages/price-override-form',
+    'pages/shared/DetailTable',
+    'compositions/form-dialog',
+    'ui/dropdown-menu',
     'pages/credit-grant-form',
   ],
   note: 'RHF + the domain schema, five steps with Previous/Next, Save as draft and the stepper in the toolbar (ChoiceCards and SimpleTable from the detail kit); sub-forms (price override, credit grant) sit outside the form element.',
@@ -139,6 +154,12 @@ export interface SubscriptionCustomerOption extends Option {
   externalId?: string | undefined
 }
 
+/** A coupon to choose from; `discount` ("20%", "$50") and `code` are shown beside its name. */
+export interface SubscriptionCouponOption extends Option {
+  discount?: string | undefined
+  code?: string | undefined
+}
+
 /** A tax rate the contract can carry. */
 export interface SubscriptionTaxRateOption {
   code: string
@@ -156,7 +177,7 @@ export interface SubscriptionFormProps {
   /** The customer changed: the page loads their tax rates. */
   onCustomerChange?: (customerId: string) => void
   /** Coupons a phase or charge can be discounted with. */
-  coupons?: readonly Option[]
+  coupons?: readonly SubscriptionCouponOption[]
   /** Rates that can be added to the contract. */
   taxRates?: readonly SubscriptionTaxRateOption[]
   /** The chosen customer's tax associations, applied when the customer is picked (as V1 does). */
@@ -822,6 +843,7 @@ export function SubscriptionForm({
           priceUnits={priceUnits}
           prorate={values.prorate}
           onProrate={(next) => set('prorate', next)}
+          planLabel={planLabel}
         />
         <AddonsSection
           selected={values.addons}
@@ -1235,15 +1257,47 @@ function priceText(charge: Charge, override: PriceOverride | undefined): string 
 /* Charges & add-ons                                                         */
 /* ------------------------------------------------------------------------- */
 
-type ChargeRow =
-  | { id: string; kind: 'plan'; charge: Charge }
-  | { id: string; kind: 'extra'; extra: AddContractCharge; index: number }
+/** A charge as the charges table lists it: plain strings for search and the filters, the charge behind them. */
+type ChargeRow = {
+  id: string
+  name: string
+  type: 'Fixed' | 'Usage'
+  status: 'Changed' | 'As on the plan'
+  price: string
+} & ({ kind: 'plan'; charge: Charge } | { kind: 'extra'; extra: AddContractCharge; index: number })
+
+/** A change a charge row carries, drawn as a chip under its name that opens the matching dialog. */
+function ChargeFlag({
+  icon,
+  label,
+  name,
+  onClick,
+}: {
+  icon: ReactNode
+  label: string
+  name: string
+  onClick: () => void
+}) {
+  return (
+    <Badge
+      variant="outline"
+      size="lg"
+      className="hover:bg-muted shrink-0 cursor-pointer font-normal"
+      render={<button type="button" aria-label={`${label}: edit on ${name}`} onClick={onClick} />}
+    >
+      {icon}
+      {label}
+    </Badge>
+  )
+}
 
 /**
- * A phase's charges as a table: the plan's, then any added to this contract
- * alone. A fixed charge's quantity is edited in its row; the pencil reprices
- * it for this phase; the row menu holds the rest (a usage charge's
- * commitment, a coupon on just that charge).
+ * A phase's charges as the reference's searchable table: any added to this
+ * contract alone first, then the plan's — a type and a status filter, twenty a
+ * page. A fixed charge's quantity is edited in its row; everything else — a new
+ * price, a usage charge's commitment, a coupon on just that charge, back to the
+ * plan — is in the row's one menu, and each change shows as a chip under the
+ * name that reopens it.
  */
 function ChargesTable({
   charges,
@@ -1258,7 +1312,9 @@ function ChargesTable({
   commitments,
   onCommitment,
   onRemoveExtra,
-  onCouponFor,
+  couponOf,
+  onCoupon,
+  onReset,
 }: {
   charges: Charge[]
   extraCharges: AddContractCharge[]
@@ -1273,19 +1329,25 @@ function ChargesTable({
   commitments?: ChargeCommitment[]
   onCommitment?: (priceId: string, next: ChargeCommitment | null) => void
   onRemoveExtra: (index: number) => void
-  onCouponFor?: (priceId: string) => void
+  /** The coupon on one charge, if it has one. */
+  couponOf: (priceId: string) => SubscriptionCouponOption | undefined
+  /** Opens the coupon dialog for a charge; absent when there are no coupons. */
+  onCoupon?: ((priceId: string) => void) | undefined
+  /** Puts a charge back as the plan has it: price, quantity, commitment and coupon. */
+  onReset: (priceId: string) => void
 }) {
-  const quantityOf = (priceId: string) =>
-    quantities.find((q) => q.priceId === priceId)?.quantity ?? ''
+  // " in Phase 2" on a contract of phases; nothing on a contract of one.
+  const inPhase = phaseLabel ? ` in ${phaseLabel}` : ''
+  const quantityEntry = (priceId: string) => quantities.find((q) => q.priceId === priceId)
+  // A fixed charge bills one unless this contract says otherwise.
   const setQuantity = (priceId: string, quantity: string) =>
     onQuantities(
-      quantity.trim() === ''
+      quantity.trim() === '1'
         ? quantities.filter((q) => q.priceId !== priceId)
         : [...quantities.filter((q) => q.priceId !== priceId), { priceId, quantity }],
     )
-  // " in Phase 2" on a contract of phases; nothing on a contract of one.
-  const inPhase = phaseLabel ? ` in ${phaseLabel}` : ''
-  const [editing, setEditing] = useState<string | null>(null)
+  // The plan charge whose price dialog is open.
+  const [repricing, setRepricing] = useState<string | null>(null)
   // The usage charge whose commitment dialog is open.
   const [committing, setCommitting] = useState<string | null>(null)
   const byId = new Map(overrides.map((o) => [o.priceId, o]))
@@ -1293,13 +1355,31 @@ function ChargesTable({
 
   if (isLoading) return <EmptyLine>Loading the plan&apos;s charges…</EmptyLine>
 
+  const changed = (charge: Charge) =>
+    byId.has(charge.id) ||
+    quantityEntry(charge.id) !== undefined ||
+    commitmentOf.has(charge.id) ||
+    couponOf(charge.id) !== undefined
+
   const rows: ChargeRow[] = [
-    ...charges.map((charge) => ({ id: charge.id, kind: 'plan' as const, charge })),
     ...extraCharges.map((extra, index) => ({
       id: `extra-${index}`,
       kind: 'extra' as const,
       extra,
       index,
+      name: extra.charge.displayName || 'Contract charge',
+      type: extra.charge.type === PriceType.Usage ? ('Usage' as const) : ('Fixed' as const),
+      status: 'Changed' as const,
+      price: extraPriceText(extra),
+    })),
+    ...charges.map((charge) => ({
+      id: charge.id,
+      kind: 'plan' as const,
+      charge,
+      name: chargeName(charge),
+      type: charge.type === PriceType.Usage ? ('Usage' as const) : ('Fixed' as const),
+      status: changed(charge) ? ('Changed' as const) : ('As on the plan' as const),
+      price: priceText(charge, byId.get(charge.id)),
     })),
   ]
   if (rows.length === 0)
@@ -1310,185 +1390,217 @@ function ChargesTable({
     )
 
   const committingCharge = charges.find((charge) => charge.id === committing)
-  const editingCharge = charges.find((charge) => charge.id === editing)
+  const repricingCharge = charges.find((charge) => charge.id === repricing)
 
-  const columns: SimpleColumn<ChargeRow>[] = [
+  const columns: DetailColumn<ChargeRow>[] = [
     {
       key: 'charge',
       header: 'Charge',
+      width: 320,
       className: 'whitespace-normal',
-      cell: (row) =>
-        row.kind === 'plan' ? (
-          <span className="flex min-w-0 flex-col gap-0.5 py-2">
-            <span className="font-medium">{chargeName(row.charge)}</span>
-            <span className="text-muted-foreground text-xs">{chargeKind(row.charge)}</span>
-            {commitmentOf.has(row.charge.id) ? (
-              <span className="flex flex-wrap items-center gap-1.5 pt-1">
-                <Badge
-                  variant="outline"
-                  size="lg"
-                  className="hover:bg-muted cursor-pointer font-normal"
-                  render={
-                    <button
-                      type="button"
-                      aria-label={`Commitment: edit on ${chargeName(row.charge)}`}
-                      onClick={() => setCommitting(row.charge.id)}
-                    />
-                  }
-                >
-                  <ScaleIcon aria-hidden className="text-primary dark:text-foreground size-3.5" />
-                  Commitment
+      text: (row) => row.name,
+      cell: (row) => {
+        if (row.kind === 'extra') {
+          return (
+            <span className="flex min-w-0 flex-col gap-0.5 py-2">
+              <span className="flex items-center gap-1.5">
+                <span className="truncate font-medium">{row.name}</span>
+                <Badge variant="outline" size="sm" className="shrink-0 font-normal">
+                  Added
                 </Badge>
-                <span className="text-muted-foreground text-xs">
-                  {commitmentText(commitmentOf.get(row.charge.id)!, currency)}
-                </span>
+              </span>
+              <span className="text-muted-foreground text-xs">{extraChargeSummary(row.extra)}</span>
+            </span>
+          )
+        }
+        const { charge } = row
+        const coupon = couponOf(charge.id)
+        const commitment = commitmentOf.get(charge.id)
+        const flags: ReactNode[] = []
+        if (byId.has(charge.id))
+          flags.push(
+            <ChargeFlag
+              key="price"
+              icon={<PencilIcon aria-hidden className="text-info size-3.5" />}
+              label="Price changed"
+              name={row.name}
+              onClick={() => setRepricing(charge.id)}
+            />,
+          )
+        if (coupon)
+          flags.push(
+            <ChargeFlag
+              key="coupon"
+              icon={<TicketPercentIcon aria-hidden className="text-success size-3.5" />}
+              label={coupon.discount ? `${coupon.discount} off` : coupon.label}
+              name={row.name}
+              onClick={() => onCoupon?.(charge.id)}
+            />,
+          )
+        if (commitment)
+          flags.push(
+            <ChargeFlag
+              key="commitment"
+              icon={
+                <ScaleIcon aria-hidden className="text-primary dark:text-foreground size-3.5" />
+              }
+              label="Commitment"
+              name={row.name}
+              onClick={() => setCommitting(charge.id)}
+            />,
+          )
+        return (
+          <span className="flex min-w-0 flex-col gap-0.5 py-2">
+            <span className="truncate font-medium">{row.name}</span>
+            <span className="text-muted-foreground text-xs">{chargeKind(charge)}</span>
+            {flags.length > 0 ? (
+              <span className="flex flex-wrap items-center gap-1.5 pt-1">
+                {flags}
+                {commitment ? (
+                  <span className="text-muted-foreground text-xs">
+                    {commitmentText(commitment, currency)}
+                  </span>
+                ) : null}
               </span>
             ) : null}
           </span>
-        ) : (
-          <span className="flex min-w-0 flex-col gap-0.5 py-2">
-            <span className="font-medium">{row.extra.charge.displayName || 'Contract charge'}</span>
-            <span className="text-muted-foreground text-xs">
-              {extraChargeSummary(row.extra)} · This contract only
-            </span>
-          </span>
-        ),
+        )
+      },
     },
     {
       key: 'price',
       header: 'Price',
+      width: 200,
       className: 'whitespace-normal',
-      cell: (row) =>
-        row.kind === 'plan' ? (
-          <span className="flex flex-wrap items-center gap-2 tabular-nums">
-            {priceText(row.charge, byId.get(row.charge.id))}
-            {byId.has(row.charge.id) ? (
-              <Badge variant="info-light" size="sm">
-                Overridden
-              </Badge>
-            ) : null}
-          </span>
-        ) : (
-          <span className="tabular-nums">
-            {'amount' in row.extra.charge && row.extra.charge.amount
-              ? money(row.extra.charge.amount, row.extra.charge.currency)
-              : '—'}
-          </span>
-        ),
+      text: (row) => row.price,
+      cell: (row) => (
+        <span className="flex min-w-0 flex-col tabular-nums">
+          <span>{row.price}</span>
+          {row.kind === 'plan' && byId.has(row.charge.id) ? (
+            <span className="text-muted-foreground text-xs line-through">
+              {priceText(row.charge, undefined)}
+            </span>
+          ) : null}
+        </span>
+      ),
     },
     {
       key: 'quantity',
       header: 'Quantity',
+      width: 100,
       cell: (row) =>
-        row.kind === 'plan' ? (
-          row.charge.type === PriceType.Fixed ? (
-            <Input
-              aria-label={`Quantity of ${chargeName(row.charge)}${inPhase}`}
-              inputMode="decimal"
-              placeholder="1"
-              className="h-8 w-20"
-              value={quantityOf(row.charge.id)}
-              onChange={(event) => setQuantity(row.charge.id, event.target.value)}
-            />
-          ) : (
-            <span className="text-muted-foreground">Pay as you go</span>
-          )
+        row.type !== 'Fixed' ? null : row.kind === 'plan' ? (
+          <Input
+            aria-label={`Quantity of ${row.name}${inPhase}`}
+            inputMode="decimal"
+            className="h-8 w-20"
+            value={quantityEntry(row.charge.id)?.quantity ?? '1'}
+            onChange={(event) => setQuantity(row.charge.id, event.target.value)}
+          />
         ) : (
-          <span className="tabular-nums">
-            {row.extra.charge.type === PriceType.Fixed
-              ? row.extra.quantity || '1'
-              : 'Pay as you go'}
-          </span>
+          <span className="tabular-nums">{row.extra.quantity || '1'}</span>
         ),
     },
     {
       key: 'actions',
       header: '',
-      className: 'w-0 text-right',
-      cell: (row) => {
-        if (row.kind === 'extra') {
-          const name = row.extra.charge.displayName || 'contract charge'
-          return (
-            <RowActionsMenu
-              label={name}
-              removeLabel={`Remove ${name}${inPhase}`}
-              onRemove={() => onRemoveExtra(row.index)}
-            />
-          )
-        }
-        const { charge } = row
-        const name = chargeName(charge)
-        const override = byId.get(charge.id)
-        const extra = [
-          ...(override
-            ? [
-                {
-                  label: 'Use the plan price',
-                  onSelect: () => onChange(overrides.filter((o) => o.priceId !== charge.id)),
-                },
-              ]
-            : []),
-          ...(onCommitment && charge.type === PriceType.Usage
-            ? [
-                {
-                  label: commitmentOf.has(charge.id) ? 'Edit commitment' : 'Add commitment',
-                  onSelect: () => setCommitting(charge.id),
-                },
-              ]
-            : []),
-          ...(onCouponFor
-            ? [{ label: 'Apply a coupon', onSelect: () => onCouponFor(charge.id) }]
-            : []),
-        ]
-        return (
-          <span className="flex items-center justify-end gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`${override ? 'Edit' : 'Override'} ${name}${inPhase}`}
-              aria-pressed={editing === charge.id}
-              onClick={() => setEditing(editing === charge.id ? null : charge.id)}
-            >
-              <PencilIcon aria-hidden />
-            </Button>
-            {extra.length > 0 ? <RowActionsMenu label={name} extra={extra} /> : null}
-          </span>
-        )
-      },
+      cell: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label={`More for ${row.name}${inPhase}`}
+              />
+            }
+          >
+            <MoreHorizontalIcon aria-hidden className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-52">
+            {row.kind === 'extra' ? (
+              <DropdownMenuItem variant="destructive" onClick={() => onRemoveExtra(row.index)}>
+                Remove charge
+              </DropdownMenuItem>
+            ) : (
+              <>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => setRepricing(row.charge.id)}>
+                    <PencilIcon aria-hidden />
+                    Override price
+                  </DropdownMenuItem>
+                  {onCommitment && row.type === 'Usage' ? (
+                    <DropdownMenuItem onClick={() => setCommitting(row.charge.id)}>
+                      <ScaleIcon aria-hidden />
+                      {commitmentOf.has(row.charge.id) ? 'Edit commitment' : 'Add commitment'}
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onCoupon ? (
+                    <DropdownMenuItem onClick={() => onCoupon(row.charge.id)}>
+                      <TicketPercentIcon aria-hidden />
+                      {couponOf(row.charge.id) ? 'Change coupon' : 'Apply coupon'}
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuGroup>
+                {row.status === 'Changed' ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => onReset(row.charge.id)}>
+                      Reset to plan
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ]
 
   return (
     <div className="flex flex-col gap-3">
-      <Frame>
-        <SimpleTable columns={columns} rows={rows} getRowId={(row) => row.id} />
-      </Frame>
-      {editingCharge ? (
-        <div className="flex flex-col gap-3 rounded-lg border p-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium">
-              Price for {chargeName(editingCharge)}
-              {inPhase}
-            </span>
-            <CloseSubForm
-              label={`Close override for ${chargeName(editingCharge)}${inPhase}`}
-              onClick={() => setEditing(null)}
+      <DetailTable
+        rows={rows}
+        columns={columns}
+        label={phaseLabel ? `Charges in ${phaseLabel}` : 'Charges'}
+        noun="charges"
+        facets={[
+          { id: 'type', label: 'Type', value: (row) => row.type },
+          { id: 'status', label: 'Status', value: (row) => row.status },
+        ]}
+        searchText={(row) => `${row.name} ${row.price}`}
+        pageSize={20}
+        compact
+        border
+      />
+      <FormDialog
+        open={repricingCharge !== undefined}
+        onOpenChange={(open) => (open ? undefined : setRepricing(null))}
+        size="lg"
+        title={repricingCharge ? `Override price · ${chargeName(repricingCharge)}` : ''}
+      >
+        {repricingCharge ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-muted-foreground text-xs">
+              Plan price: <PlanPriceText charge={repricingCharge} />
+            </p>
+            <PriceOverrideForm
+              key={repricingCharge.id}
+              priceId={repricingCharge.id}
+              {...(byId.get(repricingCharge.id)
+                ? { defaultValue: byId.get(repricingCharge.id)! }
+                : {})}
+              onSubmit={(value) => {
+                onChange([...overrides.filter((o) => o.priceId !== repricingCharge.id), value])
+                setRepricing(null)
+              }}
             />
           </div>
-          <p className="text-muted-foreground text-xs">
-            Plan price: <PlanPriceText charge={editingCharge} />
-          </p>
-          <PriceOverrideForm
-            priceId={editingCharge.id}
-            {...(byId.get(editingCharge.id) ? { defaultValue: byId.get(editingCharge.id)! } : {})}
-            onSubmit={(value) => {
-              onChange([...overrides.filter((o) => o.priceId !== editingCharge.id), value])
-              setEditing(null)
-            }}
-          />
-        </div>
-      ) : null}
+        ) : null}
+      </FormDialog>
       {onCommitment ? (
         <ChargeCommitmentDialog
           charge={
@@ -1524,6 +1636,17 @@ function ChargesTable({
       ) : null}
     </div>
   )
+}
+
+/** An added charge's price: its amount, or "—" for usage priced by its own model. */
+function extraPriceText(extra: AddContractCharge): string {
+  const { charge } = extra
+  return 'amount' in charge && charge.amount ? money(charge.amount, charge.currency) : '—'
+}
+
+/** "1 charge", "1,200 charges". */
+function chargeCountText(count: number): string {
+  return `${count.toLocaleString('en-US')} ${count === 1 ? 'charge' : 'charges'}`
 }
 
 /** "Usage · Monthly", or "Flat fee · $250.00 · One time". */
@@ -1725,6 +1848,7 @@ function PhasesStep({
   priceUnits,
   prorate,
   onProrate,
+  planLabel,
 }: {
   phases: SubscriptionPhase[]
   starts: string[]
@@ -1734,7 +1858,7 @@ function PhasesStep({
   today: string
   charges: Charge[]
   isLoading: boolean
-  coupons: readonly Option[]
+  coupons: readonly SubscriptionCouponOption[]
   errors: FieldErrors<CreateSubscription>['phases']
   onChange: (next: SubscriptionPhase[]) => void
   commitments: ChargeCommitment[]
@@ -1745,6 +1869,7 @@ function PhasesStep({
   priceUnits: PriceUnitOption[]
   prorate: boolean
   onProrate: (next: boolean) => void
+  planLabel: string | undefined
 }) {
   const update = (index: number, patch: Partial<SubscriptionPhase>) =>
     onChange(phases.map((phase, i) => (i === index ? { ...phase, ...patch } : phase)))
@@ -1781,6 +1906,33 @@ function PhasesStep({
       phases[index]?.endDate ? formatDay(phases[index]!.endDate) : 'until cancelled'
     }`
 
+  /** The coupon on one charge in a phase, as the coupon list names it. */
+  const couponOn = (index: number, priceId: string): SubscriptionCouponOption | undefined => {
+    const discount = phases[index]?.discounts.find((d) => d.priceId === priceId)
+    if (!discount) return undefined
+    return (
+      coupons.find((c) => c.value === discount.couponId) ?? {
+        value: discount.couponId,
+        label: discount.couponId,
+      }
+    )
+  }
+  /** How many of a phase's charges differ from the plan, counting those added to it. */
+  const changedIn = (index: number) => {
+    const phase = phases[index]!
+    const committed = new Set(single ? commitments.map((c) => c.priceId) : [])
+    return (
+      phase.extraCharges.length +
+      charges.filter(
+        (charge) =>
+          phase.priceOverrides.some((o) => o.priceId === charge.id) ||
+          phase.quantities.some((q) => q.priceId === charge.id) ||
+          phase.discounts.some((d) => d.priceId === charge.id) ||
+          committed.has(charge.id),
+      ).length
+    )
+  }
+
   /** One phase's charges table, and the quantity error under it. */
   const chargesOf = (index: number, label: string) => {
     const phase = phases[index]!
@@ -1805,11 +1957,18 @@ function PhasesStep({
           onRemoveExtra={(at) =>
             update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
           }
+          couponOf={(priceId) => couponOn(index, priceId)}
           {...(coupons.length > 0
-            ? {
-                onCouponFor: (priceId: string) => setCouponFor({ phase: index, target: priceId }),
-              }
+            ? { onCoupon: (priceId: string) => setCouponFor({ phase: index, target: priceId }) }
             : {})}
+          onReset={(priceId) => {
+            update(index, {
+              priceOverrides: phase.priceOverrides.filter((o) => o.priceId !== priceId),
+              quantities: phase.quantities.filter((q) => q.priceId !== priceId),
+              discounts: phase.discounts.filter((d) => d.priceId !== priceId),
+            })
+            if (single) setCommitment(priceId, null)
+          }}
           {...(single
             ? {
                 commitments,
@@ -1850,7 +2009,7 @@ function PhasesStep({
   const addCharge = (index: number, label?: string) => (
     <Button
       type="button"
-      variant="outline"
+      variant={label ? 'outline' : 'default'}
       size="sm"
       {...(label ? { 'aria-label': `Add a charge to ${label}` } : {})}
       onClick={() => setAddingTo(index)}
@@ -1890,6 +2049,8 @@ function PhasesStep({
   const addChargeDialog = (
     <ContractChargeDialog
       state={addingTo === null ? null : { mode: 'add' }}
+      addTitle="Add a charge"
+      addDescription="It bills on this contract only, on top of the plan's charges."
       onClose={() => setAddingTo(null)}
       currency={currency}
       billingPeriod={billingPeriod}
@@ -1898,7 +2059,8 @@ function PhasesStep({
       onAdd={(draft) => {
         if (addingTo === null) return
         const phase = phases[addingTo]
-        if (phase) update(addingTo, { extraCharges: [...phase.extraCharges, draft] })
+        // Newest first: the charge just added is the one at the top of the table.
+        if (phase) update(addingTo, { extraCharges: [draft, ...phase.extraCharges] })
         setAddingTo(null)
       }}
       onEdit={() => undefined}
@@ -1914,7 +2076,15 @@ function PhasesStep({
           icon={<PencilIcon aria-hidden className="text-info size-4 shrink-0" />}
           adornment={addCharge(0)}
         >
-          <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">{chargesOf(0, '')}</div>
+          <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
+            <p className="text-muted-foreground text-[13px]">
+              {chargeCountText(charges.length + phases[0]!.extraCharges.length)} from the{' '}
+              {planLabel ?? ''} plan
+              {changedIn(0) > 0 ? `, ${changedIn(0)} changed on this contract` : ''}. Search for one
+              to override its price, set a commitment or apply a coupon.
+            </p>
+            {chargesOf(0, '')}
+          </div>
           {prorationRow}
           {discountsOf(0, 'this contract')}
         </FormCard>
