@@ -215,6 +215,11 @@ export const queryKeys = {
     all: () => ['tenant'] as const,
     detail: (id: string) => ['tenant', 'detail', id] as const,
     billingUsage: () => ['tenant', 'billingUsage'] as const,
+    /** Self-billing: the tenant's own Flexprice account, the same in every environment. */
+    selfBilling: () => ['tenant', 'selfBilling'] as const,
+    selfBillingStatus: () => ['tenant', 'selfBilling', 'status'] as const,
+    selfBillingSummary: () => ['tenant', 'selfBilling', 'summary'] as const,
+    selfBillingCheckout: (id: string) => ['tenant', 'selfBilling', 'checkout', id] as const,
   },
   /**
    * The `/settings/{key}` family, keyed by environment first.

@@ -159,3 +159,22 @@ export {
   updateWebhookEndpoint,
 } from './webhooks'
 export type { SvixEndpointIn, SvixListPage, SvixMessageStatus, SvixSession } from './webhooks'
+
+/** Self-billing, `/portal/billing/*`: live but absent from the SDK. See `selfBilling.ts`. */
+export {
+  cancelSelfBillingCheckout,
+  createSelfBillingPortalSession,
+  fetchSelfBillingCheckout,
+  fetchSelfBillingStatus,
+  fetchSelfBillingSummary,
+  startSelfBillingCheckout,
+} from './selfBilling'
+export type {
+  SelfBillingCheckoutBody,
+  SelfBillingCheckoutWire,
+  SelfBillingFeatureUsageWire,
+  SelfBillingInvoiceWire,
+  SelfBillingPortalWire,
+  SelfBillingStatusWire,
+  SelfBillingSummaryWire,
+} from './selfBilling'

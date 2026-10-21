@@ -62,6 +62,29 @@ export const WriteAllowed: Story = {
   },
 }
 
+/** A locked (read-only) account: a writer's button is off too, and the reason is the lock. */
+export const WriteLocked: Story = {
+  render: () => (
+    <AccessProvider
+      value={{
+        ...principal(['plan']),
+        writeLock: 'Your account is locked. Upgrade to make changes.',
+      }}
+    >
+      <AccessScope entity="plan">
+        <WriteGate block>
+          <Button>New plan</Button>
+        </WriteGate>
+      </AccessScope>
+    </AccessProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'New plan' })).toBeDisabled()
+    await expect(canvas.getByText('Your account is locked. Upgrade to make changes.')).toBeVisible()
+  },
+}
+
 /** A settings panel needs super admin: the note says so and every control inside is off. */
 export const BlockNeedsSuperAdmin: Story = {
   render: () => (

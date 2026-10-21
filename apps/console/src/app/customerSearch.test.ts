@@ -61,7 +61,11 @@ describe('parseCustomerSearch', () => {
   })
 
   it('is stable across a parse of its own output', () => {
-    const once = parseCustomerSearch({ status: ['archived'], sortBy: 'name', sortDirection: 'desc' })
+    const once = parseCustomerSearch({
+      status: ['archived'],
+      sortBy: 'name',
+      sortDirection: 'desc',
+    })
     expect(parseCustomerSearch({ ...once })).toEqual(once)
   })
 })

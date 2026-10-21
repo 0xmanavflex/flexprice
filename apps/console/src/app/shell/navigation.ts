@@ -105,6 +105,7 @@ export const FOOTER_NAV: NavEntry[] = [
  */
 export const SECONDARY: NavEntry[] = [
   { id: 'settings', label: 'Settings', path: '/settings' },
+  { id: 'settings-usage-billing', label: 'Usage & billing', path: '/settings/usage-billing' },
   { id: 'settings-discounts', label: 'Coupons', path: '/coupons' },
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
