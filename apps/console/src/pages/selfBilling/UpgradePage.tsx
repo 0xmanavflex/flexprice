@@ -11,7 +11,7 @@ import { UpgradeView } from '@fp/ui/pages'
 import { mutationMessage } from '../settings/panelKit'
 import {
   checkoutDefaults,
-  differsFromOrganization,
+  differsInNameOrEmail,
   hasOrganizationDetails,
   rememberCheckout,
   useOrganization,
@@ -20,10 +20,10 @@ import {
 /**
  * Upgrade: the billing details, then Stripe Checkout.
  *
- * The company and address are written back to Settings → Organization first —
- * the first time, so they are not typed again, and after a change made here.
- * A locked account cannot write Organization (the API refuses every write but
- * paying), so it sends them with the checkout only. The checkout id waits in
+ * The checkout itself saves the address to Settings → Organization (and to the
+ * Flexprice Cloud customer), locked or not. The company name and billing email
+ * it does not, so a change to either is written to Organization first — except
+ * on a locked account, whose writes the API refuses. The checkout id waits in
  * session storage for the page Stripe returns to.
  */
 export function UpgradePage({
@@ -47,7 +47,7 @@ export function UpgradePage({
   const locked = state === AccountState.Suspended
 
   const submit = async (details: CheckoutDetails) => {
-    if (tenant && !locked && differsFromOrganization(tenant, details)) {
+    if (tenant && !locked && differsInNameOrEmail(tenant, details)) {
       const draft = toUpdateTenantDraft(tenant)
       await updateTenant.mutateAsync({
         ...draft,

@@ -1,4 +1,12 @@
-import { createContext, type ReactNode, useContext, useMemo } from 'react'
+import {
+  cloneElement,
+  createContext,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useContext,
+  useMemo,
+} from 'react'
 import {
   type AccessRequirement,
   type RbacAction,
@@ -149,6 +157,25 @@ export function useWriteAccess(
 }
 
 /**
+ * Why every write is refused right now — the account is locked (read-only) —
+ * or null while writes follow the roles.
+ */
+export function useWriteLock(): string | null {
+  return useAccess().writeLock ?? null
+}
+
+/** The lock a write control carries while the account is locked: after its label. */
+export function LockedMark({ className }: { className?: string }) {
+  return (
+    <LockIcon
+      aria-hidden
+      data-slot="locked-mark"
+      className={className ?? 'text-muted-foreground ml-auto size-3.5'}
+    />
+  )
+}
+
+/**
  * A control that writes: shown as is when allowed, otherwise disabled with
  * the reason in a tooltip. A `<fieldset disabled>` disables every button and
  * input inside without each needing a prop.
@@ -169,6 +196,7 @@ export function WriteGate({
   children: ReactNode
 }) {
   const write = useWriteAccess(entity, superAdmin === undefined ? {} : { superAdmin })
+  const lock = useWriteLock()
   if (write.allowed) return <>{children}</>
   if (block) {
     return (
@@ -183,11 +211,24 @@ export function WriteGate({
       </div>
     )
   }
+  // While the account is locked the control also carries a lock, after its label.
+  const locked = write.reason !== null && write.reason === lock
+  const shown =
+    locked && isValidElement<{ children?: ReactNode }>(children)
+      ? cloneElement(children as ReactElement<{ children?: ReactNode }>, {
+          children: (
+            <>
+              {children.props.children}
+              <LockedMark className="size-3.5 opacity-70" />
+            </>
+          ),
+        })
+      : children
   return (
     <Tooltip>
       <TooltipTrigger render={<span tabIndex={0} className="inline-flex" data-access="denied" />}>
         <fieldset disabled className="contents" aria-disabled>
-          {children}
+          {shown}
         </fieldset>
       </TooltipTrigger>
       <TooltipContent>{write.reason}</TooltipContent>

@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primiti
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { useInFormDialog } from '../forms/formDialogContext'
 import type { RbacEntity } from '@fp/domain'
-import { useWriteCheck } from '../access/Access'
+import { LockedMark, useWriteCheck, useWriteLock } from '../access/Access'
 
 /*
  * Shared grammar for every detail page, ported 1:1 from the reference kit
@@ -147,6 +147,7 @@ export function DetailMoreMenu({
   items: DetailMenuItem[]
 }) {
   const check = useWriteCheck()
+  const locked = useWriteLock()
   if (items.length === 0) return null
   const denied = (item: DetailMenuItem) => !item.readOnly && !check(item.entity).allowed
   const reason = items
@@ -163,6 +164,7 @@ export function DetailMoreMenu({
     >
       {item.icon ?? null}
       {item.label}
+      {locked && denied(item) ? <LockedMark /> : null}
     </DropdownMenuItem>
   )
   return (

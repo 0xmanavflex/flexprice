@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AccountState, CheckoutStatus, checkoutOutcome } from '@fp/domain'
 import {
+  useRefreshSelfBilling,
   useCancelSelfBillingCheckout,
   useSelfBillingCheckout,
   useSelfBillingSummary,
@@ -60,6 +61,23 @@ export function CheckoutReturnPage({
     // `cancel.mutate` is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outcome, checkoutId, checkout.data?.terminal])
+
+  // Paid, but the account can read trialing for a moment while the trial
+  // converts. Keep reading it (every 3s, for a minute) until it is active, so
+  // the pill and the lock go as soon as the API agrees.
+  const refresh = useRefreshSelfBilling()
+  useEffect(() => {
+    if (outcome !== 'success' || live) return
+    let tries = 0
+    const timer = window.setInterval(() => {
+      tries += 1
+      void refresh()
+      if (tries >= 20) window.clearInterval(timer)
+    }, 3_000)
+    return () => window.clearInterval(timer)
+    // `refresh` is a fresh closure each render; the interval needs only the outcome.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outcome, live])
 
   const paid = summary.data?.invoices.find((invoice) => invoice.status === 'paid') ?? null
 

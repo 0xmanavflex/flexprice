@@ -217,6 +217,8 @@ export {
   AccessScope,
   RequireAccess,
   WriteGate,
+  LockedMark,
+  useWriteLock,
   useAccess,
   useCan,
   useWriteAccess,

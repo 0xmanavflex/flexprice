@@ -35,19 +35,12 @@ export function checkoutDefaults(tenant: Tenant | null): CheckoutDetails {
   }
 }
 
-/** Whether the details typed on the upgrade page differ from Organization. */
-export function differsFromOrganization(tenant: Tenant, details: CheckoutDetails): boolean {
-  const a = tenant.address
-  return (
-    tenant.name !== details.name ||
-    tenant.billingEmail !== details.email ||
-    a.country !== details.country ||
-    a.line1 !== details.line1 ||
-    a.line2 !== details.line2 ||
-    a.city !== details.city ||
-    a.state !== details.state ||
-    a.postalCode !== details.postalCode
-  )
+/**
+ * Whether the company name or billing email typed on the upgrade page differ
+ * from Organization. The address needs no check: the checkout saves it.
+ */
+export function differsInNameOrEmail(tenant: Tenant, details: CheckoutDetails): boolean {
+  return tenant.name !== details.name || tenant.billingEmail !== details.email
 }
 
 /** Where the checkout id waits while the browser is on Stripe. */

@@ -164,6 +164,37 @@ export const PageDenied: Story = {
  * A detail menu follows the page's scope, item by item: Copy stays (read
  * only), Edit is off, and Create invoice checks invoices, not customers.
  */
+/** A locked (read-only) account: the refused writes carry a lock; reads stay open. */
+export const DetailMenuItemsLocked: Story = {
+  render: () => (
+    <AccessProvider
+      value={{
+        ...principal(['customer', 'invoice']),
+        writeLock: 'Your account is locked. Upgrade to make changes.',
+      }}
+    >
+      <AccessScope entity="customer">
+        <DetailMoreMenu
+          label="Customer actions"
+          items={[
+            { id: 'copy', label: 'Copy ID', readOnly: true, onSelect: fn() },
+            { id: 'edit', label: 'Edit customer', onSelect: fn() },
+          ]}
+        />
+      </AccessScope>
+    </AccessProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Customer actions' }))
+    const edit = await screen.findByRole('menuitem', { name: 'Edit customer' })
+    await expect(edit).toHaveAttribute('aria-disabled', 'true')
+    await expect(edit.querySelector('[data-slot="locked-mark"]')).not.toBeNull()
+    const copy = await screen.findByRole('menuitem', { name: 'Copy ID' })
+    await expect(copy.querySelector('[data-slot="locked-mark"]')).toBeNull()
+    await expect(screen.getByText('Your account is locked. Upgrade to make changes.')).toBeVisible()
+  },
+}
+
 export const DetailMenuItems: Story = {
   render: () => (
     <AccessProvider value={principal(['invoice'])}>

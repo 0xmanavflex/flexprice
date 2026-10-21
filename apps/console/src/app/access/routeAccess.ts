@@ -122,6 +122,7 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   '/settings/usage-billing/go-live': OPEN,
   '/billing/checkout/success': OPEN,
   '/billing/checkout/failure': OPEN,
+  '/billing/checkout': OPEN,
   '/environments/new': OPEN,
   '/labels': OPEN,
 }
