@@ -49,6 +49,7 @@ export function CostSheetDetailPage({
       noun: 'this cost sheet',
       listName: 'cost sheets',
       onBack: onNavigateToList,
+      recordPath: `/costs/${encodeURIComponent(costSheetId)}`,
     })
   }
 

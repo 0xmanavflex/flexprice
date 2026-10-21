@@ -54,7 +54,14 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
   if (!existing.data) {
     // A disabled query (empty id) never leaves "pending": show not-found instead of loading forever.
     const gate = props.customerId ? existing : { ...existing, isPending: false, error: null }
-    return detailGate(gate, { noun: 'this customer', listName: 'customers', onBack: onCancel })
+    return detailGate(gate, {
+      noun: 'this customer',
+      listName: 'customers',
+      onBack: onCancel,
+      ...(props.customerId
+        ? { recordPath: `/customers/${encodeURIComponent(props.customerId)}` }
+        : {}),
+    })
   }
 
   const customer = existing.data

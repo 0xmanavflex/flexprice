@@ -224,6 +224,7 @@ import { MOVED_SECTIONS } from '@/pages/settings/sections'
 import { SupportChat } from '@/app/supportChat/SupportChat'
 import { VersionCheck } from '@/app/versionCheck/VersionCheck'
 import { AccountLockProvider, AccountPill, useLockedAccess } from '@/app/selfBilling/AccountLock'
+import { EnvironmentToaster } from '@/pages/shared/RecordElsewhere'
 import { RouteAccessGate } from '@/app/access/RouteAccessGate'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
@@ -389,6 +390,7 @@ function ShellLayout() {
               <AccountPill />
               <SupportChat />
               <VersionCheck />
+              <EnvironmentToaster />
             </>
           }
         >

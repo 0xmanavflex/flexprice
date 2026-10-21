@@ -34,6 +34,7 @@ export {
 export {
   createEnvironment,
   fetchCurrentUser,
+  existsInEnvironment,
   fetchEnvironments,
   signIn,
   signUp,

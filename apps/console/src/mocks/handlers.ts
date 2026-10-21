@@ -519,6 +519,10 @@ function couponAssociations(): Record<string, unknown>[] {
  * switch — and the default-selection rule (prefer the sandbox) has nothing to
  * choose between with a single row.
  */
+const PRODUCTION_ENVIRONMENT_ID = 'env_01M020PHF0GF9KP1E9CEVNKJA1'
+/** An invoice only Production has (see `GET /invoices/:id`). */
+export const PRODUCTION_ONLY_INVOICE = 'inv_01PRODUCTIONONLYDEMO000001'
+
 const environments: Record<string, unknown>[] = [
   {
     id: 'env_01KVSNYVPMAP6JJGDF177V2DE6',
@@ -4049,8 +4053,17 @@ export const handlers = [
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
-  http.get(`${BASE}/invoices/:id`, ({ params }) => {
+  http.get(`${BASE}/invoices/:id`, ({ params, request }) => {
     const id = String(params['id'])
+    // One invoice that lives in Production only, for the shared-link journey:
+    // opened from Sandbox it 404s, as a real record in another environment does.
+    if (id === PRODUCTION_ONLY_INVOICE) {
+      if (request.headers.get('X-Environment-ID') !== PRODUCTION_ENVIRONMENT_ID) {
+        return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+      }
+      const template = sourceFor('invoices').items[0] ?? {}
+      return HttpResponse.json({ ...template, id, invoice_number: 'INV-PROD-0001' })
+    }
     const invoice =
       byId('invoices', id) ??
       sourceFor('invoices').items.find((row) => readString(row, 'id') === id)

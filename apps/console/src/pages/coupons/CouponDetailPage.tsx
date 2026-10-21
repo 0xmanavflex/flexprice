@@ -69,7 +69,12 @@ export function CouponDetailPage({
   const [tab, setTab] = useState<CouponTab>(startEditing ? 'information' : 'overview')
 
   if (!coupon.data) {
-    return detailGate(coupon, { noun: 'this coupon', listName: 'coupons', onBack })
+    return detailGate(coupon, {
+      noun: 'this coupon',
+      listName: 'coupons',
+      onBack,
+      recordPath: `/coupons/${encodeURIComponent(couponId)}`,
+    })
   }
 
   const record = coupon.data

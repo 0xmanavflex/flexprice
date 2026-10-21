@@ -166,6 +166,7 @@ export function SubscriptionDetailPage({
       noun: 'this contract',
       listName: 'contracts',
       onBack: onNavigateToList,
+      recordPath: `/subscriptions/${encodeURIComponent(subscriptionId)}`,
     })
   }
 
