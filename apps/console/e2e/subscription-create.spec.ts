@@ -18,7 +18,7 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   // Customer and plan are one step. The plan half is withheld until there is a
   // customer, so the step opens as one question.
   await expect(page.getByRole('heading', { name: 'Customer' })).toBeVisible()
-  await expect(page.getByText('Plan and billing')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Plan', exact: true })).toHaveCount(0)
 
   // The toolbar carries Next (no Cancel, no Previous on the first step, no bottom bar).
   await expect(page.getByRole('button', { name: 'Cancel' })).toHaveCount(0)
@@ -33,7 +33,7 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   await page.getByRole('option').first().click()
 
   // Choosing the customer reveals the plan, in the same step.
-  await expect(page.getByText('Plan and billing')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Plan', exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: /^Plan/ }).click()
   await page.getByRole('option').first().click()
   // Choosing a plan clears any "Choose a plan" prompt.

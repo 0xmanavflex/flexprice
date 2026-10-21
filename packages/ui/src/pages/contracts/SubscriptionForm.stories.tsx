@@ -424,7 +424,9 @@ export const BillOnLeavesTheDateBehind: Story = {
 async function openCommitment(canvas: ReturnType<typeof within>) {
   for (const menu of canvas.getAllByRole('button', { name: /^More for / })) {
     await userEvent.click(menu)
-    const item = screen.queryByRole('menuitem', { name: 'Add commitment' })
+    // Wait for the menu itself, so a slow render does not read as "no such item".
+    const opened = await screen.findByRole('menu', {}, { timeout: 3000 })
+    const item = within(opened).queryByRole('menuitem', { name: 'Add commitment' })
     if (item) {
       await userEvent.click(item)
       return within(await screen.findByRole('dialog', {}, { timeout: 3000 }))

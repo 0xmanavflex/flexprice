@@ -162,7 +162,7 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
   // is chosen, so there is no Next between them.
   await page.getByRole('combobox').first().click()
   await page.getByRole('option').first().click()
-  await expect(page.getByText('Plan and billing')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Plan', exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: /^Plan/ }).click()
   await page.getByRole('option').first().click()
   const currency = page.getByRole('combobox', { name: /Currency/ })
