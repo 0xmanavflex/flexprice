@@ -15,7 +15,9 @@ describe('parseWorkflowSearch', () => {
       statuses: [WorkflowStatus.Failed],
       sortDirection: 'asc',
     })
-    expect(parseWorkflowSearch({ search: 'wf', pageSize: 10, statuses: ['running'] })).toMatchObject({
+    expect(
+      parseWorkflowSearch({ search: 'wf', pageSize: 10, statuses: ['running'] }),
+    ).toMatchObject({
       search: 'wf',
       pageSize: 10,
       statuses: [WorkflowStatus.Running],
@@ -30,7 +32,10 @@ describe('parseWorkflowSearch', () => {
   })
 
   it('falls back on junk numbers and caps the page size', () => {
-    expect(parseWorkflowSearch({ page: '-3', size: '9999' })).toMatchObject({ page: 1, pageSize: 100 })
+    expect(parseWorkflowSearch({ page: '-3', size: '9999' })).toMatchObject({
+      page: 1,
+      pageSize: 100,
+    })
     expect(parseWorkflowSearch({ page: 'x', dir: 'sideways' })).toMatchObject({
       page: 1,
       sortDirection: 'desc',

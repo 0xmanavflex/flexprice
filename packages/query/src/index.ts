@@ -52,6 +52,7 @@ export {
   useCreateEnvironment,
   useCurrentUser,
   useEnvironmentList,
+  useRecordEnvironment,
   useRenameEnvironment,
   useSignIn,
   useSignUp,
@@ -509,6 +510,7 @@ export { useAddonLinkage } from './addonLinkage'
 export type { AddonLinkage } from './addonLinkage'
 export { APPLY_STEP_LABEL, applySteps, useApplyPricingSchema, useParsePricing } from './aiPricing'
 export { useEventDebug } from './eventDebug'
+export { useHostedInvoice, useHostedInvoiceDownload, usePayHostedInvoice } from './hostedInvoice'
 export type { ApplyResult, ApplyStep } from './aiPricing'
 export type { PlanLinkage } from './planLinkage'
 export type { CountableId } from './counts'
@@ -653,3 +655,42 @@ export { useCustomerNames, useFeatureNames } from './entityNames'
 export type { NameMap } from './entityNames'
 export { toAccessControl, useAccessControl } from './access'
 export type { AccessControl, AccessStatus } from './access'
+export {
+  isAccountLockedError,
+  localToday as selfBillingToday,
+  toCheckoutBody,
+  toSelfBillingCheckout,
+  toSelfBillingStatus,
+  toSelfBillingSummary,
+  useCancelSelfBillingCheckout,
+  useRefreshSelfBilling,
+  useSelfBillingCheckout,
+  useSelfBillingPortalSession,
+  useSelfBillingStatus,
+  useSelfBillingSummary,
+  useStartSelfBillingCheckout,
+} from './selfBilling'
+export {
+  useAddPortalPaymentMethod,
+  usePayPortalInvoice,
+  usePortalConfig,
+  usePortalCustomer,
+  usePortalGateways,
+  usePortalInvoice,
+  usePortalInvoicePdf,
+  usePortalInvoices,
+  usePortalPaymentMethods,
+  usePortalQuotas,
+  usePortalSpend,
+  usePortalSubscriptions,
+  usePortalTopUps,
+  usePortalWalletTransactions,
+  usePortalWallets,
+  useRemovePortalPaymentMethod,
+  useSetDefaultPortalPaymentMethod,
+  useTopUpPortalWallet,
+  useUpdatePortalAutoTopup,
+} from './customerPortal'
+export type { PortalAction, PortalQuery } from './customerPortal'
+export type { PortalAuth } from '@fp/api'
+export { useCreateCustomerPortalSession } from './customerPortalSession'

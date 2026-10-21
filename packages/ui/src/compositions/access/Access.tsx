@@ -44,9 +44,17 @@ export type AccessStatus = 'loading' | 'ready' | 'error' | 'unrestricted'
 
 export interface AccessValue {
   status: AccessStatus
+  /** Check again after an `error` (the user or the role catalogue did not load). */
+  retry?: () => void
   isSuperAdmin: boolean
   can: (entity: RbacEntity, action: RbacAction) => boolean
   meets: (requirement: AccessRequirement) => boolean
+  /**
+   * Every write is refused, whatever the roles, and this says why — the
+   * account is locked (read-only) until it upgrades. Absent while writes
+   * follow the roles.
+   */
+  writeLock?: string | null
 }
 
 const ALLOW_ALL: AccessValue = {
@@ -120,6 +128,10 @@ export function useWriteCheck(): (
     if (!target) return { allowed: true, reason: null }
     const superAdmin = options.superAdmin ?? (entity ? false : (scope?.superAdmin ?? false))
     if (access.status === 'loading') return { allowed: false, reason: 'Checking your access…' }
+    if (access.status === 'error') {
+      return { allowed: false, reason: "Your access couldn't be checked. Reload to try again." }
+    }
+    if (access.writeLock) return { allowed: false, reason: access.writeLock }
     const allowed = access.meets({ entity: target, action: 'write', superAdmin })
     return { allowed, reason: allowed ? null : accessDeniedReason({ superAdmin }) }
   }
@@ -199,6 +211,17 @@ export function RequireAccess({
   const access = useAccess()
   if (!requirement) return <>{children}</>
   if (access.status === 'loading') return <PageLoadingState label="Checking your access" />
+  // Not knowing is not the same as being refused: say so, and offer to look again.
+  if (access.status === 'error') {
+    return (
+      <ErrorState
+        variant="page"
+        title="We couldn't check your access"
+        description="Your roles didn't load. Try again, or reload the page."
+        {...(access.retry ? { onRetry: access.retry } : {})}
+      />
+    )
+  }
   if (!access.meets(requirement)) {
     return (
       <ErrorState

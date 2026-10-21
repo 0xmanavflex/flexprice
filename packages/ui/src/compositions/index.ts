@@ -223,3 +223,10 @@ export {
   useWriteCheck,
 } from './access/Access'
 export type { AccessStatus, AccessValue, WriteAccess } from './access/Access'
+export {
+  DelayedHint,
+  HINT_DELAY_MS,
+  InfoBlock,
+  SettingsBlock,
+  SettingsBlockProvenance,
+} from './layout/SettingsBlock'

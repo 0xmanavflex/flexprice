@@ -1,8 +1,10 @@
 import { type ReactNode } from 'react'
 import {
   ArchiveIcon,
+  ExternalLinkIcon,
   EyeIcon,
   FileTextIcon,
+  LinkIcon,
   PencilIcon,
   PlusIcon,
   ReceiptIcon,
@@ -103,6 +105,10 @@ export interface CustomerDetailProps {
   onEdit?: () => void
   /** Adds "Archive customer" to the header menu; the caller confirms and acts. */
   onArchive?: () => void
+  /** Adds "Open customer portal" to the header menu (V1's portal link). */
+  onOpenPortal?: () => void
+  /** Adds "Copy portal link" to the header menu. */
+  onCopyPortalLink?: () => void
   /**
    * Adds "Stream sample events" to the header menu: the backend generates a
    * minute of usage events for one of this customer's subscriptions. Omitted
@@ -208,6 +214,8 @@ export function CustomerDetail({
   onCreateContract,
   onEdit,
   onArchive,
+  onOpenPortal,
+  onCopyPortalLink,
   onStreamEvents,
   onUpdateField,
   onUpdateMetadata,
@@ -286,6 +294,26 @@ export function CustomerDetail({
             icon: <RocketIcon className="text-muted-foreground" aria-hidden="true" />,
             onSelect: onStreamEvents,
             entity: RBAC_ENTITY.Event,
+          },
+        ]
+      : []),
+    ...(onOpenPortal && customer.externalId
+      ? [
+          {
+            id: 'open-portal',
+            label: 'Open customer portal',
+            icon: <ExternalLinkIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: onOpenPortal,
+          },
+        ]
+      : []),
+    ...(onCopyPortalLink && customer.externalId
+      ? [
+          {
+            id: 'copy-portal-link',
+            label: 'Copy portal link',
+            icon: <LinkIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: onCopyPortalLink,
           },
         ]
       : []),

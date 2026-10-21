@@ -38,7 +38,12 @@ export function CreditNoteDetailPage({
   const [dialog, setDialog] = useState<'finalize' | 'void' | null>(null)
 
   if (!note.data) {
-    return detailGate(note, { noun: 'this credit memo', listName: 'credit memos', onBack: onBack })
+    return detailGate(note, {
+      noun: 'this credit memo',
+      listName: 'credit memos',
+      onBack,
+      recordPath: `/creditnotes/${encodeURIComponent(creditNoteId)}`,
+    })
   }
 
   const data = note.data

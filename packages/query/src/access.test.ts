@@ -70,3 +70,27 @@ describe('toAccessControl', () => {
     expect(access.can('plan', 'write')).toBe(true)
   })
 })
+
+describe('toAccessControl — first load', () => {
+  it('stays loading, never denied, while the catalogue has not been read', () => {
+    // Before an environment is chosen the catalogue is not requested at all.
+    const access = toAccessControl({ ...base, user: user(['super_admin']), catalogue: undefined })
+    expect(access.status).toBe('loading')
+  })
+
+  it('offers a retry when access could not be read', () => {
+    let retried = 0
+    const access = toAccessControl({
+      ...base,
+      user: user(['super_admin']),
+      catalogue: undefined,
+      catalogueFailed: true,
+      retry: () => {
+        retried += 1
+      },
+    })
+    access.retry()
+    expect(access.status).toBe('error')
+    expect(retried).toBe(1)
+  })
+})

@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./fixtures": "./src/fixtures.ts"
   },
+  "sideEffects": false,
   "scripts": {
     "typecheck": "tsc -b",
     "lint": "eslint . --max-warnings 0",

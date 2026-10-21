@@ -49,6 +49,15 @@
       "usedBy": [],
       "story": null
     },
+    "AccountCard": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
+    },
     "AccountHeader": {
       "file": "src/components/blocks/solution-billing-4/components/account-header.tsx",
       "layer": "vendor/blocks",
@@ -56,12 +65,30 @@
       "usedBy": [],
       "story": null
     },
+    "AccountLockedDialog": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
+    },
     "AccountSettings": {
       "file": "src/components/blocks/settings-7/components/account-settings.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "AccountStatusPill": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
     },
     "Activity": {
       "file": "src/icons/index.ts",
@@ -95,6 +122,24 @@
       ],
       "story": null
     },
+    "AddCardDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
     "AddChargeDialog": {
       "file": "src/pages/product-catalog/plans/AddChargeDialog.tsx",
       "layer": "surface",
@@ -105,6 +150,24 @@
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/AddChargeDialog.stories.tsx"
+    },
+    "AddCreditsDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
     },
     "AddFolderIcon": {
       "file": "src/reui/icons/default/outline/add-folder.tsx",
@@ -306,7 +369,16 @@
       "file": "src/reui/icons/default/outline/arrow-down-right.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "CheckoutLinkPanel",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
+        "PortalEmpty",
+        "RadioRows",
+        "SubscriptionStatusPill",
+        "SummaryCell"
+      ],
       "story": null
     },
     "ArrowLeft": {
@@ -323,7 +395,8 @@
       "usedBy": [
         "ContextualSection",
         "FormToolbar",
-        "PlanAiSetupView"
+        "PlanAiSetupView",
+        "UpgradeView"
       ],
       "story": null
     },
@@ -361,6 +434,7 @@
       "composes": [],
       "usedBy": [
         "ChargeTable",
+        "CheckoutReturnView",
         "FormToolbar",
         "GuideGrid",
         "GuidedEmptyState"
@@ -450,14 +524,24 @@
       "composes": [],
       "usedBy": [
         "ApiCard",
+        "CheckoutLinkPanel",
+        "CheckoutReturnView",
         "ConnectIntegrationSheet",
         "ConnectorCard",
         "CustomerWalletView",
         "DashboardHome",
         "EventDetailSheet",
         "FilterSelect",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
+        "PortalEmpty",
+        "RadioRows",
         "RelatedCard",
         "ShellNav",
+        "SubscriptionStatusPill",
+        "SummaryCell",
+        "UsageBillingView",
         "UsageCard"
       ],
       "story": null
@@ -503,6 +587,24 @@
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "AutoTopupDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
       "story": null
     },
     "BadgeDollarSign": {
@@ -725,6 +827,7 @@
         "DateInput",
         "FilterBar",
         "FilterSelect",
+        "PortalUsage",
         "UsageCard"
       ],
       "story": null
@@ -754,8 +857,25 @@
         "DateInput",
         "EnvironmentForm",
         "FilterSelect",
+        "PortalUsage",
         "RevenueReport",
+        "SubscriptionForm",
         "UsageCard"
+      ],
+      "story": null
+    },
+    "CardLogo": {
+      "file": "src/pages/customer-portal/CardLogo.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "PortalOverview",
+        "RemoveCardDialog"
       ],
       "story": null
     },
@@ -793,6 +913,35 @@
         "SubscriptionDetailView"
       ],
       "story": null
+    },
+    "ChargeCommitmentDialog": {
+      "file": "src/pages/contracts/ChargeCommitmentDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "Field",
+        "FormDialog",
+        "OptionSelect",
+        "PlusIcon"
+      ],
+      "usedBy": [
+        "SubscriptionForm"
+      ],
+      "story": null
+    },
+    "ChargeCouponDialog": {
+      "file": "src/pages/contracts/ChargeCouponDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "Field",
+        "FormDialog",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "SubscriptionForm"
+      ],
+      "story": "./src/pages/contracts/ChargeCouponDialog.stories.tsx"
     },
     "ChargeFlags": {
       "file": "src/pages/product-catalog/charges/ChargeFlags.tsx",
@@ -953,6 +1102,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CheckoutLinkPanel",
         "ChoiceCards",
         "Composer",
         "ConnectorCard",
@@ -967,18 +1117,57 @@
         "EnvironmentSwitcher",
         "EventTrace",
         "InvoiceForm",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
         "Mark",
         "OverviewTiles",
         "PlanAiSetupView",
         "PlanPreviewCard",
+        "PortalEmpty",
         "Properties",
+        "RadioRows",
         "RegionField",
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
-        "SummaryRow"
+        "SubscriptionStatusPill",
+        "SummaryCell",
+        "SummaryRow",
+        "UpgradeView"
       ],
       "story": null
+    },
+    "CheckoutLinkPanel": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "RemoveCardDialog"
+      ],
+      "story": null
+    },
+    "CheckoutReturnView": {
+      "file": "src/pages/selfBilling/CheckoutReturnView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowRightIcon",
+        "ArrowUpRightIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/CheckoutReturnView.stories.tsx"
     },
     "ChevronDown": {
       "file": "src/icons/index.ts",
@@ -1196,16 +1385,24 @@
         "CopyIcon"
       ],
       "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
         "ChargeAlertForm",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
         "ContractSectionDialogs",
         "CustomerTaxSection",
         "CustomerWalletView",
+        "DownloadDialog",
         "EnvironmentForm",
         "EnvironmentRenameForm",
+        "PayInvoiceDialog",
         "PaymentStatusDialog",
+        "RemoveCardDialog",
         "TaxDialog"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1215,16 +1412,22 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
         "ChargeSheet",
         "ConnectionExports",
         "ContractIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
         "DataExportDetail",
+        "DownloadDialog",
         "ExportRunList",
         "ExportsOverview",
         "InvoiceForm",
         "ManageConnectionSheet",
+        "PayInvoiceDialog",
+        "RemoveCardDialog",
         "S3ConnectionList",
         "SubscriptionDetailView",
         "TaxDialog",
@@ -1385,9 +1588,7 @@
         "PreviewRow",
         "PreviewRows"
       ],
-      "usedBy": [
-        "SubscriptionForm"
-      ],
+      "usedBy": [],
       "story": "./src/pages/contracts/ContractSummary.stories.tsx"
     },
     "ContractUsageEditForm": {
@@ -1442,6 +1643,7 @@
       "composes": [],
       "usedBy": [
         "AddonGrid",
+        "CheckoutLinkPanel",
         "ChoiceCards",
         "Composer",
         "ContractIntegrations",
@@ -1463,17 +1665,24 @@
         "FeatureGrid",
         "GroupGrid",
         "InvoiceGrid",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
         "OverviewTiles",
         "PaymentGrid",
         "PlanGrid",
+        "PortalEmpty",
         "PriceUnitGrid",
         "PricingCatalogBlock",
         "Properties",
+        "RadioRows",
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
         "SubscriptionCard",
         "SubscriptionGrid",
+        "SubscriptionStatusPill",
+        "SummaryCell",
         "SummaryRow",
         "TaxRateGrid",
         "UsageSyncGrid",
@@ -1632,6 +1841,15 @@
       "usedBy": [],
       "story": null
     },
+    "CreatingPausedScreen": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
+    },
     "CreditCard": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -1646,6 +1864,7 @@
       "usedBy": [
         "PageShell",
         "PaymentGrid",
+        "PortalOverview",
         "ShellSearch"
       ],
       "story": null
@@ -1804,6 +2023,7 @@
         "EyeIcon",
         "IntegrationMark",
         "IntegrationMarks",
+        "LinkIcon",
         "MetadataCard",
         "Money",
         "OverviewTiles",
@@ -1859,12 +2079,33 @@
         "EmDash",
         "EntityList",
         "IntegrationChips",
+        "LinkIcon",
         "PencilIcon",
         "PlusIcon",
         "UserIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerGrid.stories.tsx"
+    },
+    "CustomerPortalView": {
+      "file": "src/pages/customer-portal/CustomerPortalView.tsx",
+      "layer": "surface",
+      "composes": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "PortalCredits",
+        "PortalInvoiceSheet",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalShell",
+        "PortalUsage",
+        "RemoveCardDialog"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customer-portal/CustomerPortalView.stories.tsx"
     },
     "CustomerTaxSection": {
       "file": "src/pages/customers/CustomerTaxSection.tsx",
@@ -2093,6 +2334,15 @@
       "usedBy": [],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
     },
+    "DelayedHint": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
+      "story": null
+    },
     "DeleteFilesIcon": {
       "file": "src/reui/icons/default/outline/delete-files.tsx",
       "layer": "other",
@@ -2237,8 +2487,11 @@
         "InvoiceDetailView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
+        "PortalCredits",
+        "PortalInvoices",
         "RevenueReport",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "TaxDialog",
         "WalletLedgerTable",
         "WebhookEndpointDetail"
@@ -2339,6 +2592,24 @@
       "layer": "other",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "DownloadDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
       "story": null
     },
     "DragIcon": {
@@ -2645,11 +2916,20 @@
       "usedBy": [
         "AccessProvider",
         "AccessScope",
+        "CheckoutLinkPanel",
         "EntityList",
         "IntegrationLogo",
         "IntegrationsBlock",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
+        "PortalEmpty",
+        "PortalInvoiceSheet",
+        "RadioRows",
         "RequireAccess",
         "SubTabState",
+        "SubscriptionStatusPill",
+        "SummaryCell",
         "WebhookActivity",
         "WebhookEventCatalog",
         "WriteGate"
@@ -2801,6 +3081,7 @@
         "DataExportGrid",
         "ExportRunList",
         "ExportsOverview",
+        "PortalInvoices",
         "S3ConnectionList",
         "SignInForm",
         "SignUpScreen",
@@ -2889,7 +3170,8 @@
         "Pill",
         "PlusIcon",
         "Status",
-        "Tag"
+        "Tag",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureGrid.stories.tsx"
@@ -2941,6 +3223,11 @@
       ],
       "usedBy": [
         "AcceptInvitationForm",
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChargeForm",
         "ConnectIntegrationSheet",
         "ContractAddChargeForm",
@@ -2950,6 +3237,7 @@
         "CreditGrantEditForm",
         "CustomerWalletView",
         "DataExportDialog",
+        "DownloadDialog",
         "EntitlementCreateForm",
         "EntitlementEditForm",
         "EnvironmentForm",
@@ -2962,9 +3250,11 @@
         "InvoiceForm",
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
+        "PayInvoiceDialog",
         "PaymentStatusDialog",
         "PriceOverrideForm",
         "RegionField",
+        "RemoveCardDialog",
         "RunExportDialog",
         "S3ConnectionDialog",
         "SetPasswordForm",
@@ -2972,6 +3262,7 @@
         "SignUpScreen",
         "SpecField",
         "SyncOptions",
+        "UpgradeView",
         "UsageTermsFields",
         "WebhookEndpointDetail",
         "WebhookGuide"
@@ -3323,7 +3614,12 @@
         "FormDialogBodyContext"
       ],
       "usedBy": [
+        "AddCardDialog",
         "AddChargeDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
@@ -3331,13 +3627,17 @@
         "CustomerTaxSection",
         "CustomerWalletView",
         "DataExportDialog",
+        "DownloadDialog",
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
+        "PayInvoiceDialog",
         "PaymentStatusDialog",
+        "RemoveCardDialog",
         "RunExportDialog",
         "S3ConnectionDialog",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "TaxDialog",
         "WebhookEndpointDetail"
       ],
@@ -3693,6 +3993,30 @@
       "usedBy": [],
       "story": null
     },
+    "HostedInvoiceDetailsSheet": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceDetailsSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "Money",
+        "Pill",
+        "Sheet"
+      ],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
+    "HostedInvoiceView": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceView.tsx",
+      "layer": "surface",
+      "composes": [
+        "HostedInvoiceDetailsSheet",
+        "Money",
+        "Panel"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx"
+    },
     "HotelIcon": {
       "file": "src/reui/icons/default/outline/hotel.tsx",
       "layer": "other",
@@ -3728,6 +4052,13 @@
       "usedBy": [],
       "story": null
     },
+    "InfoBlock": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "InfoHint": {
       "file": "src/compositions/forms/InfoHint.tsx",
       "layer": "composition",
@@ -3736,7 +4067,8 @@
         "Field",
         "FormCard",
         "FormRow",
-        "LabelWithHint"
+        "LabelWithHint",
+        "UpgradeView"
       ],
       "story": "./src/compositions/forms/InfoHint.stories.tsx"
     },
@@ -3958,6 +4290,23 @@
       ],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
     },
+    "InvoiceStatusPill": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalInvoiceSheet",
+        "PortalInvoices"
+      ],
+      "story": null
+    },
     "InvoiceSummary": {
       "file": "src/components/blocks/form-3/components/invoice-summary.tsx",
       "layer": "vendor/blocks",
@@ -4101,6 +4450,22 @@
       "usedBy": [],
       "story": null
     },
+    "LedgerRow": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalCredits"
+      ],
+      "story": null
+    },
     "Link": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -4113,6 +4478,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CustomerDetail",
+        "CustomerGrid",
         "InvoiceDetailView",
         "ShellSearch",
         "TaxRateGrid"
@@ -4168,6 +4535,25 @@
       ],
       "usedBy": [],
       "story": "./src/compositions/feedback/States.stories.tsx"
+    },
+    "Loaded": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalCredits",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalUsage"
+      ],
+      "story": null
     },
     "Loader2": {
       "file": "src/icons/index.ts",
@@ -4231,7 +4617,13 @@
       "usedBy": [
         "AccessProvider",
         "AccessScope",
+        "AccountCard",
+        "AccountLockedDialog",
+        "AccountStatusPill",
+        "CreatingPausedScreen",
+        "PortalNotice",
         "RequireAccess",
+        "UpgradeView",
         "WriteGate"
       ],
       "story": null
@@ -4385,6 +4777,7 @@
         "ApiCard",
         "DashboardHome",
         "FilterSelect",
+        "PortalUsage",
         "UsageCard"
       ],
       "story": "./src/pages/shared/SegmentMeter.stories.tsx"
@@ -4465,9 +4858,13 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
         "ApiCard",
+        "AutoTopupDialog",
         "CustomerDetail",
         "DashboardHome",
+        "DownloadDialog",
         "EmDash",
         "EntityCell",
         "EntityLink",
@@ -4475,7 +4872,16 @@
         "FeatureTypePill",
         "FilterSelect",
         "Formula",
+        "HostedInvoiceDetailsSheet",
+        "HostedInvoiceView",
+        "PayInvoiceDialog",
         "Pill",
+        "PortalCredits",
+        "PortalInvoiceSheet",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalUsage",
+        "RemoveCardDialog",
         "Status",
         "UsageCard"
       ],
@@ -4589,6 +4995,7 @@
         "EntitlementEditForm",
         "SubscriptionForm",
         "TimezoneCombobox",
+        "UpgradeView",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/OptionCombobox.stories.tsx"
@@ -4599,6 +5006,8 @@
       "composes": [],
       "usedBy": [
         "ChargeAlertForm",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChargeForm",
         "ContractAddChargeForm",
         "ContractIntegrations",
@@ -4743,6 +5152,7 @@
         "ChartBox",
         "DashboardHome",
         "FilterSelect",
+        "HostedInvoiceView",
         "RevenueReport",
         "UsageCard"
       ],
@@ -4787,6 +5197,24 @@
       "layer": "vendor/examples",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "PayInvoiceDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
       "story": null
     },
     "PaymentForm": {
@@ -4930,6 +5358,7 @@
       ],
       "usedBy": [
         "CatalogStatusBadge",
+        "CheckoutLinkPanel",
         "ConnectionExports",
         "CreditNoteDetailView",
         "CustomerDetail",
@@ -4942,13 +5371,21 @@
         "FeatureGrid",
         "FeatureTypeBadge",
         "GlyphBadge",
+        "HostedInvoiceDetailsSheet",
         "InvoiceDetailView",
         "InvoiceStatusBadge",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
         "PaymentStatusBadge",
         "PaymentStatusDialog",
         "PlanAiSetupView",
+        "PortalEmpty",
+        "RadioRows",
         "S3ConnectionList",
         "SubscriptionDetailView",
+        "SubscriptionStatusPill",
+        "SummaryCell",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
         "WebhookEventCatalog",
@@ -5185,6 +5622,7 @@
       "composes": [],
       "usedBy": [
         "AddonGrid",
+        "ChargeCommitmentDialog",
         "ChargeTable",
         "ConnectionExports",
         "ContractIntegrations",
@@ -5211,6 +5649,8 @@
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "PlanForm",
+        "PortalCredits",
+        "PortalOverview",
         "PriceUnitGrid",
         "PricingCatalogBlock",
         "RunExportDialog",
@@ -5226,6 +5666,130 @@
         "TierTable",
         "WebhookEndpointDetail",
         "WebhookEndpointGrid"
+      ],
+      "story": null
+    },
+    "PortalCredits": {
+      "file": "src/pages/customer-portal/PortalCredits.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "LedgerRow",
+        "Loaded",
+        "Money",
+        "PlusIcon",
+        "PortalEmpty",
+        "Section",
+        "WalletIcon"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalEmpty": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalCredits",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalUsage"
+      ],
+      "story": null
+    },
+    "PortalInvoices": {
+      "file": "src/pages/customer-portal/PortalInvoices.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EyeIcon",
+        "InvoiceStatusPill",
+        "Loaded",
+        "Money",
+        "PortalEmpty",
+        "Section"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalInvoiceSheet": {
+      "file": "src/pages/customer-portal/PortalInvoiceSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "ErrorState",
+        "InvoiceStatusPill",
+        "Money",
+        "Sheet"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalNotice": {
+      "file": "src/pages/customer-portal/PortalNotice.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": null
+    },
+    "PortalOverview": {
+      "file": "src/pages/customer-portal/PortalOverview.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CreditCardIcon",
+        "Loaded",
+        "Money",
+        "PlusIcon",
+        "PortalEmpty",
+        "Section",
+        "SimpleTable",
+        "SubscriptionStatusPill",
+        "SummaryCell",
+        "WalletIcon"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalShell": {
+      "file": "src/pages/customer-portal/PortalShell.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalUsage": {
+      "file": "src/pages/customer-portal/PortalUsage.tsx",
+      "layer": "surface",
+      "composes": [
+        "Calendar",
+        "CalendarIcon",
+        "Loaded",
+        "MeterTrack",
+        "Money",
+        "PortalEmpty",
+        "Section"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
       ],
       "story": null
     },
@@ -5402,6 +5966,27 @@
       "usedBy": [],
       "story": "./src/pages/shared/QuotaCard.stories.tsx"
     },
+    "RadioRows": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "RemoveCardDialog"
+      ],
+      "story": null
+    },
     "Receipt": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -5468,6 +6053,24 @@
         "CustomerDetail",
         "InvoiceDetailView",
         "SubscriptionDetailView"
+      ],
+      "story": null
+    },
+    "RemoveCardDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
       ],
       "story": null
     },
@@ -5784,10 +6387,15 @@
         "PlanAiSetupView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
+        "PortalCredits",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalUsage",
         "RelatedCard",
         "S3ConnectionList",
         "SubscriptionDetailView",
         "TaxDialog",
+        "UsageBillingView",
         "WebhookEndpointDetail",
         "WebhookEventCatalog"
       ],
@@ -5808,7 +6416,8 @@
         "RevenueReport",
         "S3ConnectionList",
         "SubTabState",
-        "SubscriptionDetailView"
+        "SubscriptionDetailView",
+        "UsageBillingView"
       ],
       "story": "./src/compositions/feedback/SectionEmpty.stories.tsx"
     },
@@ -5831,6 +6440,7 @@
         "CustomerAnalyticsView",
         "DashboardHome",
         "FilterSelect",
+        "UsageBillingView",
         "UsageCard"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -5855,7 +6465,9 @@
       "file": "src/components/blocks/settings-7/components/setting-row.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
       "story": null
     },
     "SettingRowGroup": {
@@ -5879,6 +6491,15 @@
       "usedBy": [],
       "story": null
     },
+    "SettingsBlock": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
+      "story": null
+    },
     "SettingsCard": {
       "file": "src/components/blocks/settings-7/components/settings-card.tsx",
       "layer": "vendor/blocks",
@@ -5890,7 +6511,9 @@
       "file": "src/components/blocks/settings-7/components/settings-field-group.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
       "story": null
     },
     "SettingsHeading": {
@@ -5934,7 +6557,9 @@
         "ConnectIntegrationSheet",
         "CustomerEventsGrid",
         "EventDetailSheet",
+        "HostedInvoiceDetailsSheet",
         "ManageConnectionSheet",
+        "PortalInvoiceSheet",
         "UsageSyncDetailSheet",
         "WebhookMessageSheet"
       ],
@@ -6116,10 +6741,12 @@
         "ExportRunList",
         "ExportsOverview",
         "PlanAiSetupView",
+        "PortalOverview",
         "PriceOverrideForm",
         "S3ConnectionList",
         "SubscriptionForm",
-        "TierTable"
+        "TierTable",
+        "UsageBillingView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -6322,7 +6949,8 @@
         "FeatureDetailView",
         "FeatureGrid",
         "InvoiceDetailView",
-        "PlanGrid"
+        "PlanGrid",
+        "UsageBillingView"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -6384,13 +7012,17 @@
       "file": "src/pages/contracts/SubscriptionForm.tsx",
       "layer": "surface",
       "composes": [
+        "CalendarIcon",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChoiceCards",
         "ContractChargeDialog",
-        "ContractSummary",
         "CreditGrantCreateForm",
         "DateInput",
+        "DetailTable",
         "EmptyState",
         "FormCard",
+        "FormDialog",
         "FormPage",
         "FormRow",
         "OptionCombobox",
@@ -6400,6 +7032,7 @@
         "PriceOverrideForm",
         "RowActionsMenu",
         "SimpleTable",
+        "UserIcon",
         "UsersIcon",
         "WalletIcon"
       ],
@@ -6430,6 +7063,22 @@
       ],
       "story": "./src/pages/contracts/SubscriptionStatusBadge.stories.tsx"
     },
+    "SubscriptionStatusPill": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalOverview"
+      ],
+      "story": null
+    },
     "SubTabState": {
       "file": "src/compositions/detail/SubTabState.tsx",
       "layer": "composition",
@@ -6453,6 +7102,22 @@
         "PlanEntitlementsView"
       ],
       "story": "./src/compositions/detail/SubTabState.stories.tsx"
+    },
+    "SummaryCell": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalOverview"
+      ],
+      "story": null
     },
     "SummaryRow": {
       "file": "src/compositions/detail/DetailKit.tsx",
@@ -6793,6 +7458,20 @@
       "usedBy": [],
       "story": null
     },
+    "UpgradeView": {
+      "file": "src/pages/selfBilling/UpgradeView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowLeftIcon",
+        "CheckIcon",
+        "Field",
+        "InfoHint",
+        "LockIcon",
+        "OptionCombobox"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/UpgradeView.stories.tsx"
+    },
     "UpIcon": {
       "file": "src/reui/icons/default/filled/up.tsx",
       "layer": "other",
@@ -6806,6 +7485,24 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "UsageBillingView": {
+      "file": "src/pages/selfBilling/UsageBillingView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowUpRightIcon",
+        "DelayedHint",
+        "Section",
+        "SectionEmpty",
+        "SegmentMeter",
+        "SettingRow",
+        "SettingsBlock",
+        "SettingsFieldGroup",
+        "SimpleTable",
+        "Status"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/UsageBillingView.stories.tsx"
     },
     "UsageCard": {
       "file": "src/pages/home/DashboardHome.tsx",
@@ -6896,6 +7593,7 @@
       "usedBy": [
         "CustomerGrid",
         "ShellAccount",
+        "SubscriptionForm",
         "SubscriptionGrid"
       ],
       "story": null
@@ -6959,6 +7657,8 @@
         "InvoiceDetailView",
         "InvoiceGrid",
         "PageShell",
+        "PortalCredits",
+        "PortalOverview",
         "SubscriptionForm"
       ],
       "story": null
@@ -7219,6 +7919,7 @@
         "EditableCard",
         "EntitlementTable",
         "EntityList",
+        "FeatureGrid",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
@@ -7875,6 +8576,13 @@
         "CreditNoteGrid"
       ]
     },
+    "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx": {
+      "title": "App/Billing/Hosted invoice/Page",
+      "component": "HostedInvoiceView",
+      "uses": [
+        "HostedInvoiceView"
+      ]
+    },
     "./src/pages/billing/invoices/InvoiceBillingDetailBlock.stories.tsx": {
       "title": "App/Billing/Invoices/Billing details block",
       "component": "InvoiceBillingDetailBlock",
@@ -7966,6 +8674,13 @@
         "PaymentStatusBadge"
       ]
     },
+    "./src/pages/contracts/ChargeCouponDialog.stories.tsx": {
+      "title": "App/Contracts/Charge coupon dialog",
+      "component": "ChargeCouponDialog",
+      "uses": [
+        "ChargeCouponDialog"
+      ]
+    },
     "./src/pages/contracts/ContractIntegrations.stories.tsx": {
       "title": "App/Contracts/Contract integrations",
       "component": "ContractIntegrations",
@@ -8017,6 +8732,14 @@
       "component": "SubscriptionStatusBadge",
       "uses": [
         "SubscriptionStatusBadge"
+      ]
+    },
+    "./src/pages/customer-portal/CustomerPortalView.stories.tsx": {
+      "title": "App/Billing/Customer portal/Page",
+      "component": null,
+      "uses": [
+        "CustomerPortalView",
+        "PortalNotice"
       ]
     },
     "./src/pages/customers/CustomerAnalyticsView.stories.tsx": {
@@ -8521,6 +9244,36 @@
       "component": null,
       "uses": [
         "RevenueReport"
+      ]
+    },
+    "./src/pages/selfBilling/AccountStatus.stories.tsx": {
+      "title": "App/Self-billing/Account status",
+      "component": "AccountStatusPill",
+      "uses": [
+        "AccountLockedDialog",
+        "AccountStatusPill",
+        "CreatingPausedScreen"
+      ]
+    },
+    "./src/pages/selfBilling/CheckoutReturnView.stories.tsx": {
+      "title": "App/Self-billing/Checkout return",
+      "component": "CheckoutReturnView",
+      "uses": [
+        "CheckoutReturnView"
+      ]
+    },
+    "./src/pages/selfBilling/UpgradeView.stories.tsx": {
+      "title": "App/Self-billing/Upgrade",
+      "component": "UpgradeView",
+      "uses": [
+        "UpgradeView"
+      ]
+    },
+    "./src/pages/selfBilling/UsageBillingView.stories.tsx": {
+      "title": "App/Self-billing/Usage & billing",
+      "component": "UsageBillingView",
+      "uses": [
+        "UsageBillingView"
       ]
     },
     "./src/pages/settings/cost-sheets/CostMarginCard.stories.tsx": {
@@ -9428,6 +10181,31 @@
       "route": "/revenue",
       "uses": [
         "RevenueReport"
+      ]
+    },
+    "CheckoutReturnPage": {
+      "file": "apps/console/src/pages/selfBilling/CheckoutReturnPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "CheckoutReturnView"
+      ]
+    },
+    "UpgradePage": {
+      "file": "apps/console/src/pages/selfBilling/UpgradePage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "PageLoadingState",
+        "UpgradeView"
+      ]
+    },
+    "UsageBillingPage": {
+      "file": "apps/console/src/pages/selfBilling/UsageBillingPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "UsageBillingView"
       ]
     },
     "SettingsPage": {

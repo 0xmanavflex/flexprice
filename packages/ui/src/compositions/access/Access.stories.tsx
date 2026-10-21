@@ -62,6 +62,29 @@ export const WriteAllowed: Story = {
   },
 }
 
+/** A locked (read-only) account: a writer's button is off too, and the reason is the lock. */
+export const WriteLocked: Story = {
+  render: () => (
+    <AccessProvider
+      value={{
+        ...principal(['plan']),
+        writeLock: 'Your account is locked. Upgrade to make changes.',
+      }}
+    >
+      <AccessScope entity="plan">
+        <WriteGate block>
+          <Button>New plan</Button>
+        </WriteGate>
+      </AccessScope>
+    </AccessProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'New plan' })).toBeDisabled()
+    await expect(canvas.getByText('Your account is locked. Upgrade to make changes.')).toBeVisible()
+  },
+}
+
 /** A settings panel needs super admin: the note says so and every control inside is off. */
 export const BlockNeedsSuperAdmin: Story = {
   render: () => (
@@ -96,6 +119,28 @@ export const PageLoading: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText('Access denied')).toBeNull()
     await expect(canvas.queryByText('Plans')).toBeNull()
+  },
+}
+
+/**
+ * Access could not be read (the user or the role catalogue failed): the page
+ * says so and offers a retry. Never "Access denied", which would be a lie.
+ */
+const retry = fn()
+export const PageCheckFailed: Story = {
+  render: () => (
+    <AccessProvider value={{ ...principal([]), status: 'error', retry }}>
+      <RequireAccess requirement={{ entity: 'task', action: 'read' }}>
+        <p>Exports</p>
+      </RequireAccess>
+    </AccessProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText("We couldn't check your access")).toBeVisible()
+    await expect(canvas.queryByText('Access denied')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(retry).toHaveBeenCalled()
   },
 }
 

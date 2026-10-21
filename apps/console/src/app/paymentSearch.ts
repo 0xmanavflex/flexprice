@@ -35,7 +35,11 @@ export function parsePaymentSearch(raw: Record<string, unknown>): PaymentQuery {
 
   return {
     page: positiveInt(raw['page'], DEFAULT_PAYMENT_QUERY.page),
-    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_PAYMENT_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(
+      param(raw, 'size', 'pageSize'),
+      DEFAULT_PAYMENT_QUERY.pageSize,
+      MAX_PAGE_SIZE,
+    ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))

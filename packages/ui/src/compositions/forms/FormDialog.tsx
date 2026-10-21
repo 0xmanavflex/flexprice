@@ -1,5 +1,11 @@
 import { useCallback, useState, type ReactNode } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui/components/primitives/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@ui/components/primitives/dialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { FormDialogBodyContext } from './formDialogContext'
@@ -36,6 +42,8 @@ export interface FormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
+  /** A line under the title: what the dialog is for, or the one fact it is about. */
+  description?: ReactNode
   size?: keyof typeof SIZES
   /** A submit is in flight: the dialog cannot be dismissed until it settles. */
   isPending?: boolean | undefined
@@ -46,6 +54,7 @@ export function FormDialog({
   open,
   onOpenChange,
   title,
+  description,
   size = 'md',
   isPending = false,
   children,
@@ -77,6 +86,7 @@ export function FormDialog({
       >
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="text-base font-medium">{title}</DialogTitle>
+          {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
           <FormDialogBodyContext.Provider key={session} value>

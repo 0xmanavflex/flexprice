@@ -92,10 +92,13 @@ export function filledSegments(value: number, max: number, segments: number): nu
 export function MeterTrack({
   filled,
   segments,
+  fill = 'bg-blue-600 dark:bg-blue-500',
   className,
 }: {
   filled: number
   segments: number
+  /** The filled segments' colour, as a `bg-*` class: a status meter turns amber or red. */
+  fill?: string
   className?: string | undefined
 }) {
   return (
@@ -108,7 +111,7 @@ export function MeterTrack({
           aria-hidden="true"
           className={cn(
             'h-full max-w-1 min-w-0.5 flex-1 rounded-full',
-            index < filled ? 'bg-blue-600 dark:bg-blue-500' : 'bg-muted',
+            index < filled ? fill : 'bg-muted',
           )}
         />
       ))}

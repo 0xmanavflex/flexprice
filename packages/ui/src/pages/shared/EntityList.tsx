@@ -141,6 +141,24 @@ const PAGE_SIZES = [10, 25, 50, 100]
 /** Ids reserved by the table itself, so a caller cannot collide with them. */
 const ACTIONS_ID = '__actions'
 
+/**
+ * The one component every cell renders through. `flexRender` mounts a function
+ * `cell` as a component, so an inline arrow — a new type each time the columns
+ * are rebuilt, which is every render of a parent that builds them inline —
+ * remounted every cell on any re-render and closed an open row menu under the
+ * pointer. The column's own renderer rides on `meta.renderCell` instead.
+ */
+function EntityCell({
+  row,
+  column,
+}: {
+  row: { original: unknown }
+  column: { columnDef: { meta?: unknown } }
+}) {
+  const meta = column.columnDef.meta as { renderCell?: (row: unknown) => ReactNode } | undefined
+  return meta?.renderCell ? meta.renderCell(row.original) : null
+}
+
 /* ------------------------------------------------------------------ *
  * Props
  * ------------------------------------------------------------------ */
@@ -689,6 +707,7 @@ export function EntityList<T extends object>({
         meta: {
           headerTitle: column.header,
           skeleton: column.skeleton ?? <Skeleton className="h-4 w-24" />,
+          renderCell: column.cell,
           ...(column.cellClassName || column.align === 'center' || column.align === 'end'
             ? {
                 cellClassName: cn(
@@ -724,7 +743,7 @@ export function EntityList<T extends object>({
           ) : (
             <span className="sr-only">Actions</span>
           ),
-        cell: ({ row }: { row: { original: T } }) => column.cell(row.original),
+        cell: EntityCell,
       } as never)
     }
 
@@ -734,11 +753,13 @@ export function EntityList<T extends object>({
         size: ACTIONS_WIDTH,
         enableSorting: false,
         enableHiding: false,
-        meta: { headerTitle: 'Actions', skeleton: <Skeleton className="size-6 rounded-md" /> },
+        meta: {
+          headerTitle: 'Actions',
+          skeleton: <Skeleton className="size-6 rounded-md" />,
+          renderCell: (row: T) => <RowActionsMenu actions={rowActions(row)} />,
+        },
         header: () => <span className="sr-only">Actions</span>,
-        cell: ({ row }: { row: { original: T } }) => (
-          <RowActionsMenu actions={rowActions(row.original)} />
-        ),
+        cell: EntityCell,
       } as never)
     }
 
@@ -1182,7 +1203,8 @@ function RowActionsMenu({ actions: given }: { actions: EntityRowAction[] }) {
         >
           <MoreHorizontalIcon aria-hidden />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-40">
+        {/* Sized to its longest label, so "Open customer portal" stays on one line. */}
+        <DropdownMenuContent align="end" className="w-max max-w-72 min-w-40">
           <DropdownMenuGroup>
             {ordinary.map((action) => (
               <DropdownMenuItem

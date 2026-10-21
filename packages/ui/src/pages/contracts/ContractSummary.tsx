@@ -45,6 +45,11 @@ const PERIOD_NOUN: Record<string, [string, string]> = {
   ANNUAL: ['year', 'years'],
 }
 
+/** "month", "quarter": one period, as a noun. */
+export function periodNoun(period: string): string {
+  return PERIOD_NOUN[period]?.[0] ?? period.toLowerCase()
+}
+
 /** "every month", "every 3 months". */
 export function everyPeriod(period: string, count: number): string {
   const [one, many] = PERIOD_NOUN[period] ?? [period.toLowerCase(), period.toLowerCase()]
@@ -65,7 +70,7 @@ export function localToday(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-function addDays(day: string, days: number): string {
+export function addDays(day: string, days: number): string {
   const date = new Date(`${day}T00:00:00`)
   date.setDate(date.getDate() + days)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -141,6 +146,7 @@ export function firstInvoiceEstimate(
       : 'Nothing is billed up front; usage is billed at the end of the period.'
   const leftOut = [
     values.billingCycle === BillingCycle.Calendar ? 'proration to the 1st' : null,
+    values.billingAnchor ? `proration to ${formatDay(values.billingAnchor)}` : null,
     values.addons.length > 0 ? 'add-ons' : null,
     values.phases.some((p) => p.discounts.length > 0) ? 'coupons' : null,
     values.taxes.length > 0 ? 'taxes' : null,
@@ -179,7 +185,13 @@ export function ContractSummary({
           />
           <PreviewRow
             label="Bill on"
-            value={values.billingCycle === BillingCycle.Calendar ? 'The 1st' : 'Start date'}
+            value={
+              values.billingAnchor
+                ? formatDay(values.billingAnchor)
+                : values.billingCycle === BillingCycle.Calendar
+                  ? 'The 1st'
+                  : 'Start date'
+            }
           />
           <PreviewRow label="Runs" value={runsText(values, today)} />
           <PreviewRow

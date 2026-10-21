@@ -34,6 +34,7 @@ export {
 export {
   createEnvironment,
   fetchCurrentUser,
+  existsInEnvironment,
   fetchEnvironments,
   signIn,
   signUp,
@@ -96,12 +97,15 @@ export type { ParsePricingParams } from './aiPricing'
  * `GET /events/lookup`, live but absent from the SDK. See `eventDebug.ts`.
  */
 export { debitWallet } from './walletDebit'
+export { createCustomerPortalSession } from './customerPortalSession'
 export { generateSampleEvents } from './sampleEvents'
 export { listActivity } from './activity'
 export type { ListActivityParams } from './activity'
 
 export { fetchEventDebug } from './eventDebug'
 export type { EventDebugParams } from './eventDebug'
+
+export { getHostedInvoice, getHostedInvoiceDownload, payHostedInvoice } from './hostedInvoice'
 
 /**
  * The SDK's request and response models, re-exported so the rest of the
@@ -159,3 +163,44 @@ export {
   updateWebhookEndpoint,
 } from './webhooks'
 export type { SvixEndpointIn, SvixListPage, SvixMessageStatus, SvixSession } from './webhooks'
+
+/** Self-billing, `/portal/billing/*`: live but absent from the SDK. See `selfBilling.ts`. */
+export {
+  cancelSelfBillingCheckout,
+  createSelfBillingPortalSession,
+  fetchSelfBillingCheckout,
+  fetchSelfBillingStatus,
+  fetchSelfBillingSummary,
+  startSelfBillingCheckout,
+} from './selfBilling'
+export type {
+  SelfBillingCheckoutBody,
+  SelfBillingCheckoutWire,
+  SelfBillingFeatureUsageWire,
+  SelfBillingInvoiceWire,
+  SelfBillingPortalWire,
+  SelfBillingStatusWire,
+  SelfBillingSummaryWire,
+} from './selfBilling'
+
+export {
+  addPortalPaymentMethod,
+  deletePortalPaymentMethod,
+  getPortalConfig,
+  getPortalCustomer,
+  getPortalIntegrations,
+  getPortalInvoice,
+  getPortalInvoicePdf,
+  getPortalInvoices,
+  getPortalPaymentMethods,
+  getPortalSubscriptions,
+  getPortalUsageAnalytics,
+  getPortalUsageSummary,
+  getPortalWalletTransactions,
+  getPortalWallets,
+  payPortalInvoice,
+  setDefaultPortalPaymentMethod,
+  topUpPortalWallet,
+  updatePortalAutoTopup,
+} from './customerPortal'
+export type { PortalAuth } from './customerPortal'

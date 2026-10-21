@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { type Corpus, corpus } from '@fp/query/fixtures'
+import { selfBillingHandlers } from './selfBillingHandlers'
 import { svixHandlers } from './svixHandlers'
 
 /**
@@ -518,6 +519,10 @@ function couponAssociations(): Record<string, unknown>[] {
  * switch — and the default-selection rule (prefer the sandbox) has nothing to
  * choose between with a single row.
  */
+const PRODUCTION_ENVIRONMENT_ID = 'env_01M020PHF0GF9KP1E9CEVNKJA1'
+/** An invoice only Production has (see `GET /invoices/:id`). */
+export const PRODUCTION_ONLY_INVOICE = 'inv_01PRODUCTIONONLYDEMO000001'
+
 const environments: Record<string, unknown>[] = [
   {
     id: 'env_01KVSNYVPMAP6JJGDF177V2DE6',
@@ -2358,6 +2363,8 @@ function sourceFor(key: string): Corpus {
 export const handlers = [
   // The Svix API behind the webhook portal — see `svixHandlers.ts`.
   ...svixHandlers,
+  // Self-billing, off unless a mock account state is picked — see `selfBillingHandlers.ts`.
+  ...selfBillingHandlers,
 
   // Environments. Unlike the create handlers further down — which echo the
   // record back and leave the corpus alone — this one appends, because the
@@ -2579,6 +2586,83 @@ export const handlers = [
   // A single customer, for the detail page. The corpus rows already carry the
   // fuller record (address, timezone, tax treatment, metadata), so the by-id GET
   // just returns the row the SDK then camelCases.
+  // The audit trail (`POST /activity`). The corpus keeps no log, so each record
+  // in scope contributes its creation, newest first. Without a handler the
+  // request fell through to the network and the rail sat on "Loading
+  // activity…" until the retries gave up — and the failure re-rendered the page.
+  http.post(`${BASE}/activity`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      customer_id?: string
+      entity_type?: string
+      entity_id?: string
+      limit?: number
+    }
+    const records: { type: string; row: Record<string, unknown>; label: string }[] = []
+    const add = (type: string, row: Record<string, unknown> | undefined | null, label: string) => {
+      if (row) records.push({ type, row, label: label || readString(row, 'id') })
+    }
+    const subscriptionRows = sourceFor('subscriptions').items
+    const invoiceRows = sourceFor('invoices').items
+    if (body.customer_id) {
+      const customer = byId('customers', body.customer_id)
+      add('customer', customer, customer ? readString(customer, 'name') : '')
+      for (const row of subscriptionRows.filter(
+        (r) => readString(r, 'customer_id') === body.customer_id,
+      )) {
+        add('subscription', row, readString(row, 'id'))
+      }
+      for (const row of invoiceRows.filter(
+        (r) => readString(r, 'customer_id') === body.customer_id,
+      )) {
+        add('invoice', row, readString(row, 'invoice_number'))
+      }
+    } else if (body.entity_type && body.entity_id) {
+      const id = body.entity_id
+      const row =
+        body.entity_type === 'subscription'
+          ? subscriptionRows.find((r) => readString(r, 'id') === id)
+          : body.entity_type === 'invoice'
+            ? (byId('invoices', id) ?? invoiceRows.find((r) => readString(r, 'id') === id))
+            : body.entity_type === 'customer'
+              ? byId('customers', id)
+              : undefined
+      add(
+        body.entity_type,
+        row,
+        row ? readString(row, body.entity_type === 'invoice' ? 'invoice_number' : 'name') : '',
+      )
+    }
+    const items = records
+      .filter(({ row }) => readString(row, 'created_at') !== '')
+      .map(({ type, row, label }) => ({
+        id: `act_${type}_${readString(row, 'id')}`,
+        action: `${type}.created`,
+        occurred_at: readString(row, 'created_at'),
+        source: 'dashboard',
+        entity: { id: readString(row, 'id'), type, label },
+        actor: { type: 'system' },
+        state: row,
+      }))
+      .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || a.id.localeCompare(b.id))
+      .slice(0, Math.min(body.limit ?? 20, 50))
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: body.limit ?? 20, offset: 0 },
+    })
+  }),
+
+  /*
+   * `GET /customers/portal/{external_id}` — a portal session. The token is
+   * what the portal mocks accept (anything but "expired"), so "Open customer
+   * portal" lands on a working portal.
+   */
+  http.get(`${BASE}/customers/portal/:externalId`, ({ params }) =>
+    HttpResponse.json({
+      url: `https://portal.example/?token=demo-${String(params['externalId'])}`,
+      token: `demo-${String(params['externalId'])}`,
+      expires_at: new Date(Date.now() + 6 * 3_600_000).toISOString(),
+    }),
+  ),
   http.get(`${BASE}/customers/:id`, ({ params }) => {
     const customer = byId('customers', String(params['id']))
     return customer
@@ -2817,6 +2901,15 @@ export const handlers = [
 
   // RBAC answers `{roles}` / `{role}`, not the `{items, pagination}` envelope.
   http.get(`${BASE}/rbac/roles`, ({ request }) => {
+    // As the live API: without X-Environment-ID the request is refused. This
+    // is what made a fresh load read "Access denied" before an environment
+    // was chosen; the console must not ask before it has one.
+    if (!request.headers.get('X-Environment-ID')) {
+      return HttpResponse.json(
+        { error: { message: 'X-Environment-ID header is required' } },
+        { status: 403 },
+      )
+    }
     const audience = new URL(request.url).searchParams.get('user_type')
     const rows =
       audience === 'service_account'
@@ -3960,8 +4053,17 @@ export const handlers = [
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
-  http.get(`${BASE}/invoices/:id`, ({ params }) => {
+  http.get(`${BASE}/invoices/:id`, ({ params, request }) => {
     const id = String(params['id'])
+    // One invoice that lives in Production only, for the shared-link journey:
+    // opened from Sandbox it 404s, as a real record in another environment does.
+    if (id === PRODUCTION_ONLY_INVOICE) {
+      if (request.headers.get('X-Environment-ID') !== PRODUCTION_ENVIRONMENT_ID) {
+        return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+      }
+      const template = sourceFor('invoices').items[0] ?? {}
+      return HttpResponse.json({ ...template, id, invoice_number: 'INV-PROD-0001' })
+    }
     const invoice =
       byId('invoices', id) ??
       sourceFor('invoices').items.find((row) => readString(row, 'id') === id)

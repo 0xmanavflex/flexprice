@@ -3,14 +3,20 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Controller, type FieldErrors, type Resolver, type UseFormRegister } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
+  CalendarIcon,
   CoinsIcon,
   KeyRoundIcon,
+  LayersIcon,
+  MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
   PuzzleIcon,
   ReceiptIcon,
   ScaleIcon,
   Settings2Icon,
+  TicketPercentIcon,
+  Trash2Icon,
+  UserIcon,
   UsersIcon,
   WalletIcon,
   XIcon,
@@ -19,11 +25,11 @@ import {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
   BillingModel,
+  BillingPeriod,
   type AddContractCharge,
   BillingCycle,
   type Charge,
   type ChargeCommitment,
-  CommitmentType,
   type CreateCreditGrant,
   type CreateSubscription,
   FEATURE_TYPE_LABEL,
@@ -71,37 +77,49 @@ import { CreditGrantCreateForm } from '@ui/pages/product-catalog/credit-grants/C
 import { PriceOverrideForm } from '@ui/pages/product-catalog/charges/PriceOverrideForm'
 import type { MeterOption, PriceUnitOption } from '@ui/pages/product-catalog/charges/ChargeForm'
 import { RowActionsMenu } from '@ui/pages/shared/RowActionsMenu'
-import { ContractChargeDialog } from './ContractChargeDialog'
+import { DetailTable, type DetailColumn } from '@ui/pages/shared/DetailTable'
 import {
-  ContractSummary,
-  everyPeriod,
-  firstInvoiceEstimate,
-  formatDay,
-  localToday,
-  moneyText,
-} from './ContractSummary'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@ui/components/primitives/dropdown-menu'
+import { FormDialog } from '@ui/compositions/forms/FormDialog'
+import { ContractChargeDialog } from './ContractChargeDialog'
+import { addDays, everyPeriod, formatDay, localToday, periodNoun } from './ContractSummary'
+import { ChargeCommitmentDialog, commitmentText } from './ChargeCommitmentDialog'
+import {
+  ChargeCouponDialog,
+  type ChargeCouponOption,
+  couponOptionLabel,
+} from './ChargeCouponDialog'
 import { provenance } from '@ui/provenance'
 
 /**
  * Create a contract (subscription), in five steps:
  *
- * 1. **Customer & plan** — the customer, then the plan, its billing period and
- *    currency, the day it bills on, and a free trial.
- * 2. **Phases & charges** — the contract timeline: each phase's dates, its
- *    charges as a table (quantity inline, price override and commitment from
- *    the row), and its discounts. A dashed button adds the next phase.
- * 3. **Add-ons & benefits** — add-ons, the contract-wide commitment, the
- *    plan's entitlements, credit grants and taxes.
+ * 1. **Contract** — the customer, then the plan (its billing period and
+ *    currency), and the contract's dates: when it starts and ends, the day it
+ *    bills on, and a free trial.
+ * 2. **Charges & add-ons** — the plan's charges as a searchable table (price,
+ *    quantity, commitment and coupon from each row), proration, the contract's
+ *    discount and its add-ons. A contract with more than one phase shows each
+ *    phase's charges in its own card instead.
+ * 3. **Commitments & benefits** — the contract-wide commitment, then the plan's
+ *    entitlements, credit grants and taxes.
  * 4. **Billing** — payment terms, who pays (this customer, another one, and
  *    customers that inherit the contract), and the remaining settings.
- * 5. **Review** — one card per step, each with its Edit, and the first invoice.
+ * 5. **Review** — one card per step, each with its Edit.
  *
- * Steps 1–4 carry a Summary rail and an estimate of the first invoice
- * (`ContractSummary`); the review is the summary, so it drops the rail.
+ * There is no running summary or first-invoice estimate: the API has nothing
+ * to estimate one with, so the form does not guess. Save as draft sits in the
+ * header on every step.
  *
  * One react-hook-form draft over the domain schema, walked by `useFormSteps`.
- * The toolbar carries the stepper, Previous / Next and, on the last step,
- * Create; the breadcrumb names the page, so the toolbar has no title.
+ * The toolbar carries the stepper, Save as draft, Previous / Next and, on the
+ * last step, Create; the breadcrumb names the page, so the toolbar has no title.
  *
  * The form never fetches: the page hands it the customers and plans to choose
  * from and, once a plan is chosen (reported through `onPlanChange`), that
@@ -118,11 +136,13 @@ export const SubscriptionFormProvenance = provenance({
     'compositions/option-combobox',
     'compositions/date-input',
     'compositions/detail-kit',
-    'pages/contract-summary',
     'pages/price-override-form',
+    'pages/shared/DetailTable',
+    'compositions/form-dialog',
+    'ui/dropdown-menu',
     'pages/credit-grant-form',
   ],
-  note: 'RHF + the domain schema, five steps with Previous/Next and the stepper in the toolbar, and a Summary / First invoice rail on steps 1–4 (ChoiceCards and SimpleTable from the detail kit); sub-forms (price override, credit grant) sit outside the form element.',
+  note: 'RHF + the domain schema, five steps with Previous/Next, Save as draft and the stepper in the toolbar (ChoiceCards and SimpleTable from the detail kit); sub-forms (price override, credit grant) sit outside the form element.',
 })
 
 export interface SubscriptionPlanContext {
@@ -138,6 +158,17 @@ export interface SubscriptionCustomerOption extends Option {
   currency?: string | undefined
   /** Needed to bill another customer or let one inherit the contract (the API takes external ids). */
   externalId?: string | undefined
+}
+
+/** A coupon to choose from; `discount` ("20%", "$50") and `code` are shown beside its name. */
+export interface SubscriptionCouponOption extends ChargeCouponOption {
+  code?: string | undefined
+}
+
+/** An add-on to start with; `type` ("Fixed and usage") and `price`, when known, fill its row. */
+export interface SubscriptionAddonOption extends Option {
+  type?: string | undefined
+  price?: string | undefined
 }
 
 /** A tax rate the contract can carry. */
@@ -157,13 +188,13 @@ export interface SubscriptionFormProps {
   /** The customer changed: the page loads their tax rates. */
   onCustomerChange?: (customerId: string) => void
   /** Coupons a phase or charge can be discounted with. */
-  coupons?: readonly Option[]
+  coupons?: readonly SubscriptionCouponOption[]
   /** Rates that can be added to the contract. */
   taxRates?: readonly SubscriptionTaxRateOption[]
   /** The chosen customer's tax associations, applied when the customer is picked (as V1 does). */
   customerTaxes?: CreateSubscription['taxes'] | null
   /** Add-ons the contract can start with. */
-  addons?: readonly Option[]
+  addons?: readonly SubscriptionAddonOption[]
   /** For charges added to this contract alone: the metered features and price units. */
   meters?: MeterOption[]
   priceUnits?: PriceUnitOption[]
@@ -185,8 +216,9 @@ const FALLBACK_CURRENCIES = currencyCodes()
 
 /**
  * Step ids are URL-safe and mirrored by the console's route
- * (`app/subscriptionSteps.ts`). The ids predate the titles: `commitments` is
- * "Add-ons & benefits", kept so links already shared still land.
+ * (`app/subscriptionSteps.ts`). The ids predate the titles — `plan` is
+ * "Contract", `phases` is "Charges & add-ons", `commitments` is "Commitments &
+ * benefits" — and are kept so links already shared still land.
  *
  * Customer and plan are **one** step: the customer decides the currency, the
  * plan decides the billing periods on offer, and picking them a page apart
@@ -194,9 +226,9 @@ const FALLBACK_CURRENCIES = currencyCodes()
  * until a customer is chosen, so the step opens as one question.
  */
 export const SUBSCRIPTION_FORM_STEPS = [
-  { id: 'plan', title: 'Customer & plan' },
-  { id: 'phases', title: 'Phases & charges' },
-  { id: 'commitments', title: 'Add-ons & benefits' },
+  { id: 'plan', title: 'Contract' },
+  { id: 'phases', title: 'Charges & add-ons' },
+  { id: 'commitments', title: 'Commitments & benefits' },
   { id: 'billing', title: 'Billing' },
   { id: 'review', title: 'Review' },
 ] as const
@@ -208,14 +240,24 @@ const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
     'currency',
     'billingPeriod',
     'billingPeriodCount',
+    'startDate',
     'trialPeriodDays',
+    'billingAnchor',
   ],
-  phases: ['startDate', 'phases', 'chargeCommitments'],
+  phases: ['phases', 'chargeCommitments'],
   commitments: ['commitmentAmount', 'overageFactor'],
-  billing: ['billingAnchor', 'autoInvoiceThreshold'],
+  billing: ['autoInvoiceThreshold'],
 }
 
 const unique = <T,>(values: T[]) => [...new Set(values)]
+
+const WhoPays = { Same: 'same', Another: 'another' } as const
+type WhoPays = (typeof WhoPays)[keyof typeof WhoPays]
+
+const CHOOSE_PAYER = 'Choose who pays, or switch back to the same customer.'
+
+/** The three ways a contract can choose its billing day. */
+type BillOn = 'start' | 'calendar' | 'date'
 
 /** Calendar billing in words: "The 1st of every month", "The start of every calendar year". */
 function calendarTitle(period: string): string {
@@ -254,23 +296,63 @@ export function SubscriptionForm({
   const errors = form.formState.errors
   const values = form.watch()
 
-  // Opened from a customer's own page there is no customer to choose, so the
-  // first step is about the plan alone and says so.
-  const steps = useMemo(
-    () =>
-      customerLocked
-        ? SUBSCRIPTION_FORM_STEPS.map((s) => (s.id === 'plan' ? { ...s, title: 'Plan' } : s))
-        : SUBSCRIPTION_FORM_STEPS,
-    [customerLocked],
+  /*
+   * Bill on is three choices over two fields: the start date (anniversary),
+   * the 1st (calendar), or a date of your choosing (anniversary, anchored on
+   * `billingAnchor`). The third is held here because an empty anchor reads the
+   * same as "the start date" until a date is picked.
+   */
+  const [billOn, setBillOn] = useState<BillOn>(() =>
+    defaultValue?.billingAnchor
+      ? 'date'
+      : defaultValue?.billingCycle === BillingCycle.Calendar
+        ? 'calendar'
+        : 'start',
   )
+  const chooseBillOn = (next: BillOn) => {
+    setBillOn(next)
+    form.setValue(
+      'billingCycle',
+      next === 'calendar' ? BillingCycle.Calendar : BillingCycle.Anniversary,
+      { shouldDirty: true },
+    )
+    // Leaving the custom date drops it, so nothing anchors on a hidden value.
+    if (next !== 'date') {
+      form.setValue('billingAnchor', '', { shouldDirty: true })
+      form.clearErrors('billingAnchor')
+    }
+  }
+
+  // Who pays is a choice before it is a value: "another customer" with none
+  // picked yet is still the same customer to the API, so it is held here.
+  const [whoPays, setWhoPays] = useState<WhoPays>(
+    defaultValue?.invoicingCustomerExternalId ? WhoPays.Another : WhoPays.Same,
+  )
+  const payerMissing = () =>
+    whoPays === WhoPays.Another && !form.getValues('invoicingCustomerExternalId')
+
+  // The contract's end is its last phase's end: one field, wherever it is edited.
+  const lastPhase = values.phases.length - 1
+  const endPath = `phases.${lastPhase}.endDate` as const
 
   const flow = useFormSteps({
-    steps,
+    steps: SUBSCRIPTION_FORM_STEPS,
     step,
     onStepChange,
-    validate: (id) => {
+    validate: async (id) => {
       const fields: string[] = [...(STEP_FIELDS[id] ?? [])]
-      return fields.length > 0 ? form.trigger(fields as never) : true
+      if (id === 'plan') fields.push(endPath)
+      const valid = fields.length > 0 ? await form.trigger(fields as never) : true
+      // Choosing "a date" means choosing one.
+      if (id === 'plan' && billOn === 'date' && !form.getValues('billingAnchor')) {
+        form.setError('billingAnchor', { type: 'required', message: 'Choose the billing date' })
+        return false
+      }
+      if (id === 'billing' && payerMissing()) {
+        form.setError('invoicingCustomerExternalId', { type: 'required', message: CHOOSE_PAYER })
+        return false
+      }
+      return valid
     },
   })
 
@@ -301,6 +383,21 @@ export function SubscriptionForm({
     form.setValue('creditGrantsChanged', false)
     setGrantsFor(values.planId)
   }, [values.planId, plan?.creditGrants, grantsFor, form])
+
+  // A plan's free trial (on its recurring fixed charges) fills in the
+  // contract's, once per plan; a trial the draft opened with is kept.
+  const planTrial = useMemo(
+    () => Math.max(0, ...(plan?.charges ?? []).map((charge) => charge.trialPeriodDays ?? 0)),
+    [plan],
+  )
+  const [trialFor, setTrialFor] = useState<string | null>(() =>
+    defaultValue?.trialPeriodDays !== undefined ? (defaultValue.planId ?? null) : null,
+  )
+  useEffect(() => {
+    if (!values.planId || !plan || plan.isLoading || trialFor === values.planId) return
+    setTrialFor(values.planId)
+    if (planTrial > 0) form.setValue('trialPeriodDays', planTrial, { shouldDirty: true })
+  }, [values.planId, plan, planTrial, trialFor, form])
 
   const starts = phaseStarts(values)
   const set = <K extends keyof CreateSubscription>(name: K, value: CreateSubscription[K]) =>
@@ -377,6 +474,12 @@ export function SubscriptionForm({
     ],
   )
   const charges = selection.attached
+  // Fixed charges bill every period, so an early invoice on usage does not apply.
+  const hasFixedCharges =
+    charges.some((charge) => charge.type === PriceType.Fixed) ||
+    values.phases.some((phase) =>
+      phase.extraCharges.some((extra) => extra.charge.type === PriceType.Fixed),
+    )
 
   /**
    * What is sent: settings on charges this contract will not bill are dropped
@@ -396,27 +499,48 @@ export function SubscriptionForm({
       chargeCommitments: draft.chargeCommitments.filter((c) => billed.has(c.priceId)),
       optedInChargeIds: draft.optedInChargeIds.filter((id) => billed.has(id)),
       includePriceIds: selection.includePriceIds,
+      // Not offered with fixed charges; a value typed before they were added is not sent.
+      ...(hasFixedCharges ? { autoInvoiceThreshold: '' } : {}),
     }
   }
 
-  const submitAll = form.handleSubmit(
-    (draft) => onSubmit(toSubmit(draft)),
-    (failed) => {
-      const bad = flow.steps.find((s) =>
-        STEP_FIELDS[s.id]?.some((field) => failed[field] !== undefined),
-      )
-      if (bad) flow.goTo(bad.id)
-    },
-  )
+  /** The step a failed field is asked on; the contract's end is asked on the first. */
+  const stepOf = (failed: FieldErrors<CreateSubscription>) => {
+    if (failed.phases?.[lastPhase]?.endDate && values.phases.length === 1) return 'plan'
+    return flow.steps.find((s) => STEP_FIELDS[s.id]?.some((field) => failed[field] !== undefined))
+      ?.id
+  }
+  const submitWith = (patch: Partial<CreateSubscription>) =>
+    form.handleSubmit(
+      (draft) => {
+        if (payerMissing()) {
+          form.setError('invoicingCustomerExternalId', { type: 'required', message: CHOOSE_PAYER })
+          flow.goTo('billing')
+          return
+        }
+        onSubmit(toSubmit({ ...draft, ...patch }))
+      },
+      (failed) => {
+        const bad = stepOf(failed)
+        if (bad) flow.goTo(bad)
+      },
+    )
+  const submitAll = submitWith({})
+  // Save as draft: the same contract, created to activate later.
+  const saveDraft = () => void submitWith({ draft: true })()
 
   const planLabel = plans.find((p) => p.value === values.planId)?.label
   const trialDays = values.trialPeriodDays ?? 0
 
   const customerStep = (
-    <FormCard title="Customer" status="required">
+    <FormCard
+      title="Customer"
+      status="required"
+      icon={<UserIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+    >
       <FormRow
         label="Customer"
-        hint="The customer this contract bills."
+        hint="Who the contract bills."
         required
         error={errors.customerId?.message}
       >
@@ -442,10 +566,14 @@ export function SubscriptionForm({
   )
 
   const planCard = (
-    <FormCard title="Plan and billing" status="required">
+    <FormCard
+      title="Plan"
+      status="required"
+      icon={<LayersIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+    >
       <FormRow
         label="Plan"
-        hint="The plan whose charges and entitlements apply."
+        hint="Fills in the billing period, currency and free trial, and copies its charges, entitlements and credit grants onto the contract."
         required
         error={errors.planId?.message}
       >
@@ -467,100 +595,206 @@ export function SubscriptionForm({
           />
         )}
       </FormRow>
-      <FormRow
-        label="Billing period"
-        hint="How often the contract is invoiced."
-        required
-        error={errors.billingPeriod?.message}
-      >
-        {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="billingPeriod"
-            render={({ field: control }) => (
-              <OptionSelect
-                id={id}
-                {...field}
-                value={control.value}
-                onValueChange={(value) => pick('billingPeriod', value)}
-                options={periodOptions}
-                disabled={isSubmitting}
+      {values.planId ? (
+        <>
+          <FormRow
+            label="Billing period"
+            hint="How often the contract is invoiced. From the plan."
+            required
+            error={errors.billingPeriod?.message}
+          >
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="billingPeriod"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => pick('billingPeriod', value)}
+                    options={periodOptions}
+                    disabled={isSubmitting}
+                  />
+                )}
               />
             )}
-          />
-        )}
-      </FormRow>
+          </FormRow>
+          <FormRow
+            label="Every"
+            hint="Number of periods per invoice, e.g. 3 on a monthly cadence bills quarterly."
+            error={errors.billingPeriodCount?.message}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                type="number"
+                min={1}
+                className="w-32"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('billingPeriodCount', { valueAsNumber: true })}
+              />
+            )}
+          </FormRow>
+          <FormRow
+            label="Currency"
+            required
+            hint="From the plan's prices."
+            error={errors.currency?.message}
+          >
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="currency"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => pick('currency', value)}
+                    options={currencyOptions}
+                    placeholder="Choose a currency"
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </FormRow>
+        </>
+      ) : null}
+    </FormCard>
+  )
+
+  const endError = errors.phases?.[lastPhase]?.endDate?.message
+  const contractEnd = values.phases[lastPhase]?.endDate ?? ''
+  const setEnd = (value: string) =>
+    form.setValue(endPath, value, { shouldDirty: true, shouldValidate: true })
+  const datesCard = (
+    <FormCard
+      title="Dates and billing"
+      icon={<CalendarIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+    >
       <FormRow
-        label="Every"
-        hint="Number of periods per invoice, e.g. 3 on a monthly cadence bills quarterly."
-        error={errors.billingPeriodCount?.message}
+        label="Starts"
+        hint="When the contract starts. Today unless you pick another day."
+        error={errors.startDate?.message}
       >
         {({ id, ...field }) => (
-          <Input
+          <DateInput
             id={id}
-            type="number"
-            min={1}
-            className="w-32"
-            disabled={isSubmitting}
             {...field}
-            {...form.register('billingPeriodCount', { valueAsNumber: true })}
+            value={values.startDate}
+            onValueChange={(value) =>
+              form.setValue('startDate', value, { shouldDirty: true, shouldValidate: true })
+            }
+            placeholder="Pick the start"
+            disabled={isSubmitting}
           />
         )}
       </FormRow>
-      <FormRow
-        label="Currency"
-        required
-        hint={
-          customerCurrency
-            ? "Defaults to the customer's currency."
-            : "Defaults to the plan's when it bills in one."
-        }
-        error={errors.currency?.message}
-      >
+      <FormRow label="Ends" hint="Leave empty to run until cancelled." error={endError}>
         {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="currency"
-            render={({ field: control }) => (
-              <OptionSelect
+          <div className="flex min-w-0 gap-1">
+            <div className="min-w-0 flex-1">
+              <DateInput
                 id={id}
                 {...field}
-                value={control.value}
-                onValueChange={(value) => pick('currency', value)}
-                options={currencyOptions}
-                placeholder="Choose a currency"
+                value={contractEnd}
+                onValueChange={setEnd}
+                placeholder="Runs until cancelled"
                 disabled={isSubmitting}
               />
-            )}
-          />
+            </div>
+            {contractEnd ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9"
+                aria-label="Clear end date"
+                onClick={() => setEnd('')}
+                disabled={isSubmitting}
+              >
+                <XIcon aria-hidden />
+              </Button>
+            ) : null}
+          </div>
         )}
       </FormRow>
       <FormRow
         label="Bill on"
-        hint="The day each invoice falls on: the contract's own start date, or the 1st of each month."
+        hint="The day each invoice falls on: the contract's own start date, the 1st of each month, or a date you choose."
         align="start"
       >
-        <ChoiceCards
-          label="Bill on"
-          value={values.billingCycle}
-          onChange={(cycle) => set('billingCycle', cycle)}
-          choices={[
-            {
-              value: BillingCycle.Anniversary,
-              title: 'The contract start date',
-              description: `Invoices fall on the same day ${everyPeriod(values.billingPeriod, 1).replace('every', 'each')} as the start date.`,
-            },
-            {
-              value: BillingCycle.Calendar,
-              title: calendarTitle(values.billingPeriod),
-              description: 'The first invoice covers the days up to then, prorated.',
-            },
-          ]}
-        />
+        <div className="flex flex-col gap-3">
+          <ChoiceCards<BillOn>
+            label="Bill on"
+            value={billOn}
+            onChange={chooseBillOn}
+            choices={[
+              {
+                value: 'start',
+                title: 'The contract start date',
+                description: `Invoices fall on the same day ${everyPeriod(values.billingPeriod, 1).replace('every', 'each')} as the start date.`,
+              },
+              {
+                value: 'calendar',
+                title: calendarTitle(values.billingPeriod),
+                description: 'The first invoice covers the days up to then, prorated.',
+              },
+              {
+                value: 'date',
+                title: 'A date you choose',
+                description:
+                  'Invoices fall on that day; the first covers the days up to it, prorated.',
+              },
+            ]}
+          />
+          {billOn === 'date' ? (
+            <Controller
+              control={form.control}
+              name="billingAnchor"
+              render={({ field: control }) => (
+                <div className="max-w-xs">
+                  <label htmlFor="contract-billing-date" className="sr-only">
+                    Billing date
+                  </label>
+                  <DateInput
+                    id="contract-billing-date"
+                    value={control.value}
+                    onValueChange={(value) => {
+                      form.setValue('billingAnchor', value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }}
+                    placeholder="Pick the day invoices fall on"
+                    {...(errors.billingAnchor ? { 'aria-invalid': true as const } : {})}
+                    disabled={isSubmitting}
+                    aria-describedby={
+                      errors.billingAnchor ? 'contract-billing-date-error' : undefined
+                    }
+                  />
+                  {/* On the picker, not the row: a row error would redden all three cards. */}
+                  {errors.billingAnchor?.message ? (
+                    <p
+                      id="contract-billing-date-error"
+                      role="alert"
+                      className="text-destructive mt-1.5 text-xs"
+                    >
+                      {errors.billingAnchor.message}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            />
+          ) : null}
+        </div>
       </FormRow>
       <FormRow
         label="Free trial"
-        hint="Optional. Billing starts after the trial."
+        hint="From the plan. Billing starts after the trial; clear it for no trial."
         error={errors.trialPeriodDays?.message}
         align="start"
       >
@@ -571,7 +805,7 @@ export function SubscriptionForm({
                 id={id}
                 type="number"
                 min={0}
-                placeholder="0"
+                placeholder="No trial"
                 disabled={isSubmitting}
                 {...field}
                 {...form.register('trialPeriodDays', {
@@ -580,11 +814,12 @@ export function SubscriptionForm({
               />
               <InputGroupAddon align="inline-end">days</InputGroupAddon>
             </InputGroup>
-            <p className="text-muted-foreground text-xs">
-              {trialDays > 0
-                ? `Billing starts ${trialDays} ${trialDays === 1 ? 'day' : 'days'} after the contract starts. You set the start date in the next step.`
-                : 'Leave empty to bill from the start date, which you set in the next step.'}
-            </p>
+            {trialDays > 0 && billOn !== 'date' ? (
+              <p className="text-muted-foreground text-xs">
+                The trial ends and billing starts on{' '}
+                {formatDay(addDays(values.startDate || today, trialDays))}.
+              </p>
+            ) : null}
           </div>
         )}
       </FormRow>
@@ -610,13 +845,16 @@ export function SubscriptionForm({
     </form>
   )
 
+  const hasCustomer = customerLocked || Boolean(values.customerId)
+
   const content: Record<string, ReactNode> = {
-    // One form element around both cards: they are one step, and a second
+    // One form element around the cards: they are one step, and a second
     // <form> would break Enter-to-advance and the toolbar's submit.
     plan: formEl(
       <>
         {customerLocked ? null : customerStep}
-        {customerLocked || values.customerId ? planCard : null}
+        {hasCustomer ? planCard : null}
+        {hasCustomer && values.planId ? datesCard : null}
       </>,
     ),
     phases: values.planId ? (
@@ -641,12 +879,19 @@ export function SubscriptionForm({
           errors={errors.phases}
           onChange={(next) => set('phases', next)}
           commitments={values.chargeCommitments}
-          commitmentErrors={errors.chargeCommitments}
           onCommitments={(next) => set('chargeCommitments', next)}
           currency={values.currency}
           billingPeriod={values.billingPeriod}
           meters={meters}
           priceUnits={priceUnits}
+          prorate={values.prorate}
+          onProrate={(next) => set('prorate', next)}
+          planLabel={planLabel}
+        />
+        <AddonsSection
+          selected={values.addons}
+          options={addons}
+          onChange={(next) => set('addons', next)}
         />
       </div>
     ) : (
@@ -654,11 +899,6 @@ export function SubscriptionForm({
     ),
     commitments: (
       <div className="flex flex-col gap-5">
-        <AddonsSection
-          selected={values.addons}
-          options={addons}
-          onChange={(next) => set('addons', next)}
-        />
         <CommitmentsSection
           values={values}
           errors={errors}
@@ -704,7 +944,16 @@ export function SubscriptionForm({
         register={form.register}
         isSubmitting={isSubmitting}
         customers={customers}
-        onChange={set}
+        onChange={(name, value) => {
+          set(name, value)
+          if (name === 'invoicingCustomerExternalId') form.clearErrors(name)
+        }}
+        whoPays={whoPays}
+        onWhoPays={(next) => {
+          setWhoPays(next)
+          form.clearErrors('invoicingCustomerExternalId')
+        }}
+        hasFixedCharges={hasFixedCharges}
       />,
     ),
     review: formEl(
@@ -720,6 +969,8 @@ export function SubscriptionForm({
         showCustomer={!customerLocked}
         today={today}
         onEdit={flow.goTo}
+        whoPays={whoPays}
+        hasFixedCharges={hasFixedCharges}
       />,
     ),
   }
@@ -735,19 +986,13 @@ export function SubscriptionForm({
         onCancel,
         isSubmitting,
         submitError,
+        actions: (
+          <Button type="button" variant="outline" onClick={saveDraft} disabled={isSubmitting}>
+            Save as draft
+          </Button>
+        ),
       }}
       stepper={{ flow, label: 'Contract steps' }}
-      preview={
-        flow.step === 'review' ? undefined : (
-          <ContractSummary
-            values={values}
-            customerLabel={customer?.label}
-            planLabel={planLabel}
-            charges={charges}
-            today={today}
-          />
-        )
-      }
     >
       {content[flow.step]}
     </FormPage>
@@ -949,104 +1194,6 @@ function OtherCadences({
   )
 }
 
-/**
- * A usage charge's commitment, opened from that charge's menu and kept in the
- * charges list. Every option is shown at once — including true-up — so none
- * of them has to be discovered by filling in another field first.
- *
- * Only a single-phase contract can carry these — the API takes them on the
- * contract's charges, not on a phase's.
- */
-function ChargeMinimum({
-  priceId,
-  name,
-  commitment,
-  error,
-  onChange,
-}: {
-  priceId: string
-  name: string
-  commitment: ChargeCommitment | undefined
-  error: string | undefined
-  onChange: (next: Partial<ChargeCommitment> | null) => void
-}) {
-  const draft = commitment ?? {
-    type: CommitmentType.Amount,
-    value: '',
-    overageFactor: '',
-    trueUp: false,
-  }
-  return (
-    <div className="flex flex-col gap-3 border-t border-dashed pt-3">
-      <div className="flex items-center gap-2">
-        <ScaleIcon aria-hidden className="text-primary size-4 shrink-0" />
-        <span className="text-sm font-medium">Commitment</span>
-      </div>
-      <p className="text-muted-foreground text-xs">
-        The least {name} bills. Usage past it is multiplied by the overage factor; 1 is the normal
-        rate. True-up bills the shortfall when usage stays under it.
-      </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <label htmlFor={`commitment-type-${priceId}`} className="text-muted-foreground text-xs">
-            Measured as
-          </label>
-          <OptionSelect
-            id={`commitment-type-${priceId}`}
-            value={draft.type}
-            onValueChange={(type) => onChange({ type: type as CommitmentType })}
-            options={[
-              { value: CommitmentType.Amount, label: 'Spend' },
-              { value: CommitmentType.Quantity, label: 'Units' },
-            ]}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor={`commitment-value-${priceId}`} className="text-muted-foreground text-xs">
-            Minimum
-          </label>
-          <Input
-            id={`commitment-value-${priceId}`}
-            inputMode="decimal"
-            placeholder={draft.type === CommitmentType.Amount ? 'Amount' : 'Units'}
-            value={draft.value}
-            aria-invalid={error ? true : undefined}
-            onChange={(event) => onChange({ value: event.target.value })}
-          />
-          {error ? (
-            <p className="text-destructive text-xs" role="alert">
-              {error}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor={`commitment-overage-${priceId}`}
-            className="text-muted-foreground text-xs"
-          >
-            Overage factor
-          </label>
-          <Input
-            id={`commitment-overage-${priceId}`}
-            inputMode="decimal"
-            placeholder="1"
-            value={draft.overageFactor}
-            onChange={(event) => onChange({ overageFactor: event.target.value })}
-          />
-        </div>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm">
-          <Switch
-            aria-label={`True-up on ${name}`}
-            checked={draft.trueUp}
-            onCheckedChange={(trueUp) => onChange({ trueUp })}
-          />
-          True-up
-        </label>
-      </div>
-    </div>
-  )
-}
-
 /* ------------------------------------------------------------------------- */
 /* Shared pieces                                                             */
 /* ------------------------------------------------------------------------- */
@@ -1087,9 +1234,17 @@ function Frame({ children, footer }: { children: ReactNode; footer?: ReactNode }
   )
 }
 
-/** The muted, centred line an empty list shows. */
-function EmptyLine({ children }: { children: ReactNode }) {
-  return <p className="text-muted-foreground px-4 py-6 text-center text-sm">{children}</p>
+/**
+ * The muted, centred line an empty list shows — and, when there is one, the
+ * way to add the first item, centred under it rather than in a footer corner.
+ */
+function EmptyLine({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
+      <p className="text-muted-foreground text-sm">{children}</p>
+      {action}
+    </div>
+  )
 }
 
 /** "+ Add …", the quiet button that opens a picker or a sub-form. */
@@ -1098,18 +1253,21 @@ function AddButton({
   onClick,
   disabled,
   label,
+  centered = false,
 }: {
   children: string
   onClick: () => void
   disabled?: boolean
   label?: string
+  /** In an empty state: an outlined button under the message, not a quiet footer link. */
+  centered?: boolean
 }) {
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant={centered ? 'outline' : 'ghost'}
       size="sm"
-      className="text-muted-foreground hover:text-foreground -ml-2 w-fit"
+      className={centered ? 'w-fit' : 'text-muted-foreground hover:text-foreground -ml-2 w-fit'}
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
@@ -1150,18 +1308,50 @@ function priceText(charge: Charge, override: PriceOverride | undefined): string 
 }
 
 /* ------------------------------------------------------------------------- */
-/* Phases & charges                                                          */
+/* Charges & add-ons                                                         */
 /* ------------------------------------------------------------------------- */
 
-type ChargeRow =
-  | { id: string; kind: 'plan'; charge: Charge }
-  | { id: string; kind: 'extra'; extra: AddContractCharge; index: number }
+/** A charge as the charges table lists it: plain strings for search and the filters, the charge behind them. */
+type ChargeRow = {
+  id: string
+  name: string
+  type: 'Fixed' | 'Usage'
+  status: 'Changed' | 'As on the plan'
+  price: string
+} & ({ kind: 'plan'; charge: Charge } | { kind: 'extra'; extra: AddContractCharge; index: number })
+
+/** A change a charge row carries, drawn as a chip under its name that opens the matching dialog. */
+function ChargeFlag({
+  icon,
+  label,
+  name,
+  onClick,
+}: {
+  icon: ReactNode
+  label: string
+  name: string
+  onClick: () => void
+}) {
+  return (
+    <Badge
+      variant="outline"
+      size="lg"
+      className="hover:bg-muted shrink-0 cursor-pointer font-normal"
+      render={<button type="button" aria-label={`${label}: edit on ${name}`} onClick={onClick} />}
+    >
+      {icon}
+      {label}
+    </Badge>
+  )
+}
 
 /**
- * A phase's charges as a table: the plan's, then any added to this contract
- * alone. A fixed charge's quantity is edited in its row; the pencil reprices
- * it for this phase; the row menu holds the rest (a usage charge's
- * commitment, a coupon on just that charge).
+ * A phase's charges as the reference's searchable table: any added to this
+ * contract alone first, then the plan's — a type and a status filter, twenty a
+ * page. A fixed charge's quantity is edited in its row; everything else — a new
+ * price, a usage charge's commitment, a coupon on just that charge, back to the
+ * plan — is in the row's one menu, and each change shows as a chip under the
+ * name that reopens it.
  */
 function ChargesTable({
   charges,
@@ -1172,11 +1362,13 @@ function ChargesTable({
   quantities,
   onQuantities,
   phaseLabel,
+  currency,
   commitments,
-  commitmentErrors,
   onCommitment,
   onRemoveExtra,
-  onCouponFor,
+  couponOf,
+  onCoupon,
+  onReset,
 }: {
   charges: Charge[]
   extraCharges: AddContractCharge[]
@@ -1186,36 +1378,62 @@ function ChargesTable({
   quantities: SubscriptionPhase['quantities']
   onQuantities: (next: SubscriptionPhase['quantities']) => void
   phaseLabel: string
-  /** Present on a single-phase contract, where a usage charge can carry a minimum. */
+  currency: string
+  /** Present on a single-phase contract, where a usage charge can carry a commitment. */
   commitments?: ChargeCommitment[]
-  commitmentErrors?: FieldErrors<CreateSubscription>['chargeCommitments']
-  onCommitment?: (priceId: string, next: Partial<ChargeCommitment> | null) => void
+  onCommitment?: (priceId: string, next: ChargeCommitment | null) => void
   onRemoveExtra: (index: number) => void
-  onCouponFor?: (priceId: string) => void
+  /** The coupon on one charge, if it has one. */
+  couponOf: (priceId: string) => SubscriptionCouponOption | undefined
+  /** Opens the coupon dialog for a charge; absent when there are no coupons. */
+  onCoupon?: ((priceId: string) => void) | undefined
+  /** Puts a charge back as the plan has it: price, quantity, commitment and coupon. */
+  onReset: (priceId: string) => void
 }) {
-  const quantityOf = (priceId: string) =>
-    quantities.find((q) => q.priceId === priceId)?.quantity ?? ''
+  // " in Phase 2" on a contract of phases; nothing on a contract of one.
+  const inPhase = phaseLabel ? ` in ${phaseLabel}` : ''
+  const quantityEntry = (priceId: string) => quantities.find((q) => q.priceId === priceId)
+  // A fixed charge bills one unless this contract says otherwise.
   const setQuantity = (priceId: string, quantity: string) =>
     onQuantities(
-      quantity.trim() === ''
+      quantity.trim() === '1'
         ? quantities.filter((q) => q.priceId !== priceId)
         : [...quantities.filter((q) => q.priceId !== priceId), { priceId, quantity }],
     )
-  const [editing, setEditing] = useState<string | null>(null)
-  // Charges whose commitment options are open. A saved commitment stays open.
-  const [configuring, setConfiguring] = useState<ReadonlySet<string>>(new Set())
+  // The plan charge whose price dialog is open.
+  const [repricing, setRepricing] = useState<string | null>(null)
+  // The usage charge whose commitment dialog is open.
+  const [committing, setCommitting] = useState<string | null>(null)
   const byId = new Map(overrides.map((o) => [o.priceId, o]))
   const commitmentOf = new Map((commitments ?? []).map((c) => [c.priceId, c]))
 
   if (isLoading) return <EmptyLine>Loading the plan&apos;s charges…</EmptyLine>
 
+  const changed = (charge: Charge) =>
+    byId.has(charge.id) ||
+    quantityEntry(charge.id) !== undefined ||
+    commitmentOf.has(charge.id) ||
+    couponOf(charge.id) !== undefined
+
   const rows: ChargeRow[] = [
-    ...charges.map((charge) => ({ id: charge.id, kind: 'plan' as const, charge })),
     ...extraCharges.map((extra, index) => ({
       id: `extra-${index}`,
       kind: 'extra' as const,
       extra,
       index,
+      name: extra.charge.displayName || 'Contract charge',
+      type: extra.charge.type === PriceType.Usage ? ('Usage' as const) : ('Fixed' as const),
+      status: 'Changed' as const,
+      price: extraPriceText(extra),
+    })),
+    ...charges.map((charge) => ({
+      id: charge.id,
+      kind: 'plan' as const,
+      charge,
+      name: chargeName(charge),
+      type: charge.type === PriceType.Usage ? ('Usage' as const) : ('Fixed' as const),
+      status: changed(charge) ? ('Changed' as const) : ('As on the plan' as const),
+      price: priceText(charge, byId.get(charge.id)),
     })),
   ]
   if (rows.length === 0)
@@ -1225,202 +1443,264 @@ function ChargesTable({
       </Frame>
     )
 
-  const openCommitments = charges.filter(
-    (charge) =>
-      Boolean(onCommitment) &&
-      charge.type === PriceType.Usage &&
-      (configuring.has(charge.id) || commitmentOf.has(charge.id)),
-  )
-  const editingCharge = charges.find((charge) => charge.id === editing)
+  const committingCharge = charges.find((charge) => charge.id === committing)
+  const repricingCharge = charges.find((charge) => charge.id === repricing)
 
-  const columns: SimpleColumn<ChargeRow>[] = [
+  const columns: DetailColumn<ChargeRow>[] = [
     {
       key: 'charge',
       header: 'Charge',
+      width: 320,
       className: 'whitespace-normal',
-      cell: (row) =>
-        row.kind === 'plan' ? (
-          <span className="flex min-w-0 flex-col gap-0.5 py-2">
-            <span className="font-medium">{chargeName(row.charge)}</span>
-            <span className="text-muted-foreground text-xs">{chargeKind(row.charge)}</span>
-          </span>
-        ) : (
-          <span className="flex min-w-0 flex-col gap-0.5 py-2">
-            <span className="font-medium">{row.extra.charge.displayName || 'Contract charge'}</span>
-            <span className="text-muted-foreground text-xs">
-              {extraChargeSummary(row.extra)} · This contract only
+      text: (row) => row.name,
+      cell: (row) => {
+        if (row.kind === 'extra') {
+          return (
+            <span className="flex min-w-0 flex-col gap-0.5 py-2">
+              <span className="flex items-center gap-1.5">
+                <span className="truncate font-medium">{row.name}</span>
+                <Badge variant="outline" size="sm" className="shrink-0 font-normal">
+                  Added
+                </Badge>
+              </span>
+              <span className="text-muted-foreground text-xs">{extraChargeSummary(row.extra)}</span>
             </span>
+          )
+        }
+        const { charge } = row
+        const coupon = couponOf(charge.id)
+        const commitment = commitmentOf.get(charge.id)
+        const flags: ReactNode[] = []
+        if (byId.has(charge.id))
+          flags.push(
+            <ChargeFlag
+              key="price"
+              icon={<PencilIcon aria-hidden className="text-info size-3.5" />}
+              label="Price changed"
+              name={row.name}
+              onClick={() => setRepricing(charge.id)}
+            />,
+          )
+        if (coupon)
+          flags.push(
+            <ChargeFlag
+              key="coupon"
+              icon={<TicketPercentIcon aria-hidden className="text-success size-3.5" />}
+              label={coupon.discount ? `${coupon.discount} off` : coupon.label}
+              name={row.name}
+              onClick={() => onCoupon?.(charge.id)}
+            />,
+          )
+        if (commitment)
+          flags.push(
+            <ChargeFlag
+              key="commitment"
+              icon={
+                <ScaleIcon aria-hidden className="text-primary dark:text-foreground size-3.5" />
+              }
+              label="Commitment"
+              name={row.name}
+              onClick={() => setCommitting(charge.id)}
+            />,
+          )
+        return (
+          <span className="flex min-w-0 flex-col gap-0.5 py-2">
+            <span className="truncate font-medium">{row.name}</span>
+            <span className="text-muted-foreground text-xs">{chargeKind(charge)}</span>
+            {flags.length > 0 ? (
+              <span className="flex flex-wrap items-center gap-1.5 pt-1">
+                {flags}
+                {commitment ? (
+                  <span className="text-muted-foreground text-xs">
+                    {commitmentText(commitment, currency)}
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
           </span>
-        ),
+        )
+      },
     },
     {
       key: 'price',
       header: 'Price',
+      width: 200,
       className: 'whitespace-normal',
-      cell: (row) =>
-        row.kind === 'plan' ? (
-          <span className="flex flex-wrap items-center gap-2 tabular-nums">
-            {priceText(row.charge, byId.get(row.charge.id))}
-            {byId.has(row.charge.id) ? (
-              <Badge variant="info-light" size="sm">
-                Overridden
-              </Badge>
-            ) : null}
-          </span>
-        ) : (
-          <span className="tabular-nums">
-            {'amount' in row.extra.charge && row.extra.charge.amount
-              ? money(row.extra.charge.amount, row.extra.charge.currency)
-              : '—'}
-          </span>
-        ),
+      text: (row) => row.price,
+      cell: (row) => (
+        <span className="flex min-w-0 flex-col tabular-nums">
+          <span>{row.price}</span>
+          {row.kind === 'plan' && byId.has(row.charge.id) ? (
+            <span className="text-muted-foreground text-xs line-through">
+              {priceText(row.charge, undefined)}
+            </span>
+          ) : null}
+        </span>
+      ),
     },
     {
       key: 'quantity',
       header: 'Quantity',
+      width: 100,
       cell: (row) =>
-        row.kind === 'plan' ? (
-          row.charge.type === PriceType.Fixed ? (
-            <Input
-              aria-label={`Quantity of ${chargeName(row.charge)} in ${phaseLabel}`}
-              inputMode="decimal"
-              placeholder="1"
-              className="h-8 w-20"
-              value={quantityOf(row.charge.id)}
-              onChange={(event) => setQuantity(row.charge.id, event.target.value)}
-            />
-          ) : (
-            <span className="text-muted-foreground">Pay as you go</span>
-          )
+        row.type !== 'Fixed' ? null : row.kind === 'plan' ? (
+          <Input
+            aria-label={`Quantity of ${row.name}${inPhase}`}
+            inputMode="decimal"
+            className="h-8 w-20"
+            value={quantityEntry(row.charge.id)?.quantity ?? '1'}
+            onChange={(event) => setQuantity(row.charge.id, event.target.value)}
+          />
         ) : (
-          <span className="tabular-nums">
-            {row.extra.charge.type === PriceType.Fixed
-              ? row.extra.quantity || '1'
-              : 'Pay as you go'}
-          </span>
+          <span className="tabular-nums">{row.extra.quantity || '1'}</span>
         ),
     },
     {
       key: 'actions',
       header: '',
-      className: 'w-0 text-right',
-      cell: (row) => {
-        if (row.kind === 'extra') {
-          const name = row.extra.charge.displayName || 'contract charge'
-          return (
-            <RowActionsMenu
-              label={name}
-              removeLabel={`Remove ${name} from ${phaseLabel}`}
-              onRemove={() => onRemoveExtra(row.index)}
-            />
-          )
-        }
-        const { charge } = row
-        const name = chargeName(charge)
-        const override = byId.get(charge.id)
-        const commitmentOpen =
-          Boolean(onCommitment) &&
-          charge.type === PriceType.Usage &&
-          (configuring.has(charge.id) || commitmentOf.has(charge.id))
-        const extra = [
-          ...(override
-            ? [
-                {
-                  label: 'Use the plan price',
-                  onSelect: () => onChange(overrides.filter((o) => o.priceId !== charge.id)),
-                },
-              ]
-            : []),
-          ...(onCommitment && charge.type === PriceType.Usage
-            ? [
-                commitmentOpen
-                  ? {
-                      label: 'Remove commitment',
-                      onSelect: () => {
-                        setConfiguring((current) => {
-                          const next = new Set(current)
-                          next.delete(charge.id)
-                          return next
-                        })
-                        onCommitment(charge.id, null)
-                      },
-                    }
-                  : {
-                      label: 'Configure commitment',
-                      onSelect: () => setConfiguring((current) => new Set(current).add(charge.id)),
-                    },
-              ]
-            : []),
-          ...(onCouponFor
-            ? [{ label: 'Apply a coupon', onSelect: () => onCouponFor(charge.id) }]
-            : []),
-        ]
-        return (
-          <span className="flex items-center justify-end gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`${override ? 'Edit' : 'Override'} ${name} in ${phaseLabel}`}
-              aria-pressed={editing === charge.id}
-              onClick={() => setEditing(editing === charge.id ? null : charge.id)}
-            >
-              <PencilIcon aria-hidden />
-            </Button>
-            {extra.length > 0 ? <RowActionsMenu label={name} extra={extra} /> : null}
-          </span>
-        )
-      },
+      cell: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label={`More for ${row.name}${inPhase}`}
+              />
+            }
+          >
+            <MoreHorizontalIcon aria-hidden className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-52">
+            {row.kind === 'extra' ? (
+              <DropdownMenuItem variant="destructive" onClick={() => onRemoveExtra(row.index)}>
+                Remove charge
+              </DropdownMenuItem>
+            ) : (
+              <>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => setRepricing(row.charge.id)}>
+                    <PencilIcon aria-hidden />
+                    Override price
+                  </DropdownMenuItem>
+                  {onCommitment && row.type === 'Usage' ? (
+                    <DropdownMenuItem onClick={() => setCommitting(row.charge.id)}>
+                      <ScaleIcon aria-hidden />
+                      {commitmentOf.has(row.charge.id) ? 'Edit commitment' : 'Add commitment'}
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onCoupon ? (
+                    <DropdownMenuItem onClick={() => onCoupon(row.charge.id)}>
+                      <TicketPercentIcon aria-hidden />
+                      {couponOf(row.charge.id) ? 'Change coupon' : 'Apply coupon'}
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuGroup>
+                {row.status === 'Changed' ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => onReset(row.charge.id)}>
+                      Reset to plan
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ]
 
   return (
     <div className="flex flex-col gap-3">
-      <Frame>
-        <SimpleTable columns={columns} rows={rows} getRowId={(row) => row.id} />
-      </Frame>
-      {editingCharge ? (
-        <div className="flex flex-col gap-3 rounded-lg border p-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium">
-              Price for {chargeName(editingCharge)} in {phaseLabel}
-            </span>
-            <CloseSubForm
-              label={`Close override for ${chargeName(editingCharge)} in ${phaseLabel}`}
-              onClick={() => setEditing(null)}
+      <DetailTable
+        rows={rows}
+        columns={columns}
+        label={phaseLabel ? `Charges in ${phaseLabel}` : 'Charges'}
+        noun="charges"
+        facets={[
+          { id: 'type', label: 'Type', value: (row) => row.type },
+          { id: 'status', label: 'Status', value: (row) => row.status },
+        ]}
+        searchText={(row) => `${row.name} ${row.price}`}
+        pageSize={20}
+        compact
+        border
+      />
+      <FormDialog
+        open={repricingCharge !== undefined}
+        onOpenChange={(open) => (open ? undefined : setRepricing(null))}
+        size="lg"
+        title={repricingCharge ? `Override price · ${chargeName(repricingCharge)}` : ''}
+      >
+        {repricingCharge ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-muted-foreground text-xs">
+              Plan price: <PlanPriceText charge={repricingCharge} />
+            </p>
+            <PriceOverrideForm
+              key={repricingCharge.id}
+              priceId={repricingCharge.id}
+              {...(byId.get(repricingCharge.id)
+                ? { defaultValue: byId.get(repricingCharge.id)! }
+                : {})}
+              onSubmit={(value) => {
+                onChange([...overrides.filter((o) => o.priceId !== repricingCharge.id), value])
+                setRepricing(null)
+              }}
             />
           </div>
-          <p className="text-muted-foreground text-xs">
-            Plan price: <PlanPriceText charge={editingCharge} />
-          </p>
-          <PriceOverrideForm
-            priceId={editingCharge.id}
-            {...(byId.get(editingCharge.id) ? { defaultValue: byId.get(editingCharge.id)! } : {})}
-            onSubmit={(value) => {
-              onChange([...overrides.filter((o) => o.priceId !== editingCharge.id), value])
-              setEditing(null)
-            }}
-          />
-        </div>
-      ) : null}
-      {onCommitment
-        ? openCommitments.map((charge) => (
-            <div key={charge.id} className="rounded-lg border px-4 pb-4">
-              <ChargeMinimum
-                priceId={charge.id}
-                name={chargeName(charge)}
-                commitment={commitmentOf.get(charge.id)}
-                error={
-                  commitmentErrors?.[(commitments ?? []).findIndex((c) => c.priceId === charge.id)]
-                    ?.value?.message
+        ) : null}
+      </FormDialog>
+      {onCommitment ? (
+        <ChargeCommitmentDialog
+          charge={
+            committingCharge
+              ? {
+                  priceId: committingCharge.id,
+                  name: chargeName(committingCharge),
+                  description: `${BILLING_MODEL_LABEL[byId.get(committingCharge.id)?.billingModel ?? committingCharge.billingModel]} · ${priceText(committingCharge, byId.get(committingCharge.id))}`,
+                  bucketSize: committingCharge.bucketSize ?? '',
+                  unitAmount: committingCharge.amount,
+                  priceBase: committingCharge.meterId
+                    ? {
+                        entityId: committingCharge.entityId,
+                        entityType: committingCharge.entityType,
+                        meterId: committingCharge.meterId,
+                        currency: committingCharge.currency,
+                        billingPeriod: committingCharge.billingPeriod,
+                        billingPeriodCount: committingCharge.billingPeriodCount,
+                        invoiceCadence: committingCharge.invoiceCadence,
+                      }
+                    : undefined,
                 }
-                onChange={(next) => onCommitment(charge.id, next)}
-              />
-            </div>
-          ))
-        : null}
+              : null
+          }
+          commitment={committing ? commitmentOf.get(committing) : undefined}
+          currency={currency}
+          onClose={() => setCommitting(null)}
+          onSave={(next) => {
+            if (committing) onCommitment(committing, next)
+            setCommitting(null)
+          }}
+        />
+      ) : null}
     </div>
   )
+}
+
+/** An added charge's price: its amount, or "—" for usage priced by its own model. */
+function extraPriceText(extra: AddContractCharge): string {
+  const { charge } = extra
+  return 'amount' in charge && charge.amount ? money(charge.amount, charge.currency) : '—'
+}
+
+/** "1 charge", "1,200 charges". */
+function chargeCountText(count: number): string {
+  return `${count.toLocaleString('en-US')} ${count === 1 ? 'charge' : 'charges'}`
 }
 
 /** "Usage · Monthly", or "Flat fee · $250.00 · One time". */
@@ -1447,7 +1727,7 @@ function PhaseDiscounts({
 }: {
   discounts: SubscriptionDiscount[]
   charges: Charge[]
-  coupons: readonly Option[]
+  coupons: readonly SubscriptionCouponOption[]
   phaseLabel: string
   /** The target the picker is open for (`all`, or a charge id), or null while closed. */
   picking: string | null
@@ -1474,13 +1754,17 @@ function PhaseDiscounts({
       <Frame
         footer={
           coupons.length === 0 ? (
-            <p className="text-muted-foreground py-1.5 text-xs">
-              No coupons yet. Create one under Product catalog → Coupons to discount a phase.
-            </p>
+            discounts.length === 0 ? null : (
+              <p className="text-muted-foreground py-1.5 text-xs">
+                No coupons yet. Create one under Product catalog → Coupons to discount a phase.
+              </p>
+            )
           ) : picking === null ? (
-            <AddButton onClick={() => onPicking('all')} label={`Add a coupon to ${phaseLabel}`}>
-              Add coupon
-            </AddButton>
+            discounts.length === 0 ? null : (
+              <AddButton onClick={() => onPicking('all')} label={`Add a coupon to ${phaseLabel}`}>
+                Add coupon
+              </AddButton>
+            )
           ) : (
             <div className="grid gap-2 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-start">
               <label htmlFor={`${idBase}-coupon`} className="sr-only">
@@ -1490,7 +1774,10 @@ function PhaseDiscounts({
                 id={`${idBase}-coupon`}
                 value={couponId}
                 onValueChange={setCouponId}
-                options={coupons}
+                options={coupons.map((coupon) => ({
+                  value: coupon.value,
+                  label: couponOptionLabel(coupon),
+                }))}
                 placeholder="Choose a coupon…"
               />
               <label htmlFor={`${idBase}-target`} className="sr-only">
@@ -1525,7 +1812,25 @@ function PhaseDiscounts({
         }
       >
         {discounts.length === 0 ? (
-          <EmptyLine>No discounts on {phaseLabel}.</EmptyLine>
+          <EmptyLine
+            action={
+              coupons.length === 0 ? (
+                <span className="text-muted-foreground text-xs">
+                  No coupons yet. Create one under Product catalog → Coupons to discount a phase.
+                </span>
+              ) : picking === null ? (
+                <AddButton
+                  centered
+                  onClick={() => onPicking('all')}
+                  label={`Add a coupon to ${phaseLabel}`}
+                >
+                  Add coupon
+                </AddButton>
+              ) : null
+            }
+          >
+            No discounts on {phaseLabel}.
+          </EmptyLine>
         ) : (
           <ul className="divide-y">
             {discounts.map((discount, index) => (
@@ -1558,6 +1863,57 @@ function PhaseDiscounts({
   )
 }
 
+/**
+ * The contract's own discount: one coupon on the whole contract, or none. A
+ * coupon on one charge is applied from that charge's menu, so this card leaves
+ * those alone. Both are the phase's discounts underneath — this one without a
+ * charge — so the request is the same either way.
+ */
+function DiscountCard({
+  discounts,
+  coupons,
+  onChange,
+}: {
+  discounts: SubscriptionDiscount[]
+  coupons: readonly SubscriptionCouponOption[]
+  onChange: (next: SubscriptionDiscount[]) => void
+}) {
+  const whole = discounts.find((d) => !d.priceId)
+  const onCharges = discounts.filter((d) => d.priceId)
+  return (
+    <FormCard
+      title="Discount"
+      status="optional"
+      icon={<TicketPercentIcon aria-hidden className="text-success size-4 shrink-0" />}
+    >
+      <FormRow
+        label="Coupon"
+        hint="A coupon on the whole contract. A coupon on one charge is applied from that charge's menu."
+      >
+        {({ id, ...field }) => (
+          <OptionSelect
+            id={id}
+            {...field}
+            value={whole?.couponId ?? NO_DISCOUNT}
+            onValueChange={(couponId) =>
+              onChange(couponId === NO_DISCOUNT ? onCharges : [...onCharges, { couponId }])
+            }
+            options={[
+              { value: NO_DISCOUNT, label: 'No discount' },
+              ...coupons.map((coupon) => ({
+                value: coupon.value,
+                label: couponOptionLabel(coupon),
+              })),
+            ]}
+          />
+        )}
+      </FormRow>
+    </FormCard>
+  )
+}
+
+const NO_DISCOUNT = 'none'
+
 /** The phase's number in a filled circle, beside its title. */
 function PhaseNumber({ n }: { n: number }) {
   return (
@@ -1571,10 +1927,14 @@ function PhaseNumber({ n }: { n: number }) {
 }
 
 /**
- * The contract timeline: each phase a card with its dates, its charges and
- * then its discounts — and, after the last, the dashed button that adds the
- * next phase. Phase 1 starts with the contract; each later phase starts where
- * the one before it ends, so only ends are chosen after the first.
+ * The contract's charges. A contract of one phase is one card: the charges
+ * table, then proration, then the discounts — the dates are the contract's own,
+ * asked on the first step. "Add phase" splits it once it has an end date.
+ *
+ * With more than one phase it is a timeline: each phase a card with its dates,
+ * its charges and then its discounts — and, after the last, the dashed button
+ * that adds the next phase. Phase 1 starts with the contract; each later phase
+ * starts where the one before it ends, so only ends are chosen after the first.
  */
 function PhasesStep({
   phases,
@@ -1589,12 +1949,14 @@ function PhasesStep({
   errors,
   onChange,
   commitments,
-  commitmentErrors,
   onCommitments,
   currency,
   billingPeriod,
   meters,
   priceUnits,
+  prorate,
+  onProrate,
+  planLabel,
 }: {
   phases: SubscriptionPhase[]
   starts: string[]
@@ -1604,40 +1966,34 @@ function PhasesStep({
   today: string
   charges: Charge[]
   isLoading: boolean
-  coupons: readonly Option[]
+  coupons: readonly SubscriptionCouponOption[]
   errors: FieldErrors<CreateSubscription>['phases']
   onChange: (next: SubscriptionPhase[]) => void
   commitments: ChargeCommitment[]
-  commitmentErrors: FieldErrors<CreateSubscription>['chargeCommitments']
   onCommitments: (next: ChargeCommitment[]) => void
   currency: string
   billingPeriod: CreateSubscription['billingPeriod']
   meters: MeterOption[]
   priceUnits: PriceUnitOption[]
+  prorate: boolean
+  onProrate: (next: boolean) => void
+  planLabel: string | undefined
 }) {
   const update = (index: number, patch: Partial<SubscriptionPhase>) =>
     onChange(phases.map((phase, i) => (i === index ? { ...phase, ...patch } : phase)))
-  const setCommitment = (priceId: string, change: Partial<ChargeCommitment> | null) => {
+  const setCommitment = (priceId: string, next: ChargeCommitment | null) => {
     const rest = commitments.filter((c) => c.priceId !== priceId)
-    if (change === null) {
-      onCommitments(rest)
-      return
-    }
-    const current = commitments.find((c) => c.priceId === priceId) ?? {
-      priceId,
-      type: CommitmentType.Amount,
-      value: '',
-      overageFactor: '',
-      trueUp: false,
-    }
-    onCommitments([...rest, { ...current, ...change }])
+    onCommitments(next ? [...rest, next] : rest)
   }
   // Which phase the add-charge dialog adds to; null while it is closed.
   const [addingTo, setAddingTo] = useState<number | null>(null)
   // Which phase's coupon picker is open, and for what.
   const [couponFor, setCouponFor] = useState<{ phase: number; target: string } | null>(null)
+  // The charge whose coupon dialog is open, and in which phase.
+  const [couponing, setCouponing] = useState<{ phase: number; priceId: string } | null>(null)
   // Phases folded away so a newly added one can take the page.
   const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(new Set())
+  const single = phases.length === 1
   const last = phases[phases.length - 1]
   const canAdd = Boolean(last?.endDate)
   const expand = (index: number) =>
@@ -1660,6 +2016,226 @@ function PhasesStep({
       phases[index]?.endDate ? formatDay(phases[index]!.endDate) : 'until cancelled'
     }`
 
+  /** The coupon on one charge in a phase, as the coupon list names it. */
+  const couponOn = (index: number, priceId: string): SubscriptionCouponOption | undefined => {
+    const discount = phases[index]?.discounts.find((d) => d.priceId === priceId)
+    if (!discount) return undefined
+    return (
+      coupons.find((c) => c.value === discount.couponId) ?? {
+        value: discount.couponId,
+        label: discount.couponId,
+      }
+    )
+  }
+  /** How many of a phase's charges differ from the plan, counting those added to it. */
+  const changedIn = (index: number) => {
+    const phase = phases[index]!
+    const committed = new Set(single ? commitments.map((c) => c.priceId) : [])
+    return (
+      phase.extraCharges.length +
+      charges.filter(
+        (charge) =>
+          phase.priceOverrides.some((o) => o.priceId === charge.id) ||
+          phase.quantities.some((q) => q.priceId === charge.id) ||
+          phase.discounts.some((d) => d.priceId === charge.id) ||
+          committed.has(charge.id),
+      ).length
+    )
+  }
+
+  /** One phase's charges table, and the quantity error under it. */
+  const chargesOf = (index: number, label: string) => {
+    const phase = phases[index]!
+    const quantityErrors = errors?.[index]?.quantities
+    const quantityError = quantityErrors
+      ? Object.values(quantityErrors as Record<string, { quantity?: { message?: string } }>)
+          .map((row) => row?.quantity?.message)
+          .find(Boolean)
+      : undefined
+    return (
+      <>
+        <ChargesTable
+          charges={charges}
+          extraCharges={phase.extraCharges}
+          isLoading={isLoading}
+          overrides={phase.priceOverrides}
+          onChange={(priceOverrides) => update(index, { priceOverrides })}
+          quantities={phase.quantities}
+          onQuantities={(quantities) => update(index, { quantities })}
+          phaseLabel={label}
+          currency={currency}
+          onRemoveExtra={(at) =>
+            update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
+          }
+          couponOf={(priceId) => couponOn(index, priceId)}
+          {...(coupons.length > 0
+            ? { onCoupon: (priceId: string) => setCouponing({ phase: index, priceId }) }
+            : {})}
+          onReset={(priceId) => {
+            update(index, {
+              priceOverrides: phase.priceOverrides.filter((o) => o.priceId !== priceId),
+              quantities: phase.quantities.filter((q) => q.priceId !== priceId),
+              discounts: phase.discounts.filter((d) => d.priceId !== priceId),
+            })
+            if (single) setCommitment(priceId, null)
+          }}
+          {...(single
+            ? {
+                commitments,
+                onCommitment: setCommitment,
+              }
+            : {})}
+        />
+        {quantityError ? (
+          <p className="text-destructive text-xs" role="alert">
+            {quantityError}
+          </p>
+        ) : null}
+      </>
+    )
+  }
+
+  const discountsOf = (index: number, label: string) => (
+    <PhaseDiscounts
+      discounts={phases[index]!.discounts}
+      charges={charges}
+      coupons={coupons}
+      phaseLabel={label}
+      picking={couponFor?.phase === index ? couponFor.target : null}
+      onPicking={(target) => setCouponFor(target === null ? null : { phase: index, target })}
+      onChange={(discounts) => update(index, { discounts })}
+    />
+  )
+
+  const prorationRow = (
+    <FormRow
+      label="Proration"
+      hint="Charge or credit the part of a period a mid-cycle change falls in."
+    >
+      {({ id }) => <Switch id={id} checked={prorate} onCheckedChange={onProrate} />}
+    </FormRow>
+  )
+
+  const addCharge = (index: number, label?: string) => (
+    <Button
+      type="button"
+      variant={label ? 'outline' : 'default'}
+      size="sm"
+      {...(label ? { 'aria-label': `Add a charge to ${label}` } : {})}
+      onClick={() => setAddingTo(index)}
+    >
+      <PlusIcon data-icon="inline-start" aria-hidden />
+      Add charge
+    </Button>
+  )
+
+  const addPhase = (
+    <div className="flex flex-col gap-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        className="h-11 w-full border-dashed"
+        disabled={!canAdd}
+        onClick={() => {
+          setCollapsed(new Set(phases.map((_, i) => i)))
+          onChange([...phases, emptyPhase()])
+        }}
+      >
+        <PlusIcon data-icon="inline-start" aria-hidden />
+        Add phase
+      </Button>
+      <p className="text-muted-foreground text-center text-xs">
+        {single
+          ? canAdd
+            ? `Change the charges partway through: a second phase starts on ${formatDay(last!.endDate)}, with its own charges and discounts.`
+            : 'Change the charges partway through with a second phase. It starts where the contract ends, so give the contract an end date first.'
+          : canAdd
+            ? `Phase ${phases.length + 1} starts when Phase ${phases.length} ends, with its own charges and discounts.`
+            : `A new phase starts when Phase ${phases.length} ends, so Phase ${phases.length} needs an end date first.`}
+      </p>
+    </div>
+  )
+
+  const couponingCharge = couponing
+    ? charges.find((charge) => charge.id === couponing.priceId)
+    : undefined
+  const couponDialog = (
+    <ChargeCouponDialog
+      charge={
+        couponing && couponingCharge
+          ? { priceId: couponingCharge.id, name: chargeName(couponingCharge) }
+          : null
+      }
+      couponId={couponing ? couponOn(couponing.phase, couponing.priceId)?.value : undefined}
+      coupons={coupons}
+      onClose={() => setCouponing(null)}
+      onSave={(couponId) => {
+        if (couponing) {
+          const phase = phases[couponing.phase]!
+          // One coupon per charge: a new one replaces the old.
+          const rest = phase.discounts.filter((d) => d.priceId !== couponing.priceId)
+          update(couponing.phase, {
+            discounts: couponId ? [...rest, { couponId, priceId: couponing.priceId }] : rest,
+          })
+        }
+        setCouponing(null)
+      }}
+    />
+  )
+
+  const addChargeDialog = (
+    <ContractChargeDialog
+      state={addingTo === null ? null : { mode: 'add' }}
+      addTitle="Add a charge"
+      addDescription="It bills on this contract only, on top of the plan's charges."
+      onClose={() => setAddingTo(null)}
+      currency={currency}
+      billingPeriod={billingPeriod}
+      meters={meters}
+      priceUnits={priceUnits}
+      onAdd={(draft) => {
+        if (addingTo === null) return
+        const phase = phases[addingTo]
+        // Newest first: the charge just added is the one at the top of the table.
+        if (phase) update(addingTo, { extraCharges: [draft, ...phase.extraCharges] })
+        setAddingTo(null)
+      }}
+      onEdit={() => undefined}
+      onEnd={() => undefined}
+    />
+  )
+
+  if (single) {
+    return (
+      <div className="flex flex-col gap-5">
+        <FormCard
+          title="Charges"
+          icon={<PencilIcon aria-hidden className="text-info size-4 shrink-0" />}
+          adornment={addCharge(0)}
+        >
+          <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
+            <p className="text-muted-foreground text-[13px]">
+              {chargeCountText(charges.length + phases[0]!.extraCharges.length)} from the{' '}
+              {planLabel ?? ''} plan
+              {changedIn(0) > 0 ? `, ${changedIn(0)} changed on this contract` : ''}. Search for one
+              to override its price, set a commitment or apply a coupon.
+            </p>
+            {chargesOf(0, '')}
+          </div>
+          {prorationRow}
+        </FormCard>
+        <DiscountCard
+          discounts={phases[0]!.discounts}
+          coupons={coupons}
+          onChange={(discounts) => update(0, { discounts })}
+        />
+        {addChargeDialog}
+        {couponDialog}
+        {addPhase}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <h2 className="text-base font-medium">Contract timeline</h2>
@@ -1667,12 +2243,6 @@ function PhasesStep({
         const label = `Phase ${index + 1}`
         const start = starts[index]
         const endError = errors?.[index]?.endDate?.message
-        const quantityErrors = errors?.[index]?.quantities
-        const quantityError = quantityErrors
-          ? Object.values(quantityErrors as Record<string, { quantity?: { message?: string } }>)
-              .map((row) => row?.quantity?.message)
-              .find(Boolean)
-          : undefined
         if (collapsed.has(index)) {
           return (
             <button
@@ -1773,195 +2343,147 @@ function PhasesStep({
             <SubSection
               title="Charges"
               description={`The plan's prices for ${label}. Change only what this deal changes.`}
-              action={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  aria-label={`Add a charge to ${label}`}
-                  onClick={() => setAddingTo(index)}
-                >
-                  <PlusIcon data-icon="inline-start" aria-hidden />
-                  Add charge
-                </Button>
-              }
+              action={addCharge(index, label)}
             >
-              {phases.length > 1 && charges.some((charge) => charge.type === PriceType.Usage) ? (
+              {charges.some((charge) => charge.type === PriceType.Usage) ? (
                 <p className="text-muted-foreground text-xs">
                   A commitment on an individual charge is kept for a contract with one phase. Remove
                   the extra phases to set one.
                 </p>
               ) : null}
-              <ChargesTable
-                charges={charges}
-                extraCharges={phase.extraCharges}
-                isLoading={isLoading}
-                overrides={phase.priceOverrides}
-                onChange={(priceOverrides) => update(index, { priceOverrides })}
-                quantities={phase.quantities}
-                onQuantities={(quantities) => update(index, { quantities })}
-                phaseLabel={label}
-                onRemoveExtra={(at) =>
-                  update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
-                }
-                {...(coupons.length > 0
-                  ? {
-                      onCouponFor: (priceId: string) =>
-                        setCouponFor({ phase: index, target: priceId }),
-                    }
-                  : {})}
-                {...(phases.length === 1
-                  ? {
-                      commitments,
-                      commitmentErrors,
-                      onCommitment: setCommitment,
-                    }
-                  : {})}
-              />
-              {quantityError ? (
-                <p className="text-destructive text-xs" role="alert">
-                  {quantityError}
-                </p>
-              ) : null}
+              {chargesOf(index, label)}
             </SubSection>
-            <PhaseDiscounts
-              discounts={phase.discounts}
-              charges={charges}
-              coupons={coupons}
-              phaseLabel={label}
-              picking={couponFor?.phase === index ? couponFor.target : null}
-              onPicking={(target) =>
-                setCouponFor(target === null ? null : { phase: index, target })
-              }
-              onChange={(discounts) => update(index, { discounts })}
-            />
+            {discountsOf(index, label)}
           </FormCard>
         )
       })}
-      <ContractChargeDialog
-        state={addingTo === null ? null : { mode: 'add' }}
-        onClose={() => setAddingTo(null)}
-        currency={currency}
-        billingPeriod={billingPeriod}
-        meters={meters}
-        priceUnits={priceUnits}
-        onAdd={(draft) => {
-          if (addingTo === null) return
-          const phase = phases[addingTo]
-          if (phase) update(addingTo, { extraCharges: [...phase.extraCharges, draft] })
-          setAddingTo(null)
-        }}
-        onEdit={() => undefined}
-        onEnd={() => undefined}
-      />
-      <div className="flex flex-col gap-1.5">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 w-full border-dashed"
-          disabled={!canAdd}
-          onClick={() => {
-            setCollapsed(new Set(phases.map((_, i) => i)))
-            onChange([...phases, emptyPhase()])
-          }}
-        >
-          <PlusIcon data-icon="inline-start" aria-hidden />
-          Add phase
-        </Button>
-        <p className="text-muted-foreground text-center text-xs">
-          {canAdd
-            ? `Phase ${phases.length + 1} starts when Phase ${phases.length} ends, with its own charges and discounts.`
-            : `A new phase starts when Phase ${phases.length} ends, so Phase ${phases.length} needs an end date first.`}
-        </p>
-      </div>
+      {addChargeDialog}
+      {couponDialog}
+      {addPhase}
+      <FormCard
+        title="Proration"
+        icon={<Settings2Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+      >
+        {prorationRow}
+      </FormCard>
     </div>
   )
 }
 
 /* ------------------------------------------------------------------------- */
-/* Add-ons & benefits                                                        */
+/* Add-ons, commitments & benefits                                          */
 /* ------------------------------------------------------------------------- */
 
-/** Add-ons the contract starts with. */
+/** Removing a row from a table inside the form: a red delete icon. */
+function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="text-destructive hover:text-destructive hover:bg-destructive/10 size-7"
+      aria-label={label}
+      onClick={onClick}
+    >
+      <Trash2Icon aria-hidden />
+    </Button>
+  )
+}
+
+/**
+ * Add-ons the contract starts with: a table once there is one, and a picker
+ * under it for the next. An add-on has no quantity on a new contract — the
+ * API takes none.
+ */
 function AddonsSection({
   selected,
   options,
   onChange,
 }: {
   selected: CreateSubscription['addons']
-  options: readonly Option[]
+  options: readonly SubscriptionAddonOption[]
   onChange: (next: CreateSubscription['addons']) => void
 }) {
   const available = options.filter((o) => !selected.some((a) => a.addonId === o.value))
-  const [picking, setPicking] = useState(false)
-  // A fresh picker after each pick, so its list closes and it reads empty again.
-  const [pickerKey, setPickerKey] = useState(0)
+  const optionOf = (addonId: string) => options.find((o) => o.value === addonId)
+  // A price shows only when the page knows one; the add-on list carries none today.
+  const priced = options.some((o) => o.price)
+  type Row = { id: string; name: string; option: SubscriptionAddonOption | undefined }
+  const rows: Row[] = selected.map((addon) => ({
+    id: addon.addonId,
+    name: addon.name || optionOf(addon.addonId)?.label || addon.addonId,
+    option: optionOf(addon.addonId),
+  }))
+  const columns: SimpleColumn<Row>[] = [
+    {
+      key: 'addon',
+      header: 'Add-on',
+      cell: (row) => <span className="font-medium">{row.name}</span>,
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      cell: (row) => <span className="text-muted-foreground">{row.option?.type ?? '—'}</span>,
+    },
+    ...(priced
+      ? [
+          {
+            key: 'price',
+            header: 'Price',
+            className: 'text-right tabular-nums',
+            cell: (row: Row) => row.option?.price ?? '—',
+          },
+        ]
+      : []),
+    {
+      key: 'remove',
+      header: '',
+      className: 'w-10 text-right',
+      cell: (row) => (
+        <RemoveButton
+          label={`Remove ${row.name}`}
+          onClick={() => onChange(selected.filter((a) => a.addonId !== row.id))}
+        />
+      ),
+    },
+  ]
   return (
     <FormCard
       title="Add-ons"
       status="optional"
       icon={<PuzzleIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
     >
-      <div className="px-5 py-4 sm:px-6">
-        <Frame
-          footer={
-            options.length === 0 ? (
-              <p className="text-muted-foreground py-1.5 text-xs">No add-ons exist yet.</p>
-            ) : available.length === 0 ? null : picking ? (
-              <div className="flex items-center gap-2 py-2">
-                <label htmlFor="contract-add-addon" className="sr-only">
-                  Add an add-on
-                </label>
-                <div className="max-w-sm flex-1">
-                  <OptionCombobox
-                    key={pickerKey}
-                    id="contract-add-addon"
-                    value=""
-                    placeholder="Add an add-on…"
-                    options={available}
-                    onValueChange={(id) => {
-                      const option = available.find((o) => o.value === id)
-                      if (!option) return
-                      onChange([...selected, { addonId: option.value, name: option.label }])
-                      setPickerKey((n) => n + 1)
-                      setPicking(false)
-                    }}
-                  />
-                </div>
-                <CloseSubForm label="Close add-on picker" onClick={() => setPicking(false)} />
-              </div>
-            ) : (
-              <AddButton onClick={() => setPicking(true)}>Add add-on</AddButton>
-            )
-          }
-        >
-          {selected.length === 0 ? (
-            <EmptyLine>
-              No add-ons. An add-on brings its own charges and entitlements onto the contract.
-            </EmptyLine>
+      {rows.length > 0 ? (
+        <div className="px-5 pt-4 sm:px-6">
+          <Frame>
+            <SimpleTable columns={columns} rows={rows} />
+          </Frame>
+        </div>
+      ) : null}
+      <FormRow
+        label={selected.length > 0 ? 'Add another' : 'Add-on'}
+        hint="An add-on brings its own charges and entitlements onto the contract."
+      >
+        {({ id, ...field }) =>
+          options.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No add-ons exist yet.</p>
           ) : (
-            <ul className="divide-y">
-              {selected.map((addon) => (
-                <li
-                  key={addon.addonId}
-                  className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
-                >
-                  <span className="truncate font-medium">{addon.name || addon.addonId}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Remove ${addon.name || addon.addonId}`}
-                    onClick={() => onChange(selected.filter((a) => a.addonId !== addon.addonId))}
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Frame>
-      </div>
+            <OptionCombobox
+              // A fresh picker after each pick, so it reads empty again.
+              key={selected.length}
+              id={id}
+              {...field}
+              value=""
+              placeholder={selected.length > 0 ? 'Add another add-on…' : 'Choose an add-on…'}
+              options={available}
+              onValueChange={(addonId) => {
+                const option = available.find((o) => o.value === addonId)
+                if (option) onChange([...selected, { addonId: option.value, name: option.label }])
+              }}
+            />
+          )
+        }
+      </FormRow>
     </FormCard>
   )
 }
@@ -1988,12 +2510,12 @@ function CommitmentsSection({
     <FormCard
       title="Contract commitment"
       status="optional"
-      icon={<ScaleIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-      description="Applies to the whole contract, across every charge. Leave the amount empty for none. A commitment on a single charge is set on that charge."
+      icon={<ScaleIcon aria-hidden className="text-primary dark:text-foreground size-4 shrink-0" />}
+      description="Applies to the whole contract, across every charge. Leave the amount empty for none. A commitment on a single charge is set on that charge, in the previous step."
     >
       <FormRow
         label="Commitment amount"
-        hint="The least this contract bills per commitment period, across every charge."
+        hint={`The least the contract bills per commitment period, in ${values.currency.toUpperCase() || 'the contract currency'}.`}
         error={errors.commitmentAmount?.message}
       >
         {({ id, ...field }) => (
@@ -2013,7 +2535,7 @@ function CommitmentsSection({
       </FormRow>
       <FormRow
         label="Commitment period"
-        hint="The period the commitment is measured over, e.g. annual on a monthly contract."
+        hint="The period the commitment is measured over, e.g. a year on a monthly contract."
       >
         {({ id, ...field }) => (
           <OptionSelect
@@ -2027,7 +2549,9 @@ function CommitmentsSection({
             }
             options={[
               { value: 'billing', label: 'Same as billing period' },
-              ...SUBSCRIPTION_BILLING_PERIODS.map((period) => ({
+              ...SUBSCRIPTION_BILLING_PERIODS.filter(
+                (period) => period !== BillingPeriod.Daily && period !== BillingPeriod.Weekly,
+              ).map((period) => ({
                 value: period,
                 label: BILLING_PERIOD_LABEL[period],
               })),
@@ -2037,7 +2561,7 @@ function CommitmentsSection({
       </FormRow>
       <FormRow
         label="Overage factor"
-        hint="Multiplier on usage beyond the commitment. 1 bills it at the normal rate."
+        hint="Multiplier on spend beyond the commitment. 1 bills it at the normal rate."
         error={errors.overageFactor?.message}
       >
         {({ id, ...field }) => (
@@ -2161,7 +2685,7 @@ function EntitlementsSection({
           {isLoading ? (
             <EmptyLine>Loading the plan&apos;s entitlements…</EmptyLine>
           ) : entitlements.length === 0 ? (
-            <EmptyLine>This plan grants no entitlements.</EmptyLine>
+            <EmptyLine>This plan includes no entitlements.</EmptyLine>
           ) : (
             <SimpleTable columns={columns} rows={entitlements} />
           )}
@@ -2247,7 +2771,9 @@ function CreditsSection({
       <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
         <Frame
           footer={
-            adding ? null : <AddButton onClick={() => setAdding(true)}>Add credit grant</AddButton>
+            adding || grants.length === 0 ? null : (
+              <AddButton onClick={() => setAdding(true)}>Add credit grant</AddButton>
+            )
           }
         >
           {grants.length > 0 ? (
@@ -2257,7 +2783,15 @@ function CreditsSection({
               getRowId={(row) => `${row.grant.name}-${row.index}`}
             />
           ) : (
-            <EmptyLine>
+            <EmptyLine
+              action={
+                adding ? null : (
+                  <AddButton centered onClick={() => setAdding(true)}>
+                    Add credit grant
+                  </AddButton>
+                )
+              }
+            >
               {fromPlan
                 ? "All of the plan's grants are removed from this contract."
                 : 'No credit grants.'}
@@ -2315,82 +2849,89 @@ function TaxesSection({
   onChange: (next: CreateSubscription['taxes']) => void
 }) {
   const available = taxRates.filter((rate) => !taxes.some((tax) => tax.taxRateCode === rate.code))
+  type Tax = CreateSubscription['taxes'][number]
+  const columns: SimpleColumn<Tax>[] = [
+    {
+      key: 'name',
+      header: 'Tax rate',
+      cell: (tax) => <span className="font-medium">{tax.name || tax.taxRateCode}</span>,
+    },
+    {
+      key: 'code',
+      header: 'Code',
+      cell: (tax) => (
+        <span className="text-muted-foreground font-mono text-xs">{tax.taxRateCode}</span>
+      ),
+    },
+    {
+      key: 'rate',
+      header: 'Rate',
+      className: 'text-right tabular-nums',
+      cell: (tax) => (tax.percentage ? `${tax.percentage}%` : '—'),
+    },
+    {
+      key: 'remove',
+      header: '',
+      className: 'w-10 text-right',
+      cell: (tax) => (
+        <RemoveButton
+          label={`Remove ${tax.name || tax.taxRateCode}`}
+          onClick={() => onChange(taxes.filter((t) => t.taxRateCode !== tax.taxRateCode))}
+        />
+      ),
+    },
+  ]
   return (
     <FormCard
       title="Taxes"
       status="optional"
       icon={<ReceiptIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
     >
-      <div className="px-5 py-4 sm:px-6">
-        <Frame
-          footer={
-            available.length > 0 ? (
-              <div className="max-w-xs py-1.5">
-                <label htmlFor="contract-add-tax" className="sr-only">
-                  Add a tax rate
-                </label>
-                <OptionSelect
-                  id="contract-add-tax"
-                  value={undefined}
-                  placeholder="Add tax rate"
-                  options={available.map((rate) => ({
-                    value: rate.code,
-                    label: `${rate.name}${rate.percentage ? ` (${rate.percentage}%)` : ''}`,
-                  }))}
-                  onValueChange={(code) => {
-                    const rate = available.find((r) => r.code === code)
-                    if (!rate) return
-                    onChange([
-                      ...taxes,
-                      {
-                        taxRateCode: rate.code,
-                        name: rate.name,
-                        percentage: rate.percentage,
-                        taxBehavior: 'exclusive',
-                        priority: taxes.length + 1,
-                        autoApply: true,
-                      },
-                    ])
-                  }}
-                />
-              </div>
-            ) : null
-          }
-        >
-          {taxes.length === 0 ? (
-            <EmptyLine>No taxes are applied to this contract.</EmptyLine>
+      {taxes.length > 0 ? (
+        <div className="px-5 pt-4 sm:px-6">
+          <Frame>
+            <SimpleTable columns={columns} rows={taxes} getRowId={(tax) => tax.taxRateCode} />
+          </Frame>
+        </div>
+      ) : null}
+      <FormRow
+        label={taxes.length > 0 ? 'Add another' : 'Tax rate'}
+        hint="Taxes added to every invoice of this contract."
+      >
+        {({ id, ...field }) =>
+          taxRates.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No tax rates exist yet.</p>
           ) : (
-            <ul className="divide-y">
-              {taxes.map((tax) => (
-                <li
-                  key={tax.taxRateCode}
-                  className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
-                >
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium">
-                      {tax.name || tax.taxRateCode}
-                      {tax.percentage ? ` · ${tax.percentage}%` : ''}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {tax.taxRateCode} ·{' '}
-                      {tax.taxBehavior === 'inclusive' ? 'Included in the price' : 'Added on top'}
-                    </span>
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Remove ${tax.name || tax.taxRateCode}`}
-                    onClick={() => onChange(taxes.filter((t) => t.taxRateCode !== tax.taxRateCode))}
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Frame>
-      </div>
+            <OptionSelect
+              // A fresh picker after each pick, so it reads empty again.
+              key={taxes.length}
+              id={id}
+              {...field}
+              value={undefined}
+              placeholder={taxes.length > 0 ? 'Add another tax rate…' : 'Choose a tax rate…'}
+              options={available.map((rate) => ({
+                value: rate.code,
+                label: `${rate.name}${rate.percentage ? ` (${rate.percentage}%)` : ''}`,
+              }))}
+              onValueChange={(code) => {
+                const rate = available.find((r) => r.code === code)
+                if (!rate) return
+                onChange([
+                  ...taxes,
+                  {
+                    taxRateCode: rate.code,
+                    name: rate.name,
+                    percentage: rate.percentage,
+                    taxBehavior: 'exclusive',
+                    priority: taxes.length + 1,
+                    autoApply: true,
+                  },
+                ])
+              }}
+            />
+          )
+        }
+      </FormRow>
     </FormCard>
   )
 }
@@ -2398,9 +2939,6 @@ function TaxesSection({
 /* ------------------------------------------------------------------------- */
 /* Billing                                                                   */
 /* ------------------------------------------------------------------------- */
-
-const WhoPays = { Same: 'same', Another: 'another' } as const
-type WhoPays = (typeof WhoPays)[keyof typeof WhoPays]
 
 /** How and when the contract invoices, and who pays. */
 function BillingStep({
@@ -2410,6 +2948,9 @@ function BillingStep({
   isSubmitting,
   customers,
   onChange,
+  whoPays,
+  onWhoPays,
+  hasFixedCharges,
 }: {
   values: CreateSubscription
   errors: FieldErrors<CreateSubscription>
@@ -2417,10 +2958,11 @@ function BillingStep({
   isSubmitting: boolean
   customers: readonly SubscriptionCustomerOption[]
   onChange: <K extends keyof CreateSubscription>(name: K, value: CreateSubscription[K]) => void
+  whoPays: WhoPays
+  onWhoPays: (next: WhoPays) => void
+  /** Fixed charges bill each period, so there is no early invoice to trigger. */
+  hasFixedCharges: boolean
 }) {
-  const [whoPays, setWhoPays] = useState<WhoPays>(
-    values.invoicingCustomerExternalId ? WhoPays.Another : WhoPays.Same,
-  )
   // Another customer is chosen by external id, which is what the API takes.
   const others = customers.filter((c) => c.externalId && c.value !== values.customerId)
   const payerOptions = others.map((c) => ({ value: c.externalId!, label: c.label }))
@@ -2462,19 +3004,19 @@ function BillingStep({
         </FormRow>
       </FormCard>
       <FormCard
-        title="Who pays"
+        title="Customer hierarchy"
         icon={<UsersIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
       >
         <FormRow
           label="Billing customer"
-          hint="Who this contract's invoices are sent to."
+          hint="Invoices for this contract go to this customer."
           align="start"
         >
           <ChoiceCards
             label="Billing customer"
             value={whoPays}
             onChange={(next) => {
-              setWhoPays(next)
+              onWhoPays(next)
               if (next === WhoPays.Same) onChange('invoicingCustomerExternalId', '')
             }}
             choices={[
@@ -2492,7 +3034,11 @@ function BillingStep({
           />
         </FormRow>
         {whoPays === WhoPays.Another ? (
-          <FormRow label="Invoiced to" hint="The customer that receives and pays the invoices.">
+          <FormRow
+            label="Invoiced to"
+            hint="The customer that receives and pays the invoices."
+            error={errors.invoicingCustomerExternalId?.message}
+          >
             {({ id, ...field }) => (
               <OptionCombobox
                 id={id}
@@ -2500,7 +3046,7 @@ function BillingStep({
                 value={values.invoicingCustomerExternalId}
                 onValueChange={(value) => onChange('invoicingCustomerExternalId', value)}
                 options={payerOptions}
-                placeholder="Choose a customer…"
+                placeholder="Search the paying customer…"
                 emptyText="No other customer has an external ID."
                 disabled={isSubmitting}
               />
@@ -2509,7 +3055,7 @@ function BillingStep({
         ) : null}
         <FormRow
           label="Inherited customers"
-          hint="Customers that get this contract too, billed through it — e.g. a company's subsidiaries."
+          hint="Customers whose usage is billed through this contract. They share its charges, entitlements and credits; the invoice goes to the billing customer."
           align="start"
         >
           {({ id, ...field }) => (
@@ -2552,7 +3098,11 @@ function BillingStep({
                   setPickerKey((n) => n + 1)
                 }}
                 options={inheritable}
-                placeholder="Add a customer…"
+                placeholder={
+                  values.inheritedCustomerExternalIds.length > 0
+                    ? 'Add another customer…'
+                    : 'Add a customer…'
+                }
                 emptyText="No other customer has an external ID."
                 disabled={isSubmitting}
               />
@@ -2565,67 +3115,36 @@ function BillingStep({
         icon={<Settings2Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
       >
         <FormRow
-          label="Prorate changes"
-          hint="Charge or credit the part of a period a change falls in."
-        >
-          {({ id }) => (
-            <Switch
-              id={id}
-              checked={values.prorate}
-              onCheckedChange={(prorate) => onChange('prorate', prorate)}
-              disabled={isSubmitting}
-            />
-          )}
-        </FormRow>
-        <FormRow
-          label="Billing anchor"
-          hint="The day billing periods are counted from. Leave empty to follow the start date."
-          error={errors.billingAnchor?.message}
-        >
-          {({ id, ...field }) => (
-            <DateInput
-              id={id}
-              {...field}
-              value={values.billingAnchor}
-              onValueChange={(value) => onChange('billingAnchor', value)}
-              placeholder="Follows the start date"
-              disabled={isSubmitting}
-            />
-          )}
-        </FormRow>
-        <FormRow
           label="Auto-invoice threshold"
           hint="Invoice early once unbilled usage reaches this amount. Leave empty to invoice each period."
           error={errors.autoInvoiceThreshold?.message}
         >
-          {({ id, ...field }) => (
-            <InputGroup className="h-9">
-              <InputGroupAddon align="inline-start">
-                {values.currency.toUpperCase() || '—'}
-              </InputGroupAddon>
-              <InputGroupInput
+          {({ id, ...field }) =>
+            hasFixedCharges ? (
+              // No currency addon here: a disabled addon reads too faint to pass contrast.
+              <Input
                 id={id}
-                inputMode="decimal"
-                placeholder="Each period"
-                disabled={isSubmitting}
                 {...field}
-                {...register('autoInvoiceThreshold')}
+                className="h-9"
+                placeholder="Not available: the plan has fixed charges"
+                disabled
               />
-            </InputGroup>
-          )}
-        </FormRow>
-        <FormRow
-          label="Create as draft"
-          hint="Save the contract without starting it, to activate later."
-        >
-          {({ id }) => (
-            <Switch
-              id={id}
-              checked={values.draft}
-              onCheckedChange={(draft) => onChange('draft', draft)}
-              disabled={isSubmitting}
-            />
-          )}
+            ) : (
+              <InputGroup className="h-9">
+                <InputGroupAddon align="inline-start">
+                  {values.currency.toUpperCase() || '—'}
+                </InputGroupAddon>
+                <InputGroupInput
+                  id={id}
+                  inputMode="decimal"
+                  placeholder="Each period"
+                  disabled={isSubmitting}
+                  {...field}
+                  {...register('autoInvoiceThreshold')}
+                />
+              </InputGroup>
+            )
+          }
         </FormRow>
       </FormCard>
     </>
@@ -2639,7 +3158,9 @@ function BillingStep({
 /**
  * Everything the contract will be, one card per step, each with its Edit.
  * A row names what was chosen and how many — the step itself holds the
- * detail — and the last card is the first invoice.
+ * detail — except the charges this deal changes, which are listed one by one
+ * (the first eight, then how many more) so a long plan still says exactly
+ * what differs from it.
  */
 function ReviewStep({
   values,
@@ -2653,25 +3174,26 @@ function ReviewStep({
   showCustomer,
   today,
   onEdit,
+  whoPays,
+  hasFixedCharges,
 }: {
   values: CreateSubscription
   customerLabel: string | undefined
   planLabel: string | undefined
   charges: Charge[]
   entitlements: Entitlement[]
-  coupons: readonly Option[]
+  coupons: readonly SubscriptionCouponOption[]
   addons: readonly Option[]
   customers: readonly SubscriptionCustomerOption[]
   showCustomer: boolean
   today: string
   onEdit: (stepId: string) => void
+  whoPays: WhoPays
+  hasFixedCharges: boolean
 }) {
   const starts = phaseStarts(values)
-  const couponName = (id: string) => coupons.find((c) => c.value === id)?.label ?? id
-  const chargeLabel = (id: string) => {
-    const charge = charges.find((c) => c.id === id)
-    return charge ? chargeName(charge) : id
-  }
+  const couponOf = (id: string) => coupons.find((c) => c.value === id)
+  const couponName = (id: string) => couponOf(id)?.label ?? id
   const customerByExternalId = (externalId: string) =>
     customers.find((c) => c.externalId === externalId)?.label ?? externalId
   const period = BILLING_PERIOD_LABEL[values.billingPeriod].toLowerCase()
@@ -2680,30 +3202,62 @@ function ReviewStep({
       ? `${values.currency.toUpperCase()} · ${everyPeriod(values.billingPeriod, values.billingPeriodCount)}`
       : `${values.currency.toUpperCase()} · ${period}`
   const changedEntitlements = values.entitlementOverrides.length
-  const invoice = firstInvoiceEstimate(values, charges, today)
-  const other = [
-    values.prorate ? 'Prorates changes' : 'No proration',
-    values.billingAnchor ? `Anchored on ${formatDay(values.billingAnchor)}` : null,
-    values.autoInvoiceThreshold
-      ? `Invoices early at ${money(values.autoInvoiceThreshold, values.currency)}`
-      : null,
-    values.draft ? 'Created as a draft' : null,
+  const end = values.phases[values.phases.length - 1]?.endDate ?? ''
+  const single = values.phases.length === 1
+  const phase = values.phases[0]!
+  const allDiscounts = values.phases.flatMap((p) => p.discounts)
+  const wholeDiscounts = allDiscounts.filter((d) => !d.priceId)
+  const chargeDiscounts = allDiscounts.length - wholeDiscounts.length
+
+  // What this contract changes, charge by charge: added ones first, as the table lists them.
+  const changed: { key: string; name: string; parts: string[] }[] = [
+    ...phase.extraCharges.map((extra, index) => ({
+      key: `extra-${index}`,
+      name: extra.charge.displayName || 'Contract charge',
+      parts: [`added at ${extraPriceText(extra)}`],
+    })),
+    ...charges.flatMap((charge) => {
+      const override = phase.priceOverrides.find((o) => o.priceId === charge.id)
+      const quantity = phase.quantities.find((q) => q.priceId === charge.id)
+      const commitment = values.chargeCommitments.find((c) => c.priceId === charge.id)
+      const discount = phase.discounts.find((d) => d.priceId === charge.id)
+      const coupon = discount ? couponOf(discount.couponId) : undefined
+      const parts = [
+        override ? `${priceText(charge, override)} (was ${priceText(charge, undefined)})` : null,
+        quantity ? `quantity ${quantity.quantity}` : null,
+        commitment
+          ? commitmentText(commitment, values.currency).replace(/^Commits/, 'commits')
+          : null,
+        discount
+          ? coupon?.discount
+            ? `${coupon.discount} off${coupon.code ? ` (${coupon.code})` : ''}`
+            : `coupon ${coupon?.label ?? discount.couponId}`
+          : null,
+      ].filter((part): part is string => part !== null)
+      return parts.length > 0 ? [{ key: charge.id, name: chargeName(charge), parts }] : []
+    }),
   ]
-    .filter(Boolean)
-    .join(' · ')
+  const billed = charges.length + phase.extraCharges.length
+  const shown = changed.slice(0, 8)
 
   return (
     <div className="flex flex-col gap-5">
-      <ReviewCard title={showCustomer ? 'Customer & plan' : 'Plan'} step="plan" onEdit={onEdit}>
+      <ReviewCard title="Contract" step="plan" onEdit={onEdit}>
         {showCustomer ? <ReviewRow label="Customer" value={customerLabel ?? '—'} /> : null}
         <ReviewRow label="Plan" value={planLabel ?? '—'} />
         <ReviewRow label="Billing" value={billing} />
         <ReviewRow
+          label="Runs"
+          value={`${formatDay(values.startDate || today)} → ${end ? formatDay(end) : 'until cancelled'}`}
+        />
+        <ReviewRow
           label="Bill on"
           value={
-            values.billingCycle === BillingCycle.Calendar
-              ? calendarTitle(values.billingPeriod)
-              : 'The contract start date'
+            values.billingAnchor
+              ? `On ${formatDay(values.billingAnchor)}`
+              : values.billingCycle === BillingCycle.Calendar
+                ? calendarTitle(values.billingPeriod)
+                : 'The contract start date'
           }
         />
         <ReviewRow
@@ -2712,85 +3266,118 @@ function ReviewStep({
         />
       </ReviewCard>
 
-      <ReviewCard
-        title="Phases & charges"
-        step="phases"
-        onEdit={onEdit}
-        count={values.phases.length}
-      >
-        {values.phases.map((phase, index) => {
-          const billed = charges.length + phase.extraCharges.length
-          const detail = [
-            `${formatDay(starts[index] || (index === 0 ? today : ''))} → ${
-              phase.endDate ? formatDay(phase.endDate) : 'until cancelled'
-            }`,
-            `${billed} ${billed === 1 ? 'charge' : 'charges'}`,
-            phase.priceOverrides.length > 0 ? `${phase.priceOverrides.length} repriced` : null,
-            phase.extraCharges.length > 0 ? `${phase.extraCharges.length} added` : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')
-          return (
-            <div key={index}>
-              <ReviewRow label={`Phase ${index + 1}`} value={detail} />
-              {phase.priceOverrides.map((override) => {
-                const charge = charges.find((c) => c.id === override.priceId)
-                return charge ? (
-                  <ReviewRow
-                    key={override.priceId}
-                    label={chargeName(charge)}
-                    value={`${priceText(charge, override)} (plan: ${priceText(charge, undefined)})`}
-                    nested
-                  />
-                ) : null
-              })}
-              {phase.discounts.map((discount, i) => (
-                <ReviewRow
-                  key={`${discount.couponId}-${i}`}
-                  label={couponName(discount.couponId)}
-                  value={
-                    discount.priceId
-                      ? `Coupon on ${chargeLabel(discount.priceId)}`
-                      : 'Coupon on the whole phase'
-                  }
-                  nested
-                />
-              ))}
-            </div>
-          )
-        })}
-      </ReviewCard>
-
-      <ReviewCard title="Add-ons & benefits" step="commitments" onEdit={onEdit}>
+      <ReviewCard title="Charges & add-ons" step="phases" onEdit={onEdit}>
+        {single ? (
+          <>
+            <ReviewRow
+              label="Charges"
+              value={`${chargeCountText(billed)} · ${
+                changed.length > 0
+                  ? `${changed.length} changed from the plan`
+                  : "all at the plan's prices"
+              }${phase.extraCharges.length > 0 ? ` · ${phase.extraCharges.length} added` : ''}`}
+            />
+            {changed.length > 0 ? (
+              <ReviewRow
+                label="Changed charges"
+                value={
+                  <ul className="flex flex-col gap-1.5">
+                    {shown.map((item) => (
+                      <li key={item.key} className="text-[13px]">
+                        <span className="font-medium">{item.name}</span>{' '}
+                        <span className="text-muted-foreground">· {item.parts.join(' · ')}</span>
+                      </li>
+                    ))}
+                    {changed.length > shown.length ? (
+                      <li className="text-muted-foreground text-[13px]">
+                        and {changed.length - shown.length} more
+                      </li>
+                    ) : null}
+                  </ul>
+                }
+              />
+            ) : null}
+          </>
+        ) : (
+          values.phases.map((p, index) => {
+            const count = charges.length + p.extraCharges.length
+            const detail = [
+              `${formatDay(starts[index] || (index === 0 ? today : ''))} → ${
+                p.endDate ? formatDay(p.endDate) : 'until cancelled'
+              }`,
+              chargeCountText(count),
+              p.priceOverrides.length > 0 ? `${p.priceOverrides.length} repriced` : null,
+              p.extraCharges.length > 0 ? `${p.extraCharges.length} added` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')
+            return (
+              <div key={index}>
+                <ReviewRow label={`Phase ${index + 1}`} value={detail} />
+                {p.priceOverrides.map((override) => {
+                  const charge = charges.find((c) => c.id === override.priceId)
+                  return charge ? (
+                    <ReviewRow
+                      key={override.priceId}
+                      label={chargeName(charge)}
+                      value={`${priceText(charge, override)} (was ${priceText(charge, undefined)})`}
+                      nested
+                    />
+                  ) : null
+                })}
+              </div>
+            )
+          })
+        )}
+        <ReviewRow label="Proration" value={values.prorate ? 'Prorates changes' : 'No proration'} />
+        <ReviewRow
+          label="Discount"
+          value={
+            [
+              wholeDiscounts.length > 0
+                ? wholeDiscounts
+                    .map((d) => {
+                      const coupon = couponOf(d.couponId)
+                      return coupon?.discount
+                        ? `${coupon.label} (${coupon.discount} off)`
+                        : couponName(d.couponId)
+                    })
+                    .join(', ')
+                : null,
+              chargeDiscounts > 0 ? `${chargeDiscounts} on single charges` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || 'None'
+          }
+        />
         <ReviewRow
           label="Add-ons"
           value={
             values.addons.length === 0
               ? 'None'
-              : values.addons
+              : `${values.addons.length}: ${values.addons
                   .map(
                     (addon) =>
                       addon.name ||
                       addons.find((a) => a.value === addon.addonId)?.label ||
                       addon.addonId,
                   )
-                  .join(', ')
+                  .join(', ')}`
           }
         />
+      </ReviewCard>
+
+      <ReviewCard title="Commitments & benefits" step="commitments" onEdit={onEdit}>
         <ReviewRow
-          label="Commitment"
+          label="Contract commitment"
           value={
             values.commitmentAmount
-              ? `${money(values.commitmentAmount, values.currency)} per ${
+              ? `${money(values.commitmentAmount, values.currency)} minimum per ${
                   values.commitmentDuration
-                    ? BILLING_PERIOD_LABEL[values.commitmentDuration].toLowerCase()
-                    : 'billing period'
-                }${values.overageFactor ? ` · overage ×${values.overageFactor}` : ''}${
-                  values.enableTrueUp ? ' · true-up' : ''
-                }`
-              : values.chargeCommitments.length > 0
-                ? `On ${values.chargeCommitments.length} ${values.chargeCommitments.length === 1 ? 'charge' : 'charges'}`
-                : 'None'
+                    ? periodNoun(values.commitmentDuration)
+                    : periodNoun(values.billingPeriod)
+                }${values.enableTrueUp ? ', with true-up' : ''}`
+              : 'None'
           }
         />
         <ReviewRow
@@ -2808,12 +3395,12 @@ function ReviewStep({
           value={
             values.creditGrants.length === 0
               ? 'None'
-              : values.creditGrants
+              : `${values.creditGrants.length}: ${values.creditGrants
                   .map(
                     (grant) =>
                       `${grant.name} (${Number(grant.credits || 0).toLocaleString('en-US')})`,
                   )
-                  .join(', ')
+                  .join(', ')}`
           }
         />
         <ReviewRow
@@ -2824,7 +3411,7 @@ function ReviewStep({
               : values.taxes
                   .map(
                     (tax) =>
-                      `${tax.name || tax.taxRateCode}${tax.percentage ? ` (${tax.percentage}%)` : ''}`,
+                      `${tax.name || tax.taxRateCode}${tax.percentage ? ` ${tax.percentage}%` : ''}`,
                   )
                   .join(', ')
           }
@@ -2839,9 +3426,11 @@ function ReviewStep({
         <ReviewRow
           label="Billing customer"
           value={
-            values.invoicingCustomerExternalId
-              ? customerByExternalId(values.invoicingCustomerExternalId)
-              : 'Same customer'
+            whoPays === WhoPays.Same
+              ? 'Same customer'
+              : values.invoicingCustomerExternalId
+                ? customerByExternalId(values.invoicingCustomerExternalId)
+                : 'Not chosen'
           }
         />
         <ReviewRow
@@ -2852,18 +3441,15 @@ function ReviewStep({
               : values.inheritedCustomerExternalIds.map(customerByExternalId).join(', ')
           }
         />
-        <ReviewRow label="Other" value={other} />
+        <ReviewRow
+          label="Auto-invoice threshold"
+          value={
+            values.autoInvoiceThreshold && !hasFixedCharges
+              ? `${values.currency.toUpperCase()} ${values.autoInvoiceThreshold}`
+              : 'Each period'
+          }
+        />
       </ReviewCard>
-
-      {invoice ? (
-        <FormCard>
-          <ReviewRow
-            label="First invoice"
-            value={`${moneyText(invoice.amount, values.currency)} on ${formatDay(invoice.date)}`}
-            strong
-          />
-        </FormCard>
-      ) : null}
     </div>
   )
 }
@@ -2960,7 +3546,7 @@ function ReviewRow({
   strong = false,
 }: {
   label: string
-  value: string
+  value: ReactNode
   /** A detail under the row before it, e.g. a repriced charge under its phase. */
   nested?: boolean
   strong?: boolean
@@ -2975,7 +3561,7 @@ function ReviewRow({
       <span className={nested ? 'text-muted-foreground pl-4 text-xs' : 'text-muted-foreground'}>
         {label}
       </span>
-      <span
+      <div
         className={
           nested
             ? 'text-muted-foreground text-xs'
@@ -2985,7 +3571,7 @@ function ReviewRow({
         }
       >
         {value}
-      </span>
+      </div>
     </div>
   )
 }

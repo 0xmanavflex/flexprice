@@ -24,6 +24,7 @@ import {
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
+import { WriteGate } from '@ui/compositions/access/Access'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import {
@@ -315,18 +316,20 @@ export function FeatureGrid({
           // centre line like the pills around it instead of crowding the cell.
           return (
             <div className="flex min-w-0 items-center">
-              <Button
-                variant="outline"
-                size="xs"
-                className="max-w-full"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onCreateEntitlement(row)
-                }}
-              >
-                <PlusIcon aria-hidden />
-                <span className="truncate">Add entitlement</span>
-              </Button>
+              <WriteGate>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="max-w-full"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onCreateEntitlement(row)
+                  }}
+                >
+                  <PlusIcon aria-hidden />
+                  <span className="truncate">Add entitlement</span>
+                </Button>
+              </WriteGate>
             </div>
           )
         },

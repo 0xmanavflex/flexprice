@@ -55,6 +55,13 @@ export {
 } from './billing/invoices/InvoiceLinesEditor'
 export type { EditableLine, InvoiceLinesEditorProps } from './billing/invoices/InvoiceLinesEditor'
 export { InvoiceGrid, InvoiceGridProvenance } from './billing/invoices/InvoiceGrid'
+export { HostedInvoiceView, HostedInvoiceViewProvenance } from './billing/hosted-invoice/HostedInvoiceView'
+export type { HostedInvoiceViewProps } from './billing/hosted-invoice/HostedInvoiceView'
+export {
+  HostedInvoiceDetailsSheet,
+  HostedInvoiceDetailsSheetProvenance,
+} from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
+export type { HostedInvoiceDetailsSheetProps } from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance, linesChanged } from './billing/invoices/InvoiceForm'
 export type {
@@ -324,7 +331,10 @@ export type { SetPasswordFormProps } from './auth/SetPasswordForm'
 export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/AcceptInvitationForm'
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './settings/environments/EnvironmentForm'
-export type { EnvironmentContact, EnvironmentFormProps } from './settings/environments/EnvironmentForm'
+export type {
+  EnvironmentContact,
+  EnvironmentFormProps,
+} from './settings/environments/EnvironmentForm'
 export {
   EnvironmentRenameForm,
   EnvironmentRenameFormProvenance,
@@ -542,3 +552,30 @@ export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocume
 export { ContractIntegrations } from './contracts/ContractIntegrations'
 
 export type { ContractIntegrationsProps } from './contracts/ContractIntegrations'
+export {
+  CustomerPortalView,
+  CustomerPortalViewProvenance,
+} from './customer-portal/CustomerPortalView'
+export { PortalNotice, PortalNoticeProvenance } from './customer-portal/PortalNotice'
+export type {
+  CustomerPortalActions,
+  CustomerPortalData,
+  CustomerPortalViewProps,
+  Load,
+  PayVia,
+} from './customer-portal/types'
+
+// Self-billing: the tenant's own Flexprice account.
+export {
+  AccountCard,
+  AccountLockedDialog,
+  AccountStatusPill,
+  CreatingPausedScreen,
+} from './selfBilling/AccountStatus'
+export type { AccountStatusProps } from './selfBilling/AccountStatus'
+export { UsageBillingView } from './selfBilling/UsageBillingView'
+export type { UsageBillingViewProps } from './selfBilling/UsageBillingView'
+export { UpgradeView } from './selfBilling/UpgradeView'
+export type { UpgradeViewProps } from './selfBilling/UpgradeView'
+export { CheckoutReturnView } from './selfBilling/CheckoutReturnView'
+export type { CheckoutReturnViewProps, NextStep } from './selfBilling/CheckoutReturnView'
