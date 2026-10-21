@@ -172,6 +172,40 @@ export const Production: Story = {
 }
 
 /**
+ * Under mocks, the menu also lists the self-billing account states to preview,
+ * as the prototype's switcher does; the current one is ticked.
+ */
+export const MockAccounts: Story = {
+  args: {
+    current: two[1]!,
+    mockAccounts: {
+      value: 'trial',
+      options: [
+        { value: 'trial', name: 'Trial', note: '15 days left', tone: 'info' },
+        {
+          value: 'limit',
+          name: 'Account locked',
+          note: 'Event limit reached',
+          tone: 'destructive',
+        },
+        { value: 'active', name: 'Live', note: 'Paid', tone: 'success' },
+      ],
+      onChange: fn(),
+    },
+  },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /environment:/i }))
+    await expect(await screen.findByText('Mock accounts')).toBeVisible()
+    await expect(screen.getByRole('menuitem', { name: /^Trial/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('menuitem', { name: /Account locked/ }))
+    await expect(args.mockAccounts!.onChange).toHaveBeenCalledWith('limit')
+  },
+}
+
+/**
  * The switcher is the first crumb of the header's trail: the environment's
  * name beside its mark, opening a menu with the create action.
  */

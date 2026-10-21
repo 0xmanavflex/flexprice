@@ -1,5 +1,14 @@
 import { useEffect, useRef } from 'react'
-import { CalendarIcon, CircleAlertIcon, InfoIcon, MailIcon, TriangleAlertIcon } from '@ui/icons'
+import {
+  ArrowRightIcon,
+  CalendarIcon,
+  CheckIcon,
+  CircleAlertIcon,
+  InfoIcon,
+  MailIcon,
+  SparklesIcon,
+  TriangleAlertIcon,
+} from '@ui/icons'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -7,6 +16,9 @@ import {
   ENVIRONMENT_TYPE_LABEL,
   EnvironmentType,
   SANDBOX_AUTO_CANCELLATION_DAYS,
+  SELF_BILLING_PLAN,
+  planRateText,
+  usd,
   type CreateEnvironment,
   createEnvironmentSchema,
   emptyEnvironment,
@@ -34,6 +46,13 @@ import { provenance } from '@ui/provenance'
  * the card stays selectable — choosing it is how someone asks for it — but
  * "Create environment" is disabled and V1's "requires an approval" note takes
  * its place, with V1's three ways to reach us: Slack, email, or a booked call.
+ *
+ * Where the workspace pays Flexprice itself (self-billing), production is the
+ * upgrade: in the trial, choosing it shows what the upgrade costs and what it
+ * brings, and the button becomes **Upgrade** — paying creates the production
+ * environment (the API names it "Production"), so there is no name to type.
+ * Once live with a production environment, choosing it says so and offers to
+ * switch to it.
  *
  * A sandbox carries V1's warning: its subscriptions are cancelled after
  * `SANDBOX_AUTO_CANCELLATION_DAYS` days.
@@ -71,7 +90,27 @@ export interface EnvironmentFormProps {
   canCreateProduction?: boolean
   /** How to reach us when production cannot be self-served (V1's Slack, email and call). */
   contact?: EnvironmentContact
+  /**
+   * Self-billing's answer for Production, which takes precedence over
+   * `canCreateProduction`: in the trial it is the upgrade; once live with a
+   * production environment it is that environment.
+   */
+  production?: ProductionOffer
 }
+
+export type ProductionOffer =
+  | {
+      kind: 'upgrade'
+      /** The trial's event cap, for "The 50,000 event limit is lifted". */
+      eventCap: number | null
+      onUpgrade: () => void
+    }
+  | {
+      kind: 'exists'
+      /** The production environment's name. */
+      name: string
+      onSwitch: () => void
+    }
 
 export interface EnvironmentContact {
   slackUrl: string
@@ -96,6 +135,7 @@ export function EnvironmentForm({
   submitError = null,
   canCreateProduction = true,
   contact,
+  production,
 }: EnvironmentFormProps) {
   const form = useForm<CreateEnvironment>({
     resolver: standardSchemaResolver(createEnvironmentSchema),
@@ -111,12 +151,15 @@ export function EnvironmentForm({
 
   const type = form.watch('type')
   const typeError = form.formState.errors.type?.message
-  const productionWithheld = type === EnvironmentType.Production && !canCreateProduction
+  const isProduction = type === EnvironmentType.Production
+  const upgrade = isProduction && production?.kind === 'upgrade' ? production : null
+  const existing = isProduction && production?.kind === 'exists' ? production : null
+  const productionWithheld = isProduction && !upgrade && (Boolean(existing) || !canCreateProduction)
 
   const submit = form.handleSubmit((value) => {
     // The disabled button is the lock; this is the bolt behind it, for a
     // submit that arrives by Enter in the name field.
-    if (value.type === EnvironmentType.Production && !canCreateProduction) return
+    if (value.type === EnvironmentType.Production && productionWithheld) return
     onSubmit(value)
   })
 
@@ -131,35 +174,38 @@ export function EnvironmentForm({
       title="Create environment"
     >
       <Composer
-        submitLabel={isSubmitting ? 'Creating…' : 'Create environment'}
+        submitLabel={upgrade ? 'Upgrade' : isSubmitting ? 'Creating…' : 'Create environment'}
         submitting={isSubmitting}
         disabled={productionWithheld}
         onCancel={() => onOpenChange(false)}
-        onSubmit={() => void submit()}
+        // Upgrading creates the environment, so there is nothing of the form to check.
+        onSubmit={() => (upgrade ? upgrade.onUpgrade() : void submit())}
       >
         <FieldGroup className="gap-4">
-          <Field className="gap-2">
-            <LabelWithHint
-              htmlFor="environment-name"
-              hint="What this environment is called in the environment switcher."
-            >
-              Name
-              <span aria-hidden className="text-destructive">
-                *
-              </span>
-            </LabelWithHint>
-            <Input
-              id="environment-name"
-              autoFocus
-              placeholder="EU staging"
-              disabled={isSubmitting}
-              aria-invalid={form.formState.errors.name ? true : undefined}
-              {...form.register('name')}
-            />
-            {form.formState.errors.name?.message ? (
-              <FieldError>{form.formState.errors.name.message}</FieldError>
-            ) : null}
-          </Field>
+          {upgrade ? null : (
+            <Field className="gap-2">
+              <LabelWithHint
+                htmlFor="environment-name"
+                hint="What this environment is called in the environment switcher."
+              >
+                Name
+                <span aria-hidden className="text-destructive">
+                  *
+                </span>
+              </LabelWithHint>
+              <Input
+                id="environment-name"
+                autoFocus
+                placeholder="EU staging"
+                disabled={isSubmitting}
+                aria-invalid={form.formState.errors.name ? true : undefined}
+                {...form.register('name')}
+              />
+              {form.formState.errors.name?.message ? (
+                <FieldError>{form.formState.errors.name.message}</FieldError>
+              ) : null}
+            </Field>
+          )}
 
           <Field className="gap-2">
             <LabelWithHint hint="A sandbox is for testing with fake data. Production handles real customers and real money.">
@@ -210,9 +256,73 @@ export function EnvironmentForm({
           </Alert>
         ) : null}
 
-        {productionWithheld ? (
-          // TODO(checkout): production becomes a paid upgrade. Replace this
-          // contact note with the checkout flow and enable create once paid.
+        {upgrade ? (
+          <section
+            aria-label="Production comes with an upgrade"
+            className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-4"
+          >
+            <div className="flex items-start gap-2.5">
+              <SparklesIcon aria-hidden className="text-primary mt-0.5 size-4 shrink-0" />
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-medium">Production comes with an upgrade</p>
+                <p className="text-muted-foreground text-[13px]">
+                  {usd(SELF_BILLING_PLAN.base)} a month + {planRateText} of what you bill through
+                  Flexprice in production.
+                </p>
+              </div>
+            </div>
+            <ul className="flex flex-col gap-1.5 pl-6.5 text-[13px]">
+              {[
+                'A production environment is created',
+                `The ${upgrade.eventCap?.toLocaleString('en-US') ?? 'trial'} event limit is lifted`,
+                'Your sandbox stays as it is',
+              ].map((benefit) => (
+                <li key={benefit} className="flex items-start gap-2">
+                  <CheckIcon aria-hidden className="text-success mt-0.5 size-3.5 shrink-0" />
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+            <p className="text-muted-foreground pl-6.5 text-xs">
+              It is named Production; you can rename it afterwards.
+            </p>
+          </section>
+        ) : null}
+
+        {existing ? (
+          <Alert>
+            <InfoIcon aria-hidden className="text-muted-foreground" />
+            <AlertTitle>You already have a production environment.</AlertTitle>
+            <AlertDescription>{existing.name} is yours. Need another? Contact us.</AlertDescription>
+            <div className="col-start-2 mt-2 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  existing.onSwitch()
+                  onOpenChange(false)
+                }}
+              >
+                Switch to {existing.name}
+                <ArrowRightIcon aria-hidden />
+              </Button>
+              {contact ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  nativeButton={false}
+                  render={<a href={`mailto:${contact.email}`} role="link" />}
+                >
+                  <MailIcon aria-hidden />
+                  Email us
+                </Button>
+              ) : null}
+            </div>
+          </Alert>
+        ) : null}
+
+        {productionWithheld && !existing ? (
           <Alert>
             <InfoIcon aria-hidden className="text-muted-foreground" />
             <AlertTitle>Production environments require an approval.</AlertTitle>
