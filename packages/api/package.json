@@ -10,7 +10,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@flexprice/sdk": "^2.1.39"
+    "@flexprice/sdk": "^2.1.40"
   },
   "devDependencies": {
     "typescript": "~5.9.2",
