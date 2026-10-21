@@ -27,9 +27,10 @@ window.addEventListener('vite:preloadError', (event) => {
  * Which app this is, decided before anything mounts.
  *
  * Every surface's domain points at this one deployment; the hostname (or, on a
- * host that names no surface, an `/i/…` path prefix) picks one, and only that
+ * host that names no surface, an `/i/…` or `/p/…` path prefix) picks one, and only that
  * surface's code is loaded — each `import()` below is its own chunk, so the
- * hosted invoice page never downloads the console. See `surfaces/surface.ts`.
+ * hosted invoice page and the customer portal never download the console. See
+ * `surfaces/surface.ts`.
  */
 const match = surfaceFor(
   window.location,
@@ -40,6 +41,9 @@ const root = createRoot(container)
 if (match.surface === 'invoice') {
   const { mount } = await import('./surfaces/invoice/mount')
   mount(root, surfacePath(window.location.pathname, match.basePath))
+} else if (match.surface === 'portal') {
+  const { mount } = await import('./surfaces/portal/mount')
+  await mount(root, surfacePath(window.location.pathname, match.basePath), match.basePath)
 } else {
   const { mount } = await import('./surfaces/console/mount')
   await mount(root)

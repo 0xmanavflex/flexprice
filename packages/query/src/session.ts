@@ -13,6 +13,7 @@ import {
   type SessionCredentials,
   createEnvironment,
   fetchCurrentUser,
+  existsInEnvironment,
   fetchEnvironments,
   signIn,
   signUp,
@@ -120,6 +121,38 @@ export function useEnvironmentList(token: string | null): UseQueryResult<Environ
     queryFn: async () => (await fetchEnvironments(serverURL, token as string)).map(toEnvironment),
     enabled: enabledFor(token),
     staleTime: 5 * 60_000,
+  })
+}
+
+/**
+ * Which of `environmentIds` holds the record at `path`, for a link that names
+ * a record but not its environment.
+ *
+ * A shared `/invoices/inv_1` opened by someone whose console is in another
+ * environment 404s there. Record ids are unique across environments, so the
+ * other environments the person can reach are asked in turn, and the first
+ * that answers is the record's home. Resolves `null` when none has it.
+ *
+ * Sequential on purpose: most tenants have two or three environments, and
+ * the first hit ends the search.
+ */
+export function useRecordEnvironment(
+  token: string | null,
+  path: string | null,
+  environmentIds: readonly string[],
+): UseQueryResult<string | null> {
+  const serverURL = useFlexpriceServerURL()
+  return useQuery({
+    queryKey: [...queryKeys.session.environments(), 'locate', path, ...environmentIds],
+    queryFn: async () => {
+      for (const id of environmentIds) {
+        if (await existsInEnvironment(serverURL, token as string, path as string, id)) return id
+      }
+      return null
+    },
+    enabled: enabledFor(token) && path !== null && environmentIds.length > 0,
+    staleTime: 60_000,
+    retry: false,
   })
 }
 

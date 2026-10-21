@@ -191,7 +191,12 @@ export function PlanDetailPage({
   const [duplicating, setDuplicating] = useState(false)
 
   if (!plan.data) {
-    return detailGate(plan, { noun: 'this plan', listName: 'plans', onBack: onNavigateToList })
+    return detailGate(plan, {
+      noun: 'this plan',
+      listName: 'plans',
+      onBack: onNavigateToList,
+      recordPath: `/plans/${encodeURIComponent(planId)}`,
+    })
   }
 
   const record = plan.data

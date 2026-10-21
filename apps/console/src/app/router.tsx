@@ -17,13 +17,14 @@ import {
 import { Navigate, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense, type ReactNode } from 'react'
 import { AccessProvider, AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
-import { useAccessControl, useCurrentUser } from '@fp/query'
+import { useAccessControl, useCurrentUser, useSelfBillingStatus } from '@fp/query'
 import { toListFailure } from '@/pages/shared/listFailure'
 import { ConsoleShell } from './shell/ConsoleShell'
 import { useListMemory } from './shell/useListMemory'
 import { hasSession, needsSignIn, useSession } from './session'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
+import { DOCS_URL } from './shell/navigation'
 import type { InvoiceQuery } from '@fp/domain'
 const InvoiceFormPage = lazy(() =>
   import('@/pages/invoices/InvoiceFormPage').then((m) => ({ default: m.InvoiceFormPage })),
@@ -222,6 +223,8 @@ import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from 
 import { MOVED_SECTIONS } from '@/pages/settings/sections'
 import { SupportChat } from '@/app/supportChat/SupportChat'
 import { VersionCheck } from '@/app/versionCheck/VersionCheck'
+import { AccountLockProvider, AccountPill, useLockedAccess } from '@/app/selfBilling/AccountLock'
+import { EnvironmentToaster } from '@/pages/shared/RecordElsewhere'
 import { RouteAccessGate } from '@/app/access/RouteAccessGate'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
@@ -332,71 +335,82 @@ function ShellLayout() {
   // What the signed-in principal may see and do: roles from `/users/me`,
   // resolved against the role catalogue (V1's `useCurrentUserPermissions`).
   // Waits for an environment: the role catalogue needs X-Environment-ID.
-  const access = useAccessControl(session?.token ?? null, { environmentId })
+  const roleAccess = useAccessControl(session?.token ?? null, { environmentId })
+  // A locked (read-only) account writes nothing, whatever the roles.
+  const signedIn = Boolean(session?.token && environmentId)
+  const selfBilling = useSelfBillingStatus({ enabled: signedIn })
+  const access = useLockedAccess(
+    roleAccess,
+    Boolean(selfBilling.data?.enabled && selfBilling.data.state === 'suspended'),
+  )
 
   // Each list's filters, kept across a trip into a detail page and back.
   useListMemory()
 
   return (
-    <AccessProvider value={access}>
-      <ConsoleShell
-        pathname={pathname}
-        search={searchStr}
-        onNavigate={(path) => {
-          // A row may carry the search that selects it (a Settings tab).
-          const [to = path, query = ''] = path.split('?')
-          void navigate({
-            to,
-            search: Object.fromEntries(new URLSearchParams(query)) as never,
-          })
-        }}
-        environment={environments.current}
-        environments={environments.environments}
-        onEnvironmentChange={(id) => {
-          if (id === environments.current.id) return
-          environments.select(id)
-          // An id from the old environment does not exist in the new one.
-          const list = listPathAfterEnvironmentSwitch(pathname, params)
-          if (list) void navigate({ to: list, search: {} as never })
-        }}
-        /*
-         * The email is the name until `/users/me` says otherwise: it is the one
-         * thing the person definitely recognises as theirs, and it is what they
-         * just typed. Inventing a display name would be worse than showing none.
-         */
-        user={{
-          name: user?.email ?? 'Signed in',
-          email: user?.email ?? '',
-          ...(user?.tenantName ? { organization: user.tenantName } : {}),
-        }}
-        onSignOut={() => {
-          signOut()
-          void navigate({ to: '/sign-in', search: {} as never })
-        }}
-        // Help: the support chat, when a provider is configured (as in V1).
-        headerActions={
-          <>
-            <SupportChat />
-            <VersionCheck />
-          </>
-        }
-      >
-        {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
-        {/*
+    <AccountLockProvider enabled={signedIn}>
+      <AccessProvider value={access}>
+        <ConsoleShell
+          pathname={pathname}
+          search={searchStr}
+          onNavigate={(path) => {
+            // A row may carry the search that selects it (a Settings tab).
+            const [to = path, query = ''] = path.split('?')
+            void navigate({
+              to,
+              search: Object.fromEntries(new URLSearchParams(query)) as never,
+            })
+          }}
+          environment={environments.current}
+          environments={environments.environments}
+          onEnvironmentChange={(id) => {
+            if (id === environments.current.id) return
+            environments.select(id)
+            // An id from the old environment does not exist in the new one.
+            const list = listPathAfterEnvironmentSwitch(pathname, params)
+            if (list) void navigate({ to: list, search: {} as never })
+          }}
+          /*
+           * The email is the name until `/users/me` says otherwise: it is the one
+           * thing the person definitely recognises as theirs, and it is what they
+           * just typed. Inventing a display name would be worse than showing none.
+           */
+          user={{
+            name: user?.email ?? 'Signed in',
+            email: user?.email ?? '',
+            ...(user?.tenantName ? { organization: user.tenantName } : {}),
+          }}
+          onSignOut={() => {
+            signOut()
+            void navigate({ to: '/sign-in', search: {} as never })
+          }}
+          // Help: the support chat, when a provider is configured (as in V1).
+          headerActions={
+            <>
+              <AccountPill />
+              <SupportChat />
+              <VersionCheck />
+              <EnvironmentToaster />
+            </>
+          }
+        >
+          {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
+          {/*
         Keyed by environment, so switching remounts the page. Cached rows are
         already kept apart by environment; what the key protects is page state —
         a half-filled form or an open dialog that belongs to an entity of the
         environment just left must not survive into one where that entity does
         not exist, and be saved there.
       */}
-        <Suspense key={environments.current.id} fallback={<PageLoadingState />}>
-          {/* Each route's access, from one table (`app/access/routeAccess.ts`). */}
-          <RouteAccessGate>
-            <Outlet />
-          </RouteAccessGate>
-        </Suspense>
-      </ConsoleShell>
-    </AccessProvider>
+          <Suspense key={environments.current.id} fallback={<PageLoadingState />}>
+            {/* Each route's access, from one table (`app/access/routeAccess.ts`). */}
+            <RouteAccessGate>
+              <Outlet />
+            </RouteAccessGate>
+          </Suspense>
+        </ConsoleShell>
+      </AccessProvider>
+    </AccountLockProvider>
   )
 }
 
@@ -2297,6 +2311,85 @@ function SettingsRouteComponent() {
  * API keys and service accounts are Developer destinations, each a page of
  * its own; webhooks has its own routes below.
  */
+const UsageBillingPage = lazy(() =>
+  import('@/pages/selfBilling/UsageBillingPage').then((m) => ({ default: m.UsageBillingPage })),
+)
+const UpgradePage = lazy(() =>
+  import('@/pages/selfBilling/UpgradePage').then((m) => ({ default: m.UpgradePage })),
+)
+const CheckoutReturnPage = lazy(() =>
+  import('@/pages/selfBilling/CheckoutReturnPage').then((m) => ({
+    default: m.CheckoutReturnPage,
+  })),
+)
+
+/** Settings → Usage & billing: the tenant's own Flexprice account, inside the Settings frame. */
+const usageBillingRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/usage-billing',
+  component: function UsageBillingRouteComponent() {
+    const navigate = useNavigate()
+    return (
+      <SettingsListFrame sectionId="usage-billing">
+        <UsageBillingPage
+          onUpgrade={() => void navigate({ to: '/settings/usage-billing/go-live' })}
+        />
+      </SettingsListFrame>
+    )
+  },
+})
+
+/** Upgrade: every Upgrade button lands here. A full canvas, without the Settings rail. */
+const upgradeRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/usage-billing/go-live',
+  component: function UpgradeRouteComponent() {
+    const navigate = useNavigate()
+    return (
+      <UpgradePage
+        onBack={() => void navigate({ to: '/settings/usage-billing' })}
+        onAlreadyPaid={() => void navigate({ to: '/billing/checkout/success' })}
+      />
+    )
+  },
+})
+
+/** Where Stripe Checkout returns: the API's success and failure URLs. */
+function CheckoutReturnRoute({ returnedBy }: { returnedBy: 'success' | 'failure' }) {
+  const navigate = useNavigate()
+  const environments = useEnvironments()
+  const openProduction = (to: string) => {
+    const production = environments.environments.find((e) => e.kind === 'production')
+    if (production) environments.select(production.id)
+    void navigate({ to, search: {} as never })
+  }
+  return (
+    <CheckoutReturnPage
+      returnedBy={returnedBy}
+      onBilling={() => void navigate({ to: '/settings/usage-billing' })}
+      onUpgrade={() => void navigate({ to: '/settings/usage-billing/go-live' })}
+      onOpenProduction={() => openProduction('/')}
+      onNextStep={(step) => {
+        if (step === 'api-key') openProduction('/api-keys')
+        else if (step === 'plans') openProduction('/plans')
+        else window.open(DOCS_URL, '_blank', 'noopener,noreferrer')
+      }}
+    />
+  )
+}
+
+const checkoutSuccessRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/billing/checkout/success',
+  component: () => <CheckoutReturnRoute returnedBy="success" />,
+})
+
+const checkoutFailureRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/billing/checkout/failure',
+  component: () => <CheckoutReturnRoute returnedBy="failure" />,
+})
+
 const DeveloperPanels = lazy(() =>
   import('@/pages/settings/DeveloperPanels').then((m) => ({ default: m.DeveloperPanels })),
 )
@@ -2520,6 +2613,10 @@ export const routeTree = rootRoute.addChildren([
     pricingWidgetRoute,
     usageSyncsRoute,
     taxesRoute,
+    usageBillingRoute,
+    upgradeRoute,
+    checkoutSuccessRoute,
+    checkoutFailureRoute,
     taxCreateRoute,
     taxEditRoute,
     eventsRoute,

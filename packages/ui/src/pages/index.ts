@@ -331,7 +331,10 @@ export type { SetPasswordFormProps } from './auth/SetPasswordForm'
 export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/AcceptInvitationForm'
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './settings/environments/EnvironmentForm'
-export type { EnvironmentContact, EnvironmentFormProps } from './settings/environments/EnvironmentForm'
+export type {
+  EnvironmentContact,
+  EnvironmentFormProps,
+} from './settings/environments/EnvironmentForm'
 export {
   EnvironmentRenameForm,
   EnvironmentRenameFormProvenance,
@@ -549,3 +552,30 @@ export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocume
 export { ContractIntegrations } from './contracts/ContractIntegrations'
 
 export type { ContractIntegrationsProps } from './contracts/ContractIntegrations'
+export {
+  CustomerPortalView,
+  CustomerPortalViewProvenance,
+} from './customer-portal/CustomerPortalView'
+export { PortalNotice, PortalNoticeProvenance } from './customer-portal/PortalNotice'
+export type {
+  CustomerPortalActions,
+  CustomerPortalData,
+  CustomerPortalViewProps,
+  Load,
+  PayVia,
+} from './customer-portal/types'
+
+// Self-billing: the tenant's own Flexprice account.
+export {
+  AccountCard,
+  AccountLockedDialog,
+  AccountStatusPill,
+  CreatingPausedScreen,
+} from './selfBilling/AccountStatus'
+export type { AccountStatusProps } from './selfBilling/AccountStatus'
+export { UsageBillingView } from './selfBilling/UsageBillingView'
+export type { UsageBillingViewProps } from './selfBilling/UsageBillingView'
+export { UpgradeView } from './selfBilling/UpgradeView'
+export type { UpgradeViewProps } from './selfBilling/UpgradeView'
+export { CheckoutReturnView } from './selfBilling/CheckoutReturnView'
+export type { CheckoutReturnViewProps, NextStep } from './selfBilling/CheckoutReturnView'

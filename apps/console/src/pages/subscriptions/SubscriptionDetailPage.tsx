@@ -166,6 +166,7 @@ export function SubscriptionDetailPage({
       noun: 'this contract',
       listName: 'contracts',
       onBack: onNavigateToList,
+      recordPath: `/subscriptions/${encodeURIComponent(subscriptionId)}`,
     })
   }
 
@@ -187,7 +188,9 @@ export function SubscriptionDetailPage({
           const draft = lineRevertDraft(previous, line.priceId)
           return draft
             ? editLine.mutateAsync({ lineItemId: line.id, draft })
-            : Promise.reject(new Error('The earlier price was not reported, so it cannot be restored.'))
+            : Promise.reject(
+                new Error('The earlier price was not reported, so it cannot be restored.'),
+              )
         }}
         chargeAlerts={part(chargeAlerts)}
         entitlements={part(entitlements)}

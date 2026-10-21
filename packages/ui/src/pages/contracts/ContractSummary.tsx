@@ -141,6 +141,7 @@ export function firstInvoiceEstimate(
       : 'Nothing is billed up front; usage is billed at the end of the period.'
   const leftOut = [
     values.billingCycle === BillingCycle.Calendar ? 'proration to the 1st' : null,
+    values.billingAnchor ? `proration to ${formatDay(values.billingAnchor)}` : null,
     values.addons.length > 0 ? 'add-ons' : null,
     values.phases.some((p) => p.discounts.length > 0) ? 'coupons' : null,
     values.taxes.length > 0 ? 'taxes' : null,
@@ -179,7 +180,13 @@ export function ContractSummary({
           />
           <PreviewRow
             label="Bill on"
-            value={values.billingCycle === BillingCycle.Calendar ? 'The 1st' : 'Start date'}
+            value={
+              values.billingAnchor
+                ? formatDay(values.billingAnchor)
+                : values.billingCycle === BillingCycle.Calendar
+                  ? 'The 1st'
+                  : 'Start date'
+            }
           />
           <PreviewRow label="Runs" value={runsText(values, today)} />
           <PreviewRow

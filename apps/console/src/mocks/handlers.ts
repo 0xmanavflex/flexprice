@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { type Corpus, corpus } from '@fp/query/fixtures'
+import { selfBillingHandlers } from './selfBillingHandlers'
 import { svixHandlers } from './svixHandlers'
 
 /**
@@ -518,6 +519,10 @@ function couponAssociations(): Record<string, unknown>[] {
  * switch — and the default-selection rule (prefer the sandbox) has nothing to
  * choose between with a single row.
  */
+const PRODUCTION_ENVIRONMENT_ID = 'env_01M020PHF0GF9KP1E9CEVNKJA1'
+/** An invoice only Production has (see `GET /invoices/:id`). */
+export const PRODUCTION_ONLY_INVOICE = 'inv_01PRODUCTIONONLYDEMO000001'
+
 const environments: Record<string, unknown>[] = [
   {
     id: 'env_01KVSNYVPMAP6JJGDF177V2DE6',
@@ -2358,6 +2363,8 @@ function sourceFor(key: string): Corpus {
 export const handlers = [
   // The Svix API behind the webhook portal — see `svixHandlers.ts`.
   ...svixHandlers,
+  // Self-billing, off unless a mock account state is picked — see `selfBillingHandlers.ts`.
+  ...selfBillingHandlers,
 
   // Environments. Unlike the create handlers further down — which echo the
   // record back and leave the corpus alone — this one appends, because the
@@ -2644,6 +2651,18 @@ export const handlers = [
     })
   }),
 
+  /*
+   * `GET /customers/portal/{external_id}` — a portal session. The token is
+   * what the portal mocks accept (anything but "expired"), so "Open customer
+   * portal" lands on a working portal.
+   */
+  http.get(`${BASE}/customers/portal/:externalId`, ({ params }) =>
+    HttpResponse.json({
+      url: `https://portal.example/?token=demo-${String(params['externalId'])}`,
+      token: `demo-${String(params['externalId'])}`,
+      expires_at: new Date(Date.now() + 6 * 3_600_000).toISOString(),
+    }),
+  ),
   http.get(`${BASE}/customers/:id`, ({ params }) => {
     const customer = byId('customers', String(params['id']))
     return customer
@@ -4034,8 +4053,17 @@ export const handlers = [
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
-  http.get(`${BASE}/invoices/:id`, ({ params }) => {
+  http.get(`${BASE}/invoices/:id`, ({ params, request }) => {
     const id = String(params['id'])
+    // One invoice that lives in Production only, for the shared-link journey:
+    // opened from Sandbox it 404s, as a real record in another environment does.
+    if (id === PRODUCTION_ONLY_INVOICE) {
+      if (request.headers.get('X-Environment-ID') !== PRODUCTION_ENVIRONMENT_ID) {
+        return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+      }
+      const template = sourceFor('invoices').items[0] ?? {}
+      return HttpResponse.json({ ...template, id, invoice_number: 'INV-PROD-0001' })
+    }
     const invoice =
       byId('invoices', id) ??
       sourceFor('invoices').items.find((row) => readString(row, 'id') === id)

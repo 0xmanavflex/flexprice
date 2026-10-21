@@ -60,8 +60,14 @@ export function toInvoiceDocument(
   invoice: InvoiceDetail,
   sources: InvoiceDocumentSources = {},
 ): InvoiceDocument {
-  const { tenant, payments = [], creditNotes = [], activity, activityEmptyText, activityAwaiting } =
-    sources
+  const {
+    tenant,
+    payments = [],
+    creditNotes = [],
+    activity,
+    activityEmptyText,
+    activityAwaiting,
+  } = sources
   const supportEmail = tenant ? tenant.helpEmail || tenant.billingEmail : ''
 
   return {

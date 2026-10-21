@@ -9,7 +9,14 @@ describe('parseEventSearch', () => {
 
   it('reads a full query', () => {
     expect(
-      parseEventSearch({ page: '2', size: '50', q: 'api_call', customer: 'acme', source: 'sdk', dir: 'asc' }),
+      parseEventSearch({
+        page: '2',
+        size: '50',
+        q: 'api_call',
+        customer: 'acme',
+        source: 'sdk',
+        dir: 'asc',
+      }),
     ).toEqual({
       page: 2,
       pageSize: 50,

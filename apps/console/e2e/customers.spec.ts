@@ -27,6 +27,29 @@ test.describe('the customers list', () => {
     await page.getByRole('menuitem', { name: item }).click()
   }
 
+  test('opens the customer portal from the row menu, in a new tab', async ({ page, context }) => {
+    await page.goto('/customers')
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
+    const [portal] = await Promise.all([
+      context.waitForEvent('page'),
+      openRowMenu(page, 'Open customer portal'),
+    ])
+    // The session token arrives in the link and is moved out of the address bar on load.
+    await expect(portal).toHaveURL(/\/p(\?|$)/)
+    await expect(portal.getByText('Payment methods')).toBeVisible({ timeout: 20_000 })
+    await expect(portal).not.toHaveURL(/token=/)
+  })
+
+  test('copies a portal link from the row menu', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.goto('/customers')
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
+    await openRowMenu(page, 'Copy portal link')
+    await expect(page.getByText('Customer portal link copied')).toBeVisible()
+    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    expect(copied).toMatch(/\/p\?token=demo-/)
+  })
+
   test('creates a customer on its own page and lands on its detail', async ({ page }) => {
     await page.goto('/customers')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
@@ -148,5 +171,16 @@ test.describe('a customer detail page', () => {
     await page.getByRole('button', { name: 'Customer actions' }).click()
     await page.getByRole('menuitem', { name: 'Edit customer' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
+  })
+
+  test('opens the customer portal from the header menu', async ({ page, context }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('button', { name: 'Customer actions' }).click()
+    const [portal] = await Promise.all([
+      context.waitForEvent('page'),
+      page.getByRole('menuitem', { name: 'Open customer portal' }).click(),
+    ])
+    await expect(portal.getByText('Payment methods')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('menuitem', { name: 'Copy portal link' })).toHaveCount(0)
   })
 })

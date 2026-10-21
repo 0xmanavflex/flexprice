@@ -380,6 +380,18 @@ export const createSubscriptionSchema = z
       }
       start = phase.endDate || start
     })
+    // A chosen billing date counts periods from that day, so it cannot come
+    // before the contract has started.
+    const contractStart = value.startDate || localToday()
+    if (value.billingAnchor && value.billingAnchor < contractStart) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['billingAnchor'],
+        message: value.startDate
+          ? 'Choose a date on or after the contract start date'
+          : 'The contract starts today, so choose today or a later date',
+      })
+    }
   })
 
 export type CreateSubscription = z.infer<typeof createSubscriptionSchema>

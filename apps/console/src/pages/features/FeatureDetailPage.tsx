@@ -54,6 +54,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
       noun: 'this feature',
       listName: 'features',
       onBack: onNavigateToList,
+      recordPath: `/features/${encodeURIComponent(featureId)}`,
     })
   }
 

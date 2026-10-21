@@ -28,9 +28,7 @@ import { SignInPage } from './pages/auth'
  */
 
 test.describe('the mocked console', () => {
-  test('turns a signed-out visitor away, then lets the demo account through', async ({
-    page,
-  }) => {
+  test('turns a signed-out visitor away, then lets the demo account through', async ({ page }) => {
     // The whole loop in one test, because the halves are worthless apart: a
     // guard that redirects but never lets anyone back in is indistinguishable
     // from a broken build, and a sign-in that works but guards nothing is not a
@@ -50,6 +48,25 @@ test.describe('the mocked console', () => {
     await expect(page).toHaveURL(/\/plans(\?|$)/)
     await expect(plans.heading).toBeVisible()
     await expect(plans.rows().first()).toBeVisible()
+  })
+
+  test('a shared link opens as itself after signing in, query string and all', async ({ page }) => {
+    // A link someone pasted: a record, and a filtered list. Signing in must
+    // land on exactly that address, never on home and never without its query.
+    const signIn = new SignInPage(page)
+    const invoice = '/invoices/inv_01M38PVF0ES6CFXT6JBCE8M2J7'
+    await page.goto(invoice)
+    await expect(page).toHaveURL(/\/sign-in\?redirect=/)
+    await signIn.submit.click()
+    await expect(page).toHaveURL(new RegExp(`${invoice}$`))
+    await expect(page.getByText('Invoice not found')).toHaveCount(0)
+
+    await page.evaluate(() => localStorage.clear())
+    await page.goto('/invoices?status=draft')
+    await expect(page).toHaveURL(/\/sign-in\?redirect=/)
+    await signIn.submit.click()
+    // The list adds its own normalised params; what was shared is still there.
+    await expect(page).toHaveURL(/\/invoices\?status=draft(&|$)/)
   })
 
   test('does not bounce a deep link through a sign-in first', async ({ page }) => {

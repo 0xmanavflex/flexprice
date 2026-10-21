@@ -80,7 +80,12 @@ export function InvoiceDetailPage({
   const [pendingAction, setPendingAction] = useState<InvoicePendingAction | null>(null)
 
   if (!invoice.data) {
-    return detailGate(invoice, { noun: 'this invoice', listName: 'invoices', onBack })
+    return detailGate(invoice, {
+      noun: 'this invoice',
+      listName: 'invoices',
+      onBack,
+      recordPath: `/invoices/${encodeURIComponent(invoiceId)}`,
+    })
   }
 
   const data = invoice.data

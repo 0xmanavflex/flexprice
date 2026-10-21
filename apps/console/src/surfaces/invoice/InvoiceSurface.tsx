@@ -9,7 +9,7 @@ import { HostedInvoiceView } from '@fp/ui/pages'
 import { publicApiUrls } from '../publicApi'
 import { type HostedInvoiceLink, parseHostedInvoiceLink } from './link'
 import { pageKind } from './pageKind'
-import { isSafeNavigationUrl } from './safeUrl'
+import { isSafeNavigationUrl } from '../safeUrl'
 
 const GENERIC_ERROR = 'Something went wrong, please try again.'
 

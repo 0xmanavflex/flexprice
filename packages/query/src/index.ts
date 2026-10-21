@@ -52,6 +52,7 @@ export {
   useCreateEnvironment,
   useCurrentUser,
   useEnvironmentList,
+  useRecordEnvironment,
   useRenameEnvironment,
   useSignIn,
   useSignUp,
@@ -654,3 +655,42 @@ export { useCustomerNames, useFeatureNames } from './entityNames'
 export type { NameMap } from './entityNames'
 export { toAccessControl, useAccessControl } from './access'
 export type { AccessControl, AccessStatus } from './access'
+export {
+  isAccountLockedError,
+  localToday as selfBillingToday,
+  toCheckoutBody,
+  toSelfBillingCheckout,
+  toSelfBillingStatus,
+  toSelfBillingSummary,
+  useCancelSelfBillingCheckout,
+  useRefreshSelfBilling,
+  useSelfBillingCheckout,
+  useSelfBillingPortalSession,
+  useSelfBillingStatus,
+  useSelfBillingSummary,
+  useStartSelfBillingCheckout,
+} from './selfBilling'
+export {
+  useAddPortalPaymentMethod,
+  usePayPortalInvoice,
+  usePortalConfig,
+  usePortalCustomer,
+  usePortalGateways,
+  usePortalInvoice,
+  usePortalInvoicePdf,
+  usePortalInvoices,
+  usePortalPaymentMethods,
+  usePortalQuotas,
+  usePortalSpend,
+  usePortalSubscriptions,
+  usePortalTopUps,
+  usePortalWalletTransactions,
+  usePortalWallets,
+  useRemovePortalPaymentMethod,
+  useSetDefaultPortalPaymentMethod,
+  useTopUpPortalWallet,
+  useUpdatePortalAutoTopup,
+} from './customerPortal'
+export type { PortalAction, PortalQuery } from './customerPortal'
+export type { PortalAuth } from '@fp/api'
+export { useCreateCustomerPortalSession } from './customerPortalSession'

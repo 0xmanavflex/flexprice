@@ -245,6 +245,35 @@ export async function fetchEnvironments(
 }
 
 /**
+ * Whether the record at `path` (e.g. `/invoices/inv_1`) exists in
+ * `environmentId`.
+ *
+ * For a shared link that names a record but not its environment: a 404 (or
+ * a 403, for an environment this token cannot read) means "not here", so
+ * the caller can try the next environment. Anything else is a real failure
+ * and is thrown.
+ */
+export async function existsInEnvironment(
+  serverURL: string,
+  token: string,
+  path: string,
+  environmentId: string,
+): Promise<boolean> {
+  try {
+    await request(serverURL, path, { method: 'GET', token, environmentId })
+    return true
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.kind === ErrorKind.NotFound || error.kind === ErrorKind.Forbidden)
+    ) {
+      return false
+    }
+    throw error
+  }
+}
+
+/**
  * Creates an environment.
  *
  * `POST /environments` is undocumented for the same reason the list is — one
