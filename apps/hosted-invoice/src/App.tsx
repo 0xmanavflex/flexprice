@@ -52,15 +52,24 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
 
   const onPay = async () => {
     setPayError(null)
+    // Checkout opens in a new tab, like the customer portal; this page refetches when the customer returns to it.
+    const tab = window.open('about:blank', '_blank')
+    if (tab) tab.opener = null
     try {
       const url = await pay()
-      if (url === null) return
+      if (url === null) {
+        tab?.close()
+        return
+      }
       if (!isSafeNavigationUrl(url)) {
+        tab?.close()
         setPayError(GENERIC_ERROR)
         return
       }
-      window.location.assign(url)
+      if (tab) tab.location.replace(url)
+      else window.location.assign(url)
     } catch (cause) {
+      tab?.close()
       setPayError(messageOf(cause))
     }
   }
