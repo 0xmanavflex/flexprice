@@ -222,6 +222,7 @@ import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from 
 import { MOVED_SECTIONS } from '@/pages/settings/sections'
 import { SupportChat } from '@/app/supportChat/SupportChat'
 import { VersionCheck } from '@/app/versionCheck/VersionCheck'
+import { EnvironmentToaster } from '@/pages/shared/RecordElsewhere'
 import { RouteAccessGate } from '@/app/access/RouteAccessGate'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
@@ -378,6 +379,7 @@ function ShellLayout() {
           <>
             <SupportChat />
             <VersionCheck />
+            <EnvironmentToaster />
           </>
         }
       >

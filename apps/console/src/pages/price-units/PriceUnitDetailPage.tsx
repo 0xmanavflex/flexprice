@@ -46,6 +46,7 @@ export function PriceUnitDetailPage({
       noun: 'this price unit',
       listName: 'price units',
       onBack: onNavigateToList,
+      recordPath: `/prices/units/${encodeURIComponent(priceUnitId)}`,
     })
   }
 

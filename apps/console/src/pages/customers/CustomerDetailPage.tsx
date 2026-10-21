@@ -133,6 +133,7 @@ export function CustomerDetailPage({
       noun: 'this customer',
       listName: 'customers',
       onBack: onNavigateToList,
+      recordPath: `/customers/${encodeURIComponent(customerId)}`,
     })
   }
 

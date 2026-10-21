@@ -52,6 +52,7 @@ export {
   useCreateEnvironment,
   useCurrentUser,
   useEnvironmentList,
+  useRecordEnvironment,
   useRenameEnvironment,
   useSignIn,
   useSignUp,

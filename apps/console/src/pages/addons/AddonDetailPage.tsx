@@ -95,7 +95,12 @@ export function AddonDetailPage({
   const [archiving, setArchiving] = useState(false)
 
   if (!addon.data) {
-    return detailGate(addon, { noun: 'this add-on', listName: 'add-ons', onBack: onNavigateToList })
+    return detailGate(addon, {
+      noun: 'this add-on',
+      listName: 'add-ons',
+      onBack: onNavigateToList,
+      recordPath: `/addons/${encodeURIComponent(addonId)}`,
+    })
   }
 
   const data = addon.data
