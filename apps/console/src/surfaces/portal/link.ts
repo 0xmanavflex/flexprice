@@ -2,7 +2,11 @@ import { PORTAL_RANGES, PORTAL_VIEWS, type PortalRange, type PortalView } from '
 import { type ApiUrls, REGION_IDS, type RegionId } from '../publicApi'
 
 /**
- * The customer portal's address: `/<region>[/<view>][?range=…&invoice=…]`.
+ * The customer portal's address: `/<region>[/<view>][?range=…&invoice=…]`,
+ * or `/[<view>]` with no region — this deployment's own portal, served by
+ * the API the console itself uses (`ownApiOrigin`). The console's "Open
+ * customer portal" builds that form when the deployment names no region, so
+ * the link works without `VITE_PUBLIC_API_URLS`.
  *
  * The merchant mints a session (`GET /customers/portal/{external_id}`) and the
  * API answers `{ url: "<CustomerPortal.URL>?token=…" }`; each region's
@@ -12,7 +16,8 @@ import { type ApiUrls, REGION_IDS, type RegionId } from '../publicApi'
  * address bar, the history, or a `Referer`.
  */
 export interface PortalLocation {
-  region: RegionId
+  /** null: this deployment's own portal, on the console's own API. */
+  region: RegionId | null
   apiOrigin: string
   view: PortalView
   range: PortalRange
@@ -25,18 +30,24 @@ export function parsePortalLocation(
   pathname: string,
   search: string,
   apiUrls: ApiUrls,
+  ownApiOrigin: string | null = null,
 ): PortalLocation | null {
   const segments = pathname.split('/').filter(Boolean)
-  if (segments.length < 1 || segments.length > 2) return null
-  const [region, view = 'overview'] = segments
-  if (!region || !(REGION_IDS as readonly string[]).includes(region)) return null
-  const apiOrigin = apiUrls[region as RegionId]
+  if (segments.length > 2) return null
+  const first = segments[0]
+  const regional = first !== undefined && (REGION_IDS as readonly string[]).includes(first)
+  // Region ids and view names never overlap, so the first segment says which form this is.
+  const region = regional ? (first as RegionId) : null
+  const rest = regional ? segments.slice(1) : segments
+  if (rest.length > 1) return null
+  const view = rest[0] ?? 'overview'
+  const apiOrigin = region ? apiUrls[region] : ownApiOrigin
   if (!apiOrigin) return null
   if (!(PORTAL_VIEWS as readonly string[]).includes(view)) return null
   const params = new URLSearchParams(search)
   const range = params.get('range')
   return {
-    region: region as RegionId,
+    region,
     apiOrigin,
     view: view as PortalView,
     range: PORTAL_RANGES.some((r) => r.id === range) ? (range as PortalRange) : DEFAULT_RANGE,
@@ -46,7 +57,10 @@ export function parsePortalLocation(
 
 /** The address for a location: what `parsePortalLocation` reads back. */
 export function portalHref(location: Omit<PortalLocation, 'apiOrigin'>, basePath: string): string {
-  const path = `${basePath}/${location.region}${location.view === 'overview' ? '' : `/${location.view}`}`
+  const segments = [location.region, location.view === 'overview' ? null : location.view].filter(
+    Boolean,
+  )
+  const path = `${basePath}/${segments.join('/')}`.replace(/\/$/, '') || '/'
   const params = new URLSearchParams()
   if (location.view === 'usage' && location.range !== DEFAULT_RANGE)
     params.set('range', location.range)
@@ -55,7 +69,7 @@ export function portalHref(location: Omit<PortalLocation, 'apiOrigin'>, basePath
   return query ? `${path}?${query}` : path
 }
 
-const storageKey = (region: RegionId) => `fp:portal:${region}`
+const storageKey = (region: RegionId | null) => `fp:portal:${region ?? 'own'}`
 
 /**
  * The session token: from the link when it carries one (kept for this tab),
@@ -63,7 +77,7 @@ const storageKey = (region: RegionId) => `fp:portal:${region}`
  * token taken out, when it was there.
  */
 export function takePortalToken(
-  region: RegionId,
+  region: RegionId | null,
   search: string,
   storage: Pick<Storage, 'getItem' | 'setItem'> | null,
 ): { token: string | null; cleanSearch: string | null } {

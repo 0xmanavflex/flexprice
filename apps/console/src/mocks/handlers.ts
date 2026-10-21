@@ -2647,6 +2647,18 @@ export const handlers = [
     })
   }),
 
+  /*
+   * `GET /customers/portal/{external_id}` — a portal session. The token is
+   * what the portal mocks accept (anything but "expired"), so "Open customer
+   * portal" lands on a working portal.
+   */
+  http.get(`${BASE}/customers/portal/:externalId`, ({ params }) =>
+    HttpResponse.json({
+      url: `https://portal.example/?token=demo-${String(params['externalId'])}`,
+      token: `demo-${String(params['externalId'])}`,
+      expires_at: new Date(Date.now() + 6 * 3_600_000).toISOString(),
+    }),
+  ),
   http.get(`${BASE}/customers/:id`, ({ params }) => {
     const customer = byId('customers', String(params['id']))
     return customer

@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import {
   BookOpenIcon,
   CopyIcon,
+  ExternalLinkIcon,
+  LinkIcon,
   PencilIcon,
   ReceiptIcon,
   Trash2Icon,
@@ -127,6 +129,10 @@ export interface CustomerGridProps {
   onEdit?: ((customer: Customer) => void) | undefined
   /** Row menu: delete. The page confirms before it runs. */
   onDelete?: ((customer: Customer) => void) | undefined
+  /** Row menu: open the customer's portal in a new tab (V1's "Open Customer Portal"). */
+  onOpenPortal?: ((customer: Customer) => void) | undefined
+  /** Row menu: copy a link to the customer's portal. */
+  onCopyPortalLink?: ((customer: Customer) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for dates. Supplied by the app, never read from a global. */
@@ -147,6 +153,8 @@ export function CustomerGrid({
   onCreate,
   onEdit,
   onDelete,
+  onOpenPortal,
+  onCopyPortalLink,
   onClearFilters,
   locale,
   contractCounts,
@@ -247,6 +255,21 @@ export function CustomerGrid({
         label: 'Edit customer',
         icon: <PencilIcon aria-hidden className="size-4" />,
         onSelect: () => onEdit(customer),
+      })
+    }
+    // The portal is keyed by external id: a customer without one has no portal to open.
+    if (onOpenPortal && customer.externalId) {
+      actions.push({
+        label: 'Open customer portal',
+        icon: <ExternalLinkIcon aria-hidden className="size-4" />,
+        onSelect: () => onOpenPortal(customer),
+      })
+    }
+    if (onCopyPortalLink && customer.externalId) {
+      actions.push({
+        label: 'Copy portal link',
+        icon: <LinkIcon aria-hidden className="size-4" />,
+        onSelect: () => onCopyPortalLink(customer),
       })
     }
     actions.push({

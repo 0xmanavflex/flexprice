@@ -1203,7 +1203,8 @@ function RowActionsMenu({ actions: given }: { actions: EntityRowAction[] }) {
         >
           <MoreHorizontalIcon aria-hidden />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-40">
+        {/* Sized to its longest label, so "Open customer portal" stays on one line. */}
+        <DropdownMenuContent align="end" className="w-max max-w-72 min-w-40">
           <DropdownMenuGroup>
             {ordinary.map((action) => (
               <DropdownMenuItem

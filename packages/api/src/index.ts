@@ -96,6 +96,7 @@ export type { ParsePricingParams } from './aiPricing'
  * `GET /events/lookup`, live but absent from the SDK. See `eventDebug.ts`.
  */
 export { debitWallet } from './walletDebit'
+export { createCustomerPortalSession } from './customerPortalSession'
 export { generateSampleEvents } from './sampleEvents'
 export { listActivity } from './activity'
 export type { ListActivityParams } from './activity'

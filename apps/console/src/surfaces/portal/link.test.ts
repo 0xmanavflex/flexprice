@@ -85,3 +85,45 @@ describe('takePortalToken', () => {
     expect(takePortalToken('us', '', blocked).token).toBeNull()
   })
 })
+
+describe('a region-less link (this deployment’s own portal)', () => {
+  const own = 'https://api-dev.flexprice.io'
+
+  it('reads the view and uses the console’s own API', () => {
+    expect(parsePortalLocation('/', '', urls, own)).toMatchObject({
+      region: null,
+      apiOrigin: own,
+      view: 'overview',
+    })
+    expect(parsePortalLocation('/invoices', '?invoice=inv_1', urls, own)).toMatchObject({
+      region: null,
+      view: 'invoices',
+      invoiceId: 'inv_1',
+    })
+  })
+
+  it('is not a portal address without an API of its own', () => {
+    expect(parsePortalLocation('/', '', urls, null)).toBeNull()
+    expect(parsePortalLocation('/settings', '', urls, own)).toBeNull()
+  })
+
+  it('round-trips through portalHref', () => {
+    expect(
+      portalHref({ region: null, view: 'overview', range: '30d', invoiceId: null }, '/p'),
+    ).toBe('/p')
+    expect(portalHref({ region: null, view: 'usage', range: '7d', invoiceId: null }, '/p')).toBe(
+      '/p/usage?range=7d',
+    )
+  })
+
+  it('keeps its token apart from a regional one', () => {
+    const map = new Map<string, string>()
+    const storage = {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => void map.set(k, v),
+    }
+    takePortalToken(null, '?token=own', storage)
+    expect(takePortalToken('us', '', storage).token).toBeNull()
+    expect(takePortalToken(null, '', storage).token).toBe('own')
+  })
+})

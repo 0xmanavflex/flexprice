@@ -5,7 +5,17 @@ import { createQueryClient } from '@fp/query'
 import { ThemeProvider } from '@fp/ui/compositions'
 import './styles.css'
 import { REGION_IDS, publicApiUrls } from '../publicApi'
+import { env } from '@/env'
 import { PortalSurface } from './PortalSurface'
+
+/** The API this deployment's console uses: where a region-less portal link is served. */
+function ownApiOrigin(): string | null {
+  try {
+    return new URL(env.apiUrl).origin
+  } catch {
+    return null
+  }
+}
 
 /**
  * Boot the customer portal surface.
@@ -36,7 +46,12 @@ export async function mount(root: Root, pathname: string, basePath: string) {
     <StrictMode>
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
-          <PortalSurface pathname={pathname} basePath={basePath} apiUrls={apiUrls} />
+          <PortalSurface
+            pathname={pathname}
+            basePath={basePath}
+            apiUrls={apiUrls}
+            ownApiOrigin={ownApiOrigin()}
+          />
         </QueryClientProvider>
       </ThemeProvider>
     </StrictMode>,
