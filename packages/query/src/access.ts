@@ -39,6 +39,8 @@ export type AccessStatus = 'loading' | 'ready' | 'error' | 'unrestricted'
 
 export interface AccessControl {
   status: AccessStatus
+  /** Read the user and the catalogue again, after an `error`. */
+  retry: () => void
   roles: readonly string[]
   isSuperAdmin: boolean
   can: (entity: RbacEntity, action: RbacAction) => boolean
@@ -54,10 +56,13 @@ export function toAccessControl(input: {
   userFailed: boolean
   catalogue: readonly Role[] | undefined
   catalogueFailed: boolean
+  retry?: () => void
 }): AccessControl {
+  const retry = input.retry ?? (() => undefined)
   if (!input.hasToken) {
     return {
       status: 'unrestricted',
+      retry,
       roles: [],
       isSuperAdmin: false,
       can: () => true,
@@ -76,6 +81,7 @@ export function toAccessControl(input: {
       : NO_GRANTS
   return {
     status,
+    retry,
     roles: grants.roles,
     isSuperAdmin: isSuperAdmin(grants.roles),
     can: (entity, action) => canAccess(grants, entity, action),
@@ -83,7 +89,17 @@ export function toAccessControl(input: {
   }
 }
 
-export function useAccessControl(token: string | null): AccessControl {
+/**
+ * `environmentId` gates the catalogue read: `/rbac/roles` needs the
+ * `X-Environment-ID` header, and before the shell has chosen an environment
+ * (a fresh sign-in, a new tab) the request would go out without it and be
+ * refused with a 403 — which read as "Access denied" until a reload. Access
+ * stays `loading` until an environment is known.
+ */
+export function useAccessControl(
+  token: string | null,
+  { environmentId }: { environmentId: string | null },
+): AccessControl {
   const client = useFlexprice()
   const user = useCurrentUser(token)
   const audience =
@@ -97,17 +113,21 @@ export function useAccessControl(token: string | null): AccessControl {
     // so the user catalogue is fetched straight away (switched only if the
     // principal turns out to be a service account). Waiting for the user first
     // would put two round trips in front of every gated page.
-    enabled: Boolean(token),
+    enabled: Boolean(token) && Boolean(environmentId),
     // V1 re-reads the catalogue every five minutes.
     staleTime: 5 * 60_000,
     refetchInterval: 5 * 60_000,
-    retry: false,
+    // The client's default: a network or server failure is retried, a
+    // refusal (403/401) is not.
   })
 
   // A background refetch that fails keeps the answers it had: only a first
   // read that fails is an error.
   const userFailed = user.isError && !user.data
   const catalogueFailed = catalogue.isError && !catalogue.data
+  // `refetch` is stable per query; the flags decide what a retry re-reads.
+  const refetchUser = user.refetch
+  const refetchCatalogue = catalogue.refetch
   return useMemo(
     () =>
       toAccessControl({
@@ -116,7 +136,11 @@ export function useAccessControl(token: string | null): AccessControl {
         userFailed,
         catalogue: catalogue.data,
         catalogueFailed,
+        retry: () => {
+          if (userFailed) void refetchUser()
+          void refetchCatalogue()
+        },
       }),
-    [token, user.data, userFailed, catalogue.data, catalogueFailed],
+    [token, user.data, userFailed, catalogue.data, catalogueFailed, refetchUser, refetchCatalogue],
   )
 }

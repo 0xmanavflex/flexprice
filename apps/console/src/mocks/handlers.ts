@@ -2817,6 +2817,15 @@ export const handlers = [
 
   // RBAC answers `{roles}` / `{role}`, not the `{items, pagination}` envelope.
   http.get(`${BASE}/rbac/roles`, ({ request }) => {
+    // As the live API: without X-Environment-ID the request is refused. This
+    // is what made a fresh load read "Access denied" before an environment
+    // was chosen; the console must not ask before it has one.
+    if (!request.headers.get('X-Environment-ID')) {
+      return HttpResponse.json(
+        { error: { message: 'X-Environment-ID header is required' } },
+        { status: 403 },
+      )
+    }
     const audience = new URL(request.url).searchParams.get('user_type')
     const rows =
       audience === 'service_account'
