@@ -290,7 +290,8 @@
       "composes": [],
       "usedBy": [
         "ContextualSection",
-        "FormToolbar"
+        "FormToolbar",
+        "PlanAiSetupView"
       ],
       "story": null
     },
@@ -2369,7 +2370,6 @@
         "EventGrid",
         "EventTypeName",
         "FeatureGrid",
-        "PlanAiSetupView",
         "PlanEntitlementsView",
         "PlanGrid",
         "WebhookMessageSheet",
@@ -2916,7 +2916,6 @@
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
         "PaymentStatusDialog",
-        "PlanAiSetupView",
         "PriceOverrideForm",
         "RegionField",
         "RunExportDialog",
@@ -4946,14 +4945,12 @@
       "layer": "surface",
       "composes": [
         "AppFailure",
+        "ArrowLeftIcon",
         "ArrowUpIcon",
         "CheckIcon",
-        "EmDash",
-        "Field",
         "Pill",
-        "PlusIcon",
-        "Tag",
-        "UsersIcon"
+        "Section",
+        "SimpleTable"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanAiSetupView.stories.tsx"
@@ -5149,7 +5146,6 @@
         "InvoiceGrid",
         "Mark",
         "MetadataCard",
-        "PlanAiSetupView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "PlanForm",
@@ -5712,6 +5708,7 @@
         "GroupMembersView",
         "InvoiceDetailView",
         "MetadataCard",
+        "PlanAiSetupView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "RelatedCard",
@@ -6045,6 +6042,7 @@
         "DataExportDetail",
         "ExportRunList",
         "ExportsOverview",
+        "PlanAiSetupView",
         "PriceOverrideForm",
         "S3ConnectionList",
         "SubscriptionForm",
@@ -6460,7 +6458,6 @@
         "AddonGrid",
         "EventGrid",
         "FeatureGrid",
-        "PlanAiSetupView",
         "PlanGrid"
       ],
       "story": null
@@ -6846,7 +6843,6 @@
       "composes": [],
       "usedBy": [
         "PageShell",
-        "PlanAiSetupView",
         "ShellSearch",
         "SubscriptionForm"
       ],
@@ -9217,7 +9213,6 @@
       "pattern": "Other",
       "route": "/plans/ai",
       "uses": [
-        "PageBody",
         "PlanAiSetupView"
       ]
     },
