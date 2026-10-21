@@ -319,6 +319,42 @@ export const Prefilled: Story = {
   },
 }
 
+/**
+ * Bill on a date you choose: the third card opens a date picker, Next asks for
+ * a date until there is one, and the draft carries it as the billing anchor.
+ */
+export const BillOnACustomDate: Story = {
+  args: { prefilled: true, step: 'plan' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('radio', { name: /A date you choose/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(await canvas.findByText('Choose the billing date')).toBeVisible()
+    await expect(args.onStepChange).not.toHaveBeenCalledWith('phases')
+
+    // Any day after today, so it is on or after a contract that starts now.
+    await userEvent.click(canvas.getByRole('button', { name: /Billing date/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /next month/i }))
+    const days = await screen.findAllByRole('gridcell')
+    await userEvent.click(within(days[15]!).getByRole('button'))
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('phases'))
+  },
+}
+
+/** Back to the start date: the chosen date is dropped, so nothing anchors on it. */
+export const BillOnLeavesTheDateBehind: Story = {
+  args: { prefilled: true, step: 'plan' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('radio', { name: /A date you choose/ }))
+    await expect(canvas.getByRole('button', { name: /Billing date/ })).toBeVisible()
+    await userEvent.click(canvas.getByRole('radio', { name: /The contract start date/ }))
+    await expect(canvas.queryByRole('button', { name: /Billing date/ })).toBeNull()
+  },
+}
+
 /** The phases step lists the plan's charges. A usage charge's commitment opens in place. */
 export const PhaseCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 6 },
@@ -553,7 +589,6 @@ export const BillingStep: Story = {
       'Billing customer',
       'Inherited customers',
       'Prorate changes',
-      'Billing anchor',
       'Auto-invoice threshold',
       'Create as draft',
     ]) {
