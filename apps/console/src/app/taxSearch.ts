@@ -35,7 +35,11 @@ export function parseTaxSearch(raw: Record<string, unknown>): TaxRateQuery {
 
   return {
     page: positiveInt(raw['page'], DEFAULT_TAX_RATE_QUERY.page),
-    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_TAX_RATE_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(
+      param(raw, 'size', 'pageSize'),
+      DEFAULT_TAX_RATE_QUERY.pageSize,
+      MAX_PAGE_SIZE,
+    ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))

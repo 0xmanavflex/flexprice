@@ -49,6 +49,15 @@
       "usedBy": [],
       "story": null
     },
+    "AccountCard": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
+    },
     "AccountHeader": {
       "file": "src/components/blocks/solution-billing-4/components/account-header.tsx",
       "layer": "vendor/blocks",
@@ -56,12 +65,30 @@
       "usedBy": [],
       "story": null
     },
+    "AccountLockedDialog": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
+    },
     "AccountSettings": {
       "file": "src/components/blocks/settings-7/components/account-settings.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "AccountStatusPill": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
     },
     "Activity": {
       "file": "src/icons/index.ts",
@@ -351,7 +378,8 @@
       "usedBy": [
         "ContextualSection",
         "FormToolbar",
-        "PlanAiSetupView"
+        "PlanAiSetupView",
+        "UpgradeView"
       ],
       "story": null
     },
@@ -389,6 +417,7 @@
       "composes": [],
       "usedBy": [
         "ChargeTable",
+        "CheckoutReturnView",
         "FormToolbar",
         "GuideGrid",
         "GuidedEmptyState"
@@ -478,6 +507,7 @@
       "composes": [],
       "usedBy": [
         "ApiCard",
+        "CheckoutReturnView",
         "ConnectIntegrationSheet",
         "ConnectorCard",
         "CustomerWalletView",
@@ -487,6 +517,7 @@
         "PortalCredits",
         "RelatedCard",
         "ShellNav",
+        "UsageBillingView",
         "UsageCard"
       ],
       "story": null
@@ -1018,9 +1049,20 @@
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
-        "SummaryRow"
+        "SummaryRow",
+        "UpgradeView"
       ],
       "story": null
+    },
+    "CheckoutReturnView": {
+      "file": "src/pages/selfBilling/CheckoutReturnView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowRightIcon",
+        "ArrowUpRightIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/CheckoutReturnView.stories.tsx"
     },
     "ChevronDown": {
       "file": "src/icons/index.ts",
@@ -1679,6 +1721,15 @@
       "usedBy": [],
       "story": null
     },
+    "CreatingPausedScreen": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
+    },
     "CreditCard": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -2157,6 +2208,15 @@
       ],
       "usedBy": [],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
+    },
+    "DelayedHint": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
+      "story": null
     },
     "DeleteFilesIcon": {
       "file": "src/reui/icons/default/outline/delete-files.tsx",
@@ -2963,7 +3023,8 @@
         "Pill",
         "PlusIcon",
         "Status",
-        "Tag"
+        "Tag",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureGrid.stories.tsx"
@@ -3051,6 +3112,7 @@
         "SignUpScreen",
         "SpecField",
         "SyncOptions",
+        "UpgradeView",
         "UsageTermsFields",
         "WebhookEndpointDetail",
         "WebhookGuide"
@@ -3837,6 +3899,13 @@
       "usedBy": [],
       "story": null
     },
+    "InfoBlock": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "InfoHint": {
       "file": "src/compositions/forms/InfoHint.tsx",
       "layer": "composition",
@@ -3845,7 +3914,8 @@
         "Field",
         "FormCard",
         "FormRow",
-        "LabelWithHint"
+        "LabelWithHint",
+        "UpgradeView"
       ],
       "story": "./src/compositions/forms/InfoHint.stories.tsx"
     },
@@ -4370,8 +4440,13 @@
       "usedBy": [
         "AccessProvider",
         "AccessScope",
+        "AccountCard",
+        "AccountLockedDialog",
+        "AccountStatusPill",
+        "CreatingPausedScreen",
         "PortalNotice",
         "RequireAccess",
+        "UpgradeView",
         "WriteGate"
       ],
       "story": null
@@ -4751,6 +4826,7 @@
         "EntitlementEditForm",
         "SubscriptionForm",
         "TimezoneCombobox",
+        "UpgradeView",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/OptionCombobox.stories.tsx"
@@ -6123,6 +6199,7 @@
         "S3ConnectionList",
         "SubscriptionDetailView",
         "TaxDialog",
+        "UsageBillingView",
         "WebhookEndpointDetail",
         "WebhookEventCatalog"
       ],
@@ -6151,7 +6228,8 @@
         "S3ConnectionList",
         "SubTabState",
         "SubscriptionDetailView",
-        "SubscriptionStatusPill"
+        "SubscriptionStatusPill",
+        "UsageBillingView"
       ],
       "story": "./src/compositions/feedback/SectionEmpty.stories.tsx"
     },
@@ -6174,6 +6252,7 @@
         "CustomerAnalyticsView",
         "DashboardHome",
         "FilterSelect",
+        "UsageBillingView",
         "UsageCard"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -6198,7 +6277,9 @@
       "file": "src/components/blocks/settings-7/components/setting-row.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
       "story": null
     },
     "SettingRowGroup": {
@@ -6222,6 +6303,15 @@
       "usedBy": [],
       "story": null
     },
+    "SettingsBlock": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
+      "story": null
+    },
     "SettingsCard": {
       "file": "src/components/blocks/settings-7/components/settings-card.tsx",
       "layer": "vendor/blocks",
@@ -6233,7 +6323,9 @@
       "file": "src/components/blocks/settings-7/components/settings-field-group.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
       "story": null
     },
     "SettingsHeading": {
@@ -6467,7 +6559,8 @@
         "PriceOverrideForm",
         "S3ConnectionList",
         "SubscriptionForm",
-        "TierTable"
+        "TierTable",
+        "UsageBillingView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -6670,7 +6763,8 @@
         "FeatureDetailView",
         "FeatureGrid",
         "InvoiceDetailView",
-        "PlanGrid"
+        "PlanGrid",
+        "UsageBillingView"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -7154,6 +7248,20 @@
       "usedBy": [],
       "story": null
     },
+    "UpgradeView": {
+      "file": "src/pages/selfBilling/UpgradeView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowLeftIcon",
+        "CheckIcon",
+        "Field",
+        "InfoHint",
+        "LockIcon",
+        "OptionCombobox"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/UpgradeView.stories.tsx"
+    },
     "UpIcon": {
       "file": "src/reui/icons/default/filled/up.tsx",
       "layer": "other",
@@ -7167,6 +7275,24 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "UsageBillingView": {
+      "file": "src/pages/selfBilling/UsageBillingView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowUpRightIcon",
+        "DelayedHint",
+        "Section",
+        "SectionEmpty",
+        "SegmentMeter",
+        "SettingRow",
+        "SettingsBlock",
+        "SettingsFieldGroup",
+        "SimpleTable",
+        "Status"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/UsageBillingView.stories.tsx"
     },
     "UsageCard": {
       "file": "src/pages/home/DashboardHome.tsx",
@@ -7581,6 +7707,7 @@
         "EditableCard",
         "EntitlementTable",
         "EntityList",
+        "FeatureGrid",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
@@ -8893,6 +9020,36 @@
         "RevenueReport"
       ]
     },
+    "./src/pages/selfBilling/AccountStatus.stories.tsx": {
+      "title": "App/Self-billing/Account status",
+      "component": "AccountStatusPill",
+      "uses": [
+        "AccountLockedDialog",
+        "AccountStatusPill",
+        "CreatingPausedScreen"
+      ]
+    },
+    "./src/pages/selfBilling/CheckoutReturnView.stories.tsx": {
+      "title": "App/Self-billing/Checkout return",
+      "component": "CheckoutReturnView",
+      "uses": [
+        "CheckoutReturnView"
+      ]
+    },
+    "./src/pages/selfBilling/UpgradeView.stories.tsx": {
+      "title": "App/Self-billing/Upgrade",
+      "component": "UpgradeView",
+      "uses": [
+        "UpgradeView"
+      ]
+    },
+    "./src/pages/selfBilling/UsageBillingView.stories.tsx": {
+      "title": "App/Self-billing/Usage & billing",
+      "component": "UsageBillingView",
+      "uses": [
+        "UsageBillingView"
+      ]
+    },
     "./src/pages/settings/cost-sheets/CostMarginCard.stories.tsx": {
       "title": "App/Settings/Cost sheets/Cost margin card",
       "component": "CostMarginCard",
@@ -9798,6 +9955,31 @@
       "route": "/revenue",
       "uses": [
         "RevenueReport"
+      ]
+    },
+    "CheckoutReturnPage": {
+      "file": "apps/console/src/pages/selfBilling/CheckoutReturnPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "CheckoutReturnView"
+      ]
+    },
+    "UpgradePage": {
+      "file": "apps/console/src/pages/selfBilling/UpgradePage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "PageLoadingState",
+        "UpgradeView"
+      ]
+    },
+    "UsageBillingPage": {
+      "file": "apps/console/src/pages/selfBilling/UsageBillingPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "UsageBillingView"
       ]
     },
     "SettingsPage": {

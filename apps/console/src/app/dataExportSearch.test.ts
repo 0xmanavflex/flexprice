@@ -14,7 +14,9 @@ describe('parseDataExportSearch', () => {
       search: 'acme',
       state: 'enabled',
     })
-    expect(parseDataExportSearch({ search: 'acme', pageSize: 10, state: 'disabled' })).toMatchObject({
+    expect(
+      parseDataExportSearch({ search: 'acme', pageSize: 10, state: 'disabled' }),
+    ).toMatchObject({
       search: 'acme',
       pageSize: 10,
       state: 'disabled',
