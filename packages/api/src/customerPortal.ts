@@ -82,13 +82,25 @@ export const getPortalWallets = (auth: PortalAuth) => post(auth, '/wallets')
 export const getPortalWalletTransactions = (
   auth: PortalAuth,
   walletId: string,
-  query: { limit: number; offset: number; type?: string },
+  query: { limit: number; offset: number; type?: 'CREDIT' | 'DEBIT'; since?: Date },
 ) =>
   get(auth, `/wallets/${id(walletId)}/transactions`, {
     limit: String(query.limit),
     offset: String(query.offset),
     ...(query.type ? { type: query.type } : {}),
+    ...(query.since ? { start_time: query.since.toISOString() } : {}),
   })
+/** Turns automatic top-ups on or off, and sets when and how much. */
+export const updatePortalAutoTopup = (
+  auth: PortalAuth,
+  walletId: string,
+  body: {
+    enabled: boolean
+    threshold?: string
+    amount?: string
+    cooldown?: { value: number; unit: 'minute' | 'hour' | 'day' }
+  },
+) => put(auth, `/wallets/${id(walletId)}/auto-topup`, body)
 /** Buys credits: charged to a saved card, or a checkout to finish elsewhere. */
 export const topUpPortalWallet = (
   auth: PortalAuth,

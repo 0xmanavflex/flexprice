@@ -199,5 +199,6 @@ export {
   payPortalInvoice,
   setDefaultPortalPaymentMethod,
   topUpPortalWallet,
+  updatePortalAutoTopup,
 } from './customerPortal'
 export type { PortalAuth } from './customerPortal'

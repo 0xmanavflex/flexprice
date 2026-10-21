@@ -117,7 +117,7 @@ const INVOICES = [
   ),
 ]
 
-const WALLETS = [
+const WALLETS: Record<string, unknown>[] = [
   {
     id: 'wal_prepaid',
     name: 'Prepaid credits',
@@ -150,6 +150,8 @@ const TRANSACTIONS = [
     description: 'Growth plan · monthly grant',
     amount: '200',
     credit_amount: '2000',
+    credits_available: '1380',
+    expiry_date: day(7),
     transaction_status: 'COMPLETED',
     created_at: day(-23),
     currency: 'usd',
@@ -172,6 +174,7 @@ const TRANSACTIONS = [
     description: 'Auto top-up · Visa •••• 4242',
     amount: '500',
     credit_amount: '5000',
+    credits_available: '4840',
     transaction_status: 'COMPLETED',
     created_at: day(-36),
     currency: 'usd',
@@ -371,11 +374,29 @@ export const portalHandlers = [
   }),
   http.post(`${BASE}/wallets`, () => HttpResponse.json(WALLETS)),
   http.get(`${BASE}/wallets/:id/transactions`, ({ request }) => {
-    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 20)
-    return HttpResponse.json({
-      items: TRANSACTIONS.slice(0, limit),
-      pagination: { total: TRANSACTIONS.length },
-    })
+    const query = new URL(request.url).searchParams
+    const limit = Number(query.get('limit') ?? 20)
+    const type = query.get('type')
+    const rows = TRANSACTIONS.filter((t) => !type || t.type === type)
+    return HttpResponse.json({ items: rows.slice(0, limit), pagination: { total: rows.length } })
+  }),
+  http.put(`${BASE}/wallets/:id/auto-topup`, async ({ request }) => {
+    const body = (await request.json()) as {
+      enabled: boolean
+      threshold?: string
+      amount?: string
+      cooldown?: { value: number; unit: string }
+    }
+    WALLETS[0] = {
+      ...WALLETS[0],
+      auto_topup: {
+        enabled: body.enabled,
+        threshold: body.threshold ?? '0',
+        amount: body.amount ?? '0',
+        ...(body.cooldown ? { cooldown: body.cooldown } : {}),
+      },
+    }
+    return HttpResponse.json(WALLETS[0])
   }),
   http.post(`${BASE}/wallets/:id/top-up`, async ({ request }) => {
     const body = (await request.json()) as {

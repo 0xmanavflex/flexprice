@@ -10,6 +10,7 @@ describe('parsePortalLocation', () => {
       apiOrigin: 'https://us.api.flexprice.io',
       view: 'overview',
       range: '30d',
+      customRange: null,
       invoiceId: null,
     })
     expect(parsePortalLocation('/in/usage/', '?range=7d&invoice=inv_1', urls)).toMatchObject({
@@ -36,9 +37,38 @@ describe('parsePortalLocation', () => {
   })
 })
 
+describe('a calendar range', () => {
+  it('reads from and to as whole local days and writes them back', () => {
+    const at = parsePortalLocation('/us/usage', '?from=2026-09-01&to=2026-09-30', urls)
+    expect(at?.customRange).toEqual({ start: new Date(2026, 8, 1), end: new Date(2026, 9, 1) })
+    expect(
+      portalHref(
+        {
+          region: 'us',
+          view: 'usage',
+          range: '30d',
+          customRange: at?.customRange ?? null,
+          invoiceId: null,
+        },
+        '/p',
+      ),
+    ).toBe('/p/us/usage?from=2026-09-01&to=2026-09-30')
+  })
+
+  it('ignores a range it cannot read, or one that ends before it starts', () => {
+    expect(
+      parsePortalLocation('/us/usage', '?from=2026-09-30&to=2026-09-01', urls)?.customRange,
+    ).toBeNull()
+    expect(parsePortalLocation('/us/usage', '?from=yesterday', urls)?.customRange).toBeNull()
+  })
+})
+
 describe('portalHref', () => {
   it('round-trips through parsePortalLocation', () => {
-    const href = portalHref({ region: 'us', view: 'usage', range: '7d', invoiceId: 'inv_1' }, '/p')
+    const href = portalHref(
+      { region: 'us', view: 'usage', range: '7d', customRange: null, invoiceId: 'inv_1' },
+      '/p',
+    )
     expect(href).toBe('/p/us/usage?range=7d&invoice=inv_1')
     const url = new URL(href, 'https://x.test')
     expect(parsePortalLocation(url.pathname.slice(2), url.search, urls)).toMatchObject({
@@ -46,9 +76,12 @@ describe('portalHref', () => {
       range: '7d',
       invoiceId: 'inv_1',
     })
-    expect(portalHref({ region: 'us', view: 'overview', range: '30d', invoiceId: null }, '')).toBe(
-      '/us',
-    )
+    expect(
+      portalHref(
+        { region: 'us', view: 'overview', range: '30d', customRange: null, invoiceId: null },
+        '',
+      ),
+    ).toBe('/us')
   })
 })
 
@@ -109,11 +142,17 @@ describe('a region-less link (this deployment’s own portal)', () => {
 
   it('round-trips through portalHref', () => {
     expect(
-      portalHref({ region: null, view: 'overview', range: '30d', invoiceId: null }, '/p'),
+      portalHref(
+        { region: null, view: 'overview', range: '30d', customRange: null, invoiceId: null },
+        '/p',
+      ),
     ).toBe('/p')
-    expect(portalHref({ region: null, view: 'usage', range: '7d', invoiceId: null }, '/p')).toBe(
-      '/p/usage?range=7d',
-    )
+    expect(
+      portalHref(
+        { region: null, view: 'usage', range: '7d', customRange: null, invoiceId: null },
+        '/p',
+      ),
+    ).toBe('/p/usage?range=7d')
   })
 
   it('keeps its token apart from a regional one', () => {

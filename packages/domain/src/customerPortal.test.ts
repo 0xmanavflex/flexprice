@@ -9,6 +9,11 @@ import {
   periodProgress,
   portalInvoiceStatus,
   portalRangeWindow,
+  projectSpend,
+  spendChange,
+  toPortalTopUps,
+  totalDue,
+  unitPriceLabel,
   toPortalActionUrl,
   toPortalConfig,
   toPortalCustomer,
@@ -37,6 +42,20 @@ describe('customer and config', () => {
       initials: 'NL',
     })
     expect(toPortalCustomer({ external_id: 'acme' }).initials).toBe('AC')
+  })
+
+  it('keeps the portal’s own tab order whatever the stored order, and overview always', () => {
+    const config = toPortalConfig({
+      value: {
+        sections: [
+          { id: 'overview', enabled: true, order: 4 },
+          { id: 'usage', enabled: true, order: 1 },
+          { id: 'invoices', enabled: true, order: 3 },
+          { id: 'credits', enabled: true, order: 2 },
+        ],
+      },
+    })
+    expect(config.tabs).toEqual(['overview', 'usage', 'credits', 'invoices'])
   })
 
   it('reads tabs in order and keeps overview first; no config means every tab', () => {
@@ -262,6 +281,121 @@ describe('buying credits', () => {
   })
 })
 
+describe('totals and projections', () => {
+  const inv = (id: string, due: string, currency = 'USD') =>
+    ({
+      id,
+      status: 'open',
+      amountDue: money(due, currency),
+    }) as Parameters<typeof totalDue>[0][number]
+
+  it('sums what is owed in one currency, exactly', () => {
+    expect(totalDue([inv('a', '0.1'), inv('b', '0.2'), inv('c', '5', 'EUR')])).toEqual({
+      amount: money('0.3', 'USD'),
+      count: 2,
+      others: 1,
+    })
+    expect(totalDue([])).toBeNull()
+  })
+
+  it('compares spend with the window before', () => {
+    expect(spendChange(money('112', 'USD'), money('100', 'USD'))).toBeCloseTo(0.12)
+    expect(spendChange(money('5', 'USD'), money('0', 'USD'))).toBeNull()
+  })
+
+  it('projects the period at today’s pace', () => {
+    expect(projectSpend(money('315.12', 'USD'), money('13.11', 'USD'), 7)).toEqual(
+      money('406.89', 'USD'),
+    )
+  })
+
+  it('prices a unit in a unit people read', () => {
+    expect(unitPriceLabel(money('0.05', 'USD'), 'minutes')).toEqual({
+      amount: money('0.05', 'USD'),
+      per: 'minute',
+    })
+    expect(unitPriceLabel(money('0.0002', 'USD'), 'calls')).toEqual({
+      amount: money('0.2', 'USD'),
+      per: '1K calls',
+    })
+    expect(unitPriceLabel(money('0.000005', 'USD'), 'tokens')).toEqual({
+      amount: money('5', 'USD'),
+      per: '1M tokens',
+    })
+    expect(unitPriceLabel(money('0.1', 'USD'), 'GB-months')).toEqual({
+      amount: money('0.1', 'USD'),
+      per: 'GB-month',
+    })
+  })
+})
+
+describe('top-ups', () => {
+  it('reads what is left of each credit and flags what needs attention', () => {
+    const { items } = toPortalWalletTransactions(
+      {
+        items: [
+          {
+            id: 'g1',
+            type: 'CREDIT',
+            transaction_reason: 'SUBSCRIPTION_CREDIT_GRANT',
+            credit_amount: '2000',
+            credits_available: '1380',
+            expiry_date: '2026-10-12T00:00:00Z',
+            transaction_status: 'COMPLETED',
+            amount: '200',
+          },
+          {
+            id: 'g2',
+            type: 'CREDIT',
+            transaction_reason: 'PURCHASED_CREDIT_DIRECT',
+            credit_amount: '10000',
+            credits_available: '9840',
+            transaction_status: 'COMPLETED',
+            amount: '1000',
+          },
+          {
+            id: 'g3',
+            type: 'CREDIT',
+            transaction_reason: 'FREE_CREDIT_GRANT',
+            credit_amount: '5000',
+            credits_available: '0',
+            transaction_status: 'COMPLETED',
+            amount: '500',
+          },
+          {
+            id: 'g4',
+            type: 'CREDIT',
+            transaction_reason: 'FREE_CREDIT_GRANT',
+            credit_amount: '100',
+            credits_available: '100',
+            expiry_date: '2026-09-01T00:00:00Z',
+            transaction_status: 'COMPLETED',
+            amount: '10',
+          },
+          {
+            id: 'd1',
+            type: 'DEBIT',
+            transaction_reason: 'INVOICE_PAYMENT',
+            credit_amount: '50',
+            transaction_status: 'COMPLETED',
+            amount: '5',
+          },
+        ],
+      },
+      'USD',
+    )
+    const topUps = toPortalTopUps(items, NOW)
+    expect(topUps.map((t) => [t.id, t.remaining, t.state])).toEqual([
+      ['g1', '1380', 'expiring soon'],
+      ['g2', '9840', 'active'],
+      ['g3', '0', 'used up'],
+      ['g4', '100', 'expired'],
+    ])
+    expect(topUps[0]!.consumed).toBeCloseTo(0.31)
+    expect(topUps[0]!.daysLeft).toBe(7)
+  })
+})
+
 describe('usage ranges', () => {
   it('covers whole local days and ends tomorrow for rolling ranges', () => {
     const now = new Date(2026, 9, 5, 15, 30)
@@ -304,9 +438,31 @@ describe('payment methods and gateways', () => {
       },
       NOW,
     )
-    expect(cards.map((c) => [c.brand, c.mark, c.expires, c.expired, c.isDefault])).toEqual([
-      ['Visa', 'VISA', '08/28', false, true],
-      ['Amex', 'AMEX', '06/26', true, false],
+    expect(cards.map((c) => [c.brand, c.network, c.expires, c.expired, c.isDefault])).toEqual([
+      ['Visa', 'visa', '08/28', false, true],
+      ['American Express', 'amex', '06/26', true, false],
+    ])
+  })
+
+  it("reads Razorpay's network names, and keeps an unknown brand's own wording", () => {
+    const cards = toPortalPaymentMethods({
+      providers: [
+        {
+          provider: 'razorpay',
+          items: [
+            { id: 'a', card: { network: 'MasterCard', last4: '1' } },
+            { id: 'b', card: { network: 'RuPay', last4: '2' } },
+            { id: 'c', card: { network: 'Elo', last4: '3' } },
+            { id: 'd', card: { brand: 'unknown', last4: '4' } },
+          ],
+        },
+      ],
+    })
+    expect(cards.map((c) => [c.brand, c.network])).toEqual([
+      ['Mastercard', 'mastercard'],
+      ['RuPay', 'rupay'],
+      ['Elo', 'card'],
+      ['Card', 'card'],
     ])
   })
 

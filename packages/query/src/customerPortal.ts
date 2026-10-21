@@ -20,6 +20,7 @@ import {
   payPortalInvoice,
   setDefaultPortalPaymentMethod,
   topUpPortalWallet,
+  updatePortalAutoTopup,
 } from '@fp/api'
 import {
   DEFAULT_PORTAL_CONFIG,
@@ -31,6 +32,7 @@ import {
   type PortalQuota,
   type PortalSpend,
   type PortalSubscription,
+  type PortalTopUp,
   type PortalWallet,
   type PortalWalletTransaction,
   toPortalActionUrl,
@@ -43,6 +45,7 @@ import {
   toPortalQuotas,
   toPortalSpend,
   toPortalSubscriptions,
+  toPortalTopUps,
   toPortalWalletTransactions,
   toPortalWallets,
 } from '@fp/domain'
@@ -138,19 +141,48 @@ export const usePortalInvoice = (
 export const usePortalWallets = (auth: PortalAuth): PortalQuery<PortalWallet[]> =>
   usePortalQuery(auth, ['wallets'], async () => toPortalWallets(await getPortalWallets(auth)))
 
+/** A wallet's transactions, newest first; `since` keeps only those from that moment on. */
 export const usePortalWalletTransactions = (
   auth: PortalAuth,
   wallet: PortalWallet | null,
   limit: number,
+  since: Date | null = null,
 ): PortalQuery<{ items: PortalWalletTransaction[]; total: number }> =>
   usePortalQuery(
     auth,
-    ['walletTransactions', wallet?.id, limit],
+    ['walletTransactions', wallet?.id, limit, since?.toISOString() ?? null],
     async () =>
       toPortalWalletTransactions(
-        await getPortalWalletTransactions(auth, wallet?.id ?? '', { limit, offset: 0 }),
+        await getPortalWalletTransactions(auth, wallet?.id ?? '', {
+          limit,
+          offset: 0,
+          ...(since ? { since } : {}),
+        }),
         wallet?.currency ?? 'USD',
       ),
+    wallet !== null,
+  )
+
+/** Every credit added to a wallet, with what is left of it. */
+export const usePortalTopUps = (
+  auth: PortalAuth,
+  wallet: PortalWallet | null,
+  limit: number,
+): PortalQuery<{ items: PortalTopUp[]; total: number }> =>
+  usePortalQuery(
+    auth,
+    ['topUps', wallet?.id, limit],
+    async () => {
+      const page = toPortalWalletTransactions(
+        await getPortalWalletTransactions(auth, wallet?.id ?? '', {
+          limit,
+          offset: 0,
+          type: 'CREDIT',
+        }),
+        wallet?.currency ?? 'USD',
+      )
+      return { items: toPortalTopUps(page.items), total: page.total }
+    },
     wallet !== null,
   )
 
@@ -167,10 +199,14 @@ export const usePortalSpend = (
   auth: PortalAuth,
   start: Date,
   end: Date,
+  enabled = true,
 ): PortalQuery<PortalSpend> => {
   const windowSize = end.getTime() - start.getTime() <= 86_400_000 ? 'HOUR' : 'DAY'
-  return usePortalQuery(auth, ['spend', start.toISOString(), end.toISOString()], async () =>
-    toPortalSpend(await getPortalUsageAnalytics(auth, { start, end, windowSize })),
+  return usePortalQuery(
+    auth,
+    ['spend', start.toISOString(), end.toISOString()],
+    async () => toPortalSpend(await getPortalUsageAnalytics(auth, { start, end, windowSize })),
+    enabled && end.getTime() > start.getTime(),
   )
 }
 
@@ -267,6 +303,25 @@ export function useSetDefaultPortalPaymentMethod(auth: PortalAuth) {
   return usePortalAction<{ provider: string; id: string }>(auth, ({ provider, id }) =>
     setDefaultPortalPaymentMethod(auth, { payment_provider: provider, payment_method_id: id }),
   )
+}
+
+export function useUpdatePortalAutoTopup(auth: PortalAuth) {
+  return usePortalAction<{
+    walletId: string
+    enabled: boolean
+    threshold: string | null
+    credits: string | null
+    cooldown: { value: number; unit: 'minute' | 'hour' | 'day' } | null
+  }>(auth, async ({ walletId, enabled, threshold, credits, cooldown }) => {
+    await updatePortalAutoTopup(auth, walletId, {
+      enabled,
+      ...(threshold ? { threshold } : {}),
+      ...(credits ? { amount: credits } : {}),
+      ...(cooldown ? { cooldown } : {}),
+    })
+    // Saved, nothing to open.
+    return null
+  })
 }
 
 /** Resolves a fresh PDF link for an invoice; each one is short-lived. */

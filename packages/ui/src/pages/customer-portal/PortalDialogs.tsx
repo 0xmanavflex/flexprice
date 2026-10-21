@@ -1,5 +1,6 @@
-import { type ReactNode, useState } from 'react'
+import { useState } from 'react'
 import {
+  type PortalCooldownUnit,
   type PortalGateway,
   type PortalInvoice,
   type PortalPaymentMethod,
@@ -8,174 +9,84 @@ import {
   creditsCost,
   parseCreditAmount,
 } from '@fp/domain'
-import { Button } from '@ui/components/primitives/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@ui/components/primitives/dialog'
+import { FileTextIcon, SheetIcon, TriangleAlertIcon } from '@ui/icons'
 import { Field, FieldError, FieldLabel } from '@ui/components/primitives/field'
+import { Input } from '@ui/components/primitives/input'
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
 } from '@ui/components/primitives/input-group'
-import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
-import { Spinner } from '@ui/components/primitives/spinner'
-import { Textarea } from '@ui/components/primitives/textarea'
-import { Alert, AlertDescription } from '@ui/components/reui/alert'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@ui/components/primitives/select'
+import { Switch } from '@ui/components/primitives/switch'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
+import { Composer } from '@ui/compositions/detail/DetailKit'
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
+import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Money } from '../shared/Money'
+import { CardLogo } from './CardLogo'
 import { formatNumber } from './format'
-import type { PayVia } from './types'
+import { CheckoutLinkPanel, RadioRows } from './parts'
+import type { AutoTopupSettings, PayVia } from './types'
 
 /**
- * The portal's dialogs: pay an invoice, add credits, add a card, remove a card.
- * Each one runs its action, shows the error in place if it fails, and closes
- * when it is done or handed to the gateway's page.
+ * The portal's dialogs, after the portal prototype (`portal/flows.tsx`): pay an
+ * invoice, add credits, auto top-up, add a card, remove a card and download.
+ * Each is the kit's FormDialog and Composer; a write that hands off to a
+ * gateway's page keeps the link on screen (CheckoutLinkPanel) until the
+ * customer says they have paid.
  */
 export const PortalDialogsProvenance = provenance({
   source: 'composition',
   composes: [
-    'primitives/dialog',
-    'primitives/radio-group',
-    'primitives/input-group',
-    'primitives/field',
+    'compositions/forms/FormDialog',
+    'compositions/detail/DetailKit',
     'compositions/feedback/ConfirmDialog',
+    'primitives/input-group',
+    'primitives/switch',
+    'primitives/select',
+    'reui/alert',
   ],
-  note: 'Customer portal pay, add-credits and add-card dialogs, after the reference portal.',
+  note: 'Customer portal flows, after the portal prototype: pay, add credits (checkout-3), auto top-up, add card, remove card, download.',
 })
 
 const GENERIC = 'Something went wrong. Please try again.'
 
-/** Runs an action with a pending flag and an error message. */
-function useRun(onDone: () => void) {
+/** Runs a write with a pending flag and an error; resolves what the write did. */
+function useRun() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const run = async (action: () => Promise<void>) => {
+  const run = async <T,>(action: () => Promise<T>): Promise<T | undefined> => {
     setPending(true)
     setError(null)
     try {
-      await action()
-      onDone()
+      return await action()
     } catch (cause) {
       setError(cause instanceof Error && cause.message ? cause.message : GENERIC)
+      return undefined
     } finally {
       setPending(false)
     }
   }
-  return { pending, error, run }
+  return { pending, error, run, reset: () => setError(null) }
 }
 
-function PortalDialog({
-  open,
-  onOpenChange,
-  pending,
-  title,
-  description,
-  children,
-  footer,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  pending: boolean
-  title: string
-  description: ReactNode
-  children: ReactNode
-  footer: ReactNode
-}) {
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => (pending && !next ? undefined : onOpenChange(next))}
-    >
-      <DialogContent
-        showCloseButton={!pending}
-        className="flex max-h-[90svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
-      >
-        <DialogHeader className="border-b px-6 py-5">
-          <DialogTitle className="text-base font-medium">{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
-          {children}
-        </div>
-        <DialogFooter className="border-t px-6 py-4">{footer}</DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
+function copy(url: string, onCopied: () => void) {
+  void navigator.clipboard?.writeText(url).then(onCopied, () => undefined)
 }
 
-export interface ChoiceOption {
-  value: string
-  label: ReactNode
-  description?: ReactNode
-  aside?: ReactNode
-  disabled?: boolean
-}
+/* ---- Pay an invoice ------------------------------------------------------ */
 
-/** Radio cards: one bordered row per option, the chosen one ringed. */
-export function OptionCards({
-  label,
-  value,
-  onChange,
-  options,
-  columns = 1,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  options: ChoiceOption[]
-  columns?: 1 | 2 | 4
-}) {
-  return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-sm font-medium">{label}</legend>
-      <RadioGroup
-        value={value}
-        onValueChange={(next) => onChange(String(next))}
-        className={cn(
-          'grid gap-2',
-          columns === 2 && 'sm:grid-cols-2',
-          columns === 4 && 'grid-cols-2 sm:grid-cols-4',
-        )}
-      >
-        {options.map((option) => (
-          <label
-            key={option.value}
-            className={cn(
-              'flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors',
-              value === option.value
-                ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
-                : 'hover:bg-muted/40',
-              option.disabled && 'cursor-not-allowed opacity-50',
-            )}
-          >
-            <RadioGroupItem value={option.value} disabled={option.disabled ?? false} />
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-sm font-medium">{option.label}</span>
-              {option.description ? (
-                <span className="text-muted-foreground text-xs">{option.description}</span>
-              ) : null}
-            </span>
-            {option.aside ? (
-              <span className="text-muted-foreground shrink-0 text-xs">{option.aside}</span>
-            ) : null}
-          </label>
-        ))}
-      </RadioGroup>
-    </fieldset>
-  )
-}
-
-/* ---- Pay an invoice ------------------------------------------------------- */
-
+/** `POST /invoices/{id}/pay`: a payment page from the chosen gateway, in a new tab. */
 export function PayInvoiceDialog({
   invoice,
   gateways,
@@ -183,72 +94,107 @@ export function PayInvoiceDialog({
   locale,
   onClose,
   onPay,
+  onPaid,
+  onCopied,
 }: {
   invoice: PortalInvoice | null
   gateways: PortalGateway[]
   brandName: string | null
   locale: string | undefined
   onClose: () => void
-  onPay: (invoice: PortalInvoice, provider: string | null) => Promise<void>
+  onPay: (invoice: PortalInvoice, provider: string | null) => Promise<string | null>
+  /** "I've paid": refresh and close. */
+  onPaid: () => void
+  onCopied: () => void
 }) {
   const options = gateways.filter((g) => g.paysInvoices)
-  const [provider, setProvider] = useState<string>('')
+  const [provider, setProvider] = useState('')
+  const [link, setLink] = useState<string | null>(null)
   const chosen = options.find((g) => g.provider === provider) ?? options[0] ?? null
-  const { pending, error, run } = useRun(onClose)
+  const { pending, error, run } = useRun()
   const amount = invoice ? (
     <Money value={invoice.amountDue} {...(locale ? { locale } : {})} />
   ) : null
+  const close = () => {
+    setLink(null)
+    onClose()
+  }
 
   return (
-    <PortalDialog
+    <FormDialog
       open={invoice !== null}
-      onOpenChange={(open) => !open && onClose()}
-      pending={pending}
-      title={invoice ? `Pay ${invoice.number}` : 'Pay invoice'}
-      description={<>{amount} due</>}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={pending}>
-            Cancel
-          </Button>
-          <Button
-            disabled={pending || !invoice || options.length === 0}
-            onClick={() => invoice && void run(() => onPay(invoice, chosen?.provider ?? null))}
-          >
-            {pending ? <Spinner /> : null}
-            Pay {amount}
-          </Button>
-        </>
-      }
+      onOpenChange={(open) => !open && close()}
+      title={link ? 'Complete your payment' : invoice ? `Pay ${invoice.number}` : 'Pay invoice'}
+      description={link ? undefined : <>{amount} due</>}
+      size="sm"
+      isPending={pending}
     >
-      {options.length === 0 ? (
-        <Alert>
-          <AlertDescription>
-            Online payment isn’t set up for this account. Contact {brandName ?? 'your account team'}{' '}
-            to pay this invoice.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <OptionCards
-          label="Pay with"
-          value={chosen?.provider ?? ''}
-          onChange={setProvider}
-          options={options.map((g) => ({
-            value: g.provider,
-            label: g.label,
-            description: 'Opens a secure payment page in a new tab. Saved cards are offered there.',
-          }))}
+      {link ? (
+        <CheckoutLinkPanel
+          url={link}
+          amount={amount}
+          onCopy={() => copy(link, onCopied)}
+          onDone={() => {
+            onPaid()
+            close()
+          }}
         />
+      ) : (
+        <Composer
+          submitLabel={invoice ? `Pay ${amountText(invoice, locale)}` : 'Pay'}
+          onCancel={close}
+          submitting={pending}
+          disabled={!invoice || options.length === 0}
+          onSubmit={() => {
+            if (!invoice) return
+            void run(() => onPay(invoice, chosen?.provider ?? null)).then((url) => {
+              if (url) setLink(url)
+              else if (url === null) close()
+            })
+          }}
+        >
+          {options.length === 0 ? (
+            <Alert>
+              <AlertDescription>
+                Online payment isn’t set up for this account. Contact{' '}
+                {brandName ?? 'your account team'} to pay this invoice.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <RadioRows
+              label="Payment method"
+              value={chosen?.provider ?? ''}
+              onChange={setProvider}
+              options={options.map((g) => ({
+                value: g.provider,
+                label: options.length > 1 ? `Pay with ${g.label}` : 'Card or bank transfer',
+                description: 'Opens a secure payment page. Saved cards are offered there.',
+              }))}
+            />
+          )}
+          {error ? <FieldError>{error}</FieldError> : null}
+        </Composer>
       )}
-      {error ? <FieldError>{error}</FieldError> : null}
-    </PortalDialog>
+    </FormDialog>
   )
 }
 
-/* ---- Add credits ---------------------------------------------------------- */
+function amountText(invoice: PortalInvoice, locale: string | undefined): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: invoice.amountDue.currency,
+  }).format(Number(invoice.amountDue.amount))
+}
+
+/* ---- Add credits --------------------------------------------------------- */
 
 const PRESETS = ['1000', '2500', '5000', '10000']
 
+/**
+ * Add credits: an amount (with presets), what it costs and how to pay, in one
+ * step (ReUI checkout-3). `POST /wallets/{id}/top-up`, with the saved card or a
+ * gateway's checkout.
+ */
 export function AddCreditsDialog({
   wallet,
   gateways,
@@ -256,6 +202,8 @@ export function AddCreditsDialog({
   locale,
   onClose,
   onAdd,
+  onPaid,
+  onCopied,
 }: {
   wallet: PortalWallet | null
   gateways: PortalGateway[]
@@ -263,210 +211,459 @@ export function AddCreditsDialog({
   defaultCard: PortalPaymentMethod | null
   locale: string | undefined
   onClose: () => void
-  onAdd: (wallet: PortalWallet, credits: string, via: PayVia, note: string) => Promise<void>
+  onAdd: (
+    wallet: PortalWallet,
+    credits: string,
+    via: PayVia,
+    note: string,
+  ) => Promise<string | null>
+  onPaid: () => void
+  onCopied: () => void
 }) {
   const [raw, setRaw] = useState('5000')
-  const [via, setVia] = useState<string>(defaultCard ? 'saved' : '')
+  const [via, setVia] = useState(defaultCard ? 'saved' : '')
   const [note, setNote] = useState('')
-  const { pending, error, run } = useRun(onClose)
+  const [link, setLink] = useState<string | null>(null)
+  const { pending, error, run } = useRun()
   const checkouts = gateways.filter((g) => g.checkout)
-  const methods = [
-    ...(defaultCard
-      ? [
-          {
-            value: 'saved',
-            label: `${defaultCard.brand} •••• ${defaultCard.last4}`,
-            description: 'Charged now',
-          },
-        ]
-      : []),
-    ...checkouts.map((g) => ({
-      value: g.provider,
-      label: `${g.label} checkout`,
-      description: 'Opens in a new tab',
-    })),
-  ]
-  const method = methods.find((m) => m.value === via) ?? methods[0]
   const credits = parseCreditAmount(raw)
   const money = (value: PortalWallet['balance']) => (
     <Money value={value} {...(locale ? { locale } : {})} />
   )
   const cost = wallet && credits ? creditsCost(credits, wallet.creditPrice, wallet.currency) : null
   const after = wallet && credits ? creditsAfter(wallet.credits, credits) : null
-
-  const submit = () => {
-    if (!wallet || !credits || !method) return
-    const payVia: PayVia =
-      method.value === 'saved' ? { kind: 'saved' } : { kind: 'checkout', provider: method.value }
-    void run(() => onAdd(wallet, credits, payVia, note))
+  const methods = [...(defaultCard ? ['saved'] : []), ...checkouts.map((g) => g.provider)]
+  const method = methods.includes(via) ? via : (methods[0] ?? '')
+  const close = () => {
+    setLink(null)
+    onClose()
   }
 
   return (
-    <PortalDialog
+    <FormDialog
       open={wallet !== null}
-      onOpenChange={(open) => !open && onClose()}
-      pending={pending}
-      title="Add credits"
+      onOpenChange={(open) => !open && close()}
+      title={link ? 'Complete your payment' : 'Add credits'}
       description={
-        wallet ? (
+        link || !wallet ? undefined : (
           <>
             To {wallet.name}. 1 credit ={' '}
             {money({ amount: wallet.creditPrice, currency: wallet.currency })}.
           </>
-        ) : null
+        )
       }
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={pending}>
-            Cancel
-          </Button>
-          <Button disabled={pending || !credits || !method || !cost} onClick={submit}>
-            {pending ? <Spinner /> : null}
-            {cost ? <>Pay {money(cost)}</> : 'Pay'}
-          </Button>
-        </>
-      }
+      size="sm"
+      isPending={pending}
     >
-      {wallet ? (
-        <>
-          <OptionCards
-            label="Credits"
-            value={PRESETS.includes(credits ?? '') ? (credits ?? '') : ''}
-            onChange={setRaw}
-            columns={4}
-            options={PRESETS.map((p) => {
-              const price = creditsCost(p, wallet.creditPrice, wallet.currency)
-              return {
-                value: p,
-                label: formatNumber(p, locale),
-                description: price ? money(price) : null,
-              }
-            })}
-          />
+      {link ? (
+        <CheckoutLinkPanel
+          url={link}
+          amount={cost ? money(cost) : null}
+          onCopy={() => copy(link, onCopied)}
+          onDone={() => {
+            onPaid()
+            close()
+          }}
+        />
+      ) : wallet ? (
+        <Composer
+          submitLabel={
+            cost
+              ? `Pay ${new Intl.NumberFormat(locale, { style: 'currency', currency: cost.currency }).format(Number(cost.amount))}`
+              : 'Pay'
+          }
+          onCancel={close}
+          submitting={pending}
+          disabled={!credits || !cost || !method}
+          onSubmit={() => {
+            if (!credits || !method) return
+            const payVia: PayVia =
+              method === 'saved' ? { kind: 'saved' } : { kind: 'checkout', provider: method }
+            void run(() => onAdd(wallet, credits, payVia, note)).then((url) => {
+              if (url) setLink(url)
+              else if (url === null) close()
+            })
+          }}
+        >
           <Field>
-            <FieldLabel htmlFor="portal-credits">Or enter an amount</FieldLabel>
-            <InputGroup>
+            <FieldLabel>Credits</FieldLabel>
+            <div
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+              role="radiogroup"
+              aria-label="Credit amount"
+            >
+              {PRESETS.map((p) => {
+                const price = creditsCost(p, wallet.creditPrice, wallet.currency)
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    role="radio"
+                    aria-checked={credits === p}
+                    onClick={() => setRaw(p)}
+                    className={cn(
+                      'rounded-lg border px-3 py-2.5 text-left transition-colors',
+                      credits === p
+                        ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
+                        : 'hover:bg-muted/40',
+                    )}
+                  >
+                    <span className="block text-sm font-medium tabular-nums">
+                      {formatNumber(p, locale)}
+                    </span>
+                    <span className="text-muted-foreground block text-xs tabular-nums">
+                      {price ? money(price) : null}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <InputGroup className="mt-1 h-9">
               <InputGroupInput
-                id="portal-credits"
                 inputMode="numeric"
                 value={raw}
                 aria-invalid={!credits}
                 onChange={(event) => setRaw(event.target.value)}
+                aria-label="Custom amount of credits"
+                placeholder="Or enter an amount"
               />
               <InputGroupAddon align="inline-end">
                 <InputGroupText>credits</InputGroupText>
               </InputGroupAddon>
             </InputGroup>
-            {!credits ? <FieldError>Enter a number of credits above zero.</FieldError> : null}
+            {!credits ? <FieldError>Enter how many credits to add.</FieldError> : null}
           </Field>
-          {methods.length > 0 && method ? (
-            <OptionCards
-              label="Pay with"
-              value={method.value}
-              onChange={setVia}
-              options={methods}
-            />
-          ) : (
-            <Alert>
-              <AlertDescription>
-                Buying credits online isn’t set up for this account.
-              </AlertDescription>
-            </Alert>
-          )}
+
           <Field>
-            <FieldLabel htmlFor="portal-credits-note">Note (optional)</FieldLabel>
-            <Textarea
+            <FieldLabel>Pay with</FieldLabel>
+            {methods.length === 0 ? (
+              <Alert>
+                <AlertDescription>
+                  Buying credits online isn’t set up for this account.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <RadioRows
+                label="Payment method"
+                value={method}
+                onChange={setVia}
+                options={[
+                  ...(defaultCard
+                    ? [
+                        {
+                          value: 'saved',
+                          media: (
+                            <CardLogo network={defaultCard.network} label={defaultCard.brand} />
+                          ),
+                          label: `${defaultCard.brand} •••• ${defaultCard.last4}`,
+                          description: 'Charged now · credits land right away',
+                        },
+                      ]
+                    : []),
+                  ...checkouts.map((g) => ({
+                    value: g.provider,
+                    media: (
+                      <span className="bg-muted flex h-6 w-9 shrink-0 items-center justify-center rounded-[5px] border text-[9px] font-medium">
+                        {g.label.slice(0, 3).toUpperCase()}
+                      </span>
+                    ),
+                    label: `${g.label} checkout`,
+                    description: `Pay on ${g.label}’s page in a new tab`,
+                  })),
+                ]}
+              />
+            )}
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="portal-credits-note">
+              Note <span className="text-muted-foreground font-normal">(optional)</span>
+            </FieldLabel>
+            <Input
               id="portal-credits-note"
-              rows={2}
+              className="h-9"
               value={note}
               onChange={(event) => setNote(event.target.value)}
+              placeholder="What is this top-up for?"
             />
           </Field>
-          <dl className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-4 text-sm">
-            <Row label="Credits" value={credits ? formatNumber(credits, locale) : '—'} />
-            <Row
-              label="New balance"
-              value={after ? `${formatNumber(after, locale)} credits` : '—'}
-            />
-            <Row label="You pay" value={cost ? money(cost) : '—'} strong />
+
+          <dl className="bg-muted/40 grid grid-cols-[1fr_auto] gap-y-1.5 rounded-lg border px-4 py-3 text-[13px]">
+            <dt className="text-muted-foreground">Credits</dt>
+            <dd className="text-right tabular-nums">
+              {credits ? formatNumber(credits, locale) : '—'}
+            </dd>
+            <dt className="text-muted-foreground">New balance</dt>
+            <dd className="text-right tabular-nums">
+              {after ? `${formatNumber(after, locale)} credits` : '—'}
+            </dd>
+            <dt className="mt-1.5 border-t pt-2 text-sm font-medium">You pay</dt>
+            <dd className="mt-1.5 border-t pt-2 text-right text-sm font-medium tabular-nums">
+              {cost ? money(cost) : '—'}
+            </dd>
           </dl>
           {error ? <FieldError>{error}</FieldError> : null}
-        </>
+        </Composer>
       ) : null}
-    </PortalDialog>
+    </FormDialog>
   )
 }
 
-function Row({
-  label,
-  value,
-  strong = false,
+/* ---- Auto top-up --------------------------------------------------------- */
+
+const UNITS: PortalCooldownUnit[] = ['minute', 'hour', 'day']
+
+/** `PUT /wallets/{id}/auto-topup` {enabled, threshold, amount, cooldown}. Needs a card that can be charged. */
+export function AutoTopupDialog({
+  wallet,
+  card,
+  locale,
+  onClose,
+  onSave,
 }: {
-  label: string
-  value: ReactNode
-  strong?: boolean
+  wallet: PortalWallet | null
+  card: PortalPaymentMethod | null
+  locale: string | undefined
+  onClose: () => void
+  onSave: (wallet: PortalWallet, settings: AutoTopupSettings) => Promise<void>
 }) {
+  const a = wallet?.autoTopup ?? null
+  const [enabled, setEnabled] = useState(a?.enabled ?? Boolean(card))
+  const [threshold, setThreshold] = useState(a?.threshold ?? '500')
+  const [amount, setAmount] = useState(a?.credits ?? '2000')
+  const [cool, setCool] = useState(Boolean(a?.cooldown))
+  const [coolValue, setCoolValue] = useState(String(a?.cooldown?.value ?? 6))
+  const [coolUnit, setCoolUnit] = useState<PortalCooldownUnit>(a?.cooldown?.unit ?? 'hour')
+  const { pending, error, run } = useRun()
+  const money = (credits: string) => {
+    const value = wallet ? creditsCost(credits || '0', wallet.creditPrice, wallet.currency) : null
+    return value ? <Money value={value} {...(locale ? { locale } : {})} /> : null
+  }
+  const cardLabel = card ? `${card.brand} •••• ${card.last4}` : null
+
   return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className={cn('tabular-nums', strong && 'font-medium')}>{value}</dd>
-    </div>
+    <FormDialog
+      open={wallet !== null}
+      onOpenChange={(open) => !open && onClose()}
+      title="Auto top-up"
+      description={
+        a?.enabled && a.threshold && a.credits ? (
+          <>
+            On. When your balance falls below {formatNumber(a.threshold, locale)} credits (
+            {money(a.threshold)}), we add {formatNumber(a.credits, locale)} credits (
+            {money(a.credits)}){cardLabel ? ` using ${cardLabel}` : ''}.
+          </>
+        ) : (
+          'Off. Turn it on to refill your balance automatically, so usage never pauses.'
+        )
+      }
+      isPending={pending}
+    >
+      {wallet ? (
+        <Composer
+          submitLabel="Save"
+          onCancel={onClose}
+          submitting={pending}
+          disabled={enabled && !card}
+          onSubmit={() =>
+            void run(async () => {
+              await onSave(wallet, {
+                enabled,
+                threshold: parseCreditAmount(threshold),
+                credits: parseCreditAmount(amount),
+                cooldown: cool
+                  ? { value: Math.max(1, Number(coolValue) || 1), unit: coolUnit }
+                  : null,
+              })
+              onClose()
+            })
+          }
+        >
+          <label className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+            <span>
+              <span className="block text-sm">Top up automatically</span>
+              <span className="text-muted-foreground block text-xs">
+                {cardLabel ? `Charged to ${cardLabel}` : 'Needs a saved card'}
+              </span>
+            </span>
+            <Switch
+              checked={enabled}
+              onCheckedChange={setEnabled}
+              aria-label="Enable auto top-up"
+            />
+          </label>
+
+          {!card ? (
+            <Alert variant="warning">
+              <TriangleAlertIcon aria-hidden="true" />
+              <AlertTitle>No saved card</AlertTitle>
+              <AlertDescription>
+                Add a card on the Overview tab to turn on automatic top-ups.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <fieldset
+            disabled={!enabled}
+            className={cn('grid gap-5 sm:grid-cols-2', !enabled && 'opacity-50')}
+          >
+            <Field>
+              <FieldLabel htmlFor="auto-threshold">When balance falls below</FieldLabel>
+              <InputGroup className="h-9">
+                <InputGroupInput
+                  id="auto-threshold"
+                  inputMode="numeric"
+                  value={threshold}
+                  onChange={(event) => setThreshold(event.target.value)}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>credits</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
+              <p className="text-muted-foreground text-xs tabular-nums">
+                {money(parseCreditAmount(threshold) ?? '0')}
+              </p>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="auto-amount">Add</FieldLabel>
+              <InputGroup className="h-9">
+                <InputGroupInput
+                  id="auto-amount"
+                  inputMode="numeric"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>credits</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
+              <p className="text-muted-foreground text-xs tabular-nums">
+                Charged {money(parseCreditAmount(amount) ?? '0')} each time
+              </p>
+            </Field>
+          </fieldset>
+
+          <fieldset disabled={!enabled} className={cn('space-y-3', !enabled && 'opacity-50')}>
+            <label className="flex items-center justify-between gap-4">
+              <span>
+                <span className="block text-sm">Wait between top-ups</span>
+                <span className="text-muted-foreground block text-xs">
+                  Avoids several charges in a burst of usage
+                </span>
+              </span>
+              <Switch checked={cool} onCheckedChange={setCool} aria-label="Wait between top-ups" />
+            </label>
+            {cool ? (
+              <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
+                <Input
+                  className="h-9"
+                  inputMode="numeric"
+                  value={coolValue}
+                  onChange={(event) => setCoolValue(event.target.value)}
+                  aria-label="Wait duration"
+                />
+                <Select
+                  value={coolUnit}
+                  onValueChange={(value) => value && setCoolUnit(value as PortalCooldownUnit)}
+                >
+                  <SelectTrigger className="h-9 w-full" aria-label="Wait unit">
+                    <SelectValue>{(value) => `${String(value)}s`}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNITS.map((u) => (
+                      <SelectItem key={u} value={u}>
+                        {u}s
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+          </fieldset>
+          {error ? <FieldError>{error}</FieldError> : null}
+        </Composer>
+      ) : null}
+    </FormDialog>
   )
 }
 
-/* ---- Cards ---------------------------------------------------------------- */
+/* ---- Cards --------------------------------------------------------------- */
 
+/** `POST /payment-methods`: the gateway's page to save a card securely. */
 export function AddCardDialog({
   open,
   gateways,
   onClose,
   onAdd,
+  onPaid,
+  onCopied,
 }: {
   open: boolean
   gateways: PortalGateway[]
   onClose: () => void
-  onAdd: (provider: string) => Promise<void>
+  onAdd: (provider: string) => Promise<string | null>
+  onPaid: () => void
+  onCopied: () => void
 }) {
   const options = gateways.filter((g) => g.savesCards)
   const [provider, setProvider] = useState('')
+  const [link, setLink] = useState<string | null>(null)
   const chosen = options.find((g) => g.provider === provider) ?? options[0] ?? null
-  const { pending, error, run } = useRun(onClose)
+  const { pending, error, run } = useRun()
+  const close = () => {
+    setLink(null)
+    onClose()
+  }
   return (
-    <PortalDialog
+    <FormDialog
       open={open}
-      onOpenChange={(next) => !next && onClose()}
-      pending={pending}
-      title="Add a card"
-      description="Card details are entered on the payment provider’s page, never here."
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={pending}>
-            Cancel
-          </Button>
-          <Button
-            disabled={pending || !chosen}
-            onClick={() => chosen && void run(() => onAdd(chosen.provider))}
-          >
-            {pending ? <Spinner /> : null}
-            Continue
-          </Button>
-        </>
+      onOpenChange={(next) => !next && close()}
+      title={link ? 'Add your card' : 'Add a card'}
+      description={
+        link ? undefined : 'Card details are entered on the payment provider’s page, never here.'
       }
+      size="sm"
+      isPending={pending}
     >
-      <OptionCards
-        label="Provider"
-        value={chosen?.provider ?? ''}
-        onChange={setProvider}
-        options={options.map((g) => ({
-          value: g.provider,
-          label: g.label,
-          description: g.autoCharge
-            ? 'Can pay invoices and top-ups automatically'
-            : 'Used at checkout only',
-        }))}
-      />
-      {error ? <FieldError>{error}</FieldError> : null}
-    </PortalDialog>
+      {link ? (
+        <CheckoutLinkPanel
+          url={link}
+          amount="nothing now"
+          onCopy={() => copy(link, onCopied)}
+          onDone={() => {
+            onPaid()
+            close()
+          }}
+        />
+      ) : (
+        <Composer
+          submitLabel="Continue"
+          onCancel={close}
+          submitting={pending}
+          disabled={!chosen}
+          onSubmit={() => {
+            if (!chosen) return
+            void run(() => onAdd(chosen.provider)).then((url) => {
+              if (url) setLink(url)
+            })
+          }}
+        >
+          <RadioRows
+            label="Provider"
+            value={chosen?.provider ?? ''}
+            onChange={setProvider}
+            options={options.map((g) => ({
+              value: g.provider,
+              label: g.label,
+              description: g.autoCharge
+                ? 'Can pay invoices and top-ups automatically'
+                : 'Used at checkout only',
+            }))}
+          />
+          {error ? <FieldError>{error}</FieldError> : null}
+        </Composer>
+      )}
+    </FormDialog>
   )
 }
 
@@ -479,7 +676,7 @@ export function RemoveCardDialog({
   onClose: () => void
   onRemove: (card: PortalPaymentMethod) => Promise<void>
 }) {
-  const { pending, error, run } = useRun(onClose)
+  const { pending, error, run } = useRun()
   return (
     <ConfirmDialog
       open={card !== null}
@@ -495,7 +692,93 @@ export function RemoveCardDialog({
       destructive
       isPending={pending}
       error={error}
-      onConfirm={() => card && void run(() => onRemove(card))}
+      onConfirm={() =>
+        card &&
+        void run(async () => {
+          await onRemove(card)
+          onClose()
+        })
+      }
     />
   )
+}
+
+/* ---- Download ------------------------------------------------------------ */
+
+/** The invoice as a PDF (`GET /invoices/{id}/pdf`), or its lines as a CSV built here. */
+export function DownloadDialog({
+  invoice,
+  onClose,
+  onPdf,
+}: {
+  invoice: PortalInvoice | null
+  onClose: () => void
+  onPdf: (invoice: PortalInvoice) => Promise<void>
+}) {
+  const [format, setFormat] = useState<'pdf' | 'csv'>('pdf')
+  const { pending, error, run } = useRun()
+  return (
+    <FormDialog
+      open={invoice !== null}
+      onOpenChange={(open) => !open && onClose()}
+      title={invoice ? `Download ${invoice.number}` : 'Download'}
+      size="sm"
+      isPending={pending}
+    >
+      {invoice ? (
+        <Composer
+          submitLabel="Download"
+          onCancel={onClose}
+          submitting={pending}
+          onSubmit={() =>
+            void run(async () => {
+              if (format === 'pdf') await onPdf(invoice)
+              else downloadCsv(invoice)
+              onClose()
+            })
+          }
+        >
+          <RadioRows
+            label="Format"
+            value={format}
+            onChange={(value) => setFormat(value as 'pdf' | 'csv')}
+            options={[
+              {
+                value: 'pdf',
+                media: <FileTextIcon className="text-muted-foreground size-4" aria-hidden="true" />,
+                label: 'PDF',
+                description: 'The invoice as sent, for your records',
+              },
+              {
+                value: 'csv',
+                media: <SheetIcon className="text-muted-foreground size-4" aria-hidden="true" />,
+                label: 'CSV',
+                description: 'Line items, to import into a spreadsheet',
+              },
+            ]}
+          />
+          {error ? <FieldError>{error}</FieldError> : null}
+        </Composer>
+      ) : null}
+    </FormDialog>
+  )
+}
+
+function csvCell(value: string): string {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
+}
+
+/** The invoice's lines as CSV, saved in the browser: item, type, quantity, amount, currency. */
+function downloadCsv(invoice: PortalInvoice): void {
+  const rows: string[][] = [['Item', 'Type', 'Quantity', 'Amount', 'Currency']]
+  for (const line of invoice.lines) {
+    rows.push([line.name, line.kind ?? '', line.quantity, line.amount.amount, line.amount.currency])
+  }
+  const text = rows.map((row) => row.map((cell) => csvCell(String(cell))).join(',')).join('\n')
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${invoice.number}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }

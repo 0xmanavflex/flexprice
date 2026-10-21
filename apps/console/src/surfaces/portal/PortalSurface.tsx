@@ -16,12 +16,16 @@ import {
   usePortalQuotas,
   usePortalSpend,
   usePortalSubscriptions,
+  usePortalTopUps,
   usePortalWalletTransactions,
   usePortalWallets,
   useRemovePortalPaymentMethod,
   useSetDefaultPortalPaymentMethod,
   useTopUpPortalWallet,
+  useUpdatePortalAutoTopup,
+  queryKeys,
 } from '@fp/query'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   type CustomerPortalActions,
   CustomerPortalView,
@@ -34,6 +38,8 @@ import { type PortalLocation, parsePortalLocation, portalHref, takePortalToken }
 
 const GENERIC_ERROR = 'Something went wrong. Please try again.'
 const PAGE = 20
+/** Top-ups shown at once; a wallet rarely has more grants and purchases than this. */
+const TOP_UPS = 100
 
 /**
  * The customer portal: `/<region>[/<view>]`, opened from the link a merchant
@@ -140,17 +146,42 @@ function Portal({
   const quotas = usePortalQuotas(auth)
   // One window per range per day: a re-render must not move the window and refetch.
   const today = new Date().toDateString()
+  const customStart = location.customRange?.start.getTime() ?? null
+  const customEnd = location.customRange?.end.getTime() ?? null
   const span = useMemo(
-    () => portalRangeWindow(location.range, new Date(today)),
-    [location.range, today],
+    () =>
+      customStart !== null && customEnd !== null
+        ? { start: new Date(customStart), end: new Date(customEnd) }
+        : portalRangeWindow(location.range, new Date(today)),
+    [location.range, customStart, customEnd, today],
   )
   const spend = usePortalSpend(auth, span.start, span.end)
+  // The same length of time just before, for "↑ 12% vs the 30 days before".
+  const previousStart = useMemo(
+    () => new Date(span.start.getTime() - (span.end.getTime() - span.start.getTime())),
+    [span],
+  )
+  const previousSpend = usePortalSpend(auth, previousStart, span.start)
+  // The current billing period so far, for "About $407 by Oct 12 at this pace".
+  const period = subscriptions.data?.find(
+    (s) => s.status === 'active' && s.periodStart && s.periodEnd,
+  )
+  const periodStart = period?.periodStart ?? null
+  const periodNow = useMemo(() => portalRangeWindow('today', new Date(today)).end, [today])
+  const periodSpend = usePortalSpend(
+    auth,
+    periodStart ?? periodNow,
+    periodNow,
+    periodStart !== null,
+  )
   const wallet =
     wallets.data?.find((w) => w.id === walletId) ??
     wallets.data?.find((w) => w.active) ??
     wallets.data?.[0] ??
     null
-  const transactions = usePortalWalletTransactions(auth, wallet, limit)
+  // "Added since" and "Used since" the billing period's start; the latest page with no period.
+  const transactions = usePortalWalletTransactions(auth, wallet, limit, periodStart)
+  const topUps = usePortalTopUps(auth, wallet, TOP_UPS)
   const invoiceDetail = usePortalInvoice(auth, location.invoiceId)
 
   const pay = usePayPortalInvoice(auth)
@@ -159,6 +190,8 @@ function Portal({
   const removeCard = useRemovePortalPaymentMethod(auth)
   const makeDefault = useSetDefaultPortalPaymentMethod(auth)
   const pdf = usePortalInvoicePdf(auth)
+  const saveAutoTopup = useUpdatePortalAutoTopup(auth)
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     if (customer.data) document.title = `Billing · ${customer.data.name}`
@@ -172,12 +205,21 @@ function Portal({
 
   const actions: CustomerPortalActions = {
     onViewChange: (next) => navigate({ ...location, view: next, invoiceId: null }),
-    onRangeChange: (range: PortalRange) => navigate({ ...location, range }, 'replace'),
+    onRangeChange: (range: PortalRange) =>
+      navigate({ ...location, range, customRange: null }, 'replace'),
+    onCustomRange: (start, end) =>
+      navigate({ ...location, customRange: { start, end } }, 'replace'),
     onWalletChange: (id) => {
       setWalletId(id)
       setLimit(PAGE)
     },
     onShowMoreTransactions: () => setLimit((n) => n + PAGE),
+    onShowMoreTopUps: () => undefined,
+    // "I've paid": the gateway may not have told the API yet; look again now, and on focus as always.
+    onRefresh: () =>
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.customerPortal.all(auth.apiOrigin, auth.token),
+      }),
     onOpenInvoice: (invoiceId) => navigate({ ...location, invoiceId }),
     payInvoice: (invoice, provider) =>
       inNewTab(() => pay.run({ invoiceId: invoice.id, provider, returnUrl: returnUrl() })),
@@ -203,9 +245,26 @@ function Portal({
           ),
     addCard: (provider) =>
       inNewTab(() => addCard.run({ provider, returnUrl: returnUrl() }), { required: true }),
-    removeCard: (card) => settle(() => removeCard.run({ provider: card.provider, id: card.id })),
-    makeDefault: (card) => settle(() => makeDefault.run({ provider: card.provider, id: card.id })),
-    downloadInvoice: (invoice) => inNewTab(() => pdf.run(invoice.id), { required: true }),
+    removeCard: async (card) => {
+      await settle(() => removeCard.run({ provider: card.provider, id: card.id }))
+    },
+    makeDefault: async (card) => {
+      await settle(() => makeDefault.run({ provider: card.provider, id: card.id }))
+    },
+    saveAutoTopup: async (target, settings) => {
+      await settle(() =>
+        saveAutoTopup.run({
+          walletId: target.id,
+          enabled: settings.enabled,
+          threshold: settings.threshold,
+          credits: settings.credits,
+          cooldown: settings.cooldown,
+        }),
+      )
+    },
+    downloadInvoice: async (invoice) => {
+      await inNewTab(() => pdf.run(invoice.id), { required: true })
+    },
   }
 
   return (
@@ -215,6 +274,7 @@ function Portal({
       views={views}
       view={view}
       range={location.range}
+      customRange={location.customRange}
       walletId={wallet?.id ?? null}
       data={{
         customer: load(customer),
@@ -225,7 +285,10 @@ function Portal({
         gateways: load(gateways),
         quotas: load(quotas),
         spend: load(spend),
+        previousSpend: load(previousSpend),
+        periodSpend: periodStart ? load(periodSpend) : null,
         transactions: load(transactions),
+        topUps: load(topUps),
         invoiceDetail: location.invoiceId ? load(invoiceDetail) : null,
       }}
       actions={actions}
@@ -249,9 +312,10 @@ function returnUrl(): string {
 }
 
 /** Runs a write and turns any failure into a message the dialog can show. */
-async function settle(run: () => Promise<unknown>): Promise<void> {
+async function settle(run: () => Promise<unknown>): Promise<null> {
   try {
     await run()
+    return null
   } catch (cause) {
     throw new Error(messageOf(cause), { cause })
   }
@@ -260,13 +324,14 @@ async function settle(run: () => Promise<unknown>): Promise<void> {
 /**
  * Runs a write that may answer with a gateway page, and opens that page in a
  * new tab — opened on the click itself so pop-up blockers allow it, then
- * pointed at the gateway once the API answers. The portal refetches when the
- * customer comes back to it. `required`: no page in the answer is an error.
+ * pointed at the gateway once the API answers, and the URL is handed back so
+ * the dialog can keep it on screen. The portal refetches when the customer
+ * comes back to it. `required`: no page in the answer is an error.
  */
 async function inNewTab(
   run: () => Promise<string | null>,
   options: { required?: boolean } = {},
-): Promise<void> {
+): Promise<string | null> {
   const tab = window.open('about:blank', '_blank')
   if (tab) tab.opener = null
   let url: string | null
@@ -279,14 +344,16 @@ async function inNewTab(
   if (url === null) {
     tab?.close()
     if (options.required) throw new Error(GENERIC_ERROR)
-    return
+    return null
   }
   if (!isSafeNavigationUrl(url)) {
     tab?.close()
     throw new Error(GENERIC_ERROR)
   }
+  // The dialog keeps the link on screen too: the tab may have been blocked, or the portal framed.
   if (tab) tab.location.replace(url)
-  else window.location.assign(url)
+  else window.open(url, '_blank', 'noopener,noreferrer')
+  return url
 }
 
 function messageOf(cause: unknown): string {

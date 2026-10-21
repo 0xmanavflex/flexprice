@@ -682,11 +682,13 @@ export {
   usePortalQuotas,
   usePortalSpend,
   usePortalSubscriptions,
+  usePortalTopUps,
   usePortalWalletTransactions,
   usePortalWallets,
   useRemovePortalPaymentMethod,
   useSetDefaultPortalPaymentMethod,
   useTopUpPortalWallet,
+  useUpdatePortalAutoTopup,
 } from './customerPortal'
 export type { PortalAction, PortalQuery } from './customerPortal'
 export type { PortalAuth } from '@fp/api'

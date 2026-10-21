@@ -4,16 +4,18 @@ import {
   type PortalPaymentMethod,
   type PortalSubscription,
   type PortalView,
-  type PortalWallet,
   isPayable,
   periodProgress,
+  totalDue,
 } from '@fp/domain'
 import {
+  AlertCircleIcon,
   CalendarClockIcon,
-  CircleAlertIcon,
+  CircleCheckIcon,
+  CreditCardIcon,
   MoreHorizontalIcon,
   PlusIcon,
-  ReceiptTextIcon,
+  ReceiptIcon,
   RepeatIcon,
   WalletIcon,
 } from '@ui/icons'
@@ -25,49 +27,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from '@ui/components/primitives/item'
-import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
-import { Badge } from '@ui/components/reui/badge'
+import { Skeleton } from '@ui/components/primitives/skeleton'
 import { IconTile } from '@ui/components/reui/icon-tile'
 import { type SimpleColumn, SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { Money } from '../shared/Money'
-import { formatDate, formatNumber, formatRange, relativeDays } from './format'
-import {
-  CardMark,
-  FigureTile,
-  FigureTileSkeleton,
-  Loaded,
-  PortalCard,
-  PortalEmpty,
-  SubscriptionStatusPill,
-} from './parts'
+import { CardLogo } from './CardLogo'
+import { formatDate, formatNumber, relativeDays } from './format'
+import { Loaded, PortalEmpty, SubscriptionStatusPill, SummaryCell } from './parts'
 import type { CustomerPortalData } from './types'
 
 /**
- * The portal's first page: a banner when a payment failed, three figures
- * (next billing, amount due, credit balance), saved cards, and the plans on
- * the account.
+ * The portal's first page, after the portal prototype (`portal/overview.tsx`):
+ * a payment alert when an invoice is unpaid past its date, the account summary
+ * (next billing and amount due coupled, credit balance on its own), saved
+ * cards, and the plans on the account.
  */
 export const PortalOverviewProvenance = provenance({
   source: 'composition',
   composes: [
-    'reui/alert',
-    'primitives/item',
+    'compositions/layout/Section',
     'compositions/detail/DetailKit',
     'primitives/dropdown-menu',
-    'reui/badge',
+    'reui/icon-tile',
     'shared/Money',
   ],
-  note: 'Customer portal overview, after the reference portal: payment banner, figure tiles, payment methods, subscriptions.',
+  note: 'Customer portal overview, after the portal prototype: payment alert, account summary, payment methods, subscriptions.',
 })
 
 export interface PortalOverviewProps {
@@ -85,8 +71,7 @@ export interface PortalOverviewProps {
 }
 
 export function PortalOverview(props: PortalOverviewProps) {
-  const { data, locale } = props
-  const invoices = data.invoices.status === 'ready' ? data.invoices.data : []
+  const invoices = props.data.invoices.status === 'ready' ? props.data.invoices.data : []
   const payable = invoices.filter(isPayable)
   // The one to chase: a failed payment first, then the oldest overdue.
   const attention =
@@ -96,244 +81,259 @@ export function PortalOverview(props: PortalOverviewProps) {
       .sort((a, b) => (a.dueAt?.getTime() ?? 0) - (b.dueAt?.getTime() ?? 0))[0]
 
   return (
-    <>
-      {attention ? (
-        <PaymentBanner
-          invoice={attention}
-          locale={locale}
-          onPay={props.onPay}
-          onView={props.onViewInvoice}
-        />
-      ) : null}
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="bg-card grid overflow-hidden rounded-xl border max-sm:divide-y sm:grid-cols-2 sm:divide-x">
-          <NextBilling {...props} />
-          <AmountDue payable={payable} {...props} />
-        </div>
-        <div className="bg-card overflow-hidden rounded-xl border">
-          <CreditBalance {...props} />
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      {attention ? <PaymentAlert invoice={attention} {...props} /> : null}
+      <AccountSummary {...props} />
       <PaymentMethods {...props} />
       <Subscriptions {...props} />
-    </>
+    </div>
   )
 }
 
-function PaymentBanner({
+/** A neutral card with a red signal: the alert should not paint the whole page red. */
+function PaymentAlert({
   invoice,
   locale,
   onPay,
-  onView,
-}: {
-  invoice: PortalInvoice
-  locale: string | undefined
-  onPay: (invoice: PortalInvoice) => void
-  onView: (invoice: PortalInvoice) => void
-}) {
-  const failed = invoice.status === 'failed'
+  onViewInvoice,
+}: PortalOverviewProps & { invoice: PortalInvoice }) {
   const amount = <Money value={invoice.amountDue} {...(locale ? { locale } : {})} />
   return (
-    <Alert variant="destructive" className="bg-card px-5 py-4">
-      <CircleAlertIcon aria-hidden="true" />
-      <AlertTitle>
-        {failed ? 'Your last payment didn’t go through' : 'You have an overdue invoice'}
-      </AlertTitle>
-      <AlertDescription>
-        <p>
-          {invoice.number} for {amount}
-          {invoice.dueAt ? ` was due ${formatDate(invoice.dueAt, locale)}` : ' is unpaid'}. Pay it
-          now to keep your service running.
+    <section
+      role="alert"
+      className="bg-background flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border p-4 pl-5 shadow-xs"
+    >
+      <IconTile
+        size="default"
+        variant="soft"
+        className="text-destructive-foreground dark:text-destructive"
+        aria-hidden="true"
+      >
+        <AlertCircleIcon />
+      </IconTile>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">
+          {invoice.status === 'failed'
+            ? 'Your last payment didn’t go through'
+            : 'An invoice is past its due date'}
         </p>
-      </AlertDescription>
-      <AlertAction>
-        <Button variant="outline" onClick={() => onView(invoice)}>
+        <p className="text-muted-foreground text-[13px]">
+          {invoice.number} for {amount}
+          {invoice.dueAt ? <> was due {formatDate(invoice.dueAt, locale)}</> : null}. Pay it now to
+          keep your service running.
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" className="h-8 px-3" onClick={() => onViewInvoice(invoice)}>
           View invoice
         </Button>
-        <Button onClick={() => onPay(invoice)}>Pay {amount}</Button>
-      </AlertAction>
-    </Alert>
-  )
-}
-
-function NextBilling({ data, now, locale, onGoTo }: PortalOverviewProps) {
-  if (data.subscriptions.status !== 'ready') return <FigureTileSkeleton />
-  const next = data.subscriptions.data
-    .filter((s) => s.periodEnd && (s.status === 'active' || s.status === 'trialing'))
-    .sort((a, b) => (a.periodEnd?.getTime() ?? 0) - (b.periodEnd?.getTime() ?? 0))[0]
-  return (
-    <FigureTile
-      icon={<CalendarClockIcon />}
-      label="Next billing"
-      value={next?.periodEnd ? formatDate(next.periodEnd, locale) : 'No active plan'}
-      caption={
-        next?.periodEnd
-          ? `${next.planName} plan · ${relativeDays(next.periodEnd, now)}`
-          : 'Nothing is scheduled to bill.'
-      }
-      action={
-        next ? (
-          <Button variant="link" size="sm" onClick={() => onGoTo('usage')}>
-            See usage so far
-          </Button>
-        ) : null
-      }
-    />
-  )
-}
-
-function AmountDue({
-  data,
-  payable,
-  locale,
-  onPay,
-  onGoTo,
-}: PortalOverviewProps & { payable: PortalInvoice[] }) {
-  if (data.invoices.status !== 'ready') return <FigureTileSkeleton />
-  // Amounts in more than one currency are not summed: the tile shows the first, and says there is more.
-  const first = payable[0]
-  if (!first) {
-    const currency = data.invoices.data[0]?.currency ?? 'USD'
-    return (
-      <FigureTile
-        icon={<ReceiptTextIcon />}
-        label="Amount due"
-        value={<Money value={{ amount: '0', currency }} {...(locale ? { locale } : {})} />}
-        caption="You’re all paid up"
-        action={
-          <Button variant="link" size="sm" onClick={() => onGoTo('invoices')}>
-            View invoices
-          </Button>
-        }
-      />
-    )
-  }
-  const overdue = payable.some((i) => i.status === 'overdue' || i.status === 'failed')
-  const more = payable.length - 1
-  return (
-    <FigureTile
-      icon={<ReceiptTextIcon />}
-      label="Amount due"
-      value={<Money value={first.amountDue} {...(locale ? { locale } : {})} />}
-      caption={
-        overdue
-          ? more > 0
-            ? `Overdue · ${more} more unpaid`
-            : 'Overdue'
-          : first.dueAt
-            ? `Due ${formatDate(first.dueAt, locale)}${more > 0 ? ` · ${more} more unpaid` : ''}`
-            : 'Unpaid'
-      }
-      captionTone={overdue ? 'danger' : 'muted'}
-      action={
-        <Button
-          variant="link"
-          size="sm"
-          onClick={() => (more > 0 ? onGoTo('invoices') : onPay(first))}
-        >
-          {more > 0 ? 'See unpaid invoices' : 'Pay now'}
+        <Button className="h-8 px-3" onClick={() => onPay(invoice)}>
+          Pay {amount}
         </Button>
-      }
-    />
+      </div>
+    </section>
   )
 }
 
-function CreditBalance({ data, locale, onAddCredits, onGoTo }: PortalOverviewProps) {
-  if (data.wallets.status !== 'ready') return <FigureTileSkeleton />
-  const wallet: PortalWallet | undefined =
-    data.wallets.data.find((w) => w.active) ?? data.wallets.data[0]
-  if (!wallet) {
-    return (
-      <FigureTile
-        icon={<WalletIcon />}
-        label="Credit balance"
-        value="No wallet"
-        caption="Prepaid credits show up here once you have a wallet."
-      />
-    )
-  }
+function CellSkeleton() {
   return (
-    <FigureTile
-      icon={<WalletIcon />}
-      label="Credit balance"
-      value={<Money value={wallet.balance} {...(locale ? { locale } : {})} />}
-      caption={`${formatNumber(wallet.credits, locale)} credits`}
-      action={
-        wallet.active ? (
-          <Button variant="link" size="sm" onClick={onAddCredits}>
-            Add credits
-          </Button>
-        ) : (
-          <Button variant="link" size="sm" onClick={() => onGoTo('credits')}>
-            View credits
-          </Button>
-        )
-      }
-    />
+    <div className="flex flex-col gap-4 px-6 py-5" aria-hidden="true">
+      <Skeleton className="h-9 w-32" />
+      <Skeleton className="h-7 w-40" />
+      <Skeleton className="h-4 w-24" />
+    </div>
   )
 }
 
+/** Next billing and amount due coupled in one block; credit balance on its own. Three equal columns. */
+function AccountSummary({ data, now, locale, onGoTo, onPay, onAddCredits }: PortalOverviewProps) {
+  const money = (value: Parameters<typeof Money>[0]['value']) => (
+    <Money value={value} {...(locale ? { locale } : {})} />
+  )
+
+  const next =
+    data.subscriptions.status === 'ready'
+      ? data.subscriptions.data
+          .filter((s) => s.periodEnd && (s.status === 'active' || s.status === 'trialing'))
+          .sort((a, b) => (a.periodEnd?.getTime() ?? 0) - (b.periodEnd?.getTime() ?? 0))[0]
+      : undefined
+
+  const invoices = data.invoices.status === 'ready' ? data.invoices.data : []
+  const due = totalDue(invoices)
+  const firstPayable = invoices.find(isPayable)
+  const overdue = invoices.some(
+    (i) => isPayable(i) && (i.status === 'overdue' || i.status === 'failed'),
+  )
+
+  const wallets = data.wallets.status === 'ready' ? data.wallets.data : []
+  const wallet = wallets.find((w) => w.active)
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      <section className="bg-background grid rounded-xl border sm:col-span-2 sm:grid-cols-2 sm:divide-x">
+        {data.subscriptions.status !== 'ready' ? (
+          <CellSkeleton />
+        ) : (
+          <SummaryCell
+            icon={<CalendarClockIcon />}
+            label="Next billing"
+            value={
+              next?.periodEnd ? (
+                formatDate(next.periodEnd, locale)
+              ) : (
+                <span className="text-muted-foreground">No upcoming bill</span>
+              )
+            }
+            hint={
+              next?.periodEnd
+                ? `${next.planName} plan · ${relativeDays(next.periodEnd, now)}`
+                : 'You’re not on a plan yet'
+            }
+            action={next ? { label: 'See usage so far', run: () => onGoTo('usage') } : undefined}
+          />
+        )}
+        <div className="border-t sm:border-t-0">
+          {data.invoices.status !== 'ready' ? (
+            <CellSkeleton />
+          ) : due ? (
+            <SummaryCell
+              icon={<ReceiptIcon />}
+              label="Amount due"
+              value={money(due.amount)}
+              hint={
+                overdue
+                  ? 'Overdue'
+                  : firstPayable?.dueAt
+                    ? `Due ${formatDate(firstPayable.dueAt, locale)}`
+                    : 'Unpaid'
+              }
+              tone={overdue ? 'danger' : 'muted'}
+              action={
+                due.count + due.others > 1
+                  ? { label: 'See unpaid invoices', run: () => onGoTo('invoices') }
+                  : firstPayable
+                    ? { label: 'Pay now', run: () => onPay(firstPayable) }
+                    : undefined
+              }
+            />
+          ) : (
+            <SummaryCell
+              icon={<ReceiptIcon />}
+              label="Amount due"
+              value={
+                <>
+                  <CircleCheckIcon
+                    className="text-success-foreground dark:text-success size-5"
+                    aria-hidden="true"
+                  />
+                  {invoices.length ? 'All paid up' : 'Nothing due'}
+                </>
+              }
+              hint={invoices.length ? 'Every invoice is paid' : 'No invoices yet'}
+              action={
+                invoices.length
+                  ? { label: 'View invoices', run: () => onGoTo('invoices') }
+                  : undefined
+              }
+            />
+          )}
+        </div>
+      </section>
+      <section className="bg-background rounded-xl border">
+        {data.wallets.status !== 'ready' ? (
+          <CellSkeleton />
+        ) : (
+          <SummaryCell
+            icon={<WalletIcon />}
+            label="Credit balance"
+            value={
+              wallet ? (
+                money(wallet.balance)
+              ) : (
+                <span className="text-muted-foreground">No credits</span>
+              )
+            }
+            hint={
+              wallet
+                ? `${formatNumber(wallet.credits, locale)} credits`
+                : 'Credits aren’t set up on your account'
+            }
+            action={wallet ? { label: 'Add credits', run: onAddCredits } : undefined}
+          />
+        )}
+      </section>
+    </div>
+  )
+}
+
+/** Saved cards: default, remove, add. */
 function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: PortalOverviewProps) {
   const gateways: PortalGateway[] = data.gateways.status === 'ready' ? data.gateways.data : []
   const canAdd = gateways.some((g) => g.savesCards)
   const managed = (card: PortalPaymentMethod) =>
     gateways.some((g) => g.provider === card.provider && g.savesCards)
   return (
-    <PortalCard
+    <Section
       title="Payment methods"
       description="Used for invoices and automatic top-ups"
+      flush
       action={
         canAdd ? (
-          <Button variant="outline" onClick={onAddCard}>
+          <Button variant="outline" size="sm" className="h-8 px-3" onClick={onAddCard}>
             <PlusIcon aria-hidden="true" />
             Add card
           </Button>
-        ) : null
+        ) : undefined
       }
     >
       <Loaded load={data.paymentMethods} label="payment methods">
         {(cards) =>
           cards.length === 0 ? (
             <PortalEmpty
+              icon={<CreditCardIcon />}
               title="No saved cards"
-              description={
-                canAdd
-                  ? 'Save a card to pay invoices in one click and turn on automatic top-ups.'
-                  : 'Cards you save at checkout show up here.'
-              }
+              description="Save a card to pay invoices in one click and turn on automatic top-ups."
             />
           ) : (
-            <ItemGroup className="gap-0 divide-y">
-              {cards.map((card) => (
-                <Item key={card.id} role="listitem" className="rounded-none px-6 py-4">
-                  <ItemMedia>
-                    <CardMark mark={card.mark} />
-                  </ItemMedia>
-                  <ItemContent>
-                    <ItemTitle>
-                      {card.brand} •••• {card.last4}
-                      {card.isDefault ? <Badge variant="secondary">Default</Badge> : null}
-                      {card.expired ? <Badge variant="destructive-light">Expired</Badge> : null}
-                    </ItemTitle>
-                    {card.expires ? (
-                      <ItemDescription>Expires {card.expires}</ItemDescription>
-                    ) : null}
-                  </ItemContent>
-                  {managed(card) ? (
-                    <ItemActions>
+            <ul className="divide-border/50 divide-y">
+              {cards.map((card) => {
+                const label = `${card.brand} •••• ${card.last4}`
+                return (
+                  <li key={card.id} className="flex items-center gap-3 px-6 py-3.5">
+                    <CardLogo network={card.network} label={card.brand} />
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-2 text-sm">
+                        {label}
+                        {card.isDefault ? (
+                          <span className="bg-muted text-muted-foreground rounded-full px-2 py-px text-xs">
+                            Default
+                          </span>
+                        ) : null}
+                        {card.expired ? (
+                          <span className="bg-destructive/10 text-destructive-foreground dark:text-destructive rounded-full px-2 py-px text-xs">
+                            Expired
+                          </span>
+                        ) : null}
+                      </p>
+                      {card.expires ? (
+                        <p className="text-muted-foreground text-xs">Expires {card.expires}</p>
+                      ) : null}
+                    </div>
+                    {managed(card) ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={
                             <Button
                               variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Actions for ${card.brand} ending ${card.last4}`}
+                              size="icon"
+                              className="text-muted-foreground size-8"
+                              aria-label={`Options for ${label}`}
                             />
                           }
                         >
                           <MoreHorizontalIcon aria-hidden="true" />
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-44">
                           <DropdownMenuItem
                             disabled={card.isDefault || card.expired}
                             onClick={() => onMakeDefault(card)}
@@ -349,37 +349,40 @@ function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: Portal
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </ItemActions>
-                  ) : null}
-                </Item>
-              ))}
-            </ItemGroup>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
           )
         }
       </Loaded>
-    </PortalCard>
+    </Section>
   )
 }
 
+/** Read-only, as the portal API allows: one row per plan with its period and renewal. */
 function Subscriptions({ brandName, data, now, locale }: PortalOverviewProps) {
   return (
-    <PortalCard
+    <Section
       title="Subscriptions"
       description={`Plans on your account. To change a plan, contact ${brandName ?? 'your account team'}.`}
+      flush
     >
       <Loaded load={data.subscriptions} label="subscriptions">
         {(subscriptions) =>
           subscriptions.length === 0 ? (
             <PortalEmpty
-              title="No active plans"
-              description="When you subscribe to a plan, its period and renewal date show up here."
+              icon={<RepeatIcon />}
+              title="No active plan"
+              description={`When ${brandName ?? 'your account team'} puts you on a plan, its billing period and renewal date show here.`}
             />
           ) : (
             <SimpleTable rows={subscriptions} columns={subscriptionColumns(now, locale)} />
           )
         }
       </Loaded>
-    </PortalCard>
+    </Section>
   )
 }
 
@@ -392,15 +395,17 @@ function subscriptionColumns(
       key: 'plan',
       header: 'Plan',
       cell: (s) => (
-        <div className="flex items-center gap-3">
-          <IconTile size="sm" variant="outline" aria-hidden="true">
+        <span className="flex items-center gap-3">
+          <IconTile size="sm" variant="outline" className="text-foreground/70" aria-hidden="true">
             <RepeatIcon />
           </IconTile>
-          <div>
-            <p className="font-medium">{s.planName}</p>
-            {s.cadence ? <p className="text-muted-foreground text-xs">{s.cadence}</p> : null}
-          </div>
-        </div>
+          <span>
+            <span className="block text-sm font-medium">{s.planName}</span>
+            {s.cadence ? (
+              <span className="text-muted-foreground block text-xs">{s.cadence}</span>
+            ) : null}
+          </span>
+        </span>
       ),
     },
     {
@@ -414,27 +419,31 @@ function subscriptionColumns(
       cell: (s) => {
         const progress = periodProgress(s.periodStart, s.periodEnd, now)
         return (
-          <div className="flex w-56 flex-col gap-1.5">
-            <div className="text-muted-foreground flex justify-between gap-3 text-xs">
-              <span>{formatRange(s.periodStart, s.periodEnd, locale)}</span>
+          <span className="block w-56 space-y-1.5">
+            <span className="text-muted-foreground flex justify-between text-xs tabular-nums">
+              <span>
+                {s.periodStart && s.periodEnd
+                  ? `${formatDate(s.periodStart, locale)} – ${formatDate(s.periodEnd, locale)}`
+                  : '—'}
+              </span>
               {progress ? <span>Day {progress.day}</span> : null}
-            </div>
+            </span>
             {progress ? (
-              <div
-                className="bg-muted h-1 overflow-hidden rounded-full"
+              <span
+                className="bg-muted block h-1 overflow-hidden rounded-full"
                 role="progressbar"
                 aria-label="Period elapsed"
                 aria-valuemin={0}
                 aria-valuemax={progress.days}
                 aria-valuenow={progress.day}
               >
-                <div
-                  className="bg-primary h-full rounded-full"
+                <span
+                  className="bg-primary block h-full rounded-full"
                   style={{ width: `${progress.fraction * 100}%` }}
                 />
-              </div>
+              </span>
             ) : null}
-          </div>
+          </span>
         )
       },
     },
@@ -452,10 +461,10 @@ function subscriptionColumns(
               ? 'Paused'
               : 'Renews and invoices'
         return (
-          <>
-            <p>{next ? formatDate(next, locale) : '—'}</p>
-            <p className="text-muted-foreground text-xs">{note}</p>
-          </>
+          <span>
+            <span className="block text-sm">{next ? formatDate(next, locale) : '—'}</span>
+            <span className="text-muted-foreground block text-xs">{note}</span>
+          </span>
         )
       },
     },

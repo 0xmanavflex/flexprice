@@ -61,18 +61,20 @@ export function toPortalConfig(wire: unknown): PortalConfig {
   const value = record(record(wire)['value'])
   const primary = text(record(value['theme'])['primary_color'])
   const sections = list(value['sections'])
-  const tabs: PortalView[] = []
-  if (sections.length > 0) {
-    const ordered = [...sections].sort((a, b) => num(a['order']) - num(b['order']))
-    for (const section of ordered) {
-      const tab = SECTION_VIEW[text(section['id']).toLowerCase()]
-      if (tab && section['enabled'] !== false && !tabs.includes(tab)) tabs.push(tab)
-    }
+  // The config switches tabs on and off; the order is the portal's own —
+  // Overview, Usage, Credits, Invoices — whatever order the sections are stored in.
+  const enabled = new Set<PortalView>()
+  for (const section of sections) {
+    const tab = SECTION_VIEW[text(section['id']).toLowerCase()]
+    if (tab && section['enabled'] !== false) enabled.add(tab)
   }
-  if (tabs.length > 0 && !tabs.includes('overview')) tabs.unshift('overview')
+  const tabs =
+    sections.length > 0
+      ? PORTAL_VIEWS.filter((v) => v === 'overview' || enabled.has(v))
+      : [...PORTAL_VIEWS]
   return {
     primaryColor: isCssColor(primary) ? primary : null,
-    tabs: tabs.length > 0 ? tabs : [...PORTAL_VIEWS],
+    tabs,
   }
 }
 
@@ -279,7 +281,29 @@ export interface PortalWallet {
   credits: string
   /** What one credit costs to buy, in `currency`. */
   creditPrice: string
-  autoTopup: { enabled: boolean; threshold: string | null; credits: string | null } | null
+  autoTopup: {
+    enabled: boolean
+    threshold: string | null
+    credits: string | null
+    cooldown: PortalCooldown | null
+  } | null
+}
+
+export type PortalCooldownUnit = 'minute' | 'hour' | 'day'
+
+export interface PortalCooldown {
+  value: number
+  unit: PortalCooldownUnit
+}
+
+function cooldownOf(value: unknown): PortalCooldown | null {
+  const c = record(value)
+  const amount = num(c['value'])
+  const unit = text(c['unit']).toLowerCase()
+  if (amount <= 0) return null
+  // Seconds are a backend unit the portal does not offer; show them as minutes, rounded up.
+  if (unit === 'second') return { value: Math.max(1, Math.ceil(amount / 60)), unit: 'minute' }
+  return unit === 'minute' || unit === 'hour' || unit === 'day' ? { value: amount, unit } : null
 }
 
 export function toPortalWallet(wire: unknown): PortalWallet {
@@ -304,6 +328,7 @@ export function toPortalWallet(wire: unknown): PortalWallet {
             enabled: auto['enabled'] === true,
             threshold: decimalText(auto['threshold']) || null,
             credits: decimalText(auto['amount']) || null,
+            cooldown: cooldownOf(auto['cooldown']),
           },
   }
 }
@@ -325,6 +350,10 @@ export interface PortalWalletTransaction {
   amount: Money
   credits: string
   pending: boolean
+  /** For credits added: how many are still unused (`credits_available`). */
+  remaining: string | null
+  /** When credits added expire; null when they never do. */
+  expiresAt: Date | null
 }
 
 const REASON_TITLE: Record<string, string> = {
@@ -364,6 +393,8 @@ export function toPortalWalletTransactions(
       amount: moneyOf(t['amount'], text(t['currency']) || currency),
       credits: decimalText(t['credit_amount']) || '0',
       pending: status === 'PENDING',
+      remaining: decimalText(t['credits_available']) || null,
+      expiresAt: date(t['expiry_date']),
     }
   })
   const total = num(record(body['pagination'])['total'])
@@ -385,14 +416,78 @@ export function walletFlows(
   return { in: sum('in'), out: sum('out') }
 }
 
+export type PortalTopUpState = 'active' | 'running low' | 'expiring soon' | 'used up' | 'expired'
+
+export interface PortalTopUp {
+  id: string
+  title: string
+  detail: string | null
+  at: Date | null
+  granted: string
+  remaining: string
+  /** How much of it is used, 0–1. */
+  consumed: number
+  expiresAt: Date | null
+  /** Whole days until it expires; negative once it has. */
+  daysLeft: number | null
+  state: PortalTopUpState
+}
+
+/** A top-up this close to its expiry, with credits left, is flagged. */
+const EXPIRING_DAYS = 14
+/** A top-up this far consumed is running low. */
+const LOW_SHARE = 0.85
+
+/**
+ * Every credit that came in, with what is left of it: the wallet's CREDIT
+ * transactions and their `credits_available`. Newest first.
+ */
+export function toPortalTopUps(
+  transactions: readonly PortalWalletTransaction[],
+  now: Date = new Date(),
+): PortalTopUp[] {
+  return transactions
+    .filter((t) => t.direction === 'in' && !t.pending)
+    .map((t) => {
+      const granted = Number(t.credits)
+      const remaining = t.remaining ?? t.credits
+      const consumed = granted > 0 ? Math.min(1, Math.max(0, 1 - Number(remaining) / granted)) : 0
+      const daysLeft = t.expiresAt
+        ? Math.ceil((t.expiresAt.getTime() - now.getTime()) / 86_400_000)
+        : null
+      const state: PortalTopUpState =
+        daysLeft !== null && daysLeft < 0
+          ? 'expired'
+          : Number(remaining) === 0
+            ? 'used up'
+            : daysLeft !== null && daysLeft <= EXPIRING_DAYS
+              ? 'expiring soon'
+              : consumed >= LOW_SHARE
+                ? 'running low'
+                : 'active'
+      return {
+        id: t.id,
+        title: t.title,
+        detail: t.detail,
+        at: t.at,
+        granted: t.credits,
+        remaining,
+        consumed,
+        expiresAt: t.expiresAt,
+        daysLeft,
+        state,
+      }
+    })
+}
+
 /* ---- Payment methods and gateways ----------------------------------------- */
 
 export interface PortalPaymentMethod {
   id: string
   provider: string
   brand: string
-  /** A short mark for the brand chip: VISA, MC, AMEX. */
-  mark: string
+  /** The card network, normalised for its logo: visa, mastercard, amex, rupay… or 'card'. */
+  network: string
   last4: string
   /** "08/28". */
   expires: string | null
@@ -400,16 +495,28 @@ export interface PortalPaymentMethod {
   isDefault: boolean
 }
 
-const BRANDS: Record<string, [string, string]> = {
-  visa: ['Visa', 'VISA'],
-  mastercard: ['Mastercard', 'MC'],
-  amex: ['Amex', 'AMEX'],
-  american_express: ['Amex', 'AMEX'],
-  discover: ['Discover', 'DISC'],
-  rupay: ['RuPay', 'RUPAY'],
-  jcb: ['JCB', 'JCB'],
-  diners: ['Diners', 'DC'],
-  unionpay: ['UnionPay', 'UP'],
+/**
+ * Network names, keyed by the brand the gateway sends with everything but
+ * letters removed: Stripe's `card.brand` (visa, amex, diners, cartes_bancaires,
+ * eftpos_au…) and Razorpay's `card.network` (Visa, MasterCard, American
+ * Express, RuPay, Bajaj Finserv…).
+ */
+const NETWORKS: Record<string, [network: string, name: string]> = {
+  visa: ['visa', 'Visa'],
+  mastercard: ['mastercard', 'Mastercard'],
+  amex: ['amex', 'American Express'],
+  americanexpress: ['amex', 'American Express'],
+  discover: ['discover', 'Discover'],
+  diners: ['diners', 'Diners Club'],
+  dinersclub: ['diners', 'Diners Club'],
+  jcb: ['jcb', 'JCB'],
+  unionpay: ['unionpay', 'UnionPay'],
+  maestro: ['maestro', 'Maestro'],
+  rupay: ['rupay', 'RuPay'],
+  cartesbancaires: ['cartesbancaires', 'Cartes Bancaires'],
+  eftpos: ['eftpos', 'eftpos'],
+  eftposau: ['eftpos', 'eftpos'],
+  bajajfinserv: ['bajaj', 'Bajaj Finserv'],
 }
 
 export function toPortalPaymentMethods(
@@ -420,11 +527,9 @@ export function toPortalPaymentMethods(
   for (const group of list(record(wire)['providers'])) {
     for (const item of list(group['items'])) {
       const card = record(item['card'])
-      const code = text(card['brand']).toLowerCase()
-      const [brand, mark] = BRANDS[code] ?? [
-        words(code || text(item['type']) || 'Card'),
-        (code || 'card').slice(0, 4).toUpperCase(),
-      ]
+      const raw = text(card['brand']) || text(card['network'])
+      const key = raw.toLowerCase().replace(/[^a-z]/g, '')
+      const [network, brand] = NETWORKS[key] ?? ['card', raw && key !== 'unknown' ? raw : 'Card']
       const month = num(card['exp_month'])
       const year = num(card['exp_year'])
       const fullYear = year < 100 ? 2000 + year : year
@@ -432,7 +537,7 @@ export function toPortalPaymentMethods(
         id: text(item['id']),
         provider: text(item['provider']) || text(group['provider']),
         brand,
-        mark,
+        network,
         last4: text(card['last4']),
         expires:
           month && year
@@ -684,6 +789,52 @@ export function portalRangeWindow(
         new Date(now.getFullYear(), now.getMonth(), 1),
       )
   }
+}
+
+/**
+ * What is owed across unpaid invoices, summed exactly. Invoices in another
+ * currency are not added in; `others` says how many were left out.
+ */
+export function totalDue(
+  invoices: readonly PortalInvoice[],
+): { amount: Money; count: number; others: number } | null {
+  const unpaid = invoices.filter(isPayable)
+  const first = unpaid[0]
+  if (!first) return null
+  const same = unpaid.filter((i) => i.amountDue.currency === first.amountDue.currency)
+  return {
+    amount: money(decimalSum(same.map((i) => i.amountDue.amount)), first.amountDue.currency),
+    count: same.length,
+    others: unpaid.length - same.length,
+  }
+}
+
+/** The change from `previous` to `current`, as a fraction; null with nothing to compare. */
+export function spendChange(current: Money, previous: Money): number | null {
+  const before = Number(previous.amount)
+  if (!(before > 0)) return null
+  return (Number(current.amount) - before) / before
+}
+
+/** Where a billing period lands at today's pace: spent so far plus the daily average for the days left. */
+export function projectSpend(soFar: Money, daily: Money, daysLeft: number): Money {
+  const rest = decimalTimes(daily.amount, String(Math.max(0, Math.round(daysLeft))))
+  return money(decimalRound(decimalSum([soFar.amount, rest]), 2), soFar.currency)
+}
+
+/**
+ * A per-unit price in a unit people read: "$0.05 per minute", or per 1K or
+ * 1M units when one unit costs less than a cent ("$0.20 per 1K calls").
+ */
+export function unitPriceLabel(price: Money, unitPlural: string): { amount: Money; per: string } {
+  const unit = unitPlural || 'units'
+  const singular = unit.replace(/-months$/, '-month').replace(/(?<!s)s$/, '')
+  const value = Number(price.amount)
+  if (value >= 0.01 || value === 0) return { amount: price, per: singular || 'unit' }
+  const perThousand = decimalTimes(price.amount, '1000')
+  if (Number(perThousand) >= 0.01)
+    return { amount: money(perThousand, price.currency), per: `1K ${unit}` }
+  return { amount: money(decimalTimes(price.amount, '1000000'), price.currency), per: `1M ${unit}` }
 }
 
 /* ---- Buying credits ------------------------------------------------------- */
