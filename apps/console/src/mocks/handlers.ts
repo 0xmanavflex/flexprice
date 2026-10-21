@@ -2579,6 +2579,71 @@ export const handlers = [
   // A single customer, for the detail page. The corpus rows already carry the
   // fuller record (address, timezone, tax treatment, metadata), so the by-id GET
   // just returns the row the SDK then camelCases.
+  // The audit trail (`POST /activity`). The corpus keeps no log, so each record
+  // in scope contributes its creation, newest first. Without a handler the
+  // request fell through to the network and the rail sat on "Loading
+  // activity…" until the retries gave up — and the failure re-rendered the page.
+  http.post(`${BASE}/activity`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      customer_id?: string
+      entity_type?: string
+      entity_id?: string
+      limit?: number
+    }
+    const records: { type: string; row: Record<string, unknown>; label: string }[] = []
+    const add = (type: string, row: Record<string, unknown> | undefined | null, label: string) => {
+      if (row) records.push({ type, row, label: label || readString(row, 'id') })
+    }
+    const subscriptionRows = sourceFor('subscriptions').items
+    const invoiceRows = sourceFor('invoices').items
+    if (body.customer_id) {
+      const customer = byId('customers', body.customer_id)
+      add('customer', customer, customer ? readString(customer, 'name') : '')
+      for (const row of subscriptionRows.filter(
+        (r) => readString(r, 'customer_id') === body.customer_id,
+      )) {
+        add('subscription', row, readString(row, 'id'))
+      }
+      for (const row of invoiceRows.filter(
+        (r) => readString(r, 'customer_id') === body.customer_id,
+      )) {
+        add('invoice', row, readString(row, 'invoice_number'))
+      }
+    } else if (body.entity_type && body.entity_id) {
+      const id = body.entity_id
+      const row =
+        body.entity_type === 'subscription'
+          ? subscriptionRows.find((r) => readString(r, 'id') === id)
+          : body.entity_type === 'invoice'
+            ? (byId('invoices', id) ?? invoiceRows.find((r) => readString(r, 'id') === id))
+            : body.entity_type === 'customer'
+              ? byId('customers', id)
+              : undefined
+      add(
+        body.entity_type,
+        row,
+        row ? readString(row, body.entity_type === 'invoice' ? 'invoice_number' : 'name') : '',
+      )
+    }
+    const items = records
+      .filter(({ row }) => readString(row, 'created_at') !== '')
+      .map(({ type, row, label }) => ({
+        id: `act_${type}_${readString(row, 'id')}`,
+        action: `${type}.created`,
+        occurred_at: readString(row, 'created_at'),
+        source: 'dashboard',
+        entity: { id: readString(row, 'id'), type, label },
+        actor: { type: 'system' },
+        state: row,
+      }))
+      .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || a.id.localeCompare(b.id))
+      .slice(0, Math.min(body.limit ?? 20, 50))
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: body.limit ?? 20, offset: 0 },
+    })
+  }),
+
   http.get(`${BASE}/customers/:id`, ({ params }) => {
     const customer = byId('customers', String(params['id']))
     return customer
@@ -2817,6 +2882,15 @@ export const handlers = [
 
   // RBAC answers `{roles}` / `{role}`, not the `{items, pagination}` envelope.
   http.get(`${BASE}/rbac/roles`, ({ request }) => {
+    // As the live API: without X-Environment-ID the request is refused. This
+    // is what made a fresh load read "Access denied" before an environment
+    // was chosen; the console must not ask before it has one.
+    if (!request.headers.get('X-Environment-ID')) {
+      return HttpResponse.json(
+        { error: { message: 'X-Environment-ID header is required' } },
+        { status: 403 },
+      )
+    }
     const audience = new URL(request.url).searchParams.get('user_type')
     const rows =
       audience === 'service_account'

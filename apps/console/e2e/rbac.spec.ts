@@ -75,3 +75,25 @@ test('a super admin manages members, but never their own roles', async ({ page, 
   await page.goto('/plans/new')
   await expect(page.getByText('Access denied')).toHaveCount(0)
 })
+
+/**
+ * The first-load bug: with no environment chosen yet (a fresh sign-in, a new
+ * tab), the role catalogue was requested without X-Environment-ID, refused,
+ * and the page read "Access denied" until a reload.
+ */
+test('a first load with no environment chosen yet waits, and never says access denied', async ({
+  page,
+  context,
+}) => {
+  await signInAs(context)
+  await context.addInitScript(() => {
+    try {
+      window.localStorage.removeItem('flexprice.environment')
+    } catch {
+      /* private mode */
+    }
+  })
+  await page.goto('/exports')
+  await expect(page.getByRole('heading', { name: 'Destinations' })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText('Access denied')).toHaveCount(0)
+})
