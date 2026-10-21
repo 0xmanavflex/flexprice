@@ -35,23 +35,14 @@ export default defineConfig({
   // A flaky test is a broken test (`e2e/AGENTS.md`), so a retry is not allowed
   // to turn one green. If a test needs a retry to pass, that is the finding.
   retries: 0,
-  /*
-   * Longer in CI, and only in CI.
-   *
-   * The suite runs against the Vite dev server, which compiles a route the
-   * first time it is asked for. With two workers on a shared runner that
-   * cold compile can eat most of Playwright's default 30s, and three
-   * journeys timed out on it — one inside `page.goto` itself, which is the
-   * giveaway: a navigation does not take thirty seconds unless something is
-   * building. The visual config already carries the same note about cold
-   * compiles.
-   *
-   * This buys wall-clock, not leniency: `expect` still gives up after 15s,
-   * so a genuinely missing element fails as fast as it ever did.
-   */
-  timeout: process.env.CI ? 60_000 : 30_000,
-  // A cold first load of the mocked console on a 2-worker runner takes 10-15s,
-  // so Playwright's 5s default fails a different healthy journey on each run.
+  // CI serves a prebuilt bundle (see `webServer` below), so nothing compiles
+  // while a test waits and the default test timeout is enough there too.
+  timeout: 30_000,
+  // Locally the suite runs against the Vite dev server, which compiles each
+  // route the first time it is asked for; that cold first load can take
+  // 10-15s, so Playwright's 5s default would fail a healthy journey. It buys
+  // nothing in CI, where routes are already built, but costs nothing either:
+  // a genuinely missing element still fails within 15s.
   expect: { timeout: 15_000 },
   forbidOnly: !!process.env.CI,
   fullyParallel: true,
@@ -81,16 +72,32 @@ export default defineConfig({
    * The mocked app, served locally, is the system under test.
    *
    * Omitted entirely when `E2E_BASE_URL` is set — then the target is a real URL
-   * the runner must not shadow with a server of its own. `reuseExistingServer`
-   * keeps a dev server already running on :3000 during local iteration, and
-   * refuses to in CI, where a stale server would silently test the wrong build.
+   * the runner must not shadow with a server of its own.
+   *
+   * In CI the mocked app is built once and served with `vite preview`. The dev
+   * server compiles each route on its first request, and on a two-worker
+   * runner that cold compile regularly outlasted the 15s `expect` timeout, so
+   * a different healthy journey failed each run with "element(s) not found".
+   * Building first moves all of that compile into one ~5s step before any test
+   * starts. `vite preview` falls back to `index.html` for unknown paths, so deep
+   * links (`page.goto('/invoices/new')`) still land on the SPA, and it serves
+   * `public/`, so MSW's `mockServiceWorker.js` is there as it is in dev.
+   * `dist-e2e` keeps this bundle apart from a real `dist` build.
+   *
+   * Locally the dev server stays: it starts instantly and picks up edits.
+   * `reuseExistingServer` keeps one already running on :3000 during local
+   * iteration, and refuses to in CI, where a stale server would silently test
+   * the wrong build.
    */
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: 'pnpm --filter console dev',
+        command: process.env.CI
+          ? 'pnpm exec vite build --outDir dist-e2e && pnpm exec vite preview --outDir dist-e2e --port 3000 --strictPort'
+          : 'pnpm --filter console dev',
         url: 'http://localhost:3000',
-        // MSW serves the fixture corpus; nothing reaches a backend.
+        // MSW serves the fixture corpus; nothing reaches a backend. Read at
+        // build time in CI and by the dev server locally.
         env: { VITE_USE_MOCKS: 'true' },
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
