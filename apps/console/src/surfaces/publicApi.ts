@@ -2,8 +2,9 @@
  * Where the public surfaces send their requests: one API origin per region.
  *
  * The console talks to the one API its deployment was built for
- * (`VITE_FLEXPRICE_API_URL`). A public page cannot: a customer portal link names
- * its region in the URL (`/us?token=…`), and one deployment serves every
+ * (`VITE_FLEXPRICE_API_URL`). A public page cannot: a hosted invoice link
+ * (`/us/<token>`) and a customer portal link (`/us?token=…`) name their region
+ * in the URL, and one deployment serves every
  * region's links. So the browser picks the API itself, from this map — there
  * is no edge router in front choosing a build per region.
  *

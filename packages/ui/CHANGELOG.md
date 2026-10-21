@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-19
+
+- Hosted invoice page: `HostedInvoiceView` (centred card with amount, invoice number, due/payment date and method, Download and Pay; loading, not-found, not-valid and failed states) and `HostedInvoiceDetailsSheet` (summary, items, totals, payment history, contact). Installs ReUI `icon-tile`. Source: Stripe hosted invoice page; layout after ReUI receipt-5 and receipt-1.
+
 ## 2026-10-16
 
 - Shared charge actions: contract sheets open existing Price/Commitment editors only for editable lines. Line-specific coupon associations populate Discount flags and multiple-coupon details; contract-wide discounts stay separate. Batched line alerts retain condition and threshold type with read-error retry. Source: supplied charge-sheet.tsx, SDK 2.1.35 mapping contracts; unsupported coupon/alert/revert mutations remain hidden.

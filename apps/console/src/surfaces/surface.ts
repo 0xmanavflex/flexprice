@@ -4,28 +4,29 @@
  * One build and one deployment serve all of them. The domain decides: every
  * surface's domain points at the same project, and `main.tsx` asks this module
  * which surface the hostname belongs to *before* any router mounts, then loads
- * only that surface. The customer portal never downloads the console, and the
- * console never downloads the portal — each is its own chunk.
+ * only that surface. A hosted invoice or the customer portal never downloads
+ * the console, and the console never downloads them — each is its own chunk.
  *
- * Hosts are the primary signal. A path prefix (`/p/…`) is the fallback, for
+ * Hosts are the primary signal. A path prefix (`/i/…`, `/p/…`) is the fallback, for
  * any host that names no surface: localhost, a `*.vercel.app` preview, or a
  * deployment where adding a domain is not possible. Everything else is the
  * console, which is also what an unconfigured deployment gets.
  *
  * Pure and total, so it is tested as a table.
  */
-export type Surface = 'console' | 'portal'
+export type Surface = 'console' | 'invoice' | 'portal'
 
 /** The public surfaces: everything but the console. */
 export type PublicSurface = Exclude<Surface, 'console'>
 
-export const PUBLIC_SURFACES: readonly PublicSurface[] = ['portal']
+export const PUBLIC_SURFACES: readonly PublicSurface[] = ['invoice', 'portal']
 
 /**
  * The path prefix each public surface answers on when the host does not name
  * it. Short on purpose: these end up in links customers are sent.
  */
 export const SURFACE_PATH_PREFIX: Record<PublicSurface, string> = {
+  invoice: '/i',
   portal: '/p',
 }
 
@@ -33,6 +34,7 @@ export const SURFACE_PATH_PREFIX: Record<PublicSurface, string> = {
 export type SurfaceHosts = Record<PublicSurface, readonly string[]>
 
 export const DEFAULT_SURFACE_HOSTS: SurfaceHosts = {
+  invoice: ['invoice.flexprice.io', 'invoices.flexprice.io'],
   portal: ['portal.flexprice.io', 'billing.flexprice.io'],
 }
 
@@ -40,7 +42,7 @@ export interface SurfaceMatch {
   surface: Surface
   /**
    * The part of the path that selected the surface, to strip before the
-   * surface reads its own path: `'/p'` when matched by prefix, `''` by host.
+   * surface reads its own path: `'/i'` or `'/p'` when matched by prefix, `''` by host.
    */
   basePath: string
 }
@@ -70,7 +72,7 @@ export function surfacePath(pathname: string, basePath: string): string {
 }
 
 /**
- * `VITE_SURFACE_HOSTS`, e.g. `{"portal":["portal.staging.flexprice.io"]}`.
+ * `VITE_SURFACE_HOSTS`, e.g. `{"invoice":["invoice-dev.flexprice.io"]}`.
  *
  * Replaces the default list for each surface it names and keeps the rest, so
  * a staging deployment can add its own host without restating production.

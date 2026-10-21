@@ -55,6 +55,13 @@ export {
 } from './billing/invoices/InvoiceLinesEditor'
 export type { EditableLine, InvoiceLinesEditorProps } from './billing/invoices/InvoiceLinesEditor'
 export { InvoiceGrid, InvoiceGridProvenance } from './billing/invoices/InvoiceGrid'
+export { HostedInvoiceView, HostedInvoiceViewProvenance } from './billing/hosted-invoice/HostedInvoiceView'
+export type { HostedInvoiceViewProps } from './billing/hosted-invoice/HostedInvoiceView'
+export {
+  HostedInvoiceDetailsSheet,
+  HostedInvoiceDetailsSheetProvenance,
+} from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
+export type { HostedInvoiceDetailsSheetProps } from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance, linesChanged } from './billing/invoices/InvoiceForm'
 export type {
