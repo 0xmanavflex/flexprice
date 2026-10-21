@@ -93,8 +93,10 @@ export function ContractIntegrations({
 
   // In the Related card the rows are the card's whole body, so rendering nothing
   // left a bare "Related" heading over an empty box. Say so instead. The header
-  // marks have nowhere to put a sentence, so they still render nothing.
-  if (links.length === 0 && !canLink) {
+  // marks have nowhere to put a sentence, so they still render nothing — unless
+  // the parent opened the link dialog itself (a plan's overflow menu), which
+  // has to mount even though there is nothing to show beside it.
+  if (links.length === 0 && !canLink && !linking) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
     ) : null
