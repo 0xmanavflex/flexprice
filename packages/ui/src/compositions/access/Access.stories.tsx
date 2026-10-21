@@ -99,6 +99,28 @@ export const PageLoading: Story = {
   },
 }
 
+/**
+ * Access could not be read (the user or the role catalogue failed): the page
+ * says so and offers a retry. Never "Access denied", which would be a lie.
+ */
+const retry = fn()
+export const PageCheckFailed: Story = {
+  render: () => (
+    <AccessProvider value={{ ...principal([]), status: 'error', retry }}>
+      <RequireAccess requirement={{ entity: 'task', action: 'read' }}>
+        <p>Exports</p>
+      </RequireAccess>
+    </AccessProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText("We couldn't check your access")).toBeVisible()
+    await expect(canvas.queryByText('Access denied')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(retry).toHaveBeenCalled()
+  },
+}
+
 /** A page the principal cannot read: V1's "Access denied", in place. */
 export const PageDenied: Story = {
   render: () => (

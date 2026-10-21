@@ -319,7 +319,7 @@ function ShellLayout() {
   const { pathname, searchStr } = useRouterState({ select: (state) => state.location })
   const params = useParams({ strict: false })
   const environments = useEnvironments()
-  const { session, signOut } = useSession()
+  const { session, signOut, environmentId } = useSession()
   /*
    * Who is signed in, when anyone is.
    *
@@ -331,7 +331,8 @@ function ShellLayout() {
   const user = currentUser.data
   // What the signed-in principal may see and do: roles from `/users/me`,
   // resolved against the role catalogue (V1's `useCurrentUserPermissions`).
-  const access = useAccessControl(session?.token ?? null)
+  // Waits for an environment: the role catalogue needs X-Environment-ID.
+  const access = useAccessControl(session?.token ?? null, { environmentId })
 
   // Each list's filters, kept across a trip into a detail page and back.
   useListMemory()
