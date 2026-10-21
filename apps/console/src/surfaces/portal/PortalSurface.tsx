@@ -47,13 +47,16 @@ export function PortalSurface({
   pathname,
   basePath,
   apiUrls,
+  ownApiOrigin,
 }: {
   pathname: string
   basePath: string
   apiUrls: ApiUrls
+  /** The console's own API, for a region-less link (`/p?token=…`). */
+  ownApiOrigin: string | null
 }) {
   const [location, setLocation] = useState(() =>
-    parsePortalLocation(pathname, window.location.search, apiUrls),
+    parsePortalLocation(pathname, window.location.search, apiUrls, ownApiOrigin),
   )
   const [token] = useState(() => {
     if (!location) return null
@@ -72,11 +75,11 @@ export function PortalSurface({
   useEffect(() => {
     const onPop = () => {
       const path = window.location.pathname.slice(basePath.length) || '/'
-      setLocation(parsePortalLocation(path, window.location.search, apiUrls))
+      setLocation(parsePortalLocation(path, window.location.search, apiUrls, ownApiOrigin))
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
-  }, [basePath, apiUrls])
+  }, [basePath, apiUrls, ownApiOrigin])
 
   const navigate = useCallback(
     (next: PortalLocation, mode: 'push' | 'replace' = 'push') => {

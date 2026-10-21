@@ -26,6 +26,7 @@ import {
   type CustomerTab,
 } from '@fp/ui/pages'
 import { useEnvironments } from '@/app/shell/useEnvironments'
+import { useCustomerPortal } from '@/app/customerPortal/useCustomerPortal'
 import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
@@ -75,6 +76,7 @@ export function CustomerDetailPage({
   onEdit,
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
+  const portal = useCustomerPortal()
   const activity = useActivityLog({ customerId })
   const integrationLinks = useCustomerIntegrationLinks(customerId)
   const integrations = useIntegrations()
@@ -179,6 +181,8 @@ export function CustomerDetailPage({
         }
         onEdit={() => onEdit(customer.data.id)}
         onArchive={() => setArchiving(true)}
+        onOpenPortal={() => void portal.open({ externalId: customer.data?.externalId })}
+        onCopyPortalLink={() => void portal.copy({ externalId: customer.data?.externalId })}
         {...(streamTarget && !sampleEvents.isPending
           ? { onStreamEvents: () => streamEvents(streamTarget.id, streamTarget.planName) }
           : {})}
