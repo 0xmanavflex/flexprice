@@ -106,6 +106,8 @@ export const FOOTER_NAV: NavEntry[] = [
 export const SECONDARY: NavEntry[] = [
   { id: 'settings', label: 'Settings', path: '/settings' },
   { id: 'settings-usage-billing', label: 'Usage & billing', path: '/settings/usage-billing' },
+  // The page Stripe Checkout returns to belongs to Usage & billing, not to the Billing area.
+  { id: 'settings-usage-billing-checkout', label: 'Usage & billing', path: '/billing/checkout' },
   { id: 'settings-discounts', label: 'Coupons', path: '/coupons' },
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },

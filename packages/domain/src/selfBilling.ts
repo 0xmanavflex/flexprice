@@ -94,11 +94,18 @@ export function trialProgress(summary: SelfBillingSummary, today: string): Trial
 /**
  * Why a suspended account is locked: its trial used every event before it
  * ended, or the trial ended unpaid. The API does not say which, so it is read
- * from the usage: a full event cap means the event limit.
+ * from the summary: a full event cap while the trial still has days left means
+ * the event limit. Once the trial's end has passed it is the trial end, cap or
+ * not — the API suspends an expired trial whatever its usage.
  */
-export function lockReason(summary: SelfBillingSummary): LockReason {
+export function lockReason(
+  summary: SelfBillingSummary,
+  today: string = new Date().toISOString().slice(0, 10),
+): LockReason {
   const cap = summary.events?.cap ?? null
-  return cap !== null && (summary.events?.used ?? 0) >= cap ? 'event_limit' : 'trial_end'
+  const capped = cap !== null && (summary.events?.used ?? 0) >= cap
+  const trialOver = summary.trialEndsOn !== null && summary.trialEndsOn <= today
+  return capped && !trialOver ? 'event_limit' : 'trial_end'
 }
 
 export type PillTone = 'trial' | 'urgent' | 'locked'
@@ -153,7 +160,7 @@ export const planRateText = `${SELF_BILLING_PLAN.rate * 100}%`
 export function accountCopy(summary: SelfBillingSummary, today: string): string {
   const cap = summary.events?.cap?.toLocaleString('en-US') ?? ''
   if (summary.state === AccountState.Suspended) {
-    if (lockReason(summary) === 'event_limit')
+    if (lockReason(summary, today) === 'event_limit')
       return `Your account is locked and read-only. You used all ${cap} trial events.`
     return summary.trialEndsOn
       ? `Your account is locked and read-only. Your trial ended on ${shortDate(summary.trialEndsOn)}.`

@@ -1,3 +1,4 @@
+import { useSelfBillingStatus } from '@fp/query'
 import type { ReactNode } from 'react'
 import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
 import { EmbeddedPageContext, WriteGate } from '@fp/ui/compositions'
@@ -108,16 +109,28 @@ const SECTION_ICONS: Record<string, ReactNode> = {
  * route. The tab is still listed and still selectable, which is the behaviour
  * the flag was there to guarantee.
  */
-export function toShellSections(): SettingsSection[] {
+export function toShellSections({
+  hide = [],
+}: { hide?: readonly string[] } = {}): SettingsSection[] {
   return [...RAIL_SECTIONS, ...SETTINGS_SECTIONS.filter((section) => 'hidden' in section)].map(
     (section) => ({
       id: section.id,
       label: section.label,
-      ...('hidden' in section ? { hidden: true } : {}),
+      ...('hidden' in section || hide.includes(section.id) ? { hidden: true } : {}),
       ...(SECTION_ICONS[section.id] ? { icon: SECTION_ICONS[section.id] } : {}),
       tabs: section.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
     }),
   )
+}
+
+/**
+ * The rail as this workspace sees it: Usage & billing only where the
+ * deployment bills its workspaces (self-billing on). The status is the one the
+ * shell already read for the session.
+ */
+function useShellSections(): SettingsSection[] {
+  const selfBilling = useSelfBillingStatus()
+  return toShellSections(selfBilling.data?.enabled ? {} : { hide: ['usage-billing'] })
 }
 
 /**
@@ -136,9 +149,10 @@ export function SettingsFrame({
   onOpenPage: (href: string) => void
   children: ReactNode
 }) {
+  const sections = useShellSections()
   return (
     <SettingsShell
-      sections={toShellSections()}
+      sections={sections}
       sectionId={sectionId}
       tabId=""
       onSectionChange={(next) => openSection(next, onNavigate, onOpenPage)}
@@ -167,10 +181,11 @@ function openSection(
 export function SettingsPage({ sectionId, tabId, onNavigate, onOpenPage }: SettingsPageProps) {
   const section = findSettingsSection(sectionId) ?? SETTINGS_SECTIONS[0]
   const tab = findSettingsTab(section, tabId) ?? firstTabOf(section)
+  const sections = useShellSections()
 
   return (
     <SettingsShell
-      sections={toShellSections()}
+      sections={sections}
       sectionId={section.id}
       tabId={tab.id}
       onSectionChange={(next) => openSection(next, onNavigate, onOpenPage)}

@@ -27,6 +27,10 @@ test('no pill while self-billing is off', async ({ context, page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading').first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Trial ·|Account locked/ })).toHaveCount(0)
+  // A deployment that does not bill its workspaces has no Usage & billing row.
+  await page.goto('/settings')
+  await expect(page.getByRole('button', { name: 'Team' }).first()).toBeVisible()
+  await expect(page.getByText('Usage & billing')).toHaveCount(0)
 })
 
 test('a trial shows its pill on every page, and the card leads to billing and Upgrade', async ({
@@ -91,8 +95,14 @@ test('a locked account reads everything and changes nothing', async ({ context, 
   await expect(page.getByRole('row').nth(1)).toBeVisible()
   const locked = page.locator('[data-access="denied"]').first()
   await expect(locked).toBeVisible()
+  await expect(locked.locator('[data-slot="locked-mark"]')).toHaveCount(1)
   await locked.hover()
   await expect(page.getByText('Your account is locked. Upgrade to make changes.')).toBeVisible()
+  await page.keyboard.press('Escape')
+  // Row menus: the writes are off and carry a lock.
+  await page.getByRole('button', { name: 'Row actions' }).first().click()
+  await expect(page.getByRole('menu').locator('[data-slot="locked-mark"]').first()).toBeVisible()
+  await page.keyboard.press('Escape')
 
   // A create page opened directly is paused.
   await page.goto('/features/new')
