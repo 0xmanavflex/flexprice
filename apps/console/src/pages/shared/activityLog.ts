@@ -30,10 +30,7 @@ export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
   const facts = describeActivity(entry)
   const who = activityByline(entry)
   const source = activitySourceLabel(entry.source)
-  const by =
-    entry.actorType === 'user' || !who
-      ? [who, source].filter(Boolean).join(' · ')
-      : who
+  const by = entry.actorType === 'user' || !who ? [who, source].filter(Boolean).join(' · ') : who
   const href = entityHref(entry)
   return {
     id: entry.id,

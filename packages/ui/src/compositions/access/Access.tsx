@@ -49,6 +49,12 @@ export interface AccessValue {
   isSuperAdmin: boolean
   can: (entity: RbacEntity, action: RbacAction) => boolean
   meets: (requirement: AccessRequirement) => boolean
+  /**
+   * Every write is refused, whatever the roles, and this says why — the
+   * account is locked (read-only) until it upgrades. Absent while writes
+   * follow the roles.
+   */
+  writeLock?: string | null
 }
 
 const ALLOW_ALL: AccessValue = {
@@ -125,6 +131,7 @@ export function useWriteCheck(): (
     if (access.status === 'error') {
       return { allowed: false, reason: "Your access couldn't be checked. Reload to try again." }
     }
+    if (access.writeLock) return { allowed: false, reason: access.writeLock }
     const allowed = access.meets({ entity: target, action: 'write', superAdmin })
     return { allowed, reason: allowed ? null : accessDeniedReason({ superAdmin }) }
   }

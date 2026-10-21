@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { type Corpus, corpus } from '@fp/query/fixtures'
+import { selfBillingHandlers } from './selfBillingHandlers'
 import { svixHandlers } from './svixHandlers'
 
 /**
@@ -2358,6 +2359,8 @@ function sourceFor(key: string): Corpus {
 export const handlers = [
   // The Svix API behind the webhook portal — see `svixHandlers.ts`.
   ...svixHandlers,
+  // Self-billing, off unless a mock account state is picked — see `selfBillingHandlers.ts`.
+  ...selfBillingHandlers,
 
   // Environments. Unlike the create handlers further down — which echo the
   // record back and leave the corpus alone — this one appends, because the

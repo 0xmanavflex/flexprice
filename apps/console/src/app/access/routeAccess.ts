@@ -116,6 +116,12 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
 
   // Settings gates each panel itself (`SettingsPage`), as V1's tabs do.
   '/settings': OPEN,
+  // The tenant's own Flexprice account: open to anyone signed in, and to a
+  // locked account above all — paying is its way back.
+  '/settings/usage-billing': OPEN,
+  '/settings/usage-billing/go-live': OPEN,
+  '/billing/checkout/success': OPEN,
+  '/billing/checkout/failure': OPEN,
   '/environments/new': OPEN,
   '/labels': OPEN,
 }
