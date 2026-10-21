@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import {
+  BillingModel,
   BillingPeriod,
   type CreateSubscription,
   CreditGrantCadence,
   CreditGrantExpiryType,
   PriceType,
+  type SubscriptionPhase,
   emptyPhase,
 } from '@fp/domain'
 import type { Option } from '@ui/compositions/forms/OptionSelect'
@@ -92,6 +94,8 @@ interface PlaygroundProps {
   endDate?: string
   /** Gives the plan's first charge a free trial of this many days. */
   planTrial?: number
+  /** Opens with these changes on the contract's (single) phase. */
+  phase?: Partial<SubscriptionPhase>
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   onStepChange: (step: string) => void
@@ -113,6 +117,7 @@ function SubscriptionFormPlayground({
   planGrant = false,
   endDate,
   planTrial,
+  phase,
   onSubmit,
   onCancel,
   onStepChange,
@@ -187,9 +192,10 @@ function SubscriptionFormPlayground({
       key={`${prefilled}-${customerLocked}`}
       {...(prefilled
         ? {
-            defaultValue: endDate
-              ? { ...PREFILLED, phases: [{ ...emptyPhase(), endDate }] }
-              : PREFILLED,
+            defaultValue:
+              endDate || phase
+                ? { ...PREFILLED, phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
+                : PREFILLED,
           }
         : {})}
       customers={customers}
@@ -494,8 +500,9 @@ export const ConfiguresAChargeCommitment: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
+    // The review lists the charge among those this contract changes.
     await expect(
-      await canvas.findByText('Commits 10,000 units monthly · per minute, 1 window'),
+      await canvas.findByText(/· commits 10,000 units monthly · per minute, 1 window$/),
     ).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
@@ -572,6 +579,7 @@ export const SetsAFixedChargeQuantity: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
+    await expect(await canvas.findByText('· quantity 25')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -964,6 +972,35 @@ export const ReviewAndSubmit: Story = {
   },
 }
 
+/**
+ * The review names each charge this deal changes — new price over the plan's,
+ * quantity, coupon — the first eight, then how many more, and counts them.
+ */
+export const ReviewListsChangedCharges: Story = {
+  args: {
+    prefilled: true,
+    step: 'review',
+    chargeCount: 20,
+    phase: {
+      priceOverrides: [
+        { priceId: 'price_fixed_0', billingModel: BillingModel.FlatFee, amount: '7' },
+      ],
+      quantities: Array.from({ length: 9 }, (_, i) => ({
+        priceId: `price_fixed_${i + 1}`,
+        quantity: String(i + 2),
+      })),
+      discounts: [{ couponId: 'cpn_launch', priceId: 'price_fixed_0' }, { couponId: 'cpn_loyal' }],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('20 charges · 10 changed from the plan')).toBeVisible()
+    await expect(canvas.getByText('· $7.00 (was $9.00) · 20% off (LAUNCH20)')).toBeVisible()
+    await expect(canvas.getByText('and 2 more')).toBeVisible()
+    await expect(canvas.getByText('Loyalty ($50 off) · 1 on single charges')).toBeVisible()
+  },
+}
+
 export const Submitting: Story = {
   // While submitting every field is disabled, so the scrollable page body has nothing focusable.
   parameters: {
@@ -995,6 +1032,12 @@ export const ReviewByStep: Story = {
     for (const title of ['Contract', 'Charges & add-ons', 'Commitments & benefits', 'Billing']) {
       await expect(canvas.getByRole('heading', { name: title })).toBeVisible()
     }
+    await expect(canvas.getByText('Acme Robotics')).toBeVisible()
+    await expect(canvas.getByText('Oct 20, 2026 → until cancelled')).toBeVisible()
+    await expect(canvas.getByText("4 charges · all at the plan's prices")).toBeVisible()
+    await expect(canvas.getByText('Prorates changes')).toBeVisible()
+    await expect(canvas.getByText('VAT 20%')).toBeVisible()
+    await expect(canvas.getByText('Each period')).toBeVisible()
     await expect(canvas.getByText('14 days')).toBeVisible()
     await expect(canvas.getByText(/^3, from the plan/)).toBeVisible()
     await expect(canvas.queryByText('First invoice')).toBeNull()

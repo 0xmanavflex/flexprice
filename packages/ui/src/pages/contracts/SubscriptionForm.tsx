@@ -969,6 +969,8 @@ export function SubscriptionForm({
         showCustomer={!customerLocked}
         today={today}
         onEdit={flow.goTo}
+        whoPays={whoPays}
+        hasFixedCharges={hasFixedCharges}
       />,
     ),
   }
@@ -3156,7 +3158,9 @@ function BillingStep({
 /**
  * Everything the contract will be, one card per step, each with its Edit.
  * A row names what was chosen and how many — the step itself holds the
- * detail.
+ * detail — except the charges this deal changes, which are listed one by one
+ * (the first eight, then how many more) so a long plan still says exactly
+ * what differs from it.
  */
 function ReviewStep({
   values,
@@ -3170,25 +3174,26 @@ function ReviewStep({
   showCustomer,
   today,
   onEdit,
+  whoPays,
+  hasFixedCharges,
 }: {
   values: CreateSubscription
   customerLabel: string | undefined
   planLabel: string | undefined
   charges: Charge[]
   entitlements: Entitlement[]
-  coupons: readonly Option[]
+  coupons: readonly SubscriptionCouponOption[]
   addons: readonly Option[]
   customers: readonly SubscriptionCustomerOption[]
   showCustomer: boolean
   today: string
   onEdit: (stepId: string) => void
+  whoPays: WhoPays
+  hasFixedCharges: boolean
 }) {
   const starts = phaseStarts(values)
-  const couponName = (id: string) => coupons.find((c) => c.value === id)?.label ?? id
-  const chargeLabel = (id: string) => {
-    const charge = charges.find((c) => c.id === id)
-    return charge ? chargeName(charge) : id
-  }
+  const couponOf = (id: string) => coupons.find((c) => c.value === id)
+  const couponName = (id: string) => couponOf(id)?.label ?? id
   const customerByExternalId = (externalId: string) =>
     customers.find((c) => c.externalId === externalId)?.label ?? externalId
   const period = BILLING_PERIOD_LABEL[values.billingPeriod].toLowerCase()
@@ -3197,14 +3202,43 @@ function ReviewStep({
       ? `${values.currency.toUpperCase()} · ${everyPeriod(values.billingPeriod, values.billingPeriodCount)}`
       : `${values.currency.toUpperCase()} · ${period}`
   const changedEntitlements = values.entitlementOverrides.length
-  const other = [
-    values.prorate ? 'Prorates changes' : 'No proration',
-    values.autoInvoiceThreshold
-      ? `Invoices early at ${money(values.autoInvoiceThreshold, values.currency)}`
-      : null,
+  const end = values.phases[values.phases.length - 1]?.endDate ?? ''
+  const single = values.phases.length === 1
+  const phase = values.phases[0]!
+  const allDiscounts = values.phases.flatMap((p) => p.discounts)
+  const wholeDiscounts = allDiscounts.filter((d) => !d.priceId)
+  const chargeDiscounts = allDiscounts.length - wholeDiscounts.length
+
+  // What this contract changes, charge by charge: added ones first, as the table lists them.
+  const changed: { key: string; name: string; parts: string[] }[] = [
+    ...phase.extraCharges.map((extra, index) => ({
+      key: `extra-${index}`,
+      name: extra.charge.displayName || 'Contract charge',
+      parts: [`added at ${extraPriceText(extra)}`],
+    })),
+    ...charges.flatMap((charge) => {
+      const override = phase.priceOverrides.find((o) => o.priceId === charge.id)
+      const quantity = phase.quantities.find((q) => q.priceId === charge.id)
+      const commitment = values.chargeCommitments.find((c) => c.priceId === charge.id)
+      const discount = phase.discounts.find((d) => d.priceId === charge.id)
+      const coupon = discount ? couponOf(discount.couponId) : undefined
+      const parts = [
+        override ? `${priceText(charge, override)} (was ${priceText(charge, undefined)})` : null,
+        quantity ? `quantity ${quantity.quantity}` : null,
+        commitment
+          ? commitmentText(commitment, values.currency).replace(/^Commits/, 'commits')
+          : null,
+        discount
+          ? coupon?.discount
+            ? `${coupon.discount} off${coupon.code ? ` (${coupon.code})` : ''}`
+            : `coupon ${coupon?.label ?? discount.couponId}`
+          : null,
+      ].filter((part): part is string => part !== null)
+      return parts.length > 0 ? [{ key: charge.id, name: chargeName(charge), parts }] : []
+    }),
   ]
-    .filter(Boolean)
-    .join(' · ')
+  const billed = charges.length + phase.extraCharges.length
+  const shown = changed.slice(0, 8)
 
   return (
     <div className="flex flex-col gap-5">
@@ -3212,6 +3246,10 @@ function ReviewStep({
         {showCustomer ? <ReviewRow label="Customer" value={customerLabel ?? '—'} /> : null}
         <ReviewRow label="Plan" value={planLabel ?? '—'} />
         <ReviewRow label="Billing" value={billing} />
+        <ReviewRow
+          label="Runs"
+          value={`${formatDay(values.startDate || today)} → ${end ? formatDay(end) : 'until cancelled'}`}
+        />
         <ReviewRow
           label="Bill on"
           value={
@@ -3229,60 +3267,102 @@ function ReviewStep({
       </ReviewCard>
 
       <ReviewCard title="Charges & add-ons" step="phases" onEdit={onEdit}>
-        {values.phases.map((phase, index) => {
-          const billed = charges.length + phase.extraCharges.length
-          const detail = [
-            `${formatDay(starts[index] || (index === 0 ? today : ''))} → ${
-              phase.endDate ? formatDay(phase.endDate) : 'until cancelled'
-            }`,
-            `${billed} ${billed === 1 ? 'charge' : 'charges'}`,
-            phase.priceOverrides.length > 0 ? `${phase.priceOverrides.length} repriced` : null,
-            phase.extraCharges.length > 0 ? `${phase.extraCharges.length} added` : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')
-          return (
-            <div key={index}>
-              <ReviewRow label={`Phase ${index + 1}`} value={detail} />
-              {phase.priceOverrides.map((override) => {
-                const charge = charges.find((c) => c.id === override.priceId)
-                return charge ? (
-                  <ReviewRow
-                    key={override.priceId}
-                    label={chargeName(charge)}
-                    value={`${priceText(charge, override)} (plan: ${priceText(charge, undefined)})`}
-                    nested
-                  />
-                ) : null
-              })}
-              {phase.discounts.map((discount, i) => (
-                <ReviewRow
-                  key={`${discount.couponId}-${i}`}
-                  label={couponName(discount.couponId)}
-                  value={
-                    discount.priceId
-                      ? `Coupon on ${chargeLabel(discount.priceId)}`
-                      : 'Coupon on the whole phase'
-                  }
-                  nested
-                />
-              ))}
-            </div>
-          )
-        })}
+        {single ? (
+          <>
+            <ReviewRow
+              label="Charges"
+              value={`${chargeCountText(billed)} · ${
+                changed.length > 0
+                  ? `${changed.length} changed from the plan`
+                  : "all at the plan's prices"
+              }${phase.extraCharges.length > 0 ? ` · ${phase.extraCharges.length} added` : ''}`}
+            />
+            {changed.length > 0 ? (
+              <ReviewRow
+                label="Changed charges"
+                value={
+                  <ul className="flex flex-col gap-1.5">
+                    {shown.map((item) => (
+                      <li key={item.key} className="text-[13px]">
+                        <span className="font-medium">{item.name}</span>{' '}
+                        <span className="text-muted-foreground">· {item.parts.join(' · ')}</span>
+                      </li>
+                    ))}
+                    {changed.length > shown.length ? (
+                      <li className="text-muted-foreground text-[13px]">
+                        and {changed.length - shown.length} more
+                      </li>
+                    ) : null}
+                  </ul>
+                }
+              />
+            ) : null}
+          </>
+        ) : (
+          values.phases.map((p, index) => {
+            const count = charges.length + p.extraCharges.length
+            const detail = [
+              `${formatDay(starts[index] || (index === 0 ? today : ''))} → ${
+                p.endDate ? formatDay(p.endDate) : 'until cancelled'
+              }`,
+              chargeCountText(count),
+              p.priceOverrides.length > 0 ? `${p.priceOverrides.length} repriced` : null,
+              p.extraCharges.length > 0 ? `${p.extraCharges.length} added` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')
+            return (
+              <div key={index}>
+                <ReviewRow label={`Phase ${index + 1}`} value={detail} />
+                {p.priceOverrides.map((override) => {
+                  const charge = charges.find((c) => c.id === override.priceId)
+                  return charge ? (
+                    <ReviewRow
+                      key={override.priceId}
+                      label={chargeName(charge)}
+                      value={`${priceText(charge, override)} (was ${priceText(charge, undefined)})`}
+                      nested
+                    />
+                  ) : null
+                })}
+              </div>
+            )
+          })
+        )}
+        <ReviewRow label="Proration" value={values.prorate ? 'Prorates changes' : 'No proration'} />
+        <ReviewRow
+          label="Discount"
+          value={
+            [
+              wholeDiscounts.length > 0
+                ? wholeDiscounts
+                    .map((d) => {
+                      const coupon = couponOf(d.couponId)
+                      return coupon?.discount
+                        ? `${coupon.label} (${coupon.discount} off)`
+                        : couponName(d.couponId)
+                    })
+                    .join(', ')
+                : null,
+              chargeDiscounts > 0 ? `${chargeDiscounts} on single charges` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || 'None'
+          }
+        />
         <ReviewRow
           label="Add-ons"
           value={
             values.addons.length === 0
               ? 'None'
-              : values.addons
+              : `${values.addons.length}: ${values.addons
                   .map(
                     (addon) =>
                       addon.name ||
                       addons.find((a) => a.value === addon.addonId)?.label ||
                       addon.addonId,
                   )
-                  .join(', ')
+                  .join(', ')}`
           }
         />
       </ReviewCard>
@@ -3300,14 +3380,6 @@ function ReviewStep({
               : 'None'
           }
         />
-        {values.chargeCommitments.map((commitment) => (
-          <ReviewRow
-            key={commitment.priceId}
-            nested
-            label={chargeLabel(commitment.priceId)}
-            value={commitmentText(commitment, values.currency)}
-          />
-        ))}
         <ReviewRow
           label="Entitlements"
           value={
@@ -3323,12 +3395,12 @@ function ReviewStep({
           value={
             values.creditGrants.length === 0
               ? 'None'
-              : values.creditGrants
+              : `${values.creditGrants.length}: ${values.creditGrants
                   .map(
                     (grant) =>
                       `${grant.name} (${Number(grant.credits || 0).toLocaleString('en-US')})`,
                   )
-                  .join(', ')
+                  .join(', ')}`
           }
         />
         <ReviewRow
@@ -3339,7 +3411,7 @@ function ReviewStep({
               : values.taxes
                   .map(
                     (tax) =>
-                      `${tax.name || tax.taxRateCode}${tax.percentage ? ` (${tax.percentage}%)` : ''}`,
+                      `${tax.name || tax.taxRateCode}${tax.percentage ? ` ${tax.percentage}%` : ''}`,
                   )
                   .join(', ')
           }
@@ -3354,9 +3426,11 @@ function ReviewStep({
         <ReviewRow
           label="Billing customer"
           value={
-            values.invoicingCustomerExternalId
-              ? customerByExternalId(values.invoicingCustomerExternalId)
-              : 'Same customer'
+            whoPays === WhoPays.Same
+              ? 'Same customer'
+              : values.invoicingCustomerExternalId
+                ? customerByExternalId(values.invoicingCustomerExternalId)
+                : 'Not chosen'
           }
         />
         <ReviewRow
@@ -3367,7 +3441,14 @@ function ReviewStep({
               : values.inheritedCustomerExternalIds.map(customerByExternalId).join(', ')
           }
         />
-        <ReviewRow label="Other" value={other} />
+        <ReviewRow
+          label="Auto-invoice threshold"
+          value={
+            values.autoInvoiceThreshold && !hasFixedCharges
+              ? `${values.currency.toUpperCase()} ${values.autoInvoiceThreshold}`
+              : 'Each period'
+          }
+        />
       </ReviewCard>
     </div>
   )
@@ -3465,7 +3546,7 @@ function ReviewRow({
   strong = false,
 }: {
   label: string
-  value: string
+  value: ReactNode
   /** A detail under the row before it, e.g. a repriced charge under its phase. */
   nested?: boolean
   strong?: boolean
@@ -3480,7 +3561,7 @@ function ReviewRow({
       <span className={nested ? 'text-muted-foreground pl-4 text-xs' : 'text-muted-foreground'}>
         {label}
       </span>
-      <span
+      <div
         className={
           nested
             ? 'text-muted-foreground text-xs'
@@ -3490,7 +3571,7 @@ function ReviewRow({
         }
       >
         {value}
-      </span>
+      </div>
     </div>
   )
 }
