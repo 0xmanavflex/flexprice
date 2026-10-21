@@ -175,10 +175,18 @@ export function useSelfBillingSummary(options: { enabled?: boolean } = {}) {
   })
 }
 
-/** Refetches the status and the summary: after a checkout settles, the pill and the lock follow. */
+/**
+ * Refetches the status and the summary — after a checkout settles, the pill and
+ * the lock follow — and the environment list: activation creates the
+ * production environment, which "Open production" has to find.
+ */
 export function useRefreshSelfBilling() {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ queryKey: queryKeys.tenant.selfBilling() })
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.tenant.selfBilling() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() }),
+    ])
 }
 
 /** The checkout body, as the API names the address. */

@@ -280,7 +280,12 @@ export function ConsoleShell({
       >
         {children}
       </AppShell>
-      <EnvironmentFormPage open={creatingEnvironment} onOpenChange={setCreatingEnvironment} />
+      <EnvironmentFormPage
+        open={creatingEnvironment}
+        onOpenChange={setCreatingEnvironment}
+        environments={environments}
+        onSelectEnvironment={onEnvironmentChange}
+      />
       <EnvironmentRenameFormPage
         environment={renamingEnvironment}
         onClose={() => setRenamingEnvironment(null)}

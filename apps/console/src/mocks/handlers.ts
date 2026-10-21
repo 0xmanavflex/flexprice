@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { type Corpus, corpus } from '@fp/query/fixtures'
 import { selfBillingHandlers } from './selfBillingHandlers'
+import { mockAccountState } from './selfBillingState'
 import { svixHandlers } from './svixHandlers'
 
 /**
@@ -2371,14 +2372,22 @@ export const handlers = [
   // console switches to what you just created and then refetches the list. An
   // echo-only mock would switch to an id the next list does not contain, and
   // the hook would correctly treat it as stale and bounce you back out.
-  http.get(`${BASE}/environments`, () =>
-    HttpResponse.json({
-      environments,
-      total: environments.length,
+  http.get(`${BASE}/environments`, () => {
+    // A self-billing trial (or a locked one) has no production yet: paying
+    // creates it, as the API does on activation. Self-billing off, or live,
+    // lists everything.
+    const state = mockAccountState()
+    const preProduction = state !== null && state !== 'active' && state !== 'due'
+    const listed = preProduction
+      ? environments.filter((environment) => environment['type'] !== 'production')
+      : environments
+    return HttpResponse.json({
+      environments: listed,
+      total: listed.length,
       offset: 0,
       limit: 50,
-    }),
-  ),
+    })
+  }),
   http.post(`${BASE}/environments`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     const created = {
