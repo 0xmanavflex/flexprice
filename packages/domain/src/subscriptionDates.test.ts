@@ -28,12 +28,12 @@ describe('contract and phase dates', () => {
         startDate: '2030-01-01',
         phases: [{ ...emptyPhase(), endDate: '2030-01-01' }],
       }),
-    ).toEqual(['The end must be after the start'])
+    ).toEqual(['The end has to come after the start'])
   })
 
   it('treats no start date as today', () => {
     expect(endErrors({ ...base, phases: [{ ...emptyPhase(), endDate: '2000-01-01' }] })).toEqual([
-      'The contract starts today, so it must end after today',
+      'The end has to come after the start',
     ])
   })
 

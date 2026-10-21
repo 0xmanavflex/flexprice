@@ -18,7 +18,12 @@ import {
   type BucketSize,
   CommitmentKind,
   type CancelSubscription,
+  type ChargeCommitment,
+  CommitmentType,
+  type CommitmentPriceBase,
+  type CommitmentWindow,
   type CreateSubscription,
+  WindowBillingModel,
   type SubscriptionPhase,
   phaseStarts,
   type ChangeLineQuantity,
@@ -575,6 +580,83 @@ function overrideLines(phase: SubscriptionPhase): Record<string, unknown>[] {
   return [...repriced, ...counted]
 }
 
+/**
+ * A charge's bucket size, set with its commitment, folded into the override
+ * lines: onto the charge's own override when it has one, else a line of its own.
+ */
+function withBuckets(
+  lines: Record<string, unknown>[],
+  commitments: readonly ChargeCommitment[],
+): Record<string, unknown>[] {
+  const buckets = new Map(
+    commitments.filter((c) => c.bucketSize).map((c) => [c.priceId, c.bucketSize]),
+  )
+  if (buckets.size === 0) return lines
+  const merged = lines.map((line) => {
+    const bucket = buckets.get(line.priceId as string)
+    return bucket ? { ...line, bucketSize: bucket } : line
+  })
+  const covered = new Set(lines.map((line) => line.priceId))
+  for (const [priceId, bucketSize] of buckets)
+    if (!covered.has(priceId)) merged.push({ priceId, bucketSize })
+  return merged
+}
+
+/** `HH:MM` as the API's `{ hour, minute }`. */
+function toBucket(time: string): { hour: number; minute: number } {
+  const [hour = 0, minute = 0] = time.split(':').map(Number)
+  return { hour, minute }
+}
+
+/** A window's own price: the plan charge it reprices, at the window's rate. */
+function windowPrice(window: CommitmentWindow, base: CommitmentPriceBase): Record<string, unknown> {
+  return {
+    type: PriceType.Usage,
+    priceUnitType: 'FIAT',
+    entityId: base.entityId,
+    entityType: base.entityType,
+    meterId: base.meterId,
+    currency: base.currency.toLowerCase(),
+    billingPeriod: base.billingPeriod,
+    billingPeriodCount: base.billingPeriodCount,
+    invoiceCadence: base.invoiceCadence,
+    billingModel: window.billingModel,
+    amount: window.price,
+    ...(window.billingModel === WindowBillingModel.Package
+      ? { transformQuantity: { divideBy: Number(window.packageSize), round: 'up' } }
+      : {}),
+  }
+}
+
+/** One charge's commitment as `line_item_commitments` takes it. */
+function toLineItemCommitment(commitment: ChargeCommitment): Record<string, unknown> {
+  const windowed = commitment.windowed && Boolean(commitment.bucketSize)
+  const base = commitment.priceBase
+  return {
+    commitmentType: commitment.type,
+    ...(commitment.type === CommitmentType.Amount
+      ? { commitmentAmount: Number(commitment.value) }
+      : { commitmentQuantity: Number(commitment.value) }),
+    ...(commitment.duration ? { commitmentDuration: commitment.duration } : {}),
+    ...(commitment.overageFactor ? { overageFactor: Number(commitment.overageFactor) } : {}),
+    enableTrueUp: commitment.trueUp,
+    ...(windowed ? { isWindowCommitment: true } : {}),
+    ...(windowed && base && commitment.windows.length > 0
+      ? {
+          commitmentTimeBuckets: commitment.windows.map((window) => ({
+            start: toBucket(window.start),
+            end: toBucket(window.end),
+            commitmentType: window.type,
+            commitmentValue: window.value,
+            ...(window.overageFactor ? { overageFactor: window.overageFactor } : {}),
+            trueUpEnabled: window.trueUp,
+            price: windowPrice(window, base),
+          })),
+        }
+      : {}),
+  }
+}
+
 /** A phase's discounts as the API's two coupon fields: whole-phase ids, and ids per charge. */
 function couponFields(phase: SubscriptionPhase): Record<string, unknown> {
   const whole = phase.discounts.filter((d) => !d.priceId).map((d) => d.couponId)
@@ -616,8 +698,13 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
     ...(last?.endDate ? { endDate: utcDay(last.endDate) } : {}),
     ...(draft.trialPeriodDays ? { trialPeriodDays: draft.trialPeriodDays } : {}),
     ...(draft.includePriceIds ? { includePriceIds: draft.includePriceIds } : {}),
-    ...(first && overrideLines(first).length > 0
-      ? { overrideLineItems: overrideLines(first) }
+    ...(first && withBuckets(overrideLines(first), phased ? [] : draft.chargeCommitments).length > 0
+      ? {
+          overrideLineItems: withBuckets(
+            overrideLines(first),
+            phased ? [] : draft.chargeCommitments,
+          ),
+        }
       : {}),
     ...(first ? couponFields(first) : {}),
     // Charges for this contract alone: on the contract when it has one phase,
@@ -643,16 +730,7 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
             lineItemCommitments: Object.fromEntries(
               draft.chargeCommitments.map((commitment) => [
                 commitment.priceId,
-                {
-                  commitmentType: commitment.type,
-                  ...(commitment.type === 'amount'
-                    ? { commitmentAmount: Number(commitment.value) }
-                    : { commitmentQuantity: Number(commitment.value) }),
-                  ...(commitment.overageFactor
-                    ? { overageFactor: Number(commitment.overageFactor) }
-                    : {}),
-                  enableTrueUp: commitment.trueUp,
-                },
+                toLineItemCommitment(commitment),
               ]),
             ),
           }

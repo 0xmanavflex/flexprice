@@ -8,13 +8,13 @@ import type { WorkflowStep } from '@fp/ui/compositions'
  * The stepper renders whatever it is handed.
  *
  * The ids mirror the form's own steps (`SUBSCRIPTION_FORM_STEPS` in
- * `@fp/ui`): customer & plan, phases & charges, add-ons & benefits, billing,
- * review. `commitments` keeps its id for links already shared.
+ * `@fp/ui`): contract, charges & add-ons, commitments & benefits, billing,
+ * review. The ids predate those titles and are kept for links already shared.
  */
 export const SUBSCRIPTION_STEPS = [
-  { id: 'plan', title: 'Customer & plan' },
-  { id: 'phases', title: 'Phases & charges' },
-  { id: 'commitments', title: 'Add-ons & benefits' },
+  { id: 'plan', title: 'Contract' },
+  { id: 'phases', title: 'Charges & add-ons' },
+  { id: 'commitments', title: 'Commitments & benefits' },
   { id: 'billing', title: 'Billing' },
   { id: 'review', title: 'Review' },
 ] as const

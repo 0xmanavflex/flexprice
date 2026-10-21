@@ -54,6 +54,9 @@ export interface ContractChargeDialogProps {
   onEnd: (line: SubscriptionLine, draft: EndContractCharge) => void
   isSubmitting?: boolean
   submitError?: string | null
+  /** The add dialog's title and its opening line, where a caller words them its own way. */
+  addTitle?: string
+  addDescription?: string
 }
 
 /**
@@ -73,9 +76,11 @@ export function ContractChargeDialog({
   onEnd,
   isSubmitting = false,
   submitError = null,
+  addTitle = 'Add charge',
+  addDescription = 'Only this contract gets the charge; the plan does not change.',
 }: ContractChargeDialogProps) {
   const title =
-    state?.mode === 'add' ? 'Add charge' : state?.mode === 'edit' ? 'Edit charge' : 'End charge'
+    state?.mode === 'add' ? addTitle : state?.mode === 'edit' ? 'Edit charge' : 'End charge'
 
   return (
     <FormDialog
@@ -89,6 +94,7 @@ export function ContractChargeDialog({
       {state?.mode === 'add' ? (
         <AddStep
           key="add"
+          description={addDescription}
           currency={currency}
           billingPeriod={billingPeriod ?? Period.Monthly}
           meters={meters}
@@ -126,6 +132,7 @@ export function ContractChargeDialog({
 
 /** First step: fixed or metered. The form that follows is the granular one for that type. */
 function AddStep({
+  description,
   currency,
   billingPeriod,
   meters,
@@ -135,6 +142,7 @@ function AddStep({
   isSubmitting,
   submitError,
 }: {
+  description: string
   currency: string
   billingPeriod: BillingPeriod
   meters: MeterOption[]
@@ -165,9 +173,7 @@ function AddStep({
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-muted-foreground text-sm">
-        Only this contract gets the charge; the plan does not change.
-      </p>
+      <p className="text-muted-foreground text-sm">{description}</p>
       <ChoiceCards
         label="Charge type"
         value={type}

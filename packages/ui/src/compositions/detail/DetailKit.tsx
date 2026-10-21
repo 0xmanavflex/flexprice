@@ -562,6 +562,7 @@ export function Composer({
   onCancel,
   submitting,
   disabled,
+  secondary,
 }: {
   title?: string
   children: ReactNode
@@ -571,6 +572,8 @@ export function Composer({
   onCancel?: () => void
   submitting?: boolean
   disabled?: boolean
+  /** A footer action on the left, apart from Cancel and submit (e.g. "Clear"). */
+  secondary?: ReactNode
 }) {
   const inDialog = useInFormDialog()
   return (
@@ -584,6 +587,7 @@ export function Composer({
       {title ? <p className="text-sm font-medium">{title}</p> : null}
       {children}
       <div className="flex items-center justify-end gap-2 border-t pt-5">
+        {secondary ? <div className="mr-auto">{secondary}</div> : null}
         {onCancel ? (
           <Button type="button" variant="ghost" className="h-8" onClick={onCancel}>
             Cancel
