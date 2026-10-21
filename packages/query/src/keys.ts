@@ -262,4 +262,10 @@ export const queryKeys = {
       ['alertSettings', 'list', filter] as const,
     detail: (id: string) => ['alertSettings', 'detail', id] as const,
   },
+  /** Every key starts with the portal session, so one invalidation refreshes the portal. */
+  customerPortal: {
+    all: (apiOrigin: string, token: string) => ['customerPortal', apiOrigin, token] as const,
+    part: (apiOrigin: string, token: string, ...rest: readonly unknown[]) =>
+      ['customerPortal', apiOrigin, token, ...rest] as const,
+  },
 } as const

@@ -653,3 +653,24 @@ export { useCustomerNames, useFeatureNames } from './entityNames'
 export type { NameMap } from './entityNames'
 export { toAccessControl, useAccessControl } from './access'
 export type { AccessControl, AccessStatus } from './access'
+export {
+  useAddPortalPaymentMethod,
+  usePayPortalInvoice,
+  usePortalConfig,
+  usePortalCustomer,
+  usePortalGateways,
+  usePortalInvoice,
+  usePortalInvoicePdf,
+  usePortalInvoices,
+  usePortalPaymentMethods,
+  usePortalQuotas,
+  usePortalSpend,
+  usePortalSubscriptions,
+  usePortalWalletTransactions,
+  usePortalWallets,
+  useRemovePortalPaymentMethod,
+  useSetDefaultPortalPaymentMethod,
+  useTopUpPortalWallet,
+} from './customerPortal'
+export type { PortalAction, PortalQuery } from './customerPortal'
+export type { PortalAuth } from '@fp/api'

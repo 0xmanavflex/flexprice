@@ -224,6 +224,7 @@
   "packages/ui/src/components/reui/filters/filters.tsx": "50a0c890cc27605d",
   "packages/ui/src/components/reui/frame.tsx": "3bac42044ffc91c2",
   "packages/ui/src/components/reui/icon-stack.tsx": "1690c72d4b44fe26",
+  "packages/ui/src/components/reui/icon-tile.tsx": "9357a16cde9eb210",
   "packages/ui/src/components/reui/number-field.tsx": "dff12715758c2390",
   "packages/ui/src/components/reui/rating.tsx": "14778f7032f6418f",
   "packages/ui/src/components/reui/stepper.tsx": "5e2648c166636755",

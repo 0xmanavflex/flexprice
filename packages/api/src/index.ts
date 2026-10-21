@@ -159,3 +159,23 @@ export {
   updateWebhookEndpoint,
 } from './webhooks'
 export type { SvixEndpointIn, SvixListPage, SvixMessageStatus, SvixSession } from './webhooks'
+export {
+  addPortalPaymentMethod,
+  deletePortalPaymentMethod,
+  getPortalConfig,
+  getPortalCustomer,
+  getPortalIntegrations,
+  getPortalInvoice,
+  getPortalInvoicePdf,
+  getPortalInvoices,
+  getPortalPaymentMethods,
+  getPortalSubscriptions,
+  getPortalUsageAnalytics,
+  getPortalUsageSummary,
+  getPortalWalletTransactions,
+  getPortalWallets,
+  payPortalInvoice,
+  setDefaultPortalPaymentMethod,
+  topUpPortalWallet,
+} from './customerPortal'
+export type { PortalAuth } from './customerPortal'
