@@ -631,25 +631,15 @@ const roles: Record<string, unknown>[] = [
     id: 'all_writer',
     name: 'Writer',
     description: 'Can read and change everything except members and roles.',
-    permissions: {
-      plan: ['read', 'write'],
-      customer: ['read', 'write'],
-      invoice: ['read', 'write'],
-      subscription: ['read', 'write'],
-      event: ['read', 'write'],
-    },
+    // Every resource, read and write. Super-admin-only screens (members' roles,
+    // tenant settings) still refuse it, as the console's checks do.
+    permissions: { '*': ['read', 'write'] },
   },
   {
     id: 'all_reader',
     name: 'Reader',
     description: 'Can see everything and change nothing.',
-    permissions: {
-      plan: ['read'],
-      customer: ['read'],
-      invoice: ['read'],
-      subscription: ['read'],
-      event: ['read'],
-    },
+    permissions: { '*': ['read'] },
   },
   {
     id: 'event_ingestor',
@@ -2792,7 +2782,20 @@ export const handlers = [
    * try to rename the current user to whatever a role update sent.
    */
 
-  http.get(`${BASE}/users/me`, () => HttpResponse.json(users[0])),
+  /*
+   * Who is signed in. The demo user (super admin) unless
+   * `localStorage['flexprice.mock.userId']` names another mock user — how a
+   * reader's or writer's console is checked by hand and in e2e.
+   */
+  http.get(`${BASE}/users/me`, () => {
+    let id: string | null = null
+    try {
+      id = localStorage.getItem('flexprice.mock.userId')
+    } catch {
+      /* no storage: the demo user */
+    }
+    return HttpResponse.json(users.find((user) => user['id'] === id) ?? users[0])
+  }),
 
   /*
    * `POST /users/search` honours `type` and the paging window, and **ignores

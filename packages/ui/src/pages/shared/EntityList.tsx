@@ -60,6 +60,8 @@ import type { EmptyScene } from '@ui/compositions/feedback/SceneIllustration'
 import { FilterBar, type FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { SortMenu, type SortOption } from '@ui/compositions/tables/SortMenu'
 import { cn } from '@ui/lib/cn'
+import type { RbacEntity } from '@fp/domain'
+import { WriteGate, useWriteCheck } from '@ui/compositions/access/Access'
 import { revealTruncated } from '@ui/lib/revealTruncated'
 import { provenance } from '@ui/provenance'
 import type { EntityColumn } from './cells'
@@ -206,6 +208,13 @@ export interface EntityRowAction {
   /** Renders in the destructive colour, under a separator. */
   destructive?: boolean | undefined
   disabled?: boolean | undefined
+  /**
+   * Does not write (View, Copy ID, Download): stays enabled when the page's
+   * `AccessScope` denies write. Every other action is disabled then.
+   */
+  readOnly?: boolean | undefined
+  /** The entity this action writes, when not the page's. */
+  entity?: RbacEntity | undefined
 }
 
 /** One of the three cards under the first-run empty state. */
@@ -256,6 +265,11 @@ export interface EntityListProps<T> {
   sort?: EntitySort | undefined
   /** The create button on the right of the toolbar, beside the filter. */
   primaryAction?: ReactNode
+  /**
+   * The primary action does not write (Refresh). Otherwise it is gated by the
+   * page's `AccessScope`: disabled, with the reason, when write is denied.
+   */
+  primaryActionReadOnly?: boolean | undefined
   /** Enables Export CSV in the `⋯` menu, writing to this file name. */
   exportFileName?: string | undefined
 
@@ -546,6 +560,7 @@ export function EntityList<T extends object>({
   filter,
   sort,
   primaryAction,
+  primaryActionReadOnly = false,
   exportFileName,
   onRowClick,
   rowActions,
@@ -995,7 +1010,7 @@ export function EntityList<T extends object>({
               compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
             )}
           >
-            {primaryAction}
+            {primaryActionReadOnly ? primaryAction : <WriteGate>{primaryAction}</WriteGate>}
           </div>
         ) : null}
       </div>
@@ -1160,8 +1175,13 @@ export function EntityList<T extends object>({
 }
 
 /** A row's `⋯`. Icon-only and 28px, so the column can be 40px wide. */
-function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
-  if (actions.length === 0) return null
+function RowActionsMenu({ actions: given }: { actions: EntityRowAction[] }) {
+  const check = useWriteCheck()
+  if (given.length === 0) return null
+  // Writes are disabled, not hidden, when the page's scope denies them (V1).
+  const reasons = given.map((action) => (action.readOnly ? null : check(action.entity).reason))
+  const actions = given.map((action, i) => (reasons[i] ? { ...action, disabled: true } : action))
+  const reason = reasons.find(Boolean)
   const ordinary = actions.filter((action) => !action.destructive)
   const destructive = actions.filter((action) => action.destructive)
 
@@ -1217,6 +1237,9 @@ function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
+          ) : null}
+          {reason ? (
+            <p className="text-muted-foreground max-w-56 px-2 py-1.5 text-xs">{reason}</p>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>

@@ -10,6 +10,38 @@
       "usedBy": [],
       "story": "./src/pages/auth/AcceptInvitationForm.stories.tsx"
     },
+    "AccessProvider": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/access/Access.stories.tsx"
+    },
+    "AccessScope": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [
+        "CreditGrantTable",
+        "CustomerDetail",
+        "CustomerTaxSection",
+        "EntitlementTable",
+        "PlanChargesView",
+        "PlanCreditGrantsView",
+        "PlanEntitlementsView",
+        "SubscriptionDetailView",
+        "TaxDialog"
+      ],
+      "story": "./src/compositions/access/Access.stories.tsx"
+    },
     "AccountActivityRail": {
       "file": "src/components/blocks/solution-billing-4/components/account-activity-rail.tsx",
       "layer": "vendor/blocks",
@@ -290,7 +322,8 @@
       "composes": [],
       "usedBy": [
         "ContextualSection",
-        "FormToolbar"
+        "FormToolbar",
+        "PlanAiSetupView"
       ],
       "story": null
     },
@@ -820,7 +853,8 @@
         "RowActionsMenu",
         "Section",
         "SectionEmpty",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [
         "FeatureDetailView",
@@ -1650,11 +1684,13 @@
       "file": "src/pages/product-catalog/credit-grants/CreditGrantTable.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/credit-grants/CreditGrantTable.stories.tsx"
@@ -1753,6 +1789,7 @@
       "file": "src/pages/customers/CustomerDetail.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "ActivitySection",
         "ArchiveIcon",
         "ContractIntegrations",
@@ -1779,7 +1816,8 @@
         "Section",
         "Status",
         "SubTabState",
-        "WalletIcon"
+        "WalletIcon",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerDetail.stories.tsx"
@@ -1832,6 +1870,7 @@
       "file": "src/pages/customers/CustomerTaxSection.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "AppFailure",
         "Composer",
         "ConfirmDialog",
@@ -1842,7 +1881,8 @@
         "LoadingRows",
         "OptionSelect",
         "PlusIcon",
-        "Section"
+        "Section",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerTaxSection.stories.tsx"
@@ -2314,7 +2354,8 @@
       "composes": [
         "FormCard",
         "FormRow",
-        "PencilIcon"
+        "PencilIcon",
+        "WriteGate"
       ],
       "usedBy": [
         "CustomerDetail",
@@ -2369,7 +2410,6 @@
         "EventGrid",
         "EventTypeName",
         "FeatureGrid",
-        "PlanAiSetupView",
         "PlanEntitlementsView",
         "PlanGrid",
         "WebhookMessageSheet",
@@ -2451,13 +2491,15 @@
       "file": "src/pages/product-catalog/entitlements/EntitlementTable.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "EmDash",
         "EntityLink",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/entitlements/EntitlementTable.stories.tsx"
@@ -2517,7 +2559,8 @@
         "ErrorState",
         "FilterBar",
         "GuidedEmptyState",
-        "SortMenu"
+        "SortMenu",
+        "WriteGate"
       ],
       "usedBy": [
         "AddonGrid",
@@ -2600,12 +2643,16 @@
         "SkeletonRegion"
       ],
       "usedBy": [
+        "AccessProvider",
+        "AccessScope",
         "EntityList",
         "IntegrationLogo",
         "IntegrationsBlock",
+        "RequireAccess",
         "SubTabState",
         "WebhookActivity",
-        "WebhookEventCatalog"
+        "WebhookEventCatalog",
+        "WriteGate"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
     },
@@ -2916,7 +2963,6 @@
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
         "PaymentStatusDialog",
-        "PlanAiSetupView",
         "PriceOverrideForm",
         "RegionField",
         "RunExportDialog",
@@ -4182,7 +4228,12 @@
       "file": "src/reui/icons/default/outline/lock.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "AccessProvider",
+        "AccessScope",
+        "RequireAccess",
+        "WriteGate"
+      ],
       "story": null
     },
     "LoginForm": {
@@ -4644,7 +4695,12 @@
       "file": "src/compositions/feedback/Skeletons.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "AccessProvider",
+        "AccessScope",
+        "RequireAccess",
+        "WriteGate"
+      ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
     "PageShell": {
@@ -4946,14 +5002,12 @@
       "layer": "surface",
       "composes": [
         "AppFailure",
+        "ArrowLeftIcon",
         "ArrowUpIcon",
         "CheckIcon",
-        "EmDash",
-        "Field",
         "Pill",
-        "PlusIcon",
-        "Tag",
-        "UsersIcon"
+        "Section",
+        "SimpleTable"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanAiSetupView.stories.tsx"
@@ -4969,6 +5023,7 @@
       "file": "src/pages/product-catalog/plans/PlanChargesView.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "ChargeTable"
       ],
       "usedBy": [],
@@ -4978,11 +5033,13 @@
       "file": "src/pages/product-catalog/plans/PlanCreditGrantsView.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanCreditGrantsView.stories.tsx"
@@ -5000,12 +5057,14 @@
       "file": "src/pages/product-catalog/plans/PlanEntitlementsView.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "EmDash",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanEntitlementsView.stories.tsx"
@@ -5149,7 +5208,6 @@
         "InvoiceGrid",
         "Mark",
         "MetadataCard",
-        "PlanAiSetupView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "PlanForm",
@@ -5419,6 +5477,17 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "RequireAccess": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/access/Access.stories.tsx"
     },
     "ResourceNavigation": {
       "file": "src/compositions/layout/ResourceNavigation.tsx",
@@ -5712,6 +5781,7 @@
         "GroupMembersView",
         "InvoiceDetailView",
         "MetadataCard",
+        "PlanAiSetupView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "RelatedCard",
@@ -6045,6 +6115,7 @@
         "DataExportDetail",
         "ExportRunList",
         "ExportsOverview",
+        "PlanAiSetupView",
         "PriceOverrideForm",
         "S3ConnectionList",
         "SubscriptionForm",
@@ -6275,6 +6346,7 @@
       "file": "src/pages/contracts/SubscriptionDetailView.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "ActivitySection",
         "ChargeAlertForm",
         "ChargeSheet",
@@ -6302,7 +6374,8 @@
         "RowActionsMenu",
         "Section",
         "SectionEmpty",
-        "SubscriptionStatusBadge"
+        "SubscriptionStatusBadge",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionDetailView.stories.tsx"
@@ -6460,7 +6533,6 @@
         "AddonGrid",
         "EventGrid",
         "FeatureGrid",
-        "PlanAiSetupView",
         "PlanGrid"
       ],
       "story": null
@@ -6469,6 +6541,7 @@
       "file": "src/pages/customers/CustomerTaxSection.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "AppFailure",
         "Composer",
         "ConfirmDialog",
@@ -6479,7 +6552,8 @@
         "LoadingRows",
         "OptionSelect",
         "PlusIcon",
-        "Section"
+        "Section",
+        "WriteGate"
       ],
       "usedBy": [
         "ContractSectionDialogs"
@@ -6846,7 +6920,6 @@
       "composes": [],
       "usedBy": [
         "PageShell",
-        "PlanAiSetupView",
         "ShellSearch",
         "SubscriptionForm"
       ],
@@ -7130,6 +7203,29 @@
       "usedBy": [],
       "story": null
     },
+    "WriteGate": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [
+        "ChargeTable",
+        "CreditGrantTable",
+        "CustomerDetail",
+        "CustomerTaxSection",
+        "EditableCard",
+        "EntitlementTable",
+        "EntityList",
+        "PlanCreditGrantsView",
+        "PlanEntitlementsView",
+        "SubscriptionDetailView",
+        "TaxDialog"
+      ],
+      "story": "./src/compositions/access/Access.stories.tsx"
+    },
     "XCircle": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -7146,6 +7242,17 @@
     }
   },
   "stories": {
+    "./src/compositions/access/Access.stories.tsx": {
+      "title": "Building blocks/Access/Access control",
+      "component": null,
+      "uses": [
+        "AccessProvider",
+        "AccessScope",
+        "DetailMoreMenu",
+        "RequireAccess",
+        "WriteGate"
+      ]
+    },
     "./src/compositions/charts/ChartBox.stories.tsx": {
       "title": "Building blocks/Charts & metrics/ChartBox",
       "component": "ChartBox",
@@ -9217,7 +9324,6 @@
       "pattern": "Other",
       "route": "/plans/ai",
       "uses": [
-        "PageBody",
         "PlanAiSetupView"
       ]
     },
@@ -9331,7 +9437,8 @@
       "uses": [
         "EmbeddedPageContext",
         "SettingsShell",
-        "UsersIcon"
+        "UsersIcon",
+        "WriteGate"
       ]
     },
     "CustomerSubscriptionFormPage": {

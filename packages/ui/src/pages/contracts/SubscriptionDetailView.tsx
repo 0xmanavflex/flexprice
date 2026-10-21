@@ -1,3 +1,5 @@
+import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
+import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
@@ -829,6 +831,7 @@ export function SubscriptionDetailView({
               ) : null}
 
               <PartSection
+                entity={RBAC_ENTITY.Entitlement}
                 title="Entitlements"
                 showTitle
                 part={entitlements}
@@ -876,6 +879,7 @@ export function SubscriptionDetailView({
               </PartSection>
 
               <PartSection
+                entity={RBAC_ENTITY.CreditGrant}
                 title="Credit grants"
                 showTitle
                 part={creditGrants}
@@ -943,6 +947,7 @@ export function SubscriptionDetailView({
               </PartSection>
 
               <PartSection
+                entity={RBAC_ENTITY.Addon}
                 title="Add-ons"
                 showTitle
                 part={addons ?? NO_PART}
@@ -1057,6 +1062,7 @@ export function SubscriptionDetailView({
               </PartSection>
 
               <PartSection
+                entity={RBAC_ENTITY.Tax}
                 title="Taxes"
                 showTitle
                 part={taxes ?? NO_PART}
@@ -1850,7 +1856,19 @@ function PaymentCell({ row }: { row: Invoice }) {
  * the data. The table sits in a bordered box; `showTitle` puts a small visible
  * title above it (Overview), otherwise the name is for assistive tech only.
  */
+/**
+ * A contract section, scoped to the entity its rows and Add button write
+ * (an entitlement, a credit grant…) — the contract's own scope otherwise.
+ */
 function PartSection<T>({
+  entity,
+  ...props
+}: Parameters<typeof PartSectionInner<T>>[0] & { entity?: RbacEntity }) {
+  const inner = <PartSectionInner<T> {...props} />
+  return entity ? <AccessScope entity={entity}>{inner}</AccessScope> : inner
+}
+
+function PartSectionInner<T>({
   title,
   part,
   failure,
@@ -1883,10 +1901,12 @@ function PartSection<T>({
 }) {
   const { data } = part
   const createButton = create ? (
-    <Button size="sm" variant="outline" className="h-8 px-3" onClick={create.onClick}>
-      <PlusIcon aria-hidden="true" />
-      {create.label}
-    </Button>
+    <WriteGate>
+      <Button size="sm" variant="outline" className="h-8 px-3" onClick={create.onClick}>
+        <PlusIcon aria-hidden="true" />
+        {create.label}
+      </Button>
+    </WriteGate>
   ) : undefined
   const frame = {
     table: true,

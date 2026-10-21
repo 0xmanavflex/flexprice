@@ -7,6 +7,10 @@ import {
   emptyInvite,
   inviteMemberSchema,
   memberDisplayName,
+  RBAC_ENTITY,
+  SUPER_ADMIN_ROLE_ID,
+  canEditMemberRoles,
+  canRemoveMember,
 } from '@fp/domain'
 import {
   useInviteMember,
@@ -16,7 +20,14 @@ import {
   useUpdateMemberRoles,
   useUserInfo,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, FormDialog } from '@fp/ui/compositions'
+import {
+  ConfirmDialog,
+  EmptyState,
+  Field,
+  FormDialog,
+  WriteGate,
+  useAccess,
+} from '@fp/ui/compositions'
 import {
   Badge,
   Button,
@@ -71,6 +82,11 @@ export function MembersPanel() {
   const roles = useRoles('user')
   const me = useUserInfo()
   const remove = useRemoveMember()
+  const access = useAccess()
+  // V1's rules: roles and removal are super-admin only, never on yourself, and
+  // never the last member. Without them the column is not shown at all.
+  const viewer = { id: me.data?.id ?? '', roles: access.isSuperAdmin ? [SUPER_ADMIN_ROLE_ID] : [] }
+  const manages = access.isSuperAdmin
 
   const failure = toFailure(members.error, 'your team')
   const rows = members.data?.members ?? []
@@ -83,7 +99,12 @@ export function MembersPanel() {
     )
   }
 
-  const invite = <Button onClick={() => setIsInviting(true)}>Invite member</Button>
+  // Inviting needs user write (V1); disabled with the reason otherwise.
+  const invite = (
+    <WriteGate entity={RBAC_ENTITY.User}>
+      <Button onClick={() => setIsInviting(true)}>Invite member</Button>
+    </WriteGate>
+  )
 
   return (
     <WidePanel>
@@ -130,27 +151,31 @@ export function MembersPanel() {
             text: (member) => member.roles.join(' '),
             cell: (member) => <RoleList roles={member.roles} catalogue={roles.data ?? []} />,
           },
-          {
-            key: 'actions',
-            header: '',
-            width: 180,
-            cell: (member) => (
-              <span className="flex justify-end gap-1">
-                <Button size="sm" variant="ghost" onClick={() => setEditing(member)}>
-                  Edit roles
-                </Button>
-                {/*
-                 * Removing yourself locks you out of the console with no way
-                 * back in, so it is not offered. The API would allow it.
-                 */}
-                {member.id === me.data?.id ? null : (
-                  <Button size="sm" variant="ghost" onClick={() => setRemoving(member)}>
-                    Remove
-                  </Button>
-                )}
-              </span>
-            ),
-          },
+          ...(manages
+            ? [
+                {
+                  key: 'actions',
+                  header: '',
+                  width: 180,
+                  cell: (member: Member) =>
+                    canEditMemberRoles(member, viewer) ? (
+                      <span className="flex justify-end gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setEditing(member)}>
+                          Edit roles
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={!canRemoveMember(member, viewer, rows.length)}
+                          onClick={() => setRemoving(member)}
+                        >
+                          Remove
+                        </Button>
+                      </span>
+                    ) : null,
+                },
+              ]
+            : []),
         ]}
       />
 

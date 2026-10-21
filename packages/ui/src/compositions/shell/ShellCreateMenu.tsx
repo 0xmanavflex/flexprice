@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
 import { provenance } from '@ui/provenance'
+import type { RbacEntity } from '@fp/domain'
+import { useWriteCheck } from '../access/Access'
 
 /**
  * One way to start anything, in the header, from every screen.
@@ -36,6 +38,8 @@ export interface ShellCreateAction {
   icon?: ReactNode
   /** Starts a new group above this item. */
   startsGroup?: boolean
+  /** The entity this creates: disabled, with the reason, without write on it. */
+  entity?: RbacEntity
 }
 
 export interface ShellCreateMenuProps {
@@ -45,7 +49,11 @@ export interface ShellCreateMenuProps {
 }
 
 export function ShellCreateMenu({ actions, onCreate, label = 'Create' }: ShellCreateMenuProps) {
+  const check = useWriteCheck()
   if (actions.length === 0) return null
+  const reasonFor = (action: ShellCreateAction) =>
+    action.entity ? check(action.entity).reason : null
+  const note = actions.map(reasonFor).find(Boolean)
 
   // Split into groups at each `startsGroup`, so each is a labelled-by-position
   // `Menu.Group` rather than loose items.
@@ -77,7 +85,11 @@ export function ShellCreateMenu({ actions, onCreate, label = 'Create' }: ShellCr
             {index > 0 ? <DropdownMenuSeparator /> : null}
             <DropdownMenuGroup>
               {group.map((action) => (
-                <DropdownMenuItem key={action.id} onClick={() => onCreate(action.id)}>
+                <DropdownMenuItem
+                  key={action.id}
+                  disabled={Boolean(reasonFor(action))}
+                  onClick={() => onCreate(action.id)}
+                >
                   {action.icon ? (
                     <span className="text-muted-foreground contents">{action.icon}</span>
                   ) : null}
@@ -87,6 +99,7 @@ export function ShellCreateMenu({ actions, onCreate, label = 'Create' }: ShellCr
             </DropdownMenuGroup>
           </Fragment>
         ))}
+        {note ? <p className="text-muted-foreground px-2 py-1.5 text-xs">{note}</p> : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -651,3 +651,5 @@ export { SAMPLE_EVENT_DURATION_SECONDS, useGenerateSampleEvents } from './sample
 export { useFetchSupportChatHash } from './supportChat'
 export { useCustomerNames, useFeatureNames } from './entityNames'
 export type { NameMap } from './entityNames'
+export { toAccessControl, useAccessControl } from './access'
+export type { AccessControl, AccessStatus } from './access'

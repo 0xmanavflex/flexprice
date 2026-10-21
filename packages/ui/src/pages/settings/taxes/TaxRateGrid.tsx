@@ -162,6 +162,7 @@ export function TaxRateGrid({
     if (onTaxRateClick) {
       actions.push({
         label: 'View tax rate',
+        readOnly: true,
         icon: <PercentIcon aria-hidden className="size-4" />,
         onSelect: () => onTaxRateClick(taxRate),
       })
@@ -175,6 +176,7 @@ export function TaxRateGrid({
     }
     actions.push({
       label: 'Copy tax rate ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(taxRate.id),
     })

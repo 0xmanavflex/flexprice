@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { EmbeddedPageContext } from '@fp/ui/compositions'
+import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
+import { EmbeddedPageContext, WriteGate } from '@fp/ui/compositions'
 import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BadgeDollarSignIcon,
@@ -208,25 +209,38 @@ function SettingsPanel({
     )
   }
 
+  /*
+   * Who may change each panel, as V1's settings tabs: tenant-wide settings
+   * need write on the entity *and* super admin; the organisation profile needs
+   * tenant write. Anyone signed in can read them. The panel stays visible and
+   * its controls are disabled, with the reason above.
+   */
+  const gated = (entity: RbacEntity, panel: ReactNode, superAdmin = true) => (
+    <WriteGate block entity={entity} superAdmin={superAdmin}>
+      {panel}
+    </WriteGate>
+  )
+
   switch (key) {
     case 'organization/profile':
-      return <ProfilePanel />
+      return gated(RBAC_ENTITY.Tenant, <ProfilePanel />, false)
     case 'team/members':
+      // Gated row by row: invite needs user write, roles and removal super admin.
       return <MembersPanel />
     case 'invoicing/invoices':
-      return <InvoicesPanel />
+      return gated(RBAC_ENTITY.Setting, <InvoicesPanel />)
     case 'subscription/subscriptions':
-      return <SubscriptionsPanel />
+      return gated(RBAC_ENTITY.Setting, <SubscriptionsPanel />)
     case 'currency/currencies':
-      return <CurrenciesPanel />
+      return gated(RBAC_ENTITY.Setting, <CurrenciesPanel />)
     case 'customer-experience/portal':
-      return <PortalPanel />
+      return gated(RBAC_ENTITY.Portal, <PortalPanel />)
     case 'customer-experience/onboarding':
-      return <OnboardingPanel />
+      return gated(RBAC_ENTITY.Setting, <OnboardingPanel />)
     case 'tags/tags':
-      return <TagsPanel onOpenPage={onOpenPage} />
+      return gated(RBAC_ENTITY.Setting, <TagsPanel onOpenPage={onOpenPage} />, false)
     case 'alerts/wallet-alerts':
-      return <WalletAlertsPanel />
+      return gated(RBAC_ENTITY.AlertSettings, <WalletAlertsPanel />)
     case 'appearance/theme':
       return <AppearancePanel />
     default:
