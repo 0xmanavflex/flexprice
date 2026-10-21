@@ -6,6 +6,7 @@ import {
   type PortalQuota,
   type PortalSpend,
   type PortalSubscription,
+  type PortalTopUp,
   type PortalWallet,
   type PortalWalletTransaction,
   money,
@@ -116,7 +117,7 @@ export const portalWallets: PortalWallet[] = [
     balance: usd('1864'),
     credits: '18640',
     creditPrice: '0.1',
-    autoTopup: { enabled: true, threshold: '2000', credits: '5000' },
+    autoTopup: { enabled: true, threshold: '2000', credits: '5000', cooldown: null },
   },
 ]
 
@@ -130,6 +131,8 @@ export const portalTransactions: PortalWalletTransaction[] = [
     amount: usd('412'),
     credits: '4120',
     pending: false,
+    remaining: null,
+    expiresAt: null,
   },
   {
     id: 't2',
@@ -140,6 +143,8 @@ export const portalTransactions: PortalWalletTransaction[] = [
     amount: usd('200'),
     credits: '2000',
     pending: false,
+    remaining: null,
+    expiresAt: null,
   },
   {
     id: 't3',
@@ -150,6 +155,8 @@ export const portalTransactions: PortalWalletTransaction[] = [
     amount: usd('38'),
     credits: '380',
     pending: false,
+    remaining: null,
+    expiresAt: null,
   },
   {
     id: 't4',
@@ -160,6 +167,59 @@ export const portalTransactions: PortalWalletTransaction[] = [
     amount: usd('500'),
     credits: '5000',
     pending: false,
+    remaining: null,
+    expiresAt: null,
+  },
+]
+
+export const portalTopUps: PortalTopUp[] = [
+  {
+    id: 'tu-plan',
+    title: 'Plan credits',
+    detail: 'Growth plan · monthly grant',
+    at: d('2026-09-12'),
+    granted: '2000',
+    remaining: '1380',
+    consumed: 0.31,
+    expiresAt: d('2026-10-12'),
+    daysLeft: 7,
+    state: 'expiring soon',
+  },
+  {
+    id: 'tu-sep',
+    title: 'Credits purchased',
+    detail: 'Auto top-up · Visa •••• 4242',
+    at: d('2026-09-04'),
+    granted: '10000',
+    remaining: '9840',
+    consumed: 0.016,
+    expiresAt: null,
+    daysLeft: null,
+    state: 'active',
+  },
+  {
+    id: 'tu-aug',
+    title: 'Credits purchased',
+    detail: 'Stripe checkout',
+    at: d('2026-08-02'),
+    granted: '10000',
+    remaining: '7270',
+    consumed: 0.273,
+    expiresAt: null,
+    daysLeft: null,
+    state: 'active',
+  },
+  {
+    id: 'tu-free',
+    title: 'Free credits',
+    detail: 'Welcome credits',
+    at: d('2026-07-20'),
+    granted: '5000',
+    remaining: '0',
+    consumed: 1,
+    expiresAt: null,
+    daysLeft: null,
+    state: 'used up',
   },
 ]
 
@@ -168,7 +228,7 @@ export const portalCards: PortalPaymentMethod[] = [
     id: 'pm_visa',
     provider: 'stripe',
     brand: 'Visa',
-    mark: 'VISA',
+    network: 'visa',
     last4: '4242',
     expires: '08/28',
     expired: false,
@@ -178,7 +238,7 @@ export const portalCards: PortalPaymentMethod[] = [
     id: 'pm_mc',
     provider: 'stripe',
     brand: 'Mastercard',
-    mark: 'MC',
+    network: 'mastercard',
     last4: '5100',
     expires: '03/27',
     expired: false,
@@ -187,8 +247,8 @@ export const portalCards: PortalPaymentMethod[] = [
   {
     id: 'pm_amex',
     provider: 'stripe',
-    brand: 'Amex',
-    mark: 'AMEX',
+    brand: 'American Express',
+    network: 'amex',
     last4: '0005',
     expires: '06/26',
     expired: true,
@@ -319,7 +379,10 @@ export const portalData: CustomerPortalData = {
   gateways: { status: 'ready', data: portalGateways },
   quotas: { status: 'ready', data: portalQuotas },
   spend: { status: 'ready', data: portalSpend },
+  previousSpend: { status: 'ready', data: { ...portalSpend, total: usd('351.27') } },
+  periodSpend: { status: 'ready', data: { ...portalSpend, total: usd('315.12') } },
   transactions: { status: 'ready', data: { items: portalTransactions, total: 9 } },
+  topUps: { status: 'ready', data: { items: portalTopUps, total: portalTopUps.length } },
   invoiceDetail: null,
 }
 
@@ -331,7 +394,10 @@ export const emptyPortalData: CustomerPortalData = {
   paymentMethods: { status: 'ready', data: [] },
   quotas: { status: 'ready', data: [] },
   spend: { status: 'ready', data: { currency: 'USD', total: usd('0'), items: [] } },
+  previousSpend: { status: 'ready', data: { currency: 'USD', total: usd('0'), items: [] } },
+  periodSpend: { status: 'ready', data: { currency: 'USD', total: usd('0'), items: [] } },
   transactions: { status: 'ready', data: { items: [], total: 0 } },
+  topUps: { status: 'ready', data: { items: [], total: 0 } },
 }
 
 const loading = { status: 'loading' } as const
@@ -345,21 +411,29 @@ export const loadingPortalData: CustomerPortalData = {
   gateways: loading,
   quotas: loading,
   spend: loading,
+  previousSpend: loading,
+  periodSpend: loading,
   transactions: loading,
+  topUps: loading,
   invoiceDetail: null,
 }
 
 const done = () => Promise.resolve()
+const opened = () => Promise.resolve('https://checkout.stripe.com/c/pay/cs_demo' as string | null)
 
 export const noopPortalActions: CustomerPortalActions = {
   onViewChange: () => undefined,
   onRangeChange: () => undefined,
+  onCustomRange: () => undefined,
   onWalletChange: () => undefined,
   onShowMoreTransactions: () => undefined,
+  onShowMoreTopUps: () => undefined,
+  onRefresh: () => undefined,
   onOpenInvoice: () => undefined,
-  payInvoice: done,
-  addCredits: done,
-  addCard: done,
+  payInvoice: opened,
+  addCredits: () => Promise.resolve(null),
+  addCard: opened,
+  saveAutoTopup: done,
   removeCard: done,
   makeDefault: done,
   downloadInvoice: done,

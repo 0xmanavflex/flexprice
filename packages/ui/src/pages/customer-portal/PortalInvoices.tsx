@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { type PortalInvoice, type PortalInvoiceStatus, isPayable } from '@fp/domain'
-import { DownloadIcon, MoreHorizontalIcon, SearchIcon } from '@ui/icons'
+import { type PortalInvoice, isPayable } from '@fp/domain'
+import { DownloadIcon, EyeIcon, MoreHorizontalIcon, ReceiptIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -8,44 +7,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@ui/components/primitives/select'
-import { SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
+import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 import { Money } from '../shared/Money'
-import { formatDate, formatRange } from './format'
-import { InvoiceStatusPill, Loaded, PortalEmpty } from './parts'
+import { formatDate } from './format'
+import { InvoiceStatusPill, Loaded, PortalEmpty, invoiceStatusLabel } from './parts'
 import type { CustomerPortalData } from './types'
 
-/** Every invoice, newest first: search, a status filter, and pay or download per row. */
+/**
+ * Every invoice, newest first, after the portal prototype
+ * (`portal/invoices.tsx`): the kit's table with its own search, status filter
+ * and pages; a row opens the invoice; its menu views, pays or downloads.
+ */
 export const PortalInvoicesProvenance = provenance({
   source: 'composition',
   composes: [
-    'compositions/detail/DetailKit',
-    'primitives/input-group',
-    'primitives/select',
+    'compositions/layout/Section',
+    'pages/shared/DetailTable',
     'primitives/dropdown-menu',
     'shared/Money',
   ],
-  note: 'Customer portal invoices list, after the reference portal.',
+  note: 'Customer portal invoices, after the portal prototype.',
 })
-
-type Filter = 'all' | 'unpaid' | 'paid'
-
-const FILTER_LABEL: Record<Filter, string> = { all: 'All invoices', unpaid: 'Unpaid', paid: 'Paid' }
-
-const UNPAID: ReadonlySet<PortalInvoiceStatus> = new Set([
-  'open',
-  'overdue',
-  'failed',
-  'processing',
-])
 
 export interface PortalInvoicesProps {
   data: CustomerPortalData
@@ -56,162 +40,137 @@ export interface PortalInvoicesProps {
 }
 
 export function PortalInvoices({ data, locale, onOpen, onPay, onDownload }: PortalInvoicesProps) {
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<Filter>('all')
+  const count = data.invoices.status === 'ready' ? data.invoices.data.length : 0
   return (
-    <section className="bg-card overflow-hidden rounded-xl border" aria-label="Invoices">
+    <Section
+      title="Invoices"
+      {...(count
+        ? { description: `${count} ${count === 1 ? 'invoice' : 'invoices'}, newest first` }
+        : {})}
+      flush
+    >
       <Loaded load={data.invoices} label="invoices" rows={6}>
-        {(invoices) => {
-          if (invoices.length === 0) {
-            return (
-              <PortalEmpty
-                title="No invoices yet"
-                description="Invoices appear here once your first billing period closes."
-              />
-            )
-          }
-          const needle = query.trim().toLowerCase()
-          const shown = invoices.filter(
-            (i) =>
-              (filter === 'all' ||
-                (filter === 'unpaid' ? UNPAID.has(i.status) : i.status === 'paid')) &&
-              (!needle || i.number.toLowerCase().includes(needle)),
+        {(invoices) =>
+          invoices.length === 0 ? (
+            <PortalEmpty
+              icon={<ReceiptIcon />}
+              title="No invoices yet"
+              description="Invoices appear here once your first billing period closes."
+            />
+          ) : (
+            <DetailTable
+              label="Invoices"
+              noun="invoices"
+              rows={invoices}
+              columns={invoiceColumns({ locale, onOpen, onPay, onDownload })}
+              onRowClick={onOpen}
+              facet={{ label: 'Status', value: (invoice) => invoiceStatusLabel(invoice.status) }}
+              searchText={(invoice) => `${invoice.number} ${invoiceStatusLabel(invoice.status)}`}
+              compact
+              pageSize={25}
+            />
           )
-          return (
-            <>
-              <div className="flex flex-wrap items-center gap-3 border-b px-6 py-4">
-                <InputGroup className="h-9 w-full sm:w-72">
-                  <InputGroupAddon>
-                    <SearchIcon aria-hidden="true" />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    placeholder="Search invoice number"
-                    aria-label="Search invoices"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                </InputGroup>
-                <Select
-                  value={filter}
-                  onValueChange={(value) => value !== null && setFilter(value as Filter)}
-                >
-                  <SelectTrigger className="h-9 w-40" aria-label="Status">
-                    <SelectValue>{(value) => FILTER_LABEL[value as Filter]}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    {(Object.keys(FILTER_LABEL) as Filter[]).map((f) => (
-                      <SelectItem key={f} value={f}>
-                        {FILTER_LABEL[f]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {shown.length === 0 ? (
-                <PortalEmpty
-                  title="No matching invoices"
-                  description="Try another invoice number or status."
-                />
-              ) : (
-                <SimpleTable
-                  rows={shown}
-                  onRowClick={onOpen}
-                  columns={[
-                    {
-                      key: 'number',
-                      header: 'Invoice',
-                      className: 'font-medium',
-                      // The row is clickable; the number is the keyboard way in.
-                      cell: (invoice) => (
-                        <button
-                          type="button"
-                          className="hover:underline focus-visible:underline focus-visible:outline-none"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onOpen(invoice)
-                          }}
-                        >
-                          {invoice.number}
-                        </button>
-                      ),
-                    },
-                    {
-                      key: 'issued',
-                      header: 'Issued',
-                      cell: (invoice) =>
-                        invoice.issuedAt ? formatDate(invoice.issuedAt, locale) : '—',
-                    },
-                    {
-                      key: 'period',
-                      header: 'Period',
-                      className: 'text-muted-foreground max-md:hidden',
-                      cell: (invoice) =>
-                        formatRange(invoice.periodStart, invoice.periodEnd, locale),
-                    },
-                    {
-                      key: 'status',
-                      header: 'Status',
-                      cell: (invoice) => <InvoiceStatusPill status={invoice.status} />,
-                    },
-                    {
-                      key: 'amount',
-                      header: 'Amount',
-                      className: 'text-right',
-                      cell: (invoice) => (
-                        <Money value={invoice.total} {...(locale ? { locale } : {})} />
-                      ),
-                    },
-                    {
-                      key: 'actions',
-                      header: '',
-                      className: 'w-12',
-                      cell: (invoice) => (
-                        // The row opens the invoice; the menu must not.
-                        <div
-                          onClick={(event) => event.stopPropagation()}
-                          onKeyDown={(event) => event.stopPropagation()}
-                          role="presentation"
-                        >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  aria-label={`Actions for ${invoice.number}`}
-                                />
-                              }
-                            >
-                              <MoreHorizontalIcon aria-hidden="true" />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => onOpen(invoice)}>
-                                View invoice
-                              </DropdownMenuItem>
-                              {isPayable(invoice) ? (
-                                <DropdownMenuItem onClick={() => onPay(invoice)}>
-                                  Pay invoice
-                                </DropdownMenuItem>
-                              ) : null}
-                              <DropdownMenuItem onClick={() => onDownload(invoice)}>
-                                <DownloadIcon aria-hidden="true" />
-                                Download PDF
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      ),
-                    },
-                  ]}
-                />
-              )}
-              <p className="text-muted-foreground border-t px-6 py-3 text-xs">
-                {shown.length} {shown.length === 1 ? 'invoice' : 'invoices'}, newest first
-              </p>
-            </>
-          )
-        }}
+        }
       </Loaded>
-    </section>
+    </Section>
   )
+}
+
+function invoiceColumns({
+  locale,
+  onOpen,
+  onPay,
+  onDownload,
+}: Omit<PortalInvoicesProps, 'data'>): DetailColumn<PortalInvoice>[] {
+  return [
+    {
+      key: 'number',
+      header: 'Invoice',
+      text: (invoice) => invoice.number,
+      sortBy: (invoice) => invoice.number,
+      cell: (invoice) => <span className="font-medium">{invoice.number}</span>,
+    },
+    {
+      key: 'issued',
+      header: 'Issued',
+      sortBy: (invoice) => invoice.issuedAt?.getTime() ?? 0,
+      cell: (invoice) => (
+        <span className="text-muted-foreground">
+          {invoice.issuedAt ? formatDate(invoice.issuedAt, locale) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'period',
+      header: 'Period',
+      cell: (invoice) => (
+        <span className="text-muted-foreground">
+          {invoice.periodStart && invoice.periodEnd
+            ? `${formatDate(invoice.periodStart, locale)} – ${formatDate(invoice.periodEnd, locale)}`
+            : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      text: (invoice) => invoiceStatusLabel(invoice.status),
+      cell: (invoice) => <InvoiceStatusPill status={invoice.status} />,
+    },
+    {
+      key: 'amount',
+      header: 'Amount',
+      sortBy: (invoice) => Number(invoice.total.amount),
+      cell: (invoice) => (
+        <span className="tabular-nums">
+          <Money value={invoice.total} {...(locale ? { locale } : {})} />
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: 48,
+      cell: (invoice) => (
+        // The row opens the invoice; its menu must not.
+        <div
+          className="flex justify-end"
+          role="presentation"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground size-8"
+                  aria-label={`Actions for ${invoice.number}`}
+                />
+              }
+            >
+              <MoreHorizontalIcon aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => onOpen(invoice)}>
+                <EyeIcon aria-hidden="true" />
+                View invoice
+              </DropdownMenuItem>
+              {isPayable(invoice) ? (
+                <DropdownMenuItem onClick={() => onPay(invoice)}>
+                  <ReceiptIcon aria-hidden="true" />
+                  Pay now
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={() => onDownload(invoice)}>
+                <DownloadIcon aria-hidden="true" />
+                Download
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    },
+  ]
 }

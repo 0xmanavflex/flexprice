@@ -21,6 +21,8 @@ export interface PortalLocation {
   apiOrigin: string
   view: PortalView
   range: PortalRange
+  /** A calendar range on the Usage tab, `[start, end)` in local days; it replaces `range`. */
+  customRange: { start: Date; end: Date } | null
   invoiceId: string | null
 }
 
@@ -51,6 +53,7 @@ export function parsePortalLocation(
     apiOrigin,
     view: view as PortalView,
     range: PORTAL_RANGES.some((r) => r.id === range) ? (range as PortalRange) : DEFAULT_RANGE,
+    customRange: readDays(params.get('from'), params.get('to')),
     invoiceId: params.get('invoice') || null,
   }
 }
@@ -62,11 +65,36 @@ export function portalHref(location: Omit<PortalLocation, 'apiOrigin'>, basePath
   )
   const path = `${basePath}/${segments.join('/')}`.replace(/\/$/, '') || '/'
   const params = new URLSearchParams()
-  if (location.view === 'usage' && location.range !== DEFAULT_RANGE)
+  if (location.view === 'usage' && location.customRange) {
+    params.set('from', dayText(location.customRange.start))
+    params.set('to', dayText(new Date(location.customRange.end.getTime() - 1)))
+  } else if (location.view === 'usage' && location.range !== DEFAULT_RANGE) {
     params.set('range', location.range)
+  }
   if (location.invoiceId) params.set('invoice', location.invoiceId)
   const query = params.toString()
   return query ? `${path}?${query}` : path
+}
+
+/** `YYYY-MM-DD`, in local time. */
+function dayText(day: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`
+}
+
+/** `from` and `to` (both inclusive, `YYYY-MM-DD`) as `[start, end)` local days; null when unreadable. */
+function readDays(from: string | null, to: string | null): { start: Date; end: Date } | null {
+  const day = (text: string | null) => {
+    const match = text ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(text) : null
+    if (!match) return null
+    const [, y, m, d] = match.map(Number)
+    const date = new Date(y ?? 0, (m ?? 1) - 1, d ?? 1)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+  const start = day(from)
+  const last = day(to)
+  if (!start || !last || last < start) return null
+  return { start, end: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1) }
 }
 
 const storageKey = (region: RegionId | null) => `fp:portal:${region ?? 'own'}`
