@@ -15,6 +15,7 @@ import {
   ScaleIcon,
   Settings2Icon,
   TicketPercentIcon,
+  Trash2Icon,
   UserIcon,
   UsersIcon,
   WalletIcon,
@@ -164,6 +165,12 @@ export interface SubscriptionCouponOption extends ChargeCouponOption {
   code?: string | undefined
 }
 
+/** An add-on to start with; `type` ("Fixed and usage") and `price`, when known, fill its row. */
+export interface SubscriptionAddonOption extends Option {
+  type?: string | undefined
+  price?: string | undefined
+}
+
 /** A tax rate the contract can carry. */
 export interface SubscriptionTaxRateOption {
   code: string
@@ -187,7 +194,7 @@ export interface SubscriptionFormProps {
   /** The chosen customer's tax associations, applied when the customer is picked (as V1 does). */
   customerTaxes?: CreateSubscription['taxes'] | null
   /** Add-ons the contract can start with. */
-  addons?: readonly Option[]
+  addons?: readonly SubscriptionAddonOption[]
   /** For charges added to this contract alone: the metered features and price units. */
   meters?: MeterOption[]
   priceUnits?: PriceUnitOption[]
@@ -2324,96 +2331,116 @@ function PhasesStep({
 /* Add-ons, commitments & benefits                                          */
 /* ------------------------------------------------------------------------- */
 
-/** Add-ons the contract starts with. */
+/** Removing a row from a table inside the form: a red delete icon. */
+function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="text-destructive hover:text-destructive hover:bg-destructive/10 size-7"
+      aria-label={label}
+      onClick={onClick}
+    >
+      <Trash2Icon aria-hidden />
+    </Button>
+  )
+}
+
+/**
+ * Add-ons the contract starts with: a table once there is one, and a picker
+ * under it for the next. An add-on has no quantity on a new contract — the
+ * API takes none.
+ */
 function AddonsSection({
   selected,
   options,
   onChange,
 }: {
   selected: CreateSubscription['addons']
-  options: readonly Option[]
+  options: readonly SubscriptionAddonOption[]
   onChange: (next: CreateSubscription['addons']) => void
 }) {
   const available = options.filter((o) => !selected.some((a) => a.addonId === o.value))
-  const [picking, setPicking] = useState(false)
-  // A fresh picker after each pick, so its list closes and it reads empty again.
-  const [pickerKey, setPickerKey] = useState(0)
+  const optionOf = (addonId: string) => options.find((o) => o.value === addonId)
+  // A price shows only when the page knows one; the add-on list carries none today.
+  const priced = options.some((o) => o.price)
+  type Row = { id: string; name: string; option: SubscriptionAddonOption | undefined }
+  const rows: Row[] = selected.map((addon) => ({
+    id: addon.addonId,
+    name: addon.name || optionOf(addon.addonId)?.label || addon.addonId,
+    option: optionOf(addon.addonId),
+  }))
+  const columns: SimpleColumn<Row>[] = [
+    {
+      key: 'addon',
+      header: 'Add-on',
+      cell: (row) => <span className="font-medium">{row.name}</span>,
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      cell: (row) => <span className="text-muted-foreground">{row.option?.type ?? '—'}</span>,
+    },
+    ...(priced
+      ? [
+          {
+            key: 'price',
+            header: 'Price',
+            className: 'text-right tabular-nums',
+            cell: (row: Row) => row.option?.price ?? '—',
+          },
+        ]
+      : []),
+    {
+      key: 'remove',
+      header: '',
+      className: 'w-10 text-right',
+      cell: (row) => (
+        <RemoveButton
+          label={`Remove ${row.name}`}
+          onClick={() => onChange(selected.filter((a) => a.addonId !== row.id))}
+        />
+      ),
+    },
+  ]
   return (
     <FormCard
       title="Add-ons"
       status="optional"
       icon={<PuzzleIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
     >
-      <div className="px-5 py-4 sm:px-6">
-        <Frame
-          footer={
-            options.length === 0 ? (
-              <p className="text-muted-foreground py-1.5 text-xs">No add-ons exist yet.</p>
-            ) : available.length === 0 ? null : picking || selected.length > 0 ? (
-              picking ? (
-                <div className="flex items-center gap-2 py-2">
-                  <label htmlFor="contract-add-addon" className="sr-only">
-                    Add an add-on
-                  </label>
-                  <div className="max-w-sm flex-1">
-                    <OptionCombobox
-                      key={pickerKey}
-                      id="contract-add-addon"
-                      value=""
-                      placeholder="Add an add-on…"
-                      options={available}
-                      onValueChange={(id) => {
-                        const option = available.find((o) => o.value === id)
-                        if (!option) return
-                        onChange([...selected, { addonId: option.value, name: option.label }])
-                        setPickerKey((n) => n + 1)
-                        setPicking(false)
-                      }}
-                    />
-                  </div>
-                  <CloseSubForm label="Close add-on picker" onClick={() => setPicking(false)} />
-                </div>
-              ) : (
-                <AddButton onClick={() => setPicking(true)}>Add add-on</AddButton>
-              )
-            ) : null
-          }
-        >
-          {selected.length === 0 ? (
-            <EmptyLine
-              action={
-                available.length > 0 && !picking ? (
-                  <AddButton centered onClick={() => setPicking(true)}>
-                    Add add-on
-                  </AddButton>
-                ) : null
-              }
-            >
-              No add-ons. An add-on brings its own charges and entitlements onto the contract.
-            </EmptyLine>
+      {rows.length > 0 ? (
+        <div className="px-5 pt-4 sm:px-6">
+          <Frame>
+            <SimpleTable columns={columns} rows={rows} />
+          </Frame>
+        </div>
+      ) : null}
+      <FormRow
+        label={selected.length > 0 ? 'Add another' : 'Add-on'}
+        hint="An add-on brings its own charges and entitlements onto the contract."
+      >
+        {({ id, ...field }) =>
+          options.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No add-ons exist yet.</p>
           ) : (
-            <ul className="divide-y">
-              {selected.map((addon) => (
-                <li
-                  key={addon.addonId}
-                  className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
-                >
-                  <span className="truncate font-medium">{addon.name || addon.addonId}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Remove ${addon.name || addon.addonId}`}
-                    onClick={() => onChange(selected.filter((a) => a.addonId !== addon.addonId))}
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Frame>
-      </div>
+            <OptionCombobox
+              // A fresh picker after each pick, so it reads empty again.
+              key={selected.length}
+              id={id}
+              {...field}
+              value=""
+              placeholder={selected.length > 0 ? 'Add another add-on…' : 'Choose an add-on…'}
+              options={available}
+              onValueChange={(addonId) => {
+                const option = available.find((o) => o.value === addonId)
+                if (option) onChange([...selected, { addonId: option.value, name: option.label }])
+              }}
+            />
+          )
+        }
+      </FormRow>
     </FormCard>
   )
 }

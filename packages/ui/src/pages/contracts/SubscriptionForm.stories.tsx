@@ -17,6 +17,7 @@ import {
 } from '../product-catalog/plans/planDetailFixtures'
 import {
   SubscriptionForm,
+  type SubscriptionAddonOption,
   type SubscriptionCouponOption,
   type SubscriptionCustomerOption,
   type SubscriptionPlanContext,
@@ -28,7 +29,10 @@ const COUPONS: SubscriptionCouponOption[] = [
   { value: 'cpn_launch', label: 'Launch', discount: '20%', code: 'LAUNCH20' },
   { value: 'cpn_loyal', label: 'Loyalty', discount: '$50', code: 'LOYAL50' },
 ]
-const ADDONS: Option[] = [{ value: 'addon_support', label: 'Premium support' }]
+const ADDONS: SubscriptionAddonOption[] = [
+  { value: 'addon_support', label: 'Premium support', type: 'Fixed' },
+  { value: 'addon_storage', label: 'Extra storage', type: 'Usage' },
+]
 const TAX_RATES = [{ code: 'GST18', name: 'GST', percentage: '18' }]
 const PLAN_NAMES = ['Starter', 'Pro', 'Business', 'Scale', 'Enterprise']
 const CUSTOMER_NAMES = [
@@ -773,6 +777,34 @@ export const DiscountsTheWholeContract: Story = {
       expect(args.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           phases: [expect.objectContaining({ discounts: [{ couponId: 'cpn_loyal' }] })],
+        }),
+      ),
+    )
+  },
+}
+
+/** Add-ons sit under the charges: picked one at a time into a table, and removed from it. */
+export const AddsAnAddon: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const picker = canvas.getByRole('combobox', { name: /^Add-on/ })
+    await expect(
+      canvas.getByText('An add-on brings its own charges and entitlements onto the contract.'),
+    ).toBeVisible()
+    await userEvent.click(picker)
+    await userEvent.click(await screen.findByRole('option', { name: /Premium support/ }))
+    await expect(await canvas.findByRole('columnheader', { name: 'Add-on' })).toBeVisible()
+    await expect(canvas.getByRole('columnheader', { name: 'Type' })).toBeVisible()
+    await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toBeVisible()
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Add another/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Remove Extra storage' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addons: [{ addonId: 'addon_support', name: 'Premium support' }],
         }),
       ),
     )
