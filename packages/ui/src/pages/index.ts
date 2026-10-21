@@ -542,3 +542,15 @@ export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocume
 export { ContractIntegrations } from './contracts/ContractIntegrations'
 
 export type { ContractIntegrationsProps } from './contracts/ContractIntegrations'
+export {
+  CustomerPortalView,
+  CustomerPortalViewProvenance,
+} from './customer-portal/CustomerPortalView'
+export { PortalNotice, PortalNoticeProvenance } from './customer-portal/PortalNotice'
+export type {
+  CustomerPortalActions,
+  CustomerPortalData,
+  CustomerPortalViewProps,
+  Load,
+  PayVia,
+} from './customer-portal/types'

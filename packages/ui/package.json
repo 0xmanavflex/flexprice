@@ -12,6 +12,9 @@
     "./icons": "./src/icons/index.ts",
     "./styles.css": "./src/styles.css"
   },
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "typecheck": "tsc -b",
     "lint": "eslint . --max-warnings 0",
