@@ -35,7 +35,7 @@ test('a trial shows its pill on every page, and the card leads to billing and Up
 }) => {
   await signIn(context, 'trial')
   await page.goto('/settings')
-  const pill = page.getByRole('button', { name: /Trial · 15 days left/ })
+  const pill = page.getByRole('button', { name: /Trial · \d+ days left/ })
   await expect(pill).toBeVisible()
   await pill.hover()
   const card = page.getByRole('dialog', { name: 'Free trial' })

@@ -21,8 +21,7 @@ test.beforeEach(async ({ context }) => {
  * once an invoice was voided, and the assertion that Void had gone found a
  * disabled item belonging to another menu entry.
  */
-const voidItem = (page: Page) =>
-  page.getByRole('menuitem', { name: 'Void invoice', exact: true })
+const voidItem = (page: Page) => page.getByRole('menuitem', { name: 'Void invoice', exact: true })
 
 test('a created invoice is a draft, finalizing it sticks, and the list shows it', async ({
   page,
@@ -163,7 +162,7 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
   // is chosen, so there is no Next between them.
   await page.getByRole('combobox').first().click()
   await page.getByRole('option').first().click()
-  await expect(page.getByText('Plan and billing')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Plan', exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: /^Plan/ }).click()
   await page.getByRole('option').first().click()
   const currency = page.getByRole('combobox', { name: /Currency/ })
@@ -171,13 +170,13 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
     await currency.click()
     await page.getByRole('option').first().click()
   }
-  await page.getByRole('button', { name: 'Next', exact: true }).click()
-  await expect(page).toHaveURL(/step=phases/, { timeout: 15_000 })
-  // The start date is Phase 1's, on the contract timeline.
+  // The start date is the contract's own, on the first step once a plan is chosen.
   await page.getByLabel('Starts').click()
   await page.getByRole('button', { name: /next month/i }).click()
   await page.getByRole('gridcell', { name: '15' }).getByRole('button').click()
   await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page).toHaveURL(/step=phases/, { timeout: 15_000 })
   for (const step of ['commitments', 'billing', 'review']) {
     await page.getByRole('button', { name: 'Next', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })

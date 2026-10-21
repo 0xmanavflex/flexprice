@@ -162,7 +162,17 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
       overageFactor: '1.2',
       enableTrueUp: true,
       chargeCommitments: [
-        { priceId: 'price_api', type: 'quantity', value: '5000', overageFactor: '', trueUp: false },
+        {
+          priceId: 'price_api',
+          type: 'quantity',
+          value: '5000',
+          duration: '',
+          overageFactor: '',
+          trueUp: false,
+          bucketSize: '',
+          windowed: false,
+          windows: [],
+        },
       ],
       taxes: [
         {
@@ -208,6 +218,88 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
       subscription_status: 'draft',
     })
     expect(wire).not.toHaveProperty('phases')
+  })
+
+  it('sends a charge commitment per bucket, with its period, bucket size and time windows', () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        phases: [
+          {
+            ...emptyPhase(),
+            priceOverrides: [
+              { priceId: 'price_a', billingModel: BillingModel.FlatFee, amount: '9' },
+            ],
+          },
+        ],
+        chargeCommitments: [
+          {
+            priceId: 'price_gpu',
+            type: 'quantity',
+            value: '10000',
+            duration: 'MONTHLY',
+            overageFactor: '1.5',
+            trueUp: true,
+            bucketSize: 'MINUTE',
+            windowed: true,
+            windows: [
+              {
+                id: 'win_1',
+                start: '09:00',
+                end: '17:30',
+                type: 'amount',
+                value: '200',
+                overageFactor: '',
+                trueUp: false,
+                billingModel: 'PACKAGE',
+                price: '2',
+                packageSize: '1000',
+              },
+            ],
+            priceBase: {
+              entityId: 'plan_1',
+              entityType: 'PLAN',
+              meterId: 'meter_gpu',
+              currency: 'USD',
+              billingPeriod: 'MONTHLY',
+              billingPeriodCount: 1,
+              invoiceCadence: 'ARREAR',
+            },
+          },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(wire['override_line_items']).toEqual([
+      { price_id: 'price_a', billing_model: 'FLAT_FEE', amount: '9' },
+      { price_id: 'price_gpu', bucket_size: 'MINUTE' },
+    ])
+    expect(wire['line_item_commitments']).toEqual({
+      price_gpu: {
+        commitment_type: 'quantity',
+        commitment_quantity: 10000,
+        commitment_duration: 'MONTHLY',
+        overage_factor: 1.5,
+        enable_true_up: true,
+        is_window_commitment: true,
+        commitment_time_buckets: [
+          expect.objectContaining({
+            start: { hour: 9, minute: 0 },
+            end: { hour: 17, minute: 30 },
+            commitment_type: 'amount',
+            commitment_value: '200',
+            true_up_enabled: false,
+            price: expect.objectContaining({
+              type: 'USAGE',
+              billing_model: 'PACKAGE',
+              amount: '2',
+              meter_id: 'meter_gpu',
+              currency: 'usd',
+              transform_quantity: { divide_by: 1000, round: 'up' },
+            }),
+          }),
+        ],
+      },
+    })
   })
 
   it('folds a fixed charge quantity into its override, or sends it alone', () => {
@@ -304,7 +396,17 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
         },
       ],
       chargeCommitments: [
-        { priceId: 'price_api', type: 'amount', value: '50', overageFactor: '', trueUp: false },
+        {
+          priceId: 'price_api',
+          type: 'amount',
+          value: '50',
+          duration: '',
+          overageFactor: '',
+          trueUp: false,
+          bucketSize: '',
+          windowed: false,
+          windows: [],
+        },
       ],
     })
     const wire = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<string, unknown>

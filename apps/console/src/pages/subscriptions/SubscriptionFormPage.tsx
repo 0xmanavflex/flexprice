@@ -24,6 +24,7 @@ import {
   DEFAULT_CUSTOMER_QUERY,
   DEFAULT_PLAN_QUERY,
   DEFAULT_TAX_RATE_QUERY,
+  formatMoney,
   PriceEntityType,
   TaxRateStatus,
 } from '@fp/domain'
@@ -134,9 +135,19 @@ export function SubscriptionFormPage({
       priceUnits={formOptions.units}
       coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
         value: coupon.id,
-        label: coupon.code ? `${coupon.name} · ${coupon.code}` : coupon.name,
+        label: coupon.name,
+        code: coupon.code || undefined,
+        discount: coupon.percentageOff
+          ? `${coupon.percentageOff}%`
+          : coupon.amountOff
+            ? formatMoney(coupon.amountOff)
+            : undefined,
       }))}
-      addons={(addons.data?.addons ?? []).map((addon) => ({ value: addon.id, label: addon.name }))}
+      addons={(addons.data?.addons ?? []).map((addon) => ({
+        value: addon.id,
+        label: addon.name,
+        type: addonType(addon.fixedChargeCount, addon.usageChargeCount),
+      }))}
       taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
         code: rate.code,
         name: rate.name,
@@ -156,6 +167,14 @@ export function SubscriptionFormPage({
       }
     />
   )
+}
+
+/** What an add-on bills, from its charges: "Fixed", "Usage" or "Fixed and usage". */
+function addonType(fixed: number, usage: number): string | undefined {
+  if (fixed > 0 && usage > 0) return 'Fixed and usage'
+  if (fixed > 0) return 'Fixed'
+  if (usage > 0) return 'Usage'
+  return undefined
 }
 
 function toSubmitError(error: unknown): string | null {
