@@ -81,12 +81,6 @@ jobs:
     uses: ./.github/workflows/deploy-regions.yml
     secrets: inherit
 
-  deploy-hosted-invoice:
-    name: Deploy hosted invoice
-    needs: [check-lint, check-unit, check-build]
-    uses: ./.github/workflows/deploy-hosted-invoice.yml
-    secrets: inherit
-
   # ── 3. Verify ─────────────────────────────────────────────────────────────
   verify-storybook:
     name: Verify storybook
