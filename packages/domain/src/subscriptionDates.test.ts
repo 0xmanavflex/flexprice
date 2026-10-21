@@ -60,3 +60,30 @@ describe('contract and phase dates', () => {
     ).toEqual(['The end must be after the start'])
   })
 })
+
+describe('billing date (Bill on a date you choose)', () => {
+  const anchorErrors = (value: unknown) => {
+    const result = createSubscriptionSchema.safeParse(value)
+    return result.success
+      ? []
+      : result.error.issues.filter((i) => i.path.at(-1) === 'billingAnchor').map((i) => i.message)
+  }
+
+  it('accepts a date on or after the start', () => {
+    expect(anchorErrors({ ...base, startDate: '2030-01-01', billingAnchor: '2030-01-01' })).toEqual(
+      [],
+    )
+    expect(anchorErrors({ ...base, startDate: '2030-01-01', billingAnchor: '2030-01-15' })).toEqual(
+      [],
+    )
+  })
+
+  it('refuses a date before the start', () => {
+    expect(anchorErrors({ ...base, startDate: '2030-01-10', billingAnchor: '2030-01-05' })).toEqual(
+      ['Choose a date on or after the contract start date'],
+    )
+    expect(anchorErrors({ ...base, billingAnchor: '2000-01-01' })).toEqual([
+      'The contract starts today, so choose today or a later date',
+    ])
+  })
+})

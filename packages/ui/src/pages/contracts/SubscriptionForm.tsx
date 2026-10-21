@@ -209,13 +209,17 @@ const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
     'billingPeriod',
     'billingPeriodCount',
     'trialPeriodDays',
+    'billingAnchor',
   ],
   phases: ['startDate', 'phases', 'chargeCommitments'],
   commitments: ['commitmentAmount', 'overageFactor'],
-  billing: ['billingAnchor', 'autoInvoiceThreshold'],
+  billing: ['autoInvoiceThreshold'],
 }
 
 const unique = <T,>(values: T[]) => [...new Set(values)]
+
+/** The three ways a contract can choose its billing day. */
+type BillOn = 'start' | 'calendar' | 'date'
 
 /** Calendar billing in words: "The 1st of every month", "The start of every calendar year". */
 function calendarTitle(period: string): string {
@@ -264,13 +268,46 @@ export function SubscriptionForm({
     [customerLocked],
   )
 
+  /*
+   * Bill on is three choices over two fields: the start date (anniversary),
+   * the 1st (calendar), or a date of your choosing (anniversary, anchored on
+   * `billingAnchor`). The third is held here because an empty anchor reads the
+   * same as "the start date" until a date is picked.
+   */
+  const [billOn, setBillOn] = useState<BillOn>(() =>
+    defaultValue?.billingAnchor
+      ? 'date'
+      : defaultValue?.billingCycle === BillingCycle.Calendar
+        ? 'calendar'
+        : 'start',
+  )
+  const chooseBillOn = (next: BillOn) => {
+    setBillOn(next)
+    form.setValue(
+      'billingCycle',
+      next === 'calendar' ? BillingCycle.Calendar : BillingCycle.Anniversary,
+      { shouldDirty: true },
+    )
+    // Leaving the custom date drops it, so nothing anchors on a hidden value.
+    if (next !== 'date') {
+      form.setValue('billingAnchor', '', { shouldDirty: true })
+      form.clearErrors('billingAnchor')
+    }
+  }
+
   const flow = useFormSteps({
     steps,
     step,
     onStepChange,
-    validate: (id) => {
+    validate: async (id) => {
       const fields: string[] = [...(STEP_FIELDS[id] ?? [])]
-      return fields.length > 0 ? form.trigger(fields as never) : true
+      const valid = fields.length > 0 ? await form.trigger(fields as never) : true
+      // Choosing "a date" means choosing one.
+      if (id === 'plan' && billOn === 'date' && !form.getValues('billingAnchor')) {
+        form.setError('billingAnchor', { type: 'required', message: 'Choose the billing date' })
+        return false
+      }
+      return valid
     },
   })
 
@@ -537,26 +574,73 @@ export function SubscriptionForm({
       </FormRow>
       <FormRow
         label="Bill on"
-        hint="The day each invoice falls on: the contract's own start date, or the 1st of each month."
+        hint="The day each invoice falls on: the contract's own start date, the 1st of each month, or a date you choose."
         align="start"
       >
-        <ChoiceCards
-          label="Bill on"
-          value={values.billingCycle}
-          onChange={(cycle) => set('billingCycle', cycle)}
-          choices={[
-            {
-              value: BillingCycle.Anniversary,
-              title: 'The contract start date',
-              description: `Invoices fall on the same day ${everyPeriod(values.billingPeriod, 1).replace('every', 'each')} as the start date.`,
-            },
-            {
-              value: BillingCycle.Calendar,
-              title: calendarTitle(values.billingPeriod),
-              description: 'The first invoice covers the days up to then, prorated.',
-            },
-          ]}
-        />
+        <div className="flex flex-col gap-3">
+          <ChoiceCards<BillOn>
+            label="Bill on"
+            value={billOn}
+            onChange={chooseBillOn}
+            choices={[
+              {
+                value: 'start',
+                title: 'The contract start date',
+                description: `Invoices fall on the same day ${everyPeriod(values.billingPeriod, 1).replace('every', 'each')} as the start date.`,
+              },
+              {
+                value: 'calendar',
+                title: calendarTitle(values.billingPeriod),
+                description: 'The first invoice covers the days up to then, prorated.',
+              },
+              {
+                value: 'date',
+                title: 'A date you choose',
+                description:
+                  'Invoices fall on that day; the first covers the days up to it, prorated.',
+              },
+            ]}
+          />
+          {billOn === 'date' ? (
+            <Controller
+              control={form.control}
+              name="billingAnchor"
+              render={({ field: control }) => (
+                <div className="max-w-xs">
+                  <label htmlFor="contract-billing-date" className="sr-only">
+                    Billing date
+                  </label>
+                  <DateInput
+                    id="contract-billing-date"
+                    value={control.value}
+                    onValueChange={(value) => {
+                      form.setValue('billingAnchor', value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }}
+                    placeholder="Pick the day invoices fall on"
+                    {...(errors.billingAnchor ? { 'aria-invalid': true as const } : {})}
+                    disabled={isSubmitting}
+                    aria-describedby={
+                      errors.billingAnchor ? 'contract-billing-date-error' : undefined
+                    }
+                  />
+                  {/* On the picker, not the row: a row error would redden all three cards. */}
+                  {errors.billingAnchor?.message ? (
+                    <p
+                      id="contract-billing-date-error"
+                      role="alert"
+                      className="text-destructive mt-1.5 text-xs"
+                    >
+                      {errors.billingAnchor.message}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            />
+          ) : null}
+        </div>
       </FormRow>
       <FormRow
         label="Free trial"
@@ -1087,9 +1171,17 @@ function Frame({ children, footer }: { children: ReactNode; footer?: ReactNode }
   )
 }
 
-/** The muted, centred line an empty list shows. */
-function EmptyLine({ children }: { children: ReactNode }) {
-  return <p className="text-muted-foreground px-4 py-6 text-center text-sm">{children}</p>
+/**
+ * The muted, centred line an empty list shows — and, when there is one, the
+ * way to add the first item, centred under it rather than in a footer corner.
+ */
+function EmptyLine({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
+      <p className="text-muted-foreground text-sm">{children}</p>
+      {action}
+    </div>
+  )
 }
 
 /** "+ Add …", the quiet button that opens a picker or a sub-form. */
@@ -1098,18 +1190,21 @@ function AddButton({
   onClick,
   disabled,
   label,
+  centered = false,
 }: {
   children: string
   onClick: () => void
   disabled?: boolean
   label?: string
+  /** In an empty state: an outlined button under the message, not a quiet footer link. */
+  centered?: boolean
 }) {
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant={centered ? 'outline' : 'ghost'}
       size="sm"
-      className="text-muted-foreground hover:text-foreground -ml-2 w-fit"
+      className={centered ? 'w-fit' : 'text-muted-foreground hover:text-foreground -ml-2 w-fit'}
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
@@ -1474,13 +1569,17 @@ function PhaseDiscounts({
       <Frame
         footer={
           coupons.length === 0 ? (
-            <p className="text-muted-foreground py-1.5 text-xs">
-              No coupons yet. Create one under Product catalog → Coupons to discount a phase.
-            </p>
+            discounts.length === 0 ? null : (
+              <p className="text-muted-foreground py-1.5 text-xs">
+                No coupons yet. Create one under Product catalog → Coupons to discount a phase.
+              </p>
+            )
           ) : picking === null ? (
-            <AddButton onClick={() => onPicking('all')} label={`Add a coupon to ${phaseLabel}`}>
-              Add coupon
-            </AddButton>
+            discounts.length === 0 ? null : (
+              <AddButton onClick={() => onPicking('all')} label={`Add a coupon to ${phaseLabel}`}>
+                Add coupon
+              </AddButton>
+            )
           ) : (
             <div className="grid gap-2 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-start">
               <label htmlFor={`${idBase}-coupon`} className="sr-only">
@@ -1525,7 +1624,25 @@ function PhaseDiscounts({
         }
       >
         {discounts.length === 0 ? (
-          <EmptyLine>No discounts on {phaseLabel}.</EmptyLine>
+          <EmptyLine
+            action={
+              coupons.length === 0 ? (
+                <span className="text-muted-foreground text-xs">
+                  No coupons yet. Create one under Product catalog → Coupons to discount a phase.
+                </span>
+              ) : picking === null ? (
+                <AddButton
+                  centered
+                  onClick={() => onPicking('all')}
+                  label={`Add a coupon to ${phaseLabel}`}
+                >
+                  Add coupon
+                </AddButton>
+              ) : null
+            }
+          >
+            No discounts on {phaseLabel}.
+          </EmptyLine>
         ) : (
           <ul className="divide-y">
             {discounts.map((discount, index) => (
@@ -1907,36 +2024,46 @@ function AddonsSection({
           footer={
             options.length === 0 ? (
               <p className="text-muted-foreground py-1.5 text-xs">No add-ons exist yet.</p>
-            ) : available.length === 0 ? null : picking ? (
-              <div className="flex items-center gap-2 py-2">
-                <label htmlFor="contract-add-addon" className="sr-only">
-                  Add an add-on
-                </label>
-                <div className="max-w-sm flex-1">
-                  <OptionCombobox
-                    key={pickerKey}
-                    id="contract-add-addon"
-                    value=""
-                    placeholder="Add an add-on…"
-                    options={available}
-                    onValueChange={(id) => {
-                      const option = available.find((o) => o.value === id)
-                      if (!option) return
-                      onChange([...selected, { addonId: option.value, name: option.label }])
-                      setPickerKey((n) => n + 1)
-                      setPicking(false)
-                    }}
-                  />
+            ) : available.length === 0 ? null : picking || selected.length > 0 ? (
+              picking ? (
+                <div className="flex items-center gap-2 py-2">
+                  <label htmlFor="contract-add-addon" className="sr-only">
+                    Add an add-on
+                  </label>
+                  <div className="max-w-sm flex-1">
+                    <OptionCombobox
+                      key={pickerKey}
+                      id="contract-add-addon"
+                      value=""
+                      placeholder="Add an add-on…"
+                      options={available}
+                      onValueChange={(id) => {
+                        const option = available.find((o) => o.value === id)
+                        if (!option) return
+                        onChange([...selected, { addonId: option.value, name: option.label }])
+                        setPickerKey((n) => n + 1)
+                        setPicking(false)
+                      }}
+                    />
+                  </div>
+                  <CloseSubForm label="Close add-on picker" onClick={() => setPicking(false)} />
                 </div>
-                <CloseSubForm label="Close add-on picker" onClick={() => setPicking(false)} />
-              </div>
-            ) : (
-              <AddButton onClick={() => setPicking(true)}>Add add-on</AddButton>
-            )
+              ) : (
+                <AddButton onClick={() => setPicking(true)}>Add add-on</AddButton>
+              )
+            ) : null
           }
         >
           {selected.length === 0 ? (
-            <EmptyLine>
+            <EmptyLine
+              action={
+                available.length > 0 && !picking ? (
+                  <AddButton centered onClick={() => setPicking(true)}>
+                    Add add-on
+                  </AddButton>
+                ) : null
+              }
+            >
               No add-ons. An add-on brings its own charges and entitlements onto the contract.
             </EmptyLine>
           ) : (
@@ -2247,7 +2374,9 @@ function CreditsSection({
       <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
         <Frame
           footer={
-            adding ? null : <AddButton onClick={() => setAdding(true)}>Add credit grant</AddButton>
+            adding || grants.length === 0 ? null : (
+              <AddButton onClick={() => setAdding(true)}>Add credit grant</AddButton>
+            )
           }
         >
           {grants.length > 0 ? (
@@ -2257,7 +2386,15 @@ function CreditsSection({
               getRowId={(row) => `${row.grant.name}-${row.index}`}
             />
           ) : (
-            <EmptyLine>
+            <EmptyLine
+              action={
+                adding ? null : (
+                  <AddButton centered onClick={() => setAdding(true)}>
+                    Add credit grant
+                  </AddButton>
+                )
+              }
+            >
               {fromPlan
                 ? "All of the plan's grants are removed from this contract."
                 : 'No credit grants.'}
@@ -2315,6 +2452,38 @@ function TaxesSection({
   onChange: (next: CreateSubscription['taxes']) => void
 }) {
   const available = taxRates.filter((rate) => !taxes.some((tax) => tax.taxRateCode === rate.code))
+  // Centred under the empty message, or in the footer once a rate is on.
+  const addTax = (
+    <div className="w-full max-w-xs py-1.5">
+      <label htmlFor="contract-add-tax" className="sr-only">
+        Add a tax rate
+      </label>
+      <OptionSelect
+        id="contract-add-tax"
+        value={undefined}
+        placeholder="Add tax rate"
+        options={available.map((rate) => ({
+          value: rate.code,
+          label: `${rate.name}${rate.percentage ? ` (${rate.percentage}%)` : ''}`,
+        }))}
+        onValueChange={(code) => {
+          const rate = available.find((r) => r.code === code)
+          if (!rate) return
+          onChange([
+            ...taxes,
+            {
+              taxRateCode: rate.code,
+              name: rate.name,
+              percentage: rate.percentage,
+              taxBehavior: 'exclusive',
+              priority: taxes.length + 1,
+              autoApply: true,
+            },
+          ])
+        }}
+      />
+    </div>
+  )
   return (
     <FormCard
       title="Taxes"
@@ -2322,43 +2491,11 @@ function TaxesSection({
       icon={<ReceiptIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
     >
       <div className="px-5 py-4 sm:px-6">
-        <Frame
-          footer={
-            available.length > 0 ? (
-              <div className="max-w-xs py-1.5">
-                <label htmlFor="contract-add-tax" className="sr-only">
-                  Add a tax rate
-                </label>
-                <OptionSelect
-                  id="contract-add-tax"
-                  value={undefined}
-                  placeholder="Add tax rate"
-                  options={available.map((rate) => ({
-                    value: rate.code,
-                    label: `${rate.name}${rate.percentage ? ` (${rate.percentage}%)` : ''}`,
-                  }))}
-                  onValueChange={(code) => {
-                    const rate = available.find((r) => r.code === code)
-                    if (!rate) return
-                    onChange([
-                      ...taxes,
-                      {
-                        taxRateCode: rate.code,
-                        name: rate.name,
-                        percentage: rate.percentage,
-                        taxBehavior: 'exclusive',
-                        priority: taxes.length + 1,
-                        autoApply: true,
-                      },
-                    ])
-                  }}
-                />
-              </div>
-            ) : null
-          }
-        >
+        <Frame footer={available.length > 0 && taxes.length > 0 ? addTax : null}>
           {taxes.length === 0 ? (
-            <EmptyLine>No taxes are applied to this contract.</EmptyLine>
+            <EmptyLine action={available.length > 0 ? addTax : null}>
+              No taxes are applied to this contract.
+            </EmptyLine>
           ) : (
             <ul className="divide-y">
               {taxes.map((tax) => (
@@ -2578,22 +2715,6 @@ function BillingStep({
           )}
         </FormRow>
         <FormRow
-          label="Billing anchor"
-          hint="The day billing periods are counted from. Leave empty to follow the start date."
-          error={errors.billingAnchor?.message}
-        >
-          {({ id, ...field }) => (
-            <DateInput
-              id={id}
-              {...field}
-              value={values.billingAnchor}
-              onValueChange={(value) => onChange('billingAnchor', value)}
-              placeholder="Follows the start date"
-              disabled={isSubmitting}
-            />
-          )}
-        </FormRow>
-        <FormRow
           label="Auto-invoice threshold"
           hint="Invoice early once unbilled usage reaches this amount. Leave empty to invoice each period."
           error={errors.autoInvoiceThreshold?.message}
@@ -2683,7 +2804,6 @@ function ReviewStep({
   const invoice = firstInvoiceEstimate(values, charges, today)
   const other = [
     values.prorate ? 'Prorates changes' : 'No proration',
-    values.billingAnchor ? `Anchored on ${formatDay(values.billingAnchor)}` : null,
     values.autoInvoiceThreshold
       ? `Invoices early at ${money(values.autoInvoiceThreshold, values.currency)}`
       : null,
@@ -2701,9 +2821,11 @@ function ReviewStep({
         <ReviewRow
           label="Bill on"
           value={
-            values.billingCycle === BillingCycle.Calendar
-              ? calendarTitle(values.billingPeriod)
-              : 'The contract start date'
+            values.billingAnchor
+              ? `On ${formatDay(values.billingAnchor)}`
+              : values.billingCycle === BillingCycle.Calendar
+                ? calendarTitle(values.billingPeriod)
+                : 'The contract start date'
           }
         />
         <ReviewRow
