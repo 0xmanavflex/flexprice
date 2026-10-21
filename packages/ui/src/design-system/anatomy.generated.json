@@ -33,6 +33,7 @@
         "CreditGrantTable",
         "CustomerDetail",
         "CustomerTaxSection",
+        "EntitlementTable",
         "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
@@ -2490,13 +2491,15 @@
       "file": "src/pages/product-catalog/entitlements/EntitlementTable.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "EmDash",
         "EntityLink",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/entitlements/EntitlementTable.stories.tsx"
@@ -7218,6 +7221,7 @@
         "CustomerDetail",
         "CustomerTaxSection",
         "EditableCard",
+        "EntitlementTable",
         "EntityList",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",

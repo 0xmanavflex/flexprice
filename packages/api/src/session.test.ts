@@ -314,8 +314,17 @@ describe('fetchCurrentUser', () => {
       id: 'user_1',
       email: 'person@example.com',
       roles: ['admin'],
+      type: 'user',
       tenantId: 'tenant_1',
       tenantName: 'Acme',
+    })
+  })
+
+  it('keeps the principal type, which picks the role catalogue', async () => {
+    harness(ok({ id: 'svc_1', type: 'service_account', roles: ['event_ingestor'] }))
+
+    await expect(fetchCurrentUser(SERVER, TOKEN)).resolves.toMatchObject({
+      type: 'service_account',
     })
   })
 

@@ -93,7 +93,11 @@ export function useAccessControl(token: string | null): AccessControl {
   const catalogue = useQuery({
     queryKey: queryKeys.session.accessRoles(token ?? '', audience),
     queryFn: async () => toRoleList(await call(() => client.rbac.listRbacRoles(audience))),
-    enabled: Boolean(token) && Boolean(user.data),
+    // In parallel with `/users/me`, not after it: console sign-ins are people,
+    // so the user catalogue is fetched straight away (switched only if the
+    // principal turns out to be a service account). Waiting for the user first
+    // would put two round trips in front of every gated page.
+    enabled: Boolean(token),
     // V1 re-reads the catalogue every five minutes.
     staleTime: 5 * 60_000,
     refetchInterval: 5 * 60_000,
