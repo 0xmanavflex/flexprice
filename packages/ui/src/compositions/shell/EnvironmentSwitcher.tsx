@@ -4,6 +4,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
@@ -11,6 +12,14 @@ import { cn } from '@ui/lib/cn'
 import type { ShellEnvironment } from './types'
 import { RBAC_ENTITY } from '@fp/domain'
 import { useWriteAccess } from '../access/Access'
+
+/** One mock account state, for walking the self-billing flows on mocks. */
+export interface MockAccountOption {
+  value: string
+  name: string
+  note: string
+  tone: 'info' | 'warning' | 'destructive' | 'success' | 'muted'
+}
 
 export interface EnvironmentSwitcherProps {
   current: ShellEnvironment
@@ -26,6 +35,24 @@ export interface EnvironmentSwitcherProps {
    * would leave the console pointed at nothing.
    */
   onDelete?: (id: string) => void
+  /**
+   * Mocks only: the self-billing account state to preview (trial, locked,
+   * live…), as the prototype's environment switcher offers. Absent everywhere
+   * a real API answers.
+   */
+  mockAccounts?: {
+    value: string
+    options: readonly MockAccountOption[]
+    onChange: (value: string) => void
+  }
+}
+
+const TONE: Record<MockAccountOption['tone'], string> = {
+  info: 'bg-info',
+  warning: 'bg-warning',
+  destructive: 'bg-destructive',
+  success: 'bg-success',
+  muted: 'bg-muted-foreground/40',
 }
 
 /**
@@ -57,6 +84,7 @@ export function EnvironmentSwitcher({
   onCreate,
   onRename,
   onDelete,
+  mockAccounts,
 }: EnvironmentSwitcherProps) {
   // Creating and renaming environments need environment write (V1).
   const write = useWriteAccess(RBAC_ENTITY.Environment)
@@ -121,6 +149,36 @@ export function EnvironmentSwitcher({
               )
             })}
           </DropdownMenuGroup>
+        ) : null}
+
+        {mockAccounts ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                Mock accounts
+              </DropdownMenuLabel>
+              {mockAccounts.options.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => mockAccounts.onChange(option.value)}
+                  aria-current={mockAccounts.value === option.value ? 'true' : undefined}
+                >
+                  <span
+                    aria-hidden
+                    className={cn('ml-0.5 size-2 shrink-0 rounded-full', TONE[option.tone])}
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate">{option.name}</span>
+                    <span className="text-muted-foreground truncate text-xs">{option.note}</span>
+                  </span>
+                  {mockAccounts.value === option.value ? (
+                    <CheckIcon aria-hidden className="size-3.5 shrink-0" />
+                  ) : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </>
         ) : null}
 
         {onCreate ? (

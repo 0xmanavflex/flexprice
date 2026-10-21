@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { MOCK_PAID_KEY, type MockAccountState, mockAccountState } from './selfBillingState'
 
 /**
  * Self-billing, `/portal/billing/*`, for the console under mocks.
@@ -9,26 +10,7 @@ import { http, HttpResponse } from 'msw'
  * answers completed and the account turns active for the rest of the tab.
  */
 const BASE = '*/v1'
-const KEY = 'flexprice.mock.selfBilling'
-const PAID = 'flexprice.mock.selfBilling.paid'
-
-type MockState = 'trial' | 'ending' | 'near' | 'limit' | 'suspended' | 'active' | 'due'
-
-function read(key: string): string | null {
-  try {
-    return localStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-
-function mockState(): MockState | null {
-  if (read(PAID)) return 'active'
-  const value = read(KEY)
-  return value && ['trial', 'ending', 'near', 'limit', 'suspended', 'active', 'due'].includes(value)
-    ? (value as MockState)
-    : null
-}
+type MockState = MockAccountState
 
 const day = (offset: number) => {
   const date = new Date()
@@ -121,9 +103,9 @@ const statusOf = (state: MockState | null) =>
   state ? { enabled: true, status: summaryOf(state).status } : { enabled: false }
 
 export const selfBillingHandlers = [
-  http.get(`${BASE}/portal/billing/status`, () => HttpResponse.json(statusOf(mockState()))),
+  http.get(`${BASE}/portal/billing/status`, () => HttpResponse.json(statusOf(mockAccountState()))),
   http.get(`${BASE}/portal/billing/summary`, () => {
-    const state = mockState()
+    const state = mockAccountState()
     return state
       ? HttpResponse.json(summaryOf(state))
       : HttpResponse.json({ message: 'self-billing is disabled' }, { status: 404 })
@@ -134,12 +116,12 @@ export const selfBillingHandlers = [
       url: '/billing/checkout/success',
       status: 'initiated',
       terminal: false,
-      tenant_status: statusOf(mockState()).status ?? 'trialing',
+      tenant_status: statusOf(mockAccountState()).status ?? 'trialing',
     }),
   ),
   http.get(`${BASE}/portal/billing/checkout/:id`, ({ params }) => {
     try {
-      localStorage.setItem(PAID, '1')
+      localStorage.setItem(MOCK_PAID_KEY, '1')
     } catch {
       // The account just stays as it was.
     }

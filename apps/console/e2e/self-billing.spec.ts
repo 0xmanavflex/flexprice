@@ -115,3 +115,25 @@ test('a locked account reads everything and changes nothing', async ({ context, 
   await expect(page.getByText('Your account is locked and read-only')).toBeVisible()
   await expect(page.getByText('Event limit reached')).toBeVisible()
 })
+
+test('the environment switcher walks the account states on mocks', async ({ context, page }) => {
+  await signIn(context)
+  await page.goto('/features')
+  await expect(page.getByRole('button', { name: /Trial ·|Account locked/ })).toHaveCount(0)
+
+  const pick = async (name: RegExp) => {
+    await page.getByRole('button', { name: /^Environment:/ }).click()
+    await expect(page.getByText('Mock accounts')).toBeVisible()
+    await page.getByRole('menuitem', { name }).click()
+  }
+
+  await pick(/^Trial\s*15 days left/)
+  await expect(page.getByRole('button', { name: /Trial · \d+ days left/ })).toBeVisible()
+
+  await pick(/Account locked\s*Event limit reached/)
+  await expect(page.getByRole('button', { name: /Account locked/ })).toBeVisible()
+  await expect(page.locator('[data-access="denied"]').first()).toBeVisible()
+
+  await pick(/^Live\s*Paid/)
+  await expect(page.getByRole('button', { name: /Trial ·|Account locked/ })).toHaveCount(0)
+})
