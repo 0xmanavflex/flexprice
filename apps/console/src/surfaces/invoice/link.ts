@@ -1,4 +1,4 @@
-import { type ApiUrls, REGION_IDS, type RegionId } from './env'
+import { type ApiUrls, REGION_IDS, type RegionId } from '../publicApi'
 
 export interface HostedInvoiceLink {
   region: RegionId

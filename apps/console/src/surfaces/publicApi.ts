@@ -1,9 +1,20 @@
 /**
- * Build-time configuration. The only module that reads `import.meta.env`.
+ * Where the public surfaces send their requests: one API origin per region.
  *
- * `VITE_HOSTED_INVOICE_API_URLS` maps each region in a hosted link to the
- * origin of that region's API, e.g. `{"us":"https://us.api.flexprice.io"}`.
- * There are no defaults: a region the deployment does not list has no page.
+ * The console talks to the one API its deployment was built for
+ * (`VITE_FLEXPRICE_API_URL`). A public page cannot: a hosted invoice link names
+ * its region in the URL (`/us/<token>`), and one deployment serves every
+ * region's links. So the browser picks the API itself, from this map — there
+ * is no edge router in front choosing a build per region.
+ *
+ * `VITE_PUBLIC_API_URLS` maps each region to that region's API origin, e.g.
+ * `{"us":"https://us.api.flexprice.io","in":"https://api.cloud.flexprice.io"}`.
+ * There are no defaults: a region the deployment does not list has no page,
+ * rather than a request sent to a guessed host.
+ *
+ * These routes are public (`/public/v1`, a token in the link instead of a
+ * session) and are called with plain `fetch` from `@fp/api`, never the SDK:
+ * the SDK is generated for the authenticated API and will not carry them.
  */
 export type RegionId = 'in' | 'us' | 'ca' | 'staging'
 
@@ -18,7 +29,7 @@ export function parseApiUrls(raw: string | undefined): ApiUrls {
   try {
     parsed = JSON.parse(value)
   } catch {
-    console.warn('[hosted-invoice] VITE_HOSTED_INVOICE_API_URLS is not valid JSON and is ignored.')
+    console.warn('[flexprice] VITE_PUBLIC_API_URLS is not valid JSON and is ignored.')
     return {}
   }
   if (typeof parsed !== 'object' || parsed === null) return {}
@@ -30,12 +41,12 @@ export function parseApiUrls(raw: string | undefined): ApiUrls {
     try {
       out[id] = new URL(entry).origin
     } catch {
-      console.warn(`[hosted-invoice] VITE_HOSTED_INVOICE_API_URLS.${id} is not a URL and is ignored.`)
+      console.warn(`[flexprice] VITE_PUBLIC_API_URLS.${id} is not a URL and is ignored.`)
     }
   }
   return out
 }
 
-export const env = {
-  apiUrls: parseApiUrls(import.meta.env.VITE_HOSTED_INVOICE_API_URLS as string | undefined),
-}
+export const publicApiUrls: ApiUrls = parseApiUrls(
+  import.meta.env.VITE_PUBLIC_API_URLS as string | undefined,
+)

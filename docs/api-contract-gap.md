@@ -141,5 +141,7 @@ layer. That package:
 It currently holds **zero shims**, and the foundation does not depend on one.
 
 The hosted invoice page's three `/public/v1` routes (`hosted_invoice.go`: view,
-download, pay) are called with plain `fetch` from `packages/api/src/hostedInvoice.ts`,
-like `settings.ts`: one file, so annotating the handlers makes deleting it a diff.
+download, pay) are called with plain `fetch` from `packages/api/src/hostedInvoice.ts`.
+That is by design, not a gap: public routes authenticate with the link's token, not a
+session or API key, and will not be added to the SDK. The customer portal and checkout
+follow the same rule.

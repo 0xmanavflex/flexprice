@@ -3693,6 +3693,30 @@
       "usedBy": [],
       "story": null
     },
+    "HostedInvoiceDetailsSheet": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceDetailsSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "Money",
+        "Pill",
+        "Sheet"
+      ],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
+    "HostedInvoiceView": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceView.tsx",
+      "layer": "surface",
+      "composes": [
+        "HostedInvoiceDetailsSheet",
+        "Money",
+        "Panel"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx"
+    },
     "HotelIcon": {
       "file": "src/reui/icons/default/outline/hotel.tsx",
       "layer": "other",
@@ -4475,6 +4499,8 @@
         "FeatureTypePill",
         "FilterSelect",
         "Formula",
+        "HostedInvoiceDetailsSheet",
+        "HostedInvoiceView",
         "Pill",
         "Status",
         "UsageCard"
@@ -4743,6 +4769,7 @@
         "ChartBox",
         "DashboardHome",
         "FilterSelect",
+        "HostedInvoiceView",
         "RevenueReport",
         "UsageCard"
       ],
@@ -4942,6 +4969,7 @@
         "FeatureGrid",
         "FeatureTypeBadge",
         "GlyphBadge",
+        "HostedInvoiceDetailsSheet",
         "InvoiceDetailView",
         "InvoiceStatusBadge",
         "PaymentStatusBadge",
@@ -5934,6 +5962,7 @@
         "ConnectIntegrationSheet",
         "CustomerEventsGrid",
         "EventDetailSheet",
+        "HostedInvoiceDetailsSheet",
         "ManageConnectionSheet",
         "UsageSyncDetailSheet",
         "WebhookMessageSheet"
@@ -7873,6 +7902,13 @@
       "component": "CreditNoteGrid",
       "uses": [
         "CreditNoteGrid"
+      ]
+    },
+    "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx": {
+      "title": "App/Billing/Hosted invoice/Page",
+      "component": "HostedInvoiceView",
+      "uses": [
+        "HostedInvoiceView"
       ]
     },
     "./src/pages/billing/invoices/InvoiceBillingDetailBlock.stories.tsx": {

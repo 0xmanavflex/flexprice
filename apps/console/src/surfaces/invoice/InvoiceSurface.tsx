@@ -6,16 +6,23 @@ import {
   usePayHostedInvoice,
 } from '@fp/query'
 import { HostedInvoiceView } from '@fp/ui/pages'
-import { env } from './env'
+import { publicApiUrls } from '../publicApi'
 import { type HostedInvoiceLink, parseHostedInvoiceLink } from './link'
 import { pageKind } from './pageKind'
 import { isSafeNavigationUrl } from './safeUrl'
 
 const GENERIC_ERROR = 'Something went wrong, please try again.'
 
-/** Only the path counts: gateways may add a query string or hash when they send the customer back. */
-export function App({ pathname }: { pathname: string }) {
-  const link = parseHostedInvoiceLink(pathname, env.apiUrls)
+/**
+ * The hosted invoice page: `/<region>/<token>`, no sign-in.
+ *
+ * `pathname` is the path as this surface sees it — the `/i` prefix that
+ * selected it, if any, already removed (see `surface.ts`). Only the path
+ * counts: gateways may add a query string or hash when they send the customer
+ * back.
+ */
+export function InvoiceSurface({ pathname }: { pathname: string }) {
+  const link = parseHostedInvoiceLink(pathname, publicApiUrls)
   if (!link) return <HostedInvoiceView kind="not-found" />
   return <HostedInvoicePage link={link} />
 }

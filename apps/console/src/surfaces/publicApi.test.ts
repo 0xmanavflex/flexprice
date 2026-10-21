@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseApiUrls } from './env'
+import { parseApiUrls } from './publicApi'
 
 describe('parseApiUrls', () => {
   it('keeps URL entries as origins', () => {
