@@ -17,15 +17,16 @@ import {
 } from '../product-catalog/plans/planDetailFixtures'
 import {
   SubscriptionForm,
+  type SubscriptionCouponOption,
   type SubscriptionCustomerOption,
   type SubscriptionPlanContext,
 } from './SubscriptionForm'
 
 const STEPS = ['plan', 'phases', 'commitments', 'billing', 'review'] as const
 
-const COUPONS: Option[] = [
-  { value: 'cpn_launch', label: 'Launch 20%' },
-  { value: 'cpn_loyal', label: 'Loyalty $50' },
+const COUPONS: SubscriptionCouponOption[] = [
+  { value: 'cpn_launch', label: 'Launch', discount: '20%', code: 'LAUNCH20' },
+  { value: 'cpn_loyal', label: 'Loyalty', discount: '$50', code: 'LOYAL50' },
 ]
 const ADDONS: Option[] = [{ value: 'addon_support', label: 'Premium support' }]
 const TAX_RATES = [{ code: 'GST18', name: 'GST', percentage: '18' }]
@@ -715,6 +716,69 @@ export const OverridesAndResetsACharge: Story = {
   },
 }
 
+/**
+ * A coupon on one charge, from its menu: one coupon per charge, shown as a
+ * "20% off" chip that reopens the dialog to change or remove it.
+ */
+export const AppliesACouponToOneCharge: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'More for Platform base' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Apply coupon' }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Apply coupon · Platform base' }),
+    )
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Coupon' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Launch · 20% off' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Apply coupon' }))
+
+    const chip = await canvas.findByRole('button', { name: '20% off: edit on Platform base' })
+    await userEvent.click(chip)
+    const change = within(
+      await screen.findByRole('dialog', { name: 'Change coupon · Platform base' }),
+    )
+    await userEvent.click(change.getByRole('button', { name: 'Cancel' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'More for Platform base' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Change coupon' })).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [
+            expect.objectContaining({
+              discounts: [{ couponId: 'cpn_launch', priceId: 'price_fixed_0' }],
+            }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
+/** The contract's own discount: No discount by default, or one coupon on the whole contract. */
+export const DiscountsTheWholeContract: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'Discount' })).toBeVisible()
+    const coupon = canvas.getByRole('combobox', { name: /^Coupon/ })
+    await expect(coupon).toHaveTextContent('No discount')
+    await userEvent.click(coupon)
+    await userEvent.click(await screen.findByRole('option', { name: 'Loyalty · $50 off' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [expect.objectContaining({ discounts: [{ couponId: 'cpn_loyal' }] })],
+        }),
+      ),
+    )
+  },
+}
+
 export const PhaseNoCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 0 },
   play: async ({ canvasElement }) => {
@@ -744,7 +808,7 @@ export const AddsAPhaseWithItsOwnDiscount: Story = {
 
     await userEvent.click(canvas.getByRole('button', { name: 'Add a coupon to Phase 2' }))
     await userEvent.click(canvas.getByRole('combobox', { name: 'Coupon for Phase 2' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Launch 20%' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Launch · 20% off' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Add discount' }))
     await expect(canvas.getByText('On all of Phase 2')).toBeVisible()
   },

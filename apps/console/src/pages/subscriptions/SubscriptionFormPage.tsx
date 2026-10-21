@@ -24,6 +24,7 @@ import {
   DEFAULT_CUSTOMER_QUERY,
   DEFAULT_PLAN_QUERY,
   DEFAULT_TAX_RATE_QUERY,
+  formatMoney,
   PriceEntityType,
   TaxRateStatus,
 } from '@fp/domain'
@@ -134,7 +135,13 @@ export function SubscriptionFormPage({
       priceUnits={formOptions.units}
       coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
         value: coupon.id,
-        label: coupon.code ? `${coupon.name} · ${coupon.code}` : coupon.name,
+        label: coupon.name,
+        code: coupon.code || undefined,
+        discount: coupon.percentageOff
+          ? `${coupon.percentageOff}%`
+          : coupon.amountOff
+            ? formatMoney(coupon.amountOff)
+            : undefined,
       }))}
       addons={(addons.data?.addons ?? []).map((addon) => ({ value: addon.id, label: addon.name }))}
       taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({

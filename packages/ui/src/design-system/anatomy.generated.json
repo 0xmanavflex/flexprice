@@ -810,6 +810,20 @@
       ],
       "story": null
     },
+    "ChargeCouponDialog": {
+      "file": "src/pages/contracts/ChargeCouponDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "Field",
+        "FormDialog",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "SubscriptionForm"
+      ],
+      "story": "./src/pages/contracts/ChargeCouponDialog.stories.tsx"
+    },
     "ChargeFlags": {
       "file": "src/pages/product-catalog/charges/ChargeFlags.tsx",
       "layer": "surface",
@@ -1214,6 +1228,7 @@
       "usedBy": [
         "ChargeAlertForm",
         "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
@@ -2958,6 +2973,7 @@
       "usedBy": [
         "AcceptInvitationForm",
         "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChargeForm",
         "ConnectIntegrationSheet",
         "ContractAddChargeForm",
@@ -3342,6 +3358,7 @@
       "usedBy": [
         "AddChargeDialog",
         "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
@@ -4619,6 +4636,7 @@
       "usedBy": [
         "ChargeAlertForm",
         "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChargeForm",
         "ContractAddChargeForm",
         "ContractIntegrations",
@@ -6407,6 +6425,7 @@
       "composes": [
         "CalendarIcon",
         "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChoiceCards",
         "ContractChargeDialog",
         "CreditGrantCreateForm",
@@ -7990,6 +8009,13 @@
       "component": "PaymentStatusBadge",
       "uses": [
         "PaymentStatusBadge"
+      ]
+    },
+    "./src/pages/contracts/ChargeCouponDialog.stories.tsx": {
+      "title": "App/Contracts/Charge coupon dialog",
+      "component": "ChargeCouponDialog",
+      "uses": [
+        "ChargeCouponDialog"
       ]
     },
     "./src/pages/contracts/ContractIntegrations.stories.tsx": {

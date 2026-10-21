@@ -89,6 +89,11 @@ import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { ContractChargeDialog } from './ContractChargeDialog'
 import { addDays, everyPeriod, formatDay, localToday, periodNoun } from './ContractSummary'
 import { ChargeCommitmentDialog, commitmentText } from './ChargeCommitmentDialog'
+import {
+  ChargeCouponDialog,
+  type ChargeCouponOption,
+  couponOptionLabel,
+} from './ChargeCouponDialog'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -155,8 +160,7 @@ export interface SubscriptionCustomerOption extends Option {
 }
 
 /** A coupon to choose from; `discount` ("20%", "$50") and `code` are shown beside its name. */
-export interface SubscriptionCouponOption extends Option {
-  discount?: string | undefined
+export interface SubscriptionCouponOption extends ChargeCouponOption {
   code?: string | undefined
 }
 
@@ -1673,7 +1677,7 @@ function PhaseDiscounts({
 }: {
   discounts: SubscriptionDiscount[]
   charges: Charge[]
-  coupons: readonly Option[]
+  coupons: readonly SubscriptionCouponOption[]
   phaseLabel: string
   /** The target the picker is open for (`all`, or a charge id), or null while closed. */
   picking: string | null
@@ -1720,7 +1724,10 @@ function PhaseDiscounts({
                 id={`${idBase}-coupon`}
                 value={couponId}
                 onValueChange={setCouponId}
-                options={coupons}
+                options={coupons.map((coupon) => ({
+                  value: coupon.value,
+                  label: couponOptionLabel(coupon),
+                }))}
                 placeholder="Choose a coupon…"
               />
               <label htmlFor={`${idBase}-target`} className="sr-only">
@@ -1806,6 +1813,57 @@ function PhaseDiscounts({
   )
 }
 
+/**
+ * The contract's own discount: one coupon on the whole contract, or none. A
+ * coupon on one charge is applied from that charge's menu, so this card leaves
+ * those alone. Both are the phase's discounts underneath — this one without a
+ * charge — so the request is the same either way.
+ */
+function DiscountCard({
+  discounts,
+  coupons,
+  onChange,
+}: {
+  discounts: SubscriptionDiscount[]
+  coupons: readonly SubscriptionCouponOption[]
+  onChange: (next: SubscriptionDiscount[]) => void
+}) {
+  const whole = discounts.find((d) => !d.priceId)
+  const onCharges = discounts.filter((d) => d.priceId)
+  return (
+    <FormCard
+      title="Discount"
+      status="optional"
+      icon={<TicketPercentIcon aria-hidden className="text-success size-4 shrink-0" />}
+    >
+      <FormRow
+        label="Coupon"
+        hint="A coupon on the whole contract. A coupon on one charge is applied from that charge's menu."
+      >
+        {({ id, ...field }) => (
+          <OptionSelect
+            id={id}
+            {...field}
+            value={whole?.couponId ?? NO_DISCOUNT}
+            onValueChange={(couponId) =>
+              onChange(couponId === NO_DISCOUNT ? onCharges : [...onCharges, { couponId }])
+            }
+            options={[
+              { value: NO_DISCOUNT, label: 'No discount' },
+              ...coupons.map((coupon) => ({
+                value: coupon.value,
+                label: couponOptionLabel(coupon),
+              })),
+            ]}
+          />
+        )}
+      </FormRow>
+    </FormCard>
+  )
+}
+
+const NO_DISCOUNT = 'none'
+
 /** The phase's number in a filled circle, beside its title. */
 function PhaseNumber({ n }: { n: number }) {
   return (
@@ -1881,6 +1939,8 @@ function PhasesStep({
   const [addingTo, setAddingTo] = useState<number | null>(null)
   // Which phase's coupon picker is open, and for what.
   const [couponFor, setCouponFor] = useState<{ phase: number; target: string } | null>(null)
+  // The charge whose coupon dialog is open, and in which phase.
+  const [couponing, setCouponing] = useState<{ phase: number; priceId: string } | null>(null)
   // Phases folded away so a newly added one can take the page.
   const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(new Set())
   const single = phases.length === 1
@@ -1959,7 +2019,7 @@ function PhasesStep({
           }
           couponOf={(priceId) => couponOn(index, priceId)}
           {...(coupons.length > 0
-            ? { onCoupon: (priceId: string) => setCouponFor({ phase: index, target: priceId }) }
+            ? { onCoupon: (priceId: string) => setCouponing({ phase: index, priceId }) }
             : {})}
           onReset={(priceId) => {
             update(index, {
@@ -2046,6 +2106,33 @@ function PhasesStep({
     </div>
   )
 
+  const couponingCharge = couponing
+    ? charges.find((charge) => charge.id === couponing.priceId)
+    : undefined
+  const couponDialog = (
+    <ChargeCouponDialog
+      charge={
+        couponing && couponingCharge
+          ? { priceId: couponingCharge.id, name: chargeName(couponingCharge) }
+          : null
+      }
+      couponId={couponing ? couponOn(couponing.phase, couponing.priceId)?.value : undefined}
+      coupons={coupons}
+      onClose={() => setCouponing(null)}
+      onSave={(couponId) => {
+        if (couponing) {
+          const phase = phases[couponing.phase]!
+          // One coupon per charge: a new one replaces the old.
+          const rest = phase.discounts.filter((d) => d.priceId !== couponing.priceId)
+          update(couponing.phase, {
+            discounts: couponId ? [...rest, { couponId, priceId: couponing.priceId }] : rest,
+          })
+        }
+        setCouponing(null)
+      }}
+    />
+  )
+
   const addChargeDialog = (
     <ContractChargeDialog
       state={addingTo === null ? null : { mode: 'add' }}
@@ -2086,9 +2173,14 @@ function PhasesStep({
             {chargesOf(0, '')}
           </div>
           {prorationRow}
-          {discountsOf(0, 'this contract')}
         </FormCard>
+        <DiscountCard
+          discounts={phases[0]!.discounts}
+          coupons={coupons}
+          onChange={(discounts) => update(0, { discounts })}
+        />
         {addChargeDialog}
+        {couponDialog}
         {addPhase}
       </div>
     )
@@ -2216,6 +2308,7 @@ function PhasesStep({
         )
       })}
       {addChargeDialog}
+      {couponDialog}
       {addPhase}
       <FormCard
         title="Proration"
