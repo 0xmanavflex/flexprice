@@ -13,7 +13,6 @@ import {
   mutationMessage,
   toFailure,
 } from '../settings/panelKit'
-import { useOrganization } from './organization'
 
 /**
  * Settings → Usage & billing: the tenant's own Flexprice account. The billing
@@ -22,7 +21,6 @@ import { useOrganization } from './organization'
 export function UsageBillingPage({ onUpgrade }: { onUpgrade: () => void }) {
   const status = useSelfBillingStatus()
   const summary = useSelfBillingSummary({ enabled: Boolean(status.data?.enabled) })
-  const organization = useOrganization()
   const portal = useSelfBillingPortalSession()
 
   const failure = toFailure(status.error ?? summary.error, 'your Flexprice billing')
@@ -56,7 +54,6 @@ export function UsageBillingPage({ onUpgrade }: { onUpgrade: () => void }) {
       <UsageBillingView
         summary={summary.data}
         today={selfBillingToday()}
-        billingEmail={organization.tenant?.billingEmail ?? ''}
         onUpgrade={onUpgrade}
         onOpenPortal={() =>
           portal.mutate(undefined, {
