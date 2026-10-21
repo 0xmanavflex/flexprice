@@ -1,3 +1,5 @@
+import { RBAC_ENTITY } from '@fp/domain'
+import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { PlusIcon, CoinsIcon } from '@ui/icons'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import {
@@ -28,7 +30,7 @@ function grantedLabel(g: CreditGrant): string {
 }
 
 /** The plan's credit grants: grant, credits, granted, expires, priority. */
-export function PlanCreditGrantsView({
+function PlanCreditGrantsViewInner({
   grants,
   onAdd,
   onEdit,
@@ -41,10 +43,12 @@ export function PlanCreditGrantsView({
   isRetrying,
 }: PlanCreditGrantsViewProps) {
   const add = (
-    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-      <PlusIcon aria-hidden />
-      Add grant
-    </Button>
+    <WriteGate>
+      <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+        <PlusIcon aria-hidden />
+        Add grant
+      </Button>
+    </WriteGate>
   )
   if (grants.length === 0) {
     return (
@@ -128,5 +132,14 @@ export function PlanCreditGrantsView({
         ]}
       />
     </Section>
+  )
+}
+
+/** `PlanCreditGrantsView`, scoped to the entity it writes (CreditGrant). */
+export function PlanCreditGrantsView(props: Parameters<typeof PlanCreditGrantsViewInner>[0]) {
+  return (
+    <AccessScope entity={RBAC_ENTITY.CreditGrant}>
+      <PlanCreditGrantsViewInner {...props} />
+    </AccessScope>
   )
 }

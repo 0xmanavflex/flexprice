@@ -215,6 +215,7 @@ export function SubscriptionGrid({
     if (onSubscriptionClick) {
       actions.push({
         label: 'View contract',
+        readOnly: true,
         icon: <RepeatIcon aria-hidden className="size-4" />,
         onSelect: () => onSubscriptionClick(subscription),
       })
@@ -222,6 +223,7 @@ export function SubscriptionGrid({
     if (onOpenCustomer && subscription.customerId) {
       actions.push({
         label: 'View customer',
+        readOnly: true,
         icon: <UserIcon aria-hidden className="size-4" />,
         onSelect: () => onOpenCustomer(subscription.customerId),
       })
@@ -229,12 +231,14 @@ export function SubscriptionGrid({
     if (onOpenPlan && subscription.planId) {
       actions.push({
         label: 'View plan',
+        readOnly: true,
         icon: <LayersIcon aria-hidden className="size-4" />,
         onSelect: () => onOpenPlan(subscription.planId),
       })
     }
     actions.push({
       label: 'Copy contract ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(subscription.id),
     })

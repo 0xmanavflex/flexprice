@@ -24,8 +24,10 @@ import {
   isZeroMoney,
   SubscriptionStatus,
   type Subscription,
+  RBAC_ENTITY,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
+import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { ActivitySection, type ActivityLogEntry } from '@ui/compositions/detail/ActivityLog'
 import { DetailTabs, OverviewTiles, type DetailMenuItem } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
@@ -251,6 +253,7 @@ export function CustomerDetail({
             label: 'Create contract',
             icon: <FileTextIcon className="text-muted-foreground" aria-hidden="true" />,
             onSelect: onCreateContract,
+            entity: RBAC_ENTITY.Subscription,
           },
         ]
       : []),
@@ -261,6 +264,7 @@ export function CustomerDetail({
             label: 'Create invoice',
             icon: <ReceiptIcon className="text-muted-foreground size-4" aria-hidden="true" />,
             onSelect: onCreateInvoice,
+            entity: RBAC_ENTITY.Invoice,
           },
         ]
       : []),
@@ -281,6 +285,7 @@ export function CustomerDetail({
             label: 'Stream sample events',
             icon: <RocketIcon className="text-muted-foreground" aria-hidden="true" />,
             onSelect: onStreamEvents,
+            entity: RBAC_ENTITY.Event,
           },
         ]
       : []),
@@ -289,6 +294,7 @@ export function CustomerDetail({
       label: 'Top up wallet',
       icon: <WalletIcon className="text-muted-foreground" aria-hidden="true" />,
       onSelect: () => onTabChange('wallet'),
+      entity: RBAC_ENTITY.Wallet,
     },
     ...(onArchive
       ? [
@@ -375,38 +381,45 @@ export function CustomerDetail({
         ) : null}
 
         {tab === 'invoices' ? (
-          <Section table title="Invoices">
-            <InvoiceTable
-              invoices={invoices}
-              isLoading={invoicesLoading}
-              isError={invoicesError}
-              onRetry={onRetryInvoices}
-              formatDate={formatDate}
-              onOpenInvoice={onOpenInvoice}
-              {...(invoiceActions ? { actions: invoiceActions } : {})}
-              {...(onCreateInvoice
-                ? {
-                    action: (
-                      <Button size="sm" className="h-8 px-3" onClick={onCreateInvoice}>
-                        <PlusIcon aria-hidden="true" />
-                        New invoice
-                      </Button>
-                    ),
-                  }
-                : {})}
-            />
-          </Section>
+          // The invoices here write invoices, not the customer.
+          <AccessScope entity={RBAC_ENTITY.Invoice}>
+            <Section table title="Invoices">
+              <InvoiceTable
+                invoices={invoices}
+                isLoading={invoicesLoading}
+                isError={invoicesError}
+                onRetry={onRetryInvoices}
+                formatDate={formatDate}
+                onOpenInvoice={onOpenInvoice}
+                {...(invoiceActions ? { actions: invoiceActions } : {})}
+                {...(onCreateInvoice
+                  ? {
+                      action: (
+                        <WriteGate>
+                          <Button size="sm" className="h-8 px-3" onClick={onCreateInvoice}>
+                            <PlusIcon aria-hidden="true" />
+                            New invoice
+                          </Button>
+                        </WriteGate>
+                      ),
+                    }
+                  : {})}
+              />
+            </Section>
+          </AccessScope>
         ) : null}
 
-        {tab === 'wallet'
-          ? (wallet ?? (
+        {tab === 'wallet' ? (
+          <AccessScope entity={RBAC_ENTITY.Wallet}>
+            {wallet ?? (
               <EmptyState
                 scene="customers"
                 title="Wallet not available here"
                 description="This view has no wallet data to show. A customer's credit balance, top-ups and transactions appear here when it is provided."
               />
-            ))
-          : null}
+            )}
+          </AccessScope>
+        ) : null}
 
         {tab === 'usage'
           ? (usage ?? (
@@ -820,10 +833,12 @@ function ContractsTable({
       {...(onCreateContract
         ? {
             action: (
-              <Button size="sm" className="h-8 px-3" onClick={onCreateContract}>
-                <PlusIcon aria-hidden="true" />
-                Create contract
-              </Button>
+              <WriteGate entity={RBAC_ENTITY.Subscription}>
+                <Button size="sm" className="h-8 px-3" onClick={onCreateContract}>
+                  <PlusIcon aria-hidden="true" />
+                  Create contract
+                </Button>
+              </WriteGate>
             ),
           }
         : {})}

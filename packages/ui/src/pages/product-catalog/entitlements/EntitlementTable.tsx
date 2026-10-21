@@ -1,3 +1,5 @@
+import { RBAC_ENTITY } from '@fp/domain'
+import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from '@ui/icons'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
@@ -67,7 +69,7 @@ function valueOf(entitlement: Entitlement): string {
   }
 }
 
-export function EntitlementTable({
+function EntitlementTableInner({
   entitlements,
   onAdd,
   onEdit,
@@ -84,10 +86,12 @@ export function EntitlementTable({
 }: EntitlementTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
-    <Button type="button" onClick={onAdd}>
-      <PlusIcon aria-hidden />
-      Add entitlement
-    </Button>
+    <WriteGate>
+      <Button type="button" onClick={onAdd}>
+        <PlusIcon aria-hidden />
+        Add entitlement
+      </Button>
+    </WriteGate>
   ) : null
 
   if (entitlements.length === 0) {
@@ -194,5 +198,14 @@ export function EntitlementTable({
         ]}
       />
     </Section>
+  )
+}
+
+/** `EntitlementTable`, scoped to the entity it writes (Entitlement). */
+export function EntitlementTable(props: Parameters<typeof EntitlementTableInner>[0]) {
+  return (
+    <AccessScope entity={RBAC_ENTITY.Entitlement}>
+      <EntitlementTableInner {...props} />
+    </AccessScope>
   )
 }

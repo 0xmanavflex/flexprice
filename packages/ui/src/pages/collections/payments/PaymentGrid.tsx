@@ -184,12 +184,14 @@ export function PaymentGrid({
     if (onPaymentClick) {
       actions.push({
         label: 'View payment',
+        readOnly: true,
         icon: <BanknoteIcon aria-hidden className="size-4" />,
         onSelect: () => onPaymentClick(payment),
       })
     }
     actions.push({
       label: 'Copy payment ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(payment.id),
     })

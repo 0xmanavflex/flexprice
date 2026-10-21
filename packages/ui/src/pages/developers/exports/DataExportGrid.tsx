@@ -107,6 +107,7 @@ export function DataExportGrid({
       ? [
           {
             label: 'View export',
+            readOnly: true,
             icon: <EyeIcon aria-hidden className="size-4" />,
             onSelect: () => onOpen(row),
           },
@@ -114,6 +115,7 @@ export function DataExportGrid({
       : []),
     {
       label: 'Copy export ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(row.id),
     },
@@ -157,6 +159,8 @@ export function DataExportGrid({
       rowActions={rowActions}
       exportFileName="exports"
       {...(onOpen ? { onRowClick: onOpen } : {})}
+      // Refresh does not write; a "New export" given by the page does.
+      primaryActionReadOnly={!primaryAction}
       {...(primaryAction
         ? { primaryAction }
         : onRefresh

@@ -174,11 +174,13 @@ export function WebhookEndpointGrid({
   const rowActions = (row: WebhookEndpoint): EntityRowAction[] => [
     {
       label: 'Open endpoint',
+      readOnly: true,
       icon: <LayoutListIcon aria-hidden className="size-4" />,
       onSelect: () => onOpen(row),
     },
     {
       label: 'Copy URL',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(row.url),
     },
