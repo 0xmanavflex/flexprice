@@ -19,11 +19,11 @@ import {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
   BillingModel,
+  BillingPeriod,
   type AddContractCharge,
   BillingCycle,
   type Charge,
   type ChargeCommitment,
-  CommitmentType,
   type CreateCreditGrant,
   type CreateSubscription,
   FEATURE_TYPE_LABEL,
@@ -79,7 +79,9 @@ import {
   formatDay,
   localToday,
   moneyText,
+  periodNoun,
 } from './ContractSummary'
+import { ChargeCommitmentDialog, commitmentText } from './ChargeCommitmentDialog'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -725,7 +727,6 @@ export function SubscriptionForm({
           errors={errors.phases}
           onChange={(next) => set('phases', next)}
           commitments={values.chargeCommitments}
-          commitmentErrors={errors.chargeCommitments}
           onCommitments={(next) => set('chargeCommitments', next)}
           currency={values.currency}
           billingPeriod={values.billingPeriod}
@@ -1033,104 +1034,6 @@ function OtherCadences({
   )
 }
 
-/**
- * A usage charge's commitment, opened from that charge's menu and kept in the
- * charges list. Every option is shown at once — including true-up — so none
- * of them has to be discovered by filling in another field first.
- *
- * Only a single-phase contract can carry these — the API takes them on the
- * contract's charges, not on a phase's.
- */
-function ChargeMinimum({
-  priceId,
-  name,
-  commitment,
-  error,
-  onChange,
-}: {
-  priceId: string
-  name: string
-  commitment: ChargeCommitment | undefined
-  error: string | undefined
-  onChange: (next: Partial<ChargeCommitment> | null) => void
-}) {
-  const draft = commitment ?? {
-    type: CommitmentType.Amount,
-    value: '',
-    overageFactor: '',
-    trueUp: false,
-  }
-  return (
-    <div className="flex flex-col gap-3 border-t border-dashed pt-3">
-      <div className="flex items-center gap-2">
-        <ScaleIcon aria-hidden className="text-primary size-4 shrink-0" />
-        <span className="text-sm font-medium">Commitment</span>
-      </div>
-      <p className="text-muted-foreground text-xs">
-        The least {name} bills. Usage past it is multiplied by the overage factor; 1 is the normal
-        rate. True-up bills the shortfall when usage stays under it.
-      </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <label htmlFor={`commitment-type-${priceId}`} className="text-muted-foreground text-xs">
-            Measured as
-          </label>
-          <OptionSelect
-            id={`commitment-type-${priceId}`}
-            value={draft.type}
-            onValueChange={(type) => onChange({ type: type as CommitmentType })}
-            options={[
-              { value: CommitmentType.Amount, label: 'Spend' },
-              { value: CommitmentType.Quantity, label: 'Units' },
-            ]}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor={`commitment-value-${priceId}`} className="text-muted-foreground text-xs">
-            Minimum
-          </label>
-          <Input
-            id={`commitment-value-${priceId}`}
-            inputMode="decimal"
-            placeholder={draft.type === CommitmentType.Amount ? 'Amount' : 'Units'}
-            value={draft.value}
-            aria-invalid={error ? true : undefined}
-            onChange={(event) => onChange({ value: event.target.value })}
-          />
-          {error ? (
-            <p className="text-destructive text-xs" role="alert">
-              {error}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor={`commitment-overage-${priceId}`}
-            className="text-muted-foreground text-xs"
-          >
-            Overage factor
-          </label>
-          <Input
-            id={`commitment-overage-${priceId}`}
-            inputMode="decimal"
-            placeholder="1"
-            value={draft.overageFactor}
-            onChange={(event) => onChange({ overageFactor: event.target.value })}
-          />
-        </div>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm">
-          <Switch
-            aria-label={`True-up on ${name}`}
-            checked={draft.trueUp}
-            onCheckedChange={(trueUp) => onChange({ trueUp })}
-          />
-          True-up
-        </label>
-      </div>
-    </div>
-  )
-}
-
 /* ------------------------------------------------------------------------- */
 /* Shared pieces                                                             */
 /* ------------------------------------------------------------------------- */
@@ -1267,8 +1170,8 @@ function ChargesTable({
   quantities,
   onQuantities,
   phaseLabel,
+  currency,
   commitments,
-  commitmentErrors,
   onCommitment,
   onRemoveExtra,
   onCouponFor,
@@ -1281,10 +1184,10 @@ function ChargesTable({
   quantities: SubscriptionPhase['quantities']
   onQuantities: (next: SubscriptionPhase['quantities']) => void
   phaseLabel: string
-  /** Present on a single-phase contract, where a usage charge can carry a minimum. */
+  currency: string
+  /** Present on a single-phase contract, where a usage charge can carry a commitment. */
   commitments?: ChargeCommitment[]
-  commitmentErrors?: FieldErrors<CreateSubscription>['chargeCommitments']
-  onCommitment?: (priceId: string, next: Partial<ChargeCommitment> | null) => void
+  onCommitment?: (priceId: string, next: ChargeCommitment | null) => void
   onRemoveExtra: (index: number) => void
   onCouponFor?: (priceId: string) => void
 }) {
@@ -1297,8 +1200,8 @@ function ChargesTable({
         : [...quantities.filter((q) => q.priceId !== priceId), { priceId, quantity }],
     )
   const [editing, setEditing] = useState<string | null>(null)
-  // Charges whose commitment options are open. A saved commitment stays open.
-  const [configuring, setConfiguring] = useState<ReadonlySet<string>>(new Set())
+  // The usage charge whose commitment dialog is open.
+  const [committing, setCommitting] = useState<string | null>(null)
   const byId = new Map(overrides.map((o) => [o.priceId, o]))
   const commitmentOf = new Map((commitments ?? []).map((c) => [c.priceId, c]))
 
@@ -1320,12 +1223,7 @@ function ChargesTable({
       </Frame>
     )
 
-  const openCommitments = charges.filter(
-    (charge) =>
-      Boolean(onCommitment) &&
-      charge.type === PriceType.Usage &&
-      (configuring.has(charge.id) || commitmentOf.has(charge.id)),
-  )
+  const committingCharge = charges.find((charge) => charge.id === committing)
   const editingCharge = charges.find((charge) => charge.id === editing)
 
   const columns: SimpleColumn<ChargeRow>[] = [
@@ -1338,6 +1236,28 @@ function ChargesTable({
           <span className="flex min-w-0 flex-col gap-0.5 py-2">
             <span className="font-medium">{chargeName(row.charge)}</span>
             <span className="text-muted-foreground text-xs">{chargeKind(row.charge)}</span>
+            {commitmentOf.has(row.charge.id) ? (
+              <span className="flex flex-wrap items-center gap-1.5 pt-1">
+                <Badge
+                  variant="outline"
+                  size="lg"
+                  className="hover:bg-muted cursor-pointer font-normal"
+                  render={
+                    <button
+                      type="button"
+                      aria-label={`Commitment: edit on ${chargeName(row.charge)}`}
+                      onClick={() => setCommitting(row.charge.id)}
+                    />
+                  }
+                >
+                  <ScaleIcon aria-hidden className="text-primary dark:text-foreground size-3.5" />
+                  Commitment
+                </Badge>
+                <span className="text-muted-foreground text-xs">
+                  {commitmentText(commitmentOf.get(row.charge.id)!, currency)}
+                </span>
+              </span>
+            ) : null}
           </span>
         ) : (
           <span className="flex min-w-0 flex-col gap-0.5 py-2">
@@ -1413,10 +1333,6 @@ function ChargesTable({
         const { charge } = row
         const name = chargeName(charge)
         const override = byId.get(charge.id)
-        const commitmentOpen =
-          Boolean(onCommitment) &&
-          charge.type === PriceType.Usage &&
-          (configuring.has(charge.id) || commitmentOf.has(charge.id))
         const extra = [
           ...(override
             ? [
@@ -1428,22 +1344,10 @@ function ChargesTable({
             : []),
           ...(onCommitment && charge.type === PriceType.Usage
             ? [
-                commitmentOpen
-                  ? {
-                      label: 'Remove commitment',
-                      onSelect: () => {
-                        setConfiguring((current) => {
-                          const next = new Set(current)
-                          next.delete(charge.id)
-                          return next
-                        })
-                        onCommitment(charge.id, null)
-                      },
-                    }
-                  : {
-                      label: 'Configure commitment',
-                      onSelect: () => setConfiguring((current) => new Set(current).add(charge.id)),
-                    },
+                {
+                  label: commitmentOf.has(charge.id) ? 'Edit commitment' : 'Add commitment',
+                  onSelect: () => setCommitting(charge.id),
+                },
               ]
             : []),
           ...(onCouponFor
@@ -1498,22 +1402,39 @@ function ChargesTable({
           />
         </div>
       ) : null}
-      {onCommitment
-        ? openCommitments.map((charge) => (
-            <div key={charge.id} className="rounded-lg border px-4 pb-4">
-              <ChargeMinimum
-                priceId={charge.id}
-                name={chargeName(charge)}
-                commitment={commitmentOf.get(charge.id)}
-                error={
-                  commitmentErrors?.[(commitments ?? []).findIndex((c) => c.priceId === charge.id)]
-                    ?.value?.message
+      {onCommitment ? (
+        <ChargeCommitmentDialog
+          charge={
+            committingCharge
+              ? {
+                  priceId: committingCharge.id,
+                  name: chargeName(committingCharge),
+                  description: `${BILLING_MODEL_LABEL[byId.get(committingCharge.id)?.billingModel ?? committingCharge.billingModel]} · ${priceText(committingCharge, byId.get(committingCharge.id))}`,
+                  bucketSize: committingCharge.bucketSize ?? '',
+                  unitAmount: committingCharge.amount,
+                  priceBase: committingCharge.meterId
+                    ? {
+                        entityId: committingCharge.entityId,
+                        entityType: committingCharge.entityType,
+                        meterId: committingCharge.meterId,
+                        currency: committingCharge.currency,
+                        billingPeriod: committingCharge.billingPeriod,
+                        billingPeriodCount: committingCharge.billingPeriodCount,
+                        invoiceCadence: committingCharge.invoiceCadence,
+                      }
+                    : undefined,
                 }
-                onChange={(next) => onCommitment(charge.id, next)}
-              />
-            </div>
-          ))
-        : null}
+              : null
+          }
+          commitment={committing ? commitmentOf.get(committing) : undefined}
+          currency={currency}
+          onClose={() => setCommitting(null)}
+          onSave={(next) => {
+            if (committing) onCommitment(committing, next)
+            setCommitting(null)
+          }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -1706,7 +1627,6 @@ function PhasesStep({
   errors,
   onChange,
   commitments,
-  commitmentErrors,
   onCommitments,
   currency,
   billingPeriod,
@@ -1725,7 +1645,6 @@ function PhasesStep({
   errors: FieldErrors<CreateSubscription>['phases']
   onChange: (next: SubscriptionPhase[]) => void
   commitments: ChargeCommitment[]
-  commitmentErrors: FieldErrors<CreateSubscription>['chargeCommitments']
   onCommitments: (next: ChargeCommitment[]) => void
   currency: string
   billingPeriod: CreateSubscription['billingPeriod']
@@ -1734,20 +1653,9 @@ function PhasesStep({
 }) {
   const update = (index: number, patch: Partial<SubscriptionPhase>) =>
     onChange(phases.map((phase, i) => (i === index ? { ...phase, ...patch } : phase)))
-  const setCommitment = (priceId: string, change: Partial<ChargeCommitment> | null) => {
+  const setCommitment = (priceId: string, next: ChargeCommitment | null) => {
     const rest = commitments.filter((c) => c.priceId !== priceId)
-    if (change === null) {
-      onCommitments(rest)
-      return
-    }
-    const current = commitments.find((c) => c.priceId === priceId) ?? {
-      priceId,
-      type: CommitmentType.Amount,
-      value: '',
-      overageFactor: '',
-      trueUp: false,
-    }
-    onCommitments([...rest, { ...current, ...change }])
+    onCommitments(next ? [...rest, next] : rest)
   }
   // Which phase the add-charge dialog adds to; null while it is closed.
   const [addingTo, setAddingTo] = useState<number | null>(null)
@@ -1918,6 +1826,7 @@ function PhasesStep({
                 quantities={phase.quantities}
                 onQuantities={(quantities) => update(index, { quantities })}
                 phaseLabel={label}
+                currency={currency}
                 onRemoveExtra={(at) =>
                   update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
                 }
@@ -1930,7 +1839,6 @@ function PhasesStep({
                 {...(phases.length === 1
                   ? {
                       commitments,
-                      commitmentErrors,
                       onCommitment: setCommitment,
                     }
                   : {})}
@@ -2115,12 +2023,12 @@ function CommitmentsSection({
     <FormCard
       title="Contract commitment"
       status="optional"
-      icon={<ScaleIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-      description="Applies to the whole contract, across every charge. Leave the amount empty for none. A commitment on a single charge is set on that charge."
+      icon={<ScaleIcon aria-hidden className="text-primary dark:text-foreground size-4 shrink-0" />}
+      description="Applies to the whole contract, across every charge. Leave the amount empty for none. A commitment on a single charge is set on that charge, in the previous step."
     >
       <FormRow
         label="Commitment amount"
-        hint="The least this contract bills per commitment period, across every charge."
+        hint={`The least the contract bills per commitment period, in ${values.currency.toUpperCase() || 'the contract currency'}.`}
         error={errors.commitmentAmount?.message}
       >
         {({ id, ...field }) => (
@@ -2140,7 +2048,7 @@ function CommitmentsSection({
       </FormRow>
       <FormRow
         label="Commitment period"
-        hint="The period the commitment is measured over, e.g. annual on a monthly contract."
+        hint="The period the commitment is measured over, e.g. a year on a monthly contract."
       >
         {({ id, ...field }) => (
           <OptionSelect
@@ -2154,7 +2062,9 @@ function CommitmentsSection({
             }
             options={[
               { value: 'billing', label: 'Same as billing period' },
-              ...SUBSCRIPTION_BILLING_PERIODS.map((period) => ({
+              ...SUBSCRIPTION_BILLING_PERIODS.filter(
+                (period) => period !== BillingPeriod.Daily && period !== BillingPeriod.Weekly,
+              ).map((period) => ({
                 value: period,
                 label: BILLING_PERIOD_LABEL[period],
               })),
@@ -2164,7 +2074,7 @@ function CommitmentsSection({
       </FormRow>
       <FormRow
         label="Overage factor"
-        hint="Multiplier on usage beyond the commitment. 1 bills it at the normal rate."
+        hint="Multiplier on spend beyond the commitment. 1 bills it at the normal rate."
         error={errors.overageFactor?.message}
       >
         {({ id, ...field }) => (
@@ -2900,21 +2810,25 @@ function ReviewStep({
           }
         />
         <ReviewRow
-          label="Commitment"
+          label="Contract commitment"
           value={
             values.commitmentAmount
-              ? `${money(values.commitmentAmount, values.currency)} per ${
+              ? `${money(values.commitmentAmount, values.currency)} minimum per ${
                   values.commitmentDuration
-                    ? BILLING_PERIOD_LABEL[values.commitmentDuration].toLowerCase()
-                    : 'billing period'
-                }${values.overageFactor ? ` · overage ×${values.overageFactor}` : ''}${
-                  values.enableTrueUp ? ' · true-up' : ''
-                }`
-              : values.chargeCommitments.length > 0
-                ? `On ${values.chargeCommitments.length} ${values.chargeCommitments.length === 1 ? 'charge' : 'charges'}`
-                : 'None'
+                    ? periodNoun(values.commitmentDuration)
+                    : periodNoun(values.billingPeriod)
+                }${values.enableTrueUp ? ', with true-up' : ''}`
+              : 'None'
           }
         />
+        {values.chargeCommitments.map((commitment) => (
+          <ReviewRow
+            key={commitment.priceId}
+            nested
+            label={chargeLabel(commitment.priceId)}
+            value={commitmentText(commitment, values.currency)}
+          />
+        ))}
         <ReviewRow
           label="Entitlements"
           value={

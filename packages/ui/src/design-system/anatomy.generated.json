@@ -794,6 +794,21 @@
       ],
       "story": null
     },
+    "ChargeCommitmentDialog": {
+      "file": "src/pages/contracts/ChargeCommitmentDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "Field",
+        "FormDialog",
+        "OptionSelect",
+        "PlusIcon"
+      ],
+      "usedBy": [
+        "SubscriptionForm"
+      ],
+      "story": null
+    },
     "ChargeFlags": {
       "file": "src/pages/product-catalog/charges/ChargeFlags.tsx",
       "layer": "surface",
@@ -1197,6 +1212,7 @@
       ],
       "usedBy": [
         "ChargeAlertForm",
+        "ChargeCommitmentDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
@@ -2941,6 +2957,7 @@
       ],
       "usedBy": [
         "AcceptInvitationForm",
+        "ChargeCommitmentDialog",
         "ChargeForm",
         "ConnectIntegrationSheet",
         "ContractAddChargeForm",
@@ -3324,6 +3341,7 @@
       ],
       "usedBy": [
         "AddChargeDialog",
+        "ChargeCommitmentDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
@@ -4599,6 +4617,7 @@
       "composes": [],
       "usedBy": [
         "ChargeAlertForm",
+        "ChargeCommitmentDialog",
         "ChargeForm",
         "ContractAddChargeForm",
         "ContractIntegrations",
@@ -5185,6 +5204,7 @@
       "composes": [],
       "usedBy": [
         "AddonGrid",
+        "ChargeCommitmentDialog",
         "ChargeTable",
         "ConnectionExports",
         "ContractIntegrations",
@@ -6384,6 +6404,7 @@
       "file": "src/pages/contracts/SubscriptionForm.tsx",
       "layer": "surface",
       "composes": [
+        "ChargeCommitmentDialog",
         "ChoiceCards",
         "ContractChargeDialog",
         "ContractSummary",

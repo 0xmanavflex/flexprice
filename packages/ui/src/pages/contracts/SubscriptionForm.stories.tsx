@@ -355,7 +355,21 @@ export const BillOnLeavesTheDateBehind: Story = {
   },
 }
 
-/** The phases step lists the plan's charges. A usage charge's commitment opens in place. */
+/** Opens the first usage charge's commitment dialog from its row menu. */
+async function openCommitment(canvas: ReturnType<typeof within>) {
+  for (const menu of canvas.getAllByRole('button', { name: /^Actions for / })) {
+    await userEvent.click(menu)
+    const item = screen.queryByRole('menuitem', { name: 'Add commitment' })
+    if (item) {
+      await userEvent.click(item)
+      return within(await screen.findByRole('dialog'))
+    }
+    await userEvent.keyboard('{Escape}')
+  }
+  throw new Error('No usage charge to commit on')
+}
+
+/** The phases step lists the plan's charges. A usage charge's commitment opens in a dialog. */
 export const PhaseCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 6 },
   play: async ({ canvasElement }) => {
@@ -365,22 +379,89 @@ export const PhaseCharges: Story = {
     await expect(canvas.getByRole('heading', { name: 'Discounts' })).toBeVisible()
     await expect(canvas.getByText('No discounts on Phase 1.')).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
-    await expect(canvas.queryByText('Minimum on this charge')).toBeNull()
-    // Every row has a menu; a usage charge's holds its commitment.
-    for (const menu of canvas.getAllByRole('button', { name: /^Actions for / })) {
-      await userEvent.click(menu)
-      const item = screen.queryByRole('menuitem', { name: 'Configure commitment' })
-      if (item) {
-        await userEvent.click(item)
-        break
-      }
-      await userEvent.keyboard('{Escape}')
-    }
-    await expect(canvas.getByText('True-up')).toBeVisible()
-    await expect(canvas.getByText('Overage factor')).toBeVisible()
+    const dialog = await openCommitment(canvas)
+    await expect(dialog.getByRole('heading', { name: 'Configure commitment' })).toBeVisible()
+    await expect(dialog.getByText('True-up')).toBeVisible()
+    await expect(dialog.getByLabelText(/^Overage factor/)).toHaveValue('1')
+    // Per bucket waits for a bucket size.
+    await expect(dialog.getByRole('switch', { name: /Apply to each bucket/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    await expect(dialog.getByText('Set a bucket size above first.')).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
+    await expect(await dialog.findByText('Enter a commitment greater than zero.')).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
     await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
   },
 }
+
+/**
+ * A usage charge commits to 10,000 units a month, per minute bucket, with one
+ * business-hours window at its own price; the row and the review say so, and
+ * the contract carries all of it.
+ */
+export const ConfiguresAChargeCommitment: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 6 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const dialog = await openCommitment(canvas)
+    await userEvent.click(dialog.getByRole('combobox', { name: /^Committed/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Usage (a number of units)' }))
+    await userEvent.type(dialog.getByLabelText(/^Commitment \(units\)/), '10000')
+    await userEvent.click(dialog.getByRole('combobox', { name: /^Commitment period/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Monthly' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: /^Bucket size/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Minute' }))
+    await userEvent.click(dialog.getByRole('switch', { name: /Apply to each bucket/ }))
+    await expect(dialog.getByText('No time windows yet.')).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Add window' }))
+    const window1 = within(dialog.getByRole('region', { name: 'Window 1' }))
+    await userEvent.type(window1.getByLabelText(/^Commitment \(units\)/), '500')
+    await userEvent.clear(window1.getByLabelText(/^Price \(/))
+    await userEvent.type(window1.getByLabelText(/^Price \(/), '0.05')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
+
+    await expect(
+      await canvas.findByText('Commits 10,000 units monthly · per minute, 1 window'),
+    ).toBeVisible()
+    await expect(canvas.getByRole('button', { name: /^Commitment: edit on / })).toBeVisible()
+
+    for (const step of ['commitments', 'billing', 'review']) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+      await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
+    }
+    await expect(
+      await canvas.findByText('Commits 10,000 units monthly · per minute, 1 window'),
+    ).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chargeCommitments: [
+            expect.objectContaining({
+              type: 'quantity',
+              value: '10000',
+              duration: 'MONTHLY',
+              overageFactor: '1',
+              bucketSize: 'MINUTE',
+              windowed: true,
+              windows: [
+                expect.objectContaining({
+                  value: '500',
+                  price: '0.05',
+                  start: '00:00',
+                  end: '20:00',
+                }),
+              ],
+            }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
 /**
  * A monthly contract bills monthly and one-time charges. A quarterly charge
  * fits and can be opted in; a weekly one never bills here — and the phase's

@@ -45,6 +45,11 @@ const PERIOD_NOUN: Record<string, [string, string]> = {
   ANNUAL: ['year', 'years'],
 }
 
+/** "month", "quarter": one period, as a noun. */
+export function periodNoun(period: string): string {
+  return PERIOD_NOUN[period]?.[0] ?? period.toLowerCase()
+}
+
 /** "every month", "every 3 months". */
 export function everyPeriod(period: string, count: number): string {
   const [one, many] = PERIOD_NOUN[period] ?? [period.toLowerCase(), period.toLowerCase()]

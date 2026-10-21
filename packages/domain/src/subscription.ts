@@ -1,7 +1,12 @@
 import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
-import { type AddContractCharge, type EditContractCharge, type LinePricing } from './contractCharge'
+import {
+  type AddContractCharge,
+  BucketSize,
+  type EditContractCharge,
+  type LinePricing,
+} from './contractCharge'
 import { type Charge } from './price'
 import { type Money } from './money'
 import { BILLING_PERIOD_LABEL, BillingModel, BillingPeriod, TierMode } from './price'
@@ -204,25 +209,135 @@ export type SubscriptionPhase = z.infer<typeof subscriptionPhaseSchema>
 export const CommitmentType = { Amount: 'amount', Quantity: 'quantity' } as const
 export type CommitmentType = (typeof CommitmentType)[keyof typeof CommitmentType]
 
-/** A minimum on one usage charge: spend (amount) or units (quantity) per period. */
-export const chargeCommitmentSchema = z.object({
-  priceId: z.string().min(1),
-  type: z.enum([CommitmentType.Amount, CommitmentType.Quantity]),
-  value: z
-    .string()
-    .trim()
-    .refine(
-      (value) => PHASE_DECIMAL.test(value) && Number(value) > 0,
-      'Enter a commitment above zero',
-    ),
-  /** Multiplier on usage beyond the commitment; blank is 1, the base rate. */
-  overageFactor: optionalAmount('Enter a factor like 1.2').refine(
-    (value) => value === '' || Number(value) >= 1,
-    'The overage factor is at least 1',
-  ),
-  /** Bill the shortfall when usage stays under the commitment. */
-  trueUp: z.boolean(),
+const COMMITMENT_DECIMAL = /^\d+(\.\d{1,8})?$/
+const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/
+
+/** A blank overage factor reads as 1, the normal rate. */
+const overageFactorSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => value === '' || (COMMITMENT_DECIMAL.test(value) && Number(value) >= 1),
+    'Enter 1 or more. 1 means no overage premium.',
+  )
+
+/** How usage inside a time window is billed. */
+export const WindowBillingModel = {
+  PerUnit: BillingModel.FlatFee,
+  Package: BillingModel.Package,
+} as const
+export type WindowBillingModel = (typeof WindowBillingModel)[keyof typeof WindowBillingModel]
+
+export const WINDOW_BILLING_MODEL_LABEL: Record<WindowBillingModel, string> = {
+  [WindowBillingModel.PerUnit]: 'Per unit',
+  [WindowBillingModel.Package]: 'Package',
+}
+
+/**
+ * One UTC window of the day with its own commitment and price
+ * (`commitment_time_buckets`): start inclusive, end exclusive.
+ */
+export const commitmentWindowSchema = z
+  .object({
+    id: z.string(),
+    /** `HH:MM`, UTC. */
+    start: z.string().regex(CLOCK, 'Pick a time'),
+    /** `HH:MM`, UTC. */
+    end: z.string().regex(CLOCK, 'Pick a time'),
+    type: z.enum([CommitmentType.Amount, CommitmentType.Quantity]),
+    value: z
+      .string()
+      .trim()
+      .min(1, 'This field is required')
+      .refine(
+        (value) => COMMITMENT_DECIMAL.test(value) && Number(value) > 0,
+        'Enter a commitment greater than zero.',
+      ),
+    overageFactor: overageFactorSchema,
+    trueUp: z.boolean(),
+    billingModel: z.enum([WindowBillingModel.PerUnit, WindowBillingModel.Package]),
+    price: z
+      .string()
+      .trim()
+      .refine(
+        (value) => COMMITMENT_DECIMAL.test(value) && Number(value) > 0,
+        'Enter a price for this window',
+      ),
+    /** Units per package, for a package price. */
+    packageSize: z.string().trim(),
+  })
+  .superRefine((window, ctx) => {
+    if (window.start === window.end)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['start'],
+        message: 'Start and end time cannot be the same',
+      })
+    if (
+      window.billingModel === WindowBillingModel.Package &&
+      !/^[1-9]\d*$/.test(window.packageSize)
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['packageSize'],
+        message: 'Enter a whole number of 1 or more.',
+      })
+  })
+export type CommitmentWindow = z.infer<typeof commitmentWindowSchema>
+
+/**
+ * What a window's own price is built on: the plan charge it reprices, so the
+ * window bills the same meter, currency and period.
+ */
+export const commitmentPriceBaseSchema = z.object({
+  entityId: z.string(),
+  entityType: z.string(),
+  meterId: z.string(),
+  currency: z.string(),
+  billingPeriod: z.string(),
+  billingPeriodCount: z.number(),
+  invoiceCadence: z.string(),
 })
+export type CommitmentPriceBase = z.infer<typeof commitmentPriceBaseSchema>
+
+/** A minimum on one usage charge: spend (amount) or units (quantity) per period. */
+export const chargeCommitmentSchema = z
+  .object({
+    priceId: z.string().min(1),
+    type: z.enum([CommitmentType.Amount, CommitmentType.Quantity]),
+    value: z
+      .string()
+      .trim()
+      .refine(
+        (value) => COMMITMENT_DECIMAL.test(value) && Number(value) > 0,
+        'Enter a commitment greater than zero.',
+      ),
+    /** The period the commitment is measured over; blank is the billing period. */
+    duration: z.union([z.literal(''), z.enum(BillingPeriod)]),
+    /** Multiplier on usage beyond the commitment; blank is 1, the base rate. */
+    overageFactor: overageFactorSchema,
+    /** Bill the shortfall when usage stays under the commitment. */
+    trueUp: z.boolean(),
+    /**
+     * The bucket usage is summed in before it is priced; blank keeps the plan
+     * charge's own. Sent as the charge's `bucket_size` override.
+     */
+    bucketSize: z.union([z.literal(''), z.enum(BucketSize)]),
+    /** Apply the commitment to every bucket, not the whole period. Needs a bucket size. */
+    windowed: z.boolean(),
+    /** Optional UTC windows of the day, each with its own commitment and price. */
+    windows: z.array(commitmentWindowSchema),
+    /** The plan charge a window's price is built on; set when the charge is known. */
+    priceBase: commitmentPriceBaseSchema.optional(),
+  })
+  .superRefine((commitment, ctx) => {
+    if (commitment.windowed && !commitment.bucketSize)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['windowed'],
+        message: 'Set a bucket size above first.',
+      })
+  })
 export type ChargeCommitment = z.infer<typeof chargeCommitmentSchema>
 
 export const PaymentTerms = {
@@ -290,7 +405,7 @@ export const createSubscriptionSchema = z
     commitmentDuration: z.enum(['', ...SUBSCRIPTION_BILLING_PERIODS]),
     overageFactor: optionalAmount('Enter a factor like 1.2').refine(
       (value) => value === '' || Number(value) >= 1,
-      'The overage factor is at least 1',
+      'Overage factor must be at least 1.0',
     ),
     enableTrueUp: z.boolean(),
     chargeCommitments: z.array(chargeCommitmentSchema),
