@@ -43,11 +43,18 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
   await page.getByRole('button', { name: 'More actions' }).click()
   await page.getByRole('menuitem', { name: 'Finalize invoice' }).click()
   await expect(page.getByText('Finalized', { exact: true }).first()).toBeVisible()
+  // Let the menu finish its exit animation before reopening it. Clicking the
+  // trigger mid-animation reopens the closing menu, and an Escape sent to that
+  // menu is sometimes dropped — it stays open and its backdrop swallows the
+  // breadcrumb click below.
+  const menu = page.getByRole('menu', { name: 'More actions' })
+  await expect(menu).toBeHidden()
 
   await page.getByRole('button', { name: 'More actions' }).click()
   await expect(page.getByRole('menuitem', { name: 'Finalize invoice' })).toBeHidden()
   await expect(voidItem(page)).toBeVisible()
-  await page.keyboard.press('Escape')
+  await menu.press('Escape')
+  await expect(menu).toBeHidden()
   // Back through the breadcrumb, an in-app navigation, so the mock store keeps the new invoice.
   await page
     .getByRole('navigation', { name: /breadcrumb/i })

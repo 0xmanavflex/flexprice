@@ -39,6 +39,8 @@ export const config = [
   {
     ignores: [
       '**/dist/**',
+      // The mocked bundle the CI journeys build (`apps/console/playwright.config.ts`).
+      '**/dist-e2e/**',
       '**/node_modules/**',
       '**/*.gen.ts',
       '**/.nx/**',
