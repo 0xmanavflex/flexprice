@@ -421,7 +421,7 @@ async function openCommitment(canvas: ReturnType<typeof within>) {
     const item = screen.queryByRole('menuitem', { name: 'Add commitment' })
     if (item) {
       await userEvent.click(item)
-      return within(await screen.findByRole('dialog'))
+      return within(await screen.findByRole('dialog', {}, { timeout: 3000 }))
     }
     await userEvent.keyboard('{Escape}')
   }
@@ -865,8 +865,13 @@ export const CommitmentsStep: Story = {
     // Period, overage, and true-up are visible before an amount is entered.
     await expect(canvas.getByText('Commitment period')).toBeVisible()
     await expect(canvas.getByText('True-up')).toBeVisible()
-    // The customer's tax rate is applied for them.
-    await expect(canvas.getByText('VAT · 20%')).toBeVisible()
+    // The customer's tax rate is applied for them, in a table with its code.
+    await expect(canvas.getByRole('columnheader', { name: 'Code' })).toBeVisible()
+    await expect(canvas.getByText('VAT20')).toBeVisible()
+    await expect(canvas.getByText('20%')).toBeVisible()
+    await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toHaveTextContent(
+      'Add another tax rate…',
+    )
     await expect(canvas.getByRole('columnheader', { name: 'Allowance' })).toBeVisible()
     await userEvent.type(canvas.getByLabelText(/^Commitment amount/), '1000')
   },
@@ -876,7 +881,7 @@ export const BillingStep: Story = {
   args: { prefilled: true, step: 'billing' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    for (const title of ['Payment', 'Who pays', 'Other settings']) {
+    for (const title of ['Payment', 'Customer hierarchy', 'Other settings']) {
       await expect(canvas.getByRole('heading', { name: title })).toBeVisible()
     }
     for (const label of [
@@ -887,9 +892,47 @@ export const BillingStep: Story = {
     ]) {
       await expect(canvas.getByText(label, { exact: true })).toBeVisible()
     }
+    // The plan has fixed charges, so there is no early invoice to set.
+    const threshold = canvas.getByLabelText(/^Auto-invoice threshold/)
+    await expect(threshold).toBeDisabled()
+    await expect(threshold).toHaveAttribute(
+      'placeholder',
+      'Not available: the plan has fixed charges',
+    )
     // Proration moved to the charges; draft is the header's Save as draft.
     await expect(canvas.queryByText('Prorate changes')).toBeNull()
     await expect(canvas.queryByText('Create as draft')).toBeNull()
+  },
+}
+
+/** Another customer pays: Next waits until one is chosen, or the choice goes back to the same customer. */
+export const ChoosesWhoPays: Story = {
+  args: { prefilled: true, step: 'billing' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('radio', { name: /Another customer/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(
+      await canvas.findByText('Choose who pays, or switch back to the same customer.'),
+    ).toBeVisible()
+    await expect(args.onStepChange).not.toHaveBeenCalledWith('review')
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Invoiced to/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Globex/ }))
+    await expect(
+      canvas.queryByText('Choose who pays, or switch back to the same customer.'),
+    ).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
+  },
+}
+
+/** A plan without entitlements says so. */
+export const NoEntitlements: Story = {
+  args: { prefilled: true, step: 'commitments', entitlementCount: 0 },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText('This plan includes no entitlements.'),
+    ).toBeVisible()
   },
 }
 

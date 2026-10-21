@@ -53,7 +53,7 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   const titles: Record<string, string> = {
     phases: 'Charges',
     commitments: 'Contract commitment',
-    billing: 'Who pays',
+    billing: 'Customer hierarchy',
     review: 'Commitments & benefits',
   }
   for (const step of ['phases', 'commitments', 'billing', 'review']) {

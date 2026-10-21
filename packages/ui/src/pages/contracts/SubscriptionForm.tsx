@@ -251,6 +251,11 @@ const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
 
 const unique = <T,>(values: T[]) => [...new Set(values)]
 
+const WhoPays = { Same: 'same', Another: 'another' } as const
+type WhoPays = (typeof WhoPays)[keyof typeof WhoPays]
+
+const CHOOSE_PAYER = 'Choose who pays, or switch back to the same customer.'
+
 /** The three ways a contract can choose its billing day. */
 type BillOn = 'start' | 'calendar' | 'date'
 
@@ -318,6 +323,14 @@ export function SubscriptionForm({
     }
   }
 
+  // Who pays is a choice before it is a value: "another customer" with none
+  // picked yet is still the same customer to the API, so it is held here.
+  const [whoPays, setWhoPays] = useState<WhoPays>(
+    defaultValue?.invoicingCustomerExternalId ? WhoPays.Another : WhoPays.Same,
+  )
+  const payerMissing = () =>
+    whoPays === WhoPays.Another && !form.getValues('invoicingCustomerExternalId')
+
   // The contract's end is its last phase's end: one field, wherever it is edited.
   const lastPhase = values.phases.length - 1
   const endPath = `phases.${lastPhase}.endDate` as const
@@ -333,6 +346,10 @@ export function SubscriptionForm({
       // Choosing "a date" means choosing one.
       if (id === 'plan' && billOn === 'date' && !form.getValues('billingAnchor')) {
         form.setError('billingAnchor', { type: 'required', message: 'Choose the billing date' })
+        return false
+      }
+      if (id === 'billing' && payerMissing()) {
+        form.setError('invoicingCustomerExternalId', { type: 'required', message: CHOOSE_PAYER })
         return false
       }
       return valid
@@ -457,6 +474,12 @@ export function SubscriptionForm({
     ],
   )
   const charges = selection.attached
+  // Fixed charges bill every period, so an early invoice on usage does not apply.
+  const hasFixedCharges =
+    charges.some((charge) => charge.type === PriceType.Fixed) ||
+    values.phases.some((phase) =>
+      phase.extraCharges.some((extra) => extra.charge.type === PriceType.Fixed),
+    )
 
   /**
    * What is sent: settings on charges this contract will not bill are dropped
@@ -476,6 +499,8 @@ export function SubscriptionForm({
       chargeCommitments: draft.chargeCommitments.filter((c) => billed.has(c.priceId)),
       optedInChargeIds: draft.optedInChargeIds.filter((id) => billed.has(id)),
       includePriceIds: selection.includePriceIds,
+      // Not offered with fixed charges; a value typed before they were added is not sent.
+      ...(hasFixedCharges ? { autoInvoiceThreshold: '' } : {}),
     }
   }
 
@@ -487,7 +512,14 @@ export function SubscriptionForm({
   }
   const submitWith = (patch: Partial<CreateSubscription>) =>
     form.handleSubmit(
-      (draft) => onSubmit(toSubmit({ ...draft, ...patch })),
+      (draft) => {
+        if (payerMissing()) {
+          form.setError('invoicingCustomerExternalId', { type: 'required', message: CHOOSE_PAYER })
+          flow.goTo('billing')
+          return
+        }
+        onSubmit(toSubmit({ ...draft, ...patch }))
+      },
       (failed) => {
         const bad = stepOf(failed)
         if (bad) flow.goTo(bad)
@@ -912,7 +944,16 @@ export function SubscriptionForm({
         register={form.register}
         isSubmitting={isSubmitting}
         customers={customers}
-        onChange={set}
+        onChange={(name, value) => {
+          set(name, value)
+          if (name === 'invoicingCustomerExternalId') form.clearErrors(name)
+        }}
+        whoPays={whoPays}
+        onWhoPays={(next) => {
+          setWhoPays(next)
+          form.clearErrors('invoicingCustomerExternalId')
+        }}
+        hasFixedCharges={hasFixedCharges}
       />,
     ),
     review: formEl(
@@ -2642,7 +2683,7 @@ function EntitlementsSection({
           {isLoading ? (
             <EmptyLine>Loading the plan&apos;s entitlements…</EmptyLine>
           ) : entitlements.length === 0 ? (
-            <EmptyLine>This plan grants no entitlements.</EmptyLine>
+            <EmptyLine>This plan includes no entitlements.</EmptyLine>
           ) : (
             <SimpleTable columns={columns} rows={entitlements} />
           )}
@@ -2806,82 +2847,89 @@ function TaxesSection({
   onChange: (next: CreateSubscription['taxes']) => void
 }) {
   const available = taxRates.filter((rate) => !taxes.some((tax) => tax.taxRateCode === rate.code))
-  // Centred under the empty message, or in the footer once a rate is on.
-  const addTax = (
-    <div className="w-full max-w-xs py-1.5">
-      <label htmlFor="contract-add-tax" className="sr-only">
-        Add a tax rate
-      </label>
-      <OptionSelect
-        id="contract-add-tax"
-        value={undefined}
-        placeholder="Add tax rate"
-        options={available.map((rate) => ({
-          value: rate.code,
-          label: `${rate.name}${rate.percentage ? ` (${rate.percentage}%)` : ''}`,
-        }))}
-        onValueChange={(code) => {
-          const rate = available.find((r) => r.code === code)
-          if (!rate) return
-          onChange([
-            ...taxes,
-            {
-              taxRateCode: rate.code,
-              name: rate.name,
-              percentage: rate.percentage,
-              taxBehavior: 'exclusive',
-              priority: taxes.length + 1,
-              autoApply: true,
-            },
-          ])
-        }}
-      />
-    </div>
-  )
+  type Tax = CreateSubscription['taxes'][number]
+  const columns: SimpleColumn<Tax>[] = [
+    {
+      key: 'name',
+      header: 'Tax rate',
+      cell: (tax) => <span className="font-medium">{tax.name || tax.taxRateCode}</span>,
+    },
+    {
+      key: 'code',
+      header: 'Code',
+      cell: (tax) => (
+        <span className="text-muted-foreground font-mono text-xs">{tax.taxRateCode}</span>
+      ),
+    },
+    {
+      key: 'rate',
+      header: 'Rate',
+      className: 'text-right tabular-nums',
+      cell: (tax) => (tax.percentage ? `${tax.percentage}%` : '—'),
+    },
+    {
+      key: 'remove',
+      header: '',
+      className: 'w-10 text-right',
+      cell: (tax) => (
+        <RemoveButton
+          label={`Remove ${tax.name || tax.taxRateCode}`}
+          onClick={() => onChange(taxes.filter((t) => t.taxRateCode !== tax.taxRateCode))}
+        />
+      ),
+    },
+  ]
   return (
     <FormCard
       title="Taxes"
       status="optional"
       icon={<ReceiptIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
     >
-      <div className="px-5 py-4 sm:px-6">
-        <Frame footer={available.length > 0 && taxes.length > 0 ? addTax : null}>
-          {taxes.length === 0 ? (
-            <EmptyLine action={available.length > 0 ? addTax : null}>
-              No taxes are applied to this contract.
-            </EmptyLine>
+      {taxes.length > 0 ? (
+        <div className="px-5 pt-4 sm:px-6">
+          <Frame>
+            <SimpleTable columns={columns} rows={taxes} getRowId={(tax) => tax.taxRateCode} />
+          </Frame>
+        </div>
+      ) : null}
+      <FormRow
+        label={taxes.length > 0 ? 'Add another' : 'Tax rate'}
+        hint="Taxes added to every invoice of this contract."
+      >
+        {({ id, ...field }) =>
+          taxRates.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No tax rates exist yet.</p>
           ) : (
-            <ul className="divide-y">
-              {taxes.map((tax) => (
-                <li
-                  key={tax.taxRateCode}
-                  className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
-                >
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium">
-                      {tax.name || tax.taxRateCode}
-                      {tax.percentage ? ` · ${tax.percentage}%` : ''}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {tax.taxRateCode} ·{' '}
-                      {tax.taxBehavior === 'inclusive' ? 'Included in the price' : 'Added on top'}
-                    </span>
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Remove ${tax.name || tax.taxRateCode}`}
-                    onClick={() => onChange(taxes.filter((t) => t.taxRateCode !== tax.taxRateCode))}
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Frame>
-      </div>
+            <OptionSelect
+              // A fresh picker after each pick, so it reads empty again.
+              key={taxes.length}
+              id={id}
+              {...field}
+              value={undefined}
+              placeholder={taxes.length > 0 ? 'Add another tax rate…' : 'Choose a tax rate…'}
+              options={available.map((rate) => ({
+                value: rate.code,
+                label: `${rate.name}${rate.percentage ? ` (${rate.percentage}%)` : ''}`,
+              }))}
+              onValueChange={(code) => {
+                const rate = available.find((r) => r.code === code)
+                if (!rate) return
+                onChange([
+                  ...taxes,
+                  {
+                    taxRateCode: rate.code,
+                    name: rate.name,
+                    percentage: rate.percentage,
+                    taxBehavior: 'exclusive',
+                    priority: taxes.length + 1,
+                    autoApply: true,
+                  },
+                ])
+              }}
+            />
+          )
+        }
+      </FormRow>
     </FormCard>
   )
 }
@@ -2889,9 +2937,6 @@ function TaxesSection({
 /* ------------------------------------------------------------------------- */
 /* Billing                                                                   */
 /* ------------------------------------------------------------------------- */
-
-const WhoPays = { Same: 'same', Another: 'another' } as const
-type WhoPays = (typeof WhoPays)[keyof typeof WhoPays]
 
 /** How and when the contract invoices, and who pays. */
 function BillingStep({
@@ -2901,6 +2946,9 @@ function BillingStep({
   isSubmitting,
   customers,
   onChange,
+  whoPays,
+  onWhoPays,
+  hasFixedCharges,
 }: {
   values: CreateSubscription
   errors: FieldErrors<CreateSubscription>
@@ -2908,10 +2956,11 @@ function BillingStep({
   isSubmitting: boolean
   customers: readonly SubscriptionCustomerOption[]
   onChange: <K extends keyof CreateSubscription>(name: K, value: CreateSubscription[K]) => void
+  whoPays: WhoPays
+  onWhoPays: (next: WhoPays) => void
+  /** Fixed charges bill each period, so there is no early invoice to trigger. */
+  hasFixedCharges: boolean
 }) {
-  const [whoPays, setWhoPays] = useState<WhoPays>(
-    values.invoicingCustomerExternalId ? WhoPays.Another : WhoPays.Same,
-  )
   // Another customer is chosen by external id, which is what the API takes.
   const others = customers.filter((c) => c.externalId && c.value !== values.customerId)
   const payerOptions = others.map((c) => ({ value: c.externalId!, label: c.label }))
@@ -2953,19 +3002,19 @@ function BillingStep({
         </FormRow>
       </FormCard>
       <FormCard
-        title="Who pays"
+        title="Customer hierarchy"
         icon={<UsersIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
       >
         <FormRow
           label="Billing customer"
-          hint="Who this contract's invoices are sent to."
+          hint="Invoices for this contract go to this customer."
           align="start"
         >
           <ChoiceCards
             label="Billing customer"
             value={whoPays}
             onChange={(next) => {
-              setWhoPays(next)
+              onWhoPays(next)
               if (next === WhoPays.Same) onChange('invoicingCustomerExternalId', '')
             }}
             choices={[
@@ -2983,7 +3032,11 @@ function BillingStep({
           />
         </FormRow>
         {whoPays === WhoPays.Another ? (
-          <FormRow label="Invoiced to" hint="The customer that receives and pays the invoices.">
+          <FormRow
+            label="Invoiced to"
+            hint="The customer that receives and pays the invoices."
+            error={errors.invoicingCustomerExternalId?.message}
+          >
             {({ id, ...field }) => (
               <OptionCombobox
                 id={id}
@@ -2991,7 +3044,7 @@ function BillingStep({
                 value={values.invoicingCustomerExternalId}
                 onValueChange={(value) => onChange('invoicingCustomerExternalId', value)}
                 options={payerOptions}
-                placeholder="Choose a customer…"
+                placeholder="Search the paying customer…"
                 emptyText="No other customer has an external ID."
                 disabled={isSubmitting}
               />
@@ -3000,7 +3053,7 @@ function BillingStep({
         ) : null}
         <FormRow
           label="Inherited customers"
-          hint="Customers that get this contract too, billed through it — e.g. a company's subsidiaries."
+          hint="Customers whose usage is billed through this contract. They share its charges, entitlements and credits; the invoice goes to the billing customer."
           align="start"
         >
           {({ id, ...field }) => (
@@ -3043,7 +3096,11 @@ function BillingStep({
                   setPickerKey((n) => n + 1)
                 }}
                 options={inheritable}
-                placeholder="Add a customer…"
+                placeholder={
+                  values.inheritedCustomerExternalIds.length > 0
+                    ? 'Add another customer…'
+                    : 'Add a customer…'
+                }
                 emptyText="No other customer has an external ID."
                 disabled={isSubmitting}
               />
@@ -3060,21 +3117,32 @@ function BillingStep({
           hint="Invoice early once unbilled usage reaches this amount. Leave empty to invoice each period."
           error={errors.autoInvoiceThreshold?.message}
         >
-          {({ id, ...field }) => (
-            <InputGroup className="h-9">
-              <InputGroupAddon align="inline-start">
-                {values.currency.toUpperCase() || '—'}
-              </InputGroupAddon>
-              <InputGroupInput
+          {({ id, ...field }) =>
+            hasFixedCharges ? (
+              // No currency addon here: a disabled addon reads too faint to pass contrast.
+              <Input
                 id={id}
-                inputMode="decimal"
-                placeholder="Each period"
-                disabled={isSubmitting}
                 {...field}
-                {...register('autoInvoiceThreshold')}
+                className="h-9"
+                placeholder="Not available: the plan has fixed charges"
+                disabled
               />
-            </InputGroup>
-          )}
+            ) : (
+              <InputGroup className="h-9">
+                <InputGroupAddon align="inline-start">
+                  {values.currency.toUpperCase() || '—'}
+                </InputGroupAddon>
+                <InputGroupInput
+                  id={id}
+                  inputMode="decimal"
+                  placeholder="Each period"
+                  disabled={isSubmitting}
+                  {...field}
+                  {...register('autoInvoiceThreshold')}
+                />
+              </InputGroup>
+            )
+          }
         </FormRow>
       </FormCard>
     </>
@@ -3088,7 +3156,7 @@ function BillingStep({
 /**
  * Everything the contract will be, one card per step, each with its Edit.
  * A row names what was chosen and how many — the step itself holds the
- * detail — and the last card is the first invoice.
+ * detail.
  */
 function ReviewStep({
   values,
