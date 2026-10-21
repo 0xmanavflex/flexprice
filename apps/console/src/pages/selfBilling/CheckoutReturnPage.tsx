@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { AccountState, CheckoutStatus, checkoutOutcome } from '@fp/domain'
 import {
+  useRefreshSelfBilling,
   useCancelSelfBillingCheckout,
   useSelfBillingCheckout,
   useSelfBillingSummary,
 } from '@fp/query'
 import { CheckoutReturnView, type NextStep } from '@fp/ui/pages'
-import { forgetCheckout, recalledCheckout, useOrganization } from './organization'
+import {
+  forgetCheckout,
+  recalledCheckout,
+  recalledCheckoutEmail,
+  useOrganization,
+} from './organization'
 
 /**
  * The page Stripe returns to: `/billing/checkout/success` or
@@ -61,12 +67,29 @@ export function CheckoutReturnPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outcome, checkoutId, checkout.data?.terminal])
 
+  // Paid, but the account can read trialing for a moment while the trial
+  // converts. Keep reading it (every 3s, for a minute) until it is active, so
+  // the pill and the lock go as soon as the API agrees.
+  const refresh = useRefreshSelfBilling()
+  useEffect(() => {
+    if (outcome !== 'success' || live) return
+    let tries = 0
+    const timer = window.setInterval(() => {
+      tries += 1
+      void refresh()
+      if (tries >= 20) window.clearInterval(timer)
+    }, 3_000)
+    return () => window.clearInterval(timer)
+    // `refresh` is a fresh closure each render; the interval needs only the outcome.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outcome, live])
+
   const paid = summary.data?.invoices.find((invoice) => invoice.status === 'paid') ?? null
 
   return (
     <CheckoutReturnView
       outcome={outcome}
-      billingEmail={organization.tenant?.billingEmail ?? ''}
+      billingEmail={recalledCheckoutEmail() || organization.userEmail}
       paidInvoice={paid ? { number: paid.number, pdfUrl: paid.pdfUrl } : null}
       nextInvoiceOn={summary.data?.period?.end ?? null}
       onBilling={onBilling}

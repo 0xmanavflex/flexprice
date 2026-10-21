@@ -32,6 +32,7 @@ import {
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
+import { useMockAccounts } from '@/app/selfBilling/mockAccounts'
 import { SUPPORT_CHAT_ACTION_ID, searchableDestinations, useGlobalSearch } from './useGlobalSearch'
 import { openSupportChat } from '@/app/supportChat/SupportChat'
 import {
@@ -143,6 +144,7 @@ export function ConsoleShell({
   const activeItemId = navEntryForPath(pathname, search)
   const [detailTrail, setDetailTrail] = useState<ShellDetailCrumb[] | null>(null)
   const [creatingEnvironment, setCreatingEnvironment] = useState(false)
+  const mockAccounts = useMockAccounts()
   const [renamingEnvironment, setRenamingEnvironment] = useState<ShellEnvironment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const destinations = useMemo(() => searchableDestinations(), [])
@@ -225,6 +227,7 @@ export function ConsoleShell({
                     current={environment}
                     environments={environments}
                     onChange={onEnvironmentChange}
+                    {...(mockAccounts ? { mockAccounts } : {})}
                     onCreate={() => setCreatingEnvironment(true)}
                     onRename={(id) =>
                       setRenamingEnvironment(environments.find((e) => e.id === id) ?? null)
@@ -277,7 +280,12 @@ export function ConsoleShell({
       >
         {children}
       </AppShell>
-      <EnvironmentFormPage open={creatingEnvironment} onOpenChange={setCreatingEnvironment} />
+      <EnvironmentFormPage
+        open={creatingEnvironment}
+        onOpenChange={setCreatingEnvironment}
+        environments={environments}
+        onSelectEnvironment={onEnvironmentChange}
+      />
       <EnvironmentRenameFormPage
         environment={renamingEnvironment}
         onClose={() => setRenamingEnvironment(null)}

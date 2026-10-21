@@ -435,6 +435,7 @@
       "usedBy": [
         "ChargeTable",
         "CheckoutReturnView",
+        "EnvironmentForm",
         "FormToolbar",
         "GuideGrid",
         "GuidedEmptyState"
@@ -1114,6 +1115,7 @@
         "DetailMoreMenu",
         "DetailTabs",
         "Dot",
+        "EnvironmentForm",
         "EnvironmentSwitcher",
         "EventTrace",
         "InvoiceForm",
@@ -1219,7 +1221,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "AddChargeDialog",
@@ -1382,7 +1385,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "AddCardDialog",
@@ -1622,7 +1626,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1632,7 +1637,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1698,7 +1704,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -2383,7 +2390,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "DetailHeader"
@@ -2412,7 +2420,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "CatalogDetailFrame",
@@ -2503,7 +2512,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "CatalogDetailFrame",
@@ -2554,7 +2564,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -2830,6 +2841,7 @@
         "ErrorState",
         "FilterBar",
         "GuidedEmptyState",
+        "LockedMark",
         "SortMenu",
         "WriteGate"
       ],
@@ -2867,7 +2879,9 @@
       "file": "src/pages/settings/environments/EnvironmentForm.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowRightIcon",
         "CalendarIcon",
+        "CheckIcon",
         "Composer",
         "Field",
         "FormDialog",
@@ -2923,6 +2937,7 @@
         "InvoiceStatusPill",
         "LedgerRow",
         "Loaded",
+        "LockedMark",
         "PortalEmpty",
         "PortalInvoiceSheet",
         "RadioRows",
@@ -4610,6 +4625,35 @@
       "usedBy": [],
       "story": null
     },
+    "LockedMark": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [
+        "ChoiceCards",
+        "Composer",
+        "CopyChip",
+        "CopyEmail",
+        "CopyId",
+        "DetailHeaderCluster",
+        "DetailMoreMenu",
+        "DetailTabs",
+        "Dot",
+        "EntityList",
+        "OverviewTiles",
+        "Properties",
+        "SegmentMeter",
+        "ShellCreateMenu",
+        "SimpleTable",
+        "SplitMeter",
+        "SummaryRow"
+      ],
+      "story": "./src/compositions/access/Access.stories.tsx"
+    },
     "LockIcon": {
       "file": "src/reui/icons/default/outline/lock.tsx",
       "layer": "other",
@@ -4621,6 +4665,7 @@
         "AccountLockedDialog",
         "AccountStatusPill",
         "CreatingPausedScreen",
+        "LockedMark",
         "PortalNotice",
         "RequireAccess",
         "UpgradeView",
@@ -5044,7 +5089,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "CustomerDetail",
@@ -5107,6 +5153,7 @@
       "usedBy": [
         "AccessProvider",
         "AccessScope",
+        "LockedMark",
         "RequireAccess",
         "WriteGate"
       ],
@@ -5924,7 +5971,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "SubscriptionDetailView"
@@ -6433,7 +6481,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "ApiCard",
@@ -6589,6 +6638,7 @@
       "file": "src/compositions/shell/ShellCreateMenu.tsx",
       "layer": "composition",
       "composes": [
+        "LockedMark",
         "PlusIcon"
       ],
       "usedBy": [],
@@ -6733,7 +6783,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "ConnectionExports",
@@ -6870,7 +6921,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "WebhookEndpointDetail"
@@ -7124,7 +7176,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "DetailStats",

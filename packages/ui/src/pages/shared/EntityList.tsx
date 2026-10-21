@@ -61,7 +61,7 @@ import { FilterBar, type FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { SortMenu, type SortOption } from '@ui/compositions/tables/SortMenu'
 import { cn } from '@ui/lib/cn'
 import type { RbacEntity } from '@fp/domain'
-import { WriteGate, useWriteCheck } from '@ui/compositions/access/Access'
+import { LockedMark, WriteGate, useWriteCheck, useWriteLock } from '@ui/compositions/access/Access'
 import { revealTruncated } from '@ui/lib/revealTruncated'
 import { provenance } from '@ui/provenance'
 import type { EntityColumn } from './cells'
@@ -1177,9 +1177,14 @@ export function EntityList<T extends object>({
 /** A row's `⋯`. Icon-only and 28px, so the column can be 40px wide. */
 function RowActionsMenu({ actions: given }: { actions: EntityRowAction[] }) {
   const check = useWriteCheck()
+  const lock = useWriteLock()
   if (given.length === 0) return null
   // Writes are disabled, not hidden, when the page's scope denies them (V1).
   const reasons = given.map((action) => (action.readOnly ? null : check(action.entity).reason))
+  // Locked (read-only) account: the refused writes carry a lock after their label.
+  const lockedLabels = new Set(
+    given.filter((_, i) => lock !== null && reasons[i] === lock).map((action) => action.label),
+  )
   const actions = given.map((action, i) => (reasons[i] ? { ...action, disabled: true } : action))
   const reason = reasons.find(Boolean)
   const ordinary = actions.filter((action) => !action.destructive)
@@ -1217,6 +1222,7 @@ function RowActionsMenu({ actions: given }: { actions: EntityRowAction[] }) {
               >
                 {action.icon}
                 {action.label}
+                {lockedLabels.has(action.label) ? <LockedMark /> : null}
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
@@ -1235,6 +1241,7 @@ function RowActionsMenu({ actions: given }: { actions: EntityRowAction[] }) {
                 >
                   {action.icon}
                   {action.label}
+                  {lockedLabels.has(action.label) ? <LockedMark /> : null}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>

@@ -2390,6 +2390,13 @@ const checkoutFailureRoute = createRoute({
   component: () => <CheckoutReturnRoute returnedBy="failure" />,
 })
 
+/** The return pages' parent, reached only by trimming the URL: back to Usage & billing. */
+const checkoutRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/billing/checkout',
+  component: () => <Navigate to="/settings/usage-billing" replace />,
+})
+
 const DeveloperPanels = lazy(() =>
   import('@/pages/settings/DeveloperPanels').then((m) => ({ default: m.DeveloperPanels })),
 )
@@ -2617,6 +2624,7 @@ export const routeTree = rootRoute.addChildren([
     upgradeRoute,
     checkoutSuccessRoute,
     checkoutFailureRoute,
+    checkoutRoute,
     taxCreateRoute,
     taxEditRoute,
     eventsRoute,

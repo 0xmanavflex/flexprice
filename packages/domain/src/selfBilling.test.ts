@@ -65,10 +65,17 @@ describe('accountCopy', () => {
 })
 
 describe('lockReason', () => {
-  it('is the event limit when the cap is used up, else the trial end', () => {
-    expect(lockReason(trial({ events: { used: 50_000, cap: 50_000 } }))).toBe('event_limit')
-    expect(lockReason(trial({ events: { used: 46_900, cap: 50_000 } }))).toBe('trial_end')
-    expect(lockReason(trial({ events: null }))).toBe('trial_end')
+  it('is the event limit when the cap is used up before the trial ends, else the trial end', () => {
+    expect(lockReason(trial({ events: { used: 50_000, cap: 50_000 } }), TODAY)).toBe('event_limit')
+    expect(lockReason(trial({ events: { used: 46_900, cap: 50_000 } }), TODAY)).toBe('trial_end')
+    expect(lockReason(trial({ events: null }), TODAY)).toBe('trial_end')
+    // The trial ended with a full cap: the API suspended an expired trial.
+    expect(
+      lockReason(
+        trial({ trialEndsOn: '2026-10-10', events: { used: 51_000, cap: 50_000 } }),
+        TODAY,
+      ),
+    ).toBe('trial_end')
   })
 })
 

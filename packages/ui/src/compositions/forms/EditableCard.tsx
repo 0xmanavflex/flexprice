@@ -6,7 +6,7 @@ import { Textarea } from '@ui/components/primitives/textarea'
 import { provenance } from '@ui/provenance'
 import { cn } from '@ui/lib/cn'
 import { FormCard, FormRow } from './FormCard'
-import { WriteGate } from '../access/Access'
+import { WriteGate, useWriteLock } from '../access/Access'
 import type { EditableFieldDef } from './EditableFields'
 
 export const EditableCardProvenance = provenance({
@@ -85,8 +85,10 @@ export function EditableCard({
   }
 
   // Gated by the page's `AccessScope`: disabled with the reason when write is denied.
+  // A locked (read-only) account has nothing to edit, so the pencil goes.
+  const accountLocked = useWriteLock() !== null
   const pencil =
-    locked || editing ? undefined : (
+    locked || editing || accountLocked ? undefined : (
       <WriteGate>
         <Button
           variant="ghost"

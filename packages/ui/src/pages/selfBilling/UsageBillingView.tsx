@@ -53,7 +53,12 @@ export interface UsageBillingViewProps {
   /** Today, as `YYYY-MM-DD`; injectable for stories and tests. */
   today: string
   /** Settings → Organization's billing email. */
-  billingEmail: string
+  /**
+   * Where Flexprice sends the workspace's invoices, when known. Not
+   * Organization's billing email — that is what the workspace's own customers
+   * see. The row is left out while the API does not report it.
+   */
+  billingEmail?: string
   onUpgrade: () => void
   /** Opens the billing portal: pay an invoice, change the card. */
   onOpenPortal: () => void
@@ -66,7 +71,11 @@ const planPrice = `${usd(SELF_BILLING_PLAN.base)} a month + ${planRateText}`
 const unpaid = (summary: SelfBillingSummary) => summary.invoices.find((i) => i.status !== 'paid')
 
 /** Locked only: the page cannot open quietly on a read-only account. */
-function LockedAlert({ summary, onUpgrade }: Pick<UsageBillingViewProps, 'summary' | 'onUpgrade'>) {
+function LockedAlert({
+  summary,
+  today,
+  onUpgrade,
+}: Pick<UsageBillingViewProps, 'summary' | 'today' | 'onUpgrade'>) {
   if (summary.state !== AccountState.Suspended) return null
   const cap = summary.events?.cap?.toLocaleString('en-US') ?? ''
   return (
@@ -75,7 +84,7 @@ function LockedAlert({ summary, onUpgrade }: Pick<UsageBillingViewProps, 'summar
       <AlertTitle>Your account is locked and read-only</AlertTitle>
       <AlertDescription>
         <p className="max-w-md text-pretty">
-          {lockReason(summary) === 'event_limit'
+          {lockReason(summary, today) === 'event_limit'
             ? `You used all ${cap} trial events. Events are still being recorded. Upgrade to make changes again and use production.`
             : `Your trial ended${summary.trialEndsOn ? ` on ${longDate(summary.trialEndsOn)}` : ''}. Events are still being recorded. Upgrade to make changes again and use production.`}
         </p>
@@ -99,7 +108,7 @@ function PlanBlock({
   const { state } = summary
   const left = summary.trialEndsOn ? daysUntil(summary.trialEndsOn, today) : 0
   const ends = summary.trialEndsOn ? longDate(summary.trialEndsOn) : ''
-  const byLimit = state === AccountState.Suspended && lockReason(summary) === 'event_limit'
+  const byLimit = state === AccountState.Suspended && lockReason(summary, today) === 'event_limit'
   const nextInvoice = state === AccountState.Active ? (summary.period?.end ?? null) : null
   const due = unpaid(summary)
   return (
@@ -190,12 +199,13 @@ const meterTone = (share: number) =>
   share >= 1 ? 'bg-destructive' : share >= URGENT_SHARE ? 'bg-warning' : 'bg-primary'
 
 /** The two things Flexprice meters on the tenant, side by side. */
-function UsageBlock({ summary }: { summary: SelfBillingSummary }) {
+function UsageBlock({ summary, today }: { summary: SelfBillingSummary; today: string }) {
   const used = summary.events?.used ?? 0
   const cap = summary.events?.cap ?? null
   const share = cap ? used / cap : 0
   const billed = summary.billed ?? 0
-  const locked = summary.state === AccountState.Suspended && lockReason(summary) === 'event_limit'
+  const locked =
+    summary.state === AccountState.Suspended && lockReason(summary, today) === 'event_limit'
   return (
     <SettingsBlock
       label="Usage"
@@ -267,10 +277,12 @@ function UsageBlock({ summary }: { summary: SelfBillingSummary }) {
 
 function InvoicesSection({
   summary,
+  today,
   onOpenPortal,
   portalPending,
-}: Pick<UsageBillingViewProps, 'summary' | 'onOpenPortal' | 'portalPending'>) {
-  const byLimit = lockReason(summary) === 'event_limit' && summary.state === AccountState.Suspended
+}: Pick<UsageBillingViewProps, 'summary' | 'today' | 'onOpenPortal' | 'portalPending'>) {
+  const byLimit =
+    lockReason(summary, today) === 'event_limit' && summary.state === AccountState.Suspended
   return (
     <Section title="Invoices" flush table showTitle>
       {summary.invoices.length > 0 ? (
@@ -385,20 +397,19 @@ function BillingDetails({
         legend="Billing details"
         description="Where Flexprice sends invoices and how you pay."
       >
-        <SettingRow
-          title="Billing email"
-          titleAddon={<DelayedHint text="Receives Flexprice invoices and payment receipts." />}
-          last={active}
-        >
-          <span className={cn('text-sm', !billingEmail && 'text-muted-foreground')}>
-            {billingEmail || '—'}
+        {billingEmail ? (
+          <SettingRow
+            title="Billing email"
+            titleAddon={<DelayedHint text="Receives Flexprice invoices and payment receipts." />}
+          >
+            <span className="text-sm">{billingEmail}</span>
+          </SettingRow>
+        ) : null}
+        <SettingRow title="Payment method" last>
+          <span className="text-muted-foreground text-sm">
+            {active ? 'Managed in the billing portal' : 'Added when you upgrade'}
           </span>
         </SettingRow>
-        {active ? null : (
-          <SettingRow title="Payment method" last>
-            <span className="text-muted-foreground text-sm">Added when you upgrade</span>
-          </SettingRow>
-        )}
       </SettingsFieldGroup>
     </SettingsBlock>
   )
@@ -407,14 +418,14 @@ function BillingDetails({
 export function UsageBillingView(props: UsageBillingViewProps) {
   return (
     <div className="flex flex-col gap-5">
-      <LockedAlert summary={props.summary} onUpgrade={props.onUpgrade} />
+      <LockedAlert summary={props.summary} today={props.today} onUpgrade={props.onUpgrade} />
       {props.portalError ? (
         <p role="alert" className="text-destructive text-sm">
           {props.portalError}
         </p>
       ) : null}
       <PlanBlock {...props} />
-      <UsageBlock summary={props.summary} />
+      <UsageBlock summary={props.summary} today={props.today} />
       <InvoicesSection {...props} />
       <BillingDetails {...props} />
     </div>

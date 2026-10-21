@@ -25,6 +25,7 @@ describe('navEntryForPath', () => {
     ['/coupons', 'settings-discounts'],
     ['/taxes', 'settings-taxes'],
     ['/settings/usage-billing', 'settings-usage-billing'],
+    ['/billing/checkout/success', 'settings-usage-billing-checkout'],
     ['/cost-sheets', 'settings-cost-tracking'],
     ['/pricing-widget', 'pricing-widget'],
     ['/webhooks', 'webhooks'],
@@ -129,6 +130,7 @@ describe('the sidebar layout', () => {
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
       'settings',
       'settings-usage-billing',
+      'settings-usage-billing-checkout',
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',
@@ -202,6 +204,7 @@ describe('every destination resolves', () => {
     '/credit-memos',
     '/taxes',
     '/settings/usage-billing',
+    '/billing/checkout',
     '/events',
     '/workflows',
     '/exports',

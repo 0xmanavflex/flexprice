@@ -11,7 +11,7 @@ import { UpgradeView } from '@fp/ui/pages'
 import { mutationMessage } from '../settings/panelKit'
 import {
   checkoutDefaults,
-  differsFromOrganization,
+  differsInName,
   hasOrganizationDetails,
   rememberCheckout,
   useOrganization,
@@ -20,10 +20,12 @@ import {
 /**
  * Upgrade: the billing details, then Stripe Checkout.
  *
- * The company and address are written back to Settings → Organization first —
- * the first time, so they are not typed again, and after a change made here.
- * A locked account cannot write Organization (the API refuses every write but
- * paying), so it sends them with the checkout only. The checkout id waits in
+ * The checkout itself saves the address to Settings → Organization (and to the
+ * Flexprice Cloud customer), locked or not, and the billing email to the
+ * Flexprice Cloud customer only: Organization's billing email is what the
+ * workspace's own customers see, so it is never touched here. A changed company
+ * name is written to Organization first — except on a locked account, whose
+ * writes the API refuses. The checkout id waits in
  * session storage for the page Stripe returns to.
  */
 export function UpgradePage({
@@ -47,20 +49,11 @@ export function UpgradePage({
   const locked = state === AccountState.Suspended
 
   const submit = async (details: CheckoutDetails) => {
-    if (tenant && !locked && differsFromOrganization(tenant, details)) {
+    if (tenant && !locked && differsInName(tenant, details)) {
       const draft = toUpdateTenantDraft(tenant)
       await updateTenant.mutateAsync({
         ...draft,
         name: details.name,
-        billingEmail: details.email,
-        address: {
-          line1: details.line1,
-          line2: details.line2,
-          city: details.city,
-          state: details.state,
-          postalCode: details.postalCode,
-          country: details.country,
-        },
       })
     }
     const started = await checkout.mutateAsync(details)
@@ -68,7 +61,7 @@ export function UpgradePage({
       onAlreadyPaid()
       return
     }
-    if (started.checkoutId) rememberCheckout(started.checkoutId)
+    if (started.checkoutId) rememberCheckout(started.checkoutId, details.email)
     setRedirecting(true)
     window.location.assign(started.url)
   }
@@ -81,7 +74,7 @@ export function UpgradePage({
     <UpgradeView
       state={state}
       eventCap={summary.data?.events?.cap ?? null}
-      defaultValues={checkoutDefaults(tenant)}
+      defaultValues={checkoutDefaults(tenant, organization.userEmail)}
       fromOrganization={hasOrganizationDetails(tenant)}
       today={selfBillingToday()}
       submitting={updateTenant.isPending || checkout.isPending || redirecting}

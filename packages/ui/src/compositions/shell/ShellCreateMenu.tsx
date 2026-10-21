@@ -11,7 +11,7 @@ import {
 } from '@ui/components/primitives/dropdown-menu'
 import { provenance } from '@ui/provenance'
 import type { RbacEntity } from '@fp/domain'
-import { useWriteCheck } from '../access/Access'
+import { LockedMark, useWriteCheck, useWriteLock } from '../access/Access'
 
 /**
  * One way to start anything, in the header, from every screen.
@@ -50,6 +50,7 @@ export interface ShellCreateMenuProps {
 
 export function ShellCreateMenu({ actions, onCreate, label = 'Create' }: ShellCreateMenuProps) {
   const check = useWriteCheck()
+  const locked = useWriteLock()
   if (actions.length === 0) return null
   const reasonFor = (action: ShellCreateAction) =>
     action.entity ? check(action.entity).reason : null
@@ -94,6 +95,7 @@ export function ShellCreateMenu({ actions, onCreate, label = 'Create' }: ShellCr
                     <span className="text-muted-foreground contents">{action.icon}</span>
                   ) : null}
                   {action.label}
+                  {locked && reasonFor(action) ? <LockedMark /> : null}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
