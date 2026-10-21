@@ -435,6 +435,7 @@
       "usedBy": [
         "ChargeTable",
         "CheckoutReturnView",
+        "EnvironmentForm",
         "FormToolbar",
         "GuideGrid",
         "GuidedEmptyState"
@@ -1114,6 +1115,7 @@
         "DetailMoreMenu",
         "DetailTabs",
         "Dot",
+        "EnvironmentForm",
         "EnvironmentSwitcher",
         "EventTrace",
         "InvoiceForm",
@@ -2877,7 +2879,9 @@
       "file": "src/pages/settings/environments/EnvironmentForm.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowRightIcon",
         "CalendarIcon",
+        "CheckIcon",
         "Composer",
         "Field",
         "FormDialog",

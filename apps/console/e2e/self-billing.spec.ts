@@ -137,3 +137,43 @@ test('the environment switcher walks the account states on mocks', async ({ cont
   await pick(/^Live\s*Paid/)
   await expect(page.getByRole('button', { name: /Trial ·|Account locked/ })).toHaveCount(0)
 })
+
+test('in the trial, creating Production is the upgrade, and paying lands in Production', async ({
+  context,
+  page,
+}) => {
+  await signIn(context, 'trial')
+  await page.goto('/features')
+  const switcher = page.getByRole('button', { name: /^Environment:/ })
+  await switcher.click()
+  // A trial has no production yet.
+  await expect(page.getByRole('menuitem', { name: /^Production$/ })).toHaveCount(0)
+  await page.getByRole('menuitem', { name: 'New environment' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Create environment' })
+  await dialog.getByRole('radio', { name: /production/i }).click()
+  await expect(dialog.getByText('Production comes with an upgrade')).toBeVisible()
+  await expect(dialog.getByRole('textbox', { name: /name/i })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Upgrade' }).click()
+
+  await expect(page).toHaveURL(/\/settings\/usage-billing\/go-live$/)
+  const companyName = page.getByLabel(/^Company name/)
+  if ((await companyName.inputValue()) === '') await companyName.fill('Acme Inc')
+  if ((await page.getByLabel('Street').inputValue()) === '') {
+    await page.getByRole('combobox', { name: /^Address/ }).click()
+    await page.getByRole('combobox', { name: /^Address/ }).fill('United States')
+    await page.getByRole('option', { name: 'United States (US)' }).click()
+    await page.getByLabel('Street').fill('548 Market St')
+    await page.getByLabel('City').fill('San Francisco')
+    await page.getByLabel('Postal code').fill('94104')
+  }
+  const billingEmail = page.getByLabel(/^Billing email/)
+  if ((await billingEmail.inputValue()) === '') await billingEmail.fill('billing@acme.io')
+  await page.getByRole('button', { name: 'Continue to payment' }).click()
+
+  await expect(page.getByRole('heading', { name: "You're live" })).toBeVisible()
+  await page.getByRole('button', { name: /Open production/ }).click()
+  await expect(
+    page.getByRole('button', { name: /^Environment: Production, production/ }),
+  ).toBeVisible()
+})
