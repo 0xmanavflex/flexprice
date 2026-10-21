@@ -85,6 +85,8 @@ interface PlaygroundProps {
   planGrant?: boolean
   /** Opens with this contract end date (`YYYY-MM-DD`). */
   endDate?: string
+  /** Gives the plan's first charge a free trial of this many days. */
+  planTrial?: number
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   onStepChange: (step: string) => void
@@ -105,6 +107,7 @@ function SubscriptionFormPlayground({
   otherCadences = false,
   planGrant = false,
   endDate,
+  planTrial,
   onSubmit,
   onCancel,
   onStepChange,
@@ -131,7 +134,10 @@ function SubscriptionFormPlayground({
       charges: planLoading
         ? []
         : [
-            ...makeCharges(Math.ceil(chargeCount / 2), Math.floor(chargeCount / 2)),
+            ...makeCharges(Math.ceil(chargeCount / 2), Math.floor(chargeCount / 2)).map(
+              (charge, index) =>
+                index === 0 && planTrial ? { ...charge, trialPeriodDays: planTrial } : charge,
+            ),
             ...(otherCadences
               ? [
                   {
@@ -166,7 +172,7 @@ function SubscriptionFormPlayground({
           ]
         : [],
     }
-  }, [planId, planLoading, chargeCount, entitlementCount, otherCadences, planGrant])
+  }, [planId, planLoading, chargeCount, entitlementCount, otherCadences, planGrant, planTrial])
 
   return (
     <SubscriptionForm
@@ -279,13 +285,16 @@ export const PlanAppearsAfterTheCustomer: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('combobox', { name: /^Customer/ })).toBeVisible()
-    await expect(canvas.queryByText('Plan and billing')).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Plan' })).toBeNull()
 
     await userEvent.click(canvas.getByRole('combobox', { name: /^Customer/ }))
     // The combobox portals its listbox, so the option is on `screen`, not in the canvas.
     await userEvent.click(await screen.findByRole('option', { name: /Acme Robotics/ }))
 
-    await expect(await canvas.findByText('Plan and billing')).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Plan' })).toBeVisible()
+    // What the plan fills in waits for a plan.
+    await expect(canvas.queryByText('Billing period')).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Dates and billing' })).toBeNull()
   },
 }
 
@@ -306,8 +315,50 @@ export const CustomerLocked: Story = {
   args: { customerLocked: true, step: 'plan' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Plan and billing')).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Plan' })).toBeVisible()
     await expect(canvas.queryByRole('combobox', { name: /^Customer/ })).toBeNull()
+  },
+}
+
+/**
+ * The plan fills in the free trial: choosing a plan whose charges carry a
+ * trial sets it, and the note says when billing starts.
+ */
+export const PlanFillsInTheTrial: Story = {
+  args: { planTrial: 30 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Customer/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Acme Robotics/ }))
+    await userEvent.click(await canvas.findByRole('combobox', { name: /^Plan/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Pro/ }))
+    await expect(await canvas.findByRole('heading', { name: 'Dates and billing' })).toBeVisible()
+    await waitFor(() =>
+      expect(canvas.getByRole('spinbutton', { name: /Free trial/ })).toHaveValue(30),
+    )
+    await expect(
+      canvas.getByText('The trial ends and billing starts on Nov 19, 2026.'),
+    ).toBeVisible()
+  },
+}
+
+/** The contract's dates: an end date can be cleared back to running until cancelled. */
+export const ClearsTheEndDate: Story = {
+  args: { prefilled: true, step: 'plan', endDate: '2027-10-20' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /^Ends/ })).toHaveTextContent('Oct 20, 2027')
+    await userEvent.click(canvas.getByRole('button', { name: 'Clear end date' }))
+    await expect(canvas.getByRole('button', { name: /^Ends/ })).toHaveTextContent(
+      'Runs until cancelled',
+    )
+    await expect(canvas.queryByRole('button', { name: 'Clear end date' })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ phases: [expect.objectContaining({ endDate: '' })] }),
+      ),
+    )
   },
 }
 
@@ -316,6 +367,9 @@ export const Prefilled: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('spinbutton', { name: /Free trial/ })).toHaveValue(14)
+    await expect(
+      canvas.getByText('The trial ends and billing starts on Nov 3, 2026.'),
+    ).toBeVisible()
   },
 }
 
@@ -594,9 +648,7 @@ export const EndDateCheckedOnTheFirstStep: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
-    await expect(
-      await canvas.findByText('The contract starts today, so it must end after today'),
-    ).toBeVisible()
+    await expect(await canvas.findByText('The end has to come after the start')).toBeVisible()
     await expect(args.onStepChange).not.toHaveBeenCalledWith('phases')
   },
 }

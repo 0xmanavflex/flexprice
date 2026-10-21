@@ -488,9 +488,7 @@ export const createSubscriptionSchema = z
           code: 'custom',
           path: ['phases', index, 'endDate'],
           message:
-            index === 0 && !value.startDate
-              ? 'The contract starts today, so it must end after today'
-              : 'The end must be after the start',
+            index === 0 ? 'The end has to come after the start' : 'The end must be after the start',
         })
       }
       start = phase.endDate || start

@@ -75,7 +75,7 @@ import { PriceOverrideForm } from '@ui/pages/product-catalog/charges/PriceOverri
 import type { MeterOption, PriceUnitOption } from '@ui/pages/product-catalog/charges/ChargeForm'
 import { RowActionsMenu } from '@ui/pages/shared/RowActionsMenu'
 import { ContractChargeDialog } from './ContractChargeDialog'
-import { everyPeriod, formatDay, localToday, periodNoun } from './ContractSummary'
+import { addDays, everyPeriod, formatDay, localToday, periodNoun } from './ContractSummary'
 import { ChargeCommitmentDialog, commitmentText } from './ChargeCommitmentDialog'
 import { provenance } from '@ui/provenance'
 
@@ -335,6 +335,21 @@ export function SubscriptionForm({
     setGrantsFor(values.planId)
   }, [values.planId, plan?.creditGrants, grantsFor, form])
 
+  // A plan's free trial (on its recurring fixed charges) fills in the
+  // contract's, once per plan; a trial the draft opened with is kept.
+  const planTrial = useMemo(
+    () => Math.max(0, ...(plan?.charges ?? []).map((charge) => charge.trialPeriodDays ?? 0)),
+    [plan],
+  )
+  const [trialFor, setTrialFor] = useState<string | null>(() =>
+    defaultValue?.trialPeriodDays !== undefined ? (defaultValue.planId ?? null) : null,
+  )
+  useEffect(() => {
+    if (!values.planId || !plan || plan.isLoading || trialFor === values.planId) return
+    setTrialFor(values.planId)
+    if (planTrial > 0) form.setValue('trialPeriodDays', planTrial, { shouldDirty: true })
+  }, [values.planId, plan, planTrial, trialFor, form])
+
   const starts = phaseStarts(values)
   const set = <K extends keyof CreateSubscription>(name: K, value: CreateSubscription[K]) =>
     form.setValue(name, value as never, { shouldDirty: true })
@@ -461,7 +476,7 @@ export function SubscriptionForm({
     >
       <FormRow
         label="Customer"
-        hint="The customer this contract bills."
+        hint="Who the contract bills."
         required
         error={errors.customerId?.message}
       >
@@ -488,13 +503,13 @@ export function SubscriptionForm({
 
   const planCard = (
     <FormCard
-      title="Plan and billing"
+      title="Plan"
       status="required"
       icon={<LayersIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
     >
       <FormRow
         label="Plan"
-        hint="The plan whose charges and entitlements apply."
+        hint="Fills in the billing period, currency and free trial, and copies its charges, entitlements and credit grants onto the contract."
         required
         error={errors.planId?.message}
       >
@@ -516,78 +531,81 @@ export function SubscriptionForm({
           />
         )}
       </FormRow>
-      <FormRow
-        label="Billing period"
-        hint="How often the contract is invoiced."
-        required
-        error={errors.billingPeriod?.message}
-      >
-        {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="billingPeriod"
-            render={({ field: control }) => (
-              <OptionSelect
-                id={id}
-                {...field}
-                value={control.value}
-                onValueChange={(value) => pick('billingPeriod', value)}
-                options={periodOptions}
-                disabled={isSubmitting}
+      {values.planId ? (
+        <>
+          <FormRow
+            label="Billing period"
+            hint="How often the contract is invoiced. From the plan."
+            required
+            error={errors.billingPeriod?.message}
+          >
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="billingPeriod"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => pick('billingPeriod', value)}
+                    options={periodOptions}
+                    disabled={isSubmitting}
+                  />
+                )}
               />
             )}
-          />
-        )}
-      </FormRow>
-      <FormRow
-        label="Every"
-        hint="Number of periods per invoice, e.g. 3 on a monthly cadence bills quarterly."
-        error={errors.billingPeriodCount?.message}
-      >
-        {({ id, ...field }) => (
-          <Input
-            id={id}
-            type="number"
-            min={1}
-            className="w-32"
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('billingPeriodCount', { valueAsNumber: true })}
-          />
-        )}
-      </FormRow>
-      <FormRow
-        label="Currency"
-        required
-        hint={
-          customerCurrency
-            ? "Defaults to the customer's currency."
-            : "Defaults to the plan's when it bills in one."
-        }
-        error={errors.currency?.message}
-      >
-        {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="currency"
-            render={({ field: control }) => (
-              <OptionSelect
+          </FormRow>
+          <FormRow
+            label="Every"
+            hint="Number of periods per invoice, e.g. 3 on a monthly cadence bills quarterly."
+            error={errors.billingPeriodCount?.message}
+          >
+            {({ id, ...field }) => (
+              <Input
                 id={id}
-                {...field}
-                value={control.value}
-                onValueChange={(value) => pick('currency', value)}
-                options={currencyOptions}
-                placeholder="Choose a currency"
+                type="number"
+                min={1}
+                className="w-32"
                 disabled={isSubmitting}
+                {...field}
+                {...form.register('billingPeriodCount', { valueAsNumber: true })}
               />
             )}
-          />
-        )}
-      </FormRow>
+          </FormRow>
+          <FormRow
+            label="Currency"
+            required
+            hint="From the plan's prices."
+            error={errors.currency?.message}
+          >
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="currency"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => pick('currency', value)}
+                    options={currencyOptions}
+                    placeholder="Choose a currency"
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </FormRow>
+        </>
+      ) : null}
     </FormCard>
   )
 
   const endError = errors.phases?.[lastPhase]?.endDate?.message
+  const contractEnd = values.phases[lastPhase]?.endDate ?? ''
+  const setEnd = (value: string) =>
+    form.setValue(endPath, value, { shouldDirty: true, shouldValidate: true })
   const datesCard = (
     <FormCard
       title="Dates and billing"
@@ -595,7 +613,7 @@ export function SubscriptionForm({
     >
       <FormRow
         label="Starts"
-        hint="The contract start date. Leave it as today to start now."
+        hint="When the contract starts. Today unless you pick another day."
         error={errors.startDate?.message}
       >
         {({ id, ...field }) => (
@@ -606,27 +624,38 @@ export function SubscriptionForm({
             onValueChange={(value) =>
               form.setValue('startDate', value, { shouldDirty: true, shouldValidate: true })
             }
-            placeholder={`Today, ${formatDay(today)}`}
+            placeholder="Pick the start"
             disabled={isSubmitting}
           />
         )}
       </FormRow>
-      <FormRow
-        label="Ends"
-        hint="The contract end date. Leave empty to run until cancelled."
-        error={endError}
-      >
+      <FormRow label="Ends" hint="Leave empty to run until cancelled." error={endError}>
         {({ id, ...field }) => (
-          <DateInput
-            id={id}
-            {...field}
-            value={values.phases[lastPhase]?.endDate ?? ''}
-            onValueChange={(value) =>
-              form.setValue(endPath, value, { shouldDirty: true, shouldValidate: true })
-            }
-            placeholder="Runs until cancelled"
-            disabled={isSubmitting}
-          />
+          <div className="flex min-w-0 gap-1">
+            <div className="min-w-0 flex-1">
+              <DateInput
+                id={id}
+                {...field}
+                value={contractEnd}
+                onValueChange={setEnd}
+                placeholder="Runs until cancelled"
+                disabled={isSubmitting}
+              />
+            </div>
+            {contractEnd ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9"
+                aria-label="Clear end date"
+                onClick={() => setEnd('')}
+                disabled={isSubmitting}
+              >
+                <XIcon aria-hidden />
+              </Button>
+            ) : null}
+          </div>
         )}
       </FormRow>
       <FormRow
@@ -701,7 +730,7 @@ export function SubscriptionForm({
       </FormRow>
       <FormRow
         label="Free trial"
-        hint="Optional. Billing starts after the trial."
+        hint="From the plan. Billing starts after the trial; clear it for no trial."
         error={errors.trialPeriodDays?.message}
         align="start"
       >
@@ -712,7 +741,7 @@ export function SubscriptionForm({
                 id={id}
                 type="number"
                 min={0}
-                placeholder="0"
+                placeholder="No trial"
                 disabled={isSubmitting}
                 {...field}
                 {...form.register('trialPeriodDays', {
@@ -721,9 +750,10 @@ export function SubscriptionForm({
               />
               <InputGroupAddon align="inline-end">days</InputGroupAddon>
             </InputGroup>
-            {trialDays > 0 ? (
+            {trialDays > 0 && billOn !== 'date' ? (
               <p className="text-muted-foreground text-xs">
-                {`Billing starts ${trialDays} ${trialDays === 1 ? 'day' : 'days'} after the contract starts.`}
+                The trial ends and billing starts on{' '}
+                {formatDay(addDays(values.startDate || today, trialDays))}.
               </p>
             ) : null}
           </div>
