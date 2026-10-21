@@ -53,7 +53,12 @@ export interface UsageBillingViewProps {
   /** Today, as `YYYY-MM-DD`; injectable for stories and tests. */
   today: string
   /** Settings → Organization's billing email. */
-  billingEmail: string
+  /**
+   * Where Flexprice sends the workspace's invoices, when known. Not
+   * Organization's billing email — that is what the workspace's own customers
+   * see. The row is left out while the API does not report it.
+   */
+  billingEmail?: string
   onUpgrade: () => void
   /** Opens the billing portal: pay an invoice, change the card. */
   onOpenPortal: () => void
@@ -392,20 +397,19 @@ function BillingDetails({
         legend="Billing details"
         description="Where Flexprice sends invoices and how you pay."
       >
-        <SettingRow
-          title="Billing email"
-          titleAddon={<DelayedHint text="Receives Flexprice invoices and payment receipts." />}
-          last={active}
-        >
-          <span className={cn('text-sm', !billingEmail && 'text-muted-foreground')}>
-            {billingEmail || '—'}
+        {billingEmail ? (
+          <SettingRow
+            title="Billing email"
+            titleAddon={<DelayedHint text="Receives Flexprice invoices and payment receipts." />}
+          >
+            <span className="text-sm">{billingEmail}</span>
+          </SettingRow>
+        ) : null}
+        <SettingRow title="Payment method" last>
+          <span className="text-muted-foreground text-sm">
+            {active ? 'Managed in the billing portal' : 'Added when you upgrade'}
           </span>
         </SettingRow>
-        {active ? null : (
-          <SettingRow title="Payment method" last>
-            <span className="text-muted-foreground text-sm">Added when you upgrade</span>
-          </SettingRow>
-        )}
       </SettingsFieldGroup>
     </SettingsBlock>
   )
