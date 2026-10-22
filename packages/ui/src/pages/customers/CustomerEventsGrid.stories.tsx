@@ -69,6 +69,26 @@ export const HandsRowToPage: Story = {
   },
 }
 
+/** Refresh sits in the section header, so it is there even before any event arrives. */
+export const Refresh: Story = {
+  args: { events: [], onRefresh: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/No events yet/)).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Refresh' }))
+    await expect(args.onRefresh).toHaveBeenCalledOnce()
+  },
+}
+
+/** While a refresh is in flight the button is disabled. */
+export const Refreshing: Story = {
+  args: { onRefresh: fn(), isRefreshing: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Refresh' })).toBeDisabled()
+  },
+}
+
 /** The read is in flight: a shaped skeleton, never "No events yet". */
 export const Loading: Story = {
   args: { events: [], isLoading: true },
