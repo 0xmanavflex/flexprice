@@ -183,4 +183,16 @@ test.describe('a customer detail page', () => {
     await expect(portal.getByText('Payment methods')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByRole('menuitem', { name: 'Copy portal link' })).toHaveCount(0)
   })
+
+  test('pushes the customer to Stripe from the header menu', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('button', { name: 'Customer actions' }).click()
+    const sync = page.waitForRequest(
+      (request) => request.url().endsWith('/integrations/sync') && request.method() === 'POST',
+    )
+    await page.getByRole('menuitem', { name: 'Push to Stripe' }).click()
+    const body = (await sync).postDataJSON() as Record<string, unknown>
+    expect(body).toMatchObject({ entity_type: 'customer', method: 'push' })
+    await expect(page.getByText('Pushing customer to Stripe')).toBeVisible()
+  })
 })
