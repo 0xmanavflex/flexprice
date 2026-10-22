@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CreditCardIcon } from '@fp/ui/icons'
+import { CreditCardIcon, PlayIcon, Trash2Icon } from '@fp/ui/icons'
 import { PaymentStatus, formatMoney, PAYMENT_STATUS_LABEL } from '@fp/domain'
 import { ApiError, useDeletePayment, usePayment, useProcessPayment, serverReason } from '@fp/query'
 import {
@@ -79,11 +79,19 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
       menuLabel="Payment actions"
       menu={[
         ...(canProcess
-          ? [{ id: 'process', label: 'Process payment', onSelect: () => setDialog('process') }]
+          ? [
+              {
+                id: 'process',
+                label: 'Process payment',
+                icon: <PlayIcon className="text-muted-foreground" aria-hidden />,
+                onSelect: () => setDialog('process'),
+              },
+            ]
           : []),
         {
           id: 'delete',
           label: 'Delete payment',
+          icon: <Trash2Icon aria-hidden />,
           destructive: true,
           onSelect: () => setDialog('delete'),
         },

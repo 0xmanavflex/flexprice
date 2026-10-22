@@ -17,6 +17,8 @@ import {
   PlusIcon,
   ReceiptIcon,
   RepeatIcon,
+  StarIcon,
+  Trash2Icon,
   WalletIcon,
 } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
@@ -338,6 +340,7 @@ function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: Portal
                             disabled={card.isDefault || card.expired}
                             onClick={() => onMakeDefault(card)}
                           >
+                            <StarIcon aria-hidden="true" />
                             Make default
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -345,6 +348,7 @@ function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: Portal
                             variant="destructive"
                             onClick={() => onRemoveCard(card)}
                           >
+                            <Trash2Icon aria-hidden="true" />
                             Remove card
                           </DropdownMenuItem>
                         </DropdownMenuContent>

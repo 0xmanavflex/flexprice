@@ -14,7 +14,8 @@ import {
   isChargeCustomised,
 } from '@fp/domain'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
-import { ArrowRightIcon, PlusIcon } from '@ui/icons'
+import type { ReactElement } from 'react'
+import { ArrowRightIcon, CircleSlashIcon, CopyIcon, EyeIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Section } from '@ui/compositions/layout/Section'
@@ -105,7 +106,9 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** The destructive item's wording; "Terminate" on a catalogue, "End charge" on a contract. */
   removeLabel?: string
   /** Extra row-menu items, e.g. a contract's "Go to plan". */
-  extraActions?: (charge: Charge) => Array<{ label: string; onSelect: () => void }>
+  extraActions?: (
+    charge: Charge,
+  ) => Array<{ label: string; icon: ReactElement; onSelect: () => void }>
   /**
    * Replaces opening the sheet.
    *
@@ -433,13 +436,21 @@ export function ChargeTable({
             extra={[
               {
                 label: 'Copy price ID',
+                icon: <CopyIcon aria-hidden />,
                 readOnly: true,
                 onSelect: () => void navigator.clipboard?.writeText(charge.id),
               },
               ...(extraActions?.(charge) ?? []),
               ...(onRowClick
                 ? []
-                : [{ label: 'View details', readOnly: true, onSelect: () => openAt(charge) }]),
+                : [
+                    {
+                      label: 'View details',
+                      icon: <EyeIcon aria-hidden />,
+                      readOnly: true,
+                      onSelect: () => openAt(charge),
+                    },
+                  ]),
             ]}
             onEdit={
               onEdit && !charge.endDate && (canEdit?.(charge) ?? true)
@@ -448,6 +459,7 @@ export function ChargeTable({
             }
             onRemove={onTerminate && !charge.endDate ? () => onTerminate(charge) : undefined}
             removeLabel={removeLabel}
+            removeIcon={<CircleSlashIcon aria-hidden />}
           />
         </span>
       ),

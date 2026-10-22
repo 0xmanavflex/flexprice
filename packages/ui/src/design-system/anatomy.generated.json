@@ -998,7 +998,9 @@
         "ArrowRightIcon",
         "ChargeFlags",
         "ChargeSheet",
+        "CopyIcon",
         "DetailTable",
+        "EyeIcon",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
@@ -1652,6 +1654,7 @@
       "composes": [],
       "usedBy": [
         "AddonGrid",
+        "ChargeTable",
         "CheckoutLinkPanel",
         "ChoiceCards",
         "Composer",
@@ -3128,6 +3131,7 @@
       "composes": [],
       "usedBy": [
         "AcceptInvitationForm",
+        "ChargeTable",
         "ConnectionExports",
         "CustomerDetail",
         "DataExportDetail",
@@ -3139,6 +3143,7 @@
         "SignInForm",
         "SignUpScreen",
         "SpecField",
+        "SubscriptionCard",
         "SyncOptions",
         "WebhookEndpointDetail",
         "WebhookGuide"
@@ -5179,7 +5184,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
-        "PageShell"
+        "PageShell",
+        "SubscriptionDetailView"
       ],
       "story": null
     },
@@ -5420,6 +5426,7 @@
         "Pill",
         "PlanGrid",
         "PriceUnitGrid",
+        "RowActionsMenu",
         "Status",
         "SubscriptionForm",
         "TaxRateGrid"
@@ -5873,6 +5880,7 @@
         "PortalEmpty",
         "Section",
         "SimpleTable",
+        "StarIcon",
         "SubscriptionStatusPill",
         "SummaryCell",
         "WalletIcon"
@@ -6315,7 +6323,9 @@
     "RowActionsMenu": {
       "file": "src/pages/shared/RowActionsMenu.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "PencilIcon"
+      ],
       "usedBy": [
         "ChargeTable",
         "CreditGrantTable",
@@ -7040,7 +7050,9 @@
       "file": "src/reui/icons/default/outline/star.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "PortalOverview"
+      ],
       "story": null
     },
     "StatCards": {
@@ -7089,7 +7101,8 @@
       "file": "src/pages/customers/SubscriptionCard.tsx",
       "layer": "surface",
       "composes": [
-        "CopyIcon"
+        "CopyIcon",
+        "EyeIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/SubscriptionCard.stories.tsx"
@@ -7118,6 +7131,7 @@
         "LoadingRows",
         "MetadataCard",
         "OverviewTiles",
+        "PackageIcon",
         "PaymentStatusBadge",
         "Pill",
         "PlusIcon",
@@ -8121,7 +8135,9 @@
       "uses": [
         "AccessProvider",
         "AccessScope",
+        "CopyIcon",
         "DetailMoreMenu",
+        "PencilIcon",
         "RequireAccess",
         "WriteGate"
       ]
@@ -9195,7 +9211,9 @@
       "component": "CatalogDetailFrame",
       "uses": [
         "CatalogDetailFrame",
-        "CatalogStatusBadge"
+        "CatalogStatusBadge",
+        "CopyIcon",
+        "PencilIcon"
       ]
     },
     "./src/pages/product-catalog/charges/ChargeForm.stories.tsx": {
@@ -9682,6 +9700,7 @@
       "uses": [
         "BookOpenIcon",
         "EntityList",
+        "EyeIcon",
         "RocketIcon",
         "WrenchIcon"
       ]
@@ -9733,6 +9752,7 @@
       "title": "Building blocks/Tables & lists/RowActionsMenu",
       "component": "RowActionsMenu",
       "uses": [
+        "CopyIcon",
         "RowActionsMenu"
       ]
     },

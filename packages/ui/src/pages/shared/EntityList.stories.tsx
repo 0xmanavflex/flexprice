@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { BookOpenIcon, RocketIcon, WrenchIcon } from '@ui/icons'
+import { BookOpenIcon, EyeIcon, RocketIcon, WrenchIcon } from '@ui/icons'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { money } from '@fp/domain'
 import { createFilterQuery } from '@ui/components/reui/filters/filters-query'
@@ -187,7 +187,13 @@ function PlaygroundList({
             },
           }
         : {})}
-      {...(showRowActions ? { rowActions: () => [{ label: 'Open', onSelect: onRowAction }] } : {})}
+      {...(showRowActions
+        ? {
+            rowActions: () => [
+              { label: 'Open', icon: <EyeIcon aria-hidden />, onSelect: onRowAction },
+            ],
+          }
+        : {})}
       {...(clickableRows ? { onRowClick } : {})}
       {...(showExport ? { exportFileName: 'widgets' } : {})}
       {...(showSort
@@ -334,7 +340,7 @@ export const Layout: Story = {
  * overflow rather than configured.
  */
 export const ColumnsFillTheWidth: Story = {
-  args: { rowActions: () => [{ label: 'Open', onSelect: fn() }] },
+  args: { rowActions: () => [{ label: 'Open', icon: <EyeIcon aria-hidden />, onSelect: fn() }] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('API calls 1')
@@ -365,7 +371,7 @@ export const ColumnsFillTheWidth: Story = {
  */
 export const PinsOnlyWhenScrolling: Story = {
   args: {
-    rowActions: () => [{ label: 'Open', onSelect: fn() }],
+    rowActions: () => [{ label: 'Open', icon: <EyeIcon aria-hidden />, onSelect: fn() }],
     columns: [...COLUMNS, ...COLUMNS.map((c) => ({ ...c, id: `${c.id}2` }))],
   },
   decorators: [

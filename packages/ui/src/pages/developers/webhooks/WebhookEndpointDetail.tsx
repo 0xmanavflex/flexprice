@@ -3,11 +3,14 @@ import { toast } from 'sonner'
 import {
   CircleCheckIcon,
   CircleDashedIcon,
+  CirclePauseIcon,
   CopyIcon,
   EyeIcon,
   EyeOffIcon,
+  PlayIcon,
   PlusIcon,
   RefreshCwIcon,
+  RotateCcwIcon,
   SendIcon,
   Trash2Icon,
   WebhookIcon,
@@ -235,12 +238,23 @@ export function WebhookEndpointDetail({
         {
           id: 'toggle',
           label: endpoint.disabled ? 'Enable endpoint' : 'Disable endpoint',
+          icon: endpoint.disabled ? (
+            <PlayIcon className="text-muted-foreground" aria-hidden />
+          ) : (
+            <CirclePauseIcon className="text-muted-foreground" aria-hidden />
+          ),
           onSelect: () => setDialog('toggle'),
         },
-        { id: 'recover', label: 'Recover failed messages', onSelect: () => setDialog('recover') },
+        {
+          id: 'recover',
+          label: 'Recover failed messages',
+          icon: <RotateCcwIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setDialog('recover'),
+        },
         {
           id: 'delete',
           label: 'Delete endpoint',
+          icon: <Trash2Icon aria-hidden />,
           destructive: true,
           onSelect: () => setDialog('delete'),
         },

@@ -4,6 +4,7 @@ import type { AccessRequirement, RbacAction, RbacEntity } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { DetailMoreMenu } from '@ui/compositions/detail/DetailKit'
 import { AccessProvider, AccessScope, type AccessValue, RequireAccess, WriteGate } from './Access'
+import { CopyIcon, PencilIcon, ReceiptIcon } from '@ui/icons'
 
 /** A principal holding read on everything and write on `writes` only. */
 function principal(writes: RbacEntity[], superAdmin = false): AccessValue {
@@ -177,8 +178,19 @@ export const DetailMenuItemsLocked: Story = {
         <DetailMoreMenu
           label="Customer actions"
           items={[
-            { id: 'copy', label: 'Copy ID', readOnly: true, onSelect: fn() },
-            { id: 'edit', label: 'Edit customer', onSelect: fn() },
+            {
+              id: 'copy',
+              label: 'Copy ID',
+              icon: <CopyIcon aria-hidden />,
+              readOnly: true,
+              onSelect: fn(),
+            },
+            {
+              id: 'edit',
+              label: 'Edit customer',
+              icon: <PencilIcon aria-hidden />,
+              onSelect: fn(),
+            },
           ]}
         />
       </AccessScope>
@@ -202,9 +214,26 @@ export const DetailMenuItems: Story = {
         <DetailMoreMenu
           label="Customer actions"
           items={[
-            { id: 'copy', label: 'Copy ID', readOnly: true, onSelect: fn() },
-            { id: 'edit', label: 'Edit customer', onSelect: fn() },
-            { id: 'invoice', label: 'Create invoice', entity: 'invoice', onSelect: fn() },
+            {
+              id: 'copy',
+              label: 'Copy ID',
+              icon: <CopyIcon aria-hidden />,
+              readOnly: true,
+              onSelect: fn(),
+            },
+            {
+              id: 'edit',
+              label: 'Edit customer',
+              icon: <PencilIcon aria-hidden />,
+              onSelect: fn(),
+            },
+            {
+              id: 'invoice',
+              label: 'Create invoice',
+              icon: <ReceiptIcon aria-hidden />,
+              entity: 'invoice',
+              onSelect: fn(),
+            },
           ]}
         />
       </AccessScope>

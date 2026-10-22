@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactElement, type ReactNode } from 'react'
 import {
   ArchiveIcon,
   ExternalLinkIcon,
@@ -977,6 +977,8 @@ function ContractsTable({
 export interface InvoiceRowAction {
   label: string
   onSelect: () => void
+  /** Leading glyph, required so every item lines up behind one. */
+  icon: ReactElement
   destructive?: boolean
 }
 
@@ -1128,7 +1130,11 @@ function InvoiceTable({
                           label={invoice.number || 'invoice'}
                           extra={items.filter((item) => !item.destructive)}
                           {...(removal
-                            ? { onRemove: removal.onSelect, removeLabel: removal.label }
+                            ? {
+                                onRemove: removal.onSelect,
+                                removeLabel: removal.label,
+                                removeIcon: removal.icon,
+                              }
                             : {})}
                         />
                       </div>

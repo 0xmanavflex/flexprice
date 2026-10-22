@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactElement, type ReactNode } from 'react'
 import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
@@ -118,8 +118,8 @@ export function CopyEmail({ value }: { value: string }) {
 export interface DetailMenuItem {
   id: string
   label: string
-  /** Leading glyph; decorative, the label names the item. */
-  icon?: ReactNode
+  /** Leading glyph; decorative, the label names the item. Required so every item lines up. */
+  icon: ReactElement
   onSelect: () => void
   /** Destructive items are set apart below a divider, last in the menu. */
   destructive?: boolean
@@ -162,7 +162,7 @@ export function DetailMoreMenu({
       {...(item.destructive ? { variant: 'destructive' as const } : {})}
       onClick={item.onSelect}
     >
-      {item.icon ?? null}
+      {item.icon}
       {item.label}
       {locked && denied(item) ? <LockedMark /> : null}
     </DropdownMenuItem>

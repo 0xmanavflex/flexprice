@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactElement,
   type ReactNode,
 } from 'react'
 import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
@@ -204,7 +205,8 @@ export interface EntitySort<F extends string = string> {
 export interface EntityRowAction {
   label: string
   onSelect: () => void
-  icon?: ReactNode
+  /** Leading glyph, required so every item in a menu lines up behind one. */
+  icon: ReactElement
   /** Renders in the destructive colour, under a separator. */
   destructive?: boolean | undefined
   disabled?: boolean | undefined

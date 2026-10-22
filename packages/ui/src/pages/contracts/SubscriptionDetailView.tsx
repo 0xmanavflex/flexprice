@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
+  PackageIcon,
   PlusIcon,
   CirclePauseIcon,
   ClockIcon,
@@ -1199,7 +1200,7 @@ export function SubscriptionDetailView({
             {...(revertCharge ? { onRevert: revertCharge } : {})}
             extraActions={(charge) =>
               chargeRows.lineOf.get(charge.id)?.source === 'plan' && onOpenPlan
-                ? [{ label: 'Go to plan', onSelect: onOpenPlan }]
+                ? [{ label: 'Go to plan', icon: <PackageIcon aria-hidden />, onSelect: onOpenPlan }]
                 : []
             }
             isLoading={lines.isLoading ?? false}
