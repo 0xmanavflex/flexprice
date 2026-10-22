@@ -442,12 +442,23 @@ const SORT_FIELD: Record<SubscriptionSortField, string> = {
  * nothing, which is the failure this comment exists to prevent. `plan` is named
  * explicitly rather than relied on as a default.
  */
+function toWireStatuses(statuses: readonly SubscriptionStatus[]): string[] {
+  return statuses.flatMap((status) =>
+    status === SubscriptionStatus.Incomplete ? [status, 'draft'] : [status],
+  )
+}
+
 export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'customer,plan',
+    // Status goes to the server: it returns only active subscriptions when no
+    // status is given, so filtering on the page alone could never find a
+    // trialing one. Incomplete also asks for the API's `draft`, which the
+    // domain shows as Incomplete. No status chosen keeps the server's default.
+    ...(query.statuses.length > 0 ? { subscriptionStatus: toWireStatuses(query.statuses) } : {}),
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
       : {}),
@@ -473,8 +484,9 @@ export async function fetchSubscriptions(
     toSubscription(item as SubscriptionWire),
   )
 
-  // Neither status nor search is a server-side filter here, so both are applied
-  // on the page — the same split coupons and add-ons use.
+  // Search is not a server-side filter, so it is applied on the page. Status is
+  // re-checked here too, which keeps the page's filter exact while the server
+  // narrows the fetch.
   const term = query.search.trim().toLowerCase()
   const filtered = subscriptions.filter((subscription) => {
     const matchesStatus =
