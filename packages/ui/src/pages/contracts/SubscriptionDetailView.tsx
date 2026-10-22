@@ -32,6 +32,7 @@ import {
   type AddContractAddon,
   type AddContractCoupon,
   BILLING_PERIOD_LABEL,
+  commitmentPeriodNoun,
   ChargeSection,
   type BillingPeriod,
   type ChangeLineQuantity,
@@ -1539,6 +1540,7 @@ function ContractDetails({
   onOpenCustomer?: () => void
   onOpenPlan?: () => void
 }) {
+  const commitment = s.commitment
   return (
     <div className="grid items-start gap-5 lg:grid-cols-2">
       <Section title="Contract">
@@ -1600,12 +1602,19 @@ function ContractDetails({
                   ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
                   : s.billingPeriodLabel,
             },
+            // The contract-level commitment is set when the contract is created;
+            // the API cannot change it afterwards, so it reads here and nowhere else.
             {
               label: 'Commitment',
-              value: s.commitmentAmount
-                ? `${formatMoney(s.commitmentAmount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
+              value: commitment
+                ? `${formatMoney(commitment.amount)} per ${commitmentPeriodNoun(commitment.period, commitment.periodCount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
                 : 'None',
             },
+            // A factor of 1 is the normal rate, so only a premium is worth a row.
+            ...(commitment && commitment.overageFactor > 1
+              ? [{ label: 'Overage factor', value: `${commitment.overageFactor}×` }]
+              : []),
+            ...(commitment ? [{ label: 'True-up', value: commitment.trueUp ? 'On' : 'Off' }] : []),
           ]}
         />
       </Section>
