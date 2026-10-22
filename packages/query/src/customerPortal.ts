@@ -177,7 +177,7 @@ export const usePortalTopUps = (
         await getPortalWalletTransactions(auth, wallet?.id ?? '', {
           limit,
           offset: 0,
-          type: 'CREDIT',
+          type: 'credit',
         }),
         wallet?.currency ?? 'USD',
       )
