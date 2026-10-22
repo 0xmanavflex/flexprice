@@ -71,3 +71,46 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/contracts$/)
 })
+
+test('creates a contract that other customers inherit', async ({ page }) => {
+  await page.goto('/contracts/new')
+  await page.getByRole('combobox').first().click()
+  await page.getByRole('option').first().click()
+  await page.getByRole('combobox', { name: /^Plan/ }).click()
+  await page.getByRole('option').first().click()
+  const currency = page.getByRole('combobox', { name: /Currency/ })
+  if ((await currency.textContent())?.includes('Choose')) {
+    await currency.click()
+    await page.getByRole('option').first().click()
+  }
+
+  for (const step of ['phases', 'commitments', 'billing']) {
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
+  }
+
+  // V1's term. A customer with a contract of its own cannot inherit, so it is
+  // listed but not choosable; pick the first one that can.
+  const picker = page.getByRole('combobox', { name: /^Inherited customers/ })
+  await expect(picker).toHaveAttribute('placeholder', 'Add customers to inherit…')
+  await picker.click()
+  await page.locator('[role="option"]:not([aria-disabled="true"])').first().click()
+  await expect(page.getByRole('button', { name: /^Remove / })).toHaveCount(1)
+
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect(page).toHaveURL(/step=review/, { timeout: 15_000 })
+
+  // The mock echoes the request it was sent, so the response shows what went out.
+  const response = page.waitForResponse(
+    (r) =>
+      r.request().method() === 'POST' && /\/v1\/subscriptions$/.test(new URL(r.url()).pathname),
+  )
+  await page.getByRole('button', { name: 'Create contract' }).click()
+  // The contract's own customer pays for its inheritors, so only they are sent.
+  const { inheritance } = (await (await response).json()) as {
+    inheritance?: Record<string, unknown>
+  }
+  expect(inheritance?.['external_customer_ids_to_inherit_subscription']).toHaveLength(1)
+  expect(inheritance).not.toHaveProperty('invoicing_customer_external_id')
+  await expect(page).toHaveURL(/\/contracts$/)
+})

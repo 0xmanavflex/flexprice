@@ -7,6 +7,7 @@ import {
   type CreateSubscription,
   CreditGrantCadence,
   CreditGrantExpiryType,
+  InheritanceBlock,
   PriceType,
   type SubscriptionPhase,
   emptyPhase,
@@ -96,6 +97,8 @@ interface PlaygroundProps {
   planTrial?: number
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** Customers (by id) that cannot inherit, as the page loads them. */
+  inheritanceBlocks?: Record<string, InheritanceBlock>
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   onStepChange: (step: string) => void
@@ -118,6 +121,7 @@ function SubscriptionFormPlayground({
   endDate,
   planTrial,
   phase,
+  inheritanceBlocks,
   onSubmit,
   onCancel,
   onStepChange,
@@ -216,6 +220,7 @@ function SubscriptionFormPlayground({
         },
       ]}
       customerLocked={customerLocked}
+      {...(inheritanceBlocks ? { inheritanceBlocks } : {})}
       isSubmitting={isSubmitting}
       submitError={submitError || null}
       trail={[{ label: 'Contracts' }, { label: 'Create contract' }]}
@@ -911,6 +916,69 @@ export const ChoosesWhoPays: Story = {
     await expect(
       canvas.queryByText('Choose who pays, or switch back to the same customer.'),
     ).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
+  },
+}
+
+/**
+ * Customers inherit the contract: picked by name, shown as chips, and sent by
+ * external id. A customer with a contract of its own is listed but cannot be
+ * picked, and says why — the API would refuse it.
+ */
+export const InheritsCustomers: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    inheritanceBlocks: { cus_3: InheritanceBlock.OwnContract },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const picker = canvas.getByRole('combobox', { name: /^Inherited customers/ })
+    await expect(picker).toHaveAttribute('placeholder', 'Add customers to inherit…')
+    await userEvent.click(picker)
+    await expect(await screen.findByRole('option', { name: /Umbrella/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    await expect(screen.getByRole('option', { name: /Umbrella/ })).toHaveTextContent(
+      'Has its own contract',
+    )
+    await userEvent.click(screen.getByRole('option', { name: /Globex/ }))
+    await expect(canvas.getByRole('button', { name: 'Remove Globex' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inheritedCustomerExternalIds: ['ext_1'],
+          invoicingCustomerExternalId: '',
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * Inherited customers are billed to the contract's own customer, so another
+ * billing customer beside them is stopped here, not by the API.
+ */
+export const InheritedCustomersKeepTheSamePayer: Story = {
+  args: { prefilled: true, step: 'billing' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Inherited customers/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Globex/ }))
+    await userEvent.click(canvas.getByRole('radio', { name: /Another customer/ }))
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Invoiced to/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Initech/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(
+      await canvas.findByText(/Inherited customers are billed to this contract's customer/),
+    ).toBeVisible()
+    await expect(args.onStepChange).not.toHaveBeenCalledWith('review')
+    await userEvent.click(canvas.getByRole('radio', { name: /Same customer/ }))
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
   },

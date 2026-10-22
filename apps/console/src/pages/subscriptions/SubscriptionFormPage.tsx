@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
 import {
   ApiError,
+  explainContractHierarchyError,
   useAddons,
   useCoupons,
   useCreateSubscription,
   useCreditGrants,
   useCustomerTaxAssociations,
   useCustomers,
+  useInheritanceBlocks,
   usePlanEntitlements,
   usePlans,
   usePrices,
@@ -110,6 +112,13 @@ export function SubscriptionFormPage({
       })),
     [customers.data],
   )
+  // Who can inherit from the chosen customer: anyone without a contract of their own.
+  const inheritanceBlocks = useInheritanceBlocks(
+    chosenCustomer,
+    customerOptions.filter((c) => c.externalId).map((c) => c.value),
+  )
+  const nameOf = (externalId: string) =>
+    customerOptions.find((c) => c.externalId === externalId)?.label ?? externalId
   const planOptions = useMemo(
     () => (plans.data?.plans ?? []).map((p) => ({ value: p.id, label: p.name })),
     [plans.data],
@@ -120,6 +129,7 @@ export function SubscriptionFormPage({
       customers={customerOptions}
       plans={planOptions}
       customerLocked={customerId !== undefined}
+      {...(inheritanceBlocks.data ? { inheritanceBlocks: inheritanceBlocks.data } : {})}
       {...(customerId ? { defaultValue: { customerId } } : {})}
       plan={
         planId
@@ -161,7 +171,9 @@ export function SubscriptionFormPage({
       onStepChange={onStepChange}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={toSubmitError(create.error)}
+      submitError={
+        explainContractHierarchyError(create.error, nameOf) ?? toSubmitError(create.error)
+      }
       onSubmit={(draft) =>
         create.mutate(draft, {
           onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),
