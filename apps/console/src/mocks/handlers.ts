@@ -2324,12 +2324,30 @@ function recentInvoiceRows(): Record<string, unknown>[] {
  * were, so every other list still shows the world it always showed and only
  * gains some recent activity at the top.
  */
+/**
+ * The contract-level commitment the first captured contract carries, so the
+ * detail page has one to show: $250 a month, a 1.2× overage premium, true-up on.
+ * The captured corpus has none, and the usage mock reads it from here.
+ */
+const COMMITTED_SUBSCRIPTION_ID = 'subs_synth_0000'
+const CONTRACT_COMMITMENT = {
+  commitment_amount: '250',
+  commitment_duration: 'MONTHLY',
+  overage_factor: '1.2',
+  enable_true_up: true,
+}
+
 const DASHBOARD_CORPUS: Record<string, Corpus> = {
   subscriptions: (() => {
     const extra = recentSubscriptionRows()
     const base = corpus.subscriptions as Corpus
+    const items = base.items.map((item) =>
+      readString(item, 'id') === COMMITTED_SUBSCRIPTION_ID
+        ? { ...item, ...CONTRACT_COMMITMENT }
+        : item,
+    )
     return {
-      items: [...extra, ...base.items],
+      items: [...extra, ...items],
       pagination: { ...base.pagination, total: base.pagination.total + extra.length },
     }
   })(),
@@ -4244,15 +4262,22 @@ export const handlers = [
     sourceFor('invoices').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
-  // This period's consumption. Authored: an in-progress period with a commitment.
-  http.post(`${BASE}/subscriptions/usage`, () =>
-    HttpResponse.json({
+  // This period's consumption. Authored: an in-progress period, measured against
+  // the contract's own commitment as the API does — none when it has none.
+  http.post(`${BASE}/subscriptions/usage`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = sourceFor('subscriptions').items.find(
+      (item) => readString(item, 'id') === body['subscription_id'],
+    )
+    const commitment = Number(row?.['commitment_amount'] ?? 0)
+    return HttpResponse.json({
       amount: 184.5,
       currency: 'usd',
       start_time: '2026-10-01T00:00:00Z',
       end_time: '2026-11-01T00:00:00Z',
-      commitment_amount: 250,
-      commitment_utilized: 184.5,
+      commitment_amount: commitment,
+      commitment_utilized: commitment > 0 ? Math.min(184.5, commitment) : 0,
+      overage_factor: Number(row?.['overage_factor'] ?? 1),
       overage_amount: 0,
       has_overage: false,
       charges: [
@@ -4265,8 +4290,8 @@ export const handlers = [
           is_overage: false,
         },
       ],
-    }),
-  ),
+    })
+  }),
   // The next invoice, computed by the API. Authored: a fixed fee, metered usage, and a zero line
   // that "Hide zero charges" removes.
   http.post(`${BASE}/invoices/preview`, async ({ request }) => {

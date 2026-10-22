@@ -13,7 +13,7 @@ import {
   type AddContractCoupon,
   BILLING_PERIOD_LABEL,
   BillingModel,
-  type BillingPeriod,
+  BillingPeriod,
   BucketSize as BucketSizes,
   type BucketSize,
   CommitmentKind,
@@ -45,6 +45,7 @@ import {
   type Subscription,
   type SubscriptionAddon,
   type SubscriptionCoupon,
+  type ContractCommitment,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
@@ -124,6 +125,9 @@ export interface SubscriptionWire {
   timezone?: string | undefined
   lookupKey?: string | undefined
   commitmentAmount?: string | undefined
+  commitmentDuration?: string | undefined
+  overageFactor?: string | undefined
+  enableTrueUp?: boolean | undefined
   latestInvoice?: { id?: string | undefined; invoiceNumber?: string | undefined } | undefined
 }
 
@@ -159,6 +163,29 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
   }
 }
 
+/**
+ * The contract-level commitment, or null when there is none. The API measures
+ * it over the billing period (every N of them) unless `commitmentDuration`
+ * names a different period, in which case it is one of that period.
+ */
+function toContractCommitment(wire: SubscriptionWire): ContractCommitment | null {
+  if (!wire.commitmentAmount || !(Number(wire.commitmentAmount) > 0)) return null
+  const billingPeriod = wire.billingPeriod as BillingPeriod | undefined
+  const duration =
+    wire.commitmentDuration && wire.commitmentDuration in BILLING_PERIOD_LABEL
+      ? (wire.commitmentDuration as BillingPeriod)
+      : null
+  const ownPeriod = duration !== null && duration !== billingPeriod
+  const overageFactor = Number(wire.overageFactor)
+  return {
+    amount: moneyOr(wire.commitmentAmount, wire.currency),
+    period: ownPeriod ? duration : (billingPeriod ?? BillingPeriod.Monthly),
+    periodCount: ownPeriod ? 1 : (wire.billingPeriodCount ?? 1),
+    overageFactor: Number.isFinite(overageFactor) && overageFactor >= 1 ? overageFactor : 1,
+    trueUp: wire.enableTrueUp ?? false,
+  }
+}
+
 export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail {
   return {
     ...toSubscription(wire),
@@ -175,10 +202,7 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
     trialStart: realDate(wire.trialStart),
     timezone: wire.timezone ?? '',
     lookupKey: wire.lookupKey ?? '',
-    commitmentAmount:
-      wire.commitmentAmount && Number(wire.commitmentAmount) > 0
-        ? moneyOr(wire.commitmentAmount, wire.currency)
-        : null,
+    commitment: toContractCommitment(wire),
     latestInvoice: wire.latestInvoice?.id
       ? {
           id: wire.latestInvoice.id,
