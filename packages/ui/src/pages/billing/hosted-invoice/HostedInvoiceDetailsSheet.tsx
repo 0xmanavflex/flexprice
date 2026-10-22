@@ -1,22 +1,37 @@
 import { type ReactNode, useRef } from 'react'
 import type { HostedInvoice } from '@fp/domain'
-import { XIcon } from '@ui/icons'
-import { Button } from '@ui/components/primitives/button'
-import { Separator } from '@ui/components/primitives/separator'
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@ui/components/primitives/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@ui/components/primitives/sheet'
+import { type SimpleColumn, SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { Section } from '@ui/compositions/layout/Section'
+import { DetailList, type DetailItem } from '@ui/compositions/tables/DetailList'
 import { provenance } from '@ui/provenance'
 import { Pill } from '../../shared/cells'
 import { Money } from '../../shared/Money'
+import { HostedInvoiceStatePill, TenantMark, amountLabelOf } from './parts'
 import { formatHostedDate } from './format'
 
 /**
- * The full invoice behind a hosted invoice link: who it is from and to, every
- * line, the totals, and each payment attempt — Stripe's hosted invoice drawer.
+ * The full invoice behind a hosted invoice link, laid out like the customer
+ * portal's invoice drawer: the amount, who it is from and to, every line, the
+ * totals, and each payment attempt.
  */
 export const HostedInvoiceDetailsSheetProvenance = provenance({
   source: 'composition',
-  composes: ['primitives/sheet', 'primitives/separator', 'shared/Money', 'shared/cells'],
-  note: 'Hosted invoice details drawer; layout after ReUI receipt-1 items and totals.',
+  composes: [
+    'primitives/sheet',
+    'compositions/layout/Section',
+    'compositions/detail/DetailKit',
+    'compositions/tables/DetailList',
+    'shared/Money',
+    'shared/cells',
+  ],
+  note: 'Hosted invoice details drawer, after the customer portal invoice drawer.',
 })
 
 export interface HostedInvoiceDetailsSheetProps {
@@ -37,139 +52,133 @@ export function HostedInvoiceDetailsSheet({
 
   return (
     <Sheet open={invoice !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent showCloseButton={false}>
-        {shown.current ? (
-          <Details invoice={shown.current} onClose={onClose} locale={locale} />
-        ) : null}
+      <SheetContent className="flex w-full flex-col gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
+        {shown.current ? <Details invoice={shown.current} locale={locale} /> : null}
       </SheetContent>
     </Sheet>
   )
 }
 
-function Details({
-  invoice,
-  onClose,
-  locale,
-}: {
-  invoice: HostedInvoice
-  onClose: () => void
-  locale: string | undefined
-}) {
-  const date = (value: Date) => formatHostedDate(value, locale)
+type Line = HostedInvoice['lines'][number]
+type Payment = HostedInvoice['payments'][number]
+
+function Details({ invoice, locale }: { invoice: HostedInvoice; locale: string | undefined }) {
   const money = (value: HostedInvoice['total']) => (
     <Money value={value} {...(locale ? { locale } : {})} />
   )
+  const settled = invoice.state === 'paid' || invoice.state === 'voided'
+
+  const parties: DetailItem[] = []
+  if (invoice.customerName) parties.push({ label: 'Billed to', value: invoice.customerName })
+  if (invoice.tenant.name) parties.push({ label: 'From', value: invoice.tenant.name })
+  if (invoice.memo) parties.push({ label: 'Memo', value: invoice.memo, full: true })
+
+  const lineColumns: SimpleColumn<Line>[] = [
+    { key: 'item', header: 'Item', cell: (line) => line.name, className: 'break-words' },
+    {
+      key: 'quantity',
+      header: 'Quantity',
+      cell: (line) => line.quantity ?? '—',
+      className: 'text-muted-foreground tabular-nums',
+    },
+    {
+      key: 'amount',
+      header: 'Amount',
+      cell: (line) => money(line.amount),
+      className: 'text-right tabular-nums',
+    },
+  ]
+
+  const paymentColumns: SimpleColumn<Payment>[] = [
+    {
+      key: 'amount',
+      header: 'Amount',
+      cell: (payment) => money(payment.amount),
+      className: 'tabular-nums',
+    },
+    { key: 'method', header: 'Method', cell: (payment) => payment.method },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (payment) => (
+        <Pill tone={paymentTone(payment.status)}>{statusLabel(payment.status)}</Pill>
+      ),
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      cell: (payment) => (payment.at ? formatHostedDate(payment.at, locale) : '—'),
+      className: 'text-muted-foreground text-right whitespace-nowrap',
+    },
+  ]
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <div className="px-6 pt-4">
-        <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={onClose}>
-          <XIcon aria-hidden="true" />
-          Close invoice and payment details
-        </Button>
-      </div>
+    <>
+      <SheetHeader className="flex-row items-center gap-3 border-b px-6 py-5 pr-12 sm:px-8">
+        {invoice.tenant.name ? <TenantMark name={invoice.tenant.name} className="size-9" /> : null}
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <SheetTitle className="text-base font-medium break-all">{invoice.number}</SheetTitle>
+            <HostedInvoiceStatePill state={invoice.state} />
+          </div>
+          <SheetDescription>{subtitleOf(invoice, locale)}</SheetDescription>
+        </div>
+      </SheetHeader>
 
-      <div className="flex flex-col gap-8 px-6 pt-4 pb-8">
+      <div className="flex-1 space-y-8 overflow-y-auto px-6 py-7 sm:px-8">
         <div className="space-y-1">
-          <SheetTitle className="text-2xl font-medium">{titleOf(invoice, locale)}</SheetTitle>
-          <SheetDescription className="sr-only">Invoice {invoice.number}</SheetDescription>
+          <p className="text-muted-foreground text-xs">{amountLabelOf(invoice.state)}</p>
+          <p className="text-3xl font-medium tracking-tight tabular-nums">
+            {money(settled ? invoice.total : invoice.amountRemaining)}
+          </p>
         </div>
 
-        <Block title="Summary">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-            {invoice.customerName ? <Fact label="To">{invoice.customerName}</Fact> : null}
-            {invoice.tenant.name ? <Fact label="From">{invoice.tenant.name}</Fact> : null}
-            <Fact label="Invoice">{invoice.number}</Fact>
-            {invoice.memo ? <Fact label="Memo">{invoice.memo}</Fact> : null}
-          </dl>
-        </Block>
+        {parties.length > 0 ? <DetailList items={parties} className="border-y py-5" /> : null}
 
-        <Block title="Items">
-          {invoice.lines.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No line items on this invoice.</p>
-          ) : (
-            <ul className="divide-y">
-              {invoice.lines.map((line) => (
-                <li
-                  key={line.id || line.name}
-                  className="flex items-start justify-between gap-4 py-3 text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium break-words">{line.name}</p>
-                    {line.quantity ? (
-                      <p className="text-muted-foreground text-xs">Qty {line.quantity}</p>
-                    ) : null}
-                  </div>
-                  <span className="shrink-0 tabular-nums">{money(line.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <Separator />
-          <dl className="flex flex-col gap-2 pt-3 text-sm">
-            <Total label="Subtotal">{money(invoice.subtotal)}</Total>
-            {invoice.discount ? <Total label="Discount">{money(invoice.discount)}</Total> : null}
-            {invoice.tax ? <Total label="Tax">{money(invoice.tax)}</Total> : null}
-            <Total label="Total" strong>
-              {money(invoice.total)}
-            </Total>
-          </dl>
-          <Separator />
-          <dl className="flex flex-col gap-2 pt-3 text-sm">
-            <Total label="Amount paid">{money(invoice.amountPaid)}</Total>
-            <Total label="Amount remaining" strong>
-              {money(invoice.amountRemaining)}
-            </Total>
-          </dl>
-        </Block>
+        <Section title="Items" as="h3" table>
+          <SimpleTable
+            columns={lineColumns}
+            rows={invoice.lines}
+            getRowId={(line) => line.id || line.name}
+            empty="No line items on this invoice."
+          />
+        </Section>
+
+        <dl className="ml-auto w-full max-w-xs space-y-2 text-[13px]">
+          <Total label="Subtotal">{money(invoice.subtotal)}</Total>
+          {invoice.discount ? <Total label="Discount">− {money(invoice.discount)}</Total> : null}
+          {invoice.tax ? <Total label="Tax">{money(invoice.tax)}</Total> : null}
+          <Total label="Total">{money(invoice.total)}</Total>
+          <Total label="Amount paid">− {money(invoice.amountPaid)}</Total>
+          <div className="flex justify-between gap-4 border-t pt-3 text-sm font-medium">
+            <dt>Amount remaining</dt>
+            <dd className="tabular-nums">{money(invoice.amountRemaining)}</dd>
+          </div>
+        </dl>
 
         {invoice.payments.length > 0 ? (
-          <Block title="Payment history">
-            <ul className="divide-y">
-              {invoice.payments.map((payment) => (
-                <li
-                  key={payment.id}
-                  className="flex items-start justify-between gap-4 py-3 text-sm"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <p className="tabular-nums">{money(payment.amount)}</p>
-                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                      <span>{payment.method}</span>
-                      {payment.status !== 'SUCCEEDED' ? (
-                        <Pill tone={payment.status === 'FAILED' ? 'danger' : 'neutral'}>
-                          {statusLabel(payment.status)}
-                        </Pill>
-                      ) : null}
-                    </div>
-                  </div>
-                  {payment.at ? (
-                    <span className="text-muted-foreground shrink-0 text-xs">
-                      {date(payment.at)}
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </Block>
-        ) : null}
-
-        {invoice.tenant.contactEmail ? (
-          <p className="text-muted-foreground text-sm">
-            Questions? Contact{' '}
-            <a
-              className="text-foreground underline underline-offset-4"
-              href={`mailto:${invoice.tenant.contactEmail}`}
-            >
-              {invoice.tenant.name || invoice.tenant.contactEmail}
-            </a>
-          </p>
+          <Section title="Payment history" as="h3" table>
+            <SimpleTable columns={paymentColumns} rows={invoice.payments} />
+          </Section>
         ) : null}
       </div>
-    </div>
+
+      {invoice.tenant.contactEmail ? (
+        <div className="text-muted-foreground border-t px-6 py-4 text-xs sm:px-8">
+          Questions about this invoice? Contact{' '}
+          <a
+            className="text-foreground underline underline-offset-4"
+            href={`mailto:${invoice.tenant.contactEmail}`}
+          >
+            {invoice.tenant.name || invoice.tenant.contactEmail}
+          </a>
+        </div>
+      ) : null}
+    </>
   )
 }
 
-function titleOf(invoice: HostedInvoice, locale: string | undefined): string {
+function subtitleOf(invoice: HostedInvoice, locale: string | undefined): string {
   switch (invoice.state) {
     case 'paid':
       return invoice.paidAt ? `Paid on ${formatHostedDate(invoice.paidAt, locale)}` : 'Invoice paid'
@@ -182,45 +191,21 @@ function titleOf(invoice: HostedInvoice, locale: string | undefined): string {
   }
 }
 
+function paymentTone(status: string) {
+  if (status === 'SUCCEEDED') return 'success' as const
+  if (status === 'FAILED') return 'danger' as const
+  return 'neutral' as const
+}
+
 function statusLabel(status: string): string {
   const spaced = status.replace(/_/g, ' ').toLowerCase()
   return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
 
-function Block({ title, children }: { title: string; children: ReactNode }) {
+function Total({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3">
-      <h3 className="text-muted-foreground border-b pb-2 text-xs font-medium tracking-wide uppercase">
-        {title}
-      </h3>
-      {children}
-    </section>
-  )
-}
-
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <>
+    <div className="flex justify-between gap-4">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words">{children}</dd>
-    </>
-  )
-}
-
-function Total({
-  label,
-  strong = false,
-  children,
-}: {
-  label: string
-  strong?: boolean
-  children: ReactNode
-}) {
-  return (
-    <div
-      className={strong ? 'flex justify-between gap-4 font-medium' : 'flex justify-between gap-4'}
-    >
-      <dt>{label}</dt>
       <dd className="tabular-nums">{children}</dd>
     </div>
   )

@@ -2417,6 +2417,8 @@
         "EventDetailSheet",
         "ExportRunList",
         "ExportsOverview",
+        "HostedInvoiceDetailsSheet",
+        "HostedInvoiceView",
         "S3ConnectionList",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
@@ -2955,6 +2957,7 @@
         "AccessScope",
         "CheckoutLinkPanel",
         "EntityList",
+        "HostedInvoiceView",
         "IntegrationLogo",
         "IntegrationsBlock",
         "InvoiceStatusPill",
@@ -4037,11 +4040,28 @@
       "file": "src/pages/billing/hosted-invoice/HostedInvoiceDetailsSheet.tsx",
       "layer": "surface",
       "composes": [
+        "DetailList",
+        "HostedInvoiceStatePill",
         "Money",
         "Pill",
-        "Sheet"
+        "Section",
+        "Sheet",
+        "SimpleTable",
+        "TenantMark"
       ],
       "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
+    "HostedInvoiceStatePill": {
+      "file": "src/pages/billing/hosted-invoice/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "Pill"
+      ],
+      "usedBy": [
+        "HostedInvoiceDetailsSheet",
         "HostedInvoiceView"
       ],
       "story": null
@@ -4050,9 +4070,13 @@
       "file": "src/pages/billing/hosted-invoice/HostedInvoiceView.tsx",
       "layer": "surface",
       "composes": [
+        "DetailList",
+        "ErrorState",
         "HostedInvoiceDetailsSheet",
+        "HostedInvoiceStatePill",
         "Money",
-        "Panel"
+        "Section",
+        "TenantMark"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx"
@@ -5230,7 +5254,6 @@
         "ChartBox",
         "DashboardHome",
         "FilterSelect",
-        "HostedInvoiceView",
         "RevenueReport",
         "UsageCard"
       ],
@@ -5450,6 +5473,7 @@
         "FeatureTypeBadge",
         "GlyphBadge",
         "HostedInvoiceDetailsSheet",
+        "HostedInvoiceStatePill",
         "InvoiceDetailView",
         "InvoiceStatusBadge",
         "InvoiceStatusPill",
@@ -5464,6 +5488,7 @@
         "SubscriptionDetailView",
         "SubscriptionStatusPill",
         "SummaryCell",
+        "TenantMark",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
         "WebhookEventCatalog",
@@ -6461,6 +6486,8 @@
         "FeatureDetailView",
         "FormPage",
         "GroupMembersView",
+        "HostedInvoiceDetailsSheet",
+        "HostedInvoiceView",
         "InvoiceDetailView",
         "MetadataCard",
         "PlanAiSetupView",
@@ -6822,6 +6849,7 @@
         "DataExportDetail",
         "ExportRunList",
         "ExportsOverview",
+        "HostedInvoiceDetailsSheet",
         "PlanAiSetupView",
         "PortalOverview",
         "PriceOverrideForm",
@@ -7347,6 +7375,18 @@
       ],
       "usedBy": [],
       "story": "./src/pages/settings/taxes/TaxRateGrid.stories.tsx"
+    },
+    "TenantMark": {
+      "file": "src/pages/billing/hosted-invoice/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "Pill"
+      ],
+      "usedBy": [
+        "HostedInvoiceDetailsSheet",
+        "HostedInvoiceView"
+      ],
+      "story": null
     },
     "TextIcon": {
       "file": "src/reui/icons/default/outline/text.tsx",
