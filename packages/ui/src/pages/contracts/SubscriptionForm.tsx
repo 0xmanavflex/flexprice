@@ -40,6 +40,7 @@ import {
   type SubscriptionPhase,
   emptyPhase,
   phaseStarts,
+  contractDay,
   selectContractCharges,
   type ContractChargeSelection,
   CREDIT_GRANT_CADENCE_LABEL,
@@ -262,8 +263,21 @@ type BillOn = 'start' | 'calendar' | 'date'
 /** Calendar billing in words: "The 1st of every month", "The start of every calendar year". */
 function calendarTitle(period: string): string {
   return period === 'MONTHLY'
-    ? 'The 1st of every month'
-    : `The start of ${everyPeriod(period, 1).replace('every', 'every calendar')}`
+    ? '1st of every month'
+    : `Start of ${everyPeriod(period, 1).replace('every', 'every calendar')}`
+}
+
+/** A `YYYY-MM-DD` day at 00:00 local, as an instant: where a new contract starts by default. */
+function startOfDay(day: string): string {
+  const [y, m, d] = day.split('-').map(Number) as [number, number, number]
+  return new Date(y, m - 1, d).toISOString()
+}
+
+/** What the calendar billing day is called in a sentence: "the 1st", "the start of the quarter". */
+function calendarStart(period: string): string {
+  return period === 'MONTHLY'
+    ? '1st'
+    : `start of the ${everyPeriod(period, 1).replace('every ', '')}`
 }
 
 export function SubscriptionForm({
@@ -291,7 +305,12 @@ export function SubscriptionForm({
 }: SubscriptionFormProps) {
   const form = useCalmForm<CreateSubscription>({
     resolver: standardSchemaResolver(createSubscriptionSchema) as Resolver<CreateSubscription>,
-    defaultValues: { ...emptySubscription(), ...defaultValue },
+    // Starts today at midnight unless the caller says otherwise, as the reference does.
+    defaultValues: {
+      ...emptySubscription(),
+      startDate: startOfDay(today),
+      ...defaultValue,
+    },
   })
   const errors = form.formState.errors
   const values = form.watch()
@@ -621,23 +640,6 @@ export function SubscriptionForm({
             )}
           </FormRow>
           <FormRow
-            label="Every"
-            hint="Number of periods per invoice, e.g. 3 on a monthly cadence bills quarterly."
-            error={errors.billingPeriodCount?.message}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                type="number"
-                min={1}
-                className="w-32"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('billingPeriodCount', { valueAsNumber: true })}
-              />
-            )}
-          </FormRow>
-          <FormRow
             label="Currency"
             required
             hint="From the plan's prices."
@@ -678,48 +680,38 @@ export function SubscriptionForm({
       <FormRow
         label="Starts"
         hint="When the contract starts. Today unless you pick another day."
+        required
         error={errors.startDate?.message}
       >
         {({ id, ...field }) => (
           <DateInput
             id={id}
             {...field}
+            withTime
             value={values.startDate}
             onValueChange={(value) =>
               form.setValue('startDate', value, { shouldDirty: true, shouldValidate: true })
             }
             placeholder="Pick the start"
+            min={addDays(today, -90)}
             disabled={isSubmitting}
           />
         )}
       </FormRow>
       <FormRow label="Ends" hint="Leave empty to run until cancelled." error={endError}>
         {({ id, ...field }) => (
-          <div className="flex min-w-0 gap-1">
-            <div className="min-w-0 flex-1">
-              <DateInput
-                id={id}
-                {...field}
-                value={contractEnd}
-                onValueChange={setEnd}
-                placeholder="Runs until cancelled"
-                disabled={isSubmitting}
-              />
-            </div>
-            {contractEnd ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-9"
-                aria-label="Clear end date"
-                onClick={() => setEnd('')}
-                disabled={isSubmitting}
-              >
-                <XIcon aria-hidden />
-              </Button>
-            ) : null}
-          </div>
+          <DateInput
+            id={id}
+            {...field}
+            withTime
+            clearable
+            clearLabel="Clear end date"
+            value={contractEnd}
+            onValueChange={setEnd}
+            placeholder="Runs until cancelled"
+            min={addDays(contractDay(values.startDate || today), 1)}
+            disabled={isSubmitting}
+          />
         )}
       </FormRow>
       <FormRow
@@ -730,24 +722,24 @@ export function SubscriptionForm({
         <div className="flex flex-col gap-3">
           <ChoiceCards<BillOn>
             label="Bill on"
+            stacked
             value={billOn}
             onChange={chooseBillOn}
             choices={[
               {
                 value: 'start',
-                title: 'The contract start date',
-                description: `Invoices fall on the same day ${everyPeriod(values.billingPeriod, 1).replace('every', 'each')} as the start date.`,
+                title: 'Contract start date',
+                description: `The same day ${everyPeriod(values.billingPeriod, 1).replace('every', 'each')} as the start.`,
               },
               {
                 value: 'calendar',
                 title: calendarTitle(values.billingPeriod),
-                description: 'The first invoice covers the days up to then, prorated.',
+                description: `The first invoice is prorated up to the ${calendarStart(values.billingPeriod)}.`,
               },
               {
                 value: 'date',
-                title: 'A date you choose',
-                description:
-                  'Invoices fall on that day; the first covers the days up to it, prorated.',
+                title: 'Custom date',
+                description: 'Billing starts on the date you pick below.',
               },
             ]}
           />
@@ -756,12 +748,14 @@ export function SubscriptionForm({
               control={form.control}
               name="billingAnchor"
               render={({ field: control }) => (
-                <div className="max-w-xs">
+                <div>
                   <label htmlFor="contract-billing-date" className="sr-only">
                     Billing date
                   </label>
                   <DateInput
                     id="contract-billing-date"
+                    withTime
+                    min={contractDay(values.startDate || today)}
                     value={control.value}
                     onValueChange={(value) => {
                       form.setValue('billingAnchor', value, {
@@ -769,7 +763,7 @@ export function SubscriptionForm({
                         shouldValidate: true,
                       })
                     }}
-                    placeholder="Pick the day invoices fall on"
+                    placeholder="Pick the billing date"
                     {...(errors.billingAnchor ? { 'aria-invalid': true as const } : {})}
                     disabled={isSubmitting}
                     aria-describedby={
@@ -800,7 +794,7 @@ export function SubscriptionForm({
       >
         {({ id, ...field }) => (
           <div className="flex flex-col gap-1.5">
-            <InputGroup className="h-9 w-40">
+            <InputGroup className="h-9">
               <InputGroupInput
                 id={id}
                 type="number"
@@ -817,7 +811,7 @@ export function SubscriptionForm({
             {trialDays > 0 && billOn !== 'date' ? (
               <p className="text-muted-foreground text-xs">
                 The trial ends and billing starts on{' '}
-                {formatDay(addDays(values.startDate || today, trialDays))}.
+                {formatDay(addDays(contractDay(values.startDate || today), trialDays))}.
               </p>
             ) : null}
           </div>
@@ -911,8 +905,6 @@ export function SubscriptionForm({
             planLabel={planLabel}
             entitlements={plan?.entitlements ?? []}
             isLoading={plan?.isLoading ?? true}
-            overrides={values.entitlementOverrides}
-            onChange={(next) => form.setValue('entitlementOverrides', next, { shouldDirty: true })}
           />
         ) : (
           noPlan('Entitlements')
@@ -959,7 +951,9 @@ export function SubscriptionForm({
     review: formEl(
       <ReviewStep
         values={values}
-        customerLabel={customer?.label}
+        customerLabel={
+          customer ? [customer.label, customer.hint].filter(Boolean).join(' · ') : undefined
+        }
         planLabel={planLabel}
         charges={charges}
         entitlements={plan?.entitlements ?? []}
@@ -993,6 +987,8 @@ export function SubscriptionForm({
         ),
       }}
       stepper={{ flow, label: 'Contract steps' }}
+      // The charges table needs the room; every other step keeps the narrow measure.
+      width={flow.step === 'phases' ? 'medium' : 'narrow'}
     >
       {content[flow.step]}
     </FormPage>
@@ -2231,7 +2227,6 @@ function PhasesStep({
         />
         {addChargeDialog}
         {couponDialog}
-        {addPhase}
       </div>
     )
   }
@@ -2598,26 +2593,11 @@ function EntitlementsSection({
   planLabel,
   entitlements,
   isLoading,
-  overrides,
-  onChange,
 }: {
   planLabel: string | undefined
   entitlements: Entitlement[]
   isLoading: boolean
-  overrides: CreateSubscription['entitlementOverrides']
-  onChange: (next: CreateSubscription['entitlementOverrides']) => void
 }) {
-  const patch = (
-    entitlementId: string,
-    change: { usageLimit?: number | undefined; isEnabled?: boolean | undefined },
-  ) => {
-    const rest = overrides.filter((o) => o.entitlementId !== entitlementId)
-    const current = overrides.find((o) => o.entitlementId === entitlementId)
-    const merged = { entitlementId, ...current, ...change }
-    const hasValue = merged.usageLimit !== undefined || merged.isEnabled !== undefined
-    onChange(hasValue ? [...rest, merged] : rest)
-  }
-
   const columns: SimpleColumn<Entitlement>[] = [
     {
       key: 'feature',
@@ -2631,43 +2611,7 @@ function EntitlementsSection({
       header: 'Type',
       cell: (entitlement) => FEATURE_TYPE_LABEL[entitlement.featureType] ?? entitlement.featureType,
     },
-    {
-      key: 'allowance',
-      header: 'Allowance',
-      cell: (entitlement) => {
-        const name = entitlement.featureName ?? entitlement.featureId
-        const override = overrides.find((o) => o.entitlementId === entitlement.id)
-        if (entitlement.featureType === FeatureType.Metered)
-          return (
-            <Input
-              type="number"
-              min={0}
-              aria-label={`${name} usage limit`}
-              placeholder={planEntitlementValue(entitlement)}
-              className="h-8 w-32"
-              value={override?.usageLimit ?? ''}
-              onChange={(event) =>
-                patch(entitlement.id, {
-                  usageLimit: event.target.value === '' ? undefined : Number(event.target.value),
-                })
-              }
-            />
-          )
-        if (entitlement.featureType === FeatureType.Boolean)
-          return (
-            <Switch
-              aria-label={`${name} enabled`}
-              checked={override?.isEnabled ?? entitlement.isEnabled ?? false}
-              onCheckedChange={(checked) =>
-                patch(entitlement.id, {
-                  isEnabled: checked === (entitlement.isEnabled ?? false) ? undefined : checked,
-                })
-              }
-            />
-          )
-        return planEntitlementValue(entitlement)
-      },
-    },
+    { key: 'allowance', header: 'Allowance', cell: planEntitlementValue },
     { key: 'resets', header: 'Resets', cell: resetsText },
   ]
 
@@ -2675,10 +2619,7 @@ function EntitlementsSection({
     <FormCard
       title="Entitlements"
       icon={<KeyRoundIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-      description={`From the ${planLabel ?? ''} plan. Change an allowance here to set it for this contract alone.`.replace(
-        'the  plan',
-        'the plan',
-      )}
+      description={`From the ${planLabel ? `${planLabel} ` : ''}plan. Entitlements are set on the plan, not on a contract.`}
     >
       <div className="px-5 py-4 sm:px-6">
         <Frame>

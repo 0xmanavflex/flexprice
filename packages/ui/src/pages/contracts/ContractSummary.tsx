@@ -56,12 +56,28 @@ export function everyPeriod(period: string, count: number): string {
   return count > 1 ? `every ${count} ${many}` : `every ${one}`
 }
 
-/** `YYYY-MM-DD` as "Oct 20, 2026". */
+/**
+ * A contract date in words: a day (`YYYY-MM-DD`) as "Oct 20, 2026", an
+ * instant picked with a time as "Oct 20, 2026, 09:30 AM" (local time).
+ */
 export function formatDay(day: string): string {
-  const date = new Date(`${day}T00:00:00`)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+    const date = new Date(`${day}T00:00:00`)
+    return Number.isNaN(date.getTime())
+      ? day
+      : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+  const date = new Date(day)
   return Number.isNaN(date.getTime())
     ? day
-    : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })
 }
 
 export function localToday(): string {

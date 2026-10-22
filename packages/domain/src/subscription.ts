@@ -148,11 +148,44 @@ export const SUBSCRIPTION_FILTERS: readonly ListFilterSpec[] = [
 
 const PHASE_DECIMAL = /^\d+(\.\d+)?$/
 
-/** A day as `YYYY-MM-DD`, or blank. */
-const optionalDay = z
+const CONTRACT_DAY = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * A contract date: a day (`YYYY-MM-DD`) or, picked with a time, an instant (an
+ * ISO string). Blank is allowed where the field is optional.
+ */
+const optionalContractDate = z
   .string()
   .trim()
-  .refine((value) => value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value), 'Pick a date')
+  .refine(
+    (value) => value === '' || CONTRACT_DAY.test(value) || !Number.isNaN(Date.parse(value)),
+    'Pick a date',
+  )
+
+/**
+ * A contract date as the API takes it: a day is midnight UTC (as every
+ * date-only field has always been sent), an instant is itself.
+ */
+export function contractDateToInstant(value: string): Date {
+  return CONTRACT_DAY.test(value) ? new Date(`${value}T00:00:00Z`) : new Date(value)
+}
+
+/** A contract date's position in time, for ordering: a day is its local midnight. */
+function contractMoment(value: string): number {
+  if (CONTRACT_DAY.test(value)) {
+    const [y, m, d] = value.split('-').map(Number) as [number, number, number]
+    return new Date(y, m - 1, d).getTime()
+  }
+  return Date.parse(value)
+}
+
+/** The local day a contract date falls on, `YYYY-MM-DD`. */
+export function contractDay(value: string): string {
+  if (CONTRACT_DAY.test(value)) return value
+  const date = new Date(value)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
 
 /** A decimal amount, or blank for none. */
 const optionalAmount = (message: string) =>
@@ -181,7 +214,7 @@ export type SubscriptionDiscount = z.infer<typeof subscriptionDiscountSchema>
  */
 export const subscriptionPhaseSchema = z.object({
   /** `YYYY-MM-DD`; blank on the last phase means open-ended. */
-  endDate: optionalDay,
+  endDate: optionalContractDate,
   /** The plan's charges, repriced for this phase. */
   priceOverrides: z.array(priceOverrideSchema),
   /** Fixed charges billed at another quantity in this phase, e.g. 25 seats. */
@@ -384,7 +417,7 @@ export const createSubscriptionSchema = z
       .int('Must be a whole number')
       .positive('Must be greater than zero'),
     /** `YYYY-MM-DD`, or empty to start now. */
-    startDate: z.string(),
+    startDate: optionalContractDate,
     trialPeriodDays: z
       .number({ error: 'Enter a number' })
       .int('Must be a whole number')
@@ -440,7 +473,7 @@ export const createSubscriptionSchema = z
     // Billing configuration.
     billingCycle: z.enum([BillingCycle.Anniversary, BillingCycle.Calendar]),
     /** `YYYY-MM-DD`: the day cycles are anchored to; blank follows the start date. */
-    billingAnchor: optionalDay,
+    billingAnchor: optionalContractDate,
     paymentTerms: z.enum([
       '',
       PaymentTerms.Net15,
@@ -483,7 +516,7 @@ export const createSubscriptionSchema = z
           message: 'Choose when this phase ends',
         })
       }
-      if (phase.endDate && start && phase.endDate <= start) {
+      if (phase.endDate && start && contractMoment(phase.endDate) <= contractMoment(start)) {
         ctx.addIssue({
           code: 'custom',
           path: ['phases', index, 'endDate'],
@@ -496,7 +529,8 @@ export const createSubscriptionSchema = z
     // A chosen billing date counts periods from that day, so it cannot come
     // before the contract has started.
     const contractStart = value.startDate || localToday()
-    if (value.billingAnchor && value.billingAnchor < contractStart) {
+    // Compared by day: a billing date on the start day is fine whatever the time.
+    if (value.billingAnchor && contractDay(value.billingAnchor) < contractDay(contractStart)) {
       ctx.addIssue({
         code: 'custom',
         path: ['billingAnchor'],

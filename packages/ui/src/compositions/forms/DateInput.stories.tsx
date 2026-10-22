@@ -125,3 +125,89 @@ export const PicksADate: Story = {
     await expect(args.onValueChange).toHaveBeenCalledWith('2026-03-20')
   },
 }
+
+/** Local 09:30 on Oct 21, 2026, as an instant: what the date-and-time stories start on. */
+const MORNING = new Date(2026, 9, 21, 9, 30).toISOString()
+
+/** With `withTime`: the trigger reads the day and the time, in local time by default. */
+export const WithTime: Story = {
+  args: { value: MORNING, withTime: true, label: 'Starts' },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('button', { name: 'Starts' })).toHaveTextContent(
+      'Oct 21, 2026, 09:30 AM',
+    )
+  },
+}
+
+/** The Time row under the calendar: hours and minutes are typed, clamped and applied on blur. */
+export const SetsTheTime: Story = {
+  args: { value: MORNING, withTime: true, label: 'Starts' },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Starts' }))
+    const hours = await screen.findByRole('textbox', { name: 'Hours' })
+    await expect(hours).toHaveValue('09')
+    await userEvent.clear(hours)
+    await userEvent.type(hours, '14{Enter}')
+    await expect(args.onValueChange).toHaveBeenLastCalledWith(
+      new Date(2026, 9, 21, 14, 30).toISOString(),
+    )
+    const minutes = screen.getByRole('textbox', { name: 'Minutes' })
+    await userEvent.clear(minutes)
+    // Out of range is clamped, not refused.
+    await userEvent.type(minutes, '75{Enter}')
+    await expect(args.onValueChange).toHaveBeenLastCalledWith(
+      new Date(2026, 9, 21, 14, 59).toISOString(),
+    )
+  },
+}
+
+/** Picking a day keeps the time already set. */
+export const PickingADayKeepsTheTime: Story = {
+  args: { value: MORNING, withTime: true, label: 'Starts' },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Starts' }))
+    await userEvent.click(await screen.findByRole('button', { name: /October 25/ }))
+    await expect(args.onValueChange).toHaveBeenCalledWith(
+      new Date(2026, 9, 25, 9, 30).toISOString(),
+    )
+  },
+}
+
+/** UTC: the same instant read and set in UTC; the trigger says so. */
+export const InUtc: Story = {
+  args: { value: '2026-10-21T04:00:00.000Z', withTime: true, label: 'Starts' },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Starts' }))
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Time zone' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'UTC' }))
+    await expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveValue('04')
+    await expect(canvas.getByRole('button', { name: 'Starts' })).toHaveTextContent(
+      'Oct 21, 2026, 04:00 AM UTC',
+    )
+    const hours = screen.getByRole('textbox', { name: 'Hours' })
+    await userEvent.clear(hours)
+    await userEvent.type(hours, '18{Enter}')
+    await expect(args.onValueChange).toHaveBeenLastCalledWith('2026-10-21T18:00:00.000Z')
+  },
+}
+
+/** An optional date can be cleared from the trigger. */
+export const Clearable: Story = {
+  args: { value: '2026-03-15', clearable: true, clearLabel: 'Clear end date', label: 'Ends' },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Clear end date' }))
+    await expect(args.onValueChange).toHaveBeenCalledWith('')
+  },
+}
+
+/** `min` and `max`: days outside them cannot be picked. */
+export const Bounded: Story = {
+  args: { value: '2026-03-15', min: '2026-03-10', max: '2026-03-20', label: 'Billing date' },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Billing date' }))
+    await expect(await screen.findByRole('button', { name: /March 5/ })).toBeDisabled()
+    await expect(screen.getByRole('button', { name: /March 12/ })).toBeEnabled()
+    await expect(screen.getByRole('button', { name: /March 25/ })).toBeDisabled()
+  },
+}
