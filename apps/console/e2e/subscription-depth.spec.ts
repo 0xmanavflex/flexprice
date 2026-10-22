@@ -33,9 +33,12 @@ test('contract detail overview shows the upcoming invoice and entitlements', asy
   await expect(invoice.getByText('Extra seats')).toHaveCount(0)
   await expect(page.getByRole('switch', { name: 'Hide zero charges' })).toHaveCount(0)
 
-  await expect(page.getByText('API calls', { exact: true })).toBeVisible()
-  await expect(page.getByText('Single sign-on')).toBeVisible()
-  await expect(page.getByText('Unlimited')).toBeVisible()
+  // Scoped to the table's cells: each usage meter also names its feature, for
+  // screen readers, so a page-wide text match finds the name twice.
+  const entitlements = page.getByRole('region', { name: 'Entitlements', exact: true })
+  await expect(entitlements.getByRole('cell', { name: 'API calls', exact: true })).toBeVisible()
+  await expect(entitlements.getByRole('cell', { name: 'Single sign-on' })).toBeVisible()
+  await expect(entitlements.getByRole('cell', { name: 'Unlimited' })).toBeVisible()
 })
 
 test('contract detail charges tab lists the contract charges', async ({ page }) => {
@@ -99,7 +102,7 @@ test('a changed contract price stays as an inactive version, not gone', async ({
   await rows.getByRole('button', { name: /History/ }).click()
   const sheet = page.getByRole('dialog')
   // At least the old price and the new one; a reused mock may hold more.
-    await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
+  await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
   await expect(sheet.getByText('Current')).toBeVisible()
   await expect(sheet.getByText('Inactive').first()).toBeVisible()
 
