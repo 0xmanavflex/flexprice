@@ -482,6 +482,14 @@ export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
 export { CustomerTaxSection } from './customers/CustomerTaxSection'
 export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
+export {
+  CustomerEntitlementUsage,
+  CustomerEntitlementUsageProvenance,
+} from './customers/CustomerEntitlementUsage'
+export type {
+  CustomerEntitlementUsageProps,
+  CustomerEntitlementUsageRow,
+} from './customers/CustomerEntitlementUsage'
 export { CustomerUsageSummary } from './customers/CustomerUsageSummary'
 export type {
   CustomerUsageSummaryProps,
