@@ -2400,6 +2400,41 @@ export const handlers = [
     environments.push(created)
     return HttpResponse.json(created, { status: 201 })
   }),
+  // Copy environment: the API queues a workflow and answers 202. Into a new
+  // environment it creates that first, so the mock does too.
+  http.post(`${BASE}/environments/:id/clone`, async ({ params, request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const source = environments.find((environment) => environment['id'] === params['id'])
+    if (!source) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    const target = readString(body, 'target_environment_id')
+    if (target) {
+      if (target === params['id']) {
+        return HttpResponse.json(
+          { code: 'validation_error', message: 'target environment cannot be the source' },
+          { status: 400 },
+        )
+      }
+    } else {
+      const name = readString(body, 'name')
+      if (!name) {
+        return HttpResponse.json(
+          { code: 'validation_error', message: 'name is required' },
+          { status: 400 },
+        )
+      }
+      environments.push({
+        id: `env_mock_${Date.now()}`,
+        name,
+        type: readString(body, 'type') || 'development',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    }
+    return HttpResponse.json(
+      { workflow_id: `env-clone-${Date.now()}`, run_id: 'run_mock' },
+      { status: 202 },
+    )
+  }),
   // Rename, from the switcher. Mutates in place for the same reason create
   // appends: the console refetches the list straight after.
   http.put(`${BASE}/environments/:id`, async ({ params, request }) => {

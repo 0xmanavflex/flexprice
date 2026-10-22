@@ -334,6 +334,15 @@ export type { SetPasswordFormProps } from './auth/SetPasswordForm'
 export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/AcceptInvitationForm'
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './settings/environments/EnvironmentForm'
+export {
+  EnvironmentCopyForm,
+  EnvironmentCopyFormProvenance,
+} from './settings/environments/EnvironmentCopyForm'
+export type {
+  CopyableEnvironment,
+  EnvironmentCopyFormProps,
+  EnvironmentCopyTarget,
+} from './settings/environments/EnvironmentCopyForm'
 export type {
   EnvironmentContact,
   EnvironmentFormProps,

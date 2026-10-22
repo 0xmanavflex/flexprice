@@ -29,6 +29,7 @@ import {
   type ShellSearchItem,
   type ShellUser,
 } from '@fp/ui/compositions'
+import { EnvironmentCopyFormPage } from '@/pages/environments/EnvironmentCopyFormPage'
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
@@ -144,6 +145,7 @@ export function ConsoleShell({
   const activeItemId = navEntryForPath(pathname, search)
   const [detailTrail, setDetailTrail] = useState<ShellDetailCrumb[] | null>(null)
   const [creatingEnvironment, setCreatingEnvironment] = useState(false)
+  const [copyingEnvironment, setCopyingEnvironment] = useState(false)
   const mockAccounts = useMockAccounts()
   const [renamingEnvironment, setRenamingEnvironment] = useState<ShellEnvironment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -229,6 +231,7 @@ export function ConsoleShell({
                     onChange={onEnvironmentChange}
                     {...(mockAccounts ? { mockAccounts } : {})}
                     onCreate={() => setCreatingEnvironment(true)}
+                    onCopy={() => setCopyingEnvironment(true)}
                     onRename={(id) =>
                       setRenamingEnvironment(environments.find((e) => e.id === id) ?? null)
                     }
@@ -289,6 +292,12 @@ export function ConsoleShell({
       <EnvironmentRenameFormPage
         environment={renamingEnvironment}
         onClose={() => setRenamingEnvironment(null)}
+      />
+      <EnvironmentCopyFormPage
+        open={copyingEnvironment}
+        onOpenChange={setCopyingEnvironment}
+        current={environment}
+        environments={environments}
       />
     </ShellDetailTrailProvider>
   )
