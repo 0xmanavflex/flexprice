@@ -17,4 +17,11 @@ describe('commitmentPeriodNoun', () => {
     expect(commitmentPeriodNoun(BillingPeriod.Monthly, 12)).toBe('year')
     expect(commitmentPeriodNoun(BillingPeriod.Monthly, 1)).toBe('month')
   })
+
+  it('counts every other period too', () => {
+    expect(commitmentPeriodNoun(BillingPeriod.Weekly, 2)).toBe('2 weeks')
+    expect(commitmentPeriodNoun(BillingPeriod.Daily, 7)).toBe('7 days')
+    expect(commitmentPeriodNoun(BillingPeriod.Quarterly, 2)).toBe('2 quarters')
+    expect(commitmentPeriodNoun(BillingPeriod.Annual, 3)).toBe('3 years')
+  })
 })

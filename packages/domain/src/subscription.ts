@@ -615,24 +615,24 @@ export interface ContractCommitment {
   trueUp: boolean
 }
 
-const COMMITMENT_PERIOD_NOUN: Record<BillingPeriod, string> = {
-  [BillingPeriod.Daily]: 'day',
-  [BillingPeriod.Weekly]: 'week',
-  [BillingPeriod.Monthly]: 'month',
-  [BillingPeriod.Quarterly]: 'quarter',
-  [BillingPeriod.HalfYearly]: 'half-year',
-  [BillingPeriod.Annual]: 'year',
-  [BillingPeriod.OneTime]: 'contract',
+const COMMITMENT_PERIOD_NOUN: Record<BillingPeriod, [one: string, many: string]> = {
+  [BillingPeriod.Daily]: ['day', 'days'],
+  [BillingPeriod.Weekly]: ['week', 'weeks'],
+  [BillingPeriod.Monthly]: ['month', 'months'],
+  [BillingPeriod.Quarterly]: ['quarter', 'quarters'],
+  [BillingPeriod.HalfYearly]: ['half-year', 'half-years'],
+  [BillingPeriod.Annual]: ['year', 'years'],
+  [BillingPeriod.OneTime]: ['contract', 'contracts'],
 }
 
 /**
- * The commitment period as "month", "year", "3 months" — what follows "per".
+ * The commitment period as "month", "year", "2 weeks" — what follows "per".
  * Twelve months reads as a year, as the old console wrote it.
  */
 export function commitmentPeriodNoun(period: BillingPeriod, count = 1): string {
   if (period === BillingPeriod.Monthly && count === 12) return 'year'
-  if (period === BillingPeriod.Monthly && count > 1) return `${count} months`
-  return COMMITMENT_PERIOD_NOUN[period]
+  const [one, many] = COMMITMENT_PERIOD_NOUN[period]
+  return count > 1 ? `${count} ${many}` : one
 }
 
 /** The detail read model: the list row plus what the detail page adds. */
