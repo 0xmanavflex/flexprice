@@ -91,7 +91,7 @@ function CustomerTaxSectionInner({
       <Button
         variant="outline"
         size="sm"
-        className="h-9 px-3"
+        className="h-8 px-3"
         onClick={() => setDialog({ kind: 'add' })}
       >
         <PlusIcon aria-hidden /> Add tax rate

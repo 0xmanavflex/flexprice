@@ -73,7 +73,7 @@ function PlanEntitlementsViewInner({
 }: PlanEntitlementsViewProps) {
   const add = (
     <WriteGate>
-      <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3" onClick={onAdd}>
         <PlusIcon aria-hidden />
         Add entitlement
       </Button>
@@ -151,7 +151,7 @@ function PlanEntitlementsViewInner({
           },
           {
             key: 'beyond',
-            header: 'Usage beyond the value',
+            header: 'Overage',
             cell: (e) => {
               if (e.featureType !== FeatureType.Metered || e.usageLimit == null) return <EmDash />
               const price = usagePrice(e)

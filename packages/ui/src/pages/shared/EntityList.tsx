@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactElement,
   type ReactNode,
 } from 'react'
 import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
@@ -204,7 +205,8 @@ export interface EntitySort<F extends string = string> {
 export interface EntityRowAction {
   label: string
   onSelect: () => void
-  icon?: ReactNode
+  /** Leading glyph, required so every item in a menu lines up behind one. */
+  icon: ReactElement
   /** Renders in the destructive colour, under a separator. */
   destructive?: boolean | undefined
   disabled?: boolean | undefined
@@ -229,8 +231,11 @@ export interface EntityGuide {
 export interface EntityEmpty {
   title: string
   description?: string | undefined
-  /** Up to two 32px buttons — create, and a way to learn more. */
-  actions?: ReactNode
+  /**
+   * A way to learn more ("Browse event catalog"). Never the create action:
+   * that is `primaryAction`, top right, whether the list is empty or not.
+   */
+  secondaryAction?: ReactNode
   /** Three cards. Each ends in "Read docs". */
   guides?: EntityGuide[] | undefined
   /** The drawing for this area of the product. Defaults to the table figure. */
@@ -848,11 +853,36 @@ export function EntityList<T extends object>({
     !isLoading && rows.length === 0 && total === 0 && !isFiltered && empty !== undefined
   const goToFirstPage = () => onPaginationChange(1, pageSize)
 
+  /*
+   * The create action has one place: the top right, above the rows. A first
+   * run hides the search and filters (there is nothing to narrow yet) but not
+   * this, so the button never jumps into the middle of the empty state and
+   * back again once the first record exists.
+   */
+  const primaryActionSlot = primaryAction ? (
+    // Text buttons take the height of the icon buttons beside them,
+    // whatever size the caller asked for.
+    <div
+      className={cn(
+        'flex items-center gap-2',
+        compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
+      )}
+    >
+      {primaryActionReadOnly ? primaryAction : <WriteGate>{primaryAction}</WriteGate>}
+    </div>
+  ) : null
+
   const toolbar = (
     <div
       role="search"
       aria-label={`Search and filter ${noun}`}
-      className={cn('flex flex-wrap items-center justify-between gap-3', compact && 'px-6 py-3')}
+      className={cn(
+        'flex flex-wrap items-center justify-between gap-3',
+        // A compact table runs edge to edge in its card, so its toolbar insets to
+        // the cells. A bordered one sits in its own box: the toolbar lines up
+        // with that box's edges instead, or search and table start apart.
+        compact && (border ? 'pb-3' : 'px-6 py-3'),
+      )}
     >
       <div className="flex flex-wrap items-center gap-2">
         <InputGroup className={cn(compact ? 'h-8 w-60' : 'h-9 w-72', 'max-w-full')}>
@@ -1001,18 +1031,7 @@ export function EntityList<T extends object>({
           </DropdownMenu>
         ) : null}
 
-        {primaryAction ? (
-          // Text buttons take the height of the icon buttons beside them,
-          // whatever size the caller asked for.
-          <div
-            className={cn(
-              'flex items-center gap-2',
-              compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
-            )}
-          >
-            {primaryActionReadOnly ? primaryAction : <WriteGate>{primaryAction}</WriteGate>}
-          </div>
-        ) : null}
+        {primaryActionSlot}
       </div>
     </div>
   )
@@ -1026,9 +1045,15 @@ export function EntityList<T extends object>({
       onMouseOver={revealTruncated}
     >
       <Heading className="sr-only">{label}</Heading>
-      {/* A list with nothing in it has nothing to search, filter or sort: the
-          guided empty state stands alone until the first record exists. */}
-      {showFirstRun || hideToolbar ? null : toolbar}
+      {/* A list with nothing in it has nothing to search, filter or sort, so
+          the first run keeps only the create action, where the toolbar puts it. */}
+      {hideToolbar ? null : showFirstRun ? (
+        primaryActionSlot ? (
+          <div className={cn('flex justify-end', compact && 'px-6 py-3')}>{primaryActionSlot}</div>
+        ) : null
+      ) : (
+        toolbar
+      )}
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
           stops an overflowing table pushing the page itself wider. */}
@@ -1049,7 +1074,7 @@ export function EntityList<T extends object>({
             <GuidedEmptyState
               title={empty.title}
               description={empty.description}
-              actions={empty.actions}
+              actions={empty.secondaryAction}
               guides={empty.guides}
               scene={empty.scene}
               label={`${label}: nothing here yet`}

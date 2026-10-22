@@ -281,7 +281,6 @@ export function CouponGrid({
         title: 'No coupons yet',
         description:
           'A coupon takes an amount or a percentage off a contract — once, for a few periods, or forever. Create one and apply it at checkout or on an existing contract.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New coupon</Button> } : {}),
         guides: GUIDES,
       }}
     />

@@ -39,11 +39,13 @@ export interface SubTabStateProps {
   retryAfterMs?: number | undefined
   onRetry?: (() => void) | undefined
   isRetrying?: boolean | undefined
-  /** What nothing-here-yet says, specific to this tab. */
+  /**
+   * What nothing-here-yet says, specific to this tab. No action: the tab's
+   * create button is in its `Section` header, top right, empty or not.
+   */
   empty: {
     title: string
     description?: string | undefined
-    action?: ReactNode
     scene?: EmptyScene | undefined
   }
   /** Skeleton columns that mirror the real table. */
@@ -98,14 +100,7 @@ export function SubTabState({
   if (isLoading) {
     return <TableSkeleton columns={columns} rows={4} rowHeight={44} label={loadingLabel} />
   }
-  return (
-    <SectionEmpty
-      title={empty.title}
-      description={empty.description}
-      {...(empty.action ? { action: empty.action } : {})}
-      scene={empty.scene}
-    />
-  )
+  return <SectionEmpty title={empty.title} description={empty.description} scene={empty.scene} />
 }
 
 /**

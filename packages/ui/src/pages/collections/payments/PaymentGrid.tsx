@@ -284,7 +284,6 @@ export function PaymentGrid({
           title: 'No money has moved yet',
           description:
             'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
-          ...(onCreate ? { actions: <Button onClick={onCreate}>Record payment</Button> } : {}),
           guides: GUIDES,
         }}
       />

@@ -44,7 +44,7 @@ function PlanCreditGrantsViewInner({
 }: PlanCreditGrantsViewProps) {
   const add = (
     <WriteGate>
-      <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3" onClick={onAdd}>
         <PlusIcon aria-hidden />
         Add grant
       </Button>

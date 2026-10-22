@@ -3,11 +3,14 @@ import { toast } from 'sonner'
 import {
   CircleCheckIcon,
   CircleDashedIcon,
+  CirclePauseIcon,
   CopyIcon,
   EyeIcon,
   EyeOffIcon,
+  PlayIcon,
   PlusIcon,
   RefreshCwIcon,
+  RotateCcwIcon,
   SendIcon,
   Trash2Icon,
   WebhookIcon,
@@ -235,12 +238,23 @@ export function WebhookEndpointDetail({
         {
           id: 'toggle',
           label: endpoint.disabled ? 'Enable endpoint' : 'Disable endpoint',
+          icon: endpoint.disabled ? (
+            <PlayIcon className="text-muted-foreground" aria-hidden />
+          ) : (
+            <CirclePauseIcon className="text-muted-foreground" aria-hidden />
+          ),
           onSelect: () => setDialog('toggle'),
         },
-        { id: 'recover', label: 'Recover failed messages', onSelect: () => setDialog('recover') },
+        {
+          id: 'recover',
+          label: 'Recover failed messages',
+          icon: <RotateCcwIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setDialog('recover'),
+        },
         {
           id: 'delete',
           label: 'Delete endpoint',
+          icon: <Trash2Icon aria-hidden />,
           destructive: true,
           onSelect: () => setDialog('delete'),
         },
@@ -543,8 +557,9 @@ function SubscribedEvents({
       title="Subscribed events"
       actions={
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
+          className="h-8 px-3"
           onClick={() => {
             setDraft(endpoint.filterTypes)
             action.reset()
@@ -618,7 +633,7 @@ function SigningSecret({ secret }: { secret: WebhookSecretState }) {
       title="Signing secret"
       description="Verify that each request came from Flexprice."
       actions={
-        <Button variant="ghost" size="sm" onClick={() => setRotating(true)}>
+        <Button variant="outline" size="sm" className="h-8 px-3" onClick={() => setRotating(true)}>
           <RefreshCwIcon aria-hidden />
           Rotate
         </Button>

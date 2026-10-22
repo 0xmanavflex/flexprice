@@ -1,4 +1,4 @@
-import { CopyIcon, MoreHorizontalIcon } from '@ui/icons'
+import { CopyIcon, EyeIcon, MoreHorizontalIcon } from '@ui/icons'
 import { SUBSCRIPTION_STATUS_LABEL, SubscriptionStatus, type Subscription } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -101,7 +101,10 @@ export function SubscriptionCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={onOpen}>View subscription</DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpen}>
+                <EyeIcon className="text-muted-foreground" aria-hidden="true" />
+                View subscription
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void navigator.clipboard?.writeText(s.id)}>
                 <CopyIcon className="text-muted-foreground" aria-hidden="true" />
                 Copy subscription ID

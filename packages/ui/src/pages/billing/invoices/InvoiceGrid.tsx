@@ -385,7 +385,6 @@ export function InvoiceGrid({
           title: 'No invoices yet',
           description:
             'Invoices are produced when a contract’s billing period closes. Put a customer on a plan and the first one will appear here on its own.',
-          ...(onCreate ? { actions: <Button onClick={onCreate}>New invoice</Button> } : {}),
           guides: GUIDES,
         }}
       />

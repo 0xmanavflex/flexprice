@@ -8,7 +8,6 @@ import {
   CalculatorIcon,
   CheckCircle2Icon,
   DownloadIcon,
-  ExternalLinkIcon,
   FileMinusIcon,
   LinkIcon,
   MoreHorizontalIcon,
@@ -34,7 +33,7 @@ import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
 import { DetailShell } from '../../../compositions/detail/DetailShell'
 import { ActivitySection } from '../../../compositions/detail/ActivityLog'
-import { DetailTabs } from '../../../compositions/detail/DetailKit'
+import { DetailTabs, TotalRow, TotalsList } from '../../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../../compositions/detail/RelatedCard'
 import { Section } from '../../../compositions/layout/Section'
@@ -65,6 +64,7 @@ export const InvoiceDetailViewProvenance = provenance({
     'compositions/RelatedCard',
     'compositions/ActivityLog',
     'compositions/SubTabState',
+    'compositions/detail-kit',
     'ui/spinner',
     '@reui/badge',
   ],
@@ -188,16 +188,18 @@ export function InvoiceDetailView({
   ).length
   const hostedUrl = invoice.hostedUrl ?? null
 
-  const copyLink = () => {
+  const copyLink = async () => {
     if (!hostedUrl) return
-    void navigator.clipboard?.writeText(hostedUrl)
-    toast.success('Hosted invoice link copied', {
-      description: 'Anyone with the link can view and pay this invoice until it expires.',
-    })
-  }
-  const openLink = () => {
-    if (!hostedUrl) return
-    window.open(hostedUrl, '_blank', 'noopener,noreferrer')
+    try {
+      await navigator.clipboard.writeText(hostedUrl)
+      toast.success('Hosted invoice link copied', {
+        description: 'Anyone with the link can view and pay this invoice until it expires.',
+      })
+    } catch {
+      toast.error('Couldn’t copy the link', {
+        description: 'Your browser blocked clipboard access.',
+      })
+    }
   }
 
   const related: RelatedItem[] = [
@@ -276,15 +278,9 @@ export function InvoiceDetailView({
                 hint="Available once the invoice has a PDF"
               />
               <MenuAction
-                icon={<ExternalLinkIcon />}
-                label="Open hosted invoice"
-                onSelect={hostedUrl ? openLink : undefined}
-                hint="Available once the invoice is finalized"
-              />
-              <MenuAction
                 icon={<LinkIcon />}
                 label="Copy hosted invoice link"
-                onSelect={hostedUrl ? copyLink : undefined}
+                onSelect={hostedUrl ? () => void copyLink() : undefined}
                 hint="Available once the invoice is finalized"
               />
               {isDraft && onFinalize ? (
@@ -448,7 +444,19 @@ export function InvoiceDetailView({
         ) : null}
 
         {tab === 'payments' ? (
-          <Section table title="Payments">
+          <Section
+            table
+            title="Payments"
+            {...(onRecordPayment && canRecordPayment
+              ? {
+                  action: (
+                    <Button size="sm" className="h-8 px-3" onClick={onRecordPayment}>
+                      Record payment
+                    </Button>
+                  ),
+                }
+              : {})}
+          >
             <SubTabState
               hasData={invoice.payments.length > 0}
               isLoading={paymentsQuery.isLoading}
@@ -464,12 +472,6 @@ export function InvoiceDetailView({
                 scene: 'billing',
                 title: 'No payments yet',
                 description: 'No payments recorded for this invoice yet.',
-                action:
-                  onRecordPayment && canRecordPayment ? (
-                    <Button size="sm" onClick={onRecordPayment}>
-                      Record payment
-                    </Button>
-                  ) : undefined,
               }}
             >
               <DetailTable<InvoicePaymentRow>
@@ -513,7 +515,19 @@ export function InvoiceDetailView({
         ) : null}
 
         {tab === 'credit-notes' ? (
-          <Section table title="Credit memos">
+          <Section
+            table
+            title="Credit memos"
+            {...(onIssueCreditNote && canIssueCreditNote
+              ? {
+                  action: (
+                    <Button size="sm" className="h-8 px-3" onClick={onIssueCreditNote}>
+                      Issue credit memo
+                    </Button>
+                  ),
+                }
+              : {})}
+          >
             <SubTabState
               hasData={invoice.creditNotes.length > 0}
               isLoading={creditNotesQuery.isLoading}
@@ -529,12 +543,6 @@ export function InvoiceDetailView({
                 scene: 'billing',
                 title: 'No credit memos yet',
                 description: 'No credit memos issued against this invoice.',
-                action:
-                  onIssueCreditNote && canIssueCreditNote ? (
-                    <Button size="sm" onClick={onIssueCreditNote}>
-                      Issue credit memo
-                    </Button>
-                  ) : undefined,
               }}
             >
               <DetailTable<InvoiceCreditNoteRow>
@@ -719,22 +727,16 @@ function InvoiceDocumentArticle({
       </div>
 
       <div className="mx-8 flex justify-end border-t py-6">
-        <dl className="w-full max-w-xs space-y-2.5 text-[13px]">
-          <Total label="Subtotal" value={money(totals.subtotal)} />
+        <TotalsList>
+          <TotalRow label="Subtotal" value={money(totals.subtotal)} />
           {invoice.prepaidCredits ? (
-            <Total label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
+            <TotalRow label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
           ) : null}
-          <Total label="Tax" value={money(invoice.tax)} />
-          <div className="flex justify-between border-t pt-3 text-sm font-medium">
-            <dt>Total</dt>
-            <dd className="tabular-nums">{money(totals.total)}</dd>
-          </div>
-          {invoice.paid > 0 ? <Total label="Paid" value={`− ${money(invoice.paid)}`} /> : null}
-          <div className="flex justify-between text-base font-medium">
-            <dt>Amount due</dt>
-            <dd className="tabular-nums">{money(totals.due)}</dd>
-          </div>
-        </dl>
+          <TotalRow label="Tax" value={money(invoice.tax)} />
+          <TotalRow label="Total" value={money(totals.total)} emphasis="total" rule />
+          {invoice.paid > 0 ? <TotalRow label="Paid" value={`− ${money(invoice.paid)}`} /> : null}
+          <TotalRow label="Amount due" value={money(totals.due)} emphasis="due" />
+        </TotalsList>
       </div>
 
       {isDraft ? null : (
@@ -816,11 +818,3 @@ function PartyTag({ children }: { children: ReactNode }) {
   )
 }
 
-function Total({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
-    </div>
-  )
-}

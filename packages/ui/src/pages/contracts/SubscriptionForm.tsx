@@ -12,6 +12,7 @@ import {
   PlusIcon,
   PuzzleIcon,
   ReceiptIcon,
+  RotateCcwIcon,
   ScaleIcon,
   Settings2Icon,
   TicketPercentIcon,
@@ -1253,7 +1254,7 @@ function SubSection({
 }) {
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
           <h3 className="text-sm font-medium">{title}</h3>
           {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
@@ -1276,8 +1277,9 @@ function Frame({ children, footer }: { children: ReactNode; footer?: ReactNode }
 }
 
 /**
- * The muted, centred line an empty list shows — and, when there is one, the
- * way to add the first item, centred under it rather than in a footer corner.
+ * The muted, centred line an empty list shows. A create action never goes
+ * here: it stays at the top right of the section, empty or not (`AddButton`).
+ * `action` is for guidance only, such as where to create what the list needs.
  */
 function EmptyLine({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
@@ -1288,27 +1290,27 @@ function EmptyLine({ children, action }: { children: ReactNode; action?: ReactNo
   )
 }
 
-/** "+ Add …", the quiet button that opens a picker or a sub-form. */
+/**
+ * "+ Add …", the section's create action: top right, on the line of the
+ * section title, in the same place whether the list is empty or not.
+ */
 function AddButton({
   children,
   onClick,
   disabled,
   label,
-  centered = false,
 }: {
   children: string
   onClick: () => void
   disabled?: boolean
   label?: string
-  /** In an empty state: an outlined button under the message, not a quiet footer link. */
-  centered?: boolean
 }) {
   return (
     <Button
       type="button"
-      variant={centered ? 'outline' : 'ghost'}
+      variant="outline"
       size="sm"
-      className={centered ? 'w-fit' : 'text-muted-foreground hover:text-foreground -ml-2 w-fit'}
+      className="shrink-0"
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
@@ -1617,6 +1619,7 @@ function ChargesTable({
           <DropdownMenuContent align="end" className="min-w-52">
             {row.kind === 'extra' ? (
               <DropdownMenuItem variant="destructive" onClick={() => onRemoveExtra(row.index)}>
+                <Trash2Icon aria-hidden />
                 Remove charge
               </DropdownMenuItem>
             ) : (
@@ -1643,6 +1646,7 @@ function ChargesTable({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => onReset(row.charge.id)}>
+                      <RotateCcwIcon aria-hidden />
                       Reset to plan
                     </DropdownMenuItem>
                   </>
@@ -1791,6 +1795,17 @@ function PhaseDiscounts({
     <SubSection
       title="Discounts"
       description={`Coupons on all of ${phaseLabel}. A coupon on one charge is applied from that charge's menu.`}
+      action={
+        coupons.length > 0 ? (
+          <AddButton
+            onClick={() => onPicking('all')}
+            disabled={picking !== null}
+            label={`Add a coupon to ${phaseLabel}`}
+          >
+            Add coupon
+          </AddButton>
+        ) : null
+      }
     >
       <Frame
         footer={
@@ -1800,13 +1815,7 @@ function PhaseDiscounts({
                 No coupons yet. Create one under Product catalog → Coupons to discount a phase.
               </p>
             )
-          ) : picking === null ? (
-            discounts.length === 0 ? null : (
-              <AddButton onClick={() => onPicking('all')} label={`Add a coupon to ${phaseLabel}`}>
-                Add coupon
-              </AddButton>
-            )
-          ) : (
+          ) : picking === null ? null : (
             <div className="grid gap-2 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-start">
               <label htmlFor={`${idBase}-coupon`} className="sr-only">
                 Coupon for {phaseLabel}
@@ -1859,14 +1868,6 @@ function PhaseDiscounts({
                 <span className="text-muted-foreground text-xs">
                   No coupons yet. Create one under Product catalog → Coupons to discount a phase.
                 </span>
-              ) : picking === null ? (
-                <AddButton
-                  centered
-                  onClick={() => onPicking('all')}
-                  label={`Add a coupon to ${phaseLabel}`}
-                >
-                  Add coupon
-                </AddButton>
               ) : null
             }
           >
@@ -2743,25 +2744,24 @@ function CreditsSection({
       title="Credit grants"
       status="optional"
       icon={<CoinsIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+      adornment={
+        <>
+          {fromPlan && changed ? (
+            <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+              Use the plan&apos;s grants
+            </Button>
+          ) : null}
+          <AddButton onClick={() => setAdding(true)} disabled={adding}>
+            Add credit grant
+          </AddButton>
+        </>
+      }
       {...(fromPlan && changed
-        ? {
-            adornment: (
-              <Button type="button" variant="ghost" size="sm" onClick={onReset}>
-                Use the plan&apos;s grants
-              </Button>
-            ),
-            description: "These grants replace the plan's on this contract.",
-          }
+        ? { description: "These grants replace the plan's on this contract." }
         : {})}
     >
       <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
-        <Frame
-          footer={
-            adding || grants.length === 0 ? null : (
-              <AddButton onClick={() => setAdding(true)}>Add credit grant</AddButton>
-            )
-          }
-        >
+        <Frame>
           {grants.length > 0 ? (
             <SimpleTable
               columns={columns}
@@ -2769,15 +2769,7 @@ function CreditsSection({
               getRowId={(row) => `${row.grant.name}-${row.index}`}
             />
           ) : (
-            <EmptyLine
-              action={
-                adding ? null : (
-                  <AddButton centered onClick={() => setAdding(true)}>
-                    Add credit grant
-                  </AddButton>
-                )
-              }
-            >
+            <EmptyLine>
               {fromPlan
                 ? "All of the plan's grants are removed from this contract."
                 : 'No credit grants.'}

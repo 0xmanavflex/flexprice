@@ -326,6 +326,7 @@ export {
   lineLineages,
   lineRevertDraft,
   type LineLineage,
+  commitmentPeriodNoun,
 } from './subscription'
 export type {
   ChangeLineQuantity,
@@ -337,6 +338,7 @@ export type {
   SubscriptionDiscount,
   SubscriptionPhase,
   ChargeCommitment,
+  ContractCommitment,
   InvoicePreview,
   InvoicePreviewLine,
   Subscription,

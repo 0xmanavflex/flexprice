@@ -73,7 +73,7 @@ export function FormCard({
   return (
     <section className={cn('bg-background flex w-full flex-col rounded-xl border', className)}>
       {title ? (
-        <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6">
+        <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
           <div className="flex min-w-0 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
               {icon}
@@ -83,8 +83,10 @@ export function FormCard({
               <p className="text-muted-foreground text-[13px]/relaxed">{description}</p>
             ) : null}
           </div>
+          {/* Centred on the title, and `-my-1.5` takes back a button's extra height,
+              so a card is as tall with an action in its header as without. */}
           {status || adornment ? (
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="-my-1.5 flex shrink-0 items-center gap-2">
               {status ? (
                 <Badge variant={status === 'required' ? 'primary-light' : 'secondary'} size="sm">
                   {status === 'required' ? 'Required' : 'Optional'}

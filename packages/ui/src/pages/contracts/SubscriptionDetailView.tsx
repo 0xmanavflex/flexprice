@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
+  PackageIcon,
   PlusIcon,
   CirclePauseIcon,
   ClockIcon,
@@ -32,6 +33,7 @@ import {
   type AddContractAddon,
   type AddContractCoupon,
   BILLING_PERIOD_LABEL,
+  commitmentPeriodNoun,
   ChargeSection,
   type BillingPeriod,
   type ChangeLineQuantity,
@@ -68,6 +70,8 @@ import {
   DetailTabs,
   OverviewTiles,
   Properties,
+  TotalRow,
+  TotalsList,
 } from '../../compositions/detail/DetailKit'
 import { ActivitySection, type ActivityLogEntry } from '../../compositions/detail/ActivityLog'
 import { ChargeSheet } from '../product-catalog/charges/ChargeSheet'
@@ -108,6 +112,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     '@reui/alert',
     '@reui/badge',
     'compositions/ActivityLog',
+    'compositions/detail-kit',
   ],
   note: 'Contract detail (read-only): DetailShell header with every action in More, four tabs (Overview, Charges, Usage, Invoices) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners lead the Overview tab, then side-by-side Contract and Billing & collection panels, the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes.',
 })
@@ -1195,7 +1200,7 @@ export function SubscriptionDetailView({
             {...(revertCharge ? { onRevert: revertCharge } : {})}
             extraActions={(charge) =>
               chargeRows.lineOf.get(charge.id)?.source === 'plan' && onOpenPlan
-                ? [{ label: 'Go to plan', onSelect: onOpenPlan }]
+                ? [{ label: 'Go to plan', icon: <PackageIcon aria-hidden />, onSelect: onOpenPlan }]
                 : []
             }
             isLoading={lines.isLoading ?? false}
@@ -1536,6 +1541,7 @@ function ContractDetails({
   onOpenCustomer?: () => void
   onOpenPlan?: () => void
 }) {
+  const commitment = s.commitment
   return (
     <div className="grid items-start gap-5 lg:grid-cols-2">
       <Section title="Contract">
@@ -1597,12 +1603,19 @@ function ContractDetails({
                   ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
                   : s.billingPeriodLabel,
             },
+            // The contract-level commitment is set when the contract is created;
+            // the API cannot change it afterwards, so it reads here and nowhere else.
             {
               label: 'Commitment',
-              value: s.commitmentAmount
-                ? `${formatMoney(s.commitmentAmount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
+              value: commitment
+                ? `${formatMoney(commitment.amount)} per ${commitmentPeriodNoun(commitment.period, commitment.periodCount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
                 : 'None',
             },
+            // A factor of 1 is the normal rate, so only a premium is worth a row.
+            ...(commitment && commitment.overageFactor > 1
+              ? [{ label: 'Overage factor', value: `${commitment.overageFactor}×` }]
+              : []),
+            ...(commitment ? [{ label: 'True-up', value: commitment.trueUp ? 'On' : 'Off' }] : []),
           ]}
         />
       </Section>
@@ -1713,7 +1726,7 @@ function InvoicePreviewSection({
             </div>
           ) : null}
           <div className="flex justify-end border-t px-6 py-4">
-            <dl className="flex w-full flex-col gap-2 text-sm sm:w-72">
+            <TotalsList>
               <TotalRow label="Subtotal" value={formatMoney(value.subtotal)} />
               {!isZero(value.discount) ? (
                 <TotalRow label="Discount" value={deduction(value.discount)} />
@@ -1722,13 +1735,13 @@ function InvoicePreviewSection({
               {!isZero(value.prepaidCredits) ? (
                 <TotalRow label="Prepaid credits" value={deduction(value.prepaidCredits)} />
               ) : null}
-              <div className="mt-1 flex items-baseline justify-between gap-4 border-t pt-3">
-                <dt className="text-foreground font-medium">Amount due</dt>
-                <dd className="text-foreground text-base font-medium tabular-nums">
-                  {formatMoney(value.amountDue)}
-                </dd>
-              </div>
-            </dl>
+              <TotalRow
+                label="Amount due"
+                value={formatMoney(value.amountDue)}
+                emphasis="due"
+                rule
+              />
+            </TotalsList>
           </div>
           <p className="text-muted-foreground border-t px-6 py-3 text-xs">
             {value.periodEnd
@@ -1739,15 +1752,6 @@ function InvoicePreviewSection({
         </>
       )}
     </PartSection>
-  )
-}
-
-function TotalRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-muted-foreground font-normal">{label}</dt>
-      <dd className="text-foreground tabular-nums">{value}</dd>
-    </div>
   )
 }
 
@@ -1874,7 +1878,6 @@ function PartSectionInner<T>({
   failure,
   emptyTitle,
   emptyDescription,
-  emptyAction,
   scene,
   create,
   isEmpty,
@@ -1888,7 +1891,6 @@ function PartSectionInner<T>({
   failure: string
   emptyTitle: string
   emptyDescription: string
-  emptyAction?: ReactNode
   /** The drawing above the empty state. */
   scene?: EmptyScene
   /** The section's Add button, above the frame in every state. */
@@ -1954,7 +1956,6 @@ function PartSectionInner<T>({
           {...(scene ? { scene } : {})}
           title={emptyTitle}
           description={emptyDescription}
-          action={emptyAction}
         />
       </Section>
     )

@@ -413,7 +413,6 @@ export function PlanGrid({
         title: 'No plans yet',
         description:
           'A plan is what a customer subscribes to — a set of charges sold together under one name. Create one, price it, and it is ready to sell.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New plan</Button> } : {}),
         guides: GUIDES,
       }}
     />

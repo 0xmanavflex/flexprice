@@ -59,7 +59,47 @@ jobs:
         run: pnpm --filter console exec playwright install --with-deps chromium
 
       - name: Run the journeys against the mocked console
+        id: journeys
         run: pnpm --filter console test:e2e
+
+      # "These journeys passed" or "this journey failed", with a link to the
+      # run, posted to Slack after every push to main (where `pipeline.yml`
+      # runs this after the deploys) and to develop. Built from Playwright's
+      # JSON report by `.github/scripts/e2e-slack-summary.mjs`; tests tagged
+      # `@journey` are listed by name.
+      #
+      # The webhook is a repository secret, never a value in this file:
+      #   SLACK_E2E_WEBHOOK_URL  Slack → an app with Incoming Webhooks → the channel's URL
+      # Without it the step logs a line and exits 0, so forks and repos without
+      # Slack stay green. Pull requests skip it too: their result is on the PR.
+      # A Slack outage only warns — it says nothing about the journeys.
+      - name: Post the journey results to Slack
+        if: ${{ !cancelled() }}
+        env:
+          SLACK_E2E_WEBHOOK_URL: ${{ secrets.SLACK_E2E_WEBHOOK_URL }}
+          E2E_OUTCOME: ${{ steps.journeys.outcome }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ -z "$SLACK_E2E_WEBHOOK_URL" ]; then
+            echo "Slack summary skipped: the SLACK_E2E_WEBHOOK_URL secret is not set."
+            exit 0
+          fi
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "Slack summary skipped: pull request runs report on the pull request."
+            exit 0
+          fi
+
+          case "$GITHUB_REF_NAME" in
+            main) E2E_ENVIRONMENT="main, after the production deploy" ;;
+            *) E2E_ENVIRONMENT="$GITHUB_REF_NAME" ;;
+          esac
+          export E2E_ENVIRONMENT
+
+          payload=$(node .github/scripts/e2e-slack-summary.mjs apps/console/playwright-results.json)
+          if ! curl --silent --show-error --fail-with-body --max-time 20 \
+            -H 'Content-Type: application/json' --data "$payload" "$SLACK_E2E_WEBHOOK_URL"; then
+            echo "::warning::Could not post the journey results to Slack."
+          fi
 
       # `always() && failure()` so the trace, video and screenshots survive the
       # failure they document. Without it the upload is skipped exactly when it

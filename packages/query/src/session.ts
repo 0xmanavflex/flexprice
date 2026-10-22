@@ -8,9 +8,11 @@ import {
 import {
   ApiError,
   ErrorKind,
+  type CloneTarget,
   type CurrentUser,
   type EnvironmentRecord,
   type SessionCredentials,
+  cloneEnvironment,
   createEnvironment,
   fetchCurrentUser,
   existsInEnvironment,
@@ -227,6 +229,39 @@ export function useRenameEnvironment(
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+    },
+  })
+}
+
+/** What a copy sends: the environment to copy from, and where to. */
+export interface CopyEnvironment {
+  sourceEnvironmentId: string
+  target: CloneTarget
+}
+
+/**
+ * Copy an environment's published plans and features into another — V1's
+ * "Copy environment", and how a sandbox setup is taken live. The API queues the
+ * copy and answers at once; when it made a new environment, the list is
+ * refreshed so the switcher shows it.
+ */
+export function useCopyEnvironment(
+  token: string | null,
+): UseMutationResult<void, Error, CopyEnvironment> {
+  const serverURL = useFlexpriceServerURL()
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, CopyEnvironment>({
+    mutationFn: async ({ sourceEnvironmentId, target }) => {
+      if (!enabledFor(token)) {
+        throw new ApiError(ErrorKind.Unauthorized, 'Sign in to copy an environment.')
+      }
+      await cloneEnvironment(serverURL, token as string, sourceEnvironmentId, target)
+    },
+    onSuccess: (_, { target }) => {
+      if (!('targetEnvironmentId' in target)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+      }
     },
   })
 }

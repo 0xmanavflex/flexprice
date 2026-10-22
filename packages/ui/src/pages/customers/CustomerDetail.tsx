@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactElement, type ReactNode } from 'react'
 import {
   ArchiveIcon,
   ExternalLinkIcon,
@@ -9,6 +9,7 @@ import {
   PlusIcon,
   ReceiptIcon,
   RocketIcon,
+  UploadIcon,
   WalletIcon,
 } from '@ui/icons'
 import {
@@ -109,6 +110,12 @@ export interface CustomerDetailProps {
   onOpenPortal?: () => void
   /** Adds "Copy portal link" to the header menu. */
   onCopyPortalLink?: () => void
+  /**
+   * Adds "Push to {providers}" to the header menu (V1's "Push to Integration"):
+   * writes the customer to every provider that syncs customers outbound,
+   * creating them there when unmapped. Omitted when no provider does.
+   */
+  pushToIntegrations?: { providers: string; onPush: () => void }
   /**
    * Adds "Stream sample events" to the header menu: the backend generates a
    * minute of usage events for one of this customer's subscriptions. Omitted
@@ -216,6 +223,7 @@ export function CustomerDetail({
   onArchive,
   onOpenPortal,
   onCopyPortalLink,
+  pushToIntegrations,
   onStreamEvents,
   onUpdateField,
   onUpdateMetadata,
@@ -317,6 +325,17 @@ export function CustomerDetail({
           },
         ]
       : []),
+    ...(pushToIntegrations
+      ? [
+          {
+            id: 'push-to-integrations',
+            label: `Push to ${pushToIntegrations.providers}`,
+            icon: <UploadIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: pushToIntegrations.onPush,
+            entity: RBAC_ENTITY.Integration,
+          },
+        ]
+      : []),
     {
       id: 'top-up-wallet',
       label: 'Top up wallet',
@@ -411,7 +430,22 @@ export function CustomerDetail({
         {tab === 'invoices' ? (
           // The invoices here write invoices, not the customer.
           <AccessScope entity={RBAC_ENTITY.Invoice}>
-            <Section table title="Invoices">
+            <Section
+              table
+              title="Invoices"
+              {...(onCreateInvoice
+                ? {
+                    action: (
+                      <WriteGate>
+                        <Button size="sm" className="h-8 px-3" onClick={onCreateInvoice}>
+                          <PlusIcon aria-hidden="true" />
+                          New invoice
+                        </Button>
+                      </WriteGate>
+                    ),
+                  }
+                : {})}
+            >
               <InvoiceTable
                 invoices={invoices}
                 isLoading={invoicesLoading}
@@ -420,18 +454,6 @@ export function CustomerDetail({
                 formatDate={formatDate}
                 onOpenInvoice={onOpenInvoice}
                 {...(invoiceActions ? { actions: invoiceActions } : {})}
-                {...(onCreateInvoice
-                  ? {
-                      action: (
-                        <WriteGate>
-                          <Button size="sm" className="h-8 px-3" onClick={onCreateInvoice}>
-                            <PlusIcon aria-hidden="true" />
-                            New invoice
-                          </Button>
-                        </WriteGate>
-                      ),
-                    }
-                  : {})}
               />
             </Section>
           </AccessScope>
@@ -673,9 +695,7 @@ function OverviewTab({
           table
           showTitle
           title="Recent invoices"
-          {...(invoices.length > 0
-            ? { action: <ViewAllButton label="invoices" onClick={onViewAllInvoices} /> }
-            : {})}
+          action={<ViewAllButton label="invoices" onClick={onViewAllInvoices} />}
         >
           <InvoiceTable
             compactList
@@ -692,7 +712,7 @@ function OverviewTab({
             table
             showTitle
             title="Recent payments"
-            {...(onViewAllPayments && payments.length > 0
+            {...(onViewAllPayments
               ? { action: <ViewAllButton label="payments" onClick={onViewAllPayments} /> }
               : {})}
           >
@@ -957,6 +977,8 @@ function ContractsTable({
 export interface InvoiceRowAction {
   label: string
   onSelect: () => void
+  /** Leading glyph, required so every item lines up behind one. */
+  icon: ReactElement
   destructive?: boolean
 }
 
@@ -992,7 +1014,6 @@ function InvoiceTable({
   onRetry,
   formatDate,
   onOpenInvoice,
-  action,
   actions,
 }: {
   /** The short list on the Overview: no toolbar. */
@@ -1003,18 +1024,14 @@ function InvoiceTable({
   onRetry: (() => void) | undefined
   formatDate: FormatDate
   onOpenInvoice: ((invoiceId: string) => void) | undefined
-  /** Sits on the toolbar, to the right of the filter. Omitted on the short overview list. */
-  action?: ReactNode
   /** Each row's menu; omitted, rows have none. */
   actions?: (invoice: Invoice) => InvoiceRowAction[]
 }) {
   // Rows win; otherwise a failed read is an error with retry, a pending one a
   // skeleton, and only a finished empty read says "no invoices".
   if (invoices.length === 0) {
-    const failed = isLoading || isError
     return (
       <div>
-        {action && failed ? <div className="flex justify-end px-6 py-3">{action}</div> : null}
         <SubTabState
           hasData={false}
           isLoading={isLoading}
@@ -1026,7 +1043,6 @@ function InvoiceTable({
             scene: 'customers',
             title: 'No invoices yet',
             description: 'Invoices are created automatically from contracts, or raised by hand.',
-            ...(action ? { action } : {}),
           }}
         >
           {null}
@@ -1041,7 +1057,6 @@ function InvoiceTable({
         compact
         toolbar={!compactList}
         label="Invoices"
-        {...(action ? { action } : {})}
         facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
         noun="invoices"
         rows={invoices}
@@ -1115,7 +1130,11 @@ function InvoiceTable({
                           label={invoice.number || 'invoice'}
                           extra={items.filter((item) => !item.destructive)}
                           {...(removal
-                            ? { onRemove: removal.onSelect, removeLabel: removal.label }
+                            ? {
+                                onRemove: removal.onSelect,
+                                removeLabel: removal.label,
+                                removeIcon: removal.icon,
+                              }
                             : {})}
                         />
                       </div>

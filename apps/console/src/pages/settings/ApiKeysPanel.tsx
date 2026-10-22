@@ -21,6 +21,7 @@ import {
   ActionError,
   DelayedHint,
   PanelError,
+  PanelActions,
   PanelFirstRun,
   WidePanel,
   formatDate,
@@ -72,44 +73,40 @@ export function ApiKeysPanel() {
     )
   }
 
-  // With no keys the page is the empty state alone, centred in the page body,
-  // and it carries the only create button — no toolbar above it offering a
-  // second one.
+  // With no keys the empty state fills the page body, centred, under the same
+  // top-right create button the list has.
   const firstRun = !keys.isPending && rows.length === 0
 
   return (
     <WidePanel fill={firstRun}>
-      <section className={firstRun ? 'flex flex-1 flex-col' : 'flex flex-col gap-3'}>
+      <section className={firstRun ? 'flex flex-1 flex-col gap-3' : 'flex flex-col gap-3'}>
         <h1 className="sr-only">API keys</h1>
         {keys.isPending ? (
           <LoadingRows rows={3} columns={3} />
-        ) : firstRun ? (
-          <PanelFirstRun
-            scene="developers"
-            title="No API keys yet"
-            description="An API key lets your servers send usage events and call the Flexprice API without a person signing in."
-            action={
-              <WriteGate entity={RBAC_ENTITY.Secret}>
+        ) : (
+          <>
+            <PanelActions>
+              <DelayedHint text="What your systems authenticate with when they send usage or read billing data.">
                 <WriteGate entity={RBAC_ENTITY.Secret}>
                   <Button onClick={() => setIsCreating(true)}>Create API key</Button>
                 </WriteGate>
-              </WriteGate>
-            }
-            docsHref={API_DOCS_URL}
-            docsLabel="API docs"
-          />
-        ) : (
-          <>
-            <div className="flex justify-end">
-              <DelayedHint text="What your systems authenticate with when they send usage or read billing data.">
-                <Button onClick={() => setIsCreating(true)}>Create API key</Button>
               </DelayedHint>
-            </div>
-            <ul aria-label="API keys" className="bg-background divide-y rounded-xl border">
-              {rows.map((key) => (
-                <KeyRow key={key.id} apiKey={key} onRevoke={() => setRevoking(key)} />
-              ))}
-            </ul>
+            </PanelActions>
+            {firstRun ? (
+              <PanelFirstRun
+                scene="developers"
+                title="No API keys yet"
+                description="An API key lets your servers send usage events and call the Flexprice API without a person signing in."
+                docsHref={API_DOCS_URL}
+                docsLabel="API docs"
+              />
+            ) : (
+              <ul aria-label="API keys" className="bg-background divide-y rounded-xl border">
+                {rows.map((key) => (
+                  <KeyRow key={key.id} apiKey={key} onRevoke={() => setRevoking(key)} />
+                ))}
+              </ul>
+            )}
           </>
         )}
       </section>

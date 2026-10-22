@@ -121,7 +121,6 @@ export function MembersPanel() {
             size="inline"
             title="Nobody else is on your team yet"
             description="Invite a teammate by email and choose their roles. You get a one-time password to share with them."
-            action={invite}
           />
         }
         columns={[

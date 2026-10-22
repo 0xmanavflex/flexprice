@@ -263,7 +263,6 @@ export function CostSheetGrid({
         title: 'No cost sheets yet',
         description:
           'A cost sheet records what each unit of usage costs you, so margin can be measured against what you charge for it.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New cost sheet</Button> } : {}),
         guides: GUIDES,
       }}
     />

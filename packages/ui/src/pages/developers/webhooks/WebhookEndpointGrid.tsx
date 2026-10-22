@@ -249,16 +249,15 @@ export function WebhookEndpointGrid({
         title: 'No endpoints yet',
         description:
           'An endpoint is a URL Flexprice sends events to. Add one to start receiving invoice, payment and subscription events as they happen.',
-        actions: (
-          <>
-            {createButton}
-            {onViewCatalog ? (
-              <Button variant="outline" onClick={onViewCatalog}>
-                Browse event catalog
-              </Button>
-            ) : null}
-          </>
-        ),
+        ...(onViewCatalog
+          ? {
+              secondaryAction: (
+                <Button variant="outline" onClick={onViewCatalog}>
+                  Browse event catalog
+                </Button>
+              ),
+            }
+          : {}),
         guides: GUIDES,
       }}
     />
