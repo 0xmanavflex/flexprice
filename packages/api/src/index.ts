@@ -98,6 +98,7 @@ export type { ParsePricingParams } from './aiPricing'
  */
 export { debitWallet } from './walletDebit'
 export { createCustomerPortalSession } from './customerPortalSession'
+export { fetchInvoiceHostedLink } from './invoiceHostedLink'
 export { generateSampleEvents } from './sampleEvents'
 export { listActivity } from './activity'
 export type { ListActivityParams } from './activity'
