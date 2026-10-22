@@ -1,5 +1,8 @@
 # UI source of truth
 
+The working checklist for building a page is [`docs/design-rules.md`](docs/design-rules.md); this file is the
+background behind it.
+
 There is one answer to "what should this page look like?": **the reference app**. Everything else in this
 file explains how the code is organised so that answer stays true.
 
@@ -106,14 +109,15 @@ A deviation is allowed when a comment at the point of use says why, and the PR d
 
 ## How it is enforced
 
-| Check             | What it stops                                                                       | Where                                                      |
-| ----------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Architecture lint | layer violations; `Card` and raw tables in pages; bold weights; raw palette colours | `packages/eslint-config/src/architecture.js`               |
-| Provenance test   | a component naming a `composes` entry it does not import                            | `packages/ui/src/provenance/claims.test.ts`                |
-| Vendor check      | hand edits to vendored primitives, ReUI items, blocks                               | `scripts/check-vendor.mjs`, `packages/ui/vendor.lock.json` |
-| Page matrix check | pages drifting from kit vocabulary unnoticed                                        | `scripts/ui-page-matrix.mjs --check`                       |
-| Visual regression | any change that moves pixels on a covered route                                     | `apps/console/e2e/visual`, workflow `visual.yml`           |
-| CODEOWNERS        | unreviewed changes to tokens, kit, baselines, lint                                  | `.github/CODEOWNERS`                                       |
+| Check             | What it stops                                                                                    | Where                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Architecture lint | layer violations; `Card` and raw tables in pages; bold weights; raw palette colours              | `packages/eslint-config/src/architecture.js`               |
+| Design lint       | hand-built controls, literal colours, stylesheets, menu items without icons, filled section CTAs | `packages/eslint-config/src/design.js`                     |
+| Provenance test   | a component naming a `composes` entry it does not import                                         | `packages/ui/src/provenance/claims.test.ts`                |
+| Vendor check      | hand edits to vendored primitives, ReUI items, blocks                                            | `scripts/check-vendor.mjs`, `packages/ui/vendor.lock.json` |
+| Page matrix check | pages drifting from kit vocabulary unnoticed                                                     | `scripts/ui-page-matrix.mjs --check`                       |
+| Visual regression | any change that moves pixels on a covered route                                                  | `apps/console/e2e/visual`, workflow `visual.yml`           |
+| CODEOWNERS        | unreviewed changes to tokens, kit, baselines, lint                                               | `.github/CODEOWNERS`                                       |
 
 ## Working loop
 
