@@ -2049,6 +2049,17 @@
       "usedBy": [],
       "story": "./src/pages/customers/CustomerDetail.stories.tsx"
     },
+    "CustomerEntitlementUsage": {
+      "file": "src/pages/customers/CustomerEntitlementUsage.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "Section",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerEntitlementUsage.stories.tsx"
+    },
     "CustomerEventsGrid": {
       "file": "src/pages/customers/CustomerEventsGrid.tsx",
       "layer": "surface",
@@ -2487,6 +2498,7 @@
         "CreditGrantTable",
         "CustomerAnalyticsView",
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "CustomerEventsGrid",
         "CustomerTaxSection",
         "CustomerUsageSummary",
@@ -6419,6 +6431,7 @@
         "CreditGrantTable",
         "CustomerAnalyticsView",
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "CustomerEventsGrid",
         "CustomerTaxSection",
         "CustomerUsageSummary",
@@ -7143,6 +7156,7 @@
         "ChargeTable",
         "CreditGrantTable",
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "CustomerEventsGrid",
         "CustomerUsageSummary",
         "CustomerWalletView",
@@ -8820,6 +8834,13 @@
         "PageShell"
       ]
     },
+    "./src/pages/customers/CustomerEntitlementUsage.stories.tsx": {
+      "title": "App/Customers/Entitlement usage",
+      "component": "CustomerEntitlementUsage",
+      "uses": [
+        "CustomerEntitlementUsage"
+      ]
+    },
     "./src/pages/customers/CustomerEventsGrid.stories.tsx": {
       "title": "App/Customers/Customer events",
       "component": "CustomerEventsGrid",
@@ -9868,12 +9889,10 @@
       "pattern": "Detail",
       "route": "/customers/$customerId",
       "uses": [
-        "AppFailure",
         "ConfirmDialog",
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "EmptyState",
-        "LoadingRows",
-        "QuotaCard",
         "Section"
       ]
     },
