@@ -304,6 +304,8 @@ export {
   emptySubscription,
   emptyPhase,
   phaseStarts,
+  contractDateToInstant,
+  contractDay,
   subscriptionDiscountSchema,
   subscriptionPhaseSchema,
   chargeCommitmentSchema,

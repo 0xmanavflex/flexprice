@@ -392,7 +392,7 @@ export const BillOnACustomDate: Story = {
   args: { prefilled: true, step: 'plan' },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('radio', { name: /A date you choose/ }))
+    await userEvent.click(canvas.getByRole('radio', { name: /Custom date/ }))
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await expect(await canvas.findByText('Choose the billing date')).toBeVisible()
     await expect(args.onStepChange).not.toHaveBeenCalledWith('phases')
@@ -413,9 +413,9 @@ export const BillOnLeavesTheDateBehind: Story = {
   args: { prefilled: true, step: 'plan' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('radio', { name: /A date you choose/ }))
+    await userEvent.click(canvas.getByRole('radio', { name: /Custom date/ }))
     await expect(canvas.getByRole('button', { name: /Billing date/ })).toBeVisible()
-    await userEvent.click(canvas.getByRole('radio', { name: /The contract start date/ }))
+    await userEvent.click(canvas.getByRole('radio', { name: /Contract start date/ }))
     await expect(canvas.queryByRole('button', { name: /Billing date/ })).toBeNull()
   },
 }
@@ -463,7 +463,8 @@ export const PhaseCharges: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
     await expect(await dialog.findByText('Enter a commitment greater than zero.')).toBeVisible()
     await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
-    await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
+    // A new contract is one set of charges, as the reference: no phases to add.
+    await expect(canvas.queryByRole('button', { name: 'Add phase' })).toBeNull()
   },
 }
 
@@ -834,27 +835,6 @@ export const PhaseLoading: Story = {
   },
 }
 
-/**
- * A contract with an end date can be split: a second phase starts where it
- * ends, with its own discounts, and the step becomes a timeline of phases.
- */
-export const AddsAPhaseWithItsOwnDiscount: Story = {
-  args: { prefilled: true, step: 'phases', chargeCount: 2, endDate: '2027-04-20' },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Add phase' }))
-    await expect(await canvas.findByRole('heading', { name: 'Phase 2' })).toBeVisible()
-    // The phase just left is folded, so the form stays on the new one.
-    await expect(canvas.queryByRole('combobox', { name: 'Coupon for Phase 1' })).toBeNull()
-    await expect(canvas.getByRole('button', { name: /Phase 1/ })).toBeVisible()
-
-    await userEvent.click(canvas.getByRole('button', { name: 'Add a coupon to Phase 2' }))
-    await userEvent.click(canvas.getByRole('combobox', { name: 'Coupon for Phase 2' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Launch · 20% off' }))
-    await userEvent.click(canvas.getByRole('button', { name: 'Add discount' }))
-    await expect(canvas.getByText('On all of Phase 2')).toBeVisible()
-  },
-}
 /** Commitments & benefits: the contract's commitment first, then entitlements, grants and taxes. */
 export const CommitmentsStep: Story = {
   args: { prefilled: true, step: 'commitments', chargeCount: 4, entitlementCount: 12 },
@@ -1034,8 +1014,9 @@ export const ReviewByStep: Story = {
     for (const title of ['Contract', 'Charges & add-ons', 'Commitments & benefits', 'Billing']) {
       await expect(canvas.getByRole('heading', { name: title })).toBeVisible()
     }
-    await expect(canvas.getByText('Acme Robotics')).toBeVisible()
-    await expect(canvas.getByText('Oct 20, 2026 → until cancelled')).toBeVisible()
+    // The name, then the email (here the fixture's id) the picker shows under it.
+    await expect(canvas.getByText(/^Acme Robotics · /)).toBeVisible()
+    await expect(canvas.getByText('Oct 20, 2026, 12:00 AM → until cancelled')).toBeVisible()
     await expect(canvas.getByText("4 charges · all at the plan's prices")).toBeVisible()
     await expect(canvas.getByText('Prorates changes')).toBeVisible()
     await expect(canvas.getByText('VAT 20%')).toBeVisible()

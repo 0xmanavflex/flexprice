@@ -26,6 +26,7 @@ import {
   WindowBillingModel,
   type SubscriptionPhase,
   phaseStarts,
+  contractDateToInstant,
   type ChangeLineQuantity,
   type CreateCreditGrant,
   type CreateEntitlement,
@@ -560,7 +561,8 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
  * carries `scope: 'SUBSCRIPTION'` and no target id.
  */
 /** A `YYYY-MM-DD` day as midnight UTC. */
-const utcDay = (day: string) => new Date(`${day}T00:00:00Z`)
+/** A contract date (a day, or an instant picked with a time) as the API takes it. */
+const utcDay = (day: string) => contractDateToInstant(day)
 
 /**
  * A phase's charge overrides as `override_line_items`: each repricing, with

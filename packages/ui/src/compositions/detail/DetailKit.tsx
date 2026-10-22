@@ -505,6 +505,7 @@ export function ChoiceCards<V extends string>({
   value,
   onChange,
   label,
+  stacked = false,
 }: {
   /** Reference name is `options`; either works. */
   choices?: Choice<V>[]
@@ -513,11 +514,19 @@ export function ChoiceCards<V extends string>({
   onChange: (value: V) => void
   /** Accessible name for the radio group. */
   label?: string
+  /**
+   * One card per row, each led by a radio dot (the reference RadioCards), for
+   * choices whose descriptions are sentences rather than a few words.
+   */
+  stacked?: boolean
 }) {
   const items = choices ?? options ?? []
   return (
     <div
-      className={cn('grid gap-3', items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}
+      className={cn(
+        'grid',
+        stacked ? 'gap-2.5' : cn('gap-3', items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'),
+      )}
       role="radiogroup"
       aria-label={label}
     >
@@ -529,12 +538,24 @@ export function ChoiceCards<V extends string>({
           aria-checked={value === item.value}
           onClick={() => onChange(item.value)}
           className={cn(
-            'flex items-start gap-3 rounded-lg border p-4 text-left transition-colors',
+            'flex items-start gap-3 rounded-lg border text-left transition-colors',
+            stacked ? 'px-4 py-3' : 'p-4',
             value === item.value
               ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
               : 'hover:bg-muted/40',
           )}
         >
+          {stacked ? (
+            <span
+              aria-hidden
+              className={cn(
+                'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border',
+                value === item.value ? 'border-primary' : 'border-input',
+              )}
+            >
+              {value === item.value ? <span className="bg-primary size-2 rounded-full" /> : null}
+            </span>
+          ) : null}
           {item.icon ? (
             <span className="text-foreground/70 bg-muted/60 flex size-8 shrink-0 items-center justify-center rounded-md border [&_svg]:size-4">
               {item.icon}
