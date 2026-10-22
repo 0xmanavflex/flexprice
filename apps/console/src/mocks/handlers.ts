@@ -27,6 +27,8 @@ interface SearchBody {
   sort?: { field: string; direction: 'asc' | 'desc' }[]
   invoice_status?: string[]
   invoiceStatus?: string[]
+  /** Subscription lifecycle statuses — `/subscriptions/search` narrows to these when sent. */
+  subscription_status?: string[]
   /** A single catalogue status (published/archived) — how the count queries filter. */
   status?: string
   name_contains?: string
@@ -448,7 +450,19 @@ const search = (path: string, key: string) =>
     const refused = rejectUnknownExpand(key, body.expand)
     if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
-    const result = page(sourceFor(key), body)
+    const source = sourceFor(key)
+    const wanted = key === 'subscriptions' ? body.subscription_status : undefined
+    const result = page(
+      wanted?.length
+        ? {
+            ...source,
+            items: source.items.filter((row) =>
+              wanted.includes(readString(row, 'subscription_status')),
+            ),
+          }
+        : source,
+      body,
+    )
     const payload =
       key === 'features'
         ? applyFeatureExpand(result, body.expand)
