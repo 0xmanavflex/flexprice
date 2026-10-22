@@ -478,7 +478,7 @@ function ChartFilters(props: {
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <h1 className="text-lg font-medium tracking-tight">Overview</h1>
+      <h1 className="text-xl font-medium tracking-tight">Overview</h1>
       <div className="ml-auto flex items-center gap-2">
         <FilterSelect
           filter={{

@@ -179,11 +179,11 @@ export const EmptyNoData: Story = {
     await expect(canvas.getByRole('textbox', { name: 'Search features' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Filter' })).toBeVisible()
 
-    // Offered twice on purpose: pinned in the toolbar, where it stays once
-    // rows exist, and again as the empty state's own invitation.
+    // Offered once, pinned in the toolbar where it stays once rows exist; the
+    // empty state says what is missing and does not repeat the button.
     const create = canvas.getAllByRole('button', { name: 'New feature' })
-    await expect(create).toHaveLength(2)
-    for (const button of create) await expect(button).toBeVisible()
+    await expect(create).toHaveLength(1)
+    await expect(create[0]).toBeVisible()
   },
 }
 

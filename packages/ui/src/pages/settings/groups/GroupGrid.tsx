@@ -268,7 +268,6 @@ export function GroupGrid({
         title: 'No groups yet',
         description:
           'A group bundles prices or features so they can be filtered, reported and invoiced together — a product line, a region, a tier.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New group</Button> } : {}),
         guides: GUIDES,
       }}
     />

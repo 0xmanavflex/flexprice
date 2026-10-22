@@ -135,7 +135,8 @@ export const FirstRunTakesTheSlot: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('No features yet')).toBeInTheDocument()
     await expect(canvas.queryByText(/match these filters/)).not.toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'New feature' })).toBeVisible()
+    // The create action is the toolbar's; the empty body does not repeat it.
+    await expect(canvas.queryByRole('button', { name: 'New feature' })).not.toBeInTheDocument()
     // The filter had nothing to do with this, so it is not offered as the fix.
     await expect(canvas.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
   },

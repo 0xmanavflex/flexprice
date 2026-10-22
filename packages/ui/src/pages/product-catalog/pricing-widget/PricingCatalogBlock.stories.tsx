@@ -137,7 +137,9 @@ export const Empty: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('No plans to show yet')).toBeVisible()
-    await userEvent.click(canvas.getAllByRole('button', { name: 'Create plan' })[1]!)
+    // One create button, in the header row; the empty state does not repeat it.
+    await expect(canvas.getAllByRole('button', { name: 'Create plan' })).toHaveLength(1)
+    await userEvent.click(canvas.getByRole('button', { name: 'Create plan' }))
     await expect(args.onCreatePlan).toHaveBeenCalledOnce()
   },
 }

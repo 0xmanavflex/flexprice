@@ -73,7 +73,13 @@ const SUBSCRIPTION: SubscriptionDetail = {
   metadata: { account_manager: 'Priya N', region: 'eu-west' },
   timezone: 'UTC',
   lookupKey: 'acme-scale-2026',
-  commitmentAmount: money('2500', 'USD'),
+  commitment: {
+    amount: money('2500', 'USD'),
+    period: 'MONTHLY',
+    periodCount: 1,
+    overageFactor: 1,
+    trueUp: false,
+  },
   latestInvoice: { id: 'inv_0922', number: 'INV-0922' },
 }
 
@@ -940,7 +946,38 @@ export const ContractDetails: Story = {
     for (const label of ['Collection', 'Time zone', 'Usage this period']) {
       await expect(billing.queryByText(label)).toBeNull()
     }
-    await expect(billing.getByText(/\$2,500\.00/)).toBeVisible()
+    await expect(billing.getByText(/\$2,500\.00 per month/)).toBeVisible()
+    // An overage factor of 1 is the normal rate, so it has no row.
+    await expect(billing.queryByText('Overage factor')).toBeNull()
+    await expect(billing.getByText('True-up')).toBeVisible()
+  },
+}
+
+/**
+ * A contract-level commitment measured over its own period, with an overage
+ * premium and true-up. Set when the contract is created and read-only after,
+ * as the API has no way to change it.
+ */
+export const ContractCommitment: Story = {
+  args: withSubscription({
+    commitment: {
+      amount: money('30000', 'USD'),
+      period: 'ANNUAL',
+      periodCount: 1,
+      overageFactor: 1.2,
+      trueUp: true,
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const billing = within(
+      (await within(canvasElement).findByRole('heading', { name: 'Billing & collection' })).closest(
+        'section',
+      )!,
+    )
+    await expect(billing.getByText(/\$30,000\.00 per year/)).toBeVisible()
+    await expect(billing.getByText('1.2×')).toBeVisible()
+    await expect(billing.getByText('On')).toBeVisible()
+    await expect(billing.queryByRole('button', { name: /edit/i })).toBeNull()
   },
 }
 
@@ -1553,7 +1590,7 @@ export const NoActivityOrMetadata: Story = {
     ...withSubscription({
       metadata: {},
       latestInvoice: null,
-      commitmentAmount: null,
+      commitment: null,
       lookupKey: '',
     }),
     activity: [],

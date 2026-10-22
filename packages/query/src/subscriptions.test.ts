@@ -98,4 +98,21 @@ describe('toSubscriptionFilter', () => {
       ],
     })
   })
+
+  it('sends chosen statuses to the server, and Incomplete asks for drafts too', () => {
+    // The search returns only active subscriptions when no status is given, so
+    // a page-only filter could never find a trialing one.
+    expect(
+      toSubscriptionFilter({
+        ...DEFAULT_SUBSCRIPTION_QUERY,
+        statuses: [SubscriptionStatus.Trialing, SubscriptionStatus.Incomplete],
+      }),
+    ).toMatchObject({ subscriptionStatus: ['trialing', 'incomplete', 'draft'] })
+  })
+
+  it('leaves the status to the server default when none is chosen', () => {
+    expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).not.toHaveProperty(
+      'subscriptionStatus',
+    )
+  })
 })

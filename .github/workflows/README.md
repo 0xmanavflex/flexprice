@@ -85,6 +85,24 @@ own copy of the bundle cannot catch a broken build output, a bad rewrite rule
 or a missing environment variable — which is the whole reason that layer
 exists. Watchtower's CI already works this way and is the model.
 
+## Journey results in Slack
+
+After the journeys run on a push to `main` (after the deploys, through
+`pipeline.yml`) or to `develop`, `e2e.yml` posts one message to Slack: "these
+journeys passed" or "a journey failed", the failing tests by name, every
+`@journey` test with its result, the commit, and a link to the run. It is built
+from Playwright's JSON report by `.github/scripts/e2e-slack-summary.mjs`.
+
+| Secret | Where to find it |
+| --- | --- |
+| `SLACK_E2E_WEBHOOK_URL` | Slack → api.slack.com/apps → your app → Incoming Webhooks → Add New Webhook to Workspace → pick the channel → copy the URL |
+
+Without the secret the step logs a line and exits 0. Pull request runs never
+post, and a failed post only warns.
+
+To preview a message locally, run the script against any JSON report:
+`node .github/scripts/e2e-slack-summary.mjs apps/console/playwright-results.json`.
+
 ## Branch protection
 
 Require these checks: `ESLint and types`, `Unit`, `Stories (browser + a11y)`,

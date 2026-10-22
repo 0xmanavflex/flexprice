@@ -50,9 +50,9 @@ export const EmptyStateProvenance = provenance({
  * What a list offers: the create action, and the copy for its first run.
  *
  * Published by `ListState` and read in two places — `GridToolbar` pins the
- * action at the end of the toolbar, and this component swaps a grid's
- * filtered-miss copy for the first-run copy when the list is empty because
- * nothing has been created yet.
+ * action at the end of the toolbar (its only place), and this component swaps
+ * a grid's filtered-miss copy for the first-run copy when the list is empty
+ * because nothing has been created yet.
  *
  * It is a context rather than a prop because the empty body belongs to the
  * *grid*, several components below the page that knows what creating one
@@ -72,7 +72,7 @@ export interface ListOffer {
   isFirstRun: boolean
   title: string
   description?: string | undefined
-  /** Usually "New thing" — the same node the toolbar pins at its end. */
+  /** Usually "New thing". Only the toolbar draws it, at its end; the empty body never does. */
   action?: ReactNode
   secondaryAction?: ReactNode
 }
@@ -134,9 +134,8 @@ export function EmptyState({
   /*
    * A grid's empty body is written for a filtered miss, because that is the
    * only emptiness a grid can describe. When the page says the list is empty
-   * for the first time instead, its own copy and its create button take that
-   * slot — in place, so the toolbar above and the pagination below stay where
-   * they are. Replacing the whole grid with a page-sized empty state is what
+   * for the first time instead, its own copy takes that slot — in place, so
+   * the toolbar above and the pagination below stay where they are. Replacing the whole grid with a page-sized empty state is what
    * used to happen, and it took the search box and the create button with it.
    */
   const offer = useListOffer()
@@ -145,7 +144,12 @@ export function EmptyState({
   const shown = firstRun ?? { title, description, action, secondaryAction }
   /* A first-run offer is not a filtered miss, whatever slot it renders in. */
   const showsFilterMiss = isFiltered && firstRun === null
-  const actions = showsFilterMiss ? onClearFilters : shown.action
+  /*
+   * A first run says what is missing, not how to fix it: the create action
+   * is the toolbar's, top right, and a second copy in the middle of the table
+   * is the duplicate the console no longer draws.
+   */
+  const actions = showsFilterMiss ? onClearFilters : firstRun ? null : shown.action
 
   return (
     <Empty

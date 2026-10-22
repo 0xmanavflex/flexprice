@@ -122,7 +122,8 @@ export const Loading: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Loading charges')).toBeInTheDocument()
-    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+    // The add action keeps its place in the header, disabled until charges load.
+    await expect(canvas.getByRole('button', { name: 'Add charge' })).toBeDisabled()
   },
 }
 

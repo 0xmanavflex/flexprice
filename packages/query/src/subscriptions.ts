@@ -13,7 +13,7 @@ import {
   type AddContractCoupon,
   BILLING_PERIOD_LABEL,
   BillingModel,
-  type BillingPeriod,
+  BillingPeriod,
   BucketSize as BucketSizes,
   type BucketSize,
   CommitmentKind,
@@ -32,6 +32,7 @@ import {
   type CreateEntitlement,
   type CreateTaxAssociation,
   type CreditGrant,
+  CreditGrantCadence,
   CreditGrantScope,
   type EditContractCharge,
   type EndContractCharge,
@@ -45,6 +46,7 @@ import {
   type Subscription,
   type SubscriptionAddon,
   type SubscriptionCoupon,
+  type ContractCommitment,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
@@ -124,6 +126,9 @@ export interface SubscriptionWire {
   timezone?: string | undefined
   lookupKey?: string | undefined
   commitmentAmount?: string | undefined
+  commitmentDuration?: string | undefined
+  overageFactor?: string | undefined
+  enableTrueUp?: boolean | undefined
   latestInvoice?: { id?: string | undefined; invoiceNumber?: string | undefined } | undefined
 }
 
@@ -159,6 +164,29 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
   }
 }
 
+/**
+ * The contract-level commitment, or null when there is none. The API measures
+ * it over the billing period (every N of them) unless `commitmentDuration`
+ * names a different period, in which case it is one of that period.
+ */
+function toContractCommitment(wire: SubscriptionWire): ContractCommitment | null {
+  if (!wire.commitmentAmount || !(Number(wire.commitmentAmount) > 0)) return null
+  const billingPeriod = wire.billingPeriod as BillingPeriod | undefined
+  const duration =
+    wire.commitmentDuration && wire.commitmentDuration in BILLING_PERIOD_LABEL
+      ? (wire.commitmentDuration as BillingPeriod)
+      : null
+  const ownPeriod = duration !== null && duration !== billingPeriod
+  const overageFactor = Number(wire.overageFactor)
+  return {
+    amount: moneyOr(wire.commitmentAmount, wire.currency),
+    period: ownPeriod ? duration : (billingPeriod ?? BillingPeriod.Monthly),
+    periodCount: ownPeriod ? 1 : (wire.billingPeriodCount ?? 1),
+    overageFactor: Number.isFinite(overageFactor) && overageFactor >= 1 ? overageFactor : 1,
+    trueUp: wire.enableTrueUp ?? false,
+  }
+}
+
 export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail {
   return {
     ...toSubscription(wire),
@@ -175,10 +203,7 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
     trialStart: realDate(wire.trialStart),
     timezone: wire.timezone ?? '',
     lookupKey: wire.lookupKey ?? '',
-    commitmentAmount:
-      wire.commitmentAmount && Number(wire.commitmentAmount) > 0
-        ? moneyOr(wire.commitmentAmount, wire.currency)
-        : null,
+    commitment: toContractCommitment(wire),
     latestInvoice: wire.latestInvoice?.id
       ? {
           id: wire.latestInvoice.id,
@@ -441,12 +466,23 @@ const SORT_FIELD: Record<SubscriptionSortField, string> = {
  * nothing, which is the failure this comment exists to prevent. `plan` is named
  * explicitly rather than relied on as a default.
  */
+function toWireStatuses(statuses: readonly SubscriptionStatus[]): string[] {
+  return statuses.flatMap((status) =>
+    status === SubscriptionStatus.Incomplete ? [status, 'draft'] : [status],
+  )
+}
+
 export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'customer,plan',
+    // Status goes to the server: it returns only active subscriptions when no
+    // status is given, so filtering on the page alone could never find a
+    // trialing one. Incomplete also asks for the API's `draft`, which the
+    // domain shows as Incomplete. No status chosen keeps the server's default.
+    ...(query.statuses.length > 0 ? { subscriptionStatus: toWireStatuses(query.statuses) } : {}),
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
       : {}),
@@ -472,8 +508,9 @@ export async function fetchSubscriptions(
     toSubscription(item as SubscriptionWire),
   )
 
-  // Neither status nor search is a server-side filter here, so both are applied
-  // on the page — the same split coupons and add-ons use.
+  // Search is not a server-side filter, so it is applied on the page. Status is
+  // re-checked here too, which keeps the page's filter exact while the server
+  // narrows the fetch.
   const term = query.search.trim().toLowerCase()
   const filtered = subscriptions.filter((subscription) => {
     const matchesStatus =
@@ -818,6 +855,9 @@ export function useCreateSubscription() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+      // A contract that starts now bills its in-advance charges at once, so the
+      // customer's invoice list has a new row the cached page does not.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
     },
   })
 }
@@ -1644,21 +1684,36 @@ export function useCreateSubscriptionEntitlement(subscriptionId: string) {
   })
 }
 
+/**
+ * When a grant added to a running contract starts. The API requires a
+ * `start_date` for subscription-scoped grants and the dialog has no date, so
+ * it is set as V1 sets it: a recurring grant starts at the end of the current
+ * period, so it refreshes on the contract's own cycle; a one-time grant is
+ * issued now.
+ */
+export function subscriptionGrantStart(
+  draft: Pick<CreateCreditGrant, 'cadence'>,
+  currentPeriodEnd: Date | null | undefined,
+  now: Date = new Date(),
+): Date {
+  return draft.cadence === CreditGrantCadence.Recurring && currentPeriodEnd ? currentPeriodEnd : now
+}
+
 /** Grant this contract credits of its own — `POST /creditgrants`, scoped to the subscription. */
-export function useCreateSubscriptionCreditGrant(subscriptionId: string) {
+export function useCreateSubscriptionCreditGrant(
+  subscriptionId: string,
+  currentPeriodEnd?: Date | null,
+) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (draft: CreateCreditGrant) =>
       call(() =>
-        client.creditGrants.createCreditGrant(
-          toCreditGrantRequest(
-            draft,
-            CreditGrantScope.Subscription,
-            subscriptionId,
-          ) as FlexpriceModels.CreateCreditGrantRequest,
-        ),
+        client.creditGrants.createCreditGrant({
+          ...toCreditGrantRequest(draft, CreditGrantScope.Subscription, subscriptionId),
+          startDate: subscriptionGrantStart(draft, currentPeriodEnd),
+        } as FlexpriceModels.CreateCreditGrantRequest),
       ),
     onSuccess: () => {
       invalidateContract(queryClient)

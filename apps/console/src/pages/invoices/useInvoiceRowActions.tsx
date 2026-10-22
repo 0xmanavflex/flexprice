@@ -11,7 +11,6 @@ import {
   CreditCardIcon,
   ExternalLinkIcon,
   FileMinusIcon,
-  LinkIcon,
   RefreshCwIcon,
   SendIcon,
   UserIcon,
@@ -33,7 +32,7 @@ export interface InvoiceRowActionOptions {
 /**
  * V1's invoice row menu, offered only where the invoice's status allows it —
  * shared by the invoice list and a customer's Invoices tab. Past draft, it
- * also opens or copies the invoice's hosted link.
+ * also opens the invoice's hosted link (the invoice page copies it).
  *
  * Each one-click action reports in a toast, so the page must render a
  * `Toaster`; voiding is confirmed first, in the dialog returned as `dialogs`.
@@ -113,20 +112,12 @@ export function useInvoiceRowActions({
     }
     // The link the customer receives: issued once an invoice is finalized.
     if (invoice.status !== InvoiceStatus.Draft) {
-      items.push(
-        {
-          label: 'Open hosted invoice',
-          icon: <ExternalLinkIcon aria-hidden className="size-4" />,
-          readOnly: true,
-          onSelect: () => void hostedLink.open(invoice.id),
-        },
-        {
-          label: 'Copy hosted invoice link',
-          icon: <LinkIcon aria-hidden className="size-4" />,
-          readOnly: true,
-          onSelect: () => void hostedLink.copy(invoice.id),
-        },
-      )
+      items.push({
+        label: 'Open hosted invoice',
+        icon: <ExternalLinkIcon aria-hidden className="size-4" />,
+        readOnly: true,
+        onSelect: () => void hostedLink.open(invoice.id),
+      })
     }
     if (onOpenCustomer && invoice.customerId) {
       items.push({

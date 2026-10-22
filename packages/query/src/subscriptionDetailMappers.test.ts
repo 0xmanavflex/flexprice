@@ -78,9 +78,51 @@ describe('subscription detail additions', () => {
       lookupKey: 'acme-pro',
       latestInvoice: { id: 'inv_1', invoiceNumber: 'INV-0001' },
     })
-    expect(detail.commitmentAmount).toEqual({ amount: '500.00', currency: 'USD' })
+    expect(detail.commitment).toEqual({
+      amount: { amount: '500.00', currency: 'USD' },
+      period: 'MONTHLY',
+      periodCount: 1,
+      overageFactor: 1,
+      trueUp: false,
+    })
     expect(detail.latestInvoice).toEqual({ id: 'inv_1', number: 'INV-0001' })
     expect(detail.lookupKey).toBe('acme-pro')
+  })
+
+  it('reads the overage factor, true-up and a commitment period of its own', () => {
+    const detail = toSubscriptionDetail({
+      currency: 'usd',
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 1,
+      commitmentAmount: '30000',
+      commitmentDuration: 'ANNUAL',
+      overageFactor: '1.2',
+      enableTrueUp: true,
+    })
+    expect(detail.commitment).toEqual({
+      amount: { amount: '30000', currency: 'USD' },
+      period: 'ANNUAL',
+      periodCount: 1,
+      overageFactor: 1.2,
+      trueUp: true,
+    })
+  })
+
+  it('measures a commitment with no period of its own over the billing period', () => {
+    const quarterly = toSubscriptionDetail({
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 3,
+      commitmentAmount: '900',
+    })
+    expect(quarterly.commitment).toMatchObject({ period: 'MONTHLY', periodCount: 3 })
+    // A duration equal to the billing period is the billing period, count and all.
+    const same = toSubscriptionDetail({
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 3,
+      commitmentAmount: '900',
+      commitmentDuration: 'MONTHLY',
+    })
+    expect(same.commitment).toMatchObject({ period: 'MONTHLY', periodCount: 3 })
   })
 
   it('keeps a latest invoice with no number', () => {
@@ -91,8 +133,9 @@ describe('subscription detail additions', () => {
   })
 
   it('treats a zero or absent commitment and invoice as none', () => {
-    const detail = toSubscriptionDetail({ commitmentAmount: '0' })
-    expect(detail.commitmentAmount).toBeNull()
+    const detail = toSubscriptionDetail({ commitmentAmount: '0', overageFactor: '1.5' })
+    expect(detail.commitment).toBeNull()
+    expect(toSubscriptionDetail({ overageFactor: '1', enableTrueUp: false }).commitment).toBeNull()
     expect(detail.latestInvoice).toBeNull()
   })
 })

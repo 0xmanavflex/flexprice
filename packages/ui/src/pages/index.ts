@@ -334,6 +334,15 @@ export type { SetPasswordFormProps } from './auth/SetPasswordForm'
 export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/AcceptInvitationForm'
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './settings/environments/EnvironmentForm'
+export {
+  EnvironmentCopyForm,
+  EnvironmentCopyFormProvenance,
+} from './settings/environments/EnvironmentCopyForm'
+export type {
+  CopyableEnvironment,
+  EnvironmentCopyFormProps,
+  EnvironmentCopyTarget,
+} from './settings/environments/EnvironmentCopyForm'
 export type {
   EnvironmentContact,
   EnvironmentFormProps,
@@ -473,6 +482,14 @@ export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
 export { CustomerTaxSection } from './customers/CustomerTaxSection'
 export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
+export {
+  CustomerEntitlementUsage,
+  CustomerEntitlementUsageProvenance,
+} from './customers/CustomerEntitlementUsage'
+export type {
+  CustomerEntitlementUsageProps,
+  CustomerEntitlementUsageRow,
+} from './customers/CustomerEntitlementUsage'
 export { CustomerUsageSummary } from './customers/CustomerUsageSummary'
 export type {
   CustomerUsageSummaryProps,

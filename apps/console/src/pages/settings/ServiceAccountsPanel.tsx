@@ -24,6 +24,7 @@ import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
   PanelError,
+  PanelActions,
   PanelFirstRun,
   SettingsTable,
   WidePanel,
@@ -69,25 +70,27 @@ export function ServiceAccountsPanel() {
     )
   }
 
-  // Laid out exactly as API keys' first run: the empty state alone, centred in
-  // the page body, carrying the only create button.
+  // Laid out exactly as API keys' first run: the empty state centred in the
+  // page body, under the same top-right create button the table has.
   const firstRun = !accounts.isPending && rows.length === 0
 
   return (
     <WidePanel fill={firstRun}>
       <h1 className="sr-only">Service accounts</h1>
       {firstRun ? (
-        <PanelFirstRun
-          scene="developers"
-          title="No service accounts yet"
-          description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
-          action={
+        <>
+          <PanelActions>
             <WriteGate entity={RBAC_ENTITY.User}>
               <Button onClick={() => setIsCreating(true)}>New service account</Button>
             </WriteGate>
-          }
-          docsHref={SERVICE_ACCOUNT_DOCS_URL}
-        />
+          </PanelActions>
+          <PanelFirstRun
+            scene="developers"
+            title="No service accounts yet"
+            description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
+            docsHref={SERVICE_ACCOUNT_DOCS_URL}
+          />
+        </>
       ) : (
         <SettingsTable<Member>
           label="Service accounts"

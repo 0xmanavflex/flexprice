@@ -73,7 +73,9 @@ export function Section({
     return (
       <section aria-labelledby={id} className={cn('flex flex-col gap-3', className)}>
         {showTitle ? (
-          <div className="flex items-start justify-between gap-4">
+          // Centred, so the title reads on the line of the button beside it rather
+          // than hanging at the top of a row the 32px button makes taller.
+          <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-3">
                 <Heading id={id} className="text-sm font-medium">
@@ -116,7 +118,7 @@ export function Section({
           {title}
         </Heading>
       ) : (
-        <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
+        <div className="flex items-center justify-between gap-4 border-b px-6 py-4">
           <div className="min-w-0 space-y-0.5">
             <Heading id={id} className="text-sm font-medium">
               {title}
@@ -125,8 +127,11 @@ export function Section({
               <p className="text-muted-foreground text-[13px]">{description}</p>
             ) : null}
           </div>
+          {/* `-my-1.5` takes back the button's extra height over the title's line,
+              so a header is the same height with or without an action and its
+              button sits centred on the title. */}
           {headerAction ? (
-            <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
+            <div className="-my-1.5 flex shrink-0 items-center gap-2">{headerAction}</div>
           ) : null}
         </div>
       )}
@@ -173,7 +178,7 @@ export function Panel({
       className={cn('bg-muted/40 flex flex-col rounded-xl border p-1', className)}
     >
       {title || action ? (
-        <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-4">
+        <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-4">
           <div className="space-y-0.5">
             {title ? (
               <Heading id={titleId} className="flex items-center gap-1.5 text-sm font-medium">

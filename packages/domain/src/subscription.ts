@@ -597,6 +597,44 @@ export function emptySubscription(): CreateSubscription {
   }
 }
 
+/**
+ * The contract-level commitment: a minimum spend per commitment period, set
+ * when the contract is created. It is separate from the commitments a usage
+ * charge carries, and the API has no way to change it afterwards.
+ */
+export interface ContractCommitment {
+  /** The minimum spend per commitment period. */
+  amount: Money
+  /** The period the minimum is measured over. */
+  period: BillingPeriod
+  /** How many of that period, when the contract bills every few months. */
+  periodCount: number
+  /** Multiplier on spend beyond the minimum; 1 is the normal rate. */
+  overageFactor: number
+  /** Bill the shortfall when spend stays under the minimum. */
+  trueUp: boolean
+}
+
+const COMMITMENT_PERIOD_NOUN: Record<BillingPeriod, [one: string, many: string]> = {
+  [BillingPeriod.Daily]: ['day', 'days'],
+  [BillingPeriod.Weekly]: ['week', 'weeks'],
+  [BillingPeriod.Monthly]: ['month', 'months'],
+  [BillingPeriod.Quarterly]: ['quarter', 'quarters'],
+  [BillingPeriod.HalfYearly]: ['half-year', 'half-years'],
+  [BillingPeriod.Annual]: ['year', 'years'],
+  [BillingPeriod.OneTime]: ['contract', 'contracts'],
+}
+
+/**
+ * The commitment period as "month", "year", "2 weeks" — what follows "per".
+ * Twelve months reads as a year, as the old console wrote it.
+ */
+export function commitmentPeriodNoun(period: BillingPeriod, count = 1): string {
+  if (period === BillingPeriod.Monthly && count === 12) return 'year'
+  const [one, many] = COMMITMENT_PERIOD_NOUN[period]
+  return count > 1 ? `${count} ${many}` : one
+}
+
 /** The detail read model: the list row plus what the detail page adds. */
 export interface SubscriptionDetail extends Subscription {
   /** The API's billing period, which a new charge on this contract must match. */
@@ -614,8 +652,8 @@ export interface SubscriptionDetail extends Subscription {
   timezone: string
   /** The caller's own key for this contract, when it set one. */
   lookupKey: string
-  /** The minimum spend the contract commits to per period; null when it has none. */
-  commitmentAmount: Money | null
+  /** The minimum spend the contract commits to; null when it has none. */
+  commitment: ContractCommitment | null
   /** The most recent invoice, as a link target. */
   latestInvoice: { id: string; number: string } | null
 }

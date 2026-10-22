@@ -13,6 +13,7 @@ import { DetailShell } from '../../../compositions/detail/DetailShell'
 import { ActivitySection } from '../../../compositions/detail/ActivityLog'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../../compositions/detail/RelatedCard'
+import { TotalRow, TotalsList } from '../../../compositions/detail/DetailKit'
 import { Pill } from '../../shared/cells'
 import { creditNoteChips, settlementNote, type CreditNoteDocument } from './creditNoteDocument'
 
@@ -36,6 +37,7 @@ export const CreditNoteDetailViewProvenance = provenance({
     'compositions/MetadataCard',
     'compositions/RelatedCard',
     'compositions/ActivityLog',
+    'compositions/detail-kit',
   ],
   note: 'Credit memo detail: DetailShell header with status chips, the memo document with invoiced-vs-credited lines and a settlement footer, and an Activity, Metadata, Related rail.',
 })
@@ -260,24 +262,23 @@ export function CreditNoteDetailView({
           </div>
 
           <div className="mx-8 flex justify-end border-t py-6">
-            <dl className="w-full max-w-xs space-y-2.5 text-[13px]">
+            <TotalsList>
               {document.invoiceTotal !== undefined ? (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">Invoice total</dt>
-                  <dd className="tabular-nums">{money(document.invoiceTotal)}</dd>
-                </div>
+                <TotalRow label="Invoice total" value={money(document.invoiceTotal)} />
               ) : null}
-              <div className="flex justify-between gap-4 border-t pt-3 text-base font-medium">
-                <dt>Total credited</dt>
-                <dd className="tabular-nums">{money(document.amount)}</dd>
-              </div>
+              <TotalRow
+                label="Total credited"
+                value={money(document.amount)}
+                emphasis="due"
+                rule
+              />
               {document.invoiceAmountDue !== undefined ? (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">Current invoice amount due</dt>
-                  <dd className="tabular-nums">{money(document.invoiceAmountDue)}</dd>
-                </div>
+                <TotalRow
+                  label="Current invoice amount due"
+                  value={money(document.invoiceAmountDue)}
+                />
               ) : null}
-            </dl>
+            </TotalsList>
           </div>
 
           {/*

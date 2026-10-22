@@ -164,14 +164,9 @@ export function SettingsTable<T extends object>({
   empty: ReactNode
   facet?: { label: string; value: (row: T) => string }
 }) {
-  // With no rows the empty state carries the create button itself, so the
-  // toolbar does not offer it a second time above it.
-  const firstRun = !isLoading && rows.length === 0
-  const toolbarAction = firstRun ? undefined : action && hint ? (
-    <DelayedHint text={hint}>{action}</DelayedHint>
-  ) : (
-    action
-  )
+  // The create action stays at the top right with or without rows; the empty
+  // state under it says what the table is for and does not repeat the button.
+  const toolbarAction = action && hint ? <DelayedHint text={hint}>{action}</DelayedHint> : action
   return (
     <DetailTable<T>
       // Flush with the content column: the settings rail is the frame.
@@ -213,24 +208,27 @@ export function WidePanel({ children, fill = false }: { children: ReactNode; fil
   )
 }
 
+/** A panel's create action: top right, whether the panel has rows or not. */
+export function PanelActions({ children }: { children: ReactNode }) {
+  return <div className="flex justify-end gap-2">{children}</div>
+}
+
 /**
  * A panel with nothing in it yet: the shared `EmptyState` at page size, centred
- * in the page body, with the create button and a link to the docs. Render it
- * *instead of* the panel's list and toolbar, so the create action is offered
- * once, and inside `<WidePanel fill>` so it has a height to centre in.
+ * in the page body, with a link to the docs. Render it *instead of* the
+ * panel's list, under the same top-right create action the list has (see
+ * `PanelActions`), and inside `<WidePanel fill>` so it has a height to centre in.
  */
 export function PanelFirstRun({
   scene = 'settings',
   title,
   description,
-  action,
   docsHref,
   docsLabel = 'Read the docs',
 }: {
   scene?: EmptyScene
   title: string
   description: string
-  action: ReactNode
   docsHref?: string
   docsLabel?: string
 }) {
@@ -240,7 +238,6 @@ export function PanelFirstRun({
       scene={scene}
       title={title}
       description={description}
-      action={action}
       {...(docsHref
         ? {
             secondaryAction: (

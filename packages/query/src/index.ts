@@ -49,6 +49,7 @@ export type { FlexpriceProviderProps } from './provider'
 
 export {
   toEnvironment,
+  useCopyEnvironment,
   useCreateEnvironment,
   useCurrentUser,
   useEnvironmentList,
@@ -58,7 +59,7 @@ export {
   useSignUp,
   useSignUpWithToken,
 } from './session'
-export type { CurrentUser, RenameEnvironment, SessionCredentials } from './session'
+export type { CopyEnvironment, CurrentUser, RenameEnvironment, SessionCredentials } from './session'
 
 export { PASSWORD_ONLY, useAuthCapabilities, useAuthCapabilitiesValue } from './authCapabilities'
 export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
@@ -695,3 +696,4 @@ export type { PortalAction, PortalQuery } from './customerPortal'
 export type { PortalAuth } from '@fp/api'
 export { useCreateCustomerPortalSession } from './customerPortalSession'
 export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'
+export { usePushCustomerToIntegrations } from './integrationSync'
