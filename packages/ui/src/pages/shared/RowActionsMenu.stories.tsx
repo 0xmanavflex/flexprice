@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/components/primitives/table'
+import { CopyIcon } from '@ui/icons'
 import { RowActionsMenu } from './RowActionsMenu'
 
 const meta = {
@@ -160,5 +161,28 @@ export const InATable: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getAllByRole('button', { name: /^Actions for / })).toHaveLength(3)
     await expect(canvas.getByRole('button', { name: 'Actions for Seats' })).toBeVisible()
+  },
+}
+
+/** Every item leads with an icon, so the labels line up: Edit, the row's own items and the destructive one. */
+export const EveryItemHasAnIcon: Story = {
+  args: {
+    extra: [
+      {
+        label: 'Copy ID',
+        icon: <CopyIcon aria-hidden />,
+        readOnly: true,
+        onSelect: fn(),
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: 'Actions for API calls' }),
+    )
+    const items = await screen.findAllByRole('menuitem')
+    await expect(items.map((item) => item.textContent)).toEqual(['Edit', 'Copy ID', 'Remove'])
+    for (const item of items) await expect(item.querySelector('svg')).not.toBeNull()
+    await userEvent.keyboard('{Escape}')
   },
 }

@@ -12,6 +12,7 @@ import {
   PlusIcon,
   PuzzleIcon,
   ReceiptIcon,
+  RotateCcwIcon,
   ScaleIcon,
   Settings2Icon,
   TicketPercentIcon,
@@ -1572,6 +1573,7 @@ function ChargesTable({
           <DropdownMenuContent align="end" className="min-w-52">
             {row.kind === 'extra' ? (
               <DropdownMenuItem variant="destructive" onClick={() => onRemoveExtra(row.index)}>
+                <Trash2Icon aria-hidden />
                 Remove charge
               </DropdownMenuItem>
             ) : (
@@ -1598,6 +1600,7 @@ function ChargesTable({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => onReset(row.charge.id)}>
+                      <RotateCcwIcon aria-hidden />
                       Reset to plan
                     </DropdownMenuItem>
                   </>
