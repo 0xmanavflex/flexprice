@@ -270,7 +270,11 @@ const connectionRows: Record<string, unknown>[] = [
     provider_type: 'stripe',
     connection_status: 'published',
     metadata: {},
-    sync_config: { invoice: { outbound: true }, payment: { inbound: true } },
+    sync_config: {
+      customer: { outbound: true },
+      invoice: { outbound: true },
+      payment: { inbound: true },
+    },
     created_at: '2026-08-12T09:30:00Z',
   },
   { id: 'conn_qb', name: 'QuickBooks', provider_type: 'quickbooks', connection_status: 'draft' },
@@ -4480,6 +4484,21 @@ export const handlers = [
       : []
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
   }),
+  // V1's "Push to Integration": the API queues the sync and answers at once.
+  http.post(`${BASE}/integrations/sync`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      entity_type?: string
+      entity_id?: string
+    }
+    if (!body.entity_type || !body.entity_id) {
+      return HttpResponse.json(
+        { code: 'validation_error', message: 'entity_type and entity_id are required' },
+        { status: 400 },
+      )
+    }
+    return HttpResponse.json({ message: 'sync triggered' })
+  }),
+
   http.post(`${BASE}/integrations/link`, async ({ request }) => {
     const body = await readBody(request)
     const customerId = String(body['entity_id'] ?? '')

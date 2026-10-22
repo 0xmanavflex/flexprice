@@ -9,6 +9,7 @@ import {
   PlusIcon,
   ReceiptIcon,
   RocketIcon,
+  UploadIcon,
   WalletIcon,
 } from '@ui/icons'
 import {
@@ -109,6 +110,12 @@ export interface CustomerDetailProps {
   onOpenPortal?: () => void
   /** Adds "Copy portal link" to the header menu. */
   onCopyPortalLink?: () => void
+  /**
+   * Adds "Push to {providers}" to the header menu (V1's "Push to Integration"):
+   * writes the customer to every provider that syncs customers outbound,
+   * creating them there when unmapped. Omitted when no provider does.
+   */
+  pushToIntegrations?: { providers: string; onPush: () => void }
   /**
    * Adds "Stream sample events" to the header menu: the backend generates a
    * minute of usage events for one of this customer's subscriptions. Omitted
@@ -216,6 +223,7 @@ export function CustomerDetail({
   onArchive,
   onOpenPortal,
   onCopyPortalLink,
+  pushToIntegrations,
   onStreamEvents,
   onUpdateField,
   onUpdateMetadata,
@@ -314,6 +322,17 @@ export function CustomerDetail({
             label: 'Copy portal link',
             icon: <LinkIcon className="text-muted-foreground" aria-hidden="true" />,
             onSelect: onCopyPortalLink,
+          },
+        ]
+      : []),
+    ...(pushToIntegrations
+      ? [
+          {
+            id: 'push-to-integrations',
+            label: `Push to ${pushToIntegrations.providers}`,
+            icon: <UploadIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: pushToIntegrations.onPush,
+            entity: RBAC_ENTITY.Integration,
           },
         ]
       : []),

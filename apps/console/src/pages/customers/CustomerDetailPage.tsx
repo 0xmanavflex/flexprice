@@ -7,6 +7,7 @@ import {
   useIntegrations,
   useLinkCustomerIntegration,
   useUnlinkCustomerIntegration,
+  usePushCustomerToIntegrations,
   useCustomerInvoices,
   useCustomerPayments,
   useCustomerSubscriptions,
@@ -82,6 +83,11 @@ export function CustomerDetailPage({
   const integrations = useIntegrations()
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
+  const pushCustomer = usePushCustomerToIntegrations(customerId)
+  // The providers a push reaches: connected, with customer sync on outbound.
+  const pushTargets = (integrations.data ?? [])
+    .filter((integration) => integration.connection?.syncConfig.customer?.outbound)
+    .map((integration) => integration.name)
   const externalId = customer.data?.externalId ?? ''
   const subscriptions = useCustomerSubscriptions(externalId)
   const invoices = useCustomerInvoices(externalId)
@@ -183,6 +189,24 @@ export function CustomerDetailPage({
         onEdit={() => onEdit(customer.data.id)}
         onArchive={() => setArchiving(true)}
         onCopyPortalLink={() => void portal.copy({ externalId: customer.data?.externalId })}
+        {...(pushTargets.length > 0
+          ? {
+              pushToIntegrations: {
+                providers: pushTargets.join(', '),
+                onPush: () =>
+                  pushCustomer.mutate(undefined, {
+                    onSuccess: () =>
+                      toast.success(`Pushing customer to ${pushTargets.join(', ')}`, {
+                        description: 'The provider record is created or updated in the background.',
+                      }),
+                    onError: (cause) =>
+                      toast.error(
+                        cause instanceof Error ? cause.message : 'Could not push this customer.',
+                      ),
+                  }),
+              },
+            }
+          : {})}
         {...(streamTarget && !sampleEvents.isPending
           ? { onStreamEvents: () => streamEvents(streamTarget.id, streamTarget.planName) }
           : {})}

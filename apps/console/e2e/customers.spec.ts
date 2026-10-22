@@ -193,4 +193,16 @@ test.describe('a customer detail page', () => {
     await refresh.click()
     await reread
   })
+
+  test('pushes the customer to Stripe from the header menu', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('button', { name: 'Customer actions' }).click()
+    const sync = page.waitForRequest(
+      (request) => request.url().endsWith('/integrations/sync') && request.method() === 'POST',
+    )
+    await page.getByRole('menuitem', { name: 'Push to Stripe' }).click()
+    const body = (await sync).postDataJSON() as Record<string, unknown>
+    expect(body).toMatchObject({ entity_type: 'customer', method: 'push' })
+    await expect(page.getByText('Pushing customer to Stripe')).toBeVisible()
+  })
 })
