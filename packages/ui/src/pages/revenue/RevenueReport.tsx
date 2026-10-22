@@ -564,7 +564,7 @@ export function RevenueReport(props: RevenueReportProps) {
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-lg font-medium tracking-tight">{props.title ?? 'Revenue'}</h1>
+        <h1 className="text-xl font-medium tracking-tight">{props.title ?? 'Revenue'}</h1>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <FilterSelect
             filter={{

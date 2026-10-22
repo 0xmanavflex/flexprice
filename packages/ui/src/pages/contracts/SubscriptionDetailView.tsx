@@ -68,6 +68,8 @@ import {
   DetailTabs,
   OverviewTiles,
   Properties,
+  TotalRow,
+  TotalsList,
 } from '../../compositions/detail/DetailKit'
 import { ActivitySection, type ActivityLogEntry } from '../../compositions/detail/ActivityLog'
 import { ChargeSheet } from '../product-catalog/charges/ChargeSheet'
@@ -108,6 +110,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     '@reui/alert',
     '@reui/badge',
     'compositions/ActivityLog',
+    'compositions/detail-kit',
   ],
   note: 'Contract detail (read-only): DetailShell header with every action in More, four tabs (Overview, Charges, Usage, Invoices) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners lead the Overview tab, then side-by-side Contract and Billing & collection panels, the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes.',
 })
@@ -1713,7 +1716,7 @@ function InvoicePreviewSection({
             </div>
           ) : null}
           <div className="flex justify-end border-t px-6 py-4">
-            <dl className="flex w-full flex-col gap-2 text-sm sm:w-72">
+            <TotalsList>
               <TotalRow label="Subtotal" value={formatMoney(value.subtotal)} />
               {!isZero(value.discount) ? (
                 <TotalRow label="Discount" value={deduction(value.discount)} />
@@ -1722,13 +1725,13 @@ function InvoicePreviewSection({
               {!isZero(value.prepaidCredits) ? (
                 <TotalRow label="Prepaid credits" value={deduction(value.prepaidCredits)} />
               ) : null}
-              <div className="mt-1 flex items-baseline justify-between gap-4 border-t pt-3">
-                <dt className="text-foreground font-medium">Amount due</dt>
-                <dd className="text-foreground text-base font-medium tabular-nums">
-                  {formatMoney(value.amountDue)}
-                </dd>
-              </div>
-            </dl>
+              <TotalRow
+                label="Amount due"
+                value={formatMoney(value.amountDue)}
+                emphasis="due"
+                rule
+              />
+            </TotalsList>
           </div>
           <p className="text-muted-foreground border-t px-6 py-3 text-xs">
             {value.periodEnd
@@ -1739,15 +1742,6 @@ function InvoicePreviewSection({
         </>
       )}
     </PartSection>
-  )
-}
-
-function TotalRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-muted-foreground font-normal">{label}</dt>
-      <dd className="text-foreground tabular-nums">{value}</dd>
-    </div>
   )
 }
 

@@ -34,7 +34,7 @@ import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
 import { DetailShell } from '../../../compositions/detail/DetailShell'
 import { ActivitySection } from '../../../compositions/detail/ActivityLog'
-import { DetailTabs } from '../../../compositions/detail/DetailKit'
+import { DetailTabs, TotalRow, TotalsList } from '../../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../../compositions/detail/RelatedCard'
 import { Section } from '../../../compositions/layout/Section'
@@ -65,6 +65,7 @@ export const InvoiceDetailViewProvenance = provenance({
     'compositions/RelatedCard',
     'compositions/ActivityLog',
     'compositions/SubTabState',
+    'compositions/detail-kit',
     'ui/spinner',
     '@reui/badge',
   ],
@@ -719,22 +720,16 @@ function InvoiceDocumentArticle({
       </div>
 
       <div className="mx-8 flex justify-end border-t py-6">
-        <dl className="w-full max-w-xs space-y-2.5 text-[13px]">
-          <Total label="Subtotal" value={money(totals.subtotal)} />
+        <TotalsList>
+          <TotalRow label="Subtotal" value={money(totals.subtotal)} />
           {invoice.prepaidCredits ? (
-            <Total label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
+            <TotalRow label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
           ) : null}
-          <Total label="Tax" value={money(invoice.tax)} />
-          <div className="flex justify-between border-t pt-3 text-sm font-medium">
-            <dt>Total</dt>
-            <dd className="tabular-nums">{money(totals.total)}</dd>
-          </div>
-          {invoice.paid > 0 ? <Total label="Paid" value={`− ${money(invoice.paid)}`} /> : null}
-          <div className="flex justify-between text-base font-medium">
-            <dt>Amount due</dt>
-            <dd className="tabular-nums">{money(totals.due)}</dd>
-          </div>
-        </dl>
+          <TotalRow label="Tax" value={money(invoice.tax)} />
+          <TotalRow label="Total" value={money(totals.total)} emphasis="total" rule />
+          {invoice.paid > 0 ? <TotalRow label="Paid" value={`− ${money(invoice.paid)}`} /> : null}
+          <TotalRow label="Amount due" value={money(totals.due)} emphasis="due" />
+        </TotalsList>
       </div>
 
       {isDraft ? null : (
@@ -816,11 +811,3 @@ function PartyTag({ children }: { children: ReactNode }) {
   )
 }
 
-function Total({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
-    </div>
-  )
-}

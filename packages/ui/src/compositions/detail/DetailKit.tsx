@@ -336,6 +336,53 @@ export function SummaryRow({
   )
 }
 
+/**
+ * The money column under a document's lines (an invoice, a credit memo, an
+ * upcoming-invoice preview, the invoice composer): label left, figure right,
+ * one type size for every row so the same block reads the same on every page.
+ * The caller places it (`ml-auto`, a flex end).
+ */
+export function TotalsList({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <dl className={cn('flex w-full max-w-xs flex-col gap-2.5 text-sm', className)}>{children}</dl>
+  )
+}
+
+/**
+ * One row of a `TotalsList`.
+ * - plain: muted label, figure in the body colour.
+ * - `emphasis="total"`: label and figure in medium, e.g. "Total" before payments.
+ * - `emphasis="due"`: the figure the document is about ("Amount due", "Total
+ *   credited"): medium, and the figure one step larger.
+ * - `rule`: a hairline above the row, closing the sum above it.
+ */
+export function TotalRow({
+  label,
+  value,
+  emphasis,
+  rule = false,
+}: {
+  label: ReactNode
+  value: ReactNode
+  emphasis?: 'total' | 'due'
+  rule?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-baseline justify-between gap-4',
+        rule && 'mt-0.5 border-t pt-3',
+        emphasis && 'font-medium',
+      )}
+    >
+      <dt className={emphasis ? 'text-foreground' : 'text-muted-foreground'}>{label}</dt>
+      <dd className={cn('text-foreground tabular-nums', emphasis === 'due' && 'text-base')}>
+        {value}
+      </dd>
+    </div>
+  )
+}
+
 export interface OverviewTile {
   label: string
   value: ReactNode

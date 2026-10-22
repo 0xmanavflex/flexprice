@@ -1136,6 +1136,8 @@
         "SubscriptionStatusPill",
         "SummaryCell",
         "SummaryRow",
+        "TotalRow",
+        "TotalsList",
         "UpgradeView"
       ],
       "story": null
@@ -1691,6 +1693,8 @@
         "SummaryCell",
         "SummaryRow",
         "TaxRateGrid",
+        "TotalRow",
+        "TotalsList",
         "UsageSyncGrid",
         "WebhookEndpointDetail",
         "WebhookEndpointGrid",
@@ -1929,7 +1933,9 @@
         "DetailShell",
         "MetadataCard",
         "Pill",
-        "RelatedCard"
+        "RelatedCard",
+        "TotalRow",
+        "TotalsList"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/credit-notes/CreditNoteDetailView.stories.tsx"
@@ -4228,6 +4234,8 @@
         "Section",
         "Status",
         "SubTabState",
+        "TotalRow",
+        "TotalsList",
         "WalletIcon"
       ],
       "usedBy": [],
@@ -4241,10 +4249,11 @@
         "ConfirmDialog",
         "DateInput",
         "Field",
-        "InvoiceSection",
         "LabelWithHint",
         "OptionSelect",
-        "PlusIcon"
+        "PlusIcon",
+        "TotalRow",
+        "TotalsList"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/invoices/InvoiceForm.stories.tsx"
@@ -4288,9 +4297,7 @@
       "file": "src/components/blocks/form-3/components/invoice-section.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "InvoiceForm"
-      ],
+      "usedBy": [],
       "story": null
     },
     "InvoiceStatusBadge": {
@@ -4650,7 +4657,9 @@
         "ShellCreateMenu",
         "SimpleTable",
         "SplitMeter",
-        "SummaryRow"
+        "SummaryRow",
+        "TotalRow",
+        "TotalsList"
       ],
       "story": "./src/compositions/access/Access.stories.tsx"
     },
@@ -6511,8 +6520,8 @@
       "story": "./src/pages/auth/SetPasswordForm.stories.tsx"
     },
     "SettingRow": {
-      "file": "src/components/blocks/settings-7/components/setting-row.tsx",
-      "layer": "vendor/blocks",
+      "file": "src/compositions/layout/settingsSurface.tsx",
+      "layer": "composition",
       "composes": [],
       "usedBy": [
         "UsageBillingView"
@@ -7055,6 +7064,8 @@
         "Section",
         "SectionEmpty",
         "SubscriptionStatusBadge",
+        "TotalRow",
+        "TotalsList",
         "WriteGate"
       ],
       "usedBy": [],
@@ -7437,6 +7448,38 @@
       "composes": [],
       "usedBy": [],
       "story": "./src/compositions/tables/Toolbar.stories.tsx"
+    },
+    "TotalRow": {
+      "file": "src/compositions/detail/DetailKit.tsx",
+      "layer": "composition",
+      "composes": [
+        "CheckIcon",
+        "CopyIcon",
+        "LockedMark"
+      ],
+      "usedBy": [
+        "CreditNoteDetailView",
+        "InvoiceDetailView",
+        "InvoiceForm",
+        "SubscriptionDetailView"
+      ],
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
+    "TotalsList": {
+      "file": "src/compositions/detail/DetailKit.tsx",
+      "layer": "composition",
+      "composes": [
+        "CheckIcon",
+        "CopyIcon",
+        "LockedMark"
+      ],
+      "usedBy": [
+        "CreditNoteDetailView",
+        "InvoiceDetailView",
+        "InvoiceForm",
+        "SubscriptionDetailView"
+      ],
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "Trash2": {
       "file": "src/icons/index.ts",
@@ -8037,7 +8080,9 @@
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
-        "SummaryRow"
+        "SummaryRow",
+        "TotalRow",
+        "TotalsList"
       ]
     },
     "./src/compositions/detail/DetailShell.stories.tsx": {
