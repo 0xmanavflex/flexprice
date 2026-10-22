@@ -36,6 +36,7 @@ import {
   useSubscriptionCoupons,
   useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
+  useContractUsageSummary,
   useSubscriptionInvoicePreview,
   useSubscriptionInvoices,
   useSubscriptionLines,
@@ -130,6 +131,9 @@ export function SubscriptionDetailPage({
   const executeChange = useExecuteLineChange()
   const formOptions = usePlanFormOptions()
   const customerId = subscription.data?.customerId ?? ''
+  // The usage against this contract's entitlements, from the endpoint the
+  // customer overview reads, narrowed to this contract.
+  const entitlementUsage = useContractUsageSummary(customerId, subscriptionId)
   const integrationLinks = useCustomerIntegrationLinks(customerId)
   const integrations = useIntegrations()
   const linkIntegration = useLinkCustomerIntegration(customerId)
@@ -194,6 +198,7 @@ export function SubscriptionDetailPage({
         }}
         chargeAlerts={part(chargeAlerts)}
         entitlements={part(entitlements)}
+        entitlementUsage={entitlementUsage.data?.features}
         creditGrants={part(creditGrants)}
         usage={part(usage)}
         invoices={part(invoices)}

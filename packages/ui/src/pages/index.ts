@@ -315,6 +315,20 @@ export type {
 } from './shared/StatusBadge'
 export { UsageMeter, UsageMeterProvenance } from './shared/UsageMeter'
 export type { UsageMeterProps } from './shared/UsageMeter'
+export {
+  EntitlementUsage,
+  EntitlementUsageProvenance,
+  EntitlementUsageTable,
+  entitlementRowsForContract,
+  entitlementRowsFromUsage,
+  entitlementValue,
+} from './shared/EntitlementUsage'
+export type {
+  EntitlementUsageProps,
+  EntitlementUsageRow,
+  EntitlementSourceLink,
+  EntitlementUsageTableProps,
+} from './shared/EntitlementUsage'
 export { SignInForm, SignInFormProvenance } from './auth/SignInForm'
 export type { SignInFormProps } from './auth/SignInForm'
 export { SignInScreen, SignInScreenProvenance } from './auth/SignInScreen'

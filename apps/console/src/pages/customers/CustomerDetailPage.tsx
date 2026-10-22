@@ -214,6 +214,10 @@ export function CustomerDetailPage({
             draft: { externalId: customer.data.externalId, name: customer.data.name, metadata },
           })
         }
+        entitlements={usage.data?.features ?? []}
+        entitlementsLoading={usage.isLoading}
+        entitlementsError={usage.isError && !usage.data}
+        onRetryEntitlements={() => void usage.refetch()}
         subscriptionsLoading={subscriptions.isLoading}
         subscriptionsError={subscriptions.isError && !subscriptions.data}
         onRetrySubscriptions={() => void subscriptions.refetch()}

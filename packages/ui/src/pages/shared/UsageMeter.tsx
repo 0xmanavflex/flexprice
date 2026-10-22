@@ -33,9 +33,14 @@ export interface UsageMeterProps {
   limit: number | null
   unit?: string
   locale?: string
+  /**
+   * Keep the label for assistive tech only — for a table cell whose row
+   * already names the feature in its own column.
+   */
+  hideLabel?: boolean
 }
 
-export function UsageMeter({ label, used, limit, unit, locale }: UsageMeterProps) {
+export function UsageMeter({ label, used, limit, unit, locale, hideLabel }: UsageMeterProps) {
   const format = (value: number) => new Intl.NumberFormat(locale).format(value)
   const unlimited = limit === null
   const exhausted = !unlimited && limit === 0
@@ -51,7 +56,7 @@ export function UsageMeter({ label, used, limit, unit, locale }: UsageMeterProps
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="text-[13px] font-medium">{label}</span>
+        <span className={cn('text-[13px] font-medium', hideLabel && 'sr-only')}>{label}</span>
         <span
           className={cn(
             'text-xs tabular-nums',

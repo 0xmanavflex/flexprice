@@ -225,6 +225,7 @@ export {
   useCustomers,
   useCustomerSubscriptions,
   useCustomerUsageSummary,
+  useContractUsageSummary,
   toCreateCustomerRequest,
   toUpdateCustomerRequest,
   useCreateCustomer,

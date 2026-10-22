@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-22
+
+- Entitlement usage: new `EntitlementUsage` (usage cell: used of limit with unit, bar, soft-limit and reset captions, unlimited/over-limit/unreported states) and `EntitlementUsageTable` (Feature, Source when known, Value, Usage). Used on the customer Overview's new Entitlements section and on a contract's Entitlements section, which trades its Access and Limit columns for Value and Usage. `UsageMeter` gains `hideLabel` for use as a cell. Composition over `UsageMeter` and `DetailTable`. Source: V1 customer overview `CustomerUsageTable`.
+
 ## 2026-10-19
 
 - Hosted invoice page: `HostedInvoiceView` (centred card with amount, invoice number, due/payment date and method, Download and Pay; loading, not-found, not-valid and failed states) and `HostedInvoiceDetailsSheet` (summary, items, totals, payment history, contact). Installs ReUI `icon-tile`. Source: Stripe hosted invoice page; layout after ReUI receipt-5 and receipt-1.
