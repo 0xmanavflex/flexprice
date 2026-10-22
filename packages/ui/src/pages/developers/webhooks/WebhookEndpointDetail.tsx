@@ -543,8 +543,9 @@ function SubscribedEvents({
       title="Subscribed events"
       actions={
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
+          className="h-8 px-3"
           onClick={() => {
             setDraft(endpoint.filterTypes)
             action.reset()
@@ -618,7 +619,7 @@ function SigningSecret({ secret }: { secret: WebhookSecretState }) {
       title="Signing secret"
       description="Verify that each request came from Flexprice."
       actions={
-        <Button variant="ghost" size="sm" onClick={() => setRotating(true)}>
+        <Button variant="outline" size="sm" className="h-8 px-3" onClick={() => setRotating(true)}>
           <RefreshCwIcon aria-hidden />
           Rotate
         </Button>

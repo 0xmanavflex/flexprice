@@ -349,7 +349,6 @@ export function CustomerGrid({
         title: 'Nobody to bill yet',
         description:
           'A customer is who an invoice is addressed to. Create one — or send your first event with a new external id and Flexprice will create it for you.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New customer</Button> } : {}),
         guides: GUIDES,
       }}
     />

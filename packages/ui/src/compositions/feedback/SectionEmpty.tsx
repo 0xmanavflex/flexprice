@@ -7,20 +7,21 @@ import { SceneIllustration, type EmptyScene } from './SceneIllustration'
  * the action that fixes it, all on the centre line.
  *
  * Every card that can be empty uses this, so a page with several of them
- * (entitlements above credit grants) shows the same block in the same place
- * rather than one centred and another with its button pinned to the header.
- * The create action lives here while the card is empty and moves to the card
- * header once there are rows.
+ * (entitlements above credit grants) shows the same block in the same place.
+ * The create action is never here: it stays in the card's `Section` header,
+ * top right, whether the card has rows or not. `action` is for a way out that
+ * is not creating — "Try again" on a failed load.
  */
 export const SectionEmptyProvenance = provenance({
   source: 'composition',
   composes: ['compositions/feedback/SceneIllustration'],
-  note: 'Centred drawing, title, description and action for an empty card body on a detail page.',
+  note: 'Centred drawing, title and description for an empty card body on a detail page. The create action stays in the Section header.',
 })
 
 export interface SectionEmptyProps {
   title: string
   description?: string | undefined
+  /** A non-create way out, such as "Try again". Never the create action. */
   action?: ReactNode
   /** The area of the product this card is in; draws the same figure as its list page. */
   scene?: EmptyScene | undefined

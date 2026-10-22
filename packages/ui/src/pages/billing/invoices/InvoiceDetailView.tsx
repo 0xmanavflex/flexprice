@@ -444,7 +444,19 @@ export function InvoiceDetailView({
         ) : null}
 
         {tab === 'payments' ? (
-          <Section table title="Payments">
+          <Section
+            table
+            title="Payments"
+            {...(onRecordPayment && canRecordPayment
+              ? {
+                  action: (
+                    <Button size="sm" className="h-8 px-3" onClick={onRecordPayment}>
+                      Record payment
+                    </Button>
+                  ),
+                }
+              : {})}
+          >
             <SubTabState
               hasData={invoice.payments.length > 0}
               isLoading={paymentsQuery.isLoading}
@@ -460,12 +472,6 @@ export function InvoiceDetailView({
                 scene: 'billing',
                 title: 'No payments yet',
                 description: 'No payments recorded for this invoice yet.',
-                action:
-                  onRecordPayment && canRecordPayment ? (
-                    <Button size="sm" onClick={onRecordPayment}>
-                      Record payment
-                    </Button>
-                  ) : undefined,
               }}
             >
               <DetailTable<InvoicePaymentRow>
@@ -509,7 +515,19 @@ export function InvoiceDetailView({
         ) : null}
 
         {tab === 'credit-notes' ? (
-          <Section table title="Credit memos">
+          <Section
+            table
+            title="Credit memos"
+            {...(onIssueCreditNote && canIssueCreditNote
+              ? {
+                  action: (
+                    <Button size="sm" className="h-8 px-3" onClick={onIssueCreditNote}>
+                      Issue credit memo
+                    </Button>
+                  ),
+                }
+              : {})}
+          >
             <SubTabState
               hasData={invoice.creditNotes.length > 0}
               isLoading={creditNotesQuery.isLoading}
@@ -525,12 +543,6 @@ export function InvoiceDetailView({
                 scene: 'billing',
                 title: 'No credit memos yet',
                 description: 'No credit memos issued against this invoice.',
-                action:
-                  onIssueCreditNote && canIssueCreditNote ? (
-                    <Button size="sm" onClick={onIssueCreditNote}>
-                      Issue credit memo
-                    </Button>
-                  ) : undefined,
               }}
             >
               <DetailTable<InvoiceCreditNoteRow>
