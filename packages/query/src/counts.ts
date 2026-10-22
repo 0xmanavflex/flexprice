@@ -4,6 +4,7 @@ import { type InvoiceStatus } from '@fp/domain'
 import { isServerFilterable, toInvoiceFilter } from './invoices'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
+import { ALL_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 
 /**
  * How many of each thing exist, for the navigation.
@@ -51,7 +52,10 @@ const COUNTERS: Record<CountableId, (client: Flexprice, options: CallOptions) =>
     plans: (client, options) => client.plans.queryPlan({ limit: 1 }, options),
     customers: (client, options) => client.customers.queryCustomer({ limit: 1 }, options),
     subscriptions: (client, options) =>
-      client.subscriptions.querySubscription({ limit: 1 }, options),
+      client.subscriptions.querySubscription(
+        { limit: 1, subscriptionStatus: ALL_SUBSCRIPTION_STATUSES },
+        options,
+      ),
     invoices: (client, options) => client.invoices.queryInvoice({ limit: 1 }, options),
   }
 

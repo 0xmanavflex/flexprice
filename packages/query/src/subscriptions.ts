@@ -79,6 +79,7 @@ import {
 } from './creditGrants'
 import { toEntitlementRequest } from './entitlements'
 import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } from './invoices'
+import { ALL_SUBSCRIPTION_STATUSES, LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 import { queryKeys } from './keys'
 import { toFilterConditions } from './search'
 import { type ChargeWire, toCharge, toChargeRequest, toTier } from './prices'
@@ -483,11 +484,12 @@ export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, u
     offset: (query.page - 1) * query.pageSize,
     sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'customer,plan',
-    // Status goes to the server: it returns only active subscriptions when no
-    // status is given, so filtering on the page alone could never find a
-    // trialing one. Incomplete also asks for the API's `draft`, which the
-    // domain shows as Incomplete. No status chosen keeps the server's default.
-    ...(query.statuses.length > 0 ? { subscriptionStatus: toWireStatuses(query.statuses) } : {}),
+    // Status always goes to the server: it returns only active subscriptions
+    // when none is named, so a trialing contract never reached the list.
+    // Incomplete also asks for the API's `draft`, which the domain shows as
+    // Incomplete. No status chosen means every contract.
+    subscriptionStatus:
+      query.statuses.length > 0 ? toWireStatuses(query.statuses) : ALL_SUBSCRIPTION_STATUSES,
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
       : {}),
@@ -575,7 +577,12 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
         const response = await call(
           (options) =>
             client.subscriptions.querySubscription(
-              { customerIds: ids, limit: COUNT_PAGE, offset: page * COUNT_PAGE } as never,
+              {
+                customerIds: ids,
+                subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES,
+                limit: COUNT_PAGE,
+                offset: page * COUNT_PAGE,
+              } as never,
               options,
             ),
           signal,
@@ -595,7 +602,12 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
 }
 
 /** The contract states the API counts when it checks who may inherit. */
-const HIERARCHY_STATUSES = new Set(['active', 'trialing', 'draft'])
+const HIERARCHY_WIRE_STATUSES: FlexpriceModels.SubscriptionStatus[] = [
+  'active',
+  'trialing',
+  'draft',
+]
+const HIERARCHY_STATUSES = new Set<string>(HIERARCHY_WIRE_STATUSES)
 
 /**
  * Which of these customers cannot inherit a contract from `parentCustomerId`,
@@ -649,6 +661,8 @@ export function useInheritanceBlocks(parentCustomerId: string, customerIds: read
             client.subscriptions.querySubscription(
               {
                 customerIds: [parentCustomerId, ...ids],
+                // The states the API checks; left out, only active came back.
+                subscriptionStatus: HIERARCHY_WIRE_STATUSES,
                 limit: COUNT_PAGE,
                 offset: page * COUNT_PAGE,
               },
@@ -997,6 +1011,9 @@ export function useSubscription(id: string) {
           client.subscriptions.querySubscription(
             {
               subscriptionIds: [id],
+              // Without it the search answers active only, and a trialing
+              // contract's own page read "not found".
+              subscriptionStatus: ALL_SUBSCRIPTION_STATUSES,
               expand: 'customer,plan',
               limit: 1,
               offset: 0,

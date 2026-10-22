@@ -5,6 +5,7 @@ import { EntitlementEntityType } from '@fp/domain'
 import { COUNT_CONCURRENCY, mapBounded } from './featureLinkage'
 import { queryKeys } from './keys'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
+import { LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 
 /**
  * What a plan contains, beyond the charges the row already carries.
@@ -117,7 +118,10 @@ export function usePlanLinkage(planIds: readonly string[]): {
               queryFn: async () => {
                 const response = (await call(
                   (options) =>
-                    client.subscriptions.querySubscription({ planId, limit: 1 }, options),
+                    client.subscriptions.querySubscription(
+                      { planId, subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES, limit: 1 },
+                      options,
+                    ),
                   signal,
                 )) as { pagination?: { total?: number } }
                 return response.pagination?.total ?? 0

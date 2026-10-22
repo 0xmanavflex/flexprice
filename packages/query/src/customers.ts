@@ -17,6 +17,7 @@ import {
   type Subscription,
   type TenantFeatureUsage,
 } from '@fp/domain'
+import { LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 import { queryKeys } from './keys'
 import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
@@ -244,15 +245,6 @@ export function useCustomer(id: string) {
   })
 }
 
-/** Every status but cancelled. `draft` is the API's; the domain folds it into Incomplete. */
-export const CUSTOMER_SUBSCRIPTION_STATUSES = [
-  'active',
-  'trialing',
-  'paused',
-  'incomplete',
-  'draft',
-] as const
-
 export async function fetchCustomerSubscriptions(
   client: Flexprice,
   externalId: string,
@@ -263,7 +255,7 @@ export async function fetchCustomerSubscriptions(
       // The search returns only active subscriptions unless told otherwise, so a
       // trialing or draft contract would vanish. Same set V1's overview asks for,
       // plus paused, which the Live contracts tile counts.
-      subscriptionStatus: CUSTOMER_SUBSCRIPTION_STATUSES,
+      subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES,
       expand: 'plan',
       limit: 100,
     } as never),

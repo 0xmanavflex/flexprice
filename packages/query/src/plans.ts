@@ -13,6 +13,7 @@ import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 import { nameContainsFilter, toFilterConditions } from './search'
 import { sortWithTieBreak } from './listSort'
+import { ALL_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 
 /**
  * Plans: the translation between product vocabulary and the API.
@@ -331,7 +332,11 @@ export function usePlanSubscriptions(planId: string) {
     queryKey: queryKeys.subscriptions.list({ planId }),
     queryFn: async () => {
       const response = (await call(() =>
-        client.subscriptions.querySubscription({ planId, limit: 100 } as never),
+        client.subscriptions.querySubscription({
+          planId,
+          subscriptionStatus: ALL_SUBSCRIPTION_STATUSES,
+          limit: 100,
+        } as never),
       )) as { items?: unknown[] }
 
       return (response.items ?? []).map((item): PlanSubscriptionRow => {

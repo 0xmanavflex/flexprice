@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { call } from '@fp/api'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
+import { LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 
 /**
  * How each product is wired into the catalogue: the plans that grant or price
@@ -223,7 +224,10 @@ export function useFeatureLinkage(features: readonly LinkedFeature[]): {
               queryFn: async () => {
                 const response = (await call(
                   (options) =>
-                    client.subscriptions.querySubscription({ planId, limit: 1 } as never, options),
+                    client.subscriptions.querySubscription(
+                      { planId, subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES, limit: 1 } as never,
+                      options,
+                    ),
                   signal,
                 )) as { pagination?: { total?: number } }
                 return response.pagination?.total ?? 0
