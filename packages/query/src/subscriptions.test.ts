@@ -110,9 +110,9 @@ describe('toSubscriptionFilter', () => {
     ).toMatchObject({ subscriptionStatus: ['trialing', 'incomplete', 'draft'] })
   })
 
-  it('leaves the status to the server default when none is chosen', () => {
-    expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).not.toHaveProperty(
-      'subscriptionStatus',
-    )
+  it('asks for every status when none is chosen, not the server active-only default', () => {
+    expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).toMatchObject({
+      subscriptionStatus: ['active', 'trialing', 'paused', 'incomplete', 'draft', 'cancelled'],
+    })
   })
 })

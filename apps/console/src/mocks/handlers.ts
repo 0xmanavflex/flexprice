@@ -478,7 +478,13 @@ const search = (path: string, key: string) =>
     if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
     const source = sourceFor(key)
-    const wanted = key === 'subscriptions' ? body.subscription_status : undefined
+    // The API's rule: a subscription search that names no status answers active only.
+    const wanted =
+      key === 'subscriptions'
+        ? body.subscription_status?.length
+          ? body.subscription_status
+          : ['active']
+        : undefined
     const result = page(
       wanted?.length
         ? {
@@ -2378,6 +2384,9 @@ const CONTRACT_COMMITMENT = {
   enable_true_up: true,
 }
 
+/** The mock's trialing contract; see the subscriptions corpus below. */
+const TRIALING_SUBSCRIPTION_ID = 'subs_01MOCKTRIALING0000000001'
+
 const DASHBOARD_CORPUS: Record<string, Corpus> = {
   subscriptions: (() => {
     const extra = recentSubscriptionRows()
@@ -2387,9 +2396,25 @@ const DASHBOARD_CORPUS: Record<string, Corpus> = {
         ? { ...item, ...CONTRACT_COMMITMENT }
         : item,
     )
+    // One trialing contract, so a search that forgets subscription_status (the
+    // API then answers active only) loses it here as it does live.
+    const first = items[0]
+    const trialing = first
+      ? [
+          {
+            ...first,
+            id: TRIALING_SUBSCRIPTION_ID,
+            subscription_status: 'trialing',
+            updated_at: '2026-01-02T00:00:00Z',
+          },
+        ]
+      : []
     return {
-      items: [...extra, ...items],
-      pagination: { ...base.pagination, total: base.pagination.total + extra.length },
+      items: [...extra, ...items, ...trialing],
+      pagination: {
+        ...base.pagination,
+        total: base.pagination.total + extra.length + trialing.length,
+      },
     }
   })(),
   invoices: (() => {
