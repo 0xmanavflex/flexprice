@@ -852,7 +852,13 @@ export function EntityList<T extends object>({
     <div
       role="search"
       aria-label={`Search and filter ${noun}`}
-      className={cn('flex flex-wrap items-center justify-between gap-3', compact && 'px-6 py-3')}
+      className={cn(
+        'flex flex-wrap items-center justify-between gap-3',
+        // A compact table runs edge to edge in its card, so its toolbar insets to
+        // the cells. A bordered one sits in its own box: the toolbar lines up
+        // with that box's edges instead, or search and table start apart.
+        compact && (border ? 'pb-3' : 'px-6 py-3'),
+      )}
     >
       <div className="flex flex-wrap items-center gap-2">
         <InputGroup className={cn(compact ? 'h-8 w-60' : 'h-9 w-72', 'max-w-full')}>
