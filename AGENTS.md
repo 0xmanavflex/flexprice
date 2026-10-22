@@ -11,8 +11,8 @@ short. The rules that matter most:
 1. **Compose kit components; never hand-build markup.** `PageHeader`, `Section`, `EntityList` + `cells`,
    `SimpleTable`, `Properties`, `FormDialog` + `Field`, `SectionEmpty`, `ConfirmDialog`, `Button`. Copy the closest
    existing screen (the table at the top of `docs/design-rules.md`) instead of designing a new one.
-2. **Filled `Button` only for the page's one main create action** (`PageHeader action` / `EntityList
-primaryAction`). Everything else is `variant="outline"`.
+2. **Filled `Button` only for the page's one main create action** (`PageHeader` `action`, or `EntityList`
+   `primaryAction`). Everything else is `variant="outline"`.
 3. **A section's CTA lives only in its `Section` header, top right**, in every state. Empty states never repeat
    the create button.
 4. **Every row-menu and header-menu item has an `icon`** from `@ui/icons`.
