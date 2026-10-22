@@ -4077,11 +4077,19 @@ export const handlers = [
       byId('invoices', id) ??
       sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
     if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+    // A finalized invoice carries the link its customer receives, as the API answers it
+    // (the SDK drops the field, so the console reads it from this response directly).
+    const hosted =
+      readString(invoice, 'invoice_status') === 'DRAFT'
+        ? {}
+        : { hosted_invoice_url: `https://invoice-dev.flexprice.io/in/hit_${id}.demo-signature` }
     // Generated invoices carry no lines; give the detail one so line-level actions have a target.
     const lines = invoice['line_items']
-    if (Array.isArray(lines) && lines.length > 0) return HttpResponse.json(invoice)
+    if (Array.isArray(lines) && lines.length > 0)
+      return HttpResponse.json({ ...invoice, ...hosted })
     return HttpResponse.json({
       ...invoice,
+      ...hosted,
       line_items: [
         {
           id: `${id}_line_1`,

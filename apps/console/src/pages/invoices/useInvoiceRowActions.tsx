@@ -8,6 +8,7 @@ import {
 } from '@fp/query'
 import { toast } from '@fp/ui/pages'
 import { ConfirmDialog } from '@fp/ui/compositions'
+import { useHostedInvoiceLink } from '@/app/hostedInvoice/useHostedInvoiceLink'
 
 export interface InvoiceRowActionOptions {
   /** Record a payment against this invoice. */
@@ -20,7 +21,8 @@ export interface InvoiceRowActionOptions {
 
 /**
  * V1's invoice row menu, offered only where the invoice's status allows it —
- * shared by the invoice list and a customer's Invoices tab.
+ * shared by the invoice list and a customer's Invoices tab. Past draft, it
+ * also opens or copies the invoice's hosted link.
  *
  * Each one-click action reports in a toast, so the page must render a
  * `Toaster`; voiding is confirmed first, in the dialog returned as `dialogs`.
@@ -34,6 +36,7 @@ export function useInvoiceRowActions({
   const recalculate = useRecalculateInvoice()
   const send = useSendInvoice()
   const voidInvoice = useVoidInvoice()
+  const hostedLink = useHostedInvoiceLink()
   const [voiding, setVoiding] = useState<Invoice | null>(null)
 
   /** One request from the row menu, reported in a toast. */
@@ -51,7 +54,13 @@ export function useInvoiceRowActions({
     })
 
   const actionsFor = (invoice: Invoice) => {
-    const items: { label: string; onSelect: () => void; destructive?: boolean }[] = []
+    const items: {
+      label: string
+      onSelect: () => void
+      destructive?: boolean
+      /** Reading, not writing: offered to every role that can see the invoice. */
+      readOnly?: boolean
+    }[] = []
     const open = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
     if (invoice.status === InvoiceStatus.Draft) {
       items.push(
@@ -77,6 +86,21 @@ export function useInvoiceRowActions({
       if (onIssueCreditNote) {
         items.push({ label: 'Issue credit memo', onSelect: () => onIssueCreditNote(invoice.id) })
       }
+    }
+    // The link the customer receives: issued once an invoice is finalized.
+    if (invoice.status !== InvoiceStatus.Draft) {
+      items.push(
+        {
+          label: 'Open hosted invoice',
+          readOnly: true,
+          onSelect: () => void hostedLink.open(invoice.id),
+        },
+        {
+          label: 'Copy hosted invoice link',
+          readOnly: true,
+          onSelect: () => void hostedLink.copy(invoice.id),
+        },
+      )
     }
     if (onOpenCustomer && invoice.customerId) {
       items.push({ label: 'View customer', onSelect: () => onOpenCustomer(invoice.customerId) })
