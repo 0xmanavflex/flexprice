@@ -82,7 +82,8 @@ export const getPortalWallets = (auth: PortalAuth) => post(auth, '/wallets')
 export const getPortalWalletTransactions = (
   auth: PortalAuth,
   walletId: string,
-  query: { limit: number; offset: number; type?: 'CREDIT' | 'DEBIT'; since?: Date },
+  /** `type` is the API's own spelling, lowercase (`credit`, `debit`); `CREDIT` is refused. */
+  query: { limit: number; offset: number; type?: 'credit' | 'debit'; since?: Date },
 ) =>
   get(auth, `/wallets/${id(walletId)}/transactions`, {
     limit: String(query.limit),

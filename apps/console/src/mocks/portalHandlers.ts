@@ -134,7 +134,7 @@ const WALLETS: Record<string, unknown>[] = [
 const TRANSACTIONS = [
   {
     id: 'wtx_1',
-    type: 'DEBIT',
+    type: 'debit',
     transaction_reason: 'INVOICE_PAYMENT',
     description: 'INV-2026-01488',
     amount: '412',
@@ -145,7 +145,7 @@ const TRANSACTIONS = [
   },
   {
     id: 'wtx_2',
-    type: 'CREDIT',
+    type: 'credit',
     transaction_reason: 'SUBSCRIPTION_CREDIT_GRANT',
     description: 'Growth plan · monthly grant',
     amount: '200',
@@ -158,7 +158,7 @@ const TRANSACTIONS = [
   },
   {
     id: 'wtx_3',
-    type: 'DEBIT',
+    type: 'debit',
     transaction_reason: 'CREDIT_EXPIRED',
     description: 'August grant',
     amount: '38',
@@ -169,7 +169,7 @@ const TRANSACTIONS = [
   },
   {
     id: 'wtx_4',
-    type: 'CREDIT',
+    type: 'credit',
     transaction_reason: 'PURCHASED_CREDIT_DIRECT',
     description: 'Auto top-up · Visa •••• 4242',
     amount: '500',
@@ -377,6 +377,10 @@ export const portalHandlers = [
     const query = new URL(request.url).searchParams
     const limit = Number(query.get('limit') ?? 20)
     const type = query.get('type')
+    // As the API: `credit` or `debit`, lowercase; anything else is a 400.
+    if (type !== null && type !== 'credit' && type !== 'debit') {
+      return HttpResponse.json({ error: { message: 'invalid transaction type' } }, { status: 400 })
+    }
     const rows = TRANSACTIONS.filter((t) => !type || t.type === type)
     return HttpResponse.json({ items: rows.slice(0, limit), pagination: { total: rows.length } })
   }),
