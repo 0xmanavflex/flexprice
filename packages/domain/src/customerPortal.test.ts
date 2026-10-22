@@ -204,6 +204,32 @@ describe('wallets', () => {
     })
   })
 
+  it('reads the API’s lowercase transaction types', () => {
+    const { items } = toPortalWalletTransactions(
+      {
+        items: [
+          {
+            id: 'd',
+            type: 'debit',
+            amount: '1',
+            credit_amount: '10',
+            transaction_status: 'COMPLETED',
+          },
+          {
+            id: 'c',
+            type: 'credit',
+            amount: '1',
+            credit_amount: '10',
+            transaction_status: 'COMPLETED',
+          },
+        ],
+        pagination: { total: 2 },
+      },
+      'USD',
+    )
+    expect(items.map((t) => t.direction)).toEqual(['out', 'in'])
+  })
+
   it('titles transactions by reason and sums flows exactly', () => {
     const { items, total } = toPortalWalletTransactions(
       {
