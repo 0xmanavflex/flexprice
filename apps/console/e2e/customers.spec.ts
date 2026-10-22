@@ -40,14 +40,12 @@ test.describe('the customers list', () => {
     await expect(portal).not.toHaveURL(/token=/)
   })
 
-  test('copies a portal link from the row menu', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  test('the row menu opens the portal but does not copy its link', async ({ page }) => {
     await page.goto('/customers')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
-    await openRowMenu(page, 'Copy portal link')
-    await expect(page.getByText('Customer portal link copied')).toBeVisible()
-    const copied = await page.evaluate(() => navigator.clipboard.readText())
-    expect(copied).toMatch(/\/p\?token=demo-/)
+    await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Open customer portal' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Copy portal link' })).toHaveCount(0)
   })
 
   test('creates a customer on its own page and lands on its detail', async ({ page }) => {
@@ -173,14 +171,38 @@ test.describe('a customer detail page', () => {
     await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
   })
 
-  test('opens the customer portal from the header menu', async ({ page, context }) => {
+  test('copies the customer portal link from the header menu', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await openFirstCustomer(page)
     await page.getByRole('button', { name: 'Customer actions' }).click()
-    const [portal] = await Promise.all([
-      context.waitForEvent('page'),
-      page.getByRole('menuitem', { name: 'Open customer portal' }).click(),
-    ])
-    await expect(portal.getByText('Payment methods')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByRole('menuitem', { name: 'Copy portal link' })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: 'Open customer portal' })).toHaveCount(0)
+    await page.getByRole('menuitem', { name: 'Copy portal link' }).click()
+    await expect(page.getByText('Customer portal link copied')).toBeVisible()
+    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    expect(copied).toMatch(/\/p\?token=demo-/)
+  })
+
+  test('refreshes the Events tab on demand', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('tab', { name: 'Events' }).click()
+    const refresh = page.getByRole('button', { name: 'Refresh' })
+    await expect(refresh).toBeEnabled()
+    const reread = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/events/query'),
+    )
+    await refresh.click()
+    await reread
+  })
+
+  test('pushes the customer to Stripe from the header menu', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('button', { name: 'Customer actions' }).click()
+    const sync = page.waitForRequest(
+      (request) => request.url().endsWith('/integrations/sync') && request.method() === 'POST',
+    )
+    await page.getByRole('menuitem', { name: 'Push to Stripe' }).click()
+    const body = (await sync).postDataJSON() as Record<string, unknown>
+    expect(body).toMatchObject({ entity_type: 'customer', method: 'push' })
+    await expect(page.getByText('Pushing customer to Stripe')).toBeVisible()
   })
 })

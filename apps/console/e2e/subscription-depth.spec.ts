@@ -79,6 +79,24 @@ test('contract detail overview keeps every add section and adds a coupon', async
   await expect(dialog).toHaveCount(0)
 })
 
+test('adds a one-time credit grant to a contract, with the start date the API requires', async ({
+  page,
+}) => {
+  await page.goto('/contracts')
+  await page.getByRole('row').nth(1).click()
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
+
+  await page.getByRole('button', { name: 'Add credit grant' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('textbox', { name: /^Name/ }).fill('Goodwill credits')
+  await dialog.getByRole('textbox', { name: /^Credits/ }).fill('500')
+  // The mock refuses a contract grant without start_date, as the API does, so
+  // the dialog closing is the proof the date was sent.
+  await dialog.getByRole('button', { name: 'Add credit grant' }).click()
+  await expect(dialog.getByText(/start date/i)).toHaveCount(0)
+  await expect(dialog).toHaveCount(0)
+})
+
 test('a changed contract price stays as an inactive version, not gone', async ({ page }) => {
   await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()

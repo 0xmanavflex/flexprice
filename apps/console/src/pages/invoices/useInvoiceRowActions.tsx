@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactElement } from 'react'
 import { InvoiceStatus, type Invoice } from '@fp/domain'
 import {
   useFinalizeInvoice,
@@ -6,6 +6,16 @@ import {
   useSendInvoice,
   useVoidInvoice,
 } from '@fp/query'
+import {
+  CheckCircle2Icon,
+  CreditCardIcon,
+  ExternalLinkIcon,
+  FileMinusIcon,
+  RefreshCwIcon,
+  SendIcon,
+  UserIcon,
+  XCircleIcon,
+} from '@fp/ui/icons'
 import { toast } from '@fp/ui/pages'
 import { ConfirmDialog } from '@fp/ui/compositions'
 import { useHostedInvoiceLink } from '@/app/hostedInvoice/useHostedInvoiceLink'
@@ -22,7 +32,7 @@ export interface InvoiceRowActionOptions {
 /**
  * V1's invoice row menu, offered only where the invoice's status allows it —
  * shared by the invoice list and a customer's Invoices tab. Past draft, it
- * also opens or copies the invoice's hosted link.
+ * also opens the invoice's hosted link (the invoice page copies it).
  *
  * Each one-click action reports in a toast, so the page must render a
  * `Toaster`; voiding is confirmed first, in the dialog returned as `dialogs`.
@@ -57,6 +67,8 @@ export function useInvoiceRowActions({
     const items: {
       label: string
       onSelect: () => void
+      /** Every item leads with one, so the menu's labels line up. */
+      icon: ReactElement
       destructive?: boolean
       /** Reading, not writing: offered to every role that can see the invoice. */
       readOnly?: boolean
@@ -66,47 +78,61 @@ export function useInvoiceRowActions({
       items.push(
         {
           label: 'Finalize',
+          icon: <CheckCircle2Icon aria-hidden className="size-4" />,
           onSelect: () => run(finalize, invoice, 'Invoice finalized', 'finalize the invoice'),
         },
         {
           label: 'Recalculate',
+          icon: <RefreshCwIcon aria-hidden className="size-4" />,
           onSelect: () =>
             run(recalculate, invoice, 'Invoice recalculated', 'recalculate the invoice'),
         },
       )
     }
     if (open && onRecordPayment) {
-      items.push({ label: 'Record payment', onSelect: () => onRecordPayment(invoice.id) })
+      items.push({
+        label: 'Record payment',
+        icon: <CreditCardIcon aria-hidden className="size-4" />,
+        onSelect: () => onRecordPayment(invoice.id),
+      })
     }
     if (invoice.status !== InvoiceStatus.Draft && invoice.status !== InvoiceStatus.Void) {
       items.push({
         label: 'Send to customer',
+        icon: <SendIcon aria-hidden className="size-4" />,
         onSelect: () => run(send, invoice, 'Invoice sent to the customer', 'send the invoice'),
       })
       if (onIssueCreditNote) {
-        items.push({ label: 'Issue credit memo', onSelect: () => onIssueCreditNote(invoice.id) })
+        items.push({
+          label: 'Issue credit memo',
+          icon: <FileMinusIcon aria-hidden className="size-4" />,
+          onSelect: () => onIssueCreditNote(invoice.id),
+        })
       }
     }
     // The link the customer receives: issued once an invoice is finalized.
     if (invoice.status !== InvoiceStatus.Draft) {
-      items.push(
-        {
-          label: 'Open hosted invoice',
-          readOnly: true,
-          onSelect: () => void hostedLink.open(invoice.id),
-        },
-        {
-          label: 'Copy hosted invoice link',
-          readOnly: true,
-          onSelect: () => void hostedLink.copy(invoice.id),
-        },
-      )
+      items.push({
+        label: 'Open hosted invoice',
+        icon: <ExternalLinkIcon aria-hidden className="size-4" />,
+        readOnly: true,
+        onSelect: () => void hostedLink.open(invoice.id),
+      })
     }
     if (onOpenCustomer && invoice.customerId) {
-      items.push({ label: 'View customer', onSelect: () => onOpenCustomer(invoice.customerId) })
+      items.push({
+        label: 'View customer',
+        icon: <UserIcon aria-hidden className="size-4" />,
+        onSelect: () => onOpenCustomer(invoice.customerId),
+      })
     }
     if (open) {
-      items.push({ label: 'Void invoice', destructive: true, onSelect: () => setVoiding(invoice) })
+      items.push({
+        label: 'Void invoice',
+        icon: <XCircleIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => setVoiding(invoice),
+      })
     }
     return items
   }

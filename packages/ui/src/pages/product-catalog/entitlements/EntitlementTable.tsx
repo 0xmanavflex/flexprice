@@ -87,7 +87,7 @@ function EntitlementTableInner({
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
     <WriteGate>
-      <Button type="button" onClick={onAdd}>
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3" onClick={onAdd}>
         <PlusIcon aria-hidden />
         Add entitlement
       </Button>
@@ -96,7 +96,12 @@ function EntitlementTableInner({
 
   if (entitlements.length === 0) {
     return (
-      <Section title={title} flush>
+      <Section
+        table
+        title={title}
+        {...(showTitle ? { showTitle } : {})}
+        {...(addButton ? { action: addButton } : {})}
+      >
         <SubTabState
           hasData={false}
           isLoading={isLoading ?? false}
@@ -111,7 +116,6 @@ function EntitlementTableInner({
             scene: 'catalog',
             title: 'No entitlements yet',
             description: `Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`,
-            action: addButton,
           }}
         >
           {null}
@@ -121,10 +125,14 @@ function EntitlementTableInner({
   }
 
   return (
-    <Section table title={title} {...(showTitle ? { showTitle } : {})}>
+    <Section
+      table
+      title={title}
+      {...(showTitle ? { showTitle } : {})}
+      {...(addButton ? { action: addButton } : {})}
+    >
       <DetailTable
         compact
-        {...(addButton ? { action: addButton } : {})}
         label="Entitlements"
         facet={{ label: 'Type', value: (entitlement) => TYPE_LABEL[entitlement.featureType] }}
         noun="entitlements"

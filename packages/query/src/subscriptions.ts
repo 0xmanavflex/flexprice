@@ -13,7 +13,7 @@ import {
   type AddContractCoupon,
   BILLING_PERIOD_LABEL,
   BillingModel,
-  type BillingPeriod,
+  BillingPeriod,
   BucketSize as BucketSizes,
   type BucketSize,
   CommitmentKind,
@@ -32,6 +32,7 @@ import {
   type CreateEntitlement,
   type CreateTaxAssociation,
   type CreditGrant,
+  CreditGrantCadence,
   CreditGrantScope,
   type EditContractCharge,
   type EndContractCharge,
@@ -45,6 +46,7 @@ import {
   type Subscription,
   type SubscriptionAddon,
   type SubscriptionCoupon,
+  type ContractCommitment,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
@@ -65,6 +67,9 @@ import {
   money,
   moneyOr,
   SUBSCRIPTION_FILTERS,
+  INHERITANCE_WITH_BILLING_CUSTOMER,
+  INHERITANCE_WITH_THRESHOLD,
+  InheritanceBlock,
 } from '@fp/domain'
 import {
   type CreditGrantWire,
@@ -124,6 +129,11 @@ export interface SubscriptionWire {
   timezone?: string | undefined
   lookupKey?: string | undefined
   commitmentAmount?: string | undefined
+  commitmentDuration?: string | undefined
+  overageFactor?: string | undefined
+  enableTrueUp?: boolean | undefined
+  /** Set on a contract inherited from, or grouped under, another contract. */
+  parentSubscriptionId?: string | undefined
   latestInvoice?: { id?: string | undefined; invoiceNumber?: string | undefined } | undefined
 }
 
@@ -159,6 +169,29 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
   }
 }
 
+/**
+ * The contract-level commitment, or null when there is none. The API measures
+ * it over the billing period (every N of them) unless `commitmentDuration`
+ * names a different period, in which case it is one of that period.
+ */
+function toContractCommitment(wire: SubscriptionWire): ContractCommitment | null {
+  if (!wire.commitmentAmount || !(Number(wire.commitmentAmount) > 0)) return null
+  const billingPeriod = wire.billingPeriod as BillingPeriod | undefined
+  const duration =
+    wire.commitmentDuration && wire.commitmentDuration in BILLING_PERIOD_LABEL
+      ? (wire.commitmentDuration as BillingPeriod)
+      : null
+  const ownPeriod = duration !== null && duration !== billingPeriod
+  const overageFactor = Number(wire.overageFactor)
+  return {
+    amount: moneyOr(wire.commitmentAmount, wire.currency),
+    period: ownPeriod ? duration : (billingPeriod ?? BillingPeriod.Monthly),
+    periodCount: ownPeriod ? 1 : (wire.billingPeriodCount ?? 1),
+    overageFactor: Number.isFinite(overageFactor) && overageFactor >= 1 ? overageFactor : 1,
+    trueUp: wire.enableTrueUp ?? false,
+  }
+}
+
 export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail {
   return {
     ...toSubscription(wire),
@@ -175,10 +208,7 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
     trialStart: realDate(wire.trialStart),
     timezone: wire.timezone ?? '',
     lookupKey: wire.lookupKey ?? '',
-    commitmentAmount:
-      wire.commitmentAmount && Number(wire.commitmentAmount) > 0
-        ? moneyOr(wire.commitmentAmount, wire.currency)
-        : null,
+    commitment: toContractCommitment(wire),
     latestInvoice: wire.latestInvoice?.id
       ? {
           id: wire.latestInvoice.id,
@@ -441,12 +471,23 @@ const SORT_FIELD: Record<SubscriptionSortField, string> = {
  * nothing, which is the failure this comment exists to prevent. `plan` is named
  * explicitly rather than relied on as a default.
  */
+function toWireStatuses(statuses: readonly SubscriptionStatus[]): string[] {
+  return statuses.flatMap((status) =>
+    status === SubscriptionStatus.Incomplete ? [status, 'draft'] : [status],
+  )
+}
+
 export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'customer,plan',
+    // Status goes to the server: it returns only active subscriptions when no
+    // status is given, so filtering on the page alone could never find a
+    // trialing one. Incomplete also asks for the API's `draft`, which the
+    // domain shows as Incomplete. No status chosen keeps the server's default.
+    ...(query.statuses.length > 0 ? { subscriptionStatus: toWireStatuses(query.statuses) } : {}),
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
       : {}),
@@ -472,8 +513,9 @@ export async function fetchSubscriptions(
     toSubscription(item as SubscriptionWire),
   )
 
-  // Neither status nor search is a server-side filter here, so both are applied
-  // on the page — the same split coupons and add-ons use.
+  // Search is not a server-side filter, so it is applied on the page. Status is
+  // re-checked here too, which keeps the page's filter exact while the server
+  // narrows the fetch.
   const term = query.search.trim().toLowerCase()
   const filtered = subscriptions.filter((subscription) => {
     const matchesStatus =
@@ -550,6 +592,118 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
     enabled: ids.length > 0,
     staleTime: 30_000,
   })
+}
+
+/** The contract states the API counts when it checks who may inherit. */
+const HIERARCHY_STATUSES = new Set(['active', 'trialing', 'draft'])
+
+/**
+ * Which of these customers cannot inherit a contract from `parentCustomerId`,
+ * applying the rule the API checks on create: a child may hold no contract of
+ * its own, and may already inherit only from the paying customer's contracts.
+ *
+ * `contracts` are every contract of the paying customer and the candidates.
+ * Cancelled and paused contracts do not count, as the API does not count them.
+ */
+export function toInheritanceBlocks(
+  parentCustomerId: string,
+  contracts: readonly SubscriptionWire[],
+): Record<string, InheritanceBlock> {
+  const live = contracts.filter((c) => HIERARCHY_STATUSES.has(c.subscriptionStatus ?? ''))
+  const parentContracts = new Set(
+    live.filter((c) => c.customerId === parentCustomerId).map((c) => c.id),
+  )
+  const blocks: Record<string, InheritanceBlock> = {}
+  for (const contract of live) {
+    const customerId = contract.customerId
+    if (!customerId || customerId === parentCustomerId) continue
+    if (!contract.parentSubscriptionId) {
+      // Its own contract outranks any other reason: it is the one to end first.
+      blocks[customerId] = InheritanceBlock.OwnContract
+    } else if (
+      !parentContracts.has(contract.parentSubscriptionId) &&
+      blocks[customerId] !== InheritanceBlock.OwnContract
+    ) {
+      blocks[customerId] = InheritanceBlock.OtherParent
+    }
+  }
+  return blocks
+}
+
+/**
+ * Why each of these customers cannot inherit a contract from `parentCustomerId`
+ * — one `POST /subscriptions/search` narrowed by `customer_ids`, paged like the
+ * contract counts. A customer missing from the result can inherit.
+ */
+export function useInheritanceBlocks(parentCustomerId: string, customerIds: readonly string[]) {
+  const client = useFlexprice()
+  const ids = [...new Set(customerIds.filter((id) => id && id !== parentCustomerId))].sort()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.list({ inheritanceFor: parentCustomerId, ids }),
+    queryFn: async ({ signal }) => {
+      const contracts: SubscriptionWire[] = []
+      for (let page = 0; page < COUNT_PAGES; page += 1) {
+        const response = await call(
+          (options) =>
+            client.subscriptions.querySubscription(
+              {
+                customerIds: [parentCustomerId, ...ids],
+                limit: COUNT_PAGE,
+                offset: page * COUNT_PAGE,
+              },
+              options,
+            ),
+          signal,
+        )
+        const items = (response.items ?? []) as SubscriptionWire[]
+        contracts.push(...items)
+        const total = response.pagination?.total ?? 0
+        if (items.length < COUNT_PAGE || (page + 1) * COUNT_PAGE >= total) break
+      }
+      return toInheritanceBlocks(parentCustomerId, contracts)
+    },
+    enabled: Boolean(parentCustomerId) && ids.length > 0,
+    staleTime: 30_000,
+  })
+}
+
+/**
+ * A plain sentence for the customer-hierarchy refusals of `POST /subscriptions`.
+ *
+ * The API answers with its hint — "The child customer cannot have standalone
+ * or parent subscriptions" — which names neither the customer nor the fix.
+ * `nameOf` turns the external id the API reports into the customer's name.
+ * Any other error is null, so the caller keeps its own message.
+ */
+export function explainContractHierarchyError(
+  error: unknown,
+  nameOf: (externalId: string) => string = (externalId) => externalId,
+): string | null {
+  if (!(error instanceof ApiError) || !error.fromServer) return null
+  const said = error.message.toLowerCase()
+  const externalId = error.details?.['external_id']
+  const who = externalId ? nameOf(externalId) : 'One of the inherited customers'
+
+  if (said.includes('cannot have standalone or parent subscriptions')) {
+    return `${who} has a contract of its own, so it cannot inherit this one. End that contract first, or remove ${externalId ? 'the customer' : 'it'} from Inherited customers.`
+  }
+  if (said.includes('can only be inherited under one parent')) {
+    return `${who} already inherits another customer's contract. A customer can inherit only one.`
+  }
+  if (said.includes('cannot appear in external_customer_ids_to_inherit_subscription')) {
+    return "The contract's own customer cannot also be one of its inherited customers."
+  }
+  if (said.includes('receives a subscription through hierarchy')) {
+    return "This customer inherits another customer's contract, so it cannot have a contract of its own."
+  }
+  if (said.includes('external_customer_ids_to_inherit_subscription, not both')) {
+    return INHERITANCE_WITH_BILLING_CUSTOMER
+  }
+  if (said.includes('remove auto_invoice_threshold')) {
+    return INHERITANCE_WITH_THRESHOLD
+  }
+  return null
 }
 
 /**
@@ -818,6 +972,9 @@ export function useCreateSubscription() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+      // A contract that starts now bills its in-advance charges at once, so the
+      // customer's invoice list has a new row the cached page does not.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
     },
   })
 }
@@ -1644,21 +1801,36 @@ export function useCreateSubscriptionEntitlement(subscriptionId: string) {
   })
 }
 
+/**
+ * When a grant added to a running contract starts. The API requires a
+ * `start_date` for subscription-scoped grants and the dialog has no date, so
+ * it is set as V1 sets it: a recurring grant starts at the end of the current
+ * period, so it refreshes on the contract's own cycle; a one-time grant is
+ * issued now.
+ */
+export function subscriptionGrantStart(
+  draft: Pick<CreateCreditGrant, 'cadence'>,
+  currentPeriodEnd: Date | null | undefined,
+  now: Date = new Date(),
+): Date {
+  return draft.cadence === CreditGrantCadence.Recurring && currentPeriodEnd ? currentPeriodEnd : now
+}
+
 /** Grant this contract credits of its own — `POST /creditgrants`, scoped to the subscription. */
-export function useCreateSubscriptionCreditGrant(subscriptionId: string) {
+export function useCreateSubscriptionCreditGrant(
+  subscriptionId: string,
+  currentPeriodEnd?: Date | null,
+) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (draft: CreateCreditGrant) =>
       call(() =>
-        client.creditGrants.createCreditGrant(
-          toCreditGrantRequest(
-            draft,
-            CreditGrantScope.Subscription,
-            subscriptionId,
-          ) as FlexpriceModels.CreateCreditGrantRequest,
-        ),
+        client.creditGrants.createCreditGrant({
+          ...toCreditGrantRequest(draft, CreditGrantScope.Subscription, subscriptionId),
+          startDate: subscriptionGrantStart(draft, currentPeriodEnd),
+        } as FlexpriceModels.CreateCreditGrantRequest),
       ),
     onSuccess: () => {
       invalidateContract(queryClient)

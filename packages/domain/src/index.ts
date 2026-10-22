@@ -301,6 +301,10 @@ export {
   SubscriptionSortField,
   SubscriptionStatus,
   createSubscriptionSchema,
+  INHERITANCE_BLOCK_LABEL,
+  INHERITANCE_WITH_BILLING_CUSTOMER,
+  INHERITANCE_WITH_THRESHOLD,
+  InheritanceBlock,
   emptySubscription,
   emptyPhase,
   phaseStarts,
@@ -322,6 +326,7 @@ export {
   lineLineages,
   lineRevertDraft,
   type LineLineage,
+  commitmentPeriodNoun,
 } from './subscription'
 export type {
   ChangeLineQuantity,
@@ -333,6 +338,7 @@ export type {
   SubscriptionDiscount,
   SubscriptionPhase,
   ChargeCommitment,
+  ContractCommitment,
   InvoicePreview,
   InvoicePreviewLine,
   Subscription,

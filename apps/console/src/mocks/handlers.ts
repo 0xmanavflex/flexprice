@@ -27,6 +27,8 @@ interface SearchBody {
   sort?: { field: string; direction: 'asc' | 'desc' }[]
   invoice_status?: string[]
   invoiceStatus?: string[]
+  /** Subscription lifecycle statuses — `/subscriptions/search` narrows to these when sent. */
+  subscription_status?: string[]
   /** A single catalogue status (published/archived) — how the count queries filter. */
   status?: string
   name_contains?: string
@@ -268,7 +270,11 @@ const connectionRows: Record<string, unknown>[] = [
     provider_type: 'stripe',
     connection_status: 'published',
     metadata: {},
-    sync_config: { invoice: { outbound: true }, payment: { inbound: true } },
+    sync_config: {
+      customer: { outbound: true },
+      invoice: { outbound: true },
+      payment: { inbound: true },
+    },
     created_at: '2026-08-12T09:30:00Z',
   },
   { id: 'conn_qb', name: 'QuickBooks', provider_type: 'quickbooks', connection_status: 'draft' },
@@ -383,6 +389,8 @@ function seedDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
 function invoicePayments(invoiceId: string): Record<string, unknown>[] {
   const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === invoiceId)
   if (!invoice) return []
+  // Payments recorded in this session already stand for what has been paid.
+  if (paymentStore.some((row) => readString(row, 'destination_id') === invoiceId)) return []
   const paid = Number(readString(invoice, 'amount_paid') || 0)
   if (!(paid > 0)) return []
   const at = readString(invoice, 'issue_date') || readString(invoice, 'created_at')
@@ -401,6 +409,27 @@ function invoicePayments(invoiceId: string): Record<string, unknown>[] {
       succeeded_at: at,
     },
   ]
+}
+
+/**
+ * A succeeded payment against an invoice pays it down, as the API does: the
+ * invoice's paid and remaining amounts move, and it reads Succeeded once the
+ * balance is cleared.
+ */
+function applyPaymentToInvoice(payment: Record<string, unknown>) {
+  if (readString(payment, 'destination_type') !== 'INVOICE') return
+  const id = readString(payment, 'destination_id')
+  const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+  if (!invoice) return
+  const due = Number(readString(invoice, 'amount_due') || readString(invoice, 'total') || 0)
+  const paid =
+    Number(readString(invoice, 'amount_paid') || 0) + Number(readString(payment, 'amount') || 0)
+  const remaining = Math.max(0, due - paid)
+  patchRow(sourceFor('invoices').items, id, {
+    amount_paid: String(paid),
+    amount_remaining: String(remaining),
+    payment_status: remaining === 0 ? 'SUCCEEDED' : 'PENDING',
+  })
 }
 
 /*
@@ -448,7 +477,19 @@ const search = (path: string, key: string) =>
     const refused = rejectUnknownExpand(key, body.expand)
     if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
-    const result = page(sourceFor(key), body)
+    const source = sourceFor(key)
+    const wanted = key === 'subscriptions' ? body.subscription_status : undefined
+    const result = page(
+      wanted?.length
+        ? {
+            ...source,
+            items: source.items.filter((row) =>
+              wanted.includes(readString(row, 'subscription_status')),
+            ),
+          }
+        : source,
+      body,
+    )
     const payload =
       key === 'features'
         ? applyFeatureExpand(result, body.expand)
@@ -2324,12 +2365,30 @@ function recentInvoiceRows(): Record<string, unknown>[] {
  * were, so every other list still shows the world it always showed and only
  * gains some recent activity at the top.
  */
+/**
+ * The contract-level commitment the first captured contract carries, so the
+ * detail page has one to show: $250 a month, a 1.2× overage premium, true-up on.
+ * The captured corpus has none, and the usage mock reads it from here.
+ */
+const COMMITTED_SUBSCRIPTION_ID = 'subs_synth_0000'
+const CONTRACT_COMMITMENT = {
+  commitment_amount: '250',
+  commitment_duration: 'MONTHLY',
+  overage_factor: '1.2',
+  enable_true_up: true,
+}
+
 const DASHBOARD_CORPUS: Record<string, Corpus> = {
   subscriptions: (() => {
     const extra = recentSubscriptionRows()
     const base = corpus.subscriptions as Corpus
+    const items = base.items.map((item) =>
+      readString(item, 'id') === COMMITTED_SUBSCRIPTION_ID
+        ? { ...item, ...CONTRACT_COMMITMENT }
+        : item,
+    )
     return {
-      items: [...extra, ...base.items],
+      items: [...extra, ...items],
       pagination: { ...base.pagination, total: base.pagination.total + extra.length },
     }
   })(),
@@ -2399,6 +2458,41 @@ export const handlers = [
     }
     environments.push(created)
     return HttpResponse.json(created, { status: 201 })
+  }),
+  // Copy environment: the API queues a workflow and answers 202. Into a new
+  // environment it creates that first, so the mock does too.
+  http.post(`${BASE}/environments/:id/clone`, async ({ params, request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const source = environments.find((environment) => environment['id'] === params['id'])
+    if (!source) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    const target = readString(body, 'target_environment_id')
+    if (target) {
+      if (target === params['id']) {
+        return HttpResponse.json(
+          { code: 'validation_error', message: 'target environment cannot be the source' },
+          { status: 400 },
+        )
+      }
+    } else {
+      const name = readString(body, 'name')
+      if (!name) {
+        return HttpResponse.json(
+          { code: 'validation_error', message: 'name is required' },
+          { status: 400 },
+        )
+      }
+      environments.push({
+        id: `env_mock_${Date.now()}`,
+        name,
+        type: readString(body, 'type') || 'development',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    }
+    return HttpResponse.json(
+      { workflow_id: `env-clone-${Date.now()}`, run_id: 'run_mock' },
+      { status: 202 },
+    )
   }),
   // Rename, from the switcher. Mutates in place for the same reason create
   // appends: the console refetches the list straight after.
@@ -2802,6 +2896,7 @@ export const handlers = [
       attempts: processed ? [{ id: 'att_1', attempt_number: 1 }] : [],
     }
     paymentStore.unshift(row)
+    if (processed) applyPaymentToInvoice(row)
     return HttpResponse.json(row, { status: 201 })
   }),
   http.get(`${BASE}/payments/:id`, ({ params }) => {
@@ -2818,11 +2913,14 @@ export const handlers = [
     if (!paymentStore.some((row) => readString(row, 'id') === id)) {
       return HttpResponse.json({ message: 'Payment not found' }, { status: 404 })
     }
-    return patchRow(paymentStore, id, {
+    const response = patchRow(paymentStore, id, {
       payment_status: 'SUCCEEDED',
       succeeded_at: new Date().toISOString(),
       attempts: [{ id: 'att_1', attempt_number: 1 }],
     })
+    const processed = paymentStore.find((row) => readString(row, 'id') === id)
+    if (processed) applyPaymentToInvoice(processed)
+    return response
   }),
   http.delete(`${BASE}/payments/:id`, ({ params }) => {
     removeRow(paymentStore, String(params['id']))
@@ -3944,6 +4042,18 @@ export const handlers = [
   }),
   http.post(`${BASE}/creditgrants`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
+    // The API's own rule: a subscription-scoped grant must say when it starts.
+    if (body['scope'] === 'SUBSCRIPTION' && !body['start_date']) {
+      return HttpResponse.json(
+        {
+          code: 'validation_error',
+          message: 'start_date is required for SUBSCRIPTION-scoped grants',
+          hint: 'Please provide a start date for the credit grant',
+          http_status_code: 400,
+        },
+        { status: 400 },
+      )
+    }
     const row = { ...body, id: `cg_new_${Date.now()}`, status: 'published' }
     if (body['scope'] === 'SUBSCRIPTION') {
       additionsFor('grants', String(body['subscription_id'] ?? '')).push({
@@ -4010,10 +4120,16 @@ export const handlers = [
   // success path runs end to end.
   http.post(`${BASE}/plans`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json(
-      { ...body, id: `plan_new_${Date.now()}`, status: 'published' },
-      { status: 201 },
-    )
+    const row = {
+      ...body,
+      id: `plan_new_${Date.now()}`,
+      status: 'published',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    // Kept, so the detail page the form lands on reads the plan just created.
+    ;(corpus['plans'] as Corpus).items.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/plans/:id`, async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>
@@ -4274,15 +4390,22 @@ export const handlers = [
     sourceFor('invoices').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
-  // This period's consumption. Authored: an in-progress period with a commitment.
-  http.post(`${BASE}/subscriptions/usage`, () =>
-    HttpResponse.json({
+  // This period's consumption. Authored: an in-progress period, measured against
+  // the contract's own commitment as the API does — none when it has none.
+  http.post(`${BASE}/subscriptions/usage`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = sourceFor('subscriptions').items.find(
+      (item) => readString(item, 'id') === body['subscription_id'],
+    )
+    const commitment = Number(row?.['commitment_amount'] ?? 0)
+    return HttpResponse.json({
       amount: 184.5,
       currency: 'usd',
       start_time: '2026-10-01T00:00:00Z',
       end_time: '2026-11-01T00:00:00Z',
-      commitment_amount: 250,
-      commitment_utilized: 184.5,
+      commitment_amount: commitment,
+      commitment_utilized: commitment > 0 ? Math.min(184.5, commitment) : 0,
+      overage_factor: Number(row?.['overage_factor'] ?? 1),
       overage_amount: 0,
       has_overage: false,
       charges: [
@@ -4295,8 +4418,8 @@ export const handlers = [
           is_overage: false,
         },
       ],
-    }),
-  ),
+    })
+  }),
   // The next invoice, computed by the API. Authored: a fixed fee, metered usage, and a zero line
   // that "Hide zero charges" removes.
   http.post(`${BASE}/invoices/preview`, async ({ request }) => {
@@ -4391,6 +4514,21 @@ export const handlers = [
       : []
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
   }),
+  // V1's "Push to Integration": the API queues the sync and answers at once.
+  http.post(`${BASE}/integrations/sync`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      entity_type?: string
+      entity_id?: string
+    }
+    if (!body.entity_type || !body.entity_id) {
+      return HttpResponse.json(
+        { code: 'validation_error', message: 'entity_type and entity_id are required' },
+        { status: 400 },
+      )
+    }
+    return HttpResponse.json({ message: 'sync triggered' })
+  }),
+
   http.post(`${BASE}/integrations/link`, async ({ request }) => {
     const body = await readBody(request)
     const customerId = String(body['entity_id'] ?? '')
@@ -4702,6 +4840,40 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     sourceFor('subscriptions').items.unshift(row)
+    // An active contract bills its in-advance fixed charges at once, as the API
+    // does, so the customer's first invoice is there to find on their Invoices
+    // tab. Drafts and future starts have not begun, so they bill nothing yet.
+    if (row.subscription_status === 'active') {
+      const planId = readString(body, 'plan_id')
+      const total = sourceFor('prices')
+        .items.filter(
+          (price) =>
+            readString(price, 'entity_id') === planId &&
+            readString(price, 'type') === 'FIXED' &&
+            readString(price, 'invoice_cadence') === 'ADVANCE',
+        )
+        .reduce((sum, price) => sum + Number(readString(price, 'amount') || 0), 0)
+      sourceFor('invoices').items.unshift({
+        id: `inv_new_${Date.now()}`,
+        customer_id: readString(body, 'customer_id'),
+        subscription_id: row.id,
+        currency: readString(body, 'currency') || 'usd',
+        invoice_type: 'SUBSCRIPTION',
+        billing_reason: 'SUBSCRIPTION_CREATE',
+        invoice_status: 'FINALIZED',
+        payment_status: 'PENDING',
+        subtotal: String(total),
+        total: String(total),
+        amount_due: String(total),
+        amount_paid: '0',
+        amount_remaining: String(total),
+        issue_date: row.created_at,
+        finalized_at: row.created_at,
+        status: 'published',
+        created_at: row.created_at,
+        updated_at: row.created_at,
+      })
+    }
     return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/customers`, async ({ request }) =>

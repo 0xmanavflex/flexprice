@@ -2,9 +2,11 @@ import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 import {
   CalendarClockIcon,
+  CirclePauseIcon,
   DatabaseIcon,
   DownloadIcon,
   EyeIcon,
+  PlayIcon,
   PlusIcon,
   ShieldCheckIcon,
   Trash2Icon,
@@ -288,11 +290,7 @@ export function S3ConnectionList({
   return (
     <PageBody>
       <div className="flex flex-col gap-6">
-        <Section
-          title="S3 connections"
-          actions={connections.length > 0 ? addButton : undefined}
-          flush
-        >
+        <Section title="S3 connections" actions={addButton} flush>
           {isLoading ? (
             <p className="text-muted-foreground p-6 text-sm">Loading connections…</p>
           ) : error ? (
@@ -314,7 +312,6 @@ export function S3ConnectionList({
               scene="developers"
               title="No S3 connections yet"
               description="Connect a bucket to start exporting billing data to it."
-              action={addButton}
             />
           ) : (
             <ItemGroup className="divide-y">
@@ -590,11 +587,17 @@ export function DataExportDetail({
               {
                 id: 'toggle',
                 label: enabled ? 'Pause export' : 'Resume export',
+                icon: enabled ? (
+                  <CirclePauseIcon className="text-muted-foreground" aria-hidden />
+                ) : (
+                  <PlayIcon className="text-muted-foreground" aria-hidden />
+                ),
                 onSelect: () => setDialog('toggle'),
               },
               {
                 id: 'delete',
                 label: 'Delete export',
+                icon: <Trash2Icon aria-hidden />,
                 destructive: true,
                 onSelect: () => setDialog('delete'),
               },

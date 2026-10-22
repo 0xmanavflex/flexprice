@@ -2,8 +2,7 @@ import { ApiError, serverReason, useInvoiceHostedLink } from '@fp/query'
 import { toast } from '@fp/ui/pages'
 
 /**
- * "Open hosted invoice" and "Copy hosted invoice link" on the invoice list's
- * row menu and the invoice page's menu — the invoice's own
+ * "Open hosted invoice" on the invoice list's row menu — the invoice's own
  * `hosted_invoice_url`, as the customer receives it (Stripe's page when the
  * invoice synced to Stripe, otherwise the Flexprice hosted invoice).
  *
@@ -33,23 +32,8 @@ export function useHostedInvoiceLink() {
     }
   }
 
-  const copy = async (invoiceId: string) => {
-    try {
-      const url = await link.mutateAsync(invoiceId)
-      if (!url) {
-        toast.error(NO_LINK)
-        return
-      }
-      await navigator.clipboard.writeText(url)
-      toast.success('Hosted invoice link copied', {
-        description: 'Anyone with the link can view and pay this invoice until it expires.',
-      })
-    } catch (cause) {
-      toast.error(messageOf(cause))
-    }
-  }
 
-  return { open, copy, isPending: link.isPending }
+  return { open, isPending: link.isPending }
 }
 
 const NO_LINK =
@@ -63,7 +47,5 @@ function messageOf(cause: unknown): string {
     if (cause.kind === 'not_found') return 'Flexprice could not find this invoice.'
     return serverReason(cause) ?? 'Could not get the hosted invoice link. Try again.'
   }
-  if (cause instanceof DOMException)
-    return 'Could not copy the link. Allow clipboard access and try again.'
   return 'Could not get the hosted invoice link. Try again.'
 }

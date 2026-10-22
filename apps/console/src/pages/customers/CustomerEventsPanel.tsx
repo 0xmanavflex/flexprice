@@ -44,6 +44,8 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
         events={(events.data?.events ?? []).map(toCustomerEvent)}
         total={events.data?.total}
         onOpenEvent={setOpenId}
+        onRefresh={() => void events.refetch()}
+        isRefreshing={events.isFetching && !events.isPending}
         {...subTab(events, 'events')}
       />
       <EventDetailSheet

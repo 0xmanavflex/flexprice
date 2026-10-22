@@ -399,6 +399,29 @@ export const PAYMENT_TERMS_LABEL: Record<PaymentTerms, string> = {
 export const BillingCycle = { Anniversary: 'anniversary', Calendar: 'calendar' } as const
 export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle]
 
+export const INHERITANCE_WITH_BILLING_CUSTOMER =
+  "Inherited customers are billed to this contract's customer. Set the billing customer to Same customer, or remove the inherited customers."
+export const INHERITANCE_WITH_THRESHOLD =
+  'An auto-invoice threshold cannot be used on a contract with inherited customers. Clear it, or remove the inherited customers.'
+
+/**
+ * Why a customer cannot inherit a contract, as the API decides it:
+ * - `OwnContract` — it has a contract of its own (active, trialing or draft)
+ *   that is not under the paying customer.
+ * - `OtherParent` — it already inherits, or is grouped under, another
+ *   customer's contract.
+ */
+export const InheritanceBlock = {
+  OwnContract: 'own-contract',
+  OtherParent: 'other-parent',
+} as const
+export type InheritanceBlock = (typeof InheritanceBlock)[keyof typeof InheritanceBlock]
+
+export const INHERITANCE_BLOCK_LABEL: Record<InheritanceBlock, string> = {
+  [InheritanceBlock.OwnContract]: 'Has its own contract',
+  [InheritanceBlock.OtherParent]: "Inherits another customer's contract",
+}
+
 /**
  * The rules for starting a contract, in the order the form asks them — V1's:
  * customer and plan with the contract's dates; phases, each with its own
@@ -539,6 +562,25 @@ export const createSubscriptionSchema = z
           : 'The contract starts today, so choose today or a later date',
       })
     }
+    // Customers that inherit a contract are billed through its own customer, so
+    // the API takes either inherited customers or another billing customer,
+    // never both, and an early invoice threshold only on a contract without them.
+    if (value.inheritedCustomerExternalIds.length > 0) {
+      if (value.invoicingCustomerExternalId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['inheritedCustomerExternalIds'],
+          message: INHERITANCE_WITH_BILLING_CUSTOMER,
+        })
+      }
+      if (value.autoInvoiceThreshold) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['autoInvoiceThreshold'],
+          message: INHERITANCE_WITH_THRESHOLD,
+        })
+      }
+    }
   })
 
 export type CreateSubscription = z.infer<typeof createSubscriptionSchema>
@@ -597,6 +639,44 @@ export function emptySubscription(): CreateSubscription {
   }
 }
 
+/**
+ * The contract-level commitment: a minimum spend per commitment period, set
+ * when the contract is created. It is separate from the commitments a usage
+ * charge carries, and the API has no way to change it afterwards.
+ */
+export interface ContractCommitment {
+  /** The minimum spend per commitment period. */
+  amount: Money
+  /** The period the minimum is measured over. */
+  period: BillingPeriod
+  /** How many of that period, when the contract bills every few months. */
+  periodCount: number
+  /** Multiplier on spend beyond the minimum; 1 is the normal rate. */
+  overageFactor: number
+  /** Bill the shortfall when spend stays under the minimum. */
+  trueUp: boolean
+}
+
+const COMMITMENT_PERIOD_NOUN: Record<BillingPeriod, [one: string, many: string]> = {
+  [BillingPeriod.Daily]: ['day', 'days'],
+  [BillingPeriod.Weekly]: ['week', 'weeks'],
+  [BillingPeriod.Monthly]: ['month', 'months'],
+  [BillingPeriod.Quarterly]: ['quarter', 'quarters'],
+  [BillingPeriod.HalfYearly]: ['half-year', 'half-years'],
+  [BillingPeriod.Annual]: ['year', 'years'],
+  [BillingPeriod.OneTime]: ['contract', 'contracts'],
+}
+
+/**
+ * The commitment period as "month", "year", "2 weeks" — what follows "per".
+ * Twelve months reads as a year, as the old console wrote it.
+ */
+export function commitmentPeriodNoun(period: BillingPeriod, count = 1): string {
+  if (period === BillingPeriod.Monthly && count === 12) return 'year'
+  const [one, many] = COMMITMENT_PERIOD_NOUN[period]
+  return count > 1 ? `${count} ${many}` : one
+}
+
 /** The detail read model: the list row plus what the detail page adds. */
 export interface SubscriptionDetail extends Subscription {
   /** The API's billing period, which a new charge on this contract must match. */
@@ -614,8 +694,8 @@ export interface SubscriptionDetail extends Subscription {
   timezone: string
   /** The caller's own key for this contract, when it set one. */
   lookupKey: string
-  /** The minimum spend the contract commits to per period; null when it has none. */
-  commitmentAmount: Money | null
+  /** The minimum spend the contract commits to; null when it has none. */
+  commitment: ContractCommitment | null
   /** The most recent invoice, as a link target. */
   latestInvoice: { id: string; number: string } | null
 }

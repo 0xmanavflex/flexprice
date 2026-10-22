@@ -14,7 +14,8 @@ import {
   isChargeCustomised,
 } from '@fp/domain'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
-import { ArrowRightIcon, PlusIcon } from '@ui/icons'
+import type { ReactElement } from 'react'
+import { ArrowRightIcon, CircleSlashIcon, CopyIcon, EyeIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Section } from '@ui/compositions/layout/Section'
@@ -105,7 +106,9 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** The destructive item's wording; "Terminate" on a catalogue, "End charge" on a contract. */
   removeLabel?: string
   /** Extra row-menu items, e.g. a contract's "Go to plan". */
-  extraActions?: (charge: Charge) => Array<{ label: string; onSelect: () => void }>
+  extraActions?: (
+    charge: Charge,
+  ) => Array<{ label: string; icon: ReactElement; onSelect: () => void }>
   /**
    * Replaces opening the sheet.
    *
@@ -310,6 +313,7 @@ export function ChargeTable({
         showTitle={showTitle}
         title={title}
         {...(sectionDescription ? { description: sectionDescription } : {})}
+        {...(addButton ? { action: addButton } : {})}
       >
         <SubTabState
           hasData={false}
@@ -325,7 +329,6 @@ export function ChargeTable({
             scene: 'catalog',
             title: 'No charges yet',
             description: emptyText,
-            ...(addButton ? { action: addButton } : {}),
           }}
         >
           {null}
@@ -433,13 +436,21 @@ export function ChargeTable({
             extra={[
               {
                 label: 'Copy price ID',
+                icon: <CopyIcon aria-hidden />,
                 readOnly: true,
                 onSelect: () => void navigator.clipboard?.writeText(charge.id),
               },
               ...(extraActions?.(charge) ?? []),
               ...(onRowClick
                 ? []
-                : [{ label: 'View details', readOnly: true, onSelect: () => openAt(charge) }]),
+                : [
+                    {
+                      label: 'View details',
+                      icon: <EyeIcon aria-hidden />,
+                      readOnly: true,
+                      onSelect: () => openAt(charge),
+                    },
+                  ]),
             ]}
             onEdit={
               onEdit && !charge.endDate && (canEdit?.(charge) ?? true)
@@ -448,6 +459,7 @@ export function ChargeTable({
             }
             onRemove={onTerminate && !charge.endDate ? () => onTerminate(charge) : undefined}
             removeLabel={removeLabel}
+            removeIcon={<CircleSlashIcon aria-hidden />}
           />
         </span>
       ),
@@ -460,12 +472,9 @@ export function ChargeTable({
       <ArrowRightIcon aria-hidden />
     </Button>
   ) : null
-  // While the summary has nothing to list, the way through sits in the empty
-  // body. Once a change appears, it moves up beside the title.
-  const summaryEmpty = variant === 'summary' && rows.length === 0
-  const titleAction = variant === 'summary' && !summaryEmpty ? showAllButton : undefined
-
-  // The add action sits inside the table frame, beside its filter, as on every other table.
+  // The section's action has one place, the top right of its header, with
+  // rows or without: "Add" on the full table, the way to it on the summary.
+  const headerAction = variant === 'summary' ? showAllButton : addButton
   const description = variant === 'summary' ? undefined : sectionDescription
 
   return (
@@ -475,7 +484,7 @@ export function ChargeTable({
         showTitle={showTitle}
         title={title}
         {...(description ? { description } : {})}
-        {...(titleAction ? { action: titleAction } : {})}
+        {...(headerAction ? { action: headerAction } : {})}
       >
         {rows.length === 0 ? (
           <SectionEmpty
@@ -486,14 +495,12 @@ export function ChargeTable({
                 ? 'Every charge is billed as the plan sets it. Changed charges show here.'
                 : undefined
             }
-            {...(summaryEmpty && showAllButton ? { action: showAllButton } : {})}
           />
         ) : (
           <DetailTable
             compact
             label="Charges"
             toolbar={variant === 'full'}
-            {...(variant === 'full' && addButton ? { action: addButton } : {})}
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
             // filter keeps it.

@@ -15,7 +15,7 @@ import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
-import { CopyIcon, PlusIcon } from '@ui/icons'
+import { CircleSlashIcon, CopyIcon, PlusIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 import { toast } from 'sonner'
 import { IntegrationMark } from '../customers/IntegrationMark'
@@ -180,7 +180,7 @@ export function ContractIntegrations({
                     setUnlinking(link)
                   }}
                 >
-                  Unlink {link.name}
+                  <CircleSlashIcon aria-hidden /> Unlink {link.name}
                 </DropdownMenuItem>
               </>
             ) : null}

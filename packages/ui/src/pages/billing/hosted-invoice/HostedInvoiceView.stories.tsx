@@ -26,6 +26,8 @@ type Story = StoryObj<typeof meta>
 export const Open: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { level: 1, name: 'Invoice' })).toBeVisible()
+    await expect(canvas.getByText('Due')).toBeVisible()
     await expect(canvas.getByText('Amount due')).toBeVisible()
     await expect(canvas.getByText('DSADDWUO-0001')).toBeVisible()
     await expect(canvas.getByText('14 Nov 2026')).toBeVisible()
@@ -42,11 +44,14 @@ export const Details: Story = {
     const body = within(document.body)
     // The drawer animates in; wait until it has.
     await waitFor(() => expect(body.getByText('Due 14 Nov 2026')).toBeVisible())
-    await expect(body.getByText('Summary')).toBeVisible()
-    await expect(body.getByText('API calls')).toBeVisible()
-    await expect(body.getByText('Amount remaining')).toBeVisible()
-    await expect(body.getByText('Payment history')).toBeVisible()
-    await userEvent.click(body.getByRole('button', { name: 'Close invoice and payment details' }))
+    const drawer = within(body.getByRole('dialog'))
+    await expect(drawer.getByText('Billed to')).toBeVisible()
+    await expect(drawer.getByRole('heading', { name: 'Items' })).toBeVisible()
+    await expect(drawer.getByText('API calls')).toBeVisible()
+    await expect(drawer.getByText('Amount remaining')).toBeVisible()
+    await expect(drawer.getByRole('heading', { name: 'Payment history' })).toBeVisible()
+    await expect(drawer.getByText('Failed')).toBeVisible()
+    await userEvent.click(drawer.getByRole('button', { name: 'Close' }))
     await waitFor(() => expect(body.queryByText('Due 14 Nov 2026')).not.toBeInTheDocument())
   },
 }
@@ -54,7 +59,9 @@ export const Details: Story = {
 export const Paying: Story = {
   args: { isPaying: true },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('button', { name: 'Pay' })).toBeDisabled()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Pay' })).toBeDisabled()
+    await expect(canvas.queryByText(/Online payment isn’t available/)).not.toBeInTheDocument()
   },
 }
 
@@ -70,7 +77,11 @@ export const PayError: Story = {
 export const PayDisabled: Story = {
   args: { invoice: { ...DEMO_HOSTED_INVOICE, payEnabled: false } },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('button', { name: 'Pay' })).toBeDisabled()
+    const pay = within(canvasElement).getByRole('button', { name: 'Pay' })
+    await expect(pay).toBeDisabled()
+    await expect(pay).toHaveAccessibleDescription(
+      `Online payment isn’t available for this invoice. Contact ${DEMO_HOSTED_INVOICE.tenant.name} to pay.`,
+    )
   },
 }
 
@@ -79,6 +90,7 @@ export const Processing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Payment processing')).toBeVisible()
+    await expect(canvas.getByText('Processing')).toBeVisible()
     await expect(canvas.queryByRole('button', { name: 'Pay' })).not.toBeInTheDocument()
   },
 }
@@ -88,6 +100,7 @@ export const Paid: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Invoice paid')).toBeVisible()
+    await expect(canvas.getByText('Paid')).toBeVisible()
     await expect(canvas.getByText('14 Oct 2026')).toBeVisible()
     await expect(canvas.getByText('Stripe')).toBeVisible()
     await expect(canvas.queryByRole('button', { name: 'Pay' })).not.toBeInTheDocument()
@@ -100,6 +113,7 @@ export const Voided: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Invoice voided')).toBeVisible()
+    await expect(canvas.getByText('Void')).toBeVisible()
     await expect(canvas.queryByRole('button', { name: 'Pay' })).not.toBeInTheDocument()
   },
 }
@@ -111,7 +125,8 @@ export const Sparse: Story = {
     await expect(canvas.queryByText(/Questions\?/)).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'View invoice and payment details' }))
     const body = within(document.body)
-    await waitFor(() => expect(body.getByText('Summary')).toBeVisible())
+    await waitFor(() => expect(body.getByText('No line items on this invoice.')).toBeVisible())
+    await expect(body.queryByText('Billed to')).not.toBeInTheDocument()
     await expect(body.queryByText('Payment history')).not.toBeInTheDocument()
   },
 }
@@ -128,7 +143,12 @@ export const Invalid: Story = {
 export const NotFound: Story = {
   args: { kind: 'not-found' },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('Invoice not found')).toBeVisible()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Invoice not found')
+    await expect(canvas.getByRole('link', { name: 'Contact Flexprice support' })).toHaveAttribute(
+      'href',
+      'https://flexprice.io/contact',
+    )
   },
 }
 
@@ -140,4 +160,11 @@ export const Failed: Story = {
   },
 }
 
-export const Loading: Story = { args: { kind: 'loading' } }
+export const Loading: Story = {
+  args: { kind: 'loading' },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('status', { name: 'Loading invoice' }),
+    ).toBeVisible()
+  },
+}
