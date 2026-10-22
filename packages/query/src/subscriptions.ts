@@ -65,6 +65,9 @@ import {
   money,
   moneyOr,
   SUBSCRIPTION_FILTERS,
+  INHERITANCE_WITH_BILLING_CUSTOMER,
+  INHERITANCE_WITH_THRESHOLD,
+  InheritanceBlock,
 } from '@fp/domain'
 import {
   type CreditGrantWire,
@@ -124,6 +127,8 @@ export interface SubscriptionWire {
   timezone?: string | undefined
   lookupKey?: string | undefined
   commitmentAmount?: string | undefined
+  /** Set on a contract inherited from, or grouped under, another contract. */
+  parentSubscriptionId?: string | undefined
   latestInvoice?: { id?: string | undefined; invoiceNumber?: string | undefined } | undefined
 }
 
@@ -550,6 +555,118 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
     enabled: ids.length > 0,
     staleTime: 30_000,
   })
+}
+
+/** The contract states the API counts when it checks who may inherit. */
+const HIERARCHY_STATUSES = new Set(['active', 'trialing', 'draft'])
+
+/**
+ * Which of these customers cannot inherit a contract from `parentCustomerId`,
+ * applying the rule the API checks on create: a child may hold no contract of
+ * its own, and may already inherit only from the paying customer's contracts.
+ *
+ * `contracts` are every contract of the paying customer and the candidates.
+ * Cancelled and paused contracts do not count, as the API does not count them.
+ */
+export function toInheritanceBlocks(
+  parentCustomerId: string,
+  contracts: readonly SubscriptionWire[],
+): Record<string, InheritanceBlock> {
+  const live = contracts.filter((c) => HIERARCHY_STATUSES.has(c.subscriptionStatus ?? ''))
+  const parentContracts = new Set(
+    live.filter((c) => c.customerId === parentCustomerId).map((c) => c.id),
+  )
+  const blocks: Record<string, InheritanceBlock> = {}
+  for (const contract of live) {
+    const customerId = contract.customerId
+    if (!customerId || customerId === parentCustomerId) continue
+    if (!contract.parentSubscriptionId) {
+      // Its own contract outranks any other reason: it is the one to end first.
+      blocks[customerId] = InheritanceBlock.OwnContract
+    } else if (
+      !parentContracts.has(contract.parentSubscriptionId) &&
+      blocks[customerId] !== InheritanceBlock.OwnContract
+    ) {
+      blocks[customerId] = InheritanceBlock.OtherParent
+    }
+  }
+  return blocks
+}
+
+/**
+ * Why each of these customers cannot inherit a contract from `parentCustomerId`
+ * — one `POST /subscriptions/search` narrowed by `customer_ids`, paged like the
+ * contract counts. A customer missing from the result can inherit.
+ */
+export function useInheritanceBlocks(parentCustomerId: string, customerIds: readonly string[]) {
+  const client = useFlexprice()
+  const ids = [...new Set(customerIds.filter((id) => id && id !== parentCustomerId))].sort()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.list({ inheritanceFor: parentCustomerId, ids }),
+    queryFn: async ({ signal }) => {
+      const contracts: SubscriptionWire[] = []
+      for (let page = 0; page < COUNT_PAGES; page += 1) {
+        const response = await call(
+          (options) =>
+            client.subscriptions.querySubscription(
+              {
+                customerIds: [parentCustomerId, ...ids],
+                limit: COUNT_PAGE,
+                offset: page * COUNT_PAGE,
+              },
+              options,
+            ),
+          signal,
+        )
+        const items = (response.items ?? []) as SubscriptionWire[]
+        contracts.push(...items)
+        const total = response.pagination?.total ?? 0
+        if (items.length < COUNT_PAGE || (page + 1) * COUNT_PAGE >= total) break
+      }
+      return toInheritanceBlocks(parentCustomerId, contracts)
+    },
+    enabled: Boolean(parentCustomerId) && ids.length > 0,
+    staleTime: 30_000,
+  })
+}
+
+/**
+ * A plain sentence for the customer-hierarchy refusals of `POST /subscriptions`.
+ *
+ * The API answers with its hint — "The child customer cannot have standalone
+ * or parent subscriptions" — which names neither the customer nor the fix.
+ * `nameOf` turns the external id the API reports into the customer's name.
+ * Any other error is null, so the caller keeps its own message.
+ */
+export function explainContractHierarchyError(
+  error: unknown,
+  nameOf: (externalId: string) => string = (externalId) => externalId,
+): string | null {
+  if (!(error instanceof ApiError) || !error.fromServer) return null
+  const said = error.message.toLowerCase()
+  const externalId = error.details?.['external_id']
+  const who = externalId ? nameOf(externalId) : 'One of the inherited customers'
+
+  if (said.includes('cannot have standalone or parent subscriptions')) {
+    return `${who} has a contract of its own, so it cannot inherit this one. End that contract first, or remove ${externalId ? 'the customer' : 'it'} from Inherited customers.`
+  }
+  if (said.includes('can only be inherited under one parent')) {
+    return `${who} already inherits another customer's contract. A customer can inherit only one.`
+  }
+  if (said.includes('cannot appear in external_customer_ids_to_inherit_subscription')) {
+    return "The contract's own customer cannot also be one of its inherited customers."
+  }
+  if (said.includes('receives a subscription through hierarchy')) {
+    return "This customer inherits another customer's contract, so it cannot have a contract of its own."
+  }
+  if (said.includes('external_customer_ids_to_inherit_subscription, not both')) {
+    return INHERITANCE_WITH_BILLING_CUSTOMER
+  }
+  if (said.includes('remove auto_invoice_threshold')) {
+    return INHERITANCE_WITH_THRESHOLD
+  }
+  return null
 }
 
 /**

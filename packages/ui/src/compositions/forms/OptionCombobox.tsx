@@ -85,7 +85,7 @@ export function OptionCombobox({
         <ComboboxEmpty>{emptyText}</ComboboxEmpty>
         <ComboboxList>
           {(option: Option) => (
-            <ComboboxItem key={option.value} value={option}>
+            <ComboboxItem key={option.value} value={option} disabled={option.disabled ?? false}>
               <OptionBody option={option} />
             </ComboboxItem>
           )}

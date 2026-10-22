@@ -399,6 +399,29 @@ export const PAYMENT_TERMS_LABEL: Record<PaymentTerms, string> = {
 export const BillingCycle = { Anniversary: 'anniversary', Calendar: 'calendar' } as const
 export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle]
 
+export const INHERITANCE_WITH_BILLING_CUSTOMER =
+  "Inherited customers are billed to this contract's customer. Set the billing customer to Same customer, or remove the inherited customers."
+export const INHERITANCE_WITH_THRESHOLD =
+  'An auto-invoice threshold cannot be used on a contract with inherited customers. Clear it, or remove the inherited customers.'
+
+/**
+ * Why a customer cannot inherit a contract, as the API decides it:
+ * - `OwnContract` — it has a contract of its own (active, trialing or draft)
+ *   that is not under the paying customer.
+ * - `OtherParent` — it already inherits, or is grouped under, another
+ *   customer's contract.
+ */
+export const InheritanceBlock = {
+  OwnContract: 'own-contract',
+  OtherParent: 'other-parent',
+} as const
+export type InheritanceBlock = (typeof InheritanceBlock)[keyof typeof InheritanceBlock]
+
+export const INHERITANCE_BLOCK_LABEL: Record<InheritanceBlock, string> = {
+  [InheritanceBlock.OwnContract]: 'Has its own contract',
+  [InheritanceBlock.OtherParent]: "Inherits another customer's contract",
+}
+
 /**
  * The rules for starting a contract, in the order the form asks them — V1's:
  * customer and plan with the contract's dates; phases, each with its own
@@ -538,6 +561,25 @@ export const createSubscriptionSchema = z
           ? 'Choose a date on or after the contract start date'
           : 'The contract starts today, so choose today or a later date',
       })
+    }
+    // Customers that inherit a contract are billed through its own customer, so
+    // the API takes either inherited customers or another billing customer,
+    // never both, and an early invoice threshold only on a contract without them.
+    if (value.inheritedCustomerExternalIds.length > 0) {
+      if (value.invoicingCustomerExternalId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['inheritedCustomerExternalIds'],
+          message: INHERITANCE_WITH_BILLING_CUSTOMER,
+        })
+      }
+      if (value.autoInvoiceThreshold) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['autoInvoiceThreshold'],
+          message: INHERITANCE_WITH_THRESHOLD,
+        })
+      }
     }
   })
 

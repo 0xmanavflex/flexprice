@@ -59,6 +59,8 @@ import {
   createSubscriptionSchema,
   emptySubscription,
   currencyCodes,
+  INHERITANCE_BLOCK_LABEL,
+  InheritanceBlock,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
@@ -200,6 +202,12 @@ export interface SubscriptionFormProps {
   meters?: MeterOption[]
   priceUnits?: PriceUnitOption[]
   customerLocked?: boolean
+  /**
+   * Customers (by id) that cannot inherit this contract, and why — the API
+   * refuses a child that has a contract of its own or inherits another one.
+   * Loaded for the chosen customer; they are listed but cannot be picked.
+   */
+  inheritanceBlocks?: Readonly<Record<string, InheritanceBlock>>
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -212,6 +220,8 @@ export interface SubscriptionFormProps {
 }
 
 const FORM_ID = 'subscription-form'
+
+const NO_BLOCKS: Readonly<Record<string, InheritanceBlock>> = {}
 
 const FALLBACK_CURRENCIES = currencyCodes()
 
@@ -247,7 +257,7 @@ const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
   ],
   phases: ['phases', 'chargeCommitments'],
   commitments: ['commitmentAmount', 'overageFactor'],
-  billing: ['autoInvoiceThreshold'],
+  billing: ['autoInvoiceThreshold', 'inheritedCustomerExternalIds'],
 }
 
 const unique = <T,>(values: T[]) => [...new Set(values)]
@@ -256,6 +266,23 @@ const WhoPays = { Same: 'same', Another: 'another' } as const
 type WhoPays = (typeof WhoPays)[keyof typeof WhoPays]
 
 const CHOOSE_PAYER = 'Choose who pays, or switch back to the same customer.'
+
+/** Why the first of the picked customers cannot inherit, naming it; null when all can. */
+function inheritanceBlockedMessage(
+  externalIds: readonly string[],
+  customers: readonly SubscriptionCustomerOption[],
+  blocks: Readonly<Record<string, InheritanceBlock>>,
+): string | null {
+  for (const externalId of externalIds) {
+    const customer = customers.find((c) => c.externalId === externalId)
+    const block = customer ? blocks[customer.value] : undefined
+    if (!customer || !block) continue
+    return block === InheritanceBlock.OwnContract
+      ? `${customer.label} has a contract of its own, so it cannot inherit this one. Remove it, or end that contract first.`
+      : `${customer.label} already inherits another customer's contract. Remove it from Inherited customers.`
+  }
+  return null
+}
 
 /** The three ways a contract can choose its billing day. */
 type BillOn = 'start' | 'calendar' | 'date'
@@ -294,6 +321,7 @@ export function SubscriptionForm({
   meters = [],
   priceUnits = [],
   customerLocked = false,
+  inheritanceBlocks = NO_BLOCKS,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -349,6 +377,16 @@ export function SubscriptionForm({
   )
   const payerMissing = () =>
     whoPays === WhoPays.Another && !form.getValues('invoicingCustomerExternalId')
+  /** Flags a picked customer the API would refuse to let inherit; true when one was flagged. */
+  const inheritanceBlocked = () => {
+    const message = inheritanceBlockedMessage(
+      form.getValues('inheritedCustomerExternalIds'),
+      customers,
+      inheritanceBlocks,
+    )
+    if (message) form.setError('inheritedCustomerExternalIds', { type: 'validate', message })
+    return message !== null
+  }
 
   // The contract's end is its last phase's end: one field, wherever it is edited.
   const lastPhase = values.phases.length - 1
@@ -371,6 +409,7 @@ export function SubscriptionForm({
         form.setError('invoicingCustomerExternalId', { type: 'required', message: CHOOSE_PAYER })
         return false
       }
+      if (id === 'billing' && valid && inheritanceBlocked()) return false
       return valid
     },
   })
@@ -534,6 +573,10 @@ export function SubscriptionForm({
       (draft) => {
         if (payerMissing()) {
           form.setError('invoicingCustomerExternalId', { type: 'required', message: CHOOSE_PAYER })
+          flow.goTo('billing')
+          return
+        }
+        if (inheritanceBlocked()) {
           flow.goTo('billing')
           return
         }
@@ -936,14 +979,16 @@ export function SubscriptionForm({
         register={form.register}
         isSubmitting={isSubmitting}
         customers={customers}
+        inheritanceBlocks={inheritanceBlocks}
         onChange={(name, value) => {
           set(name, value)
-          if (name === 'invoicingCustomerExternalId') form.clearErrors(name)
+          if (name === 'invoicingCustomerExternalId' || name === 'inheritedCustomerExternalIds')
+            form.clearErrors(name)
         }}
         whoPays={whoPays}
         onWhoPays={(next) => {
           setWhoPays(next)
-          form.clearErrors('invoicingCustomerExternalId')
+          form.clearErrors(['invoicingCustomerExternalId', 'inheritedCustomerExternalIds'])
         }}
         hasFixedCharges={hasFixedCharges}
       />,
@@ -2888,6 +2933,7 @@ function BillingStep({
   register,
   isSubmitting,
   customers,
+  inheritanceBlocks,
   onChange,
   whoPays,
   onWhoPays,
@@ -2898,6 +2944,7 @@ function BillingStep({
   register: UseFormRegister<CreateSubscription>
   isSubmitting: boolean
   customers: readonly SubscriptionCustomerOption[]
+  inheritanceBlocks: Readonly<Record<string, InheritanceBlock>>
   onChange: <K extends keyof CreateSubscription>(name: K, value: CreateSubscription[K]) => void
   whoPays: WhoPays
   onWhoPays: (next: WhoPays) => void
@@ -2907,9 +2954,20 @@ function BillingStep({
   // Another customer is chosen by external id, which is what the API takes.
   const others = customers.filter((c) => c.externalId && c.value !== values.customerId)
   const payerOptions = others.map((c) => ({ value: c.externalId!, label: c.label }))
-  const inheritable = payerOptions.filter(
-    (o) => !values.inheritedCustomerExternalIds.includes(o.value),
-  )
+  // A customer the API would refuse is listed, greyed, with the reason.
+  const inheritable = others
+    .filter((c) => !values.inheritedCustomerExternalIds.includes(c.externalId!))
+    .map((c) => {
+      const block = inheritanceBlocks[c.value]
+      return block
+        ? {
+            value: c.externalId!,
+            label: c.label,
+            hint: INHERITANCE_BLOCK_LABEL[block],
+            disabled: true,
+          }
+        : { value: c.externalId!, label: c.label }
+    })
   const nameOf = (externalId: string) =>
     payerOptions.find((o) => o.value === externalId)?.label ?? externalId
   const [pickerKey, setPickerKey] = useState(0)
@@ -2996,8 +3054,9 @@ function BillingStep({
         ) : null}
         <FormRow
           label="Inherited customers"
-          hint="Customers whose usage is billed through this contract. They share its charges, entitlements and credits; the invoice goes to the billing customer."
+          hint="Customers that share this contract's charges, entitlements and credits. Their usage is invoiced to this contract's customer, so the billing customer stays the same."
           align="start"
+          error={errors.inheritedCustomerExternalIds?.message}
         >
           {({ id, ...field }) => (
             <div className="flex flex-col gap-2">
@@ -3042,7 +3101,7 @@ function BillingStep({
                 placeholder={
                   values.inheritedCustomerExternalIds.length > 0
                     ? 'Add another customer…'
-                    : 'Add a customer…'
+                    : 'Add customers to inherit…'
                 }
                 emptyText="No other customer has an external ID."
                 disabled={isSubmitting}
