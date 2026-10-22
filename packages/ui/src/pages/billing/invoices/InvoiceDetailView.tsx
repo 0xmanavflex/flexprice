@@ -187,12 +187,18 @@ export function InvoiceDetailView({
   ).length
   const hostedUrl = invoice.hostedUrl ?? null
 
-  const copyLink = () => {
+  const copyLink = async () => {
     if (!hostedUrl) return
-    void navigator.clipboard?.writeText(hostedUrl)
-    toast.success('Hosted invoice link copied', {
-      description: 'Anyone with the link can view and pay this invoice until it expires.',
-    })
+    try {
+      await navigator.clipboard.writeText(hostedUrl)
+      toast.success('Hosted invoice link copied', {
+        description: 'Anyone with the link can view and pay this invoice until it expires.',
+      })
+    } catch {
+      toast.error('Couldn’t copy the link', {
+        description: 'Your browser blocked clipboard access.',
+      })
+    }
   }
 
   const related: RelatedItem[] = [
@@ -273,7 +279,7 @@ export function InvoiceDetailView({
               <MenuAction
                 icon={<LinkIcon />}
                 label="Copy hosted invoice link"
-                onSelect={hostedUrl ? copyLink : undefined}
+                onSelect={hostedUrl ? () => void copyLink() : undefined}
                 hint="Available once the invoice is finalized"
               />
               {isDraft && onFinalize ? (
