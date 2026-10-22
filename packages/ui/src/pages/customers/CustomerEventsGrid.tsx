@@ -6,7 +6,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@ui/components/primitives/sheet'
+import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
+import { RefreshCwIcon } from '@ui/icons'
 import { SubTabState, truncationNote, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { DetailTable } from '../shared/DetailTable'
 
@@ -38,6 +40,14 @@ export interface CustomerEventsGridProps extends Partial<SubTabQuery> {
    * sheet of the event's properties itself.
    */
   onOpenEvent?: ((eventId: string) => void) | undefined
+  /**
+   * Adds a Refresh button to the section header (V1's manual refresh): events
+   * are ingested continuously and the list does not poll. In the header, not
+   * the table toolbar, so it is there while the list is still empty.
+   */
+  onRefresh?: (() => void) | undefined
+  /** A refresh is in flight: the button is disabled and its icon spins. */
+  isRefreshing?: boolean | undefined
 }
 
 export function CustomerEventsGrid({
@@ -50,6 +60,8 @@ export function CustomerEventsGrid({
   onRetry,
   isRetrying,
   onOpenEvent,
+  onRefresh,
+  isRefreshing = false,
 }: CustomerEventsGridProps) {
   const [selected, setSelected] = useState<CustomerEvent | null>(null)
   const capped =
@@ -59,7 +71,23 @@ export function CustomerEventsGrid({
 
   return (
     <>
-      <Section table title="Recent events">
+      <Section
+        table
+        title="Recent events"
+        {...(onRefresh
+          ? {
+              action: (
+                <Button variant="outline" onClick={onRefresh} disabled={isRefreshing}>
+                  <RefreshCwIcon
+                    aria-hidden
+                    className={isRefreshing ? 'animate-spin' : undefined}
+                  />
+                  Refresh
+                </Button>
+              ),
+            }
+          : {})}
+      >
         <SubTabState
           hasData={events.length > 0}
           isLoading={isLoading}

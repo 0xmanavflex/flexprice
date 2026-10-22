@@ -183,4 +183,16 @@ test.describe('a customer detail page', () => {
     await expect(portal.getByText('Payment methods')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByRole('menuitem', { name: 'Copy portal link' })).toHaveCount(0)
   })
+
+  test('refreshes the Events tab on demand', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('tab', { name: 'Events' }).click()
+    const refresh = page.getByRole('button', { name: 'Refresh' })
+    await expect(refresh).toBeEnabled()
+    const reread = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/events/query'),
+    )
+    await refresh.click()
+    await reread
+  })
 })
