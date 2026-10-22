@@ -16,6 +16,8 @@ import {
   SimpleTable,
   SplitMeter,
   SummaryRow,
+  TotalRow,
+  TotalsList,
   type Choice,
 } from './DetailKit'
 import { Field } from '../forms/Field'
@@ -201,6 +203,41 @@ export const SummaryRowPlayground: StoryObj<SummaryRowArgs> = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('MRR')).toBeVisible()
     await expect(canvas.getByText('+4.2% vs last month')).toBeVisible()
+  },
+}
+
+/* ----------------------------------------------------------------- totals */
+
+interface TotalsArgs {
+  paid: boolean
+}
+
+/**
+ * The money column under a document's lines. Every row is one size; "Total"
+ * and "Amount due" are medium, and the figure the document is about is a step
+ * larger. Invoice, credit memo, upcoming invoice and the composer all use it.
+ */
+export const TotalsListPlayground: StoryObj<TotalsArgs> = {
+  name: 'TotalsList: Playground',
+  argTypes: { paid: { control: 'boolean' } },
+  args: { paid: true },
+  render: ({ paid }) => (
+    <TotalsList className="ml-auto">
+      <TotalRow label="Subtotal" value="$283.50" />
+      <TotalRow label="Discount" value="−$28.35" />
+      <TotalRow label="Tax" value="$20.41" />
+      <TotalRow label="Total" value="$275.56" emphasis="total" rule />
+      {paid ? <TotalRow label="Paid" value="− $275.56" /> : null}
+      <TotalRow label="Amount due" value={paid ? '$0.00' : '$275.56'} emphasis="due" />
+    </TotalsList>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const subtotal = canvas.getByText('Subtotal')
+    const due = canvas.getByText('Amount due')
+    // One type size down the column; only the weight marks the totals.
+    await expect(getComputedStyle(subtotal).fontSize).toBe(getComputedStyle(due).fontSize)
+    await expect(Number(getComputedStyle(due).fontWeight)).toBeLessThanOrEqual(500)
   },
 }
 

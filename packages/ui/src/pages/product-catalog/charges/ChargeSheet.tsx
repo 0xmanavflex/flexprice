@@ -153,7 +153,7 @@ function Box({
         <FrameHeader className="flex-row items-center justify-between gap-3">
           <FrameTitle
             id={`charge-${section}-title`}
-            className="flex items-center gap-2 [&_svg]:size-4"
+            className="flex items-center gap-2 font-medium [&_svg]:size-4"
           >
             {icon}
             {title}

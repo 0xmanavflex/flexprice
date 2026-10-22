@@ -157,7 +157,9 @@ export function PricingCatalogBlock({
               to change what the widget displays.
             </AlertDescription>
           </Alert>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {/* The vendored tile sets the plan name and price in semibold; the console
+              tops out at medium, so the grid brings those two back to it. */}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [&_.text-2xl]:font-medium [&_h3]:font-medium">
             {tiles.map((tile) => {
               const total = featureCount(tile.id)
               const hidden = total - VISIBLE_FEATURES

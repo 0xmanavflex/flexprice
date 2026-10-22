@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from 'react'
 import { CheckIcon, InfoIcon, PlusIcon, ReceiptIcon, SaveIcon, Trash2Icon, XIcon } from '@ui/icons'
 import type { z } from 'zod'
 import {
@@ -57,10 +57,10 @@ import {
   TableRow,
 } from '@ui/components/primitives/table'
 import { Textarea } from '@ui/components/primitives/textarea'
-import { InvoiceSection } from '@ui/components/blocks/form-3/components/invoice-section'
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
+import { TotalRow, TotalsList } from '@ui/compositions/detail/DetailKit'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
@@ -87,13 +87,13 @@ import type { EditableLine } from './InvoiceLinesEditor'
 export const InvoiceFormProvenance = provenance({
   source: 'composition',
   composes: [
-    'blocks/form-3',
     'ui/card',
     'ui/combobox',
     'ui/field',
     'ui/table',
     'compositions/DateInput',
     'compositions/LabelWithHint',
+    'compositions/detail-kit',
   ],
   note: 'One create/edit invoice form on the form-3 layout, V1 fields only; line total is quantity × unit price, summed exactly.',
 })
@@ -630,7 +630,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                   Customer, dates, line items, taxes and notes.
                 </FieldDescription>
                 <FieldGroup className="gap-7">
-                  <InvoiceSection
+                  <InvoiceFormSection
                     title="Customer"
                     description="Who the invoice bills, and its number."
                     {...(edit ? {} : { badge: 'Required', badgeVariant: 'success-light' as const })}
@@ -722,11 +722,11 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         empty={create ? 'Choose a customer to see their billing details.' : '—'}
                       />
                     </div>
-                  </InvoiceSection>
+                  </InvoiceFormSection>
 
                   <Separator />
 
-                  <InvoiceSection
+                  <InvoiceFormSection
                     title="Dates and currency"
                     description="When it is issued and due, and what it is billed in."
                   >
@@ -786,11 +786,11 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         <FieldError message={issue(error, 'currency')} />
                       </Field>
                     </FieldGroup>
-                  </InvoiceSection>
+                  </InvoiceFormSection>
 
                   <Separator />
 
-                  <InvoiceSection
+                  <InvoiceFormSection
                     title="Line items"
                     description="What the invoice charges for: quantity × unit price, with a note and service period."
                     badge={`${lines.length} item${lines.length === 1 ? '' : 's'}`}
@@ -809,7 +809,9 @@ export function InvoiceForm(props: InvoiceFormProps) {
                   >
                     <Table aria-label="Invoice line items" className="min-w-[760px]">
                       <TableHeader>
-                        <TableRow>
+                        {/* The invoice document's column heads (muted, small, regular), so the
+                            lines read the same while drafting as on the finished invoice. */}
+                        <TableRow className="[&>th]:text-muted-foreground [&>th]:text-xs [&>th]:font-normal">
                           <TableHead className="w-[44%]">Item</TableHead>
                           <TableHead className="w-24">Qty</TableHead>
                           <TableHead className="w-40">Unit price</TableHead>
@@ -849,12 +851,12 @@ export function InvoiceForm(props: InvoiceFormProps) {
                       </p>
                     ) : null}
                     <FieldError message={issue(error, 'lines')} />
-                  </InvoiceSection>
+                  </InvoiceFormSection>
 
                   <Separator />
 
                   {create ? (
-                    <InvoiceSection
+                    <InvoiceFormSection
                       title="Taxes"
                       description="Applied by Flexprice on top of the lines. Starts from the customer's tax rates."
                       badge={`${taxes.length} rate${taxes.length === 1 ? '' : 's'}`}
@@ -928,9 +930,9 @@ export function InvoiceForm(props: InvoiceFormProps) {
                           </div>
                         ) : null}
                       </div>
-                    </InvoiceSection>
+                    </InvoiceFormSection>
                   ) : (
-                    <InvoiceSection
+                    <InvoiceFormSection
                       title="Status and payment"
                       description="Applied after the other changes are saved."
                     >
@@ -1054,12 +1056,12 @@ export function InvoiceForm(props: InvoiceFormProps) {
                           </Field>
                         )}
                       </FieldGroup>
-                    </InvoiceSection>
+                    </InvoiceFormSection>
                   )}
 
                   <Separator />
 
-                  <InvoiceSection
+                  <InvoiceFormSection
                     title="Notes"
                     description="A memo printed on the invoice, and metadata for your own systems."
                     badge="Optional"
@@ -1151,7 +1153,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         </Button>
                       </div>
                     </FieldGroup>
-                  </InvoiceSection>
+                  </InvoiceFormSection>
                 </FieldGroup>
               </FieldSet>
             </CardContent>
@@ -1352,30 +1354,49 @@ function Summary({
   totalLabel: string
 }) {
   return (
-    <dl className="ml-auto flex w-full max-w-xs flex-col gap-2 text-sm">
-      <SummaryRow label="Subtotal">{subtotal}</SummaryRow>
-      <SummaryRow label="Tax">{tax}</SummaryRow>
-      <SummaryRow label={totalLabel} strong>
-        {total}
-      </SummaryRow>
-    </dl>
+    <TotalsList className="ml-auto">
+      <TotalRow label="Subtotal" value={subtotal} />
+      <TotalRow label="Tax" value={tax} />
+      <TotalRow label={totalLabel} value={total} emphasis="due" rule />
+    </TotalsList>
   )
 }
 
-function SummaryRow({
-  label,
-  strong = false,
+/**
+ * A titled group inside the invoice card. The form-3 block's own section heads
+ * its groups in semibold at a larger size, which no other form uses; this keeps
+ * its layout and gives the title the console's section-title type (the size and
+ * weight of `Section`, `FormCard` and `Panel` titles).
+ */
+function InvoiceFormSection({
+  title,
+  description,
+  badge,
+  badgeVariant = 'secondary',
+  action,
   children,
 }: {
-  label: string
-  strong?: boolean
+  title: string
+  description?: string
+  badge?: string
+  badgeVariant?: ComponentProps<typeof Badge>['variant']
+  action?: ReactNode
   children: ReactNode
 }) {
   return (
-    <div className={`flex justify-between gap-4 ${strong ? 'border-t pt-2 font-medium' : ''}`}>
-      <dt className={strong ? '' : 'text-muted-foreground'}>{label}</dt>
-      <dd className="tabular-nums">{children}</dd>
-    </div>
+    <section className="flex flex-col gap-4 sm:gap-5">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-foreground text-sm font-medium">{title}</h2>
+            {badge ? <Badge variant={badgeVariant}>{badge}</Badge> : null}
+          </div>
+          {description ? <p className="text-muted-foreground text-[13px]">{description}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      {children}
+    </section>
   )
 }
 

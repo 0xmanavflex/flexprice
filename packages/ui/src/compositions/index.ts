@@ -189,6 +189,8 @@ export {
   SimpleTable,
   SplitMeter,
   SummaryRow,
+  TotalRow,
+  TotalsList,
 } from './detail/DetailKit'
 export type { Choice, DetailMenuItem, DetailTabSpec, SimpleColumn } from './detail/DetailKit'
 export { GuidedEmptyState } from './feedback/GuidedEmptyState'

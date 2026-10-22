@@ -54,9 +54,11 @@ export function RelatedCard({
         {links.map((item) => (
           <div
             key={item.id ?? item.label}
-            className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-4 px-6 py-3"
+            className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-baseline gap-4 px-6 py-3"
           >
-            <dt className="text-muted-foreground min-w-0 text-xs break-words">{item.label}</dt>
+            <dt className="text-muted-foreground min-w-0 truncate text-xs" title={item.label}>
+              {item.label}
+            </dt>
             <dd className="min-w-0">
               {item.onOpen ? (
                 <button
