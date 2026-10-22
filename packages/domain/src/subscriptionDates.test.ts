@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createSubscriptionSchema, emptyPhase, emptySubscription } from './subscription'
+import {
+  contractDateToInstant,
+  contractDay,
+  createSubscriptionSchema,
+  emptyPhase,
+  emptySubscription,
+} from './subscription'
 
 const base = { ...emptySubscription(), customerId: 'c', planId: 'p', currency: 'USD' }
 const endErrors = (value: unknown) => {
@@ -85,5 +91,41 @@ describe('billing date (Bill on a date you choose)', () => {
     expect(anchorErrors({ ...base, billingAnchor: '2000-01-01' })).toEqual([
       'The contract starts today, so choose today or a later date',
     ])
+  })
+})
+
+describe('contract dates with a time', () => {
+  it('orders a day and an instant by when they fall', () => {
+    const start = new Date(2026, 9, 21, 9, 30).toISOString()
+    const before = new Date(2026, 9, 21, 9, 0).toISOString()
+    const parsed = createSubscriptionSchema.safeParse({
+      ...emptySubscription(),
+      customerId: 'cus_1',
+      planId: 'plan_1',
+      currency: 'usd',
+      startDate: start,
+      phases: [{ ...emptyPhase(), endDate: before }],
+    })
+    expect(parsed.success).toBe(false)
+  })
+
+  it('accepts a billing date on the start day whatever the time', () => {
+    const parsed = createSubscriptionSchema.safeParse({
+      ...emptySubscription(),
+      customerId: 'cus_1',
+      planId: 'plan_1',
+      currency: 'usd',
+      startDate: new Date(2026, 9, 21, 9, 30).toISOString(),
+      billingAnchor: new Date(2026, 9, 21, 0, 0).toISOString(),
+    })
+    expect(parsed.success).toBe(true)
+  })
+
+  it('sends a day as midnight UTC and an instant as itself', () => {
+    expect(contractDateToInstant('2026-10-21').toISOString()).toBe('2026-10-21T00:00:00.000Z')
+    expect(contractDateToInstant('2026-10-21T04:00:00.000Z').toISOString()).toBe(
+      '2026-10-21T04:00:00.000Z',
+    )
+    expect(contractDay(new Date(2026, 9, 21, 23, 0).toISOString())).toBe('2026-10-21')
   })
 })
