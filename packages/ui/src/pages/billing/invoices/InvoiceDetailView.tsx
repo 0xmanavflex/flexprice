@@ -8,7 +8,6 @@ import {
   CalculatorIcon,
   CheckCircle2Icon,
   DownloadIcon,
-  ExternalLinkIcon,
   FileMinusIcon,
   LinkIcon,
   MoreHorizontalIcon,
@@ -195,10 +194,6 @@ export function InvoiceDetailView({
       description: 'Anyone with the link can view and pay this invoice until it expires.',
     })
   }
-  const openLink = () => {
-    if (!hostedUrl) return
-    window.open(hostedUrl, '_blank', 'noopener,noreferrer')
-  }
 
   const related: RelatedItem[] = [
     {
@@ -274,12 +269,6 @@ export function InvoiceDetailView({
                 label="Download PDF"
                 onSelect={onDownload}
                 hint="Available once the invoice has a PDF"
-              />
-              <MenuAction
-                icon={<ExternalLinkIcon />}
-                label="Open hosted invoice"
-                onSelect={hostedUrl ? openLink : undefined}
-                hint="Available once the invoice is finalized"
               />
               <MenuAction
                 icon={<LinkIcon />}

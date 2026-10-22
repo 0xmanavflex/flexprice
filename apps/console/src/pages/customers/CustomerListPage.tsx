@@ -88,7 +88,6 @@ export function CustomerListPage({
             onEdit={(customer) => onEditCustomer(customer.id)}
             onDelete={setDeleting}
             onOpenPortal={(customer) => void portal.open(customer)}
-            onCopyPortalLink={(customer) => void portal.copy(customer)}
             onClearFilters={clearFilters}
           />
         </ListState>
