@@ -32,6 +32,7 @@ export {
  * deletes them.
  */
 export {
+  cloneEnvironment,
   createEnvironment,
   fetchCurrentUser,
   existsInEnvironment,
@@ -40,7 +41,7 @@ export {
   signUp,
   updateEnvironment,
 } from './session'
-export type { CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
+export type { CloneTarget, CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
 
 /**
  * Which sign-in methods the deployment offers, asked at runtime rather than

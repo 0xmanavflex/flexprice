@@ -351,3 +351,36 @@ export async function updateEnvironment(
     type: str(row, 'type'),
   }
 }
+
+/** Where a clone goes: an existing environment, or a new one made for it. */
+export type CloneTarget = { targetEnvironmentId: string } | { name: string; type: string }
+
+/**
+ * Copies every published feature and plan from one environment into another —
+ * `POST /environments/{id}/clone`, the one annotated handler in
+ * `environment.go`.
+ *
+ * Into an existing environment (`target_environment_id`), or into a new one the
+ * API creates first from `name` and `type`, under the same per-type quota as
+ * `POST /environments`. It answers 202 once the copy is queued as a workflow,
+ * not when it is done. The copy skips any feature or plan whose lookup key the
+ * target already has, so it is safe to run again: a second run adds only what
+ * is new, and does not update what was copied before.
+ */
+export async function cloneEnvironment(
+  serverURL: string,
+  token: string,
+  sourceEnvironmentId: string,
+  target: CloneTarget,
+): Promise<void> {
+  await request(serverURL, `/environments/${encodeURIComponent(sourceEnvironmentId)}/clone`, {
+    method: 'POST',
+    token,
+    // Environment-scoped like the rename: the source is the scope.
+    environmentId: sourceEnvironmentId,
+    body:
+      'targetEnvironmentId' in target
+        ? { target_environment_id: target.targetEnvironmentId }
+        : { name: target.name, type: target.type },
+  })
+}

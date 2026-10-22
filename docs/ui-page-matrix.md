@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-68 route pages.
+69 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -32,6 +32,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | customers | `CustomerDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EmptyState, EntityList, FormCard, FormDialog, RowActionsMenu, Section | AppFailure, CUSTOMER_TABS, CustomerDetail, CustomerTab, LoadingRows, QuotaCard, Toaster |
 | customers | `CustomerFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | CustomerForm |
 | customers | `CustomerListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CustomerGrid, ListState, PageBody, Toaster |
+| environments | `EnvironmentCopyFormPage` | Form | Field, FormDialog | EnvironmentCopyForm |
 | environments | `EnvironmentFormPage` | Form | Field, FormDialog | EnvironmentContact, EnvironmentForm, ProductionOffer |
 | environments | `EnvironmentRenameFormPage` | Form | Field, FormDialog | EnvironmentRenameForm |
 | events | `EventListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | DataFreshness, EMPTY_CATALOGUE, EventDetailSheet, EventGrid, ListState, PageBody |

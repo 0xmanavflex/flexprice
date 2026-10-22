@@ -72,6 +72,26 @@ test.describe('price unit edit', () => {
   })
 })
 
+test.describe('environment copy', () => {
+  test('promotes the sandbox plans and features to production from the switcher', async ({
+    page,
+  }) => {
+    await page.goto('/customers')
+    await page.getByRole('button', { name: /Change environment/ }).click()
+    await page.getByRole('menuitem', { name: 'Copy environment…' }).click()
+
+    const dialog = page.getByRole('dialog', { name: 'Copy environment' })
+    await expect(dialog).toBeVisible()
+    // From a sandbox, the target starts on Production.
+    await expect(dialog.getByRole('combobox', { name: /Copy to/ })).toHaveText(/Production/)
+    await expect(dialog.getByText(/go live in/)).toBeVisible()
+    await dialog.getByRole('button', { name: 'Copy plans and features' }).click()
+
+    await expect(dialog).toHaveCount(0)
+    await expect(page.getByText(/Copying plans and features to/)).toBeVisible()
+  })
+})
+
 test.describe('environment create', () => {
   test('opens as a dialog from the environment switcher and closes on cancel', async ({ page }) => {
     await page.goto('/customers')
