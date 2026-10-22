@@ -493,6 +493,7 @@ export type {
   TenantAddress,
   TenantBillingUsage,
   TenantFeatureUsage,
+  EntitlementUsageSource,
   TenantPlan,
   UpdateTenant,
 } from './tenant'

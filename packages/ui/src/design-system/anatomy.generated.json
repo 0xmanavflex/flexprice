@@ -2037,6 +2037,7 @@
         "EditableCard",
         "EmDash",
         "EmptyState",
+        "EntitlementUsageTable",
         "EntityHeader",
         "EntityLink",
         "EyeIcon",
@@ -2517,6 +2518,8 @@
         "CustomerTaxSection",
         "CustomerUsageSummary",
         "EntitlementTable",
+        "EntitlementUsage",
+        "EntitlementUsageTable",
         "FeatureDetailView",
         "GroupMembersView",
         "InvoiceDetailView",
@@ -2715,6 +2718,8 @@
         "CustomerDetail",
         "CustomerGrid",
         "EntitlementTable",
+        "EntitlementUsage",
+        "EntitlementUsageTable",
         "EventGrid",
         "EventTypeName",
         "FeatureGrid",
@@ -2812,6 +2817,33 @@
       "usedBy": [],
       "story": "./src/pages/product-catalog/entitlements/EntitlementTable.stories.tsx"
     },
+    "EntitlementUsage": {
+      "file": "src/pages/shared/EntitlementUsage.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EmDash",
+        "EntityLink",
+        "UsageMeter"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/shared/EntitlementUsage.stories.tsx"
+    },
+    "EntitlementUsageTable": {
+      "file": "src/pages/shared/EntitlementUsage.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EmDash",
+        "EntityLink",
+        "UsageMeter"
+      ],
+      "usedBy": [
+        "CustomerDetail",
+        "SubscriptionDetailView"
+      ],
+      "story": "./src/pages/shared/EntitlementUsage.stories.tsx"
+    },
     "EntityCell": {
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
@@ -2851,6 +2883,8 @@
       "usedBy": [
         "CustomerDetail",
         "EntitlementTable",
+        "EntitlementUsage",
+        "EntitlementUsageTable",
         "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
@@ -7125,6 +7159,7 @@
         "DetailShell",
         "DetailTable",
         "DetailTabs",
+        "EntitlementUsageTable",
         "EntityLink",
         "FormDialog",
         "InvoiceStatusBadge",
@@ -7719,7 +7754,10 @@
       "file": "src/pages/shared/UsageMeter.tsx",
       "layer": "surface",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "EntitlementUsage",
+        "EntitlementUsageTable"
+      ],
       "story": "./src/pages/shared/UsageMeter.stories.tsx"
     },
     "UsageSyncDetailSheet": {
@@ -9680,6 +9718,14 @@
       "component": "DetailTable",
       "uses": [
         "DetailTable"
+      ]
+    },
+    "./src/pages/shared/EntitlementUsage.stories.tsx": {
+      "title": "Building blocks/Charts & metrics/EntitlementUsage",
+      "component": "EntitlementUsage",
+      "uses": [
+        "EntitlementUsage",
+        "EntitlementUsageTable"
       ]
     },
     "./src/pages/shared/EntityHeader.stories.tsx": {

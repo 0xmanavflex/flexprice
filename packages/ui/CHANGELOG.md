@@ -9,6 +9,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 ## 2026-10-22
 
 - Hosted invoice page: rebuilt on the customer portal's frame and kit parts — header band with the merchant's mark, one `Section` with a state `Pill`, `IconTile` and amount, `DetailList` facts, Download/Pay `Button`s and a ReUI `Alert` for pay/download errors; not-found, not-valid and failed pages use `ErrorState` (page variant) inside the same frame. `HostedInvoiceDetailsSheet` follows `PortalInvoiceSheet`: sheet header with number and state, `DetailList` parties, `SimpleTable` for lines and payment history, totals. Drops the Stripe-style floating card (shadow, oversized type, uppercase block headings). New `parts.tsx` (state pill, merchant mark). Source: review on #37 — the page must read as the product.
+- Entitlement usage: new `EntitlementUsage` (usage cell: used of limit with unit, bar, soft-limit and reset captions, unlimited/over-limit/unreported states) and `EntitlementUsageTable` (Feature, Source when known, Value, Usage). Used on the customer Overview's new Entitlements section and on a contract's Entitlements section, which trades its Access and Limit columns for Value and Usage. `UsageMeter` gains `hideLabel` for use as a cell. Composition over `UsageMeter` and `DetailTable`. Source: V1 customer overview `CustomerUsageTable`.
 
 ## 2026-10-19
 

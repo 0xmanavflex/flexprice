@@ -199,7 +199,13 @@ export function useUpdateTenantMetadata() {
  */
 export interface FeatureUsageWire {
   feature?:
-    { id?: string | undefined; name?: string | undefined; type?: string | undefined } | undefined
+    | {
+        id?: string | undefined
+        name?: string | undefined
+        type?: string | undefined
+        unitPlural?: string | undefined
+      }
+    | undefined
   totalLimit?: number | null | undefined
   isUnlimited?: boolean | undefined
   currentUsage?: string | undefined
@@ -207,6 +213,16 @@ export interface FeatureUsageWire {
   isEnabled?: boolean | undefined
   isSoftLimit?: boolean | undefined
   nextUsageResetAt?: Date | null | undefined
+  sources?:
+    | Array<{
+        subscriptionId?: string | undefined
+        entityId?: string | undefined
+        entityType?: string | undefined
+        entityName?: string | undefined
+        usageResetPeriod?: string | undefined
+        staticValue?: string | undefined
+      }>
+    | undefined
 }
 
 interface TenantSubscriptionWire {
@@ -270,6 +286,15 @@ export function toFeatureUsage(wire: FeatureUsageWire): TenantFeatureUsage {
     isEnabled: wire.isEnabled ?? false,
     isSoftLimit: wire.isSoftLimit ?? false,
     nextUsageResetAt: wire.nextUsageResetAt ?? null,
+    unit: wire.feature?.unitPlural ?? '',
+    sources: (wire.sources ?? []).map((source) => ({
+      subscriptionId: source.subscriptionId ?? '',
+      entityId: source.entityId ?? '',
+      entityType: source.entityType ?? '',
+      entityName: source.entityName ?? '',
+      usageResetPeriod: source.usageResetPeriod ?? '',
+      staticValue: source.staticValue ?? '',
+    })),
   }
 }
 
@@ -325,6 +350,7 @@ export function toTenantBillingWire(raw: unknown): TenantBillingUsageWire {
             id: text(feature['id']),
             name: text(feature['name']),
             type: text(feature['type']),
+            unitPlural: text(feature['unit_plural']),
           },
           // Preserved as null when null: an unlimited entitlement sends
           // `total_limit: null`, and a `?? 0` here renders "0 of 0" for
@@ -337,6 +363,17 @@ export function toTenantBillingWire(raw: unknown): TenantBillingUsageWire {
           isEnabled: row['is_enabled'] === true,
           isSoftLimit: row['is_soft_limit'] === true,
           nextUsageResetAt: asDate(row['next_usage_reset_at']),
+          sources: asArray(row['sources']).map((entry) => {
+            const source = asRecord(entry)
+            return {
+              subscriptionId: text(source['subscription_id']),
+              entityId: text(source['entity_id']),
+              entityType: text(source['entity_type']),
+              entityName: text(source['entity_name']),
+              usageResetPeriod: text(source['usage_reset_period']),
+              staticValue: text(source['static_value']),
+            }
+          }),
         }
       }),
       period: { startTime: asDate(period['start_time']), endTime: asDate(period['end_time']) },

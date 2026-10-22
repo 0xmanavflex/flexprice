@@ -1630,8 +1630,8 @@ const tenantBilling = {
  *
  * Every `usage_percent` is the real quotient of the two columns beside it — a
  * fixture whose percentage disagrees with its own usage is how a broken
- * percentage survives review. `sources` is `[]` on every row for the reason
- * given on the tenant fixture: the live element shape was never observed.
+ * percentage survives review. `sources` is filled in by the handler from the
+ * customer's own contracts, so each row names a real plan and contract.
  * ---------------------------------------------------------------------------
  */
 const CUSTOMER_USAGE_PERIOD_START = '2026-09-01T00:00:00Z'
@@ -2674,16 +2674,46 @@ export const handlers = [
    * "usage" and answer a 404 for it.
    */
   http.get(`${BASE}/customers/usage`, ({ request }) => {
-    const customerId = new URL(request.url).searchParams.get('customer_id') ?? ''
+    const params = new URL(request.url).searchParams
+    const customerId = params.get('customer_id') ?? ''
+    // `subscription_ids` narrows to those contracts' grants, however the
+    // client spells an array — repeated keys or one comma-separated value.
+    const subscriptionIds = params
+      .getAll('subscription_ids')
+      .flatMap((value) => value.split(','))
+      .filter(Boolean)
     // Unknown customers get an empty summary, not the demo rows: a customer
     // with no entitlements and a customer that does not exist both have no
     // quotas to show, and neither should borrow somebody else's.
-    const known = byId('customers', customerId) !== undefined
-    return HttpResponse.json({
-      ...customerUsage,
-      customer_id: customerId,
-      ...(known ? {} : { features: [] }),
-    })
+    const known = byId('customers', customerId) !== null
+    // Each row is granted by the plan of one of the customer's contracts, so
+    // the Source column names a real plan and links to a real contract.
+    const contracts = sourceFor('subscriptions').items.filter(
+      (row) =>
+        readString(row, 'customer_id') === customerId &&
+        (subscriptionIds.length === 0 || subscriptionIds.includes(readString(row, 'id'))),
+    )
+    const features =
+      known && contracts.length > 0
+        ? customerUsage.features.map((feature, index) => {
+            const contract = contracts[index % contracts.length]!
+            const plan = (contract['plan'] ?? {}) as Record<string, unknown>
+            return {
+              ...feature,
+              sources: [
+                {
+                  subscription_id: readString(contract, 'id'),
+                  entity_id: readString(contract, 'plan_id'),
+                  entity_type: 'plan',
+                  entity_name: readString(plan, 'name') || readString(contract, 'plan_id'),
+                  usage_reset_period: feature.next_usage_reset_at ? 'MONTHLY' : 'NEVER',
+                  is_enabled: true,
+                },
+              ],
+            }
+          })
+        : []
+    return HttpResponse.json({ ...customerUsage, customer_id: customerId, features })
   }),
 
   // A single customer, for the detail page. The corpus rows already carry the
@@ -4544,12 +4574,23 @@ export const handlers = [
           feature: { id: row['feature_id'], name: String(row['feature_id']) },
           entitlement: row,
         })),
+        // The same features `GET /customers/usage` reports, so the contract's
+        // Usage column has a reading to match by feature id.
         {
-          feature: { id: 'feat_api_calls', name: 'API calls' },
+          feature: { id: 'feat_synth_0000', name: 'API calls' },
           entitlement: {
             is_enabled: true,
-            is_soft_limit: false,
-            usage_limit: 100000,
+            is_soft_limit: true,
+            usage_limit: 250000,
+            usage_reset_period: 'MONTHLY',
+          },
+        },
+        {
+          feature: { id: 'feat_synth_0001', name: 'Tokens processed' },
+          entitlement: {
+            is_enabled: true,
+            is_soft_limit: true,
+            usage_limit: 1000000,
             usage_reset_period: 'MONTHLY',
           },
         },

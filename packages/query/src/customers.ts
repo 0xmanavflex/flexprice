@@ -355,8 +355,14 @@ export function toCustomerUsageSummary(wire: CustomerUsageSummaryWire): Customer
 export async function fetchCustomerUsageSummary(
   client: Flexprice,
   customerId: string,
+  subscriptionId?: string,
 ): Promise<CustomerUsageSummary> {
-  const response = await call(() => client.customers.getCustomerUsageSummary({ customerId }))
+  const response = await call(() =>
+    client.customers.getCustomerUsageSummary({
+      customerId,
+      ...(subscriptionId ? { subscriptionIds: [subscriptionId] } : {}),
+    }),
+  )
   return toCustomerUsageSummary(response as CustomerUsageSummaryWire)
 }
 
@@ -374,6 +380,25 @@ export function useCustomerUsageSummary(customerId: string) {
     queryKey: queryKeys.customers.usage(customerId),
     queryFn: () => fetchCustomerUsageSummary(client, customerId),
     enabled: customerId.length > 0,
+  })
+}
+
+/**
+ * The quotas one contract grants, with the customer's usage against them.
+ *
+ * The same `GET /customers/usage`, narrowed with `subscription_ids`, so a
+ * contract's Entitlements section reads its usage from the endpoint the
+ * customer page does rather than from a second source that could disagree.
+ * Usage is the customer's: a feature two contracts both grant reports one
+ * combined figure, which is how the API meters it.
+ */
+export function useContractUsageSummary(customerId: string, subscriptionId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.customers.contractUsage(customerId, subscriptionId),
+    queryFn: () => fetchCustomerUsageSummary(client, customerId, subscriptionId),
+    enabled: customerId.length > 0 && subscriptionId.length > 0,
   })
 }
 

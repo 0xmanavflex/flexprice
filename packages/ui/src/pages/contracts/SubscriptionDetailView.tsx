@@ -60,6 +60,7 @@ import {
   type SubscriptionTax,
   type SubscriptionUsage,
   type SubscriptionUsageCharge,
+  type TenantFeatureUsage,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
@@ -87,6 +88,7 @@ import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
 import { LoadingRows } from '../../compositions/feedback/States'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 import { EntityLink, Pill } from '../shared/cells'
+import { EntitlementUsageTable, entitlementRowsForContract } from '../shared/EntitlementUsage'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 import { InvoiceStatusBadge } from '../shared/StatusBadge'
 import { PaymentStatusBadge } from '../collections/payments/PaymentStatusBadge'
@@ -144,6 +146,12 @@ export interface SubscriptionDetailViewProps {
   onRevertLine?:
     ((line: SubscriptionLine, previous: SubscriptionLine) => Promise<unknown>) | undefined
   entitlements: SubscriptionPart<SubscriptionEntitlement[]>
+  /**
+   * The customer's usage against this contract's entitlements
+   * (`GET /customers/usage?subscription_ids=`). Omitted or still loading, the
+   * Usage column shows a dash for each row; the limits still show.
+   */
+  entitlementUsage?: TenantFeatureUsage[] | undefined
   creditGrants: SubscriptionPart<CreditGrant[]>
   usage: SubscriptionPart<SubscriptionUsage>
   invoices: SubscriptionPart<Invoice[]>
@@ -324,6 +332,7 @@ export function SubscriptionDetailView({
   lineHistory,
   onRevertLine,
   entitlements,
+  entitlementUsage,
   creditGrants,
   usage,
   invoices,
@@ -848,37 +857,9 @@ export function SubscriptionDetailView({
                 isEmpty={(rows) => rows.length === 0}
               >
                 {(rows) => (
-                  <DetailTable<SubscriptionEntitlement>
-                    compact
+                  <EntitlementUsageTable
                     pageSize={5}
-                    label="Entitlements"
-                    noun="features"
-                    rows={rows}
-                    getRowId={(row) => row.featureId || row.name}
-                    columns={[
-                      {
-                        key: 'feature',
-                        header: 'Feature',
-                        sortBy: (row) => row.name.toLowerCase(),
-                        cell: (row) => <Strong>{row.name}</Strong>,
-                      },
-                      {
-                        key: 'access',
-                        header: 'Access',
-                        cell: (row) => <Muted>{row.enabled ? 'Included' : 'Not included'}</Muted>,
-                      },
-                      {
-                        key: 'limit',
-                        header: 'Limit',
-                        cell: (row) => (
-                          <Muted>
-                            {row.usageLimit === null
-                              ? 'Unlimited'
-                              : `${row.usageLimit.toLocaleString('en-US')}${row.softLimit ? ' (soft)' : ''}${row.resetPeriodLabel ? ` / ${row.resetPeriodLabel.toLowerCase()}` : ''}`}
-                          </Muted>
-                        ),
-                      },
-                    ]}
+                    rows={entitlementRowsForContract(rows, entitlementUsage)}
                   />
                 )}
               </PartSection>

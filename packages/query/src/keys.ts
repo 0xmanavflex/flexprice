@@ -32,6 +32,9 @@ export const queryKeys = {
     detail: (id: string) => ['customers', 'detail', id] as const,
     /** Entitlement usage for one customer — `GET /customers/usage`. */
     usage: (id: string) => ['customers', 'usage', id] as const,
+    /** The same read narrowed to one contract — `?subscription_ids=`. Under `usage(id)`. */
+    contractUsage: (id: string, subscriptionId: string) =>
+      ['customers', 'usage', id, { subscriptionId }] as const,
   },
   subscriptions: {
     all: () => ['subscriptions'] as const,

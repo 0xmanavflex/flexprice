@@ -27,6 +27,7 @@ import {
   isZeroMoney,
   SubscriptionStatus,
   type Subscription,
+  type TenantFeatureUsage,
   RBAC_ENTITY,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -44,6 +45,7 @@ import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
 import { EmDash, EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
+import { EntitlementUsageTable, entitlementRowsFromUsage } from '../shared/EntitlementUsage'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 import {
   ContractIntegrations,
@@ -72,7 +74,7 @@ export const CustomerDetailProvenance = provenance({
     'pages/shared/Money',
     'compositions/SubTabState',
   ],
-  note: 'Customer detail: EntityHeader + DetailTabs; Overview from OverviewTiles, a Contracts table and the activity log, Information as single-pencil EditableCards. Lineage: ui/detail-kit, ui/section, ui/editable-card.',
+  note: 'Customer detail: EntityHeader + DetailTabs; Overview from OverviewTiles, a Contracts table, an Entitlements usage table and the activity log, Information as single-pencil EditableCards. Lineage: ui/detail-kit, ui/section, ui/editable-card.',
 })
 
 /** How many invoices the customer page asks for; at this count the list may be cut. */
@@ -187,6 +189,16 @@ export interface CustomerDetailProps {
    * no quota data to hand.
    */
   usage?: ReactNode
+  /**
+   * The Overview's Entitlements section: each feature the customer is
+   * entitled to, what grants it, and how much is used (`GET /customers/usage`).
+   * Omitted, the section is not drawn; loaded and empty, it is not drawn
+   * either — as in V1, a customer with no entitlements has nothing to show.
+   */
+  entitlements?: TenantFeatureUsage[] | undefined
+  entitlementsLoading?: boolean | undefined
+  entitlementsError?: boolean | undefined
+  onRetryEntitlements?: (() => void) | undefined
   /** The Wallet section's contents; omitted, the empty state shows. */
   wallet?: ReactNode
   /** The Taxes section on the Information tab; omitted, it is not shown. */
@@ -248,6 +260,10 @@ export function CustomerDetail({
   activityAwaiting = false,
   events,
   usage,
+  entitlements,
+  entitlementsLoading = false,
+  entitlementsError = false,
+  onRetryEntitlements,
   wallet,
   taxes,
   locale,
@@ -405,6 +421,10 @@ export function CustomerDetail({
             onOpenPlan={onOpenPlan}
             onOpenContract={onOpenContract}
             onCreateContract={onCreateContract}
+            entitlements={entitlements}
+            entitlementsLoading={entitlementsLoading}
+            entitlementsError={entitlementsError}
+            onRetryEntitlements={onRetryEntitlements}
             invoices={invoices}
             invoicesLoading={invoicesLoading}
             invoicesError={invoicesError}
@@ -577,6 +597,10 @@ function OverviewTab({
   onOpenPlan,
   onOpenContract,
   onCreateContract,
+  entitlements,
+  entitlementsLoading,
+  entitlementsError,
+  onRetryEntitlements,
   invoices,
   invoicesLoading,
   invoicesError,
@@ -605,6 +629,10 @@ function OverviewTab({
   onOpenPlan: ((planId: string) => void) | undefined
   onOpenContract: ((subscriptionId: string) => void) | undefined
   onCreateContract: (() => void) | undefined
+  entitlements: TenantFeatureUsage[] | undefined
+  entitlementsLoading: boolean
+  entitlementsError: boolean
+  onRetryEntitlements: (() => void) | undefined
   invoices: Invoice[]
   invoicesLoading: boolean
   invoicesError: boolean
@@ -691,6 +719,38 @@ function OverviewTab({
           onOpenContract={onOpenContract}
           onCreateContract={onCreateContract}
         />
+        {entitlements && (entitlementsLoading || entitlementsError || entitlements.length > 0) ? (
+          <Section table showTitle title="Entitlements">
+            <SubTabState
+              hasData={entitlements.length > 0}
+              isLoading={entitlementsLoading}
+              error={entitlementsError ? "Entitlements couldn't be loaded" : null}
+              onRetry={onRetryEntitlements}
+              columns={4}
+              loadingLabel="Loading entitlements"
+              empty={{
+                scene: 'customers',
+                title: 'No entitlements yet',
+                description:
+                  'Features appear here once this customer is on a plan that grants one.',
+              }}
+            >
+              <EntitlementUsageTable
+                rows={entitlementRowsFromUsage(entitlements, (source) => {
+                  // As V1: a plan opens the plan; anything else opens the
+                  // contract it reaches this customer through.
+                  if (source.entityType === 'plan' && source.entityId && onOpenPlan)
+                    return () => onOpenPlan(source.entityId)
+                  if (source.subscriptionId && onOpenContract)
+                    return () => onOpenContract(source.subscriptionId)
+                  return undefined
+                })}
+                pageSize={5}
+                locale={locale}
+              />
+            </SubTabState>
+          </Section>
+        ) : null}
         <Section
           table
           showTitle
