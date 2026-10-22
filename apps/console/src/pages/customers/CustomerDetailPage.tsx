@@ -182,7 +182,6 @@ export function CustomerDetailPage({
         }
         onEdit={() => onEdit(customer.data.id)}
         onArchive={() => setArchiving(true)}
-        onOpenPortal={() => void portal.open({ externalId: customer.data?.externalId })}
         onCopyPortalLink={() => void portal.copy({ externalId: customer.data?.externalId })}
         {...(streamTarget && !sampleEvents.isPending
           ? { onStreamEvents: () => streamEvents(streamTarget.id, streamTarget.planName) }

@@ -286,35 +286,21 @@ export const MoreMenu: Story = {
   },
 }
 
-/** With a hosted link, More opens it in a new tab and copies it; Related links to it too. */
+/** With a hosted link, More copies it (the list's row menu is where it opens); Related links to it. */
 export const HostedLink: Story = {
   args: { hasHostedLink: true },
   parameters: menuA11y,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const opened = fn()
-    const original = window.open
-    window.open = ((...args: Parameters<typeof window.open>) => {
-      opened(...args)
-      return null
-    }) as typeof window.open
-    try {
-      await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
-      const open = await screen.findByRole('menuitem', { name: /Open hosted invoice/ })
-      await expect(open).not.toHaveAttribute('aria-disabled', 'true')
-      await userEvent.click(open)
-      await expect(opened).toHaveBeenCalledWith(HOSTED_URL, '_blank', 'noopener,noreferrer')
-      await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
-      await expect(
-        await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
-      ).not.toHaveAttribute('aria-disabled', 'true')
-      await expect(canvas.getByRole('link', { name: /Hosted invoice/ })).toHaveAttribute(
-        'href',
-        HOSTED_URL,
-      )
-    } finally {
-      window.open = original
-    }
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
+    await expect(
+      await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
+    ).not.toHaveAttribute('aria-disabled', 'true')
+    await expect(screen.queryByRole('menuitem', { name: /Open hosted invoice/ })).toBeNull()
+    await expect(canvas.getByRole('link', { name: /Hosted invoice/ })).toHaveAttribute(
+      'href',
+      HOSTED_URL,
+    )
   },
 }
 

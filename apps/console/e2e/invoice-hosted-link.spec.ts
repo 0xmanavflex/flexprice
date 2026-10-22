@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 /**
  * The invoice's hosted link — `hosted_invoice_url`, the page its customer
- * receives — from the list's row menu and the invoice page's More menu.
+ * receives: the list's row menu opens it, the invoice page's More menu copies it.
  * The mocks answer it for every finalized invoice, as the API does.
  */
 test.beforeEach(async ({ context }) => {
@@ -32,32 +32,26 @@ test('opens the hosted invoice from the list row menu, in a new tab', async ({ p
   await expect.poll(() => opened.url(), { timeout: 15_000 }).toMatch(HOSTED)
 })
 
-test('copies the hosted invoice link from the list row menu', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+test('the list row menu opens the hosted invoice but does not copy it', async ({ page }) => {
   await page.goto('/invoices?status=finalized')
   const row = page.getByRole('row').nth(1)
   await expect(row).toBeVisible({ timeout: 20_000 })
   await row.getByRole('button', { name: 'Row actions' }).click()
-  await page.getByRole('menuitem', { name: 'Copy hosted invoice link' }).click()
-  await expect(page.getByText('Hosted invoice link copied')).toBeVisible()
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(HOSTED)
+  await expect(page.getByRole('menuitem', { name: 'Open hosted invoice' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Copy hosted invoice link' })).toHaveCount(0)
 })
 
-test('the invoice page opens and copies its hosted link from More', async ({ page, context }) => {
+test('the invoice page copies its hosted link from More', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.goto('/invoices?status=finalized')
   await page.getByRole('row').nth(1).getByRole('cell').first().click()
   await expect(page).toHaveURL(/\/invoices\/[^/?]+$/)
 
   await page.getByRole('button', { name: 'More actions' }).click()
-  const open = page.getByRole('menuitem', { name: /Open hosted invoice/ })
-  await expect(open).not.toHaveAttribute('aria-disabled', 'true', { timeout: 15_000 })
-  const tab = context.waitForEvent('page')
-  await open.click()
-  await expect.poll(async () => (await tab).url(), { timeout: 15_000 }).toMatch(HOSTED)
-
-  await page.getByRole('button', { name: 'More actions' }).click()
-  await page.getByRole('menuitem', { name: /Copy hosted invoice link/ }).click()
+  await expect(page.getByRole('menuitem', { name: /Open hosted invoice/ })).toHaveCount(0)
+  const copy = page.getByRole('menuitem', { name: /Copy hosted invoice link/ })
+  await expect(copy).not.toHaveAttribute('aria-disabled', 'true', { timeout: 15_000 })
+  await copy.click()
   await expect(page.getByText('Hosted invoice link copied')).toBeVisible()
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(HOSTED)
 })
