@@ -6,7 +6,8 @@
   "description": "The architecture, as build errors.",
   "exports": {
     ".": "./src/index.js",
-    "./architecture": "./src/architecture.js"
+    "./architecture": "./src/architecture.js",
+    "./design": "./src/design.js"
   },
   "scripts": {
     "test": "vitest run"
