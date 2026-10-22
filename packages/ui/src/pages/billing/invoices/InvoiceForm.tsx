@@ -598,7 +598,9 @@ export function InvoiceForm(props: InvoiceFormProps) {
               </CardDescription>
               <CardAction className="flex items-center gap-1.5 self-center">
                 <Badge variant={isDraft ? 'warning-light' : 'info-light'}>
-                  <ReceiptIcon aria-hidden />
+                  {/* Sized here: an animated icon's wrapper is 24px unless told otherwise,
+                      and the badge only sizes a bare svg, so it spilled out of the badge. */}
+                  <ReceiptIcon aria-hidden className="size-3" />
                   <span className="sr-only">Status</span>
                   {statusLabel}
                 </Badge>
