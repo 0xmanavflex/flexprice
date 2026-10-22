@@ -135,7 +135,10 @@ export function SubscriptionDetailPage({
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const createEntitlement = useCreateSubscriptionEntitlement(subscriptionId)
-  const createCreditGrant = useCreateSubscriptionCreditGrant(subscriptionId)
+  const createCreditGrant = useCreateSubscriptionCreditGrant(
+    subscriptionId,
+    subscription.data?.currentPeriodEnd,
+  )
   const addAddon = useAddSubscriptionAddon(subscriptionId)
   const addCoupon = useAddSubscriptionCoupon(subscriptionId)
   const updateAlert = useUpdateAlertSetting()

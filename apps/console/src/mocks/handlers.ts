@@ -3914,6 +3914,18 @@ export const handlers = [
   }),
   http.post(`${BASE}/creditgrants`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
+    // The API's own rule: a subscription-scoped grant must say when it starts.
+    if (body['scope'] === 'SUBSCRIPTION' && !body['start_date']) {
+      return HttpResponse.json(
+        {
+          code: 'validation_error',
+          message: 'start_date is required for SUBSCRIPTION-scoped grants',
+          hint: 'Please provide a start date for the credit grant',
+          http_status_code: 400,
+        },
+        { status: 400 },
+      )
+    }
     const row = { ...body, id: `cg_new_${Date.now()}`, status: 'published' }
     if (body['scope'] === 'SUBSCRIPTION') {
       additionsFor('grants', String(body['subscription_id'] ?? '')).push({
