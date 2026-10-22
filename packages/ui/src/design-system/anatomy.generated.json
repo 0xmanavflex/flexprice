@@ -8143,6 +8143,7 @@
       "component": "SectionEmpty",
       "uses": [
         "PlusIcon",
+        "Section",
         "SectionEmpty"
       ]
     },

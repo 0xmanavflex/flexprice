@@ -83,7 +83,6 @@ export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }
             size="inline"
             title="No tags yet"
             description="A tag collects prices or features under one name, like a product line or a region, so you can filter and report on them together."
-            action={create}
           />
         }
         columns={[

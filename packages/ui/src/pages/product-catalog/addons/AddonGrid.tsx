@@ -304,7 +304,6 @@ export function AddonGrid({
         title: 'No add-ons yet',
         description:
           'An add-on is a priced extra sold alongside a plan — extra seats, a support tier, a burst of capacity. Create the shell here, then give it charges.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New add-on</Button> } : {}),
         guides: GUIDES,
       }}
     />

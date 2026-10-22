@@ -288,11 +288,7 @@ export function S3ConnectionList({
   return (
     <PageBody>
       <div className="flex flex-col gap-6">
-        <Section
-          title="S3 connections"
-          actions={connections.length > 0 ? addButton : undefined}
-          flush
-        >
+        <Section title="S3 connections" actions={addButton} flush>
           {isLoading ? (
             <p className="text-muted-foreground p-6 text-sm">Loading connections…</p>
           ) : error ? (
@@ -314,7 +310,6 @@ export function S3ConnectionList({
               scene="developers"
               title="No S3 connections yet"
               description="Connect a bucket to start exporting billing data to it."
-              action={addButton}
             />
           ) : (
             <ItemGroup className="divide-y">

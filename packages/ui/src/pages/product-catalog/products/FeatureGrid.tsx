@@ -491,16 +491,6 @@ export function FeatureGrid({
         title: 'Nothing is being measured yet',
         description:
           'A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
-        ...(onCreate
-          ? {
-              actions: (
-                <Button onClick={onCreate}>
-                  <PlusIcon aria-hidden />
-                  New feature
-                </Button>
-              ),
-            }
-          : {}),
         guides: GUIDES,
       }}
     />

@@ -184,7 +184,6 @@ function PlaygroundList({
             empty: {
               title: `No ${noun} yet`,
               description: 'Create one to start measuring.',
-              actions: <Button>New widget</Button>,
             },
           }
         : {})}
@@ -476,21 +475,18 @@ export const FilteredEmpty: Story = {
   },
 }
 
-/** Nothing has been created yet: the illustration, two 32px buttons, and
- *  three guide cards that each end in "Read docs". */
+/** Nothing has been created yet: the create action stays top right, and the
+ *  body has the illustration, a learn-more button and three guide cards that
+ *  each end in "Read docs". */
 export const FirstRun: Story = {
   args: {
     rows: [],
     total: 0,
+    primaryAction: <Button>New widget</Button>,
     empty: {
       title: 'No widgets yet',
       description: 'A widget is the thing you meter. Create one to start measuring.',
-      actions: (
-        <>
-          <Button>New widget</Button>
-          <Button variant="outline">Import</Button>
-        </>
-      ),
+      secondaryAction: <Button variant="outline">Import</Button>,
       guides: [
         {
           title: 'What a widget is',
@@ -518,9 +514,11 @@ export const FirstRun: Story = {
     await expect(await canvas.findByText('No widgets yet')).toBeInTheDocument()
     await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
 
-    // Two 32px buttons.
+    // One create action, top right above the frame, not in the empty state.
     const create = canvas.getByRole('button', { name: 'New widget' })
-    await expect(Math.round(create.getBoundingClientRect().height)).toBe(32)
+    const status = canvas.getByRole('status', { name: /nothing here yet/i })
+    await expect(status.contains(create)).toBe(false)
+    await expect(canvas.getAllByRole('button', { name: 'New widget' })).toHaveLength(1)
     await expect(
       Math.round(canvas.getByRole('button', { name: 'Import' }).getBoundingClientRect().height),
     ).toBe(32)

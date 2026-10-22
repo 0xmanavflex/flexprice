@@ -141,11 +141,6 @@ export function PricingCatalogBlock({
           scene="catalog"
           title="No plans to show yet"
           description="Publish a plan and it appears here, ready to embed on your pricing page."
-          action={
-            <Button type="button" onClick={onCreatePlan}>
-              Create plan
-            </Button>
-          }
         />
       ) : (
         <>

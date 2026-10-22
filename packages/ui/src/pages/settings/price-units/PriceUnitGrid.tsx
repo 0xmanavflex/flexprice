@@ -249,7 +249,6 @@ export function PriceUnitGrid({
         title: 'No price units yet',
         description:
           'A price unit lets you charge in something other than a currency — credits, tokens, minutes — by pinning a code and a symbol to a base currency through a rate.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New price unit</Button> } : {}),
         guides: GUIDES,
       }}
     />

@@ -229,8 +229,11 @@ export interface EntityGuide {
 export interface EntityEmpty {
   title: string
   description?: string | undefined
-  /** Up to two 32px buttons — create, and a way to learn more. */
-  actions?: ReactNode
+  /**
+   * A way to learn more ("Browse event catalog"). Never the create action:
+   * that is `primaryAction`, top right, whether the list is empty or not.
+   */
+  secondaryAction?: ReactNode
   /** Three cards. Each ends in "Read docs". */
   guides?: EntityGuide[] | undefined
   /** The drawing for this area of the product. Defaults to the table figure. */
@@ -848,6 +851,25 @@ export function EntityList<T extends object>({
     !isLoading && rows.length === 0 && total === 0 && !isFiltered && empty !== undefined
   const goToFirstPage = () => onPaginationChange(1, pageSize)
 
+  /*
+   * The create action has one place: the top right, above the rows. A first
+   * run hides the search and filters (there is nothing to narrow yet) but not
+   * this, so the button never jumps into the middle of the empty state and
+   * back again once the first record exists.
+   */
+  const primaryActionSlot = primaryAction ? (
+    // Text buttons take the height of the icon buttons beside them,
+    // whatever size the caller asked for.
+    <div
+      className={cn(
+        'flex items-center gap-2',
+        compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
+      )}
+    >
+      {primaryActionReadOnly ? primaryAction : <WriteGate>{primaryAction}</WriteGate>}
+    </div>
+  ) : null
+
   const toolbar = (
     <div
       role="search"
@@ -1001,18 +1023,7 @@ export function EntityList<T extends object>({
           </DropdownMenu>
         ) : null}
 
-        {primaryAction ? (
-          // Text buttons take the height of the icon buttons beside them,
-          // whatever size the caller asked for.
-          <div
-            className={cn(
-              'flex items-center gap-2',
-              compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
-            )}
-          >
-            {primaryActionReadOnly ? primaryAction : <WriteGate>{primaryAction}</WriteGate>}
-          </div>
-        ) : null}
+        {primaryActionSlot}
       </div>
     </div>
   )
@@ -1026,9 +1037,15 @@ export function EntityList<T extends object>({
       onMouseOver={revealTruncated}
     >
       <Heading className="sr-only">{label}</Heading>
-      {/* A list with nothing in it has nothing to search, filter or sort: the
-          guided empty state stands alone until the first record exists. */}
-      {showFirstRun || hideToolbar ? null : toolbar}
+      {/* A list with nothing in it has nothing to search, filter or sort, so
+          the first run keeps only the create action, where the toolbar puts it. */}
+      {hideToolbar ? null : showFirstRun ? (
+        primaryActionSlot ? (
+          <div className={cn('flex justify-end', compact && 'px-6 py-3')}>{primaryActionSlot}</div>
+        ) : null
+      ) : (
+        toolbar
+      )}
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
           stops an overflowing table pushing the page itself wider. */}
@@ -1049,7 +1066,7 @@ export function EntityList<T extends object>({
             <GuidedEmptyState
               title={empty.title}
               description={empty.description}
-              actions={empty.actions}
+              actions={empty.secondaryAction}
               guides={empty.guides}
               scene={empty.scene}
               label={`${label}: nothing here yet`}

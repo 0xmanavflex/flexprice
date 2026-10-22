@@ -66,7 +66,7 @@ function CreditGrantTableInner({
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
     <WriteGate>
-      <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3" onClick={onAdd}>
         <PlusIcon aria-hidden="true" />
         Add credit grant
       </Button>
@@ -74,7 +74,12 @@ function CreditGrantTableInner({
   ) : null
   if (grants.length === 0) {
     return (
-      <Section title="Credit grants" flush>
+      <Section
+        table
+        title="Credit grants"
+        {...(showTitle ? { showTitle } : {})}
+        {...(addButton ? { action: addButton } : {})}
+      >
         <SubTabState
           hasData={false}
           isLoading={isLoading ?? false}
@@ -89,7 +94,6 @@ function CreditGrantTableInner({
             scene: 'catalog',
             title: 'No credit grants yet',
             description: `Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`,
-            action: addButton,
           }}
         >
           {null}
@@ -99,11 +103,15 @@ function CreditGrantTableInner({
   }
 
   return (
-    <Section table title="Credit grants" {...(showTitle ? { showTitle } : {})}>
+    <Section
+      table
+      title="Credit grants"
+      {...(showTitle ? { showTitle } : {})}
+      {...(addButton ? { action: addButton } : {})}
+    >
       <DetailTable
         compact
         label="Credit grants"
-        {...(addButton ? { action: addButton } : {})}
         noun="credit grants"
         rows={grants}
         getRowId={(grant) => grant.id}

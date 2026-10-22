@@ -319,7 +319,6 @@ export function SubscriptionGrid({
         title: 'Nobody is on a plan yet',
         description:
           'A contract puts a customer on a plan and starts their billing cycle. Once one is running, invoices appear on their own as each period closes.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New contract</Button> } : {}),
         guides: GUIDES,
       }}
     />

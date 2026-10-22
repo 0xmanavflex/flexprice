@@ -1874,7 +1874,6 @@ function PartSectionInner<T>({
   failure,
   emptyTitle,
   emptyDescription,
-  emptyAction,
   scene,
   create,
   isEmpty,
@@ -1888,7 +1887,6 @@ function PartSectionInner<T>({
   failure: string
   emptyTitle: string
   emptyDescription: string
-  emptyAction?: ReactNode
   /** The drawing above the empty state. */
   scene?: EmptyScene
   /** The section's Add button, above the frame in every state. */
@@ -1954,7 +1952,6 @@ function PartSectionInner<T>({
           {...(scene ? { scene } : {})}
           title={emptyTitle}
           description={emptyDescription}
-          action={emptyAction}
         />
       </Section>
     )
