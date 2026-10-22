@@ -27,6 +27,7 @@ import {
   toRemoveCouponRequest,
   toCancelSubscriptionRequest,
   toCreateSubscriptionRequest,
+  subscriptionGrantStart,
 } from './subscriptions'
 
 const base: CreateSubscription = {
@@ -536,5 +537,27 @@ describe('contract-scoped creators', () => {
       type: 'coupon',
       coupon_params: { action: 'remove', coupon_association_id: 'assoc_1' },
     })
+  })
+})
+
+describe('subscriptionGrantStart', () => {
+  // The API refuses a subscription-scoped grant without a start_date.
+  const now = new Date('2026-10-22T12:00:00Z')
+  const periodEnd = new Date('2026-11-01T00:00:00Z')
+
+  it('starts a one-time grant now', () => {
+    expect(subscriptionGrantStart({ cadence: CreditGrantCadence.OneTime }, periodEnd, now)).toBe(
+      now,
+    )
+  })
+
+  it("starts a recurring grant at the end of the contract's current period", () => {
+    expect(subscriptionGrantStart({ cadence: CreditGrantCadence.Recurring }, periodEnd, now)).toBe(
+      periodEnd,
+    )
+  })
+
+  it('starts a recurring grant now when the period end is unknown', () => {
+    expect(subscriptionGrantStart({ cadence: CreditGrantCadence.Recurring }, null, now)).toBe(now)
   })
 })

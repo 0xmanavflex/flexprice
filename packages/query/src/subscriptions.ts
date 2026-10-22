@@ -32,6 +32,7 @@ import {
   type CreateEntitlement,
   type CreateTaxAssociation,
   type CreditGrant,
+  CreditGrantCadence,
   CreditGrantScope,
   type EditContractCharge,
   type EndContractCharge,
@@ -1644,21 +1645,36 @@ export function useCreateSubscriptionEntitlement(subscriptionId: string) {
   })
 }
 
+/**
+ * When a grant added to a running contract starts. The API requires a
+ * `start_date` for subscription-scoped grants and the dialog has no date, so
+ * it is set as V1 sets it: a recurring grant starts at the end of the current
+ * period, so it refreshes on the contract's own cycle; a one-time grant is
+ * issued now.
+ */
+export function subscriptionGrantStart(
+  draft: Pick<CreateCreditGrant, 'cadence'>,
+  currentPeriodEnd: Date | null | undefined,
+  now: Date = new Date(),
+): Date {
+  return draft.cadence === CreditGrantCadence.Recurring && currentPeriodEnd ? currentPeriodEnd : now
+}
+
 /** Grant this contract credits of its own — `POST /creditgrants`, scoped to the subscription. */
-export function useCreateSubscriptionCreditGrant(subscriptionId: string) {
+export function useCreateSubscriptionCreditGrant(
+  subscriptionId: string,
+  currentPeriodEnd?: Date | null,
+) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (draft: CreateCreditGrant) =>
       call(() =>
-        client.creditGrants.createCreditGrant(
-          toCreditGrantRequest(
-            draft,
-            CreditGrantScope.Subscription,
-            subscriptionId,
-          ) as FlexpriceModels.CreateCreditGrantRequest,
-        ),
+        client.creditGrants.createCreditGrant({
+          ...toCreditGrantRequest(draft, CreditGrantScope.Subscription, subscriptionId),
+          startDate: subscriptionGrantStart(draft, currentPeriodEnd),
+        } as FlexpriceModels.CreateCreditGrantRequest),
       ),
     onSuccess: () => {
       invalidateContract(queryClient)
