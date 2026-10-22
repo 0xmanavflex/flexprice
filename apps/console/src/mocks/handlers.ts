@@ -385,6 +385,8 @@ function seedDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
 function invoicePayments(invoiceId: string): Record<string, unknown>[] {
   const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === invoiceId)
   if (!invoice) return []
+  // Payments recorded in this session already stand for what has been paid.
+  if (paymentStore.some((row) => readString(row, 'destination_id') === invoiceId)) return []
   const paid = Number(readString(invoice, 'amount_paid') || 0)
   if (!(paid > 0)) return []
   const at = readString(invoice, 'issue_date') || readString(invoice, 'created_at')
@@ -403,6 +405,27 @@ function invoicePayments(invoiceId: string): Record<string, unknown>[] {
       succeeded_at: at,
     },
   ]
+}
+
+/**
+ * A succeeded payment against an invoice pays it down, as the API does: the
+ * invoice's paid and remaining amounts move, and it reads Succeeded once the
+ * balance is cleared.
+ */
+function applyPaymentToInvoice(payment: Record<string, unknown>) {
+  if (readString(payment, 'destination_type') !== 'INVOICE') return
+  const id = readString(payment, 'destination_id')
+  const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+  if (!invoice) return
+  const due = Number(readString(invoice, 'amount_due') || readString(invoice, 'total') || 0)
+  const paid =
+    Number(readString(invoice, 'amount_paid') || 0) + Number(readString(payment, 'amount') || 0)
+  const remaining = Math.max(0, due - paid)
+  patchRow(sourceFor('invoices').items, id, {
+    amount_paid: String(paid),
+    amount_remaining: String(remaining),
+    payment_status: remaining === 0 ? 'SUCCEEDED' : 'PENDING',
+  })
 }
 
 /*
@@ -2821,6 +2844,7 @@ export const handlers = [
       attempts: processed ? [{ id: 'att_1', attempt_number: 1 }] : [],
     }
     paymentStore.unshift(row)
+    if (processed) applyPaymentToInvoice(row)
     return HttpResponse.json(row, { status: 201 })
   }),
   http.get(`${BASE}/payments/:id`, ({ params }) => {
@@ -2837,11 +2861,14 @@ export const handlers = [
     if (!paymentStore.some((row) => readString(row, 'id') === id)) {
       return HttpResponse.json({ message: 'Payment not found' }, { status: 404 })
     }
-    return patchRow(paymentStore, id, {
+    const response = patchRow(paymentStore, id, {
       payment_status: 'SUCCEEDED',
       succeeded_at: new Date().toISOString(),
       attempts: [{ id: 'att_1', attempt_number: 1 }],
     })
+    const processed = paymentStore.find((row) => readString(row, 'id') === id)
+    if (processed) applyPaymentToInvoice(processed)
+    return response
   }),
   http.delete(`${BASE}/payments/:id`, ({ params }) => {
     removeRow(paymentStore, String(params['id']))
@@ -4041,10 +4068,16 @@ export const handlers = [
   // success path runs end to end.
   http.post(`${BASE}/plans`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json(
-      { ...body, id: `plan_new_${Date.now()}`, status: 'published' },
-      { status: 201 },
-    )
+    const row = {
+      ...body,
+      id: `plan_new_${Date.now()}`,
+      status: 'published',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    // Kept, so the detail page the form lands on reads the plan just created.
+    ;(corpus['plans'] as Corpus).items.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/plans/:id`, async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>
@@ -4722,6 +4755,40 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     sourceFor('subscriptions').items.unshift(row)
+    // An active contract bills its in-advance fixed charges at once, as the API
+    // does, so the customer's first invoice is there to find on their Invoices
+    // tab. Drafts and future starts have not begun, so they bill nothing yet.
+    if (row.subscription_status === 'active') {
+      const planId = readString(body, 'plan_id')
+      const total = sourceFor('prices')
+        .items.filter(
+          (price) =>
+            readString(price, 'entity_id') === planId &&
+            readString(price, 'type') === 'FIXED' &&
+            readString(price, 'invoice_cadence') === 'ADVANCE',
+        )
+        .reduce((sum, price) => sum + Number(readString(price, 'amount') || 0), 0)
+      sourceFor('invoices').items.unshift({
+        id: `inv_new_${Date.now()}`,
+        customer_id: readString(body, 'customer_id'),
+        subscription_id: row.id,
+        currency: readString(body, 'currency') || 'usd',
+        invoice_type: 'SUBSCRIPTION',
+        billing_reason: 'SUBSCRIPTION_CREATE',
+        invoice_status: 'FINALIZED',
+        payment_status: 'PENDING',
+        subtotal: String(total),
+        total: String(total),
+        amount_due: String(total),
+        amount_paid: '0',
+        amount_remaining: String(total),
+        issue_date: row.created_at,
+        finalized_at: row.created_at,
+        status: 'published',
+        created_at: row.created_at,
+        updated_at: row.created_at,
+      })
+    }
     return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/customers`, async ({ request }) =>

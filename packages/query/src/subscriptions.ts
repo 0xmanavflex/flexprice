@@ -831,6 +831,9 @@ export function useCreateSubscription() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+      // A contract that starts now bills its in-advance charges at once, so the
+      // customer's invoice list has a new row the cached page does not.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
     },
   })
 }
