@@ -30,6 +30,7 @@
     "Calculator": { "reui": "calculator" },
     "Calendar": { "reui": "calendar" },
     "CalendarClock": { "reui": "calendar-dots" },
+    "ChartColumn": { "reui": "chart-simple" },
     "Check": { "reui": "check" },
     "CheckCircle2": { "reui": "check-circle" },
     "ChevronDown": { "reui": "up", "style": "filled", "rotate": 180 },

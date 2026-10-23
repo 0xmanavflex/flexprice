@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import {
   BarChart3Icon,
+  ChartColumnIcon,
   BookOpenIcon,
   CreditCardIcon,
   ReceiptIcon,
@@ -64,6 +65,7 @@ const ICONS: Record<string, ReactNode> = {
   catalog: <Layers2Icon className="size-4" />,
   billing: <LandmarkIcon className="size-4" />,
   revenue: <BarChart3Icon className="size-4" />,
+  reports: <ChartColumnIcon className="size-4" />,
   developers: <CodeXmlIcon className="size-4" />,
   integrations: <IntegrationsIcon className="size-4" />,
   'pricing-widget': <GalleryHorizontalEndIcon className="size-4" />,

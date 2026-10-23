@@ -298,6 +298,7 @@
   "packages/ui/src/reui/icons/default/outline/chart-arrow-down.tsx": "148ec35b25b82188",
   "packages/ui/src/reui/icons/default/outline/chart-arrow-up.tsx": "9214a7dfa31927c5",
   "packages/ui/src/reui/icons/default/outline/chart-bars-square.tsx": "d9b7f1b5db1a03fd",
+  "packages/ui/src/reui/icons/default/outline/chart-simple.tsx": "f7a5b3c548d5e883",
   "packages/ui/src/reui/icons/default/outline/check-circle.tsx": "55106f6e9e37de1d",
   "packages/ui/src/reui/icons/default/outline/check.tsx": "04d39c342ceb5456",
   "packages/ui/src/reui/icons/default/outline/chevrons-up-down.tsx": "09c7a2b8da54351c",
