@@ -1,0 +1,273 @@
+name: E2E release verification
+
+# The live journeys, against the production frontend users actually receive,
+# after a release from `main` has deployed — and never before.
+#
+#   main release → Pipeline deploys (Deploy main) → this workflow starts
+#     → confirm the deploy step really ran and succeeded for this commit
+#     → wait until the production URL serves that commit (/meta.json)
+#     → run the journeys → upload e2e-results → one Slack report
+#
+# ## Why `workflow_run` on Pipeline
+#
+# `pipeline.yml` is the only thing that deploys `main` to production: its
+# `Deploy main` job calls `deploy.yml`, whose `Deploy` step runs
+# `vercel deploy --prod`. A push to `main` is not evidence of a release —
+# lint, tests and the build gate the deploy — so this listens for Pipeline to
+# *complete* and then reads that run's jobs: it goes ahead only when the
+# `Deploy main` job's `Deploy` step concluded `success`. A skipped deploy (no
+# Vercel secrets), a failed or cancelled one, a PR, a branch push or any other
+# workflow never reaches the journeys.
+#
+# Pipeline's own conclusion is deliberately not the test: its last stage runs
+# the mocked suites *after* the deploy, so a red storybook can fail Pipeline
+# while the release is live — and the live release is what needs verifying.
+#
+# ## Independent of the deploy
+#
+# Nothing here is called by, or `needs:`, anything in the release path.
+# Pipeline has finished before this starts, so the journeys cannot delay,
+# block, cancel or roll back a deployment, and their result cannot change
+# Pipeline's. A failure fails *this* workflow and is reported to Slack.
+#
+# ## Configuration (Settings → Secrets and variables → Actions)
+#
+#   Variables  E2E_BASE_URL     production frontend, e.g. https://admin.flexprice.io
+#              E2E_API_URL      the API that frontend talks to
+#              E2E_ENV_ID       id of the dedicated environment the journeys write to
+#              E2E_ENV_PREFIX   that environment's name prefix (isolation guard)
+#              E2E_ENVIRONMENT  environment name whose rows the read-only journey checks
+#              E2E_SLACK_CHANNEL_ID  channel for the bot-token report (optional)
+#              E2E_RETRIES      retries per journey; default 0
+#   Secrets    E2E_USER, E2E_PASSWORD   the dedicated E2E account — never a person's
+#              E2E_SLACK_WEBHOOK_URL    incoming webhook (text report)
+#              E2E_SLACK_BOT_TOKEN      bot token with chat:write, files:write,
+#                                       channels:history — needed to attach videos
+#
+# Full reference: docs/e2e-journeys.md.
+on:
+  workflow_run:
+    workflows: [Pipeline]
+    types: [completed]
+    branches: [main]
+  # By hand, against whatever production is serving now. Posts to Slack only
+  # when asked to.
+  workflow_dispatch:
+    inputs:
+      journeys:
+        description: Only journeys whose title matches (Playwright --grep); empty runs all
+        required: false
+        default: ''
+      slack:
+        description: Post the report to Slack
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  # Read the triggering Pipeline run's jobs.
+  actions: read
+
+# One verification per released commit: a rerun of the same release queues
+# behind the first instead of racing it on the shared test account.
+concurrency:
+  group: e2e-release-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Confirm the release deployed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Only main's own push pipeline; a cancelled run was superseded by a newer
+    # push, whose own run will be verified.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion != 'cancelled')
+    outputs:
+      deployed: ${{ steps.check.outputs.deployed }}
+      sha: ${{ steps.check.outputs.sha }}
+      deployment_url: ${{ steps.check.outputs.deployment_url }}
+    steps:
+      - name: Check the Deploy main job and its Deploy step
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.eventName === 'workflow_dispatch') {
+              // By hand: whatever production serves now; the next job reads
+              // its version from /meta.json.
+              core.setOutput('deployed', 'true')
+              core.setOutput('sha', '')
+              core.setOutput('deployment_url', '')
+              return
+            }
+            const run = context.payload.workflow_run
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+              ...context.repo,
+              run_id: run.id,
+              attempt_number: run.run_attempt,
+              per_page: 100,
+            })
+            const deploy = jobs.find((job) => job.name.startsWith('Deploy main'))
+            const step = deploy?.steps?.find((s) => s.name === 'Deploy')
+            const deployed = deploy?.conclusion === 'success' && step?.conclusion === 'success'
+            core.setOutput('deployed', String(deployed))
+            core.setOutput('sha', run.head_sha)
+            core.setOutput('deployment_url', deploy?.html_url ?? run.html_url)
+            const regions = jobs
+              .filter((job) => job.name.startsWith('Deploy regions'))
+              .map((job) => `${job.name}: ${job.conclusion}`)
+            core.summary.addRaw(
+              deployed
+                ? `Production deploy of ${run.head_sha.slice(0, 7)} succeeded (${deploy.html_url}). Regions: ${regions.join(', ') || 'none'}.`
+                : `No E2E run: the Deploy main job was ${deploy?.conclusion ?? 'missing'} and its Deploy step ${step?.conclusion ?? 'missing'} — nothing new reached production.`,
+            )
+            await core.summary.write()
+            if (!deployed) core.notice('Production was not deployed by this Pipeline run; E2E skipped.')
+
+  journeys:
+    name: Live journeys
+    needs: release
+    if: needs.release.outputs.deployed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
+      E2E_API_URL: ${{ vars.E2E_API_URL }}
+      RELEASE_SHA: ${{ needs.release.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The journeys as they were at the released commit.
+          ref: ${{ needs.release.outputs.sha || github.sha }}
+
+      - name: Check the configuration
+        id: config
+        env:
+          E2E_USER: ${{ secrets.E2E_USER }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_ENV_ID: ${{ vars.E2E_ENV_ID }}
+        run: |
+          missing=""
+          [ -n "$E2E_BASE_URL" ] || missing="$missing E2E_BASE_URL(variable)"
+          [ -n "$E2E_API_URL" ] || missing="$missing E2E_API_URL(variable)"
+          [ -n "$E2E_ENV_ID" ] || missing="$missing E2E_ENV_ID(variable)"
+          [ -n "$E2E_USER" ] || missing="$missing E2E_USER(secret)"
+          [ -n "$E2E_PASSWORD" ] || missing="$missing E2E_PASSWORD(secret)"
+          if [ -n "$missing" ]; then
+            echo "error=Not configured:$missing" >> "$GITHUB_OUTPUT"
+            echo "::error::E2E release verification is not configured:$missing (docs/e2e-journeys.md)"
+            exit 1
+          fi
+
+      # The deploy step finishing is not the same as the domain serving the
+      # new build. Every build publishes its commit at /meta.json
+      # (apps/console/app-version.ts); wait until production reports this one.
+      - name: Wait for production to serve the release
+        id: frontend
+        run: |
+          base="${E2E_BASE_URL%/}"
+          for i in $(seq 1 40); do
+            served=$(curl --silent --max-time 10 -H 'Cache-Control: no-cache' "$base/meta.json?ts=$(date +%s)" \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).versionId??"")}catch{}})')
+            if [ -n "$served" ] && { [ -z "$RELEASE_SHA" ] || [ "$served" = "$RELEASE_SHA" ]; }; then
+              echo "sha=$served" >> "$GITHUB_OUTPUT"
+              echo "Production serves ${served:0:7}." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Attempt $i: production serves '${served:-nothing}', waiting for ${RELEASE_SHA:-any build}…"
+            sleep 15
+          done
+          echo "error=Production at $base never served release ${RELEASE_SHA:0:7} (last seen: ${served:-no /meta.json})" >> "$GITHUB_OUTPUT"
+          echo "::error::Production never served the release within 10 minutes."
+          exit 1
+
+      - name: Check the API is reachable
+        id: api
+        run: |
+          code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 "${E2E_API_URL%/}/health" || echo 000)
+          if [ "$code" = "000" ] || [ "$code" -ge 500 ]; then
+            echo "error=The API at E2E_API_URL answered $code" >> "$GITHUB_OUTPUT"
+            echo "::error::The API answered $code."
+            exit 1
+          fi
+          echo "API reachable (HTTP $code)."
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      - name: Install the Playwright browser
+        run: pnpm --filter console exec playwright install --with-deps chromium
+
+      # The live specs (`e2e/live-*.spec.ts`): the only journeys that exercise a
+      # real deployment. The mocked journeys assert fixture data, so they run
+      # in Pipeline's Verify stage and on pull requests (`e2e.yml`) instead.
+      - name: Run the journeys against production
+        id: journeys
+        env:
+          E2E_LIVE: '1'
+          E2E_USER: ${{ secrets.E2E_USER }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_ENV_ID: ${{ vars.E2E_ENV_ID }}
+          E2E_ENV_PREFIX: ${{ vars.E2E_ENV_PREFIX }}
+          E2E_ENVIRONMENT: ${{ vars.E2E_ENVIRONMENT }}
+          E2E_RETRIES: ${{ vars.E2E_RETRIES || '0' }}
+          E2E_TARGET_NAME: Production (${{ vars.E2E_BASE_URL }})
+          E2E_RELEASE_SHA: ${{ steps.frontend.outputs.sha }}
+          E2E_DEPLOYMENT_URL: ${{ needs.release.outputs.deployment_url }}
+          GREP: ${{ inputs.journeys }}
+        run: |
+          if [ -n "$GREP" ]; then
+            pnpm --filter console exec playwright test e2e/live- --grep "$GREP"
+          else
+            pnpm --filter console exec playwright test e2e/live-
+          fi
+
+      # Only `e2e-results/`: every text in it is redacted and evidence exists
+      # for failed journeys only. Never `test-results/` or the HTML report,
+      # whose raw traces hold the request headers the reporter scrubs.
+      - name: Upload the journey reports
+        id: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ steps.frontend.outputs.sha || github.sha }}-${{ github.run_attempt }}
+          path: apps/console/e2e-results
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Write the run summary
+        if: always()
+        run: |
+          if [ -f apps/console/e2e-results/journey-inventory.md ]; then
+            cat apps/console/e2e-results/journey-inventory.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Exactly one report per run, after everything above. It never fails the
+      # job, so the job's result stays the journeys' result.
+      - name: Post the report to Slack
+        if: always() && (github.event_name == 'workflow_run' || inputs.slack)
+        env:
+          E2E_SLACK_ENABLED: '1'
+          E2E_SLACK_WEBHOOK_URL: ${{ secrets.E2E_SLACK_WEBHOOK_URL }}
+          E2E_SLACK_BOT_TOKEN: ${{ secrets.E2E_SLACK_BOT_TOKEN }}
+          E2E_SLACK_CHANNEL_ID: ${{ vars.E2E_SLACK_CHANNEL_ID }}
+          E2E_ENVIRONMENT: Production
+          E2E_DEPLOY_STATUS: ${{ github.event_name == 'workflow_run' && 'succeeded' || 'not checked (manual run)' }}
+          E2E_RELEASE_SHA: ${{ steps.frontend.outputs.sha || needs.release.outputs.sha }}
+          E2E_DEPLOYMENT_URL: ${{ needs.release.outputs.deployment_url }}
+          E2E_TARGET_URL: ${{ vars.E2E_BASE_URL }}
+          E2E_ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          E2E_SETUP_ERROR: ${{ steps.config.outputs.error || steps.frontend.outputs.error || steps.api.outputs.error }}
+        run: node .github/scripts/e2e-release-slack.mjs apps/console/e2e-results

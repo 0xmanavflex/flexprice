@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 /**
  * The invoice's hosted link — `hosted_invoice_url`, the page its customer

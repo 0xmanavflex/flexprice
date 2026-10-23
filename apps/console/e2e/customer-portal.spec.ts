@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 /**
  * The customer portal surface (`/p`), opened from its link. The mocks answer

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -54,6 +54,5 @@ test.describe('Settings → Tags', () => {
 
     await expect(dialog).toBeHidden()
     await expect(page).toHaveURL(/\/settings\?section=tags&tab=tags$/)
-
   })
 })

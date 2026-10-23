@@ -13,7 +13,7 @@ support.
 | Shot | What it proves |
 | --- | --- |
 | `01-sign-in.png` | The sign-in screen **before** the ReUI `auth-6` layout — kept as the before half of the pair. |
-| `03-signed-in-home.png` | A real session: `dkinsh123@gmail.com`, tenant `testing`, from `GET /users/me`. |
+| `03-signed-in-home.png` | A real session: the test account, tenant `testing`, from `GET /users/me`. |
 | `04-environment-switcher.png` | The two environments the tenant actually has, from `GET /environments`. |
 | `05-plans.png` | Real rows. Note the sidebar counts (Features 3, Plans 1) and `2 charges`, which needs `expand: prices` to be honoured. |
 | `06-features.png` | Real features, and the one surface whose `nameContains` search the API supports natively. |

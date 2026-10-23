@@ -1,4 +1,5 @@
-import { expect, test, type BrowserContext } from '@playwright/test'
+import { type BrowserContext } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 /**
  * RBAC as V1: the console shows what the signed-in principal's roles allow.

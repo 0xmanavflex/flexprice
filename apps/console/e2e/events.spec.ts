@@ -1,15 +1,19 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { CatalogListPage } from './pages/catalog'
 
 test.beforeEach(async ({ context }) => {
-  await context.addInitScript((value) => {
-    try {
-      window.localStorage.setItem('flexprice.session', value)
-    } catch {
-      /* private-mode browser: the guard falls back to sign-in, tested elsewhere */
-    }
-  }, JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }))
+  await context.addInitScript(
+    (value) => {
+      try {
+        window.localStorage.setItem('flexprice.session', value)
+      } catch {
+        /* private-mode browser: the guard falls back to sign-in, tested elsewhere */
+      }
+    },
+    JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }),
+  )
 })
 
 /**
