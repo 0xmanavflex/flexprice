@@ -385,9 +385,9 @@ function ShellLayout() {
             void navigate({ to: '/sign-in', search: {} as never })
           }}
           // Help: the support chat, when a provider is configured (as in V1).
+          headerLeading={<AccountPill />}
           headerActions={
             <>
-              <AccountPill />
               <SupportChat />
               <VersionCheck />
               <EnvironmentToaster />

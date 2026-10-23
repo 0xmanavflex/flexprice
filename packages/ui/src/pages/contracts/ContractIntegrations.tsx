@@ -152,9 +152,7 @@ export function ContractIntegrations({
               <IntegrationMenu
                 link={link}
                 entityLabel={entityLabel}
-                onPush={
-                  onPush && pushProviders?.includes(link.name) ? onPush : undefined
-                }
+                {...(onPush && pushProviders?.includes(link.name) ? { onPush } : {})}
                 onUnlink={onUnlink}
                 onAskUnlink={() => {
                   setError(null)
