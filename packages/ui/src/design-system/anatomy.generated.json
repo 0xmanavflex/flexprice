@@ -10225,6 +10225,7 @@
       "route": "/features/$featureId",
       "uses": [
         "ConfirmDialog",
+        "EntityAlertDialog",
         "FeatureCloneDialog",
         "FeatureDetailView"
       ]

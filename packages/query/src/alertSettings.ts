@@ -36,7 +36,7 @@ interface ThresholdWire {
   threshold?: string | undefined
 }
 
-interface AlertConfigWire {
+export interface AlertConfigWire {
   alertEnabled?: boolean | undefined
   alertThresholdType?: string | undefined
   info?: ThresholdWire | undefined
@@ -76,6 +76,28 @@ function toThreshold(wire: ThresholdWire | undefined): AlertThreshold | null {
       ? (wire.condition as AlertCondition)
       : AlertCondition.Above,
     threshold: wire.threshold,
+  }
+}
+
+/**
+ * An `AlertSettings` object as an entity carries it inline (a feature's
+ * `alert_settings`), back into the editor's config. Null when nothing is set,
+ * so the editor can say "nothing watches this yet".
+ */
+export function toAlertConfig(wire: AlertConfigWire | undefined): AlertSettingConfig | null {
+  if (!wire) return null
+  const info = toThreshold(wire.info)
+  const warning = toThreshold(wire.warning)
+  const critical = toThreshold(wire.critical)
+  if (!info && !warning && !critical) return null
+  return {
+    alertEnabled: wire.alertEnabled ?? true,
+    thresholdType: ALERT_THRESHOLD_TYPES.has(wire.alertThresholdType ?? '')
+      ? (wire.alertThresholdType as AlertThresholdType)
+      : AlertThresholdType.Percentage,
+    ...(info ? { info } : {}),
+    ...(warning ? { warning } : {}),
+    ...(critical ? { critical } : {}),
   }
 }
 
@@ -144,10 +166,7 @@ export async function fetchAlertSettings(
   }
 }
 
-export function useAlertSettings(
-  query: AlertSettingQuery,
-  options: { enabled?: boolean } = {},
-) {
+export function useAlertSettings(query: AlertSettingQuery, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
   return useQuery({
