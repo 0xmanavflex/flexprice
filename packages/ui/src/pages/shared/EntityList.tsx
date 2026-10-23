@@ -520,9 +520,15 @@ function TableScroller({
 
   return (
     <>
+      {/*
+        Focusable while the table is wider than its frame, so a keyboard can
+        scroll it with the arrow keys (axe: scrollable-region-focusable). The
+        thumb below is pointer-only and hidden from assistive tech.
+      */}
       <div
         ref={ref}
-        className="w-full min-w-0 [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden"
+        {...(bar.overflow ? { tabIndex: 0 } : {})}
+        className="focus-visible:ring-ring/50 w-full min-w-0 [scrollbar-width:none] overflow-x-auto rounded-md outline-none focus-visible:ring-2 [&::-webkit-scrollbar]:hidden"
         style={{ '--table-min': `${minWidth}px` } as React.CSSProperties}
       >
         {children}
