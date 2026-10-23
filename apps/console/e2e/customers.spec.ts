@@ -143,7 +143,10 @@ test.describe('a customer detail page', () => {
 
   test('unlinking from Related refreshes both the rail and header', async ({ page }) => {
     await openFirstCustomer(page)
-    const rail = page.getByRole('complementary', { name: 'Customer details' })
+    // Integration links are managed on the Information tab; the overview's
+    // Related card links to the customer's invoices instead.
+    await page.getByRole('tab', { name: 'Information' }).click()
+    const rail = page.getByRole('region', { name: 'Related', exact: true })
     const mapping = rail.getByRole('button', { name: /^Manage .+ integration$/ }).first()
     await expect(mapping).toBeVisible()
     const label = await mapping.getAttribute('aria-label')
