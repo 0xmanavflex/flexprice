@@ -2381,6 +2381,13 @@
       "usedBy": [],
       "story": null
     },
+    "DeliveryIcon": {
+      "file": "src/reui/icons/default/outline/delivery.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "DetailBreadcrumb": {
       "file": "src/compositions/detail/DetailShell.tsx",
       "layer": "composition",
@@ -2432,8 +2439,6 @@
         "EventDetailSheet",
         "ExportRunList",
         "ExportsOverview",
-        "HostedInvoiceDetailsSheet",
-        "HostedInvoiceView",
         "S3ConnectionList",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
@@ -4087,47 +4092,14 @@
       "usedBy": [],
       "story": null
     },
-    "HostedInvoiceDetailsSheet": {
-      "file": "src/pages/billing/hosted-invoice/HostedInvoiceDetailsSheet.tsx",
-      "layer": "surface",
-      "composes": [
-        "DetailList",
-        "HostedInvoiceStatePill",
-        "Money",
-        "Pill",
-        "Section",
-        "Sheet",
-        "SimpleTable",
-        "TenantMark"
-      ],
-      "usedBy": [
-        "HostedInvoiceView"
-      ],
-      "story": null
-    },
-    "HostedInvoiceStatePill": {
-      "file": "src/pages/billing/hosted-invoice/parts.tsx",
-      "layer": "surface",
-      "composes": [
-        "Pill"
-      ],
-      "usedBy": [
-        "HostedInvoiceDetailsSheet",
-        "HostedInvoiceView"
-      ],
-      "story": null
-    },
     "HostedInvoiceView": {
       "file": "src/pages/billing/hosted-invoice/HostedInvoiceView.tsx",
       "layer": "surface",
       "composes": [
-        "DetailList",
         "ErrorState",
-        "HostedInvoiceDetailsSheet",
-        "HostedInvoiceStatePill",
         "Money",
-        "Section",
-        "TenantMark"
+        "Panel",
+        "PrinterIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx"
@@ -5022,7 +4994,6 @@
         "FeatureTypePill",
         "FilterSelect",
         "Formula",
-        "HostedInvoiceDetailsSheet",
         "HostedInvoiceView",
         "PayInvoiceDialog",
         "Pill",
@@ -5306,6 +5277,7 @@
         "ChartBox",
         "DashboardHome",
         "FilterSelect",
+        "HostedInvoiceView",
         "RevenueReport",
         "UsageCard"
       ],
@@ -5525,8 +5497,6 @@
         "FeatureGrid",
         "FeatureTypeBadge",
         "GlyphBadge",
-        "HostedInvoiceDetailsSheet",
-        "HostedInvoiceStatePill",
         "InvoiceDetailView",
         "InvoiceStatusBadge",
         "InvoiceStatusPill",
@@ -5541,7 +5511,6 @@
         "SubscriptionDetailView",
         "SubscriptionStatusPill",
         "SummaryCell",
-        "TenantMark",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
         "WebhookEventCatalog",
@@ -6048,6 +6017,22 @@
       "usedBy": [],
       "story": "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx"
     },
+    "Printer": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PrinterIcon": {
+      "file": "src/reui/icons/default/outline/printer.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
     "ProfileAvatarUpload": {
       "file": "src/components/blocks/settings-7/components/profile-avatar-upload.tsx",
       "layer": "vendor/blocks",
@@ -6543,8 +6528,6 @@
         "FeatureDetailView",
         "FormPage",
         "GroupMembersView",
-        "HostedInvoiceDetailsSheet",
-        "HostedInvoiceView",
         "InvoiceDetailView",
         "MetadataCard",
         "PlanAiSetupView",
@@ -6721,7 +6704,6 @@
         "ConnectIntegrationSheet",
         "CustomerEventsGrid",
         "EventDetailSheet",
-        "HostedInvoiceDetailsSheet",
         "ManageConnectionSheet",
         "PortalInvoiceSheet",
         "UsageSyncDetailSheet",
@@ -6906,7 +6888,6 @@
         "DataExportDetail",
         "ExportRunList",
         "ExportsOverview",
-        "HostedInvoiceDetailsSheet",
         "PlanAiSetupView",
         "PortalOverview",
         "PriceOverrideForm",
@@ -7439,18 +7420,6 @@
       "usedBy": [],
       "story": "./src/pages/settings/taxes/TaxRateGrid.stories.tsx"
     },
-    "TenantMark": {
-      "file": "src/pages/billing/hosted-invoice/parts.tsx",
-      "layer": "surface",
-      "composes": [
-        "Pill"
-      ],
-      "usedBy": [
-        "HostedInvoiceDetailsSheet",
-        "HostedInvoiceView"
-      ],
-      "story": null
-    },
     "TextIcon": {
       "file": "src/reui/icons/default/outline/text.tsx",
       "layer": "other",
@@ -7660,6 +7629,13 @@
     },
     "TriangleSplitIcon": {
       "file": "src/reui/icons/default/outline/triangle-split.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Truck": {
+      "file": "src/icons/index.ts",
       "layer": "other",
       "composes": [],
       "usedBy": [],
