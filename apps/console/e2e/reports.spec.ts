@@ -49,3 +49,13 @@ test('Reports reads the report library, and the old /revenue address lands there
     expect(reports, `queried ${key}`).toContain(key)
   }
 })
+
+test('Usage keeps to the 7-day limit of the events report on a 12-month range', async ({
+  page,
+}) => {
+  await page.goto('/reports?view=usage&range=12m')
+  await expect(page.getByText('Total events')).toBeVisible({ timeout: 20_000 })
+  await expect(
+    page.getByText('The last 7 days: the events report covers at most a week.'),
+  ).toBeVisible()
+})

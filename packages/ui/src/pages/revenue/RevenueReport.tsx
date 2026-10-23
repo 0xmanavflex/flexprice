@@ -773,6 +773,7 @@ function OverviewTab({
                   ]}
                 />
                 <EventsChart series={usage.series} height={220} />
+                <BasedOn text={usage.basedOn} />
               </>
             ) : (
               <NotReady state={usage} height={220} empty="No events in this range" />
@@ -1136,6 +1137,7 @@ function UsageTab({ usage }: RevenueReportProps) {
                 ]}
               />
               <EventsChart series={usage.series} height={260} />
+              <BasedOn text={usage.basedOn} />
             </>
           ) : (
             <NotReady state={usage} empty="No events in this range" />

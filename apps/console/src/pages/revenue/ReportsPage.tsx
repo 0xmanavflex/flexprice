@@ -53,6 +53,9 @@ import {
  * it stays on the revenue dashboard (`POST /dashboard/revenue-dashboard`).
  */
 
+/** The widest range the events report answers (its `max_range_days`). */
+const EVENTS_MAX_DAYS = 7
+
 /** How many customers a breakdown lists. */
 const TOP = 50
 
@@ -156,11 +159,17 @@ export function ReportsPage({
     dimensions: ['customer_id'],
     limit: TOP,
   })
+  // The events report covers at most a week (`max_range_days: 7`): the last
+  // seven days of the range, by day, whatever the range is.
+  const eventsStart = new Date(
+    Math.max(window.start.getTime(), window.end.getTime() - (EVENTS_MAX_DAYS - 1) * DAY_MS),
+  )
   const eventsReport = useReport('events_volume', {
-    range,
+    range: `${isoDay(eventsStart)}..${isoDay(new Date(window.end.getTime() + DAY_MS))}`,
     shape: 'timeseries',
-    grain: window.grain,
+    grain: 'day',
   })
+  const eventsLimited = eventsStart.getTime() > window.start.getTime()
   const consumed = useReport('credit_consumption', {
     range,
     currency: currency.toLowerCase(),
@@ -290,7 +299,8 @@ export function ReportsPage({
 
   const events = reportSeries(eventsReport.data, 'events_volume')
   const eventsTotal = events.reduce((sum, point) => sum + point.value, 0)
-  const weeks = Math.max((window.end.getTime() - window.start.getTime()) / (7 * DAY_MS), 1)
+  // The tile reads "Daily average": events per day over the days the report covers.
+  const eventDays = Math.max(Math.ceil((window.end.getTime() - eventsStart.getTime()) / DAY_MS), 1)
   const peak = events.reduce<ReportPoint | null>(
     (best, point) => (best === null || point.value > best.value ? point : best),
     null,
@@ -413,12 +423,15 @@ export function ReportsPage({
         status: statusOf(eventsReport, events.length === 0),
         reason: eventsReport.isError ? 'The events report did not respond.' : undefined,
         onRetry: retry(eventsReport),
+        ...(eventsLimited
+          ? { basedOn: 'The last 7 days: the events report covers at most a week.' }
+          : {}),
         series: events.map((point) => ({
-          label: bucketLabel(point.bucket, window.grain),
+          label: bucketLabel(point.bucket, 'day'),
           events: point.value,
         })),
         total: count.format(eventsTotal),
-        weeklyAverage: count.format(eventsTotal / weeks),
+        weeklyAverage: count.format(eventsTotal / eventDays),
         peak: peak ? `${count.format(peak.value)} on ${dayLabel.format(peak.bucket)}` : '—',
         creditsReason: 'The credit reports did not respond.',
         ...(consumedValue !== null || toppedUpValue !== null
