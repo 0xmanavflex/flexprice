@@ -73,7 +73,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
   },
   {
     name: 'revenue',
-    route: '/revenue',
+    route: '/reports',
     reference: 'pages/revenue.tsx',
     pattern: 'dashboard',
     ready: { text: 'Receivables aging' },

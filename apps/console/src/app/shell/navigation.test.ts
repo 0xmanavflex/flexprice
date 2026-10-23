@@ -116,7 +116,7 @@ describe('the sidebar layout', () => {
       'Contracts',
       'Billing',
       'Collections',
-      'Revenue',
+      'Reports',
       'Developers',
     ])
     expect(FOOTER_NAV.map((entry) => entry.label)).toEqual(['Integrations', 'Documentation'])
@@ -165,7 +165,7 @@ describe('breadcrumbForPath', () => {
   })
 
   it('is a single crumb for a top-level destination', () => {
-    expect(breadcrumbForPath('/revenue')).toEqual([{ label: 'Revenue' }])
+    expect(breadcrumbForPath('/reports')).toEqual([{ label: 'Reports' }])
   })
 
   // A crumb that navigates somewhere the user did not name is worse than one
@@ -189,7 +189,7 @@ describe('breadcrumbForPath', () => {
 describe('every destination resolves', () => {
   const BUILT = [
     '/',
-    '/revenue',
+    '/reports',
     '/features',
     '/plans',
     '/addons',

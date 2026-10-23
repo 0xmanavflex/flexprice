@@ -62,10 +62,10 @@ export interface AppShellProps {
   /** Pinned above the footer — an allowance, a usage meter, an alert count. */
   pinned?: ReactNode
   breadcrumb?: ReactNode
+  /** Sits in the header, to the left of search. */
+  headerLeading?: ReactNode
   /** One control that belongs to the page as a whole, not to its content. */
   headerActions?: ReactNode
-  /** A status chip that leads the cluster, left of search — the account's trial, say. */
-  headerLeading?: ReactNode
   children: ReactNode
 }
 
@@ -101,8 +101,8 @@ export function AppShell({
   search,
   pinned,
   breadcrumb,
-  headerActions,
   headerLeading,
+  headerActions,
   children,
 }: AppShellProps) {
   // The pinned nav group already takes the free space above itself; a second

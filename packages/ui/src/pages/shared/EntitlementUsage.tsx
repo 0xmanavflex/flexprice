@@ -28,7 +28,7 @@ import { UsageMeter } from './UsageMeter'
 export const EntitlementUsageProvenance = provenance({
   source: 'composition',
   composes: ['pages/shared/UsageMeter', 'pages/shared/DetailTable', 'pages/shared/cells'],
-  note: "V1's customer entitlements table (Feature, Source, Value, Usage) over DetailTable, with UsageMeter as the usage cell plus soft-limit and reset-date captions.",
+  note: "V1's customer entitlements table (Feature, Source, Value, Usage) on the shared detail table, so filter and sort sit in the section header.",
 })
 
 export interface EntitlementUsageProps {
@@ -115,9 +115,6 @@ export interface EntitlementUsageRow {
 
 export interface EntitlementUsageTableProps {
   rows: EntitlementUsageRow[]
-  /** Accessible name of the table. */
-  label?: string | undefined
-  pageSize?: number | undefined
   locale?: string | undefined
 }
 
@@ -157,28 +154,23 @@ function Sources({ sources }: { sources: EntitlementSourceLink[] }) {
 }
 
 /** The entitlements table: Feature, Source (when known), Value, Usage. */
-export function EntitlementUsageTable({
-  rows,
-  label = 'Entitlements',
-  pageSize,
-  locale,
-}: EntitlementUsageTableProps) {
+export function EntitlementUsageTable({ rows, locale }: EntitlementUsageTableProps) {
   const withSources = rows.some((row) => (row.sources?.length ?? 0) > 0)
 
   return (
     <DetailTable<EntitlementUsageRow>
       compact
-      label={label}
+      toolbar
+      footer={false}
+      label="Entitlements"
       noun="features"
       rows={rows}
       getRowId={(row) => row.id}
-      {...(pageSize ? { pageSize } : {})}
       columns={[
         {
           key: 'feature',
           header: 'Feature',
-          width: 180,
-          sortBy: (row) => row.feature.toLowerCase(),
+          sortBy: (row) => row.feature,
           text: (row) => row.feature,
           cell: (row) => <span className="truncate font-medium">{row.feature}</span>,
         },
@@ -187,7 +179,7 @@ export function EntitlementUsageTable({
               {
                 key: 'source',
                 header: 'Source',
-                width: 160,
+                sortBy: (row: EntitlementUsageRow) => row.sources?.[0]?.label ?? '',
                 text: (row: EntitlementUsageRow) =>
                   (row.sources ?? []).map((source) => source.label).join(', '),
                 cell: (row: EntitlementUsageRow) => <Sources sources={row.sources ?? []} />,
@@ -197,16 +189,43 @@ export function EntitlementUsageTable({
         {
           key: 'value',
           header: 'Value',
-          width: 160,
+          sortBy: (row) => entitlementValue(row, locale),
           text: (row) => entitlementValue(row, locale),
           cell: (row) => (
             <span className="text-muted-foreground">{entitlementValue(row, locale)}</span>
           ),
         },
         {
+          key: 'resets',
+          header: 'Resets',
+          sortBy: (row) => row.resetsOn?.getTime() ?? 0,
+          text: (row) =>
+            row.resetsOn && !Number.isNaN(row.resetsOn.getTime())
+              ? new Intl.DateTimeFormat(locale, {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                }).format(row.resetsOn)
+              : '',
+          cell: (row) => {
+            const resets = row.resetsOn
+            if (!resets || Number.isNaN(resets.getTime())) return <EmDash />
+            return (
+              <span className="text-muted-foreground tabular-nums">
+                {new Intl.DateTimeFormat(locale, {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                }).format(resets)}
+              </span>
+            )
+          },
+        },
+        {
           key: 'usage',
           header: 'Usage',
           width: 260,
+          sortBy: (row) => row.used ?? -1,
           cell: (row) =>
             row.enabled && measured(row) ? (
               <EntitlementUsage
@@ -215,13 +234,12 @@ export function EntitlementUsageTable({
                 limit={row.limit}
                 unit={row.unit}
                 softLimit={row.softLimit}
-                resetsOn={row.resetsOn}
                 locale={locale}
               />
             ) : (
               <EmDash />
             ),
-        },
+        }
       ]}
     />
   )

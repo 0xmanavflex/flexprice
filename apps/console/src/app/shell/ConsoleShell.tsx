@@ -114,10 +114,10 @@ export interface ConsoleShellProps {
   onEnvironmentChange: (id: string) => void
   user: ShellUser
   onSignOut?: () => void
+  /** Sits in the header, to the left of search. */
+  headerLeading?: ReactNode
   /** One control belonging to the page as a whole, rendered in the header. */
   headerActions?: ReactNode
-  /** Leads the header cluster, left of search: the trial chip. */
-  headerLeading?: ReactNode
   children: ReactNode
 }
 
@@ -141,8 +141,8 @@ export function ConsoleShell({
   onEnvironmentChange,
   user,
   onSignOut,
-  headerActions,
   headerLeading,
+  headerActions,
   children,
 }: ConsoleShellProps) {
   const activeItemId = navEntryForPath(pathname, search)
@@ -212,6 +212,7 @@ export function ConsoleShell({
         user={user}
         onSettings={() => goTo('settings')}
         {...(onSignOut ? { onSignOut } : {})}
+        {...(headerLeading ? { headerLeading } : {})}
         /*
          * The environment leads the trail, and it is where you change it too — the
          * switcher moved out of the sidebar and became this first crumb. The one
@@ -255,7 +256,6 @@ export function ConsoleShell({
          * people start cold — a subscription, a customer — do not live on the
          * screen they happen to be looking at.
          */
-        headerLeading={headerLeading}
         headerActions={
           <>
             {headerActions}

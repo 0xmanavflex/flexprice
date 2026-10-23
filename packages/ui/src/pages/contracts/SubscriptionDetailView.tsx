@@ -1,9 +1,21 @@
-import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
+import {
+  RBAC_ENTITY,
+  type PauseSubscription,
+  type RbacEntity,
+  type ResumeSubscription,
+  canPauseSubscription,
+  canResumeSubscription,
+} from '@fp/domain'
+import { toast } from 'sonner'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
+  BellIcon,
+  CopyIcon,
+  PencilIcon,
+  TicketPercentIcon,
   PackageIcon,
   PlusIcon,
   CirclePauseIcon,
@@ -84,8 +96,7 @@ import { Section } from '../../compositions/layout/Section'
 import { ConfirmDialog } from '../../compositions/feedback/ConfirmDialog'
 import { FormDialog } from '../../compositions/forms/FormDialog'
 import type { EmptyScene } from '../../compositions/feedback/SceneIllustration'
-import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
-import { LoadingRows } from '../../compositions/feedback/States'
+import { SubTabState } from '@ui/compositions/detail/SubTabState'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 import { EntityLink, Pill } from '../shared/cells'
 import { EntitlementUsageTable, entitlementRowsForContract } from '../shared/EntitlementUsage'
@@ -102,6 +113,7 @@ import {
 } from './ContractSectionDialogs'
 import { ContractQuantityDialog } from './ContractQuantityDialog'
 import { ChargeAlertForm } from './ChargeAlertForm'
+import { PauseContractDialog } from './PauseContractDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
@@ -193,6 +205,8 @@ export interface SubscriptionDetailViewProps {
     | ((draft: { settingId: string; config: AlertSettingConfig }) => Promise<unknown> | void)
     | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
+  /** A charge's row menu: take its coupon off. Resolves when done. */
+  onRemoveCoupon?: ((coupon: SubscriptionCoupon) => Promise<unknown>) | undefined
   /** Row menus: take an add-on off, stop a tax, end a credit grant. Each resolves when done. */
   onRemoveAddon?: ((addon: SubscriptionAddon) => Promise<unknown>) | undefined
   onRemoveTax?: ((tax: SubscriptionTax) => Promise<unknown>) | undefined
@@ -206,6 +220,12 @@ export interface SubscriptionDetailViewProps {
   /** Incomplete contracts only: the More item and the banner button. */
   onActivate?: () => void
   onCancel?: () => void
+  /** Running contracts: stop billing until resumed. Omitted, the item is hidden. */
+  onPause?: ((draft: PauseSubscription) => Promise<unknown>) | undefined
+  /** Paused contracts: start billing again. */
+  onResume?: ((draft: ResumeSubscription) => Promise<unknown>) | undefined
+  /** Opens the alert setting that watches this contract. */
+  onAlertSettings?: (() => void) | undefined
   /** Saves the contract's metadata map. Omitted, the metadata card is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /**
@@ -366,6 +386,10 @@ export function SubscriptionDetailView({
   onActivate,
   onSaveMetadata,
   onCancel,
+  onPause,
+  onResume,
+  onAlertSettings,
+  onRemoveCoupon,
   onAddCharge,
   onEditCharge,
   onEndCharge,
@@ -375,6 +399,7 @@ export function SubscriptionDetailView({
   priceUnits = [],
 }: SubscriptionDetailViewProps) {
   const [tab, setTab] = useState<SubscriptionTab>('overview')
+  const [pauseMode, setPauseMode] = useState<'pause' | 'resume' | null>(null)
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
   const [saving, setSaving] = useState(false)
   const [quantityLine, setQuantityLine] = useState<SubscriptionLine | null>(null)
@@ -428,14 +453,9 @@ export function SubscriptionDetailView({
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
   const canCancel = !isCancelled && !isCancelling && !s.cancelledAt
   const canActivate = s.status === SubscriptionStatus.Incomplete && Boolean(onActivate)
+  const canPause = Boolean(onPause) && canPauseSubscription(s.status) && !isCancelling
+  const canResume = Boolean(onResume) && canResumeSubscription(s.status)
   const title = `${s.customerName} on ${s.planName}`
-
-  const endsOn = isCancelled
-    ? (s.cancelledAt ?? s.endDate)
-    : s.cancelAtPeriodEnd
-      ? s.currentPeriodEnd
-      : (s.cancelAt ?? s.currentPeriodEnd)
-  const endLabel = isCancelled ? 'Ended' : isCancelling ? 'Ends' : 'Renews'
 
   const canEditCharges = !isCancelled && !isCancelling
   const canAddCharge =
@@ -651,6 +671,7 @@ export function SubscriptionDetailView({
     title: event.title,
     at: event.at,
     summary: event.summary,
+    ...(event.detail ? { detail: event.detail } : {}),
     ...(event.record ? { record: event.record } : {}),
     ...(event.by ? { by: event.by } : {}),
     ...(event.href ? { href: event.href } : {}),
@@ -687,6 +708,18 @@ export function SubscriptionDetailView({
         <DetailMoreMenu
           label="Contract actions"
           items={[
+            {
+              id: 'copy-id',
+              label: 'Copy ID',
+              icon: <CopyIcon aria-hidden="true" className="size-4" />,
+              readOnly: true,
+              onSelect: () => {
+                void navigator.clipboard
+                  .writeText(s.id)
+                  .then(() => toast.success('Contract ID copied'))
+                  .catch(() => toast.error('Couldn’t copy the contract ID'))
+              },
+            },
             ...(canActivate && onActivate
               ? [
                   {
@@ -694,6 +727,48 @@ export function SubscriptionDetailView({
                     label: 'Activate',
                     icon: <PlayIcon aria-hidden="true" className="size-4" />,
                     onSelect: onActivate,
+                  },
+                ]
+              : []),
+            // V1's "Edit Subscription" opened a page of charges; here the charges
+            // are edited in place, on their tab.
+            ...(canEditCharges
+              ? [
+                  {
+                    id: 'edit',
+                    label: 'Edit contract',
+                    icon: <PencilIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setTab('charges'),
+                  },
+                ]
+              : []),
+            ...(onAlertSettings
+              ? [
+                  {
+                    id: 'alerts',
+                    label: 'Alert settings',
+                    icon: <BellIcon aria-hidden="true" className="size-4" />,
+                    onSelect: onAlertSettings,
+                  },
+                ]
+              : []),
+            ...(canPause
+              ? [
+                  {
+                    id: 'pause',
+                    label: 'Pause contract',
+                    icon: <CirclePauseIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setPauseMode('pause'),
+                  },
+                ]
+              : []),
+            ...(canResume
+              ? [
+                  {
+                    id: 'resume',
+                    label: 'Resume contract',
+                    icon: <PlayIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setPauseMode('resume'),
                   },
                 ]
               : []),
@@ -759,8 +834,6 @@ export function SubscriptionDetailView({
               <ContractDetails
                 subscription={s}
                 usage={usageData}
-                endLabel={endLabel}
-                endsOn={endsOn}
                 {...(onOpenCustomer ? { onOpenCustomer } : {})}
                 {...(onOpenPlan ? { onOpenPlan } : {})}
               />
@@ -803,7 +876,6 @@ export function SubscriptionDetailView({
                 <Section table showTitle title="Commitments">
                   <DetailTable<CommitmentRow>
                     compact
-                    toolbar={false}
                     footer={false}
                     label="Commitments"
                     noun="commitments"
@@ -813,6 +885,8 @@ export function SubscriptionDetailView({
                       {
                         key: 'charge',
                         header: 'Charge',
+                        sortBy: (row) => row.name,
+                        text: (row) => row.name,
                         cell: (row) => <Strong>{row.name}</Strong>,
                       },
                       {
@@ -858,7 +932,6 @@ export function SubscriptionDetailView({
               >
                 {(rows) => (
                   <EntitlementUsageTable
-                    pageSize={5}
                     rows={entitlementRowsForContract(rows, entitlementUsage)}
                   />
                 )}
@@ -893,11 +966,14 @@ export function SubscriptionDetailView({
                       {
                         key: 'credits',
                         header: 'Credits',
+                        sortBy: (row) => row.credits,
                         cell: (row) => <Strong className="tabular-nums">{row.credits}</Strong>,
                       },
                       {
                         key: 'cadence',
                         header: 'Cadence',
+                        sortBy: (row) => row.cadence,
+                        text: (row) => CREDIT_GRANT_CADENCE_LABEL[row.cadence],
                         cell: (row) => (
                           <Muted>
                             {row.cadence === CreditGrantCadence.Recurring && row.period
@@ -961,11 +1037,14 @@ export function SubscriptionDetailView({
                       {
                         key: 'status',
                         header: 'Status',
+                        sortBy: (row) => (row.active ? 'Active' : 'Inactive'),
+                        text: (row) => (row.active ? 'Active' : 'Inactive'),
                         cell: (row) => <ActiveBadge active={row.active} />,
                       },
                       {
                         key: 'start',
                         header: 'Starts',
+                        sortBy: (row) => row.startDate?.getTime() ?? 0,
                         cell: (row) => <Muted>{day(row.startDate)}</Muted>,
                       },
                       {
@@ -1035,11 +1114,14 @@ export function SubscriptionDetailView({
                       {
                         key: 'status',
                         header: 'Status',
+                        sortBy: (row) => (row.active ? 'Active' : 'Inactive'),
+                        text: (row) => (row.active ? 'Active' : 'Inactive'),
                         cell: (row) => <ActiveBadge active={row.active} />,
                       },
                       {
                         key: 'end',
                         header: 'Ends',
+                        sortBy: (row) => row.endDate?.getTime() ?? 0,
                         cell: (row) => <Muted>{day(row.endDate)}</Muted>,
                       },
                     ]}
@@ -1088,6 +1170,8 @@ export function SubscriptionDetailView({
                       {
                         key: 'inclusive',
                         header: 'Applied',
+                        sortBy: (row) => (row.inclusive ? 'Included in price' : 'Added on top'),
+                        text: (row) => (row.inclusive ? 'Included in price' : 'Added on top'),
                         cell: (row) => (
                           <Muted>{row.inclusive ? 'Included in price' : 'Added on top'}</Muted>
                         ),
@@ -1179,11 +1263,61 @@ export function SubscriptionDetailView({
               : {})}
             removeLabel="End charge"
             {...(revertCharge ? { onRevert: revertCharge } : {})}
-            extraActions={(charge) =>
-              chargeRows.lineOf.get(charge.id)?.source === 'plan' && onOpenPlan
-                ? [{ label: 'Go to plan', icon: <PackageIcon aria-hidden />, onSelect: onOpenPlan }]
-                : []
-            }
+            extraActions={(charge) => {
+              const line = chargeRows.lineOf.get(charge.id)
+              if (!line) return []
+              // V1's charge row: the line item id beside the price id, and a
+              // coupon applied to (or taken off) just this charge.
+              const lineCoupon = (coupons?.data ?? []).find(
+                (coupon) => coupon.active && coupon.lineItemId === line.id,
+              )
+              const open = !charge.endDate && canEditCharges
+              return [
+                {
+                  label: 'Copy line item ID',
+                  icon: <CopyIcon aria-hidden />,
+                  onSelect: () => {
+                    void navigator.clipboard
+                      .writeText(line.id)
+                      .then(() => toast.success('Line item ID copied'))
+                      .catch(() => toast.error('Couldn’t copy the line item ID'))
+                  },
+                },
+                ...(open && onAddCoupon && !lineCoupon
+                  ? [
+                      {
+                        label: 'Apply coupon',
+                        icon: <TicketPercentIcon aria-hidden />,
+                        onSelect: () => editCharge(charge, ChargeSection.Discount),
+                      },
+                    ]
+                  : []),
+                ...(open && onRemoveCoupon && lineCoupon
+                  ? [
+                      {
+                        label: 'Remove coupon',
+                        icon: <TicketPercentIcon aria-hidden />,
+                        onSelect: () =>
+                          setRemoval({
+                            title: `Remove ${lineCoupon.name}?`,
+                            description: `The discount stops applying to ${line.name || 'this charge'}.`,
+                            confirmLabel: 'Remove coupon',
+                            run: () => onRemoveCoupon(lineCoupon),
+                          }),
+                      },
+                    ]
+                  : []),
+                ...(line.source === 'plan' && onOpenPlan
+                  ? [
+                      {
+                        label: 'Go to plan',
+                        icon: <PackageIcon aria-hidden />,
+                        onSelect: onOpenPlan,
+                      },
+                    ]
+                  : []),
+              ]
+            }}
             isLoading={lines.isLoading ?? false}
             error={lines.isError ? 'Charges could not be loaded' : null}
             {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
@@ -1230,6 +1364,8 @@ export function SubscriptionDetailView({
                     {
                       key: 'name',
                       header: 'Charge',
+                      sortBy: (charge) => charge.name,
+                      text: (charge) => charge.name,
                       cell: (charge) => (
                         <span className="text-foreground flex items-center gap-2 font-medium">
                           {charge.name}
@@ -1253,6 +1389,7 @@ export function SubscriptionDetailView({
                     {
                       key: 'amount',
                       header: 'Amount',
+                      sortBy: (charge) => Number(charge.amount.amount),
                       cell: (charge) => (
                         <Strong className="tabular-nums">{formatMoney(charge.amount)}</Strong>
                       ),
@@ -1267,6 +1404,7 @@ export function SubscriptionDetailView({
         {tab === 'invoices' ? (
           <PartSection
             title="Invoices"
+            showTitle={false}
             part={invoices}
             failure="Invoices could not be loaded"
             emptyTitle="No invoices yet"
@@ -1317,9 +1455,19 @@ export function SubscriptionDetailView({
                   {
                     key: 'status',
                     header: 'Status',
+                    sortBy: (row) => sentence(words(row.status)),
+                    text: (row) => sentence(words(row.status)),
                     cell: (row) => <InvoiceStatusBadge status={row.status} />,
                   },
-                  { key: 'payment', header: 'Payment', cell: (row) => <PaymentCell row={row} /> },
+                  {
+                    key: 'payment',
+                    header: 'Payment',
+                    sortBy: (row) =>
+                      row.paymentStatus ? sentence(words(row.paymentStatus)) : 'No payment',
+                    text: (row) =>
+                      row.paymentStatus ? sentence(words(row.paymentStatus)) : 'No payment',
+                    cell: (row) => <PaymentCell row={row} />,
+                  },
                   {
                     key: 'amount',
                     header: 'Amount',
@@ -1432,6 +1580,22 @@ export function SubscriptionDetailView({
         onRun={(action) => void runSection(action)}
         onClose={closeSection}
       />
+      {onPause && pauseMode === 'pause' ? (
+        <PauseContractDialog
+          mode="pause"
+          open
+          onOpenChange={(next) => !next && setPauseMode(null)}
+          onConfirm={onPause}
+        />
+      ) : null}
+      {onResume && pauseMode === 'resume' ? (
+        <PauseContractDialog
+          mode="resume"
+          open
+          onOpenChange={(next) => !next && setPauseMode(null)}
+          onConfirm={onResume}
+        />
+      ) : null}
       <FormDialog
         open={alertEdit !== null}
         onOpenChange={(next) => {
@@ -1504,28 +1668,25 @@ const deduction = (money: Money) =>
   Number(money.amount) > 0 ? `−${formatMoney(money)}` : formatMoney(money)
 
 /**
- * The contract's own facts. A strip of four leads, each one a thing a reader
- * checks first; the rest sit in a grid below in the quieter label/value style.
+ * The contract's own facts. Each card is four fields, and nothing the header
+ * already says: status, billing cycle and currency are badges, and a trial is
+ * the info chip above these cards.
  */
 function ContractDetails({
   subscription: s,
   usage,
-  endLabel,
-  endsOn,
   onOpenCustomer,
   onOpenPlan,
 }: {
   subscription: SubscriptionDetail
   usage: SubscriptionUsage | undefined
-  endLabel: string
-  endsOn: Date | null
   onOpenCustomer?: () => void
   onOpenPlan?: () => void
 }) {
   const commitment = s.commitment
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-2">
-      <Section title="Contract">
+    <div className="grid items-stretch gap-5 lg:grid-cols-2">
+      <Section title="Contract" className="h-full">
         <Properties
           columns={2}
           items={[
@@ -1550,25 +1711,10 @@ function ContractDetails({
               label: 'Current period',
               value: `${day(s.currentPeriodStart)} – ${day(s.currentPeriodEnd)}`,
             },
-            // "Renews" repeats the end of the current period; "Ends" / "Ended" is
-            // the only place a cancellation date shows, so that one stays.
-            ...(endLabel === 'Renews' ? [] : [{ label: endLabel, value: day(endsOn) }]),
-            ...(s.trialStart || s.trialEnd
-              ? [{ label: 'Trial', value: `${day(s.trialStart)} – ${day(s.trialEnd)}` }]
-              : []),
-            ...(s.endDate ? [{ label: 'Contract end', value: day(s.endDate) }] : []),
-            ...(s.lookupKey
-              ? [
-                  {
-                    label: 'Lookup key',
-                    value: <span className="font-mono text-xs">{s.lookupKey}</span>,
-                  },
-                ]
-              : []),
           ]}
         />
       </Section>
-      <Section title="Billing & collection">
+      <Section title="Billing & collection" className="h-full">
         <Properties
           columns={2}
           items={[
@@ -1576,27 +1722,20 @@ function ContractDetails({
               label: 'Payment terms',
               value: sentence(s.paymentTerms ? words(s.paymentTerms) : ''),
             },
-            { label: 'Currency', value: s.currency || '—' },
             {
-              label: 'Billing cycle',
-              value:
-                s.billingPeriodCount > 1
-                  ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
-                  : s.billingPeriodLabel,
+              label: 'Collection',
+              value: sentence(s.collectionMethod ? words(s.collectionMethod) : ''),
             },
-            // The contract-level commitment is set when the contract is created;
-            // the API cannot change it afterwards, so it reads here and nowhere else.
             {
               label: 'Commitment',
               value: commitment
                 ? `${formatMoney(commitment.amount)} per ${commitmentPeriodNoun(commitment.period, commitment.periodCount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
                 : 'None',
             },
-            // A factor of 1 is the normal rate, so only a premium is worth a row.
-            ...(commitment && commitment.overageFactor > 1
-              ? [{ label: 'Overage factor', value: `${commitment.overageFactor}×` }]
-              : []),
-            ...(commitment ? [{ label: 'True-up', value: commitment.trueUp ? 'On' : 'Off' }] : []),
+            {
+              label: 'True-up',
+              value: commitment ? (commitment.trueUp ? 'On' : 'Off') : 'None',
+            },
           ]}
         />
       </Section>
@@ -1624,11 +1763,19 @@ function InvoicePreviewSection({
   if (status === SubscriptionStatus.Trialing) {
     return (
       <Section table showTitle title="Upcoming invoice">
-        <SectionEmpty
-          scene="billing"
-          title="Billing starts after the trial"
-          description="The first invoice is created when the trial ends."
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={false}
+          columns={4}
+          loadingLabel="Loading the upcoming invoice"
+          empty={{
+            scene: 'billing',
+            title: 'Billing starts after the trial',
+            description: 'The first invoice is created when the trial ends.',
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }
@@ -1660,13 +1807,13 @@ function InvoicePreviewSection({
             label="Upcoming invoice lines"
             noun="lines"
             rows={expanded ? value.lines : value.lines.slice(0, PREVIEW_LINES_SHOWN)}
-            toolbar={false}
             footer={false}
             pageSize={Math.max(value.lines.length, 1)}
             columns={[
               {
                 key: 'name',
                 header: 'Description',
+                sortBy: (line) => line.name,
                 text: (line) => `${line.name} ${line.detail}`,
                 cell: (line) => (
                   <span className="flex min-w-0 flex-col">
@@ -1685,6 +1832,7 @@ function InvoicePreviewSection({
                 key: 'amount',
                 header: 'Amount',
                 align: 'end',
+                sortBy: (line) => Number(line.amount.amount),
                 cell: (line) => (
                   <Strong className="tabular-nums">{formatMoney(line.amount)}</Strong>
                 ),
@@ -1907,37 +2055,47 @@ function PartSectionInner<T>({
   if (part.isLoading || (!data && !part.isError)) {
     return (
       <Section {...frame}>
-        <div className="p-4">
-          <LoadingRows />
-        </div>
+        <SubTabState
+          hasData={false}
+          isLoading
+          columns={5}
+          loadingLabel={`Loading ${title.toLowerCase()}`}
+          empty={{ scene: scene ?? 'billing', title: emptyTitle, description: emptyDescription }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }
   if (part.isError || !data) {
     return (
       <Section {...frame}>
-        <SectionEmpty
-          title={failure}
-          description="The rest of the page still works."
-          action={
-            part.onRetry ? (
-              <Button size="sm" variant="outline" className="h-8 px-3" onClick={part.onRetry}>
-                Try again
-              </Button>
-            ) : undefined
-          }
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={false}
+          error={failure}
+          onRetry={part.onRetry}
+          columns={5}
+          loadingLabel={`Loading ${title.toLowerCase()}`}
+          empty={{ scene: scene ?? 'billing', title: emptyTitle, description: emptyDescription }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }
   if (isEmpty(data)) {
     return (
       <Section {...frame}>
-        <SectionEmpty
-          {...(scene ? { scene } : {})}
-          title={emptyTitle}
-          description={emptyDescription}
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={false}
+          columns={5}
+          loadingLabel={`Loading ${title.toLowerCase()}`}
+          empty={{ scene: scene ?? 'billing', title: emptyTitle, description: emptyDescription }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }

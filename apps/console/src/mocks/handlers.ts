@@ -2387,6 +2387,32 @@ const CONTRACT_COMMITMENT = {
 /** The mock's trialing contract; see the subscriptions corpus below. */
 const TRIALING_SUBSCRIPTION_ID = 'subs_01MOCKTRIALING0000000001'
 
+/** Each report's seeded figure for the mock report library. */
+const REPORT_BASE: Record<string, number> = {
+  invoice_total: 412_000,
+  invoice_total_issued: 409_000,
+  net_billing: 399_000,
+  net_billing_issued: 397_000,
+  total_receivables: 121_460,
+  receivables_aging: 60_000,
+  days_to_pay: 16.4,
+  active_customers: 172,
+  arpu: 2_630,
+  arpu_paid: 2_410,
+  credit_consumption: 52_000,
+  credit_topups: 61_000,
+  events_volume: 18_400_000,
+}
+/** Reports the API compares with the previous period. */
+const REPORT_COMPARES = new Set([
+  'invoice_total',
+  'invoice_total_issued',
+  'days_to_pay',
+  'arpu',
+  'arpu_paid',
+  'credit_topups',
+])
+
 const DASHBOARD_CORPUS: Record<string, Corpus> = {
   subscriptions: (() => {
     const extra = recentSubscriptionRows()
@@ -2596,6 +2622,129 @@ export const handlers = [
    * and customer) and `POST /analytics/revenue` (net revenue per day, grouped
    * by currency), both read from `revenueDays`.
    */
+  /*
+   * The analytics report library — `POST /analytics/reports/{key}/query`.
+   * Answers in the API's table form: a `bucket` (timeseries) or dimension
+   * column, `currency`, the metric named after the report, and `{key}_prev` /
+   * `{key}_change_pct` when compared. Figures are seeded per report and
+   * bucket, and customers are real ones from the corpus so names resolve.
+   */
+  http.post(`${BASE}/analytics/reports/:key/query`, async ({ params, request }) => {
+    const key = String(params['key'])
+    const body = (await request.json().catch(() => ({}))) as {
+      shape?: string
+      range?: string
+      dimensions?: string[]
+      grain?: string
+      currency?: string
+      compare?: string
+      limit?: number
+    }
+    const base = REPORT_BASE[key]
+    if (base === undefined) {
+      return HttpResponse.json({ message: `report "${key}" not found` }, { status: 404 })
+    }
+    const compare = Boolean(body.compare) && REPORT_COMPARES.has(key)
+    const metric = [
+      { name: key, type: 'decimal', role: 'metric' },
+      ...(compare
+        ? [
+            { name: `${key}_prev`, type: 'decimal', role: 'metric' },
+            { name: `${key}_change_pct`, type: 'decimal', role: 'metric' },
+          ]
+        : []),
+    ]
+    const values = (now: number, before: number) =>
+      compare
+        ? [
+            now.toFixed(2),
+            before.toFixed(2),
+            before === 0 ? '' : (((now - before) / before) * 100).toFixed(1),
+          ]
+        : [now.toFixed(2)]
+    const currencyCol =
+      key === 'events_volume' ? [] : [{ name: 'currency', type: 'string', role: 'dimension' }]
+    const currency = key === 'events_volume' ? [] : [body.currency || 'usd']
+    const [from, to] = (body.range ?? '').split('..')
+    const start = from ? new Date(`${from}T00:00:00Z`) : new Date(Date.now() - 90 * DAY_MS)
+    const end = to ? new Date(`${to}T00:00:00Z`) : new Date()
+    const meta = { query_source: 'mock', from: start.toISOString(), to: end.toISOString() }
+
+    if (body.shape === 'timeseries') {
+      const step =
+        body.grain === 'month' ? 30 * DAY_MS : body.grain === 'week' ? 7 * DAY_MS : DAY_MS
+      const rows: string[][] = []
+      for (let t = start.getTime(); t < end.getTime() && rows.length < 400; t += step) {
+        // A ratio (days to pay, ARPU) is the same size per bucket; a flow scales with its width.
+        const ratio = key === 'days_to_pay' || key === 'arpu' || key === 'arpu_paid'
+        const now =
+          (ratio ? base : (base / 30) * (step / DAY_MS)) * (0.75 + 0.5 * noise(`${key}:${t}`))
+        const before = now * (0.85 + 0.2 * noise(`${key}:prev:${t}`))
+        rows.push([new Date(t).toISOString(), ...currency, ...values(now, before)])
+      }
+      return HttpResponse.json({
+        columns: [
+          { name: 'bucket', type: 'datetime', role: 'dimension' },
+          ...currencyCol,
+          ...metric,
+        ],
+        rows,
+        meta,
+      })
+    }
+
+    if (body.shape === 'breakdown') {
+      const dims = body.dimensions?.length ? body.dimensions : ['customer_id']
+      // The customers the customer search answers with, so their names resolve.
+      const customers = sourceFor('customers')
+        .items.slice(0, 8)
+        .map((row) => readString(row, 'id'))
+      const labels: Record<string, string[]> = {
+        customer_id: customers,
+        aging_bucket: ['Current', '1-30', '31-60', '61-90', '90+'],
+        invoice_type: ['SUBSCRIPTION', 'ONE_OFF'],
+        meter_id: ['meter_api', 'meter_storage'],
+      }
+      const combos = dims.reduce<string[][]>(
+        (acc, dim) => acc.flatMap((prefix) => (labels[dim] ?? ['a']).map((v) => [...prefix, v])),
+        [[]],
+      )
+      // Shares of the report's total, so the parts add up to the whole.
+      const weights = combos.map(
+        (combo, i) => (1 / (i + 1)) * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`)),
+      )
+      const sum = weights.reduce((total, weight) => total + weight, 0) || 1
+      const rows = combos
+        .map((combo, i) => {
+          // A ratio (days to pay) is per row, not a share of a total.
+          const now =
+            key === 'days_to_pay'
+              ? base * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`))
+              : (base * (weights[i] ?? 0)) / sum
+          return [...combo, ...currency, ...values(now, now * 0.9)]
+        })
+        .slice(0, body.limit ?? 500)
+      return HttpResponse.json({
+        columns: [
+          ...dims.map((name) => ({ name, type: 'string', role: 'dimension' })),
+          ...currencyCol,
+          ...metric,
+        ],
+        rows,
+        meta,
+      })
+    }
+
+    // Scalar: one row per currency when none was asked for, the one asked for otherwise.
+    const rows = body.currency
+      ? [[body.currency, ...values(base, base * 0.91)]]
+      : [
+          ['usd', ...values(base, base * 0.91)],
+          ['eur', ...values(base * 0.18, base * 0.2)],
+        ]
+    return HttpResponse.json({ columns: [...currencyCol, ...metric], rows, meta })
+  }),
+
   http.post(`${BASE}/dashboard/revenue-dashboard`, async ({ request }) => {
     if (demoEmpty()) return HttpResponse.json({ summaries: {}, items: [] })
     const body = (await request.json().catch(() => ({}))) as {
@@ -4838,6 +4987,16 @@ export const handlers = [
     patchRow(sourceFor('subscriptions').items, String(params['id']), patch)
     return HttpResponse.json({ subscription_id: params['id'], ...patch })
   }),
+  http.post(`${BASE}/subscriptions/:id/pause`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'paused',
+    }),
+  ),
+  http.post(`${BASE}/subscriptions/:id/resume`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'active',
+    }),
+  ),
   http.post(`${BASE}/subscriptions/:id/activate`, async ({ request, params }) => {
     const body = await readBody(request)
     return patchRow(sourceFor('subscriptions').items, String(params['id']), {

@@ -288,8 +288,8 @@ const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
 const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
-const RevenuePage = lazy(() =>
-  import('@/pages/revenue/RevenuePage').then((m) => ({ default: m.RevenuePage })),
+const ReportsPage = lazy(() =>
+  import('@/pages/revenue/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 )
 /*
  * Not lazy, unlike every other page.
@@ -1532,27 +1532,38 @@ const homeRoute = createRoute({
 })
 
 /**
- * Revenue — a report page, not a list. The tab, range, comparison and
- * currency live in the URL, so a report can be shared as it is on screen.
+ * Reports — the analytics report library (once "Revenue"). The tab, range,
+ * comparison and currency live in the URL, so a report can be shared as it is
+ * on screen.
  */
-const revenueRoute = createRoute({
+const reportsRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/revenue',
+  path: '/reports',
   validateSearch: (search: Record<string, unknown>): RevenueSearch => parseRevenueSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_REVENUE_SEARCH)] },
-  component: RevenueRouteComponent,
+  component: ReportsRouteComponent,
 })
 
-function RevenueRouteComponent() {
-  const search = useSearch({ from: revenueRoute.id })
+function ReportsRouteComponent() {
+  const search = useSearch({ from: reportsRoute.id })
   const navigate = useNavigate()
   return (
-    <RevenuePage
+    <ReportsPage
       search={search}
-      onSearchChange={(next) => void navigate({ to: '/revenue', search: next, replace: true })}
+      onSearchChange={(next) => void navigate({ to: '/reports', search: next, replace: true })}
     />
   )
 }
+
+/** The page's old address: links and bookmarks to /revenue land on Reports, filters kept. */
+const revenueRedirectRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/revenue',
+  validateSearch: (search: Record<string, unknown>): RevenueSearch => parseRevenueSearch(search),
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: '/reports', search, replace: true })
+  },
+})
 
 /**
  * Billing lists — customers, subscriptions, payments and taxes. The same
@@ -2566,7 +2577,8 @@ export const routeTree = rootRoute.addChildren([
     ...legacyRoutes,
     customerContractRedirect,
     homeRoute,
-    revenueRoute,
+    reportsRoute,
+    revenueRedirectRoute,
     featuresRoute,
     featureCreateRoute,
     featureEditRoute,
