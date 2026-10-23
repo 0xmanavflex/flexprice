@@ -168,11 +168,14 @@ export function PillColumns({
                     />
                   ))}
                 </TooltipTrigger>
-                <TooltipContent side="top" className="px-2.5 py-2">
+                <TooltipContent side="top" className="flex-col items-stretch gap-1.5 px-3 py-2">
                   <div className="text-xs font-medium">{column.label}</div>
-                  <div className="mt-1.5 flex flex-col gap-1">
+                  <div className="flex flex-col gap-1">
                     {series.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between gap-3">
+                      <div
+                        key={item.id}
+                        className="grid grid-cols-[minmax(8rem,1fr)_auto] items-baseline gap-4"
+                      >
                         <span className="text-xs">{item.label}</span>
                         <span className="text-xs font-medium tabular-nums">
                           {format(column.values[item.id] ?? 0)}
