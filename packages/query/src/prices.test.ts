@@ -7,7 +7,7 @@ import {
   PriceWindowSize,
   TierMode,
 } from '@fp/domain'
-import { toCharge, toChargeRequest, toUpdatePriceRequest } from './prices'
+import { toCharge, toChargeRequest, toTier, toUpdatePriceRequest } from './prices'
 
 describe('toCharge', () => {
   it('maps a plan price to the charge a row renders', () => {
@@ -74,6 +74,62 @@ describe('toChargeRequest', () => {
       displayName: 'Platform',
     })
     expect(body).not.toHaveProperty('meterId')
+  })
+})
+
+describe('tier package size', () => {
+  const sized = {
+    upTo: null,
+    unitAmount: '1000',
+    transformQuantity: { divideBy: 100, round: 'up' },
+  }
+
+  it('reads a package band, defaulting the rounding to up', () => {
+    expect(toTier({ ...sized, transformQuantity: { divideBy: 100, round: 'down' } })).toEqual({
+      upTo: null,
+      unitAmount: '1000',
+      transformQuantity: { divideBy: 100, round: 'down' },
+    })
+    expect(toTier({ ...sized, transformQuantity: { divideBy: 100 } }).transformQuantity).toEqual({
+      divideBy: 100,
+      round: 'up',
+    })
+    expect(toTier({ ...sized, transformQuantity: { divideBy: 0 } })).not.toHaveProperty(
+      'transformQuantity',
+    )
+  })
+
+  it('sends the size only on package bands, for fiat and custom units', () => {
+    const draft = {
+      type: PriceType.Usage,
+      billingModel: BillingModel.Tiered,
+      currency: 'usd',
+      billingPeriod: BillingPeriod.Monthly,
+      invoiceCadence: 'ARREAR',
+      meterId: 'meter_1',
+      tierMode: TierMode.Slab,
+      tiers: [{ upTo: 1000, unitAmount: '0' }, sized],
+    }
+    const fiat = toChargeRequest(draft as never, PriceEntityType.Plan, 'plan_1')
+    const custom = toChargeRequest(
+      { ...draft, priceUnit: 'BTC' } as never,
+      PriceEntityType.Plan,
+      'plan_1',
+    )
+    for (const tiers of [
+      fiat.tiers,
+      (custom.priceUnitConfig as { priceUnitTiers: unknown }).priceUnitTiers,
+    ]) {
+      expect(tiers).toEqual([
+        { upTo: 1000, unitAmount: '0', flatAmount: '0' },
+        {
+          upTo: null,
+          unitAmount: '1000',
+          flatAmount: '0',
+          transformQuantity: { divideBy: 100, round: 'up' },
+        },
+      ])
+    }
   })
 })
 

@@ -245,7 +245,10 @@ export function withPackageSize(tier: Tier, input: string): Tier {
   const { transformQuantity, ...rest } = tier
   const divideBy = Number(input.replace(/\D/g, ''))
   if (!divideBy) return rest
-  return { ...rest, transformQuantity: { divideBy, round: transformQuantity?.round ?? RoundType.Up } }
+  return {
+    ...rest,
+    transformQuantity: { divideBy, round: transformQuantity?.round ?? RoundType.Up },
+  }
 }
 
 /** "per unit", or "per 1,000 units" for a package band. */

@@ -44,7 +44,7 @@ export interface ChargeWire {
   invoiceCadence?: string | undefined
   billingCadence?: string | undefined
   tierMode?: string | undefined
-  tiers?: Array<{ upTo?: number | null; unitAmount?: string; flatAmount?: string }> | undefined
+  tiers?: TierWire[] | undefined
   transformQuantity?: { divideBy?: number; round?: string } | undefined
   meterId?: string | undefined
   meter?: { id?: string; name?: string } | undefined
@@ -69,17 +69,36 @@ const BILLING_PERIODS = new Set<string>(Object.values(BillingPeriod))
 const INVOICE_CADENCES = new Set<string>(Object.values(InvoiceCadence))
 const TIER_MODES = new Set<string>(Object.values(TierMode))
 
-/** One tier band, snake-safe: the SDK camelCases it, but guard the shape anyway. */
-export function toTier(raw: {
+export type TierWire = {
   upTo?: number | null
   unitAmount?: string
   flatAmount?: string
-}): Tier {
+  transformQuantity?: { divideBy?: number; round?: string }
+}
+
+/** One tier band, snake-safe: the SDK camelCases it, but guard the shape anyway. */
+export function toTier(raw: TierWire): Tier {
+  const divideBy = raw.transformQuantity?.divideBy
   return {
     upTo: typeof raw.upTo === 'number' ? raw.upTo : null,
     unitAmount: raw.unitAmount ?? '0',
     ...(raw.flatAmount != null ? { flatAmount: raw.flatAmount } : {}),
+    ...(divideBy && divideBy > 0
+      ? {
+          transformQuantity: {
+            divideBy,
+            round: raw.transformQuantity?.round === 'down' ? 'down' : 'up',
+          },
+        }
+      : {}),
   }
+}
+
+/** A band's package size for a request; absent on per-unit bands. */
+export function tierPackageFields(tier: Tier): {
+  transformQuantity?: { divideBy: number; round: RoundType }
+} {
+  return tier.transformQuantity ? { transformQuantity: tier.transformQuantity } : {}
 }
 
 /**
@@ -206,6 +225,7 @@ export function toChargeRequest(
       upTo: tier.upTo,
       unitAmount: tier.unitAmount,
       flatAmount: tier.flatAmount ?? '0',
+      ...tierPackageFields(tier),
     }))
 
   switch (draft.billingModel) {
@@ -272,6 +292,7 @@ export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknow
       upTo: tier.upTo,
       unitAmount: tier.unitAmount,
       flatAmount: tier.flatAmount ?? '0',
+      ...tierPackageFields(tier),
     }))
 
   switch (draft.billingModel) {
