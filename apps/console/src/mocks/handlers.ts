@@ -2685,6 +2685,17 @@ export const handlers = [
     const start = from ? new Date(`${from}T00:00:00Z`) : new Date(Date.now() - 90 * DAY_MS)
     const end = to ? new Date(`${to}T00:00:00Z`) : new Date()
     const meta = { query_source: 'mock', from: start.toISOString(), to: end.toISOString() }
+    // The API's `max_range_days`: the events report answers a week at most.
+    if (key === 'events_volume' && (end.getTime() - start.getTime()) / DAY_MS > 7) {
+      return HttpResponse.json(
+        {
+          code: 'validation_error',
+          message: 'range exceeds 7 days for this report',
+          http_status_code: 400,
+        },
+        { status: 400 },
+      )
+    }
 
     if (body.shape === 'timeseries') {
       const step =
