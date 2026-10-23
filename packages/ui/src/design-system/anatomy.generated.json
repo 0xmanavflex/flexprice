@@ -1056,6 +1056,20 @@
       "usedBy": [],
       "story": "./src/compositions/charts/ChartBox.stories.tsx"
     },
+    "ChartColumn": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ChartSimpleIcon": {
+      "file": "src/reui/icons/default/outline/chart-simple.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "ChartSkeleton": {
       "file": "src/compositions/feedback/Skeletons.tsx",
       "layer": "composition",
