@@ -295,6 +295,106 @@ const pylon = {
   identityVerificationEnabled: flag(import.meta.env.VITE_PYLON_IDENTITY_VERIFICATION_ENABLED),
 }
 
+/**
+ * The platform config: one JSON variable, `VITE_PLATFORM_CONFIG`, as V1's.
+ *
+ * Every key is optional and anything left out keeps its default, so a
+ * deployment writes only what it changes. Keys this console does not use yet
+ * (V1's `revenue`, `signup`, …) are accepted and ignored, so one value can be
+ * shared by both dashboards.
+ *
+ *     VITE_PLATFORM_CONFIG={
+ *       "production": { "enabled": false },
+ *       "contact_us": {
+ *         "enabled": true,
+ *         "slack_url": "https://join.slack.com/t/…",
+ *         "email": "support@example.com",
+ *         "book_call_url": "https://calendly.com/…"
+ *       }
+ *     }
+ *
+ * - `production.enabled` — production environments can be created here.
+ *   Off by default (V1's default): asking for one shows the contact options.
+ * - `contact_us` — the Slack, Email and Book a call options. Each value
+ *   defaults to Flexprice's own (V1's `config/contact.ts`); set one to `""` to
+ *   hide it, or `"enabled": false` to hide them all (a white-label deployment).
+ */
+export const DEFAULT_CONTACT = {
+  slackUrl:
+    'https://join.slack.com/t/flexpricecommunity/shared_invite/zt-39uat51l0-n8JmSikHZP~bHJNXladeaQ',
+  email: 'support@flexprice.io',
+  bookCallUrl: 'https://calendly.com/nikhil-flexprice/30min',
+} as const
+
+export interface ContactConfig {
+  /** `null` when hidden. */
+  slackUrl: string | null
+  email: string | null
+  bookCallUrl: string | null
+}
+
+export interface PlatformConfig {
+  production: { enabled: boolean }
+  contact: ContactConfig
+}
+
+export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
+  production: { enabled: false },
+  contact: { ...DEFAULT_CONTACT },
+}
+
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
+}
+
+/** A configured string, trimmed; `""` hides the option; anything else keeps the default. */
+function contactValue(value: unknown, fallback: string): string | null {
+  if (typeof value !== 'string') return fallback
+  return value.trim() || null
+}
+
+/**
+ * Reads `VITE_PLATFORM_CONFIG`. Invalid JSON is reported and ignored rather
+ * than thrown (see the note at the top of this file): the defaults apply.
+ */
+export function parsePlatformConfig(raw: string | undefined): PlatformConfig {
+  if (!raw?.trim()) return DEFAULT_PLATFORM_CONFIG
+  let parsed: Record<string, unknown> | undefined
+  try {
+    parsed = record(JSON.parse(raw))
+  } catch {
+    parsed = undefined
+  }
+  if (!parsed) {
+    console.warn('[flexprice] VITE_PLATFORM_CONFIG is not a JSON object and is ignored.')
+    return DEFAULT_PLATFORM_CONFIG
+  }
+
+  const production = record(parsed['production'])
+  const contactUs = record(parsed['contact_us'])
+  const contactOff = parsed['contact_us'] === false || contactUs?.['enabled'] === false
+
+  return {
+    production: {
+      enabled:
+        typeof production?.['enabled'] === 'boolean'
+          ? production['enabled']
+          : DEFAULT_PLATFORM_CONFIG.production.enabled,
+    },
+    contact: contactOff
+      ? { slackUrl: null, email: null, bookCallUrl: null }
+      : {
+          slackUrl: contactValue(contactUs?.['slack_url'], DEFAULT_CONTACT.slackUrl),
+          email: contactValue(contactUs?.['email'], DEFAULT_CONTACT.email),
+          bookCallUrl: contactValue(contactUs?.['book_call_url'], DEFAULT_CONTACT.bookCallUrl),
+        },
+  }
+}
+
+const platform = parsePlatformConfig(clean(import.meta.env.VITE_PLATFORM_CONFIG))
+
 export const env = {
   useMocks,
   problem,
@@ -340,6 +440,8 @@ export const env = {
   /** Support chat providers. */
   intercom,
   pylon,
+  /** `VITE_PLATFORM_CONFIG`: what this deployment allows, and how people reach us. */
+  platform,
   /** A production build — config warnings stay quiet there, as in V1. */
   isProd: import.meta.env.PROD,
   /**
