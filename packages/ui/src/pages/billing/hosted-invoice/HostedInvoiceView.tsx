@@ -29,7 +29,6 @@ const FLEXPRICE_URL = 'https://flexprice.io'
 export const HostedInvoiceViewProvenance = provenance({
   source: 'composition',
   composes: [
-    'blocks/receipt-5',
     'reui/badge',
     'compositions/layout/Section',
     'primitives/item',
