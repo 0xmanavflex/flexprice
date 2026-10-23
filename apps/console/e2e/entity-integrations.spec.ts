@@ -13,13 +13,13 @@ test('invoice mapping stays consistent across Related, header and list', async (
   await page.goto('/invoices')
   await expect(page.getByRole('columnheader', { name: 'Integrations' })).toBeVisible()
   await page.getByRole('row').nth(1).click()
-  await page.getByRole('button', { name: 'Link an integration', exact: true }).click()
+  await page.getByRole('button', { name: 'Link integration', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Link an integration' })
   await dialog.getByLabel('Invoice ID at the provider').fill('external_invoice_mapping')
   await dialog.getByRole('button', { name: 'Link', exact: true }).click()
   await expect(dialog).toBeHidden()
   const related = page.getByRole('region', { name: 'Related', exact: true })
-  await expect(related.getByText('external_invoice_mapping')).toBeVisible()
+  await expect(related.getByRole('button', { name: /ID external_invoice_mapping$/ })).toBeVisible()
   const manage = related.getByRole('button', { name: /^Manage .* integration$/ })
   const provider = (await manage.getAttribute('aria-label'))!
     .replace(/^Manage /, '')
@@ -50,7 +50,9 @@ test('Plan links from the overflow and shows mappings beside metadata', async ({
   await expect(dialog).toBeHidden()
   await page.getByRole('tab', { name: 'Information', exact: true }).click()
   await expect(
-    page.getByRole('region', { name: 'Related', exact: true }).getByText('external_plan_mapping'),
+    page
+      .getByRole('region', { name: 'Related', exact: true })
+      .getByRole('button', { name: /ID external_plan_mapping$/ }),
   ).toBeVisible()
   await page.getByRole('button', { name: /^Manage .* integration$/ }).click()
   await page.getByRole('menuitem', { name: /^Unlink / }).click()
