@@ -7,14 +7,17 @@ import { useState, type ReactNode } from 'react'
 import {
   CalculatorIcon,
   CheckCircle2Icon,
+  CopyIcon,
   DownloadIcon,
   FileMinusIcon,
+  FileTextIcon,
   LinkIcon,
   MoreHorizontalIcon,
   PencilIcon,
   ReceiptIcon,
   RefreshCwIcon,
   SendIcon,
+  UserIcon,
   WalletIcon,
   XCircleIcon,
 } from '@ui/icons'
@@ -26,6 +29,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
@@ -351,8 +355,33 @@ export function InvoiceDetailView({
                 pendingLabel="Sending…"
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
+              <MenuAction
+                icon={<CopyIcon />}
+                label="Copy invoice ID"
+                onSelect={() => {
+                  void navigator.clipboard
+                    .writeText(invoice.id)
+                    .then(() => toast.success('Invoice ID copied'))
+                    .catch(() => toast.error('Couldn’t copy the invoice ID'))
+                }}
+              />
             </DropdownMenuGroup>
-            {isOpen && onVoid ? (
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Go to</DropdownMenuLabel>
+              <DropdownMenuItem disabled={!onOpenCustomer} onClick={onOpenCustomer}>
+                <UserIcon aria-hidden="true" /> Customer
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!onOpenSubscription || !invoice.subscriptionId}
+                onClick={onOpenSubscription}
+              >
+                <FileTextIcon aria-hidden="true" /> Contract
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            {onVoid &&
+            invoice.status !== InvoiceStatus.Void &&
+            invoice.status !== InvoiceStatus.Skipped ? (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={onVoid}>
