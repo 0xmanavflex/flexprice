@@ -297,7 +297,7 @@ export const HostedLink: Story = {
       await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
     ).not.toHaveAttribute('aria-disabled', 'true')
     await expect(screen.queryByRole('menuitem', { name: /Open hosted invoice/ })).toBeNull()
-    await expect(canvas.getByRole('link', { name: /Hosted invoice/ })).toHaveAttribute(
+    await expect(canvas.getByRole('link', { name: HOSTED_URL })).toHaveAttribute(
       'href',
       HOSTED_URL,
     )
@@ -450,12 +450,12 @@ export const DraftHasNoNote: Story = {
   },
 }
 
-/** Bill to names the customer without an avatar and tags the email and address rows. */
+/** Bill to names the customer without an avatar, and without billing tags. */
 export const BillTo: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Billing email')).toBeVisible()
-    await expect(canvas.getByText('Billing address')).toBeVisible()
+    await expect(canvas.queryByText('Billing email')).toBeNull()
+    await expect(canvas.queryByText('Billing address')).toBeNull()
   },
 }
 

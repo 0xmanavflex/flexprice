@@ -33,7 +33,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
 import { DetailShell } from '../../../compositions/detail/DetailShell'
 import { ActivitySection } from '../../../compositions/detail/ActivityLog'
@@ -220,7 +219,7 @@ export function InvoiceDetailView({
       ...(onOpenSubscription && invoice.subscriptionId ? { onOpen: onOpenSubscription } : {}),
     },
     ...(hostedUrl
-      ? [{ id: 'payment-link', label: 'Payment link', value: 'Hosted invoice', href: hostedUrl }]
+      ? [{ id: 'payment-link', label: 'Payment link', value: hostedUrl, href: hostedUrl }]
       : []),
   ]
 
@@ -706,7 +705,7 @@ function InvoiceDocumentArticle({
 
       <div className="grid gap-6 px-8 py-8 sm:grid-cols-2">
         {invoice.from ? <Party heading="Bill from" party={invoice.from} withLogo /> : null}
-        <Party heading="Bill to" party={invoice.billTo} tagged />
+        <Party heading="Bill to" party={invoice.billTo} />
         {invoice.payment ? (
           <div className="space-y-1.5 text-[13px]">
             <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Payment</p>
@@ -799,13 +798,10 @@ function Party({
   heading,
   party,
   withLogo = false,
-  tagged = false,
 }: {
   heading: string
   party: InvoiceParty
   withLogo?: boolean
-  /** Marks the address and email rows with a small "Billing ..." tag. */
-  tagged?: boolean
 }) {
   return (
     <div className="space-y-1.5 text-[13px]">
@@ -821,34 +817,18 @@ function Party({
         <div className="min-w-0 space-y-1">
           <p className="font-medium">{party.name}</p>
           {party.address.length > 0 ? (
-            <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
-              <div className="space-y-0.5">
-                {party.address.map((line, index) => (
-                  <p key={`${index}-${line}`} className="text-muted-foreground">
-                    {line}
-                  </p>
-                ))}
-              </div>
-              {tagged ? <PartyTag>Billing address</PartyTag> : null}
+            <div className="space-y-0.5">
+              {party.address.map((line, index) => (
+                <p key={`${index}-${line}`} className="text-muted-foreground">
+                  {line}
+                </p>
+              ))}
             </div>
           ) : null}
-          {party.email ? (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <p className="text-muted-foreground">{party.email}</p>
-              {tagged ? <PartyTag>Billing email</PartyTag> : null}
-            </div>
-          ) : null}
+          {party.email ? <p className="text-muted-foreground">{party.email}</p> : null}
         </div>
       </div>
     </div>
-  )
-}
-
-function PartyTag({ children }: { children: ReactNode }) {
-  return (
-    <Badge variant="outline" size="sm" radius="full" className="text-muted-foreground font-normal">
-      {children}
-    </Badge>
   )
 }
 
