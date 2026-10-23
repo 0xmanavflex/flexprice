@@ -17,7 +17,6 @@ import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabSta
 import type { ReactElement } from 'react'
 import { ArrowRightIcon, CircleSlashIcon, CopyIcon, EyeIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Section } from '@ui/compositions/layout/Section'
 
 import { provenance } from '@ui/provenance'
@@ -287,6 +286,7 @@ export function ChargeTable({
     <WriteGate>
       <Button
         type="button"
+        variant="outline"
         size="sm"
         className="h-8 px-3"
         onClick={onAdd}
@@ -484,23 +484,30 @@ export function ChargeTable({
         showTitle={showTitle}
         title={title}
         {...(description ? { description } : {})}
-        {...(headerAction ? { action: headerAction } : {})}
+        {...(headerAction && (showTitle || rows.length === 0) ? { action: headerAction } : {})}
       >
         {rows.length === 0 ? (
-          <SectionEmpty
-            scene="catalog"
-            title={variant === 'summary' ? 'No changes' : 'No charges yet'}
-            description={
-              variant === 'summary'
-                ? 'Every charge is billed as the plan sets it. Changed charges show here.'
-                : undefined
-            }
-          />
+          <SubTabState
+            hasData={false}
+            isLoading={false}
+            columns={4}
+            loadingLabel="Loading charges"
+            empty={{
+              scene: 'catalog',
+              title: variant === 'summary' ? 'No changes' : 'No charges yet',
+              description:
+                variant === 'summary'
+                  ? 'Every charge is billed as the plan sets it. Changed charges show here.'
+                  : undefined,
+            }}
+          >
+            {null}
+          </SubTabState>
         ) : (
           <DetailTable
             compact
             label="Charges"
-            toolbar={variant === 'full'}
+            toolbar
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
             // filter keeps it.
@@ -516,6 +523,7 @@ export function ChargeTable({
               ...(facets ?? []),
             ]}
             noun="charges"
+            {...(!showTitle && headerAction ? { action: headerAction } : {})}
             rows={rows}
             columns={columns}
             onRowClick={onRowClick ?? ((charge: Charge) => openAt(charge))}

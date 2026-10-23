@@ -404,6 +404,7 @@ export function InvoiceDetailView({
                   title: event.title,
                   at: event.at,
                   summary: event.summary,
+                  ...(event.detail ? { detail: event.detail } : {}),
                   ...(event.record ? { record: event.record } : {}),
                   ...(event.by ? { by: event.by } : {}),
                   ...(event.href ? { href: event.href } : {}),

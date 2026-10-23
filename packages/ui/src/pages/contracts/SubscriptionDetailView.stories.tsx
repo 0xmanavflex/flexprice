@@ -940,10 +940,10 @@ export const ContractDetails: Story = {
         .getByRole('heading', { name: 'Billing & collection' })
         .closest('section')!,
     )
-    for (const label of ['Payment terms', 'Currency', 'Billing cycle', 'Commitment']) {
+    for (const label of ['Payment terms', 'Collection', 'Commitment', 'True-up']) {
       await expect(billing.getByText(label)).toBeVisible()
     }
-    for (const label of ['Collection', 'Time zone', 'Usage this period']) {
+    for (const label of ['Currency', 'Billing cycle', 'Time zone', 'Usage this period']) {
       await expect(billing.queryByText(label)).toBeNull()
     }
     await expect(billing.getByText(/\$2,500\.00 per month/)).toBeVisible()

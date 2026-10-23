@@ -42,7 +42,8 @@ describe('toActivityEntry', () => {
 
     expect(describeActivity(entry)).toEqual({
       record: 'INV-202610-00001',
-      summary: '$2,000.00 · $1,000.00 paid · $1,000.00 due · Finalized',
+      summary: '$2,000.00 · $1,000.00 due · Finalized',
+      detail: '$1,000.00 paid',
     })
   })
 
@@ -80,6 +81,7 @@ describe('toActivityEntry', () => {
         address_country: '',
         created_by: 'dde9a118-f186-45a6-969b-a9dab4590a75',
         environment_id: 'env_01',
+        name: 'Acme Corp',
         external_id: 'actlog-read-1791926997-a',
         id: 'cust_01',
         status: 'published',
@@ -90,9 +92,10 @@ describe('toActivityEntry', () => {
     })
 
     expect(describeActivity(entry)).toEqual({
-      record: 'actlog-read-1791926997-a',
+      record: 'Acme Corp',
       summary: 'Taxable · UTC · Published',
     })
+    expect(describeActivity(entry).record).not.toBe('actlog-read-1791926997-a')
     expect(activityByline(entry)).toBe('activity-log · API key')
   })
 
