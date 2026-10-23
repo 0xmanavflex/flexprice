@@ -47,6 +47,8 @@ export {
 } from './provider'
 export type { FlexpriceProviderProps } from './provider'
 
+export { toCostAnalytics, useCustomerCostAnalytics } from './costAnalytics'
+export type { CostAnalytics } from './costAnalytics'
 export {
   toEnvironment,
   useCopyEnvironment,

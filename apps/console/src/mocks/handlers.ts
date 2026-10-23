@@ -2163,7 +2163,12 @@ const cents = (value: number) => (Math.round(value * 100) / 100).toFixed(2)
  * each item's usage priced at that feature's rate. Nothing is asserted that is
  * not computed from something else here.
  */
-function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
+function usageAnalytics(
+  startTime: Date,
+  endTime: Date,
+  windowSize: string,
+  featureIds: readonly string[] = [],
+) {
   const step = WINDOW_MS[windowSize] ?? DAY_MS
   const buckets: number[] = []
   for (
@@ -2174,7 +2179,10 @@ function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
     buckets.push(cursor)
   }
 
-  const items = ANALYTICS_FEATURES.map((feature) => {
+  const chosen = ANALYTICS_FEATURES.filter(
+    (feature) => featureIds.length === 0 || featureIds.includes(feature.id),
+  )
+  const items = chosen.map((feature) => {
     const scale = step / DAY_MS
     const points = buckets.map((bucket) => {
       const wobble = 0.72 + 0.56 * noise(`${feature.lookupKey}:${bucket}`)
@@ -2186,20 +2194,24 @@ function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
       }
     })
 
+    const totalUsage = points.reduce((sum, point) => sum + Number(point.usage), 0)
+    // The item's own price: what this usage bills at, as the API reports it.
+    const billed = (totalUsage * feature.rate).toFixed(2)
     return {
       feature_id: feature.id,
+      meter_id: `meter_${feature.id}`,
       event_name: feature.eventName,
       feature: feature.row,
       event_count: points.reduce((sum, point) => sum + point.event_count, 0),
-      total_usage: String(points.reduce((sum, point) => sum + Number(point.usage), 0)),
+      total_usage: String(totalUsage),
+      subtotal: billed,
+      total_cost: billed,
+      currency: 'USD',
       points,
     }
   })
 
-  const subtotal = items.reduce(
-    (sum, item, index) => sum + Number(item.total_usage) * (ANALYTICS_FEATURES[index]?.rate ?? 0),
-    0,
-  )
+  const subtotal = items.reduce((sum, item) => sum + Number(item.total_cost), 0)
 
   return { items, subtotal: subtotal.toFixed(2), total_cost: subtotal.toFixed(2), currency: 'USD' }
 }
@@ -2680,13 +2692,54 @@ export const handlers = [
       start_time?: string
       end_time?: string
       window_size?: string
+      feature_ids?: string[]
     }
     const endTime = body.end_time ? new Date(body.end_time) : new Date()
     const startTime = body.start_time
       ? new Date(body.start_time)
       : new Date(endTime.getTime() - 7 * DAY_MS)
 
-    return HttpResponse.json(usageAnalytics(startTime, endTime, body.window_size ?? 'DAY'))
+    return HttpResponse.json(
+      usageAnalytics(startTime, endTime, body.window_size ?? 'DAY', body.feature_ids ?? []),
+    )
+  }),
+
+  /*
+   * Cost analytics — revenue against what the usage cost to serve, from the
+   * cost sheet. `POST /costs/analytics`. Built from the same usage the usage
+   * analytics answers, with each meter costing a fixed share of what it bills,
+   * so the two reads agree.
+   */
+  http.post(`${BASE}/costs/analytics`, async ({ request }) => {
+    if (demoEmpty()) return HttpResponse.json({ cost_analytics: [] })
+    const body = (await request.json().catch(() => ({}))) as {
+      start_time?: string
+      end_time?: string
+      feature_ids?: string[]
+    }
+    const endTime = body.end_time ? new Date(body.end_time) : new Date()
+    const startTime = body.start_time
+      ? new Date(body.start_time)
+      : new Date(endTime.getTime() - 7 * DAY_MS)
+    const usage = usageAnalytics(startTime, endTime, 'DAY', body.feature_ids ?? [])
+    const costAnalytics = usage.items.map((item, index) => ({
+      meter_id: item.meter_id,
+      total_cost: (Number(item.total_cost) * [0.42, 0.35, 0.5, 0.28][index % 4]!).toFixed(2),
+      total_quantity: item.total_usage,
+      total_events: item.event_count,
+      currency: 'USD',
+    }))
+    const totalCost = costAnalytics.reduce((sum, item) => sum + Number(item.total_cost), 0)
+    const revenue = Number(usage.subtotal)
+    const margin = revenue - totalCost
+    return HttpResponse.json({
+      currency: 'USD',
+      total_revenue: revenue.toFixed(2),
+      total_cost: totalCost.toFixed(2),
+      margin: margin.toFixed(2),
+      margin_percent: revenue > 0 ? ((margin / revenue) * 100).toFixed(2) : '0',
+      cost_analytics: costAnalytics,
+    })
   }),
 
   search('/customers/search', 'customers'),
