@@ -10442,10 +10442,10 @@
         "PricingCatalogBlock"
       ]
     },
-    "RevenuePage": {
-      "file": "apps/console/src/pages/revenue/RevenuePage.tsx",
-      "pattern": "Dashboard",
-      "route": "/revenue",
+    "ReportsPage": {
+      "file": "apps/console/src/pages/revenue/ReportsPage.tsx",
+      "pattern": "Other",
+      "route": "/reports",
       "uses": [
         "RevenueReport"
       ]
