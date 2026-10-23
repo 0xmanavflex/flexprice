@@ -83,6 +83,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 - Tier table: new "Package size" column (optional; `InfoHint` on the header) that sets a band's `transformQuantity`; "Per unit" header renamed "Price". Composes `InfoHint`. Source: FLE-1515 per-tier package pricing.
 - Price override form: same "Package size" column in its tier table (keeps a band's rounding when the size is replaced); "Per unit" header renamed "Price". Composes `InfoHint`. Source: FLE-1515 per-tier package pricing.
+- Charge sheet, charge table, plan preview, subscription form: a package band reads "per N units" instead of per unit. Source: FLE-1515.
 
 ## 2026-10-22
 

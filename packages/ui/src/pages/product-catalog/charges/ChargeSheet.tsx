@@ -16,6 +16,7 @@ import {
   TierMode,
   type VersionStatus,
   versionStatus,
+  tierUnitLabel,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Frame, FrameHeader, FramePanel, FrameTitle } from '@ui/components/reui/frame'
@@ -234,6 +235,7 @@ function TierList({ tiers }: { tiers: Charge['tiers'] }) {
             </span>
             <span className="tabular-nums">
               {tier.unitAmount}
+              {tier.transformQuantity ? ` ${tierUnitLabel(tier)}` : ''}
               {tier.flatAmount && Number(tier.flatAmount) > 0 ? ` + ${tier.flatAmount}` : ''}
             </span>
           </li>

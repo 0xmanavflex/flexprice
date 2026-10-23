@@ -9,6 +9,7 @@ import {
   type CreditGrantPeriod,
   FeatureType,
   PriceType,
+  tierUnitLabel,
 } from '@fp/domain'
 import { FormPreview } from '@ui/compositions/forms/FormPreview'
 import { provenance } from '@ui/provenance'
@@ -155,7 +156,8 @@ export function pricingSummary(
       const first = charge.tiers[0]
       const from = first ? Number(first.unitAmount || 0) : 0
       const n = charge.tiers.length
-      return `${n} tier${n === 1 ? '' : 's'}, from ${money(from, currency, locale)} ${per}`
+      const unit = first?.transformQuantity ? tierUnitLabel(first) : per
+      return `${n} tier${n === 1 ? '' : 's'}, from ${money(from, currency, locale)} ${unit}`
     }
   }
 }
