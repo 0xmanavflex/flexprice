@@ -303,15 +303,23 @@ export async function createEnvironment(
     token,
     body: { name: draft.name, type: draft.type },
   })
-  const row = isRecord(body) ? body : {}
+  const root = isRecord(body) ? body : {}
+  // Some responses wrap the record (`{ environment }` or `{ data }`). Reading
+  // only the top level leaves `id` blank, so the console never switches and
+  // the switcher has nothing to add.
+  const wrapped = isRecord(root['environment'])
+    ? root['environment']
+    : isRecord(root['data'])
+      ? root['data']
+      : root
 
   return {
-    id: str(row, 'id'),
+    id: str(wrapped, 'id') || str(root, 'id'),
     // Echoed back when the response omits them: the request is what was
     // created, and a blank name in the switcher would be a worse lie than the
     // name we just sent.
-    name: str(row, 'name') || draft.name,
-    type: str(row, 'type') || draft.type,
+    name: str(wrapped, 'name') || str(root, 'name') || draft.name,
+    type: str(wrapped, 'type') || str(root, 'type') || draft.type,
   }
 }
 

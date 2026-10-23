@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  AlertEntityType,
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
   DEFAULT_TAX_RATE_QUERY,
@@ -10,6 +11,9 @@ import {
 import {
   ApiError,
   useActivateSubscription,
+  useRemoveSubscriptionCoupon,
+  usePauseSubscription,
+  useResumeSubscription,
   useCancelSubscriptionCreditGrant,
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,
@@ -49,12 +53,13 @@ import {
   useActivityLog,
   serverReason,
 } from '@fp/query'
-import { SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
+import { EntityAlertDialog, SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions } from '../plans/planFormOptions'
 import { railActivity } from '@/pages/shared/activityLog'
 import { detailGate } from '../shared/detailGate'
+import { useEntityAlert } from '../shared/useEntityAlert'
 
 export interface SubscriptionDetailPageProps {
   subscriptionId: string
@@ -121,6 +126,9 @@ export function SubscriptionDetailPage({
   })
   const cancel = useCancelSubscription()
   const activate = useActivateSubscription()
+  const pause = usePauseSubscription()
+  const resume = useResumeSubscription()
+  const contractAlert = useEntityAlert(AlertEntityType.Subscription, subscriptionId, 'Contract')
   const removeAddon = useRemoveSubscriptionAddon()
   const removeTax = useRemoveSubscriptionTax()
   const endGrant = useCancelSubscriptionCreditGrant()
@@ -145,6 +153,7 @@ export function SubscriptionDetailPage({
   )
   const addAddon = useAddSubscriptionAddon(subscriptionId)
   const addCoupon = useAddSubscriptionCoupon(subscriptionId)
+  const removeCoupon = useRemoveSubscriptionCoupon(subscriptionId)
   const updateAlert = useUpdateAlertSetting()
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
@@ -218,6 +227,7 @@ export function SubscriptionDetailPage({
         onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
         onAddAddon={(draft) => addAddon.mutateAsync(draft)}
         onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
+        onRemoveCoupon={(coupon) => removeCoupon.mutateAsync(coupon.id)}
         onSaveChargeAlert={({ settingId, config }) =>
           updateAlert.mutateAsync({ id: settingId, config })
         }
@@ -255,6 +265,9 @@ export function SubscriptionDetailPage({
           ? { onActivate: () => setDialog('activate') }
           : {})}
         onCancel={() => setDialog('cancel')}
+        onPause={(draft) => pause.mutateAsync({ id: data.id, draft })}
+        onResume={(draft) => resume.mutateAsync({ id: data.id, draft })}
+        onAlertSettings={contractAlert.openAlertSettings}
         meters={formOptions.meters}
         priceUnits={formOptions.units.filter((unit) => unit.baseCurrency === data.currency)}
         onAddCharge={async (draft) => {
@@ -379,6 +392,7 @@ export function SubscriptionDetailPage({
           )
         }
       />
+      <EntityAlertDialog {...contractAlert.dialog} />
     </>
   )
 }

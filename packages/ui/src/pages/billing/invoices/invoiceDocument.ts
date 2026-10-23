@@ -28,6 +28,8 @@ export interface InvoiceActivity {
   at: string
   status: 'completed' | 'active' | 'pending' | 'issue'
   summary: string
+  /** A second line, such as the amount paid. */
+  detail?: string
   /** The record, drawn in front of the summary. */
   record?: string
   /** The person who acted. Omitted when the system did. */

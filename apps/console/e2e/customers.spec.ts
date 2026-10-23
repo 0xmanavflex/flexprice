@@ -194,9 +194,10 @@ test.describe('a customer detail page', () => {
     await reread
   })
 
-  test('pushes the customer to Stripe from the header menu', async ({ page }) => {
+  test('pushes the customer to Stripe from the related integration', async ({ page }) => {
     await openFirstCustomer(page)
-    await page.getByRole('button', { name: 'Customer actions' }).click()
+    await page.getByRole('tab', { name: 'Information' }).click()
+    await page.getByRole('button', { name: 'Manage Stripe integration' }).click()
     const sync = page.waitForRequest(
       (request) => request.url().endsWith('/integrations/sync') && request.method() === 'POST',
     )

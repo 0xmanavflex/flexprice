@@ -243,7 +243,7 @@ export const Default: Story = {
     await expect(header.getByText('Finalized')).toBeVisible()
     await expect(header.getByText('Payment failed')).toBeVisible()
     // The header holds only the chips, the ID and More: no inline action buttons.
-    await expect(header.queryByRole('button', { name: 'Download PDF' })).toBeNull()
+    await expect(header.queryByRole('button', { name: 'Download invoice' })).toBeNull()
     await expect(header.queryByRole('button', { name: 'Copy hosted invoice link' })).toBeNull()
     await expect(canvas.getByRole('button', { name: /^Copy ID / })).toHaveTextContent('ID')
     // Stripe wording on the document.
@@ -272,15 +272,15 @@ export const MoreMenu: Story = {
     await expect(
       await screen.findByRole('menuitem', { name: /Record payment/ }),
     ).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('menuitem', { name: /Download PDF/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Download invoice/ }))
     await expect(args.onDownload).toHaveBeenCalledOnce()
     await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
     await screen.findByRole('menuitem', { name: 'Void invoice' })
     await expect(
       screen.getByRole('menuitem', { name: /Copy hosted invoice link/ }),
     ).toHaveAttribute('aria-disabled', 'true')
-    await expect(screen.getByRole('menuitem', { name: /Issue credit memo/ })).toBeInTheDocument()
-    await expect(screen.getByRole('menuitem', { name: /Send invoice/ })).toBeInTheDocument()
+    await expect(screen.getByRole('menuitem', { name: /Issue a credit note/ })).toBeInTheDocument()
+    await expect(screen.getByRole('menuitem', { name: /Send communication/ })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('menuitem', { name: 'Void invoice' }))
     await expect(args.onVoid).toHaveBeenCalledOnce()
   },
@@ -297,7 +297,7 @@ export const HostedLink: Story = {
       await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
     ).not.toHaveAttribute('aria-disabled', 'true')
     await expect(screen.queryByRole('menuitem', { name: /Open hosted invoice/ })).toBeNull()
-    await expect(canvas.getByRole('link', { name: /Hosted invoice/ })).toHaveAttribute(
+    await expect(canvas.getByRole('link', { name: HOSTED_URL })).toHaveAttribute(
       'href',
       HOSTED_URL,
     )
@@ -450,12 +450,12 @@ export const DraftHasNoNote: Story = {
   },
 }
 
-/** Bill to names the customer without an avatar and tags the email and address rows. */
+/** Bill to names the customer without an avatar, and without billing tags. */
 export const BillTo: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Billing email')).toBeVisible()
-    await expect(canvas.getByText('Billing address')).toBeVisible()
+    await expect(canvas.queryByText('Billing email')).toBeNull()
+    await expect(canvas.queryByText('Billing address')).toBeNull()
   },
 }
 

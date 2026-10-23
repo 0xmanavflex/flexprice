@@ -80,7 +80,10 @@ function PlanCreditGrantsViewInner({
       <DetailTable
         compact
         label="Credit grants"
-
+        facet={{
+          label: 'Expires',
+          value: (g) => CREDIT_GRANT_EXPIRY_TYPE_LABEL[g.expirationType],
+        }}
         noun="credit grants"
         rows={grants}
         columns={[

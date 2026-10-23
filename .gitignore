@@ -18,3 +18,5 @@ storybook-static/
 
 # Mocked bundle the CI journeys build and serve (apps/console/playwright.config.ts)
 dist-e2e/
+
+.claude/worktrees

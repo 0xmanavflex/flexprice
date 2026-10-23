@@ -84,6 +84,7 @@ export {
   useUpdateInvoiceMetadata,
   useUpdateInvoicePaymentStatus,
   useInvoice,
+  useInvoicePdfLink,
   useInvoices,
   useRecalculateInvoice,
   useSendInvoice,
@@ -264,6 +265,8 @@ export {
   toLineItemChangeRequest,
   toUpdateLineItemRequest,
   useActivateSubscription,
+  usePauseSubscription,
+  useResumeSubscription,
   useUpdateSubscriptionMetadata,
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,
@@ -280,6 +283,7 @@ export {
   toRemoveCouponRequest,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
+  useRemoveSubscriptionCoupon,
   useCreateSubscriptionCreditGrant,
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
@@ -601,6 +605,7 @@ export {
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,
+  useUpdateWalletAlerts,
   useWalletBalance,
   useWalletTransactions,
 } from './wallets'
@@ -702,4 +707,7 @@ export type { PortalAction, PortalQuery } from './customerPortal'
 export type { PortalAuth } from '@fp/api'
 export { useCreateCustomerPortalSession } from './customerPortalSession'
 export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'
+export { reportBreakdown, reportCurrencies, reportScalar, reportSeries, useReport } from './reports'
+export type { ReportBreakdownRow, ReportPoint, ReportScalar } from './reports'
+export type { ReportQuery, ReportResult } from '@fp/api'
 export { usePushCustomerToIntegrations } from './integrationSync'

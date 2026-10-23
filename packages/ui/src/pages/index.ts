@@ -60,11 +60,6 @@ export {
   HostedInvoiceViewProvenance,
 } from './billing/hosted-invoice/HostedInvoiceView'
 export type { HostedInvoiceViewProps } from './billing/hosted-invoice/HostedInvoiceView'
-export {
-  HostedInvoiceDetailsSheet,
-  HostedInvoiceDetailsSheetProvenance,
-} from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
-export type { HostedInvoiceDetailsSheetProps } from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance, linesChanged } from './billing/invoices/InvoiceForm'
 export type {
@@ -417,6 +412,8 @@ export type { SplitMeterPart, SplitMeterProps } from './shared/SplitMeter'
 export { ArcGauge, ArcGaugeProvenance } from './shared/ArcGauge'
 export type { ArcGaugeProps } from './shared/ArcGauge'
 export { QuotaCard, QuotaCardProvenance } from './shared/QuotaCard'
+export { EntityAlertDialog, EntityAlertDialogProvenance } from './shared/EntityAlertDialog'
+export type { EntityAlertDialogProps } from './shared/EntityAlertDialog'
 export type { QuotaCardAction, QuotaCardProps } from './shared/QuotaCard'
 
 /* The billing grids' migration onto EntityList. Appended — the grids and their

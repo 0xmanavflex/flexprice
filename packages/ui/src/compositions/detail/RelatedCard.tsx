@@ -94,7 +94,9 @@ export function RelatedCard({
           </div>
         ))}
       </dl>
-      {children}
+      {children ? (
+        <div className={links.length > 0 ? 'border-t' : undefined}>{children}</div>
+      ) : null}
       {action ? <div className="border-t px-6 py-3">{action}</div> : null}
     </Section>
   )

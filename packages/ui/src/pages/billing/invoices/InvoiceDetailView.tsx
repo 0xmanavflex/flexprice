@@ -7,14 +7,17 @@ import { useState, type ReactNode } from 'react'
 import {
   CalculatorIcon,
   CheckCircle2Icon,
+  CopyIcon,
   DownloadIcon,
   FileMinusIcon,
+  FileTextIcon,
   LinkIcon,
   MoreHorizontalIcon,
   PencilIcon,
   ReceiptIcon,
   RefreshCwIcon,
   SendIcon,
+  UserIcon,
   WalletIcon,
   XCircleIcon,
 } from '@ui/icons'
@@ -26,10 +29,10 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
 import { DetailShell } from '../../../compositions/detail/DetailShell'
 import { ActivitySection } from '../../../compositions/detail/ActivityLog'
@@ -211,12 +214,12 @@ export function InvoiceDetailView({
     },
     {
       id: 'subscription',
-      label: 'Subscription',
+      label: 'Contract',
       value: invoice.subscriptionLabel,
       ...(onOpenSubscription && invoice.subscriptionId ? { onOpen: onOpenSubscription } : {}),
     },
     ...(hostedUrl
-      ? [{ id: 'payment-link', label: 'Payment link', value: 'Hosted invoice', href: hostedUrl }]
+      ? [{ id: 'payment-link', label: 'Payment link', value: hostedUrl, href: hostedUrl }]
       : []),
   ]
 
@@ -272,17 +275,19 @@ export function InvoiceDetailView({
           <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuGroup>
               <MenuAction
-                icon={<DownloadIcon />}
-                label="Download PDF"
-                onSelect={onDownload}
-                hint="Available once the invoice has a PDF"
+                icon={<CopyIcon />}
+                label="Copy ID"
+                onSelect={() => {
+                  void navigator.clipboard
+                    .writeText(invoice.id)
+                    .then(() => toast.success('Invoice ID copied'))
+                    .catch(() => toast.error('Couldn’t copy the invoice ID'))
+                }}
               />
-              <MenuAction
-                icon={<LinkIcon />}
-                label="Copy hosted invoice link"
-                onSelect={hostedUrl ? () => void copyLink() : undefined}
-                hint="Available once the invoice is finalized"
-              />
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
               {isDraft && onFinalize ? (
                 <MenuAction
                   icon={<CheckCircle2Icon />}
@@ -298,6 +303,18 @@ export function InvoiceDetailView({
               invoice.status !== InvoiceStatus.Skipped ? (
                 <MenuAction icon={<PencilIcon />} label="Edit invoice" onSelect={onEdit} />
               ) : null}
+              <MenuAction
+                icon={<DownloadIcon />}
+                label="Download invoice"
+                onSelect={onDownload}
+                hint="Available once the invoice has a PDF"
+              />
+              <MenuAction
+                icon={<LinkIcon />}
+                label="Copy hosted invoice link"
+                onSelect={hostedUrl ? () => void copyLink() : undefined}
+                hint="Available once the invoice is finalized"
+              />
               <MenuAction
                 icon={<WalletIcon />}
                 label="Record payment"
@@ -317,7 +334,7 @@ export function InvoiceDetailView({
               ) : null}
               <MenuAction
                 icon={<CalculatorIcon />}
-                label="Recalculate"
+                label="Recalculate invoice"
                 onSelect={onRecalculate}
                 disabled={!isDraft || pendingAction === 'recalculate'}
                 pending={pendingAction === 'recalculate'}
@@ -326,7 +343,7 @@ export function InvoiceDetailView({
               />
               <MenuAction
                 icon={<FileMinusIcon />}
-                label="Issue credit memo"
+                label="Issue a credit note"
                 onSelect={onIssueCreditNote}
                 disabled={!canIssueCreditNote}
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
@@ -342,7 +359,7 @@ export function InvoiceDetailView({
               ) : null}
               <MenuAction
                 icon={<SendIcon />}
-                label="Send invoice"
+                label="Send communication"
                 onSelect={onSend}
                 disabled={
                   isDraft || invoice.status === InvoiceStatus.Void || pendingAction === 'send'
@@ -352,7 +369,22 @@ export function InvoiceDetailView({
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
             </DropdownMenuGroup>
-            {isOpen && onVoid ? (
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Connections</DropdownMenuLabel>
+              <DropdownMenuItem disabled={!onOpenCustomer} onClick={onOpenCustomer}>
+                <UserIcon aria-hidden="true" /> View customer
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!onOpenSubscription || !invoice.subscriptionId}
+                onClick={onOpenSubscription}
+              >
+                <FileTextIcon aria-hidden="true" /> View subscription
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            {onVoid &&
+            invoice.status !== InvoiceStatus.Void &&
+            invoice.status !== InvoiceStatus.Skipped ? (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={onVoid}>
@@ -404,6 +436,7 @@ export function InvoiceDetailView({
                   title: event.title,
                   at: event.at,
                   summary: event.summary,
+                  ...(event.detail ? { detail: event.detail } : {}),
                   ...(event.record ? { record: event.record } : {}),
                   ...(event.by ? { by: event.by } : {}),
                   ...(event.href ? { href: event.href } : {}),
@@ -672,7 +705,7 @@ function InvoiceDocumentArticle({
 
       <div className="grid gap-6 px-8 py-8 sm:grid-cols-2">
         {invoice.from ? <Party heading="Bill from" party={invoice.from} withLogo /> : null}
-        <Party heading="Bill to" party={invoice.billTo} tagged />
+        <Party heading="Bill to" party={invoice.billTo} />
         {invoice.payment ? (
           <div className="space-y-1.5 text-[13px]">
             <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Payment</p>
@@ -765,13 +798,10 @@ function Party({
   heading,
   party,
   withLogo = false,
-  tagged = false,
 }: {
   heading: string
   party: InvoiceParty
   withLogo?: boolean
-  /** Marks the address and email rows with a small "Billing ..." tag. */
-  tagged?: boolean
 }) {
   return (
     <div className="space-y-1.5 text-[13px]">
@@ -787,34 +817,18 @@ function Party({
         <div className="min-w-0 space-y-1">
           <p className="font-medium">{party.name}</p>
           {party.address.length > 0 ? (
-            <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
-              <div className="space-y-0.5">
-                {party.address.map((line, index) => (
-                  <p key={`${index}-${line}`} className="text-muted-foreground">
-                    {line}
-                  </p>
-                ))}
-              </div>
-              {tagged ? <PartyTag>Billing address</PartyTag> : null}
+            <div className="space-y-0.5">
+              {party.address.map((line, index) => (
+                <p key={`${index}-${line}`} className="text-muted-foreground">
+                  {line}
+                </p>
+              ))}
             </div>
           ) : null}
-          {party.email ? (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <p className="text-muted-foreground">{party.email}</p>
-              {tagged ? <PartyTag>Billing email</PartyTag> : null}
-            </div>
-          ) : null}
+          {party.email ? <p className="text-muted-foreground">{party.email}</p> : null}
         </div>
       </div>
     </div>
-  )
-}
-
-function PartyTag({ children }: { children: ReactNode }) {
-  return (
-    <Badge variant="outline" size="sm" radius="full" className="text-muted-foreground font-normal">
-      {children}
-    </Badge>
   )
 }
 
