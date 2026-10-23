@@ -1,20 +1,25 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
+  reportBreakdown,
+  reportCurrencies,
+  reportScalar,
+  reportSeries,
+  useCustomerNames,
   useCustomers,
   useInvoices,
-  useInvoicedRevenue,
+  useReport,
   useSubscriptions,
   useUsageAnalytics,
   UsageWindowSize,
 } from '@fp/query'
-import type { InvoicedRevenue, UsageAnalytics } from '@fp/query'
+import type { ReportResult, UsageAnalytics } from '@fp/query'
 import {
   CustomerSortField,
   DEFAULT_INVOICE_QUERY,
   DEFAULT_SUBSCRIPTION_QUERY,
   InvoiceStatus,
-  isZeroMoney,
+  money,
 } from '@fp/domain'
 import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
 import { CUSTOM_RANGE_ID, DashboardHome } from '@fp/ui/pages'
@@ -263,15 +268,53 @@ export function HomePage() {
   // const apiKeys = useApiKeys()
 
   /*
-   * Invoiced revenue: every finalized invoice created in this window and the
-   * one before it. The headline, the points and the top customers all read the
-   * same invoices, so the headline is exactly the sum of what is plotted.
+   * Revenue: the report library's `invoice_total` (finalized invoices by
+   * finalization date), as on Reports — the total and its change against the
+   * window before, by day for the chart, and by customer for the leaders.
+   * Every currency first, to find the one billed most; then that one.
    */
-  const revenue = useInvoicedRevenue(windows.current)
-  const priorRevenue = useInvoicedRevenue(windows.prior)
+  const range = reportRange(windows.current)
+  const revenueAll = useReport('invoice_total', {
+    shape: 'scalar',
+    range,
+    compare: 'previous_period',
+  })
+  const mainCurrency = largestCurrency(revenueAll.data)
+  const revenueByDay = useReport(
+    'invoice_total',
+    mainCurrency
+      ? { shape: 'timeseries', range, grain: 'day', currency: mainCurrency.toLowerCase() }
+      : null,
+  )
+  const revenueByCustomer = useReport(
+    'invoice_total',
+    mainCurrency
+      ? {
+          shape: 'breakdown',
+          range,
+          dimensions: ['customer_id'],
+          currency: mainCurrency.toLowerCase(),
+          limit: TOP_CUSTOMERS,
+        }
+      : null,
+  )
+  const leaderIds = reportBreakdown(
+    revenueByCustomer.data,
+    'invoice_total',
+    ['customer_id'],
+    mainCurrency ?? undefined,
+  ).map((row) => row.keys['customer_id'] ?? '')
+  const leaderNames = useCustomerNames(leaderIds)
 
   const eventsPanel = toEventsPanel(analytics, priorAnalytics, granularity.id)
-  const revenuePanel = toRevenuePanel(revenue, priorRevenue, windows, granularity.id)
+  const revenuePanel = toRevenuePanel(
+    revenueAll,
+    revenueByDay.data,
+    revenueByCustomer.data,
+    leaderNames.data ?? {},
+    windows,
+    granularity.id,
+  )
   const customersPanel = toCustomersPanel(customers, windows)
 
   /*
@@ -385,9 +428,32 @@ const TOP_CUSTOMERS = 5
  * The invoiced-revenue panel. The headline currency is the one invoiced to the
  * most customers; any others are named, never added in.
  */
+/** The window as the report library's range: `from..to`, both whole UTC days, `to` exclusive. */
+function reportRange(window: { start: Date; end: Date }): string {
+  const day = (date: Date) => date.toISOString().slice(0, 10)
+  const end = new Date(window.end)
+  // A window that ends mid-day (a preset runs to now) includes that day.
+  if (end.getUTCHours() || end.getUTCMinutes() || end.getUTCSeconds() || end.getUTCMilliseconds()) {
+    end.setUTCHours(24, 0, 0, 0)
+  }
+  return `${day(window.start)}..${day(end)}`
+}
+
+/** The currency the report billed most in, upper case; null before it answers or when empty. */
+function largestCurrency(result: ReportResult | undefined): string | null {
+  let best: { currency: string; value: number } | null = null
+  for (const currency of reportCurrencies(result)) {
+    const value = reportScalar(result, 'invoice_total', currency).value ?? 0
+    if (value > 0 && (best === null || value > best.value)) best = { currency, value }
+  }
+  return best?.currency ?? null
+}
+
 function toRevenuePanel(
-  view: QueryView<InvoicedRevenue>,
-  prior: QueryView<InvoicedRevenue>,
+  view: QueryView<ReportResult>,
+  byDay: ReportResult | undefined,
+  byCustomer: ReportResult | undefined,
+  names: Record<string, string>,
   windows: Windows,
   granularityId: string,
 ): RevenuePanel {
@@ -400,49 +466,49 @@ function toRevenuePanel(
     topCustomers: [],
     otherCurrencies: [],
   }
-  const data = view.data
-  if (data === undefined) return { ...meta, ...blank, status: withoutData(view) }
-  const [main, ...others] = data.currencies
-  if (!main || isZeroMoney(main.total)) return { ...meta, ...blank, status: 'empty' }
+  if (view.data === undefined) return { ...meta, ...blank, status: withoutData(view) }
+  const main = largestCurrency(view.data)
+  if (!main) return { ...meta, ...blank, status: 'empty' }
 
-  const priorMain =
-    prior.data !== undefined && !prior.isPlaceholderData && !view.isPlaceholderData
-      ? prior.data.currencies.find((entry) => entry.currency === main.currency)
-      : undefined
+  const totalOf = (currency: string) => reportScalar(view.data, 'invoice_total', currency)
+  const headline = totalOf(main)
+  const asMoney = (value: number, currency: string) => money(value.toFixed(2), currency)
 
   return {
     ...meta,
     status: 'ready',
-    total: main.total,
+    total: asMoney(headline.value ?? 0, main),
     fixed: null,
     usage: null,
-    changePercent: priorMain ? revenueChange(main.total, priorMain.total) : null,
-    points: revenuePoints(main.rows, windows, granularityId),
-    topCustomers: main.customers
-      .filter((row) => !isZeroMoney(row.total))
+    changePercent: headline.change === null ? null : headline.change * 100,
+    points: revenuePoints(reportSeries(byDay, 'invoice_total', main), windows, granularityId),
+    topCustomers: reportBreakdown(byCustomer, 'invoice_total', ['customer_id'], main)
+      .filter((row) => row.value > 0)
       .slice(0, TOP_CUSTOMERS)
-      .map((row) => ({ id: row.customerId, name: row.name, total: row.total })),
-    otherCurrencies: others
-      .filter((other) => !isZeroMoney(other.total))
-      .map((other) => other.currency),
+      .map((row) => {
+        const id = row.keys['customer_id'] ?? ''
+        return { id, name: names[id] ?? id, total: asMoney(row.value, main) }
+      }),
+    otherCurrencies: reportCurrencies(view.data).filter(
+      (currency) => currency !== main && (totalOf(currency).value ?? 0) > 0,
+    ),
   }
 }
 
 /**
- * Invoices as chart points: one per UTC day of the window (a quiet day is a
- * zero, not a gap), or one per week under the weekly granularity. Hourly reads
- * as daily — an invoice total has no meaningful hour.
+ * The report's days as chart points: one per UTC day of the window (a quiet
+ * day is a zero, not a gap), or one per week under the weekly granularity.
+ * Hourly reads as daily — an invoice total has no meaningful hour.
  */
 function revenuePoints(
-  rows: InvoicedRevenue['currencies'][number]['rows'],
+  days: { bucket: Date; value: number }[],
   windows: Windows,
   granularityId: string,
 ): { label: string; value: number }[] {
   const byDay = new Map<string, number>()
-  for (const row of rows) {
-    const day = row.createdAt.toISOString().slice(0, 10)
-    // A chart value only; the headline is the exact sum, not this.
-    byDay.set(day, (byDay.get(day) ?? 0) + Number(row.amount))
+  for (const day of days) {
+    const key = day.bucket.toISOString().slice(0, 10)
+    byDay.set(key, (byDay.get(key) ?? 0) + day.value)
   }
   const step = granularityId === 'weekly' ? 7 : 1
   const span = spanDays(windows)
