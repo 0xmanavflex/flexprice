@@ -42,7 +42,7 @@ interface RecordedQuery {
 
 interface RecordedMutation {
   mutationFn: (variables: never) => Promise<unknown>
-  onSuccess?: () => void
+  onSuccess?: (data?: unknown) => void
 }
 
 // Hoisted with the `vi.mock` factories that close over it: the factories run
@@ -51,6 +51,8 @@ const recorded = vi.hoisted(() => ({
   queries: [] as RecordedQuery[],
   mutations: [] as RecordedMutation[],
   invalidated: [] as unknown[],
+  updated: [] as unknown[],
+  updaters: [] as ((current: unknown) => unknown)[],
 }))
 
 vi.mock('./provider', () => ({
@@ -71,6 +73,12 @@ vi.mock('@tanstack/react-query', () => {
     invalidateQueries: (filters: { queryKey: unknown }) => {
       recorded.invalidated.push(filters.queryKey)
       return Promise.resolve()
+    },
+    // A create also writes the new environment into every cached list, so the
+    // switcher can select it before the refetch lands.
+    setQueriesData: (filters: { queryKey: unknown }, updater: (current: unknown) => unknown) => {
+      recorded.updated.push(filters.queryKey)
+      recorded.updaters.push(updater)
     },
   })
   return {
@@ -123,6 +131,8 @@ afterEach(() => {
   recorded.queries.length = 0
   recorded.mutations.length = 0
   recorded.invalidated.length = 0
+  recorded.updated.length = 0
+  recorded.updaters.length = 0
   vi.unstubAllGlobals()
 })
 
@@ -396,6 +406,23 @@ describe('useCreateEnvironment', () => {
 
     expect(invalidated).toEqual([...queryKeys.session.environments()])
     expect(listKey.slice(0, invalidated.length)).toEqual([...invalidated])
+    // The cached lists are written at the same prefix, before the refetch.
+    expect(recorded.updated[0]).toEqual([...queryKeys.session.environments()])
+  })
+
+  it('adds the new environment to a cached list, and leaves a located record id alone', () => {
+    useCreateEnvironment('token-a')
+    const created = { id: 'env_new', name: 'Staging' }
+    lastMutation().onSuccess?.(created)
+    const merge = recorded.updaters[0]!
+
+    expect(merge([{ id: 'env_a', name: 'Production' }])).toEqual([
+      { id: 'env_a', name: 'Production' },
+      created,
+    ])
+    // `useRecordEnvironment` caches under the same prefix, holding an id.
+    expect(merge('env_a')).toBe('env_a')
+    expect(merge(null)).toBeNull()
   })
 })
 

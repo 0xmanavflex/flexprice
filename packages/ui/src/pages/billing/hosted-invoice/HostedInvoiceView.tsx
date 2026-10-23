@@ -1,5 +1,10 @@
 import { type ReactNode, useId } from 'react'
-import type { HostedInvoice, HostedInvoiceLine, Money as MoneyValue } from '@fp/domain'
+import type {
+  HostedInvoice,
+  HostedInvoiceLine,
+  HostedInvoicePayment,
+  Money as MoneyValue,
+} from '@fp/domain'
 import { CircleAlertIcon, CircleCheckIcon, DownloadIcon, PrinterIcon } from '@ui/icons'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
@@ -29,7 +34,6 @@ const FLEXPRICE_URL = 'https://flexprice.io'
 export const HostedInvoiceViewProvenance = provenance({
   source: 'composition',
   composes: [
-    'blocks/receipt-5',
     'reui/badge',
     'compositions/layout/Section',
     'primitives/item',
@@ -289,6 +293,13 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
                   <TotalRow label="Amount due" value={money(invoice.amountRemaining)} strong />
                 ) : null}
               </dl>
+
+              {invoice.payments.length > 0 ? (
+                <>
+                  <Separator />
+                  <PaymentHistory payments={invoice.payments} money={money} date={date} />
+                </>
+              ) : null}
             </div>
           </div>
         </Panel>
@@ -450,9 +461,9 @@ function LineItem({
         isLast ? 'pb-0' : 'pb-2',
       )}
     >
-      <p className="text-foreground min-w-0 flex-1 truncate font-medium" title={line.name}>
-        {line.name}
-      </p>
+      {/* Names wrap rather than truncate: a charge name is often the only
+          thing that tells two lines apart, on a phone and on paper. */}
+      <p className="text-foreground min-w-0 flex-1 font-medium break-words">{line.name}</p>
       <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
         × {quantityText(line.quantity)}
       </span>
@@ -460,6 +471,73 @@ function LineItem({
         {amount}
       </span>
     </article>
+  )
+}
+
+const PAYMENT_BADGE: Record<string, 'success-light' | 'destructive-light' | 'info-light'> = {
+  SUCCEEDED: 'success-light',
+  FAILED: 'destructive-light',
+  PROCESSING: 'info-light',
+  PENDING: 'info-light',
+}
+
+/** "PARTIALLY_REFUNDED" → "Partially refunded". */
+function paymentStatusLabel(status: string): string {
+  const spaced = status.replace(/_/g, ' ').toLowerCase()
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+}
+
+/**
+ * Each payment attempt: amount, method, when, and how it ended. A failed card
+ * attempt is the only explanation a customer gets for a balance still due.
+ */
+function PaymentHistory({
+  payments,
+  money,
+  date,
+}: {
+  payments: HostedInvoicePayment[]
+  money: (value: MoneyValue) => ReactNode
+  date: (value: Date) => string
+}) {
+  return (
+    <section aria-labelledby="payment-history-heading" className="flex flex-col gap-4">
+      <h2
+        id="payment-history-heading"
+        className="text-muted-foreground text-[0.6875rem] font-medium tracking-[0.2em] uppercase"
+      >
+        Payment History
+      </h2>
+      <ul className="flex flex-col divide-y">
+        {payments.map((payment, index) => (
+          <li
+            key={payment.id}
+            className={cn(
+              'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[13px]',
+              index === 0 ? 'pt-0' : 'pt-2',
+              index === payments.length - 1 ? 'pb-0' : 'pb-2',
+            )}
+          >
+            <span className="text-foreground min-w-0 flex-1 font-medium">
+              {payment.method || 'Payment'}
+              {payment.at ? (
+                <span className="text-muted-foreground ml-2 text-xs font-normal">
+                  {date(payment.at)}
+                </span>
+              ) : null}
+            </span>
+            {payment.status ? (
+              <Badge variant={PAYMENT_BADGE[payment.status] ?? 'secondary'} radius="full">
+                {paymentStatusLabel(payment.status)}
+              </Badge>
+            ) : null}
+            <span className="text-foreground w-24 shrink-0 text-right font-medium tabular-nums">
+              {money(payment.amount)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

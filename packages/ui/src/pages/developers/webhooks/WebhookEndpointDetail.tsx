@@ -214,8 +214,13 @@ export function WebhookEndpointDetail({
 
   const withFacts = (main: ReactNode) => (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-w-0 flex-col gap-5">{main}</div>
-      {facts}
+      <div className="flex min-w-0 flex-col gap-5">
+        {main}
+        <Section title="Message attempts" flush>
+          {attempts}
+        </Section>
+      </div>
+      <div className="xl:sticky xl:top-6">{facts}</div>
     </div>
   )
 
@@ -373,10 +378,6 @@ export function WebhookEndpointDetail({
         },
       ]}
     >
-      <Section title="Message attempts" flush>
-        {attempts}
-      </Section>
-
       <ConfirmDialog
         open={dialog === 'delete'}
         onOpenChange={(open) => !open && close()}

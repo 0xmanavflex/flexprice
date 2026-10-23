@@ -1,11 +1,21 @@
-import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
+import {
+  RBAC_ENTITY,
+  type PauseSubscription,
+  type RbacEntity,
+  type ResumeSubscription,
+  canPauseSubscription,
+  canResumeSubscription,
+} from '@fp/domain'
 import { toast } from 'sonner'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
+  BellIcon,
   CopyIcon,
+  PencilIcon,
+  TicketPercentIcon,
   PackageIcon,
   PlusIcon,
   CirclePauseIcon,
@@ -103,6 +113,7 @@ import {
 } from './ContractSectionDialogs'
 import { ContractQuantityDialog } from './ContractQuantityDialog'
 import { ChargeAlertForm } from './ChargeAlertForm'
+import { PauseContractDialog } from './PauseContractDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
@@ -194,6 +205,8 @@ export interface SubscriptionDetailViewProps {
     | ((draft: { settingId: string; config: AlertSettingConfig }) => Promise<unknown> | void)
     | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
+  /** A charge's row menu: take its coupon off. Resolves when done. */
+  onRemoveCoupon?: ((coupon: SubscriptionCoupon) => Promise<unknown>) | undefined
   /** Row menus: take an add-on off, stop a tax, end a credit grant. Each resolves when done. */
   onRemoveAddon?: ((addon: SubscriptionAddon) => Promise<unknown>) | undefined
   onRemoveTax?: ((tax: SubscriptionTax) => Promise<unknown>) | undefined
@@ -207,6 +220,12 @@ export interface SubscriptionDetailViewProps {
   /** Incomplete contracts only: the More item and the banner button. */
   onActivate?: () => void
   onCancel?: () => void
+  /** Running contracts: stop billing until resumed. Omitted, the item is hidden. */
+  onPause?: ((draft: PauseSubscription) => Promise<unknown>) | undefined
+  /** Paused contracts: start billing again. */
+  onResume?: ((draft: ResumeSubscription) => Promise<unknown>) | undefined
+  /** Opens the alert setting that watches this contract. */
+  onAlertSettings?: (() => void) | undefined
   /** Saves the contract's metadata map. Omitted, the metadata card is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /**
@@ -367,6 +386,10 @@ export function SubscriptionDetailView({
   onActivate,
   onSaveMetadata,
   onCancel,
+  onPause,
+  onResume,
+  onAlertSettings,
+  onRemoveCoupon,
   onAddCharge,
   onEditCharge,
   onEndCharge,
@@ -376,6 +399,7 @@ export function SubscriptionDetailView({
   priceUnits = [],
 }: SubscriptionDetailViewProps) {
   const [tab, setTab] = useState<SubscriptionTab>('overview')
+  const [pauseMode, setPauseMode] = useState<'pause' | 'resume' | null>(null)
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
   const [saving, setSaving] = useState(false)
   const [quantityLine, setQuantityLine] = useState<SubscriptionLine | null>(null)
@@ -429,6 +453,8 @@ export function SubscriptionDetailView({
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
   const canCancel = !isCancelled && !isCancelling && !s.cancelledAt
   const canActivate = s.status === SubscriptionStatus.Incomplete && Boolean(onActivate)
+  const canPause = Boolean(onPause) && canPauseSubscription(s.status) && !isCancelling
+  const canResume = Boolean(onResume) && canResumeSubscription(s.status)
   const title = `${s.customerName} on ${s.planName}`
 
   const canEditCharges = !isCancelled && !isCancelling
@@ -701,6 +727,48 @@ export function SubscriptionDetailView({
                     label: 'Activate',
                     icon: <PlayIcon aria-hidden="true" className="size-4" />,
                     onSelect: onActivate,
+                  },
+                ]
+              : []),
+            // V1's "Edit Subscription" opened a page of charges; here the charges
+            // are edited in place, on their tab.
+            ...(canEditCharges
+              ? [
+                  {
+                    id: 'edit',
+                    label: 'Edit contract',
+                    icon: <PencilIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setTab('charges'),
+                  },
+                ]
+              : []),
+            ...(onAlertSettings
+              ? [
+                  {
+                    id: 'alerts',
+                    label: 'Alert settings',
+                    icon: <BellIcon aria-hidden="true" className="size-4" />,
+                    onSelect: onAlertSettings,
+                  },
+                ]
+              : []),
+            ...(canPause
+              ? [
+                  {
+                    id: 'pause',
+                    label: 'Pause contract',
+                    icon: <CirclePauseIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setPauseMode('pause'),
+                  },
+                ]
+              : []),
+            ...(canResume
+              ? [
+                  {
+                    id: 'resume',
+                    label: 'Resume contract',
+                    icon: <PlayIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setPauseMode('resume'),
                   },
                 ]
               : []),
@@ -1195,11 +1263,61 @@ export function SubscriptionDetailView({
               : {})}
             removeLabel="End charge"
             {...(revertCharge ? { onRevert: revertCharge } : {})}
-            extraActions={(charge) =>
-              chargeRows.lineOf.get(charge.id)?.source === 'plan' && onOpenPlan
-                ? [{ label: 'Go to plan', icon: <PackageIcon aria-hidden />, onSelect: onOpenPlan }]
-                : []
-            }
+            extraActions={(charge) => {
+              const line = chargeRows.lineOf.get(charge.id)
+              if (!line) return []
+              // V1's charge row: the line item id beside the price id, and a
+              // coupon applied to (or taken off) just this charge.
+              const lineCoupon = (coupons?.data ?? []).find(
+                (coupon) => coupon.active && coupon.lineItemId === line.id,
+              )
+              const open = !charge.endDate && canEditCharges
+              return [
+                {
+                  label: 'Copy line item ID',
+                  icon: <CopyIcon aria-hidden />,
+                  onSelect: () => {
+                    void navigator.clipboard
+                      .writeText(line.id)
+                      .then(() => toast.success('Line item ID copied'))
+                      .catch(() => toast.error('Couldn’t copy the line item ID'))
+                  },
+                },
+                ...(open && onAddCoupon && !lineCoupon
+                  ? [
+                      {
+                        label: 'Apply coupon',
+                        icon: <TicketPercentIcon aria-hidden />,
+                        onSelect: () => editCharge(charge, ChargeSection.Discount),
+                      },
+                    ]
+                  : []),
+                ...(open && onRemoveCoupon && lineCoupon
+                  ? [
+                      {
+                        label: 'Remove coupon',
+                        icon: <TicketPercentIcon aria-hidden />,
+                        onSelect: () =>
+                          setRemoval({
+                            title: `Remove ${lineCoupon.name}?`,
+                            description: `The discount stops applying to ${line.name || 'this charge'}.`,
+                            confirmLabel: 'Remove coupon',
+                            run: () => onRemoveCoupon(lineCoupon),
+                          }),
+                      },
+                    ]
+                  : []),
+                ...(line.source === 'plan' && onOpenPlan
+                  ? [
+                      {
+                        label: 'Go to plan',
+                        icon: <PackageIcon aria-hidden />,
+                        onSelect: onOpenPlan,
+                      },
+                    ]
+                  : []),
+              ]
+            }}
             isLoading={lines.isLoading ?? false}
             error={lines.isError ? 'Charges could not be loaded' : null}
             {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
@@ -1462,6 +1580,22 @@ export function SubscriptionDetailView({
         onRun={(action) => void runSection(action)}
         onClose={closeSection}
       />
+      {onPause && pauseMode === 'pause' ? (
+        <PauseContractDialog
+          mode="pause"
+          open
+          onOpenChange={(next) => !next && setPauseMode(null)}
+          onConfirm={onPause}
+        />
+      ) : null}
+      {onResume && pauseMode === 'resume' ? (
+        <PauseContractDialog
+          mode="resume"
+          open
+          onOpenChange={(next) => !next && setPauseMode(null)}
+          onConfirm={onResume}
+        />
+      ) : null}
       <FormDialog
         open={alertEdit !== null}
         onOpenChange={(next) => {
@@ -1595,7 +1729,8 @@ function ContractDetails({
             {
               label: 'Commitment',
               value: commitment
-                ? `${formatMoney(commitment.amount)} per ${commitmentPeriodNoun(commitment.period, commitment.periodCount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
+                ? // The overage premium rides with the amount, so the card keeps its four rows.
+                  `${formatMoney(commitment.amount)} per ${commitmentPeriodNoun(commitment.period, commitment.periodCount)}${commitment.overageFactor && commitment.overageFactor !== 1 ? ` · ${commitment.overageFactor}× overage` : ''}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
                 : 'None',
             },
             {

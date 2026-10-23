@@ -42,6 +42,7 @@ import static_calendarDots from '../reui/icons/default/outline/calendar-dots'
 import static_chartArrowDown from '../reui/icons/default/outline/chart-arrow-down'
 import static_chartArrowUp from '../reui/icons/default/outline/chart-arrow-up'
 import static_chartBarsSquare from '../reui/icons/default/outline/chart-bars-square'
+import static_chartSimple from '../reui/icons/default/outline/chart-simple'
 import static_check from '../reui/icons/default/outline/check'
 import static_checkCircle from '../reui/icons/default/outline/check-circle'
 import static_chevronsUpDown from '../reui/icons/default/outline/chevrons-up-down'
@@ -204,6 +205,8 @@ export const Calendar: IconComponent = staticIcon(static_calendar, 'Calendar')
 export { Calendar as CalendarIcon }
 export const CalendarClock: IconComponent = staticIcon(static_calendarDots, 'CalendarClock')
 export { CalendarClock as CalendarClockIcon }
+export const ChartColumn: IconComponent = staticIcon(static_chartSimple, 'ChartColumn')
+export { ChartColumn as ChartColumnIcon }
 export const Check: IconComponent = staticIcon(static_check, 'Check')
 export { Check as CheckIcon }
 export const CheckCircle2: IconComponent = staticIcon(static_checkCircle, 'CheckCircle2')

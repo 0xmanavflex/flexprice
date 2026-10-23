@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, within } from 'storybook/test'
 import { CustomerEntitlementUsage } from './CustomerEntitlementUsage'
 
 const meta = {
@@ -56,34 +56,42 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const table = canvas.getByRole('region', { name: 'Entitlement usage table' })
+    const table = canvas.getByRole('region', { name: 'Entitlements table' })
     const t = within(table)
-    for (const header of ['Feature', 'Value', 'Usage', 'Resets on']) {
+    for (const header of ['Feature', 'Value', 'Resets', 'Usage']) {
       await expect(t.getByRole('columnheader', { name: new RegExp(header) })).toBeVisible()
     }
-    await expect(t.getByText('API calls')).toBeVisible()
-    await expect(t.getByText('4,200 / 10,000')).toBeVisible()
+    // The row names the feature; its meter repeats the name for screen readers only.
+    await expect(t.getByRole('row', { name: /API calls/ })).toBeVisible()
+    await expect(t.getByText('4,200 of 10,000')).toBeVisible()
     await expect(t.getByText('Nov 1, 2026')).toBeVisible()
   },
 }
 
-/** Unlimited says so; over the limit reads past 100%; a boolean is on or off. */
+/**
+ * The same states the overview draws, from the same table: unlimited says so
+ * with no bar, over the limit turns red, a boolean is included.
+ */
 export const States: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('90,210 / Unlimited')).toBeVisible()
-    await expect(canvas.getByText('12 / 10')).toHaveClass('text-destructive')
-    await expect(canvas.getByText('Enabled')).toBeVisible()
+    await expect(canvas.getByText('90,210 used of unlimited')).toBeVisible()
+    await expect(canvas.queryByRole('progressbar', { name: /AI tokens/ })).toBeNull()
+    await expect(canvas.getByText('12 of 10')).toHaveClass('text-destructive')
+    await expect(canvas.getByText('Included')).toBeVisible()
   },
 }
 
-/** The search narrows the rows like every other detail table. */
-export const Search: Story = {
+/**
+ * Under its section title the table's tools sit in the header, as on the other
+ * overview tables: Filter and Sort beside the title, no search row.
+ */
+export const HeaderTools: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.type(canvas.getByLabelText('Search features'), 'Seats')
-    await expect(await canvas.findByText('12 / 10')).toBeVisible()
-    await expect(canvas.queryByText('API calls')).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Sort' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Filter' })).toBeVisible()
+    await expect(canvas.queryByLabelText('Search features')).toBeNull()
   },
 }
 

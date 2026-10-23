@@ -180,7 +180,7 @@ export interface RevenueReportProps {
     /** Invoices paid in the range; omitted when the source does not count them. */
     paidCount?: number | undefined
     withinWeek: string
-    series: { label: string; days: number }[]
+    series: { label: string; days: number | null }[]
     payers: PayerRow[]
     onOpenCustomer?: ((id: string) => void) | undefined
   }
@@ -432,7 +432,7 @@ function DaysChart({
   series,
   height = 240,
 }: {
-  series: { label: string; days: number }[]
+  series: { label: string; days: number | null }[]
   height?: number
 }) {
   const config: ChartConfig = { days: { label: 'Average days to pay', color: REVENUE } }

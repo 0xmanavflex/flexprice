@@ -15,7 +15,14 @@ import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
-import { ArrowUpRightIcon, CircleSlashIcon, CopyIcon, MoreHorizontalIcon, PlusIcon, UploadIcon } from '@ui/icons'
+import {
+  ArrowUpRightIcon,
+  CircleSlashIcon,
+  CopyIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+  UploadIcon,
+} from '@ui/icons'
 import { provenance } from '@ui/provenance'
 import { toast } from 'sonner'
 import { IntegrationMark } from '../customers/IntegrationMark'
@@ -56,7 +63,12 @@ export interface ContractIntegrationsProps {
   linkable: LinkableProvider[]
   onLink?: (input: { providerType: string; providerEntityId: string }) => Promise<unknown>
   onUnlink?: (input: { providerType: string }) => Promise<unknown>
-  /** Provider names that can receive a push. Shows "Push to {name}" on that row. */
+  /**
+   * Provider names a push reaches: every connection that syncs this entity
+   * outbound. The API pushes to all of them at once, so the Related card has
+   * one "Push to {names}" action, shown whether or not a mapping exists yet
+   * (a push creates the provider record).
+   */
   pushProviders?: string[]
   onPush?: () => void
 }
@@ -94,6 +106,8 @@ export function ContractIntegrations({
   const [error, setError] = useState<string | null>(null)
 
   const canLink = showLink && Boolean(onLink) && linkable.length > 0
+  const pushTo = onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
+  const canPush = layout === 'rows' && pushTo !== null
   const none = `No integrations linked to this ${entityLabel}.`
 
   // In the Related card the rows are the card's whole body, so rendering nothing
@@ -101,7 +115,7 @@ export function ContractIntegrations({
   // marks have nowhere to put a sentence, so they still render nothing — unless
   // the parent opened the link dialog itself (a plan's overflow menu), which
   // has to mount even though there is nothing to show beside it.
-  if (links.length === 0 && !canLink && !linking) {
+  if (links.length === 0 && !canLink && !linking && !canPush) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
     ) : null
@@ -134,69 +148,75 @@ export function ContractIntegrations({
             </span>
             <span className="flex min-w-0 items-center gap-1">
               <Tooltip>
-                <TooltipTrigger className="inline-flex min-w-0 items-center gap-1 text-sm">
+                {/* The row shows a shortened id; the accessible name carries it whole. */}
+                <TooltipTrigger
+                  aria-label={`${link.name} ID ${link.providerEntityId}`}
+                  className="inline-flex min-w-0 items-center gap-1 text-sm"
+                >
                   <span className="truncate font-mono">{shortId(link.providerEntityId)}</span>
-                  <ArrowUpRightIcon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
+                  <ArrowUpRightIcon
+                    aria-hidden
+                    className="text-muted-foreground size-3.5 shrink-0"
+                  />
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
                   {link.providerEntityId}
                 </TooltipContent>
               </Tooltip>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label={`Manage ${link.name} integration`}
-                className="text-muted-foreground hover:bg-muted focus-visible:outline-ring ml-auto flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
-              >
-                <MoreHorizontalIcon aria-hidden className="size-4" />
-              </DropdownMenuTrigger>
-              <IntegrationMenu
-                link={link}
-                entityLabel={entityLabel}
-                {...(onPush && pushProviders?.includes(link.name) ? { onPush } : {})}
-                onUnlink={onUnlink}
-                onAskUnlink={() => {
-                  setError(null)
-                  setUnlinking(link)
-                }}
-              />
-            </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label={`Manage ${link.name} integration`}
+                  className="text-muted-foreground hover:bg-muted focus-visible:outline-ring ml-auto flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
+                >
+                  <MoreHorizontalIcon aria-hidden className="size-4" />
+                </DropdownMenuTrigger>
+                <IntegrationMenu
+                  link={link}
+                  entityLabel={entityLabel}
+                  onUnlink={onUnlink}
+                  onAskUnlink={() => {
+                    setError(null)
+                    setUnlinking(link)
+                  }}
+                />
+              </DropdownMenu>
             </span>
           </div>
         ) : (
-        <DropdownMenu key={link.providerType}>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <DropdownMenuTrigger
-                  aria-label={`${link.name} integration`}
-                  className="focus-visible:outline-ring flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2"
-                />
-              }
-            >
-              <IntegrationMark integration={link} />
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="block max-w-72 p-3">
-              <p className="mb-2 text-xs font-medium">{link.name}</p>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                <dt className="opacity-70">Provider {entityLabel} ID</dt>
-                <dd className="font-mono break-all">{link.providerEntityId}</dd>
-                <dt className="opacity-70">Created</dt>
-                <dd>{when(link.createdAt)}</dd>
-                <dt className="opacity-70">Updated</dt>
-                <dd>{when(link.updatedAt)}</dd>
-              </dl>
-            </TooltipContent>
-          </Tooltip>
-          <IntegrationMenu
-            link={link}
-            entityLabel={entityLabel}
-            onUnlink={onUnlink}
-            onAskUnlink={() => {
-              setError(null)
-              setUnlinking(link)
-            }}
-          />
-        </DropdownMenu>
+          <DropdownMenu key={link.providerType}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <DropdownMenuTrigger
+                    aria-label={`${link.name} integration`}
+                    className="focus-visible:outline-ring flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+                  />
+                }
+              >
+                <IntegrationMark integration={link} />
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="block max-w-72 p-3">
+                <p className="mb-2 text-xs font-medium">{link.name}</p>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                  <dt className="opacity-70">Provider {entityLabel} ID</dt>
+                  <dd className="font-mono break-all">{link.providerEntityId}</dd>
+                  <dt className="opacity-70">Created</dt>
+                  <dd>{when(link.createdAt)}</dd>
+                  <dt className="opacity-70">Updated</dt>
+                  <dd>{when(link.updatedAt)}</dd>
+                </dl>
+              </TooltipContent>
+            </Tooltip>
+            <IntegrationMenu
+              link={link}
+              entityLabel={entityLabel}
+              onUnlink={onUnlink}
+              onAskUnlink={() => {
+                setError(null)
+                setUnlinking(link)
+              }}
+            />
+          </DropdownMenu>
         ),
       )}
       {layout === 'rows' && links.length === 0 ? (
@@ -237,6 +257,17 @@ export function ContractIntegrations({
             <TooltipContent side="bottom">Link an integration</TooltipContent>
           </Tooltip>
         )
+      ) : null}
+      {canPush && pushTo && onPush ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+          onClick={onPush}
+        >
+          <UploadIcon aria-hidden className="size-3.5" />
+          Push to {pushTo.join(', ')}
+        </Button>
       ) : null}
 
       <ConfirmDialog
@@ -287,21 +318,14 @@ function IntegrationMenu({
   entityLabel,
   onUnlink,
   onAskUnlink,
-  onPush,
 }: {
   link: IntegrationLink
   entityLabel: string
   onUnlink?: ContractIntegrationsProps['onUnlink']
   onAskUnlink: () => void
-  onPush?: () => void
 }) {
   return (
     <DropdownMenuContent align="end" className="min-w-48">
-      {onPush ? (
-        <DropdownMenuItem onClick={onPush}>
-          <UploadIcon aria-hidden /> Push to {link.name}
-        </DropdownMenuItem>
-      ) : null}
       <DropdownMenuItem
         onClick={() => {
           void navigator.clipboard

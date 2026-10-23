@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -70,6 +70,8 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   await request
 
   await expect(page).toHaveURL(/\/contracts$/)
+  // Confirmed bottom right, on the list it lands on.
+  await expect(page.getByText('Contract created')).toBeVisible()
 })
 
 test('creates a contract that other customers inherit', async ({ page }) => {

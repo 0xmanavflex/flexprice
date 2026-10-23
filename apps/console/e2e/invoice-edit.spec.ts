@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -42,8 +43,11 @@ test('opens on the invoice as it is, with nothing to save yet', async ({ page })
 test('cancel goes back without saving', async ({ page }) => {
   const id = await openEdit(page, 'draft')
   let sawWrite = false
+  // `/search` and `/activity` are POST reads (the invoice page lists its
+  // activity rail after the redirect), not writes.
   page.on('request', (r) => {
-    if (r.method() !== 'GET' && !r.url().includes('/search')) sawWrite = true
+    if (r.method() !== 'GET' && !/\/(search|activity)$/.test(new URL(r.url()).pathname))
+      sawWrite = true
   })
   await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(page).toHaveURL(new RegExp(`/invoices/${id}$`))

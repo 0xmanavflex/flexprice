@@ -255,6 +255,7 @@ const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
     'startDate',
     'trialPeriodDays',
     'billingAnchor',
+    'prorate',
   ],
   phases: ['phases', 'chargeCommitments'],
   commitments: ['commitmentAmount', 'overageFactor'],
@@ -865,6 +866,7 @@ export function SubscriptionForm({
       <FormRow
         label="Proration"
         hint="Charge or credit the part of a period a mid-cycle change falls in."
+        error={errors.prorate?.message}
       >
         {({ id }) => (
           <Switch

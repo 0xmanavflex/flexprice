@@ -549,6 +549,25 @@ export const createSubscriptionSchema = z
       }
       start = phase.endDate || start
     })
+    // A contract in phases is a schedule, and a schedule needs a fixed first
+    // day: "today" would move every phase boundary with the day it is saved.
+    if (value.phases.length > 1 && !value.startDate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['startDate'],
+        message: 'Choose when the contract starts: a contract in phases needs a start date',
+      })
+    }
+    // The API refuses entitlement overrides on a prorated contract (V1 checks
+    // it before sending, with the same words).
+    if (value.prorate && value.entitlementOverrides.length > 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['prorate'],
+        message:
+          'Entitlement overrides cannot be combined with proration. Turn off proration or remove the entitlement overrides.',
+      })
+    }
     // A chosen billing date counts periods from that day, so it cannot come
     // before the contract has started.
     const contractStart = value.startDate || localToday()
@@ -933,6 +952,31 @@ export interface CancelSubscription {
   prorate?: boolean
   /** For `immediate`: raise a final invoice now, rather than skip it. */
   generateInvoice?: boolean
+}
+
+/**
+ * Pausing a contract: `POST /subscriptions/{id}/pause`, as V1 sends it — a
+ * proration choice and an optional reason. Billing stops until it is resumed.
+ */
+export interface PauseSubscription {
+  /** Credit the unused part of the current period. Off means no proration. */
+  prorate: boolean
+  reason: string
+}
+
+/** Resuming a paused contract: `POST /subscriptions/{id}/resume`. */
+export interface ResumeSubscription {
+  /** Charge for the remainder of the current period. Off means no proration. */
+  prorate: boolean
+}
+
+/** Pause is offered on a running contract; resume only on a paused one. */
+export function canPauseSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Active || status === SubscriptionStatus.Trialing
+}
+
+export function canResumeSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Paused
 }
 
 /** One line of the invoice a contract will raise next. */

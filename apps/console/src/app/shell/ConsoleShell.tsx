@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import {
   BarChart3Icon,
+  ChartColumnIcon,
   BookOpenIcon,
   CreditCardIcon,
   ReceiptIcon,
@@ -31,6 +32,7 @@ import {
 } from '@fp/ui/compositions'
 import { EnvironmentCopyFormPage } from '@/pages/environments/EnvironmentCopyFormPage'
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
+import { MutationToasts } from '@/app/notifications/MutationToasts'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { useMockAccounts } from '@/app/selfBilling/mockAccounts'
@@ -63,6 +65,7 @@ const ICONS: Record<string, ReactNode> = {
   catalog: <Layers2Icon className="size-4" />,
   billing: <LandmarkIcon className="size-4" />,
   revenue: <BarChart3Icon className="size-4" />,
+  reports: <ChartColumnIcon className="size-4" />,
   developers: <CodeXmlIcon className="size-4" />,
   integrations: <IntegrationsIcon className="size-4" />,
   'pricing-widget': <GalleryHorizontalEndIcon className="size-4" />,
@@ -293,6 +296,7 @@ export function ConsoleShell({
         environments={environments}
         onSelectEnvironment={onEnvironmentChange}
       />
+      <MutationToasts />
       <EnvironmentRenameFormPage
         environment={renamingEnvironment}
         onClose={() => setRenamingEnvironment(null)}

@@ -18,6 +18,8 @@ import {
   type BucketSize,
   CommitmentKind,
   type CancelSubscription,
+  type PauseSubscription,
+  type ResumeSubscription,
   type ChargeCommitment,
   CommitmentType,
   type CommitmentPriceBase,
@@ -978,6 +980,7 @@ export function useCreateSubscription() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Contract created', error: 'Could not create the contract.' } },
     mutationFn: (draft: CreateSubscription) =>
       call(() =>
         client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
@@ -1143,6 +1146,39 @@ export function useCancelSubscription() {
     mutationFn: ({ id, draft }: { id: string; draft: CancelSubscription }) =>
       call(() =>
         client.subscriptions.cancelSubscription(id, toCancelSubscriptionRequest(draft) as never),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Stop billing a running contract until it is resumed — `POST /subscriptions/{id}/pause`. */
+export function usePauseSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: PauseSubscription }) =>
+      call(() =>
+        client.subscriptions.pauseSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+          ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
+        }),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Start billing a paused contract again — `POST /subscriptions/{id}/resume`. */
+export function useResumeSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: ResumeSubscription }) =>
+      call(() =>
+        client.subscriptions.resumeSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+        }),
       ),
     onSuccess: () => invalidateSubscription(queryClient),
   })
@@ -1791,11 +1827,14 @@ export function useSubscriptionTaxes(id: string) {
  * What adding something to one contract can change on its page: the detail, its
  * entitlements, grants, add-ons, coupons, taxes and the invoice preview all sit
  * under the subscriptions family. Tax associations are shared with the customer
- * page, so they refresh too.
+ * page, so they refresh too, and so does entitlement usage, which is read
+ * through the customer (`GET /customers/usage`): a new entitlement would
+ * otherwise show no usage until something else refetched it.
  */
 const invalidateContract = (queryClient: ReturnType<typeof useQueryClient>) => {
   void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
   void queryClient.invalidateQueries({ queryKey: queryKeys.taxAssociations.all() })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.usageAll() })
 }
 
 /** Give this contract an entitlement its plan does not carry — `POST /entitlements`. */
@@ -1927,6 +1966,23 @@ export function useAddSubscriptionCoupon(subscriptionId: string) {
       }
       return added
     },
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Take one coupon off this contract or one of its charges, by its association id. */
+export function useRemoveSubscriptionCoupon(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (associationId: string) =>
+      call(() =>
+        client.subscriptions.executeSubscriptionModify(
+          subscriptionId,
+          toRemoveCouponRequest(associationId),
+        ),
+      ),
     onSuccess: () => invalidateContract(queryClient),
   })
 }

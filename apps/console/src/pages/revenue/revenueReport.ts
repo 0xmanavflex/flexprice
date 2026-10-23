@@ -179,6 +179,53 @@ function bucketed(days: RevenueDayRow[], currency: string, window: Window, grain
   return [...buckets.values()]
 }
 
+export interface DatedAmount {
+  at: Date
+  value: number
+  previous?: number | null
+}
+
+/**
+ * One point per bucket in the window. A report timeseries omits months with
+ * nothing to add up, which draws a two-bar chart for a twelve-month filter.
+ * Missing buckets are zero, in order, including a comparison when one was asked for.
+ */
+export function alignToWindow(
+  points: DatedAmount[],
+  window: Window,
+  grain: Grain,
+  comparing = false,
+  emptyValue: number | null = 0,
+): { label: string; value: number | null; previous?: number | null }[] {
+  const buckets = emptyBuckets(window, grain)
+  const seen = new Set<string>()
+  const previous = new Map<string, number>()
+  const start = utcMidnight(window.start)
+  for (const point of points) {
+    if (Number.isNaN(point.at.getTime())) continue
+    if (point.at < start || point.at >= window.end) continue
+    const { key } = bucketOf(point.at, grain, window.start)
+    const bucket = buckets.get(key)
+    if (!bucket) continue
+    bucket.value += point.value
+    seen.add(key)
+    if (comparing && point.previous != null) {
+      previous.set(key, (previous.get(key) ?? 0) + point.previous)
+    }
+  }
+  return [...buckets.entries()].map(([key, bucket]) => ({
+    label: bucket.label,
+    value: seen.has(key) ? Math.round(bucket.value * 100) / 100 : emptyValue,
+    ...(comparing
+      ? {
+          previous: seen.has(key)
+            ? Math.round((previous.get(key) ?? 0) * 100) / 100
+            : emptyValue,
+        }
+      : {}),
+  }))
+}
+
 /**
  * Net revenue per bucket for one currency, with the previous window's buckets
  * laid over by position — the first week against the first week before it.

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { PlanDetailPage } from './pages/plan-charges'
 
@@ -75,7 +75,10 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await expect(firstActions).toBeVisible()
     const before = await rows.count()
     // Follow one charge by name: other journeys add charges to this plan.
-    const name = ((await firstActions.getAttribute('aria-label')) ?? '').replace(/^Actions for /, '')
+    const name = ((await firstActions.getAttribute('aria-label')) ?? '').replace(
+      /^Actions for /,
+      '',
+    )
     const row = rows.filter({ has: page.getByRole('button', { name: `Actions for ${name}` }) })
 
     // Two edits with known prices, so the revert has a known price to return to.

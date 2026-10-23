@@ -47,6 +47,8 @@ export {
 } from './provider'
 export type { FlexpriceProviderProps } from './provider'
 
+export { toCostAnalytics, useCustomerCostAnalytics } from './costAnalytics'
+export type { CostAnalytics } from './costAnalytics'
 export {
   toEnvironment,
   useCopyEnvironment,
@@ -82,6 +84,7 @@ export {
   useUpdateInvoiceMetadata,
   useUpdateInvoicePaymentStatus,
   useInvoice,
+  useInvoicePdfLink,
   useInvoices,
   useRecalculateInvoice,
   useSendInvoice,
@@ -262,6 +265,8 @@ export {
   toLineItemChangeRequest,
   toUpdateLineItemRequest,
   useActivateSubscription,
+  usePauseSubscription,
+  useResumeSubscription,
   useUpdateSubscriptionMetadata,
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,
@@ -278,6 +283,7 @@ export {
   toRemoveCouponRequest,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
+  useRemoveSubscriptionCoupon,
   useCreateSubscriptionCreditGrant,
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
@@ -599,6 +605,7 @@ export {
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,
+  useUpdateWalletAlerts,
   useWalletBalance,
   useWalletTransactions,
 } from './wallets'

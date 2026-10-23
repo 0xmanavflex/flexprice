@@ -15,7 +15,7 @@ export interface RevenueSearch {
 
 export const DEFAULT_REVENUE_SEARCH: RevenueSearch = {
   view: 'overview',
-  range: '90d',
+  range: '12m',
   compare: 'none',
   currency: '',
 }
@@ -35,7 +35,7 @@ export function parseRevenueSearch(search: Record<string, unknown>): RevenueSear
     : 'overview'
   const range = RANGE_OPTIONS.some((option) => option.id === search['range'])
     ? (search['range'] as RangeId)
-    : '90d'
+    : '12m'
   const compare = search['compare'] === 'previous' ? 'previous' : 'none'
   const currency = typeof search['currency'] === 'string' ? search['currency'].toUpperCase() : ''
   return { view, range, compare, currency }

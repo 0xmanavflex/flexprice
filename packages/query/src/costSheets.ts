@@ -169,6 +169,7 @@ export function useCreateCostSheet() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Cost sheet created', error: 'Could not create the cost sheet.' } },
     mutationFn: (draft: CreateCostSheet) =>
       call(() => client.costs.createCostsheet(toCreateCostSheetRequest(draft) as never)),
     onSuccess: () => {

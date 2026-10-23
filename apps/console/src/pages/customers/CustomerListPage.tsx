@@ -7,7 +7,7 @@ import {
   useDeleteCustomer,
   serverReason,
 } from '@fp/query'
-import { CustomerGrid, Toaster } from '@fp/ui/pages'
+import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { useCustomerPortal } from '@/app/customerPortal/useCustomerPortal'
@@ -92,7 +92,6 @@ export function CustomerListPage({
           />
         </ListState>
       </PageBody>
-      <Toaster />
 
       <ConfirmDialog
         open={deleting !== null}

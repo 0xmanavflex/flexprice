@@ -28,10 +28,10 @@ import {
   RANGE_OPTIONS,
   amountOf,
   customerRows as dashboardCustomerRows,
+  alignToWindow,
   formatAmount,
   percentOf,
   rangeWindow,
-  type Grain,
   type RangeId,
 } from './revenueReport'
 
@@ -71,14 +71,11 @@ const AGING: Record<
 const NOT_DUE = 'Current'
 
 const isoDay = (date: Date) => date.toISOString().slice(0, 10)
-const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' })
 const dayLabel = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
   timeZone: 'UTC',
 })
-const bucketLabel = (date: Date, grain: Grain) =>
-  grain === 'month' ? monthLabel.format(date) : dayLabel.format(date)
 
 /** The status of one report read: loading, failed, nothing to show, or ready. */
 function statusOf(query: { isPending: boolean; isError: boolean; data?: unknown }, empty: boolean) {
@@ -101,7 +98,7 @@ export function ReportsPage({
   // One window per range: a fresh `Date` each render would change every query key.
   const window = useMemo(() => rangeWindow(search.range), [search.range])
   const rangeLabel = (
-    RANGE_OPTIONS.find((option) => option.id === search.range)?.label ?? 'Last 90 days'
+    RANGE_OPTIONS.find((option) => option.id === search.range)?.label ?? 'Last 12 months'
   ).toLowerCase()
   // `from..to`, to exclusive: through the end of today.
   const range = `${isoDay(window.start)}..${isoDay(new Date(window.end.getTime() + DAY_MS))}`
@@ -238,13 +235,20 @@ export function ReportsPage({
   const contract = amountOf(summary?.fixed)
   const total = revenue.value ?? 0
 
-  const points = reportSeries(revenueSeries.data, 'invoice_total', currency).map(
-    (point: ReportPoint) => ({
-      label: bucketLabel(point.bucket, window.grain),
-      revenue: point.value,
-      ...(comparing && point.previous !== null ? { previous: point.previous } : {}),
-    }),
-  )
+  const points = alignToWindow(
+    reportSeries(revenueSeries.data, 'invoice_total', currency).map((point: ReportPoint) => ({
+      at: point.bucket,
+      value: point.value,
+      previous: point.previous,
+    })),
+    window,
+    window.grain,
+    comparing,
+  ).map((point) => ({
+    label: point.label,
+    revenue: point.value ?? 0,
+    ...(point.previous != null ? { previous: point.previous } : {}),
+  }))
 
   const customerRows: CustomerRevenueRow[] = customerRevenue.map((row) => {
     const id = row.keys['customer_id'] ?? ''
@@ -412,9 +416,18 @@ export function ReportsPage({
         },
         median: '—',
         withinWeek: '—',
-        series: reportSeries(daysSeries.data, 'days_to_pay', currency).map((point) => ({
-          label: bucketLabel(point.bucket, payGrain),
-          days: Math.round(point.value),
+        series: alignToWindow(
+          reportSeries(daysSeries.data, 'days_to_pay', currency).map((point) => ({
+            at: point.bucket,
+            value: point.value,
+          })),
+          window,
+          payGrain,
+          false,
+          null,
+        ).map((point) => ({
+          label: point.label,
+          days: point.value === null ? null : Math.round(point.value),
         })),
         payers,
         onOpenCustomer: openCustomer,
@@ -426,9 +439,13 @@ export function ReportsPage({
         ...(eventsLimited
           ? { basedOn: 'The last 7 days: the events report covers at most a week.' }
           : {}),
-        series: events.map((point) => ({
-          label: bucketLabel(point.bucket, 'day'),
-          events: point.value,
+        series: alignToWindow(
+          events.map((point) => ({ at: point.bucket, value: point.value })),
+          { start: eventsStart, end: window.end },
+          'day',
+        ).map((point) => ({
+          label: point.label,
+          events: point.value ?? 0,
         })),
         total: count.format(eventsTotal),
         weeklyAverage: count.format(eventsTotal / eventDays),

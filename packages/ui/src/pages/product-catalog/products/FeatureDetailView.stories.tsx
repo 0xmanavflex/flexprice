@@ -31,6 +31,7 @@ interface HarnessProps {
   onDuplicate: () => void
   onDelete: () => void
   onOpenChargeParent: (charge: Charge) => void
+  onAlertSettings?: () => void
 }
 
 /** One fixture feature of the requested type, with the status overridden. */
@@ -342,6 +343,21 @@ export const EditFromMenu: Story = {
       }),
     )
     await expect(args.onEditConfiguration).toHaveBeenCalled()
+  },
+}
+
+/** V1's feature menu also has Alert Settings, shown when the page offers it. */
+export const AlertSettingsFromMenu: Story = {
+  args: { onAlertSettings: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole('menuitem', {
+        name: 'Alert settings',
+      }),
+    )
+    await expect(args.onAlertSettings).toHaveBeenCalledOnce()
   },
 }
 

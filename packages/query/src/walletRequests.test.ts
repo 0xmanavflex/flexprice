@@ -17,7 +17,12 @@ import {
 describe('wallet requests', () => {
   it('sends a manual debit with the credits and a required reference', () => {
     expect(
-      toDebitRequest({ ...emptyDebit(), credits: '25', idempotencyKey: 'debit-1', description: 'Adjustment' }),
+      toDebitRequest({
+        ...emptyDebit(),
+        credits: '25',
+        idempotencyKey: 'debit-1',
+        description: 'Adjustment',
+      }),
     ).toEqual({
       credits: '25',
       idempotencyKey: 'debit-1',
@@ -190,5 +195,21 @@ describe('toWallet on the real-time balance response', () => {
     expect(wallet.creditBalance).toBe('10')
     expect(wallet.realTimeCreditBalance).toBe('-122.5')
     expect(wallet.realTimeBalance).toEqual({ amount: '-122.5', currency: 'USD' })
+  })
+})
+
+describe('toWallet alert settings', () => {
+  it('reads the balance alerts the wallet carries, and null when it has none', () => {
+    expect(
+      toWallet({
+        id: 'wallet_1',
+        alertSettings: { alertEnabled: true, critical: { threshold: '10', condition: 'below' } },
+      }).alertSettings,
+    ).toEqual({
+      alertEnabled: true,
+      thresholdType: 'percentage',
+      critical: { threshold: '10', condition: 'below' },
+    })
+    expect(toWallet({ id: 'wallet_2' }).alertSettings).toBeNull()
   })
 })

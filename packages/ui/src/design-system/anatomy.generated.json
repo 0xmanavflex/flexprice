@@ -914,6 +914,7 @@
         "OptionSelect"
       ],
       "usedBy": [
+        "EntityAlertDialog",
         "SubscriptionDetailView"
       ],
       "story": null
@@ -1054,6 +1055,20 @@
       ],
       "usedBy": [],
       "story": "./src/compositions/charts/ChartBox.stories.tsx"
+    },
+    "ChartColumn": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ChartSimpleIcon": {
+      "file": "src/reui/icons/default/outline/chart-simple.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "ChartSkeleton": {
       "file": "src/compositions/feedback/Skeletons.tsx",
@@ -1411,6 +1426,7 @@
         "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
+        "PauseContractDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "RemoveCardDialog",
@@ -2015,6 +2031,8 @@
       "composes": [
         "CalendarIcon",
         "DetailTable",
+        "EmptyState",
+        "ErrorState",
         "MetricChart",
         "Section",
         "SegmentMeter"
@@ -2076,7 +2094,7 @@
       "file": "src/pages/customers/CustomerEntitlementUsage.tsx",
       "layer": "surface",
       "composes": [
-        "DetailTable",
+        "EntitlementUsageTable",
         "Section",
         "SubTabState"
       ],
@@ -2532,7 +2550,6 @@
         "CreditGrantTable",
         "CustomerAnalyticsView",
         "CustomerDetail",
-        "CustomerEntitlementUsage",
         "CustomerEventsGrid",
         "CustomerTaxSection",
         "CustomerUsageSummary",
@@ -2768,6 +2785,7 @@
         "AddonSubscriptionsView",
         "CostMarginCard",
         "CouponRedemptionsView",
+        "CustomerAnalyticsView",
         "CustomerDetail",
         "CustomerTaxSection",
         "CustomerWalletView",
@@ -2859,9 +2877,22 @@
       ],
       "usedBy": [
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/EntitlementUsage.stories.tsx"
+    },
+    "EntityAlertDialog": {
+      "file": "src/pages/shared/EntityAlertDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChargeAlertForm",
+        "ErrorState",
+        "FormDialog",
+        "LoadingRows"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/shared/EntityAlertDialog.stories.tsx"
     },
     "EntityCell": {
       "file": "src/pages/shared/cells.tsx",
@@ -3024,6 +3055,8 @@
         "AccessProvider",
         "AccessScope",
         "CheckoutLinkPanel",
+        "CustomerAnalyticsView",
+        "EntityAlertDialog",
         "EntityList",
         "HostedInvoiceView",
         "IntegrationLogo",
@@ -3742,10 +3775,12 @@
         "CustomerWalletView",
         "DataExportDialog",
         "DownloadDialog",
+        "EntityAlertDialog",
         "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
+        "PauseContractDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "RemoveCardDialog",
@@ -4705,6 +4740,7 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
+        "EntityAlertDialog",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
@@ -5342,6 +5378,18 @@
       "usedBy": [],
       "story": null
     },
+    "PauseContractDialog": {
+      "file": "src/pages/contracts/PauseContractDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "FormDialog"
+      ],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
+      "story": null
+    },
     "PayInvoiceDialog": {
       "file": "src/pages/customer-portal/PortalDialogs.tsx",
       "layer": "surface",
@@ -5452,6 +5500,7 @@
         "PriceUnitGrid",
         "RowActionsMenu",
         "Status",
+        "SubscriptionDetailView",
         "SubscriptionForm",
         "TaxRateGrid"
       ],
@@ -7176,7 +7225,9 @@
         "MetadataCard",
         "OverviewTiles",
         "PackageIcon",
+        "PauseContractDialog",
         "PaymentStatusBadge",
+        "PencilIcon",
         "Pill",
         "PlusIcon",
         "Properties",
@@ -9723,7 +9774,8 @@
       "title": "Building blocks/Tables & lists/DetailTable",
       "component": "DetailTable",
       "uses": [
-        "DetailTable"
+        "DetailTable",
+        "Section"
       ]
     },
     "./src/pages/shared/EntitlementUsage.stories.tsx": {
@@ -9732,6 +9784,13 @@
       "uses": [
         "EntitlementUsage",
         "EntitlementUsageTable"
+      ]
+    },
+    "./src/pages/shared/EntityAlertDialog.stories.tsx": {
+      "title": "Building blocks/Feedback/EntityAlertDialog",
+      "component": "EntityAlertDialog",
+      "uses": [
+        "EntityAlertDialog"
       ]
     },
     "./src/pages/shared/EntityHeader.stories.tsx": {
@@ -10185,6 +10244,7 @@
       "route": "/features/$featureId",
       "uses": [
         "ConfirmDialog",
+        "EntityAlertDialog",
         "FeatureCloneDialog",
         "FeatureDetailView"
       ]
@@ -10503,6 +10563,7 @@
       "uses": [
         "ConfirmDialog",
         "DateInput",
+        "EntityAlertDialog",
         "OptionSelect",
         "SubscriptionDetailView"
       ]

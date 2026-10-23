@@ -161,7 +161,6 @@ export function EntitlementUsageTable({ rows, locale }: EntitlementUsageTablePro
     <DetailTable<EntitlementUsageRow>
       compact
       toolbar
-      footer={false}
       label="Entitlements"
       noun="features"
       rows={rows}
@@ -239,7 +238,7 @@ export function EntitlementUsageTable({ rows, locale }: EntitlementUsageTablePro
             ) : (
               <EmDash />
             ),
-        }
+        },
       ]}
     />
   )

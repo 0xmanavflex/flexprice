@@ -162,6 +162,7 @@ export function useCreateTaxRate() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Tax rate created', error: 'Could not create the tax rate.' } },
     mutationFn: (draft: CreateTaxRate) =>
       call(() => client.taxRates.createTaxRate(toCreateTaxRateRequest(draft) as never)),
     onSuccess: () => {
