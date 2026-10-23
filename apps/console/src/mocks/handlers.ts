@@ -2489,6 +2489,10 @@ export const handlers = [
   // Self-billing, off unless a mock account state is picked — see `selfBillingHandlers.ts`.
   ...selfBillingHandlers,
 
+  // Sample events: the backend accepts the request and streams later. The
+  // console only waits for this 200.
+  http.post(`${BASE}/portal/onboarding/events`, () => HttpResponse.json({})),
+
   // Environments. Unlike the create handlers further down — which echo the
   // record back and leave the corpus alone — this one appends, because the
   // console switches to what you just created and then refetches the list. An

@@ -221,7 +221,16 @@ export function CustomerDetailPage({
         onCopyPortalLink={() => void portal.copy({ externalId: customer.data?.externalId })}
         {...(streamTarget && !sampleEvents.isPending
           ? { onStreamEvents: () => streamEvents(streamTarget.id, streamTarget.planName) }
-          : {})}
+          : {
+              streamEventsReason:
+                environments.current.kind !== 'sandbox' || !environments.current.id
+                  ? 'Sample events are only available in a sandbox.'
+                  : subscriptions.isPending
+                    ? "Checking this customer's contracts."
+                    : sampleEvents.isPending
+                      ? 'A sample stream is already starting.'
+                      : 'Needs an active or trialing contract.',
+            })}
         onOpenInvoice={(invoiceId) =>
           void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
         }

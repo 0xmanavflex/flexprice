@@ -1,6 +1,6 @@
 import { RBAC_ENTITY } from '@fp/domain'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
-import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from '@ui/icons'
+import { CheckCircle2Icon, GaugeIcon, PlusIcon, SlidersHorizontalIcon, TypeIcon } from '@ui/icons'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -43,7 +43,7 @@ export interface EntitlementTableProps extends Partial<SubTabQuery> {
 
 const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
   [FeatureType.Metered]: GaugeIcon,
-  [FeatureType.Boolean]: ToggleRightIcon,
+  [FeatureType.Boolean]: CheckCircle2Icon,
   [FeatureType.Static]: TypeIcon,
   [FeatureType.Config]: SlidersHorizontalIcon,
 }
@@ -146,17 +146,17 @@ function EntitlementTableInner({
               const Icon = TYPE_ICON[entitlement.featureType]
               const label = entitlement.featureName ?? entitlement.featureId
               return (
-                <span className="flex items-center gap-2.5">
-                  <Icon aria-hidden className="text-muted-foreground size-4" />
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />
                   {onOpenFeature ? (
-                    <span className="min-w-0 font-medium">
+                    <span className="min-w-0 truncate font-medium">
                       <EntityLink
                         label={label}
                         onOpen={() => onOpenFeature(entitlement.featureId)}
                       />
                     </span>
                   ) : (
-                    <span className="font-medium">{label}</span>
+                    <span className="min-w-0 truncate font-medium">{label}</span>
                   )}
                 </span>
               )

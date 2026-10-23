@@ -49,6 +49,13 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
   test('a new customer is put on a contract, and its first invoice appears', async ({ page }) => {
     await createCustomer(page, 'Journey Contracts Ltd')
 
+    // No live contract yet, so sample events stay in the menu but cannot run.
+    await page.getByRole('button', { name: 'Customer actions' }).click()
+    const unavailable = page.getByRole('menuitem', { name: /Stream sample events/ })
+    await expect(unavailable).toBeDisabled()
+    await expect(unavailable).toContainText('Needs an active or trialing contract.')
+    await page.keyboard.press('Escape')
+
     await page.getByRole('button', { name: 'Customer actions' }).click()
     await page.getByRole('menuitem', { name: 'Create contract' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\/contracts\/new/)
@@ -69,6 +76,14 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
 
     // Back on the customer, which now has a contract and the invoice it issued.
     await expect(page).toHaveURL(/\/customers\/(?!new\b)[^/?]+(?:\?|$)/)
+
+    // The new contract is live, so the same menu item can stream sample events.
+    await page.getByRole('button', { name: 'Customer actions' }).click()
+    const stream = page.waitForRequest(isWrite('POST', /\/portal\/onboarding\/events$/))
+    await page.getByRole('menuitem', { name: 'Stream sample events' }).click()
+    await stream
+    await expect(page.getByText('Streaming sample events')).toBeVisible()
+
     await page.getByRole('tab', { name: 'Invoices' }).click()
     const invoices = page.getByRole('region', { name: /Invoices table/ })
     await expect(invoices.getByRole('row').nth(1)).toBeVisible()

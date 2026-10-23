@@ -118,6 +118,8 @@ export function CopyEmail({ value }: { value: string }) {
 export interface DetailMenuItem {
   id: string
   label: string
+  /** A line under the label, such as why a disabled item cannot run. */
+  description?: string
   /** Leading glyph; decorative, the label names the item. Required so every item lines up. */
   icon: ReactElement
   onSelect: () => void
@@ -161,9 +163,17 @@ export function DetailMoreMenu({
       disabled={(item.disabled ?? false) || denied(item)}
       {...(item.destructive ? { variant: 'destructive' as const } : {})}
       onClick={item.onSelect}
+      {...(item.description ? { className: 'items-start' } : {})}
     >
       {item.icon}
-      {item.label}
+      {item.description ? (
+        <span className="flex min-w-0 flex-col">
+          <span>{item.label}</span>
+          <span className="text-muted-foreground text-xs">{item.description}</span>
+        </span>
+      ) : (
+        item.label
+      )}
       {locked && denied(item) ? <LockedMark /> : null}
     </DropdownMenuItem>
   )
@@ -174,7 +184,10 @@ export function DetailMoreMenu({
       >
         <MoreHorizontalIcon aria-hidden="true" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent
+        align="end"
+        className={items.some((item) => item.description) ? 'w-72' : 'w-52'}
+      >
         {regular.map(renderItem)}
         {regular.length > 0 && destructive.length > 0 ? <DropdownMenuSeparator /> : null}
         {destructive.map(renderItem)}

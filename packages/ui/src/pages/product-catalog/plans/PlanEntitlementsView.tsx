@@ -1,6 +1,6 @@
 import { RBAC_ENTITY } from '@fp/domain'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
-import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from '@ui/icons'
+import { CheckCircle2Icon, GaugeIcon, PlusIcon, SlidersHorizontalIcon, TypeIcon } from '@ui/icons'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { EmDash } from '../../shared/cells'
 import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
@@ -44,7 +44,7 @@ const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumF
 
 const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
   [FeatureType.Metered]: GaugeIcon,
-  [FeatureType.Boolean]: ToggleRightIcon,
+  [FeatureType.Boolean]: CheckCircle2Icon,
   [FeatureType.Static]: TypeIcon,
   [FeatureType.Config]: SlidersHorizontalIcon,
 }
@@ -122,9 +122,9 @@ function PlanEntitlementsViewInner({
             cell: (e) => {
               const Icon = TYPE_ICON[e.featureType]
               return (
-                <span className="flex items-center gap-2.5">
-                  <Icon aria-hidden className="text-muted-foreground size-4" />
-                  <span className="font-medium">{e.featureName ?? e.featureId}</span>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />
+                  <span className="min-w-0 truncate font-medium">{e.featureName ?? e.featureId}</span>
                 </span>
               )
             },
