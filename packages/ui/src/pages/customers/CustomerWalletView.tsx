@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
+  BellIcon,
   ArrowUpRightIcon,
   InfoIcon,
   MinusIcon,
@@ -91,6 +92,8 @@ export interface CustomerWalletViewProps {
   terminateError?: string | null
   onSaveAutoTopup: (draft: AutoTopup) => Promise<unknown>
   autoTopupError?: string | null
+  /** More menu: the selected wallet's balance alerts. Omitted, the item is hidden. */
+  onAlertSettings?: () => void
   /** Called when a dialog opens, so a stale error from the last attempt is cleared. */
   onResetErrors?: () => void
 }
@@ -121,6 +124,7 @@ export function CustomerWalletView({
   onDebit,
   debitError = null,
   onTerminate,
+  onAlertSettings,
   terminateError = null,
   onSaveAutoTopup,
   autoTopupError = null,
@@ -255,6 +259,12 @@ export function CustomerWalletView({
                 <RepeatIcon className="text-muted-foreground" aria-hidden="true" />
                 Auto top-up settings
               </DropdownMenuItem>
+              {onAlertSettings ? (
+                <DropdownMenuItem disabled={closed} onClick={onAlertSettings}>
+                  <BellIcon className="text-muted-foreground" aria-hidden="true" />
+                  Alert settings
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={() => open('create')}>
                 <WalletIcon className="text-muted-foreground" aria-hidden="true" />
                 Create wallet

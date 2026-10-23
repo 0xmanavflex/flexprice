@@ -603,6 +603,7 @@ export {
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,
+  useUpdateWalletAlerts,
   useWalletBalance,
   useWalletTransactions,
 } from './wallets'
