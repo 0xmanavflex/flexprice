@@ -2017,6 +2017,8 @@
       "composes": [
         "CalendarIcon",
         "DetailTable",
+        "EmptyState",
+        "ErrorState",
         "MetricChart",
         "Section",
         "SegmentMeter"
@@ -2770,6 +2772,7 @@
         "AddonSubscriptionsView",
         "CostMarginCard",
         "CouponRedemptionsView",
+        "CustomerAnalyticsView",
         "CustomerDetail",
         "CustomerTaxSection",
         "CustomerWalletView",
@@ -3038,6 +3041,7 @@
         "AccessProvider",
         "AccessScope",
         "CheckoutLinkPanel",
+        "CustomerAnalyticsView",
         "EntityAlertDialog",
         "EntityList",
         "HostedInvoiceView",

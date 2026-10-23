@@ -219,4 +219,21 @@ test.describe('a customer detail page', () => {
     expect(body).toMatchObject({ entity_type: 'customer', method: 'push' })
     await expect(page.getByText('Pushing customer to Stripe')).toBeVisible()
   })
+
+  test('the Analytics tab reads usage and cost analytics for this customer', async ({ page }) => {
+    await openFirstCustomer(page)
+    const usage = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/events/analytics'),
+    )
+    const costs = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/costs/analytics'),
+    )
+    await page.getByRole('tab', { name: 'Analytics' }).click()
+    await Promise.all([usage, costs])
+    await expect(page.getByText('Usage breakdown').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText('Margin %')).toBeVisible()
+    // Real figures, not the dash an absent one reads as.
+    await expect(page.getByText(/^\d+(\.\d)?%$/).first()).toBeVisible()
+    if (process.env['SHOT']) await page.screenshot({ path: process.env['SHOT'], fullPage: true })
+  })
 })

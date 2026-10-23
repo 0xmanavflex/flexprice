@@ -506,11 +506,16 @@ export type {
   CustomerUsageSummaryProps,
   CustomerUsageSummaryRow,
 } from './customers/CustomerUsageSummary'
-export { CustomerAnalyticsView, DEMO_FEATURE_ANALYTICS } from './customers/CustomerAnalyticsView'
+export {
+  CustomerAnalyticsView,
+  CustomerAnalyticsViewProvenance,
+} from './customers/CustomerAnalyticsView'
 export type {
   CustomerAnalyticsViewProps,
   FeatureAnalytics,
   AnalyticsQuery,
+  AnalyticsTotals,
+  AnalyticsFeatureOption,
 } from './customers/CustomerAnalyticsView'
 
 export { CatalogDetailFrame } from './product-catalog/catalog-detail/CatalogDetailFrame'
