@@ -28,6 +28,8 @@ export interface Invoice {
   customerId: string
   /** Display name, already resolved. The UI never joins data. */
   customerName: string
+  /** The contract that raised it; absent for one-off invoices and older reads. */
+  subscriptionId?: string | null
   status: InvoiceStatus
   /**
    * What the *money* did, as opposed to what the document did.

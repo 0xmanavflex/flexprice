@@ -337,3 +337,11 @@ describe('runInvoiceEdit — the whole edit page, in the order the API needs', (
     expect(log).toEqual([])
   })
 })
+
+describe('toInvoice subscription', () => {
+  // The row menu's "View contract" needs it; one-off invoices have none.
+  it('keeps the contract that raised the invoice, and null when there is none', () => {
+    expect(toInvoice({ id: 'inv_1', subscriptionId: 'subs_1' }).subscriptionId).toBe('subs_1')
+    expect(toInvoice({ id: 'inv_2' }).subscriptionId).toBeNull()
+  })
+})

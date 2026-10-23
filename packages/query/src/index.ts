@@ -82,6 +82,7 @@ export {
   useUpdateInvoiceMetadata,
   useUpdateInvoicePaymentStatus,
   useInvoice,
+  useInvoicePdfLink,
   useInvoices,
   useRecalculateInvoice,
   useSendInvoice,
