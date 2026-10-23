@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { PricingSchema } from '@fp/domain'
 import { useApplyPricingSchema, useParsePricing } from '@fp/query'
 import type { ApplyStep } from '@fp/query'
-import { PlanAiSetupView, Toaster, toast } from '@fp/ui/pages'
+import { PlanAiSetupView, toast } from '@fp/ui/pages'
 import { toSubmitError } from './planMessages'
 
 /** How long "Your pricing has been created" stays up before Plans, as the reference. */
@@ -45,7 +45,6 @@ export function PlanAiSetupPage({ onDone }: PlanAiSetupPageProps) {
 
   return (
     <>
-      <Toaster />
       <PlanAiSetupView
         description={description}
         onDescriptionChange={(value) => {

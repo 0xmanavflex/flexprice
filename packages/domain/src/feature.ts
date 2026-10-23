@@ -1,6 +1,6 @@
 import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
-import { alertSettingConfigSchema } from './alertSetting'
+import { type AlertSettingConfig, alertSettingConfigSchema } from './alertSetting'
 import { KEY_PREFIX, suggestKey } from './suggestKey'
 
 /**
@@ -272,6 +272,8 @@ export function emptyCloneFeature(source: { name: string; description?: string }
 export interface Feature {
   id: string
   name: string
+  /** Usage alert thresholds stored on the feature (`alert_settings`); null when none. */
+  alertSettings?: AlertSettingConfig | null
   lookupKey: string
   description: string
   type: FeatureType

@@ -914,6 +914,7 @@
         "OptionSelect"
       ],
       "usedBy": [
+        "EntityAlertDialog",
         "SubscriptionDetailView"
       ],
       "story": null
@@ -1411,6 +1412,7 @@
         "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
+        "PauseContractDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "RemoveCardDialog",
@@ -2015,6 +2017,8 @@
       "composes": [
         "CalendarIcon",
         "DetailTable",
+        "EmptyState",
+        "ErrorState",
         "MetricChart",
         "Section",
         "SegmentMeter"
@@ -2768,6 +2772,7 @@
         "AddonSubscriptionsView",
         "CostMarginCard",
         "CouponRedemptionsView",
+        "CustomerAnalyticsView",
         "CustomerDetail",
         "CustomerTaxSection",
         "CustomerWalletView",
@@ -2862,6 +2867,18 @@
         "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/EntitlementUsage.stories.tsx"
+    },
+    "EntityAlertDialog": {
+      "file": "src/pages/shared/EntityAlertDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChargeAlertForm",
+        "ErrorState",
+        "FormDialog",
+        "LoadingRows"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/shared/EntityAlertDialog.stories.tsx"
     },
     "EntityCell": {
       "file": "src/pages/shared/cells.tsx",
@@ -3024,6 +3041,8 @@
         "AccessProvider",
         "AccessScope",
         "CheckoutLinkPanel",
+        "CustomerAnalyticsView",
+        "EntityAlertDialog",
         "EntityList",
         "HostedInvoiceView",
         "IntegrationLogo",
@@ -3742,10 +3761,12 @@
         "CustomerWalletView",
         "DataExportDialog",
         "DownloadDialog",
+        "EntityAlertDialog",
         "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
+        "PauseContractDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "RemoveCardDialog",
@@ -4705,6 +4726,7 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
+        "EntityAlertDialog",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
@@ -5342,6 +5364,18 @@
       "usedBy": [],
       "story": null
     },
+    "PauseContractDialog": {
+      "file": "src/pages/contracts/PauseContractDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "FormDialog"
+      ],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
+      "story": null
+    },
     "PayInvoiceDialog": {
       "file": "src/pages/customer-portal/PortalDialogs.tsx",
       "layer": "surface",
@@ -5452,6 +5486,7 @@
         "PriceUnitGrid",
         "RowActionsMenu",
         "Status",
+        "SubscriptionDetailView",
         "SubscriptionForm",
         "TaxRateGrid"
       ],
@@ -7176,7 +7211,9 @@
         "MetadataCard",
         "OverviewTiles",
         "PackageIcon",
+        "PauseContractDialog",
         "PaymentStatusBadge",
+        "PencilIcon",
         "Pill",
         "PlusIcon",
         "Properties",
@@ -9734,6 +9771,13 @@
         "EntitlementUsageTable"
       ]
     },
+    "./src/pages/shared/EntityAlertDialog.stories.tsx": {
+      "title": "Building blocks/Feedback/EntityAlertDialog",
+      "component": "EntityAlertDialog",
+      "uses": [
+        "EntityAlertDialog"
+      ]
+    },
     "./src/pages/shared/EntityHeader.stories.tsx": {
       "title": "Building blocks/Detail pages/EntityHeader",
       "component": "EntityHeader",
@@ -10185,6 +10229,7 @@
       "route": "/features/$featureId",
       "uses": [
         "ConfirmDialog",
+        "EntityAlertDialog",
         "FeatureCloneDialog",
         "FeatureDetailView"
       ]
@@ -10442,10 +10487,10 @@
         "PricingCatalogBlock"
       ]
     },
-    "RevenuePage": {
-      "file": "apps/console/src/pages/revenue/RevenuePage.tsx",
-      "pattern": "Dashboard",
-      "route": "/revenue",
+    "ReportsPage": {
+      "file": "apps/console/src/pages/revenue/ReportsPage.tsx",
+      "pattern": "Other",
+      "route": "/reports",
       "uses": [
         "RevenueReport"
       ]
@@ -10503,6 +10548,7 @@
       "uses": [
         "ConfirmDialog",
         "DateInput",
+        "EntityAlertDialog",
         "OptionSelect",
         "SubscriptionDetailView"
       ]

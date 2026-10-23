@@ -2,6 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { InvoiceStatus, type Invoice } from '@fp/domain'
 import {
   useFinalizeInvoice,
+  useInvoicePdfLink,
   useRecalculateInvoice,
   useSendInvoice,
   useVoidInvoice,
@@ -9,6 +10,9 @@ import {
 import {
   CheckCircle2Icon,
   CreditCardIcon,
+  DownloadIcon,
+  FileTextIcon,
+  PencilIcon,
   ExternalLinkIcon,
   FileMinusIcon,
   RefreshCwIcon,
@@ -27,6 +31,10 @@ export interface InvoiceRowActionOptions {
   onIssueCreditNote?: ((invoiceId: string) => void) | undefined
   /** Open the invoice's customer; left out where the customer is already on screen. */
   onOpenCustomer?: ((customerId: string) => void) | undefined
+  /** Open the edit page: drafts and unpaid invoices, as V1 allows. */
+  onEditInvoice?: ((invoiceId: string) => void) | undefined
+  /** Open the contract that raised the invoice. */
+  onOpenContract?: ((subscriptionId: string) => void) | undefined
 }
 
 /**
@@ -41,7 +49,10 @@ export function useInvoiceRowActions({
   onRecordPayment,
   onIssueCreditNote,
   onOpenCustomer,
+  onEditInvoice,
+  onOpenContract,
 }: InvoiceRowActionOptions) {
+  const pdfLink = useInvoicePdfLink()
   const finalize = useFinalizeInvoice()
   const recalculate = useRecalculateInvoice()
   const send = useSendInvoice()
@@ -110,6 +121,39 @@ export function useInvoiceRowActions({
         })
       }
     }
+    if (onEditInvoice && (invoice.status === InvoiceStatus.Draft || open)) {
+      items.push({
+        label: 'Edit invoice',
+        icon: <PencilIcon aria-hidden className="size-4" />,
+        onSelect: () => onEditInvoice(invoice.id),
+      })
+    }
+    if (invoice.status !== InvoiceStatus.Draft) {
+      items.push({
+        label: 'Download invoice',
+        icon: <DownloadIcon aria-hidden className="size-4" />,
+        readOnly: true,
+        onSelect: () => {
+          // Opened on the click so pop-up blockers allow it, then pointed at the PDF.
+          const tab = window.open('about:blank', '_blank')
+          if (tab) tab.opener = null
+          pdfLink(invoice.id)
+            .then((url) => {
+              if (!url) {
+                tab?.close()
+                toast.error('This invoice has no PDF yet.')
+                return
+              }
+              if (tab) tab.location.replace(url)
+              else window.open(url, '_blank', 'noopener')
+            })
+            .catch(() => {
+              tab?.close()
+              toast.error('Could not download the invoice. Try again.')
+            })
+        },
+      })
+    }
     // The link the customer receives: issued once an invoice is finalized.
     if (invoice.status !== InvoiceStatus.Draft) {
       items.push({
@@ -124,6 +168,14 @@ export function useInvoiceRowActions({
         label: 'View customer',
         icon: <UserIcon aria-hidden className="size-4" />,
         onSelect: () => onOpenCustomer(invoice.customerId),
+      })
+    }
+    if (onOpenContract && invoice.subscriptionId) {
+      const subscriptionId = invoice.subscriptionId
+      items.push({
+        label: 'View contract',
+        icon: <FileTextIcon aria-hidden className="size-4" />,
+        onSelect: () => onOpenContract(subscriptionId),
       })
     }
     if (open) {

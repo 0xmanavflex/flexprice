@@ -56,7 +56,8 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
         trail={[{ label: 'Features', onClick: onCancel }, { label: 'Create feature' }]}
         {...formProps}
         isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error, 'create')}
+        // The API's refusal is a toast (MutationToasts); validation stays in the form.
+        submitError={null}
         onSubmit={(draft: CreateFeature) =>
           create.mutate(draft, {
             onSuccess: (created) => props.onDone((created as { id?: string }).id ?? ''),

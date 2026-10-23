@@ -62,6 +62,10 @@ export interface FeatureUsageRow {
   eventCount: number
   usage: number
   points: UsagePoint[]
+  /** The meter behind the feature, to match its row in the cost analytics. */
+  meterId: string
+  /** What this feature's usage is billed at, after discounts. Null when the server did not price it. */
+  revenue: Money | null
 }
 
 export interface UsageAnalytics {
@@ -86,6 +90,10 @@ export interface UsageAnalyticsQuery {
   windowSize: UsageWindowSize
   /** Narrow to one customer. Omitted means the whole tenant. */
   externalCustomerId?: string | undefined
+  /** Narrow to these features. Omitted or empty means every feature. */
+  featureIds?: readonly string[] | undefined
+  /** Add the usage of child customers linked through a subscription hierarchy. */
+  includeChildren?: boolean | undefined
 }
 
 /**
@@ -102,6 +110,9 @@ interface AnalyticsPointWire {
 
 interface AnalyticsItemWire {
   featureId?: string | undefined
+  meterId?: string | undefined
+  totalCost?: string | undefined
+  currency?: string | undefined
   eventName?: string | undefined
   eventCount?: number | undefined
   totalUsage?: string | undefined
@@ -142,7 +153,13 @@ function toPoint(wire: AnalyticsPointWire): UsagePoint | null {
   }
 }
 
-function toFeatureRow(wire: AnalyticsItemWire): FeatureUsageRow {
+/** A server price as money, or null when there is none to show. */
+function priced(amount: string | undefined, currency: string | undefined): Money | null {
+  const code = currency?.trim() ?? ''
+  return amount !== undefined && amount !== '' && code !== '' ? money(amount, code) : null
+}
+
+function toFeatureRow(wire: AnalyticsItemWire, currency?: string): FeatureUsageRow {
   const points = (wire.points ?? [])
     .map(toPoint)
     .filter((point): point is UsagePoint => point !== null)
@@ -159,6 +176,10 @@ function toFeatureRow(wire: AnalyticsItemWire): FeatureUsageRow {
     eventCount: wire.eventCount ?? 0,
     usage: quantity(wire.totalUsage),
     points,
+    meterId: wire.meterId ?? '',
+    // `total_cost` on an analytics item is what the usage bills at after
+    // discounts — revenue, not what it costs to serve.
+    revenue: priced(wire.totalCost, wire.currency || currency),
   }
 }
 
@@ -190,7 +211,7 @@ function combineSeries(features: FeatureUsageRow[]): UsagePoint[] {
 
 export function toUsageAnalytics(wire: AnalyticsResponseWire): UsageAnalytics {
   const features = (wire.items ?? [])
-    .map(toFeatureRow)
+    .map((item) => toFeatureRow(item, wire.currency))
     .sort((a, b) => b.usage - a.usage || b.eventCount - a.eventCount)
 
   const points = combineSeries(features)
@@ -224,6 +245,8 @@ async function fetchUsageAnalytics(
       ...(query.externalCustomerId !== undefined
         ? { externalCustomerId: query.externalCustomerId }
         : {}),
+      ...(query.featureIds?.length ? { featureIds: [...query.featureIds] } : {}),
+      ...(query.includeChildren ? { includeChildren: true } : {}),
     } as never),
   )) as AnalyticsResponseWire
 
@@ -237,6 +260,8 @@ function analyticsFilter(query: UsageAnalyticsQuery): Record<string, unknown> {
     end: query.window.end.toISOString(),
     windowSize: query.windowSize,
     customer: query.externalCustomerId ?? '',
+    features: [...(query.featureIds ?? [])].sort(),
+    children: query.includeChildren ?? false,
   }
 }
 

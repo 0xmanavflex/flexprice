@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import {
-  ApiError,
   explainContractHierarchyError,
   useAddons,
   useCoupons,
@@ -13,7 +12,6 @@ import {
   usePlans,
   usePrices,
   useTaxRates,
-  serverReason,
 } from '@fp/query'
 import {
   AddonStatus,
@@ -171,9 +169,9 @@ export function SubscriptionFormPage({
       onStepChange={onStepChange}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={
-        explainContractHierarchyError(create.error, nameOf) ?? toSubmitError(create.error)
-      }
+      // The hierarchy explanation is guidance, so it stays at the top; every
+      // other refusal from the API is a toast (MutationToasts).
+      submitError={explainContractHierarchyError(create.error, nameOf)}
       onSubmit={(draft) =>
         create.mutate(draft, {
           onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),
@@ -189,22 +187,4 @@ function addonType(fixed: number, usage: number): string | undefined {
   if (fixed > 0) return 'Fixed'
   if (usage > 0) return 'Usage'
   return undefined
-}
-
-function toSubmitError(error: unknown): string | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'invalid':
-        return error.message || 'Check the details and try again.'
-      case 'forbidden':
-        return serverReason(error) ?? 'You do not have permission to create contracts here.'
-      case 'network':
-        return 'Could not reach Flexprice. Check your connection and try again.'
-      default:
-        return serverReason(error) ?? 'Could not create the contract. Try again.'
-    }
-  }
-  return 'Could not create the contract. Try again.'
 }

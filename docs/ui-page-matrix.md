@@ -29,18 +29,18 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | credit-notes | `CreditNoteDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, MetricRail, Section | CreditNoteDetailView |
 | credit-notes | `CreditNoteFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | CreditNoteForm |
 | credit-notes | `CreditNoteListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | CreditNoteGrid, ListState, PageBody |
-| customers | `CustomerDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EmptyState, EntityList, FilterBar, FormCard, FormDialog, RowActionsMenu, Section, SimpleTable, SortMenu | CUSTOMER_TABS, CustomerDetail, CustomerEntitlementUsage, CustomerTab, Toaster |
+| customers | `CustomerDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EmptyState, EntityList, FilterBar, FormCard, FormDialog, RowActionsMenu, Section, SimpleTable, SortMenu | CUSTOMER_TABS, CustomerDetail, CustomerEntitlementUsage, CustomerTab |
 | customers | `CustomerFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | CustomerForm |
-| customers | `CustomerListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CustomerGrid, ListState, PageBody, Toaster |
+| customers | `CustomerListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CustomerGrid, ListState, PageBody |
 | environments | `EnvironmentCopyFormPage` | Form | Field, FormDialog | EnvironmentCopyForm |
-| environments | `EnvironmentFormPage` | Form | Field, FormDialog | EnvironmentContact, EnvironmentForm, ProductionOffer |
+| environments | `EnvironmentFormPage` | Form | Field, FormDialog | EnvironmentForm, ProductionOffer |
 | environments | `EnvironmentRenameFormPage` | Form | Field, FormDialog | EnvironmentRenameForm |
 | events | `EventListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | DataFreshness, EMPTY_CATALOGUE, EventDetailSheet, EventGrid, ListState, PageBody |
 | exports | `ConnectionExportsPage` | Other | ChoiceCards, ConfirmDialog, DetailHeader, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SimpleTable, SortMenu | ConnectionExports, DataExportGrid, ErrorState, ListState, PageLoadingState |
 | exports | `DataExportDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SimpleTable, SortMenu | DataExportDetail, DataExportTab, ErrorState, ExportRunList, PageLoadingState |
 | exports | `ExportListPage` | List | ChoiceCards, ConfirmDialog, DetailHeader, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SimpleTable, SortMenu | DataExportGrid, ExportsOverview, ListState |
 | exports | `S3ConnectionsPage` | Other | ChoiceCards, ConfirmDialog, DetailHeader, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SimpleTable, SortMenu | S3ConnectionList |
-| features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, MetricRail, RowActionsMenu, Section, SortMenu | FeatureCloneDialog, FeatureDetailView, FeatureTab |
+| features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, MetricRail, RowActionsMenu, Section, SortMenu | EntityAlertDialog, FeatureCloneDialog, FeatureDetailView, FeatureTab |
 | features | `FeatureFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, FeatureForm, LoadingRows, PageBody |
 | features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, FeatureLinkage, ListState, PageBody |
 | groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | GroupForm |
@@ -48,14 +48,14 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | home | `HomePage` | Dashboard | Panel | CUSTOM_RANGE_ID, DashboardHome |
 | integrations | `IntegrationListPage` | List | ConfirmDialog, ConnectorCard, EmptyState, Field, WorkflowStepper | ConnectIntegrationSheet, ConnectionContext, IntegrationLogo, IntegrationsBlock, ManageConnectionSheet |
 | integrations | `OAuthCallbackPage` | Other | — | Button, ErrorState, PageBody, PageLoadingState |
-| invoices | `InvoiceDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SortMenu | InvoiceDetailView, InvoicePendingAction, PaymentStatusDialog, Toaster |
+| invoices | `InvoiceDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SortMenu | InvoiceDetailView, InvoicePendingAction, PaymentStatusDialog |
 | invoices | `InvoiceEditPage` | Form | ConfirmDialog, Field | AppFailure, EditableInvoice, EditableLine, InvoiceEditDraft, InvoiceForm, LoadingRows, PageBody |
 | invoices | `InvoiceFormPage` | Form | ConfirmDialog, Field | InvoiceForm, LoadingRows, PageBody |
-| invoices | `InvoiceListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | InvoiceGrid, ListState, PageBody, Toaster |
+| invoices | `InvoiceListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | InvoiceGrid, ListState, PageBody |
 | payments | `PaymentDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, Field, FormCard, MetricRail | AppFailure, CatalogDetailFrame, CreditCardIcon, EditableCard, EntityLink, IntegrationMark, LoadingRows, PageBody, PaymentStatusBadge, Pill, PlayIcon, Trash2Icon |
 | payments | `PaymentFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | LoadingRows, PageBody, PaymentForm |
 | payments | `PaymentListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | ListState, PageBody, PaymentGrid |
-| plans | `PlanAiSetupPage` | Other | Section, SimpleTable | PlanAiSetupView, Toaster |
+| plans | `PlanAiSetupPage` | Other | Section, SimpleTable | PlanAiSetupView |
 | plans | `PlanDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, MetricRail, RowActionsMenu, Section, SortMenu | AddChargeDialog, ArchiveIcon, Button, ContractIntegrations, ContractIntegrationsProps, CopyIcon, CreditGrantCreateForm, CreditGrantEditForm, DetailBreadcrumb, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EditableCard, EntitlementCreateForm, EntitlementEditForm, FeatureOption, LayersIcon, MetadataCard, MoreHorizontalIcon, PencilIcon, Pill, PlanChargesView, PlanCreditGrantsView, PlanCustomerPreview, PlanEntitlementsView, PlugIcon, RefreshCwIcon, RelatedCard, Status |
 | plans | `PlanFormPage` | Form | ChoiceCards, Field, FormActions, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, PlanForm, PlanFormValue |
 | plans | `PlanListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PlanGrid |
@@ -63,15 +63,15 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | price-units | `PriceUnitFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | PriceUnitForm |
 | price-units | `PriceUnitListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |
 | pricing-widget | `PricingWidgetPage` | Other | EmptyState | PricingCatalogBlock |
-| revenue | `RevenuePage` | Dashboard | DetailTabs, EntityList, FilterBar, Panel, SortMenu | ReportStatus, RevenueReport |
+| revenue | `ReportsPage` | Other | DetailTabs, EntityList, FilterBar, Panel, SortMenu | AgingBucket, CustomerRevenueRow, OverdueCustomerRow, PayerRow, ReportStatus, RevenueReport |
 | selfBilling | `CheckoutReturnPage` | Other | — | CheckoutReturnView, NextStep |
 | selfBilling | `UpgradePage` | Other | Field | PageLoadingState, UpgradeView |
 | selfBilling | `UsageBillingPage` | Other | Section, SimpleTable | UsageBillingView |
 | settings | `SettingsPage` | Settings | DetailTabs, EmptyState | BadgeDollarSignIcon, BellIcon, Building2Icon, CoinsIcon, EmbeddedPageContext, GaugeIcon, PaletteIcon, PercentIcon, ReceiptTextIcon, RepeatIcon, SettingsSection, SettingsShell, SmileIcon, TagIcon, TicketPercentIcon, UsersIcon, WriteGate |
 | subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
-| subscriptions | `SubscriptionDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Properties, RowActionsMenu, Section, SortMenu | DateInput, Input, OptionSelect, SubscriptionDetailView, SubscriptionPart, Switch |
+| subscriptions | `SubscriptionDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Properties, RowActionsMenu, Section, SortMenu | DateInput, EntityAlertDialog, Input, OptionSelect, SubscriptionDetailView, SubscriptionPart, Switch |
 | subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, FormPage, RowActionsMenu, Section, SimpleTable, SortMenu, WorkflowStepper | SubscriptionForm |
-| subscriptions | `SubscriptionListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, OptionSelect, PageBody, SubscriptionGrid, Toaster |
+| subscriptions | `SubscriptionListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, OptionSelect, PageBody, SubscriptionGrid |
 | taxes | `TaxFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, TaxRateCreateForm, TaxRateEditForm |
 | taxes | `TaxListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, TaxRateGrid |
 | usage-syncs | `UsageSyncListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | ListState, PageBody, UsageSyncDetailSheet, UsageSyncGrid |

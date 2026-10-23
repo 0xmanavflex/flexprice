@@ -2163,7 +2163,12 @@ const cents = (value: number) => (Math.round(value * 100) / 100).toFixed(2)
  * each item's usage priced at that feature's rate. Nothing is asserted that is
  * not computed from something else here.
  */
-function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
+function usageAnalytics(
+  startTime: Date,
+  endTime: Date,
+  windowSize: string,
+  featureIds: readonly string[] = [],
+) {
   const step = WINDOW_MS[windowSize] ?? DAY_MS
   const buckets: number[] = []
   for (
@@ -2174,7 +2179,10 @@ function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
     buckets.push(cursor)
   }
 
-  const items = ANALYTICS_FEATURES.map((feature) => {
+  const chosen = ANALYTICS_FEATURES.filter(
+    (feature) => featureIds.length === 0 || featureIds.includes(feature.id),
+  )
+  const items = chosen.map((feature) => {
     const scale = step / DAY_MS
     const points = buckets.map((bucket) => {
       const wobble = 0.72 + 0.56 * noise(`${feature.lookupKey}:${bucket}`)
@@ -2186,20 +2194,24 @@ function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
       }
     })
 
+    const totalUsage = points.reduce((sum, point) => sum + Number(point.usage), 0)
+    // The item's own price: what this usage bills at, as the API reports it.
+    const billed = (totalUsage * feature.rate).toFixed(2)
     return {
       feature_id: feature.id,
+      meter_id: `meter_${feature.id}`,
       event_name: feature.eventName,
       feature: feature.row,
       event_count: points.reduce((sum, point) => sum + point.event_count, 0),
-      total_usage: String(points.reduce((sum, point) => sum + Number(point.usage), 0)),
+      total_usage: String(totalUsage),
+      subtotal: billed,
+      total_cost: billed,
+      currency: 'USD',
       points,
     }
   })
 
-  const subtotal = items.reduce(
-    (sum, item, index) => sum + Number(item.total_usage) * (ANALYTICS_FEATURES[index]?.rate ?? 0),
-    0,
-  )
+  const subtotal = items.reduce((sum, item) => sum + Number(item.total_cost), 0)
 
   return { items, subtotal: subtotal.toFixed(2), total_cost: subtotal.toFixed(2), currency: 'USD' }
 }
@@ -2386,6 +2398,32 @@ const CONTRACT_COMMITMENT = {
 
 /** The mock's trialing contract; see the subscriptions corpus below. */
 const TRIALING_SUBSCRIPTION_ID = 'subs_01MOCKTRIALING0000000001'
+
+/** Each report's seeded figure for the mock report library. */
+const REPORT_BASE: Record<string, number> = {
+  invoice_total: 412_000,
+  invoice_total_issued: 409_000,
+  net_billing: 399_000,
+  net_billing_issued: 397_000,
+  total_receivables: 121_460,
+  receivables_aging: 60_000,
+  days_to_pay: 16.4,
+  active_customers: 172,
+  arpu: 2_630,
+  arpu_paid: 2_410,
+  credit_consumption: 52_000,
+  credit_topups: 61_000,
+  events_volume: 18_400_000,
+}
+/** Reports the API compares with the previous period. */
+const REPORT_COMPARES = new Set([
+  'invoice_total',
+  'invoice_total_issued',
+  'days_to_pay',
+  'arpu',
+  'arpu_paid',
+  'credit_topups',
+])
 
 const DASHBOARD_CORPUS: Record<string, Corpus> = {
   subscriptions: (() => {
@@ -2596,6 +2634,129 @@ export const handlers = [
    * and customer) and `POST /analytics/revenue` (net revenue per day, grouped
    * by currency), both read from `revenueDays`.
    */
+  /*
+   * The analytics report library — `POST /analytics/reports/{key}/query`.
+   * Answers in the API's table form: a `bucket` (timeseries) or dimension
+   * column, `currency`, the metric named after the report, and `{key}_prev` /
+   * `{key}_change_pct` when compared. Figures are seeded per report and
+   * bucket, and customers are real ones from the corpus so names resolve.
+   */
+  http.post(`${BASE}/analytics/reports/:key/query`, async ({ params, request }) => {
+    const key = String(params['key'])
+    const body = (await request.json().catch(() => ({}))) as {
+      shape?: string
+      range?: string
+      dimensions?: string[]
+      grain?: string
+      currency?: string
+      compare?: string
+      limit?: number
+    }
+    const base = REPORT_BASE[key]
+    if (base === undefined) {
+      return HttpResponse.json({ message: `report "${key}" not found` }, { status: 404 })
+    }
+    const compare = Boolean(body.compare) && REPORT_COMPARES.has(key)
+    const metric = [
+      { name: key, type: 'decimal', role: 'metric' },
+      ...(compare
+        ? [
+            { name: `${key}_prev`, type: 'decimal', role: 'metric' },
+            { name: `${key}_change_pct`, type: 'decimal', role: 'metric' },
+          ]
+        : []),
+    ]
+    const values = (now: number, before: number) =>
+      compare
+        ? [
+            now.toFixed(2),
+            before.toFixed(2),
+            before === 0 ? '' : (((now - before) / before) * 100).toFixed(1),
+          ]
+        : [now.toFixed(2)]
+    const currencyCol =
+      key === 'events_volume' ? [] : [{ name: 'currency', type: 'string', role: 'dimension' }]
+    const currency = key === 'events_volume' ? [] : [body.currency || 'usd']
+    const [from, to] = (body.range ?? '').split('..')
+    const start = from ? new Date(`${from}T00:00:00Z`) : new Date(Date.now() - 90 * DAY_MS)
+    const end = to ? new Date(`${to}T00:00:00Z`) : new Date()
+    const meta = { query_source: 'mock', from: start.toISOString(), to: end.toISOString() }
+
+    if (body.shape === 'timeseries') {
+      const step =
+        body.grain === 'month' ? 30 * DAY_MS : body.grain === 'week' ? 7 * DAY_MS : DAY_MS
+      const rows: string[][] = []
+      for (let t = start.getTime(); t < end.getTime() && rows.length < 400; t += step) {
+        // A ratio (days to pay, ARPU) is the same size per bucket; a flow scales with its width.
+        const ratio = key === 'days_to_pay' || key === 'arpu' || key === 'arpu_paid'
+        const now =
+          (ratio ? base : (base / 30) * (step / DAY_MS)) * (0.75 + 0.5 * noise(`${key}:${t}`))
+        const before = now * (0.85 + 0.2 * noise(`${key}:prev:${t}`))
+        rows.push([new Date(t).toISOString(), ...currency, ...values(now, before)])
+      }
+      return HttpResponse.json({
+        columns: [
+          { name: 'bucket', type: 'datetime', role: 'dimension' },
+          ...currencyCol,
+          ...metric,
+        ],
+        rows,
+        meta,
+      })
+    }
+
+    if (body.shape === 'breakdown') {
+      const dims = body.dimensions?.length ? body.dimensions : ['customer_id']
+      // The customers the customer search answers with, so their names resolve.
+      const customers = sourceFor('customers')
+        .items.slice(0, 8)
+        .map((row) => readString(row, 'id'))
+      const labels: Record<string, string[]> = {
+        customer_id: customers,
+        aging_bucket: ['Current', '1-30', '31-60', '61-90', '90+'],
+        invoice_type: ['SUBSCRIPTION', 'ONE_OFF'],
+        meter_id: ['meter_api', 'meter_storage'],
+      }
+      const combos = dims.reduce<string[][]>(
+        (acc, dim) => acc.flatMap((prefix) => (labels[dim] ?? ['a']).map((v) => [...prefix, v])),
+        [[]],
+      )
+      // Shares of the report's total, so the parts add up to the whole.
+      const weights = combos.map(
+        (combo, i) => (1 / (i + 1)) * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`)),
+      )
+      const sum = weights.reduce((total, weight) => total + weight, 0) || 1
+      const rows = combos
+        .map((combo, i) => {
+          // A ratio (days to pay) is per row, not a share of a total.
+          const now =
+            key === 'days_to_pay'
+              ? base * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`))
+              : (base * (weights[i] ?? 0)) / sum
+          return [...combo, ...currency, ...values(now, now * 0.9)]
+        })
+        .slice(0, body.limit ?? 500)
+      return HttpResponse.json({
+        columns: [
+          ...dims.map((name) => ({ name, type: 'string', role: 'dimension' })),
+          ...currencyCol,
+          ...metric,
+        ],
+        rows,
+        meta,
+      })
+    }
+
+    // Scalar: one row per currency when none was asked for, the one asked for otherwise.
+    const rows = body.currency
+      ? [[body.currency, ...values(base, base * 0.91)]]
+      : [
+          ['usd', ...values(base, base * 0.91)],
+          ['eur', ...values(base * 0.18, base * 0.2)],
+        ]
+    return HttpResponse.json({ columns: [...currencyCol, ...metric], rows, meta })
+  }),
+
   http.post(`${BASE}/dashboard/revenue-dashboard`, async ({ request }) => {
     if (demoEmpty()) return HttpResponse.json({ summaries: {}, items: [] })
     const body = (await request.json().catch(() => ({}))) as {
@@ -2680,13 +2841,54 @@ export const handlers = [
       start_time?: string
       end_time?: string
       window_size?: string
+      feature_ids?: string[]
     }
     const endTime = body.end_time ? new Date(body.end_time) : new Date()
     const startTime = body.start_time
       ? new Date(body.start_time)
       : new Date(endTime.getTime() - 7 * DAY_MS)
 
-    return HttpResponse.json(usageAnalytics(startTime, endTime, body.window_size ?? 'DAY'))
+    return HttpResponse.json(
+      usageAnalytics(startTime, endTime, body.window_size ?? 'DAY', body.feature_ids ?? []),
+    )
+  }),
+
+  /*
+   * Cost analytics — revenue against what the usage cost to serve, from the
+   * cost sheet. `POST /costs/analytics`. Built from the same usage the usage
+   * analytics answers, with each meter costing a fixed share of what it bills,
+   * so the two reads agree.
+   */
+  http.post(`${BASE}/costs/analytics`, async ({ request }) => {
+    if (demoEmpty()) return HttpResponse.json({ cost_analytics: [] })
+    const body = (await request.json().catch(() => ({}))) as {
+      start_time?: string
+      end_time?: string
+      feature_ids?: string[]
+    }
+    const endTime = body.end_time ? new Date(body.end_time) : new Date()
+    const startTime = body.start_time
+      ? new Date(body.start_time)
+      : new Date(endTime.getTime() - 7 * DAY_MS)
+    const usage = usageAnalytics(startTime, endTime, 'DAY', body.feature_ids ?? [])
+    const costAnalytics = usage.items.map((item, index) => ({
+      meter_id: item.meter_id,
+      total_cost: (Number(item.total_cost) * [0.42, 0.35, 0.5, 0.28][index % 4]!).toFixed(2),
+      total_quantity: item.total_usage,
+      total_events: item.event_count,
+      currency: 'USD',
+    }))
+    const totalCost = costAnalytics.reduce((sum, item) => sum + Number(item.total_cost), 0)
+    const revenue = Number(usage.subtotal)
+    const margin = revenue - totalCost
+    return HttpResponse.json({
+      currency: 'USD',
+      total_revenue: revenue.toFixed(2),
+      total_cost: totalCost.toFixed(2),
+      margin: margin.toFixed(2),
+      margin_percent: revenue > 0 ? ((margin / revenue) * 100).toFixed(2) : '0',
+      cost_analytics: costAnalytics,
+    })
   }),
 
   search('/customers/search', 'customers'),
@@ -4229,6 +4431,21 @@ export const handlers = [
 
   http.post(`${BASE}/customers`, async ({ request }) => {
     const body = await readBody(request)
+    // The API's unique index on (environment, external_id): a taken id is a 409.
+    const externalId = readString(body, 'external_id')
+    const taken = (corpus['customers'] as Corpus).items.some(
+      (row) => externalId !== '' && readString(row, 'external_id') === externalId,
+    )
+    if (taken) {
+      return HttpResponse.json(
+        {
+          code: 'already_exists',
+          message: 'A customer with this identifier already exists',
+          http_status_code: 409,
+        },
+        { status: 409 },
+      )
+    }
     const row = { ...body, id: `cust_new_${Date.now()}`, status: 'published' }
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
@@ -4838,6 +5055,16 @@ export const handlers = [
     patchRow(sourceFor('subscriptions').items, String(params['id']), patch)
     return HttpResponse.json({ subscription_id: params['id'], ...patch })
   }),
+  http.post(`${BASE}/subscriptions/:id/pause`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'paused',
+    }),
+  ),
+  http.post(`${BASE}/subscriptions/:id/resume`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'active',
+    }),
+  ),
   http.post(`${BASE}/subscriptions/:id/activate`, async ({ request, params }) => {
     const body = await readBody(request)
     return patchRow(sourceFor('subscriptions').items, String(params['id']), {

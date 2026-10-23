@@ -22,7 +22,6 @@ import {
   CUSTOMER_TABS,
   CustomerDetail,
   CustomerEntitlementUsage,
-  Toaster,
   toast,
   type CustomerTab,
 } from '@fp/ui/pages'
@@ -134,6 +133,10 @@ export function CustomerDetailPage({
       void navigate({ to: '/payments/new', search: { invoice: invoiceId } }),
     onIssueCreditNote: (invoiceId) =>
       void navigate({ to: '/credit-memos/new', search: { invoice: invoiceId } }),
+    onEditInvoice: (invoiceId) =>
+      void navigate({ to: '/invoices/$invoiceId/edit', params: { invoiceId } }),
+    onOpenContract: (subscriptionId) =>
+      void navigate({ to: '/contracts/$subscriptionId', params: { subscriptionId } }),
   })
 
   if (!customer.data) {
@@ -320,7 +323,6 @@ export function CustomerDetailPage({
         error={remove.error ? 'Could not archive the customer. Try again.' : null}
       />
       {invoiceRows.dialogs}
-      <Toaster />
     </>
   )
 }

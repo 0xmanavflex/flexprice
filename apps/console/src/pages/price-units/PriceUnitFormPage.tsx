@@ -22,7 +22,8 @@ export function PriceUnitFormPage({ onCancel, onDone }: PriceUnitFormPageProps) 
       trail={[{ label: 'Price Units', onClick: onCancel }, { label: 'Create price unit' }]}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={toSubmitError(create.error)}
+      // The API's refusal is a toast (MutationToasts); validation stays in the form.
+      submitError={null}
       onSubmit={(draft: CreatePriceUnit) =>
         create.mutate(draft, {
           onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),

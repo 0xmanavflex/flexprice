@@ -32,7 +32,8 @@ export function TaxFormPage(props: TaxFormPageProps) {
         trail={[{ label: 'Tax rates', onClick: onCancel }, { label: 'Create tax rate' }]}
         onCancel={onCancel}
         isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error)}
+        // The API's refusal is a toast (MutationToasts); validation stays in the form.
+        submitError={null}
         onSubmit={(draft: CreateTaxRate) => create.mutate(draft, { onSuccess: onDone })}
       />
     )

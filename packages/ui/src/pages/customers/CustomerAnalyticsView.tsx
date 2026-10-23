@@ -11,55 +11,99 @@ import {
 } from '@ui/components/primitives/dropdown-menu'
 import { Input } from '@ui/components/primitives/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
+import { Skeleton } from '@ui/components/primitives/skeleton'
 import { Switch } from '@ui/components/primitives/switch'
 import { SegmentMeter } from '@ui/compositions/detail/DetailKit'
+import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { ErrorState } from '@ui/compositions/feedback/States'
 import { Section } from '@ui/compositions/layout/Section'
-import { MetricChart } from '../shared/charts'
+import { provenance } from '@ui/provenance'
+import { MetricChart, type MetricPoint } from '../shared/charts'
 import { DetailTable } from '../shared/DetailTable'
+
+/**
+ * A customer's Analytics tab, after the redesign (`customer-analytics.tsx`):
+ * choose features, a date range and whether to include child customers, then
+ * see Revenue, Cost, Margin and Margin %, each feature's usage over time, and a
+ * per-feature breakdown with its share of revenue.
+ *
+ * Every figure comes from the page, already formatted: usage and revenue from
+ * the usage analytics, cost and margin from the cost analytics (the cost
+ * sheet). A figure the API did not give is `null` and reads as "—", never as a
+ * made-up zero.
+ */
+export const CustomerAnalyticsViewProvenance = provenance({
+  source: 'composition',
+  composes: [
+    'primitives/dropdown-menu',
+    'primitives/popover',
+    'primitives/switch',
+    'compositions/layout/Section',
+    'shared/charts',
+    'shared/DetailTable',
+  ],
+  note: 'Customer analytics, after the admin redesign prototype (customer-analytics.tsx).',
+})
 
 export interface FeatureAnalytics {
   id: string
   name: string
+  /** Total usage, formatted, e.g. `120,000`. */
   usage: string
-  /** Compact total for the chart tabs, e.g. `120K`. */
-  short?: string
+  /** Compact total for the chart tab, e.g. `120K`. */
+  short?: string | undefined
   /** The unit of usage, e.g. `calls`. */
-  unit?: string
-  revenue: number
-  cost: number
+  unit?: string | undefined
+  /** Revenue from this feature, formatted. Null when the API did not price it. */
+  revenue: string | null
+  /** This feature's share of revenue, 0 to 1. */
+  share: number
+  /** What this feature's usage cost to serve, formatted. Null without a cost sheet. */
+  cost: string | null
+  /** Usage per day across the range. */
+  points: MetricPoint[]
+}
+
+export interface AnalyticsTotals {
+  revenue: string | null
+  cost: string | null
+  margin: string | null
+  marginPercent: string | null
 }
 
 export interface AnalyticsQuery {
+  /** `YYYY-MM-DD`. */
   from: string
+  /** `YYYY-MM-DD`. */
   to: string
   includeChildren: boolean
 }
 
-export interface CustomerAnalyticsViewProps {
-  features: FeatureAnalytics[]
-  query?: AnalyticsQuery
-  onQueryChange?: (query: AnalyticsQuery) => void
+export interface AnalyticsFeatureOption {
+  id: string
+  name: string
 }
 
-const usd = (n: number) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currencyDisplay: 'narrowSymbol',
-    currency: 'USD',
-  }).format(n)
+export interface CustomerAnalyticsViewProps {
+  features: FeatureAnalytics[]
+  totals: AnalyticsTotals
+  query: AnalyticsQuery
+  onQueryChange: (query: AnalyticsQuery) => void
+  /** The metered features to choose from. */
+  featureOptions: AnalyticsFeatureOption[]
+  /** The features chosen. Empty means all of them. */
+  selectedFeatureIds: string[]
+  onSelectedFeatureIdsChange: (ids: string[]) => void
+  isLoading?: boolean | undefined
+  error?: string | null | undefined
+  onRetry?: (() => void) | undefined
+}
 
 const Muted = ({ children }: { children: React.ReactNode }) => (
   <span className="text-muted-foreground">{children}</span>
 )
 
-/** Demo daily series, shaped from the feature's id so each tab differs. */
-function seriesFor(feature: FeatureAnalytics) {
-  const seed = feature.id.charCodeAt(feature.id.length - 1)
-  return Array.from({ length: 14 }, (_, i) => ({
-    label: `Sep ${i + 1}`,
-    value: Math.round(40 + 30 * Math.sin((i + seed) / 2) + i * 4),
-  }))
-}
+const DASH = '—'
 
 /** A date range end: shows the date, edits it in a popover. */
 function DateButton({
@@ -67,11 +111,15 @@ function DateButton({
   value,
   onChange,
   icon,
+  min,
+  max,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   icon?: boolean
+  min?: string
+  max?: string
 }) {
   return (
     <Popover>
@@ -85,7 +133,11 @@ function DateButton({
           type="date"
           aria-label={label}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          {...(min ? { min } : {})}
+          {...(max ? { max } : {})}
+          onChange={(event) => {
+            if (event.target.value) onChange(event.target.value)
+          }}
           className="h-8"
         />
       </PopoverContent>
@@ -95,25 +147,27 @@ function DateButton({
 
 export function CustomerAnalyticsView({
   features,
+  totals,
   query,
   onQueryChange,
+  featureOptions,
+  selectedFeatureIds,
+  onSelectedFeatureIdsChange,
+  isLoading = false,
+  error = null,
+  onRetry,
 }: CustomerAnalyticsViewProps) {
-  const [local, setLocal] = useState<AnalyticsQuery>({
-    from: '2026-09-01',
-    to: '2026-09-30',
-    includeChildren: false,
-  })
-  const current = query ?? local
-  const change = (next: AnalyticsQuery) => (onQueryChange ? onQueryChange(next) : setLocal(next))
-
-  const [selected, setSelected] = useState<string[] | null>(null)
-  const chosen = selected ?? features.map((f) => f.id)
-  const visible = features.filter((f) => chosen.includes(f.id))
-  const revenue = visible.reduce((s, f) => s + f.revenue, 0)
-  const cost = visible.reduce((s, f) => s + f.cost, 0)
-  const margin = revenue - cost
-  const pct = revenue > 0 ? (margin / revenue) * 100 : 0
   const [activeTab, setActiveTab] = useState('')
+  const all = selectedFeatureIds.length === 0
+  const chosen = all ? featureOptions.map((f) => f.id) : selectedFeatureIds
+  const range = `${query.from} to ${query.to}${query.includeChildren ? ', including child customers' : ''}`
+
+  const toggle = (id: string, on: boolean) => {
+    const next = on ? [...chosen, id] : chosen.filter((x) => x !== id)
+    // At least one stays chosen; all chosen is the same as no filter.
+    if (next.length === 0) return
+    onSelectedFeatureIdsChange(next.length === featureOptions.length ? [] : next)
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -121,11 +175,17 @@ export function CustomerAnalyticsView({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button variant="outline" size="sm" className="h-8 px-3" aria-label="Features" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3"
+                aria-label="Features"
+                disabled={featureOptions.length === 0}
+              />
             }
           >
             <LayersIcon aria-hidden="true" />
-            {chosen.length === features.length ? 'All features' : `${chosen.length} features`}
+            {all ? 'All features' : `${chosen.length} features`}
             <ChevronDownIcon className="opacity-50" aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
@@ -133,20 +193,12 @@ export function CustomerAnalyticsView({
               <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
                 Metered features
               </DropdownMenuLabel>
-              {features.map((f) => (
+              {featureOptions.map((f) => (
                 <DropdownMenuCheckboxItem
                   key={f.id}
                   closeOnClick={false}
                   checked={chosen.includes(f.id)}
-                  onCheckedChange={(on) =>
-                    setSelected(
-                      on
-                        ? [...chosen, f.id]
-                        : chosen.length > 1
-                          ? chosen.filter((id) => id !== f.id)
-                          : chosen,
-                    )
-                  }
+                  onCheckedChange={(on) => toggle(f.id, on)}
                 >
                   {f.name}
                 </DropdownMenuCheckboxItem>
@@ -157,135 +209,132 @@ export function CustomerAnalyticsView({
         <DateButton
           icon
           label="From"
-          value={current.from}
-          onChange={(from) => change({ ...current, from })}
+          value={query.from}
+          max={query.to}
+          onChange={(from) => onQueryChange({ ...query, from })}
         />
-        <DateButton label="To" value={current.to} onChange={(to) => change({ ...current, to })} />
+        <DateButton
+          label="To"
+          value={query.to}
+          min={query.from}
+          onChange={(to) => onQueryChange({ ...query, to })}
+        />
         <label className="text-muted-foreground ml-auto flex items-center gap-2 text-[13px]">
           Include children
           <Switch
-            checked={current.includeChildren}
-            onCheckedChange={(includeChildren) => change({ ...current, includeChildren })}
+            checked={query.includeChildren}
+            onCheckedChange={(includeChildren) => onQueryChange({ ...query, includeChildren })}
             aria-label="Include children"
           />
         </label>
       </div>
 
       <dl className="bg-background grid grid-cols-2 divide-x rounded-xl border sm:grid-cols-4">
-        {[
-          ['Revenue', usd(revenue)],
-          ['Cost', usd(cost)],
-          ['Margin', usd(margin)],
-          ['Margin %', `${pct.toFixed(0)}%`],
-        ].map(([label, value]) => (
+        {(
+          [
+            ['Revenue', totals.revenue],
+            ['Cost', totals.cost],
+            ['Margin', totals.margin],
+            ['Margin %', totals.marginPercent],
+          ] as const
+        ).map(([label, value]) => (
           <div key={label} className="px-6 py-4">
             <dt className="text-muted-foreground text-xs">{label}</dt>
-            <dd className="mt-1 text-lg font-medium tabular-nums">{value}</dd>
+            <dd className="mt-1 text-lg font-medium tabular-nums">
+              {isLoading && value === null ? (
+                <>
+                  <Skeleton aria-hidden className="h-6 w-20" />
+                  <span className="sr-only">Loading</span>
+                </>
+              ) : (
+                (value ?? DASH)
+              )}
+            </dd>
           </div>
         ))}
       </dl>
 
-      {visible.length > 0 ? (
-        <MetricChart
-          tabs={visible.map((f) => ({
-            id: f.id,
-            label: f.name,
-            value: (
-              <>
-                {f.short ?? f.usage}
-                {f.unit ? <span className="text-muted-foreground text-xs"> {f.unit}</span> : null}
-              </>
-            ),
-            points: seriesFor(f),
-          }))}
-          activeTab={visible.some((f) => f.id === activeTab) ? activeTab : (visible[0]?.id ?? '')}
-          onTabChange={setActiveTab}
-          caption={`${current.from} to ${current.to}`}
+      {error ? (
+        <ErrorState
+          title="Analytics could not be loaded"
+          description={error}
+          {...(onRetry ? { onRetry } : {})}
         />
-      ) : null}
-
-      <Section title="Usage breakdown" flush bare>
-        <DetailTable
-          label="Usage breakdown"
-          noun="features"
-          rows={visible}
-          getRowId={(f) => f.id}
-          columns={[
-            {
-              key: 'name',
-              header: 'Feature',
-              cell: (f) => <span className="font-medium">{f.name}</span>,
-            },
-            {
-              key: 'usage',
-              header: 'Usage',
-              cell: (f) => (
-                <span className="tabular-nums">
-                  {f.usage} {f.unit ? <Muted>{f.unit}</Muted> : null}
-                </span>
+      ) : !isLoading && features.length === 0 ? (
+        <EmptyState
+          size="inline"
+          title="No usage in this period"
+          description="Events this customer sends for metered features show up here."
+        />
+      ) : (
+        <>
+          <MetricChart
+            tabs={features.map((f) => ({
+              id: f.id,
+              label: f.name,
+              value: (
+                <>
+                  {f.short ?? f.usage}
+                  {f.unit ? <span className="text-muted-foreground text-xs"> {f.unit}</span> : null}
+                </>
               ),
-            },
-            {
-              key: 'revenue',
-              header: 'Revenue',
-              cell: (f) => <span className="tabular-nums">{usd(f.revenue)}</span>,
-            },
-            { key: 'cost', header: 'Cost', cell: (f) => <Muted>{usd(f.cost)}</Muted> },
-            {
-              key: 'share',
-              header: 'Share of revenue',
-              cell: (f) => {
-                const share = revenue > 0 ? f.revenue / revenue : 0
-                return (
-                  <span className="flex items-center gap-3">
-                    <SegmentMeter value={share} segments={24} className="h-4 w-40" />
-                    <Muted>{Math.round(share * 100)}%</Muted>
-                  </span>
-                )
-              },
-            },
-          ]}
-        />
-      </Section>
+              points: f.points,
+              ...(isLoading ? { status: 'loading' as const } : {}),
+            }))}
+            activeTab={
+              features.some((f) => f.id === activeTab) ? activeTab : (features[0]?.id ?? '')
+            }
+            onTabChange={setActiveTab}
+            caption={range}
+          />
+
+          <Section title="Usage breakdown" description={range} flush>
+            <DetailTable
+              label="Usage breakdown"
+              noun="features"
+              rows={features}
+              isLoading={isLoading}
+              getRowId={(f) => f.id}
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Feature',
+                  cell: (f) => <span className="font-medium">{f.name}</span>,
+                },
+                {
+                  key: 'usage',
+                  header: 'Usage',
+                  cell: (f) => (
+                    <span className="tabular-nums">
+                      {f.usage} {f.unit ? <Muted>{f.unit}</Muted> : null}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'revenue',
+                  header: 'Revenue',
+                  cell: (f) => <span className="tabular-nums">{f.revenue ?? DASH}</span>,
+                },
+                {
+                  key: 'cost',
+                  header: 'Cost',
+                  cell: (f) => <Muted>{f.cost ?? DASH}</Muted>,
+                },
+                {
+                  key: 'share',
+                  header: 'Share of revenue',
+                  cell: (f) => (
+                    <span className="flex items-center gap-3">
+                      <SegmentMeter value={f.share} segments={24} className="h-4 w-40" />
+                      <Muted>{Math.round(f.share * 100)}%</Muted>
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          </Section>
+        </>
+      )}
     </div>
   )
 }
-
-export const DEMO_FEATURE_ANALYTICS: FeatureAnalytics[] = [
-  {
-    id: 'f1',
-    name: 'API Calls',
-    usage: '120,000',
-    short: '120K',
-    unit: 'calls',
-    revenue: 240,
-    cost: 100.8,
-  },
-  {
-    id: 'f2',
-    name: 'AI Tokens',
-    usage: '203,000',
-    short: '203K',
-    unit: 'tokens',
-    revenue: 609,
-    cost: 371.49,
-  },
-  {
-    id: 'f3',
-    name: 'Video Minutes',
-    usage: '286,000',
-    short: '286K',
-    unit: 'minutes',
-    revenue: 1144,
-    cost: 515.2,
-  },
-  {
-    id: 'f4',
-    name: 'Compute Minutes',
-    usage: '369,000',
-    short: '369K',
-    unit: 'minutes',
-    revenue: 922.5,
-    cost: 346.45,
-  },
-]

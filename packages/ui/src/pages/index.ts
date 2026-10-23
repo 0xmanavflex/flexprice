@@ -412,6 +412,8 @@ export type { SplitMeterPart, SplitMeterProps } from './shared/SplitMeter'
 export { ArcGauge, ArcGaugeProvenance } from './shared/ArcGauge'
 export type { ArcGaugeProps } from './shared/ArcGauge'
 export { QuotaCard, QuotaCardProvenance } from './shared/QuotaCard'
+export { EntityAlertDialog, EntityAlertDialogProvenance } from './shared/EntityAlertDialog'
+export type { EntityAlertDialogProps } from './shared/EntityAlertDialog'
 export type { QuotaCardAction, QuotaCardProps } from './shared/QuotaCard'
 
 /* The billing grids' migration onto EntityList. Appended — the grids and their
@@ -504,11 +506,16 @@ export type {
   CustomerUsageSummaryProps,
   CustomerUsageSummaryRow,
 } from './customers/CustomerUsageSummary'
-export { CustomerAnalyticsView, DEMO_FEATURE_ANALYTICS } from './customers/CustomerAnalyticsView'
+export {
+  CustomerAnalyticsView,
+  CustomerAnalyticsViewProvenance,
+} from './customers/CustomerAnalyticsView'
 export type {
   CustomerAnalyticsViewProps,
   FeatureAnalytics,
   AnalyticsQuery,
+  AnalyticsTotals,
+  AnalyticsFeatureOption,
 } from './customers/CustomerAnalyticsView'
 
 export { CatalogDetailFrame } from './product-catalog/catalog-detail/CatalogDetailFrame'

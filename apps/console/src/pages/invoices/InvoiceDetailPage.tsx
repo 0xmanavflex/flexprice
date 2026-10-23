@@ -29,7 +29,6 @@ import {
 import {
   InvoiceDetailView,
   PaymentStatusDialog,
-  Toaster,
   toast,
   type InvoicePendingAction,
 } from '@fp/ui/pages'
@@ -217,7 +216,6 @@ export function InvoiceDetailPage({
           )
         }
       />
-      <Toaster />
     </>
   )
 }

@@ -65,7 +65,7 @@ export const NAV: NavEntry[] = [
     label: 'Collections',
     children: [{ id: 'payments', label: 'Payments', path: '/payments' }],
   },
-  { id: 'revenue', label: 'Revenue', path: '/revenue' },
+  { id: 'reports', label: 'Reports', path: '/reports' },
   {
     id: 'developers',
     label: 'Developers',

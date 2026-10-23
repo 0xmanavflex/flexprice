@@ -307,6 +307,7 @@ export function useCreateCoupon() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Coupon created', error: 'Could not create the coupon.' } },
     mutationFn: (draft: CreateCoupon) =>
       call(() => client.coupons.createCoupon(toCreateCouponRequest(draft) as never)),
     onSuccess: () => {

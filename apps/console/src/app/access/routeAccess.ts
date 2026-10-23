@@ -39,6 +39,8 @@ const OPEN: RouteAccess = {}
 
 export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   '/': OPEN,
+  '/reports': OPEN,
+  // The old address of Reports; it redirects there.
   '/revenue': OPEN,
 
   // Product catalog
