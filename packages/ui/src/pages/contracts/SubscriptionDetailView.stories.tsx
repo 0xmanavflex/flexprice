@@ -975,7 +975,7 @@ export const ContractCommitment: Story = {
       )!,
     )
     await expect(billing.getByText(/\$30,000\.00 per year/)).toBeVisible()
-    await expect(billing.getByText('1.2×')).toBeVisible()
+    await expect(billing.getByText(/1\.2× overage/)).toBeVisible()
     await expect(billing.getByText('On')).toBeVisible()
     await expect(billing.queryByRole('button', { name: /edit/i })).toBeNull()
   },
@@ -1223,7 +1223,7 @@ export const LinkIntegration: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: 'Link an integration' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Link integration' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.type(dialog.getByLabelText(/Customer ID at the provider/), 'qb_42')
     await userEvent.click(dialog.getByRole('button', { name: 'Link' }))

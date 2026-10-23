@@ -36,7 +36,7 @@ export const NothingLinkedYet: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('No integrations linked to this customer.')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Link an integration' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Link integration' })).toBeVisible()
   },
 }
 

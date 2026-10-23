@@ -69,7 +69,6 @@ export const InvoiceDetailViewProvenance = provenance({
     'compositions/SubTabState',
     'compositions/detail-kit',
     'ui/spinner',
-    '@reui/badge',
   ],
   note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit memos tabs. Entity-specific integration controls share header and Related mappings, following the supplied HTML reference.',
 })
@@ -831,4 +830,3 @@ function Party({
     </div>
   )
 }
-

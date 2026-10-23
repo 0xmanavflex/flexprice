@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, within } from 'storybook/test'
 import { CustomerEntitlementUsage } from './CustomerEntitlementUsage'
 
 const meta = {
@@ -77,13 +77,16 @@ export const States: Story = {
   },
 }
 
-/** The search narrows the rows like every other detail table. */
-export const Search: Story = {
+/**
+ * Under its section title the table's tools sit in the header, as on the other
+ * overview tables: Filter and Sort beside the title, no search row.
+ */
+export const HeaderTools: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.type(canvas.getByLabelText('Search features'), 'Seats')
-    await expect(await canvas.findByText('12 / 10')).toBeVisible()
-    await expect(canvas.queryByText('API calls')).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Sort' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Filter' })).toBeVisible()
+    await expect(canvas.queryByLabelText('Search features')).toBeNull()
   },
 }
 

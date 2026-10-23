@@ -1595,7 +1595,8 @@ function ContractDetails({
             {
               label: 'Commitment',
               value: commitment
-                ? `${formatMoney(commitment.amount)} per ${commitmentPeriodNoun(commitment.period, commitment.periodCount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
+                ? // The overage premium rides with the amount, so the card keeps its four rows.
+                  `${formatMoney(commitment.amount)} per ${commitmentPeriodNoun(commitment.period, commitment.periodCount)}${commitment.overageFactor && commitment.overageFactor !== 1 ? ` · ${commitment.overageFactor}× overage` : ''}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
                 : 'None',
             },
             {
