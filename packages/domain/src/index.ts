@@ -109,6 +109,8 @@ export {
   nonNegativeAmount,
   priceTierSchema,
   tiersSchema,
+  tierUnitLabel,
+  withPackageSize,
   chargeLineages,
   currentVersion,
   versionStatus,

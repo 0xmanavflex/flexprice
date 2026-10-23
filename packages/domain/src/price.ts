@@ -225,10 +225,34 @@ export const priceTierSchema = z.object({
   upTo: z.number().int().positive('Must be greater than zero').nullable(),
   unitAmount: nonNegativeAmount,
   flatAmount: nonNegativeAmount.optional(),
+  /** Prices the band per package of `divideBy` units; absent means per unit. */
+  transformQuantity: z
+    .object({
+      divideBy: z
+        .number({ error: 'Enter a package size' })
+        .int('Must be a whole number')
+        .positive('Must be greater than zero'),
+      round: z.enum([RoundType.Up, RoundType.Down]),
+    })
+    .optional(),
 })
 export type PriceTier = z.infer<typeof priceTierSchema>
 /** The plan's name for the same thing. `PriceTier` is the override's. */
 export type Tier = PriceTier
+
+/** Applies a typed package size; empty or zero clears it, an edit keeps the band's rounding. */
+export function withPackageSize(tier: Tier, input: string): Tier {
+  const { transformQuantity, ...rest } = tier
+  const divideBy = Number(input.replace(/\D/g, ''))
+  if (!divideBy) return rest
+  return { ...rest, transformQuantity: { divideBy, round: transformQuantity?.round ?? RoundType.Up } }
+}
+
+/** "per unit", or "per 1,000 units" for a package band. */
+export function tierUnitLabel(tier: Tier): string {
+  const divideBy = tier.transformQuantity?.divideBy
+  return divideBy ? `per ${divideBy.toLocaleString('en-US')} units` : 'per unit'
+}
 
 /**
  * Tier bands must climb, and end open.
