@@ -210,14 +210,15 @@ test.describe('a customer detail page', () => {
     await reread
   })
 
-  test('pushes the customer to Stripe from the related integration', async ({ page }) => {
+  test('pushes the customer to its outbound integrations from Related', async ({ page }) => {
     await openFirstCustomer(page)
     await page.getByRole('tab', { name: 'Information' }).click()
-    await page.getByRole('button', { name: 'Manage Stripe integration' }).click()
     const sync = page.waitForRequest(
       (request) => request.url().endsWith('/integrations/sync') && request.method() === 'POST',
     )
-    await page.getByRole('menuitem', { name: 'Push to Stripe' }).click()
+    // One push reaches every provider syncing customers outbound, so it is one
+    // action on the card rather than an item in a single provider's menu.
+    await page.getByRole('button', { name: /^Push to .*Stripe/ }).click()
     const body = (await sync).postDataJSON() as Record<string, unknown>
     expect(body).toMatchObject({ entity_type: 'customer', method: 'push' })
     await expect(page.getByText('Pushing customer to Stripe')).toBeVisible()

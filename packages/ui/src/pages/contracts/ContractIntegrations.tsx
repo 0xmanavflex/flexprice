@@ -63,7 +63,12 @@ export interface ContractIntegrationsProps {
   linkable: LinkableProvider[]
   onLink?: (input: { providerType: string; providerEntityId: string }) => Promise<unknown>
   onUnlink?: (input: { providerType: string }) => Promise<unknown>
-  /** Provider names that can receive a push. Shows "Push to {name}" on that row. */
+  /**
+   * Provider names a push reaches: every connection that syncs this entity
+   * outbound. The API pushes to all of them at once, so the Related card has
+   * one "Push to {names}" action, shown whether or not a mapping exists yet
+   * (a push creates the provider record).
+   */
   pushProviders?: string[]
   onPush?: () => void
 }
@@ -101,6 +106,8 @@ export function ContractIntegrations({
   const [error, setError] = useState<string | null>(null)
 
   const canLink = showLink && Boolean(onLink) && linkable.length > 0
+  const pushTo = onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
+  const canPush = layout === 'rows' && pushTo !== null
   const none = `No integrations linked to this ${entityLabel}.`
 
   // In the Related card the rows are the card's whole body, so rendering nothing
@@ -108,7 +115,7 @@ export function ContractIntegrations({
   // marks have nowhere to put a sentence, so they still render nothing — unless
   // the parent opened the link dialog itself (a plan's overflow menu), which
   // has to mount even though there is nothing to show beside it.
-  if (links.length === 0 && !canLink && !linking) {
+  if (links.length === 0 && !canLink && !linking && !canPush) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
     ) : null
@@ -166,7 +173,6 @@ export function ContractIntegrations({
                 <IntegrationMenu
                   link={link}
                   entityLabel={entityLabel}
-                  {...(onPush && pushProviders?.includes(link.name) ? { onPush } : {})}
                   onUnlink={onUnlink}
                   onAskUnlink={() => {
                     setError(null)
@@ -252,6 +258,17 @@ export function ContractIntegrations({
           </Tooltip>
         )
       ) : null}
+      {canPush && pushTo && onPush ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+          onClick={onPush}
+        >
+          <UploadIcon aria-hidden className="size-3.5" />
+          Push to {pushTo.join(', ')}
+        </Button>
+      ) : null}
 
       <ConfirmDialog
         open={unlinking !== null}
@@ -301,21 +318,14 @@ function IntegrationMenu({
   entityLabel,
   onUnlink,
   onAskUnlink,
-  onPush,
 }: {
   link: IntegrationLink
   entityLabel: string
   onUnlink?: ContractIntegrationsProps['onUnlink']
   onAskUnlink: () => void
-  onPush?: () => void
 }) {
   return (
     <DropdownMenuContent align="end" className="min-w-48">
-      {onPush ? (
-        <DropdownMenuItem onClick={onPush}>
-          <UploadIcon aria-hidden /> Push to {link.name}
-        </DropdownMenuItem>
-      ) : null}
       <DropdownMenuItem
         onClick={() => {
           void navigator.clipboard

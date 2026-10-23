@@ -1827,11 +1827,14 @@ export function useSubscriptionTaxes(id: string) {
  * What adding something to one contract can change on its page: the detail, its
  * entitlements, grants, add-ons, coupons, taxes and the invoice preview all sit
  * under the subscriptions family. Tax associations are shared with the customer
- * page, so they refresh too.
+ * page, so they refresh too, and so does entitlement usage, which is read
+ * through the customer (`GET /customers/usage`): a new entitlement would
+ * otherwise show no usage until something else refetched it.
  */
 const invalidateContract = (queryClient: ReturnType<typeof useQueryClient>) => {
   void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
   void queryClient.invalidateQueries({ queryKey: queryKeys.taxAssociations.all() })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.usageAll() })
 }
 
 /** Give this contract an entitlement its plan does not carry — `POST /entitlements`. */

@@ -196,9 +196,11 @@ export function useCreateEnvironment(
       // The list refetch can land after the console has already switched, and
       // a missing id makes the shell abandon the switch. Put the new row in
       // every cached list first, then again after the refetch in case the
-      // server answer is briefly behind the create.
+      // server answer is briefly behind the create. The prefix also matches
+      // `useRecordEnvironment`'s entries, which hold an id rather than a list,
+      // so anything that is not a list is left alone.
       const merge = (current: Environment[] | undefined) => {
-        if (!current || !created?.id) return current
+        if (!Array.isArray(current) || !created?.id) return current
         if (current.some((environment) => environment.id === created.id)) return current
         return [...current, created]
       }
