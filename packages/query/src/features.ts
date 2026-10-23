@@ -13,7 +13,7 @@ import {
   FeatureSortField,
   FEATURE_FILTERS,
 } from '@fp/domain'
-import { toAlertConfigRequest } from './alertSettings'
+import { type AlertConfigWire, toAlertConfig, toAlertConfigRequest } from './alertSettings'
 import { queryKeys } from './keys'
 import { toFilterConditions } from './search'
 import { useFlexprice } from './provider'
@@ -41,6 +41,7 @@ import { sortWithTieBreak } from './listSort'
 
 /** The wire shape this reads. Structural, so a fixture need not be complete. */
 export interface FeatureWire {
+  alertSettings?: AlertConfigWire | undefined
   id?: string | undefined
   name?: string | undefined
   lookupKey?: string | undefined
@@ -107,6 +108,7 @@ export function toFeature(wire: FeatureWire): Feature {
     : FeatureStatus.Published
 
   return {
+    alertSettings: toAlertConfig(wire.alertSettings),
     id: wire.id ?? '',
     name: wire.name ?? 'Untitled feature',
     lookupKey: wire.lookupKey ?? '',

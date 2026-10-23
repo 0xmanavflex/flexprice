@@ -133,6 +133,10 @@ export function CustomerDetailPage({
       void navigate({ to: '/payments/new', search: { invoice: invoiceId } }),
     onIssueCreditNote: (invoiceId) =>
       void navigate({ to: '/credit-memos/new', search: { invoice: invoiceId } }),
+    onEditInvoice: (invoiceId) =>
+      void navigate({ to: '/invoices/$invoiceId/edit', params: { invoiceId } }),
+    onOpenContract: (subscriptionId) =>
+      void navigate({ to: '/contracts/$subscriptionId', params: { subscriptionId } }),
   })
 
   if (!customer.data) {
@@ -163,11 +167,38 @@ export function CustomerDetailPage({
                 onLink: (input: { providerType: string; providerEntityId: string }) =>
                   linkIntegration.mutateAsync(input),
                 onUnlink: (input: { providerType: string }) => unlinkIntegration.mutateAsync(input),
+                ...(pushTargets.length > 0
+                  ? {
+                      pushProviders: pushTargets,
+                      onPush: () =>
+                        pushCustomer.mutate(undefined, {
+                          onSuccess: () =>
+                            toast.success(`Pushing customer to ${pushTargets.join(', ')}`, {
+                              description:
+                                'The provider record is created or updated in the background.',
+                            }),
+                          onError: (cause) =>
+                            toast.error(
+                              cause instanceof Error
+                                ? cause.message
+                                : 'Could not push this customer.',
+                            ),
+                        }),
+                    }
+                  : {}),
               },
             }
           : {})}
         customer={customer.data}
-        activity={activity.data ? activity.data.map(toActivityLogEntry) : []}
+        activity={
+          activity.data
+            ? activity.data.map((entry) => {
+                const row = toActivityLogEntry(entry)
+                if (entry.entityType !== 'customer' || !customer.data.name) return row
+                return { ...row, record: customer.data.name }
+              })
+            : []
+        }
         activityLoading={activity.isPending}
         activityError={activity.isError}
         activityAwaiting={activity.isAwaiting}
@@ -188,24 +219,6 @@ export function CustomerDetailPage({
         onEdit={() => onEdit(customer.data.id)}
         onArchive={() => setArchiving(true)}
         onCopyPortalLink={() => void portal.copy({ externalId: customer.data?.externalId })}
-        {...(pushTargets.length > 0
-          ? {
-              pushToIntegrations: {
-                providers: pushTargets.join(', '),
-                onPush: () =>
-                  pushCustomer.mutate(undefined, {
-                    onSuccess: () =>
-                      toast.success(`Pushing customer to ${pushTargets.join(', ')}`, {
-                        description: 'The provider record is created or updated in the background.',
-                      }),
-                    onError: (cause) =>
-                      toast.error(
-                        cause instanceof Error ? cause.message : 'Could not push this customer.',
-                      ),
-                  }),
-              },
-            }
-          : {})}
         {...(streamTarget && !sampleEvents.isPending
           ? { onStreamEvents: () => streamEvents(streamTarget.id, streamTarget.planName) }
           : {})}

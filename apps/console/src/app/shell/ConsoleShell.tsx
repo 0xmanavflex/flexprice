@@ -115,6 +115,8 @@ export interface ConsoleShellProps {
   onEnvironmentChange: (id: string) => void
   user: ShellUser
   onSignOut?: () => void
+  /** Sits in the header, to the left of search. */
+  headerLeading?: ReactNode
   /** One control belonging to the page as a whole, rendered in the header. */
   headerActions?: ReactNode
   children: ReactNode
@@ -140,6 +142,7 @@ export function ConsoleShell({
   onEnvironmentChange,
   user,
   onSignOut,
+  headerLeading,
   headerActions,
   children,
 }: ConsoleShellProps) {
@@ -210,6 +213,7 @@ export function ConsoleShell({
         user={user}
         onSettings={() => goTo('settings')}
         {...(onSignOut ? { onSignOut } : {})}
+        {...(headerLeading ? { headerLeading } : {})}
         /*
          * The environment leads the trail, and it is where you change it too — the
          * switcher moved out of the sidebar and became this first crumb. The one

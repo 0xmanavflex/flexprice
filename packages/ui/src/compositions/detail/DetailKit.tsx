@@ -510,7 +510,7 @@ export function SimpleTable<T>({
                   key={id}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
-                    'border-border/40 h-14 border-b transition-colors last:border-b-0',
+                    'border-border/40 border-b transition-colors last:border-b-0',
                     onRowClick && 'hover:bg-muted/30 cursor-pointer',
                     highlighted === id && 'bg-success/6',
                   )}
@@ -519,7 +519,7 @@ export function SimpleTable<T>({
                     <td
                       key={column.key}
                       className={cn(
-                        'px-4 whitespace-nowrap',
+                        'px-4 py-4 whitespace-nowrap',
                         index === 0 && 'pl-6',
                         index === columns.length - 1 && 'pr-6',
                         column.className,

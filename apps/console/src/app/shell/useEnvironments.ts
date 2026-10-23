@@ -125,7 +125,7 @@ export function useEnvironments(): UseEnvironments {
    */
   const token = env.apiKey ?? session?.token ?? (env.useMocks ? MOCK_TOKEN : null)
 
-  const { data, isError } = useEnvironmentList(token)
+  const { data, isError, isFetching } = useEnvironmentList(token)
   const environments = useMemo(() => data ?? [], [data])
 
   const selected = environments.find((e) => e.id === environmentId)
@@ -147,9 +147,12 @@ export function useEnvironments(): UseEnvironments {
    * agree, so it settles in one pass.
    */
   useEffect(() => {
-    if (!fallback || selected) return
+    // A create switches to the new id before the list refetch finishes. Falling
+    // back in that window would leave the console on the previous environment
+    // and, once the refetch landed, look like the new one was never selected.
+    if (!fallback || selected || isFetching) return
     setEnvironmentId(fallback.id)
-  }, [fallback, selected, setEnvironmentId])
+  }, [fallback, selected, isFetching, setEnvironmentId])
 
   const { mutate } = useCreateEnvironment(token)
 

@@ -34,6 +34,8 @@ export interface ActivityFacts {
   record?: string
   /** The rest of the sentence: amount, status, or what changed. */
   summary?: string
+  /** A second line, used for the amount paid so it does not sit in the sentence. */
+  detail?: string
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -74,10 +76,11 @@ export function activitySourceLabel(source: string): string {
  * `balance`. A payment's is `amount`. Anything else uses the first money
  * field the snapshot actually carries, then the entity's own label.
  */
-function facts(record?: string, summary?: string): ActivityFacts {
+function facts(record?: string, summary?: string, detail?: string): ActivityFacts {
   return {
     ...(record ? { record } : {}),
     ...(summary ? { summary } : {}),
+    ...(detail ? { detail } : {}),
   }
 }
 
@@ -134,10 +137,10 @@ function invoiceFacts(entry: ActivityEntry): ActivityFacts {
     human(text(read(entry.state, 'payment_status', 'paymentStatus')))
   const parts: Array<string | undefined> = []
   if (total && !isZero(total.raw)) parts.push(total.formatted)
-  if (paid && !isZero(paid.raw)) parts.push(`${paid.formatted} paid`)
   if (due && !isZero(due.raw) && due.raw !== total?.raw) parts.push(`${due.formatted} due`)
   if (status) parts.push(status)
-  return facts(record, join(parts))
+  const paidLine = paid && !isZero(paid.raw) ? `${paid.formatted} paid` : undefined
+  return facts(record, join(parts), paidLine)
 }
 
 function amount(
@@ -191,12 +194,12 @@ function join(parts: Array<string | undefined>): string | undefined {
 function customerFacts(entry: ActivityEntry): ActivityFacts {
   const name = text(read(entry.state, 'name'))
   const external = text(read(entry.state, 'external_id', 'externalId'))
-  const record =
-    name && name !== external
-      ? name
-      : entry.entityLabel && entry.entityLabel !== entry.entityId
-        ? entry.entityLabel
-        : undefined
+  // The API's entity label is the external id when it has no display name.
+  const labelName =
+    entry.entityLabel && entry.entityLabel !== entry.entityId && entry.entityLabel !== external
+      ? entry.entityLabel
+      : undefined
+  const record = name || labelName || undefined
   const zone = text(read(entry.state, 'timezone'))
   return facts(
     record,

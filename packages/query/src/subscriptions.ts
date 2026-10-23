@@ -18,6 +18,8 @@ import {
   type BucketSize,
   CommitmentKind,
   type CancelSubscription,
+  type PauseSubscription,
+  type ResumeSubscription,
   type ChargeCommitment,
   CommitmentType,
   type CommitmentPriceBase,
@@ -1149,6 +1151,39 @@ export function useCancelSubscription() {
   })
 }
 
+/** Stop billing a running contract until it is resumed — `POST /subscriptions/{id}/pause`. */
+export function usePauseSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: PauseSubscription }) =>
+      call(() =>
+        client.subscriptions.pauseSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+          ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
+        }),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Start billing a paused contract again — `POST /subscriptions/{id}/resume`. */
+export function useResumeSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: ResumeSubscription }) =>
+      call(() =>
+        client.subscriptions.resumeSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+        }),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
 /** Start a draft subscription — `POST /subscriptions/{id}/activate`. */
 export function useActivateSubscription() {
   const client = useFlexprice()
@@ -1928,6 +1963,23 @@ export function useAddSubscriptionCoupon(subscriptionId: string) {
       }
       return added
     },
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Take one coupon off this contract or one of its charges, by its association id. */
+export function useRemoveSubscriptionCoupon(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (associationId: string) =>
+      call(() =>
+        client.subscriptions.executeSubscriptionModify(
+          subscriptionId,
+          toRemoveCouponRequest(associationId),
+        ),
+      ),
     onSuccess: () => invalidateContract(queryClient),
   })
 }

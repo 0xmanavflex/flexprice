@@ -1,6 +1,16 @@
-import type { ReactNode } from 'react'
+import { createContext, useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+
+/**
+ * A detail table portals its filter and sort here, so they sit in the section
+ * header beside the action on every detail page, not inside one page's table.
+ */
+export const SectionToolsContext = createContext<{
+  el: HTMLElement | null
+  /** The section shows its own title, so the table's search stays off and its filter and sort sit beside that title. */
+  titled: boolean
+} | null>(null)
 
 /**
  * A titled, bordered surface on a detail or settings page.
@@ -68,47 +78,57 @@ export function Section({
 }: SectionProps) {
   const id = `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
   const headerAction = actions ?? action
+  const [toolsEl, setToolsEl] = useState<HTMLDivElement | null>(null)
+  const toolsSlot = { el: toolsEl, titled: !bare && (!table || showTitle) }
+  const tools = (
+    <div ref={setToolsEl} className="flex items-center gap-2 empty:hidden" />
+  )
 
   if (table) {
     return (
-      <section aria-labelledby={id} className={cn('flex flex-col gap-3', className)}>
-        {showTitle ? (
-          // Centred, so the title reads on the line of the button beside it rather
-          // than hanging at the top of a row the 32px button makes taller.
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-3">
-                <Heading id={id} className="text-sm font-medium">
-                  {title}
-                </Heading>
-                {titleAction}
+      <SectionToolsContext.Provider value={toolsSlot}>
+        <section
+          aria-labelledby={id}
+          className={cn('bg-background flex flex-col overflow-hidden rounded-xl border', className)}
+        >
+          {showTitle ? (
+            <div className="flex items-center justify-between gap-4 border-b px-6 py-4">
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Heading id={id} className="text-sm font-medium">
+                    {title}
+                  </Heading>
+                  {titleAction}
+                </div>
+                {description ? (
+                  <p className="text-muted-foreground mt-0.5 text-[13px]">{description}</p>
+                ) : null}
               </div>
-              {description ? (
-                <p className="text-muted-foreground mt-0.5 text-[13px]">{description}</p>
-              ) : null}
+              <div className="-my-1.5 flex shrink-0 items-center gap-2">
+                {tools}
+                {headerAction}
+              </div>
             </div>
-            {headerAction ? (
-              <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
-            ) : null}
-          </div>
-        ) : (
-          <>
+          ) : headerAction ? (
+            <div className="flex items-center justify-end gap-2 border-b px-6 py-3">
+              <Heading id={id} className="sr-only">
+                {title}
+              </Heading>
+              {headerAction}
+            </div>
+          ) : (
             <Heading id={id} className="sr-only">
               {title}
             </Heading>
-            {headerAction ? <div className="flex justify-end gap-2">{headerAction}</div> : null}
-          </>
-        )}
-        <div
-          className={cn('bg-background min-w-0 overflow-hidden rounded-xl border', bodyClassName)}
-        >
-          {children}
-        </div>
-      </section>
+          )}
+          <div className={cn('min-w-0', bodyClassName)}>{children}</div>
+        </section>
+      </SectionToolsContext.Provider>
     )
   }
 
   return (
+    <SectionToolsContext.Provider value={toolsSlot}>
     <section
       aria-labelledby={id}
       className={cn('bg-background flex flex-col rounded-xl border', className)}
@@ -130,13 +150,15 @@ export function Section({
           {/* `-my-1.5` takes back the button's extra height over the title's line,
               so a header is the same height with or without an action and its
               button sits centred on the title. */}
-          {headerAction ? (
-            <div className="-my-1.5 flex shrink-0 items-center gap-2">{headerAction}</div>
-          ) : null}
+          <div className="-my-1.5 flex shrink-0 items-center gap-2">
+            {tools}
+            {headerAction}
+          </div>
         </div>
       )}
       <div className={cn('flex-1', !flush && 'p-6', bodyClassName)}>{children}</div>
     </section>
+    </SectionToolsContext.Provider>
   )
 }
 
@@ -175,7 +197,7 @@ export function Panel({
   return (
     <section
       aria-labelledby={title ? titleId : undefined}
-      className={cn('bg-muted/40 flex flex-col rounded-xl border p-1', className)}
+      className={cn('bg-muted/40 flex flex-col rounded-xl border p-1', className)} 
     >
       {title || action ? (
         <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-4">

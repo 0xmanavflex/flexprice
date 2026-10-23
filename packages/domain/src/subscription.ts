@@ -954,6 +954,31 @@ export interface CancelSubscription {
   generateInvoice?: boolean
 }
 
+/**
+ * Pausing a contract: `POST /subscriptions/{id}/pause`, as V1 sends it — a
+ * proration choice and an optional reason. Billing stops until it is resumed.
+ */
+export interface PauseSubscription {
+  /** Credit the unused part of the current period. Off means no proration. */
+  prorate: boolean
+  reason: string
+}
+
+/** Resuming a paused contract: `POST /subscriptions/{id}/resume`. */
+export interface ResumeSubscription {
+  /** Charge for the remainder of the current period. Off means no proration. */
+  prorate: boolean
+}
+
+/** Pause is offered on a running contract; resume only on a paused one. */
+export function canPauseSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Active || status === SubscriptionStatus.Trialing
+}
+
+export function canResumeSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Paused
+}
+
 /** One line of the invoice a contract will raise next. */
 export interface InvoicePreviewLine {
   id: string

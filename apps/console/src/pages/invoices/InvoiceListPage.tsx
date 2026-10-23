@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import {
   DEFAULT_CUSTOMER_QUERY,
   type Invoice,
@@ -43,10 +44,15 @@ export function InvoiceListPage({
   onIssueCreditNote,
 }: InvoiceListPageProps) {
   const invoices = useInvoices(query)
+  const navigate = useNavigate()
   const { actionsFor, dialogs } = useInvoiceRowActions({
     onRecordPayment,
     onIssueCreditNote,
     onOpenCustomer,
+    onEditInvoice: (invoiceId) =>
+      void navigate({ to: '/invoices/$invoiceId/edit', params: { invoiceId } }),
+    onOpenContract: (subscriptionId) =>
+      void navigate({ to: '/contracts/$subscriptionId', params: { subscriptionId } }),
   })
 
   const isFiltered =

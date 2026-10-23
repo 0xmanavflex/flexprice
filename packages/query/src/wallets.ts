@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, ErrorKind, call, debitWallet } from '@fp/api'
 import {
+  type AlertSettingConfig,
   type AutoTopup,
   type CreateWallet,
   type DebitWallet,
@@ -10,6 +11,7 @@ import {
   WalletStatus,
   moneyOr,
 } from '@fp/domain'
+import { type AlertConfigWire, toAlertConfig, toAlertConfigRequest } from './alertSettings'
 import { queryKeys } from './keys'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
@@ -20,6 +22,7 @@ import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provide
  */
 
 export interface WalletWire {
+  alertSettings?: AlertConfigWire | undefined
   id?: string | undefined
   customerId?: string | undefined
   currency?: string | undefined
@@ -62,6 +65,7 @@ export function toWallet(wire: WalletWire): Wallet {
   const credits = wire.creditBalance ?? '0'
   const amount = wire.balance ?? '0'
   return {
+    alertSettings: toAlertConfig(wire.alertSettings),
     id: wire.id ?? '',
     customerId: wire.customerId ?? '',
     currency,
@@ -276,13 +280,36 @@ export function useTopUpWallet(walletId: string) {
   })
 }
 
+/**
+ * `PUT /wallets/{id}` with one part of the wallet. The one place the update
+ * request is cast: the auto top-up and alert bodies are built as plain maps.
+ */
+function updateWallet(client: ReturnType<typeof useFlexprice>, walletId: string, body: object) {
+  return call(() => client.wallets.updateWallet(walletId, body as never))
+}
+
 export function useUpdateAutoTopup(walletId: string) {
   const client = useFlexprice()
   const invalidate = useInvalidateWallets()
 
   return useMutation({
     mutationFn: (draft: AutoTopup) =>
-      call(() => client.wallets.updateWallet(walletId, toUpdateAutoTopupRequest(draft) as never)),
+      updateWallet(client, walletId, toUpdateAutoTopupRequest(draft)),
+    onSuccess: invalidate,
+  })
+}
+
+/**
+ * A wallet's balance alerts, stored on the wallet as V1 does
+ * (`alert_settings` on `PUT /wallets/{id}`), not as an `/alerts/setting` record.
+ */
+export function useUpdateWalletAlerts(walletId: string) {
+  const client = useFlexprice()
+  const invalidate = useInvalidateWallets()
+
+  return useMutation({
+    mutationFn: (config: AlertSettingConfig) =>
+      updateWallet(client, walletId, { alertSettings: toAlertConfigRequest(config) }),
     onSuccess: invalidate,
   })
 }
