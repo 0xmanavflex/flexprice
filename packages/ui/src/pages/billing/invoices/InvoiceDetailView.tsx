@@ -215,7 +215,7 @@ export function InvoiceDetailView({
     },
     {
       id: 'subscription',
-      label: 'Subscription',
+      label: 'Contract',
       value: invoice.subscriptionLabel,
       ...(onOpenSubscription && invoice.subscriptionId ? { onOpen: onOpenSubscription } : {}),
     },
@@ -276,17 +276,19 @@ export function InvoiceDetailView({
           <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuGroup>
               <MenuAction
-                icon={<DownloadIcon />}
-                label="Download PDF"
-                onSelect={onDownload}
-                hint="Available once the invoice has a PDF"
+                icon={<CopyIcon />}
+                label="Copy ID"
+                onSelect={() => {
+                  void navigator.clipboard
+                    .writeText(invoice.id)
+                    .then(() => toast.success('Invoice ID copied'))
+                    .catch(() => toast.error('Couldn’t copy the invoice ID'))
+                }}
               />
-              <MenuAction
-                icon={<LinkIcon />}
-                label="Copy hosted invoice link"
-                onSelect={hostedUrl ? () => void copyLink() : undefined}
-                hint="Available once the invoice is finalized"
-              />
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
               {isDraft && onFinalize ? (
                 <MenuAction
                   icon={<CheckCircle2Icon />}
@@ -302,6 +304,18 @@ export function InvoiceDetailView({
               invoice.status !== InvoiceStatus.Skipped ? (
                 <MenuAction icon={<PencilIcon />} label="Edit invoice" onSelect={onEdit} />
               ) : null}
+              <MenuAction
+                icon={<DownloadIcon />}
+                label="Download invoice"
+                onSelect={onDownload}
+                hint="Available once the invoice has a PDF"
+              />
+              <MenuAction
+                icon={<LinkIcon />}
+                label="Copy hosted invoice link"
+                onSelect={hostedUrl ? () => void copyLink() : undefined}
+                hint="Available once the invoice is finalized"
+              />
               <MenuAction
                 icon={<WalletIcon />}
                 label="Record payment"
@@ -321,7 +335,7 @@ export function InvoiceDetailView({
               ) : null}
               <MenuAction
                 icon={<CalculatorIcon />}
-                label="Recalculate"
+                label="Recalculate invoice"
                 onSelect={onRecalculate}
                 disabled={!isDraft || pendingAction === 'recalculate'}
                 pending={pendingAction === 'recalculate'}
@@ -330,7 +344,7 @@ export function InvoiceDetailView({
               />
               <MenuAction
                 icon={<FileMinusIcon />}
-                label="Issue credit memo"
+                label="Issue a credit note"
                 onSelect={onIssueCreditNote}
                 disabled={!canIssueCreditNote}
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
@@ -346,7 +360,7 @@ export function InvoiceDetailView({
               ) : null}
               <MenuAction
                 icon={<SendIcon />}
-                label="Send invoice"
+                label="Send communication"
                 onSelect={onSend}
                 disabled={
                   isDraft || invoice.status === InvoiceStatus.Void || pendingAction === 'send'
@@ -355,28 +369,18 @@ export function InvoiceDetailView({
                 pendingLabel="Sending…"
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
-              <MenuAction
-                icon={<CopyIcon />}
-                label="Copy invoice ID"
-                onSelect={() => {
-                  void navigator.clipboard
-                    .writeText(invoice.id)
-                    .then(() => toast.success('Invoice ID copied'))
-                    .catch(() => toast.error('Couldn’t copy the invoice ID'))
-                }}
-              />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuLabel>Go to</DropdownMenuLabel>
+              <DropdownMenuLabel>Connections</DropdownMenuLabel>
               <DropdownMenuItem disabled={!onOpenCustomer} onClick={onOpenCustomer}>
-                <UserIcon aria-hidden="true" /> Customer
+                <UserIcon aria-hidden="true" /> View customer
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!onOpenSubscription || !invoice.subscriptionId}
                 onClick={onOpenSubscription}
               >
-                <FileTextIcon aria-hidden="true" /> Contract
+                <FileTextIcon aria-hidden="true" /> View subscription
               </DropdownMenuItem>
             </DropdownMenuGroup>
             {onVoid &&

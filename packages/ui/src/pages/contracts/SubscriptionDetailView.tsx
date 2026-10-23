@@ -1,9 +1,11 @@
 import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
+import { toast } from 'sonner'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
+  CopyIcon,
   PackageIcon,
   PlusIcon,
   CirclePauseIcon,
@@ -680,6 +682,18 @@ export function SubscriptionDetailView({
         <DetailMoreMenu
           label="Contract actions"
           items={[
+            {
+              id: 'copy-id',
+              label: 'Copy ID',
+              icon: <CopyIcon aria-hidden="true" className="size-4" />,
+              readOnly: true,
+              onSelect: () => {
+                void navigator.clipboard
+                  .writeText(s.id)
+                  .then(() => toast.success('Contract ID copied'))
+                  .catch(() => toast.error('Couldn’t copy the contract ID'))
+              },
+            },
             ...(canActivate && onActivate
               ? [
                   {
