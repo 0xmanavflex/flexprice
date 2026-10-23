@@ -496,6 +496,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CustomerDetail",
+        "DetailTable",
         "EntityList",
         "SortMenu"
       ],
@@ -529,6 +531,7 @@
         "CheckoutReturnView",
         "ConnectIntegrationSheet",
         "ConnectorCard",
+        "ContractIntegrations",
         "CustomerWalletView",
         "DashboardHome",
         "EventDetailSheet",
@@ -1004,7 +1007,6 @@
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty",
         "SubTabState",
         "WriteGate"
       ],
@@ -1543,6 +1545,7 @@
       "file": "src/pages/contracts/ContractIntegrations.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowUpRightIcon",
         "Composer",
         "ConfirmDialog",
         "CopyIcon",
@@ -1682,6 +1685,7 @@
         "LedgerRow",
         "Loaded",
         "Mark",
+        "MetadataCard",
         "OverviewTiles",
         "PaymentGrid",
         "PlanGrid",
@@ -2030,6 +2034,7 @@
         "AccessScope",
         "ActivitySection",
         "ArchiveIcon",
+        "ArrowUpDownIcon",
         "ContractIntegrations",
         "CopyValue",
         "DetailTable",
@@ -2041,6 +2046,7 @@
         "EntityHeader",
         "EntityLink",
         "EyeIcon",
+        "FilterBar",
         "IntegrationMark",
         "IntegrationMarks",
         "LinkIcon",
@@ -2054,6 +2060,8 @@
         "RocketIcon",
         "RowActionsMenu",
         "Section",
+        "SimpleTable",
+        "SortMenu",
         "Status",
         "SubTabState",
         "WalletIcon",
@@ -2509,7 +2517,11 @@
       "file": "src/pages/shared/DetailTable.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "ArrowUpDownIcon",
+        "EntityList",
+        "FilterBar",
+        "SectionToolsContext",
+        "SortMenu"
       ],
       "usedBy": [
         "AddonSubscriptionsView",
@@ -3437,6 +3449,8 @@
         "Filters"
       ],
       "usedBy": [
+        "CustomerDetail",
+        "DetailTable",
         "EntityList"
       ],
       "story": "./src/compositions/tables/FilterBar.stories.tsx"
@@ -4687,7 +4701,6 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
-        "SubscriptionDetailView",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
@@ -4865,6 +4878,7 @@
       "file": "src/compositions/detail/MetadataCard.tsx",
       "layer": "composition",
       "composes": [
+        "CopyIcon",
         "PencilIcon",
         "PlusIcon",
         "Section"
@@ -6554,7 +6568,6 @@
         "SceneIllustration"
       ],
       "usedBy": [
-        "ChargeTable",
         "ConnectionExports",
         "DataExportDetail",
         "ExportRunList",
@@ -6562,10 +6575,18 @@
         "RevenueReport",
         "S3ConnectionList",
         "SubTabState",
-        "SubscriptionDetailView",
         "UsageBillingView"
       ],
       "story": "./src/compositions/feedback/SectionEmpty.stories.tsx"
+    },
+    "SectionToolsContext": {
+      "file": "src/compositions/layout/Section.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "DetailTable"
+      ],
+      "story": "./src/compositions/layout/Section.stories.tsx"
     },
     "SecurityTab": {
       "file": "src/components/blocks/settings-7/components/security-tab.tsx",
@@ -6885,6 +6906,7 @@
       ],
       "usedBy": [
         "ConnectionExports",
+        "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
         "ExportsOverview",
@@ -6970,6 +6992,8 @@
         "ArrowUpIcon"
       ],
       "usedBy": [
+        "CustomerDetail",
+        "DetailTable",
         "EntityList"
       ],
       "story": "./src/compositions/tables/SortMenu.stories.tsx"
@@ -7144,7 +7168,6 @@
         "EntityLink",
         "FormDialog",
         "InvoiceStatusBadge",
-        "LoadingRows",
         "MetadataCard",
         "OverviewTiles",
         "PackageIcon",
@@ -7155,7 +7178,7 @@
         "RelatedCard",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty",
+        "SubTabState",
         "SubscriptionStatusBadge",
         "TotalRow",
         "TotalsList",
@@ -7256,7 +7279,8 @@
         "GroupMembersView",
         "InvoiceDetailView",
         "PlanCreditGrantsView",
-        "PlanEntitlementsView"
+        "PlanEntitlementsView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/SubTabState.stories.tsx"
     },
