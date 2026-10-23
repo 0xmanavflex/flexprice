@@ -185,9 +185,7 @@ export function DetailTable<T extends object>({
         return haystack.toLowerCase().includes(needle)
       })
     }
-    const sorting = sortState
-      ? columns.find((column) => column.key === sortState.field)
-      : null
+    const sorting = sortState ? columns.find((column) => column.key === sortState.field) : null
     const by = sorting?.sortBy ?? sorting?.text
     if (sortState && by) {
       const sign = sortState.direction === 'asc' ? 1 : -1
@@ -270,14 +268,22 @@ export function DetailTable<T extends object>({
                 onQueryChange={(_query, flat: FlatFilter[]) => {
                   const next: Record<string, string[]> = {}
                   for (const spec of activeSpecs) {
-                    const allowed = new Set((choicesById[spec.id] ?? []).map((choice) => choice.value))
+                    const allowed = new Set(
+                      (choicesById[spec.id] ?? []).map((choice) => choice.value),
+                    )
                     next[spec.id] = readSelectFilter(flat, spec.id, allowed)
                   }
                   setSelected(next)
                   setPage(1)
                 }}
                 trigger={
-                  <Button type="button" variant="outline" size="icon" className="size-8" aria-label="Filter">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    aria-label="Filter"
+                  >
                     <FilterIcon aria-hidden />
                   </Button>
                 }
@@ -294,7 +300,13 @@ export function DetailTable<T extends object>({
                   setPage(1)
                 }}
                 trigger={
-                  <Button type="button" variant="outline" size="icon" className="size-8" aria-label="Sort">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    aria-label="Sort"
+                  >
                     <ArrowUpDownIcon aria-hidden />
                   </Button>
                 }
@@ -314,7 +326,10 @@ export function DetailTable<T extends object>({
         border={border}
         isLoading={isLoading}
         hideToolbar={!toolbar || inHeader}
-        hideFooter={!footer || inHeader}
+        // With its tools in the section header the table is usually short
+        // enough to need no footer, but a longer one keeps its pager: rows are
+        // sliced to one page, so without it the rest could not be reached.
+        hideFooter={!footer || (inHeader && visible.length <= pageSize)}
         label={`${label} table`}
         noun={noun}
         rows={slice}
@@ -359,7 +374,9 @@ export function DetailTable<T extends object>({
                 onQueryChange: (_query, flat: FlatFilter[]) => {
                   const next: Record<string, string[]> = {}
                   for (const spec of activeSpecs) {
-                    const allowed = new Set((choicesById[spec.id] ?? []).map((choice) => choice.value))
+                    const allowed = new Set(
+                      (choicesById[spec.id] ?? []).map((choice) => choice.value),
+                    )
                     next[spec.id] = readSelectFilter(flat, spec.id, allowed)
                   }
                   setSelected(next)
