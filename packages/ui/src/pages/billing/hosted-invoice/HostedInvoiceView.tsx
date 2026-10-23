@@ -148,18 +148,18 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
         <Panel innerClassName="p-6">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-10">
             {/* Sidebar: merchant + state + amount + essentials + Pay */}
-            <aside className="flex flex-col gap-5 lg:border-r lg:pr-10">
+            <aside className="flex flex-col gap-5 lg:sticky lg:top-6 lg:self-start lg:border-r lg:pr-10">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <Item
-                    className="bg-primary text-primary-foreground size-9 shrink-0 items-center justify-center p-0"
+                    className="bg-primary text-primary-foreground size-8 shrink-0 items-center justify-center p-0"
                     aria-hidden="true"
                   >
                     <ItemMedia variant="icon" className="size-auto text-sm font-medium">
                       {merchant.charAt(0).toUpperCase()}
                     </ItemMedia>
                   </Item>
-                  <span className="truncate text-sm font-medium">{merchant}</span>
+                  <span className="truncate text-[13px] font-medium">{merchant}</span>
                 </div>
                 <Badge variant={state.badge} radius="full">
                   {invoice.state === 'paid' ? (
@@ -176,7 +176,7 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
                 >
                   {state.hero}
                 </h1>
-                <span className="text-foreground text-3xl leading-none font-medium tracking-tight tabular-nums md:text-4xl">
+                <span className="text-foreground text-2xl leading-none font-medium tracking-tight tabular-nums">
                   {money(amount)}
                 </span>
                 {invoice.state === 'paid' && invoice.paidAt ? (
@@ -190,21 +190,27 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
 
               <div className="flex flex-col gap-4">
                 <MetaSection label="Invoice">
-                  <p className="text-foreground font-mono text-sm tabular-nums">{invoice.number}</p>
+                  <p className="text-foreground font-mono text-[13px] tabular-nums">
+                    {invoice.number}
+                  </p>
                 </MetaSection>
                 {invoice.customerName ? (
                   <MetaSection label="Billed To">
-                    <p className="text-foreground text-sm font-medium">{invoice.customerName}</p>
+                    <p className="text-foreground text-[13px] font-medium">
+                      {invoice.customerName}
+                    </p>
                   </MetaSection>
                 ) : null}
                 {invoice.state === 'paid' && invoice.paidWith ? (
                   <MetaSection label="Paid With">
-                    <p className="text-foreground text-sm font-medium">{invoice.paidWith}</p>
+                    <p className="text-foreground text-[13px] font-medium">{invoice.paidWith}</p>
                   </MetaSection>
                 ) : null}
                 {invoice.state !== 'paid' && invoice.state !== 'voided' && invoice.dueAt ? (
                   <MetaSection label="Due Date">
-                    <p className="text-foreground text-sm font-medium">{dueDay(invoice.dueAt)}</p>
+                    <p className="text-foreground text-[13px] font-medium">
+                      {dueDay(invoice.dueAt)}
+                    </p>
                   </MetaSection>
                 ) : null}
                 {invoice.memo ? (
@@ -265,7 +271,7 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
 
               <Separator />
 
-              <dl className="ml-auto flex w-full flex-col gap-1.5 text-sm sm:w-72">
+              <dl className="ml-auto flex w-full flex-col gap-1.5 text-[13px] sm:w-72">
                 <TotalRow label="Subtotal" value={money(invoice.subtotal)} />
                 {invoice.discount ? (
                   <TotalRow
@@ -416,6 +422,14 @@ function MetaSection({ label, children }: { label: string; children: ReactNode }
   )
 }
 
+/** A quantity as the API sent it, grouped for reading ("1,800"); anything unparseable as is. */
+function quantityText(quantity: string): string {
+  const value = Number(quantity)
+  return quantity !== '' && Number.isFinite(value)
+    ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(value)
+    : quantity
+}
+
 function LineItem({
   line,
   amount,
@@ -428,22 +442,23 @@ function LineItem({
   isLast: boolean
 }) {
   return (
+    // One line per item, so an invoice with many lines stays a short list.
     <article
       className={cn(
-        'flex min-w-0 items-start gap-4',
-        isFirst ? 'pt-0' : 'pt-4',
-        isLast ? 'pb-0' : 'pb-4',
+        'flex min-w-0 items-baseline gap-4 text-[13px]',
+        isFirst ? 'pt-0' : 'pt-2',
+        isLast ? 'pb-0' : 'pb-2',
       )}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p className="text-foreground min-w-0 truncate text-sm leading-snug font-medium">
-          {line.name}
-        </p>
-        <p className="text-muted-foreground text-xs">Qty {line.quantity}</p>
-      </div>
-      <div className="flex shrink-0 flex-col items-end gap-0.5 text-sm tabular-nums">
-        <span className="text-foreground font-medium">{amount}</span>
-      </div>
+      <p className="text-foreground min-w-0 flex-1 truncate font-medium" title={line.name}>
+        {line.name}
+      </p>
+      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+        × {quantityText(line.quantity)}
+      </span>
+      <span className="text-foreground w-24 shrink-0 text-right font-medium tabular-nums">
+        {amount}
+      </span>
     </article>
   )
 }
@@ -468,7 +483,7 @@ function TotalRow({
     >
       <dt
         className={cn(
-          strong ? 'text-foreground text-base font-medium' : 'text-muted-foreground text-sm',
+          strong ? 'text-foreground text-sm font-medium' : 'text-muted-foreground text-[13px]',
         )}
       >
         {label}
@@ -476,7 +491,9 @@ function TotalRow({
       <dd
         className={cn(
           'tabular-nums',
-          strong ? 'text-foreground text-lg font-medium' : 'text-foreground text-sm font-medium',
+          strong
+            ? 'text-foreground text-base font-medium'
+            : 'text-foreground text-[13px] font-medium',
           tone === 'success' && 'text-success',
         )}
       >

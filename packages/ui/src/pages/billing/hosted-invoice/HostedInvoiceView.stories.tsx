@@ -35,7 +35,7 @@ export const Open: Story = {
     await expect(canvas.getByText('due 14 Nov 2026')).toBeVisible()
     await expect(canvas.getByText('FX G5 1791253409')).toBeVisible()
     await expect(canvas.getByText('API calls')).toBeVisible()
-    await expect(canvas.getByText('Qty 4000')).toBeVisible()
+    await expect(canvas.getByText('× 4,000')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: pay }))
     await waitFor(() => expect((args as { onPay: () => void }).onPay).toHaveBeenCalledTimes(1))
   },
@@ -50,6 +50,27 @@ export const Download: Story = {
       expect((args as { onDownload: () => void }).onDownload).toHaveBeenCalledTimes(1),
     )
     await expect(canvas.getByRole('button', { name: 'Print invoice DSADDWUO-0001' })).toBeVisible()
+  },
+}
+
+/** Many lines: one row each, so 15 lines and the totals still read as one short receipt. */
+export const ManyLines: Story = {
+  args: {
+    invoice: {
+      ...DEMO_HOSTED_INVOICE,
+      lines: Array.from({ length: 15 }, (_, i) => ({
+        id: `li_${i}`,
+        name: `Usage line ${i + 1}`,
+        quantity: String((i + 1) * 120),
+        amount: { amount: String(400 + i * 37), currency: 'INR' },
+      })),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('15 items')).toBeVisible()
+    await expect(canvas.getByText('Usage line 15')).toBeVisible()
+    await expect(canvas.getByText('× 1,800')).toBeVisible()
   },
 }
 
