@@ -29,10 +29,15 @@ test('opens a contract from the list and cancels it', async ({ page }) => {
 
 // The search answers active only unless told otherwise, which hid trialing
 // contracts from the list and made their own page read "Contract not found".
-const TRIALING = 'subs_01MOCKTRIALING0000000001'
-
+// Found from the list rather than by a fixture id, then opened by URL: a link
+// or a reload lands on the page with nothing cached.
 test('opens a trialing contract instead of "not found"', async ({ page }) => {
-  await page.goto(`/contracts/${TRIALING}`)
+  await page.goto('/contracts?status=trialing')
+  await page.getByRole('row').filter({ hasText: 'Trialing' }).first().click({ timeout: 20_000 })
+  await expect(page).toHaveURL(/\/contracts\/[^/?]+$/)
+  const url = page.url()
+  await page.goto('about:blank')
+  await page.goto(url)
   await expect(page.getByText('Trialing').first()).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('Contract not found')).toHaveCount(0)
 })

@@ -41,7 +41,7 @@ async function createCustomer(page: Page, name: string) {
   const created = page.waitForRequest(isWrite('POST', /\/v1\/customers$/))
   await page.getByRole('button', { name: 'Create customer' }).click()
   await created
-  await expect(page).toHaveURL(/\/customers\/cust_new_[^/?]+/)
+  await expect(page).toHaveURL(/\/customers\/(?!new\b)[^/?]+(?:\?|$)/)
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
 }
 
@@ -51,7 +51,7 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
 
     await page.getByRole('button', { name: 'Customer actions' }).click()
     await page.getByRole('menuitem', { name: 'Create contract' }).click()
-    await expect(page).toHaveURL(/\/customers\/cust_new_[^/]+\/contracts\/new/)
+    await expect(page).toHaveURL(/\/customers\/[^/]+\/contracts\/new/)
 
     await page.getByRole('combobox', { name: /^Plan/ }).click()
     await page.getByRole('option').first().click()
@@ -68,12 +68,12 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
     await contract
 
     // Back on the customer, which now has a contract and the invoice it issued.
-    await expect(page).toHaveURL(/\/customers\/cust_new_[^/?]+/)
+    await expect(page).toHaveURL(/\/customers\/(?!new\b)[^/?]+(?:\?|$)/)
     await page.getByRole('tab', { name: 'Invoices' }).click()
     const invoices = page.getByRole('region', { name: /Invoices table/ })
     await expect(invoices.getByRole('row').nth(1)).toBeVisible()
     await invoices.getByRole('row').nth(1).getByRole('cell').first().click()
-    await expect(page).toHaveURL(/\/invoices\/inv_new_/)
+    await expect(page).toHaveURL(/\/invoices\/(?!new\b)[^/?]+(?:\?|$)/)
     await expect(page.getByRole('heading', { name: 'Invoice', level: 1 })).toBeVisible()
   })
 
@@ -88,7 +88,7 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
     await page.getByLabel('Line 1 name').fill('Onboarding')
     await page.getByLabel('Unit price for line 1').fill('240.00')
     await page.getByRole('button', { name: 'Save draft' }).click()
-    await expect(page).toHaveURL(/\/invoices\/inv_new_/)
+    await expect(page).toHaveURL(/\/invoices\/(?!new\b)[^/?]+(?:\?|$)/)
     const invoiceUrl = page.url()
 
     const menu = page.getByRole('menu', { name: 'More actions' })
@@ -99,7 +99,7 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
 
     await page.getByRole('button', { name: 'More actions' }).click()
     await page.getByRole('menuitem', { name: 'Record payment' }).click()
-    await expect(page).toHaveURL(/\/payments\/new\?invoice=inv_new_/)
+    await expect(page).toHaveURL(/\/payments\/new\?invoice=[^&]+/)
 
     const currency = page.getByRole('combobox', { name: /Currency/ })
     if ((await currency.textContent())?.includes('Choose')) {
@@ -110,7 +110,7 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
     // "Process now" is on by default: the payment succeeds as it is recorded.
     await expect(page.getByRole('switch', { name: /Process now/ })).toBeChecked()
     await page.getByRole('button', { name: 'Create payment' }).click()
-    await expect(page).toHaveURL(/\/payments\/pay_new_/)
+    await expect(page).toHaveURL(/\/payments\/(?!new\b)[^/?]+(?:\?|$)/)
     await expect(page.getByText('Succeeded').first()).toBeVisible()
 
     // The invoice it settled shows the payment and no balance left to pay.
