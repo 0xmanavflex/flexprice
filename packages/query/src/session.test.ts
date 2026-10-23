@@ -51,6 +51,7 @@ const recorded = vi.hoisted(() => ({
   queries: [] as RecordedQuery[],
   mutations: [] as RecordedMutation[],
   invalidated: [] as unknown[],
+  updated: [] as unknown[],
 }))
 
 vi.mock('./provider', () => ({
@@ -71,6 +72,11 @@ vi.mock('@tanstack/react-query', () => {
     invalidateQueries: (filters: { queryKey: unknown }) => {
       recorded.invalidated.push(filters.queryKey)
       return Promise.resolve()
+    },
+    // A create also writes the new environment into every cached list, so the
+    // switcher can select it before the refetch lands.
+    setQueriesData: (filters: { queryKey: unknown }) => {
+      recorded.updated.push(filters.queryKey)
     },
   })
   return {
@@ -123,6 +129,7 @@ afterEach(() => {
   recorded.queries.length = 0
   recorded.mutations.length = 0
   recorded.invalidated.length = 0
+  recorded.updated.length = 0
   vi.unstubAllGlobals()
 })
 
@@ -396,6 +403,8 @@ describe('useCreateEnvironment', () => {
 
     expect(invalidated).toEqual([...queryKeys.session.environments()])
     expect(listKey.slice(0, invalidated.length)).toEqual([...invalidated])
+    // The cached lists are written at the same prefix, before the refetch.
+    expect(recorded.updated[0]).toEqual([...queryKeys.session.environments()])
   })
 })
 
