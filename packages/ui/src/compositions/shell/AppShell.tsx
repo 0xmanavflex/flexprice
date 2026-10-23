@@ -64,6 +64,8 @@ export interface AppShellProps {
   breadcrumb?: ReactNode
   /** One control that belongs to the page as a whole, not to its content. */
   headerActions?: ReactNode
+  /** A status chip that leads the cluster, left of search — the account's trial, say. */
+  headerLeading?: ReactNode
   children: ReactNode
 }
 
@@ -100,6 +102,7 @@ export function AppShell({
   pinned,
   breadcrumb,
   headerActions,
+  headerLeading,
   children,
 }: AppShellProps) {
   // The pinned nav group already takes the free space above itself; a second
@@ -181,6 +184,7 @@ export function AppShell({
               breadcrumb; the crumbs truncate instead, keeping Create reachable
               at 390. */}
             <div className="flex shrink-0 items-center gap-1.5">
+              {headerLeading}
               <ShellSearch {...(search ?? {})} />
               {headerActions}
             </div>

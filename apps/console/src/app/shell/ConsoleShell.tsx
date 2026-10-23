@@ -116,6 +116,8 @@ export interface ConsoleShellProps {
   onSignOut?: () => void
   /** One control belonging to the page as a whole, rendered in the header. */
   headerActions?: ReactNode
+  /** Leads the header cluster, left of search: the trial chip. */
+  headerLeading?: ReactNode
   children: ReactNode
 }
 
@@ -140,6 +142,7 @@ export function ConsoleShell({
   user,
   onSignOut,
   headerActions,
+  headerLeading,
   children,
 }: ConsoleShellProps) {
   const activeItemId = navEntryForPath(pathname, search)
@@ -252,6 +255,7 @@ export function ConsoleShell({
          * people start cold — a subscription, a customer — do not live on the
          * screen they happen to be looking at.
          */
+        headerLeading={headerLeading}
         headerActions={
           <>
             {headerActions}
