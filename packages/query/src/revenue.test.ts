@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { sumDecimals, toInvoicedRevenue, toRevenueOverview } from './revenue'
+import {
+  revenueAnalyticsWindows,
+  sumDecimals,
+  toInvoicedRevenue,
+  toRevenueOverview,
+} from './revenue'
 
 describe('toRevenueOverview', () => {
   it('keeps the server decimals and orders currencies by how many customers they bill', () => {
@@ -69,5 +74,60 @@ describe('toInvoicedRevenue', () => {
       ['Globex', '99.90'],
       ['Acme', '11.00'],
     ])
+  })
+})
+
+describe('revenueAnalyticsWindows', () => {
+  const DAY = 24 * 60 * 60 * 1000
+  const iso = (pieces: { start: Date; end: Date }[]) =>
+    pieces.map(({ start, end }) => [start.toISOString(), end.toISOString()])
+  // What the API checks: no piece may run past 90 days.
+  const withinLimit = (pieces: { start: Date; end: Date }[]) =>
+    pieces.every(({ start, end }) => end.getTime() - start.getTime() <= 90 * DAY)
+  // The API counts whole UTC days, floor(start) to floor(end).
+  const days = (pieces: { start: Date; end: Date }[]) =>
+    pieces.flatMap(({ start, end }) => {
+      const out: string[] = []
+      for (
+        let day = Math.floor(start.getTime() / DAY) * DAY;
+        day <= Math.floor(end.getTime() / DAY) * DAY;
+        day += DAY
+      ) {
+        out.push(new Date(day).toISOString().slice(0, 10))
+      }
+      return out
+    })
+
+  it('sends a window of 90 days or less as it is', () => {
+    const window = {
+      start: new Date('2026-08-01T00:00:00Z'),
+      end: new Date('2026-10-29T12:00:00Z'),
+    }
+    expect(revenueAnalyticsWindows(window)).toEqual([window])
+  })
+
+  it('splits the 90 days and 17 hours the API refused into two pieces', () => {
+    const pieces = revenueAnalyticsWindows({
+      start: new Date('2026-07-25T00:00:00.000Z'),
+      end: new Date('2026-10-23T17:16:01.968Z'),
+    })
+    expect(iso(pieces)).toEqual([
+      ['2026-07-25T00:00:00.000Z', '2026-10-22T00:00:00.000Z'],
+      ['2026-10-23T00:00:00.000Z', '2026-10-23T17:16:01.968Z'],
+    ])
+    expect(withinLimit(pieces)).toBe(true)
+  })
+
+  it('covers a year once each day, every piece within the limit', () => {
+    const start = new Date('2024-11-09T06:45:42.264Z')
+    const end = new Date('2025-11-01T00:00:00.000Z')
+    const pieces = revenueAnalyticsWindows({ start, end })
+    expect(pieces).toHaveLength(4)
+    expect(withinLimit(pieces)).toBe(true)
+    const covered = days(pieces)
+    expect(new Set(covered).size).toBe(covered.length)
+    expect(covered[0]).toBe('2024-11-09')
+    expect(covered.at(-1)).toBe('2025-11-01')
+    expect(covered).toHaveLength(358)
   })
 })

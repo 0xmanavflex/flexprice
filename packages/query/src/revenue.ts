@@ -127,9 +127,46 @@ export interface RevenueDay {
   amount: number
 }
 
+/** The most days one `POST /analytics/revenue` covers; past it the API answers 400. */
+export const REVENUE_ANALYTICS_MAX_DAYS = 90
+
+const DAY_MS = 24 * 60 * 60 * 1000
+const floorDayUTC = (value: Date) => Math.floor(value.getTime() / DAY_MS) * DAY_MS
+
+/**
+ * A window cut into requests the revenue analytics API accepts.
+ *
+ * The API counts whole UTC days, `floor(start)` to `floor(end)` inclusive, and
+ * refuses a request whose `end - start` exceeds 90 days ("Narrow the time
+ * range or run multiple requests"). Each piece is day-aligned so no day is
+ * asked for twice, and none spans more than 90 days.
+ */
+export function revenueAnalyticsWindows(
+  window: { start: Date; end: Date },
+  maxDays = REVENUE_ANALYTICS_MAX_DAYS,
+): { start: Date; end: Date }[] {
+  const pieces: { start: Date; end: Date }[] = []
+  const lastDay = floorDayUTC(window.end)
+  let start = window.start
+  // `maxDays - 1` days after the first: that day is still the piece's own.
+  for (;;) {
+    const firstDay = floorDayUTC(start)
+    const pieceLastDay = firstDay + (maxDays - 1) * DAY_MS
+    if (lastDay <= pieceLastDay) {
+      pieces.push({ start, end: window.end })
+      return pieces
+    }
+    pieces.push({ start, end: new Date(pieceLastDay) })
+    start = new Date(pieceLastDay + DAY_MS)
+  }
+}
+
 /**
  * Net revenue per day — `POST /analytics/revenue` at day granularity, grouped
  * by currency so no two currencies share a point.
+ *
+ * A window longer than the API's 90 days is asked for in pieces, in parallel,
+ * and the days joined (`revenueAnalyticsWindows`).
  *
  * Needs the tenant's revenue analytics setting; where it is off the request
  * fails and the caller shows the headline without a series.
@@ -143,24 +180,30 @@ export function useRevenueSeries(window: { start: Date; end: Date }): UseQueryRe
       end: window.end.toISOString(),
     }),
     queryFn: async ({ signal }) => {
-      const response = await call(
-        (options) =>
-          client.analytics.getRevenueAnalytics(
-            {
-              startTime: window.start,
-              endTime: window.end,
-              granularity: 'day',
-              groupBy: ['currency'],
-            },
-            options,
+      const responses = await Promise.all(
+        revenueAnalyticsWindows(window).map((piece) =>
+          call(
+            (options) =>
+              client.analytics.getRevenueAnalytics(
+                {
+                  startTime: piece.start,
+                  endTime: piece.end,
+                  granularity: 'day',
+                  groupBy: ['currency'],
+                },
+                options,
+              ),
+            signal,
           ),
-        signal,
+        ),
       )
-      return (response.rows ?? []).flatMap((row) => {
-        const currency = (row.group?.['currency'] ?? '').trim().toUpperCase()
-        if (!row.day || !currency) return []
-        return [{ day: row.day.slice(0, 10), currency, amount: row.netAmount ?? 0 }]
-      })
+      return responses
+        .flatMap((response) => response.rows ?? [])
+        .flatMap((row) => {
+          const currency = (row.group?.['currency'] ?? '').trim().toUpperCase()
+          if (!row.day || !currency) return []
+          return [{ day: row.day.slice(0, 10), currency, amount: row.netAmount ?? 0 }]
+        })
     },
     staleTime: 60_000,
     retry: false,
