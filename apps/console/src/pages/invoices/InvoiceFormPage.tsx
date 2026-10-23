@@ -7,8 +7,6 @@ import {
   emptyInvoice,
 } from '@fp/domain'
 import {
-  ApiError,
-  serverReason,
   useCreateInvoice,
   useCustomer,
   useCustomerTaxAssociations,
@@ -100,21 +98,11 @@ export function InvoiceFormPage({ customerId, onCancel, onDone }: InvoiceFormPag
       customerTaxes={chosen ? customerTaxes : null}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={toSubmitError(create.error)}
+      // The API's refusal is a toast (MutationToasts); validation stays in the form.
+      submitError={null}
       onSubmit={(draft) =>
         create.mutate(draft, { onSuccess: (created) => onDone(created.id ?? '') })
       }
     />
   )
-}
-
-function toSubmitError(error: unknown): string | null {
-  if (!error) return null
-  if (error instanceof ApiError) {
-    if (error.kind === 'invalid') return error.message || 'Check the details and try again.'
-    if (error.kind === 'forbidden')
-      return serverReason(error) ?? 'You do not have permission to create invoices here.'
-    if (error.kind === 'network') return 'Could not reach Flexprice. Check your connection.'
-  }
-  return serverReason(error) ?? 'Could not create the invoice. Try again.'
 }

@@ -10,7 +10,7 @@ import {
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import { ArchiveIcon, CopyIcon, PencilIcon } from '@ui/icons'
+import { ArchiveIcon, BellIcon, CopyIcon, PencilIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
 import { DetailBreadcrumb } from '../../../compositions/detail/DetailShell'
@@ -63,6 +63,8 @@ export interface FeatureDetailViewProps {
   onEditConfiguration: () => void
   /** Header menu: Duplicate. Omitted, the item is not shown. */
   onDuplicate?: () => void
+  /** Header menu: the feature's usage alert thresholds. Omitted, the item is not shown. */
+  onAlertSettings?: () => void
   /** Header menu: delete the feature. Omitted, the item is not shown. */
   onDelete?: () => void
   /** Plans and add-ons that price this feature. */
@@ -150,6 +152,7 @@ export function FeatureDetailView({
   onBack,
   onEditConfiguration,
   onDuplicate,
+  onAlertSettings,
   onDelete,
   charges = [],
   chargesLoading = false,
@@ -190,6 +193,16 @@ export function FeatureDetailView({
             label: 'Duplicate',
             icon: <CopyIcon className="text-muted-foreground" aria-hidden />,
             onSelect: onDuplicate,
+          },
+        ]
+      : []),
+    ...(onAlertSettings
+      ? [
+          {
+            id: 'alerts',
+            label: 'Alert settings',
+            icon: <BellIcon className="text-muted-foreground" aria-hidden />,
+            onSelect: onAlertSettings,
           },
         ]
       : []),

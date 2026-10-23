@@ -18,6 +18,8 @@ import {
   type BucketSize,
   CommitmentKind,
   type CancelSubscription,
+  type PauseSubscription,
+  type ResumeSubscription,
   type ChargeCommitment,
   CommitmentType,
   type CommitmentPriceBase,
@@ -978,6 +980,7 @@ export function useCreateSubscription() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Contract created', error: 'Could not create the contract.' } },
     mutationFn: (draft: CreateSubscription) =>
       call(() =>
         client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
@@ -1143,6 +1146,39 @@ export function useCancelSubscription() {
     mutationFn: ({ id, draft }: { id: string; draft: CancelSubscription }) =>
       call(() =>
         client.subscriptions.cancelSubscription(id, toCancelSubscriptionRequest(draft) as never),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Stop billing a running contract until it is resumed — `POST /subscriptions/{id}/pause`. */
+export function usePauseSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: PauseSubscription }) =>
+      call(() =>
+        client.subscriptions.pauseSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+          ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
+        }),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Start billing a paused contract again — `POST /subscriptions/{id}/resume`. */
+export function useResumeSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: ResumeSubscription }) =>
+      call(() =>
+        client.subscriptions.resumeSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+        }),
       ),
     onSuccess: () => invalidateSubscription(queryClient),
   })
@@ -1927,6 +1963,23 @@ export function useAddSubscriptionCoupon(subscriptionId: string) {
       }
       return added
     },
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Take one coupon off this contract or one of its charges, by its association id. */
+export function useRemoveSubscriptionCoupon(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (associationId: string) =>
+      call(() =>
+        client.subscriptions.executeSubscriptionModify(
+          subscriptionId,
+          toRemoveCouponRequest(associationId),
+        ),
+      ),
     onSuccess: () => invalidateContract(queryClient),
   })
 }

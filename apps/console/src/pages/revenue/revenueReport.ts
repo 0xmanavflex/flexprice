@@ -297,7 +297,7 @@ export function receivables(
       else {
         const bucket = AGING.find((candidate) => days >= candidate.from && days <= candidate.to)
         if (bucket) amounts.set(bucket.id, (amounts.get(bucket.id) ?? 0) + remaining)
-        entry.invoices += 1
+        entry.invoices = (entry.invoices ?? 0) + 1
         entry.overdue += remaining
         entry.oldestDays = Math.max(entry.oldestDays, days)
       }

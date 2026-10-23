@@ -33,6 +33,31 @@ test('no pill while self-billing is off', async ({ context, page }) => {
   await expect(page.getByText('Usage & billing')).toHaveCount(0)
 })
 
+test('the trial chip leads the header: trial chip, search, then Create', async ({
+  context,
+  page,
+}) => {
+  await signIn(context, 'trial')
+  await page.goto('/customers')
+  const pill = page.getByRole('button', { name: /Trial · \d+ days left/ })
+  const search = page.getByRole('button', { name: 'Search', exact: true })
+  const create = page.getByRole('button', { name: 'Create something new' })
+  await expect(pill).toBeVisible()
+  const [p, s, c] = await Promise.all([
+    pill.boundingBox(),
+    search.boundingBox(),
+    create.boundingBox(),
+  ])
+  expect(p!.x).toBeLessThan(s!.x)
+  expect(s!.x).toBeLessThan(c!.x)
+  if (process.env['SHOT']) {
+    await page.screenshot({
+      path: process.env['SHOT'],
+      clip: { x: p!.x - 40, y: 0, width: 760, height: 60 },
+    })
+  }
+})
+
 test('a trial shows its pill on every page, and the card leads to billing and Upgrade', async ({
   context,
   page,

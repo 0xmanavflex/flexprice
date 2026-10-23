@@ -240,6 +240,7 @@ export function useCreateCreditNote() {
   const invalidate = useInvalidateCreditNotes()
 
   return useMutation({
+    meta: { notify: { success: 'Credit memo issued', error: 'Could not issue the credit memo.' } },
     mutationFn: (draft: CreateCreditNote) =>
       call(() => client.creditNotes.createCreditNote(toCreateCreditNoteRequest(draft) as never)),
     onSuccess: invalidate,

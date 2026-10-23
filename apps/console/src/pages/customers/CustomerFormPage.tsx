@@ -36,7 +36,8 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
         trail={[{ label: 'Customers', onClick: onCancel }, { label: 'Create customer' }]}
         onCancel={onCancel}
         isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error)}
+        // The API's refusal is a toast (MutationToasts); validation stays in the form.
+        submitError={null}
         onSubmit={(draft: CreateCustomer) =>
           create.mutate(draft, {
             // A created customer with no id cannot be opened: land on the list instead of /customers/.

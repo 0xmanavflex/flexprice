@@ -433,6 +433,7 @@ export function useCreateCustomer() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Customer created', error: 'Could not create the customer.' } },
     mutationFn: (draft: CreateCustomer) =>
       call(() => client.customers.createCustomer(toCreateCustomerRequest(draft) as never)),
     onSuccess: () => {

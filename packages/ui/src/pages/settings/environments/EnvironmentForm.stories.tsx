@@ -188,6 +188,21 @@ export const ProductionUnavailable: Story = {
   },
 }
 
+/** A deployment that hides Slack and the booking page (`"slack_url": ""` and `"book_call_url": ""` in `VITE_PLATFORM_CONFIG`) shows email alone. */
+export const ProductionEmailOnly: Story = {
+  args: {
+    canCreateProduction: false,
+    contact: { slackUrl: null, email: 'billing@example.com', bookCallUrl: null },
+  },
+  play: async () => {
+    const canvas = dialog()
+    await userEvent.click(canvas.getByRole('radio', { name: /production/i }))
+    await waitFor(() => expect(canvas.getByRole('link', { name: /email/i })).toBeVisible())
+    await expect(canvas.queryByRole('link', { name: /slack/i })).toBeNull()
+    await expect(canvas.queryByRole('link', { name: /book a call/i })).toBeNull()
+  },
+}
+
 /**
  * Self-billing, in the trial: Production is the upgrade. Choosing it shows what
  * the upgrade costs and brings, drops the name (paying creates "Production"),

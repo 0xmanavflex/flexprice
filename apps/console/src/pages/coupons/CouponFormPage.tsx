@@ -39,7 +39,8 @@ export function CouponFormPage(props: CouponFormPageProps) {
         trail={[{ label: 'Coupons', onClick: onNavigateToList }, { label: 'Create coupon' }]}
         onCancel={onCancel}
         isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error)}
+        // The API's refusal is a toast (MutationToasts); validation stays in the form.
+        submitError={null}
         onSubmit={(draft: CreateCoupon) =>
           create.mutate(draft, {
             onSuccess: (created) => props.onDone((created as { id?: string }).id ?? ''),

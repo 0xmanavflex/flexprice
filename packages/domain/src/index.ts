@@ -327,6 +327,8 @@ export {
   lineRevertDraft,
   type LineLineage,
   commitmentPeriodNoun,
+  canPauseSubscription,
+  canResumeSubscription,
 } from './subscription'
 export type {
   ChangeLineQuantity,
@@ -334,6 +336,8 @@ export type {
   LineChangePreview,
   EndContractCharge,
   CancelSubscription,
+  PauseSubscription,
+  ResumeSubscription,
   CreateSubscription,
   SubscriptionDiscount,
   SubscriptionPhase,

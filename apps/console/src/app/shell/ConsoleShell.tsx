@@ -31,6 +31,7 @@ import {
 } from '@fp/ui/compositions'
 import { EnvironmentCopyFormPage } from '@/pages/environments/EnvironmentCopyFormPage'
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
+import { MutationToasts } from '@/app/notifications/MutationToasts'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { useMockAccounts } from '@/app/selfBilling/mockAccounts'
@@ -293,6 +294,7 @@ export function ConsoleShell({
         environments={environments}
         onSelectEnvironment={onEnvironmentChange}
       />
+      <MutationToasts />
       <EnvironmentRenameFormPage
         environment={renamingEnvironment}
         onClose={() => setRenamingEnvironment(null)}

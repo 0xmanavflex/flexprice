@@ -225,6 +225,21 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   ),
 }
 
+/** V1's wallet menu has Alert Settings; it is offered when the page passes the handler. */
+export const AlertSettingsFromMenu: Story = {
+  args: { onAlertSettings: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Wallet actions' }))
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole('menuitem', {
+        name: 'Alert settings',
+      }),
+    )
+    await expect(args.onAlertSettings).toHaveBeenCalledOnce()
+  },
+}
+
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

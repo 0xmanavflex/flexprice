@@ -1,3 +1,4 @@
+import type { AlertSettingConfig } from './alertSetting'
 import { z } from 'zod'
 import type { Money } from './money'
 
@@ -30,6 +31,8 @@ export const emptyAutoTopup = (): AutoTopup => ({
 
 /** One prepaid wallet. Balances stay decimal strings; the API owns the arithmetic. */
 export interface Wallet {
+  /** Balance alert thresholds stored on the wallet (`alert_settings`); null when none. */
+  alertSettings?: AlertSettingConfig | null
   id: string
   customerId: string
   currency: string

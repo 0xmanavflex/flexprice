@@ -84,6 +84,7 @@ export function toInvoiceFilter(query: InvoiceQuery): Record<string, unknown> {
 
 /** The shape this mapper reads. Structural, so a fixture need not be complete. */
 export interface InvoiceWire {
+  subscriptionId?: string | undefined
   id?: string | undefined
   invoiceNumber?: string | undefined
   customerId?: string | undefined
@@ -106,6 +107,7 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
 
   return {
     id: wire.id ?? '',
+    subscriptionId: wire.subscriptionId || null,
     // Drafts often have no invoice number yet. Leave it blank so the UI shows
     // a dash instead of the internal id.
     number: wire.invoiceNumber?.trim() ?? '',
@@ -291,6 +293,32 @@ export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
   })
 }
 
+/**
+ * An invoice's PDF link, read on demand for a row's "Download invoice".
+ *
+ * Rows come from the list, which does not carry `invoice_pdf_url`; this reads
+ * the invoice through the same query the detail page uses (so a later visit is
+ * cached) and resolves to its link, or null when no PDF exists yet.
+ */
+export function useInvoicePdfLink() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return (id: string): Promise<string | null> =>
+    queryClient
+      .fetchQuery({
+        queryKey: queryKeys.invoices.detail(id),
+        queryFn: async ({ signal }) =>
+          toInvoiceDetail(
+            (await call(
+              (options) => client.invoices.getInvoice(id, undefined, undefined, undefined, options),
+              signal,
+            )) as InvoiceDetailWire,
+          ),
+      })
+      .then((invoice) => invoice.invoicePdfUrl)
+}
+
 /** Builds `POST /invoices`. Money stays a string; the form's total is sent as given. */
 export function toCreateInvoiceRequest(draft: CreateInvoice): Record<string, unknown> {
   const description = draft.description.trim()
@@ -339,6 +367,7 @@ export function useCreateInvoice() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Invoice created', error: 'Could not create the invoice.' } },
     mutationFn: (draft: CreateInvoice) =>
       call(() => client.invoices.createInvoice(toCreateInvoiceRequest(draft) as never)),
     onSuccess: () => {
