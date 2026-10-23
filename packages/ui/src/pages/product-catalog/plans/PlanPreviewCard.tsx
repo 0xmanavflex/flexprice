@@ -156,7 +156,7 @@ export function pricingSummary(
       const first = charge.tiers[0]
       const from = first ? Number(first.unitAmount || 0) : 0
       const n = charge.tiers.length
-      const unit = first?.transformQuantity ? tierUnitLabel(first) : per
+      const unit = first?.transformQuantity?.divideBy ? tierUnitLabel(first) : per
       return `${n} tier${n === 1 ? '' : 's'}, from ${money(from, currency, locale)} ${unit}`
     }
   }

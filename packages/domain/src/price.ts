@@ -225,13 +225,10 @@ export const priceTierSchema = z.object({
   upTo: z.number().int().positive('Must be greater than zero').nullable(),
   unitAmount: nonNegativeAmount,
   flatAmount: nonNegativeAmount.optional(),
-  /** Prices the band per package of `divideBy` units; absent means per unit. */
+  /** Prices the band per package of `divideBy` units; absent or 0 means per unit. */
   transformQuantity: z
     .object({
-      divideBy: z
-        .number({ error: 'Enter a package size' })
-        .int('Must be a whole number')
-        .positive('Must be greater than zero'),
+      divideBy: z.number().int('Must be a whole number').nonnegative(),
       round: z.enum([RoundType.Up, RoundType.Down]),
     })
     .optional(),
@@ -240,11 +237,14 @@ export type PriceTier = z.infer<typeof priceTierSchema>
 /** The plan's name for the same thing. `PriceTier` is the override's. */
 export type Tier = PriceTier
 
-/** Applies a typed package size; empty or zero clears it, an edit keeps the band's rounding. */
+/** Applies a typed package size; empty or zero clears it to 0 so the band's rounding survives a retype. */
 export function withPackageSize(tier: Tier, input: string): Tier {
   const { transformQuantity, ...rest } = tier
   const divideBy = Number(input.replace(/\D/g, ''))
-  if (!divideBy) return rest
+  if (!divideBy)
+    return transformQuantity
+      ? { ...rest, transformQuantity: { ...transformQuantity, divideBy: 0 } }
+      : rest
   return {
     ...rest,
     transformQuantity: { divideBy, round: transformQuantity?.round ?? RoundType.Up },

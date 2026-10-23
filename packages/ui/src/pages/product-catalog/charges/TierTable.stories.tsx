@@ -163,9 +163,10 @@ export const PackageSize: Story = {
       { upTo: null, unitAmount: '1000', transformQuantity: { divideBy: 100, round: 'up' } },
     ])
     await userEvent.clear(size)
+    await expect(size).toHaveValue('')
     await expect(args.onChange).toHaveBeenLastCalledWith([
       { upTo: 1000, unitAmount: '0' },
-      { upTo: null, unitAmount: '1000' },
+      { upTo: null, unitAmount: '1000', transformQuantity: { divideBy: 0, round: 'up' } },
     ])
     const hint = canvas.getByRole('button', { name: /more information/i })
     await userEvent.hover(hint)

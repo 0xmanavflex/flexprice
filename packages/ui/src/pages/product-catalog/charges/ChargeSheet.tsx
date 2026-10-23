@@ -235,7 +235,7 @@ function TierList({ tiers }: { tiers: Charge['tiers'] }) {
             </span>
             <span className="tabular-nums">
               {tier.unitAmount}
-              {tier.transformQuantity ? ` ${tierUnitLabel(tier)}` : ''}
+              {tier.transformQuantity?.divideBy ? ` ${tierUnitLabel(tier)}` : ''}
               {tier.flatAmount && Number(tier.flatAmount) > 0 ? ` + ${tier.flatAmount}` : ''}
             </span>
           </li>

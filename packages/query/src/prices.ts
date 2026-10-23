@@ -98,7 +98,7 @@ export function toTier(raw: TierWire): Tier {
 export function tierPackageFields(tier: Tier): {
   transformQuantity?: { divideBy: number; round: RoundType }
 } {
-  return tier.transformQuantity ? { transformQuantity: tier.transformQuantity } : {}
+  return tier.transformQuantity?.divideBy ? { transformQuantity: tier.transformQuantity } : {}
 }
 
 /**

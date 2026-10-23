@@ -17,9 +17,18 @@ describe('withPackageSize', () => {
     expect(withPackageSize(band, '1,000').transformQuantity?.divideBy).toBe(1000)
   })
 
-  it.each(['', '0', 'abc'])('drops the size for %j', (input) => {
-    const sized: Tier = { ...band, transformQuantity: { divideBy: 100, round: 'up' } }
-    expect('transformQuantity' in withPackageSize(sized, input)).toBe(false)
+  it.each(['', '0', 'abc'])('leaves a per-unit band per unit for %j', (input) => {
+    expect('transformQuantity' in withPackageSize(band, input)).toBe(false)
+  })
+
+  it('keeps the rounding while the size is cleared and retyped', () => {
+    const down: Tier = { ...band, transformQuantity: { divideBy: 100, round: 'down' } }
+    const cleared = withPackageSize(down, '')
+    expect(tierUnitLabel(cleared)).toBe('per unit')
+    expect(withPackageSize(cleared, '250').transformQuantity).toEqual({
+      divideBy: 250,
+      round: 'down',
+    })
   })
 })
 

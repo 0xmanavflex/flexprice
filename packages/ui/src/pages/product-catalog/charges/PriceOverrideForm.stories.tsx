@@ -315,7 +315,7 @@ export const UsageMeterOwnsBucket: Story = {
   },
 }
 
-/** Replacing a package band's size keeps the rounding it came with. */
+/** Retyping a package band's size keeps the rounding it came with. */
 export const TieredPackageOverride: Story = {
   args: {
     defaultValue: {
@@ -337,8 +337,8 @@ export const TieredPackageOverride: Story = {
     const canvas = within(canvasElement)
     const size = canvas.getByRole('textbox', { name: /tier 2 package size/i })
     await expect(size).toHaveValue('100')
-    await userEvent.tripleClick(size)
-    await userEvent.keyboard('200')
+    await userEvent.clear(size)
+    await userEvent.type(size, '200')
 
     await userEvent.click(canvas.getByRole('button', { name: /save override/i }))
 

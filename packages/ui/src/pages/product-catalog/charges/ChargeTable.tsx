@@ -180,7 +180,7 @@ function valueOf(charge: Charge): string {
     case BillingModel.Tiered:
       // The tier count is its own grey line now, so the price says the price.
       return charge.tiers[0]?.unitAmount
-        ? `From ${charge.tiers[0].unitAmount}${charge.tiers[0].transformQuantity ? ` ${tierUnitLabel(charge.tiers[0])}` : ''}`
+        ? `From ${charge.tiers[0].unitAmount}${charge.tiers[0].transformQuantity?.divideBy ? ` ${tierUnitLabel(charge.tiers[0])}` : ''}`
         : '—'
   }
 }

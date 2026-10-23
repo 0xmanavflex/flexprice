@@ -179,7 +179,7 @@ export function TierTable({
                   aria-label={`Tier ${index + 1} package size`}
                   placeholder="Per unit"
                   disabled={disabled}
-                  value={tier.transformQuantity?.divideBy ?? ''}
+                  value={tier.transformQuantity?.divideBy || ''}
                   onChange={(event) => setPackageSize(index, event.target.value)}
                 />
               ),

@@ -95,7 +95,7 @@ function overrideStarted(value: PriceOverride): boolean {
         (tier.unitAmount ?? '').trim() !== '' ||
         (tier.flatAmount ?? '').trim() !== '' ||
         tier.upTo != null ||
-        tier.transformQuantity != null,
+        !!tier.transformQuantity?.divideBy,
     )
   }
   if (value.billingModel === BillingModel.Package) {
@@ -342,7 +342,7 @@ export function PriceOverrideForm({
                           disabled={isSubmitting}
                           placeholder="Per unit"
                           aria-label={`Tier ${index + 1} package size`}
-                          value={tier?.transformQuantity?.divideBy ?? ''}
+                          value={tier?.transformQuantity?.divideBy || ''}
                           onChange={(event) =>
                             tier &&
                             form.setValue(

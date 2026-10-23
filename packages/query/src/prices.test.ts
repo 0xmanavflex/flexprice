@@ -108,7 +108,10 @@ describe('tier package size', () => {
       invoiceCadence: 'ARREAR',
       meterId: 'meter_1',
       tierMode: TierMode.Slab,
-      tiers: [{ upTo: 1000, unitAmount: '0' }, sized],
+      tiers: [
+        { upTo: 1000, unitAmount: '0', transformQuantity: { divideBy: 0, round: 'down' } },
+        sized,
+      ],
     }
     const fiat = toChargeRequest(draft as never, PriceEntityType.Plan, 'plan_1')
     const custom = toChargeRequest(
