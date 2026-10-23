@@ -1,8 +1,9 @@
-import { type Tier } from '@fp/domain'
+import { type Tier, withPackageSize } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { PlusIcon, Trash2Icon } from '@ui/icons'
 import { SimpleTable } from '../../../compositions/detail/DetailKit'
+import { InfoHint } from '../../../compositions/forms/InfoHint'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -21,7 +22,7 @@ import { provenance } from '@ui/provenance'
  */
 export const TierTableProvenance = provenance({
   source: 'composition',
-  composes: ['composition/DetailKit', 'ui/input', 'ui/button'],
+  composes: ['composition/DetailKit', 'compositions/InfoHint', 'ui/input', 'ui/button'],
   note: 'Controlled tier editor: derived From, unbounded last band, add/remove.',
 })
 
@@ -60,6 +61,10 @@ export function TierTable({
     onChange(tiers.map((tier, i) => (i === index ? { ...tier, ...patch } : tier)))
   }
 
+  const setPackageSize = (index: number, input: string) => {
+    onChange(tiers.map((tier, i) => (i === index ? withPackageSize(tier, input) : tier)))
+  }
+
   const addTier = () => {
     const last = tiers[tiers.length - 1]
     // The current last band is unbounded; give it a concrete ceiling before
@@ -93,7 +98,7 @@ export function TierTable({
             {
               key: 'from',
               header: 'From',
-              className: 'w-[22%]',
+              className: 'w-[16%]',
               cell: ({ index }) => (
                 // Derived and read-only: the floor is the band below's ceiling.
                 <span className="text-muted-foreground tabular-nums">
@@ -104,7 +109,7 @@ export function TierTable({
             {
               key: 'upTo',
               header: 'Up to',
-              className: 'w-[22%] whitespace-normal py-2 align-top',
+              className: 'w-[16%] whitespace-normal py-2 align-top',
               cell: ({ tier, index }) => {
                 const error = rowErrors?.[index]
                 return (
@@ -132,8 +137,8 @@ export function TierTable({
             },
             {
               key: 'unit',
-              header: 'Per unit',
-              className: 'w-[26%] whitespace-normal py-2 align-top',
+              header: 'Price',
+              className: 'w-[22%] whitespace-normal py-2 align-top',
               cell: ({ tier, index }) => {
                 const error = rowErrors?.[index]
                 return (
@@ -160,9 +165,29 @@ export function TierTable({
               },
             },
             {
+              key: 'package',
+              header: (
+                <span className="inline-flex items-center gap-1">
+                  Package size
+                  <InfoHint>Units per package. Leave empty to charge per unit.</InfoHint>
+                </span>
+              ),
+              className: 'w-[18%] whitespace-normal py-2 align-top',
+              cell: ({ tier, index }) => (
+                <Input
+                  inputMode="numeric"
+                  aria-label={`Tier ${index + 1} package size`}
+                  placeholder="Per unit"
+                  disabled={disabled}
+                  value={tier.transformQuantity?.divideBy ?? ''}
+                  onChange={(event) => setPackageSize(index, event.target.value)}
+                />
+              ),
+            },
+            {
               key: 'flat',
               header: 'Flat fee',
-              className: 'w-[26%] whitespace-normal py-2 align-top',
+              className: 'w-[22%] whitespace-normal py-2 align-top',
               cell: ({ tier, index }) => {
                 const error = rowErrors?.[index]
                 return (
