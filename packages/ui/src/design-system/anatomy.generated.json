@@ -2076,7 +2076,7 @@
       "file": "src/pages/customers/CustomerEntitlementUsage.tsx",
       "layer": "surface",
       "composes": [
-        "DetailTable",
+        "EntitlementUsageTable",
         "Section",
         "SubTabState"
       ],
@@ -2532,7 +2532,6 @@
         "CreditGrantTable",
         "CustomerAnalyticsView",
         "CustomerDetail",
-        "CustomerEntitlementUsage",
         "CustomerEventsGrid",
         "CustomerTaxSection",
         "CustomerUsageSummary",
@@ -2859,6 +2858,7 @@
       ],
       "usedBy": [
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/EntitlementUsage.stories.tsx"
@@ -9723,7 +9723,8 @@
       "title": "Building blocks/Tables & lists/DetailTable",
       "component": "DetailTable",
       "uses": [
-        "DetailTable"
+        "DetailTable",
+        "Section"
       ]
     },
     "./src/pages/shared/EntitlementUsage.stories.tsx": {
