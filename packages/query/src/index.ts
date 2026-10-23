@@ -262,6 +262,8 @@ export {
   toLineItemChangeRequest,
   toUpdateLineItemRequest,
   useActivateSubscription,
+  usePauseSubscription,
+  useResumeSubscription,
   useUpdateSubscriptionMetadata,
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,

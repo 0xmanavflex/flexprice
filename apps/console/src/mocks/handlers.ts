@@ -4838,6 +4838,16 @@ export const handlers = [
     patchRow(sourceFor('subscriptions').items, String(params['id']), patch)
     return HttpResponse.json({ subscription_id: params['id'], ...patch })
   }),
+  http.post(`${BASE}/subscriptions/:id/pause`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'paused',
+    }),
+  ),
+  http.post(`${BASE}/subscriptions/:id/resume`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'active',
+    }),
+  ),
   http.post(`${BASE}/subscriptions/:id/activate`, async ({ request, params }) => {
     const body = await readBody(request)
     return patchRow(sourceFor('subscriptions').items, String(params['id']), {

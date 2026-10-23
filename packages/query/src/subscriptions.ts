@@ -18,6 +18,8 @@ import {
   type BucketSize,
   CommitmentKind,
   type CancelSubscription,
+  type PauseSubscription,
+  type ResumeSubscription,
   type ChargeCommitment,
   CommitmentType,
   type CommitmentPriceBase,
@@ -1143,6 +1145,39 @@ export function useCancelSubscription() {
     mutationFn: ({ id, draft }: { id: string; draft: CancelSubscription }) =>
       call(() =>
         client.subscriptions.cancelSubscription(id, toCancelSubscriptionRequest(draft) as never),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Stop billing a running contract until it is resumed — `POST /subscriptions/{id}/pause`. */
+export function usePauseSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: PauseSubscription }) =>
+      call(() =>
+        client.subscriptions.pauseSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+          ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
+        }),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Start billing a paused contract again — `POST /subscriptions/{id}/resume`. */
+export function useResumeSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: ResumeSubscription }) =>
+      call(() =>
+        client.subscriptions.resumeSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+        }),
       ),
     onSuccess: () => invalidateSubscription(queryClient),
   })

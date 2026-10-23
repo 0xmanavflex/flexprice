@@ -144,13 +144,17 @@ export async function fetchAlertSettings(
   }
 }
 
-export function useAlertSettings(query: AlertSettingQuery) {
+export function useAlertSettings(
+  query: AlertSettingQuery,
+  options: { enabled?: boolean } = {},
+) {
   const client = useFlexprice()
 
   return useQuery({
     queryKey: queryKeys.alertSettings.list({ ...query }),
     queryFn: () => fetchAlertSettings(client, query),
     placeholderData: (previous) => previous,
+    enabled: options.enabled ?? true,
   })
 }
 

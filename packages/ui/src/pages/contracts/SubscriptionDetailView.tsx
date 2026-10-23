@@ -1,11 +1,20 @@
-import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
+import {
+  RBAC_ENTITY,
+  type PauseSubscription,
+  type RbacEntity,
+  type ResumeSubscription,
+  canPauseSubscription,
+  canResumeSubscription,
+} from '@fp/domain'
 import { toast } from 'sonner'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
+  BellIcon,
   CopyIcon,
+  PencilIcon,
   PackageIcon,
   PlusIcon,
   CirclePauseIcon,
@@ -103,6 +112,7 @@ import {
 } from './ContractSectionDialogs'
 import { ContractQuantityDialog } from './ContractQuantityDialog'
 import { ChargeAlertForm } from './ChargeAlertForm'
+import { PauseContractDialog } from './PauseContractDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
@@ -207,6 +217,12 @@ export interface SubscriptionDetailViewProps {
   /** Incomplete contracts only: the More item and the banner button. */
   onActivate?: () => void
   onCancel?: () => void
+  /** Running contracts: stop billing until resumed. Omitted, the item is hidden. */
+  onPause?: ((draft: PauseSubscription) => Promise<unknown>) | undefined
+  /** Paused contracts: start billing again. */
+  onResume?: ((draft: ResumeSubscription) => Promise<unknown>) | undefined
+  /** Opens the alert setting that watches this contract. */
+  onAlertSettings?: (() => void) | undefined
   /** Saves the contract's metadata map. Omitted, the metadata card is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /**
@@ -367,6 +383,9 @@ export function SubscriptionDetailView({
   onActivate,
   onSaveMetadata,
   onCancel,
+  onPause,
+  onResume,
+  onAlertSettings,
   onAddCharge,
   onEditCharge,
   onEndCharge,
@@ -376,6 +395,7 @@ export function SubscriptionDetailView({
   priceUnits = [],
 }: SubscriptionDetailViewProps) {
   const [tab, setTab] = useState<SubscriptionTab>('overview')
+  const [pauseMode, setPauseMode] = useState<'pause' | 'resume' | null>(null)
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
   const [saving, setSaving] = useState(false)
   const [quantityLine, setQuantityLine] = useState<SubscriptionLine | null>(null)
@@ -429,6 +449,8 @@ export function SubscriptionDetailView({
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
   const canCancel = !isCancelled && !isCancelling && !s.cancelledAt
   const canActivate = s.status === SubscriptionStatus.Incomplete && Boolean(onActivate)
+  const canPause = Boolean(onPause) && canPauseSubscription(s.status) && !isCancelling
+  const canResume = Boolean(onResume) && canResumeSubscription(s.status)
   const title = `${s.customerName} on ${s.planName}`
 
   const canEditCharges = !isCancelled && !isCancelling
@@ -701,6 +723,48 @@ export function SubscriptionDetailView({
                     label: 'Activate',
                     icon: <PlayIcon aria-hidden="true" className="size-4" />,
                     onSelect: onActivate,
+                  },
+                ]
+              : []),
+            // V1's "Edit Subscription" opened a page of charges; here the charges
+            // are edited in place, on their tab.
+            ...(canEditCharges
+              ? [
+                  {
+                    id: 'edit',
+                    label: 'Edit contract',
+                    icon: <PencilIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setTab('charges'),
+                  },
+                ]
+              : []),
+            ...(onAlertSettings
+              ? [
+                  {
+                    id: 'alerts',
+                    label: 'Alert settings',
+                    icon: <BellIcon aria-hidden="true" className="size-4" />,
+                    onSelect: onAlertSettings,
+                  },
+                ]
+              : []),
+            ...(canPause
+              ? [
+                  {
+                    id: 'pause',
+                    label: 'Pause contract',
+                    icon: <CirclePauseIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setPauseMode('pause'),
+                  },
+                ]
+              : []),
+            ...(canResume
+              ? [
+                  {
+                    id: 'resume',
+                    label: 'Resume contract',
+                    icon: <PlayIcon aria-hidden="true" className="size-4" />,
+                    onSelect: () => setPauseMode('resume'),
                   },
                 ]
               : []),
@@ -1462,6 +1526,22 @@ export function SubscriptionDetailView({
         onRun={(action) => void runSection(action)}
         onClose={closeSection}
       />
+      {onPause && pauseMode === 'pause' ? (
+        <PauseContractDialog
+          mode="pause"
+          open
+          onOpenChange={(next) => !next && setPauseMode(null)}
+          onConfirm={onPause}
+        />
+      ) : null}
+      {onResume && pauseMode === 'resume' ? (
+        <PauseContractDialog
+          mode="resume"
+          open
+          onOpenChange={(next) => !next && setPauseMode(null)}
+          onConfirm={onResume}
+        />
+      ) : null}
       <FormDialog
         open={alertEdit !== null}
         onOpenChange={(next) => {
