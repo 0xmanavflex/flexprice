@@ -60,11 +60,6 @@ export {
   HostedInvoiceViewProvenance,
 } from './billing/hosted-invoice/HostedInvoiceView'
 export type { HostedInvoiceViewProps } from './billing/hosted-invoice/HostedInvoiceView'
-export {
-  HostedInvoiceDetailsSheet,
-  HostedInvoiceDetailsSheetProvenance,
-} from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
-export type { HostedInvoiceDetailsSheetProps } from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance, linesChanged } from './billing/invoices/InvoiceForm'
 export type {
