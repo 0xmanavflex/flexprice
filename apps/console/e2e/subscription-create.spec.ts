@@ -18,7 +18,7 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   // Customer and plan are one step. The plan half is withheld until there is a
   // customer, so the step opens as one question.
   await expect(page.getByRole('heading', { name: 'Customer' })).toBeVisible()
-  await expect(page.getByText('Plan and billing')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Plan', exact: true })).toHaveCount(0)
 
   // The toolbar carries Next (no Cancel, no Previous on the first step, no bottom bar).
   await expect(page.getByRole('button', { name: 'Cancel' })).toHaveCount(0)
@@ -33,7 +33,7 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   await page.getByRole('option').first().click()
 
   // Choosing the customer reveals the plan, in the same step.
-  await expect(page.getByText('Plan and billing')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Plan', exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: /^Plan/ }).click()
   await page.getByRole('option').first().click()
   // Choosing a plan clears any "Choose a plan" prompt.
@@ -45,24 +45,23 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
     await page.getByRole('option').first().click()
   }
 
-  // The rail sums up the choices and the first invoice beside every step but the review.
-  const summary = page.getByRole('complementary', { name: 'Summary' })
-  await expect(summary).toBeVisible()
-  await expect(page.getByRole('region', { name: 'First invoice' })).toBeVisible()
+  // No summary rail and no first-invoice estimate: the API has none to give.
+  await expect(page.getByRole('complementary', { name: 'Summary' })).toHaveCount(0)
+  // Save as draft sits in the header on every step.
+  await expect(page.getByRole('button', { name: 'Save as draft' })).toBeVisible()
 
   const titles: Record<string, string> = {
-    phases: 'Contract timeline',
+    phases: 'Charges',
     commitments: 'Contract commitment',
-    billing: 'Who pays',
-    review: 'Add-ons & benefits',
+    billing: 'Customer hierarchy',
+    review: 'Commitments & benefits',
   }
   for (const step of ['phases', 'commitments', 'billing', 'review']) {
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
-    await expect(page.getByRole('heading', { name: titles[step] })).toBeVisible()
+    await expect(page.getByRole('heading', { name: titles[step], exact: true })).toBeVisible()
   }
   await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0)
-  await expect(summary).toHaveCount(0)
 
   const request = page.waitForRequest(
     (r) => r.method() === 'POST' && /\/v1\/subscriptions$/.test(new URL(r.url()).pathname),
@@ -70,5 +69,48 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   await page.getByRole('button', { name: 'Create contract' }).click()
   await request
 
+  await expect(page).toHaveURL(/\/contracts$/)
+})
+
+test('creates a contract that other customers inherit', async ({ page }) => {
+  await page.goto('/contracts/new')
+  await page.getByRole('combobox').first().click()
+  await page.getByRole('option').first().click()
+  await page.getByRole('combobox', { name: /^Plan/ }).click()
+  await page.getByRole('option').first().click()
+  const currency = page.getByRole('combobox', { name: /Currency/ })
+  if ((await currency.textContent())?.includes('Choose')) {
+    await currency.click()
+    await page.getByRole('option').first().click()
+  }
+
+  for (const step of ['phases', 'commitments', 'billing']) {
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
+  }
+
+  // V1's term. A customer with a contract of its own cannot inherit, so it is
+  // listed but not choosable; pick the first one that can.
+  const picker = page.getByRole('combobox', { name: /^Inherited customers/ })
+  await expect(picker).toHaveAttribute('placeholder', 'Add customers to inherit…')
+  await picker.click()
+  await page.locator('[role="option"]:not([aria-disabled="true"])').first().click()
+  await expect(page.getByRole('button', { name: /^Remove / })).toHaveCount(1)
+
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect(page).toHaveURL(/step=review/, { timeout: 15_000 })
+
+  // The mock echoes the request it was sent, so the response shows what went out.
+  const response = page.waitForResponse(
+    (r) =>
+      r.request().method() === 'POST' && /\/v1\/subscriptions$/.test(new URL(r.url()).pathname),
+  )
+  await page.getByRole('button', { name: 'Create contract' }).click()
+  // The contract's own customer pays for its inheritors, so only they are sent.
+  const { inheritance } = (await (await response).json()) as {
+    inheritance?: Record<string, unknown>
+  }
+  expect(inheritance?.['external_customer_ids_to_inherit_subscription']).toHaveLength(1)
+  expect(inheritance).not.toHaveProperty('invoicing_customer_external_id')
   await expect(page).toHaveURL(/\/contracts$/)
 })

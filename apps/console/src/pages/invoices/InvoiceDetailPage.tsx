@@ -5,6 +5,7 @@ import {
   useAttemptInvoicePayment,
   useFinalizeInvoice,
   useInvoice,
+  useInvoiceHostedUrl,
   useEntityIntegrationControls,
   useInvoiceCreditNotes,
   useInvoicePayments,
@@ -59,6 +60,7 @@ export function InvoiceDetailPage({
 }: InvoiceDetailPageProps) {
   const navigate = useNavigate()
   const invoice = useInvoice(invoiceId)
+  const hostedUrl = useInvoiceHostedUrl(invoiceId)
   const activity = useActivityLog({ entityType: 'invoice', entityId: invoiceId })
   const mappings = useEntityIntegrationControls('invoice', invoiceId)
   // "Bill from" is the signed-in tenant: `GET /tenants/{id}` only answers for
@@ -80,7 +82,12 @@ export function InvoiceDetailPage({
   const [pendingAction, setPendingAction] = useState<InvoicePendingAction | null>(null)
 
   if (!invoice.data) {
-    return detailGate(invoice, { noun: 'this invoice', listName: 'invoices', onBack })
+    return detailGate(invoice, {
+      noun: 'this invoice',
+      listName: 'invoices',
+      onBack,
+      recordPath: `/invoices/${encodeURIComponent(invoiceId)}`,
+    })
   }
 
   const data = invoice.data
@@ -113,6 +120,7 @@ export function InvoiceDetailPage({
         }}
         invoice={toInvoiceDocument(data, {
           tenant: tenant.data,
+          hostedUrl: hostedUrl.data ?? null,
           payments: payments.data,
           creditNotes: creditNotes.data,
           activity: activity.data ?? [],

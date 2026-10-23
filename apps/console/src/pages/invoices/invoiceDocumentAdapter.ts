@@ -46,6 +46,8 @@ export interface InvoiceDocumentSources {
   activity?: ActivityEntry[] | undefined
   activityEmptyText?: string | undefined
   activityAwaiting?: boolean | undefined
+  /** `hosted_invoice_url`: the link the customer receives. Null or omitted when there is none. */
+  hostedUrl?: string | null | undefined
 }
 
 /**
@@ -60,8 +62,15 @@ export function toInvoiceDocument(
   invoice: InvoiceDetail,
   sources: InvoiceDocumentSources = {},
 ): InvoiceDocument {
-  const { tenant, payments = [], creditNotes = [], activity, activityEmptyText, activityAwaiting } =
-    sources
+  const {
+    tenant,
+    payments = [],
+    creditNotes = [],
+    activity,
+    activityEmptyText,
+    activityAwaiting,
+    hostedUrl = null,
+  } = sources
   const supportEmail = tenant ? tenant.helpEmail || tenant.billingEmail : ''
 
   return {
@@ -108,8 +117,8 @@ export function toInvoiceDocument(
     customerId: invoice.customerId,
     subscriptionId: invoice.subscriptionId,
     subscriptionLabel: invoice.subscriptionId ?? '',
-    // The API has no hosted invoice page yet, so Copy link stays disabled.
-    hostedUrl: null,
+    // The link the customer receives (Stripe's page, or the Flexprice hosted invoice).
+    hostedUrl,
     metadata: invoice.metadata,
     payments: payments.map((payment) => ({
       id: payment.id,

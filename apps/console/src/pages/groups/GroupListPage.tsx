@@ -19,11 +19,7 @@ export interface GroupListPageProps {
  * wrong name means delete and recreate. The list stays URL-driven; the pending
  * delete is the only local state.
  */
-export function GroupListPage({
-  query,
-  onQueryChange,
-  onCreateGroup,
-}: GroupListPageProps) {
+export function GroupListPage({ query, onQueryChange, onCreateGroup }: GroupListPageProps) {
   const groups = useGroups(query)
   const remove = useDeleteGroup()
 

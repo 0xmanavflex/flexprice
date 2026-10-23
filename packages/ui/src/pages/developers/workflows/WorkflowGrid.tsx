@@ -148,11 +148,13 @@ export function WorkflowGrid({
   const rowActions = (run: WorkflowRun): EntityRowAction[] => [
     {
       label: 'Copy workflow ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(run.workflowId),
     },
     {
       label: 'Copy run ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(run.id),
     },
@@ -160,6 +162,7 @@ export function WorkflowGrid({
 
   return (
     <EntityList<WorkflowRun>
+      primaryActionReadOnly
       label="Workflows"
       noun="workflows"
       rows={runs}

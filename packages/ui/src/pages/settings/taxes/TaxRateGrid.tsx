@@ -162,6 +162,7 @@ export function TaxRateGrid({
     if (onTaxRateClick) {
       actions.push({
         label: 'View tax rate',
+        readOnly: true,
         icon: <PercentIcon aria-hidden className="size-4" />,
         onSelect: () => onTaxRateClick(taxRate),
       })
@@ -175,6 +176,7 @@ export function TaxRateGrid({
     }
     actions.push({
       label: 'Copy tax rate ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(taxRate.id),
     })
@@ -248,7 +250,6 @@ export function TaxRateGrid({
         title: 'No taxes set up yet',
         description:
           'Taxes are the percentages added on top of an invoice, like VAT or GST. Add a tax, then attach it to the customers, plans or charges it applies to.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>Add tax</Button> } : {}),
         guides: GUIDES,
       }}
     />

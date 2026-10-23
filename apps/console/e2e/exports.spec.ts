@@ -42,3 +42,45 @@ test.describe('exports', () => {
     await expect(exports.rows()).toHaveCount(1)
   })
 })
+
+test.describe('exports flow (as V1)', () => {
+  test('connects S3, creates an export on it, pauses it and runs it now', async ({ page }) => {
+    await page.goto('/exports')
+    await page.getByRole('button', { name: /Amazon S3/ }).click()
+    await expect(page).toHaveURL(/\/exports\/s3$/)
+
+    // A Flexprice-managed bucket needs only a name.
+    await page.getByRole('button', { name: 'Add connection' }).click()
+    const connect = page.getByRole('dialog')
+    await connect.getByLabel(/Connection name/).fill('E2E bucket')
+    await connect.getByRole('switch').click()
+    await connect.getByRole('button', { name: 'Connect' }).click()
+    await expect(page.getByText('E2E bucket')).toBeVisible()
+
+    // Open the seeded customer-owned connection and add an export.
+    await page
+      .getByRole('listitem')
+      .filter({ hasText: 'Acme data lake' })
+      .getByRole('button', { name: 'View exports' })
+      .click()
+    await expect(page).toHaveURL(/\/exports\/s3\/conn_s3_01$/)
+    await page.getByRole('button', { name: 'New export' }).first().click()
+    const create = page.getByRole('dialog')
+    await create.getByLabel(/^Bucket/).fill('e2e-bucket')
+    await create.getByRole('button', { name: 'Create export' }).click()
+    await expect(page.getByText('e2e-bucket')).toBeVisible()
+
+    // The export's page: pause, then run now; the runs tab lists the run.
+    await page.getByRole('row').filter({ hasText: 'e2e-bucket' }).click()
+    await expect(page.getByRole('heading', { name: 'Events export' })).toBeVisible()
+    await page.getByRole('button', { name: 'Export actions' }).click()
+    await page.getByRole('menuitem', { name: 'Pause export' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Pause export' }).click()
+    await expect(page.getByText('Paused').first()).toBeVisible()
+
+    await page.getByRole('button', { name: 'Run now' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Run export' }).click()
+    await page.getByRole('tab', { name: 'Runs' }).click()
+    await expect(page.getByText(/run_manual_/).first()).toBeVisible()
+  })
+})

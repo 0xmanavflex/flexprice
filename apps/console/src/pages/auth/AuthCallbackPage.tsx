@@ -4,7 +4,7 @@ import { AuthFrame } from '@fp/ui/pages'
 import { Button } from '@fp/ui/primitives'
 import { readHandoff } from '../../app/session/samlHandoff'
 import { useSession } from '../../app/session'
-import { safeRedirect } from './SignInPage'
+import { takeReturnTo } from './returnTo'
 
 /**
  * Where a SAML login lands.
@@ -69,7 +69,8 @@ export function AuthCallbackPage() {
     // The fragment carries no user id; the token is what authenticates, and
     // `/users/me` fills in who it belongs to once the app is running.
     signIn({ token: result.handoff.token, userId: '', tenantId: result.handoff.tenantId })
-    void navigate({ to: safeRedirect(result.handoff.state), search: {} as never })
+    // The relay state is the nonce, not an address: the page to return to was kept when sign-in began.
+    void navigate({ href: takeReturnTo() })
   }, [navigate, signIn])
 
   return (

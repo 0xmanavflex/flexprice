@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ApiError } from '@fp/query'
 import { ErrorState, PageBody, PageLoadingState } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
+import { RecordElsewhere } from './RecordElsewhere'
 import { toListFailure } from './listFailure'
 
 export interface DetailGateQuery {
@@ -17,6 +18,12 @@ export interface DetailGateOptions {
   /** What the list is called: "invoices". Names the back button. */
   listName: string
   onBack: () => void
+  /**
+   * The record's API path, e.g. `/invoices/inv_1`. On a 404 the record is
+   * looked for in the person's other environments before "not found" — a
+   * shared link names the record, not its environment.
+   */
+  recordPath?: string
 }
 
 /**
@@ -30,7 +37,7 @@ export interface DetailGateOptions {
  * never navigates away.
  */
 export function detailGate(query: DetailGateQuery, options: DetailGateOptions): ReactNode {
-  const { noun, listName, onBack } = options
+  const { noun, listName, onBack, recordPath } = options
   const back = (
     <Button variant="outline" size="sm" onClick={onBack}>
       Back to {listName}
@@ -49,7 +56,7 @@ export function detailGate(query: DetailGateQuery, options: DetailGateOptions): 
     !query.error || (query.error instanceof ApiError && query.error.kind === 'not_found')
   if (notFound) {
     const name = noun.replace(/^this /, '')
-    return (
+    const missing = (
       <PageBody>
         <ErrorState
           variant="page"
@@ -59,6 +66,12 @@ export function detailGate(query: DetailGateQuery, options: DetailGateOptions): 
           action={back}
         />
       </PageBody>
+    )
+    // A real 404 only: with no error the record simply has not arrived.
+    return query.error && recordPath ? (
+      <RecordElsewhere path={recordPath} noun={noun} notFound={missing} />
+    ) : (
+      missing
     )
   }
 

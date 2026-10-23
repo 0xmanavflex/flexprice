@@ -1,14 +1,32 @@
-import { CheckIcon, ChevronsUpDownIcon, PencilIcon, PlusIcon, Trash2Icon } from '@ui/icons'
+import {
+  CheckIcon,
+  ChevronsUpDownIcon,
+  CopyIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from '@ui/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
 import { cn } from '@ui/lib/cn'
 import type { ShellEnvironment } from './types'
+import { RBAC_ENTITY } from '@fp/domain'
+import { useWriteAccess } from '../access/Access'
+
+/** One mock account state, for walking the self-billing flows on mocks. */
+export interface MockAccountOption {
+  value: string
+  name: string
+  note: string
+  tone: 'info' | 'warning' | 'destructive' | 'success' | 'muted'
+}
 
 export interface EnvironmentSwitcherProps {
   current: ShellEnvironment
@@ -19,11 +37,34 @@ export interface EnvironmentSwitcherProps {
   /** Rename an environment. Absent means no pencil on the rows. */
   onRename?: (id: string) => void
   /**
+   * Copy the current environment's plans and features into another (V1's
+   * "Copy environment"). Absent means no item.
+   */
+  onCopy?: () => void
+  /**
    * Delete an environment. Absent means no delete action on the rows. Never
    * offered on the current environment: deleting the one you are standing in
    * would leave the console pointed at nothing.
    */
   onDelete?: (id: string) => void
+  /**
+   * Mocks only: the self-billing account state to preview (trial, locked,
+   * live…), as the prototype's environment switcher offers. Absent everywhere
+   * a real API answers.
+   */
+  mockAccounts?: {
+    value: string
+    options: readonly MockAccountOption[]
+    onChange: (value: string) => void
+  }
+}
+
+const TONE: Record<MockAccountOption['tone'], string> = {
+  info: 'bg-info',
+  warning: 'bg-warning',
+  destructive: 'bg-destructive',
+  success: 'bg-success',
+  muted: 'bg-muted-foreground/40',
 }
 
 /**
@@ -54,8 +95,12 @@ export function EnvironmentSwitcher({
   onChange,
   onCreate,
   onRename,
+  onCopy,
   onDelete,
+  mockAccounts,
 }: EnvironmentSwitcherProps) {
+  // Creating and renaming environments need environment write (V1).
+  const write = useWriteAccess(RBAC_ENTITY.Environment)
   // Production first, so the consequential environment leads the list; the rest
   // follow in the order the server returned them. One flat list, no headings.
   const production = environments.filter((e) => e.kind === 'production')
@@ -96,6 +141,7 @@ export function EnvironmentSwitcher({
                     <DropdownMenuItem
                       className={ROW_ACTION}
                       aria-label={`Rename ${environment.name}`}
+                      disabled={!write.allowed}
                       onClick={() => onRename(environment.id)}
                     >
                       <PencilIcon aria-hidden className="text-muted-foreground size-3.5" />
@@ -106,6 +152,7 @@ export function EnvironmentSwitcher({
                       variant="destructive"
                       className={ROW_ACTION}
                       aria-label={`Delete ${environment.name}`}
+                      disabled={!write.allowed}
                       onClick={() => onDelete(environment.id)}
                     >
                       <Trash2Icon aria-hidden className="size-3.5" />
@@ -117,17 +164,58 @@ export function EnvironmentSwitcher({
           </DropdownMenuGroup>
         ) : null}
 
-        {onCreate ? (
+        {mockAccounts ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                Mock accounts
+              </DropdownMenuLabel>
+              {mockAccounts.options.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => mockAccounts.onChange(option.value)}
+                  aria-current={mockAccounts.value === option.value ? 'true' : undefined}
+                >
+                  <span
+                    aria-hidden
+                    className={cn('ml-0.5 size-2 shrink-0 rounded-full', TONE[option.tone])}
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate">{option.name}</span>
+                    <span className="text-muted-foreground truncate text-xs">{option.note}</span>
+                  </span>
+                  {mockAccounts.value === option.value ? (
+                    <CheckIcon aria-hidden className="size-3.5 shrink-0" />
+                  ) : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </>
+        ) : null}
+
+        {onCreate || onCopy ? (
           <>
             {/* Below the scroll area, so create stays visible however long the
                 environment list is. */}
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={onCreate}>
-                <PlusIcon className="text-muted-foreground" aria-hidden />
-                New environment
-              </DropdownMenuItem>
+              {onCreate ? (
+                <DropdownMenuItem disabled={!write.allowed} onClick={onCreate}>
+                  <PlusIcon className="text-muted-foreground" aria-hidden />
+                  New environment
+                </DropdownMenuItem>
+              ) : null}
+              {onCopy ? (
+                <DropdownMenuItem disabled={!write.allowed} onClick={onCopy}>
+                  <CopyIcon className="text-muted-foreground" aria-hidden />
+                  Copy environment…
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuGroup>
+            {write.reason ? (
+              <p className="text-muted-foreground px-2 py-1.5 text-xs">{write.reason}</p>
+            ) : null}
           </>
         ) : null}
       </DropdownMenuContent>

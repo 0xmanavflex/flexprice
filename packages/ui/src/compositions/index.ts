@@ -140,7 +140,7 @@ export { OptionCombobox, OptionComboboxProvenance } from './forms/OptionCombobox
 export type { OptionComboboxProps } from './forms/OptionCombobox'
 export { TimezoneCombobox, TimezoneComboboxProvenance } from './forms/TimezoneCombobox'
 export type { TimezoneComboboxProps } from './forms/TimezoneCombobox'
-export { DateInput, DateInputProvenance } from './forms/DateInput'
+export { DateInput, DateInputProvenance, formatDateValue, parseDateValue } from './forms/DateInput'
 export type { DateInputProps } from './forms/DateInput'
 
 export * from './shell'
@@ -189,6 +189,8 @@ export {
   SimpleTable,
   SplitMeter,
   SummaryRow,
+  TotalRow,
+  TotalsList,
 } from './detail/DetailKit'
 export type { Choice, DetailMenuItem, DetailTabSpec, SimpleColumn } from './detail/DetailKit'
 export { GuidedEmptyState } from './feedback/GuidedEmptyState'
@@ -211,3 +213,24 @@ export type { CheckboxRowProps } from './forms/CheckboxRow'
 
 export { ActivitySection } from './detail/ActivityLog'
 export type { ActivityLogEntry } from './detail/ActivityLog'
+export {
+  AccessProvenance,
+  AccessProvider,
+  AccessScope,
+  RequireAccess,
+  WriteGate,
+  LockedMark,
+  useWriteLock,
+  useAccess,
+  useCan,
+  useWriteAccess,
+  useWriteCheck,
+} from './access/Access'
+export type { AccessStatus, AccessValue, WriteAccess } from './access/Access'
+export {
+  DelayedHint,
+  HINT_DELAY_MS,
+  InfoBlock,
+  SettingsBlock,
+  SettingsBlockProvenance,
+} from './layout/SettingsBlock'

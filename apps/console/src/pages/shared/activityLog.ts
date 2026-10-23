@@ -30,10 +30,7 @@ export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
   const facts = describeActivity(entry)
   const who = activityByline(entry)
   const source = activitySourceLabel(entry.source)
-  const by =
-    entry.actorType === 'user' || !who
-      ? [who, source].filter(Boolean).join(' · ')
-      : who
+  const by = entry.actorType === 'user' || !who ? [who, source].filter(Boolean).join(' · ') : who
   const href = entityHref(entry)
   return {
     id: entry.id,
@@ -41,6 +38,7 @@ export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
     at: entry.occurredAt ? stamp(entry.occurredAt) : '',
     ...(facts.record ? { record: facts.record } : {}),
     ...(facts.summary ? { summary: facts.summary } : {}),
+    ...(facts.detail ? { detail: facts.detail } : {}),
     ...(by ? { by } : {}),
     ...(href ? { href } : {}),
   }
@@ -53,6 +51,7 @@ export function railActivity(entries: ActivityEntry[]): Array<{
   at: string
   status: 'completed'
   summary: string
+  detail?: string
   record?: string
   by?: string
   href?: string
@@ -65,6 +64,7 @@ export function railActivity(entries: ActivityEntry[]): Array<{
       at: row.at,
       status: 'completed' as const,
       summary: row.summary ?? '',
+      ...(row.detail ? { detail: row.detail } : {}),
       ...(row.record ? { record: row.record } : {}),
       ...(row.by ? { by: row.by } : {}),
       ...(row.href ? { href: row.href } : {}),

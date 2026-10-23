@@ -183,6 +183,7 @@ export function CostSheetGrid({
     if (onCostSheetClick) {
       actions.push({
         label: 'View cost sheet',
+        readOnly: true,
         icon: <SheetIcon aria-hidden className="size-4" />,
         onSelect: () => onCostSheetClick(costSheet),
       })
@@ -196,6 +197,7 @@ export function CostSheetGrid({
     }
     actions.push({
       label: 'Copy cost sheet ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(costSheet.id),
     })
@@ -261,7 +263,6 @@ export function CostSheetGrid({
         title: 'No cost sheets yet',
         description:
           'A cost sheet records what each unit of usage costs you, so margin can be measured against what you charge for it.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New cost sheet</Button> } : {}),
         guides: GUIDES,
       }}
     />

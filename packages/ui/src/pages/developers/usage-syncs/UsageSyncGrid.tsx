@@ -133,12 +133,14 @@ export function UsageSyncGrid({
     if (onUsageSyncClick) {
       actions.push({
         label: 'View syncs',
+        readOnly: true,
         icon: <WaypointsIcon aria-hidden className="size-4" />,
         onSelect: () => onUsageSyncClick(row),
       })
     }
     actions.push({
       label: 'Copy record ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(row.id),
     })
@@ -147,6 +149,7 @@ export function UsageSyncGrid({
 
   return (
     <EntityList<UsageSync>
+      primaryActionReadOnly
       label="Usage Syncs"
       noun="usage syncs"
       rows={usageSyncs}

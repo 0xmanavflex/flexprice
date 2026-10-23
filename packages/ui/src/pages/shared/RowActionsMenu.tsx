@@ -5,13 +5,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { MoreHorizontalIcon } from '@ui/icons'
+import type { ReactElement } from 'react'
+import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
+import { useWriteAccess } from '@ui/compositions/access/Access'
 
 /**
  * The per-row action menu the plan-nested tables share: an icon trigger named
  * for the row it acts on, and Edit / destructive items only for the actions the
- * caller wired.
+ * caller wired. Every item leads with an icon: Edit a pencil, the destructive
+ * item a bin unless the caller names another.
  */
 export const RowActionsMenuProvenance = provenance({
   source: 'composition',
@@ -23,10 +26,21 @@ export interface RowActionsMenuProps {
   /** Names the trigger: "Actions for <label>". */
   label: string
   /** Extra items before Edit, for actions that are neither an edit nor a removal. */
-  extra?: { label: string; onSelect: () => void }[] | undefined
+  extra?:
+    | {
+        label: string
+        onSelect: () => void
+        /** Leading glyph, required so every item lines up behind one. */
+        icon: ReactElement
+        /** Does not write (Copy, View): stays enabled when write is denied. */
+        readOnly?: boolean
+      }[]
+    | undefined
   onEdit?: (() => void) | undefined
   onRemove?: (() => void) | undefined
   removeLabel?: string
+  /** The destructive item's glyph, when a bin is wrong (Archive, Void). */
+  removeIcon?: ReactElement | undefined
 }
 
 export function RowActionsMenu({
@@ -35,7 +49,12 @@ export function RowActionsMenu({
   onEdit,
   onRemove,
   removeLabel = 'Remove',
+  removeIcon = <Trash2Icon aria-hidden />,
 }: RowActionsMenuProps) {
+  // Edit, Remove and every non-read-only item follow the page's `AccessScope`.
+  const write = useWriteAccess()
+  const denied = !write.allowed
+  const gated = denied && (Boolean(onEdit || onRemove) || Boolean(extra?.some((i) => !i.readOnly)))
   return (
     <div className="flex justify-end">
       <DropdownMenu>
@@ -54,16 +73,30 @@ export function RowActionsMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-40">
           {/* Edit leads, then the row's own items, then the destructive one. */}
-          {onEdit ? <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem> : null}
+          {onEdit ? (
+            <DropdownMenuItem disabled={denied} onClick={onEdit}>
+              <PencilIcon aria-hidden />
+              Edit
+            </DropdownMenuItem>
+          ) : null}
           {extra?.map((item) => (
-            <DropdownMenuItem key={item.label} onClick={item.onSelect}>
+            <DropdownMenuItem
+              key={item.label}
+              disabled={denied && !item.readOnly}
+              onClick={item.onSelect}
+            >
+              {item.icon}
               {item.label}
             </DropdownMenuItem>
           ))}
           {onRemove ? (
-            <DropdownMenuItem variant="destructive" onClick={onRemove}>
+            <DropdownMenuItem variant="destructive" disabled={denied} onClick={onRemove}>
+              {removeIcon}
               {removeLabel}
             </DropdownMenuItem>
+          ) : null}
+          {gated ? (
+            <p className="text-muted-foreground max-w-56 px-2 py-1.5 text-xs">{write.reason}</p>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>

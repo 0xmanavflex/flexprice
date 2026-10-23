@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ApiError,
   ErrorKind,
@@ -21,6 +21,7 @@ import {
   supabaseSignUpFor,
   unfinishedSignUp,
 } from '@/app/auth/supabaseSignUp'
+import { rememberReturnTo, takeReturnTo } from './returnTo'
 import { messageForSignInError } from './signInMessage'
 
 /**
@@ -40,21 +41,7 @@ const DEMO_HINT = 'Demo mode — the sample data is loaded. Just click Sign in.'
 
 export { messageForSignInError }
 
-/**
- * Where a successful sign-in lands.
- *
- * The guard puts the address it turned away into `?redirect=`, so a bookmarked
- * `/invoices?status=overdue` survives the detour. Only same-origin paths are
- * honoured: a `redirect` is attacker-supplied by definition, and one that
- * accepted `https://…` would make the console a convincing hop for a phishing
- * link. A protocol-relative `//evil.test` is a URL the browser treats as
- * absolute, which is why it is rejected alongside the obvious ones.
- */
-export function safeRedirect(target: string | undefined): string {
-  if (!target) return '/'
-  if (!target.startsWith('/') || target.startsWith('//')) return '/'
-  return target
-}
+export { safeRedirect } from './returnTo'
 
 export interface SignInPageProps {
   /** Where to go once signed in. Defaults to the console's home. */
@@ -68,6 +55,8 @@ export interface SignInPageProps {
 }
 
 export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
+  // Kept for the tab before anything can leave for Google or an identity provider.
+  useEffect(() => rememberReturnTo(redirect), [redirect])
   const navigate = useNavigate()
   const session = useSession()
   const signIn = useSignIn()
@@ -202,7 +191,8 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
           setRecoveryError(null)
           const enter = (result: { token: string; userId: string; tenantId: string }) => {
             session.signIn(result)
-            void navigate({ to: safeRedirect(redirect), search: {} as never })
+            // `href`, not `to`: the shared address keeps its query string.
+            void navigate({ href: takeReturnTo(redirect) })
           }
           signIn.mutate(credentials, {
             onSuccess: enter,

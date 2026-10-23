@@ -9,6 +9,7 @@ import {
   emptyServiceAccount,
   memberDisplayName,
   renameMemberSchema,
+  RBAC_ENTITY,
 } from '@fp/domain'
 import {
   useCreateServiceAccount,
@@ -17,12 +18,13 @@ import {
   useRoles,
   useServiceAccounts,
 } from '@fp/query'
-import { ConfirmDialog, Field, FormDialog } from '@fp/ui/compositions'
+import { ConfirmDialog, Field, FormDialog, WriteGate } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
   PanelError,
+  PanelActions,
   PanelFirstRun,
   SettingsTable,
   WidePanel,
@@ -68,21 +70,27 @@ export function ServiceAccountsPanel() {
     )
   }
 
-  // Laid out exactly as API keys' first run: the empty state alone, centred in
-  // the page body, carrying the only create button.
+  // Laid out exactly as API keys' first run: the empty state centred in the
+  // page body, under the same top-right create button the table has.
   const firstRun = !accounts.isPending && rows.length === 0
 
   return (
     <WidePanel fill={firstRun}>
       <h1 className="sr-only">Service accounts</h1>
       {firstRun ? (
-        <PanelFirstRun
-          scene="developers"
-          title="No service accounts yet"
-          description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
-          action={<Button onClick={() => setIsCreating(true)}>New service account</Button>}
-          docsHref={SERVICE_ACCOUNT_DOCS_URL}
-        />
+        <>
+          <PanelActions>
+            <WriteGate entity={RBAC_ENTITY.User}>
+              <Button onClick={() => setIsCreating(true)}>New service account</Button>
+            </WriteGate>
+          </PanelActions>
+          <PanelFirstRun
+            scene="developers"
+            title="No service accounts yet"
+            description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
+            docsHref={SERVICE_ACCOUNT_DOCS_URL}
+          />
+        </>
       ) : (
         <SettingsTable<Member>
           label="Service accounts"
@@ -91,7 +99,11 @@ export function ServiceAccountsPanel() {
           rows={rows}
           isLoading={accounts.isPending}
           getRowId={(account) => account.id}
-          action={<Button onClick={() => setIsCreating(true)}>New service account</Button>}
+          action={
+            <WriteGate entity={RBAC_ENTITY.User}>
+              <Button onClick={() => setIsCreating(true)}>New service account</Button>
+            </WriteGate>
+          }
           // First run is handled above; the table only ever renders with rows
           // or while loading.
           empty={null}
@@ -122,14 +134,17 @@ export function ServiceAccountsPanel() {
               header: '',
               width: 160,
               cell: (account) => (
-                <span className="flex justify-end gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
-                    Rename
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
-                    Delete
-                  </Button>
-                </span>
+                // Managing service accounts needs user write (V1).
+                <WriteGate entity={RBAC_ENTITY.User}>
+                  <span className="flex justify-end gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
+                      Rename
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
+                      Delete
+                    </Button>
+                  </span>
+                </WriteGate>
               ),
             },
           ]}

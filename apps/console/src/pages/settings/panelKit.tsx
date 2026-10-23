@@ -1,15 +1,16 @@
-import { type ReactNode, useId } from 'react'
-import { ArrowUpRightIcon, InfoIcon } from '@fp/ui/icons'
+import { type ReactNode } from 'react'
+import { ArrowUpRightIcon } from '@fp/ui/icons'
 import { ApiError } from '@fp/query'
 import {
   EMPTY_CATALOGUE,
+  DelayedHint,
   EmptyState,
   ErrorState,
   TableSkeleton,
   type EmptyScene,
 } from '@fp/ui/compositions'
 import { DetailTable, type DetailColumn } from '@fp/ui/pages'
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@fp/ui/primitives'
+import { Button } from '@fp/ui/primitives'
 import { type ListFailure, toListFailure } from '../shared/listFailure'
 
 /**
@@ -128,97 +129,8 @@ export function ActionNote({ message }: { message: string | null }) {
   )
 }
 
-/**
- * One settings region: a bordered surface with no visible header.
- *
- * Settings opens straight onto its content, so there is no titled card above
- * a form any more. `label` still names the region for assistive tech (an
- * `sr-only` heading), `info` is the one explanatory block a form may carry at
- * its top, and `actions` land in the footer bar. `flush` drops the body
- * padding, for rows that pad themselves (`SettingRow`, `FormRow`).
- */
-export function SettingsBlock({
-  label,
-  info,
-  actions,
-  flush = false,
-  children,
-}: {
-  label: string
-  info?: ReactNode
-  actions?: ReactNode
-  flush?: boolean
-  children: ReactNode
-}) {
-  const id = useId()
-  return (
-    <section
-      aria-labelledby={id}
-      className="bg-background flex min-w-0 flex-col overflow-hidden rounded-xl border"
-    >
-      <h3 id={id} className="sr-only">
-        {label}
-      </h3>
-      {info ? <InfoBlock>{info}</InfoBlock> : null}
-      <div className={flush ? 'min-w-0' : 'flex min-w-0 flex-col gap-4 overflow-x-auto px-5 py-4'}>
-        {children}
-      </div>
-      {actions ? (
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t px-5 py-3">
-          {actions}
-        </div>
-      ) : null}
-    </section>
-  )
-}
-
-/**
- * The info block a form-type setting may open with: what the fields add up to,
- * said once, above them. Not a subtitle — it is part of the form's content.
- */
-export function InfoBlock({ children }: { children: ReactNode }) {
-  return (
-    <div className="bg-muted/40 text-muted-foreground flex items-start gap-2 border-b px-5 py-3 text-[13px]">
-      <InfoIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-      <div className="flex min-w-0 flex-col gap-1">{children}</div>
-    </div>
-  )
-}
-
-/** How long a hover has to last before a settings hint appears. */
-export const HINT_DELAY_MS = 3000
-
-/**
- * A one-line explanation, on hover, after a deliberate pause.
- *
- * Settings has no subtitles: the empty states do the educating. Where one line
- * really helps, it waits here — three seconds of hovering, so it never gets in
- * the way of someone who already knows. With `children` the hint hangs off
- * them (a button, a label); without, it hangs off a small (i).
- */
-export function DelayedHint({ text, children }: { text: string; children?: ReactNode }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        delay={HINT_DELAY_MS}
-        render={
-          children ? (
-            <span className="inline-flex" />
-          ) : (
-            <span
-              role="img"
-              aria-label={text}
-              className="text-muted-foreground inline-flex size-4 shrink-0 items-center justify-center"
-            />
-          )
-        }
-      >
-        {children ?? <InfoIcon aria-hidden className="size-3.5" />}
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs">{text}</TooltipContent>
-    </Tooltip>
-  )
-}
+/** The settings surfaces, kept in the kit so a page outside the console can use them. */
+export { DelayedHint, HINT_DELAY_MS, InfoBlock, SettingsBlock } from '@fp/ui/compositions'
 
 /**
  * The one table every list-type settings tab opens on: the app's shared
@@ -252,14 +164,9 @@ export function SettingsTable<T extends object>({
   empty: ReactNode
   facet?: { label: string; value: (row: T) => string }
 }) {
-  // With no rows the empty state carries the create button itself, so the
-  // toolbar does not offer it a second time above it.
-  const firstRun = !isLoading && rows.length === 0
-  const toolbarAction = firstRun ? undefined : action && hint ? (
-    <DelayedHint text={hint}>{action}</DelayedHint>
-  ) : (
-    action
-  )
+  // The create action stays at the top right with or without rows; the empty
+  // state under it says what the table is for and does not repeat the button.
+  const toolbarAction = action && hint ? <DelayedHint text={hint}>{action}</DelayedHint> : action
   return (
     <DetailTable<T>
       // Flush with the content column: the settings rail is the frame.
@@ -301,24 +208,27 @@ export function WidePanel({ children, fill = false }: { children: ReactNode; fil
   )
 }
 
+/** A panel's create action: top right, whether the panel has rows or not. */
+export function PanelActions({ children }: { children: ReactNode }) {
+  return <div className="flex justify-end gap-2">{children}</div>
+}
+
 /**
  * A panel with nothing in it yet: the shared `EmptyState` at page size, centred
- * in the page body, with the create button and a link to the docs. Render it
- * *instead of* the panel's list and toolbar, so the create action is offered
- * once, and inside `<WidePanel fill>` so it has a height to centre in.
+ * in the page body, with a link to the docs. Render it *instead of* the
+ * panel's list, under the same top-right create action the list has (see
+ * `PanelActions`), and inside `<WidePanel fill>` so it has a height to centre in.
  */
 export function PanelFirstRun({
   scene = 'settings',
   title,
   description,
-  action,
   docsHref,
   docsLabel = 'Read the docs',
 }: {
   scene?: EmptyScene
   title: string
   description: string
-  action: ReactNode
   docsHref?: string
   docsLabel?: string
 }) {
@@ -328,7 +238,6 @@ export function PanelFirstRun({
       scene={scene}
       title={title}
       description={description}
-      action={action}
       {...(docsHref
         ? {
             secondaryAction: (

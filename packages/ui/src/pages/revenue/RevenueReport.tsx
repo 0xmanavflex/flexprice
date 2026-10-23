@@ -102,7 +102,8 @@ export interface AgingBucket {
 export interface OverdueCustomerRow {
   id: string
   name: string
-  invoices: number
+  /** How many invoices are overdue; omitted when the source does not count them. */
+  invoices?: number | undefined
   overdue: number
   display: { overdue: string; outstanding: string }
   oldestDays: number
@@ -111,8 +112,9 @@ export interface OverdueCustomerRow {
 export interface PayerRow {
   id: string
   name: string
-  paid: number
-  collected: string
+  /** Paid invoices and amount collected; omitted when the source does not report them. */
+  paid?: number | undefined
+  collected?: string | undefined
   averageDays: number
 }
 
@@ -175,7 +177,8 @@ export interface RevenueReportProps {
   payments: ReportState & {
     average: ReportFigure
     median: string
-    paidCount: number
+    /** Invoices paid in the range; omitted when the source does not count them. */
+    paidCount?: number | undefined
     withinWeek: string
     series: { label: string; days: number }[]
     payers: PayerRow[]
@@ -187,8 +190,10 @@ export interface RevenueReportProps {
     total: string
     weeklyAverage: string
     peak: string
-    /** Why wallet credits are not reported here. */
+    /** Why wallet credits are not reported here (shown when `credits` is absent). */
     creditsReason: string
+    /** Credits applied to invoices and credits topped up over the range. */
+    credits?: { consumed: ReportFigure; toppedUp: ReportFigure } | undefined
   }
 }
 
@@ -564,7 +569,7 @@ export function RevenueReport(props: RevenueReportProps) {
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-lg font-medium tracking-tight">{props.title ?? 'Revenue'}</h1>
+        <h1 className="text-xl font-medium tracking-tight">{props.title ?? 'Revenue'}</h1>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <FilterSelect
             filter={{
@@ -610,7 +615,9 @@ export function RevenueReport(props: RevenueReportProps) {
       <DetailTabs tabs={TABS} value={view} onChange={(next) => onViewChange(next as RevenueView)} />
 
       {/* Names the report for assistive tech, so the panels' headings sit under it. */}
-      <h2 className="sr-only">{TABS.find((tab) => tab.value === view)?.label ?? 'Overview'} report</h2>
+      <h2 className="sr-only">
+        {TABS.find((tab) => tab.value === view)?.label ?? 'Overview'} report
+      </h2>
       {view === 'overview' ? <OverviewTab {...props} /> : null}
       {view === 'revenue' ? <RevenueTab {...props} /> : null}
       {view === 'customers' ? <CustomersTab {...props} /> : null}
@@ -986,9 +993,11 @@ function ReceivablesTab({ receivables }: RevenueReportProps) {
                 {
                   key: 'invoices',
                   header: 'Overdue invoices',
-                  sortBy: (row) => row.invoices,
+                  sortBy: (row) => row.invoices ?? -1,
                   cell: (row) => (
-                    <span className="text-muted-foreground tabular-nums">{row.invoices}</span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {row.invoices ?? '—'}
+                    </span>
                   ),
                 },
                 {
@@ -1038,7 +1047,10 @@ function PaymentsTab({ payments, comparing }: RevenueReportProps) {
                 tiles={[
                   tile('Average', payments.average, comparing),
                   { label: 'Median', value: payments.median },
-                  { label: 'Paid invoices', value: String(payments.paidCount) },
+                  {
+                    label: 'Paid invoices',
+                    value: payments.paidCount === undefined ? '—' : String(payments.paidCount),
+                  },
                   { label: 'Paid within a week', value: payments.withinWeek },
                 ]}
               />
@@ -1076,15 +1088,15 @@ function PaymentsTab({ payments, comparing }: RevenueReportProps) {
                 {
                   key: 'paid',
                   header: 'Paid invoices',
-                  sortBy: (row) => row.paid,
+                  sortBy: (row) => row.paid ?? -1,
                   cell: (row) => (
-                    <span className="text-muted-foreground tabular-nums">{row.paid}</span>
+                    <span className="text-muted-foreground tabular-nums">{row.paid ?? '—'}</span>
                   ),
                 },
                 {
                   key: 'collected',
                   header: 'Collected',
-                  cell: (row) => <span className="tabular-nums">{row.collected}</span>,
+                  cell: (row) => <span className="tabular-nums">{row.collected ?? '—'}</span>,
                 },
                 {
                   key: 'days',
@@ -1135,11 +1147,21 @@ function UsageTab({ usage }: RevenueReportProps) {
         description="Wallet credits added, and credits applied to invoices"
       >
         <Surface>
-          <SectionEmpty
-            scene="billing"
-            title="Not available yet"
-            description={usage.creditsReason}
-          />
+          {usage.credits ? (
+            <OverviewTiles
+              variant="flush"
+              tiles={[
+                tile('Credits consumed', usage.credits.consumed, false),
+                tile('Credits topped up', usage.credits.toppedUp, false),
+              ]}
+            />
+          ) : (
+            <SectionEmpty
+              scene="billing"
+              title="Not available yet"
+              description={usage.creditsReason}
+            />
+          )}
         </Surface>
       </Panel>
     </div>

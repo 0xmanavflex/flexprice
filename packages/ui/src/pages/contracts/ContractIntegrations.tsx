@@ -15,7 +15,7 @@ import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
-import { CopyIcon, PlusIcon } from '@ui/icons'
+import { ArrowUpRightIcon, CircleSlashIcon, CopyIcon, MoreHorizontalIcon, PlusIcon, UploadIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 import { toast } from 'sonner'
 import { IntegrationMark } from '../customers/IntegrationMark'
@@ -56,6 +56,9 @@ export interface ContractIntegrationsProps {
   linkable: LinkableProvider[]
   onLink?: (input: { providerType: string; providerEntityId: string }) => Promise<unknown>
   onUnlink?: (input: { providerType: string }) => Promise<unknown>
+  /** Provider names that can receive a push. Shows "Push to {name}" on that row. */
+  pushProviders?: string[]
+  onPush?: () => void
 }
 
 const stamp = new Intl.DateTimeFormat('en-US', {
@@ -80,6 +83,8 @@ export function ContractIntegrations({
   linkable,
   onLink,
   onUnlink,
+  pushProviders,
+  onPush,
 }: ContractIntegrationsProps) {
   const [unlinking, setUnlinking] = useState<IntegrationLink | null>(null)
   const [internalLinking, setInternalLinking] = useState(false)
@@ -93,8 +98,10 @@ export function ContractIntegrations({
 
   // In the Related card the rows are the card's whole body, so rendering nothing
   // left a bare "Related" heading over an empty box. Say so instead. The header
-  // marks have nowhere to put a sentence, so they still render nothing.
-  if (links.length === 0 && !canLink) {
+  // marks have nowhere to put a sentence, so they still render nothing — unless
+  // the parent opened the link dialog itself (a plan's overflow menu), which
+  // has to mount even though there is nothing to show beside it.
+  if (links.length === 0 && !canLink && !linking) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
     ) : null
@@ -114,36 +121,59 @@ export function ContractIntegrations({
   }
 
   return (
-    <div
-      className={layout === 'rows' ? 'flex flex-col gap-3 px-6 py-3' : 'flex items-center gap-1.5'}
-    >
-      {links.map((link) => (
+    <div className={layout === 'rows' ? 'flex flex-col divide-y' : 'flex items-center gap-1.5'}>
+      {links.map((link) =>
+        layout === 'rows' ? (
+          <div
+            key={link.providerType}
+            className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-4 px-6 py-3"
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              <IntegrationMark integration={link} />
+              <span className="truncate text-sm">{link.name}</span>
+            </span>
+            <span className="flex min-w-0 items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger className="inline-flex min-w-0 items-center gap-1 text-sm">
+                  <span className="truncate font-mono">{shortId(link.providerEntityId)}</span>
+                  <ArrowUpRightIcon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
+                  {link.providerEntityId}
+                </TooltipContent>
+              </Tooltip>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={`Manage ${link.name} integration`}
+                className="text-muted-foreground hover:bg-muted focus-visible:outline-ring ml-auto flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
+              >
+                <MoreHorizontalIcon aria-hidden className="size-4" />
+              </DropdownMenuTrigger>
+              <IntegrationMenu
+                link={link}
+                entityLabel={entityLabel}
+                {...(onPush && pushProviders?.includes(link.name) ? { onPush } : {})}
+                onUnlink={onUnlink}
+                onAskUnlink={() => {
+                  setError(null)
+                  setUnlinking(link)
+                }}
+              />
+            </DropdownMenu>
+            </span>
+          </div>
+        ) : (
         <DropdownMenu key={link.providerType}>
           <Tooltip>
             <TooltipTrigger
               render={
                 <DropdownMenuTrigger
-                  aria-label={
-                    layout === 'rows'
-                      ? `Manage ${link.name} integration`
-                      : `${link.name} integration`
-                  }
+                  aria-label={`${link.name} integration`}
                   className="focus-visible:outline-ring flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2"
                 />
               }
             >
               <IntegrationMark integration={link} />
-              {layout === 'rows' ? (
-                <span className="min-w-0">
-                  <span className="block text-sm">{link.name}</span>
-                  <span
-                    className="text-muted-foreground block truncate font-mono text-xs"
-                    title={link.providerEntityId}
-                  >
-                    {link.providerEntityId}
-                  </span>
-                </span>
-              ) : null}
             </TooltipTrigger>
             <TooltipContent side="bottom" className="block max-w-72 p-3">
               <p className="mb-2 text-xs font-medium">{link.name}</p>
@@ -157,58 +187,56 @@ export function ContractIntegrations({
               </dl>
             </TooltipContent>
           </Tooltip>
-          <DropdownMenuContent align="end" className="min-w-48">
-            <DropdownMenuItem
-              onClick={() => {
-                void navigator.clipboard
-                  ?.writeText(link.providerEntityId)
-                  .then(() => toast.success(`${link.name} ${entityLabel} ID copied`))
-                  .catch(() => toast.error('Copy failed'))
-              }}
-            >
-              <CopyIcon aria-hidden /> Copy {entityLabel} ID
-            </DropdownMenuItem>
-            {onUnlink ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => {
-                    setError(null)
-                    setUnlinking(link)
-                  }}
-                >
-                  Unlink {link.name}
-                </DropdownMenuItem>
-              </>
-            ) : null}
-          </DropdownMenuContent>
+          <IntegrationMenu
+            link={link}
+            entityLabel={entityLabel}
+            onUnlink={onUnlink}
+            onAskUnlink={() => {
+              setError(null)
+              setUnlinking(link)
+            }}
+          />
         </DropdownMenu>
-      ))}
+        ),
+      )}
       {layout === 'rows' && links.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{none}</p>
+        <p className="text-muted-foreground px-6 py-3 text-sm">{none}</p>
       ) : null}
       {canLink ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="outline"
-                size={layout === 'rows' ? 'sm' : 'icon'}
-                className={layout === 'rows' ? 'w-full' : 'size-7 rounded-lg'}
-                aria-label="Link an integration"
-                onClick={() => {
-                  setError(null)
-                  setLinking(true)
-                }}
-              />
-            }
+        layout === 'rows' ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+            onClick={() => {
+              setError(null)
+              setLinking(true)
+            }}
           >
             <PlusIcon aria-hidden className="size-3.5" />
-            {layout === 'rows' ? 'Link integration' : null}
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Link an integration</TooltipContent>
-        </Tooltip>
+            Link integration
+          </Button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-7 rounded-lg"
+                  aria-label="Link an integration"
+                  onClick={() => {
+                    setError(null)
+                    setLinking(true)
+                  }}
+                />
+              }
+            >
+              <PlusIcon aria-hidden className="size-3.5" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Link an integration</TooltipContent>
+          </Tooltip>
+        )
       ) : null}
 
       <ConfirmDialog
@@ -246,6 +274,53 @@ export function ContractIntegrations({
         }
       />
     </div>
+  )
+}
+
+function shortId(value: string): string {
+  if (value.length <= 18) return value
+  return `${value.slice(0, 9)}…${value.slice(-4)}`
+}
+
+function IntegrationMenu({
+  link,
+  entityLabel,
+  onUnlink,
+  onAskUnlink,
+  onPush,
+}: {
+  link: IntegrationLink
+  entityLabel: string
+  onUnlink?: ContractIntegrationsProps['onUnlink']
+  onAskUnlink: () => void
+  onPush?: () => void
+}) {
+  return (
+    <DropdownMenuContent align="end" className="min-w-48">
+      {onPush ? (
+        <DropdownMenuItem onClick={onPush}>
+          <UploadIcon aria-hidden /> Push to {link.name}
+        </DropdownMenuItem>
+      ) : null}
+      <DropdownMenuItem
+        onClick={() => {
+          void navigator.clipboard
+            ?.writeText(link.providerEntityId)
+            .then(() => toast.success(`${link.name} ${entityLabel} ID copied`))
+            .catch(() => toast.error('Copy failed'))
+        }}
+      >
+        <CopyIcon aria-hidden /> Copy {entityLabel} ID
+      </DropdownMenuItem>
+      {onUnlink ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={onAskUnlink}>
+            <CircleSlashIcon aria-hidden /> Unlink {link.name}
+          </DropdownMenuItem>
+        </>
+      ) : null}
+    </DropdownMenuContent>
   )
 }
 

@@ -169,6 +169,7 @@ export function PriceUnitGrid({
     if (onPriceUnitClick) {
       actions.push({
         label: 'View price unit',
+        readOnly: true,
         icon: <CoinsIcon aria-hidden className="size-4" />,
         onSelect: () => onPriceUnitClick(priceUnit),
       })
@@ -182,6 +183,7 @@ export function PriceUnitGrid({
     }
     actions.push({
       label: 'Copy price unit ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(priceUnit.id),
     })
@@ -247,7 +249,6 @@ export function PriceUnitGrid({
         title: 'No price units yet',
         description:
           'A price unit lets you charge in something other than a currency — credits, tokens, minutes — by pinning a code and a symbol to a base currency through a rate.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New price unit</Button> } : {}),
         guides: GUIDES,
       }}
     />

@@ -124,12 +124,14 @@ export function CreditNoteGrid({
     if (onCreditNoteClick) {
       actions.push({
         label: 'View credit memo',
+        readOnly: true,
         icon: <FileMinusIcon aria-hidden className="size-4" />,
         onSelect: () => onCreditNoteClick(creditNote),
       })
     }
     actions.push({
       label: 'Copy credit memo ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(creditNote.id),
     })

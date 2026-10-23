@@ -1,5 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { type Corpus, corpus } from '@fp/query/fixtures'
+import { selfBillingHandlers } from './selfBillingHandlers'
+import { mockAccountState } from './selfBillingState'
 import { svixHandlers } from './svixHandlers'
 
 /**
@@ -25,6 +27,8 @@ interface SearchBody {
   sort?: { field: string; direction: 'asc' | 'desc' }[]
   invoice_status?: string[]
   invoiceStatus?: string[]
+  /** Subscription lifecycle statuses — `/subscriptions/search` narrows to these when sent. */
+  subscription_status?: string[]
   /** A single catalogue status (published/archived) — how the count queries filter. */
   status?: string
   name_contains?: string
@@ -266,17 +270,42 @@ const connectionRows: Record<string, unknown>[] = [
     provider_type: 'stripe',
     connection_status: 'published',
     metadata: {},
-    sync_config: { invoice: { outbound: true }, payment: { inbound: true } },
+    sync_config: {
+      customer: { outbound: true },
+      invoice: { outbound: true },
+      payment: { inbound: true },
+    },
     created_at: '2026-08-12T09:30:00Z',
   },
   { id: 'conn_qb', name: 'QuickBooks', provider_type: 'quickbooks', connection_status: 'draft' },
+  // Export destinations. Storage is not a billing provider, so customers never show it.
+  {
+    id: 'conn_s3_01',
+    name: 'Acme data lake',
+    provider_type: 's3',
+    connection_status: 'published',
+    metadata: {},
+    sync_config: { s3: { is_flexprice_managed: false } },
+    created_at: '2026-01-20T10:00:00Z',
+  },
+  {
+    id: 'conn_s3_02',
+    name: 'Flexprice-managed bucket',
+    provider_type: 's3',
+    connection_status: 'published',
+    metadata: {},
+    sync_config: { s3: { is_flexprice_managed: true } },
+    created_at: '2026-03-02T10:00:00Z',
+  },
 ]
+const STORAGE_PROVIDERS = new Set(['s3', 'gcs'])
 let connectionSeq = 0
 const pendingOAuth = new Map<string, { name: unknown; provider: string; metadata: unknown }>()
 
 function publishedProviders(): string[] {
   return connectionRows
     .filter((row) => row['connection_status'] === 'published')
+    .filter((row) => !STORAGE_PROVIDERS.has(String(row['provider_type'])))
     .map((row) => String(row['provider_type']))
 }
 
@@ -360,6 +389,8 @@ function seedDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
 function invoicePayments(invoiceId: string): Record<string, unknown>[] {
   const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === invoiceId)
   if (!invoice) return []
+  // Payments recorded in this session already stand for what has been paid.
+  if (paymentStore.some((row) => readString(row, 'destination_id') === invoiceId)) return []
   const paid = Number(readString(invoice, 'amount_paid') || 0)
   if (!(paid > 0)) return []
   const at = readString(invoice, 'issue_date') || readString(invoice, 'created_at')
@@ -378,6 +409,27 @@ function invoicePayments(invoiceId: string): Record<string, unknown>[] {
       succeeded_at: at,
     },
   ]
+}
+
+/**
+ * A succeeded payment against an invoice pays it down, as the API does: the
+ * invoice's paid and remaining amounts move, and it reads Succeeded once the
+ * balance is cleared.
+ */
+function applyPaymentToInvoice(payment: Record<string, unknown>) {
+  if (readString(payment, 'destination_type') !== 'INVOICE') return
+  const id = readString(payment, 'destination_id')
+  const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+  if (!invoice) return
+  const due = Number(readString(invoice, 'amount_due') || readString(invoice, 'total') || 0)
+  const paid =
+    Number(readString(invoice, 'amount_paid') || 0) + Number(readString(payment, 'amount') || 0)
+  const remaining = Math.max(0, due - paid)
+  patchRow(sourceFor('invoices').items, id, {
+    amount_paid: String(paid),
+    amount_remaining: String(remaining),
+    payment_status: remaining === 0 ? 'SUCCEEDED' : 'PENDING',
+  })
 }
 
 /*
@@ -425,7 +477,25 @@ const search = (path: string, key: string) =>
     const refused = rejectUnknownExpand(key, body.expand)
     if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
-    const result = page(sourceFor(key), body)
+    const source = sourceFor(key)
+    // The API's rule: a subscription search that names no status answers active only.
+    const wanted =
+      key === 'subscriptions'
+        ? body.subscription_status?.length
+          ? body.subscription_status
+          : ['active']
+        : undefined
+    const result = page(
+      wanted?.length
+        ? {
+            ...source,
+            items: source.items.filter((row) =>
+              wanted.includes(readString(row, 'subscription_status')),
+            ),
+          }
+        : source,
+      body,
+    )
     const payload =
       key === 'features'
         ? applyFeatureExpand(result, body.expand)
@@ -497,6 +567,10 @@ function couponAssociations(): Record<string, unknown>[] {
  * switch — and the default-selection rule (prefer the sandbox) has nothing to
  * choose between with a single row.
  */
+const PRODUCTION_ENVIRONMENT_ID = 'env_01M020PHF0GF9KP1E9CEVNKJA1'
+/** An invoice only Production has (see `GET /invoices/:id`). */
+export const PRODUCTION_ONLY_INVOICE = 'inv_01PRODUCTIONONLYDEMO000001'
+
 const environments: Record<string, unknown>[] = [
   {
     id: 'env_01KVSNYVPMAP6JJGDF177V2DE6',
@@ -610,25 +684,15 @@ const roles: Record<string, unknown>[] = [
     id: 'all_writer',
     name: 'Writer',
     description: 'Can read and change everything except members and roles.',
-    permissions: {
-      plan: ['read', 'write'],
-      customer: ['read', 'write'],
-      invoice: ['read', 'write'],
-      subscription: ['read', 'write'],
-      event: ['read', 'write'],
-    },
+    // Every resource, read and write. Super-admin-only screens (members' roles,
+    // tenant settings) still refuse it, as the console's checks do.
+    permissions: { '*': ['read', 'write'] },
   },
   {
     id: 'all_reader',
     name: 'Reader',
     description: 'Can see everything and change nothing.',
-    permissions: {
-      plan: ['read'],
-      customer: ['read'],
-      invoice: ['read'],
-      subscription: ['read'],
-      event: ['read'],
-    },
+    permissions: { '*': ['read'] },
   },
   {
     id: 'event_ingestor',
@@ -1136,9 +1200,49 @@ const scheduledTasks: Record<string, unknown>[] = [
   interval,
   enabled,
   status: 'published',
-  job_config: { bucket, region, key_prefix: prefix },
+  job_config: {
+    bucket,
+    region,
+    key_prefix: prefix,
+    compression: index % 2 ? 'gzip' : 'none',
+    encryption: 'AES256',
+    ...(entity === 'credit_usage'
+      ? { export_metadata_fields: [{ entity_type: 'customer', field_key: 'account_manager' }] }
+      : {}),
+  },
   created_at: new Date(Date.UTC(2026, 1, 1 + index)).toISOString(),
+  updated_at: new Date(Date.UTC(2026, 1, 3 + index)).toISOString(),
 }))
+let scheduledTaskSeq = scheduledTasks.length
+
+/** Each export's runs, newest first: hourly windows for hourly exports, days for daily. */
+function exportRuns(task: Record<string, unknown>): Record<string, unknown>[] {
+  const hourly = task['interval'] === 'hourly'
+  const step = hourly ? 3_600_000 : 86_400_000
+  const end = Date.UTC(2026, 9, 20, 0)
+  return Array.from({ length: 23 }, (_, index) => {
+    const windowEnd = end - index * step
+    const status = index === 0 ? 'PROCESSING' : index === 4 ? 'FAILED' : 'COMPLETED'
+    return {
+      id: `run_${String(task['id'])}_${String(index + 1).padStart(3, '0')}`,
+      task_type: 'EXPORT',
+      entity_type: task['entity_type'],
+      scheduled_task_id: task['id'],
+      task_status: status,
+      file_url: status === 'COMPLETED' ? `s3://export/${String(task['id'])}/${index}.csv` : '',
+      total_records: status === 'COMPLETED' ? 1200 + ((index * 137) % 900) : 0,
+      error_summary: status === 'FAILED' ? 'Access denied writing to the bucket' : '',
+      metadata: {
+        start_time: new Date(windowEnd - step).toISOString(),
+        end_time: new Date(windowEnd).toISOString(),
+      },
+      started_at: new Date(windowEnd + 60_000).toISOString(),
+      created_at: new Date(windowEnd + 60_000).toISOString(),
+      status: 'published',
+    }
+  })
+}
+const manualRuns = new Map<string, Record<string, unknown>[]>()
 
 /**
  * `GET /taxes/rates`, the one settings panel with no handler at all.
@@ -1532,8 +1636,8 @@ const tenantBilling = {
  *
  * Every `usage_percent` is the real quotient of the two columns beside it — a
  * fixture whose percentage disagrees with its own usage is how a broken
- * percentage survives review. `sources` is `[]` on every row for the reason
- * given on the tenant fixture: the live element shape was never observed.
+ * percentage survives review. `sources` is filled in by the handler from the
+ * customer's own contracts, so each row names a real plan and contract.
  * ---------------------------------------------------------------------------
  */
 const CUSTOMER_USAGE_PERIOD_START = '2026-09-01T00:00:00Z'
@@ -2267,13 +2371,76 @@ function recentInvoiceRows(): Record<string, unknown>[] {
  * were, so every other list still shows the world it always showed and only
  * gains some recent activity at the top.
  */
+/**
+ * The contract-level commitment the first captured contract carries, so the
+ * detail page has one to show: $250 a month, a 1.2× overage premium, true-up on.
+ * The captured corpus has none, and the usage mock reads it from here.
+ */
+const COMMITTED_SUBSCRIPTION_ID = 'subs_synth_0000'
+const CONTRACT_COMMITMENT = {
+  commitment_amount: '250',
+  commitment_duration: 'MONTHLY',
+  overage_factor: '1.2',
+  enable_true_up: true,
+}
+
+/** The mock's trialing contract; see the subscriptions corpus below. */
+const TRIALING_SUBSCRIPTION_ID = 'subs_01MOCKTRIALING0000000001'
+
+/** Each report's seeded figure for the mock report library. */
+const REPORT_BASE: Record<string, number> = {
+  invoice_total: 412_000,
+  invoice_total_issued: 409_000,
+  net_billing: 399_000,
+  net_billing_issued: 397_000,
+  total_receivables: 121_460,
+  receivables_aging: 60_000,
+  days_to_pay: 16.4,
+  active_customers: 172,
+  arpu: 2_630,
+  arpu_paid: 2_410,
+  credit_consumption: 52_000,
+  credit_topups: 61_000,
+  events_volume: 18_400_000,
+}
+/** Reports the API compares with the previous period. */
+const REPORT_COMPARES = new Set([
+  'invoice_total',
+  'invoice_total_issued',
+  'days_to_pay',
+  'arpu',
+  'arpu_paid',
+  'credit_topups',
+])
+
 const DASHBOARD_CORPUS: Record<string, Corpus> = {
   subscriptions: (() => {
     const extra = recentSubscriptionRows()
     const base = corpus.subscriptions as Corpus
+    const items = base.items.map((item) =>
+      readString(item, 'id') === COMMITTED_SUBSCRIPTION_ID
+        ? { ...item, ...CONTRACT_COMMITMENT }
+        : item,
+    )
+    // One trialing contract, so a search that forgets subscription_status (the
+    // API then answers active only) loses it here as it does live.
+    const first = items[0]
+    const trialing = first
+      ? [
+          {
+            ...first,
+            id: TRIALING_SUBSCRIPTION_ID,
+            subscription_status: 'trialing',
+            updated_at: '2026-01-02T00:00:00Z',
+          },
+        ]
+      : []
     return {
-      items: [...extra, ...base.items],
-      pagination: { ...base.pagination, total: base.pagination.total + extra.length },
+      items: [...extra, ...items, ...trialing],
+      pagination: {
+        ...base.pagination,
+        total: base.pagination.total + extra.length + trialing.length,
+      },
     }
   })(),
   invoices: (() => {
@@ -2307,20 +2474,30 @@ function sourceFor(key: string): Corpus {
 export const handlers = [
   // The Svix API behind the webhook portal — see `svixHandlers.ts`.
   ...svixHandlers,
+  // Self-billing, off unless a mock account state is picked — see `selfBillingHandlers.ts`.
+  ...selfBillingHandlers,
 
   // Environments. Unlike the create handlers further down — which echo the
   // record back and leave the corpus alone — this one appends, because the
   // console switches to what you just created and then refetches the list. An
   // echo-only mock would switch to an id the next list does not contain, and
   // the hook would correctly treat it as stale and bounce you back out.
-  http.get(`${BASE}/environments`, () =>
-    HttpResponse.json({
-      environments,
-      total: environments.length,
+  http.get(`${BASE}/environments`, () => {
+    // A self-billing trial (or a locked one) has no production yet: paying
+    // creates it, as the API does on activation. Self-billing off, or live,
+    // lists everything.
+    const state = mockAccountState()
+    const preProduction = state !== null && state !== 'active' && state !== 'due'
+    const listed = preProduction
+      ? environments.filter((environment) => environment['type'] !== 'production')
+      : environments
+    return HttpResponse.json({
+      environments: listed,
+      total: listed.length,
       offset: 0,
       limit: 50,
-    }),
-  ),
+    })
+  }),
   http.post(`${BASE}/environments`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     const created = {
@@ -2332,6 +2509,41 @@ export const handlers = [
     }
     environments.push(created)
     return HttpResponse.json(created, { status: 201 })
+  }),
+  // Copy environment: the API queues a workflow and answers 202. Into a new
+  // environment it creates that first, so the mock does too.
+  http.post(`${BASE}/environments/:id/clone`, async ({ params, request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const source = environments.find((environment) => environment['id'] === params['id'])
+    if (!source) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    const target = readString(body, 'target_environment_id')
+    if (target) {
+      if (target === params['id']) {
+        return HttpResponse.json(
+          { code: 'validation_error', message: 'target environment cannot be the source' },
+          { status: 400 },
+        )
+      }
+    } else {
+      const name = readString(body, 'name')
+      if (!name) {
+        return HttpResponse.json(
+          { code: 'validation_error', message: 'name is required' },
+          { status: 400 },
+        )
+      }
+      environments.push({
+        id: `env_mock_${Date.now()}`,
+        name,
+        type: readString(body, 'type') || 'development',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    }
+    return HttpResponse.json(
+      { workflow_id: `env-clone-${Date.now()}`, run_id: 'run_mock' },
+      { status: 202 },
+    )
   }),
   // Rename, from the switcher. Mutates in place for the same reason create
   // appends: the console refetches the list straight after.
@@ -2410,6 +2622,129 @@ export const handlers = [
    * and customer) and `POST /analytics/revenue` (net revenue per day, grouped
    * by currency), both read from `revenueDays`.
    */
+  /*
+   * The analytics report library — `POST /analytics/reports/{key}/query`.
+   * Answers in the API's table form: a `bucket` (timeseries) or dimension
+   * column, `currency`, the metric named after the report, and `{key}_prev` /
+   * `{key}_change_pct` when compared. Figures are seeded per report and
+   * bucket, and customers are real ones from the corpus so names resolve.
+   */
+  http.post(`${BASE}/analytics/reports/:key/query`, async ({ params, request }) => {
+    const key = String(params['key'])
+    const body = (await request.json().catch(() => ({}))) as {
+      shape?: string
+      range?: string
+      dimensions?: string[]
+      grain?: string
+      currency?: string
+      compare?: string
+      limit?: number
+    }
+    const base = REPORT_BASE[key]
+    if (base === undefined) {
+      return HttpResponse.json({ message: `report "${key}" not found` }, { status: 404 })
+    }
+    const compare = Boolean(body.compare) && REPORT_COMPARES.has(key)
+    const metric = [
+      { name: key, type: 'decimal', role: 'metric' },
+      ...(compare
+        ? [
+            { name: `${key}_prev`, type: 'decimal', role: 'metric' },
+            { name: `${key}_change_pct`, type: 'decimal', role: 'metric' },
+          ]
+        : []),
+    ]
+    const values = (now: number, before: number) =>
+      compare
+        ? [
+            now.toFixed(2),
+            before.toFixed(2),
+            before === 0 ? '' : (((now - before) / before) * 100).toFixed(1),
+          ]
+        : [now.toFixed(2)]
+    const currencyCol =
+      key === 'events_volume' ? [] : [{ name: 'currency', type: 'string', role: 'dimension' }]
+    const currency = key === 'events_volume' ? [] : [body.currency || 'usd']
+    const [from, to] = (body.range ?? '').split('..')
+    const start = from ? new Date(`${from}T00:00:00Z`) : new Date(Date.now() - 90 * DAY_MS)
+    const end = to ? new Date(`${to}T00:00:00Z`) : new Date()
+    const meta = { query_source: 'mock', from: start.toISOString(), to: end.toISOString() }
+
+    if (body.shape === 'timeseries') {
+      const step =
+        body.grain === 'month' ? 30 * DAY_MS : body.grain === 'week' ? 7 * DAY_MS : DAY_MS
+      const rows: string[][] = []
+      for (let t = start.getTime(); t < end.getTime() && rows.length < 400; t += step) {
+        // A ratio (days to pay, ARPU) is the same size per bucket; a flow scales with its width.
+        const ratio = key === 'days_to_pay' || key === 'arpu' || key === 'arpu_paid'
+        const now =
+          (ratio ? base : (base / 30) * (step / DAY_MS)) * (0.75 + 0.5 * noise(`${key}:${t}`))
+        const before = now * (0.85 + 0.2 * noise(`${key}:prev:${t}`))
+        rows.push([new Date(t).toISOString(), ...currency, ...values(now, before)])
+      }
+      return HttpResponse.json({
+        columns: [
+          { name: 'bucket', type: 'datetime', role: 'dimension' },
+          ...currencyCol,
+          ...metric,
+        ],
+        rows,
+        meta,
+      })
+    }
+
+    if (body.shape === 'breakdown') {
+      const dims = body.dimensions?.length ? body.dimensions : ['customer_id']
+      // The customers the customer search answers with, so their names resolve.
+      const customers = sourceFor('customers')
+        .items.slice(0, 8)
+        .map((row) => readString(row, 'id'))
+      const labels: Record<string, string[]> = {
+        customer_id: customers,
+        aging_bucket: ['Current', '1-30', '31-60', '61-90', '90+'],
+        invoice_type: ['SUBSCRIPTION', 'ONE_OFF'],
+        meter_id: ['meter_api', 'meter_storage'],
+      }
+      const combos = dims.reduce<string[][]>(
+        (acc, dim) => acc.flatMap((prefix) => (labels[dim] ?? ['a']).map((v) => [...prefix, v])),
+        [[]],
+      )
+      // Shares of the report's total, so the parts add up to the whole.
+      const weights = combos.map(
+        (combo, i) => (1 / (i + 1)) * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`)),
+      )
+      const sum = weights.reduce((total, weight) => total + weight, 0) || 1
+      const rows = combos
+        .map((combo, i) => {
+          // A ratio (days to pay) is per row, not a share of a total.
+          const now =
+            key === 'days_to_pay'
+              ? base * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`))
+              : (base * (weights[i] ?? 0)) / sum
+          return [...combo, ...currency, ...values(now, now * 0.9)]
+        })
+        .slice(0, body.limit ?? 500)
+      return HttpResponse.json({
+        columns: [
+          ...dims.map((name) => ({ name, type: 'string', role: 'dimension' })),
+          ...currencyCol,
+          ...metric,
+        ],
+        rows,
+        meta,
+      })
+    }
+
+    // Scalar: one row per currency when none was asked for, the one asked for otherwise.
+    const rows = body.currency
+      ? [[body.currency, ...values(base, base * 0.91)]]
+      : [
+          ['usd', ...values(base, base * 0.91)],
+          ['eur', ...values(base * 0.18, base * 0.2)],
+        ]
+    return HttpResponse.json({ columns: [...currencyCol, ...metric], rows, meta })
+  }),
+
   http.post(`${BASE}/dashboard/revenue-dashboard`, async ({ request }) => {
     if (demoEmpty()) return HttpResponse.json({ summaries: {}, items: [] })
     const body = (await request.json().catch(() => ({}))) as {
@@ -2513,21 +2848,128 @@ export const handlers = [
    * "usage" and answer a 404 for it.
    */
   http.get(`${BASE}/customers/usage`, ({ request }) => {
-    const customerId = new URL(request.url).searchParams.get('customer_id') ?? ''
+    const params = new URL(request.url).searchParams
+    const customerId = params.get('customer_id') ?? ''
+    // `subscription_ids` narrows to those contracts' grants, however the
+    // client spells an array — repeated keys or one comma-separated value.
+    const subscriptionIds = params
+      .getAll('subscription_ids')
+      .flatMap((value) => value.split(','))
+      .filter(Boolean)
     // Unknown customers get an empty summary, not the demo rows: a customer
     // with no entitlements and a customer that does not exist both have no
     // quotas to show, and neither should borrow somebody else's.
-    const known = byId('customers', customerId) !== undefined
-    return HttpResponse.json({
-      ...customerUsage,
-      customer_id: customerId,
-      ...(known ? {} : { features: [] }),
-    })
+    const known = byId('customers', customerId) !== null
+    // Each row is granted by the plan of one of the customer's contracts, so
+    // the Source column names a real plan and links to a real contract.
+    const contracts = sourceFor('subscriptions').items.filter(
+      (row) =>
+        readString(row, 'customer_id') === customerId &&
+        (subscriptionIds.length === 0 || subscriptionIds.includes(readString(row, 'id'))),
+    )
+    const features =
+      known && contracts.length > 0
+        ? customerUsage.features.map((feature, index) => {
+            const contract = contracts[index % contracts.length]!
+            const plan = (contract['plan'] ?? {}) as Record<string, unknown>
+            return {
+              ...feature,
+              sources: [
+                {
+                  subscription_id: readString(contract, 'id'),
+                  entity_id: readString(contract, 'plan_id'),
+                  entity_type: 'plan',
+                  entity_name: readString(plan, 'name') || readString(contract, 'plan_id'),
+                  usage_reset_period: feature.next_usage_reset_at ? 'MONTHLY' : 'NEVER',
+                  is_enabled: true,
+                },
+              ],
+            }
+          })
+        : []
+    return HttpResponse.json({ ...customerUsage, customer_id: customerId, features })
   }),
 
   // A single customer, for the detail page. The corpus rows already carry the
   // fuller record (address, timezone, tax treatment, metadata), so the by-id GET
   // just returns the row the SDK then camelCases.
+  // The audit trail (`POST /activity`). The corpus keeps no log, so each record
+  // in scope contributes its creation, newest first. Without a handler the
+  // request fell through to the network and the rail sat on "Loading
+  // activity…" until the retries gave up — and the failure re-rendered the page.
+  http.post(`${BASE}/activity`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      customer_id?: string
+      entity_type?: string
+      entity_id?: string
+      limit?: number
+    }
+    const records: { type: string; row: Record<string, unknown>; label: string }[] = []
+    const add = (type: string, row: Record<string, unknown> | undefined | null, label: string) => {
+      if (row) records.push({ type, row, label: label || readString(row, 'id') })
+    }
+    const subscriptionRows = sourceFor('subscriptions').items
+    const invoiceRows = sourceFor('invoices').items
+    if (body.customer_id) {
+      const customer = byId('customers', body.customer_id)
+      add('customer', customer, customer ? readString(customer, 'name') : '')
+      for (const row of subscriptionRows.filter(
+        (r) => readString(r, 'customer_id') === body.customer_id,
+      )) {
+        add('subscription', row, readString(row, 'id'))
+      }
+      for (const row of invoiceRows.filter(
+        (r) => readString(r, 'customer_id') === body.customer_id,
+      )) {
+        add('invoice', row, readString(row, 'invoice_number'))
+      }
+    } else if (body.entity_type && body.entity_id) {
+      const id = body.entity_id
+      const row =
+        body.entity_type === 'subscription'
+          ? subscriptionRows.find((r) => readString(r, 'id') === id)
+          : body.entity_type === 'invoice'
+            ? (byId('invoices', id) ?? invoiceRows.find((r) => readString(r, 'id') === id))
+            : body.entity_type === 'customer'
+              ? byId('customers', id)
+              : undefined
+      add(
+        body.entity_type,
+        row,
+        row ? readString(row, body.entity_type === 'invoice' ? 'invoice_number' : 'name') : '',
+      )
+    }
+    const items = records
+      .filter(({ row }) => readString(row, 'created_at') !== '')
+      .map(({ type, row, label }) => ({
+        id: `act_${type}_${readString(row, 'id')}`,
+        action: `${type}.created`,
+        occurred_at: readString(row, 'created_at'),
+        source: 'dashboard',
+        entity: { id: readString(row, 'id'), type, label },
+        actor: { type: 'system' },
+        state: row,
+      }))
+      .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || a.id.localeCompare(b.id))
+      .slice(0, Math.min(body.limit ?? 20, 50))
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: body.limit ?? 20, offset: 0 },
+    })
+  }),
+
+  /*
+   * `GET /customers/portal/{external_id}` — a portal session. The token is
+   * what the portal mocks accept (anything but "expired"), so "Open customer
+   * portal" lands on a working portal.
+   */
+  http.get(`${BASE}/customers/portal/:externalId`, ({ params }) =>
+    HttpResponse.json({
+      url: `https://portal.example/?token=demo-${String(params['externalId'])}`,
+      token: `demo-${String(params['externalId'])}`,
+      expires_at: new Date(Date.now() + 6 * 3_600_000).toISOString(),
+    }),
+  ),
   http.get(`${BASE}/customers/:id`, ({ params }) => {
     const customer = byId('customers', String(params['id']))
     return customer
@@ -2628,6 +3070,7 @@ export const handlers = [
       attempts: processed ? [{ id: 'att_1', attempt_number: 1 }] : [],
     }
     paymentStore.unshift(row)
+    if (processed) applyPaymentToInvoice(row)
     return HttpResponse.json(row, { status: 201 })
   }),
   http.get(`${BASE}/payments/:id`, ({ params }) => {
@@ -2644,11 +3087,14 @@ export const handlers = [
     if (!paymentStore.some((row) => readString(row, 'id') === id)) {
       return HttpResponse.json({ message: 'Payment not found' }, { status: 404 })
     }
-    return patchRow(paymentStore, id, {
+    const response = patchRow(paymentStore, id, {
       payment_status: 'SUCCEEDED',
       succeeded_at: new Date().toISOString(),
       attempts: [{ id: 'att_1', attempt_number: 1 }],
     })
+    const processed = paymentStore.find((row) => readString(row, 'id') === id)
+    if (processed) applyPaymentToInvoice(processed)
+    return response
   }),
   http.delete(`${BASE}/payments/:id`, ({ params }) => {
     removeRow(paymentStore, String(params['id']))
@@ -2666,7 +3112,20 @@ export const handlers = [
    * try to rename the current user to whatever a role update sent.
    */
 
-  http.get(`${BASE}/users/me`, () => HttpResponse.json(users[0])),
+  /*
+   * Who is signed in. The demo user (super admin) unless
+   * `localStorage['flexprice.mock.userId']` names another mock user — how a
+   * reader's or writer's console is checked by hand and in e2e.
+   */
+  http.get(`${BASE}/users/me`, () => {
+    let id: string | null = null
+    try {
+      id = localStorage.getItem('flexprice.mock.userId')
+    } catch {
+      /* no storage: the demo user */
+    }
+    return HttpResponse.json(users.find((user) => user['id'] === id) ?? users[0])
+  }),
 
   /*
    * `POST /users/search` honours `type` and the paging window, and **ignores
@@ -2753,6 +3212,15 @@ export const handlers = [
 
   // RBAC answers `{roles}` / `{role}`, not the `{items, pagination}` envelope.
   http.get(`${BASE}/rbac/roles`, ({ request }) => {
+    // As the live API: without X-Environment-ID the request is refused. This
+    // is what made a fresh load read "Access denied" before an environment
+    // was chosen; the console must not ask before it has one.
+    if (!request.headers.get('X-Environment-ID')) {
+      return HttpResponse.json(
+        { error: { message: 'X-Environment-ID header is required' } },
+        { status: 403 },
+      )
+    }
     const audience = new URL(request.url).searchParams.get('user_type')
     const rows =
       audience === 'service_account'
@@ -3241,14 +3709,101 @@ export const handlers = [
     const limit = Number(url.searchParams.get('limit') ?? 25)
     const offset = Number(url.searchParams.get('offset') ?? 0)
     const enabled = url.searchParams.get('enabled')
-    const matches = scheduledTasks.filter(
-      (task) => enabled === null || String(task['enabled']) === enabled,
-    )
+    const connection = url.searchParams.get('connection_id')
+    const matches = scheduledTasks
+      .filter((task) => task['status'] !== 'deleted')
+      .filter((task) => enabled === null || String(task['enabled']) === enabled)
+      .filter((task) => !connection || task['connection_id'] === connection)
     return HttpResponse.json({
       items: matches.slice(offset, offset + limit),
       pagination: { total: matches.length, limit, offset },
     })
   }),
+
+  http.post(`${BASE}/tasks/scheduled`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const row = {
+      id: `task_mock_${++scheduledTaskSeq}`,
+      connection_id: body['connection_id'],
+      entity_type: body['entity_type'],
+      interval: body['interval'],
+      enabled: body['enabled'] ?? true,
+      status: 'published',
+      job_config: body['job_config'] ?? {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    scheduledTasks.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+
+  http.get(`${BASE}/tasks/scheduled/:id`, ({ params }) => {
+    const row = scheduledTasks.find((task) => task['id'] === params['id'])
+    if (!row || row['status'] === 'deleted')
+      return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
+    return HttpResponse.json(row)
+  }),
+
+  http.put(`${BASE}/tasks/scheduled/:id`, async ({ params, request }) => {
+    const row = scheduledTasks.find((task) => task['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
+    const body = (await request.json()) as Record<string, unknown>
+    if (typeof body['enabled'] === 'boolean') row['enabled'] = body['enabled']
+    row['updated_at'] = new Date().toISOString()
+    return HttpResponse.json(row)
+  }),
+
+  http.delete(`${BASE}/tasks/scheduled/:id`, ({ params }) => {
+    const row = scheduledTasks.find((task) => task['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
+    row['status'] = 'deleted'
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  /** `POST /tasks/scheduled/{id}/run` — a manual run, listed first among the runs. */
+  http.post(`${BASE}/tasks/scheduled/:id/run`, async ({ params, request }) => {
+    const row = scheduledTasks.find((task) => task['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const now = new Date()
+    const runs = manualRuns.get(String(row['id'])) ?? []
+    const run = {
+      id: `run_manual_${String(row['id'])}_${runs.length + 1}`,
+      task_type: 'EXPORT',
+      scheduled_task_id: row['id'],
+      task_status: 'PENDING',
+      total_records: 0,
+      metadata: {
+        start_time: body['start_time'] ?? new Date(now.getTime() - 3_600_000).toISOString(),
+        end_time: body['end_time'] ?? now.toISOString(),
+      },
+      started_at: now.toISOString(),
+      created_at: now.toISOString(),
+      status: 'published',
+    }
+    manualRuns.set(String(row['id']), [run, ...runs])
+    return HttpResponse.json({ workflow_id: `wf_${run.id}`, message: 'started' })
+  }),
+
+  /** `GET /tasks` — an export's runs, by `scheduled_task_id` and `task_status`. */
+  http.get(`${BASE}/tasks`, ({ request }) => {
+    const url = new URL(request.url)
+    const limit = Number(url.searchParams.get('limit') ?? 10)
+    const offset = Number(url.searchParams.get('offset') ?? 0)
+    const taskId = url.searchParams.get('scheduled_task_id')
+    const status = url.searchParams.get('task_status')
+    const task = scheduledTasks.find((row) => row['id'] === taskId)
+    const all = task ? [...(manualRuns.get(String(task['id'])) ?? []), ...exportRuns(task)] : []
+    const matches = all.filter((run) => !status || run['task_status'] === status)
+    return HttpResponse.json({
+      items: matches.slice(offset, offset + limit),
+      pagination: { total: matches.length, limit, offset },
+    })
+  }),
+
+  http.get(`${BASE}/tasks/:id/download`, ({ params }) =>
+    HttpResponse.json({ download_url: `https://example.com/exports/${String(params['id'])}.csv` }),
+  ),
 
   /*
    * `POST /workflows/search` — the Workflows list. The body is snake_case;
@@ -3661,6 +4216,18 @@ export const handlers = [
   }),
   http.post(`${BASE}/creditgrants`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
+    // The API's own rule: a subscription-scoped grant must say when it starts.
+    if (body['scope'] === 'SUBSCRIPTION' && !body['start_date']) {
+      return HttpResponse.json(
+        {
+          code: 'validation_error',
+          message: 'start_date is required for SUBSCRIPTION-scoped grants',
+          hint: 'Please provide a start date for the credit grant',
+          http_status_code: 400,
+        },
+        { status: 400 },
+      )
+    }
     const row = { ...body, id: `cg_new_${Date.now()}`, status: 'published' }
     if (body['scope'] === 'SUBSCRIPTION') {
       additionsFor('grants', String(body['subscription_id'] ?? '')).push({
@@ -3727,10 +4294,16 @@ export const handlers = [
   // success path runs end to end.
   http.post(`${BASE}/plans`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json(
-      { ...body, id: `plan_new_${Date.now()}`, status: 'published' },
-      { status: 201 },
-    )
+    const row = {
+      ...body,
+      id: `plan_new_${Date.now()}`,
+      status: 'published',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    // Kept, so the detail page the form lands on reads the plan just created.
+    ;(corpus['plans'] as Corpus).items.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/plans/:id`, async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>
@@ -3809,17 +4382,34 @@ export const handlers = [
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
-  http.get(`${BASE}/invoices/:id`, ({ params }) => {
+  http.get(`${BASE}/invoices/:id`, ({ params, request }) => {
     const id = String(params['id'])
+    // One invoice that lives in Production only, for the shared-link journey:
+    // opened from Sandbox it 404s, as a real record in another environment does.
+    if (id === PRODUCTION_ONLY_INVOICE) {
+      if (request.headers.get('X-Environment-ID') !== PRODUCTION_ENVIRONMENT_ID) {
+        return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+      }
+      const template = sourceFor('invoices').items[0] ?? {}
+      return HttpResponse.json({ ...template, id, invoice_number: 'INV-PROD-0001' })
+    }
     const invoice =
       byId('invoices', id) ??
       sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
     if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+    // A finalized invoice carries the link its customer receives, as the API answers it
+    // (the SDK drops the field, so the console reads it from this response directly).
+    const hosted =
+      readString(invoice, 'invoice_status') === 'DRAFT'
+        ? {}
+        : { hosted_invoice_url: `https://invoice-dev.flexprice.io/in/hit_${id}.demo-signature` }
     // Generated invoices carry no lines; give the detail one so line-level actions have a target.
     const lines = invoice['line_items']
-    if (Array.isArray(lines) && lines.length > 0) return HttpResponse.json(invoice)
+    if (Array.isArray(lines) && lines.length > 0)
+      return HttpResponse.json({ ...invoice, ...hosted })
     return HttpResponse.json({
       ...invoice,
+      ...hosted,
       line_items: [
         {
           id: `${id}_line_1`,
@@ -3974,15 +4564,22 @@ export const handlers = [
     sourceFor('invoices').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
-  // This period's consumption. Authored: an in-progress period with a commitment.
-  http.post(`${BASE}/subscriptions/usage`, () =>
-    HttpResponse.json({
+  // This period's consumption. Authored: an in-progress period, measured against
+  // the contract's own commitment as the API does — none when it has none.
+  http.post(`${BASE}/subscriptions/usage`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = sourceFor('subscriptions').items.find(
+      (item) => readString(item, 'id') === body['subscription_id'],
+    )
+    const commitment = Number(row?.['commitment_amount'] ?? 0)
+    return HttpResponse.json({
       amount: 184.5,
       currency: 'usd',
       start_time: '2026-10-01T00:00:00Z',
       end_time: '2026-11-01T00:00:00Z',
-      commitment_amount: 250,
-      commitment_utilized: 184.5,
+      commitment_amount: commitment,
+      commitment_utilized: commitment > 0 ? Math.min(184.5, commitment) : 0,
+      overage_factor: Number(row?.['overage_factor'] ?? 1),
       overage_amount: 0,
       has_overage: false,
       charges: [
@@ -3995,8 +4592,8 @@ export const handlers = [
           is_overage: false,
         },
       ],
-    }),
-  ),
+    })
+  }),
   // The next invoice, computed by the API. Authored: a fixed fee, metered usage, and a zero line
   // that "Hide zero charges" removes.
   http.post(`${BASE}/invoices/preview`, async ({ request }) => {
@@ -4091,6 +4688,21 @@ export const handlers = [
       : []
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
   }),
+  // V1's "Push to Integration": the API queues the sync and answers at once.
+  http.post(`${BASE}/integrations/sync`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      entity_type?: string
+      entity_id?: string
+    }
+    if (!body.entity_type || !body.entity_id) {
+      return HttpResponse.json(
+        { code: 'validation_error', message: 'entity_type and entity_id are required' },
+        { status: 400 },
+      )
+    }
+    return HttpResponse.json({ message: 'sync triggered' })
+  }),
+
   http.post(`${BASE}/integrations/link`, async ({ request }) => {
     const body = await readBody(request)
     const customerId = String(body['entity_id'] ?? '')
@@ -4136,12 +4748,23 @@ export const handlers = [
           feature: { id: row['feature_id'], name: String(row['feature_id']) },
           entitlement: row,
         })),
+        // The same features `GET /customers/usage` reports, so the contract's
+        // Usage column has a reading to match by feature id.
         {
-          feature: { id: 'feat_api_calls', name: 'API calls' },
+          feature: { id: 'feat_synth_0000', name: 'API calls' },
           entitlement: {
             is_enabled: true,
-            is_soft_limit: false,
-            usage_limit: 100000,
+            is_soft_limit: true,
+            usage_limit: 250000,
+            usage_reset_period: 'MONTHLY',
+          },
+        },
+        {
+          feature: { id: 'feat_synth_0001', name: 'Tokens processed' },
+          entitlement: {
+            is_enabled: true,
+            is_soft_limit: true,
+            usage_limit: 1000000,
             usage_reset_period: 'MONTHLY',
           },
         },
@@ -4364,6 +4987,16 @@ export const handlers = [
     patchRow(sourceFor('subscriptions').items, String(params['id']), patch)
     return HttpResponse.json({ subscription_id: params['id'], ...patch })
   }),
+  http.post(`${BASE}/subscriptions/:id/pause`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'paused',
+    }),
+  ),
+  http.post(`${BASE}/subscriptions/:id/resume`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'active',
+    }),
+  ),
   http.post(`${BASE}/subscriptions/:id/activate`, async ({ request, params }) => {
     const body = await readBody(request)
     return patchRow(sourceFor('subscriptions').items, String(params['id']), {
@@ -4391,6 +5024,40 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     sourceFor('subscriptions').items.unshift(row)
+    // An active contract bills its in-advance fixed charges at once, as the API
+    // does, so the customer's first invoice is there to find on their Invoices
+    // tab. Drafts and future starts have not begun, so they bill nothing yet.
+    if (row.subscription_status === 'active') {
+      const planId = readString(body, 'plan_id')
+      const total = sourceFor('prices')
+        .items.filter(
+          (price) =>
+            readString(price, 'entity_id') === planId &&
+            readString(price, 'type') === 'FIXED' &&
+            readString(price, 'invoice_cadence') === 'ADVANCE',
+        )
+        .reduce((sum, price) => sum + Number(readString(price, 'amount') || 0), 0)
+      sourceFor('invoices').items.unshift({
+        id: `inv_new_${Date.now()}`,
+        customer_id: readString(body, 'customer_id'),
+        subscription_id: row.id,
+        currency: readString(body, 'currency') || 'usd',
+        invoice_type: 'SUBSCRIPTION',
+        billing_reason: 'SUBSCRIPTION_CREATE',
+        invoice_status: 'FINALIZED',
+        payment_status: 'PENDING',
+        subtotal: String(total),
+        total: String(total),
+        amount_due: String(total),
+        amount_paid: '0',
+        amount_remaining: String(total),
+        issue_date: row.created_at,
+        finalized_at: row.created_at,
+        status: 'published',
+        created_at: row.created_at,
+        updated_at: row.created_at,
+      })
+    }
     return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/customers`, async ({ request }) =>

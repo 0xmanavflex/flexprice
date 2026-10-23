@@ -26,6 +26,8 @@ export interface Option {
   hint?: string
   /** Pinned to the right end of the option, e.g. a type glyph. */
   trailing?: ReactNode
+  /** Shown but not choosable; say why in `hint`. */
+  disabled?: boolean
 }
 
 /** An option's body: label, optional hint, optional trailing mark pushed to the end. */
@@ -83,7 +85,7 @@ export function OptionSelect({
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem key={option.value} value={option.value} disabled={option.disabled ?? false}>
             <OptionBody option={option} />
           </SelectItem>
         ))}

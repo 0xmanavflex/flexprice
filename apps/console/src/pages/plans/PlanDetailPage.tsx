@@ -86,6 +86,7 @@ import {
   LayersIcon,
   MoreHorizontalIcon,
   PencilIcon,
+  PlugIcon,
   RefreshCwIcon,
 } from '@fp/ui/icons'
 import { usePlanFormOptions } from './planFormOptions'
@@ -191,7 +192,12 @@ export function PlanDetailPage({
   const [duplicating, setDuplicating] = useState(false)
 
   if (!plan.data) {
-    return detailGate(plan, { noun: 'this plan', listName: 'plans', onBack: onNavigateToList })
+    return detailGate(plan, {
+      noun: 'this plan',
+      listName: 'plans',
+      onBack: onNavigateToList,
+      recordPath: `/plans/${encodeURIComponent(planId)}`,
+    })
   }
 
   const record = plan.data
@@ -246,6 +252,7 @@ export function PlanDetailPage({
               <DropdownMenuContent align="end" className="w-48">
                 {mappings.controls?.linkable.length ? (
                   <DropdownMenuItem onClick={() => setLinkingIntegration(true)}>
+                    <PlugIcon className="text-muted-foreground" aria-hidden />
                     Link integration
                   </DropdownMenuItem>
                 ) : null}

@@ -32,14 +32,16 @@ export {
  * deletes them.
  */
 export {
+  cloneEnvironment,
   createEnvironment,
   fetchCurrentUser,
+  existsInEnvironment,
   fetchEnvironments,
   signIn,
   signUp,
   updateEnvironment,
 } from './session'
-export type { CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
+export type { CloneTarget, CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
 
 /**
  * Which sign-in methods the deployment offers, asked at runtime rather than
@@ -96,12 +98,19 @@ export type { ParsePricingParams } from './aiPricing'
  * `GET /events/lookup`, live but absent from the SDK. See `eventDebug.ts`.
  */
 export { debitWallet } from './walletDebit'
+export { createCustomerPortalSession } from './customerPortalSession'
+export { fetchInvoiceHostedLink } from './invoiceHostedLink'
+export { runReport } from './reports'
+export type { ReportColumn, ReportGrain, ReportQuery, ReportResult, ReportShape } from './reports'
+export { pushToIntegrations } from './integrationSync'
 export { generateSampleEvents } from './sampleEvents'
 export { listActivity } from './activity'
 export type { ListActivityParams } from './activity'
 
 export { fetchEventDebug } from './eventDebug'
 export type { EventDebugParams } from './eventDebug'
+
+export { getHostedInvoice, getHostedInvoiceDownload, payHostedInvoice } from './hostedInvoice'
 
 /**
  * The SDK's request and response models, re-exported so the rest of the
@@ -159,3 +168,44 @@ export {
   updateWebhookEndpoint,
 } from './webhooks'
 export type { SvixEndpointIn, SvixListPage, SvixMessageStatus, SvixSession } from './webhooks'
+
+/** Self-billing, `/portal/billing/*`: live but absent from the SDK. See `selfBilling.ts`. */
+export {
+  cancelSelfBillingCheckout,
+  createSelfBillingPortalSession,
+  fetchSelfBillingCheckout,
+  fetchSelfBillingStatus,
+  fetchSelfBillingSummary,
+  startSelfBillingCheckout,
+} from './selfBilling'
+export type {
+  SelfBillingCheckoutBody,
+  SelfBillingCheckoutWire,
+  SelfBillingFeatureUsageWire,
+  SelfBillingInvoiceWire,
+  SelfBillingPortalWire,
+  SelfBillingStatusWire,
+  SelfBillingSummaryWire,
+} from './selfBilling'
+
+export {
+  addPortalPaymentMethod,
+  deletePortalPaymentMethod,
+  getPortalConfig,
+  getPortalCustomer,
+  getPortalIntegrations,
+  getPortalInvoice,
+  getPortalInvoicePdf,
+  getPortalInvoices,
+  getPortalPaymentMethods,
+  getPortalSubscriptions,
+  getPortalUsageAnalytics,
+  getPortalUsageSummary,
+  getPortalWalletTransactions,
+  getPortalWallets,
+  payPortalInvoice,
+  setDefaultPortalPaymentMethod,
+  topUpPortalWallet,
+  updatePortalAutoTopup,
+} from './customerPortal'
+export type { PortalAuth } from './customerPortal'

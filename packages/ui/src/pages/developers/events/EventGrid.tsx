@@ -200,12 +200,14 @@ export function EventGrid({
     if (onEventClick) {
       actions.push({
         label: 'View event',
+        readOnly: true,
         icon: <ScrollTextIcon aria-hidden className="size-4" />,
         onSelect: () => onEventClick(event),
       })
     }
     actions.push({
       label: 'Copy event ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(event.id),
     })

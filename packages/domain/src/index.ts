@@ -16,12 +16,7 @@
  * would recreate the 53 hand-written DTO files this architecture removes; the
  * SDK already has them, and they are only interesting once something renders.
  */
-export {
-  activityByline,
-  activitySourceLabel,
-  activityTitle,
-  describeActivity,
-} from './activity'
+export { activityByline, activitySourceLabel, activityTitle, describeActivity } from './activity'
 export type { ActivityEntry, ActivityFacts } from './activity'
 export {
   InvalidMoneyError,
@@ -306,13 +301,24 @@ export {
   SubscriptionSortField,
   SubscriptionStatus,
   createSubscriptionSchema,
+  INHERITANCE_BLOCK_LABEL,
+  INHERITANCE_WITH_BILLING_CUSTOMER,
+  INHERITANCE_WITH_THRESHOLD,
+  InheritanceBlock,
   emptySubscription,
   emptyPhase,
   phaseStarts,
+  contractDateToInstant,
+  contractDay,
   subscriptionDiscountSchema,
   subscriptionPhaseSchema,
   chargeCommitmentSchema,
+  commitmentWindowSchema,
   CommitmentType,
+  WindowBillingModel,
+  WINDOW_BILLING_MODEL_LABEL,
+  type CommitmentWindow,
+  type CommitmentPriceBase,
   PaymentTerms,
   PAYMENT_TERMS_LABEL,
   BillingCycle,
@@ -320,6 +326,9 @@ export {
   lineLineages,
   lineRevertDraft,
   type LineLineage,
+  commitmentPeriodNoun,
+  canPauseSubscription,
+  canResumeSubscription,
 } from './subscription'
 export type {
   ChangeLineQuantity,
@@ -327,10 +336,13 @@ export type {
   LineChangePreview,
   EndContractCharge,
   CancelSubscription,
+  PauseSubscription,
+  ResumeSubscription,
   CreateSubscription,
   SubscriptionDiscount,
   SubscriptionPhase,
   ChargeCommitment,
+  ContractCommitment,
   InvoicePreview,
   InvoicePreviewLine,
   Subscription,
@@ -485,6 +497,7 @@ export type {
   TenantAddress,
   TenantBillingUsage,
   TenantFeatureUsage,
+  EntitlementUsageSource,
   TenantPlan,
   UpdateTenant,
 } from './tenant'
@@ -630,13 +643,42 @@ export type { WorkflowQuery, WorkflowRun } from './workflowRun'
 export { DEFAULT_USAGE_SYNC_QUERY, USAGE_SYNC_STATE, USAGE_SYNC_STATE_LABEL } from './usageSync'
 export type { UsageSync, UsageSyncEntry, UsageSyncQuery, UsageSyncState } from './usageSync'
 export {
+  ALLOWED_METADATA_ENTITIES,
   DEFAULT_DATA_EXPORT_QUERY,
+  DEFAULT_EXPORT_RUN_QUERY,
   EXPORT_ENTITY,
   EXPORT_ENTITY_LABEL,
+  EXPORT_INTERVAL,
   EXPORT_INTERVAL_LABEL,
+  EXPORT_METADATA_ENTITY,
+  EXPORT_METADATA_ENTITY_LABEL,
+  EXPORT_RUN_STATUS,
+  EXPORT_RUN_STATUS_LABEL,
   EXPORT_STATE,
+  clampMetadataFields,
+  emptyDataExport,
+  emptyS3Connection,
+  validateDataExport,
+  validateS3Connection,
 } from './dataExport'
-export type { DataExport, DataExportQuery, ExportEntity, ExportState } from './dataExport'
+export type {
+  CreateDataExport,
+  CreateS3Connection,
+  DataExport,
+  DataExportErrors,
+  DataExportQuery,
+  ExportEntity,
+  ExportInterval,
+  ExportMetadataEntity,
+  ExportMetadataField,
+  ExportRun,
+  ExportRunQuery,
+  ExportRunRequest,
+  ExportRunStatus,
+  ExportState,
+  S3Connection,
+  S3ConnectionErrors,
+} from './dataExport'
 export { INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './integrationConnect'
@@ -741,6 +783,20 @@ export type {
   ProcessedUsage,
 } from './eventDebug'
 
+export {
+  hostedInvoiceState,
+  paymentMethodLabel,
+  toHostedInvoice,
+  toPaymentActionUrl,
+  toPresignedUrl,
+} from './hostedInvoice'
+export type {
+  HostedInvoice,
+  HostedInvoiceLine,
+  HostedInvoicePayment,
+  HostedInvoiceState,
+} from './hostedInvoice'
+
 export { COUNTRY_CODES, countryName, countryOptions } from './countries'
 export type { CountryCode, CountryOption } from './countries'
 export {
@@ -753,3 +809,109 @@ export type { TimezoneOption } from './timezones'
 
 export { cadenceAllowed, selectContractCharges } from './contractCharges'
 export type { ContractChargeSelection } from './contractCharges'
+export {
+  RBAC_ACTION,
+  RBAC_ENTITY,
+  accessDeniedReason,
+  canAccess,
+  canDeleteMember,
+  canEditMemberRoles,
+  canRemoveMember,
+  isSuperAdmin,
+  meetsRequirement,
+  resolveGrants,
+} from './access'
+export type { AccessGrants, AccessRequirement, RbacAction, RbacEntity } from './access'
+export {
+  SELF_BILLING_PLAN,
+  AccountState,
+  CheckoutStatus,
+  CHECKOUT_SLOW_AFTER_MS,
+  LOCKED_REASON,
+  URGENT_DAYS,
+  URGENT_SHARE,
+  accountCopy,
+  accountPill,
+  checkoutDetailsSchema,
+  checkoutOutcome,
+  daysUntil,
+  emptyCheckoutDetails,
+  lockReason,
+  longDate,
+  planRateText,
+  selfInvoiceStatus,
+  shortDate,
+  trialProgress,
+  usd,
+} from './selfBilling'
+export type {
+  AccountPill,
+  CheckoutDetails,
+  CheckoutOutcome,
+  LockReason,
+  PillTone,
+  SelfBillingCheckout,
+  SelfBillingInvoice,
+  SelfBillingStatus,
+  SelfBillingSummary,
+  SelfInvoiceStatus,
+  TrialProgress,
+} from './selfBilling'
+export {
+  DEFAULT_PORTAL_CONFIG,
+  PORTAL_RANGES,
+  PORTAL_VIEWS,
+  billingCadence,
+  creditsAfter,
+  creditsCost,
+  dailyAverage,
+  gatewayLabel,
+  isPayable,
+  parseCreditAmount,
+  periodProgress,
+  portalInvoiceStatus,
+  portalRangeWindow,
+  projectSpend,
+  spendChange,
+  toPortalTopUps,
+  totalDue,
+  unitPriceLabel,
+  toPortalActionUrl,
+  toPortalConfig,
+  toPortalCustomer,
+  toPortalGateways,
+  toPortalInvoice,
+  toPortalInvoices,
+  toPortalPaymentMethods,
+  toPortalQuotas,
+  toPortalSpend,
+  toPortalSubscriptions,
+  toPortalWallet,
+  toPortalWalletTransactions,
+  toPortalWallets,
+  walletFlows,
+} from './customerPortal'
+export type {
+  PortalConfig,
+  PortalCooldown,
+  PortalCooldownUnit,
+  PortalCustomer,
+  PortalGateway,
+  PortalInvoice,
+  PortalInvoiceLine,
+  PortalInvoiceStatus,
+  PortalPaymentMethod,
+  PortalQuota,
+  PortalRange,
+  PortalSpend,
+  PortalSpendItem,
+  PortalSpendPoint,
+  PortalSubscription,
+  PortalSubscriptionStatus,
+  PortalTopUp,
+  PortalTopUpState,
+  PortalView,
+  PortalTransactionDirection,
+  PortalWallet,
+  PortalWalletTransaction,
+} from './customerPortal'

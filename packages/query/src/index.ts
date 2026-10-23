@@ -49,15 +49,17 @@ export type { FlexpriceProviderProps } from './provider'
 
 export {
   toEnvironment,
+  useCopyEnvironment,
   useCreateEnvironment,
   useCurrentUser,
   useEnvironmentList,
+  useRecordEnvironment,
   useRenameEnvironment,
   useSignIn,
   useSignUp,
   useSignUpWithToken,
 } from './session'
-export type { CurrentUser, RenameEnvironment, SessionCredentials } from './session'
+export type { CopyEnvironment, CurrentUser, RenameEnvironment, SessionCredentials } from './session'
 
 export { PASSWORD_ONLY, useAuthCapabilities, useAuthCapabilitiesValue } from './authCapabilities'
 export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
@@ -80,6 +82,7 @@ export {
   useUpdateInvoiceMetadata,
   useUpdateInvoicePaymentStatus,
   useInvoice,
+  useInvoicePdfLink,
   useInvoices,
   useRecalculateInvoice,
   useSendInvoice,
@@ -224,6 +227,7 @@ export {
   useCustomers,
   useCustomerSubscriptions,
   useCustomerUsageSummary,
+  useContractUsageSummary,
   toCreateCustomerRequest,
   toUpdateCustomerRequest,
   useCreateCustomer,
@@ -259,11 +263,16 @@ export {
   toLineItemChangeRequest,
   toUpdateLineItemRequest,
   useActivateSubscription,
+  usePauseSubscription,
+  useResumeSubscription,
   useUpdateSubscriptionMetadata,
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,
   useCancelSubscriptionCreditGrant,
   useCustomerContractCounts,
+  useInheritanceBlocks,
+  toInheritanceBlocks,
+  explainContractHierarchyError,
   useCancelSubscription,
   useCreateSubscription,
   useCreateSubscriptionLineItem,
@@ -272,6 +281,7 @@ export {
   toRemoveCouponRequest,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
+  useRemoveSubscriptionCoupon,
   useCreateSubscriptionCreditGrant,
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
@@ -509,6 +519,7 @@ export { useAddonLinkage } from './addonLinkage'
 export type { AddonLinkage } from './addonLinkage'
 export { APPLY_STEP_LABEL, applySteps, useApplyPricingSchema, useParsePricing } from './aiPricing'
 export { useEventDebug } from './eventDebug'
+export { useHostedInvoice, useHostedInvoiceDownload, usePayHostedInvoice } from './hostedInvoice'
 export type { ApplyResult, ApplyStep } from './aiPricing'
 export type { PlanLinkage } from './planLinkage'
 export type { CountableId } from './counts'
@@ -545,8 +556,27 @@ export { fetchWorkflowRuns, toWorkflowFilter, toWorkflowRun, useWorkflowRuns } f
 export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'
-export { fetchDataExports, toDataExport, toDataExportFilter, useDataExports } from './dataExports'
-export type { DataExportPage, DataExportWire } from './dataExports'
+export {
+  fetchDataExports,
+  toCreateDataExportRequest,
+  toCreateS3ConnectionRequest,
+  toDataExport,
+  toDataExportFilter,
+  toExportRun,
+  toS3Connection,
+  useCreateDataExport,
+  useCreateS3Connection,
+  useDataExport,
+  useDataExportCounts,
+  useDataExports,
+  useDeleteDataExport,
+  useDownloadExportRun,
+  useExportRuns,
+  useRunDataExport,
+  useS3Connections,
+  useSetDataExportEnabled,
+} from './dataExports'
+export type { DataExportPage, DataExportWire, ExportRunWire, S3ConnectionWire } from './dataExports'
 export {
   countConnections,
   fetchIntegrations,
@@ -573,6 +603,7 @@ export {
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,
+  useUpdateWalletAlerts,
   useWalletBalance,
   useWalletTransactions,
 } from './wallets'
@@ -632,3 +663,49 @@ export { SAMPLE_EVENT_DURATION_SECONDS, useGenerateSampleEvents } from './sample
 export { useFetchSupportChatHash } from './supportChat'
 export { useCustomerNames, useFeatureNames } from './entityNames'
 export type { NameMap } from './entityNames'
+export { toAccessControl, useAccessControl } from './access'
+export type { AccessControl, AccessStatus } from './access'
+export {
+  isAccountLockedError,
+  localToday as selfBillingToday,
+  toCheckoutBody,
+  toSelfBillingCheckout,
+  toSelfBillingStatus,
+  toSelfBillingSummary,
+  useCancelSelfBillingCheckout,
+  useRefreshSelfBilling,
+  useSelfBillingCheckout,
+  useSelfBillingPortalSession,
+  useSelfBillingStatus,
+  useSelfBillingSummary,
+  useStartSelfBillingCheckout,
+} from './selfBilling'
+export {
+  useAddPortalPaymentMethod,
+  usePayPortalInvoice,
+  usePortalConfig,
+  usePortalCustomer,
+  usePortalGateways,
+  usePortalInvoice,
+  usePortalInvoicePdf,
+  usePortalInvoices,
+  usePortalPaymentMethods,
+  usePortalQuotas,
+  usePortalSpend,
+  usePortalSubscriptions,
+  usePortalTopUps,
+  usePortalWalletTransactions,
+  usePortalWallets,
+  useRemovePortalPaymentMethod,
+  useSetDefaultPortalPaymentMethod,
+  useTopUpPortalWallet,
+  useUpdatePortalAutoTopup,
+} from './customerPortal'
+export type { PortalAction, PortalQuery } from './customerPortal'
+export type { PortalAuth } from '@fp/api'
+export { useCreateCustomerPortalSession } from './customerPortalSession'
+export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'
+export { reportBreakdown, reportCurrencies, reportScalar, reportSeries, useReport } from './reports'
+export type { ReportBreakdownRow, ReportPoint, ReportScalar } from './reports'
+export type { ReportQuery, ReportResult } from '@fp/api'
+export { usePushCustomerToIntegrations } from './integrationSync'

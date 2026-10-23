@@ -188,12 +188,14 @@ export function GroupGrid({
     if (onGroupClick) {
       actions.push({
         label: 'View group',
+        readOnly: true,
         icon: <LayersIcon aria-hidden className="size-4" />,
         onSelect: () => onGroupClick(group),
       })
     }
     actions.push({
       label: 'Copy group ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(group.id),
     })
@@ -266,7 +268,6 @@ export function GroupGrid({
         title: 'No groups yet',
         description:
           'A group bundles prices or features so they can be filtered, reported and invoiced together — a product line, a region, a tier.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New group</Button> } : {}),
         guides: GUIDES,
       }}
     />

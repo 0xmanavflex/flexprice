@@ -29,6 +29,8 @@ export function parseDataExportSearch(raw: Record<string, unknown>): DataExportQ
       MAX_PAGE_SIZE,
     ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
-    state: STATES.has(state) ? (state as DataExportQuery['state']) : DEFAULT_DATA_EXPORT_QUERY.state,
+    state: STATES.has(state)
+      ? (state as DataExportQuery['state'])
+      : DEFAULT_DATA_EXPORT_QUERY.state,
   }
 }

@@ -6,6 +6,15 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-22
+
+- Hosted invoice page: rebuilt on the customer portal's frame and kit parts — header band with the merchant's mark, one `Section` with a state `Pill`, `IconTile` and amount, `DetailList` facts, Download/Pay `Button`s and a ReUI `Alert` for pay/download errors; not-found, not-valid and failed pages use `ErrorState` (page variant) inside the same frame. `HostedInvoiceDetailsSheet` follows `PortalInvoiceSheet`: sheet header with number and state, `DetailList` parties, `SimpleTable` for lines and payment history, totals. Drops the Stripe-style floating card (shadow, oversized type, uppercase block headings). New `parts.tsx` (state pill, merchant mark). Source: review on #37 — the page must read as the product.
+- Entitlement usage: new `EntitlementUsage` (usage cell: used of limit with unit, bar, soft-limit and reset captions, unlimited/over-limit/unreported states) and `EntitlementUsageTable` (Feature, Source when known, Value, Usage). Used on the customer Overview's new Entitlements section and on a contract's Entitlements section, which trades its Access and Limit columns for Value and Usage. `UsageMeter` gains `hideLabel` for use as a cell. Composition over `UsageMeter` and `DetailTable`. Source: V1 customer overview `CustomerUsageTable`.
+
+## 2026-10-19
+
+- Hosted invoice page: `HostedInvoiceView` (centred card with amount, invoice number, due/payment date and method, Download and Pay; loading, not-found, not-valid and failed states) and `HostedInvoiceDetailsSheet` (summary, items, totals, payment history, contact). Installs ReUI `icon-tile`. Source: Stripe hosted invoice page; layout after ReUI receipt-5 and receipt-1.
+
 ## 2026-10-16
 
 - Shared charge actions: contract sheets open existing Price/Commitment editors only for editable lines. Line-specific coupon associations populate Discount flags and multiple-coupon details; contract-wide discounts stay separate. Batched line alerts retain condition and threshold type with read-error retry. Source: supplied charge-sheet.tsx, SDK 2.1.35 mapping contracts; unsupported coupon/alert/revert mutations remain hidden.
@@ -19,7 +28,6 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 - Credit memo document is now connected to the console route: exact API totals, original invoice-line comparisons, lifecycle controls and Activity/Related sidebar. Removed calculated balances and assumed refund destinations. Added keyboard-accessible narrow line scrolling. Source: supplied HTML credit-memo-detail.tsx; metadata/tax/settlement details are omitted when unavailable.
 
 - Feature charges and price-group members now use the shared ChargeTable. Feature rows open their parent plan/add-on/cost sheet; group rows open ChargeSheet, retaining missing-member IDs and query errors. Shared table accepts contextual column labels and descriptions. Source: supplied HTML charges-table.tsx, Feature context.
-
 
 - Shared charges: PlanChargesView now composes ChargeTable/ChargeSheet, preserving add/edit/terminate and loading/error states. Tier rows move into the sheet. Wide tables show supplied quantities; all views keep controls above the frame. Table price labels carry into the sheet. History sorts newest first and shows last-updated dates.
 - Credit memo detail: adds a responsive Activity/Related rail from real lifecycle timestamps and invoice/customer links. Metadata remains unavailable in the current read model.

@@ -1,3 +1,5 @@
+import { RBAC_ENTITY } from '@fp/domain'
+import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { PlusIcon } from '@ui/icons'
@@ -52,7 +54,7 @@ const BEHAVIOR_OPTIONS = [TaxBehavior.Exclusive, TaxBehavior.Inclusive].map((val
 }))
 
 /** The tax rates attached to one customer: add, change priority/behavior, remove. */
-export function CustomerTaxSection({
+function CustomerTaxSectionInner({
   associations,
   taxRates,
   isLoading,
@@ -85,14 +87,16 @@ export function CustomerTaxSection({
     dialog && dialog.kind !== 'add' ? associations.find((a) => a.id === dialog.id) : undefined
 
   const addTaxRate = (
-    <Button
-      variant="outline"
-      size="sm"
-      className="h-9 px-3"
-      onClick={() => setDialog({ kind: 'add' })}
-    >
-      <PlusIcon aria-hidden /> Add tax rate
-    </Button>
+    <WriteGate>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 px-3"
+        onClick={() => setDialog({ kind: 'add' })}
+      >
+        <PlusIcon aria-hidden /> Add tax rate
+      </Button>
+    </WriteGate>
   )
 
   return (
@@ -319,5 +323,14 @@ export function TaxDialog({
         ) : null}
       </Composer>
     </FormDialog>
+  )
+}
+
+/** `CustomerTaxSection`, scoped to the entity it writes (Tax). */
+export function CustomerTaxSection(props: Parameters<typeof CustomerTaxSectionInner>[0]) {
+  return (
+    <AccessScope entity={RBAC_ENTITY.Tax}>
+      <CustomerTaxSectionInner {...props} />
+    </AccessScope>
   )
 }

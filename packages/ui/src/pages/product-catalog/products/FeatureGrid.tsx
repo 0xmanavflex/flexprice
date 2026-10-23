@@ -24,6 +24,7 @@ import {
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
+import { WriteGate } from '@ui/compositions/access/Access'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import {
@@ -315,18 +316,20 @@ export function FeatureGrid({
           // centre line like the pills around it instead of crowding the cell.
           return (
             <div className="flex min-w-0 items-center">
-              <Button
-                variant="outline"
-                size="xs"
-                className="max-w-full"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onCreateEntitlement(row)
-                }}
-              >
-                <PlusIcon aria-hidden />
-                <span className="truncate">Add entitlement</span>
-              </Button>
+              <WriteGate>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="max-w-full"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onCreateEntitlement(row)
+                  }}
+                >
+                  <PlusIcon aria-hidden />
+                  <span className="truncate">Add entitlement</span>
+                </Button>
+              </WriteGate>
             </div>
           )
         },
@@ -385,6 +388,7 @@ export function FeatureGrid({
     if (onFeatureClick) {
       actions.push({
         label: 'View feature',
+        readOnly: true,
         icon: <GaugeIcon aria-hidden className="size-4" />,
         onSelect: () => onFeatureClick(feature),
       })
@@ -413,6 +417,7 @@ export function FeatureGrid({
     }
     actions.push({
       label: 'Copy feature ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(feature.id),
     })
@@ -486,16 +491,6 @@ export function FeatureGrid({
         title: 'Nothing is being measured yet',
         description:
           'A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
-        ...(onCreate
-          ? {
-              actions: (
-                <Button onClick={onCreate}>
-                  <PlusIcon aria-hidden />
-                  New feature
-                </Button>
-              ),
-            }
-          : {}),
         guides: GUIDES,
       }}
     />

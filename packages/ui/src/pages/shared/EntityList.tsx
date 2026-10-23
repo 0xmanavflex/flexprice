@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactElement,
   type ReactNode,
 } from 'react'
 import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
@@ -60,6 +61,8 @@ import type { EmptyScene } from '@ui/compositions/feedback/SceneIllustration'
 import { FilterBar, type FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { SortMenu, type SortOption } from '@ui/compositions/tables/SortMenu'
 import { cn } from '@ui/lib/cn'
+import type { RbacEntity } from '@fp/domain'
+import { LockedMark, WriteGate, useWriteCheck, useWriteLock } from '@ui/compositions/access/Access'
 import { revealTruncated } from '@ui/lib/revealTruncated'
 import { provenance } from '@ui/provenance'
 import type { EntityColumn } from './cells'
@@ -139,6 +142,24 @@ const PAGE_SIZES = [10, 25, 50, 100]
 /** Ids reserved by the table itself, so a caller cannot collide with them. */
 const ACTIONS_ID = '__actions'
 
+/**
+ * The one component every cell renders through. `flexRender` mounts a function
+ * `cell` as a component, so an inline arrow — a new type each time the columns
+ * are rebuilt, which is every render of a parent that builds them inline —
+ * remounted every cell on any re-render and closed an open row menu under the
+ * pointer. The column's own renderer rides on `meta.renderCell` instead.
+ */
+function EntityCell({
+  row,
+  column,
+}: {
+  row: { original: unknown }
+  column: { columnDef: { meta?: unknown } }
+}) {
+  const meta = column.columnDef.meta as { renderCell?: (row: unknown) => ReactNode } | undefined
+  return meta?.renderCell ? meta.renderCell(row.original) : null
+}
+
 /* ------------------------------------------------------------------ *
  * Props
  * ------------------------------------------------------------------ */
@@ -184,10 +205,18 @@ export interface EntitySort<F extends string = string> {
 export interface EntityRowAction {
   label: string
   onSelect: () => void
-  icon?: ReactNode
+  /** Leading glyph, required so every item in a menu lines up behind one. */
+  icon: ReactElement
   /** Renders in the destructive colour, under a separator. */
   destructive?: boolean | undefined
   disabled?: boolean | undefined
+  /**
+   * Does not write (View, Copy ID, Download): stays enabled when the page's
+   * `AccessScope` denies write. Every other action is disabled then.
+   */
+  readOnly?: boolean | undefined
+  /** The entity this action writes, when not the page's. */
+  entity?: RbacEntity | undefined
 }
 
 /** One of the three cards under the first-run empty state. */
@@ -202,8 +231,11 @@ export interface EntityGuide {
 export interface EntityEmpty {
   title: string
   description?: string | undefined
-  /** Up to two 32px buttons — create, and a way to learn more. */
-  actions?: ReactNode
+  /**
+   * A way to learn more ("Browse event catalog"). Never the create action:
+   * that is `primaryAction`, top right, whether the list is empty or not.
+   */
+  secondaryAction?: ReactNode
   /** Three cards. Each ends in "Read docs". */
   guides?: EntityGuide[] | undefined
   /** The drawing for this area of the product. Defaults to the table figure. */
@@ -238,6 +270,11 @@ export interface EntityListProps<T> {
   sort?: EntitySort | undefined
   /** The create button on the right of the toolbar, beside the filter. */
   primaryAction?: ReactNode
+  /**
+   * The primary action does not write (Refresh). Otherwise it is gated by the
+   * page's `AccessScope`: disabled, with the reason, when write is denied.
+   */
+  primaryActionReadOnly?: boolean | undefined
   /** Enables Export CSV in the `⋯` menu, writing to this file name. */
   exportFileName?: string | undefined
 
@@ -528,6 +565,7 @@ export function EntityList<T extends object>({
   filter,
   sort,
   primaryAction,
+  primaryActionReadOnly = false,
   exportFileName,
   onRowClick,
   rowActions,
@@ -674,6 +712,7 @@ export function EntityList<T extends object>({
         meta: {
           headerTitle: column.header,
           skeleton: column.skeleton ?? <Skeleton className="h-4 w-24" />,
+          renderCell: column.cell,
           ...(column.cellClassName || column.align === 'center' || column.align === 'end'
             ? {
                 cellClassName: cn(
@@ -709,7 +748,7 @@ export function EntityList<T extends object>({
           ) : (
             <span className="sr-only">Actions</span>
           ),
-        cell: ({ row }: { row: { original: T } }) => column.cell(row.original),
+        cell: EntityCell,
       } as never)
     }
 
@@ -719,11 +758,13 @@ export function EntityList<T extends object>({
         size: ACTIONS_WIDTH,
         enableSorting: false,
         enableHiding: false,
-        meta: { headerTitle: 'Actions', skeleton: <Skeleton className="size-6 rounded-md" /> },
+        meta: {
+          headerTitle: 'Actions',
+          skeleton: <Skeleton className="size-6 rounded-md" />,
+          renderCell: (row: T) => <RowActionsMenu actions={rowActions(row)} />,
+        },
         header: () => <span className="sr-only">Actions</span>,
-        cell: ({ row }: { row: { original: T } }) => (
-          <RowActionsMenu actions={rowActions(row.original)} />
-        ),
+        cell: EntityCell,
       } as never)
     }
 
@@ -812,11 +853,36 @@ export function EntityList<T extends object>({
     !isLoading && rows.length === 0 && total === 0 && !isFiltered && empty !== undefined
   const goToFirstPage = () => onPaginationChange(1, pageSize)
 
+  /*
+   * The create action has one place: the top right, above the rows. A first
+   * run hides the search and filters (there is nothing to narrow yet) but not
+   * this, so the button never jumps into the middle of the empty state and
+   * back again once the first record exists.
+   */
+  const primaryActionSlot = primaryAction ? (
+    // Text buttons take the height of the icon buttons beside them,
+    // whatever size the caller asked for.
+    <div
+      className={cn(
+        'flex items-center gap-2',
+        compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
+      )}
+    >
+      {primaryActionReadOnly ? primaryAction : <WriteGate>{primaryAction}</WriteGate>}
+    </div>
+  ) : null
+
   const toolbar = (
     <div
       role="search"
       aria-label={`Search and filter ${noun}`}
-      className={cn('flex flex-wrap items-center justify-between gap-3', compact && 'px-6 py-3')}
+      className={cn(
+        'flex flex-wrap items-center justify-between gap-3',
+        // A compact table runs edge to edge in its card, so its toolbar insets to
+        // the cells. A bordered one sits in its own box: the toolbar lines up
+        // with that box's edges instead, or search and table start apart.
+        compact && (border ? 'pb-3' : 'px-6 py-3'),
+      )}
     >
       <div className="flex flex-wrap items-center gap-2">
         <InputGroup className={cn(compact ? 'h-8 w-60' : 'h-9 w-72', 'max-w-full')}>
@@ -965,18 +1031,7 @@ export function EntityList<T extends object>({
           </DropdownMenu>
         ) : null}
 
-        {primaryAction ? (
-          // Text buttons take the height of the icon buttons beside them,
-          // whatever size the caller asked for.
-          <div
-            className={cn(
-              'flex items-center gap-2',
-              compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
-            )}
-          >
-            {primaryAction}
-          </div>
-        ) : null}
+        {primaryActionSlot}
       </div>
     </div>
   )
@@ -990,9 +1045,15 @@ export function EntityList<T extends object>({
       onMouseOver={revealTruncated}
     >
       <Heading className="sr-only">{label}</Heading>
-      {/* A list with nothing in it has nothing to search, filter or sort: the
-          guided empty state stands alone until the first record exists. */}
-      {showFirstRun || hideToolbar ? null : toolbar}
+      {/* A list with nothing in it has nothing to search, filter or sort, so
+          the first run keeps only the create action, where the toolbar puts it. */}
+      {hideToolbar ? null : showFirstRun ? (
+        primaryActionSlot ? (
+          <div className={cn('flex justify-end', compact && 'px-6 py-3')}>{primaryActionSlot}</div>
+        ) : null
+      ) : (
+        toolbar
+      )}
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
           stops an overflowing table pushing the page itself wider. */}
@@ -1013,7 +1074,7 @@ export function EntityList<T extends object>({
             <GuidedEmptyState
               title={empty.title}
               description={empty.description}
-              actions={empty.actions}
+              actions={empty.secondaryAction}
               guides={empty.guides}
               scene={empty.scene}
               label={`${label}: nothing here yet`}
@@ -1139,8 +1200,18 @@ export function EntityList<T extends object>({
 }
 
 /** A row's `⋯`. Icon-only and 28px, so the column can be 40px wide. */
-function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
-  if (actions.length === 0) return null
+function RowActionsMenu({ actions: given }: { actions: EntityRowAction[] }) {
+  const check = useWriteCheck()
+  const lock = useWriteLock()
+  if (given.length === 0) return null
+  // Writes are disabled, not hidden, when the page's scope denies them (V1).
+  const reasons = given.map((action) => (action.readOnly ? null : check(action.entity).reason))
+  // Locked (read-only) account: the refused writes carry a lock after their label.
+  const lockedLabels = new Set(
+    given.filter((_, i) => lock !== null && reasons[i] === lock).map((action) => action.label),
+  )
+  const actions = given.map((action, i) => (reasons[i] ? { ...action, disabled: true } : action))
+  const reason = reasons.find(Boolean)
   const ordinary = actions.filter((action) => !action.destructive)
   const destructive = actions.filter((action) => action.destructive)
 
@@ -1162,7 +1233,8 @@ function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
         >
           <MoreHorizontalIcon aria-hidden />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-40">
+        {/* Sized to its longest label, so "Open customer portal" stays on one line. */}
+        <DropdownMenuContent align="end" className="w-max max-w-72 min-w-40">
           <DropdownMenuGroup>
             {ordinary.map((action) => (
               <DropdownMenuItem
@@ -1175,6 +1247,7 @@ function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
               >
                 {action.icon}
                 {action.label}
+                {lockedLabels.has(action.label) ? <LockedMark /> : null}
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
@@ -1193,9 +1266,13 @@ function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
                 >
                   {action.icon}
                   {action.label}
+                  {lockedLabels.has(action.label) ? <LockedMark /> : null}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
+          ) : null}
+          {reason ? (
+            <p className="text-muted-foreground max-w-56 px-2 py-1.5 text-xs">{reason}</p>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>

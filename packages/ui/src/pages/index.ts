@@ -55,6 +55,11 @@ export {
 } from './billing/invoices/InvoiceLinesEditor'
 export type { EditableLine, InvoiceLinesEditorProps } from './billing/invoices/InvoiceLinesEditor'
 export { InvoiceGrid, InvoiceGridProvenance } from './billing/invoices/InvoiceGrid'
+export {
+  HostedInvoiceView,
+  HostedInvoiceViewProvenance,
+} from './billing/hosted-invoice/HostedInvoiceView'
+export type { HostedInvoiceViewProps } from './billing/hosted-invoice/HostedInvoiceView'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance, linesChanged } from './billing/invoices/InvoiceForm'
 export type {
@@ -305,6 +310,20 @@ export type {
 } from './shared/StatusBadge'
 export { UsageMeter, UsageMeterProvenance } from './shared/UsageMeter'
 export type { UsageMeterProps } from './shared/UsageMeter'
+export {
+  EntitlementUsage,
+  EntitlementUsageProvenance,
+  EntitlementUsageTable,
+  entitlementRowsForContract,
+  entitlementRowsFromUsage,
+  entitlementValue,
+} from './shared/EntitlementUsage'
+export type {
+  EntitlementUsageProps,
+  EntitlementUsageRow,
+  EntitlementSourceLink,
+  EntitlementUsageTableProps,
+} from './shared/EntitlementUsage'
 export { SignInForm, SignInFormProvenance } from './auth/SignInForm'
 export type { SignInFormProps } from './auth/SignInForm'
 export { SignInScreen, SignInScreenProvenance } from './auth/SignInScreen'
@@ -324,7 +343,20 @@ export type { SetPasswordFormProps } from './auth/SetPasswordForm'
 export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/AcceptInvitationForm'
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './settings/environments/EnvironmentForm'
-export type { EnvironmentContact, EnvironmentFormProps } from './settings/environments/EnvironmentForm'
+export {
+  EnvironmentCopyForm,
+  EnvironmentCopyFormProvenance,
+} from './settings/environments/EnvironmentCopyForm'
+export type {
+  CopyableEnvironment,
+  EnvironmentCopyFormProps,
+  EnvironmentCopyTarget,
+} from './settings/environments/EnvironmentCopyForm'
+export type {
+  EnvironmentContact,
+  EnvironmentFormProps,
+  ProductionOffer,
+} from './settings/environments/EnvironmentForm'
 export {
   EnvironmentRenameForm,
   EnvironmentRenameFormProvenance,
@@ -380,6 +412,8 @@ export type { SplitMeterPart, SplitMeterProps } from './shared/SplitMeter'
 export { ArcGauge, ArcGaugeProvenance } from './shared/ArcGauge'
 export type { ArcGaugeProps } from './shared/ArcGauge'
 export { QuotaCard, QuotaCardProvenance } from './shared/QuotaCard'
+export { EntityAlertDialog, EntityAlertDialogProvenance } from './shared/EntityAlertDialog'
+export type { EntityAlertDialogProps } from './shared/EntityAlertDialog'
 export type { QuotaCardAction, QuotaCardProps } from './shared/QuotaCard'
 
 /* The billing grids' migration onto EntityList. Appended — the grids and their
@@ -408,6 +442,33 @@ export { CustomerForm, CustomerFormProvenance } from './customers/CustomerForm'
 export type { CustomerFormProps } from './customers/CustomerForm'
 export { DataExportGrid, DataExportGridProvenance } from './developers/exports/DataExportGrid'
 export type { DataExportGridProps } from './developers/exports/DataExportGrid'
+export {
+  ConnectionExports,
+  DataExportDetail,
+  ExportFlowProvenance,
+  ExportRunList,
+  ExportsOverview,
+  S3ConnectionList,
+} from './developers/exports/ExportFlow'
+export type {
+  ConnectionExportsProps,
+  DataExportDetailProps,
+  DataExportTab,
+  ExportRunListProps,
+  ExportsOverviewProps,
+  S3ConnectionListProps,
+} from './developers/exports/ExportFlow'
+export {
+  DataExportDialog,
+  ExportFormsProvenance,
+  RunExportDialog,
+  S3ConnectionDialog,
+} from './developers/exports/ExportForms'
+export type {
+  DataExportDialogProps,
+  RunExportDialogProps,
+  S3ConnectionDialogProps,
+} from './developers/exports/ExportForms'
 export { IntegrationsBlock, IntegrationLogo } from './integrations/IntegrationsBlock'
 export type { IntegrationsFailure, IntegrationsBlockProps } from './integrations/IntegrationsBlock'
 export {
@@ -432,6 +493,14 @@ export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
 export { CustomerTaxSection } from './customers/CustomerTaxSection'
 export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
+export {
+  CustomerEntitlementUsage,
+  CustomerEntitlementUsageProvenance,
+} from './customers/CustomerEntitlementUsage'
+export type {
+  CustomerEntitlementUsageProps,
+  CustomerEntitlementUsageRow,
+} from './customers/CustomerEntitlementUsage'
 export { CustomerUsageSummary } from './customers/CustomerUsageSummary'
 export type {
   CustomerUsageSummaryProps,
@@ -515,3 +584,30 @@ export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocume
 export { ContractIntegrations } from './contracts/ContractIntegrations'
 
 export type { ContractIntegrationsProps } from './contracts/ContractIntegrations'
+export {
+  CustomerPortalView,
+  CustomerPortalViewProvenance,
+} from './customer-portal/CustomerPortalView'
+export { PortalNotice, PortalNoticeProvenance } from './customer-portal/PortalNotice'
+export type {
+  CustomerPortalActions,
+  CustomerPortalData,
+  CustomerPortalViewProps,
+  Load,
+  PayVia,
+} from './customer-portal/types'
+
+// Self-billing: the tenant's own Flexprice account.
+export {
+  AccountCard,
+  AccountLockedDialog,
+  AccountStatusPill,
+  CreatingPausedScreen,
+} from './selfBilling/AccountStatus'
+export type { AccountStatusProps } from './selfBilling/AccountStatus'
+export { UsageBillingView } from './selfBilling/UsageBillingView'
+export type { UsageBillingViewProps } from './selfBilling/UsageBillingView'
+export { UpgradeView } from './selfBilling/UpgradeView'
+export type { UpgradeViewProps } from './selfBilling/UpgradeView'
+export { CheckoutReturnView } from './selfBilling/CheckoutReturnView'
+export type { CheckoutReturnViewProps, NextStep } from './selfBilling/CheckoutReturnView'

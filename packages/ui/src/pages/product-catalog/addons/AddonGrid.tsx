@@ -224,6 +224,7 @@ export function AddonGrid({
     if (onAddonClick) {
       actions.push({
         label: 'View add-on',
+        readOnly: true,
         icon: <PuzzleIcon aria-hidden className="size-4" />,
         onSelect: () => onAddonClick(addon),
       })
@@ -237,6 +238,7 @@ export function AddonGrid({
     }
     actions.push({
       label: 'Copy add-on ID',
+      readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(addon.id),
     })
@@ -302,7 +304,6 @@ export function AddonGrid({
         title: 'No add-ons yet',
         description:
           'An add-on is a priced extra sold alongside a plan — extra seats, a support tier, a burst of capacity. Create the shell here, then give it charges.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New add-on</Button> } : {}),
         guides: GUIDES,
       }}
     />

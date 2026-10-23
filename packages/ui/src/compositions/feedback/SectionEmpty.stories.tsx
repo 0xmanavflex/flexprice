@@ -1,7 +1,9 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, within } from 'storybook/test'
 import { PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
+import { Section } from '../layout/Section'
 import { SectionEmpty } from './SectionEmpty'
 
 const meta = {
@@ -24,28 +26,25 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 type PlaygroundArgs = ComponentProps<typeof SectionEmpty> & {
-  showAction: boolean
-  actionLabel: string
+  showRetry: boolean
 }
 
-/** Edit the copy and toggle the call to action. */
+/** Edit the copy and toggle the non-create way out ("Try again"). */
 export const Playground: StoryObj<PlaygroundArgs> = {
   args: {
     title: 'No entitlements yet',
     description: 'Entitlements decide what is included of each feature.',
-    showAction: true,
-    actionLabel: 'Add entitlement',
+    showRetry: false,
   },
-  argTypes: { showAction: { control: 'boolean' }, actionLabel: { control: 'text' } },
-  render: ({ showAction, actionLabel, ...args }) => (
+  argTypes: { showRetry: { control: 'boolean' } },
+  render: ({ showRetry, ...args }) => (
     <SectionEmpty
       {...args}
-      {...(showAction
+      {...(showRetry
         ? {
             action: (
-              <Button type="button" size="sm" className="h-8 px-3">
-                <PlusIcon aria-hidden />
-                {actionLabel}
+              <Button type="button" variant="outline" size="sm" className="h-8 px-3">
+                Try again
               </Button>
             ),
           }
@@ -56,12 +55,43 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 
 export const Default: Story = {}
 
-export const WithAction: Story = {
+/**
+ * Inside its card: the create action is the section header's, top right, and
+ * the empty body does not repeat it.
+ */
+export const InSection: Story = {
+  render: (args) => (
+    <Section
+      table
+      title="Entitlements"
+      action={
+        <Button type="button" variant="outline" size="sm" className="h-8 px-3">
+          <PlusIcon aria-hidden />
+          Add entitlement
+        </Button>
+      }
+    >
+      <SectionEmpty {...args} />
+    </Section>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByRole('button', { name: 'Add entitlement' })).toHaveLength(1)
+    const status = canvas.getByRole('status')
+    await expect(status.contains(canvas.getByRole('button', { name: 'Add entitlement' }))).toBe(
+      false,
+    )
+  },
+}
+
+/** A failed load offers the way back, not the create action. */
+export const WithRetry: Story = {
   args: {
+    title: 'Entitlements could not be loaded',
+    description: 'The rest of the page still works.',
     action: (
-      <Button type="button" size="sm" className="h-8 px-3">
-        <PlusIcon aria-hidden />
-        Add entitlement
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3">
+        Try again
       </Button>
     ),
   },

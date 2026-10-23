@@ -190,7 +190,7 @@ export const uiSeamRules = {
     // panels can compose `SettingsCard` and `SettingRow` without naming a
     // block. Forbidding it here would not remove the import, it would scatter
     // it across every settings panel — the opposite of the rule's intent.
-    'packages/ui/src/compositions/layout/settingsSurface.ts',
+    'packages/ui/src/compositions/layout/settingsSurface.tsx',
   ],
   rules: {
     'no-restricted-imports': [

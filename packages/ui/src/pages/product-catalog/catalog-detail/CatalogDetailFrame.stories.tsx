@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { TicketPercentIcon } from '@ui/icons'
+import { CopyIcon, PencilIcon, PowerIcon, TicketPercentIcon, Trash2Icon } from '@ui/icons'
 import { CatalogStatusBadge, type CatalogStatus } from '../../shared/StatusBadge'
 import { CatalogDetailFrame, type CatalogDetailFrameProps } from './CatalogDetailFrame'
 
@@ -17,9 +17,15 @@ function makeTabs(count: number) {
 
 function makeMenu(count: number) {
   const items = [
-    { id: 'edit', label: 'Edit', onSelect: fn() },
-    { id: 'duplicate', label: 'Duplicate', onSelect: fn() },
-    { id: 'delete', label: 'Delete', onSelect: fn(), destructive: true },
+    { id: 'edit', label: 'Edit', icon: <PencilIcon aria-hidden />, onSelect: fn() },
+    { id: 'duplicate', label: 'Duplicate', icon: <CopyIcon aria-hidden />, onSelect: fn() },
+    {
+      id: 'delete',
+      label: 'Delete',
+      icon: <Trash2Icon aria-hidden />,
+      onSelect: fn(),
+      destructive: true,
+    },
   ]
   return items.slice(0, count)
 }
@@ -144,7 +150,17 @@ export const OverflowMenu: Story = {
 
 /** A disabled menu item stays in the list but cannot be chosen. */
 export const DisabledItem: Story = {
-  args: { menu: [{ id: 'activate', label: 'Activate', onSelect: fn(), disabled: true }] },
+  args: {
+    menu: [
+      {
+        id: 'activate',
+        label: 'Activate',
+        icon: <PowerIcon aria-hidden />,
+        onSelect: fn(),
+        disabled: true,
+      },
+    ],
+  },
   parameters: {
     a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
   },

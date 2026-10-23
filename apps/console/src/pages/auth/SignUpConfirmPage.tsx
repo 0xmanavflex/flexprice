@@ -9,6 +9,7 @@ import {
   forgetConfirmation,
   readConfirmedSession,
 } from '@/app/auth/supabaseSignUp'
+import { takeReturnTo } from './returnTo'
 import { messageForConfirmError } from './signUpConfirmMessage'
 
 export { messageForConfirmError }
@@ -44,7 +45,8 @@ export function SignUpConfirmPage() {
         )
         session.signIn(credentials)
         await forgetConfirmation(region)
-        void navigate({ to: '/', search: {} as never })
+        // Google sign-in returns here: back to the page that asked for it, if any.
+        void navigate({ href: takeReturnTo() })
       } catch (cause) {
         await forgetConfirmation(region)
         setError(messageForConfirmError(cause))

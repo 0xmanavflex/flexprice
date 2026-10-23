@@ -129,6 +129,26 @@ export function toUpdateTenantDraft(tenant: Tenant): UpdateTenant {
 }
 
 /**
+ * Where an entitlement comes from — the `sources[]` of a usage summary row.
+ *
+ * A feature can be granted by more than one contract, plan or add-on; the
+ * usage on its row is the customer's total across all of them.
+ */
+export interface EntitlementUsageSource {
+  /** The contract (subscription) the grant reaches the customer through. */
+  subscriptionId: string
+  /** The plan, add-on or subscription that grants it. */
+  entityId: string
+  /** `plan`, `addon`, `subscription` — as the API spells it. */
+  entityType: string
+  entityName: string
+  /** `MONTHLY`, `NEVER`, … as the API spells it; `''` when not sent. */
+  usageResetPeriod: string
+  /** A static entitlement's value ("Premium"); `''` for other kinds. */
+  staticValue: string
+}
+
+/**
  * One entitlement the tenant's Flexprice plan grants, and how much is used.
  *
  * `currentUsage` and `usagePercent` are the strings the API sent, never floats
@@ -151,6 +171,10 @@ export interface TenantFeatureUsage {
   /** A soft limit warns; a hard limit blocks. */
   isSoftLimit: boolean
   nextUsageResetAt: Date | null
+  /** The feature's plural unit ("calls"), or `''` when it has none. */
+  unit: string
+  /** What grants it. Empty when the API reported no source. */
+  sources: EntitlementUsageSource[]
 }
 
 /** Has this entitlement been consumed past its limit? */

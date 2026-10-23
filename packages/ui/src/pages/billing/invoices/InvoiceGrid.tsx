@@ -266,6 +266,7 @@ export function InvoiceGrid({
     if (onInvoiceClick) {
       actions.push({
         label: 'View invoice',
+        readOnly: true,
         icon: <ReceiptIcon aria-hidden className="size-4" />,
         onSelect: () => onInvoiceClick(invoice),
       })
@@ -273,6 +274,7 @@ export function InvoiceGrid({
     if (invoice.number) {
       actions.push({
         label: 'Copy invoice number',
+        readOnly: true,
         icon: <CopyIcon aria-hidden className="size-4" />,
         onSelect: () => void navigator.clipboard?.writeText(invoice.number),
       })
@@ -383,7 +385,6 @@ export function InvoiceGrid({
           title: 'No invoices yet',
           description:
             'Invoices are produced when a contract’s billing period closes. Put a customer on a plan and the first one will appear here on its own.',
-          ...(onCreate ? { actions: <Button onClick={onCreate}>New invoice</Button> } : {}),
           guides: GUIDES,
         }}
       />

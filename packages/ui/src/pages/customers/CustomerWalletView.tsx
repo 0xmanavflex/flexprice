@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
+  BellIcon,
   ArrowUpRightIcon,
   InfoIcon,
   MinusIcon,
@@ -61,10 +62,7 @@ import {
 } from '../../compositions'
 import { ChoiceCards, Composer } from '../../compositions/detail/DetailKit'
 import { Pill, type PillTone } from '../shared/cells'
-import {
-  WalletLedgerTable,
-  formatCredits,
-} from './WalletLedgerTable'
+import { WalletLedgerTable, formatCredits } from './WalletLedgerTable'
 import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
 
@@ -94,6 +92,8 @@ export interface CustomerWalletViewProps {
   terminateError?: string | null
   onSaveAutoTopup: (draft: AutoTopup) => Promise<unknown>
   autoTopupError?: string | null
+  /** More menu: the selected wallet's balance alerts. Omitted, the item is hidden. */
+  onAlertSettings?: () => void
   /** Called when a dialog opens, so a stale error from the last attempt is cleared. */
   onResetErrors?: () => void
 }
@@ -124,6 +124,7 @@ export function CustomerWalletView({
   onDebit,
   debitError = null,
   onTerminate,
+  onAlertSettings,
   terminateError = null,
   onSaveAutoTopup,
   autoTopupError = null,
@@ -178,17 +179,24 @@ export function CustomerWalletView({
 
   const wallet = wallets.find((candidate) => candidate.id === selectedId) ?? wallets[0]
   if (!wallet) {
+    // The create action sits where the wallet's own actions do once one
+    // exists, top right; the empty state only says what a wallet is.
     return (
-      <>
+      <div className="flex flex-col gap-5">
+        <div className="flex justify-end">
+          <Button className="h-8 px-3.5" onClick={() => open('create')}>
+            <PlusIcon aria-hidden="true" />
+            Create wallet
+          </Button>
+        </div>
         <EmptyState
           scene="customers"
           size="inline"
           title="No wallet yet"
           description="A wallet holds prepaid credits this customer's usage draws down."
-          action={<Button onClick={() => open('create')}>Create wallet</Button>}
         />
         {createDialog}
-      </>
+      </div>
     )
   }
 
@@ -251,6 +259,12 @@ export function CustomerWalletView({
                 <RepeatIcon className="text-muted-foreground" aria-hidden="true" />
                 Auto top-up settings
               </DropdownMenuItem>
+              {onAlertSettings ? (
+                <DropdownMenuItem disabled={closed} onClick={onAlertSettings}>
+                  <BellIcon className="text-muted-foreground" aria-hidden="true" />
+                  Alert settings
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={() => open('create')}>
                 <WalletIcon className="text-muted-foreground" aria-hidden="true" />
                 Create wallet
@@ -574,7 +588,10 @@ function DebitDialog({
       >
         <div className="grid gap-5 sm:grid-cols-2">
           <Field>
-            <LabelWithHint htmlFor="debit-credits" hint="How many credits to remove from the wallet.">
+            <LabelWithHint
+              htmlFor="debit-credits"
+              hint="How many credits to remove from the wallet."
+            >
               Credits
             </LabelWithHint>
             <Input

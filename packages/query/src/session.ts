@@ -8,11 +8,14 @@ import {
 import {
   ApiError,
   ErrorKind,
+  type CloneTarget,
   type CurrentUser,
   type EnvironmentRecord,
   type SessionCredentials,
+  cloneEnvironment,
   createEnvironment,
   fetchCurrentUser,
+  existsInEnvironment,
   fetchEnvironments,
   signIn,
   signUp,
@@ -87,6 +90,9 @@ export function useCurrentUser(token: string | null): UseQueryResult<CurrentUser
     enabled: enabledFor(token),
     // A signed-in user's identity does not change while they look at a grid.
     staleTime: 5 * 60_000,
+    // Roles can change mid-session (an admin edits them); re-read like V1 does,
+    // so access follows within a minute without a sign-out.
+    refetchInterval: 60_000,
   })
 }
 
@@ -117,6 +123,38 @@ export function useEnvironmentList(token: string | null): UseQueryResult<Environ
     queryFn: async () => (await fetchEnvironments(serverURL, token as string)).map(toEnvironment),
     enabled: enabledFor(token),
     staleTime: 5 * 60_000,
+  })
+}
+
+/**
+ * Which of `environmentIds` holds the record at `path`, for a link that names
+ * a record but not its environment.
+ *
+ * A shared `/invoices/inv_1` opened by someone whose console is in another
+ * environment 404s there. Record ids are unique across environments, so the
+ * other environments the person can reach are asked in turn, and the first
+ * that answers is the record's home. Resolves `null` when none has it.
+ *
+ * Sequential on purpose: most tenants have two or three environments, and
+ * the first hit ends the search.
+ */
+export function useRecordEnvironment(
+  token: string | null,
+  path: string | null,
+  environmentIds: readonly string[],
+): UseQueryResult<string | null> {
+  const serverURL = useFlexpriceServerURL()
+  return useQuery({
+    queryKey: [...queryKeys.session.environments(), 'locate', path, ...environmentIds],
+    queryFn: async () => {
+      for (const id of environmentIds) {
+        if (await existsInEnvironment(serverURL, token as string, path as string, id)) return id
+      }
+      return null
+    },
+    enabled: enabledFor(token) && path !== null && environmentIds.length > 0,
+    staleTime: 60_000,
+    retry: false,
   })
 }
 
@@ -154,8 +192,28 @@ export function useCreateEnvironment(
       }
       return toEnvironment(await createEnvironment(serverURL, token as string, draft))
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+    onSuccess: (created) => {
+      // The list refetch can land after the console has already switched, and
+      // a missing id makes the shell abandon the switch. Put the new row in
+      // every cached list first, then again after the refetch in case the
+      // server answer is briefly behind the create.
+      const merge = (current: Environment[] | undefined) => {
+        if (!current || !created?.id) return current
+        if (current.some((environment) => environment.id === created.id)) return current
+        return [...current, created]
+      }
+      queryClient.setQueriesData<Environment[]>(
+        { queryKey: queryKeys.session.environments() },
+        merge,
+      )
+      void queryClient
+        .invalidateQueries({ queryKey: queryKeys.session.environments() })
+        .then(() => {
+          queryClient.setQueriesData<Environment[]>(
+            { queryKey: queryKeys.session.environments() },
+            merge,
+          )
+        })
     },
   })
 }
@@ -191,6 +249,39 @@ export function useRenameEnvironment(
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+    },
+  })
+}
+
+/** What a copy sends: the environment to copy from, and where to. */
+export interface CopyEnvironment {
+  sourceEnvironmentId: string
+  target: CloneTarget
+}
+
+/**
+ * Copy an environment's published plans and features into another — V1's
+ * "Copy environment", and how a sandbox setup is taken live. The API queues the
+ * copy and answers at once; when it made a new environment, the list is
+ * refreshed so the switcher shows it.
+ */
+export function useCopyEnvironment(
+  token: string | null,
+): UseMutationResult<void, Error, CopyEnvironment> {
+  const serverURL = useFlexpriceServerURL()
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, CopyEnvironment>({
+    mutationFn: async ({ sourceEnvironmentId, target }) => {
+      if (!enabledFor(token)) {
+        throw new ApiError(ErrorKind.Unauthorized, 'Sign in to copy an environment.')
+      }
+      await cloneEnvironment(serverURL, token as string, sourceEnvironmentId, target)
+    },
+    onSuccess: (_, { target }) => {
+      if (!('targetEnvironmentId' in target)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+      }
     },
   })
 }

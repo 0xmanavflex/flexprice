@@ -23,7 +23,8 @@ export async function listConnections(
 export interface ConnectionRequest {
   name: string
   provider_type: string
-  encrypted_secret_data: Record<string, string>
+  /** Absent for a connection Flexprice manages itself, e.g. a managed S3 bucket. */
+  encrypted_secret_data?: Record<string, string>
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
 }

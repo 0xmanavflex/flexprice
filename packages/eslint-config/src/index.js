@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
 import { architecture } from './architecture.js'
+import { designRules } from './design.js'
 
 /**
  * Paths whose contents we did not write and must not edit.
@@ -39,6 +40,8 @@ export const config = [
   {
     ignores: [
       '**/dist/**',
+      // The mocked bundle the CI journeys build (`apps/console/playwright.config.ts`).
+      '**/dist-e2e/**',
       '**/node_modules/**',
       '**/*.gen.ts',
       '**/.nx/**',
@@ -113,6 +116,8 @@ export const config = [
     },
   },
   ...architecture,
+  // The checkable half of docs/design-rules.md.
+  ...designRules,
 ]
 
 export default config

@@ -27,6 +27,7 @@ import {
   toRemoveCouponRequest,
   toCancelSubscriptionRequest,
   toCreateSubscriptionRequest,
+  subscriptionGrantStart,
 } from './subscriptions'
 
 const base: CreateSubscription = {
@@ -45,7 +46,7 @@ describe('toCreateSubscriptionRequest', () => {
       billingPeriod: 'MONTHLY',
       billingPeriodCount: 1,
       billingCycle: 'anniversary',
-      prorationBehavior: 'create_prorations',
+      prorationBehavior: 'none',
     })
   })
 
@@ -82,25 +83,42 @@ describe('toCreateSubscriptionRequest', () => {
     expect(parsed['override_entitlements']).toHaveLength(1)
   })
 
-  it('routes invoices to another customer and names the inheriting customers, by external id', () => {
+  it('routes invoices to another customer by external id', () => {
     expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('inheritance')
     const request = toCreateSubscriptionRequest({
       ...base,
-      invoicingCustomerExternalId: 'parent_ext',
+      invoicingCustomerExternalId: 'payer_ext',
+    })
+    expect(request['inheritance']).toEqual({ invoicingCustomerExternalId: 'payer_ext' })
+    const parsed = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<
+      string,
+      unknown
+    >
+    expect(parsed['inheritance']).toEqual({ invoicing_customer_external_id: 'payer_ext' })
+  })
+
+  it('names the inherited customers alone, beside a commitment, as V1 sends them', () => {
+    // The API refuses `invoicing_customer_external_id` beside inherited
+    // customers, so a parent contract sends only the children — the contract's
+    // own customer pays. The commitment rides on the parent unchanged.
+    const request = toCreateSubscriptionRequest({
+      ...base,
+      commitmentAmount: '1000',
       inheritedCustomerExternalIds: ['child_a', 'child_b'],
     })
     expect(request['inheritance']).toEqual({
-      invoicingCustomerExternalId: 'parent_ext',
       externalCustomerIdsToInheritSubscription: ['child_a', 'child_b'],
     })
+    expect(request['commitmentAmount']).toBe('1000')
     const parsed = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<
       string,
       unknown
     >
     expect(parsed['inheritance']).toEqual({
-      invoicing_customer_external_id: 'parent_ext',
       external_customer_ids_to_inherit_subscription: ['child_a', 'child_b'],
     })
+    expect(parsed['commitment_amount']).toBe('1000')
+    expect(parsed).not.toHaveProperty('auto_invoice_threshold')
   })
 
   it("leaves the plan's grants alone until they are changed, then sends the whole list", () => {
@@ -162,7 +180,17 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
       overageFactor: '1.2',
       enableTrueUp: true,
       chargeCommitments: [
-        { priceId: 'price_api', type: 'quantity', value: '5000', overageFactor: '', trueUp: false },
+        {
+          priceId: 'price_api',
+          type: 'quantity',
+          value: '5000',
+          duration: '',
+          overageFactor: '',
+          trueUp: false,
+          bucketSize: '',
+          windowed: false,
+          windows: [],
+        },
       ],
       taxes: [
         {
@@ -208,6 +236,88 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
       subscription_status: 'draft',
     })
     expect(wire).not.toHaveProperty('phases')
+  })
+
+  it('sends a charge commitment per bucket, with its period, bucket size and time windows', () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        phases: [
+          {
+            ...emptyPhase(),
+            priceOverrides: [
+              { priceId: 'price_a', billingModel: BillingModel.FlatFee, amount: '9' },
+            ],
+          },
+        ],
+        chargeCommitments: [
+          {
+            priceId: 'price_gpu',
+            type: 'quantity',
+            value: '10000',
+            duration: 'MONTHLY',
+            overageFactor: '1.5',
+            trueUp: true,
+            bucketSize: 'MINUTE',
+            windowed: true,
+            windows: [
+              {
+                id: 'win_1',
+                start: '09:00',
+                end: '17:30',
+                type: 'amount',
+                value: '200',
+                overageFactor: '',
+                trueUp: false,
+                billingModel: 'PACKAGE',
+                price: '2',
+                packageSize: '1000',
+              },
+            ],
+            priceBase: {
+              entityId: 'plan_1',
+              entityType: 'PLAN',
+              meterId: 'meter_gpu',
+              currency: 'USD',
+              billingPeriod: 'MONTHLY',
+              billingPeriodCount: 1,
+              invoiceCadence: 'ARREAR',
+            },
+          },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(wire['override_line_items']).toEqual([
+      { price_id: 'price_a', billing_model: 'FLAT_FEE', amount: '9' },
+      { price_id: 'price_gpu', bucket_size: 'MINUTE' },
+    ])
+    expect(wire['line_item_commitments']).toEqual({
+      price_gpu: {
+        commitment_type: 'quantity',
+        commitment_quantity: 10000,
+        commitment_duration: 'MONTHLY',
+        overage_factor: 1.5,
+        enable_true_up: true,
+        is_window_commitment: true,
+        commitment_time_buckets: [
+          expect.objectContaining({
+            start: { hour: 9, minute: 0 },
+            end: { hour: 17, minute: 30 },
+            commitment_type: 'amount',
+            commitment_value: '200',
+            true_up_enabled: false,
+            price: expect.objectContaining({
+              type: 'USAGE',
+              billing_model: 'PACKAGE',
+              amount: '2',
+              meter_id: 'meter_gpu',
+              currency: 'usd',
+              transform_quantity: { divide_by: 1000, round: 'up' },
+            }),
+          }),
+        ],
+      },
+    })
   })
 
   it('folds a fixed charge quantity into its override, or sends it alone', () => {
@@ -304,7 +414,17 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
         },
       ],
       chargeCommitments: [
-        { priceId: 'price_api', type: 'amount', value: '50', overageFactor: '', trueUp: false },
+        {
+          priceId: 'price_api',
+          type: 'amount',
+          value: '50',
+          duration: '',
+          overageFactor: '',
+          trueUp: false,
+          bucketSize: '',
+          windowed: false,
+          windows: [],
+        },
       ],
     })
     const wire = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<string, unknown>
@@ -434,5 +554,27 @@ describe('contract-scoped creators', () => {
       type: 'coupon',
       coupon_params: { action: 'remove', coupon_association_id: 'assoc_1' },
     })
+  })
+})
+
+describe('subscriptionGrantStart', () => {
+  // The API refuses a subscription-scoped grant without a start_date.
+  const now = new Date('2026-10-22T12:00:00Z')
+  const periodEnd = new Date('2026-11-01T00:00:00Z')
+
+  it('starts a one-time grant now', () => {
+    expect(subscriptionGrantStart({ cadence: CreditGrantCadence.OneTime }, periodEnd, now)).toBe(
+      now,
+    )
+  })
+
+  it("starts a recurring grant at the end of the contract's current period", () => {
+    expect(subscriptionGrantStart({ cadence: CreditGrantCadence.Recurring }, periodEnd, now)).toBe(
+      periodEnd,
+    )
+  })
+
+  it('starts a recurring grant now when the period end is unknown', () => {
+    expect(subscriptionGrantStart({ cadence: CreditGrantCadence.Recurring }, null, now)).toBe(now)
   })
 })

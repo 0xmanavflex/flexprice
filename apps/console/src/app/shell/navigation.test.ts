@@ -24,6 +24,8 @@ describe('navEntryForPath', () => {
     ['/contracts', 'subscriptions'],
     ['/coupons', 'settings-discounts'],
     ['/taxes', 'settings-taxes'],
+    ['/settings/usage-billing', 'settings-usage-billing'],
+    ['/billing/checkout/success', 'settings-usage-billing-checkout'],
     ['/cost-sheets', 'settings-cost-tracking'],
     ['/pricing-widget', 'pricing-widget'],
     ['/webhooks', 'webhooks'],
@@ -114,7 +116,7 @@ describe('the sidebar layout', () => {
       'Contracts',
       'Billing',
       'Collections',
-      'Revenue',
+      'Reports',
       'Developers',
     ])
     expect(FOOTER_NAV.map((entry) => entry.label)).toEqual(['Integrations', 'Documentation'])
@@ -127,6 +129,8 @@ describe('the sidebar layout', () => {
     expect(hrefForNavId('docs')).toBe(DOCS_URL)
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
       'settings',
+      'settings-usage-billing',
+      'settings-usage-billing-checkout',
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',
@@ -161,7 +165,7 @@ describe('breadcrumbForPath', () => {
   })
 
   it('is a single crumb for a top-level destination', () => {
-    expect(breadcrumbForPath('/revenue')).toEqual([{ label: 'Revenue' }])
+    expect(breadcrumbForPath('/reports')).toEqual([{ label: 'Reports' }])
   })
 
   // A crumb that navigates somewhere the user did not name is worse than one
@@ -185,7 +189,7 @@ describe('breadcrumbForPath', () => {
 describe('every destination resolves', () => {
   const BUILT = [
     '/',
-    '/revenue',
+    '/reports',
     '/features',
     '/plans',
     '/addons',
@@ -199,6 +203,8 @@ describe('every destination resolves', () => {
     '/payments',
     '/credit-memos',
     '/taxes',
+    '/settings/usage-billing',
+    '/billing/checkout',
     '/events',
     '/workflows',
     '/exports',

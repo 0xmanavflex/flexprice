@@ -1,11 +1,14 @@
+import { useSelfBillingStatus } from '@fp/query'
 import type { ReactNode } from 'react'
-import { EmbeddedPageContext } from '@fp/ui/compositions'
+import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
+import { EmbeddedPageContext, WriteGate } from '@fp/ui/compositions'
 import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BadgeDollarSignIcon,
   BellIcon,
   Building2Icon,
   CoinsIcon,
+  GaugeIcon,
   PaletteIcon,
   PercentIcon,
   ReceiptTextIcon,
@@ -79,6 +82,7 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   discounts: <TicketPercentIcon aria-hidden className="size-4" />,
   taxes: <PercentIcon aria-hidden className="size-4" />,
   'cost-tracking': <CoinsIcon aria-hidden className="size-4" />,
+  'usage-billing': <GaugeIcon aria-hidden className="size-4" />,
   invoicing: <ReceiptTextIcon aria-hidden className="size-4" />,
   subscription: <RepeatIcon aria-hidden className="size-4" />,
   currency: <BadgeDollarSignIcon aria-hidden className="size-4" />,
@@ -105,16 +109,28 @@ const SECTION_ICONS: Record<string, ReactNode> = {
  * route. The tab is still listed and still selectable, which is the behaviour
  * the flag was there to guarantee.
  */
-export function toShellSections(): SettingsSection[] {
+export function toShellSections({
+  hide = [],
+}: { hide?: readonly string[] } = {}): SettingsSection[] {
   return [...RAIL_SECTIONS, ...SETTINGS_SECTIONS.filter((section) => 'hidden' in section)].map(
     (section) => ({
       id: section.id,
       label: section.label,
-      ...('hidden' in section ? { hidden: true } : {}),
+      ...('hidden' in section || hide.includes(section.id) ? { hidden: true } : {}),
       ...(SECTION_ICONS[section.id] ? { icon: SECTION_ICONS[section.id] } : {}),
       tabs: section.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
     }),
   )
+}
+
+/**
+ * The rail as this workspace sees it: Usage & billing only where the
+ * deployment bills its workspaces (self-billing on). The status is the one the
+ * shell already read for the session.
+ */
+function useShellSections(): SettingsSection[] {
+  const selfBilling = useSelfBillingStatus()
+  return toShellSections(selfBilling.data?.enabled ? {} : { hide: ['usage-billing'] })
 }
 
 /**
@@ -133,9 +149,10 @@ export function SettingsFrame({
   onOpenPage: (href: string) => void
   children: ReactNode
 }) {
+  const sections = useShellSections()
   return (
     <SettingsShell
-      sections={toShellSections()}
+      sections={sections}
       sectionId={sectionId}
       tabId=""
       onSectionChange={(next) => openSection(next, onNavigate, onOpenPage)}
@@ -164,10 +181,11 @@ function openSection(
 export function SettingsPage({ sectionId, tabId, onNavigate, onOpenPage }: SettingsPageProps) {
   const section = findSettingsSection(sectionId) ?? SETTINGS_SECTIONS[0]
   const tab = findSettingsTab(section, tabId) ?? firstTabOf(section)
+  const sections = useShellSections()
 
   return (
     <SettingsShell
-      sections={toShellSections()}
+      sections={sections}
       sectionId={section.id}
       tabId={tab.id}
       onSectionChange={(next) => openSection(next, onNavigate, onOpenPage)}
@@ -208,25 +226,38 @@ function SettingsPanel({
     )
   }
 
+  /*
+   * Who may change each panel, as V1's settings tabs: tenant-wide settings
+   * need write on the entity *and* super admin; the organisation profile needs
+   * tenant write. Anyone signed in can read them. The panel stays visible and
+   * its controls are disabled, with the reason above.
+   */
+  const gated = (entity: RbacEntity, panel: ReactNode, superAdmin = true) => (
+    <WriteGate block entity={entity} superAdmin={superAdmin}>
+      {panel}
+    </WriteGate>
+  )
+
   switch (key) {
     case 'organization/profile':
-      return <ProfilePanel />
+      return gated(RBAC_ENTITY.Tenant, <ProfilePanel />, false)
     case 'team/members':
+      // Gated row by row: invite needs user write, roles and removal super admin.
       return <MembersPanel />
     case 'invoicing/invoices':
-      return <InvoicesPanel />
+      return gated(RBAC_ENTITY.Setting, <InvoicesPanel />)
     case 'subscription/subscriptions':
-      return <SubscriptionsPanel />
+      return gated(RBAC_ENTITY.Setting, <SubscriptionsPanel />)
     case 'currency/currencies':
-      return <CurrenciesPanel />
+      return gated(RBAC_ENTITY.Setting, <CurrenciesPanel />)
     case 'customer-experience/portal':
-      return <PortalPanel />
+      return gated(RBAC_ENTITY.Portal, <PortalPanel />)
     case 'customer-experience/onboarding':
-      return <OnboardingPanel />
+      return gated(RBAC_ENTITY.Setting, <OnboardingPanel />)
     case 'tags/tags':
-      return <TagsPanel onOpenPage={onOpenPage} />
+      return gated(RBAC_ENTITY.Setting, <TagsPanel onOpenPage={onOpenPage} />, false)
     case 'alerts/wallet-alerts':
-      return <WalletAlertsPanel />
+      return gated(RBAC_ENTITY.AlertSettings, <WalletAlertsPanel />)
     case 'appearance/theme':
       return <AppearancePanel />
     default:

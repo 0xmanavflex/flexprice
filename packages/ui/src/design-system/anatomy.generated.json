@@ -10,12 +10,53 @@
       "usedBy": [],
       "story": "./src/pages/auth/AcceptInvitationForm.stories.tsx"
     },
+    "AccessProvider": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/access/Access.stories.tsx"
+    },
+    "AccessScope": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [
+        "CreditGrantTable",
+        "CustomerDetail",
+        "CustomerTaxSection",
+        "EntitlementTable",
+        "PlanChargesView",
+        "PlanCreditGrantsView",
+        "PlanEntitlementsView",
+        "SubscriptionDetailView",
+        "TaxDialog"
+      ],
+      "story": "./src/compositions/access/Access.stories.tsx"
+    },
     "AccountActivityRail": {
       "file": "src/components/blocks/solution-billing-4/components/account-activity-rail.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "AccountCard": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
     },
     "AccountHeader": {
       "file": "src/components/blocks/solution-billing-4/components/account-header.tsx",
@@ -24,12 +65,30 @@
       "usedBy": [],
       "story": null
     },
+    "AccountLockedDialog": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
+    },
     "AccountSettings": {
       "file": "src/components/blocks/settings-7/components/account-settings.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "AccountStatusPill": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
     },
     "Activity": {
       "file": "src/icons/index.ts",
@@ -63,6 +122,24 @@
       ],
       "story": null
     },
+    "AddCardDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
     "AddChargeDialog": {
       "file": "src/pages/product-catalog/plans/AddChargeDialog.tsx",
       "layer": "surface",
@@ -73,6 +150,24 @@
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/AddChargeDialog.stories.tsx"
+    },
+    "AddCreditsDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
     },
     "AddFolderIcon": {
       "file": "src/reui/icons/default/outline/add-folder.tsx",
@@ -123,6 +218,13 @@
     "AddUserIcon": {
       "file": "src/reui/icons/default/outline/add-user.tsx",
       "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "AiChat": {
+      "file": "src/components/blocks/ai-chat-5/components/ai-chat.tsx",
+      "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -267,7 +369,16 @@
       "file": "src/reui/icons/default/outline/arrow-down-right.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "CheckoutLinkPanel",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
+        "PortalEmpty",
+        "RadioRows",
+        "SubscriptionStatusPill",
+        "SummaryCell"
+      ],
       "story": null
     },
     "ArrowLeft": {
@@ -283,7 +394,9 @@
       "composes": [],
       "usedBy": [
         "ContextualSection",
-        "FormToolbar"
+        "FormToolbar",
+        "PlanAiSetupView",
+        "UpgradeView"
       ],
       "story": null
     },
@@ -321,6 +434,8 @@
       "composes": [],
       "usedBy": [
         "ChargeTable",
+        "CheckoutReturnView",
+        "EnvironmentForm",
         "FormToolbar",
         "GuideGrid",
         "GuidedEmptyState"
@@ -381,6 +496,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CustomerDetail",
+        "DetailTable",
         "EntityList",
         "SortMenu"
       ],
@@ -392,6 +509,7 @@
       "composes": [],
       "usedBy": [
         "EntityList",
+        "PlanAiSetupView",
         "SortMenu"
       ],
       "story": null
@@ -409,14 +527,25 @@
       "composes": [],
       "usedBy": [
         "ApiCard",
+        "CheckoutLinkPanel",
+        "CheckoutReturnView",
         "ConnectIntegrationSheet",
         "ConnectorCard",
+        "ContractIntegrations",
         "CustomerWalletView",
         "DashboardHome",
         "EventDetailSheet",
         "FilterSelect",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
+        "PortalEmpty",
+        "RadioRows",
         "RelatedCard",
         "ShellNav",
+        "SubscriptionStatusPill",
+        "SummaryCell",
+        "UsageBillingView",
         "UsageCard"
       ],
       "story": null
@@ -462,6 +591,24 @@
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "AutoTopupDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
       "story": null
     },
     "BadgeDollarSign": {
@@ -684,6 +831,7 @@
         "DateInput",
         "FilterBar",
         "FilterSelect",
+        "PortalUsage",
         "UsageCard"
       ],
       "story": null
@@ -713,8 +861,25 @@
         "DateInput",
         "EnvironmentForm",
         "FilterSelect",
+        "PortalUsage",
         "RevenueReport",
+        "SubscriptionForm",
         "UsageCard"
+      ],
+      "story": null
+    },
+    "CardLogo": {
+      "file": "src/pages/customer-portal/CardLogo.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "PortalOverview",
+        "RemoveCardDialog"
       ],
       "story": null
     },
@@ -749,9 +914,39 @@
         "OptionSelect"
       ],
       "usedBy": [
+        "EntityAlertDialog",
         "SubscriptionDetailView"
       ],
       "story": null
+    },
+    "ChargeCommitmentDialog": {
+      "file": "src/pages/contracts/ChargeCommitmentDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "Field",
+        "FormDialog",
+        "OptionSelect",
+        "PlusIcon"
+      ],
+      "usedBy": [
+        "SubscriptionForm"
+      ],
+      "story": null
+    },
+    "ChargeCouponDialog": {
+      "file": "src/pages/contracts/ChargeCouponDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "Field",
+        "FormDialog",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "SubscriptionForm"
+      ],
+      "story": "./src/pages/contracts/ChargeCouponDialog.stories.tsx"
     },
     "ChargeFlags": {
       "file": "src/pages/product-catalog/charges/ChargeFlags.tsx",
@@ -807,12 +1002,14 @@
         "ArrowRightIcon",
         "ChargeFlags",
         "ChargeSheet",
+        "CopyIcon",
         "DetailTable",
+        "EyeIcon",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [
         "FeatureDetailView",
@@ -911,6 +1108,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CheckoutLinkPanel",
         "ChoiceCards",
         "Composer",
         "ConnectorCard",
@@ -922,21 +1120,63 @@
         "DetailMoreMenu",
         "DetailTabs",
         "Dot",
+        "EnvironmentForm",
         "EnvironmentSwitcher",
         "EventTrace",
         "InvoiceForm",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
         "Mark",
         "OverviewTiles",
         "PlanAiSetupView",
         "PlanPreviewCard",
+        "PortalEmpty",
         "Properties",
+        "RadioRows",
         "RegionField",
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
-        "SummaryRow"
+        "SubscriptionStatusPill",
+        "SummaryCell",
+        "SummaryRow",
+        "TotalRow",
+        "TotalsList",
+        "UpgradeView"
       ],
       "story": null
+    },
+    "CheckoutLinkPanel": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "RemoveCardDialog"
+      ],
+      "story": null
+    },
+    "CheckoutReturnView": {
+      "file": "src/pages/selfBilling/CheckoutReturnView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowRightIcon",
+        "ArrowUpRightIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/CheckoutReturnView.stories.tsx"
     },
     "ChevronDown": {
       "file": "src/icons/index.ts",
@@ -988,7 +1228,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "AddChargeDialog",
@@ -997,8 +1238,11 @@
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
+        "DataExportDialog",
         "PaymentStatusDialog",
         "PriceOverrideForm",
+        "RunExportDialog",
+        "S3ConnectionDialog",
         "SubscriptionForm"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1148,19 +1392,30 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
         "ChargeAlertForm",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
         "ContractSectionDialogs",
         "CustomerTaxSection",
         "CustomerWalletView",
+        "DownloadDialog",
+        "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
+        "PauseContractDialog",
+        "PayInvoiceDialog",
         "PaymentStatusDialog",
+        "RemoveCardDialog",
         "TaxDialog"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1170,12 +1425,23 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
         "ChargeSheet",
+        "ConnectionExports",
         "ContractIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
+        "DataExportDetail",
+        "DownloadDialog",
+        "ExportRunList",
+        "ExportsOverview",
         "InvoiceForm",
         "ManageConnectionSheet",
+        "PayInvoiceDialog",
+        "RemoveCardDialog",
+        "S3ConnectionList",
         "SubscriptionDetailView",
         "TaxDialog",
         "WebhookEndpointDetail"
@@ -1197,6 +1463,30 @@
       ],
       "usedBy": [],
       "story": "./src/pages/integrations/ConnectIntegrationSheet.stories.tsx"
+    },
+    "ConnectionExports": {
+      "file": "src/pages/developers/exports/ExportFlow.tsx",
+      "layer": "surface",
+      "composes": [
+        "ConfirmDialog",
+        "DataExportDialog",
+        "DetailList",
+        "DetailMoreMenu",
+        "DetailShell",
+        "DetailTabs",
+        "EntityList",
+        "EyeIcon",
+        "PageBody",
+        "Pill",
+        "PlusIcon",
+        "RunExportDialog",
+        "S3ConnectionDialog",
+        "Section",
+        "SectionEmpty",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/exports/ExportFlow.stories.tsx"
     },
     "ConnectorCard": {
       "file": "src/compositions/layout/ConnectorCard.tsx",
@@ -1257,6 +1547,7 @@
       "file": "src/pages/contracts/ContractIntegrations.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowUpRightIcon",
         "Composer",
         "ConfirmDialog",
         "CopyIcon",
@@ -1311,9 +1602,7 @@
         "PreviewRow",
         "PreviewRows"
       ],
-      "usedBy": [
-        "SubscriptionForm"
-      ],
+      "usedBy": [],
       "story": "./src/pages/contracts/ContractSummary.stories.tsx"
     },
     "ContractUsageEditForm": {
@@ -1347,7 +1636,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1357,7 +1647,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1368,6 +1659,8 @@
       "composes": [],
       "usedBy": [
         "AddonGrid",
+        "ChargeTable",
+        "CheckoutLinkPanel",
         "ChoiceCards",
         "Composer",
         "ContractIntegrations",
@@ -1384,24 +1677,38 @@
         "DetailMoreMenu",
         "DetailTabs",
         "Dot",
+        "EnvironmentSwitcher",
         "EventGrid",
         "FeatureDetailView",
         "FeatureGrid",
         "GroupGrid",
+        "InvoiceDetailView",
         "InvoiceGrid",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
+        "Mark",
+        "MetadataCard",
         "OverviewTiles",
         "PaymentGrid",
         "PlanGrid",
+        "PortalEmpty",
         "PriceUnitGrid",
         "PricingCatalogBlock",
         "Properties",
+        "RadioRows",
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
         "SubscriptionCard",
+        "SubscriptionDetailView",
         "SubscriptionGrid",
+        "SubscriptionStatusPill",
+        "SummaryCell",
         "SummaryRow",
         "TaxRateGrid",
+        "TotalRow",
+        "TotalsList",
         "UsageSyncGrid",
         "WebhookEndpointDetail",
         "WebhookEndpointGrid",
@@ -1415,7 +1722,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1558,6 +1866,15 @@
       "usedBy": [],
       "story": null
     },
+    "CreatingPausedScreen": {
+      "file": "src/pages/selfBilling/AccountStatus.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
+    },
     "CreditCard": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -1572,6 +1889,7 @@
       "usedBy": [
         "PageShell",
         "PaymentGrid",
+        "PortalOverview",
         "ShellSearch"
       ],
       "story": null
@@ -1610,11 +1928,13 @@
       "file": "src/pages/product-catalog/credit-grants/CreditGrantTable.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/credit-grants/CreditGrantTable.stories.tsx"
@@ -1627,7 +1947,9 @@
         "DetailShell",
         "MetadataCard",
         "Pill",
-        "RelatedCard"
+        "RelatedCard",
+        "TotalRow",
+        "TotalsList"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/credit-notes/CreditNoteDetailView.stories.tsx"
@@ -1713,8 +2035,10 @@
       "file": "src/pages/customers/CustomerDetail.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "ActivitySection",
         "ArchiveIcon",
+        "ArrowUpDownIcon",
         "ContractIntegrations",
         "CopyValue",
         "DetailTable",
@@ -1722,11 +2046,14 @@
         "EditableCard",
         "EmDash",
         "EmptyState",
+        "EntitlementUsageTable",
         "EntityHeader",
         "EntityLink",
         "EyeIcon",
+        "FilterBar",
         "IntegrationMark",
         "IntegrationMarks",
+        "LinkIcon",
         "MetadataCard",
         "Money",
         "OverviewTiles",
@@ -1737,12 +2064,26 @@
         "RocketIcon",
         "RowActionsMenu",
         "Section",
+        "SimpleTable",
+        "SortMenu",
         "Status",
         "SubTabState",
-        "WalletIcon"
+        "WalletIcon",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerDetail.stories.tsx"
+    },
+    "CustomerEntitlementUsage": {
+      "file": "src/pages/customers/CustomerEntitlementUsage.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "Section",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerEntitlementUsage.stories.tsx"
     },
     "CustomerEventsGrid": {
       "file": "src/pages/customers/CustomerEventsGrid.tsx",
@@ -1781,6 +2122,7 @@
         "EmDash",
         "EntityList",
         "IntegrationChips",
+        "LinkIcon",
         "PencilIcon",
         "PlusIcon",
         "UserIcon"
@@ -1788,10 +2130,31 @@
       "usedBy": [],
       "story": "./src/pages/customers/CustomerGrid.stories.tsx"
     },
+    "CustomerPortalView": {
+      "file": "src/pages/customer-portal/CustomerPortalView.tsx",
+      "layer": "surface",
+      "composes": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "PortalCredits",
+        "PortalInvoiceSheet",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalShell",
+        "PortalUsage",
+        "RemoveCardDialog"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customer-portal/CustomerPortalView.stories.tsx"
+    },
     "CustomerTaxSection": {
       "file": "src/pages/customers/CustomerTaxSection.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "AppFailure",
         "Composer",
         "ConfirmDialog",
@@ -1802,7 +2165,8 @@
         "LoadingRows",
         "OptionSelect",
         "PlusIcon",
-        "Section"
+        "Section",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerTaxSection.stories.tsx"
@@ -1885,13 +2249,58 @@
       "usedBy": [],
       "story": null
     },
+    "DataExportDetail": {
+      "file": "src/pages/developers/exports/ExportFlow.tsx",
+      "layer": "surface",
+      "composes": [
+        "ConfirmDialog",
+        "DataExportDialog",
+        "DetailList",
+        "DetailMoreMenu",
+        "DetailShell",
+        "DetailTabs",
+        "EntityList",
+        "EyeIcon",
+        "PageBody",
+        "Pill",
+        "PlusIcon",
+        "RunExportDialog",
+        "S3ConnectionDialog",
+        "Section",
+        "SectionEmpty",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/exports/ExportFlow.stories.tsx"
+    },
+    "DataExportDialog": {
+      "file": "src/pages/developers/exports/ExportForms.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChoiceCards",
+        "DateInput",
+        "Field",
+        "FormDialog",
+        "OptionSelect",
+        "PlusIcon"
+      ],
+      "usedBy": [
+        "ConnectionExports",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
+        "S3ConnectionList"
+      ],
+      "story": "./src/pages/developers/exports/ExportForms.stories.tsx"
+    },
     "DataExportGrid": {
       "file": "src/pages/developers/exports/DataExportGrid.tsx",
       "layer": "surface",
       "composes": [
         "BookOpenIcon",
         "CopyIcon",
-        "EntityList"
+        "EntityList",
+        "EyeIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/developers/exports/DataExportGrid.stories.tsx"
@@ -1943,8 +2352,11 @@
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
+        "DataExportDialog",
         "InvoiceForm",
         "InvoiceLinesEditor",
+        "RunExportDialog",
+        "S3ConnectionDialog",
         "SubscriptionForm"
       ],
       "story": "./src/compositions/forms/DateInput.stories.tsx"
@@ -1965,8 +2377,24 @@
       "usedBy": [],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
     },
+    "DelayedHint": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
+      "story": null
+    },
     "DeleteFilesIcon": {
       "file": "src/reui/icons/default/outline/delete-files.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "DeliveryIcon": {
+      "file": "src/reui/icons/default/outline/delivery.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [],
@@ -2005,7 +2433,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "DetailHeader"
@@ -2017,7 +2446,12 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ConnectionExports",
+        "DataExportDetail",
         "EventDetailSheet",
+        "ExportRunList",
+        "ExportsOverview",
+        "S3ConnectionList",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
         "WebhookMessageSheet"
@@ -2029,12 +2463,18 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "CatalogDetailFrame",
+        "ConnectionExports",
+        "DataExportDetail",
         "EntityHeader",
+        "ExportRunList",
+        "ExportsOverview",
         "FeatureDetailView",
+        "S3ConnectionList",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -2057,8 +2497,13 @@
       ],
       "usedBy": [
         "CatalogDetailFrame",
+        "ConnectionExports",
         "CreditNoteDetailView",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
         "InvoiceDetailView",
+        "S3ConnectionList",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailShell.stories.tsx"
@@ -2076,7 +2521,11 @@
       "file": "src/pages/shared/DetailTable.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "ArrowUpDownIcon",
+        "EntityList",
+        "FilterBar",
+        "SectionToolsContext",
+        "SortMenu"
       ],
       "usedBy": [
         "AddonSubscriptionsView",
@@ -2085,17 +2534,23 @@
         "CreditGrantTable",
         "CustomerAnalyticsView",
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "CustomerEventsGrid",
         "CustomerTaxSection",
         "CustomerUsageSummary",
         "EntitlementTable",
+        "EntitlementUsage",
+        "EntitlementUsageTable",
         "FeatureDetailView",
         "GroupMembersView",
         "InvoiceDetailView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
+        "PortalCredits",
+        "PortalInvoices",
         "RevenueReport",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "TaxDialog",
         "WalletLedgerTable",
         "WebhookEndpointDetail"
@@ -2107,14 +2562,20 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "CatalogDetailFrame",
+        "ConnectionExports",
         "CustomerDetail",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
         "FeatureDetailView",
         "InvoiceDetailView",
         "RevenueReport",
+        "S3ConnectionList",
         "SettingsShell",
         "SubscriptionDetailView"
       ],
@@ -2153,7 +2614,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -2193,6 +2655,24 @@
       "usedBy": [],
       "story": null
     },
+    "DownloadDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
     "DragIcon": {
       "file": "src/reui/icons/default/outline/drag.tsx",
       "layer": "other",
@@ -2206,7 +2686,8 @@
       "composes": [
         "FormCard",
         "FormRow",
-        "PencilIcon"
+        "PencilIcon",
+        "WriteGate"
       ],
       "usedBy": [
         "CustomerDetail",
@@ -2258,10 +2739,11 @@
         "CustomerDetail",
         "CustomerGrid",
         "EntitlementTable",
+        "EntitlementUsage",
+        "EntitlementUsageTable",
         "EventGrid",
         "EventTypeName",
         "FeatureGrid",
-        "PlanAiSetupView",
         "PlanEntitlementsView",
         "PlanGrid",
         "WebhookMessageSheet",
@@ -2343,16 +2825,57 @@
       "file": "src/pages/product-catalog/entitlements/EntitlementTable.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "EmDash",
         "EntityLink",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/entitlements/EntitlementTable.stories.tsx"
+    },
+    "EntitlementUsage": {
+      "file": "src/pages/shared/EntitlementUsage.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EmDash",
+        "EntityLink",
+        "UsageMeter"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/shared/EntitlementUsage.stories.tsx"
+    },
+    "EntitlementUsageTable": {
+      "file": "src/pages/shared/EntitlementUsage.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EmDash",
+        "EntityLink",
+        "UsageMeter"
+      ],
+      "usedBy": [
+        "CustomerDetail",
+        "SubscriptionDetailView"
+      ],
+      "story": "./src/pages/shared/EntitlementUsage.stories.tsx"
+    },
+    "EntityAlertDialog": {
+      "file": "src/pages/shared/EntityAlertDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChargeAlertForm",
+        "ErrorState",
+        "FormDialog",
+        "LoadingRows"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/shared/EntityAlertDialog.stories.tsx"
     },
     "EntityCell": {
       "file": "src/pages/shared/cells.tsx",
@@ -2393,6 +2916,8 @@
       "usedBy": [
         "CustomerDetail",
         "EntitlementTable",
+        "EntitlementUsage",
+        "EntitlementUsageTable",
         "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
@@ -2409,23 +2934,30 @@
         "ErrorState",
         "FilterBar",
         "GuidedEmptyState",
-        "SortMenu"
+        "LockedMark",
+        "SortMenu",
+        "WriteGate"
       ],
       "usedBy": [
         "AddonGrid",
+        "ConnectionExports",
         "CostSheetGrid",
         "CouponGrid",
         "CreditNoteGrid",
         "CustomerGrid",
+        "DataExportDetail",
         "DataExportGrid",
         "DetailTable",
         "EventGrid",
+        "ExportRunList",
+        "ExportsOverview",
         "FeatureGrid",
         "GroupGrid",
         "InvoiceGrid",
         "PaymentGrid",
         "PlanGrid",
         "PriceUnitGrid",
+        "S3ConnectionList",
         "SubscriptionGrid",
         "TaxRateGrid",
         "UsageSyncGrid",
@@ -2436,11 +2968,26 @@
       ],
       "story": "./src/pages/shared/EntityList.stories.tsx"
     },
+    "EnvironmentCopyForm": {
+      "file": "src/pages/settings/environments/EnvironmentCopyForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "Field",
+        "FormDialog",
+        "LabelWithHint",
+        "OptionSelect"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/environments/EnvironmentCopyForm.stories.tsx"
+    },
     "EnvironmentForm": {
       "file": "src/pages/settings/environments/EnvironmentForm.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowRightIcon",
         "CalendarIcon",
+        "CheckIcon",
         "Composer",
         "Field",
         "FormDialog",
@@ -2466,6 +3013,7 @@
       "composes": [
         "CheckIcon",
         "ChevronsUpDownIcon",
+        "CopyIcon",
         "PencilIcon",
         "PlusIcon"
       ],
@@ -2487,12 +3035,28 @@
         "SkeletonRegion"
       ],
       "usedBy": [
+        "AccessProvider",
+        "AccessScope",
+        "CheckoutLinkPanel",
+        "EntityAlertDialog",
         "EntityList",
+        "HostedInvoiceView",
         "IntegrationLogo",
         "IntegrationsBlock",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
+        "LockedMark",
+        "PortalEmpty",
+        "PortalInvoiceSheet",
+        "RadioRows",
+        "RequireAccess",
         "SubTabState",
+        "SubscriptionStatusPill",
+        "SummaryCell",
         "WebhookActivity",
-        "WebhookEventCatalog"
+        "WebhookEventCatalog",
+        "WriteGate"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
     },
@@ -2567,6 +3131,54 @@
       "usedBy": [],
       "story": null
     },
+    "ExportRunList": {
+      "file": "src/pages/developers/exports/ExportFlow.tsx",
+      "layer": "surface",
+      "composes": [
+        "ConfirmDialog",
+        "DataExportDialog",
+        "DetailList",
+        "DetailMoreMenu",
+        "DetailShell",
+        "DetailTabs",
+        "EntityList",
+        "EyeIcon",
+        "PageBody",
+        "Pill",
+        "PlusIcon",
+        "RunExportDialog",
+        "S3ConnectionDialog",
+        "Section",
+        "SectionEmpty",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/exports/ExportFlow.stories.tsx"
+    },
+    "ExportsOverview": {
+      "file": "src/pages/developers/exports/ExportFlow.tsx",
+      "layer": "surface",
+      "composes": [
+        "ConfirmDialog",
+        "DataExportDialog",
+        "DetailList",
+        "DetailMoreMenu",
+        "DetailShell",
+        "DetailTabs",
+        "EntityList",
+        "EyeIcon",
+        "PageBody",
+        "Pill",
+        "PlusIcon",
+        "RunExportDialog",
+        "S3ConnectionDialog",
+        "Section",
+        "SectionEmpty",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/exports/ExportFlow.stories.tsx"
+    },
     "ExternalLink": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -2587,10 +3199,19 @@
       "composes": [],
       "usedBy": [
         "AcceptInvitationForm",
+        "ChargeTable",
+        "ConnectionExports",
         "CustomerDetail",
+        "DataExportDetail",
+        "DataExportGrid",
+        "ExportRunList",
+        "ExportsOverview",
+        "PortalInvoices",
+        "S3ConnectionList",
         "SignInForm",
         "SignUpScreen",
         "SpecField",
+        "SubscriptionCard",
         "SyncOptions",
         "WebhookEndpointDetail",
         "WebhookGuide"
@@ -2675,7 +3296,8 @@
         "Pill",
         "PlusIcon",
         "Status",
-        "Tag"
+        "Tag",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureGrid.stories.tsx"
@@ -2727,6 +3349,11 @@
       ],
       "usedBy": [
         "AcceptInvitationForm",
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChargeForm",
         "ConnectIntegrationSheet",
         "ContractAddChargeForm",
@@ -2735,8 +3362,11 @@
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
+        "DataExportDialog",
+        "DownloadDialog",
         "EntitlementCreateForm",
         "EntitlementEditForm",
+        "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
@@ -2747,14 +3377,19 @@
         "InvoiceForm",
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
+        "PayInvoiceDialog",
         "PaymentStatusDialog",
         "PriceOverrideForm",
         "RegionField",
+        "RemoveCardDialog",
+        "RunExportDialog",
+        "S3ConnectionDialog",
         "SetPasswordForm",
         "SignInForm",
         "SignUpScreen",
         "SpecField",
         "SyncOptions",
+        "UpgradeView",
         "UsageTermsFields",
         "WebhookEndpointDetail",
         "WebhookGuide"
@@ -2831,6 +3466,8 @@
         "Filters"
       ],
       "usedBy": [
+        "CustomerDetail",
+        "DetailTable",
         "EntityList"
       ],
       "story": "./src/compositions/tables/FilterBar.stories.tsx"
@@ -3090,7 +3727,6 @@
         "FormDisclosure",
         "GroupForm",
         "PaymentForm",
-        "PlanAiSetupView",
         "PlanForm",
         "PriceUnitForm",
         "SubscriptionForm",
@@ -3107,18 +3743,33 @@
         "FormDialogBodyContext"
       ],
       "usedBy": [
+        "AddCardDialog",
         "AddChargeDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
         "ContractSectionDialogs",
         "CustomerTaxSection",
         "CustomerWalletView",
+        "DataExportDialog",
+        "DownloadDialog",
+        "EntityAlertDialog",
+        "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
+        "PauseContractDialog",
+        "PayInvoiceDialog",
         "PaymentStatusDialog",
+        "RemoveCardDialog",
+        "RunExportDialog",
+        "S3ConnectionDialog",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "TaxDialog",
         "WebhookEndpointDetail"
       ],
@@ -3474,6 +4125,18 @@
       "usedBy": [],
       "story": null
     },
+    "HostedInvoiceView": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ErrorState",
+        "Money",
+        "Panel",
+        "PrinterIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx"
+    },
     "HotelIcon": {
       "file": "src/reui/icons/default/outline/hotel.tsx",
       "layer": "other",
@@ -3509,6 +4172,13 @@
       "usedBy": [],
       "story": null
     },
+    "InfoBlock": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "InfoHint": {
       "file": "src/compositions/forms/InfoHint.tsx",
       "layer": "composition",
@@ -3517,7 +4187,8 @@
         "Field",
         "FormCard",
         "FormRow",
-        "LabelWithHint"
+        "LabelWithHint",
+        "UpgradeView"
       ],
       "story": "./src/compositions/forms/InfoHint.stories.tsx"
     },
@@ -3587,6 +4258,13 @@
       ],
       "story": null
     },
+    "Integrations": {
+      "file": "src/components/blocks/ai-chat-5/components/integrations.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "IntegrationsBlock": {
       "file": "src/pages/integrations/IntegrationsBlock.tsx",
       "layer": "surface",
@@ -3644,6 +4322,7 @@
         "ActivitySection",
         "CalculatorIcon",
         "ContractIntegrations",
+        "CopyIcon",
         "DetailShell",
         "DetailTable",
         "DetailTabs",
@@ -3655,6 +4334,9 @@
         "Section",
         "Status",
         "SubTabState",
+        "TotalRow",
+        "TotalsList",
+        "UserIcon",
         "WalletIcon"
       ],
       "usedBy": [],
@@ -3668,10 +4350,11 @@
         "ConfirmDialog",
         "DateInput",
         "Field",
-        "InvoiceSection",
         "LabelWithHint",
         "OptionSelect",
-        "PlusIcon"
+        "PlusIcon",
+        "TotalRow",
+        "TotalsList"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/invoices/InvoiceForm.stories.tsx"
@@ -3715,9 +4398,7 @@
       "file": "src/components/blocks/form-3/components/invoice-section.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "InvoiceForm"
-      ],
+      "usedBy": [],
       "story": null
     },
     "InvoiceStatusBadge": {
@@ -3731,6 +4412,23 @@
         "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
+    },
+    "InvoiceStatusPill": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalInvoiceSheet",
+        "PortalInvoices"
+      ],
+      "story": null
     },
     "InvoiceSummary": {
       "file": "src/components/blocks/form-3/components/invoice-summary.tsx",
@@ -3799,6 +4497,7 @@
         "ContractSectionDialogs",
         "CustomerTaxSection",
         "CustomerWalletView",
+        "EnvironmentCopyForm",
         "EnvironmentForm",
         "InvoiceForm",
         "TaxDialog"
@@ -3875,6 +4574,22 @@
       "usedBy": [],
       "story": null
     },
+    "LedgerRow": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalCredits"
+      ],
+      "story": null
+    },
     "Link": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -3887,6 +4602,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CustomerDetail",
+        "CustomerGrid",
         "InvoiceDetailView",
         "ShellSearch",
         "TaxRateGrid"
@@ -3943,6 +4660,25 @@
       "usedBy": [],
       "story": "./src/compositions/feedback/States.stories.tsx"
     },
+    "Loaded": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalCredits",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalUsage"
+      ],
+      "story": null
+    },
     "Loader2": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -3986,7 +4722,7 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
-        "SubscriptionDetailView",
+        "EntityAlertDialog",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
@@ -3998,11 +4734,54 @@
       "usedBy": [],
       "story": null
     },
+    "LockedMark": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [
+        "ChoiceCards",
+        "Composer",
+        "CopyChip",
+        "CopyEmail",
+        "CopyId",
+        "DetailHeaderCluster",
+        "DetailMoreMenu",
+        "DetailTabs",
+        "Dot",
+        "EntityList",
+        "OverviewTiles",
+        "Properties",
+        "SegmentMeter",
+        "ShellCreateMenu",
+        "SimpleTable",
+        "SplitMeter",
+        "SummaryRow",
+        "TotalRow",
+        "TotalsList"
+      ],
+      "story": "./src/compositions/access/Access.stories.tsx"
+    },
     "LockIcon": {
       "file": "src/reui/icons/default/outline/lock.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "AccessProvider",
+        "AccessScope",
+        "AccountCard",
+        "AccountLockedDialog",
+        "AccountStatusPill",
+        "CreatingPausedScreen",
+        "LockedMark",
+        "PortalNotice",
+        "RequireAccess",
+        "UpgradeView",
+        "WriteGate"
+      ],
       "story": null
     },
     "LoginForm": {
@@ -4054,6 +4833,7 @@
       "composes": [
         "CheckIcon",
         "ChevronsUpDownIcon",
+        "CopyIcon",
         "PencilIcon",
         "PlusIcon"
       ],
@@ -4120,6 +4900,7 @@
       "file": "src/compositions/detail/MetadataCard.tsx",
       "layer": "composition",
       "composes": [
+        "CopyIcon",
         "PencilIcon",
         "PlusIcon",
         "Section"
@@ -4154,6 +4935,7 @@
         "ApiCard",
         "DashboardHome",
         "FilterSelect",
+        "PortalUsage",
         "UsageCard"
       ],
       "story": "./src/pages/shared/SegmentMeter.stories.tsx"
@@ -4222,14 +5004,25 @@
       ],
       "story": null
     },
+    "ModeChips": {
+      "file": "src/components/blocks/ai-chat-5/components/mode-chips.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Money": {
       "file": "src/pages/shared/Money.tsx",
       "layer": "surface",
       "composes": [],
       "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
         "ApiCard",
+        "AutoTopupDialog",
         "CustomerDetail",
         "DashboardHome",
+        "DownloadDialog",
         "EmDash",
         "EntityCell",
         "EntityLink",
@@ -4237,7 +5030,15 @@
         "FeatureTypePill",
         "FilterSelect",
         "Formula",
+        "HostedInvoiceView",
+        "PayInvoiceDialog",
         "Pill",
+        "PortalCredits",
+        "PortalInvoiceSheet",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalUsage",
+        "RemoveCardDialog",
         "Status",
         "UsageCard"
       ],
@@ -4351,6 +5152,7 @@
         "EntitlementEditForm",
         "SubscriptionForm",
         "TimezoneCombobox",
+        "UpgradeView",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/OptionCombobox.stories.tsx"
@@ -4361,6 +5163,8 @@
       "composes": [],
       "usedBy": [
         "ChargeAlertForm",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChargeForm",
         "ContractAddChargeForm",
         "ContractIntegrations",
@@ -4372,11 +5176,15 @@
         "CustomerForm",
         "CustomerTaxSection",
         "CustomerWalletView",
+        "DataExportDialog",
+        "EnvironmentCopyForm",
         "FeatureForm",
         "GroupForm",
         "InvoiceForm",
         "MeteredEntitlementFields",
         "PaymentForm",
+        "RunExportDialog",
+        "S3ConnectionDialog",
         "SpecField",
         "SubscriptionForm",
         "SyncOptions",
@@ -4394,7 +5202,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "CustomerDetail",
@@ -4416,12 +5225,13 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
-        "PageShell"
+        "PageShell",
+        "SubscriptionDetailView"
       ],
       "story": null
     },
     "Page": {
-      "file": "src/components/blocks/app-shell-3/page.tsx",
+      "file": "src/components/blocks/ai-chat-5/page.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [
@@ -4434,7 +5244,12 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "FormPage"
+        "ConnectionExports",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
+        "FormPage",
+        "S3ConnectionList"
       ],
       "story": "./src/compositions/layout/Page.stories.tsx"
     },
@@ -4449,7 +5264,13 @@
       "file": "src/compositions/feedback/Skeletons.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "AccessProvider",
+        "AccessScope",
+        "LockedMark",
+        "RequireAccess",
+        "WriteGate"
+      ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
     "PageShell": {
@@ -4492,6 +5313,7 @@
         "ChartBox",
         "DashboardHome",
         "FilterSelect",
+        "HostedInvoiceView",
         "RevenueReport",
         "UsageCard"
       ],
@@ -4536,6 +5358,36 @@
       "layer": "vendor/examples",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "PauseContractDialog": {
+      "file": "src/pages/contracts/PauseContractDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "FormDialog"
+      ],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
+      "story": null
+    },
+    "PayInvoiceDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
       "story": null
     },
     "PaymentForm": {
@@ -4628,7 +5480,9 @@
         "Pill",
         "PlanGrid",
         "PriceUnitGrid",
+        "RowActionsMenu",
         "Status",
+        "SubscriptionDetailView",
         "SubscriptionForm",
         "TaxRateGrid"
       ],
@@ -4679,20 +5533,33 @@
       ],
       "usedBy": [
         "CatalogStatusBadge",
+        "CheckoutLinkPanel",
+        "ConnectionExports",
         "CreditNoteDetailView",
         "CustomerDetail",
         "CustomerWalletView",
+        "DataExportDetail",
         "EventTypeName",
+        "ExportRunList",
+        "ExportsOverview",
         "FeatureDetailView",
         "FeatureGrid",
         "FeatureTypeBadge",
         "GlyphBadge",
         "InvoiceDetailView",
         "InvoiceStatusBadge",
+        "InvoiceStatusPill",
+        "LedgerRow",
+        "Loaded",
         "PaymentStatusBadge",
         "PaymentStatusDialog",
         "PlanAiSetupView",
+        "PortalEmpty",
+        "RadioRows",
+        "S3ConnectionList",
         "SubscriptionDetailView",
+        "SubscriptionStatusPill",
+        "SummaryCell",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
         "WebhookEventCatalog",
@@ -4746,12 +5613,12 @@
       "layer": "surface",
       "composes": [
         "AppFailure",
+        "ArrowLeftIcon",
+        "ArrowUpIcon",
         "CheckIcon",
-        "EmDash",
-        "FormCard",
         "Pill",
         "Section",
-        "Tag"
+        "SimpleTable"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanAiSetupView.stories.tsx"
@@ -4767,6 +5634,7 @@
       "file": "src/pages/product-catalog/plans/PlanChargesView.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "ChargeTable"
       ],
       "usedBy": [],
@@ -4776,11 +5644,13 @@
       "file": "src/pages/product-catalog/plans/PlanCreditGrantsView.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanCreditGrantsView.stories.tsx"
@@ -4798,12 +5668,14 @@
       "file": "src/pages/product-catalog/plans/PlanEntitlementsView.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "DetailTable",
         "EmDash",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SubTabState"
+        "SubTabState",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanEntitlementsView.stories.tsx"
@@ -4924,7 +5796,9 @@
       "composes": [],
       "usedBy": [
         "AddonGrid",
+        "ChargeCommitmentDialog",
         "ChargeTable",
+        "ConnectionExports",
         "ContractIntegrations",
         "CostSheetGrid",
         "CouponGrid",
@@ -4933,8 +5807,12 @@
         "CustomerGrid",
         "CustomerTaxSection",
         "CustomerWalletView",
+        "DataExportDetail",
+        "DataExportDialog",
         "EntitlementTable",
         "EnvironmentSwitcher",
+        "ExportRunList",
+        "ExportsOverview",
         "FeatureForm",
         "FeatureGrid",
         "GroupGrid",
@@ -4945,8 +5823,13 @@
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "PlanForm",
+        "PortalCredits",
+        "PortalOverview",
         "PriceUnitGrid",
         "PricingCatalogBlock",
+        "RunExportDialog",
+        "S3ConnectionDialog",
+        "S3ConnectionList",
         "ShellCreateMenu",
         "ShellSearch",
         "SubscriptionDetailView",
@@ -4957,6 +5840,131 @@
         "TierTable",
         "WebhookEndpointDetail",
         "WebhookEndpointGrid"
+      ],
+      "story": null
+    },
+    "PortalCredits": {
+      "file": "src/pages/customer-portal/PortalCredits.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "LedgerRow",
+        "Loaded",
+        "Money",
+        "PlusIcon",
+        "PortalEmpty",
+        "Section",
+        "WalletIcon"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalEmpty": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalCredits",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalUsage"
+      ],
+      "story": null
+    },
+    "PortalInvoices": {
+      "file": "src/pages/customer-portal/PortalInvoices.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EyeIcon",
+        "InvoiceStatusPill",
+        "Loaded",
+        "Money",
+        "PortalEmpty",
+        "Section"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalInvoiceSheet": {
+      "file": "src/pages/customer-portal/PortalInvoiceSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "ErrorState",
+        "InvoiceStatusPill",
+        "Money",
+        "Sheet"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalNotice": {
+      "file": "src/pages/customer-portal/PortalNotice.tsx",
+      "layer": "surface",
+      "composes": [
+        "LockIcon"
+      ],
+      "usedBy": [],
+      "story": null
+    },
+    "PortalOverview": {
+      "file": "src/pages/customer-portal/PortalOverview.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CreditCardIcon",
+        "Loaded",
+        "Money",
+        "PlusIcon",
+        "PortalEmpty",
+        "Section",
+        "SimpleTable",
+        "StarIcon",
+        "SubscriptionStatusPill",
+        "SummaryCell",
+        "WalletIcon"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalShell": {
+      "file": "src/pages/customer-portal/PortalShell.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
+    "PortalUsage": {
+      "file": "src/pages/customer-portal/PortalUsage.tsx",
+      "layer": "surface",
+      "composes": [
+        "Calendar",
+        "CalendarIcon",
+        "Loaded",
+        "MeterTrack",
+        "Money",
+        "PortalEmpty",
+        "Section"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
       ],
       "story": null
     },
@@ -5058,6 +6066,22 @@
       "usedBy": [],
       "story": "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx"
     },
+    "Printer": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PrinterIcon": {
+      "file": "src/reui/icons/default/outline/printer.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
     "ProfileAvatarUpload": {
       "file": "src/components/blocks/settings-7/components/profile-avatar-upload.tsx",
       "layer": "vendor/blocks",
@@ -5091,7 +6115,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "SubscriptionDetailView"
@@ -5132,6 +6157,27 @@
       "composes": [],
       "usedBy": [],
       "story": "./src/pages/shared/QuotaCard.stories.tsx"
+    },
+    "RadioRows": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "RemoveCardDialog"
+      ],
+      "story": null
     },
     "Receipt": {
       "file": "src/icons/index.ts",
@@ -5202,12 +6248,41 @@
       ],
       "story": null
     },
+    "RemoveCardDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
     "Repeat": {
       "file": "src/icons/index.ts",
       "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "RequireAccess": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/access/Access.stories.tsx"
     },
     "ResourceNavigation": {
       "file": "src/compositions/layout/ResourceNavigation.tsx",
@@ -5316,7 +6391,9 @@
     "RowActionsMenu": {
       "file": "src/pages/shared/RowActionsMenu.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "PencilIcon"
+      ],
       "usedBy": [
         "ChargeTable",
         "CreditGrantTable",
@@ -5335,6 +6412,77 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "RunExportDialog": {
+      "file": "src/pages/developers/exports/ExportForms.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChoiceCards",
+        "DateInput",
+        "Field",
+        "FormDialog",
+        "OptionSelect",
+        "PlusIcon"
+      ],
+      "usedBy": [
+        "ConnectionExports",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
+        "S3ConnectionList"
+      ],
+      "story": "./src/pages/developers/exports/ExportForms.stories.tsx"
+    },
+    "RunPanel": {
+      "file": "src/components/blocks/ai-chat-5/components/run-panel.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "S3ConnectionDialog": {
+      "file": "src/pages/developers/exports/ExportForms.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChoiceCards",
+        "DateInput",
+        "Field",
+        "FormDialog",
+        "OptionSelect",
+        "PlusIcon"
+      ],
+      "usedBy": [
+        "ConnectionExports",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
+        "S3ConnectionList"
+      ],
+      "story": "./src/pages/developers/exports/ExportForms.stories.tsx"
+    },
+    "S3ConnectionList": {
+      "file": "src/pages/developers/exports/ExportFlow.tsx",
+      "layer": "surface",
+      "composes": [
+        "ConfirmDialog",
+        "DataExportDialog",
+        "DetailList",
+        "DetailMoreMenu",
+        "DetailShell",
+        "DetailTabs",
+        "EntityList",
+        "EyeIcon",
+        "PageBody",
+        "Pill",
+        "PlusIcon",
+        "RunExportDialog",
+        "S3ConnectionDialog",
+        "Section",
+        "SectionEmpty",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/exports/ExportFlow.stories.tsx"
     },
     "Save": {
       "file": "src/icons/index.ts",
@@ -5410,17 +6558,22 @@
         "ActivitySection",
         "AddonSubscriptionsView",
         "ChargeTable",
+        "ConnectionExports",
         "ContextualSection",
         "CostMarginCard",
         "CouponRedemptionsView",
         "CreditGrantTable",
         "CustomerAnalyticsView",
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "CustomerEventsGrid",
         "CustomerTaxSection",
         "CustomerUsageSummary",
         "CustomerWalletView",
+        "DataExportDetail",
         "EntitlementTable",
+        "ExportRunList",
+        "ExportsOverview",
         "FeatureDetailView",
         "FormPage",
         "GroupMembersView",
@@ -5429,9 +6582,15 @@
         "PlanAiSetupView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
+        "PortalCredits",
+        "PortalInvoices",
+        "PortalOverview",
+        "PortalUsage",
         "RelatedCard",
+        "S3ConnectionList",
         "SubscriptionDetailView",
         "TaxDialog",
+        "UsageBillingView",
         "WebhookEndpointDetail",
         "WebhookEventCatalog"
       ],
@@ -5444,12 +6603,25 @@
         "SceneIllustration"
       ],
       "usedBy": [
-        "ChargeTable",
+        "ConnectionExports",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
         "RevenueReport",
+        "S3ConnectionList",
         "SubTabState",
-        "SubscriptionDetailView"
+        "UsageBillingView"
       ],
       "story": "./src/compositions/feedback/SectionEmpty.stories.tsx"
+    },
+    "SectionToolsContext": {
+      "file": "src/compositions/layout/Section.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "DetailTable"
+      ],
+      "story": "./src/compositions/layout/Section.stories.tsx"
     },
     "SecurityTab": {
       "file": "src/components/blocks/settings-7/components/security-tab.tsx",
@@ -5463,13 +6635,15 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "ApiCard",
         "CustomerAnalyticsView",
         "DashboardHome",
         "FilterSelect",
+        "UsageBillingView",
         "UsageCard"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -5491,10 +6665,12 @@
       "story": "./src/pages/auth/SetPasswordForm.stories.tsx"
     },
     "SettingRow": {
-      "file": "src/components/blocks/settings-7/components/setting-row.tsx",
-      "layer": "vendor/blocks",
+      "file": "src/compositions/layout/settingsSurface.tsx",
+      "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
       "story": null
     },
     "SettingRowGroup": {
@@ -5518,6 +6694,15 @@
       "usedBy": [],
       "story": null
     },
+    "SettingsBlock": {
+      "file": "src/compositions/layout/SettingsBlock.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
+      "story": null
+    },
     "SettingsCard": {
       "file": "src/components/blocks/settings-7/components/settings-card.tsx",
       "layer": "vendor/blocks",
@@ -5529,7 +6714,9 @@
       "file": "src/components/blocks/settings-7/components/settings-field-group.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "UsageBillingView"
+      ],
       "story": null
     },
     "SettingsHeading": {
@@ -5574,6 +6761,7 @@
         "CustomerEventsGrid",
         "EventDetailSheet",
         "ManageConnectionSheet",
+        "PortalInvoiceSheet",
         "UsageSyncDetailSheet",
         "WebhookMessageSheet"
       ],
@@ -5603,6 +6791,7 @@
       "file": "src/compositions/shell/ShellCreateMenu.tsx",
       "layer": "composition",
       "composes": [
+        "LockedMark",
         "PlusIcon"
       ],
       "usedBy": [],
@@ -5747,12 +6936,22 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
+        "ConnectionExports",
+        "CustomerDetail",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
+        "PlanAiSetupView",
+        "PortalOverview",
         "PriceOverrideForm",
+        "S3ConnectionList",
         "SubscriptionForm",
-        "TierTable"
+        "TierTable",
+        "UsageBillingView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -5828,6 +7027,8 @@
         "ArrowUpIcon"
       ],
       "usedBy": [
+        "CustomerDetail",
+        "DetailTable",
         "EntityList"
       ],
       "story": "./src/compositions/tables/SortMenu.stories.tsx"
@@ -5876,7 +7077,8 @@
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "WebhookEndpointDetail"
@@ -5922,7 +7124,9 @@
       "file": "src/reui/icons/default/outline/star.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "PortalOverview"
+      ],
       "story": null
     },
     "StatCards": {
@@ -5955,7 +7159,8 @@
         "FeatureDetailView",
         "FeatureGrid",
         "InvoiceDetailView",
-        "PlanGrid"
+        "PlanGrid",
+        "UsageBillingView"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -5970,7 +7175,8 @@
       "file": "src/pages/customers/SubscriptionCard.tsx",
       "layer": "surface",
       "composes": [
-        "CopyIcon"
+        "CopyIcon",
+        "EyeIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/SubscriptionCard.stories.tsx"
@@ -5979,6 +7185,7 @@
       "file": "src/pages/contracts/SubscriptionDetailView.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "ActivitySection",
         "ChargeAlertForm",
         "ChargeSheet",
@@ -5988,25 +7195,32 @@
         "ContractIntegrations",
         "ContractQuantityDialog",
         "ContractSectionDialogs",
+        "CopyIcon",
         "DetailMoreMenu",
         "DetailShell",
         "DetailTable",
         "DetailTabs",
+        "EntitlementUsageTable",
         "EntityLink",
         "FormDialog",
         "InvoiceStatusBadge",
-        "LoadingRows",
         "MetadataCard",
         "OverviewTiles",
+        "PackageIcon",
+        "PauseContractDialog",
         "PaymentStatusBadge",
+        "PencilIcon",
         "Pill",
         "PlusIcon",
         "Properties",
         "RelatedCard",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty",
-        "SubscriptionStatusBadge"
+        "SubTabState",
+        "SubscriptionStatusBadge",
+        "TotalRow",
+        "TotalsList",
+        "WriteGate"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionDetailView.stories.tsx"
@@ -6015,13 +7229,17 @@
       "file": "src/pages/contracts/SubscriptionForm.tsx",
       "layer": "surface",
       "composes": [
+        "CalendarIcon",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
         "ChoiceCards",
         "ContractChargeDialog",
-        "ContractSummary",
         "CreditGrantCreateForm",
         "DateInput",
+        "DetailTable",
         "EmptyState",
         "FormCard",
+        "FormDialog",
         "FormPage",
         "FormRow",
         "OptionCombobox",
@@ -6031,6 +7249,7 @@
         "PriceOverrideForm",
         "RowActionsMenu",
         "SimpleTable",
+        "UserIcon",
         "UsersIcon",
         "WalletIcon"
       ],
@@ -6061,6 +7280,22 @@
       ],
       "story": "./src/pages/contracts/SubscriptionStatusBadge.stories.tsx"
     },
+    "SubscriptionStatusPill": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalOverview"
+      ],
+      "story": null
+    },
     "SubTabState": {
       "file": "src/compositions/detail/SubTabState.tsx",
       "layer": "composition",
@@ -6073,6 +7308,7 @@
         "ChargeTable",
         "CreditGrantTable",
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "CustomerEventsGrid",
         "CustomerUsageSummary",
         "CustomerWalletView",
@@ -6081,16 +7317,34 @@
         "GroupMembersView",
         "InvoiceDetailView",
         "PlanCreditGrantsView",
-        "PlanEntitlementsView"
+        "PlanEntitlementsView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/SubTabState.stories.tsx"
+    },
+    "SummaryCell": {
+      "file": "src/pages/customer-portal/parts.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
+        "CheckIcon",
+        "CopyIcon",
+        "ErrorState",
+        "Pill"
+      ],
+      "usedBy": [
+        "PortalOverview"
+      ],
+      "story": null
     },
     "SummaryRow": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [
         "CheckIcon",
-        "CopyIcon"
+        "CopyIcon",
+        "LockedMark"
       ],
       "usedBy": [
         "DetailStats",
@@ -6164,7 +7418,6 @@
         "AddonGrid",
         "EventGrid",
         "FeatureGrid",
-        "PlanAiSetupView",
         "PlanGrid"
       ],
       "story": null
@@ -6173,6 +7426,7 @@
       "file": "src/pages/customers/CustomerTaxSection.tsx",
       "layer": "surface",
       "composes": [
+        "AccessScope",
         "AppFailure",
         "Composer",
         "ConfirmDialog",
@@ -6183,7 +7437,8 @@
         "LoadingRows",
         "OptionSelect",
         "PlusIcon",
-        "Section"
+        "Section",
+        "WriteGate"
       ],
       "usedBy": [
         "ContractSectionDialogs"
@@ -6350,6 +7605,38 @@
       "usedBy": [],
       "story": "./src/compositions/tables/Toolbar.stories.tsx"
     },
+    "TotalRow": {
+      "file": "src/compositions/detail/DetailKit.tsx",
+      "layer": "composition",
+      "composes": [
+        "CheckIcon",
+        "CopyIcon",
+        "LockedMark"
+      ],
+      "usedBy": [
+        "CreditNoteDetailView",
+        "InvoiceDetailView",
+        "InvoiceForm",
+        "SubscriptionDetailView"
+      ],
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
+    "TotalsList": {
+      "file": "src/compositions/detail/DetailKit.tsx",
+      "layer": "composition",
+      "composes": [
+        "CheckIcon",
+        "CopyIcon",
+        "LockedMark"
+      ],
+      "usedBy": [
+        "CreditNoteDetailView",
+        "InvoiceDetailView",
+        "InvoiceForm",
+        "SubscriptionDetailView"
+      ],
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
     "Trash2": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -6409,6 +7696,13 @@
       "usedBy": [],
       "story": null
     },
+    "Truck": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Type": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -6423,6 +7717,20 @@
       "usedBy": [],
       "story": null
     },
+    "UpgradeView": {
+      "file": "src/pages/selfBilling/UpgradeView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowLeftIcon",
+        "CheckIcon",
+        "Field",
+        "InfoHint",
+        "LockIcon",
+        "OptionCombobox"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/UpgradeView.stories.tsx"
+    },
     "UpIcon": {
       "file": "src/reui/icons/default/filled/up.tsx",
       "layer": "other",
@@ -6436,6 +7744,24 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "UsageBillingView": {
+      "file": "src/pages/selfBilling/UsageBillingView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowUpRightIcon",
+        "DelayedHint",
+        "Section",
+        "SectionEmpty",
+        "SegmentMeter",
+        "SettingRow",
+        "SettingsBlock",
+        "SettingsFieldGroup",
+        "SimpleTable",
+        "Status"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/selfBilling/UsageBillingView.stories.tsx"
     },
     "UsageCard": {
       "file": "src/pages/home/DashboardHome.tsx",
@@ -6466,7 +7792,10 @@
       "file": "src/pages/shared/UsageMeter.tsx",
       "layer": "surface",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "EntitlementUsage",
+        "EntitlementUsageTable"
+      ],
       "story": "./src/pages/shared/UsageMeter.stories.tsx"
     },
     "UsageSyncDetailSheet": {
@@ -6525,7 +7854,9 @@
       "composes": [],
       "usedBy": [
         "CustomerGrid",
+        "InvoiceDetailView",
         "ShellAccount",
+        "SubscriptionForm",
         "SubscriptionGrid"
       ],
       "story": null
@@ -6589,6 +7920,8 @@
         "InvoiceDetailView",
         "InvoiceGrid",
         "PageShell",
+        "PortalCredits",
+        "PortalOverview",
         "SubscriptionForm"
       ],
       "story": null
@@ -6783,6 +8116,13 @@
       ],
       "story": null
     },
+    "Welcome": {
+      "file": "src/components/blocks/ai-chat-5/components/welcome.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Workflow": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -6826,6 +8166,30 @@
       "usedBy": [],
       "story": null
     },
+    "WriteGate": {
+      "file": "src/compositions/access/Access.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "LockIcon",
+        "PageLoadingState"
+      ],
+      "usedBy": [
+        "ChargeTable",
+        "CreditGrantTable",
+        "CustomerDetail",
+        "CustomerTaxSection",
+        "EditableCard",
+        "EntitlementTable",
+        "EntityList",
+        "FeatureGrid",
+        "PlanCreditGrantsView",
+        "PlanEntitlementsView",
+        "SubscriptionDetailView",
+        "TaxDialog"
+      ],
+      "story": "./src/compositions/access/Access.stories.tsx"
+    },
     "XCircle": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -6842,6 +8206,19 @@
     }
   },
   "stories": {
+    "./src/compositions/access/Access.stories.tsx": {
+      "title": "Building blocks/Access/Access control",
+      "component": null,
+      "uses": [
+        "AccessProvider",
+        "AccessScope",
+        "CopyIcon",
+        "DetailMoreMenu",
+        "PencilIcon",
+        "RequireAccess",
+        "WriteGate"
+      ]
+    },
     "./src/compositions/charts/ChartBox.stories.tsx": {
       "title": "Building blocks/Charts & metrics/ChartBox",
       "component": "ChartBox",
@@ -6872,7 +8249,9 @@
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
-        "SummaryRow"
+        "SummaryRow",
+        "TotalRow",
+        "TotalsList"
       ]
     },
     "./src/compositions/detail/DetailShell.stories.tsx": {
@@ -6978,6 +8357,7 @@
       "component": "SectionEmpty",
       "uses": [
         "PlusIcon",
+        "Section",
         "SectionEmpty"
       ]
     },
@@ -7464,6 +8844,13 @@
         "CreditNoteGrid"
       ]
     },
+    "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx": {
+      "title": "App/Billing/Hosted invoice/Page",
+      "component": "HostedInvoiceView",
+      "uses": [
+        "HostedInvoiceView"
+      ]
+    },
     "./src/pages/billing/invoices/InvoiceBillingDetailBlock.stories.tsx": {
       "title": "App/Billing/Invoices/Billing details block",
       "component": "InvoiceBillingDetailBlock",
@@ -7555,6 +8942,13 @@
         "PaymentStatusBadge"
       ]
     },
+    "./src/pages/contracts/ChargeCouponDialog.stories.tsx": {
+      "title": "App/Contracts/Charge coupon dialog",
+      "component": "ChargeCouponDialog",
+      "uses": [
+        "ChargeCouponDialog"
+      ]
+    },
     "./src/pages/contracts/ContractIntegrations.stories.tsx": {
       "title": "App/Contracts/Contract integrations",
       "component": "ContractIntegrations",
@@ -7608,6 +9002,14 @@
         "SubscriptionStatusBadge"
       ]
     },
+    "./src/pages/customer-portal/CustomerPortalView.stories.tsx": {
+      "title": "App/Billing/Customer portal/Page",
+      "component": null,
+      "uses": [
+        "CustomerPortalView",
+        "PortalNotice"
+      ]
+    },
     "./src/pages/customers/CustomerAnalyticsView.stories.tsx": {
       "title": "App/Customers/Customer analytics",
       "component": "CustomerAnalyticsView",
@@ -7631,6 +9033,13 @@
         "PageBody",
         "PageLoadingState",
         "PageShell"
+      ]
+    },
+    "./src/pages/customers/CustomerEntitlementUsage.stories.tsx": {
+      "title": "App/Customers/Entitlement usage",
+      "component": "CustomerEntitlementUsage",
+      "uses": [
+        "CustomerEntitlementUsage"
       ]
     },
     "./src/pages/customers/CustomerEventsGrid.stories.tsx": {
@@ -7711,6 +9120,23 @@
       "component": "DataExportGrid",
       "uses": [
         "DataExportGrid"
+      ]
+    },
+    "./src/pages/developers/exports/ExportFlow.stories.tsx": {
+      "title": "App/Developers/Exports/Export flow",
+      "component": null,
+      "uses": [
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
+        "S3ConnectionList"
+      ]
+    },
+    "./src/pages/developers/exports/ExportForms.stories.tsx": {
+      "title": "App/Developers/Exports/New export dialog",
+      "component": "DataExportDialog",
+      "uses": [
+        "DataExportDialog"
       ]
     },
     "./src/pages/developers/usage-syncs/UsageSyncDetailSheet.stories.tsx": {
@@ -7862,7 +9288,9 @@
       "component": "CatalogDetailFrame",
       "uses": [
         "CatalogDetailFrame",
-        "CatalogStatusBadge"
+        "CatalogStatusBadge",
+        "CopyIcon",
+        "PencilIcon"
       ]
     },
     "./src/pages/product-catalog/charges/ChargeForm.stories.tsx": {
@@ -8095,6 +9523,36 @@
         "RevenueReport"
       ]
     },
+    "./src/pages/selfBilling/AccountStatus.stories.tsx": {
+      "title": "App/Self-billing/Account status",
+      "component": "AccountStatusPill",
+      "uses": [
+        "AccountLockedDialog",
+        "AccountStatusPill",
+        "CreatingPausedScreen"
+      ]
+    },
+    "./src/pages/selfBilling/CheckoutReturnView.stories.tsx": {
+      "title": "App/Self-billing/Checkout return",
+      "component": "CheckoutReturnView",
+      "uses": [
+        "CheckoutReturnView"
+      ]
+    },
+    "./src/pages/selfBilling/UpgradeView.stories.tsx": {
+      "title": "App/Self-billing/Upgrade",
+      "component": "UpgradeView",
+      "uses": [
+        "UpgradeView"
+      ]
+    },
+    "./src/pages/selfBilling/UsageBillingView.stories.tsx": {
+      "title": "App/Self-billing/Usage & billing",
+      "component": "UsageBillingView",
+      "uses": [
+        "UsageBillingView"
+      ]
+    },
     "./src/pages/settings/cost-sheets/CostMarginCard.stories.tsx": {
       "title": "App/Settings/Cost sheets/Cost margin card",
       "component": "CostMarginCard",
@@ -8159,6 +9617,13 @@
         "ListState",
         "PageBody",
         "PageShell"
+      ]
+    },
+    "./src/pages/settings/environments/EnvironmentCopyForm.stories.tsx": {
+      "title": "App/Settings/Environments/Copy environment form",
+      "component": "EnvironmentCopyForm",
+      "uses": [
+        "EnvironmentCopyForm"
       ]
     },
     "./src/pages/settings/environments/EnvironmentForm.stories.tsx": {
@@ -8294,6 +9759,21 @@
         "DetailTable"
       ]
     },
+    "./src/pages/shared/EntitlementUsage.stories.tsx": {
+      "title": "Building blocks/Charts & metrics/EntitlementUsage",
+      "component": "EntitlementUsage",
+      "uses": [
+        "EntitlementUsage",
+        "EntitlementUsageTable"
+      ]
+    },
+    "./src/pages/shared/EntityAlertDialog.stories.tsx": {
+      "title": "Building blocks/Feedback/EntityAlertDialog",
+      "component": "EntityAlertDialog",
+      "uses": [
+        "EntityAlertDialog"
+      ]
+    },
     "./src/pages/shared/EntityHeader.stories.tsx": {
       "title": "Building blocks/Detail pages/EntityHeader",
       "component": "EntityHeader",
@@ -8312,6 +9792,7 @@
       "uses": [
         "BookOpenIcon",
         "EntityList",
+        "EyeIcon",
         "RocketIcon",
         "WrenchIcon"
       ]
@@ -8363,6 +9844,7 @@
       "title": "Building blocks/Tables & lists/RowActionsMenu",
       "component": "RowActionsMenu",
       "uses": [
+        "CopyIcon",
         "RowActionsMenu"
       ]
     },
@@ -8634,12 +10116,10 @@
       "pattern": "Detail",
       "route": "/customers/$customerId",
       "uses": [
-        "AppFailure",
         "ConfirmDialog",
         "CustomerDetail",
+        "CustomerEntitlementUsage",
         "EmptyState",
-        "LoadingRows",
-        "QuotaCard",
         "Section"
       ]
     },
@@ -8660,6 +10140,14 @@
         "CustomerGrid",
         "ListState",
         "PageBody"
+      ]
+    },
+    "EnvironmentCopyFormPage": {
+      "file": "apps/console/src/pages/environments/EnvironmentCopyFormPage.tsx",
+      "pattern": "Form",
+      "route": null,
+      "uses": [
+        "EnvironmentCopyForm"
       ]
     },
     "EnvironmentFormPage": {
@@ -8690,14 +10178,45 @@
         "PageBody"
       ]
     },
+    "ConnectionExportsPage": {
+      "file": "apps/console/src/pages/exports/ConnectionExportsPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "ConnectionExports",
+        "DataExportGrid",
+        "ErrorState",
+        "ListState",
+        "PageLoadingState"
+      ]
+    },
+    "DataExportDetailPage": {
+      "file": "apps/console/src/pages/exports/DataExportDetailPage.tsx",
+      "pattern": "Detail",
+      "route": null,
+      "uses": [
+        "DataExportDetail",
+        "ErrorState",
+        "ExportRunList",
+        "PageLoadingState"
+      ]
+    },
     "ExportListPage": {
       "file": "apps/console/src/pages/exports/ExportListPage.tsx",
       "pattern": "List",
       "route": "/exports",
       "uses": [
         "DataExportGrid",
-        "ListState",
-        "PageBody"
+        "ExportsOverview",
+        "ListState"
+      ]
+    },
+    "S3ConnectionsPage": {
+      "file": "apps/console/src/pages/exports/S3ConnectionsPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "S3ConnectionList"
       ]
     },
     "FeatureDetailPage": {
@@ -8706,6 +10225,7 @@
       "route": "/features/$featureId",
       "uses": [
         "ConfirmDialog",
+        "EntityAlertDialog",
         "FeatureCloneDialog",
         "FeatureDetailView"
       ]
@@ -8865,7 +10385,6 @@
       "pattern": "Other",
       "route": "/plans/ai",
       "uses": [
-        "PageBody",
         "PlanAiSetupView"
       ]
     },
@@ -8964,12 +10483,37 @@
         "PricingCatalogBlock"
       ]
     },
-    "RevenuePage": {
-      "file": "apps/console/src/pages/revenue/RevenuePage.tsx",
-      "pattern": "Dashboard",
-      "route": "/revenue",
+    "ReportsPage": {
+      "file": "apps/console/src/pages/revenue/ReportsPage.tsx",
+      "pattern": "Other",
+      "route": "/reports",
       "uses": [
         "RevenueReport"
+      ]
+    },
+    "CheckoutReturnPage": {
+      "file": "apps/console/src/pages/selfBilling/CheckoutReturnPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "CheckoutReturnView"
+      ]
+    },
+    "UpgradePage": {
+      "file": "apps/console/src/pages/selfBilling/UpgradePage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "PageLoadingState",
+        "UpgradeView"
+      ]
+    },
+    "UsageBillingPage": {
+      "file": "apps/console/src/pages/selfBilling/UsageBillingPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "UsageBillingView"
       ]
     },
     "SettingsPage": {
@@ -8979,7 +10523,8 @@
       "uses": [
         "EmbeddedPageContext",
         "SettingsShell",
-        "UsersIcon"
+        "UsersIcon",
+        "WriteGate"
       ]
     },
     "CustomerSubscriptionFormPage": {
@@ -8999,6 +10544,7 @@
       "uses": [
         "ConfirmDialog",
         "DateInput",
+        "EntityAlertDialog",
         "OptionSelect",
         "SubscriptionDetailView"
       ]

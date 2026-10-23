@@ -1,3 +1,5 @@
+import { RBAC_ENTITY } from '@fp/domain'
+import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
@@ -48,7 +50,7 @@ function cadenceLabel(grant: CreditGrant): string {
   return CREDIT_GRANT_CADENCE_LABEL[grant.cadence]
 }
 
-export function CreditGrantTable({
+function CreditGrantTableInner({
   grants,
   onAdd,
   onEdit,
@@ -63,14 +65,21 @@ export function CreditGrantTable({
 }: CreditGrantTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
-    <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
-      <PlusIcon aria-hidden="true" />
-      Add credit grant
-    </Button>
+    <WriteGate>
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3" onClick={onAdd}>
+        <PlusIcon aria-hidden="true" />
+        Add credit grant
+      </Button>
+    </WriteGate>
   ) : null
   if (grants.length === 0) {
     return (
-      <Section title="Credit grants" flush>
+      <Section
+        table
+        title="Credit grants"
+        {...(showTitle ? { showTitle } : {})}
+        {...(addButton ? { action: addButton } : {})}
+      >
         <SubTabState
           hasData={false}
           isLoading={isLoading ?? false}
@@ -85,7 +94,6 @@ export function CreditGrantTable({
             scene: 'catalog',
             title: 'No credit grants yet',
             description: `Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`,
-            action: addButton,
           }}
         >
           {null}
@@ -95,11 +103,15 @@ export function CreditGrantTable({
   }
 
   return (
-    <Section table title="Credit grants" {...(showTitle ? { showTitle } : {})}>
+    <Section
+      table
+      title="Credit grants"
+      {...(showTitle ? { showTitle } : {})}
+      {...(addButton ? { action: addButton } : {})}
+    >
       <DetailTable
         compact
         label="Credit grants"
-        {...(addButton ? { action: addButton } : {})}
         noun="credit grants"
         rows={grants}
         getRowId={(grant) => grant.id}
@@ -151,5 +163,14 @@ export function CreditGrantTable({
         ]}
       />
     </Section>
+  )
+}
+
+/** `CreditGrantTable`, scoped to the entity it writes (CreditGrant). */
+export function CreditGrantTable(props: Parameters<typeof CreditGrantTableInner>[0]) {
+  return (
+    <AccessScope entity={RBAC_ENTITY.CreditGrant}>
+      <CreditGrantTableInner {...props} />
+    </AccessScope>
   )
 }

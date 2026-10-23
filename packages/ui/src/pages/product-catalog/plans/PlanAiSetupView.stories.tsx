@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { type PricingSchema, normalisePricingSchema } from '@fp/domain'
-import { PlanAiSetupView } from './PlanAiSetupView'
+import { type PlanAiCreateStep, PlanAiSetupView } from './PlanAiSetupView'
 
 /** What the parser answers for the description in `TYPED`, normalised. */
 const PARSED: PricingSchema = normalisePricingSchema({
@@ -54,28 +54,32 @@ function Harness({
   isApplying?: boolean
   parseError?: string | null
   applyError?: string | null
-  applyStep?: string | null
-  onParse?: () => void
+  createStep?: PlanAiCreateStep | null
+  created?: boolean
+  onParse?: (description: string) => void
   onApply?: () => void
   onDiscard?: () => void
   onCancel?: () => void
 }) {
   const [description, setDescription] = useState(initialDescription)
   return (
-    <PlanAiSetupView
-      description={description}
-      onDescriptionChange={setDescription}
-      onParse={rest.onParse ?? fn()}
-      isParsing={rest.isParsing ?? false}
-      parseError={rest.parseError ?? null}
-      schema={rest.schema ?? null}
-      onDiscard={rest.onDiscard ?? fn()}
-      onApply={rest.onApply ?? fn()}
-      isApplying={rest.isApplying ?? false}
-      applyError={rest.applyError ?? null}
-      applyStep={rest.applyStep ?? null}
-      onCancel={rest.onCancel ?? fn()}
-    />
+    <div className="flex h-svh flex-col">
+      <PlanAiSetupView
+        description={description}
+        onDescriptionChange={setDescription}
+        onParse={rest.onParse ?? fn()}
+        isParsing={rest.isParsing ?? false}
+        parseError={rest.parseError ?? null}
+        schema={rest.schema ?? null}
+        onDiscard={rest.onDiscard ?? fn()}
+        onApply={rest.onApply ?? fn()}
+        isApplying={rest.isApplying ?? false}
+        applyError={rest.applyError ?? null}
+        createStep={rest.createStep ?? null}
+        created={rest.created ?? false}
+        onCancel={rest.onCancel ?? fn()}
+      />
+    </div>
   )
 }
 
@@ -88,33 +92,51 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Nothing typed yet: the only action is disabled, so it cannot be run empty. */
-export const Empty: Story = {
+/** The prompt: "Set up your pricing", the composer, and five templates. */
+export const Prompt: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('button', { name: /read my pricing/i })).toBeDisabled()
+    await expect(canvas.getByRole('heading', { name: 'Set up your pricing' })).toBeVisible()
+    await expect(canvas.getByLabelText('Describe your pricing')).toBeVisible()
+    for (const name of ['Railway', 'Cursor', 'Gemini', 'Apollo', 'Vapi']) {
+      await expect(canvas.getByRole('radio', { name: new RegExp(name) })).toBeVisible()
+    }
   },
 }
 
-export const Typed: Story = {
-  // The spy has to be an arg, not a Harness default, for `args.onParse` to be it.
-  args: { initialDescription: TYPED, onParse: fn() },
+/** A template fills the box and sits in it as a chip; clearing it empties the box. */
+export const PickATemplate: Story = {
+  args: { onParse: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    const read = canvas.getByRole('button', { name: /read my pricing/i })
-    await expect(read).toBeEnabled()
-    await userEvent.click(read)
-    await expect(args.onParse).toHaveBeenCalled()
+    await userEvent.click(canvas.getByRole('radio', { name: /Railway/ }))
+    const box = canvas.getByLabelText('Describe your pricing') as HTMLTextAreaElement
+    await expect(box.value).toContain("Railway's pricing")
+    await expect(canvas.getByText('Railway template')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Generate pricing' }))
+    await expect(args.onParse).toHaveBeenCalledWith(expect.stringContaining("Railway's pricing"))
   },
 }
 
-export const Parsing: Story = {
+/** An empty send generates from the example, as the reference does. */
+export const EmptySendUsesTheExample: Story = {
+  args: { onParse: fn() },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Generate pricing' }))
+    await expect(args.onParse).toHaveBeenCalledWith(
+      expect.stringContaining('free plan and a pro plan'),
+    )
+  },
+}
+
+/** Drafting: the review header, a skeleton, and the progress card. */
+export const Drafting: Story = {
   args: { initialDescription: TYPED, isParsing: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Reading your pricing')).toBeVisible()
-    // The review must not be on screen while it is still being produced.
-    await expect(canvas.queryByText('What this will create')).toBeNull()
+    await expect(canvas.getByText('Drafting your pricing')).toBeVisible()
+    await expect(canvas.getByText('Reading the description')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Create all of this' })).toBeDisabled()
   },
 }
 
@@ -125,65 +147,64 @@ export const Parsing: Story = {
  * someone unpicks by hand.
  */
 export const Reviewing: Story = {
-  args: { initialDescription: TYPED, schema: PARSED },
-  play: async ({ canvasElement }) => {
+  args: { initialDescription: TYPED, schema: PARSED, onApply: fn() },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('What this will create')).toBeVisible()
-    // The counts say how much is about to happen, before it happens.
-    await expect(
-      canvas.getByText('2 features · 1 plan · 2 prices · 2 entitlements · 1 credit grant'),
-    ).toBeVisible()
-    await expect(canvas.getByText('API Calls')).toBeVisible()
-    await expect(canvas.getByText('Starter')).toBeVisible()
-    await expect(canvas.getByText('Welcome credits')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: /create all of this/i })).toBeEnabled()
+    await expect(canvas.getByRole('heading', { name: 'Review your pricing' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Starter' })).toBeVisible()
+    await expect(canvas.getByText('+ usage')).toBeVisible()
+    await expect(canvas.getByText('5,000 credits once')).toBeVisible()
+    await expect(canvas.getByText('Features and meters')).toBeVisible()
+    await expect(canvas.getByText('api_calls')).toBeVisible()
+    await expect(canvas.getByText('Credit grants')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Create all of this' }))
+    await expect(args.onApply).toHaveBeenCalled()
   },
 }
 
-/** A schema that cannot be created says why, and the create button is off. */
 export const HasProblems: Story = {
-  args: { initialDescription: 'Charge per minute.', schema: BROKEN },
+  args: { initialDescription: TYPED, schema: BROKEN },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('These have to be fixed first')).toBeVisible()
     await expect(canvas.getByText('"Minutes" sums usage but names no field to sum.')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: /create all of this/i })).toBeDisabled()
+    await expect(canvas.getByRole('button', { name: 'Create all of this' })).toBeDisabled()
   },
 }
 
-export const Applying: Story = {
-  args: {
-    initialDescription: TYPED,
-    schema: PARSED,
-    isApplying: true,
-    applyStep: 'Creating features',
-  },
+/** Creating: the canvas blurs under a card that follows the real write. */
+export const Creating: Story = {
+  args: { initialDescription: TYPED, schema: PARSED, isApplying: true, createStep: 'prices' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Creating features…')).toBeVisible()
+    await expect(canvas.getByText('Creating your pricing')).toBeVisible()
+    await expect(canvas.getByText('Adding prices')).toBeVisible()
     await expect(canvas.getByRole('button', { name: /creating…/i })).toBeDisabled()
   },
 }
 
-/** A half-finished apply says what survived, rather than implying a clean failure. */
+export const Created: Story = {
+  args: { initialDescription: TYPED, schema: PARSED, created: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Your pricing has been created')).toBeVisible()
+    await expect(canvas.getByText('2 features · 1 plan · 1 credit grant')).toBeVisible()
+  },
+}
+
 export const ApplyFailed: Story = {
   args: {
     initialDescription: TYPED,
     schema: PARSED,
-    applyError:
-      'Some of that could not be created. What was created is kept; read the pricing again to see what is left.',
+    applyError: 'The plan "Starter" already exists.',
   },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByText('Some of that could not be created')).toBeVisible()
+    await expect(within(canvasElement).getByText('Some of that could not be created')).toBeVisible()
   },
 }
 
 export const ParseFailed: Story = {
-  args: {
-    initialDescription: 'asdf',
-    parseError: 'Could not read that pricing. Try rewording it.',
-  },
+  args: { initialDescription: TYPED, parseError: 'The description could not be read.' },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('That could not be read')).toBeVisible()
   },

@@ -24,6 +24,8 @@ interface InvoiceShape {
   hasIssuer: boolean
   hasSubscription: boolean
   hasNumber: boolean
+  /** The invoice has a `hosted_invoice_url`: Open and Copy hosted invoice link are live. */
+  hasHostedLink?: boolean
   paymentsState: SubTabMode
   creditNotesState: SubTabMode
 }
@@ -46,6 +48,8 @@ function subTab(mode: SubTabMode, onRetry: () => void): SubTabQuery {
 
 type PlaygroundArgs = Omit<InvoiceDetailViewProps, 'invoice'> &
   InvoiceShape & { onRetrySubTab: () => void }
+
+const HOSTED_URL = 'https://invoice.flexprice.io/us/hit_demo.signature'
 
 /** Every line is a whole-dollar amount, and every fifth is zero so the always-hidden zero lines have something to hide. */
 function makeInvoice(
@@ -77,6 +81,7 @@ function makeInvoice(
     dueAt: args.status === InvoiceStatus.Draft ? null : 'May 26, 2026',
     subscriptionId: args.hasSubscription ? 'subs_demo' : null,
     subscriptionLabel: args.hasSubscription ? 'Scale · monthly' : '',
+    hostedUrl: args.hasHostedLink ? HOSTED_URL : null,
     lines,
     prepaidCredits: Math.min(100, subtotal),
     paid: args.paidAmount,
@@ -114,6 +119,7 @@ function InvoiceDetailPlayground({
   hasIssuer,
   hasSubscription,
   hasNumber,
+  hasHostedLink = false,
   paymentsState,
   creditNotesState,
   onRetrySubTab,
@@ -130,6 +136,7 @@ function InvoiceDetailPlayground({
     hasIssuer,
     hasSubscription,
     hasNumber,
+    hasHostedLink,
   })
   return (
     <InvoiceDetailView
@@ -236,8 +243,8 @@ export const Default: Story = {
     await expect(header.getByText('Finalized')).toBeVisible()
     await expect(header.getByText('Payment failed')).toBeVisible()
     // The header holds only the chips, the ID and More: no inline action buttons.
-    await expect(header.queryByRole('button', { name: 'Download PDF' })).toBeNull()
-    await expect(header.queryByRole('button', { name: 'Copy link' })).toBeNull()
+    await expect(header.queryByRole('button', { name: 'Download invoice' })).toBeNull()
+    await expect(header.queryByRole('button', { name: 'Copy hosted invoice link' })).toBeNull()
     await expect(canvas.getByRole('button', { name: /^Copy ID / })).toHaveTextContent('ID')
     // Stripe wording on the document.
     await expect(canvas.getByText('Date of issue')).toBeVisible()
@@ -265,18 +272,35 @@ export const MoreMenu: Story = {
     await expect(
       await screen.findByRole('menuitem', { name: /Record payment/ }),
     ).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('menuitem', { name: /Download PDF/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Download invoice/ }))
     await expect(args.onDownload).toHaveBeenCalledOnce()
     await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
     await screen.findByRole('menuitem', { name: 'Void invoice' })
-    await expect(screen.getByRole('menuitem', { name: /Copy link/ })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    )
-    await expect(screen.getByRole('menuitem', { name: /Issue credit memo/ })).toBeInTheDocument()
-    await expect(screen.getByRole('menuitem', { name: /Send invoice/ })).toBeInTheDocument()
+    await expect(
+      screen.getByRole('menuitem', { name: /Copy hosted invoice link/ }),
+    ).toHaveAttribute('aria-disabled', 'true')
+    await expect(screen.getByRole('menuitem', { name: /Issue a credit note/ })).toBeInTheDocument()
+    await expect(screen.getByRole('menuitem', { name: /Send communication/ })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('menuitem', { name: 'Void invoice' }))
     await expect(args.onVoid).toHaveBeenCalledOnce()
+  },
+}
+
+/** With a hosted link, More copies it (the list's row menu is where it opens); Related links to it. */
+export const HostedLink: Story = {
+  args: { hasHostedLink: true },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
+    await expect(
+      await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
+    ).not.toHaveAttribute('aria-disabled', 'true')
+    await expect(screen.queryByRole('menuitem', { name: /Open hosted invoice/ })).toBeNull()
+    await expect(canvas.getByRole('link', { name: HOSTED_URL })).toHaveAttribute(
+      'href',
+      HOSTED_URL,
+    )
   },
 }
 
@@ -426,12 +450,12 @@ export const DraftHasNoNote: Story = {
   },
 }
 
-/** Bill to names the customer without an avatar and tags the email and address rows. */
+/** Bill to names the customer without an avatar, and without billing tags. */
 export const BillTo: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Billing email')).toBeVisible()
-    await expect(canvas.getByText('Billing address')).toBeVisible()
+    await expect(canvas.queryByText('Billing email')).toBeNull()
+    await expect(canvas.queryByText('Billing address')).toBeNull()
   },
 }
 

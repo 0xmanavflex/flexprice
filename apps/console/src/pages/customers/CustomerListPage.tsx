@@ -7,9 +7,10 @@ import {
   useDeleteCustomer,
   serverReason,
 } from '@fp/query'
-import { CustomerGrid } from '@fp/ui/pages'
+import { CustomerGrid, Toaster } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
+import { useCustomerPortal } from '@/app/customerPortal/useCustomerPortal'
 import { toListFailure } from '../shared/listFailure'
 
 export interface CustomerListPageProps {
@@ -40,6 +41,7 @@ export function CustomerListPage({
   const remove = useDeleteCustomer()
 
   const [deleting, setDeleting] = useState<Customer | null>(null)
+  const portal = useCustomerPortal()
 
   const failure = toListFailure(customers.error, 'customers')
   const rows = customers.data?.customers ?? []
@@ -85,10 +87,12 @@ export function CustomerListPage({
             onCreate={onCreateCustomer}
             onEdit={(customer) => onEditCustomer(customer.id)}
             onDelete={setDeleting}
+            onOpenPortal={(customer) => void portal.open(customer)}
             onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
+      <Toaster />
 
       <ConfirmDialog
         open={deleting !== null}

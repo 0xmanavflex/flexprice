@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createSubscriptionSchema, emptyPhase, emptySubscription } from './subscription'
+import {
+  contractDateToInstant,
+  contractDay,
+  createSubscriptionSchema,
+  emptyPhase,
+  emptySubscription,
+} from './subscription'
 
 const base = { ...emptySubscription(), customerId: 'c', planId: 'p', currency: 'USD' }
 const endErrors = (value: unknown) => {
@@ -28,12 +34,12 @@ describe('contract and phase dates', () => {
         startDate: '2030-01-01',
         phases: [{ ...emptyPhase(), endDate: '2030-01-01' }],
       }),
-    ).toEqual(['The end must be after the start'])
+    ).toEqual(['The end has to come after the start'])
   })
 
   it('treats no start date as today', () => {
     expect(endErrors({ ...base, phases: [{ ...emptyPhase(), endDate: '2000-01-01' }] })).toEqual([
-      'The contract starts today, so it must end after today',
+      'The end has to come after the start',
     ])
   })
 
@@ -58,5 +64,68 @@ describe('contract and phase dates', () => {
         ],
       }),
     ).toEqual(['The end must be after the start'])
+  })
+})
+
+describe('billing date (Bill on a date you choose)', () => {
+  const anchorErrors = (value: unknown) => {
+    const result = createSubscriptionSchema.safeParse(value)
+    return result.success
+      ? []
+      : result.error.issues.filter((i) => i.path.at(-1) === 'billingAnchor').map((i) => i.message)
+  }
+
+  it('accepts a date on or after the start', () => {
+    expect(anchorErrors({ ...base, startDate: '2030-01-01', billingAnchor: '2030-01-01' })).toEqual(
+      [],
+    )
+    expect(anchorErrors({ ...base, startDate: '2030-01-01', billingAnchor: '2030-01-15' })).toEqual(
+      [],
+    )
+  })
+
+  it('refuses a date before the start', () => {
+    expect(anchorErrors({ ...base, startDate: '2030-01-10', billingAnchor: '2030-01-05' })).toEqual(
+      ['Choose a date on or after the contract start date'],
+    )
+    expect(anchorErrors({ ...base, billingAnchor: '2000-01-01' })).toEqual([
+      'The contract starts today, so choose today or a later date',
+    ])
+  })
+})
+
+describe('contract dates with a time', () => {
+  it('orders a day and an instant by when they fall', () => {
+    const start = new Date(2026, 9, 21, 9, 30).toISOString()
+    const before = new Date(2026, 9, 21, 9, 0).toISOString()
+    const parsed = createSubscriptionSchema.safeParse({
+      ...emptySubscription(),
+      customerId: 'cus_1',
+      planId: 'plan_1',
+      currency: 'usd',
+      startDate: start,
+      phases: [{ ...emptyPhase(), endDate: before }],
+    })
+    expect(parsed.success).toBe(false)
+  })
+
+  it('accepts a billing date on the start day whatever the time', () => {
+    const parsed = createSubscriptionSchema.safeParse({
+      ...emptySubscription(),
+      customerId: 'cus_1',
+      planId: 'plan_1',
+      currency: 'usd',
+      startDate: new Date(2026, 9, 21, 9, 30).toISOString(),
+      billingAnchor: new Date(2026, 9, 21, 0, 0).toISOString(),
+    })
+    expect(parsed.success).toBe(true)
+  })
+
+  it('sends a day as midnight UTC and an instant as itself', () => {
+    expect(contractDateToInstant('2026-10-21').toISOString()).toBe('2026-10-21T00:00:00.000Z')
+    expect(contractDateToInstant('2026-10-21T04:00:00.000Z').toISOString()).toBe(
+      '2026-10-21T04:00:00.000Z',
+    )
+    expect(contractDay(new Date(2026, 9, 21, 23, 0).toISOString())).toBe('2026-10-21')
   })
 })

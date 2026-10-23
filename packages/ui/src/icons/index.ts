@@ -58,6 +58,7 @@ import static_crossCircle from '../reui/icons/default/outline/cross-circle'
 import static_cube from '../reui/icons/default/outline/cube'
 import static_cubeSquare from '../reui/icons/default/outline/cube-square'
 import static_deleteFiles from '../reui/icons/default/outline/delete-files'
+import static_delivery from '../reui/icons/default/outline/delivery'
 import static_discount from '../reui/icons/default/outline/discount'
 import static_disk from '../reui/icons/default/outline/disk'
 import static_document from '../reui/icons/default/outline/document'
@@ -111,6 +112,7 @@ import static_plugCharging from '../reui/icons/default/outline/plug-charging'
 import static_plus from '../reui/icons/default/outline/plus'
 import static_plusCircle from '../reui/icons/default/outline/plus-circle'
 import static_priceTag from '../reui/icons/default/outline/price-tag'
+import static_printer from '../reui/icons/default/outline/printer'
 import static_profileCircle from '../reui/icons/default/outline/profile-circle'
 import static_pulse from '../reui/icons/default/outline/pulse'
 import static_questionCircle from '../reui/icons/default/outline/question-circle'
@@ -376,6 +378,8 @@ export const Plus: IconComponent = staticIcon(static_plus, 'Plus')
 export { Plus as PlusIcon }
 export const Power: IconComponent = staticIcon(static_switch, 'Power')
 export { Power as PowerIcon }
+export const Printer: IconComponent = staticIcon(static_printer, 'Printer')
+export { Printer as PrinterIcon }
 export const Puzzle: IconComponent = staticIcon(static_cubeSquare, 'Puzzle')
 export { Puzzle as PuzzleIcon }
 export const Receipt: IconComponent = animatedIcon(animated_receiptSquare, 'Receipt')
@@ -450,6 +454,8 @@ export const TrendingUp: IconComponent = staticIcon(static_chartArrowUp, 'Trendi
 export { TrendingUp as TrendingUpIcon }
 export const TriangleAlert: IconComponent = staticIcon(static_exclamationBadge, 'TriangleAlert')
 export { TriangleAlert as TriangleAlertIcon }
+export const Truck: IconComponent = staticIcon(static_delivery, 'Truck')
+export { Truck as TruckIcon }
 export const Type: IconComponent = staticIcon(static_text, 'Type')
 export { Type as TypeIcon }
 export const Ungroup: IconComponent = staticIcon(static_triangleSplit, 'Ungroup')

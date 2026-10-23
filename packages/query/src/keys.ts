@@ -14,6 +14,13 @@ export const queryKeys = {
   session: {
     all: () => ['session'] as const,
     current: () => ['session', 'current'] as const,
+    /**
+     * The role catalogue the signed-in principal's access is resolved from.
+     * Under the unscoped `session` root: roles are tenant-wide, so switching
+     * environment must not drop them and re-show a loading gate.
+     */
+    accessRoles: (token: string, audience: string) =>
+      ['session', 'accessRoles', token, audience] as const,
     environments: () => ['session', 'environments'] as const,
     /** Keyed by server URL: the region picker can switch deployments mid-session. */
     capabilities: (serverURL: string) => ['session', 'capabilities', serverURL] as const,
@@ -25,6 +32,9 @@ export const queryKeys = {
     detail: (id: string) => ['customers', 'detail', id] as const,
     /** Entitlement usage for one customer — `GET /customers/usage`. */
     usage: (id: string) => ['customers', 'usage', id] as const,
+    /** The same read narrowed to one contract — `?subscription_ids=`. Under `usage(id)`. */
+    contractUsage: (id: string, subscriptionId: string) =>
+      ['customers', 'usage', id, { subscriptionId }] as const,
   },
   subscriptions: {
     all: () => ['subscriptions'] as const,
@@ -147,6 +157,13 @@ export const queryKeys = {
   dataExports: {
     all: () => ['dataExports'] as const,
     list: (filter: Record<string, unknown>) => ['dataExports', 'list', filter] as const,
+    detail: (id: string) => ['dataExports', 'detail', id] as const,
+    runs: (id: string, filter: Record<string, unknown>) =>
+      ['dataExports', 'runs', id, filter] as const,
+    counts: () => ['dataExports', 'counts'] as const,
+  },
+  s3Connections: {
+    all: () => ['s3Connections'] as const,
   },
   workflowRuns: {
     all: () => ['workflowRuns'] as const,
@@ -201,6 +218,11 @@ export const queryKeys = {
     all: () => ['tenant'] as const,
     detail: (id: string) => ['tenant', 'detail', id] as const,
     billingUsage: () => ['tenant', 'billingUsage'] as const,
+    /** Self-billing: the tenant's own Flexprice account, the same in every environment. */
+    selfBilling: () => ['tenant', 'selfBilling'] as const,
+    selfBillingStatus: () => ['tenant', 'selfBilling', 'status'] as const,
+    selfBillingSummary: () => ['tenant', 'selfBilling', 'summary'] as const,
+    selfBillingCheckout: (id: string) => ['tenant', 'selfBilling', 'checkout', id] as const,
   },
   /**
    * The `/settings/{key}` family, keyed by environment first.
@@ -247,5 +269,14 @@ export const queryKeys = {
     list: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['alertSettings', 'list', filter] as const,
     detail: (id: string) => ['alertSettings', 'detail', id] as const,
+  },
+  hostedInvoice: {
+    detail: (apiOrigin: string, token: string) => ['hostedInvoice', apiOrigin, token] as const,
+  },
+  /** Every key starts with the portal session, so one invalidation refreshes the portal. */
+  customerPortal: {
+    all: (apiOrigin: string, token: string) => ['customerPortal', apiOrigin, token] as const,
+    part: (apiOrigin: string, token: string, ...rest: readonly unknown[]) =>
+      ['customerPortal', apiOrigin, token, ...rest] as const,
   },
 } as const

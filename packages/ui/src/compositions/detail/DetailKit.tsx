@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactElement, type ReactNode } from 'react'
 import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
@@ -15,6 +15,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { useInFormDialog } from '../forms/formDialogContext'
+import type { RbacEntity } from '@fp/domain'
+import { LockedMark, useWriteCheck, useWriteLock } from '../access/Access'
 
 /*
  * Shared grammar for every detail page, ported 1:1 from the reference kit
@@ -116,12 +118,19 @@ export function CopyEmail({ value }: { value: string }) {
 export interface DetailMenuItem {
   id: string
   label: string
-  /** Leading glyph; decorative, the label names the item. */
-  icon?: ReactNode
+  /** Leading glyph; decorative, the label names the item. Required so every item lines up. */
+  icon: ReactElement
   onSelect: () => void
   /** Destructive items are set apart below a divider, last in the menu. */
   destructive?: boolean
   disabled?: boolean
+  /**
+   * Does not write (Copy, Download, Open): stays enabled when the page's
+   * `AccessScope` denies write. Every other item is disabled then.
+   */
+  readOnly?: boolean
+  /** The entity this item writes, when not the page's (Create invoice on a customer). */
+  entity?: RbacEntity
 }
 
 /**
@@ -137,18 +146,25 @@ export function DetailMoreMenu({
   label: string
   items: DetailMenuItem[]
 }) {
+  const check = useWriteCheck()
+  const locked = useWriteLock()
   if (items.length === 0) return null
+  const denied = (item: DetailMenuItem) => !item.readOnly && !check(item.entity).allowed
+  const reason = items
+    .map((item) => (denied(item) ? check(item.entity).reason : null))
+    .find(Boolean)
   const regular = items.filter((item) => !item.destructive)
   const destructive = items.filter((item) => item.destructive)
   const renderItem = (item: DetailMenuItem) => (
     <DropdownMenuItem
       key={item.id}
-      disabled={item.disabled ?? false}
+      disabled={(item.disabled ?? false) || denied(item)}
       {...(item.destructive ? { variant: 'destructive' as const } : {})}
       onClick={item.onSelect}
     >
-      {item.icon ?? null}
+      {item.icon}
       {item.label}
+      {locked && denied(item) ? <LockedMark /> : null}
     </DropdownMenuItem>
   )
   return (
@@ -162,6 +178,7 @@ export function DetailMoreMenu({
         {regular.map(renderItem)}
         {regular.length > 0 && destructive.length > 0 ? <DropdownMenuSeparator /> : null}
         {destructive.map(renderItem)}
+        {reason ? <p className="text-muted-foreground px-2 py-1.5 text-xs">{reason}</p> : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -319,6 +336,53 @@ export function SummaryRow({
   )
 }
 
+/**
+ * The money column under a document's lines (an invoice, a credit memo, an
+ * upcoming-invoice preview, the invoice composer): label left, figure right,
+ * one type size for every row so the same block reads the same on every page.
+ * The caller places it (`ml-auto`, a flex end).
+ */
+export function TotalsList({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <dl className={cn('flex w-full max-w-xs flex-col gap-2.5 text-sm', className)}>{children}</dl>
+  )
+}
+
+/**
+ * One row of a `TotalsList`.
+ * - plain: muted label, figure in the body colour.
+ * - `emphasis="total"`: label and figure in medium, e.g. "Total" before payments.
+ * - `emphasis="due"`: the figure the document is about ("Amount due", "Total
+ *   credited"): medium, and the figure one step larger.
+ * - `rule`: a hairline above the row, closing the sum above it.
+ */
+export function TotalRow({
+  label,
+  value,
+  emphasis,
+  rule = false,
+}: {
+  label: ReactNode
+  value: ReactNode
+  emphasis?: 'total' | 'due'
+  rule?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-baseline justify-between gap-4',
+        rule && 'mt-0.5 border-t pt-3',
+        emphasis && 'font-medium',
+      )}
+    >
+      <dt className={emphasis ? 'text-foreground' : 'text-muted-foreground'}>{label}</dt>
+      <dd className={cn('text-foreground tabular-nums', emphasis === 'due' && 'text-base')}>
+        {value}
+      </dd>
+    </div>
+  )
+}
+
 export interface OverviewTile {
   label: string
   value: ReactNode
@@ -354,8 +418,8 @@ export function OverviewTiles({
         variant !== 'flush' && 'bg-background rounded-xl border',
         variant === 'flush' && 'border-b',
         line
-          ? 'sm:grid-cols-2 lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none [&>div]:border-b sm:[&>div:nth-child(odd)]:border-r lg:[&>div]:border-b-0 lg:[&>div:not(:last-child)]:border-r [&>div:last-child]:border-b-0'
-          : 'sm:grid-cols-2 [&>div]:border-b sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-last-child(-n+2)]:border-b-0 [&>div:last-child]:border-b-0',
+          ? 'sm:grid-cols-2 lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none [&>div]:border-b lg:[&>div]:border-b-0 [&>div:last-child]:border-b-0 lg:[&>div:not(:last-child)]:border-r sm:[&>div:nth-child(odd)]:border-r'
+          : 'sm:grid-cols-2 [&>div]:border-b [&>div:last-child]:border-b-0 sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-last-child(-n+2)]:border-b-0',
         className,
       )}
     >
@@ -446,7 +510,7 @@ export function SimpleTable<T>({
                   key={id}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
-                    'border-border/40 h-14 border-b transition-colors last:border-b-0',
+                    'border-border/40 border-b transition-colors last:border-b-0',
                     onRowClick && 'hover:bg-muted/30 cursor-pointer',
                     highlighted === id && 'bg-success/6',
                   )}
@@ -455,7 +519,7 @@ export function SimpleTable<T>({
                     <td
                       key={column.key}
                       className={cn(
-                        'px-4 whitespace-nowrap',
+                        'px-4 py-4 whitespace-nowrap',
                         index === 0 && 'pl-6',
                         index === columns.length - 1 && 'pr-6',
                         column.className,
@@ -488,6 +552,7 @@ export function ChoiceCards<V extends string>({
   value,
   onChange,
   label,
+  stacked = false,
 }: {
   /** Reference name is `options`; either works. */
   choices?: Choice<V>[]
@@ -496,11 +561,19 @@ export function ChoiceCards<V extends string>({
   onChange: (value: V) => void
   /** Accessible name for the radio group. */
   label?: string
+  /**
+   * One card per row, each led by a radio dot (the reference RadioCards), for
+   * choices whose descriptions are sentences rather than a few words.
+   */
+  stacked?: boolean
 }) {
   const items = choices ?? options ?? []
   return (
     <div
-      className={cn('grid gap-3', items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}
+      className={cn(
+        'grid',
+        stacked ? 'gap-2.5' : cn('gap-3', items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'),
+      )}
       role="radiogroup"
       aria-label={label}
     >
@@ -512,12 +585,24 @@ export function ChoiceCards<V extends string>({
           aria-checked={value === item.value}
           onClick={() => onChange(item.value)}
           className={cn(
-            'flex items-start gap-3 rounded-lg border p-4 text-left transition-colors',
+            'flex items-start gap-3 rounded-lg border text-left transition-colors',
+            stacked ? 'px-4 py-3' : 'p-4',
             value === item.value
               ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
               : 'hover:bg-muted/40',
           )}
         >
+          {stacked ? (
+            <span
+              aria-hidden
+              className={cn(
+                'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border',
+                value === item.value ? 'border-primary' : 'border-input',
+              )}
+            >
+              {value === item.value ? <span className="bg-primary size-2 rounded-full" /> : null}
+            </span>
+          ) : null}
           {item.icon ? (
             <span className="text-foreground/70 bg-muted/60 flex size-8 shrink-0 items-center justify-center rounded-md border [&_svg]:size-4">
               {item.icon}
@@ -547,6 +632,7 @@ export function Composer({
   onCancel,
   submitting,
   disabled,
+  secondary,
 }: {
   title?: string
   children: ReactNode
@@ -556,6 +642,8 @@ export function Composer({
   onCancel?: () => void
   submitting?: boolean
   disabled?: boolean
+  /** A footer action on the left, apart from Cancel and submit (e.g. "Clear"). */
+  secondary?: ReactNode
 }) {
   const inDialog = useInFormDialog()
   return (
@@ -569,6 +657,7 @@ export function Composer({
       {title ? <p className="text-sm font-medium">{title}</p> : null}
       {children}
       <div className="flex items-center justify-end gap-2 border-t pt-5">
+        {secondary ? <div className="mr-auto">{secondary}</div> : null}
         {onCancel ? (
           <Button type="button" variant="ghost" className="h-8" onClick={onCancel}>
             Cancel

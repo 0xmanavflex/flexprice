@@ -1,3 +1,5 @@
+import { RBAC_ENTITY } from '@fp/domain'
+import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from '@ui/icons'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { EmDash } from '../../shared/cells'
@@ -55,7 +57,7 @@ function includedOf(e: Entitlement): string {
 }
 
 /** Entitlements section; the last column shows what happens past the value. */
-export function PlanEntitlementsView({
+function PlanEntitlementsViewInner({
   entitlements,
   usagePrice,
   onAdd,
@@ -70,10 +72,12 @@ export function PlanEntitlementsView({
   isRetrying,
 }: PlanEntitlementsViewProps) {
   const add = (
-    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-      <PlusIcon aria-hidden />
-      Add entitlement
-    </Button>
+    <WriteGate>
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3" onClick={onAdd}>
+        <PlusIcon aria-hidden />
+        Add entitlement
+      </Button>
+    </WriteGate>
   )
   if (entitlements.length === 0) {
     return (
@@ -147,7 +151,7 @@ export function PlanEntitlementsView({
           },
           {
             key: 'beyond',
-            header: 'Usage beyond the value',
+            header: 'Overage',
             cell: (e) => {
               if (e.featureType !== FeatureType.Metered || e.usageLimit == null) return <EmDash />
               const price = usagePrice(e)
@@ -179,5 +183,14 @@ export function PlanEntitlementsView({
         ]}
       />
     </Section>
+  )
+}
+
+/** `PlanEntitlementsView`, scoped to the entity it writes (Entitlement). */
+export function PlanEntitlementsView(props: Parameters<typeof PlanEntitlementsViewInner>[0]) {
+  return (
+    <AccessScope entity={RBAC_ENTITY.Entitlement}>
+      <PlanEntitlementsViewInner {...props} />
+    </AccessScope>
   )
 }

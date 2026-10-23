@@ -41,6 +41,8 @@ export interface CurrentUser {
   id: string
   email: string
   roles: string[]
+  /** `user` or `service_account`: which role catalogue the roles come from. */
+  type: string
   tenantId: string
   tenantName: string
 }
@@ -216,6 +218,7 @@ export async function fetchCurrentUser(serverURL: string, token: string): Promis
     id: str(body, 'id'),
     email: str(body, 'email'),
     roles,
+    type: str(body, 'type') || 'user',
     tenantId: str(tenant, 'id'),
     tenantName: str(tenant, 'name'),
   }
@@ -239,6 +242,35 @@ export async function fetchEnvironments(
     name: str(row, 'name'),
     type: str(row, 'type'),
   }))
+}
+
+/**
+ * Whether the record at `path` (e.g. `/invoices/inv_1`) exists in
+ * `environmentId`.
+ *
+ * For a shared link that names a record but not its environment: a 404 (or
+ * a 403, for an environment this token cannot read) means "not here", so
+ * the caller can try the next environment. Anything else is a real failure
+ * and is thrown.
+ */
+export async function existsInEnvironment(
+  serverURL: string,
+  token: string,
+  path: string,
+  environmentId: string,
+): Promise<boolean> {
+  try {
+    await request(serverURL, path, { method: 'GET', token, environmentId })
+    return true
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.kind === ErrorKind.NotFound || error.kind === ErrorKind.Forbidden)
+    ) {
+      return false
+    }
+    throw error
+  }
 }
 
 /**
@@ -271,15 +303,23 @@ export async function createEnvironment(
     token,
     body: { name: draft.name, type: draft.type },
   })
-  const row = isRecord(body) ? body : {}
+  const root = isRecord(body) ? body : {}
+  // Some responses wrap the record (`{ environment }` or `{ data }`). Reading
+  // only the top level leaves `id` blank, so the console never switches and
+  // the switcher has nothing to add.
+  const wrapped = isRecord(root['environment'])
+    ? root['environment']
+    : isRecord(root['data'])
+      ? root['data']
+      : root
 
   return {
-    id: str(row, 'id'),
+    id: str(wrapped, 'id') || str(root, 'id'),
     // Echoed back when the response omits them: the request is what was
     // created, and a blank name in the switcher would be a worse lie than the
     // name we just sent.
-    name: str(row, 'name') || draft.name,
-    type: str(row, 'type') || draft.type,
+    name: str(wrapped, 'name') || str(root, 'name') || draft.name,
+    type: str(wrapped, 'type') || str(root, 'type') || draft.type,
   }
 }
 
@@ -318,4 +358,37 @@ export async function updateEnvironment(
     name: str(row, 'name') || patch.name,
     type: str(row, 'type'),
   }
+}
+
+/** Where a clone goes: an existing environment, or a new one made for it. */
+export type CloneTarget = { targetEnvironmentId: string } | { name: string; type: string }
+
+/**
+ * Copies every published feature and plan from one environment into another —
+ * `POST /environments/{id}/clone`, the one annotated handler in
+ * `environment.go`.
+ *
+ * Into an existing environment (`target_environment_id`), or into a new one the
+ * API creates first from `name` and `type`, under the same per-type quota as
+ * `POST /environments`. It answers 202 once the copy is queued as a workflow,
+ * not when it is done. The copy skips any feature or plan whose lookup key the
+ * target already has, so it is safe to run again: a second run adds only what
+ * is new, and does not update what was copied before.
+ */
+export async function cloneEnvironment(
+  serverURL: string,
+  token: string,
+  sourceEnvironmentId: string,
+  target: CloneTarget,
+): Promise<void> {
+  await request(serverURL, `/environments/${encodeURIComponent(sourceEnvironmentId)}/clone`, {
+    method: 'POST',
+    token,
+    // Environment-scoped like the rename: the source is the scope.
+    environmentId: sourceEnvironmentId,
+    body:
+      'targetEnvironmentId' in target
+        ? { target_environment_id: target.targetEnvironmentId }
+        : { name: target.name, type: target.type },
+  })
 }

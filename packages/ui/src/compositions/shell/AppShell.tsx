@@ -62,6 +62,8 @@ export interface AppShellProps {
   /** Pinned above the footer — an allowance, a usage meter, an alert count. */
   pinned?: ReactNode
   breadcrumb?: ReactNode
+  /** Sits in the header, to the left of search. */
+  headerLeading?: ReactNode
   /** One control that belongs to the page as a whole, not to its content. */
   headerActions?: ReactNode
   children: ReactNode
@@ -99,6 +101,7 @@ export function AppShell({
   search,
   pinned,
   breadcrumb,
+  headerLeading,
   headerActions,
   children,
 }: AppShellProps) {
@@ -181,6 +184,7 @@ export function AppShell({
               breadcrumb; the crumbs truncate instead, keeping Create reachable
               at 390. */}
             <div className="flex shrink-0 items-center gap-1.5">
+              {headerLeading}
               <ShellSearch {...(search ?? {})} />
               {headerActions}
             </div>

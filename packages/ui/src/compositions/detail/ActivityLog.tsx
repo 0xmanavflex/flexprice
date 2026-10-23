@@ -17,6 +17,8 @@ export interface ActivityLogEntry {
   record?: string | undefined
   /** What happened, muted. */
   summary?: string | undefined
+  /** A second muted line, such as the amount paid. */
+  detail?: string | undefined
   /** Who did it. Omitted when the system did. */
   by?: string | undefined
   /** Page for this entity. Set only when the id maps to a route. */
@@ -67,6 +69,9 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
                 {entry.record && entry.summary ? ' ' : null}
                 {entry.summary}
               </p>
+            ) : null}
+            {entry.detail ? (
+              <p className="text-muted-foreground text-[13px] leading-5">{entry.detail}</p>
             ) : null}
             {entry.by ? <p className="text-muted-foreground text-xs">By {entry.by}</p> : null}
             {entry.action ? <div className="pt-2">{entry.action}</div> : null}

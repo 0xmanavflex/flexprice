@@ -17,6 +17,7 @@ import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
 import { sortWithTieBreak } from './listSort'
+import { ALL_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 
 /**
  * Coupons: the translation between product vocabulary and the API.
@@ -344,6 +345,7 @@ export function useCouponRedemptions(couponId: string) {
         const response = await call(() =>
           client.subscriptions.querySubscription({
             subscriptionIds: ids,
+            subscriptionStatus: ALL_SUBSCRIPTION_STATUSES,
             limit: ids.length,
             expand: 'customer,plan',
           } as never),

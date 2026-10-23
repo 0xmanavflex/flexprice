@@ -203,6 +203,58 @@ export const ProductionEmailOnly: Story = {
   },
 }
 
+/**
+ * Self-billing, in the trial: Production is the upgrade. Choosing it shows what
+ * the upgrade costs and brings, drops the name (paying creates "Production"),
+ * and the button becomes Upgrade.
+ */
+export const ProductionIsTheUpgrade: Story = {
+  args: {
+    canCreateProduction: false,
+    production: { kind: 'upgrade', eventCap: 50_000, onUpgrade: fn() },
+  },
+  play: async ({ args }) => {
+    const canvas = dialog()
+    await userEvent.click(canvas.getByRole('radio', { name: /production/i }))
+    await waitFor(() => expect(canvas.getByText('Production comes with an upgrade')).toBeVisible())
+    await expect(
+      canvas.getByText('$199.00 a month + 0.5% of what you bill through Flexprice in production.'),
+    ).toBeVisible()
+    await expect(canvas.getByText('The 50,000 event limit is lifted')).toBeVisible()
+    await expect(canvas.queryByRole('textbox', { name: /name/i })).toBeNull()
+    await expect(canvas.queryByText(/require an approval/i)).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Upgrade' }))
+    const offer = args.production as { onUpgrade: () => void }
+    await expect(offer.onUpgrade).toHaveBeenCalled()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
+/** Live, with production already there: choosing it says so and offers to switch. */
+export const ProductionAlreadyExists: Story = {
+  args: {
+    canCreateProduction: false,
+    production: { kind: 'exists', name: 'Production', onSwitch: fn() },
+    contact: {
+      slackUrl: 'https://example.com/slack',
+      email: 'support@example.com',
+      bookCallUrl: 'https://example.com/call',
+    },
+  },
+  play: async ({ args }) => {
+    const canvas = dialog()
+    await userEvent.click(canvas.getByRole('radio', { name: /production/i }))
+    await waitFor(() =>
+      expect(canvas.getByText('You already have a production environment.')).toBeVisible(),
+    )
+    await expect(canvas.getByRole('button', { name: 'Create environment' })).toBeDisabled()
+    await userEvent.click(canvas.getByRole('button', { name: /Switch to Production/ }))
+    const offer = args.production as { onSwitch: () => void }
+    await expect(offer.onSwitch).toHaveBeenCalled()
+    await expect(args.onOpenChange).toHaveBeenCalledWith(false)
+  },
+}
+
 /** Submitting disables the fields. */
 export const Submitting: Story = {
   args: { isSubmitting: true },

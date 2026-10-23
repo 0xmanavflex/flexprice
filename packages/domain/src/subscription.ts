@@ -1,7 +1,12 @@
 import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
-import { type AddContractCharge, type EditContractCharge, type LinePricing } from './contractCharge'
+import {
+  type AddContractCharge,
+  BucketSize,
+  type EditContractCharge,
+  type LinePricing,
+} from './contractCharge'
 import { type Charge } from './price'
 import { type Money } from './money'
 import { BILLING_PERIOD_LABEL, BillingModel, BillingPeriod, TierMode } from './price'
@@ -143,11 +148,44 @@ export const SUBSCRIPTION_FILTERS: readonly ListFilterSpec[] = [
 
 const PHASE_DECIMAL = /^\d+(\.\d+)?$/
 
-/** A day as `YYYY-MM-DD`, or blank. */
-const optionalDay = z
+const CONTRACT_DAY = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * A contract date: a day (`YYYY-MM-DD`) or, picked with a time, an instant (an
+ * ISO string). Blank is allowed where the field is optional.
+ */
+const optionalContractDate = z
   .string()
   .trim()
-  .refine((value) => value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value), 'Pick a date')
+  .refine(
+    (value) => value === '' || CONTRACT_DAY.test(value) || !Number.isNaN(Date.parse(value)),
+    'Pick a date',
+  )
+
+/**
+ * A contract date as the API takes it: a day is midnight UTC (as every
+ * date-only field has always been sent), an instant is itself.
+ */
+export function contractDateToInstant(value: string): Date {
+  return CONTRACT_DAY.test(value) ? new Date(`${value}T00:00:00Z`) : new Date(value)
+}
+
+/** A contract date's position in time, for ordering: a day is its local midnight. */
+function contractMoment(value: string): number {
+  if (CONTRACT_DAY.test(value)) {
+    const [y, m, d] = value.split('-').map(Number) as [number, number, number]
+    return new Date(y, m - 1, d).getTime()
+  }
+  return Date.parse(value)
+}
+
+/** The local day a contract date falls on, `YYYY-MM-DD`. */
+export function contractDay(value: string): string {
+  if (CONTRACT_DAY.test(value)) return value
+  const date = new Date(value)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
 
 /** A decimal amount, or blank for none. */
 const optionalAmount = (message: string) =>
@@ -176,7 +214,7 @@ export type SubscriptionDiscount = z.infer<typeof subscriptionDiscountSchema>
  */
 export const subscriptionPhaseSchema = z.object({
   /** `YYYY-MM-DD`; blank on the last phase means open-ended. */
-  endDate: optionalDay,
+  endDate: optionalContractDate,
   /** The plan's charges, repriced for this phase. */
   priceOverrides: z.array(priceOverrideSchema),
   /** Fixed charges billed at another quantity in this phase, e.g. 25 seats. */
@@ -204,25 +242,135 @@ export type SubscriptionPhase = z.infer<typeof subscriptionPhaseSchema>
 export const CommitmentType = { Amount: 'amount', Quantity: 'quantity' } as const
 export type CommitmentType = (typeof CommitmentType)[keyof typeof CommitmentType]
 
-/** A minimum on one usage charge: spend (amount) or units (quantity) per period. */
-export const chargeCommitmentSchema = z.object({
-  priceId: z.string().min(1),
-  type: z.enum([CommitmentType.Amount, CommitmentType.Quantity]),
-  value: z
-    .string()
-    .trim()
-    .refine(
-      (value) => PHASE_DECIMAL.test(value) && Number(value) > 0,
-      'Enter a commitment above zero',
-    ),
-  /** Multiplier on usage beyond the commitment; blank is 1, the base rate. */
-  overageFactor: optionalAmount('Enter a factor like 1.2').refine(
-    (value) => value === '' || Number(value) >= 1,
-    'The overage factor is at least 1',
-  ),
-  /** Bill the shortfall when usage stays under the commitment. */
-  trueUp: z.boolean(),
+const COMMITMENT_DECIMAL = /^\d+(\.\d{1,8})?$/
+const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/
+
+/** A blank overage factor reads as 1, the normal rate. */
+const overageFactorSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => value === '' || (COMMITMENT_DECIMAL.test(value) && Number(value) >= 1),
+    'Enter 1 or more. 1 means no overage premium.',
+  )
+
+/** How usage inside a time window is billed. */
+export const WindowBillingModel = {
+  PerUnit: BillingModel.FlatFee,
+  Package: BillingModel.Package,
+} as const
+export type WindowBillingModel = (typeof WindowBillingModel)[keyof typeof WindowBillingModel]
+
+export const WINDOW_BILLING_MODEL_LABEL: Record<WindowBillingModel, string> = {
+  [WindowBillingModel.PerUnit]: 'Per unit',
+  [WindowBillingModel.Package]: 'Package',
+}
+
+/**
+ * One UTC window of the day with its own commitment and price
+ * (`commitment_time_buckets`): start inclusive, end exclusive.
+ */
+export const commitmentWindowSchema = z
+  .object({
+    id: z.string(),
+    /** `HH:MM`, UTC. */
+    start: z.string().regex(CLOCK, 'Pick a time'),
+    /** `HH:MM`, UTC. */
+    end: z.string().regex(CLOCK, 'Pick a time'),
+    type: z.enum([CommitmentType.Amount, CommitmentType.Quantity]),
+    value: z
+      .string()
+      .trim()
+      .min(1, 'This field is required')
+      .refine(
+        (value) => COMMITMENT_DECIMAL.test(value) && Number(value) > 0,
+        'Enter a commitment greater than zero.',
+      ),
+    overageFactor: overageFactorSchema,
+    trueUp: z.boolean(),
+    billingModel: z.enum([WindowBillingModel.PerUnit, WindowBillingModel.Package]),
+    price: z
+      .string()
+      .trim()
+      .refine(
+        (value) => COMMITMENT_DECIMAL.test(value) && Number(value) > 0,
+        'Enter a price for this window',
+      ),
+    /** Units per package, for a package price. */
+    packageSize: z.string().trim(),
+  })
+  .superRefine((window, ctx) => {
+    if (window.start === window.end)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['start'],
+        message: 'Start and end time cannot be the same',
+      })
+    if (
+      window.billingModel === WindowBillingModel.Package &&
+      !/^[1-9]\d*$/.test(window.packageSize)
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['packageSize'],
+        message: 'Enter a whole number of 1 or more.',
+      })
+  })
+export type CommitmentWindow = z.infer<typeof commitmentWindowSchema>
+
+/**
+ * What a window's own price is built on: the plan charge it reprices, so the
+ * window bills the same meter, currency and period.
+ */
+export const commitmentPriceBaseSchema = z.object({
+  entityId: z.string(),
+  entityType: z.string(),
+  meterId: z.string(),
+  currency: z.string(),
+  billingPeriod: z.string(),
+  billingPeriodCount: z.number(),
+  invoiceCadence: z.string(),
 })
+export type CommitmentPriceBase = z.infer<typeof commitmentPriceBaseSchema>
+
+/** A minimum on one usage charge: spend (amount) or units (quantity) per period. */
+export const chargeCommitmentSchema = z
+  .object({
+    priceId: z.string().min(1),
+    type: z.enum([CommitmentType.Amount, CommitmentType.Quantity]),
+    value: z
+      .string()
+      .trim()
+      .refine(
+        (value) => COMMITMENT_DECIMAL.test(value) && Number(value) > 0,
+        'Enter a commitment greater than zero.',
+      ),
+    /** The period the commitment is measured over; blank is the billing period. */
+    duration: z.union([z.literal(''), z.enum(BillingPeriod)]),
+    /** Multiplier on usage beyond the commitment; blank is 1, the base rate. */
+    overageFactor: overageFactorSchema,
+    /** Bill the shortfall when usage stays under the commitment. */
+    trueUp: z.boolean(),
+    /**
+     * The bucket usage is summed in before it is priced; blank keeps the plan
+     * charge's own. Sent as the charge's `bucket_size` override.
+     */
+    bucketSize: z.union([z.literal(''), z.enum(BucketSize)]),
+    /** Apply the commitment to every bucket, not the whole period. Needs a bucket size. */
+    windowed: z.boolean(),
+    /** Optional UTC windows of the day, each with its own commitment and price. */
+    windows: z.array(commitmentWindowSchema),
+    /** The plan charge a window's price is built on; set when the charge is known. */
+    priceBase: commitmentPriceBaseSchema.optional(),
+  })
+  .superRefine((commitment, ctx) => {
+    if (commitment.windowed && !commitment.bucketSize)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['windowed'],
+        message: 'Set a bucket size above first.',
+      })
+  })
 export type ChargeCommitment = z.infer<typeof chargeCommitmentSchema>
 
 export const PaymentTerms = {
@@ -251,6 +399,29 @@ export const PAYMENT_TERMS_LABEL: Record<PaymentTerms, string> = {
 export const BillingCycle = { Anniversary: 'anniversary', Calendar: 'calendar' } as const
 export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle]
 
+export const INHERITANCE_WITH_BILLING_CUSTOMER =
+  "Inherited customers are billed to this contract's customer. Set the billing customer to Same customer, or remove the inherited customers."
+export const INHERITANCE_WITH_THRESHOLD =
+  'An auto-invoice threshold cannot be used on a contract with inherited customers. Clear it, or remove the inherited customers.'
+
+/**
+ * Why a customer cannot inherit a contract, as the API decides it:
+ * - `OwnContract` — it has a contract of its own (active, trialing or draft)
+ *   that is not under the paying customer.
+ * - `OtherParent` — it already inherits, or is grouped under, another
+ *   customer's contract.
+ */
+export const InheritanceBlock = {
+  OwnContract: 'own-contract',
+  OtherParent: 'other-parent',
+} as const
+export type InheritanceBlock = (typeof InheritanceBlock)[keyof typeof InheritanceBlock]
+
+export const INHERITANCE_BLOCK_LABEL: Record<InheritanceBlock, string> = {
+  [InheritanceBlock.OwnContract]: 'Has its own contract',
+  [InheritanceBlock.OtherParent]: "Inherits another customer's contract",
+}
+
 /**
  * The rules for starting a contract, in the order the form asks them — V1's:
  * customer and plan with the contract's dates; phases, each with its own
@@ -269,7 +440,7 @@ export const createSubscriptionSchema = z
       .int('Must be a whole number')
       .positive('Must be greater than zero'),
     /** `YYYY-MM-DD`, or empty to start now. */
-    startDate: z.string(),
+    startDate: optionalContractDate,
     trialPeriodDays: z
       .number({ error: 'Enter a number' })
       .int('Must be a whole number')
@@ -290,7 +461,7 @@ export const createSubscriptionSchema = z
     commitmentDuration: z.enum(['', ...SUBSCRIPTION_BILLING_PERIODS]),
     overageFactor: optionalAmount('Enter a factor like 1.2').refine(
       (value) => value === '' || Number(value) >= 1,
-      'The overage factor is at least 1',
+      'Overage factor must be at least 1.0',
     ),
     enableTrueUp: z.boolean(),
     chargeCommitments: z.array(chargeCommitmentSchema),
@@ -325,7 +496,7 @@ export const createSubscriptionSchema = z
     // Billing configuration.
     billingCycle: z.enum([BillingCycle.Anniversary, BillingCycle.Calendar]),
     /** `YYYY-MM-DD`: the day cycles are anchored to; blank follows the start date. */
-    billingAnchor: optionalDay,
+    billingAnchor: optionalContractDate,
     paymentTerms: z.enum([
       '',
       PaymentTerms.Net15,
@@ -368,18 +539,48 @@ export const createSubscriptionSchema = z
           message: 'Choose when this phase ends',
         })
       }
-      if (phase.endDate && start && phase.endDate <= start) {
+      if (phase.endDate && start && contractMoment(phase.endDate) <= contractMoment(start)) {
         ctx.addIssue({
           code: 'custom',
           path: ['phases', index, 'endDate'],
           message:
-            index === 0 && !value.startDate
-              ? 'The contract starts today, so it must end after today'
-              : 'The end must be after the start',
+            index === 0 ? 'The end has to come after the start' : 'The end must be after the start',
         })
       }
       start = phase.endDate || start
     })
+    // A chosen billing date counts periods from that day, so it cannot come
+    // before the contract has started.
+    const contractStart = value.startDate || localToday()
+    // Compared by day: a billing date on the start day is fine whatever the time.
+    if (value.billingAnchor && contractDay(value.billingAnchor) < contractDay(contractStart)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['billingAnchor'],
+        message: value.startDate
+          ? 'Choose a date on or after the contract start date'
+          : 'The contract starts today, so choose today or a later date',
+      })
+    }
+    // Customers that inherit a contract are billed through its own customer, so
+    // the API takes either inherited customers or another billing customer,
+    // never both, and an early invoice threshold only on a contract without them.
+    if (value.inheritedCustomerExternalIds.length > 0) {
+      if (value.invoicingCustomerExternalId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['inheritedCustomerExternalIds'],
+          message: INHERITANCE_WITH_BILLING_CUSTOMER,
+        })
+      }
+      if (value.autoInvoiceThreshold) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['autoInvoiceThreshold'],
+          message: INHERITANCE_WITH_THRESHOLD,
+        })
+      }
+    }
   })
 
 export type CreateSubscription = z.infer<typeof createSubscriptionSchema>
@@ -430,12 +631,51 @@ export function emptySubscription(): CreateSubscription {
     billingCycle: BillingCycle.Anniversary,
     billingAnchor: '',
     paymentTerms: '',
-    prorate: true,
+    // Off until someone turns it on in Dates and billing.
+    prorate: false,
     autoInvoiceThreshold: '',
     draft: false,
     invoicingCustomerExternalId: '',
     inheritedCustomerExternalIds: [],
   }
+}
+
+/**
+ * The contract-level commitment: a minimum spend per commitment period, set
+ * when the contract is created. It is separate from the commitments a usage
+ * charge carries, and the API has no way to change it afterwards.
+ */
+export interface ContractCommitment {
+  /** The minimum spend per commitment period. */
+  amount: Money
+  /** The period the minimum is measured over. */
+  period: BillingPeriod
+  /** How many of that period, when the contract bills every few months. */
+  periodCount: number
+  /** Multiplier on spend beyond the minimum; 1 is the normal rate. */
+  overageFactor: number
+  /** Bill the shortfall when spend stays under the minimum. */
+  trueUp: boolean
+}
+
+const COMMITMENT_PERIOD_NOUN: Record<BillingPeriod, [one: string, many: string]> = {
+  [BillingPeriod.Daily]: ['day', 'days'],
+  [BillingPeriod.Weekly]: ['week', 'weeks'],
+  [BillingPeriod.Monthly]: ['month', 'months'],
+  [BillingPeriod.Quarterly]: ['quarter', 'quarters'],
+  [BillingPeriod.HalfYearly]: ['half-year', 'half-years'],
+  [BillingPeriod.Annual]: ['year', 'years'],
+  [BillingPeriod.OneTime]: ['contract', 'contracts'],
+}
+
+/**
+ * The commitment period as "month", "year", "2 weeks" — what follows "per".
+ * Twelve months reads as a year, as the old console wrote it.
+ */
+export function commitmentPeriodNoun(period: BillingPeriod, count = 1): string {
+  if (period === BillingPeriod.Monthly && count === 12) return 'year'
+  const [one, many] = COMMITMENT_PERIOD_NOUN[period]
+  return count > 1 ? `${count} ${many}` : one
 }
 
 /** The detail read model: the list row plus what the detail page adds. */
@@ -455,8 +695,8 @@ export interface SubscriptionDetail extends Subscription {
   timezone: string
   /** The caller's own key for this contract, when it set one. */
   lookupKey: string
-  /** The minimum spend the contract commits to per period; null when it has none. */
-  commitmentAmount: Money | null
+  /** The minimum spend the contract commits to; null when it has none. */
+  commitment: ContractCommitment | null
   /** The most recent invoice, as a link target. */
   latestInvoice: { id: string; number: string } | null
 }
@@ -693,6 +933,31 @@ export interface CancelSubscription {
   prorate?: boolean
   /** For `immediate`: raise a final invoice now, rather than skip it. */
   generateInvoice?: boolean
+}
+
+/**
+ * Pausing a contract: `POST /subscriptions/{id}/pause`, as V1 sends it — a
+ * proration choice and an optional reason. Billing stops until it is resumed.
+ */
+export interface PauseSubscription {
+  /** Credit the unused part of the current period. Off means no proration. */
+  prorate: boolean
+  reason: string
+}
+
+/** Resuming a paused contract: `POST /subscriptions/{id}/resume`. */
+export interface ResumeSubscription {
+  /** Charge for the remainder of the current period. Off means no proration. */
+  prorate: boolean
+}
+
+/** Pause is offered on a running contract; resume only on a paused one. */
+export function canPauseSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Active || status === SubscriptionStatus.Trialing
+}
+
+export function canResumeSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Paused
 }
 
 /** One line of the invoice a contract will raise next. */

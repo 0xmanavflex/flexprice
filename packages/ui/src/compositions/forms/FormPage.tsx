@@ -55,7 +55,11 @@ interface FormPageBaseProps {
   /** The way back, then this form. The shell header draws it; the parent crumb is a link. */
   trail: DetailCrumb[]
   children: ReactNode
-  width?: 'wide' | 'narrow'
+  /**
+   * `narrow` caps the fields at 48rem, `medium` at 61rem (a step with a table,
+   * such as a contract's charges), `wide` not at all.
+   */
+  width?: 'wide' | 'medium' | 'narrow'
   className?: string
 }
 
@@ -81,6 +85,12 @@ export type FormPageProps = FormPageBaseProps &
         footer: ReactNode
       }
   )
+
+const MEASURE = {
+  narrow: 'mx-auto w-full max-w-3xl',
+  medium: 'mx-auto w-full max-w-[61rem]',
+  wide: '',
+} as const
 
 export function FormPage({
   title,
@@ -108,9 +118,7 @@ export function FormPage({
     const onNext = flow && !navHidden && !flow.isLast ? () => void flow.next() : undefined
     const fields = (
       <FieldSet className="gap-0 pb-6">
-        <FieldGroup className={cn(width === 'narrow' && !preview && 'mx-auto w-full max-w-3xl')}>
-          {children}
-        </FieldGroup>
+        <FieldGroup className={cn(!preview && MEASURE[width])}>{children}</FieldGroup>
       </FieldSet>
     )
     return (
@@ -165,9 +173,7 @@ export function FormPage({
       <PageBody width="wide" className="self-center">
         <Section as="h1" title={title} className="flex-1" bodyClassName="flex flex-col">
           <FieldSet className="gap-0 pb-6">
-            <FieldGroup className={cn(width === 'narrow' && 'mx-auto max-w-3xl')}>
-              {children}
-            </FieldGroup>
+            <FieldGroup className={cn(MEASURE[width])}>{children}</FieldGroup>
           </FieldSet>
           {footer ? <div className="mt-auto border-t pt-5">{footer}</div> : null}
         </Section>
