@@ -89,6 +89,19 @@ export const PriceOnly: Story = {
   },
 }
 
+/** A slab price whose top band is sold in packages of 100. */
+export const PackageBand: Story = {
+  args: {
+    charge: {
+      ...usage,
+      tiers: [
+        { upTo: 1000, unitAmount: '$0.0000' },
+        { upTo: null, unitAmount: '$1,000', transformQuantity: { divideBy: 100, round: 'up' } },
+      ],
+    },
+  },
+}
+
 /**
  * An overridden price.
  *
