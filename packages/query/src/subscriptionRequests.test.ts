@@ -46,7 +46,7 @@ describe('toCreateSubscriptionRequest', () => {
       billingPeriod: 'MONTHLY',
       billingPeriodCount: 1,
       billingCycle: 'anniversary',
-      prorationBehavior: 'create_prorations',
+      prorationBehavior: 'none',
     })
   })
 

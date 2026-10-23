@@ -106,10 +106,10 @@ import { provenance } from '@ui/provenance'
  *
  * 1. **Contract** — the customer, then the plan (its billing period and
  *    currency), and the contract's dates: when it starts and ends, the day it
- *    bills on, and a free trial.
+ *    bills on, a free trial, and proration (off unless turned on).
  * 2. **Charges & add-ons** — the plan's charges as a searchable table (price,
- *    quantity, commitment and coupon from each row), proration, the contract's
- *    discount and its add-ons. A contract with more than one phase shows each
+ *    quantity, commitment and coupon from each row), the contract's discount
+ *    and its add-ons. A contract with more than one phase shows each
  *    phase's charges in its own card instead.
  * 3. **Commitments & benefits** — the contract-wide commitment, then the plan's
  *    entitlements, credit grants and taxes.
@@ -861,6 +861,20 @@ export function SubscriptionForm({
           </div>
         )}
       </FormRow>
+      {/* A billing term, so it sits with the dates; off until someone turns it on. */}
+      <FormRow
+        label="Proration"
+        hint="Charge or credit the part of a period a mid-cycle change falls in."
+      >
+        {({ id }) => (
+          <Switch
+            id={id}
+            checked={values.prorate}
+            onCheckedChange={(next) => set('prorate', next)}
+            disabled={isSubmitting}
+          />
+        )}
+      </FormRow>
     </FormCard>
   )
 
@@ -922,8 +936,6 @@ export function SubscriptionForm({
           billingPeriod={values.billingPeriod}
           meters={meters}
           priceUnits={priceUnits}
-          prorate={values.prorate}
-          onProrate={(next) => set('prorate', next)}
           planLabel={planLabel}
         />
         <AddonsSection
@@ -1970,7 +1982,7 @@ function PhaseNumber({ n }: { n: number }) {
 
 /**
  * The contract's charges. A contract of one phase is one card: the charges
- * table, then proration, then the discounts — the dates are the contract's own,
+ * table, then the discounts — the dates (and proration) are the contract's own,
  * asked on the first step. "Add phase" splits it once it has an end date.
  *
  * With more than one phase it is a timeline: each phase a card with its dates,
@@ -1996,8 +2008,6 @@ function PhasesStep({
   billingPeriod,
   meters,
   priceUnits,
-  prorate,
-  onProrate,
   planLabel,
 }: {
   phases: SubscriptionPhase[]
@@ -2017,8 +2027,6 @@ function PhasesStep({
   billingPeriod: CreateSubscription['billingPeriod']
   meters: MeterOption[]
   priceUnits: PriceUnitOption[]
-  prorate: boolean
-  onProrate: (next: boolean) => void
   planLabel: string | undefined
 }) {
   const update = (index: number, patch: Partial<SubscriptionPhase>) =>
@@ -2149,15 +2157,6 @@ function PhasesStep({
     />
   )
 
-  const prorationRow = (
-    <FormRow
-      label="Proration"
-      hint="Charge or credit the part of a period a mid-cycle change falls in."
-    >
-      {({ id }) => <Switch id={id} checked={prorate} onCheckedChange={onProrate} />}
-    </FormRow>
-  )
-
   const addCharge = (index: number, label?: string) => (
     <Button
       type="button"
@@ -2264,7 +2263,6 @@ function PhasesStep({
             </p>
             {chargesOf(0, '')}
           </div>
-          {prorationRow}
         </FormCard>
         <DiscountCard
           discounts={phases[0]!.discounts}
@@ -2401,12 +2399,6 @@ function PhasesStep({
       {addChargeDialog}
       {couponDialog}
       {addPhase}
-      <FormCard
-        title="Proration"
-        icon={<Settings2Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-      >
-        {prorationRow}
-      </FormCard>
     </div>
   )
 }
@@ -3256,6 +3248,7 @@ function ReviewStep({
           label="Free trial"
           value={values.trialPeriodDays ? `${values.trialPeriodDays} days` : 'None'}
         />
+        <ReviewRow label="Proration" value={values.prorate ? 'Prorates changes' : 'No proration'} />
       </ReviewCard>
 
       <ReviewCard title="Charges & add-ons" step="phases" onEdit={onEdit}>
@@ -3321,7 +3314,6 @@ function ReviewStep({
             )
           })
         )}
-        <ReviewRow label="Proration" value={values.prorate ? 'Prorates changes' : 'No proration'} />
         <ReviewRow
           label="Discount"
           value={
