@@ -192,8 +192,28 @@ export function useCreateEnvironment(
       }
       return toEnvironment(await createEnvironment(serverURL, token as string, draft))
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+    onSuccess: (created) => {
+      // The list refetch can land after the console has already switched, and
+      // a missing id makes the shell abandon the switch. Put the new row in
+      // every cached list first, then again after the refetch in case the
+      // server answer is briefly behind the create.
+      const merge = (current: Environment[] | undefined) => {
+        if (!current || !created?.id) return current
+        if (current.some((environment) => environment.id === created.id)) return current
+        return [...current, created]
+      }
+      queryClient.setQueriesData<Environment[]>(
+        { queryKey: queryKeys.session.environments() },
+        merge,
+      )
+      void queryClient
+        .invalidateQueries({ queryKey: queryKeys.session.environments() })
+        .then(() => {
+          queryClient.setQueriesData<Environment[]>(
+            { queryKey: queryKeys.session.environments() },
+            merge,
+          )
+        })
     },
   })
 }
