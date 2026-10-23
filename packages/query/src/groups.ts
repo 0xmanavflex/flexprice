@@ -146,6 +146,7 @@ export function useCreateGroup() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Group created', error: 'Could not create the group.' } },
     mutationFn: (draft: CreateGroup) =>
       call(() => client.groups.createGroup(toCreateGroupRequest(draft) as never)),
     onSuccess: () => {

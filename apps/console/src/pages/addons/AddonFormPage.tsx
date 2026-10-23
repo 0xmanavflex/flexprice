@@ -33,7 +33,8 @@ export function AddonFormPage(props: AddonFormPageProps) {
         trail={[{ label: 'Add-ons', onClick: onNavigateToList }, { label: 'Create add-on' }]}
         onCancel={onCancel}
         isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error)}
+        // The API's refusal is a toast (MutationToasts); validation stays in the form.
+        submitError={null}
         onSubmit={(draft: CreateAddon) =>
           create.mutate(draft, {
             onSuccess: (created) => props.onDone((created as { id?: string }).id ?? ''),

@@ -22,7 +22,6 @@ import {
   CUSTOMER_TABS,
   CustomerDetail,
   CustomerEntitlementUsage,
-  Toaster,
   toast,
   type CustomerTab,
 } from '@fp/ui/pages'
@@ -324,7 +323,6 @@ export function CustomerDetailPage({
         error={remove.error ? 'Could not archive the customer. Try again.' : null}
       />
       {invoiceRows.dialogs}
-      <Toaster />
     </>
   )
 }

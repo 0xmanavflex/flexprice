@@ -4378,6 +4378,21 @@ export const handlers = [
 
   http.post(`${BASE}/customers`, async ({ request }) => {
     const body = await readBody(request)
+    // The API's unique index on (environment, external_id): a taken id is a 409.
+    const externalId = readString(body, 'external_id')
+    const taken = (corpus['customers'] as Corpus).items.some(
+      (row) => externalId !== '' && readString(row, 'external_id') === externalId,
+    )
+    if (taken) {
+      return HttpResponse.json(
+        {
+          code: 'already_exists',
+          message: 'A customer with this identifier already exists',
+          http_status_code: 409,
+        },
+        { status: 409 },
+      )
+    }
     const row = { ...body, id: `cust_new_${Date.now()}`, status: 'published' }
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })

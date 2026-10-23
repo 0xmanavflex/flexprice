@@ -549,6 +549,25 @@ export const createSubscriptionSchema = z
       }
       start = phase.endDate || start
     })
+    // A contract in phases is a schedule, and a schedule needs a fixed first
+    // day: "today" would move every phase boundary with the day it is saved.
+    if (value.phases.length > 1 && !value.startDate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['startDate'],
+        message: 'Choose when the contract starts: a contract in phases needs a start date',
+      })
+    }
+    // The API refuses entitlement overrides on a prorated contract (V1 checks
+    // it before sending, with the same words).
+    if (value.prorate && value.entitlementOverrides.length > 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['prorate'],
+        message:
+          'Entitlement overrides cannot be combined with proration. Turn off proration or remove the entitlement overrides.',
+      })
+    }
     // A chosen billing date counts periods from that day, so it cannot come
     // before the contract has started.
     const contractStart = value.startDate || localToday()

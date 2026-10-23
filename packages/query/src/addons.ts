@@ -155,6 +155,7 @@ export function useCreateAddon() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Add-on created', error: 'Could not create the add-on.' } },
     mutationFn: (draft: CreateAddon) =>
       call(() => client.addons.createAddon(toCreateAddonRequest(draft) as never)),
     onSuccess: () => {

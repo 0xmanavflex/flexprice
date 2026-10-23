@@ -367,6 +367,7 @@ export function useCreateInvoice() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Invoice created', error: 'Could not create the invoice.' } },
     mutationFn: (draft: CreateInvoice) =>
       call(() => client.invoices.createInvoice(toCreateInvoiceRequest(draft) as never)),
     onSuccess: () => {

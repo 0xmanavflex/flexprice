@@ -160,6 +160,7 @@ export function useCreatePriceUnit() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Price unit created', error: 'Could not create the price unit.' } },
     mutationFn: (draft: CreatePriceUnit) =>
       call(() => client.priceUnits.createPriceUnit(toCreatePriceUnitRequest(draft) as never)),
     onSuccess: () => {

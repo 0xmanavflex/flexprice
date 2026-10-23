@@ -268,6 +268,7 @@ export function useRecordPayment() {
   const invalidate = useInvalidatePayments()
 
   return useMutation({
+    meta: { notify: { success: 'Payment recorded', error: 'Could not record the payment.' } },
     mutationFn: (draft: RecordPayment) =>
       call(() => client.payments.createPayment(toRecordPaymentRequest(draft) as never)),
     onSuccess: invalidate,

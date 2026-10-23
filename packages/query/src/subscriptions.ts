@@ -980,6 +980,7 @@ export function useCreateSubscription() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Contract created', error: 'Could not create the contract.' } },
     mutationFn: (draft: CreateSubscription) =>
       call(() =>
         client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
