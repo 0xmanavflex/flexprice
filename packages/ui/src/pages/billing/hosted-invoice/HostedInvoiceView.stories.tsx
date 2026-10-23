@@ -120,7 +120,9 @@ export const Paid: Story = {
     await expect(canvas.getByRole('heading', { name: 'Total Paid' })).toBeVisible()
     await expect(canvas.getByText('Paid', { selector: '[data-slot=badge]' })).toBeVisible()
     await expect(canvas.getByText('on 14 Oct 2026')).toBeVisible()
-    await expect(canvas.getByText('Stripe')).toBeVisible()
+    // "Paid With" in the sidebar, and the succeeded attempt in the payment history.
+    await expect(canvas.getByText('Paid With')).toBeVisible()
+    await expect(canvas.getAllByText('Stripe')).toHaveLength(2)
     await expect(canvas.queryByRole('button', { name: pay })).not.toBeInTheDocument()
   },
 }
@@ -180,5 +182,50 @@ export const Loading: Story = {
     await expect(
       within(canvasElement).getByRole('status', { name: 'Loading invoice' }),
     ).toBeVisible()
+  },
+}
+
+/**
+ * A failed attempt is listed under the totals, so the customer can see why the
+ * balance is still due.
+ */
+export const FailedAttempt: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const history = canvas.getByRole('region', { name: 'Payment History' })
+    await expect(within(history).getByText('Card')).toBeVisible()
+    await expect(within(history).getByText('Failed')).toBeVisible()
+  },
+}
+
+/** Paid after a failed attempt: both attempts are listed. */
+export const PaidAfterRetry: Story = {
+  args: { invoice: DEMO_PAID_HOSTED_INVOICE },
+  play: async ({ canvasElement }) => {
+    const history = within(canvasElement).getByRole('region', { name: 'Payment History' })
+    await expect(within(history).getAllByRole('listitem')).toHaveLength(2)
+    await expect(within(history).getByText('Succeeded')).toBeVisible()
+  },
+}
+
+/** A long charge name wraps instead of being cut off, so it reads in full on a phone and on paper. */
+export const LongChargeName: Story = {
+  args: {
+    invoice: {
+      ...DEMO_HOSTED_INVOICE,
+      lines: [
+        {
+          id: 'li_long',
+          name: 'Enterprise analytics workspace — premium support and dedicated region add-on',
+          quantity: '1',
+          amount: DEMO_HOSTED_INVOICE.lines[0]!.amount,
+        },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const name = within(canvasElement).getByText(/^Enterprise analytics workspace/)
+    await expect(name).toBeVisible()
+    await expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth)
   },
 }
