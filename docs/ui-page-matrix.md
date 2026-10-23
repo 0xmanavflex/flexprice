@@ -63,7 +63,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | price-units | `PriceUnitFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | PriceUnitForm |
 | price-units | `PriceUnitListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |
 | pricing-widget | `PricingWidgetPage` | Other | EmptyState | PricingCatalogBlock |
-| revenue | `RevenuePage` | Dashboard | DetailTabs, EntityList, FilterBar, Panel, SortMenu | ReportStatus, RevenueReport |
+| revenue | `ReportsPage` | Other | DetailTabs, EntityList, FilterBar, Panel, SortMenu | AgingBucket, CustomerRevenueRow, OverdueCustomerRow, PayerRow, ReportStatus, RevenueReport |
 | selfBilling | `CheckoutReturnPage` | Other | — | CheckoutReturnView, NextStep |
 | selfBilling | `UpgradePage` | Other | Field | PageLoadingState, UpgradeView |
 | selfBilling | `UsageBillingPage` | Other | Section, SimpleTable | UsageBillingView |
