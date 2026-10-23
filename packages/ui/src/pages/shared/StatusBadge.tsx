@@ -1,4 +1,4 @@
-import { BracesIcon, GaugeIcon, HashIcon, ToggleRightIcon, type CircleIcon } from '@ui/icons'
+import { BracesIcon, CheckCircle2Icon, GaugeIcon, HashIcon, type CircleIcon } from '@ui/icons'
 import { FEATURE_TYPE_LABEL, FeatureType, InvoiceStatus, needsAttention } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { Pill, type PillTone } from './cells'
@@ -92,7 +92,7 @@ export function GlyphBadge({ tone, label }: GlyphBadgeProps) {
 /** The glyph each feature type carries. */
 const FEATURE_TYPE_ICON: Record<FeatureType, typeof CircleIcon> = {
   [FeatureType.Metered]: GaugeIcon,
-  [FeatureType.Boolean]: ToggleRightIcon,
+  [FeatureType.Boolean]: CheckCircle2Icon,
   [FeatureType.Static]: HashIcon,
   [FeatureType.Config]: BracesIcon,
 }

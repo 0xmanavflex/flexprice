@@ -94,6 +94,7 @@ function Harness({
   onBack,
   onEdit,
   onStreamEvents,
+  streamEventsReason,
   onUpdateField,
   subscriptionsLoading = false,
   subscriptionsError = false,
@@ -114,6 +115,7 @@ function Harness({
   onBack?: () => void
   onEdit?: () => void
   onStreamEvents?: () => void
+  streamEventsReason?: string
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
   subscriptionsLoading?: boolean
   subscriptionsError?: boolean
@@ -147,6 +149,7 @@ function Harness({
         {...(onOpenPlan ? { onOpenPlan } : {})}
         {...(onEdit ? { onEdit } : {})}
         {...(onStreamEvents ? { onStreamEvents } : {})}
+        {...(streamEventsReason ? { streamEventsReason } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
       />
     </div>
@@ -364,14 +367,16 @@ export const StreamsSampleEventsFromMenu: Story = {
   },
 }
 
-/** Without `onStreamEvents` (production, or no live subscription) the item is absent. */
+/** Without `onStreamEvents` the item stays, disabled, with the reason under the label. */
 export const NoSampleEventsWithoutHandler: Story = {
+  args: { streamEventsReason: 'Needs an active or trialing contract.' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
     const body = within(canvasElement.ownerDocument.body)
-    await body.findByRole('menuitem', { name: 'Top up wallet' })
-    await expect(body.queryByRole('menuitem', { name: 'Stream sample events' })).toBeNull()
+    const item = await body.findByRole('menuitem', { name: /Stream sample events/ })
+    await expect(item).toHaveAttribute('aria-disabled', 'true')
+    await expect(item).toHaveTextContent('Needs an active or trialing contract.')
   },
 }
 

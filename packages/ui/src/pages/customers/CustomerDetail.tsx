@@ -132,11 +132,13 @@ export interface CustomerDetailProps {
   /** Adds "Copy portal link" to the header menu. */
   onCopyPortalLink?: () => void
   /**
-   * Adds "Stream sample events" to the header menu: the backend generates a
-   * minute of usage events for one of this customer's subscriptions. Omitted
-   * (production, or no live subscription), the item is not shown.
+   * "Stream sample events" in the header menu: the backend generates a minute
+   * of usage events for one live subscription. Omitted, the item stays in the
+   * menu, disabled, with `streamEventsReason` under the label.
    */
   onStreamEvents?: () => void
+  /** Why sample events cannot be streamed. Shown under the disabled menu item. */
+  streamEventsReason?: string
   /**
    * Save one of the simple fields in place (name, email, phone). Omitted, the
    * Information tab is read-only. Resolve to commit; reject with an Error to
@@ -249,6 +251,7 @@ export function CustomerDetail({
   onOpenPortal,
   onCopyPortalLink,
   onStreamEvents,
+  streamEventsReason,
   onUpdateField,
   onUpdateMetadata,
   onOpenInvoice,
@@ -322,17 +325,17 @@ export function CustomerDetail({
           },
         ]
       : []),
-    ...(onStreamEvents
-      ? [
-          {
-            id: 'stream-events',
-            label: 'Stream sample events',
-            icon: <RocketIcon className="text-muted-foreground" aria-hidden="true" />,
-            onSelect: onStreamEvents,
-            entity: RBAC_ENTITY.Event,
-          },
-        ]
-      : []),
+    {
+      id: 'stream-events',
+      label: 'Stream sample events',
+      icon: <RocketIcon className="text-muted-foreground" aria-hidden="true" />,
+      onSelect: onStreamEvents ?? (() => undefined),
+      disabled: !onStreamEvents,
+      entity: RBAC_ENTITY.Event,
+      ...(!onStreamEvents
+        ? { description: streamEventsReason ?? 'Sample events are not available for this customer.' }
+        : {}),
+    },
     ...(onOpenPortal && customer.externalId
       ? [
           {
