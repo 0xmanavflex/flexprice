@@ -8,6 +8,7 @@ import {
   previousWindow,
   rangeWindow,
   receivables,
+  alignToWindow,
   revenueSeries,
 } from './revenueReport'
 
@@ -41,6 +42,24 @@ describe('windows', () => {
   it('puts the comparison window immediately before, the same length', () => {
     const window = { start: day('2026-10-01'), end: day('2026-10-11') }
     expect(previousWindow(window)).toEqual({ start: day('2026-09-21'), end: day('2026-10-01') })
+  })
+})
+
+describe('alignToWindow', () => {
+  it('keeps every month in the window, with quiet months as zero', () => {
+    const window = rangeWindow('12m', NOW)
+    const points = alignToWindow(
+      [
+        { at: day('2026-09-01'), value: 800 },
+        { at: day('2026-10-01'), value: 6900 },
+      ],
+      window,
+      'month',
+    )
+    expect(points).toHaveLength(12)
+    expect(points.map((point) => point.label).slice(-2)).toEqual(['Sep', 'Oct'])
+    expect(points.map((point) => point.value).slice(0, 10)).toEqual(Array(10).fill(0))
+    expect(points.map((point) => point.value).slice(-2)).toEqual([800, 6900])
   })
 })
 
@@ -181,7 +200,7 @@ describe('parseRevenueSearch', () => {
   it('falls back to the defaults for anything it does not know', () => {
     expect(parseRevenueSearch({ view: 'nope', range: 'forever', compare: 'x' })).toEqual({
       view: 'overview',
-      range: '90d',
+      range: '12m',
       compare: 'none',
       currency: '',
     })
