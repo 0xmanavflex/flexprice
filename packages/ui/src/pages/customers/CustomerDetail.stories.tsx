@@ -287,8 +287,9 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
-    // Overview opens on the invoices table. Its title is for assistive tech; the table is what is on screen.
-    await expect(canvas.getByRole('region', { name: 'Invoices table' })).toBeVisible()
+    // Overview leads with the five most recent invoices, under their own heading.
+    const recent = canvas.getByRole('heading', { name: 'Recent invoices' }).closest('section')
+    await expect(within(recent as HTMLElement).getByRole('table')).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Contracts' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()

@@ -708,7 +708,7 @@ function EntitlementsBlock({
   hasData: boolean
 }) {
   return (
-    <Section flush as="h3" title="Entitlements">
+    <Section flush title="Entitlements">
       <SubTabState
         hasData={hasData}
         isLoading={isLoading}
@@ -888,7 +888,7 @@ function OverviewTab({
           action={<ViewAllButton label="invoices" onClick={onViewAllInvoices} />}
         >
           {(rows, controls) => (
-            <Section flush as="h3" title="Recent invoices" action={controls}>
+            <Section flush title="Recent invoices" action={controls}>
               <InvoiceTable
                 compactList
                 invoices={invoices.slice(0, 5)}
@@ -918,7 +918,7 @@ function OverviewTab({
               : {})}
           >
             {(rows, controls) => (
-              <Section flush as="h3" title="Recent payments" action={controls}>
+              <Section flush title="Recent payments" action={controls}>
                 <PaymentTable
                   payments={payments.slice(0, 5)}
                   shown={rows}
@@ -1102,7 +1102,6 @@ function ContractsTable({
       {(rows, controls) => (
     <Section
       flush
-      as="h3"
       title="Contracts"
       bare={!showTitle}
       action={controls}
