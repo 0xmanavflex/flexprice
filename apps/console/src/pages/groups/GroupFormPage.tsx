@@ -22,7 +22,8 @@ export function GroupFormPage({ onCancel, onDone }: GroupFormPageProps) {
       trail={[{ label: 'Groups', onClick: onCancel }, { label: 'Create group' }]}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={toSubmitError(create.error)}
+      // The API's refusal is a toast (MutationToasts); validation stays in the form.
+      submitError={null}
       onSubmit={(draft: CreateGroup) =>
         create.mutate(draft, {
           onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),

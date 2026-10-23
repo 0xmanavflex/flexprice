@@ -185,6 +185,7 @@ export function useCreatePlan() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Plan created', error: 'Could not create the plan.' } },
     mutationFn: (draft: CreatePlan) =>
       call(() => client.plans.createPlan(toCreatePlanRequest(draft) as never)),
     onSuccess: () => {

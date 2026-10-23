@@ -7,7 +7,7 @@ import {
   type SubscriptionQuery,
 } from '@fp/domain'
 import { useCancelSubscription, useCustomers, usePlans, useSubscriptions } from '@fp/query'
-import { SubscriptionGrid, Toaster, toast } from '@fp/ui/pages'
+import { SubscriptionGrid, toast } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, OptionSelect, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
@@ -143,7 +143,6 @@ export function SubscriptionListPage({
           )
         }}
       />
-      <Toaster />
     </>
   )
 }

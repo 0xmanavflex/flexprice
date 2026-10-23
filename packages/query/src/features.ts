@@ -343,6 +343,7 @@ export function useCreateFeature() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Feature created', error: 'Could not create the feature.' } },
     mutationFn: (draft: CreateFeature) =>
       call(() => client.features.createFeature(toCreateFeatureRequest(draft) as never)),
     onSuccess: () => {

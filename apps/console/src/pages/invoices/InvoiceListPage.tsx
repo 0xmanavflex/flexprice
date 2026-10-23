@@ -5,7 +5,7 @@ import {
   isStoredInvoiceStatus,
 } from '@fp/domain'
 import { useCustomers, useInvoices, useEntityIntegrationColumns } from '@fp/query'
-import { InvoiceGrid, Toaster } from '@fp/ui/pages'
+import { InvoiceGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { useInvoiceRowActions } from './useInvoiceRowActions'
 import { toListFailure } from '../shared/listFailure'
@@ -143,7 +143,6 @@ export function InvoiceListPage({
       </PageBody>
 
       {dialogs}
-      <Toaster />
     </>
   )
 }

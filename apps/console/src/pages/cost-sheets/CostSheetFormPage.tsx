@@ -35,7 +35,8 @@ export function CostSheetFormPage(props: CostSheetFormPageProps) {
         ]}
         onCancel={onCancel}
         isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error)}
+        // The API's refusal is a toast (MutationToasts); validation stays in the form.
+        submitError={null}
         onSubmit={(draft: CreateCostSheet) =>
           create.mutate(draft, {
             onSuccess: (created) => {
