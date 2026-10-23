@@ -22,7 +22,28 @@ import { defineConfig, devices } from '@playwright/test'
  *
  * Strategy: `docs/testing-strategy.md`. Rules: `e2e/AGENTS.md`.
  */
-const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
+// `E2E_PORT` moves the local server off :3000 when something else holds it —
+// locally an existing server is reused, so the wrong app would be tested.
+const port = process.env.E2E_PORT ?? '3000'
+const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${port}`
+
+/**
+ * The per-journey reports (`e2e/reporters/journey-reporter.ts`): always in CI,
+ * and locally with `E2E_REPORT=1` (`pnpm test:e2e:report`). Writes
+ * `e2e-results/`; never sends anything anywhere — Slack is a separate step
+ * that only the release workflow runs.
+ */
+const journeyReports = !!process.env.CI || process.env.E2E_REPORT === '1'
+const journeyReporter = [
+  './e2e/reporters/journey-reporter.ts',
+  { outputDir: 'e2e-results' },
+] as const
+
+/**
+ * Live journeys share one test account and one dedicated environment, so they
+ * run one at a time (`E2E_LIVE=1`).
+ */
+const live = process.env.E2E_LIVE === '1'
 
 export default defineConfig({
   testDir: './e2e',
@@ -34,7 +55,10 @@ export default defineConfig({
 
   // A flaky test is a broken test (`e2e/AGENTS.md`), so a retry is not allowed
   // to turn one green. If a test needs a retry to pass, that is the finding.
-  retries: 0,
+  // `E2E_RETRIES` exists for the release run against a real network; even
+  // there the journey report records every earlier failed attempt, and only
+  // the final attempt decides PASS or FAIL.
+  retries: Number(process.env.E2E_RETRIES ?? 0),
   // CI serves a prebuilt bundle (see `webServer` below), so nothing compiles
   // while a test waits and the default test timeout is enough there too.
   timeout: 30_000,
@@ -46,7 +70,7 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   forbidOnly: !!process.env.CI,
   fullyParallel: true,
-  workers: process.env.CI ? 2 : undefined,
+  workers: live ? 1 : process.env.CI ? 2 : undefined,
 
   reporter: process.env.CI
     ? [
@@ -56,8 +80,11 @@ export default defineConfig({
         // reporting "the suite failed" and making someone open the run to
         // learn which surface broke.
         ['json', { outputFile: 'playwright-results.json' }],
+        journeyReporter,
       ]
-    : [['list']],
+    : journeyReports
+      ? [['list'], journeyReporter]
+      : [['list']],
 
   use: {
     baseURL,
@@ -93,12 +120,18 @@ export default defineConfig({
     ? undefined
     : {
         command: process.env.CI
-          ? 'pnpm exec vite build --outDir dist-e2e && pnpm exec vite preview --outDir dist-e2e --port 3000 --strictPort'
-          : 'pnpm --filter console dev',
-        url: 'http://localhost:3000',
+          ? `pnpm exec vite build --outDir dist-e2e && pnpm exec vite preview --outDir dist-e2e --port ${port} --strictPort`
+          : `pnpm exec vite --port ${port} --strictPort`,
+        url: `http://localhost:${port}`,
         // MSW serves the fixture corpus; nothing reaches a backend. Read at
-        // build time in CI and by the dev server locally.
-        env: { VITE_USE_MOCKS: 'true' },
+        // build time in CI and by the dev server locally. A local live run
+        // (`E2E_LIVE=1` with `E2E_API_URL`) serves the console against that
+        // API instead — the release workflow never gets here, it sets
+        // `E2E_BASE_URL` to the deployed frontend.
+        env:
+          live && process.env.E2E_API_URL
+            ? { VITE_USE_MOCKS: 'false', VITE_FLEXPRICE_API_URL: process.env.E2E_API_URL }
+            : { VITE_USE_MOCKS: 'true' },
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
       },

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { CatalogListPage } from './pages/catalog'
 import { SignInPage } from './pages/auth'
@@ -35,7 +35,7 @@ import { ShellPage } from './pages/shell'
  *
  * # terminal 2 — the live spec, and only it
  * E2E_LIVE=1 \
- * E2E_EMAIL='you@example.com' \
+ * E2E_USER='e2e-account@example.com' \
  * E2E_PASSWORD='…' \
  * E2E_BASE_URL=http://localhost:3000 \
  *   pnpm --filter console test:e2e live-auth
@@ -47,7 +47,8 @@ import { ShellPage } from './pages/shell'
  * everyone who pulled.
  */
 
-const email = process.env['E2E_EMAIL']
+/** The dedicated E2E account. `E2E_EMAIL` is the older name, still read. */
+const email = process.env['E2E_USER'] ?? process.env['E2E_EMAIL']
 const password = process.env['E2E_PASSWORD']
 /**
  * Which environment holds the rows to assert on.
@@ -70,7 +71,7 @@ const live = process.env['E2E_LIVE'] === '1' && !!email && !!password
 test.describe('a real session', () => {
   test.skip(
     !live,
-    'Live sign-in is opt-in: set E2E_LIVE=1, E2E_EMAIL, E2E_PASSWORD and E2E_BASE_URL (see the note at the top of this file).',
+    'Live sign-in is opt-in: set E2E_LIVE=1, E2E_USER, E2E_PASSWORD and E2E_BASE_URL (see the note at the top of this file).',
   )
 
   // A real backend over a real network is slower than a fixture, and the point

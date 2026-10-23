@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { CatalogListPage } from './pages/catalog'
 
 test.beforeEach(async ({ context }) => {
