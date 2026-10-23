@@ -1966,6 +1966,23 @@ export function useAddSubscriptionCoupon(subscriptionId: string) {
   })
 }
 
+/** Take one coupon off this contract or one of its charges, by its association id. */
+export function useRemoveSubscriptionCoupon(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (associationId: string) =>
+      call(() =>
+        client.subscriptions.executeSubscriptionModify(
+          subscriptionId,
+          toRemoveCouponRequest(associationId),
+        ),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
 /** Apply a tax rate to this contract — `POST /taxes/associations`, entity type `subscription`. */
 export function useCreateSubscriptionTax(subscriptionId: string) {
   const client = useFlexprice()

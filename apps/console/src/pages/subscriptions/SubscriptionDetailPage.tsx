@@ -11,6 +11,7 @@ import {
 import {
   ApiError,
   useActivateSubscription,
+  useRemoveSubscriptionCoupon,
   usePauseSubscription,
   useResumeSubscription,
   useCancelSubscriptionCreditGrant,
@@ -152,6 +153,7 @@ export function SubscriptionDetailPage({
   )
   const addAddon = useAddSubscriptionAddon(subscriptionId)
   const addCoupon = useAddSubscriptionCoupon(subscriptionId)
+  const removeCoupon = useRemoveSubscriptionCoupon(subscriptionId)
   const updateAlert = useUpdateAlertSetting()
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
@@ -225,6 +227,7 @@ export function SubscriptionDetailPage({
         onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
         onAddAddon={(draft) => addAddon.mutateAsync(draft)}
         onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
+        onRemoveCoupon={(coupon) => removeCoupon.mutateAsync(coupon.id)}
         onSaveChargeAlert={({ settingId, config }) =>
           updateAlert.mutateAsync({ id: settingId, config })
         }

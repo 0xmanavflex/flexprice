@@ -1302,6 +1302,29 @@ export const EditPlanLink: Story = {
   },
 }
 
+/** V1's charge row: copy the line item id, and apply or remove a coupon on just this charge. */
+export const ChargeRowCouponActions: Story = {
+  parameters: menuA11y,
+  args: {
+    onRemoveCoupon: fn(async () => undefined),
+    coupons: ready([{ ...COUPONS[0]!, id: 'assoc_line', lineItemId: 'line_1', active: true }]),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Copy line item ID' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: 'Apply coupon' })).toBeNull()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove coupon' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove coupon' }))
+    await waitFor(() =>
+      expect(args.onRemoveCoupon).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'assoc_line' }),
+      ),
+    )
+  },
+}
+
 /** Add a fixed charge: the full charge form plus quantity, start date and proration. */
 export const AddCharge: Story = {
   parameters: menuA11y,

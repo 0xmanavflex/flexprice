@@ -280,6 +280,7 @@ export {
   toRemoveCouponRequest,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
+  useRemoveSubscriptionCoupon,
   useCreateSubscriptionCreditGrant,
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
