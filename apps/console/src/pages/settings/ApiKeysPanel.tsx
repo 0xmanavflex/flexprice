@@ -40,7 +40,7 @@ const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
  *
  * A key is something you look at, copy and occasionally revoke; nobody sorts,
  * filters or pages through them. So each key is one compact row — name and
- * dates on the left, the masked key in monospace with a copy button, Revoke —
+ * dates on the left, the masked key in monospace, Revoke —
  * inside one outline, with no toolbar beyond the create button. Deliberate
  * deviation from the shared table, by product request.
  *
@@ -166,7 +166,7 @@ function maskedKey(key: ApiKey): string {
   return `${key.displayId || key.id}${'•'.repeat(12)}`
 }
 
-/** One key: name and dates, the masked key with copy, Revoke. */
+/** One key: name and dates, the masked key, Revoke. The secret is not stored, so there is nothing to copy. */
 function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) {
   const name = apiKey.name || apiKey.displayId || apiKey.id
   return (
@@ -196,7 +196,9 @@ function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) 
           {apiKey.expiresAt ? ` · Expires ${formatDate(apiKey.expiresAt)}` : ''}
         </span>
       </div>
-      <CopySnippet value={apiKey.displayId || apiKey.id} display={maskedKey(apiKey)} label={name} />
+      <code className="bg-muted max-w-full min-w-0 truncate rounded-md px-2.5 py-1 font-mono text-xs">
+        {maskedKey(apiKey)}
+      </code>
       {/* Revoking needs secret write (V1). */}
       <WriteGate entity={RBAC_ENTITY.Secret}>
         <Button size="sm" variant="ghost" onClick={onRevoke}>
