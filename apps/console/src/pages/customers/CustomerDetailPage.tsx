@@ -134,6 +134,10 @@ export function CustomerDetailPage({
       void navigate({ to: '/payments/new', search: { invoice: invoiceId } }),
     onIssueCreditNote: (invoiceId) =>
       void navigate({ to: '/credit-memos/new', search: { invoice: invoiceId } }),
+    onEditInvoice: (invoiceId) =>
+      void navigate({ to: '/invoices/$invoiceId/edit', params: { invoiceId } }),
+    onOpenContract: (subscriptionId) =>
+      void navigate({ to: '/contracts/$subscriptionId', params: { subscriptionId } }),
   })
 
   if (!customer.data) {
