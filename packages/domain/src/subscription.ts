@@ -631,7 +631,8 @@ export function emptySubscription(): CreateSubscription {
     billingCycle: BillingCycle.Anniversary,
     billingAnchor: '',
     paymentTerms: '',
-    prorate: true,
+    // Off until someone turns it on in Dates and billing.
+    prorate: false,
     autoInvoiceThreshold: '',
     draft: false,
     invoicingCustomerExternalId: '',

@@ -389,6 +389,18 @@ export const Prefilled: Story = {
   },
 }
 
+/** Proration sits in Dates and billing, off until someone turns it on. */
+export const ProrationIsOffUntilTurnedOn: Story = {
+  args: { prefilled: true, step: 'plan' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const proration = canvas.getByRole('switch', { name: /^Proration/ })
+    await expect(proration).not.toBeChecked()
+    await userEvent.click(proration)
+    await expect(proration).toBeChecked()
+  },
+}
+
 /**
  * Bill on a date you choose: the third card opens a date picker, Next asks for
  * a date until there is one, and the draft carries it as the billing anchor.
@@ -443,8 +455,8 @@ async function openCommitment(canvas: ReturnType<typeof within>) {
 
 /**
  * A contract of one phase lists the plan's charges in one Charges card, with
- * no phase chrome; proration sits under them. A usage charge's commitment
- * opens in a dialog.
+ * no phase chrome; proration is not here (it is a billing term, in Dates and
+ * billing). A usage charge's commitment opens in a dialog.
  */
 export const PhaseCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 6 },
@@ -452,7 +464,7 @@ export const PhaseCharges: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.queryByRole('heading', { name: 'Phase 1' })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).toBeVisible()
-    await expect(canvas.getByRole('switch', { name: /^Proration/ })).toBeChecked()
+    await expect(canvas.queryByRole('switch', { name: /^Proration/ })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
     const dialog = await openCommitment(canvas)
@@ -894,7 +906,7 @@ export const BillingStep: Story = {
       'placeholder',
       'Not available: the plan has fixed charges',
     )
-    // Proration moved to the charges; draft is the header's Save as draft.
+    // Proration is in Dates and billing; draft is the header's Save as draft.
     await expect(canvas.queryByText('Prorate changes')).toBeNull()
     await expect(canvas.queryByText('Create as draft')).toBeNull()
   },
@@ -1086,7 +1098,7 @@ export const ReviewByStep: Story = {
     await expect(canvas.getByText(/^Acme Robotics · /)).toBeVisible()
     await expect(canvas.getByText('Oct 20, 2026, 12:00 AM → until cancelled')).toBeVisible()
     await expect(canvas.getByText("4 charges · all at the plan's prices")).toBeVisible()
-    await expect(canvas.getByText('Prorates changes')).toBeVisible()
+    await expect(canvas.getByText('No proration')).toBeVisible()
     await expect(canvas.getByText('VAT 20%')).toBeVisible()
     await expect(canvas.getByText('Each period')).toBeVisible()
     await expect(canvas.getByText('14 days')).toBeVisible()
