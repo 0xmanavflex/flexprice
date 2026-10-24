@@ -529,13 +529,8 @@ export function InvoiceForm(props: InvoiceFormProps) {
               <Separator orientation="vertical" className="my-auto mr-2 h-4 shrink-0" />
             </>
           ) : null}
+          {/* The status sits once, on the details card below, not here as well. */}
           <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
-          <Badge
-            variant={isDraft ? 'warning-light' : 'info-light'}
-            className="hidden translate-y-px self-center sm:inline-flex"
-          >
-            {statusLabel}
-          </Badge>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {edit ? (
