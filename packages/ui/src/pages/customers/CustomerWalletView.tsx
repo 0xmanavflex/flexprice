@@ -13,6 +13,8 @@ import {
   XCircleIcon,
 } from '@ui/icons'
 import {
+  AUTO_TOPUP_COOLDOWN_UNIT_LABEL,
+  AutoTopupCooldownUnit,
   type AutoTopup,
   type CreateWallet,
   type DebitWallet,
@@ -773,6 +775,11 @@ function TopUpDialog({
   )
 }
 
+const COOLDOWN_UNIT_OPTIONS = Object.values(AutoTopupCooldownUnit).map((value) => ({
+  value,
+  label: AUTO_TOPUP_COOLDOWN_UNIT_LABEL[value],
+}))
+
 function AutoTopupDialog({
   open,
   onClose,
@@ -835,11 +842,13 @@ function AutoTopupDialog({
             >
               Below
             </LabelWithHint>
-            <InputGroup className="h-9">
+            <InputGroup className="h-9" aria-disabled={!draft.enabled || undefined}>
               <InputGroupInput
                 id="auto-topup-threshold"
                 inputMode="decimal"
                 value={draft.threshold}
+                // Nothing to set until auto top-up is on.
+                disabled={!draft.enabled}
                 onChange={(event) => set({ threshold: event.target.value })}
               />
               <InputGroupAddon align="inline-end">credits</InputGroupAddon>
@@ -852,15 +861,52 @@ function AutoTopupDialog({
             >
               Add
             </LabelWithHint>
-            <InputGroup className="h-9">
+            <InputGroup className="h-9" aria-disabled={!draft.enabled || undefined}>
               <InputGroupInput
                 id="auto-topup-amount"
                 inputMode="decimal"
                 value={draft.amount}
+                // Nothing to set until auto top-up is on.
+                disabled={!draft.enabled}
                 onChange={(event) => set({ amount: event.target.value })}
               />
               <InputGroupAddon align="inline-end">credits</InputGroupAddon>
             </InputGroup>
+          </Field>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field>
+            <LabelWithHint
+              htmlFor="auto-topup-cooldown"
+              hint="The least time between two automatic top-ups, so a burst of usage cannot trigger several in a row. Leave blank for none."
+            >
+              Cool-off
+            </LabelWithHint>
+            <Input
+              id="auto-topup-cooldown"
+              inputMode="numeric"
+              placeholder="None"
+              value={draft.cooldownValue ?? ''}
+              disabled={!draft.enabled}
+              onChange={(event) => set({ cooldownValue: event.target.value })}
+            />
+          </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="auto-topup-cooldown-unit"
+              hint="What the cool-off is counted in."
+            >
+              Unit
+            </LabelWithHint>
+            <OptionSelect
+              id="auto-topup-cooldown-unit"
+              value={draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour}
+              disabled={!draft.enabled}
+              onValueChange={(cooldownUnit) =>
+                set({ cooldownUnit: cooldownUnit as AutoTopupCooldownUnit })
+              }
+              options={COOLDOWN_UNIT_OPTIONS}
+            />
           </Field>
         </div>
         <div className="flex items-center justify-between gap-4">
