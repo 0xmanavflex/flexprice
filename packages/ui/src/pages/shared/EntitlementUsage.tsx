@@ -29,7 +29,13 @@ import { UsageMeter } from './UsageMeter'
  */
 export const EntitlementUsageProvenance = provenance({
   source: 'composition',
-  composes: ['pages/shared/UsageMeter', 'pages/shared/DetailTable', 'pages/shared/cells'],
+  composes: [
+    'pages/shared/UsageMeter',
+    'pages/shared/DetailTable',
+    'pages/shared/cells',
+    'ui/button',
+    'ui/popover',
+  ],
   note: "V1's customer entitlements table (Feature, Source, Value, Usage) on the shared detail table, so filter and sort sit in the section header.",
 })
 
@@ -161,9 +167,9 @@ function Sources({ sources }: { sources: EntitlementSourceLink[] }) {
             render={
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="xs"
-                className="text-muted-foreground h-5 shrink-0 px-1 text-xs"
+                className="h-5 shrink-0 px-1.5 text-xs"
                 aria-label={`${sources.length} sources`}
                 onClick={(event) => event.stopPropagation()}
               />

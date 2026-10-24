@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   type CloneFeature,
+  FeatureStatus,
   FeatureType,
   PriceEntityType,
   emptyAlertSettingConfig,
@@ -128,14 +129,20 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
           }
         }}
         // Only usage is charged per feature: a metered feature can be billed on a plan.
-        {...(data.type === FeatureType.Metered && data.meterId
+        // Not on an archived feature: new prices belong on live meters.
+        {...(data.type === FeatureType.Metered &&
+        data.meterId &&
+        data.status !== FeatureStatus.Archived
           ? { onAddCharge: () => setAddingCharge(true) }
           : {})}
         onSaveMetadata={(metadata) =>
           update.mutateAsync({ id: data.id, draft: { name: data.name, metadata } })
         }
       />
-      <AddFeatureChargeDialog feature={data} open={addingCharge} onOpenChange={setAddingCharge} />
+      {/* Mounted only while open: its plan and catalogue reads wait for the click. */}
+      {addingCharge ? (
+        <AddFeatureChargeDialog feature={data} open onOpenChange={setAddingCharge} />
+      ) : null}
       <FeatureCloneDialog
         open={cloning}
         onOpenChange={(open) => {
