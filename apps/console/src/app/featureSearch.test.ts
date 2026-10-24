@@ -12,6 +12,10 @@ describe('parseFeatureSearch', () => {
     expect(parseFeatureSearch({ filters: [] }).filters).toEqual([])
   })
 
+  it('leaves the default filter off a link that names a status', () => {
+    expect(parseFeatureSearch({ status: 'archived' }).filters).toEqual([])
+  })
+
   it('reads a full query', () => {
     expect(parseFeatureSearch({ page: '2', size: '50', q: 'api', type: 'metered' })).toEqual({
       page: 2,

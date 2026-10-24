@@ -225,7 +225,7 @@ export function AddonDetailPage({
 function EntitlementsTab({ addonId }: { addonId: string }) {
   const navigate = useNavigate()
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
-  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
+  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100, filters: [] })
   const create = useCreateBulkEntitlements()
   const updateEntitlement = useUpdateEntitlement()
   const remove = useDeleteEntitlement()

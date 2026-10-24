@@ -1,4 +1,4 @@
-import { FilterOp, type ListFilter, type ListFilterSpec } from './listFilter'
+import { FilterOp, type ListFilter, type ListFilterSpec, sameListFilters } from './listFilter'
 import { z } from 'zod'
 
 /**
@@ -167,7 +167,10 @@ export function isCustomerQueryFiltered(query: CustomerQuery): boolean {
   return (
     query.search.length > 0 ||
     query.statuses.length > 0 ||
-    JSON.stringify(query.filters ?? []) !== JSON.stringify(DEFAULT_CUSTOMER_QUERY.filters ?? [])
+    // An empty list (every status) is not a narrowing; the default view is
+    // not one either. Anything else the person chose is.
+    ((query.filters?.length ?? 0) > 0 &&
+      !sameListFilters(query.filters ?? [], DEFAULT_CUSTOMER_QUERY.filters ?? []))
   )
 }
 

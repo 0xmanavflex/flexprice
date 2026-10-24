@@ -55,7 +55,11 @@ export function parseCustomerSearch(raw: Record<string, unknown>): CustomerQuery
     // empty list is "every status", so removing the chip sticks across reloads.
     filters:
       raw['filters'] === undefined
-        ? (DEFAULT_CUSTOMER_QUERY.filters ?? [])
+        ? // A link that names a status asks for that status; the default
+          // status filter would contradict it, so it is left off.
+          statuses.length > 0
+          ? []
+          : (DEFAULT_CUSTOMER_QUERY.filters ?? [])
         : runnableFilters(decodeListFilters(raw['filters']), CUSTOMER_FILTERS),
   }
 }

@@ -35,6 +35,10 @@ describe('parseCustomerSearch', () => {
     expect(parseCustomerSearch({ filters: '[]' }).filters).toEqual([])
   })
 
+  it('leaves the default filter off a link that names a status', () => {
+    expect(parseCustomerSearch({ status: 'archived' }).filters).toEqual([])
+  })
+
   it('drops filters it cannot run', () => {
     expect(
       parseCustomerSearch({ filters: [{ field: 'plan', op: 'eq', value: 'x' }] }).filters,
