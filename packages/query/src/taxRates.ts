@@ -120,13 +120,20 @@ export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Pro
   }
 }
 
-export function useTaxRates(query: TaxRateQuery) {
+export function useTaxRates(
+  query: TaxRateQuery,
+  options: {
+    /** Refetch when the tab regains focus, e.g. after a rate is created in another tab. */
+    refetchOnWindowFocus?: boolean
+  } = {},
+) {
   const client = useFlexprice()
 
   return useQuery({
     queryKey: queryKeys.taxRates.list({ ...query, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchTaxRates(client, query),
     placeholderData: (previous) => previous,
+    ...(options.refetchOnWindowFocus ? { refetchOnWindowFocus: 'always' as const } : {}),
   })
 }
 
