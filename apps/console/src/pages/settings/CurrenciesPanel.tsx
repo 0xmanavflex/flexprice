@@ -4,6 +4,7 @@ import {
   type CustomCurrencyConfig,
   customCurrencyConfigSchema,
   emptyCustomCurrency,
+  currencyCodes,
   quotedFiatCurrencies,
 } from '@fp/domain'
 import {
@@ -11,7 +12,13 @@ import {
   useResetCustomCurrencyConfig,
   useUpdateCustomCurrencyConfig,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
+import {
+  ConfirmDialog,
+  EmptyState,
+  OptionCombobox,
+  SettingRow,
+  SettingsFieldGroup,
+} from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
 import {
@@ -69,6 +76,10 @@ import { useDraft } from './useDraft'
  * currency is three letters, a name and a symbol; removing and re-adding one
  * is cheaper than a rename that fights the person doing it.
  */
+
+/** Every ISO currency, as the fiat picker offers it (stored lower-case, shown upper). */
+const FIAT_OPTIONS = currencyCodes().map((code) => ({ value: code.toLowerCase(), label: code }))
+
 export function CurrenciesPanel() {
   const { environmentId } = useSession()
   const config = useCustomCurrencyConfig(environmentId)
@@ -131,7 +142,6 @@ function CurrencyForm({
    */
   const [fiats, setFiats] = useState<string[]>(() => quotedFiatCurrencies(config))
 
-  const [newFiat, setNewFiat] = useState('')
   const [fiatIssue, setFiatIssue] = useState<string | null>(null)
   const [newCode, setNewCode] = useState('')
   const [codeIssue, setCodeIssue] = useState<string | null>(null)
@@ -149,7 +159,6 @@ function CurrencyForm({
   function reseed(saved: CustomCurrencyConfig) {
     draft.reset(saved)
     setFiats(quotedFiatCurrencies(saved))
-    setNewFiat('')
     setFiatIssue(null)
     setNewCode('')
     setCodeIssue(null)
@@ -157,8 +166,8 @@ function CurrencyForm({
     setAdding(false)
   }
 
-  function addFiat() {
-    const code = normalise(newFiat)
+  function addFiat(picked: string) {
+    const code = normalise(picked)
     if (!CODE.test(code)) {
       setFiatIssue('A currency code is three letters, for example usd.')
       return
@@ -169,7 +178,6 @@ function CurrencyForm({
     }
 
     setFiatIssue(null)
-    setNewFiat('')
     setFiats([...fiats, code].sort())
     // Every currency gains the same empty rate box, which is the rule.
     draft.update((current) => ({
@@ -307,28 +315,23 @@ function CurrencyForm({
             )}
             <ActionError message={draft.error('defaultFiatCurrency') ?? null} />
             <div className="flex max-w-md items-center gap-2">
-              <Input
-                id="currency-add-fiat"
-                aria-label="Add a fiat currency"
-                disabled={busy}
-                placeholder="Add a fiat currency, e.g. gbp"
-                autoComplete="off"
-                spellCheck={false}
-                aria-invalid={fiatIssue ? true : undefined}
-                value={newFiat}
-                onChange={(event) => setNewFiat(event.target.value)}
-                onKeyDown={(event) => {
-                  // A three-letter code plus Enter should not submit
-                  // the whole form — it should add the code.
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    addFiat()
-                  }
-                }}
-              />
-              <Button type="button" variant="outline" disabled={busy} onClick={addFiat}>
-                Add
-              </Button>
+              {/* A dropdown of real ISO codes rather than free text: a fiat currency
+                  is one the world already has, so it is picked, not typed. */}
+              <div className="min-w-0 flex-1">
+                <label htmlFor="currency-add-fiat" className="sr-only">
+                  Add a fiat currency
+                </label>
+                <OptionCombobox
+                  id="currency-add-fiat"
+                  value={undefined}
+                  onValueChange={(code) => addFiat(code)}
+                  options={FIAT_OPTIONS.filter((option) => !fiats.includes(option.value))}
+                  placeholder="Add a fiat currency…"
+                  emptyText="No currency matches"
+                  searchable
+                  disabled={busy}
+                />
+              </div>
               <DelayedHint text="The currencies you invoice in. The settlement currency is what an invoice priced in a custom currency is collected in." />
             </div>
             <ActionError message={fiatIssue} />
