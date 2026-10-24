@@ -322,7 +322,7 @@ export function ChargeForm({
         />
       )}
 
-      {/* The date a change starts is the first thing an edit decides, so it leads. */}
+      {/* The date a price starts is the first thing a create or an edit decides, so it leads. */}
       {isEdit ? (
         <div className="max-w-xs">
           <Field
@@ -338,6 +338,31 @@ export function ChargeForm({
                     id={id}
                     value={(field.value as string | undefined) ?? ''}
                     onValueChange={field.onChange}
+                    placeholder="Now"
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : priceOptions ? (
+        // A new price's start date leads too: it belongs to the price, not to its model.
+        <div className="max-w-xs">
+          <Field
+            label="Start date"
+            hint="Optional. The price applies from this day; empty means now."
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <Controller
+                control={form.control}
+                name={'startDate' as never}
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={(field.value as string | undefined) ?? ''}
+                    onValueChange={(value) => field.onChange(value || undefined)}
                     placeholder="Now"
                     disabled={isSubmitting}
                     aria-describedby={describedBy}
@@ -715,7 +740,7 @@ export function ChargeForm({
         </div>
       ) : null}
 
-      {priceOptions && !isEdit ? (
+      {priceOptions && !isEdit && (priceOptions.groups.length > 0 || !isUsage) ? (
         <div className="grid gap-5 sm:grid-cols-2">
           {priceOptions.groups.length > 0 ? (
             <Field
@@ -740,27 +765,6 @@ export function ChargeForm({
               )}
             </Field>
           ) : null}
-          <Field
-            label="Start date"
-            hint="Optional. The price applies from this day; empty means now."
-          >
-            {({ id, 'aria-describedby': describedBy }) => (
-              <Controller
-                control={form.control}
-                name={'startDate' as never}
-                render={({ field }) => (
-                  <DateInput
-                    id={id}
-                    value={(field.value as string | undefined) ?? ''}
-                    onValueChange={(value) => field.onChange(value || undefined)}
-                    placeholder="Now"
-                    disabled={isSubmitting}
-                    aria-describedby={describedBy}
-                  />
-                )}
-              />
-            )}
-          </Field>
           {!isUsage ? (
             <Field
               label="Minimum quantity"
