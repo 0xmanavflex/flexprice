@@ -156,6 +156,7 @@ export interface PaymentDetail extends Payment {
 
 export const PaymentMethod = {
   Offline: 'OFFLINE',
+  Credits: 'CREDITS',
   Card: 'CARD',
   Ach: 'ACH',
   Upi: 'UPI',
@@ -164,24 +165,39 @@ export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   OFFLINE: 'Offline (recorded manually)',
+  CREDITS: 'Credits (from a wallet)',
   CARD: 'Card',
   ACH: 'ACH',
   UPI: 'UPI',
 }
 
+/**
+ * What a person records a payment as, as V1 offers it: money that moved
+ * outside Flexprice, or credits drawn from the customer's wallet. Card, ACH
+ * and UPI payments arrive through a gateway, not this form.
+ */
+export const RECORDABLE_PAYMENT_METHODS = [PaymentMethod.Offline, PaymentMethod.Credits] as const
+
 /** Record a payment against an invoice. The amount is typed; the API owns the arithmetic. */
-export const recordPaymentSchema = z.object({
-  invoiceId: z.string().min(1, 'Choose an invoice'),
-  currency: z.string().trim().length(3, 'Choose a currency'),
-  amount: z
-    .string()
-    .trim()
-    .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount like 120 or 120.50')
-    .refine((value) => Number(value) > 0, 'Enter an amount above zero'),
-  methodType: z.enum(['OFFLINE', 'CARD', 'ACH', 'UPI']),
-  /** Run the payment straight away instead of leaving it initiated. */
-  processNow: z.boolean(),
-})
+export const recordPaymentSchema = z
+  .object({
+    invoiceId: z.string().min(1, 'Choose an invoice'),
+    currency: z.string().trim().length(3, 'Choose a currency'),
+    amount: z
+      .string()
+      .trim()
+      .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount like 120 or 120.50')
+      .refine((value) => Number(value) > 0, 'Enter an amount above zero'),
+    methodType: z.enum(['OFFLINE', 'CREDITS', 'CARD', 'ACH', 'UPI']),
+    /** The wallet the credits come from; required for `CREDITS`. */
+    walletId: z.string().optional(),
+    /** Run the payment straight away instead of leaving it initiated. */
+    processNow: z.boolean(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.methodType === PaymentMethod.Credits && !value.walletId)
+      ctx.addIssue({ code: 'custom', path: ['walletId'], message: 'Choose the wallet to pay from' })
+  })
 export type RecordPayment = z.infer<typeof recordPaymentSchema>
 
 export function emptyPayment(): RecordPayment {

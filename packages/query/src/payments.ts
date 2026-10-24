@@ -235,6 +235,10 @@ export function toRecordPaymentRequest(draft: RecordPayment): Record<string, unk
     destinationId: draft.invoiceId,
     destinationType: 'INVOICE',
     paymentMethodType: draft.methodType,
+    // Credits are drawn from a wallet, which the request names as the method.
+    ...(draft.methodType === 'CREDITS' && draft.walletId
+      ? { paymentMethodId: draft.walletId }
+      : {}),
     processPayment: draft.processNow,
   }
 }
