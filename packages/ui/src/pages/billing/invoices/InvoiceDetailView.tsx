@@ -746,9 +746,10 @@ function InvoiceDocumentArticle({
         <div role="table" aria-label="Line items" className="text-sm">
           <div
             role="row"
-            className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"
+            className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_10rem_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"
           >
             <span role="columnheader">Description</span>
+            <span role="columnheader">Interval</span>
             <span role="columnheader" className="text-right">
               Qty
             </span>
@@ -763,11 +764,20 @@ function InvoiceDocumentArticle({
             <div
               key={line.id}
               role="row"
-              className="border-border/50 grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] items-start gap-4 border-b py-4 last:border-b-0"
+              className="border-border/50 grid grid-cols-[minmax(0,1fr)_10rem_5rem_7rem_7rem] items-start gap-4 border-b py-4 last:border-b-0"
             >
-              <p role="cell" className="min-w-0 font-medium">
-                {line.description}
-              </p>
+              <span role="cell" className="flex min-w-0 flex-col">
+                <span className="font-medium">{line.description}</span>
+                {/* Which kind of charge it is, so a fixed fee reads apart from usage. */}
+                {line.kind ? (
+                  <span className="text-muted-foreground text-xs">
+                    {line.kind === 'usage' ? 'Usage charge' : 'Fixed charge'}
+                  </span>
+                ) : null}
+              </span>
+              <span role="cell" className="text-muted-foreground tabular-nums">
+                {line.detail || '—'}
+              </span>
               <span role="cell" className="text-muted-foreground text-right tabular-nums">
                 {line.quantity || '—'}
               </span>
