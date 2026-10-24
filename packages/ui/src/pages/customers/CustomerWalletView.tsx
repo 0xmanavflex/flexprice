@@ -98,6 +98,11 @@ export interface CustomerWalletViewProps {
   autoTopupError?: string | null
   /** More menu: the selected wallet's balance alerts. Omitted, the item is hidden. */
   onAlertSettings?: () => void
+  /**
+   * View only (an archived customer): every write is disabled, while picking
+   * another wallet and reading its balance and ledger still work.
+   */
+  readOnly?: boolean
   /** Saves the selected wallet's metadata (the whole map). Omitted, the card is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /** Called when a dialog opens, so a stale error from the last attempt is cleared. */
@@ -132,6 +137,7 @@ export function CustomerWalletView({
   onTerminate,
   onAlertSettings,
   onSaveMetadata,
+  readOnly = false,
   terminateError = null,
   onSaveAutoTopup,
   autoTopupError = null,
@@ -191,7 +197,7 @@ export function CustomerWalletView({
     return (
       <div className="flex flex-col gap-5">
         <div className="flex justify-end">
-          <Button className="h-8 px-3.5" onClick={() => open('create')}>
+          <Button className="h-8 px-3.5" onClick={() => open('create')} disabled={readOnly}>
             <PlusIcon aria-hidden="true" />
             Create wallet
           </Button>
@@ -207,7 +213,8 @@ export function CustomerWalletView({
     )
   }
 
-  const closed = wallet.status === WalletStatus.Closed
+  // A terminated wallet, or a read-only page: no writes either way.
+  const closed = wallet.status === WalletStatus.Closed || readOnly
   const currency = wallet.currency.toUpperCase()
   const asOf = now ?? new Date()
   const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
@@ -272,7 +279,7 @@ export function CustomerWalletView({
                   Alert settings
                 </DropdownMenuItem>
               ) : null}
-              <DropdownMenuItem onClick={() => open('create')}>
+              <DropdownMenuItem disabled={readOnly} onClick={() => open('create')}>
                 <WalletIcon className="text-muted-foreground" aria-hidden="true" />
                 Create wallet
               </DropdownMenuItem>
@@ -348,6 +355,8 @@ export function CustomerWalletView({
       </Section>
 
       <MetadataCard
+        // One card per wallet: switching wallets mid-edit must not carry a draft across.
+        key={wallet.id}
         description="Your own key/value fields on this wallet, for reporting or your systems."
         metadata={wallet.metadata}
         {...(onSaveMetadata && !closed ? { onSave: onSaveMetadata } : {})}

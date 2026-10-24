@@ -47,6 +47,14 @@ export function PaymentFormPage({ invoiceId, onCancel, onDone }: PaymentFormPage
     [invoices.data],
   )
 
+  const invoiceCurrencies = useMemo(
+    () =>
+      Object.fromEntries(
+        (invoices.data?.invoices ?? []).map((invoice) => [invoice.id, invoice.total.currency]),
+      ),
+    [invoices.data],
+  )
+
   // A preset invoice waits for its record, so the amount due can be filled in.
   if (invoiceId && chosen.isPending) {
     return (
@@ -83,6 +91,7 @@ export function PaymentFormPage({ invoiceId, onCancel, onDone }: PaymentFormPage
         : {})}
       trail={[{ label: 'Payments', onClick: onCancel }, { label: 'Record payment' }]}
       wallets={wallets}
+      invoiceCurrencies={invoiceCurrencies}
       onInvoiceChange={setPickedInvoiceId}
       onCancel={onCancel}
       isSubmitting={record.isPending}

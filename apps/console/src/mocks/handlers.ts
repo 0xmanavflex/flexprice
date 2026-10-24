@@ -3968,6 +3968,9 @@ export const handlers = [
       const current = (wallet['auto_topup'] ?? {}) as Record<string, unknown>
       wallet['auto_topup'] = { ...current, ...next }
     }
+    // The real update replaces the metadata map, so the mock does too.
+    if (body['metadata'] && typeof body['metadata'] === 'object')
+      wallet['metadata'] = body['metadata']
     return HttpResponse.json(wallet)
   }),
   http.post(`${BASE}/wallets/:id/terminate`, ({ params }) => {

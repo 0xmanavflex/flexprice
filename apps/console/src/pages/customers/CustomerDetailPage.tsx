@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { SubscriptionStatus, type TenantFeatureUsage } from '@fp/domain'
+import { CustomerStatus, SubscriptionStatus, type TenantFeatureUsage } from '@fp/domain'
 import {
   useCustomer,
   useCustomerIntegrationLinks,
@@ -148,10 +148,16 @@ export function CustomerDetailPage({
     })
   }
 
+  // An archived customer is read-only (CustomerDetail shows why). The page's
+  // own write handlers are withheld too, so controls that do not consult the
+  // access scope — inline edits, metadata, integration links, the wallet and
+  // tax panels — cannot write either.
+  const archived = customer.data.status === CustomerStatus.Archived
+
   return (
     <>
       <CustomerDetail
-        {...(integrationLinks.isSuccess && integrations.isSuccess
+        {...(!archived && integrationLinks.isSuccess && integrations.isSuccess
           ? {
               integrationControls: {
                 links: integrationLinks.data,
@@ -246,18 +252,28 @@ export function CustomerDetailPage({
             search: {} as never,
           })
         }
-        onUpdateField={(patch) =>
-          update.mutateAsync({
-            id: customer.data.id,
-            draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
-          })
-        }
-        onUpdateMetadata={(metadata) =>
-          update.mutateAsync({
-            id: customer.data.id,
-            draft: { externalId: customer.data.externalId, name: customer.data.name, metadata },
-          })
-        }
+        {...(archived
+          ? {}
+          : {
+              onUpdateField: (patch: { name?: string; email?: string; phone?: string }) =>
+                update.mutateAsync({
+                  id: customer.data.id,
+                  draft: {
+                    externalId: customer.data.externalId,
+                    name: customer.data.name,
+                    ...patch,
+                  },
+                }),
+              onUpdateMetadata: (metadata: Record<string, string>) =>
+                update.mutateAsync({
+                  id: customer.data.id,
+                  draft: {
+                    externalId: customer.data.externalId,
+                    name: customer.data.name,
+                    metadata,
+                  },
+                }),
+            })}
         entitlements={usage.data?.features ?? []}
         entitlementsLoading={usage.isLoading}
         entitlementsError={usage.isError && !usage.data}
@@ -283,8 +299,13 @@ export function CustomerDetailPage({
             />
           )
         }
-        wallet={<CustomerWalletPanel customerId={customer.data.id} />}
-        taxes={<CustomerTaxPanel customerId={customer.data.id} />}
+        // Read-only, not disabled wholesale: switching between wallets still works.
+        wallet={<CustomerWalletPanel customerId={customer.data.id} readOnly={archived} />}
+        taxes={
+          <fieldset disabled={archived} className="contents">
+            <CustomerTaxPanel customerId={customer.data.id} />
+          </fieldset>
+        }
         usage={
           <div className="flex flex-col gap-8">
             {customer.data.externalId ? (

@@ -43,6 +43,8 @@ export interface PaymentFormProps {
    * currency), for "Credits". Undefined while they load.
    */
   wallets?: readonly Option[] | undefined
+  /** Each offered invoice's currency, so choosing one fills the payment's currency. */
+  invoiceCurrencies?: Readonly<Record<string, string>> | undefined
   /** Reports the chosen invoice, so the page can load its customer's wallets. */
   onInvoiceChange?: ((invoiceId: string) => void) | undefined
 }
@@ -58,6 +60,7 @@ export function PaymentForm({
   submitError = null,
   wallets,
   onInvoiceChange,
+  invoiceCurrencies,
 }: PaymentFormProps) {
   const form = useCalmForm<RecordPayment>({
     resolver: standardSchemaResolver(recordPaymentSchema) as Resolver<RecordPayment>,
@@ -103,6 +106,11 @@ export function PaymentForm({
                     value={control.value}
                     onValueChange={(value) => {
                       control.onChange(value)
+                      // Another invoice may belong to another customer: its wallet is not this one's.
+                      form.setValue('walletId', undefined)
+                      // A payment is in its invoice's currency (and Credits locks the field).
+                      const currency = invoiceCurrencies?.[value]
+                      if (currency) form.setValue('currency', currency.toUpperCase())
                       onInvoiceChange?.(value)
                     }}
                     options={invoices}
@@ -131,7 +139,8 @@ export function PaymentForm({
                     onValueChange={control.onChange}
                     options={CURRENCIES}
                     placeholder="Choose a currency"
-                    disabled={isSubmitting}
+                    // Credits are drawn in the wallet's currency, which is the invoice's.
+                    disabled={isSubmitting || methodType === PaymentMethod.Credits}
                   />
                 )}
               />
