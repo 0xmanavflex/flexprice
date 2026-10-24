@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { CheckIcon, InfoIcon, PlusIcon, ReceiptIcon, SaveIcon, Trash2Icon, XIcon } from '@ui/icons'
 import type { z } from 'zod'
 import {
+  DRAFT_INVOICE_NUMBER_LABEL,
   type CreateInvoice,
   InvoiceStatus,
   type InvoiceTax,
@@ -707,7 +715,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         <Input
                           id="invoice-number"
                           value={edit ? edit.invoice.number : invoiceNumber}
-                          placeholder={edit ? 'Assigned when finalized' : 'Assigned automatically'}
+                          placeholder={edit ? DRAFT_INVOICE_NUMBER_LABEL : 'Assigned automatically'}
                           disabled={isSubmitting || Boolean(edit)}
                           onChange={(event) => setInvoiceNumber(event.target.value)}
                         />

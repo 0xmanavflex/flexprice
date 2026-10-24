@@ -78,6 +78,9 @@ export const InvoiceStatus = {
 
 export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus]
 
+/** What stands in for a draft's invoice number, which is assigned when it is finalized. */
+export const DRAFT_INVOICE_NUMBER_LABEL = 'To be generated'
+
 /**
  * Inputs to {@link deriveInvoiceStatus}, structurally typed.
  *
