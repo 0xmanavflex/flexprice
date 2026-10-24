@@ -80,7 +80,7 @@ export interface FeatureDetailViewProps {
   entitlementsErrorKind?: ErrorKind | undefined
   onRetryEntitlements?: (() => void) | undefined
   /** Charges tab CTA: price this feature on a plan. Omitted, no button is shown. */
-  onAddPlan?: () => void
+  onAddCharge?: () => void
   onOpenChargeParent?: (charge: Charge) => void
   /** Saves the whole metadata map. Omitted, the Metadata section is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
@@ -164,7 +164,7 @@ export function FeatureDetailView({
   entitlementsError = null,
   entitlementsErrorKind,
   onRetryEntitlements,
-  onAddPlan,
+  onAddCharge,
   onOpenChargeParent,
   onSaveMetadata,
   apiBaseUrl,
@@ -256,7 +256,7 @@ export function FeatureDetailView({
             chargesError={chargesError}
             chargesErrorKind={chargesErrorKind}
             onRetryCharges={onRetryCharges}
-            {...(onAddPlan ? { onAddPlan } : {})}
+            {...(onAddCharge ? { onAddCharge } : {})}
             {...(onOpenChargeParent ? { onOpenChargeParent } : {})}
             entitlements={entitlements}
             entitlementsLoading={entitlementsLoading}
@@ -400,7 +400,7 @@ function OverviewTab({
   chargesError,
   chargesErrorKind,
   onRetryCharges,
-  onAddPlan,
+  onAddCharge,
   onOpenChargeParent,
   entitlements,
   entitlementsLoading,
@@ -414,7 +414,7 @@ function OverviewTab({
   chargesError: string | null
   chargesErrorKind?: ErrorKind | undefined
   onRetryCharges?: (() => void) | undefined
-  onAddPlan?: (() => void) | undefined
+  onAddCharge?: (() => void) | undefined
   onOpenChargeParent?: ((charge: Charge) => void) | undefined
   entitlements: FeatureEntitlementLink[]
   entitlementsLoading: boolean
@@ -436,7 +436,7 @@ function OverviewTab({
           emptyDescription="No plan or add-on prices this feature yet."
           layout="narrow"
           hideRowActions
-          addLabel="Add plan"
+          addLabel="Add charge"
           facets={[
             {
               id: 'parent-status',
@@ -450,7 +450,7 @@ function OverviewTab({
           error={chargesError}
           errorKind={chargesErrorKind}
           onRetry={onRetryCharges}
-          {...(onAddPlan ? { onAdd: onAddPlan } : {})}
+          {...(onAddCharge ? { onAdd: onAddCharge } : {})}
         />
       ) : null}
       <EntitlementsSection
