@@ -112,6 +112,37 @@ export const CreatesWithDetailsOnly: Story = {
   },
 }
 
+/** A staged item can be edited before the plan exists: the change replaces it, not adds a second. */
+export const EditsAStagedCreditGrant: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
+    for (let i = 0; i < 3; i++) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    }
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add credit grant' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Credits/ }), '100')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add credit grant' }))
+    await expect(await canvas.findByText('100 credits')).toBeInTheDocument()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit Free credits' }))
+    const credits = canvas.getByRole('textbox', { name: /^Credits/ })
+    await expect(credits).toHaveValue('100')
+    await userEvent.clear(credits)
+    await userEvent.type(credits, '250')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save credit grant' }))
+    await expect(await canvas.findByText('250 credits')).toBeInTheDocument()
+    await expect(canvas.queryByText('100 credits')).toBeNull()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Create plan' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        creditGrants: [expect.objectContaining({ credits: '250' })],
+      }),
+    )
+  },
+}
+
 /** The lookup key is filled from the name until the person types their own. */
 export const LookupKeyFollowsName: Story = {
   play: async ({ canvasElement }) => {

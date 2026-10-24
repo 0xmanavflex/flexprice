@@ -2,7 +2,7 @@ import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState, type ReactNode } from 'react'
 import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { PlusIcon, Trash2Icon, XIcon } from '@ui/icons'
+import { PencilIcon, PlusIcon, Trash2Icon, XIcon } from '@ui/icons'
 import {
   BILLING_PERIOD_LABEL,
   type CreateCharge,
@@ -135,6 +135,19 @@ export function PlanForm({
   const [entitlements, setEntitlements] = useState<CreateEntitlement[]>([])
   const [grants, setGrants] = useState<CreateCreditGrant[]>([])
   const [adding, setAdding] = useState<null | 'charges' | 'entitlements' | 'credit-grants'>(null)
+  // The staged item being edited in the step's form; null adds a new one.
+  const [editIndex, setEditIndex] = useState<number | null>(null)
+  const openForm = (step: NonNullable<typeof adding>, index: number | null = null) => {
+    setEditIndex(index)
+    setAdding(step)
+  }
+  const closeForm = () => {
+    setEditIndex(null)
+    setAdding(null)
+  }
+  /** Replaces the edited item, or appends a new one. */
+  const place = <T,>(rows: T[], item: T): T[] =>
+    editIndex === null ? [...rows, item] : rows.map((row, i) => (i === editIndex ? item : row))
 
   const flow = useFormSteps({
     steps: isEdit ? EDIT_STEPS : CREATE_STEPS,
@@ -154,6 +167,11 @@ export function PlanForm({
 
   const featureName = (id: string) => features.find((f) => f.id === id)?.name ?? id
   const grantable = features.filter((f) => !entitlements.some((e) => e.featureId === f.id))
+  // An entitlement being edited keeps its own feature on offer.
+  const editedFeatures =
+    adding === 'entitlements' && editIndex !== null
+      ? features.filter((f) => f.id === entitlements[editIndex]?.featureId || grantable.includes(f))
+      : grantable
 
   const detailsStep = (
     <>
@@ -206,27 +224,32 @@ export function PlanForm({
     <StagedStep
       title="Charges"
       emptyText="No charges added yet."
-      addLabel="Add charge"
+      addLabel={editIndex === null ? 'Add charge' : 'Edit charge'}
       adding={adding === 'charges'}
-      onAdd={() => setAdding('charges')}
-      onClose={() => setAdding(null)}
+      onAdd={() => openForm('charges')}
+      onClose={closeForm}
       items={charges.map((charge, index) => ({
         key: `${index}`,
         label:
           charge.displayName || (charge.type === PriceType.Usage ? 'Usage charge' : 'Fixed charge'),
         detail: `${'amount' in charge ? `${charge.amount} ` : ''}${charge.currency} · ${BILLING_PERIOD_LABEL[charge.billingPeriod]}`,
+        onEdit: () => openForm('charges', index),
         onRemove: () => setCharges((rows) => rows.filter((_, i) => i !== index)),
       }))}
       form={
         <ChargeForm
+          key={editIndex ?? 'new'}
           mode="create"
+          {...(editIndex !== null && charges[editIndex]
+            ? { defaultValue: charges[editIndex] }
+            : {})}
           meters={meters}
           priceUnits={priceUnits}
           priceOptions={{ groups: priceGroups }}
-          submitLabel="Add charge"
+          submitLabel={editIndex === null ? 'Add charge' : 'Save charge'}
           onSubmit={(charge) => {
-            setCharges((rows) => [...rows, charge])
-            setAdding(null)
+            setCharges((rows) => place(rows, charge))
+            closeForm()
           }}
         />
       }
@@ -237,23 +260,28 @@ export function PlanForm({
     <StagedStep
       title="Entitlements"
       emptyText="No entitlements added yet."
-      addLabel="Add entitlement"
+      addLabel={editIndex === null ? 'Add entitlement' : 'Edit entitlement'}
       adding={adding === 'entitlements'}
-      onAdd={() => setAdding('entitlements')}
-      onClose={() => setAdding(null)}
+      onAdd={() => openForm('entitlements')}
+      onClose={closeForm}
       items={entitlements.map((entitlement, index) => ({
         key: entitlement.featureId,
         label: featureName(entitlement.featureId),
         detail: String(entitlement.featureType),
+        onEdit: () => openForm('entitlements', index),
         onRemove: () => setEntitlements((rows) => rows.filter((_, i) => i !== index)),
       }))}
       form={
         <EntitlementCreateForm
-          features={grantable}
-          submitLabel="Add entitlement"
+          key={editIndex ?? 'new'}
+          features={editedFeatures}
+          {...(editIndex !== null && entitlements[editIndex]
+            ? { defaultValue: entitlements[editIndex] }
+            : {})}
+          submitLabel={editIndex === null ? 'Add entitlement' : 'Save entitlement'}
           onSubmit={(entitlement) => {
-            setEntitlements((rows) => [...rows, entitlement])
-            setAdding(null)
+            setEntitlements((rows) => place(rows, entitlement))
+            closeForm()
           }}
         />
       }
@@ -264,22 +292,25 @@ export function PlanForm({
     <StagedStep
       title="Credit grants"
       emptyText="No credit grants added yet."
-      addLabel="Add credit grant"
+      addLabel={editIndex === null ? 'Add credit grant' : 'Edit credit grant'}
       adding={adding === 'credit-grants'}
-      onAdd={() => setAdding('credit-grants')}
-      onClose={() => setAdding(null)}
+      onAdd={() => openForm('credit-grants')}
+      onClose={closeForm}
       items={grants.map((grant, index) => ({
         key: `${index}`,
         label: grant.name,
         detail: `${grant.credits} credits`,
+        onEdit: () => openForm('credit-grants', index),
         onRemove: () => setGrants((rows) => rows.filter((_, i) => i !== index)),
       }))}
       form={
         <CreditGrantCreateForm
-          submitLabel="Add credit grant"
+          key={editIndex ?? 'new'}
+          {...(editIndex !== null && grants[editIndex] ? { defaultValue: grants[editIndex] } : {})}
+          submitLabel={editIndex === null ? 'Add credit grant' : 'Save credit grant'}
           onSubmit={(grant) => {
-            setGrants((rows) => [...rows, grant])
-            setAdding(null)
+            setGrants((rows) => place(rows, grant))
+            closeForm()
           }}
         />
       }
@@ -329,6 +360,7 @@ interface StagedItem {
   key: string
   label: string
   detail: string
+  onEdit: () => void
   onRemove: () => void
 }
 
@@ -368,15 +400,26 @@ function StagedStep({
                 <span className="truncate text-sm font-medium">{item.label}</span>
                 <span className="text-muted-foreground truncate text-xs">{item.detail}</span>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Remove ${item.label}`}
-                onClick={item.onRemove}
-              >
-                <Trash2Icon aria-hidden className="size-4" />
-              </Button>
+              <span className="flex shrink-0 items-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Edit ${item.label}`}
+                  onClick={item.onEdit}
+                >
+                  <PencilIcon aria-hidden className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Remove ${item.label}`}
+                  onClick={item.onRemove}
+                >
+                  <Trash2Icon aria-hidden className="size-4" />
+                </Button>
+              </span>
             </li>
           ))}
         </ul>
