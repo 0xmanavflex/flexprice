@@ -3,6 +3,7 @@ import { ApiError, ErrorKind, call, debitWallet } from '@fp/api'
 import {
   type AlertSettingConfig,
   type AutoTopup,
+  AutoTopupCooldownUnit,
   type CreateWallet,
   type DebitWallet,
   type TopUpWallet,
@@ -40,6 +41,7 @@ export interface WalletWire {
         threshold?: number | string | undefined
         amount?: number | string | undefined
         invoicing?: boolean | undefined
+        cooldown?: { unit?: string | undefined; value?: number | undefined } | undefined
       }
     | undefined
   createdAt?: Date | undefined
@@ -84,6 +86,7 @@ export function toWallet(wire: WalletWire): Wallet {
       threshold: String(wire.autoTopup?.threshold ?? ''),
       amount: String(wire.autoTopup?.amount ?? ''),
       invoicing: wire.autoTopup?.invoicing ?? true,
+      ...toCooldown(wire.autoTopup?.cooldown),
     },
     createdAt: wire.createdAt ?? null,
   }
@@ -168,8 +171,27 @@ export function toUpdateAutoTopupRequest(draft: AutoTopup): Record<string, unkno
       threshold: Number(draft.threshold),
       amount: Number(draft.amount),
       invoicing: draft.invoicing,
+      // Sent only when set: a blank cool-off leaves whatever the wallet has.
+      ...(draft.cooldownValue
+        ? {
+            cooldown: {
+              value: Number(draft.cooldownValue),
+              unit: draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour,
+            },
+          }
+        : {}),
     },
   }
+}
+
+const COOLDOWN_UNITS = new Set<string>(Object.values(AutoTopupCooldownUnit))
+
+/** The wire's cool-off, as the draft's two fields. Seconds and unknown units are read as none. */
+function toCooldown(
+  wire: { unit?: string | undefined; value?: number | undefined } | undefined,
+): Pick<AutoTopup, 'cooldownValue' | 'cooldownUnit'> {
+  if (!wire?.value || !COOLDOWN_UNITS.has(wire.unit ?? '')) return {}
+  return { cooldownValue: String(wire.value), cooldownUnit: wire.unit as AutoTopupCooldownUnit }
 }
 
 /** A customer's wallets — `GET /customers/{id}/wallets`. */
