@@ -186,6 +186,15 @@ export function InvoiceDetailView({
       maximumFractionDigits: 6,
     }).format(value)
   const isDraft = invoice.status === InvoiceStatus.Draft
+  // The API voids only unpaid invoices.
+  const voidReason =
+    invoice.status === InvoiceStatus.Void
+      ? 'Already void'
+      : invoice.status === InvoiceStatus.Skipped
+        ? 'A skipped invoice has nothing to void'
+        : invoice.status === InvoiceStatus.Paid || invoice.paid > 0
+          ? 'A paid invoice cannot be voided; issue a credit memo instead'
+          : null
   const recalcReason =
     recalculateBlocked === undefined ? (isDraft ? null : 'Drafts only') : recalculateBlocked
   const isOpen = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
@@ -389,15 +398,19 @@ export function InvoiceDetailView({
                 <FileTextIcon aria-hidden="true" /> View subscription
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            {onVoid &&
-            invoice.status !== InvoiceStatus.Void &&
-            invoice.status !== InvoiceStatus.Skipped ? (
+            {onVoid ? (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={onVoid}>
-                  <XCircleIcon aria-hidden="true" />
-                  Void invoice
-                </DropdownMenuItem>
+                {/* Always listed, so the status change is findable; disabled with
+                    the reason when this invoice cannot be voided. */}
+                <MenuAction
+                  icon={<XCircleIcon />}
+                  label="Void invoice"
+                  onSelect={onVoid}
+                  disabled={voidReason !== null}
+                  hint={voidReason ?? undefined}
+                  destructive
+                />
               </>
             ) : null}
           </DropdownMenuContent>
@@ -633,6 +646,7 @@ function MenuAction({
   hint,
   pending = false,
   pendingLabel,
+  destructive = false,
 }: {
   icon: ReactNode
   label: string
@@ -642,9 +656,11 @@ function MenuAction({
   /** The action is running: spinner, `pendingLabel`, not selectable. */
   pending?: boolean
   pendingLabel?: string | undefined
+  destructive?: boolean
 }) {
   return (
     <DropdownMenuItem
+      {...(destructive ? { variant: 'destructive' as const } : {})}
       disabled={disabled || pending || !onSelect}
       onClick={onSelect}
       {...(pending ? { 'aria-busy': true } : {})}
