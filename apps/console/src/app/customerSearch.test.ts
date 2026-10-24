@@ -35,6 +35,12 @@ describe('parseCustomerSearch', () => {
     expect(parseCustomerSearch({ filters: '[]' }).filters).toEqual([])
   })
 
+  it('leaves the default filter off a link that names a status', () => {
+    const query = parseCustomerSearch({ status: 'archived' })
+    expect(query.filters).toEqual([{ field: 'status', op: 'in', value: ['archived'] }])
+    expect(query.statuses).toEqual([])
+  })
+
   it('drops filters it cannot run', () => {
     expect(
       parseCustomerSearch({ filters: [{ field: 'plan', op: 'eq', value: 'x' }] }).filters,
@@ -42,13 +48,13 @@ describe('parseCustomerSearch', () => {
   })
 
   it('accepts statuses as a repeated param or a comma list', () => {
-    expect(parseCustomerSearch({ status: ['published', 'archived'] }).statuses).toEqual([
-      'published',
-      'archived',
-    ])
-    expect(parseCustomerSearch({ status: 'published,archived' }).statuses).toEqual([
-      'published',
-      'archived',
+    // Alongside explicit filters the facet is kept as written…
+    expect(
+      parseCustomerSearch({ status: ['published', 'archived'], filters: [] }).statuses,
+    ).toEqual(['published', 'archived'])
+    // …and on its own it becomes the visible status filter.
+    expect(parseCustomerSearch({ status: 'published,archived' }).filters).toEqual([
+      { field: 'status', op: 'in', value: ['published', 'archived'] },
     ])
   })
 

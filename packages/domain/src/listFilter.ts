@@ -101,6 +101,22 @@ export function runnableFilters(
 }
 
 /**
+ * Whether two filter lists ask for the same thing, regardless of property or
+ * option order — a URL can spell the same filter either way.
+ */
+export function sameListFilters(a: readonly ListFilter[], b: readonly ListFilter[]): boolean {
+  const key = (filter: ListFilter) =>
+    JSON.stringify([
+      filter.field,
+      filter.op,
+      Array.isArray(filter.value) ? [...filter.value].sort() : filter.value,
+    ])
+  const left = a.map(key).sort()
+  const right = b.map(key).sort()
+  return left.length === right.length && left.every((value, index) => value === right[index])
+}
+
+/**
  * Filters as a URL value, and back. A hand-edited or stale URL degrades to
  * "no filter" for whatever it cannot read rather than to an error.
  */

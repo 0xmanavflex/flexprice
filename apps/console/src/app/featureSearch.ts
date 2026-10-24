@@ -1,5 +1,6 @@
 import {
   DEFAULT_FEATURE_QUERY,
+  FilterOp,
   type FeatureQuery,
   FeatureSortField,
   FeatureStatus,
@@ -65,7 +66,9 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
     ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     types: [...new Set(types)],
-    statuses: [...new Set(statuses)],
+    // A status link becomes the visible status filter below; the facet is
+    // cleared so removing that chip really shows every status.
+    statuses: raw['filters'] === undefined ? [] : [...new Set(statuses)],
     // Unknown values fall back rather than throwing: a hand-edited URL should
     // show the default list, not an error page.
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
@@ -79,7 +82,13 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
     // empty list is "every status", so removing the chip sticks across reloads.
     filters:
       raw['filters'] === undefined
-        ? (DEFAULT_FEATURE_QUERY.filters ?? [])
+        ? // A link that names a status asks for that status; the default
+          // status filter would contradict it, so it is left off.
+          // The status goes to the server as a filter, so every page is narrowed
+          // (the `statuses` facet alone only narrows the page fetched).
+          statuses.length > 0
+          ? [{ field: 'status', op: FilterOp.In, value: [...new Set(statuses)] }]
+          : (DEFAULT_FEATURE_QUERY.filters ?? [])
         : runnableFilters(decodeListFilters(raw['filters']), FEATURE_FILTERS),
   }
 }

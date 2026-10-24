@@ -36,6 +36,7 @@ export {
   encodeListFilters,
   isRunnableFilter,
   runnableFilters,
+  sameListFilters,
   withFilterOptions,
 } from './listFilter'
 export type { FilterKind, ListFilter, ListFilterSpec } from './listFilter'

@@ -1,4 +1,4 @@
-import { FilterOp, type ListFilter, type ListFilterSpec } from './listFilter'
+import { FilterOp, type ListFilter, type ListFilterSpec, sameListFilters } from './listFilter'
 import { z } from 'zod'
 import { type AlertSettingConfig, alertSettingConfigSchema } from './alertSetting'
 import { KEY_PREFIX, suggestKey } from './suggestKey'
@@ -453,7 +453,10 @@ export function isFeatureQueryFiltered(query: FeatureQuery): boolean {
     query.search.length > 0 ||
     query.types.length > 0 ||
     query.statuses.length > 0 ||
-    JSON.stringify(query.filters ?? []) !== JSON.stringify(DEFAULT_FEATURE_QUERY.filters ?? [])
+    // An empty list (every status) is not a narrowing; the default view is
+    // not one either. Anything else the person chose is.
+    ((query.filters?.length ?? 0) > 0 &&
+      !sameListFilters(query.filters ?? [], DEFAULT_FEATURE_QUERY.filters ?? []))
   )
 }
 
