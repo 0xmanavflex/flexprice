@@ -65,7 +65,9 @@ export function ApiKeysPanel() {
   const failure = toFailure(keys.error, 'your API keys')
   const rows = keys.data?.keys ?? []
 
-  if (failure) {
+  // Never while a fresh secret is on screen: the list refetches after a key is
+  // issued, and swapping the panel for the error would lose the only copy.
+  if (failure && !issued) {
     return (
       <WidePanel>
         <PanelError failure={failure} onRetry={() => void keys.refetch()} />

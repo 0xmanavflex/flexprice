@@ -94,7 +94,10 @@ export function ChargeAlertForm({
       onCancel={onCancel}
       submitting={pending}
       onSubmit={() => {
-        const parsed = alertSettingConfigSchema.safeParse(config)
+        // Turning alerts off saves the thresholds as they were loaded, not the
+        // disabled draft: a half-typed value no one can now edit must not block it.
+        const draft = config.alertEnabled ? config : { ...initial, alertEnabled: false }
+        const parsed = alertSettingConfigSchema.safeParse(draft)
         if (!parsed.success) {
           setProblem(parsed.error.issues[0]?.message ?? 'Check the thresholds')
           return

@@ -103,6 +103,8 @@ export function PaymentForm({
                     value={control.value}
                     onValueChange={(value) => {
                       control.onChange(value)
+                      // Another invoice may belong to another customer: its wallet is not this one's.
+                      form.setValue('walletId', undefined)
                       onInvoiceChange?.(value)
                     }}
                     options={invoices}
@@ -131,7 +133,8 @@ export function PaymentForm({
                     onValueChange={control.onChange}
                     options={CURRENCIES}
                     placeholder="Choose a currency"
-                    disabled={isSubmitting}
+                    // Credits are drawn in the wallet's currency, which is the invoice's.
+                    disabled={isSubmitting || methodType === PaymentMethod.Credits}
                   />
                 )}
               />

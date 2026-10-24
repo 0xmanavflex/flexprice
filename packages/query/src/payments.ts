@@ -264,6 +264,8 @@ function useInvalidatePayments() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.payments.all() })
     void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
     void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    // A payment from credits draws a wallet down.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.wallets.all() })
   }
 }
 

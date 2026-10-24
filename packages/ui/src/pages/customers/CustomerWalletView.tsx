@@ -348,6 +348,8 @@ export function CustomerWalletView({
       </Section>
 
       <MetadataCard
+        // One card per wallet: switching wallets mid-edit must not carry a draft across.
+        key={wallet.id}
         description="Your own key/value fields on this wallet, for reporting or your systems."
         metadata={wallet.metadata}
         {...(onSaveMetadata && !closed ? { onSave: onSaveMetadata } : {})}
