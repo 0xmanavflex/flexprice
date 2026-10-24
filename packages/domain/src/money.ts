@@ -146,3 +146,34 @@ export function isZeroMoney(value: Money): boolean {
 export function isNegativeMoney(value: Money): boolean {
   return parts(value.amount).negative
 }
+
+const PLAIN_DECIMAL = /^(-)?(\d+)(?:\.(\d+))?$/
+
+/**
+ * An amount shared out over a quantity — a line's unit price, shown beside
+ * its quantity — computed exactly on scaled integers, never in floating
+ * point. Rounded half away from zero to `places` decimals. `null` when the
+ * quantity is not a positive number, since nothing is divided then.
+ */
+export function perUnit(value: Money, quantity: string, places = 6): Money | null {
+  const amount = PLAIN_DECIMAL.exec(value.amount)
+  const qty = PLAIN_DECIMAL.exec(quantity.replace(/,/g, '').trim())
+  if (!amount || !qty || qty[1]) return null
+  const amountDecimals = amount[3] ?? ''
+  const qtyDecimals = qty[3] ?? ''
+  const numerator = BigInt(`${amount[2]}${amountDecimals}`)
+  const denominator = BigInt(`${qty[2]}${qtyDecimals}`)
+  if (denominator === 0n) return null
+  // result * 10^places = amount / qty * 10^places
+  //   = numerator * 10^(places + qtyDecimals - amountDecimals) / denominator
+  const shift = places + qtyDecimals.length - amountDecimals.length
+  const scaledNumerator = shift >= 0 ? numerator * 10n ** BigInt(shift) : numerator
+  const scaledDenominator = shift >= 0 ? denominator : denominator * 10n ** BigInt(-shift)
+  const quotient = scaledNumerator / scaledDenominator
+  const rounded = (scaledNumerator % scaledDenominator) * 2n >= scaledDenominator ? quotient + 1n : quotient
+  const digits = rounded.toString().padStart(places + 1, '0')
+  const whole = digits.slice(0, digits.length - places)
+  const fraction = digits.slice(digits.length - places).replace(/0+$/, '')
+  const sign = amount[1] && rounded !== 0n ? '-' : ''
+  return { amount: `${sign}${whole}${fraction ? `.${fraction}` : ''}`, currency: value.currency }
+}
