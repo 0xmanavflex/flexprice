@@ -22,6 +22,7 @@ import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
 import { DetailTable, type DetailColumn } from '../../shared/DetailTable'
+import { Pill, type PillTone } from '../../shared/cells'
 import { ChargeFlags } from './ChargeFlags'
 import { ChargeSheet } from './ChargeSheet'
 
@@ -127,7 +128,10 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   title?: string
   /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
   showTitle?: boolean
-  /** Adds a Dates column: when each charge started and, once ended, when it ended. */
+  /**
+   * Forces the "In effect" column (when each charge starts and ends) on. It is
+   * on by default in the wide layout and in the column menu in the narrow one.
+   */
   showDates?: boolean
   description?: string
   chargeColumnLabel?: string
@@ -182,6 +186,12 @@ function nameOf(charge: Charge): string {
 }
 
 const DATE = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+
+const STATUS_TONE: Record<string, PillTone> = {
+  Active: 'success',
+  Changed: 'warning',
+  Ended: 'neutral',
+}
 
 /**
  * The grey line under a charge's name: fixed or usage, then one more thing.
@@ -383,34 +393,24 @@ export function ChargeTable({
     },
   ]
 
-  if (showDates) {
-    const format = locale
-      ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
-      : DATE
-    columns.splice(2, 0, {
-      key: 'dates',
-      header: 'Dates',
-      width: 200,
-      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
-      text: (charge) =>
-        `${charge.startDate ? format.format(charge.startDate) : ''} ${charge.endDate ? format.format(charge.endDate) : ''}`,
-      cell: (charge) => (
-        <span className="block min-w-0">
-          <span className="block tabular-nums">
-            {charge.startDate ? `From ${format.format(charge.startDate)}` : '—'}
-          </span>
-          {charge.endDate ? (
-            <span className="text-muted-foreground block text-xs tabular-nums">
-              Ended {format.format(charge.endDate)}
-            </span>
-          ) : null}
-        </span>
-      ),
-    })
-  }
+  const format = locale
+    ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
+    : DATE
+  const inEffect = (charge: Charge) =>
+    !charge.startDate && !charge.endDate
+      ? 'Always'
+      : `${charge.startDate ? format.format(charge.startDate) : '—'} → ${
+          charge.endDate ? format.format(charge.endDate) : 'Ongoing'
+        }`
+  const timing = (charge: Charge) =>
+    charge.invoiceCadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'
 
+  // After price: quantity (when a page knows it), billing timing and the dates
+  // the charge is in effect, then flags. Timing and dates sit in the column
+  // menu, not on screen, in the narrow layout beside a side rail.
+  const middle: DetailColumn<Charge>[] = []
   if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
-    columns.splice(2, 0, {
+    middle.push({
       key: 'quantity',
       header: 'Quantity',
       width: 100,
@@ -420,6 +420,38 @@ export function ChargeTable({
       ),
     })
   }
+  middle.push(
+    {
+      key: 'timing',
+      header: 'Billing timing',
+      width: 130,
+      text: timing,
+      cell: (charge) => <span>{timing(charge)}</span>,
+      ...(narrow ? { hiddenByDefault: true } : {}),
+    },
+    {
+      key: 'dates',
+      header: 'In effect',
+      width: 220,
+      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
+      text: inEffect,
+      cell: (charge) => <span className="tabular-nums">{inEffect(charge)}</span>,
+      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
+    },
+  )
+  columns.splice(2, 0, ...middle)
+  columns.push({
+    key: 'status',
+    header: 'Status',
+    width: 110,
+    text: statusOf,
+    cell: (charge) => (
+      <Pill tone={STATUS_TONE[statusOf(charge)] ?? 'neutral'} size="sm">
+        {statusOf(charge)}
+      </Pill>
+    ),
+    hiddenByDefault: true,
+  })
 
   if (hasActions) {
     columns.push({
@@ -517,9 +549,8 @@ export function ChargeTable({
                 label: 'Billing model',
                 value: (charge: Charge) => modelLabel(charge),
               },
-              ...(variant === 'full' && (changed.length > 0 || ended.length > 0)
-                ? [{ id: 'status', label: 'Status', value: statusOf }]
-                : []),
+              // Always offered on the full table, so ended charges can be asked for.
+              ...(variant === 'full' ? [{ id: 'status', label: 'Status', value: statusOf }] : []),
               ...(facets ?? []),
             ]}
             noun="charges"

@@ -1006,6 +1006,7 @@
         "CopyIcon",
         "DetailTable",
         "EyeIcon",
+        "Pill",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
@@ -5561,6 +5562,7 @@
       ],
       "usedBy": [
         "CatalogStatusBadge",
+        "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
         "CreditNoteDetailView",
