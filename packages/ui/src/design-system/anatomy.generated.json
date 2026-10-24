@@ -5509,6 +5509,7 @@
         "Mark",
         "MetadataCard",
         "Pill",
+        "PlanForm",
         "PlanGrid",
         "PriceUnitGrid",
         "RowActionsMenu",
@@ -5722,6 +5723,7 @@
         "FormCard",
         "FormPage",
         "FormRow",
+        "PencilIcon",
         "PlusIcon"
       ],
       "usedBy": [],

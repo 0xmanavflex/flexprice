@@ -86,12 +86,15 @@ export interface EntitlementCreateFormProps extends SharedProps {
   features: FeatureOption[]
   /** Opens with this feature already chosen, e.g. from the product it was started on. */
   defaultFeatureId?: string
+  /** Opens on a draft not yet saved, e.g. a staged entitlement being edited. */
+  defaultValue?: CreateEntitlement | undefined
   onSubmit: (entitlement: CreateEntitlement) => void
 }
 
 export function EntitlementCreateForm({
   features,
   defaultFeatureId,
+  defaultValue,
   onSubmit,
   isSubmitting = false,
   submitError = null,
@@ -100,12 +103,18 @@ export function EntitlementCreateForm({
 }: EntitlementCreateFormProps) {
   const form = useCalmForm<CreateEntitlement>({
     resolver: standardSchemaResolver(createEntitlementSchema) as Resolver<CreateEntitlement>,
-    defaultValues: emptyEntitlement(
-      defaultFeatureId ?? '',
-      features.find((option) => option.id === defaultFeatureId)?.type ?? FeatureType.Metered,
-    ),
+    defaultValues:
+      defaultValue ??
+      emptyEntitlement(
+        defaultFeatureId ?? '',
+        features.find((option) => option.id === defaultFeatureId)?.type ?? FeatureType.Metered,
+      ),
   })
-  const [configText, setConfigText] = useState('{}')
+  const [configText, setConfigText] = useState(() =>
+    defaultValue && 'configValue' in defaultValue && defaultValue.configValue
+      ? JSON.stringify(defaultValue.configValue, null, 2)
+      : '{}',
+  )
   const [configError, setConfigError] = useState<string | null>(null)
 
   const featureId = form.watch('featureId')
