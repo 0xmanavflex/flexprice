@@ -4,9 +4,7 @@ import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   type CreateTaxRate,
   type EditTaxRate,
-  TAX_RATE_SCOPE_LABEL,
   TAX_RATE_STATUS_LABEL,
-  TaxRateScope,
   TaxRateStatus,
   createTaxRateSchema,
   editTaxRateSchema,
@@ -51,11 +49,6 @@ export interface TaxRateEditFormProps extends TaxRateFormBase {
   defaultValue: EditTaxRate
   onSubmit: (taxRate: EditTaxRate) => void
 }
-
-const SCOPE_OPTIONS = Object.values(TaxRateScope).map((value) => ({
-  value,
-  label: TAX_RATE_SCOPE_LABEL[value],
-}))
 
 const STATUS_OPTIONS = [TaxRateStatus.Published, TaxRateStatus.Archived].map((value) => ({
   value,
@@ -146,25 +139,6 @@ export function TaxRateCreateForm({
               />
             )}
           </FormRow>
-          <FormRow label="Scope" required hint="Fixed once created." error={errors.scope?.message}>
-            {({ id, ...field }) => (
-              <Controller
-                control={form.control}
-                name="scope"
-                render={({ field: control }) => (
-                  <OptionSelect
-                    id={id}
-                    {...field}
-                    value={control.value}
-                    onValueChange={(value) => control.onChange(value)}
-                    options={SCOPE_OPTIONS}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )}
-          </FormRow>
-
           <FormRow
             label="Description"
             hint="An internal note about when this rate applies. Optional."
