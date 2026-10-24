@@ -1431,6 +1431,7 @@ function ChargesTable({
   commitments,
   onCommitment,
   onRemoveExtra,
+  onEditExtra,
   couponOf,
   onCoupon,
   onReset,
@@ -1448,6 +1449,8 @@ function ChargesTable({
   commitments?: ChargeCommitment[]
   onCommitment?: (priceId: string, next: ChargeCommitment | null) => void
   onRemoveExtra: (index: number) => void
+  /** Reopens a charge added on this contract, to change it before saving. */
+  onEditExtra: (index: number) => void
   /** The coupon on one charge, if it has one. */
   couponOf: (priceId: string) => SubscriptionCouponOption | undefined
   /** Opens the coupon dialog for a charge; absent when there are no coupons. */
@@ -1640,10 +1643,17 @@ function ChargesTable({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-52">
             {row.kind === 'extra' ? (
-              <DropdownMenuItem variant="destructive" onClick={() => onRemoveExtra(row.index)}>
-                <Trash2Icon aria-hidden />
-                Remove charge
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={() => onEditExtra(row.index)}>
+                  <PencilIcon aria-hidden />
+                  Edit charge
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => onRemoveExtra(row.index)}>
+                  <Trash2Icon aria-hidden />
+                  Remove charge
+                </DropdownMenuItem>
+              </>
             ) : (
               <>
                 <DropdownMenuGroup>
@@ -2047,6 +2057,8 @@ function PhasesStep({
   }
   // Which phase the add-charge dialog adds to; null while it is closed.
   const [addingTo, setAddingTo] = useState<number | null>(null)
+  // A charge added on this contract, reopened to change it.
+  const [editingExtra, setEditingExtra] = useState<{ phase: number; index: number } | null>(null)
   // Which phase's coupon picker is open, and for what.
   const [couponFor, setCouponFor] = useState<{ phase: number; target: string } | null>(null)
   // The charge whose coupon dialog is open, and in which phase.
@@ -2127,6 +2139,7 @@ function PhasesStep({
           onRemoveExtra={(at) =>
             update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
           }
+          onEditExtra={(at) => setEditingExtra({ phase: index, index: at })}
           couponOf={(priceId) => couponOn(index, priceId)}
           {...(coupons.length > 0
             ? { onCoupon: (priceId: string) => setCouponing({ phase: index, priceId }) }
@@ -2234,17 +2247,36 @@ function PhasesStep({
     />
   )
 
+  const edited = editingExtra
+    ? phases[editingExtra.phase]?.extraCharges[editingExtra.index]
+    : undefined
+  const closeChargeDialog = () => {
+    setAddingTo(null)
+    setEditingExtra(null)
+  }
   const addChargeDialog = (
     <ContractChargeDialog
-      state={addingTo === null ? null : { mode: 'add' }}
+      state={edited ? { mode: 'add', initial: edited } : addingTo === null ? null : { mode: 'add' }}
       addTitle="Add a charge"
       addDescription="It bills on this contract only, on top of the plan's charges."
-      onClose={() => setAddingTo(null)}
+      onClose={closeChargeDialog}
       currency={currency}
       billingPeriod={billingPeriod}
       meters={meters}
       priceUnits={priceUnits}
       onAdd={(draft) => {
+        if (editingExtra) {
+          // An edit replaces the charge where it is.
+          const phase = phases[editingExtra.phase]
+          if (phase)
+            update(editingExtra.phase, {
+              extraCharges: phase.extraCharges.map((extra, i) =>
+                i === editingExtra.index ? draft : extra,
+              ),
+            })
+          closeChargeDialog()
+          return
+        }
         if (addingTo === null) return
         const phase = phases[addingTo]
         // Newest first: the charge just added is the one at the top of the table.

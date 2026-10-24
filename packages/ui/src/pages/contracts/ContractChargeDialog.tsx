@@ -37,7 +37,7 @@ export const ContractChargeDialogProvenance = provenance({
 
 /** Which edit is open, and on which charge. */
 export type ContractChargeDialogState =
-  | { mode: 'add' }
+  | { mode: 'add'; initial?: AddContractCharge | undefined }
   | { mode: 'edit'; line: SubscriptionLine }
   | { mode: 'end'; line: SubscriptionLine }
 
@@ -80,7 +80,13 @@ export function ContractChargeDialog({
   addDescription = 'Only this contract gets the charge; the plan does not change.',
 }: ContractChargeDialogProps) {
   const title =
-    state?.mode === 'add' ? addTitle : state?.mode === 'edit' ? 'Edit charge' : 'End charge'
+    state?.mode === 'add'
+      ? state.initial
+        ? 'Edit charge'
+        : addTitle
+      : state?.mode === 'edit'
+        ? 'Edit charge'
+        : 'End charge'
 
   return (
     <FormDialog
@@ -94,6 +100,7 @@ export function ContractChargeDialog({
       {state?.mode === 'add' ? (
         <AddStep
           key="add"
+          initial={state.initial}
           description={addDescription}
           currency={currency}
           billingPeriod={billingPeriod ?? Period.Monthly}
@@ -132,6 +139,7 @@ export function ContractChargeDialog({
 
 /** First step: fixed or metered. The form that follows is the granular one for that type. */
 function AddStep({
+  initial,
   description,
   currency,
   billingPeriod,
@@ -142,6 +150,8 @@ function AddStep({
   isSubmitting,
   submitError,
 }: {
+  /** A drafted charge to change: skips the type choice. */
+  initial?: AddContractCharge | undefined
   description: string
   currency: string
   billingPeriod: BillingPeriod
@@ -152,14 +162,15 @@ function AddStep({
   isSubmitting: boolean
   submitError: string | null
 }) {
-  const [type, setType] = useState<PriceType>(PriceType.Fixed)
-  const [chosen, setChosen] = useState(false)
+  const [type, setType] = useState<PriceType>(initial?.charge.type ?? PriceType.Fixed)
+  const [chosen, setChosen] = useState(Boolean(initial))
 
   if (chosen) {
     return (
       <ContractAddChargeForm
         key={type}
         type={type}
+        initial={initial}
         currency={currency}
         billingPeriod={billingPeriod}
         meters={meters}
