@@ -299,12 +299,8 @@ export function CustomerDetailPage({
             />
           )
         }
-        wallet={
-          // Disabled wholesale: the panel's buttons are its own, not access-gated.
-          <fieldset disabled={archived} className="contents">
-            <CustomerWalletPanel customerId={customer.data.id} />
-          </fieldset>
-        }
+        // Read-only, not disabled wholesale: switching between wallets still works.
+        wallet={<CustomerWalletPanel customerId={customer.data.id} readOnly={archived} />}
         taxes={
           <fieldset disabled={archived} className="contents">
             <CustomerTaxPanel customerId={customer.data.id} />

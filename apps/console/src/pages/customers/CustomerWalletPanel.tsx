@@ -19,10 +19,12 @@ import { subTab } from '@/pages/shared/subTab'
 
 export interface CustomerWalletPanelProps {
   customerId: string
+  /** View only: an archived customer's wallets can be read, not changed. */
+  readOnly?: boolean
 }
 
 /** Wires a customer's wallets: reads them, and runs create, top-up, auto top-up and terminate. */
-export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
+export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWalletPanelProps) {
   const wallets = useCustomerWallets(customerId)
   const [chosen, setChosen] = useState<string | null>(null)
   const selected = wallets.data?.find((wallet) => wallet.id === chosen) ?? wallets.data?.[0] ?? null
@@ -63,6 +65,7 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
   return (
     <>
       <CustomerWalletView
+        readOnly={readOnly}
         {...(selected ? { onAlertSettings: () => setAlerting(true) } : {})}
         {...(selected
           ? { onSaveMetadata: (metadata) => walletMetadata.mutateAsync(metadata) }
