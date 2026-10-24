@@ -1831,9 +1831,13 @@ export const EditsChargeAlerts: Story = {
       within(sheet.getByRole('region', { name: 'Alerts' })).getByRole('button', { name: 'Edit' }),
     )
     const dialog = within(await body.findByRole('dialog', { name: 'Alert settings' }))
-    await expect(dialog.getByRole('textbox', { name: 'Threshold' })).toHaveValue('80')
-    await userEvent.click(dialog.getByRole('combobox', { name: 'Warning' }))
-    await userEvent.click(await body.findByRole('option', { name: 'Rises above' }))
+    await expect(dialog.getByRole('textbox', { name: /^Warning threshold/ })).toHaveValue('80')
+    // The condition is a two-way switcher now, not a dropdown.
+    await userEvent.click(
+      within(dialog.getByRole('group', { name: 'Warning condition' })).getByRole('button', {
+        name: 'Rises above',
+      }),
+    )
     await userEvent.click(dialog.getByRole('button', { name: 'Save alerts' }))
     await waitFor(() =>
       expect(args.onSaveChargeAlert).toHaveBeenCalledWith({
