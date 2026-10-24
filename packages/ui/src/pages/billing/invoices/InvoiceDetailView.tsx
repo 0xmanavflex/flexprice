@@ -707,11 +707,14 @@ function InvoiceDocumentArticle({
   const settled = totals.due <= 0 && invoice.paid > 0
   const note = paymentFailed
     ? 'The last payment attempt failed. Retry, or send the customer a payment link.'
-    : settled || invoice.status === InvoiceStatus.Paid
-      ? 'Paid in full.'
-      : invoice.dueAt
-        ? `Payment is due on ${invoice.dueAt}.`
-        : 'Payment is due on receipt.'
+    : invoice.paymentStatus === PaymentStatus.Refunded
+      ? // The read model merges full and partial refunds, so this says only that one happened.
+        'A refund was issued against this invoice.'
+      : settled || invoice.status === InvoiceStatus.Paid
+        ? 'Paid in full.'
+        : invoice.dueAt
+          ? `Payment is due on ${invoice.dueAt}.`
+          : 'Payment is due on receipt.'
 
   return (
     <article className="bg-background w-full overflow-hidden rounded-xl border shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
@@ -742,8 +745,10 @@ function InvoiceDocumentArticle({
         ) : null}
       </div>
 
-      <div className="mx-8 border-t pt-3">
-        <div role="table" aria-label="Line items" className="text-sm">
+      {/* Five columns need room: on a narrow screen the lines scroll sideways
+          rather than the amounts being clipped. */}
+      <div className="mx-8 overflow-x-auto border-t pt-3">
+        <div role="table" aria-label="Line items" className="min-w-[40rem] text-sm">
           <div
             role="row"
             className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_10rem_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"

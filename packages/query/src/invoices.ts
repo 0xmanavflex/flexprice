@@ -752,8 +752,19 @@ export const useRecalculateInvoice = () =>
  * `POST /invoices/{id}/recalculate`. Starts a workflow; the replacement shows
  * up in the invoice list once it completes.
  */
-export const useReplaceVoidedInvoice = () =>
-  useInvoiceAction((client, id) => client.invoices.recalculateInvoice(id))
+export function useReplaceVoidedInvoice() {
+  const queryClient = useQueryClient()
+  const action = useInvoiceAction((client, id) => client.invoices.recalculateInvoice(id))
+  return {
+    ...action,
+    // A contract keeps its own invoice list; the replacement belongs there too.
+    mutateAsync: async (id: string) => {
+      const result = await action.mutateAsync(id)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
+      return result
+    },
+  }
+}
 
 /**
  * Send the invoice to the customer — `POST /invoices/{id}/comms/trigger`.

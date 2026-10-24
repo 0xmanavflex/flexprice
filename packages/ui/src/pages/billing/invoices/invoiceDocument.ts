@@ -107,15 +107,24 @@ export function statusChips(
   if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', tone: 'neutral' }]
   if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', tone: 'neutral' }]
   const chips: StatusChip[] = [{ label: 'Finalized', tone: 'neutral' }]
-  if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', tone: 'success' })
+  // A refunded invoice reads as refunded, not paid, though nothing remains due.
+  if (doc.status === InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Refunded)
+    chips.push({ label: 'Refund issued', tone: 'neutral' })
+  else if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', tone: 'success' })
   else if (doc.status === InvoiceStatus.Overdue) chips.push({ label: 'Overdue', tone: 'danger' })
   if (doc.status !== InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Failed)
     chips.push({ label: 'Payment failed', tone: 'danger' })
   else if (doc.status !== InvoiceStatus.Paid && doc.paid > 0)
     chips.push({ label: 'Partially paid', tone: 'warning' })
-  // A finalized invoice always says where its money stands, including the
-  // ordinary case where nothing has been paid yet.
-  if (chips.length === 1) chips.push({ label: 'Payment pending', tone: 'neutral' })
+  // A finalized invoice says where its money stands when the API says so,
+  // including the ordinary case of a payment still pending. Unknown and
+  // reversed states are not dressed up as pending.
+  if (chips.length === 1) {
+    if (doc.paymentStatus === PaymentStatus.Pending)
+      chips.push({ label: 'Payment pending', tone: 'neutral' })
+    else if (doc.paymentStatus === PaymentStatus.Refunded)
+      chips.push({ label: 'Refund issued', tone: 'neutral' })
+  }
   return chips
 }
 

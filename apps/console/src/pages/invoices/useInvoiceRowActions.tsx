@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import { InvoiceStatus, type Invoice } from '@fp/domain'
+import { InvoiceStatus, type Invoice, compareMoney } from '@fp/domain'
 import {
   useFinalizeInvoice,
   useInvoicePdfLink,
@@ -178,7 +178,11 @@ export function useInvoiceRowActions({
         onSelect: () => onOpenContract(subscriptionId),
       })
     }
-    if (open) {
+    // The API voids only unpaid invoices: one with money against it is not
+    // offered, as on the invoice's own page.
+    // Against what is payable, not the gross: a discount is not a payment.
+    const partlyPaid = compareMoney(invoice.amountRemaining, invoice.amountDue) < 0
+    if (open && !partlyPaid) {
       items.push({
         label: 'Void invoice',
         icon: <XCircleIcon aria-hidden className="size-4" />,
