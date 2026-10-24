@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactElement, type ReactNode } from 'react'
 import {
   ArchiveIcon,
+  InfoIcon,
   ExternalLinkIcon,
   ArrowUpDownIcon,
   EyeIcon,
@@ -16,6 +17,7 @@ import {
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_STATUS_LABEL,
+  CustomerStatus,
   CUSTOMER_TAX_TREATMENT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
   type Invoice,
@@ -32,7 +34,8 @@ import {
   RBAC_ENTITY,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
+import { AccessProvider, AccessScope, WriteGate, useAccess } from '@ui/compositions/access/Access'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { ActivitySection, type ActivityLogEntry } from '@ui/compositions/detail/ActivityLog'
 import {
   DetailTabs,
@@ -236,6 +239,9 @@ const Muted = ({ children }: { children: ReactNode }) => (
   <span className="text-muted-foreground">{children}</span>
 )
 
+/** Why nothing on an archived customer's page can be changed. */
+const ARCHIVED_CUSTOMER_LOCK = 'You can only view their details; nothing here can be changed.'
+
 export function CustomerDetail({
   customer,
   integrationControls,
@@ -333,7 +339,9 @@ export function CustomerDetail({
       disabled: !onStreamEvents,
       entity: RBAC_ENTITY.Event,
       ...(!onStreamEvents
-        ? { description: streamEventsReason ?? 'Sample events are not available for this customer.' }
+        ? {
+            description: streamEventsReason ?? 'Sample events are not available for this customer.',
+          }
         : {}),
     },
     ...(onOpenPortal && customer.externalId
@@ -376,7 +384,10 @@ export function CustomerDetail({
       : []),
   ]
 
-  return (
+  const access = useAccess()
+  const archived = customer.status === CustomerStatus.Archived
+
+  const page = (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <EntityHeader
         trail={[{ label: 'Customers', onClick: onBack }, { label: 'Customer details' }]}
@@ -398,6 +409,13 @@ export function CustomerDetail({
         menu={menu}
       />
       <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-w-0 flex-col gap-6 px-6 pb-10">
+        {archived ? (
+          <Alert variant="info">
+            <InfoIcon aria-hidden="true" />
+            <AlertTitle>This customer is archived</AlertTitle>
+            <AlertDescription>{ARCHIVED_CUSTOMER_LOCK}</AlertDescription>
+          </Alert>
+        ) : null}
         <DetailTabs
           value={tab}
           onValueChange={(next) => onTabChange(next as CustomerTab)}
@@ -459,7 +477,12 @@ export function CustomerDetail({
                 ? {
                     action: (
                       <WriteGate>
-                        <Button variant="outline" size="sm" className="h-8 px-3" onClick={onCreateInvoice}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-3"
+                          onClick={onCreateInvoice}
+                        >
                           <PlusIcon aria-hidden="true" />
                           New invoice
                         </Button>
@@ -526,6 +549,21 @@ export function CustomerDetail({
         ) : null}
       </div>
     </div>
+  )
+
+  /*
+   * An archived customer is read-only: the same lock a locked account uses,
+   * scoped to this page, so every write control here (menus, inline edits,
+   * section actions, the wallet and tax panels) is disabled with the reason,
+   * and the strip above the tabs says so once.
+   */
+  return archived ? (
+    <AccessProvider value={{ ...access, writeLock: ARCHIVED_CUSTOMER_LOCK }}>
+      {/* A scope, so items that name no entity of their own are checked too. */}
+      <AccessScope entity={RBAC_ENTITY.Customer}>{page}</AccessScope>
+    </AccessProvider>
+  ) : (
+    page
   )
 }
 
@@ -611,7 +649,8 @@ function TableTools<T>({
   }, [rows, facet])
   const visible = useMemo(() => {
     const allowed = new Set(selected)
-    const filtered = facet && selected.length > 0 ? rows.filter((row) => allowed.has(facet.value(row))) : rows
+    const filtered =
+      facet && selected.length > 0 ? rows.filter((row) => allowed.has(facet.value(row))) : rows
     if (!sorted) return filtered
     const sort = sorts.find((item) => item.key === field)
     if (!sort) return filtered
@@ -646,7 +685,13 @@ function TableTools<T>({
         <FilterBar
           variant="advanced"
           advancedAlign="end"
-          fields={[selectFilterField('facet', facet.label, choices.map((choice) => ({ value: choice, label: choice })))]}
+          fields={[
+            selectFilterField(
+              'facet',
+              facet.label,
+              choices.map((choice) => ({ value: choice, label: choice })),
+            ),
+          ]}
           query={query}
           onQueryChange={(_query, flat: FlatFilter[]) => {
             setSelected(readSelectFilter(flat, 'facet', new Set(choices)))
@@ -910,11 +955,23 @@ function OverviewTab({
             rows={payments.slice(0, 5)}
             facet={{ label: 'Status', value: (payment) => PAYMENT_STATUS_LABEL[payment.status] }}
             sorts={[
-              { key: 'invoice', label: 'Invoice number', value: (payment) => payment.invoiceNumber },
+              {
+                key: 'invoice',
+                label: 'Invoice number',
+                value: (payment) => payment.invoiceNumber,
+              },
               { key: 'amount', label: 'Amount', value: (payment) => Number(payment.amount.amount) },
               { key: 'method', label: 'Payment method', value: (payment) => payment.methodType },
-              { key: 'status', label: 'Status', value: (payment) => PAYMENT_STATUS_LABEL[payment.status] },
-              { key: 'date', label: 'Date', value: (payment) => Number(new Date(payment.createdAt ?? 0)) },
+              {
+                key: 'status',
+                label: 'Status',
+                value: (payment) => PAYMENT_STATUS_LABEL[payment.status],
+              },
+              {
+                key: 'date',
+                label: 'Date',
+                value: (payment) => Number(new Date(payment.createdAt ?? 0)),
+              },
             ]}
             {...(onViewAllPayments
               ? { action: <ViewAllButton label="payments" onClick={onViewAllPayments} /> }
@@ -1098,38 +1155,38 @@ function ContractsTable({
         { key: 'plan', label: 'Plan', value: (s) => s.planName },
         { key: 'status', label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] },
         { key: 'billing', label: 'Billing', value: (s) => s.billingPeriodLabel },
-        { key: 'period', label: 'Current period', value: (s) => Number(new Date(s.currentPeriodStart ?? 0)) },
+        {
+          key: 'period',
+          label: 'Current period',
+          value: (s) => Number(new Date(s.currentPeriodStart ?? 0)),
+        },
       ]}
       {...(create ? { action: create } : {})}
     >
       {(rows, controls) => (
-    <Section
-      flush
-      title="Contracts"
-      bare={!showTitle}
-      action={controls}
-    >
-      <SubTabState
-        hasData={subscriptions.length > 0}
-        isLoading={isLoading}
-        error={isError ? "Contracts couldn't be loaded" : null}
-        onRetry={onRetry}
-        columns={5}
-        loadingLabel="Loading contracts"
-        empty={{
-          scene: 'customers',
-          title: 'No contracts yet',
-          description: 'A contract puts this customer on a plan. Create one to start billing them.',
-        }}
-      >
-        <SimpleTable
-          rows={rows}
-          getRowId={(s) => s.id}
-          {...(onOpenContract ? { onRowClick: (s: Subscription) => onOpenContract(s.id) } : {})}
-          columns={contractColumns(formatDate, onOpenPlan, onOpenContract)}
-        />
-      </SubTabState>
-    </Section>
+        <Section flush title="Contracts" bare={!showTitle} action={controls}>
+          <SubTabState
+            hasData={subscriptions.length > 0}
+            isLoading={isLoading}
+            error={isError ? "Contracts couldn't be loaded" : null}
+            onRetry={onRetry}
+            columns={5}
+            loadingLabel="Loading contracts"
+            empty={{
+              scene: 'customers',
+              title: 'No contracts yet',
+              description:
+                'A contract puts this customer on a plan. Create one to start billing them.',
+            }}
+          >
+            <SimpleTable
+              rows={rows}
+              getRowId={(s) => s.id}
+              {...(onOpenContract ? { onRowClick: (s: Subscription) => onOpenContract(s.id) } : {})}
+              columns={contractColumns(formatDate, onOpenPlan, onOpenContract)}
+            />
+          </SubTabState>
+        </Section>
       )}
     </TableTools>
   )
@@ -1221,7 +1278,11 @@ function invoicePayment(invoice: Invoice): { label: string; tone: PillTone } {
 
 const invoiceSorts: SortKey<Invoice>[] = [
   { key: 'number', label: 'Invoice number', value: (invoice) => invoice.number },
-  { key: 'issued', label: 'Issue date', value: (invoice) => Number(new Date(invoice.issuedAt ?? 0)) },
+  {
+    key: 'issued',
+    label: 'Issue date',
+    value: (invoice) => Number(new Date(invoice.issuedAt ?? 0)),
+  },
   { key: 'due', label: 'Due date', value: (invoice) => Number(new Date(invoice.dueDate ?? 0)) },
   { key: 'status', label: 'Status', value: (invoice) => invoiceDocument(invoice) },
   { key: 'payment', label: 'Payment', value: (invoice) => invoicePayment(invoice).label },

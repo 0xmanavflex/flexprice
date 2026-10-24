@@ -355,6 +355,20 @@ export const CreatesInvoiceFromMenu: Story = {
   },
 }
 
+/** An archived customer is read-only: a strip says so, and the record's actions are disabled. */
+export const ArchivedIsReadOnly: Story = {
+  args: { customer: { ...CUSTOMER, status: 'archived' }, onEdit: fn(), onCreateInvoice: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('This customer is archived')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
+    const body = within(canvasElement.ownerDocument.body)
+    const edit = await body.findByRole('menuitem', { name: /Edit customer/ })
+    await expect(edit).toHaveAttribute('aria-disabled', 'true')
+    await expect(args.onEdit).not.toHaveBeenCalled()
+  },
+}
+
 /** "Stream sample events" is in the actions menu only when the page offers it. */
 export const StreamsSampleEventsFromMenu: Story = {
   args: { onStreamEvents: fn() },
