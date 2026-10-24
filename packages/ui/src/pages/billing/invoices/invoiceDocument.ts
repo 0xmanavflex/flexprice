@@ -3,6 +3,7 @@ import { InvoiceStatus, PaymentStatus } from '@fp/domain'
 export interface InvoiceLine {
   id: string
   description: string
+  /** The service period ("Oct 1 – Nov 1"), shown in the Interval column. */
   detail?: string
   quantity: string
   /** Per-unit price for display; `null` when it cannot be stated (no quantity). */

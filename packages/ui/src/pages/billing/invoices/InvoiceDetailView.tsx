@@ -186,6 +186,15 @@ export function InvoiceDetailView({
       maximumFractionDigits: 6,
     }).format(value)
   const isDraft = invoice.status === InvoiceStatus.Draft
+  // The API voids only unpaid invoices.
+  const voidReason =
+    invoice.status === InvoiceStatus.Void
+      ? 'Already void'
+      : invoice.status === InvoiceStatus.Skipped
+        ? 'A skipped invoice has nothing to void'
+        : invoice.status === InvoiceStatus.Paid || invoice.paid > 0
+          ? 'A paid invoice cannot be voided; issue a credit memo instead'
+          : null
   const recalcReason =
     recalculateBlocked === undefined ? (isDraft ? null : 'Drafts only') : recalculateBlocked
   const isOpen = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
@@ -389,15 +398,19 @@ export function InvoiceDetailView({
                 <FileTextIcon aria-hidden="true" /> View subscription
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            {onVoid &&
-            invoice.status !== InvoiceStatus.Void &&
-            invoice.status !== InvoiceStatus.Skipped ? (
+            {onVoid ? (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={onVoid}>
-                  <XCircleIcon aria-hidden="true" />
-                  Void invoice
-                </DropdownMenuItem>
+                {/* Always listed, so the status change is findable; disabled with
+                    the reason when this invoice cannot be voided. */}
+                <MenuAction
+                  icon={<XCircleIcon />}
+                  label="Void invoice"
+                  onSelect={onVoid}
+                  disabled={voidReason !== null}
+                  hint={voidReason ?? undefined}
+                  destructive
+                />
               </>
             ) : null}
           </DropdownMenuContent>
@@ -633,6 +646,7 @@ function MenuAction({
   hint,
   pending = false,
   pendingLabel,
+  destructive = false,
 }: {
   icon: ReactNode
   label: string
@@ -642,9 +656,11 @@ function MenuAction({
   /** The action is running: spinner, `pendingLabel`, not selectable. */
   pending?: boolean
   pendingLabel?: string | undefined
+  destructive?: boolean
 }) {
   return (
     <DropdownMenuItem
+      {...(destructive ? { variant: 'destructive' as const } : {})}
       disabled={disabled || pending || !onSelect}
       onClick={onSelect}
       {...(pending ? { 'aria-busy': true } : {})}
@@ -730,9 +746,10 @@ function InvoiceDocumentArticle({
         <div role="table" aria-label="Line items" className="text-sm">
           <div
             role="row"
-            className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"
+            className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_10rem_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"
           >
             <span role="columnheader">Description</span>
+            <span role="columnheader">Interval</span>
             <span role="columnheader" className="text-right">
               Qty
             </span>
@@ -747,11 +764,20 @@ function InvoiceDocumentArticle({
             <div
               key={line.id}
               role="row"
-              className="border-border/50 grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] items-start gap-4 border-b py-4 last:border-b-0"
+              className="border-border/50 grid grid-cols-[minmax(0,1fr)_10rem_5rem_7rem_7rem] items-start gap-4 border-b py-4 last:border-b-0"
             >
-              <p role="cell" className="min-w-0 font-medium">
-                {line.description}
-              </p>
+              <span role="cell" className="flex min-w-0 flex-col">
+                <span className="font-medium">{line.description}</span>
+                {/* Which kind of charge it is, so a fixed fee reads apart from usage. */}
+                {line.kind ? (
+                  <span className="text-muted-foreground text-xs">
+                    {line.kind === 'usage' ? 'Usage charge' : 'Fixed charge'}
+                  </span>
+                ) : null}
+              </span>
+              <span role="cell" className="text-muted-foreground tabular-nums">
+                {line.detail || '—'}
+              </span>
               <span role="cell" className="text-muted-foreground text-right tabular-nums">
                 {line.quantity || '—'}
               </span>

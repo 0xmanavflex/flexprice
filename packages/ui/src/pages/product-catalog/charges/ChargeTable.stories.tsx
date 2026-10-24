@@ -293,7 +293,7 @@ export const Views: Story = {
   },
 }
 
-/** The contract's Charges tab: a Dates column says when each charge started and ended. */
+/** The contract's Charges tab: "In effect" says when each charge starts and ends. */
 export const WithDates: Story = {
   args: {
     charges: [
@@ -311,9 +311,11 @@ export const WithDates: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('columnheader', { name: 'Dates' })).toBeInTheDocument()
-    await expect(canvas.getByText('From Jan 1, 2026')).toBeInTheDocument()
-    await expect(canvas.getByText('Ended Feb 1, 2026')).toBeInTheDocument()
+    await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeInTheDocument()
+    await expect(canvas.getByText('Jan 1, 2026 → Ongoing')).toBeInTheDocument()
+    await expect(canvas.getByText('Jun 1, 2025 → Feb 1, 2026')).toBeInTheDocument()
+    // Billing timing has its own column, beside the dates.
+    await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeInTheDocument()
   },
 }
 

@@ -390,6 +390,7 @@ const PREVIEW: InvoicePreview = {
       name: 'Platform fee',
       detail: 'Oct 1 – Nov 1',
       quantity: '1',
+      unitPrice: money('1500', 'USD'),
       amount: money('1500', 'USD'),
       kind: 'fixed',
     },
@@ -398,6 +399,7 @@ const PREVIEW: InvoicePreview = {
       name: 'API requests',
       detail: '920,250 requests',
       quantity: '920250',
+      unitPrice: money('0.002', 'USD'),
       amount: money('1840.5', 'USD'),
       kind: 'usage',
     },
@@ -406,6 +408,7 @@ const PREVIEW: InvoicePreview = {
       name: 'Onboarding',
       detail: 'Oct 1 – Nov 1',
       quantity: '1',
+      unitPrice: money('250', 'USD'),
       amount: money('250', 'USD'),
       kind: 'fixed',
     },
@@ -414,6 +417,7 @@ const PREVIEW: InvoicePreview = {
       name: 'Seat overage',
       detail: 'No usage this period',
       quantity: '0',
+      unitPrice: null,
       amount: money('0', 'USD'),
       kind: 'usage',
     },
@@ -1210,6 +1214,7 @@ export const UpcomingInvoiceManyLines: Story = {
         name: `Line item ${index + 1}`,
         detail: 'Oct 1 – Nov 1',
         quantity: '1',
+        unitPrice: money('10', 'USD'),
         amount: money('10', 'USD'),
         kind: 'fixed' as const,
       })),
@@ -1831,9 +1836,13 @@ export const EditsChargeAlerts: Story = {
       within(sheet.getByRole('region', { name: 'Alerts' })).getByRole('button', { name: 'Edit' }),
     )
     const dialog = within(await body.findByRole('dialog', { name: 'Alert settings' }))
-    await expect(dialog.getByRole('textbox', { name: 'Threshold' })).toHaveValue('80')
-    await userEvent.click(dialog.getByRole('combobox', { name: 'Warning' }))
-    await userEvent.click(await body.findByRole('option', { name: 'Rises above' }))
+    await expect(dialog.getByRole('textbox', { name: /^Warning threshold/ })).toHaveValue('80')
+    // The condition is a two-way switcher now, not a dropdown.
+    await userEvent.click(
+      within(dialog.getByRole('group', { name: 'Warning condition' })).getByRole('button', {
+        name: 'Rises above',
+      }),
+    )
     await userEvent.click(dialog.getByRole('button', { name: 'Save alerts' }))
     await waitFor(() =>
       expect(args.onSaveChargeAlert).toHaveBeenCalledWith({

@@ -986,6 +986,8 @@ export interface InvoicePreviewLine {
   /** The period note under the name, when the API sent one. */
   detail: string
   quantity: string
+  /** The amount over the quantity (exact; `perUnit`), or null without a quantity. */
+  unitPrice: Money | null
   amount: Money
   kind: 'fixed' | 'usage' | null
 }

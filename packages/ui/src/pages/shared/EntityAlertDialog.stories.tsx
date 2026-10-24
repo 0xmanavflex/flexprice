@@ -26,11 +26,8 @@ export const CreatesAnAlert: Story = {
   play: async ({ args }) => {
     const dialog = within(await screen.findByRole('dialog'))
     await expect(dialog.getByText(/Nothing watches this contract yet/)).toBeVisible()
-    await userEvent.click(dialog.getByRole('switch', { name: 'Critical' }))
-    await userEvent.type(
-      dialog.getByLabelText('Threshold', { selector: '#charge-alert-critical-value' }),
-      '95',
-    )
+    await userEvent.click(dialog.getByRole('switch', { name: 'Critical alert' }))
+    await userEvent.type(dialog.getByRole('textbox', { name: /^Critical threshold/ }), '95')
     await userEvent.click(dialog.getByRole('button', { name: 'Create alert' }))
     await waitFor(() =>
       expect(args.onSave).toHaveBeenCalledWith(
@@ -55,7 +52,7 @@ export const EditsAnAlert: Story = {
   },
   play: async ({ args }) => {
     const dialog = within(await screen.findByRole('dialog'))
-    await expect(dialog.getByRole('switch', { name: 'Info' })).toBeChecked()
+    await expect(dialog.getByRole('switch', { name: 'Info alert' })).toBeChecked()
     await userEvent.click(dialog.getByRole('button', { name: 'Save alerts' }))
     await waitFor(() => expect(args.onSave).toHaveBeenCalledOnce())
   },
