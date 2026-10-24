@@ -148,6 +148,12 @@ export function FeatureListPage({
           <FeatureGrid
             features={rows}
             groupName={(groupId) => groupNames.get(groupId)}
+            filterOptions={{
+              group_id: (groups.data?.groups ?? []).map((group) => ({
+                value: group.id,
+                label: group.name,
+              })),
+            }}
             linkage={linkage}
             linkageLoading={linked.isPending}
             onCreateEntitlement={setEntitling}

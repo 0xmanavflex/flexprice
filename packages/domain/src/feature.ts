@@ -481,5 +481,7 @@ export const FEATURE_FILTERS: readonly ListFilterSpec[] = [
       { value: 'archived', label: 'Archived' },
     ],
   },
+  // The account's own feature groups; the page fills the choices in.
+  { field: 'group_id', label: 'Group', kind: 'options', options: [] },
   { field: 'created_at', label: 'Created', kind: 'date' },
 ]
