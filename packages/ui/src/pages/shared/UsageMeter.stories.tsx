@@ -73,7 +73,9 @@ export const OverLimit: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('12,400 of 10,000 calls')).toBeInTheDocument()
-    await expect(canvas.getByText(/over the included amount by 2,400/i)).toBeInTheDocument()
+    // Over the limit is told by the red reading and bar, not an extra line.
+    await expect(canvas.getByText('12,400 of 10,000 calls')).toHaveClass('text-destructive')
+    await expect(canvas.queryByText(/over the included amount/i)).not.toBeInTheDocument()
   },
 }
 

@@ -6,6 +6,8 @@ import {
   type TenantFeatureUsage,
 } from '@fp/domain'
 import { provenance } from '@ui/provenance'
+import { Button } from '@ui/components/primitives/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { DetailTable } from './DetailTable'
 import { EmDash, EntityLink } from './cells'
 import { UsageMeter } from './UsageMeter'
@@ -133,21 +135,53 @@ export function entitlementValue(row: EntitlementUsageRow, locale?: string): str
   }`
 }
 
+function SourceName({ source }: { source: EntitlementSourceLink }) {
+  return source.onOpen ? (
+    <EntityLink label={source.label} onOpen={source.onOpen} />
+  ) : (
+    <span className="truncate">{source.label}</span>
+  )
+}
+
+/**
+ * The first source, then "+N": hovering or pressing it lists every source,
+ * each one a link to where the grant comes from.
+ */
 function Sources({ sources }: { sources: EntitlementSourceLink[] }) {
   const [first, ...rest] = sources
   if (!first) return <EmDash />
   return (
-    <span
-      className="flex min-w-0 items-baseline gap-1.5"
-      title={sources.map((source) => source.label).join(', ')}
-    >
-      {first.onOpen ? (
-        <EntityLink label={first.label} onOpen={first.onOpen} />
-      ) : (
-        <span className="truncate">{first.label}</span>
-      )}
+    <span className="flex min-w-0 items-baseline gap-1.5">
+      <SourceName source={first} />
       {rest.length > 0 ? (
-        <span className="text-muted-foreground shrink-0 text-xs">+{rest.length}</span>
+        <Popover>
+          <PopoverTrigger
+            openOnHover
+            delay={150}
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                className="text-muted-foreground h-5 shrink-0 px-1 text-xs"
+                aria-label={`${sources.length} sources`}
+                onClick={(event) => event.stopPropagation()}
+              />
+            }
+          >
+            +{rest.length}
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-56 p-2">
+            <p className="text-muted-foreground px-1 pb-1.5 text-xs">Granted by</p>
+            <ul className="flex flex-col gap-1">
+              {sources.map((source, index) => (
+                <li key={`${source.label}-${index}`} className="px-1 text-sm">
+                  <SourceName source={source} />
+                </li>
+              ))}
+            </ul>
+          </PopoverContent>
+        </Popover>
       ) : null}
     </span>
   )

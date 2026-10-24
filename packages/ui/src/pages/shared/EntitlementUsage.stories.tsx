@@ -61,7 +61,7 @@ export const OverSoftLimit: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('1,243,900 of 1,000,000 tokens')).toBeInTheDocument()
-    await expect(canvas.getByText(/over the included amount by 243,900/i)).toBeInTheDocument()
+    await expect(canvas.getByText('1,243,900 of 1,000,000 tokens')).toHaveClass('text-destructive')
     await expect(canvas.getByText(/Soft limit/)).toBeInTheDocument()
   },
 }
@@ -156,7 +156,7 @@ export const CustomerTable: StoryObj<typeof EntitlementUsageTable> = {
     await expect(canvas.getByText('1,000,000 (soft) / monthly')).toBeInTheDocument()
     await expect(canvas.getByText('Included')).toBeInTheDocument()
     await expect(canvas.getByText('Premium')).toBeInTheDocument()
-    await expect(canvas.getByText('+1')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: '2 sources' })).toHaveTextContent('+1')
     // One bar per capped metered feature; the unlimited, boolean and static rows draw none.
     await expect(canvas.getAllByRole('progressbar')).toHaveLength(2)
     await userEvent.click(canvas.getAllByRole('button', { name: 'Growth' })[0]!)

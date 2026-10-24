@@ -80,11 +80,7 @@ export function UsageMeter({ label, used, limit, unit, locale, hideLabel }: Usag
         />
       )}
 
-      {over ? (
-        <p className="text-destructive text-xs">
-          Over the included amount by {format(used - (limit ?? 0))}
-        </p>
-      ) : null}
+      {/* Over the limit reads from the red reading and bar above; no extra line. */}
     </div>
   )
 }
