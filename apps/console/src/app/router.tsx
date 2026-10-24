@@ -226,6 +226,7 @@ import { VersionCheck } from '@/app/versionCheck/VersionCheck'
 import { AccountLockProvider, AccountPill, useLockedAccess } from '@/app/selfBilling/AccountLock'
 import { EnvironmentToaster } from '@/pages/shared/RecordElsewhere'
 import { RouteAccessGate } from '@/app/access/RouteAccessGate'
+import { DEFAULT_HOME_SEARCH, parseHomeSearch, type HomeSearch } from '@/app/homeSearch'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
@@ -1522,14 +1523,27 @@ function CostSheetDetailRouteComponent() {
  * Home: the ReUI `dashboard-4` block, mounted as installed.
  *
  * The first destination in the sidebar, and the only one that is a dashboard
- * rather than a list. It carries no query state yet; the block renders its own
- * sample data until it is wired to real revenue and usage.
+ * rather than a list. The range, granularity and open metric tab live in the
+ * URL, so they are still selected when you come back.
  */
 const homeRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/',
-  component: HomePage,
+  validateSearch: (search: Record<string, unknown>): HomeSearch => parseHomeSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_HOME_SEARCH)] },
+  component: HomeRouteComponent,
 })
+
+function HomeRouteComponent() {
+  const search = useSearch({ from: homeRoute.id })
+  const navigate = useNavigate()
+  return (
+    <HomePage
+      search={search}
+      onSearchChange={(next) => void navigate({ to: '/', search: next, replace: true })}
+    />
+  )
+}
 
 /**
  * Reports: the analytics report library (once "Revenue"). The tab, range,

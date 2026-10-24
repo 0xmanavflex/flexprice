@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import type { HomeSearch } from '@/app/homeSearch'
 import {
   reportBreakdown,
   reportCurrencies,
@@ -99,6 +100,19 @@ const GRANULARITIES: (FilterOption & { windowSize: UsageWindowSize })[] = [
   { id: 'weekly', label: 'Weekly', windowSize: UsageWindowSize.Week },
 ]
 
+function formatDay(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+function parseDay(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return null
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 /** A picked calendar day as midnight UTC, so a custom window is cut like a preset one. */
 function utcDay(date: Date): Date {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
@@ -174,16 +188,38 @@ function change(current: number, prior: number): number | null {
   return ((current - prior) / prior) * 100
 }
 
-export function HomePage() {
+export function HomePage({
+  search,
+  onSearchChange,
+}: {
+  search: HomeSearch
+  onSearchChange: (next: HomeSearch) => void
+}) {
   const navigate = useNavigate()
   const { environmentId } = useSession()
-  const [rangeId, setRangeId] = useState('7d')
-  const [granularityId, setGranularityId] = useState('daily')
-  // Seeded with the last 30 days, so choosing "Custom range" shows data at once.
-  const [custom, setCustom] = useState<DayRange>(() => ({
+  const rangeId = search.range
+  const granularityId = search.grain
+  // Seeded once, so a custom range with no dates in the URL stays put.
+  const [customFallback] = useState<DayRange>(() => ({
     from: new Date(Date.now() - 29 * DAY_MS),
     to: new Date(),
   }))
+  const custom = useMemo<DayRange>(
+    () => ({
+      from: parseDay(search.from) ?? customFallback.from,
+      to: parseDay(search.to) ?? customFallback.to,
+    }),
+    [search.from, search.to, customFallback],
+  )
+  const setRangeId = (range: string) => onSearchChange({ ...search, range })
+  const setGranularityId = (grain: string) => onSearchChange({ ...search, grain })
+  const setCustom = (next: DayRange) =>
+    onSearchChange({
+      ...search,
+      range: CUSTOM_RANGE_ID,
+      from: formatDay(next.from),
+      to: formatDay(next.to),
+    })
   const isCustom = rangeId === CUSTOM_RANGE_ID
 
   /*
@@ -376,6 +412,8 @@ export function HomePage() {
       granularityOptions={granularityOptions.map(({ id, label }) => ({ id, label }))}
       granularity={granularity.id}
       onGranularityChange={setGranularityId}
+      metric={search.metric}
+      onMetricChange={(metric) => onSearchChange({ ...search, metric })}
       rangeLabel={rangeLabel}
       events={eventsPanel}
       revenue={revenuePanel}
