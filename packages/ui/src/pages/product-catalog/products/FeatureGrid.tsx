@@ -21,6 +21,7 @@ import {
   type FeatureQuery,
   FeatureSortField,
   FEATURE_FILTERS,
+  withFilterOptions,
 } from '@fp/domain'
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
@@ -135,6 +136,8 @@ export interface FeatureGridProps {
    * feature carries only `groupId` and the names are fetched alongside.
    */
   groupName?: ((groupId: string) => string | undefined) | undefined
+  /** Choices for filters whose options are the account's records, e.g. `group_id`. */
+  filterOptions?: Readonly<Record<string, readonly { value: string; label: string }[]>>
   /** Plans, entitlements and subscriptions per feature id. */
   linkage?: ReadonlyMap<string, FeatureLinkage>
   /** The linkage is still being read; its three columns show a placeholder. */
@@ -164,6 +167,7 @@ export interface FeatureGridProps {
 export function FeatureGrid({
   features,
   groupName,
+  filterOptions,
   linkage,
   linkageLoading = false,
   onCreateEntitlement,
@@ -448,7 +452,7 @@ export function FeatureGrid({
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search features…"
       filter={granularFilter({
-        specs: FEATURE_FILTERS,
+        specs: withFilterOptions(FEATURE_FILTERS, filterOptions ?? {}),
         filters: query.filters ?? [],
         onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
