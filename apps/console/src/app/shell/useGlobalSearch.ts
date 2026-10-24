@@ -79,7 +79,7 @@ export function useGlobalSearch(rawTerm: string) {
 
   const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, ...base }, { enabled })
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, ...base }, { enabled })
-  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, ...base }, { enabled })
+  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, ...base, filters: [] }, { enabled })
   const invoices = useInvoices({ ...DEFAULT_INVOICE_QUERY, ...base }, { enabled })
 
   const { results, paths } = useMemo(() => {

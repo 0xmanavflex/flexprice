@@ -1,4 +1,4 @@
-import type { ListFilter, ListFilterSpec } from './listFilter'
+import { FilterOp, type ListFilter, type ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { type AlertSettingConfig, alertSettingConfigSchema } from './alertSetting'
 import { KEY_PREFIX, suggestKey } from './suggestKey'
@@ -418,6 +418,17 @@ export interface FeatureQuery {
   filters?: ListFilter[]
 }
 
+/**
+ * The list opens on published (active) features only, as V1 did: a visible,
+ * removable "Status is Published" filter, sent to the search endpoint, so
+ * archived features stay out of the list and its totals until asked for.
+ */
+export const ACTIVE_FEATURES_FILTER: ListFilter = {
+  field: 'status',
+  op: FilterOp.In,
+  value: [FeatureStatus.Published],
+}
+
 export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   page: 1,
   pageSize: 25,
@@ -429,7 +440,21 @@ export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   sortBy: FeatureSortField.UpdatedAt,
   sortDirection: 'desc',
   view: FeatureView.Table,
-  filters: [],
+  filters: [ACTIVE_FEATURES_FILTER],
+}
+
+/**
+ * Whether the list is narrowed beyond its default view. The default status
+ * filter does not count, so an empty catalogue still gets the first-run empty
+ * state rather than "nothing matches these filters".
+ */
+export function isFeatureQueryFiltered(query: FeatureQuery): boolean {
+  return (
+    query.search.length > 0 ||
+    query.types.length > 0 ||
+    query.statuses.length > 0 ||
+    JSON.stringify(query.filters ?? []) !== JSON.stringify(DEFAULT_FEATURE_QUERY.filters ?? [])
+  )
 }
 
 /** What the product list can filter on — V1's fields, by their wire names. */

@@ -13,6 +13,7 @@ import {
 import {
   aggregationFormula,
   DEFAULT_FEATURE_QUERY,
+  isFeatureQueryFiltered,
   FEATURE_SORT_LABEL,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
@@ -478,12 +479,7 @@ export function FeatureGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={
-        query.search.length > 0 ||
-        query.types.length > 0 ||
-        query.statuses.length > 0 ||
-        (query.filters?.length ?? 0) > 0
-      }
+      isFiltered={isFeatureQueryFiltered(query)}
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No features match these filters"
       empty={{
