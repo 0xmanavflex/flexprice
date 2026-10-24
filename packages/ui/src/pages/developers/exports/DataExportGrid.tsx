@@ -54,7 +54,7 @@ export interface DataExportGridProps {
   onOpen?: (row: DataExport) => void
   /** Offers Delete in each row's menu. */
   onDelete?: (row: DataExport) => void
-  /** Replaces Refresh as the header action, e.g. "New export". */
+  /** Replaces Refresh as the header action, e.g. "Add task". */
   primaryAction?: ReactNode
   locale?: string
 }
@@ -159,7 +159,7 @@ export function DataExportGrid({
       rowActions={rowActions}
       exportFileName="exports"
       {...(onOpen ? { onRowClick: onOpen } : {})}
-      // Refresh does not write; a "New export" given by the page does.
+      // Refresh does not write; an "Add task" given by the page does.
       primaryActionReadOnly={!primaryAction}
       {...(primaryAction
         ? { primaryAction }

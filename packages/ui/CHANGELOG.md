@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-25
+
+- Exports: a connection's exports page gets an `EntityHeader` (connection name, Flexprice-managed / Your bucket badge, copyable ID) instead of only a breadcrumb; its create action and dialog read "Add task" / "Add export task" (was "New export"). The S3 connections section's "Add connection" is outline, per the section-action rule. Source: walkthrough QA 8.4.
+
 ## 2026-10-24
 
 - FormDialog: new `dismissible` prop (default true). `false` hides the close control and ignores Escape/overlay, for bodies whose own button is the only exit. Used by the one-time API key secret, whose X rendered but did nothing. Source: walkthrough QA 8.1.
