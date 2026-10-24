@@ -520,10 +520,8 @@ export const ConfiguresAChargeCommitment: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
-    // The review lists the charge among those this contract changes.
-    await expect(
-      await canvas.findByText(/· commits 10,000 units monthly · per minute, 1 window$/),
-    ).toBeVisible()
+    // The review counts the charge among those this contract changes.
+    await expect(await canvas.findByText(/· 1 changed from the plan$/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -599,7 +597,7 @@ export const SetsAFixedChargeQuantity: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
-    await expect(await canvas.findByText('· quantity 25')).toBeVisible()
+    await expect(await canvas.findByText(/· 1 changed from the plan$/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -1035,10 +1033,10 @@ export const ReviewAndSubmit: Story = {
 }
 
 /**
- * The review names each charge this deal changes — new price over the plan's,
- * quantity, coupon — the first eight, then how many more, and counts them.
+ * The review counts the charges this deal changes rather than listing them —
+ * a contract can change dozens; the charges step shows each one.
  */
-export const ReviewListsChangedCharges: Story = {
+export const ReviewCountsChangedCharges: Story = {
   args: {
     prefilled: true,
     step: 'review',
@@ -1057,8 +1055,7 @@ export const ReviewListsChangedCharges: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('20 charges · 10 changed from the plan')).toBeVisible()
-    await expect(canvas.getByText('· $7.00 (was $9.00) · 20% off (LAUNCH20)')).toBeVisible()
-    await expect(canvas.getByText('and 2 more')).toBeVisible()
+    await expect(canvas.queryByText('and 2 more')).not.toBeInTheDocument()
     await expect(canvas.getByText('Loyalty ($50 off) · 1 on single charges')).toBeVisible()
   },
 }

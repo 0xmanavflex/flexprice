@@ -693,6 +693,8 @@ export {
   WalletTopUpKind,
   autoTopupSchema,
   createWalletSchema,
+  AutoTopupCooldownUnit,
+  AUTO_TOPUP_COOLDOWN_UNIT_LABEL,
   emptyAutoTopup,
   debitWalletSchema,
   emptyDebit,

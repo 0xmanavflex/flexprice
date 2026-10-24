@@ -20,6 +20,24 @@ export interface AutoTopup {
   amount: string
   /** Raise an invoice for the refill instead of granting it. */
   invoicing: boolean
+  /** The least time between two refills; blank for none. A whole number of `cooldownUnit`s. */
+  cooldownValue?: string | undefined
+  cooldownUnit?: AutoTopupCooldownUnit | undefined
+}
+
+/** The units a refill cool-off is counted in (the wire's `DurationUnit`, less seconds). */
+export const AutoTopupCooldownUnit = {
+  Minute: 'minute',
+  Hour: 'hour',
+  Day: 'day',
+} as const
+export type AutoTopupCooldownUnit =
+  (typeof AutoTopupCooldownUnit)[keyof typeof AutoTopupCooldownUnit]
+
+export const AUTO_TOPUP_COOLDOWN_UNIT_LABEL: Record<AutoTopupCooldownUnit, string> = {
+  [AutoTopupCooldownUnit.Minute]: 'Minutes',
+  [AutoTopupCooldownUnit.Hour]: 'Hours',
+  [AutoTopupCooldownUnit.Day]: 'Days',
 }
 
 export const emptyAutoTopup = (): AutoTopup => ({
@@ -187,6 +205,10 @@ export const autoTopupSchema = z
     threshold: z.string().trim(),
     amount: z.string().trim(),
     invoicing: z.boolean(),
+    cooldownValue: z.string().trim().optional(),
+    cooldownUnit: z
+      .enum([AutoTopupCooldownUnit.Minute, AutoTopupCooldownUnit.Hour, AutoTopupCooldownUnit.Day])
+      .optional(),
   })
   .superRefine((value, ctx) => {
     if (!value.enabled) return
@@ -201,5 +223,11 @@ export const autoTopupSchema = z
         code: 'custom',
         path: ['amount'],
         message: 'Enter how many credits to add',
+      })
+    if (value.cooldownValue && !/^[1-9]\d*$/.test(value.cooldownValue))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cooldownValue'],
+        message: 'Enter a whole number, or leave blank for no cool-off',
       })
   })
