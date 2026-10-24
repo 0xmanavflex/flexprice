@@ -269,20 +269,40 @@ function ColorField({
   return (
     <Field
       label={`${label} colour`}
-      hint="A CSS colour, or blank."
+      hint="A hex code such as #0f172a, or blank."
       {...(draft.error(path) ? { error: draft.error(path) } : {})}
     >
       {({ id, ...field }) => (
-        <Input
-          id={id}
-          disabled={busy}
-          placeholder="#0f172a"
-          value={draft.text(path)}
-          onChange={(event) => draft.setText(path, event.target.value)}
-          {...field}
-        />
+        <div className="flex items-center gap-2">
+          <ColorSwatch value={draft.text(path)} />
+          <Input
+            id={id}
+            disabled={busy}
+            placeholder="#0f172a"
+            value={draft.text(path)}
+            onChange={(event) => draft.setText(path, event.target.value)}
+            {...field}
+          />
+        </div>
       )}
     </Field>
+  )
+}
+
+/**
+ * A preview of the colour typed beside it, so a hex code reads as the colour
+ * it is. The colour is the merchant's own data, not a theme value, hence the
+ * inline style; an empty or unreadable value shows an empty, dashed square.
+ */
+function ColorSwatch({ value }: { value: string }) {
+  const colour = value.trim()
+  const valid = colour !== '' && typeof CSS !== 'undefined' && CSS.supports('color', colour)
+  return (
+    <span
+      aria-hidden
+      className={`size-9 shrink-0 rounded-md border ${valid ? '' : 'border-dashed'}`}
+      style={valid ? { backgroundColor: colour } : undefined}
+    />
   )
 }
 
