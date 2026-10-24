@@ -690,6 +690,8 @@ export { INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './integrationConnect'
 export {
+  WalletKind,
+  WALLET_KIND_LABEL,
   WALLET_STATUS_LABEL,
   WalletStatus,
   WalletTopUpKind,

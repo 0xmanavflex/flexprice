@@ -14,6 +14,7 @@ import {
 } from '@ui/icons'
 import {
   AUTO_TOPUP_COOLDOWN_UNIT_LABEL,
+  WALLET_KIND_LABEL,
   AutoTopupCooldownUnit,
   type AutoTopup,
   type CreateWallet,
@@ -306,6 +307,7 @@ export function CustomerWalletView({
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t px-6 py-4">
           <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+          {wallet.walletType ? <Pill>{WALLET_KIND_LABEL[wallet.walletType]}</Pill> : null}
           {/* The chip is also the way in: off never dead-ends, it opens the settings. */}
           <button
             type="button"
