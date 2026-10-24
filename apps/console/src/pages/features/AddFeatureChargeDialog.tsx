@@ -9,7 +9,7 @@ import {
   type Feature,
 } from '@fp/domain'
 import { useCreateBulkPrices, usePlans } from '@fp/query'
-import { ChargeForm } from '@fp/ui/pages'
+import { ChargeForm, type MeterOption } from '@fp/ui/pages'
 import { Field, FormDialog, OptionSelect } from '@fp/ui/compositions'
 import { usePlanFormOptions } from '../plans/planFormOptions'
 
@@ -30,11 +30,23 @@ export function AddFeatureChargeDialog({
   onAdded?: () => void
 }) {
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, pageSize: 100, statuses: [PlanStatus.Published] })
-  const { meters, units, priceGroups } = usePlanFormOptions()
+  const { units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const [planId, setPlanId] = useState('')
 
-  const meter = meters.filter((option) => option.id === feature.meterId)
+  // The one meter on offer is this feature's, built from the record already
+  // loaded rather than looked up in a page of the catalogue it may not be on.
+  const meter: MeterOption[] = feature.meterId
+    ? [
+        {
+          id: feature.meterId,
+          name: feature.name,
+          ...(feature.unitSingular ? { unit: feature.unitSingular } : {}),
+          ...(feature.aggregationType ? { aggregationType: feature.aggregationType } : {}),
+          ...(feature.meterBucketSize ? { bucketSize: feature.meterBucketSize } : {}),
+        },
+      ]
+    : []
   const planOptions = (plans.data?.plans ?? []).map((plan) => ({
     value: plan.id,
     label: plan.name,

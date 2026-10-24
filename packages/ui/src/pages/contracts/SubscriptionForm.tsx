@@ -2774,44 +2774,46 @@ function CreditsSection({
   const editingGrant = editing === null ? undefined : grants[editing]
 
   return (
-    <FormCard
-      title="Credit grants"
-      status="optional"
-      icon={<CoinsIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-      adornment={
-        <>
-          {fromPlan && changed ? (
-            <Button type="button" variant="ghost" size="sm" onClick={onReset}>
-              Use the plan&apos;s grants
-            </Button>
-          ) : null}
-          <AddButton onClick={() => setAdding(true)} disabled={adding}>
-            Add credit grant
-          </AddButton>
-        </>
-      }
-      {...(fromPlan && changed
-        ? { description: "These grants replace the plan's on this contract." }
-        : {})}
-    >
-      <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
-        <Frame>
-          {grants.length > 0 ? (
-            <SimpleTable
-              columns={columns}
-              rows={grants.map((grant, index) => ({ grant, index }))}
-              getRowId={(row) => `${row.grant.name}-${row.index}`}
-            />
-          ) : (
-            <EmptyLine>
-              {fromPlan
-                ? "All of the plan's grants are removed from this contract."
-                : 'No credit grants.'}
-            </EmptyLine>
-          )}
-        </Frame>
-      </div>
-      {/* Add and edit open in a dialog, as on a contract's own page, not as a panel
+    <>
+      <FormCard
+        title="Credit grants"
+        status="optional"
+        icon={<CoinsIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+        adornment={
+          <>
+            {fromPlan && changed ? (
+              <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+                Use the plan&apos;s grants
+              </Button>
+            ) : null}
+            <AddButton onClick={() => setAdding(true)} disabled={adding}>
+              Add credit grant
+            </AddButton>
+          </>
+        }
+        {...(fromPlan && changed
+          ? { description: "These grants replace the plan's on this contract." }
+          : {})}
+      >
+        <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
+          <Frame>
+            {grants.length > 0 ? (
+              <SimpleTable
+                columns={columns}
+                rows={grants.map((grant, index) => ({ grant, index }))}
+                getRowId={(row) => `${row.grant.name}-${row.index}`}
+              />
+            ) : (
+              <EmptyLine>
+                {fromPlan
+                  ? "All of the plan's grants are removed from this contract."
+                  : 'No credit grants.'}
+              </EmptyLine>
+            )}
+          </Frame>
+        </div>
+      </FormCard>
+      {/* Outside the card, which draws a row per child. Add and edit open in a dialog, as on a contract's own page, not as a panel
           that pushes the rest of the step down. */}
       <FormDialog
         open={editingGrant !== undefined}
@@ -2843,7 +2845,7 @@ function CreditsSection({
           }}
         />
       </FormDialog>
-    </FormCard>
+    </>
   )
 }
 
@@ -2897,6 +2899,23 @@ function TaxesSection({
       title="Taxes"
       status="optional"
       icon={<ReceiptIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+      // The card's action, in its header in every state (design rules §2):
+      // opened in a new tab so this draft survives.
+      {...(createTaxRateHref
+        ? {
+            adornment: (
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<a href={createTaxRateHref} target="_blank" rel="noreferrer" />}
+              >
+                <ExternalLinkIcon aria-hidden />
+                Create a tax rate
+              </Button>
+            ),
+          }
+        : {})}
     >
       {taxes.length > 0 ? (
         <div className="px-5 pt-4 sm:px-6">
@@ -2911,20 +2930,7 @@ function TaxesSection({
       >
         {({ id, ...field }) =>
           taxRates.length === 0 ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-muted-foreground text-sm">No tax rates exist yet.</p>
-              {createTaxRateHref ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  nativeButton={false}
-                  render={<a href={createTaxRateHref} target="_blank" rel="noreferrer" />}
-                >
-                  <ExternalLinkIcon aria-hidden />
-                  Create a tax rate
-                </Button>
-              ) : null}
-            </div>
+            <p className="text-muted-foreground text-sm">No tax rates exist yet.</p>
           ) : (
             <OptionSelect
               // A fresh picker after each pick, so it reads empty again.

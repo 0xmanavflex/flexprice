@@ -185,7 +185,10 @@ function nameOf(charge: Charge): string {
   return charge.displayName || charge.meterName || 'Charge'
 }
 
-const DATE = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+// Charge dates are calendar days stored at midnight UTC; read them in UTC so a
+// viewer west of Greenwich does not see the day before.
+const DATE_OPTIONS = { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' } as const
+const DATE = new Intl.DateTimeFormat(undefined, DATE_OPTIONS)
 
 const STATUS_TONE: Record<string, PillTone> = {
   Active: 'success',
@@ -208,9 +211,7 @@ function kindLine(
   source: string | undefined,
 ): string {
   const kind = charge.type === PriceType.Usage ? 'Usage' : 'Fixed'
-  const format = locale
-    ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
-    : DATE
+  const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
   // Two parts, never three: a third would be a column wearing a grey font.
   // Lifecycle first (it changes what the row means), then where the charge
   // came from where a page can say, then the billing model as the default.
@@ -393,9 +394,7 @@ export function ChargeTable({
     },
   ]
 
-  const format = locale
-    ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
-    : DATE
+  const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
   const inEffect = (charge: Charge) =>
     !charge.startDate && !charge.endDate
       ? 'Always'
