@@ -288,6 +288,40 @@ export interface InvoiceDetail extends Invoice {
   createdAt: Date | null
 }
 
+/**
+ * How an invoice can be recalculated, or why it cannot. Two endpoints exist:
+ * a draft is recalculated in place (`recalculate-v2`); a voided contract
+ * invoice is replaced by a fresh one for the same period (`recalculate`, an
+ * async workflow). An unpaid finalized contract invoice gets there by being
+ * voided first, which the person confirms.
+ */
+export type InvoiceRecalculation =
+  | { kind: 'in-place' }
+  | { kind: 'replace' }
+  | { kind: 'void-and-replace' }
+  | { kind: 'unavailable'; reason: string }
+
+export function invoiceRecalculation(
+  invoice: Pick<InvoiceDetail, 'status' | 'subscriptionId' | 'amountPaid'>,
+): InvoiceRecalculation {
+  if (invoice.status === InvoiceStatus.Draft) return { kind: 'in-place' }
+  if (!invoice.subscriptionId)
+    return { kind: 'unavailable', reason: 'Only contract invoices can be recalculated' }
+  if (invoice.status === InvoiceStatus.Void) return { kind: 'replace' }
+  if (invoice.status === InvoiceStatus.Skipped)
+    return { kind: 'unavailable', reason: 'A skipped invoice has nothing to recalculate' }
+  const paidSomething = /[1-9]/.test(invoice.amountPaid)
+  if (
+    (invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue) &&
+    !paidSomething
+  )
+    return { kind: 'void-and-replace' }
+  return {
+    kind: 'unavailable',
+    reason: 'A paid invoice cannot be voided; issue a credit memo instead',
+  }
+}
+
 const LINE_AMOUNT = /^(\d+)(?:\.(\d{1,8}))?$/
 
 /**

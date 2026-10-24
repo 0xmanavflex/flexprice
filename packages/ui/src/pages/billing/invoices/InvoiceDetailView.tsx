@@ -88,8 +88,13 @@ export interface InvoiceDetailViewProps {
   /** More menu: Download PDF. Omitted, the item is disabled. */
   onDownload?: () => void
   onRecordPayment?: () => void
-  /** Drafts only: recompute lines, credits and taxes in place. */
+  /** Recompute a draft in place, or replace a (voided) contract invoice with a fresh one. */
   onRecalculate?: () => void
+  /**
+   * Why Recalculate is unavailable for this invoice, shown beside it; null when
+   * it is available. Omitted, Recalculate is offered for drafts only.
+   */
+  recalculateBlocked?: string | null
   onVoid?: () => void
   /** Set the payment status by hand, for money that moved outside Flexprice. */
   onUpdatePaymentStatus?: () => void
@@ -149,6 +154,7 @@ export function InvoiceDetailView({
   onDownload,
   onRecordPayment,
   onRecalculate,
+  recalculateBlocked,
   onVoid,
   onUpdatePaymentStatus,
   paymentStatusBlocked = null,
@@ -189,6 +195,8 @@ export function InvoiceDetailView({
         : invoice.status === InvoiceStatus.Paid || invoice.paid > 0
           ? 'A paid invoice cannot be voided; issue a credit memo instead'
           : null
+  const recalcReason =
+    recalculateBlocked === undefined ? (isDraft ? null : 'Drafts only') : recalculateBlocked
   const isOpen = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
   const paymentFailed = isOpen && invoice.paymentStatus === PaymentStatus.Failed
   const lines = invoice.lines.filter((line) => line.amount !== 0)
@@ -344,10 +352,10 @@ export function InvoiceDetailView({
                 icon={<CalculatorIcon />}
                 label="Recalculate invoice"
                 onSelect={onRecalculate}
-                disabled={!isDraft || pendingAction === 'recalculate'}
+                disabled={Boolean(recalcReason) || pendingAction === 'recalculate'}
                 pending={pendingAction === 'recalculate'}
                 pendingLabel="Recalculating…"
-                hint={isDraft ? undefined : 'Drafts only'}
+                hint={recalcReason ?? undefined}
               />
               <MenuAction
                 icon={<FileMinusIcon />}

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ArrowUpRightIcon, CheckIcon, SettingsIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
+import { Badge } from '@ui/components/reui/badge'
 import { cn } from '@ui/lib/cn'
 
 export interface ConnectorCardProps {
@@ -18,7 +19,7 @@ export interface ConnectorCardProps {
 /**
  * A connector: a muted tray holding a white card (logo, name, description,
  * docs link), with one action in the tray footer. Unconnected shows Connect;
- * connected shows a Connected marker and Configure, where disconnecting lives.
+ * connected shows a green Connected chip and Configure, where disconnecting lives.
  * Purely presentational; every action is a prop.
  */
 export function ConnectorCard({
@@ -63,10 +64,10 @@ export function ConnectorCard({
       <div className="flex items-center justify-between gap-3 px-3 py-2.5">
         {connected ? (
           <>
-            <span className="text-foreground inline-flex items-center gap-1.5 text-[13px] font-medium">
-              <CheckIcon className="size-3.5" aria-hidden="true" />
+            <Badge variant="success-light">
+              <CheckIcon aria-hidden="true" />
               Connected
-            </span>
+            </Badge>
             <Button
               type="button"
               size="sm"
