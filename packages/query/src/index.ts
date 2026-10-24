@@ -87,6 +87,7 @@ export {
   useInvoicePdfLink,
   useInvoices,
   useRecalculateInvoice,
+  useReplaceVoidedInvoice,
   useSendInvoice,
   useVoidInvoice,
 } from './invoices'
