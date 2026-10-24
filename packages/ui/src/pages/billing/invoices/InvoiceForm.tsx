@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { CheckIcon, InfoIcon, PlusIcon, ReceiptIcon, SaveIcon, Trash2Icon, XIcon } from '@ui/icons'
 import type { z } from 'zod'
 import {
+  DRAFT_INVOICE_NUMBER_LABEL,
   type CreateInvoice,
   InvoiceStatus,
   type InvoiceTax,
@@ -529,13 +537,8 @@ export function InvoiceForm(props: InvoiceFormProps) {
               <Separator orientation="vertical" className="my-auto mr-2 h-4 shrink-0" />
             </>
           ) : null}
+          {/* The status sits once, on the details card below, not here as well. */}
           <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
-          <Badge
-            variant={isDraft ? 'warning-light' : 'info-light'}
-            className="hidden translate-y-px self-center sm:inline-flex"
-          >
-            {statusLabel}
-          </Badge>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {edit ? (
@@ -614,7 +617,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
             <Separator />
             <CardContent className="flex flex-col gap-7 px-5 py-5 sm:px-6 sm:py-6">
               {edit && !isDraft ? (
-                <Alert>
+                <Alert variant="info">
                   <InfoIcon aria-hidden="true" />
                   <AlertTitle>This invoice is finalized</AlertTitle>
                   <AlertDescription>
@@ -707,7 +710,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         <Input
                           id="invoice-number"
                           value={edit ? edit.invoice.number : invoiceNumber}
-                          placeholder={edit ? 'Assigned when finalized' : 'Assigned automatically'}
+                          placeholder={edit ? DRAFT_INVOICE_NUMBER_LABEL : 'Assigned automatically'}
                           disabled={isSubmitting || Boolean(edit)}
                           onChange={(event) => setInvoiceNumber(event.target.value)}
                         />

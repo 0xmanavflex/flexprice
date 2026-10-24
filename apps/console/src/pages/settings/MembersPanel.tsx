@@ -28,6 +28,8 @@ import {
   WriteGate,
   useAccess,
 } from '@fp/ui/compositions'
+import { PencilIcon } from '@fp/ui/icons'
+import { RowActionsMenu } from '@fp/ui/pages'
 import {
   Badge,
   Button,
@@ -155,22 +157,25 @@ export function MembersPanel() {
                 {
                   key: 'actions',
                   header: '',
-                  width: 180,
+                  width: 56,
                   cell: (member: Member) =>
                     canEditMemberRoles(member, viewer) ? (
-                      <span className="flex justify-end gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(member)}>
-                          Edit roles
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={!canRemoveMember(member, viewer, rows.length)}
-                          onClick={() => setRemoving(member)}
-                        >
-                          Remove
-                        </Button>
-                      </span>
+                      <RowActionsMenu
+                        label={memberDisplayName(member)}
+                        extra={[
+                          {
+                            label: 'Edit roles',
+                            icon: <PencilIcon aria-hidden className="size-4" />,
+                            onSelect: () => setEditing(member),
+                          },
+                        ]}
+                        // Absent rather than disabled when this member cannot be
+                        // removed (the last super admin, or yourself).
+                        {...(canRemoveMember(member, viewer, rows.length)
+                          ? { onRemove: () => setRemoving(member) }
+                          : {})}
+                        removeLabel="Remove from team"
+                      />
                     ) : null,
                 },
               ]

@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { type Customer, type CustomerQuery } from '@fp/domain'
+import {
+  type Customer,
+  type CustomerQuery,
+  DEFAULT_CUSTOMER_QUERY,
+  isCustomerQueryFiltered,
+} from '@fp/domain'
 import {
   ApiError,
   useCustomerContractCounts,
@@ -46,10 +51,16 @@ export function CustomerListPage({
   const failure = toListFailure(customers.error, 'customers')
   const rows = customers.data?.customers ?? []
   const contractCounts = useCustomerContractCounts(rows.map((customer) => customer.id))
-  const isFiltered =
-    query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+  const isFiltered = isCustomerQueryFiltered(query)
+  // Back to the default view (active customers), not to every status.
   const clearFilters = () =>
-    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
+    onQueryChange({
+      ...query,
+      search: '',
+      statuses: [],
+      filters: DEFAULT_CUSTOMER_QUERY.filters ?? [],
+      page: 1,
+    })
 
   const closeDelete = () => {
     setDeleting(null)

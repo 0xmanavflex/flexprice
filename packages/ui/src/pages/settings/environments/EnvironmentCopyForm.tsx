@@ -188,7 +188,7 @@ export function EnvironmentCopyForm({
           </Alert>
         ) : null}
 
-        <Alert>
+        <Alert variant="info">
           <InfoIcon aria-hidden />
           <AlertDescription>
             Anything whose lookup key {isNew ? 'the target' : (target?.name ?? 'the target')}{' '}

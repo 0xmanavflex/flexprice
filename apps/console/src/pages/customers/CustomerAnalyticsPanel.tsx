@@ -62,6 +62,8 @@ export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
     ...DEFAULT_FEATURE_QUERY,
     pageSize: 100,
     types: [FeatureType.Metered],
+    // Archived features can still carry usage in the window.
+    filters: [],
   })
 
   const data = usage.data

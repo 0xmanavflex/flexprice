@@ -38,7 +38,7 @@ export function SubscriptionListPage({
   const subscriptions = useSubscriptions(query)
   // The choices behind the Customer and Plan filters: the first hundred of each,
   // the same picker page the create form uses.
-  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
+  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100, filters: [] })
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, page: 1, pageSize: 100 })
   const filterOptions = {
     customer_id: (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),

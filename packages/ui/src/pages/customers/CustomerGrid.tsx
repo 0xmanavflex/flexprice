@@ -19,6 +19,7 @@ import {
   CustomerSortField,
   CustomerStatus,
   DEFAULT_CUSTOMER_QUERY,
+  isCustomerQueryFiltered,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
@@ -339,9 +340,7 @@ export function CustomerGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={
-        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
-      }
+      isFiltered={isCustomerQueryFiltered(query)}
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No customers match these filters"
       empty={{
