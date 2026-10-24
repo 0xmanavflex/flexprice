@@ -117,6 +117,23 @@ import { PauseContractDialog } from './PauseContractDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
+/**
+ * A unit price, with the precision a usage rate needs ($0.002 a request):
+ * the currency's own decimals at least, up to six. Display only.
+ */
+function unitMoney(value: Money): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: value.currency,
+      currencyDisplay: 'narrowSymbol',
+      maximumFractionDigits: 6,
+    }).format(Number(value.amount))
+  } catch {
+    return formatMoney(value)
+  }
+}
+
 export const SubscriptionDetailViewProvenance = provenance({
   source: 'composition',
   composes: [
@@ -1835,7 +1852,7 @@ function InvoicePreviewSection({
                 align: 'end',
                 cell: (line) => (
                   <Muted className="tabular-nums">
-                    {line.unitPrice ? formatMoney(line.unitPrice) : '—'}
+                    {line.unitPrice ? unitMoney(line.unitPrice) : '—'}
                   </Muted>
                 ),
               },

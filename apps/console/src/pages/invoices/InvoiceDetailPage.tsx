@@ -81,6 +81,9 @@ export function InvoiceDetailPage({
   const send = useSendInvoice()
   const [dialog, setDialog] = useState<Dialog>(null)
   const inFlight = useRef(false)
+  // The invoice this page has already voided on the way to a replacement, so a
+  // retry after the replacement failed does not try to void it again.
+  const voidedFor = useRef<string | null>(null)
   const [pendingAction, setPendingAction] = useState<InvoicePendingAction | null>(null)
 
   if (!invoice.data) {
@@ -115,7 +118,10 @@ export function InvoiceDetailPage({
   // Replacing goes through a confirm: a finalized invoice is voided first, and
   // either way the new invoice is created by a workflow, not here and now.
   const confirmReplace = async () => {
-    if (recalculation.kind === 'void-and-replace') await voidInvoice.mutateAsync(data.id)
+    if (recalculation.kind === 'void-and-replace' && voidedFor.current !== data.id) {
+      await voidInvoice.mutateAsync(data.id)
+      voidedFor.current = data.id
+    }
     await replace.mutateAsync(data.id)
     setDialog(null)
     toast('Recalculation started', {
