@@ -292,8 +292,8 @@ export function EnvironmentForm({
         ) : null}
 
         {existing ? (
-          <Alert>
-            <InfoIcon aria-hidden className="text-muted-foreground" />
+          <Alert variant="info">
+            <InfoIcon aria-hidden />
             <AlertTitle>You already have a production environment.</AlertTitle>
             <AlertDescription>{existing.name} is yours. Need another? Contact us.</AlertDescription>
             <div className="col-start-2 mt-2 flex flex-wrap gap-2">
@@ -325,8 +325,8 @@ export function EnvironmentForm({
         ) : null}
 
         {productionWithheld && !existing ? (
-          <Alert>
-            <InfoIcon aria-hidden className="text-muted-foreground" />
+          <Alert variant="info">
+            <InfoIcon aria-hidden />
             <AlertTitle>Production environments require an approval.</AlertTitle>
             <AlertDescription>
               {hasContact

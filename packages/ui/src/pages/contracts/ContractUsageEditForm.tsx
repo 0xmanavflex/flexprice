@@ -142,7 +142,7 @@ export function ContractUsageEditForm({
       submitError={submitError}
       submitLabel="Save charge"
       notice={
-        <Alert>
+        <Alert variant="info">
           <InfoIcon aria-hidden="true" />
           <AlertTitle>Only this contract changes</AlertTitle>
           <AlertDescription>
