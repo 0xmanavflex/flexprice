@@ -2778,42 +2778,39 @@ function CreditsSection({
             </EmptyLine>
           )}
         </Frame>
-        {editingGrant ? (
-          <div className="flex flex-col gap-2 rounded-lg border p-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">Edit {editingGrant.name}</span>
-              <CloseSubForm
-                label={`Close edit of ${editingGrant.name}`}
-                onClick={() => setEditing(null)}
-              />
-            </div>
-            <CreditGrantCreateForm
-              key={editing}
-              defaultValue={editingGrant}
-              submitLabel="Save grant"
-              onSubmit={(next) => {
-                onChange(grants.map((g, i) => (i === editing ? next : g)))
-                setEditing(null)
-              }}
-            />
-          </div>
-        ) : null}
-        {adding ? (
-          <div className="flex flex-col gap-2 rounded-lg border p-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">Add credit grant</span>
-              <CloseSubForm label="Close add credit grant" onClick={() => setAdding(false)} />
-            </div>
-            <CreditGrantCreateForm
-              submitLabel="Add grant"
-              onSubmit={(grant) => {
-                onChange([...grants, grant])
-                setAdding(false)
-              }}
-            />
-          </div>
-        ) : null}
       </div>
+      {/* Add and edit open in a dialog, as on a contract's own page, not as a panel
+          that pushes the rest of the step down. */}
+      <FormDialog
+        open={editingGrant !== undefined}
+        onOpenChange={(next) => (next ? undefined : setEditing(null))}
+        title={editingGrant ? `Edit ${editingGrant.name}` : 'Edit credit grant'}
+      >
+        {editingGrant ? (
+          <CreditGrantCreateForm
+            key={editing}
+            defaultValue={editingGrant}
+            submitLabel="Save grant"
+            onSubmit={(next) => {
+              onChange(grants.map((g, i) => (i === editing ? next : g)))
+              setEditing(null)
+            }}
+          />
+        ) : null}
+      </FormDialog>
+      <FormDialog
+        open={adding}
+        onOpenChange={(next) => (next ? undefined : setAdding(false))}
+        title="Add credit grant"
+      >
+        <CreditGrantCreateForm
+          submitLabel="Add grant"
+          onSubmit={(grant) => {
+            onChange([...grants, grant])
+            setAdding(false)
+          }}
+        />
+      </FormDialog>
     </FormCard>
   )
 }
