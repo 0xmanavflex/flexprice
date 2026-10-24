@@ -75,6 +75,11 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
       param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_FEATURE_QUERY.sortDirection,
     // A layout, not a filter. `cards` persists; anything else is the table.
     view: param(raw, 'view', 'view') === FeatureView.Cards ? FeatureView.Cards : FeatureView.Table,
-    filters: runnableFilters(decodeListFilters(raw['filters']), FEATURE_FILTERS),
+    // No `filters` param is the default view (published features); an explicit
+    // empty list is "every status", so removing the chip sticks across reloads.
+    filters:
+      raw['filters'] === undefined
+        ? (DEFAULT_FEATURE_QUERY.filters ?? [])
+        : runnableFilters(decodeListFilters(raw['filters']), FEATURE_FILTERS),
   }
 }

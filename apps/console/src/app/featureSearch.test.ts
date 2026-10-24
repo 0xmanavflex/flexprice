@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_FEATURE_QUERY, FeatureType } from '@fp/domain'
+import { DEFAULT_FEATURE_QUERY, FeatureType, ACTIVE_FEATURES_FILTER } from '@fp/domain'
 import { parseFeatureSearch } from './featureSearch'
 
 describe('parseFeatureSearch', () => {
   it('returns defaults for an empty URL', () => {
     expect(parseFeatureSearch({})).toEqual(DEFAULT_FEATURE_QUERY)
+  })
+
+  it('opens on published features, and an explicit empty filter list means every status', () => {
+    expect(parseFeatureSearch({}).filters).toEqual([ACTIVE_FEATURES_FILTER])
+    expect(parseFeatureSearch({ filters: [] }).filters).toEqual([])
   })
 
   it('reads a full query', () => {
@@ -17,7 +22,7 @@ describe('parseFeatureSearch', () => {
       sortBy: DEFAULT_FEATURE_QUERY.sortBy,
       sortDirection: DEFAULT_FEATURE_QUERY.sortDirection,
       view: 'table',
-      filters: [],
+      filters: [ACTIVE_FEATURES_FILTER],
     })
   })
 
@@ -79,7 +84,7 @@ describe('round-trips what the router writes', () => {
       sortBy: 'updatedAt',
       sortDirection: 'desc',
       view: 'table',
-      filters: [],
+      filters: [ACTIVE_FEATURES_FILTER],
     })
   })
 

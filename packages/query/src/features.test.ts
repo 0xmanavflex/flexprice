@@ -18,6 +18,12 @@ describe('toFeatureFilter', () => {
     })
   })
 
+  it('sends the default view as a server-side "status in published" condition', () => {
+    expect(toFeatureFilter(DEFAULT_FEATURE_QUERY)['filters']).toEqual([
+      { field: 'status', operator: 'in', dataType: 'array', value: { array: ['published'] } },
+    ])
+  })
+
   it('sends a name search only when there is one', () => {
     expect(toFeatureFilter(DEFAULT_FEATURE_QUERY)).not.toHaveProperty('nameContains')
     expect(toFeatureFilter({ ...DEFAULT_FEATURE_QUERY, search: 'api' })).toMatchObject({

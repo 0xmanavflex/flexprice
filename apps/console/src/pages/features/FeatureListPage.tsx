@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
+  DEFAULT_FEATURE_QUERY,
+  isFeatureQueryFiltered,
   DEFAULT_GROUP_QUERY,
   GroupEntityType,
   type CloneFeature,
@@ -100,13 +102,17 @@ export function FeatureListPage({
     }
     return out
   }, [linked.byFeature])
-  const isFiltered =
-    query.search.length > 0 ||
-    query.types.length > 0 ||
-    query.statuses.length > 0 ||
-    (query.filters?.length ?? 0) > 0
+  const isFiltered = isFeatureQueryFiltered(query)
+  // Back to the default view (published features), not to every status.
   const clearFilters = () =>
-    onQueryChange({ ...query, search: '', types: [], statuses: [], filters: [], page: 1 })
+    onQueryChange({
+      ...query,
+      search: '',
+      types: [],
+      statuses: [],
+      filters: DEFAULT_FEATURE_QUERY.filters ?? [],
+      page: 1,
+    })
 
   return (
     <>
