@@ -25,6 +25,7 @@ export {
   isNegativeMoney,
   isZeroMoney,
   money,
+  perUnit,
   moneyOr,
 } from './money'
 export type { Money } from './money'

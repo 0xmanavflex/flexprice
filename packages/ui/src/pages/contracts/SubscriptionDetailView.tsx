@@ -1830,6 +1830,16 @@ function InvoicePreviewSection({
                 cell: (line) => <Muted className="tabular-nums">{line.quantity || '—'}</Muted>,
               },
               {
+                key: 'unitPrice',
+                header: 'Unit price',
+                align: 'end',
+                cell: (line) => (
+                  <Muted className="tabular-nums">
+                    {line.unitPrice ? formatMoney(line.unitPrice) : '—'}
+                  </Muted>
+                ),
+              },
+              {
                 key: 'amount',
                 header: 'Amount',
                 align: 'end',
