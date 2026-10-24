@@ -35,6 +35,7 @@ function makeWallets(
       status: i === 0 ? status : WalletStatus.Active,
       walletType: i === 2 ? 'POST_PAID' : 'PRE_PAID',
       description: i === 0 ? 'Prepaid credits' : `Wallet ${i + 1}`,
+      metadata: i === 0 ? { cost_center: 'ops' } : {},
       creditBalance: current,
       balance: money(current, currency),
       realTimeCreditBalance: live,

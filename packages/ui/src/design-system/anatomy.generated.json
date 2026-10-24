@@ -2218,6 +2218,7 @@
         "FormDialog",
         "LabelWithHint",
         "LoadingRows",
+        "MetadataCard",
         "MinusIcon",
         "OptionSelect",
         "Pill",
@@ -4938,6 +4939,7 @@
       "usedBy": [
         "CreditNoteDetailView",
         "CustomerDetail",
+        "CustomerWalletView",
         "FeatureDetailView",
         "InvoiceDetailView",
         "SubscriptionDetailView"

@@ -31,6 +31,7 @@ export interface WalletWire {
   walletStatus?: string | undefined
   walletType?: string | undefined
   description?: string | undefined
+  metadata?: Record<string, string> | undefined
   creditBalance?: string | undefined
   balance?: string | undefined
   realTimeCreditBalance?: string | undefined
@@ -94,6 +95,7 @@ export function toWallet(wire: WalletWire): Wallet {
       invoicing: wire.autoTopup?.invoicing ?? true,
       ...toCooldown(wire.autoTopup?.cooldown),
     },
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -340,6 +342,17 @@ export function useUpdateWalletAlerts(walletId: string) {
   return useMutation({
     mutationFn: (config: AlertSettingConfig) =>
       updateWallet(client, walletId, { alertSettings: toAlertConfigRequest(config) }),
+    onSuccess: invalidate,
+  })
+}
+
+/** A wallet's metadata — `PUT /wallets/{id}` with the whole map. */
+export function useUpdateWalletMetadata(walletId: string) {
+  const client = useFlexprice()
+  const invalidate = useInvalidateWallets()
+
+  return useMutation({
+    mutationFn: (metadata: Record<string, string>) => updateWallet(client, walletId, { metadata }),
     onSuccess: invalidate,
   })
 }
