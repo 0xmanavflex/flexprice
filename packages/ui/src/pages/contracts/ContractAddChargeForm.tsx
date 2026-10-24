@@ -48,6 +48,8 @@ export interface ContractAddChargeFormProps {
   onSubmit: (draft: AddContractCharge) => void
   isSubmitting?: boolean
   submitError?: string | null
+  /** A charge already drafted (not yet saved) to reopen and change. */
+  initial?: AddContractCharge | undefined
 }
 
 /** A new charge on one contract, as one granular form. */
@@ -60,17 +62,18 @@ export function ContractAddChargeForm({
   onSubmit,
   isSubmitting = false,
   submitError = null,
+  initial,
 }: ContractAddChargeFormProps) {
   const isUsage = type === PriceType.Usage
-  const [quantity, setQuantity] = useState('1')
-  const [startDate, setStartDate] = useState('')
-  const [proration, setProration] = useState<Proration>(PRORATION.Prorate)
-  const [terms, setTerms] = useState<UsageTerms>(NO_USAGE_TERMS)
+  const [quantity, setQuantity] = useState(initial?.quantity ?? '1')
+  const [startDate, setStartDate] = useState(initial?.startDate ?? '')
+  const [proration, setProration] = useState<Proration>(initial?.proration ?? PRORATION.Prorate)
+  const [terms, setTerms] = useState<UsageTerms>(initial?.terms ?? NO_USAGE_TERMS)
   const [showErrors, setShowErrors] = useState(false)
 
   const errors = validateContractTerms(isUsage ? { terms } : { quantity })
 
-  const defaultValue = {
+  const defaultValue = initial?.charge ?? {
     ...emptyCharge(type, BillingModel.FlatFee),
     currency: currency.toUpperCase() || 'USD',
     billingPeriod,
@@ -89,7 +92,7 @@ export function ContractAddChargeForm({
       priceUnits={priceUnits}
       isSubmitting={isSubmitting}
       submitError={submitError}
-      submitLabel="Add charge"
+      submitLabel={initial ? 'Save charge' : 'Add charge'}
       onSubmit={(charge) => {
         if (hasTermsErrors(errors)) {
           setShowErrors(true)

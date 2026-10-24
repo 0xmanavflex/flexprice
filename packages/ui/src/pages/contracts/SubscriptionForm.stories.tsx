@@ -684,6 +684,51 @@ export const AddsAChargeForThisContract: Story = {
   },
 }
 
+/** A charge added on this contract can be reopened and changed; the change replaces it. */
+export const EditsAChargeAddedToThisContract: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add a charge' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Continue' }))
+    await userEvent.type(await dialog.findByLabelText('Display name'), 'Onboarding')
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '250')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(await canvas.findByText('Onboarding')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'More for Onboarding' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit charge' }))
+    const edit = within(await screen.findByRole('dialog', { name: 'Edit charge' }))
+    const amount = edit.getByLabelText(/^Amount/)
+    await expect(amount).toHaveValue('250')
+    await userEvent.clear(amount)
+    await userEvent.type(amount, '300')
+    await userEvent.click(edit.getByRole('button', { name: 'Save charge' }))
+
+    for (const step of ['commitments', 'billing', 'review']) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+      await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
+    }
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [
+            expect.objectContaining({
+              extraCharges: [
+                expect.objectContaining({
+                  charge: expect.objectContaining({ displayName: 'Onboarding', amount: '300' }),
+                }),
+              ],
+            }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
 /** A contract that would end before it starts is stopped on the first step, where the end date is. */
 export const EndDateCheckedOnTheFirstStep: Story = {
   args: { prefilled: true, step: 'plan', endDate: '2000-01-01' },
