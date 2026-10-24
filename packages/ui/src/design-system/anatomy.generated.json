@@ -18,7 +18,9 @@
         "LockIcon",
         "PageLoadingState"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "CustomerDetail"
+      ],
       "story": "./src/compositions/access/Access.stories.tsx"
     },
     "AccessScope": {
@@ -2051,6 +2053,7 @@
       "file": "src/pages/customers/CustomerDetail.tsx",
       "layer": "surface",
       "composes": [
+        "AccessProvider",
         "AccessScope",
         "ActivitySection",
         "ArchiveIcon",

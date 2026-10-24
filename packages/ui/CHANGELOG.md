@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-25
+
+- Customer detail: an archived customer is read-only. An info strip above the tabs says so, and the page runs under a scoped `writeLock` (nested `AccessProvider` + `AccessScope`), so every write control on it (header menu, inline edits, section actions, wallet and tax panels) is disabled with that reason. Source: walkthrough QA 1.3.
+
 ## 2026-10-24
 
 - Informational alerts use the `info` variant instead of the default white card: price-version note (ChargeForm), contract-only edit note, pricing widget note, finalized-invoice note, environment create/copy notes, integration prerequisites. Error, status (cancelled/paused) and customer-portal alerts are unchanged. The `--info` hue (violet today) is untouched; changing it to blue is a token change that needs a design decision. Source: walkthrough QA 3.6.
