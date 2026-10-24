@@ -50,6 +50,8 @@ export interface DetailColumn<T> {
   className?: string
   /** `end` right-aligns the header and the cell, for a document-shaped table. */
   align?: 'end'
+  /** Off until turned on from the table's column menu. */
+  hiddenByDefault?: boolean
 }
 
 export interface DetailTableProps<T> {
@@ -143,6 +145,7 @@ export function DetailTable<T extends object>({
         ...(column.sortBy ? { sortable: true } : {}),
         ...(column.className ? { cellClassName: column.className } : {}),
         ...(column.align ? { align: column.align } : {}),
+        ...(column.hiddenByDefault ? { hiddenByDefault: true } : {}),
       })),
     [columns],
   )
