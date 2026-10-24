@@ -145,6 +145,20 @@ export function PlanForm({
     setEditIndex(null)
     setAdding(null)
   }
+  /**
+   * Removes a staged row and keeps an open edit pointed at its own row: the
+   * edited row itself closes the form, and an earlier one shifts the index.
+   */
+  const removeAt = <T,>(
+    step: NonNullable<typeof adding>,
+    set: (update: (rows: T[]) => T[]) => void,
+    index: number,
+  ) => {
+    set((rows) => rows.filter((_, i) => i !== index))
+    if (adding !== step || editIndex === null) return
+    if (index === editIndex) closeForm()
+    else if (index < editIndex) setEditIndex(editIndex - 1)
+  }
   /** Replaces the edited item, or appends a new one. */
   const place = <T,>(rows: T[], item: T): T[] =>
     editIndex === null ? [...rows, item] : rows.map((row, i) => (i === editIndex ? item : row))
@@ -234,7 +248,7 @@ export function PlanForm({
           charge.displayName || (charge.type === PriceType.Usage ? 'Usage charge' : 'Fixed charge'),
         detail: `${'amount' in charge ? `${charge.amount} ` : ''}${charge.currency} · ${BILLING_PERIOD_LABEL[charge.billingPeriod]}`,
         onEdit: () => openForm('charges', index),
-        onRemove: () => setCharges((rows) => rows.filter((_, i) => i !== index)),
+        onRemove: () => removeAt('charges', setCharges, index),
       }))}
       form={
         <ChargeForm
@@ -269,7 +283,7 @@ export function PlanForm({
         label: featureName(entitlement.featureId),
         detail: String(entitlement.featureType),
         onEdit: () => openForm('entitlements', index),
-        onRemove: () => setEntitlements((rows) => rows.filter((_, i) => i !== index)),
+        onRemove: () => removeAt('entitlements', setEntitlements, index),
       }))}
       form={
         <EntitlementCreateForm
@@ -301,7 +315,7 @@ export function PlanForm({
         label: grant.name,
         detail: `${grant.credits} credits`,
         onEdit: () => openForm('credit-grants', index),
-        onRemove: () => setGrants((rows) => rows.filter((_, i) => i !== index)),
+        onRemove: () => removeAt('credit-grants', setGrants, index),
       }))}
       form={
         <CreditGrantCreateForm
