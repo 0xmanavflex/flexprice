@@ -180,7 +180,8 @@ export function useInvoiceRowActions({
     }
     // The API voids only unpaid invoices: one with money against it is not
     // offered, as on the invoice's own page.
-    const partlyPaid = compareMoney(invoice.amountRemaining, invoice.total) < 0
+    // Against what is payable, not the gross: a discount is not a payment.
+    const partlyPaid = compareMoney(invoice.amountRemaining, invoice.amountDue) < 0
     if (open && !partlyPaid) {
       items.push({
         label: 'Void invoice',

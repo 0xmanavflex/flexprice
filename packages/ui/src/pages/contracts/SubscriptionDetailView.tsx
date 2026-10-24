@@ -128,7 +128,9 @@ function unitMoney(value: Money): string {
       currency: value.currency,
       currencyDisplay: 'narrowSymbol',
       maximumFractionDigits: 6,
-    }).format(Number(value.amount))
+      // The exact decimal string, as formatMoney passes it: a double would
+      // round a large rate (see money.ts).
+    }).format(value.amount as unknown as number)
   } catch {
     return formatMoney(value)
   }

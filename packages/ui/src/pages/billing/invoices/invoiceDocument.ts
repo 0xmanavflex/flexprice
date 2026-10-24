@@ -107,7 +107,10 @@ export function statusChips(
   if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', tone: 'neutral' }]
   if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', tone: 'neutral' }]
   const chips: StatusChip[] = [{ label: 'Finalized', tone: 'neutral' }]
-  if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', tone: 'success' })
+  // A refunded invoice reads as refunded, not paid, though nothing remains due.
+  if (doc.status === InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Refunded)
+    chips.push({ label: 'Refunded', tone: 'neutral' })
+  else if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', tone: 'success' })
   else if (doc.status === InvoiceStatus.Overdue) chips.push({ label: 'Overdue', tone: 'danger' })
   if (doc.status !== InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Failed)
     chips.push({ label: 'Payment failed', tone: 'danger' })

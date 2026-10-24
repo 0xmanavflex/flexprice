@@ -745,7 +745,7 @@ function InvoiceDocumentArticle({
       {/* Five columns need room: on a narrow screen the lines scroll sideways
           rather than the amounts being clipped. */}
       <div className="mx-8 overflow-x-auto border-t pt-3">
-        <div role="table" aria-label="Line items" className="min-w-[34rem] text-sm">
+        <div role="table" aria-label="Line items" className="min-w-[40rem] text-sm">
           <div
             role="row"
             className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_10rem_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"
