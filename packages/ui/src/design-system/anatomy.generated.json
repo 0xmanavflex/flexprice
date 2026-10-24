@@ -912,8 +912,7 @@
       "file": "src/pages/contracts/ChargeAlertForm.tsx",
       "layer": "surface",
       "composes": [
-        "Composer",
-        "OptionSelect"
+        "Composer"
       ],
       "usedBy": [
         "EntityAlertDialog",
@@ -5192,7 +5191,6 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "ChargeAlertForm",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",

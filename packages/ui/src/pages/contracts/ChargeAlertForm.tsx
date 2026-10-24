@@ -11,28 +11,23 @@ import {
   type AlertSeverity,
 } from '@fp/domain'
 import { Composer } from '@ui/compositions/detail/DetailKit'
-import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
+import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
 import { provenance } from '@ui/provenance'
 
 export const ChargeAlertFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'compositions/detail/DetailKit',
-    'compositions/option-select',
-    'ui/input',
-    'ui/switch',
-  ],
+  composes: ['compositions/detail/DetailKit', 'ui/button', 'ui/input', 'ui/switch'],
   note: 'Edit the thresholds of one charge alert setting. The watched line cannot be changed.',
 })
 
-const TYPES = Object.values(AlertThresholdType).map((value) => ({
+const TYPES = [AlertThresholdType.Absolute, AlertThresholdType.Percentage].map((value) => ({
   value,
   label: ALERT_THRESHOLD_TYPE_LABEL[value],
 }))
 
-const CONDITIONS = Object.values(AlertCondition).map((value) => ({
+const CONDITIONS = [AlertCondition.Below, AlertCondition.Above].map((value) => ({
   value,
   label: ALERT_CONDITION_LABEL[value],
 }))
@@ -65,6 +60,9 @@ export function ChargeAlertForm({
 }) {
   const [config, setConfig] = useState(initial)
   const [problem, setProblem] = useState<string | null>(null)
+  // With alerts off, nothing below the switch applies; the values are kept.
+  const off = pending || !config.alertEnabled
+  const percentage = config.thresholdType === AlertThresholdType.Percentage
   const severities = chooseSeverities
     ? ALERT_SEVERITY_ORDER
     : ALERT_SEVERITY_ORDER.filter((severity) => initial[severity])
@@ -113,67 +111,79 @@ export function ChargeAlertForm({
           onCheckedChange={(alertEnabled) => setConfig({ ...config, alertEnabled })}
         />
       </label>
+      {/* A two-way choice reads better as a switcher than a dropdown (as in Settings → Wallet alerts). */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="charge-alert-type" className="text-sm">
+        <span id="charge-alert-type" className="text-sm">
           Measured as
-        </label>
-        <OptionSelect
-          id="charge-alert-type"
-          value={config.thresholdType}
-          disabled={pending}
-          onValueChange={(thresholdType) =>
-            setConfig({ ...config, thresholdType: thresholdType as AlertThresholdType })
-          }
-          options={TYPES}
-        />
+        </span>
+        <div role="group" aria-labelledby="charge-alert-type" className="flex gap-1.5">
+          {TYPES.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={config.thresholdType === option.value ? 'secondary' : 'outline'}
+              aria-pressed={config.thresholdType === option.value}
+              disabled={off}
+              onClick={() => setConfig({ ...config, thresholdType: option.value })}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
       </div>
-      {severities.map((severity) => {
-        const value = config[severity]
-        const toggle = chooseSeverities ? (
-          <label className="flex items-center justify-between gap-3 text-sm">
-            {ALERT_SEVERITY_LABEL[severity]}
-            <Switch
-              checked={Boolean(value)}
-              disabled={pending}
-              onCheckedChange={(on) => toggleSeverity(severity, on)}
-            />
-          </label>
-        ) : null
-        if (!value) return toggle ? <div key={severity}>{toggle}</div> : null
-        return (
-          <div key={severity} className="flex flex-col gap-2">
-            {toggle}
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor={`charge-alert-${severity}-when`} className="text-sm">
-                  {ALERT_SEVERITY_LABEL[severity]}
-                </label>
-                <OptionSelect
-                  id={`charge-alert-${severity}-when`}
-                  value={value.condition}
-                  disabled={pending}
-                  onValueChange={(condition) =>
-                    setSeverity(severity, { condition: condition as AlertCondition })
-                  }
-                  options={CONDITIONS}
-                />
+      <div className="flex flex-col gap-3">
+        {severities.map((severity) => {
+          const value = config[severity]
+          const name = ALERT_SEVERITY_LABEL[severity]
+          return (
+            <div key={severity} className="flex flex-col gap-2">
+              {/* The severity is named once: on its switch, or as the row's label. */}
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span>{name}</span>
+                {chooseSeverities ? (
+                  <Switch
+                    aria-label={`${name} alert`}
+                    checked={Boolean(value)}
+                    disabled={off}
+                    onCheckedChange={(on) => toggleSeverity(severity, on)}
+                  />
+                ) : null}
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor={`charge-alert-${severity}-value`} className="text-sm">
-                  Threshold
-                </label>
-                <Input
-                  id={`charge-alert-${severity}-value`}
-                  inputMode="decimal"
-                  value={value.threshold}
-                  disabled={pending}
-                  onChange={(event) => setSeverity(severity, { threshold: event.target.value })}
-                />
-              </div>
+              {value ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div role="group" aria-label={`${name} condition`} className="flex gap-1.5">
+                    {CONDITIONS.map((condition) => (
+                      <Button
+                        key={condition.value}
+                        type="button"
+                        size="sm"
+                        variant={value.condition === condition.value ? 'secondary' : 'outline'}
+                        aria-pressed={value.condition === condition.value}
+                        disabled={off}
+                        onClick={() => setSeverity(severity, { condition: condition.value })}
+                      >
+                        {condition.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <Input
+                    id={`charge-alert-${severity}-value`}
+                    aria-label={`${name} threshold${percentage ? ' (%)' : ''}`}
+                    className="w-32"
+                    inputMode="decimal"
+                    placeholder={percentage ? '80' : '1000'}
+                    value={value.threshold}
+                    disabled={off}
+                    onChange={(event) => setSeverity(severity, { threshold: event.target.value })}
+                  />
+                  {percentage ? <span className="text-muted-foreground text-sm">%</span> : null}
+                </div>
+              ) : null}
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
       {problem || error ? (
         <p role="alert" className="text-destructive text-sm">
           {problem ?? error}
