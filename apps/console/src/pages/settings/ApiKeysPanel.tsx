@@ -210,41 +210,35 @@ function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) 
 }
 
 /**
- * A monospace value with a copy button beside it.
- *
- * `value` is what is copied, `display` what is shown — for a stored key they
- * differ (the visible prefix, padded with dots), for a fresh secret they are
- * the same string.
+ * A freshly issued secret, shown whole (wrapped, never truncated) with a
+ * labelled copy button, so a long key is legible and copyable at a glance.
  */
-function CopySnippet({
-  value,
-  display,
-  label,
-}: {
-  value: string
-  display?: string
-  label: string
-}) {
+function SecretReveal({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
   return (
-    <span className="bg-muted flex max-w-full min-w-0 items-center gap-1 rounded-md py-0.5 pr-0.5 pl-2.5">
-      <code className="truncate font-mono text-xs">{display ?? value}</code>
-      <Button
-        type="button"
-        size="icon-xs"
-        variant="ghost"
-        aria-label={copied ? `Copied ${label}` : `Copy ${label}`}
-        onClick={() => {
-          void navigator.clipboard
-            .writeText(value)
-            .then(() => setCopied(true))
-            // Clipboard access can be refused; say nothing rather than claim success.
-            .catch(() => setCopied(false))
-        }}
-      >
-        {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
-      </Button>
-    </span>
+    <div className="flex flex-col gap-2">
+      <code className="bg-muted rounded-md px-3 py-2.5 font-mono text-sm break-all select-all">
+        {value}
+      </code>
+      <div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label={copied ? `Copied ${label}` : `Copy ${label}`}
+          onClick={() => {
+            void navigator.clipboard
+              .writeText(value)
+              .then(() => setCopied(true))
+              // Clipboard access can be refused; say nothing rather than claim success.
+              .catch(() => setCopied(false))
+          }}
+        >
+          {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
+          {copied ? 'Copied' : 'Copy key'}
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -286,11 +280,12 @@ function CreateKeyDialog({
   return (
     <FormDialog
       open={open}
-      size="sm"
+      size={issued ? 'md' : 'sm'}
       title={issued ? 'Copy this key now' : 'New API key'}
+      // The secret is dismissed by "I have saved it", never by a stray click or a close control.
+      dismissible={!issued}
       onOpenChange={(next) => {
-        // The secret is dismissed by "I have saved it", never by a stray click.
-        if (!next && !issued) onClose()
+        if (!next) onClose()
       }}
     >
       {issued ? (
@@ -298,7 +293,7 @@ function CreateKeyDialog({
           <p className="text-muted-foreground text-sm">
             This is the only time Flexprice will show it. A lost key has to be revoked and replaced.
           </p>
-          <CopySnippet value={issued.secret} label={issued.key.name || 'the new API key'} />
+          <SecretReveal value={issued.secret} label={issued.key.name || 'the new API key'} />
           <div className="flex justify-end">
             <Button onClick={onClose}>I have saved it</Button>
           </div>
