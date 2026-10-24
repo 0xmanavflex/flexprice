@@ -25,6 +25,7 @@ import {
 import { ConfirmDialog } from '@fp/ui/compositions'
 import { toSubmitError } from './featureMessages'
 import { detailGate } from '../shared/detailGate'
+import { AddFeatureChargeDialog } from './AddFeatureChargeDialog'
 import { subTab } from '../shared/subTab'
 
 export interface FeatureDetailPageProps {
@@ -57,6 +58,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
   const clone = useCloneFeature()
   const remove = useDeleteFeature()
   const [cloning, setCloning] = useState(false)
+  const [addingCharge, setAddingCharge] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [alerting, setAlerting] = useState(false)
 
@@ -125,12 +127,15 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
             })
           }
         }}
-        // A charge is priced on a plan: start a new one.
-        onAddPlan={() => void navigate({ to: '/plans/new' })}
+        // Only usage is charged per feature: a metered feature can be billed on a plan.
+        {...(data.type === FeatureType.Metered && data.meterId
+          ? { onAddCharge: () => setAddingCharge(true) }
+          : {})}
         onSaveMetadata={(metadata) =>
           update.mutateAsync({ id: data.id, draft: { name: data.name, metadata } })
         }
       />
+      <AddFeatureChargeDialog feature={data} open={addingCharge} onOpenChange={setAddingCharge} />
       <FeatureCloneDialog
         open={cloning}
         onOpenChange={(open) => {
