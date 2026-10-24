@@ -51,6 +51,11 @@ export function parseCustomerSearch(raw: Record<string, unknown>): CustomerQuery
       : DEFAULT_CUSTOMER_QUERY.sortBy,
     sortDirection:
       param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_CUSTOMER_QUERY.sortDirection,
-    filters: runnableFilters(decodeListFilters(raw['filters']), CUSTOMER_FILTERS),
+    // No `filters` param is the default view (active customers); an explicit
+    // empty list is "every status", so removing the chip sticks across reloads.
+    filters:
+      raw['filters'] === undefined
+        ? (DEFAULT_CUSTOMER_QUERY.filters ?? [])
+        : runnableFilters(decodeListFilters(raw['filters']), CUSTOMER_FILTERS),
   }
 }

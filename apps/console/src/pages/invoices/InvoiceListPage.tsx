@@ -58,7 +58,7 @@ export function InvoiceListPage({
   const isFiltered =
     query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
   // The choices behind the Customer filter: the first hundred customers.
-  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
+  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100, filters: [] })
   const filterOptions = {
     customer_id: (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
   }

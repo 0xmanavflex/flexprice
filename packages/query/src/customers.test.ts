@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CustomerStatus, DEFAULT_CUSTOMER_QUERY } from '@fp/domain'
+
+/** The default query without its "Active" filter, so each case sees only what it sets. */
+const ALL_CUSTOMERS = { ...DEFAULT_CUSTOMER_QUERY, filters: [] }
 import type { Flexprice } from '@fp/api'
 import {
   fetchCustomers,
@@ -96,7 +99,7 @@ describe('toCustomerFilter', () => {
   it('sends the search term as a server-side name condition', () => {
     // Not `nameContains`: the SDK's zod strips keys its model does not declare,
     // so that key never reaches the wire. The filter DSL does.
-    const filter = toCustomerFilter({ ...DEFAULT_CUSTOMER_QUERY, search: 'acme' })
+    const filter = toCustomerFilter({ ...ALL_CUSTOMERS, search: 'acme' })
     expect(filter).not.toHaveProperty('nameContains')
     expect(filter['filters']).toEqual([
       { field: 'name', operator: 'contains', dataType: 'string', value: { string: 'acme' } },
@@ -104,29 +107,29 @@ describe('toCustomerFilter', () => {
   })
 
   it('trims the search term, and sends nothing for a blank one', () => {
-    expect(toCustomerFilter({ ...DEFAULT_CUSTOMER_QUERY, search: '  acme  ' })['filters']).toEqual([
+    expect(toCustomerFilter({ ...ALL_CUSTOMERS, search: '  acme  ' })['filters']).toEqual([
       { field: 'name', operator: 'contains', dataType: 'string', value: { string: 'acme' } },
     ])
-    expect(toCustomerFilter({ ...DEFAULT_CUSTOMER_QUERY, search: '   ' })).not.toHaveProperty(
+    expect(toCustomerFilter({ ...ALL_CUSTOMERS, search: '   ' })).not.toHaveProperty(
       'filters',
     )
   })
 
   it('sends one selected status as the server-side field', () => {
     const filter = toCustomerFilter({
-      ...DEFAULT_CUSTOMER_QUERY,
+      ...ALL_CUSTOMERS,
       statuses: [CustomerStatus.Archived],
     })
     expect(filter['status']).toBe('archived')
   })
 
   it('sends no status when none or all are selected', () => {
-    expect(toCustomerFilter({ ...DEFAULT_CUSTOMER_QUERY, statuses: [] })).not.toHaveProperty(
+    expect(toCustomerFilter({ ...ALL_CUSTOMERS, statuses: [] })).not.toHaveProperty(
       'status',
     )
     expect(
       toCustomerFilter({
-        ...DEFAULT_CUSTOMER_QUERY,
+        ...ALL_CUSTOMERS,
         statuses: [CustomerStatus.Published, CustomerStatus.Archived],
       }),
     ).not.toHaveProperty('status')
@@ -134,17 +137,23 @@ describe('toCustomerFilter', () => {
 
   it('sends granular filters as typed conditions', () => {
     const filter = toCustomerFilter({
-      ...DEFAULT_CUSTOMER_QUERY,
+      ...ALL_CUSTOMERS,
       filters: [{ field: 'email', op: 'contains', value: '@acme' }],
     })
     expect(filter['filters']).toEqual([
       { field: 'email', operator: 'contains', dataType: 'string', value: { string: '@acme' } },
     ])
-    expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)).not.toHaveProperty('filters')
+    expect(toCustomerFilter(ALL_CUSTOMERS)).not.toHaveProperty('filters')
+  })
+
+  it('sends the default view as a server-side "status in published" condition', () => {
+    expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)['filters']).toEqual([
+      { field: 'status', operator: 'in', dataType: 'array', value: { array: ['published'] } },
+    ])
   })
 
   it('expands integrations so the list can show each customer’s marks', () => {
-    expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)).toMatchObject({ expand: 'integrations' })
+    expect(toCustomerFilter(ALL_CUSTOMERS)).toMatchObject({ expand: 'integrations' })
   })
 })
 
@@ -204,7 +213,7 @@ describe('fetchCustomers', () => {
     const client = { customers: { queryCustomer } } as unknown as Flexprice
 
     const result = await fetchCustomers(client, {
-      ...DEFAULT_CUSTOMER_QUERY,
+      ...ALL_CUSTOMERS,
       search: 'acme',
       statuses: [CustomerStatus.Published],
     })
