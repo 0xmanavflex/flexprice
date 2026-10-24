@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-25
 
+- ConnectorCard: the connected state is a green `success-light` "Connected" badge (tick inside) instead of plain tick + text, so connected integrations read at a glance. Source: walkthrough QA 9.2.
+- `textColumn` gains `placeholder(row)`: a muted stand-in for an empty value, in place of the dash. The invoice list uses it for a draft's number ("To be generated"), as do the invoice detail's payments table and the edit form's number field. Source: walkthrough QA 6.7.
 - Exports: a connection's exports page gets an `EntityHeader` (connection name, Flexprice-managed / Your bucket badge, copyable ID) instead of only a breadcrumb; its create action and dialog read "Add task" / "Add export task" (was "New export"). The S3 connections section's "Add connection" is outline, per the section-action rule. Source: walkthrough QA 8.4.
 - `textColumn` gains `placeholder(row)`: a muted stand-in for an empty value, in place of the dash. The invoice list uses it for a draft's number ("To be generated"), as do the invoice detail's payments table and the edit form's number field. Source: walkthrough QA 6.7.
 
