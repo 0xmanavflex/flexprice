@@ -13,9 +13,9 @@ describe('parseFeatureSearch', () => {
   })
 
   it('leaves the default filter off a link that names a status', () => {
-    expect(parseFeatureSearch({ status: 'archived' }).filters).toEqual([
-      { field: 'status', op: 'in', value: ['archived'] },
-    ])
+    const query = parseFeatureSearch({ status: 'archived' })
+    expect(query.filters).toEqual([{ field: 'status', op: 'in', value: ['archived'] }])
+    expect(query.statuses).toEqual([])
   })
 
   it('reads a full query', () => {

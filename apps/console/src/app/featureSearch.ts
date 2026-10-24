@@ -66,7 +66,9 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
     ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     types: [...new Set(types)],
-    statuses: [...new Set(statuses)],
+    // A status link becomes the visible status filter below; the facet is
+    // cleared so removing that chip really shows every status.
+    statuses: raw['filters'] === undefined ? [] : [...new Set(statuses)],
     // Unknown values fall back rather than throwing: a hand-edited URL should
     // show the default list, not an error page.
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
