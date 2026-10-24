@@ -3205,10 +3205,12 @@ function ReviewStep({
   const couponName = (id: string) => couponOf(id)?.label ?? id
   const customerByExternalId = (externalId: string) =>
     customers.find((c) => c.externalId === externalId)?.label ?? externalId
-  const period = BILLING_PERIOD_LABEL[values.billingPeriod].toLowerCase()
+  // Labels as written ("Monthly", "Every 3 months"), not the lowercased enum.
+  const period = BILLING_PERIOD_LABEL[values.billingPeriod]
+  const every = everyPeriod(values.billingPeriod, values.billingPeriodCount)
   const billing =
     values.billingPeriodCount > 1
-      ? `${values.currency.toUpperCase()} · ${everyPeriod(values.billingPeriod, values.billingPeriodCount)}`
+      ? `${values.currency.toUpperCase()} · ${every.charAt(0).toUpperCase()}${every.slice(1)}`
       : `${values.currency.toUpperCase()} · ${period}`
   const changedEntitlements = values.entitlementOverrides.length
   const end = values.phases[values.phases.length - 1]?.endDate ?? ''
@@ -3247,7 +3249,6 @@ function ReviewStep({
     }),
   ]
   const billed = charges.length + phase.extraCharges.length
-  const shown = changed.slice(0, 8)
 
   return (
     <div className="flex flex-col gap-5">
@@ -3287,26 +3288,6 @@ function ReviewStep({
                   : "all at the plan's prices"
               }${phase.extraCharges.length > 0 ? ` · ${phase.extraCharges.length} added` : ''}`}
             />
-            {changed.length > 0 ? (
-              <ReviewRow
-                label="Changed charges"
-                value={
-                  <ul className="flex flex-col gap-1.5">
-                    {shown.map((item) => (
-                      <li key={item.key} className="text-[13px]">
-                        <span className="font-medium">{item.name}</span>{' '}
-                        <span className="text-muted-foreground">· {item.parts.join(' · ')}</span>
-                      </li>
-                    ))}
-                    {changed.length > shown.length ? (
-                      <li className="text-muted-foreground text-[13px]">
-                        and {changed.length - shown.length} more
-                      </li>
-                    ) : null}
-                  </ul>
-                }
-              />
-            ) : null}
           </>
         ) : (
           values.phases.map((p, index) => {
@@ -3404,12 +3385,14 @@ function ReviewStep({
           value={
             values.creditGrants.length === 0
               ? 'None'
-              : `${values.creditGrants.length}: ${values.creditGrants
-                  .map(
-                    (grant) =>
-                      `${grant.name} (${Number(grant.credits || 0).toLocaleString('en-US')})`,
-                  )
-                  .join(', ')}`
+              : // A count and where they came from; the grants step lists each one.
+                `${values.creditGrants.length}${
+                  values.creditGrantsChanged
+                    ? ' · changed from the plan'
+                    : planLabel
+                      ? ` · from ${planLabel}`
+                      : ''
+                }`
           }
         />
         <ReviewRow
