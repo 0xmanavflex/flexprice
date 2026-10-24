@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-24
 
+- Informational alerts use the `info` variant instead of the default white card: price-version note (ChargeForm), contract-only edit note, pricing widget note, finalized-invoice note, environment create/copy notes, integration prerequisites. Error, status (cancelled/paused) and customer-portal alerts are unchanged. The `--info` hue (violet today) is untouched; changing it to blue is a token change that needs a design decision. Source: walkthrough QA 3.6.
 - FormDialog: new `dismissible` prop (default true). `false` hides the close control and ignores Escape/overlay, for bodies whose own button is the only exit. Used by the one-time API key secret, whose X rendered but did nothing. Source: walkthrough QA 8.1.
 
 ## 2026-10-22

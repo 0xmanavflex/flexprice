@@ -144,7 +144,7 @@ export function PricingCatalogBlock({
         />
       ) : (
         <>
-          <Alert>
+          <Alert variant="info">
             <CodeXmlIcon aria-hidden="true" />
             <AlertTitle>Pricing widget</AlertTitle>
             <AlertDescription>

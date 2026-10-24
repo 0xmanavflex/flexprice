@@ -254,7 +254,7 @@ function ConnectForm({
         {step === 'credentials' ? (
           <div className="flex flex-col gap-5">
             {spec.prerequisites?.map((line) => (
-              <Alert key={line}>
+              <Alert key={line} variant="info">
                 <InfoIcon aria-hidden="true" />
                 <AlertDescription>{line}</AlertDescription>
               </Alert>
