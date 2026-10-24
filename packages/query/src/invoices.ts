@@ -748,6 +748,14 @@ export const useRecalculateInvoice = () =>
   useInvoiceAction((client, id) => client.invoices.recalculateInvoiceV2(id))
 
 /**
+ * Replace a voided contract invoice with a fresh one for the same period —
+ * `POST /invoices/{id}/recalculate`. Starts a workflow; the replacement shows
+ * up in the invoice list once it completes.
+ */
+export const useReplaceVoidedInvoice = () =>
+  useInvoiceAction((client, id) => client.invoices.recalculateInvoice(id))
+
+/**
  * Send the invoice to the customer — `POST /invoices/{id}/comms/trigger`.
  * Fires the invoice communication webhook (email, Slack) the tenant has set up.
  */
