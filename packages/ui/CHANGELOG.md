@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-24
 
+- AppShell header: the breadcrumb/actions row now takes the page's measure (`max-w-[var(--shell-max)]`, `px-6`, centred) instead of `px-4 sm:px-10 2xl:px-14` across the full width, so its edges line up with the content below. The border still spans the inset. Source: walkthrough QA 10.1.
 - FormDialog: new `dismissible` prop (default true). `false` hides the close control and ignores Escape/overlay, for bodies whose own button is the only exit. Used by the one-time API key secret, whose X rendered but did nothing. Source: walkthrough QA 8.1.
 
 ## 2026-10-22
