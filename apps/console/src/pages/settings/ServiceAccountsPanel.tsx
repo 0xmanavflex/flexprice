@@ -18,7 +18,9 @@ import {
   useRoles,
   useServiceAccounts,
 } from '@fp/query'
-import { ConfirmDialog, Field, FormDialog, WriteGate } from '@fp/ui/compositions'
+import { AccessScope, ConfirmDialog, Field, FormDialog, WriteGate } from '@fp/ui/compositions'
+import { CopyIcon } from '@fp/ui/icons'
+import { RowActionsMenu } from '@fp/ui/pages'
 import { Button, Input } from '@fp/ui/primitives'
 import { RoleList, RolePicker } from './RolePicker'
 import {
@@ -132,19 +134,25 @@ export function ServiceAccountsPanel() {
             {
               key: 'actions',
               header: '',
-              width: 160,
+              width: 56,
               cell: (account) => (
-                // Managing service accounts needs user write (V1).
-                <WriteGate entity={RBAC_ENTITY.User}>
-                  <span className="flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
-                      Rename
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
-                      Delete
-                    </Button>
-                  </span>
-                </WriteGate>
+                // Edit and Delete need user write (V1); Copy ID stays available.
+                <AccessScope entity={RBAC_ENTITY.User}>
+                  <RowActionsMenu
+                    label={memberDisplayName(account)}
+                    extra={[
+                      {
+                        label: 'Copy ID',
+                        icon: <CopyIcon aria-hidden className="size-4" />,
+                        readOnly: true,
+                        onSelect: () => void navigator.clipboard?.writeText(account.id),
+                      },
+                    ]}
+                    onEdit={() => setRenaming(account)}
+                    onRemove={() => setDeleting(account)}
+                    removeLabel="Delete"
+                  />
+                </AccessScope>
               ),
             },
           ]}
