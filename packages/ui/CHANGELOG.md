@@ -10,6 +10,10 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 - FormDialog: new `dismissible` prop (default true). `false` hides the close control and ignores Escape/overlay, for bodies whose own button is the only exit. Used by the one-time API key secret, whose X rendered but did nothing. Source: walkthrough QA 8.1.
 
+## 2026-10-25
+
+- `textColumn` gains `placeholder(row)`: a muted stand-in for an empty value, in place of the dash. The invoice list uses it for a draft's number ("To be generated"), as do the invoice detail's payments table and the edit form's number field. Source: walkthrough QA 6.7.
+
 ## 2026-10-22
 
 - Hosted invoice page: rebuilt on the customer portal's frame and kit parts — header band with the merchant's mark, one `Section` with a state `Pill`, `IconTile` and amount, `DetailList` facts, Download/Pay `Button`s and a ReUI `Alert` for pay/download errors; not-found, not-valid and failed pages use `ErrorState` (page variant) inside the same frame. `HostedInvoiceDetailsSheet` follows `PortalInvoiceSheet`: sheet header with number and state, `DetailList` parties, `SimpleTable` for lines and payment history, totals. Drops the Stripe-style floating card (shadow, oversized type, uppercase block headings). New `parts.tsx` (state pill, merchant mark). Source: review on #37 — the page must read as the product.

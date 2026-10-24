@@ -22,7 +22,7 @@ import {
   XCircleIcon,
 } from '@ui/icons'
 import { toast } from 'sonner'
-import { InvoiceStatus, PaymentStatus } from '@fp/domain'
+import { DRAFT_INVOICE_NUMBER_LABEL, InvoiceStatus, PaymentStatus } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -525,6 +525,8 @@ export function InvoiceDetailView({
                     cell: () =>
                       invoice.number ? (
                         <span className="font-mono text-xs">{invoice.number}</span>
+                      ) : invoice.status === InvoiceStatus.Draft ? (
+                        <span className="text-muted-foreground">{DRAFT_INVOICE_NUMBER_LABEL}</span>
                       ) : (
                         '—'
                       ),

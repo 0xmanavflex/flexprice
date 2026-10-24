@@ -44,6 +44,7 @@ export {
   INVOICE_FILTERS,
   InvoiceLinePriceType,
   InvoiceSortField,
+  DRAFT_INVOICE_NUMBER_LABEL,
   InvoiceStatus,
   createInvoiceSchema,
   sumLineAmounts,
