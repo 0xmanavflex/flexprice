@@ -78,11 +78,16 @@ export function SubscriptionFormPage({
     ...PICKER_PAGE,
     statuses: [AddonStatus.Published],
   })
-  const taxRates = useTaxRates({
-    ...DEFAULT_TAX_RATE_QUERY,
-    ...PICKER_PAGE,
-    statuses: [TaxRateStatus.Published],
-  })
+  // Refetched on focus: "Create a tax rate" opens in a new tab, and the rate
+  // made there should be pickable on return without losing this draft.
+  const taxRates = useTaxRates(
+    {
+      ...DEFAULT_TAX_RATE_QUERY,
+      ...PICKER_PAGE,
+      statuses: [TaxRateStatus.Published],
+    },
+    { refetchOnWindowFocus: true },
+  )
   const associations = useCustomerTaxAssociations(chosenCustomer)
   const customerTaxes = useMemo<CreateSubscription['taxes'] | null>(
     () =>
@@ -158,6 +163,7 @@ export function SubscriptionFormPage({
         label: addon.name,
         type: addonType(addon.fixedChargeCount, addon.usageChargeCount),
       }))}
+      createTaxRateHref="/taxes/new"
       taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
         code: rate.code,
         name: rate.name,
