@@ -3,6 +3,7 @@ import { ApiError, ErrorKind, call, debitWallet } from '@fp/api'
 import {
   type AlertSettingConfig,
   type AutoTopup,
+  WalletKind,
   AutoTopupCooldownUnit,
   type CreateWallet,
   type DebitWallet,
@@ -28,6 +29,7 @@ export interface WalletWire {
   customerId?: string | undefined
   currency?: string | undefined
   walletStatus?: string | undefined
+  walletType?: string | undefined
   description?: string | undefined
   creditBalance?: string | undefined
   balance?: string | undefined
@@ -71,6 +73,10 @@ export function toWallet(wire: WalletWire): Wallet {
     id: wire.id ?? '',
     customerId: wire.customerId ?? '',
     currency,
+    walletType:
+      wire.walletType === WalletKind.PrePaid || wire.walletType === WalletKind.PostPaid
+        ? wire.walletType
+        : null,
     status: STATUSES.has(wire.walletStatus ?? '')
       ? (wire.walletStatus as WalletStatus)
       : WalletStatus.Active,

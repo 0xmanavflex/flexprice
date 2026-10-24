@@ -47,6 +47,14 @@ export const emptyAutoTopup = (): AutoTopup => ({
   invoicing: true,
 })
 
+export const WalletKind = { PrePaid: 'PRE_PAID', PostPaid: 'POST_PAID' } as const
+export type WalletKind = (typeof WalletKind)[keyof typeof WalletKind]
+
+export const WALLET_KIND_LABEL: Record<WalletKind, string> = {
+  PRE_PAID: 'Prepaid',
+  POST_PAID: 'Postpaid',
+}
+
 /** One prepaid wallet. Balances stay decimal strings; the API owns the arithmetic. */
 export interface Wallet {
   /** Balance alert thresholds stored on the wallet (`alert_settings`); null when none. */
@@ -55,6 +63,8 @@ export interface Wallet {
   customerId: string
   currency: string
   status: WalletStatus
+  /** Prepaid (drawn down in real time) or postpaid (settled on the invoice); null when the API does not say. */
+  walletType: WalletKind | null
   description: string
   /** Credits as of the last invoice. */
   creditBalance: string
