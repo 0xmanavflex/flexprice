@@ -6,13 +6,15 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
-## 2026-10-24
-
-- FormDialog: new `dismissible` prop (default true). `false` hides the close control and ignores Escape/overlay, for bodies whose own button is the only exit. Used by the one-time API key secret, whose X rendered but did nothing. Source: walkthrough QA 8.1.
-
 ## 2026-10-25
 
 - ConnectorCard: the connected state is a green `success-light` "Connected" badge (tick inside) instead of plain tick + text, so connected integrations read at a glance. Source: walkthrough QA 9.2.
+- `textColumn` gains `placeholder(row)`: a muted stand-in for an empty value, in place of the dash. The invoice list uses it for a draft's number ("To be generated"), as do the invoice detail's payments table and the edit form's number field. Source: walkthrough QA 6.7.
+
+## 2026-10-24
+
+- Informational alerts use the `info` variant instead of the default white card: price-version note (ChargeForm), contract-only edit note, pricing widget note, finalized-invoice note, environment create/copy notes, integration prerequisites. Error, status (cancelled/paused) and customer-portal alerts are unchanged. The `--info` hue (violet today) is untouched; changing it to blue is a token change that needs a design decision. Source: walkthrough QA 3.6.
+- FormDialog: new `dismissible` prop (default true). `false` hides the close control and ignores Escape/overlay, for bodies whose own button is the only exit. Used by the one-time API key secret, whose X rendered but did nothing. Source: walkthrough QA 8.1.
 
 ## 2026-10-22
 

@@ -294,7 +294,7 @@ export function ChargeForm({
       {isEdit && notice ? (
         notice
       ) : isEdit ? (
-        <Alert>
+        <Alert variant="info">
           <InfoIcon aria-hidden="true" />
           <AlertTitle>Changing the price creates a new version</AlertTitle>
           <AlertDescription>

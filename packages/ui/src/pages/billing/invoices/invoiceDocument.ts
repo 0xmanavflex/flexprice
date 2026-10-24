@@ -96,7 +96,8 @@ export interface StatusChip {
 /**
  * The header's status chips: the document state (Draft, Finalized, Void,
  * Skipped), then — for a finalized invoice — what the money did (Paid, Overdue,
- * Payment failed, Partially paid). Overdue and failed carry the danger tone.
+ * Payment failed, Partially paid, or Payment pending when nothing has happened
+ * yet). Overdue and failed carry the danger tone.
  */
 export function statusChips(
   doc: Pick<InvoiceDocument, 'status' | 'paymentStatus' | 'paid'>,
@@ -111,6 +112,9 @@ export function statusChips(
     chips.push({ label: 'Payment failed', tone: 'danger' })
   else if (doc.status !== InvoiceStatus.Paid && doc.paid > 0)
     chips.push({ label: 'Partially paid', tone: 'warning' })
+  // A finalized invoice always says where its money stands, including the
+  // ordinary case where nothing has been paid yet.
+  if (chips.length === 1) chips.push({ label: 'Payment pending', tone: 'neutral' })
   return chips
 }
 

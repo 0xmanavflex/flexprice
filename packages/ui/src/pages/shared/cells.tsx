@@ -500,6 +500,11 @@ export function textColumn<T>(
      * column gets the same treatment without each grid opting in.
      */
     primary?: boolean | undefined
+    /**
+     * What an empty value means for this row, drawn muted in place of the
+     * dash (e.g. a draft invoice's number: "To be generated"). Null keeps the dash.
+     */
+    placeholder?: ((row: T) => string | null) | undefined
   },
 ): EntityColumn<T> {
   const onEdit = options?.onEdit
@@ -522,7 +527,14 @@ export function textColumn<T>(
           />
         )
       }
-      if (!value?.trim()) return <EmDash />
+      if (!value?.trim()) {
+        const placeholder = options?.placeholder?.(row)
+        return placeholder ? (
+          <span className="text-muted-foreground">{placeholder}</span>
+        ) : (
+          <EmDash />
+        )
+      }
       if (onOpen) {
         return (
           <EntityLink

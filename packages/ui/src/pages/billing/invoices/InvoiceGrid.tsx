@@ -2,6 +2,7 @@ import { integrationColumn, type IntegrationMappings } from '../../shared/integr
 import { useMemo } from 'react'
 import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from '@ui/icons'
 import {
+  DRAFT_INVOICE_NUMBER_LABEL,
   DEFAULT_INVOICE_QUERY,
   type Invoice,
   type InvoiceQuery,
@@ -194,6 +195,9 @@ export function InvoiceGrid({
         width: 180,
         // The document's own identity. A row without it is unciteable.
         hideable: false,
+        // A draft is numbered when it is finalized.
+        placeholder: (row) =>
+          row.status === InvoiceStatus.Draft ? DRAFT_INVOICE_NUMBER_LABEL : null,
       }),
       textColumn<Invoice>('customer', 'Customer', (row) => row.customerName, {
         width: 180,

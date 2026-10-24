@@ -7,6 +7,7 @@ import {
   CoinsIcon,
   KeyRoundIcon,
   LayersIcon,
+  ExternalLinkIcon,
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
@@ -195,6 +196,11 @@ export interface SubscriptionFormProps {
   coupons?: readonly SubscriptionCouponOption[]
   /** Rates that can be added to the contract. */
   taxRates?: readonly SubscriptionTaxRateOption[]
+  /**
+   * Where a tax rate is created. Opened in a new tab so the contract being
+   * drafted here is not lost; the rate list refreshes when this tab regains focus.
+   */
+  createTaxRateHref?: string | undefined
   /** The chosen customer's tax associations, applied when the customer is picked (as V1 does). */
   customerTaxes?: CreateSubscription['taxes'] | null
   /** Add-ons the contract can start with. */
@@ -318,6 +324,7 @@ export function SubscriptionForm({
   onCustomerChange,
   coupons = [],
   taxRates = [],
+  createTaxRateHref,
   customerTaxes = null,
   addons = [],
   meters = [],
@@ -983,6 +990,7 @@ export function SubscriptionForm({
         <TaxesSection
           taxes={values.taxes}
           taxRates={taxRates}
+          createTaxRateHref={createTaxRateHref}
           onChange={(next) => set('taxes', next)}
         />
       </div>
@@ -2814,10 +2822,12 @@ function CreditsSection({
 function TaxesSection({
   taxes,
   taxRates,
+  createTaxRateHref,
   onChange,
 }: {
   taxes: CreateSubscription['taxes']
   taxRates: readonly SubscriptionTaxRateOption[]
+  createTaxRateHref?: string | undefined
   onChange: (next: CreateSubscription['taxes']) => void
 }) {
   const available = taxRates.filter((rate) => !taxes.some((tax) => tax.taxRateCode === rate.code))
@@ -2872,7 +2882,20 @@ function TaxesSection({
       >
         {({ id, ...field }) =>
           taxRates.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No tax rates exist yet.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-muted-foreground text-sm">No tax rates exist yet.</p>
+              {createTaxRateHref ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<a href={createTaxRateHref} target="_blank" rel="noreferrer" />}
+                >
+                  <ExternalLinkIcon aria-hidden />
+                  Create a tax rate
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <OptionSelect
               // A fresh picker after each pick, so it reads empty again.
