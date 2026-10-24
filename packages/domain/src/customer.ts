@@ -1,4 +1,4 @@
-import type { ListFilter, ListFilterSpec } from './listFilter'
+import { FilterOp, type ListFilter, type ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 
 /**
@@ -137,6 +137,17 @@ export interface CustomerQuery {
   filters?: ListFilter[]
 }
 
+/**
+ * The list opens on active customers only, as V1 did: a visible, removable
+ * "Status is Active" filter rather than a hidden narrowing, so archived
+ * customers are one click away and the filter chip says why they are missing.
+ */
+export const ACTIVE_CUSTOMERS_FILTER: ListFilter = {
+  field: 'status',
+  op: FilterOp.In,
+  value: [CustomerStatus.Published],
+}
+
 export const DEFAULT_CUSTOMER_QUERY: CustomerQuery = {
   page: 1,
   pageSize: 25,
@@ -144,7 +155,20 @@ export const DEFAULT_CUSTOMER_QUERY: CustomerQuery = {
   statuses: [],
   sortBy: CustomerSortField.UpdatedAt,
   sortDirection: 'desc',
-  filters: [],
+  filters: [ACTIVE_CUSTOMERS_FILTER],
+}
+
+/**
+ * Whether the list is narrowed beyond its default view. The default "Active"
+ * filter does not count, so an account with no customers still gets the
+ * first-run empty state rather than "nothing matches these filters".
+ */
+export function isCustomerQueryFiltered(query: CustomerQuery): boolean {
+  return (
+    query.search.length > 0 ||
+    query.statuses.length > 0 ||
+    JSON.stringify(query.filters ?? []) !== JSON.stringify(DEFAULT_CUSTOMER_QUERY.filters ?? [])
+  )
 }
 
 /** What the customer list can filter on — V1's fields, by their wire names. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CUSTOMER_QUERY, CustomerStatus } from '@fp/domain'
+import { ACTIVE_CUSTOMERS_FILTER, DEFAULT_CUSTOMER_QUERY, CustomerStatus } from '@fp/domain'
 import { parseCustomerSearch } from './customerSearch'
 
 describe('parseCustomerSearch', () => {
@@ -27,6 +27,12 @@ describe('parseCustomerSearch', () => {
       sortDirection: 'desc',
       filters: [{ field: 'email', op: 'contains', value: '@acme' }],
     })
+  })
+
+  it('opens on active customers, and an explicit empty filter list means every status', () => {
+    expect(parseCustomerSearch({}).filters).toEqual([ACTIVE_CUSTOMERS_FILTER])
+    expect(parseCustomerSearch({ filters: [] }).filters).toEqual([])
+    expect(parseCustomerSearch({ filters: '[]' }).filters).toEqual([])
   })
 
   it('drops filters it cannot run', () => {

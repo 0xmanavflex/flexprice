@@ -116,7 +116,9 @@ test.describe('visual: shared surfaces', () => {
 
   test('list filter popover', async ({ page }) => {
     await open(page, '/customers', { heading: 'Customers', rows: true })
-    await page.getByRole('button', { name: 'Filter', exact: true }).click()
+    // The list opens with its default "Active" filter, so the trigger reads
+    // "Filter. 1 active" rather than plain "Filter".
+    await page.getByRole('button', { name: /^Filter(\. \d+ active)?$/ }).click()
     await expect(page.getByRole('dialog').or(page.getByRole('menu')).first()).toBeVisible()
     await expect(page).toHaveScreenshot('surface-filter-popover.png', { fullPage: false })
   })
