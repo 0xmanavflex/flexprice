@@ -1,7 +1,6 @@
 import {
   DEFAULT_FEATURE_QUERY,
   DEFAULT_PRICE_UNIT_QUERY,
-  FeatureStatus,
   FeatureType,
   PriceUnitStatus,
 } from '@fp/domain'
@@ -10,9 +9,7 @@ import type { FeatureOption, MeterOption, PriceUnitOption } from '@fp/ui/pages'
 
 /** The pickers the charge and entitlement forms need, read once from the catalogue. */
 export function usePlanFormOptions() {
-  // Every status: these options also name the meters and features of charges
-  // and entitlements already saved, and an archived feature's must still resolve.
-  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100, filters: [] })
+  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
   const priceUnits = usePriceUnits({ ...DEFAULT_PRICE_UNIT_QUERY, pageSize: 100 })
   const priceGroups = usePriceGroupOptions()
 
@@ -22,7 +19,7 @@ export function usePlanFormOptions() {
     .filter((f) => f.type === FeatureType.Metered && f.meterId)
     .map((f) => ({
       id: f.meterId as string,
-      name: f.status === FeatureStatus.Archived ? `${f.name} (archived)` : f.name,
+      name: f.name,
       ...(f.unitSingular ? { unit: f.unitSingular } : {}),
       // Both decide whether a usage window may be set on a charge, and the
       // charge form leaves the field out rather than guessing when they are

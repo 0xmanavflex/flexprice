@@ -1,5 +1,6 @@
 import {
   DEFAULT_FEATURE_QUERY,
+  FilterOp,
   type FeatureQuery,
   FeatureSortField,
   FeatureStatus,
@@ -81,8 +82,10 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
       raw['filters'] === undefined
         ? // A link that names a status asks for that status; the default
           // status filter would contradict it, so it is left off.
+          // The status goes to the server as a filter, so every page is narrowed
+          // (the `statuses` facet alone only narrows the page fetched).
           statuses.length > 0
-          ? []
+          ? [{ field: 'status', op: FilterOp.In, value: [...new Set(statuses)] }]
           : (DEFAULT_FEATURE_QUERY.filters ?? [])
         : runnableFilters(decodeListFilters(raw['filters']), FEATURE_FILTERS),
   }
