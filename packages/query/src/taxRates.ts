@@ -137,7 +137,6 @@ export function toCreateTaxRateRequest(draft: CreateTaxRate): Record<string, unk
     code: draft.code,
     taxRateType: 'percentage',
     percentageValue: draft.percentageValue,
-    scope: draft.scope,
     ...(draft.description ? { description: draft.description } : {}),
     ...(draft.metadata ? { metadata: draft.metadata } : {}),
   }

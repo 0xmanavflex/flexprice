@@ -109,14 +109,15 @@ const taxCode = z
  * A tax rate draft. Only percentage rates are offered — the backend has no
  * other type — so there is no type field; the request mapper sends
  * `percentage`. The value is a decimal string in 0–100 (`"18"`, not `0.18`).
- * The code is case-sensitive alphanumeric.
+ * The code is case-sensitive alphanumeric. No scope: it is optional on the
+ * wire and not something a person setting up a rate chooses, so the backend's
+ * default applies.
  */
 export const createTaxRateSchema = z.object({
   name: z.string().trim().min(1, 'Enter a name'),
   code: taxCode,
   description: z.string().trim().optional(),
   percentageValue: percentage,
-  scope: z.enum([TaxRateScope.Internal, TaxRateScope.External, TaxRateScope.OneTime]),
   metadata: z.record(z.string(), z.string()).optional(),
 })
 
@@ -143,7 +144,6 @@ export function emptyTaxRate(): CreateTaxRate {
     code: '',
     description: '',
     percentageValue: '',
-    scope: TaxRateScope.Internal,
   }
 }
 
