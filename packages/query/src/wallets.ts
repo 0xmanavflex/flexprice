@@ -204,6 +204,8 @@ export function useCustomerWallets(customerId: string) {
       ((await call(() => client.wallets.getWalletsByCustomerId(customerId))) as WalletWire[]).map(
         toWallet,
       ),
+    // No customer yet (a form still choosing one): nothing to read.
+    enabled: customerId.length > 0,
   })
 }
 
