@@ -8,6 +8,7 @@ import {
   useTopUpWallet,
   useUpdateAutoTopup,
   useUpdateWalletAlerts,
+  useUpdateWalletMetadata,
   useWalletBalance,
   useWalletTransactions,
   serverReason,
@@ -55,6 +56,7 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
   const debit = useDebitWallet(selected?.id ?? '')
   const autoTopup = useUpdateAutoTopup(selected?.id ?? '')
   const walletAlerts = useUpdateWalletAlerts(selected?.id ?? '')
+  const walletMetadata = useUpdateWalletMetadata(selected?.id ?? '')
   const [alerting, setAlerting] = useState(false)
   const terminate = useTerminateWallet()
 
@@ -62,6 +64,9 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
     <>
       <CustomerWalletView
         {...(selected ? { onAlertSettings: () => setAlerting(true) } : {})}
+        {...(selected
+          ? { onSaveMetadata: (metadata) => walletMetadata.mutateAsync(metadata) }
+          : {})}
         wallets={shown}
         isLoading={wallets.isPending}
         failed={wallets.error !== null && !wallets.data}

@@ -606,6 +606,7 @@ export {
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,
+  useUpdateWalletMetadata,
   useUpdateWalletAlerts,
   useWalletBalance,
   useWalletTransactions,

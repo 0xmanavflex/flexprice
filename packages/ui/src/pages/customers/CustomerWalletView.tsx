@@ -63,6 +63,7 @@ import {
   Section,
 } from '../../compositions'
 import { ChoiceCards, Composer } from '../../compositions/detail/DetailKit'
+import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { Pill, type PillTone } from '../shared/cells'
 import { WalletLedgerTable, formatCredits } from './WalletLedgerTable'
 import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
@@ -96,6 +97,8 @@ export interface CustomerWalletViewProps {
   autoTopupError?: string | null
   /** More menu: the selected wallet's balance alerts. Omitted, the item is hidden. */
   onAlertSettings?: () => void
+  /** Saves the selected wallet's metadata (the whole map). Omitted, the card is read-only. */
+  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /** Called when a dialog opens, so a stale error from the last attempt is cleared. */
   onResetErrors?: () => void
 }
@@ -127,6 +130,7 @@ export function CustomerWalletView({
   debitError = null,
   onTerminate,
   onAlertSettings,
+  onSaveMetadata,
   terminateError = null,
   onSaveAutoTopup,
   autoTopupError = null,
@@ -340,6 +344,12 @@ export function CustomerWalletView({
           <WalletLedgerTable transactions={transactions} now={asOf} />
         </SubTabState>
       </Section>
+
+      <MetadataCard
+        description="Your own key/value fields on this wallet, for reporting or your systems."
+        metadata={wallet.metadata}
+        {...(onSaveMetadata && !closed ? { onSave: onSaveMetadata } : {})}
+      />
 
       {createDialog}
       <TopUpDialog

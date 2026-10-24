@@ -66,6 +66,8 @@ export interface Wallet {
   conversionRate: string
   topupConversionRate: string
   autoTopup: AutoTopup
+  /** Free-form key/value fields; `{}` when none. */
+  metadata: Readonly<Record<string, string>>
   createdAt: Date | null
 }
 
