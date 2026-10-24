@@ -58,7 +58,7 @@ export interface AddonDetailPageProps {
 }
 
 /** The tabs, in order. Overview leads with the add-on's prices. */
-type AddonTab = 'charges' | 'entitlements' | 'subscriptions' | 'information'
+type AddonTab = 'charges' | 'entitlements' | 'credit-grants' | 'subscriptions' | 'information'
 
 /**
  * One add-on, in full.
@@ -90,6 +90,7 @@ export function AddonDetailPage({
   // Fetched here too (deduped by react-query) so the rail can carry real counts.
   const prices = usePrices(PriceEntityType.Addon, addonId)
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
+  const grants = useCreditGrants(CreditGrantScope.Addon, addonId)
 
   const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'charges')
   const [archiving, setArchiving] = useState(false)
@@ -160,12 +161,13 @@ export function AddonDetailPage({
           value: 'entitlements',
           label: 'Entitlements',
           ...(entitlements.data ? { count: entitlementCount } : {}),
-          content: (
-            <div className="flex flex-col gap-5">
-              <EntitlementsTab addonId={addonId} />
-              <CreditGrantsTab addonId={addonId} />
-            </div>
-          ),
+          content: <EntitlementsTab addonId={addonId} />,
+        },
+        {
+          value: 'credit-grants',
+          label: 'Credit grants',
+          ...(grants.data ? { count: grants.data.length } : {}),
+          content: <CreditGrantsTab addonId={addonId} />,
         },
         { value: 'subscriptions', label: 'Contracts', content: <AddonSubscriptionsView /> },
         {
