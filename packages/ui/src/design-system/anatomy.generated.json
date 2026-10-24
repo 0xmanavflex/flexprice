@@ -1490,6 +1490,7 @@
         "DetailMoreMenu",
         "DetailShell",
         "DetailTabs",
+        "EntityHeader",
         "EntityList",
         "EyeIcon",
         "PageBody",
@@ -2278,6 +2279,7 @@
         "DetailMoreMenu",
         "DetailShell",
         "DetailTabs",
+        "EntityHeader",
         "EntityList",
         "EyeIcon",
         "PageBody",
@@ -2921,7 +2923,12 @@
         "DetailMoreMenu"
       ],
       "usedBy": [
-        "CustomerDetail"
+        "ConnectionExports",
+        "CustomerDetail",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
+        "S3ConnectionList"
       ],
       "story": "./src/pages/shared/EntityHeader.stories.tsx"
     },
@@ -3162,6 +3169,7 @@
         "DetailMoreMenu",
         "DetailShell",
         "DetailTabs",
+        "EntityHeader",
         "EntityList",
         "EyeIcon",
         "PageBody",
@@ -3186,6 +3194,7 @@
         "DetailMoreMenu",
         "DetailShell",
         "DetailTabs",
+        "EntityHeader",
         "EntityList",
         "EyeIcon",
         "PageBody",
@@ -6491,6 +6500,7 @@
         "DetailMoreMenu",
         "DetailShell",
         "DetailTabs",
+        "EntityHeader",
         "EntityList",
         "EyeIcon",
         "PageBody",

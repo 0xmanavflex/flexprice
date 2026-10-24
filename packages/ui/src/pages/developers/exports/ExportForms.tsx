@@ -336,7 +336,7 @@ export function DataExportDialog({
     <FormDialog
       open={open}
       onOpenChange={close}
-      title="New export"
+      title="Add export task"
       size="md"
       isPending={submit.pending}
     >
