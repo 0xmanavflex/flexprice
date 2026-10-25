@@ -349,10 +349,14 @@ export function HomePage() {
     windows,
     granularity.id,
   )
-  const customersPanel = preferred(
-    customersFromList(customers, windows),
-    customersFromReport(activeCustomers),
-  )
+  // A window with no new customers is an answer (zero), not a gap: the report,
+  // which counts something else (customers with a subscription), stands in only
+  // when the list itself could not be read.
+  const customersFromListPanel = customersFromList(customers, windows)
+  const customersPanel =
+    customersFromListPanel.status === 'unavailable'
+      ? preferred(customersFromListPanel, customersFromReport(activeCustomers))
+      : customersFromListPanel
 
   /*
    * Parked until quota-based metrics land.
@@ -682,10 +686,15 @@ function customersFromList(
   const window = windows.current
   const dates = rows.map((row) => row.createdAt).filter((at): at is Date => at !== null)
   const created = dates.filter((at) => at >= window.start && at < window.end)
-  if (created.length === 0) return { ...meta, ...blank, status: 'empty', newCount: 0 }
-
-  // Every row on the page is new and the server holds more: the count is a floor.
-  const partial = created.length === rows.length && total > rows.length
+  // Newest first, so the count is exact only when the page holds every customer
+  // or reaches back past the window's start. Otherwise customers created in the
+  // window may sit on later pages (a past window under newer sign-ups), and the
+  // count is a floor, said as such.
+  const complete = total <= rows.length || dates.some((at) => at < window.start)
+  const partial = !complete
+  if (created.length === 0 && complete) {
+    return { ...meta, ...blank, status: 'empty', newCount: 0 }
+  }
 
   // A point per day, oldest first, so a quiet day is a zero rather than a gap.
   const points = Array.from({ length: spanDays(windows) }, (_, index) => {
