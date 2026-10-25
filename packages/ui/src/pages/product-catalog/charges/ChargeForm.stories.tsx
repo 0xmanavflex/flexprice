@@ -161,7 +161,7 @@ export const SetsPriceOptions: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByLabelText(/^price group/i)).toBeInTheDocument()
+    await expect(canvas.getByLabelText(/^tag/i)).toBeInTheDocument()
     await expect(canvas.getByLabelText(/^start date/i)).toBeInTheDocument()
     await userEvent.type(canvas.getByLabelText(/^minimum quantity/i), '3')
     await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
