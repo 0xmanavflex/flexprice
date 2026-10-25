@@ -216,7 +216,10 @@ export const BooleanHasNoUnits: Story = {
     await expect(canvas.queryByLabelText(/^Unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Event name/)).not.toBeInTheDocument()
-    await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+    // No metering cards for a feature that is not metered.
+    for (const name of ['Units', 'Event', 'Aggregation']) {
+      await expect(canvas.queryByRole('heading', { name })).not.toBeInTheDocument()
+    }
   },
 }
 
@@ -229,7 +232,10 @@ export const StaticHasNoUsage: Story = {
     const canvas = within(canvasElement)
 
     await expect(canvas.queryByRole('heading', { name: 'Usage' })).not.toBeInTheDocument()
-    await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+    // No metering cards for a feature that is not metered.
+    for (const name of ['Units', 'Event', 'Aggregation']) {
+      await expect(canvas.queryByRole('heading', { name })).not.toBeInTheDocument()
+    }
     await expect(canvas.queryByLabelText(/^Unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
 
