@@ -346,14 +346,29 @@ export function aggregationFormula(
 }
 
 export const AGGREGATION_LABEL: Record<AggregationType, string> = {
-  [AggregationType.Count]: 'Count of events',
-  [AggregationType.CountUnique]: 'Count of unique values',
-  [AggregationType.Sum]: 'Sum of a field',
-  [AggregationType.SumWithMultiplier]: 'Sum, multiplied',
-  [AggregationType.Avg]: 'Average of a field',
-  [AggregationType.Max]: 'Maximum value',
-  [AggregationType.Latest]: 'Most recent value',
-  [AggregationType.WeightedSum]: 'Weighted sum',
+  [AggregationType.Count]: 'Count',
+  [AggregationType.CountUnique]: 'Count Unique',
+  [AggregationType.Sum]: 'Sum',
+  [AggregationType.SumWithMultiplier]: 'Sum with Multiplier',
+  [AggregationType.Avg]: 'Average',
+  [AggregationType.Max]: 'Max',
+  [AggregationType.Latest]: 'Latest',
+  [AggregationType.WeightedSum]: 'Weighted Sum',
+}
+
+/** What each aggregation does, shown under its name in the feature form. */
+export const AGGREGATION_DESCRIPTION: Record<AggregationType, string> = {
+  [AggregationType.Sum]: 'Sum a defined property for incoming events.',
+  [AggregationType.Count]: 'Count the number of times an incoming event occurs.',
+  [AggregationType.CountUnique]:
+    'Count the number of unique value of a defined property for incoming events.',
+  [AggregationType.SumWithMultiplier]:
+    'Sum a defined property for incoming events with a multiplier.',
+  [AggregationType.Latest]: 'Get the latest value of a defined property for incoming events.',
+  [AggregationType.Max]: 'Get the maximum value of a defined property for incoming events.',
+  [AggregationType.WeightedSum]:
+    'Sum a defined property for incoming events with weight-based aggregation.',
+  [AggregationType.Avg]: 'Get the average value of a defined property for incoming events.',
 }
 
 /**
@@ -485,6 +500,6 @@ export const FEATURE_FILTERS: readonly ListFilterSpec[] = [
     ],
   },
   // The account's own feature groups; the page fills the choices in.
-  { field: 'group_id', label: 'Group', kind: 'options', options: [] },
+  { field: 'group_id', label: 'Tag', kind: 'options', options: [] },
   { field: 'created_at', label: 'Created', kind: 'date' },
 ]

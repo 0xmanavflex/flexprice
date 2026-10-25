@@ -2,6 +2,7 @@ import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { get, useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
+  AGGREGATION_DESCRIPTION,
   AGGREGATION_LABEL,
   AggregationType,
   FEATURE_TYPE_LABEL,
@@ -55,7 +56,7 @@ type FeatureFormProps = {
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
-  /** The labels (groups) a feature can be filed under. Empty disables the picker, never hides it. */
+  /** The tags a feature can be filed under. Empty disables the picker, never hides it. */
   groups?: readonly Option[]
   trail: DetailCrumb[]
 } & (
@@ -105,9 +106,20 @@ const TYPE_HINT: Record<FeatureType, string> = {
   [FeatureType.Config]: 'A configuration value carried on the plan.',
 }
 
-const AGGREGATION_OPTIONS: Option[] = Object.values(AggregationType).map((value) => ({
+const AGGREGATION_ORDER: AggregationType[] = [
+  AggregationType.Sum,
+  AggregationType.Count,
+  AggregationType.CountUnique,
+  AggregationType.SumWithMultiplier,
+  AggregationType.Latest,
+  AggregationType.Max,
+  AggregationType.WeightedSum,
+]
+
+const AGGREGATION_OPTIONS: Option[] = AGGREGATION_ORDER.map((value) => ({
   value,
   label: AGGREGATION_LABEL[value],
+  description: AGGREGATION_DESCRIPTION[value],
 }))
 
 const RESET_OPTIONS: Option[] = [
@@ -350,19 +362,19 @@ export function FeatureForm(props: FeatureFormProps) {
         )}
       </FormRow>
       {/*
-        Always drawn, even with no labels to choose.
+        Always drawn, even with no tags to choose.
         Hiding the field when the environment has none meant the question was
-        never asked: people filed nothing under a label because they never
+        never asked: people filed nothing under a tag because they never
         learned the field was there, and reported the dropdown as missing. An
         empty picker says what it is and that there is nothing in it yet,
         which is information; an absent one is not.
       */}
       <FormRow
-        label="Label"
+        label="Tag"
         hint={
           groups.length > 0
-            ? 'File the feature under a label.'
-            : 'File the feature under a label. None exist yet — create one under Groups.'
+            ? 'File the feature under a tag.'
+            : 'File the feature under a tag. None exist yet — create one under Tags.'
         }
         error={message('groupId')}
       >
@@ -372,7 +384,7 @@ export function FeatureForm(props: FeatureFormProps) {
             aria-describedby={field['aria-describedby']}
             value={form.watch('groupId')}
             options={groups}
-            placeholder="No label"
+            placeholder="No tag"
             disabled={isSubmitting || groups.length === 0}
             onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
           />

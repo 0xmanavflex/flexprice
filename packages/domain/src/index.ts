@@ -143,6 +143,7 @@ export {
 export type { CreateCreditGrant, CreditGrant, EditCreditGrant } from './creditGrant'
 
 export {
+  AGGREGATION_DESCRIPTION,
   AGGREGATION_LABEL,
   aggregationFormula,
   AggregationType,
