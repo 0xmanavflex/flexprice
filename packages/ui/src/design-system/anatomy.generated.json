@@ -8262,7 +8262,7 @@
       ]
     },
     "./src/compositions/detail/ActivityLog.stories.tsx": {
-      "title": "Invoice voided",
+      "title": "Building blocks/Detail pages/ActivityLog",
       "component": "ActivitySection",
       "uses": [
         "ActivitySection"
