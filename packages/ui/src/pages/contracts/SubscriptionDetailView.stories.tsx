@@ -1883,7 +1883,7 @@ export const AddsChargeAlerts: Story = {
     const sheet = within(await body.findByRole('dialog'))
     const alerts = within(sheet.getByRole('region', { name: 'Alerts' }))
     await expect(alerts.getByText(/No alerts on this charge/)).toBeVisible()
-    await userEvent.click(alerts.getByRole('button', { name: 'Add' }))
+    await userEvent.click(alerts.getByRole('button', { name: 'Add alerts' }))
     const dialog = within(await body.findByRole('dialog', { name: 'Add alerts' }))
     await expect(dialog.getByRole('textbox', { name: /^Warning threshold/ })).toHaveValue('80')
     await userEvent.click(dialog.getByRole('button', { name: 'Add alerts' }))

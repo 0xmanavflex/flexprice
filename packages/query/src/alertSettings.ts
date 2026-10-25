@@ -250,6 +250,55 @@ export function useCreateAlertSetting() {
   })
 }
 
+/**
+ * Alerts on one contract line item. The contract's alert read lists only live
+ * settings with thresholds, so a line that looks bare can still hold a
+ * switched-off or empty setting: that one is updated rather than a second
+ * created beside it.
+ */
+export function useAddLineItemAlert(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ lineId, config }: { lineId: string; config: AlertSettingConfig }) => {
+      const found = await call(() =>
+        client.alertSettings.queryAlertSettings({
+          entityType: AlertEntityType.SubscriptionLineItem,
+          entityId: lineId,
+          parentEntityId: subscriptionId,
+          limit: 10,
+        } as never),
+      )
+      const existing = (found.items ?? []).find(
+        (item) => item.id && item.entityId === lineId && item.status !== 'archived',
+      )
+      const wire = existing?.id
+        ? await call(() =>
+            client.alertSettings.updateAlertSettings(
+              existing.id!,
+              toUpdateAlertSettingRequest(config) as never,
+            ),
+          )
+        : await call(() =>
+            client.alertSettings.createAlertSettings(
+              toCreateAlertSettingRequest({
+                entityType: AlertEntityType.SubscriptionLineItem,
+                entityId: lineId,
+                parentEntityId: subscriptionId,
+                parentEntityType: AlertEntityType.Subscription,
+                config,
+              }) as never,
+            ),
+          )
+      return toAlertSetting(wire as AlertSettingWire)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.alertSettings.all() })
+    },
+  })
+}
+
 export function useUpdateAlertSetting() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

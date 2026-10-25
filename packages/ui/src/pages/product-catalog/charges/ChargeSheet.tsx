@@ -29,6 +29,7 @@ import {
   BellIcon,
   ClockIcon,
   PencilIcon,
+  PlusIcon,
   RotateCcwIcon,
   ScaleIcon,
   TicketPercentIcon,
@@ -127,7 +128,7 @@ function Box({
   title,
   badge,
   onEdit,
-  editLabel = 'Edit',
+  addLabel,
   focused,
   children,
 }: {
@@ -136,8 +137,11 @@ function Box({
   title: string
   badge?: string | undefined
   onEdit?: (() => void) | undefined
-  /** "Add" when the part is empty and editing it creates it. */
-  editLabel?: string | undefined
+  /**
+   * Set when the part is empty and editing it creates it: the header action
+   * is then the section Add button ("Add alerts") rather than Edit.
+   */
+  addLabel?: string | undefined
   focused: boolean
   children: ReactNode
 }) {
@@ -166,14 +170,19 @@ function Box({
               </Badge>
             ) : null}
           </FrameTitle>
-          {onEdit ? (
+          {onEdit && addLabel ? (
+            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onEdit}>
+              <PlusIcon aria-hidden />
+              {addLabel}
+            </Button>
+          ) : onEdit ? (
             <Button
               variant="ghost"
               size="sm"
               className="text-muted-foreground -mr-1.5 h-6 px-2 text-xs"
               onClick={onEdit}
             >
-              {editLabel}
+              Edit
             </Button>
           ) : null}
         </FrameHeader>
@@ -498,7 +507,7 @@ export function ChargeSheet({
               icon={<BellIcon aria-hidden className="text-warning-foreground" />}
               title="Alerts"
               onEdit={editAt(ChargeSection.Alerts)}
-              editLabel={detail?.alerts?.length ? 'Edit' : 'Add'}
+              {...(detail?.alerts?.length ? {} : { addLabel: 'Add alerts' })}
               focused={section === ChargeSection.Alerts}
             >
               {detail?.alerts?.length ? (
