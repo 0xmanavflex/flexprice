@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import type { RawEvent, RawEventQuery } from '@fp/domain'
 import { queryKeys } from './keys'
@@ -69,5 +69,26 @@ export function useRawEvents(query: RawEventQuery) {
     queryKey: queryKeys.rawEvents.list({ ...query }),
     queryFn: () => fetchRawEvents(client, query),
     placeholderData: (previous) => previous,
+  })
+}
+
+/**
+ * The same read, a page at a time, for a list that grows as it is scrolled
+ * (a customer's Events tab). Pages are fetched in order; there is a next one
+ * while the last came back full and fewer than the total have been loaded.
+ */
+export function useRawEventsInfinite(query: Omit<RawEventQuery, 'page'>) {
+  const client = useFlexprice()
+
+  return useInfiniteQuery({
+    queryKey: [...queryKeys.rawEvents.list({ ...query }), 'infinite'] as const,
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => fetchRawEvents(client, { ...query, page: pageParam }),
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((sum, page) => sum + page.events.length, 0)
+      return last.events.length === query.pageSize && loaded < last.total
+        ? pages.length + 1
+        : undefined
+    },
   })
 }

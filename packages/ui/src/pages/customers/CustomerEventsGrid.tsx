@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -20,6 +20,8 @@ export interface CustomerEvent {
   source: string
   /** Already formatted for display; empty when the event carries no timestamp. */
   receivedAt: string
+  /** The same moment in epoch milliseconds, for sorting; 0 when unknown. */
+  receivedAtMs?: number | undefined
 }
 
 const summarize = (properties: Record<string, string>) =>
@@ -48,7 +50,30 @@ export interface CustomerEventsGridProps extends Partial<SubTabQuery> {
   onRefresh?: (() => void) | undefined
   /** A refresh is in flight: the button is disabled and its icon spins. */
   isRefreshing?: boolean | undefined
+  /**
+   * Loads the next page of events. Given, the list grows as it is scrolled
+   * (and from a "Load more" button) instead of stopping at one page.
+   */
+  onLoadMore?: (() => void) | undefined
+  /** There are more events to load. */
+  hasMore?: boolean | undefined
+  isLoadingMore?: boolean | undefined
+  /**
+   * The last "load more" failed: the list says why, and offers a retry only
+   * when one can succeed (not after a denial), after any cooldown has passed.
+   */
+  loadMoreError?: LoadMoreError | null | undefined
 }
+
+export interface LoadMoreError {
+  message: string
+  canRetry: boolean
+  /** A rate limit's cooldown: Try again waits this long. */
+  retryAfterMs?: number | undefined
+}
+
+/** Every loaded row on one table page: the list grows by loading, not paging. */
+const ALL_ROWS = Number.MAX_SAFE_INTEGER
 
 export function CustomerEventsGrid({
   events,
@@ -62,12 +87,48 @@ export function CustomerEventsGrid({
   onOpenEvent,
   onRefresh,
   isRefreshing = false,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
+  loadMoreError = null,
 }: CustomerEventsGridProps) {
+  const loadMoreFailed = loadMoreError !== null
+  // A rate limit's cooldown holds the retry back until it has passed.
+  const [coolingDown, setCoolingDown] = useState(false)
+  useEffect(() => {
+    const wait = loadMoreError?.retryAfterMs
+    if (!wait) return
+    setCoolingDown(true)
+    const timer = setTimeout(() => setCoolingDown(false), wait)
+    return () => clearTimeout(timer)
+  }, [loadMoreError])
   const [selected, setSelected] = useState<CustomerEvent | null>(null)
-  const capped =
-    total !== undefined && total > events.length
+  const capped = onLoadMore
+    ? undefined
+    : total !== undefined && total > events.length
       ? `Showing the latest ${events.length} of ${total} events.`
       : truncationNote(events.length, CUSTOMER_EVENTS_LIMIT)
+
+  // Reaching the end of the list asks for the next page, so it reads as one
+  // continuous log; the button below does the same for keyboard and AT users.
+  const sentinel = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const node = sentinel.current
+    // After a failure the retry is the reader's: scrolling must not loop on it.
+    if (
+      !node ||
+      !onLoadMore ||
+      !hasMore ||
+      loadMoreFailed ||
+      typeof IntersectionObserver === 'undefined'
+    )
+      return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting) && !isLoadingMore) onLoadMore()
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [onLoadMore, hasMore, isLoadingMore, loadMoreFailed])
 
   return (
     <>
@@ -98,7 +159,7 @@ export function CustomerEventsGrid({
           isRetrying={isRetrying}
           columns={4}
           loadingLabel="Loading events"
-          truncation={capped}
+          {...(capped ? { truncation: capped } : {})}
           empty={{
             scene: 'customers',
             title: 'No events yet',
@@ -109,6 +170,13 @@ export function CustomerEventsGrid({
             label="Recent events"
             noun="events"
             rows={events}
+            // Every loaded event on one page: the list grows by loading more,
+            // not by paging through what is already here.
+            {...(onLoadMore ? { pageSize: ALL_ROWS, footer: false } : {})}
+            facets={[
+              { id: 'name', label: 'Event', value: (e: CustomerEvent) => e.name },
+              { id: 'source', label: 'Source', value: (e: CustomerEvent) => e.source || '—' },
+            ]}
             getRowId={(event) => event.id}
             onRowClick={(event) => (onOpenEvent ? onOpenEvent(event.id) : setSelected(event))}
             columns={[
@@ -134,11 +202,31 @@ export function CustomerEventsGrid({
               {
                 key: 'at',
                 header: 'Received',
+                sortBy: (e) => e.receivedAtMs ?? 0,
                 cell: (e) => <span className="text-muted-foreground">{e.receivedAt || '—'}</span>,
               },
             ]}
             empty="No events yet. Events ingested for this customer appear here as they arrive."
           />
+          {onLoadMore && hasMore ? (
+            <div ref={sentinel} className="flex flex-col items-center gap-2 border-t py-3">
+              {loadMoreError && !isLoadingMore ? (
+                <p role="alert" className="text-muted-foreground text-[13px]">
+                  {loadMoreError.message}
+                </p>
+              ) : null}
+              {loadMoreError && !loadMoreError.canRetry ? null : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore || coolingDown}
+                >
+                  {isLoadingMore ? 'Loading…' : loadMoreFailed ? 'Try again' : 'Load more events'}
+                </Button>
+              )}
+            </div>
+          ) : null}
         </SubTabState>
       </Section>
 
