@@ -15,6 +15,8 @@ export interface CheckboxRowProps {
   disabled?: boolean
   className?: string
   children: string
+  /** A muted line under the label, for a choice that needs a sentence. */
+  description?: string | undefined
 }
 
 export function CheckboxRow({
@@ -23,19 +25,33 @@ export function CheckboxRow({
   disabled,
   className,
   children,
+  description,
 }: CheckboxRowProps) {
   const id = useId()
+  const descriptionId = `${id}-description`
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex gap-2', description ? 'items-start' : 'items-center', className)}>
       <Checkbox
         id={id}
         checked={checked}
         disabled={!!disabled}
         onCheckedChange={(next) => onCheckedChange(next === true)}
+        {...(description ? { 'aria-describedby': descriptionId, className: 'mt-0.5' } : {})}
       />
-      <label htmlFor={id} className="text-sm">
-        {children}
-      </label>
+      {description ? (
+        <div className="space-y-0.5">
+          <label htmlFor={id} className="block text-sm">
+            {children}
+          </label>
+          <p id={descriptionId} className="text-muted-foreground text-xs">
+            {description}
+          </p>
+        </div>
+      ) : (
+        <label htmlFor={id} className="text-sm">
+          {children}
+        </label>
+      )}
     </div>
   )
 }
