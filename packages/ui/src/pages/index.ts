@@ -4,7 +4,7 @@
  * `billing/`, `collections/`, `revenue/`, `developers/`, `integrations/`,
  * `settings/`, `auth/`), one folder per entity inside an area. `shared/` holds
  * the list table, cells, charts and meters every page is built from. See
- * `../README.md` for the full map. Domain types belong here — a `Money` cell takes a
+ * `../README.md` for the full map. Domain types belong here: a `Money` cell takes a
  * `Money`, an `InvoiceStatusBadge` takes a domain status. Transport types do
  * not: a component receiving a `WalletResponse` is the bug the layering prevents.
  *
@@ -416,7 +416,7 @@ export { EntityAlertDialog, EntityAlertDialogProvenance } from './shared/EntityA
 export type { EntityAlertDialogProps } from './shared/EntityAlertDialog'
 export type { QuotaCardAction, QuotaCardProps } from './shared/QuotaCard'
 
-/* The billing grids' migration onto EntityList. Appended — the grids and their
+/* The billing grids' migration onto EntityList. Appended: the grids and their
    props were already exported above; this is the one new type the move added. */
 export { WorkflowGrid, WorkflowGridProvenance } from './developers/workflows/WorkflowGrid'
 export type { WorkflowGridProps } from './developers/workflows/WorkflowGrid'
@@ -531,7 +531,7 @@ export { CostMarginCard } from './settings/cost-sheets/CostMarginCard'
 export { GroupMembersView } from './settings/groups/GroupMembersView'
 
 /*
- * Webhooks — the Svix consumer app portal, in the console's grammar: endpoint
+ * Webhooks: the Svix consumer app portal, in the console's grammar: endpoint
  * list, endpoint detail (overview / testing / advanced), message attempts,
  * message sheet, event catalog, message log and activity.
  */

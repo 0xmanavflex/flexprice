@@ -5,7 +5,7 @@ import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
 /**
- * Usage analytics — the only time series this console can actually ask for.
+ * Usage analytics: the only time series this console can actually ask for.
  *
  * Everything else on the overview counts rows that already exist (invoices,
  * subscriptions, keys). This is the one endpoint that answers "how much came in
@@ -25,7 +25,7 @@ import { useFlexprice } from './provider'
  *     curve is exactly the failure the old sample-data dashboard was.
  *
  * Event counts and usage quantities *are* summed across features, because those
- * are plain counts of things — not currency — and the server returns them
+ * are plain counts of things: not currency: and the server returns them
  * per-feature with no combined series of its own.
  */
 
@@ -37,7 +37,7 @@ export const UsageWindowSize = {
 } as const
 export type UsageWindowSize = (typeof UsageWindowSize)[keyof typeof UsageWindowSize]
 
-/** The period being asked about. Both ends are required — an open range is a different question. */
+/** The period being asked about. Both ends are required: an open range is a different question. */
 export interface UsageWindow {
   start: Date
   end: Date
@@ -56,7 +56,7 @@ export interface UsagePoint {
 export interface FeatureUsageRow {
   featureId: string
   name: string
-  /** The feature's `lookup_key` — what the design shows as `code.key`. */
+  /** The feature's `lookup_key`: what the design shows as `code.key`. */
   lookupKey: string
   unitPlural: string
   eventCount: number
@@ -78,7 +78,7 @@ export interface UsageAnalytics {
   /**
    * What the server says this usage is worth.
    *
-   * `null` when the response carried no `subtotal` — the panel renders that as
+   * `null` when the response carried no `subtotal`: the panel renders that as
    * unavailable rather than as zero, because "the server did not price this"
    * and "this was worth nothing" are different claims.
    */
@@ -135,7 +135,7 @@ interface AnalyticsResponseWire {
   currency?: string | undefined
 }
 
-/** A decimal string the server sent, as a number. Counts and quantities only — never money. */
+/** A decimal string the server sent, as a number. Counts and quantities only: never money. */
 function quantity(value: string | undefined): number {
   if (value === undefined || value === '') return 0
   const parsed = Number(value)
@@ -169,7 +169,7 @@ function toFeatureRow(wire: AnalyticsItemWire, currency?: string): FeatureUsageR
   return {
     featureId: wire.featureId ?? feature?.id ?? lookupKey,
     // Falls back through the shapes the server may answer with, and only then
-    // to the lookup key — a row with no name at all is still a real row.
+    // to the lookup key: a row with no name at all is still a real row.
     name: feature?.name ?? wire.eventName ?? lookupKey,
     lookupKey,
     unitPlural: feature?.unitPlural ?? feature?.unit_plural ?? 'events',
@@ -178,7 +178,7 @@ function toFeatureRow(wire: AnalyticsItemWire, currency?: string): FeatureUsageR
     points,
     meterId: wire.meterId ?? '',
     // `total_cost` on an analytics item is what the usage bills at after
-    // discounts — revenue, not what it costs to serve.
+    // discounts: revenue, not what it costs to serve.
     revenue: priced(wire.totalCost, wire.currency || currency),
   }
 }
@@ -268,7 +268,7 @@ function analyticsFilter(query: UsageAnalyticsQuery): Record<string, unknown> {
 /**
  * Usage analytics for one window.
  *
- * Call it twice — once for the period on screen, once for the period before it —
+ * Call it twice: once for the period on screen, once for the period before it:
  * to show a change. That is two real measurements compared, which is a different
  * thing from a percentage a component made up.
  */

@@ -52,7 +52,7 @@ export function GroupMembersView({
             <ul className="space-y-2 text-sm">
               {missing.map((member) => (
                 <li key={member.id}>
-                  <span className="font-mono">{member.id}</span> — Not found
+                  <span className="font-mono">{member.id}</span>: Not found
                 </li>
               ))}
             </ul>

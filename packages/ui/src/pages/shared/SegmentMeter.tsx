@@ -7,18 +7,18 @@ import { formatWhole } from './charts'
  * A row per thing, each with a segmented bar meter.
  *
  * `@reui/chart-14` draws its allocation figure as a run of 56 narrow rounded
- * uprights — filled ones in colour, the rest in `muted` — rather than a solid
+ * uprights: filled ones in colour, the rest in `muted`: rather than a solid
  * progress bar. The block draws exactly one of those, for one hard-wired
  * portfolio figure, inside a card with tabs and an avatar stack. What is reused
  * here is the meter: the segment count, the `w-1` upright, the full-height
- * pill, the filled/track pairing. What is added is *rows* — the console always
+ * pill, the filled/track pairing. What is added is *rows*: the console always
  * has several features, plans or customers to compare, and the comparison is
  * the entire reason to draw a meter instead of printing the number.
  *
  * The block draws that meter once, under a single figure. A usage list repeats
  * it: the name and its key on the left, the track in the middle, the figure
- * and the block's delta on the right. The delta keeps the block's classes —
- * `text-xs font-medium` in `text-success` or `text-destructive` — and each
+ * and the block's delta on the right. The delta keeps the block's classes:
+ * `text-xs font-medium` in `text-success` or `text-destructive`: and each
  * track is a focusable tooltip trigger so the exact figure is reachable by
  * keyboard.
  */
@@ -34,7 +34,7 @@ export interface SegmentMeterRow {
   id: string
   /** Row heading. */
   label: string
-  /** Secondary line under the label — a lookup key, a plan, a unit. */
+  /** Secondary line under the label: a lookup key, a plan, a unit. */
   caption?: string | undefined
   value: number
   /**
@@ -42,7 +42,7 @@ export interface SegmentMeterRow {
    *
    * Omit it and every row is measured against the largest value in the list,
    * which is what you want when comparing features to each other. Give it when
-   * the rows have a real ceiling — an entitlement, a quota — because then
+   * the rows have a real ceiling: an entitlement, a quota: because then
    * "full" means something and the largest row may be nowhere near it.
    */
   max?: number | undefined

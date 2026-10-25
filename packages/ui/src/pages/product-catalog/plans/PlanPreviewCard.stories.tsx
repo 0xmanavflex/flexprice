@@ -12,7 +12,7 @@ import { CreditGrantCadence, CreditGrantPeriod, FeatureType } from '@fp/domain'
 import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
 
 /**
- * The live pricing preview. Fixtures in, a customer's-eye pricing card out —
+ * The live pricing preview. Fixtures in, a customer's-eye pricing card out:
  * headline price, usage, included entitlements and credits, all from staged data.
  * No provider, no network.
  */

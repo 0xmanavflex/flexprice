@@ -19,7 +19,7 @@ describe('toCreateAddonRequest', () => {
 })
 
 describe('toUpdateAddonRequest', () => {
-  it('does not send the lookup key — it is fixed once set', () => {
+  it('does not send the lookup key: it is fixed once set', () => {
     expect(
       toUpdateAddonRequest({ name: 'Priority support', lookupKey: 'priority_support' }),
     ).not.toHaveProperty('lookupKey')

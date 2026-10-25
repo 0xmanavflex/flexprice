@@ -46,7 +46,7 @@ describe('flat fee', () => {
   })
 
   // The discriminated union is what stops the form carrying dead state between
-  // models — the thing V1 does with twelve parallel useStates.
+  // models: the thing V1 does with twelve parallel useStates.
   it('does not accept tier fields', () => {
     const result = parse({
       priceId: 'p1',
@@ -135,7 +135,7 @@ describe('tiers', () => {
     ).toMatch(/greater than 100/)
   })
 
-  // A closed final band drops usage above it on the floor — revenue quietly lost.
+  // A closed final band drops usage above it on the floor: revenue quietly lost.
   it('requires the last band to be unbounded', () => {
     expect(errors(tiered([{ upTo: 100, unitAmount: '0.10' }])).join(' ')).toMatch(
       /last tier must be unbounded/,
@@ -191,7 +191,7 @@ describe('emptyOverride', () => {
       const value = emptyOverride('p1', model)
       expect(value.billingModel).toBe(model)
       const issues = parse(value)
-      // Amounts are blank and so do fail — but only on the amount fields, never
+      // Amounts are blank and so do fail: but only on the amount fields, never
       // on structure, so switching models cannot land somewhere incoherent.
       if (!issues.success) {
         for (const issue of issues.error.issues) {

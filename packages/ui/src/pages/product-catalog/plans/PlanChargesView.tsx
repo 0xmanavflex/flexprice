@@ -12,7 +12,7 @@ export interface PlanChargesViewProps {
   readOnly?: boolean
   /** The plan's prices are still being fetched: skeleton rows, no add action. */
   loading?: boolean
-  /** The fetch failed. Shown in place of the list — never as "No charges yet". */
+  /** The fetch failed. Shown in place of the list: never as "No charges yet". */
   error?: boolean
   /** Re-runs the fetch; the error state's "Try again". */
   onRetry?: () => void

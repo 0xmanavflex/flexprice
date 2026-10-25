@@ -55,7 +55,7 @@ import { useDraft } from './useDraft'
 /**
  * Team: the people in this organisation, and what each of them may do.
  *
- * The section opens straight onto the table — the toolbar (search, Invite) is
+ * The section opens straight onto the table: the toolbar (search, Invite) is
  * the only thing above it.
  *
  * ## Search is client-side
@@ -63,13 +63,13 @@ import { useDraft } from './useDraft'
  * `POST /users/search` accepts `filters` and `roles` and **silently ignores
  * both**. Verified live: a `contains` filter came back with a row whose name
  * cannot match it. An accepted-and-ignored filter is worse than a rejected one
- * — the list looks filtered and is not — so neither is sent. The table's own
+ *: the list looks filtered and is not: so neither is sent. The table's own
  * search narrows the page that arrived (up to a hundred people).
  *
  * ## Two columns that do not exist
  *
  * `UserResponse` carries no `created_at` and no `status`. So there is **no
- * "Joined" column** and **no pending/invited state** — an invited person is
+ * "Joined" column** and **no pending/invited state**: an invited person is
  * indistinguishable from an accepted one in the payload, and a "Pending" badge
  * derived from nothing is a lie with a colour. When the API grows the fields,
  * the columns can follow.
@@ -240,8 +240,8 @@ export function MembersPanel() {
 /**
  * Inviting someone.
  *
- * The roles are chosen up front because the alternative is a two-step dance —
- * invite, then find them in the table, then edit — for something the create
+ * The roles are chosen up front because the alternative is a two-step dance:
+ * invite, then find them in the table, then edit: for something the create
  * call already accepts.
  */
 function InviteDialog({
@@ -376,8 +376,8 @@ function csvCell(value: string): string {
  * anyone sees it: it can be revealed, copied on its own or with the email, or
  * saved as a CSV to hand over.
  *
- * There is deliberately no sign-in link. A URL is not a private channel — it
- * lands in history, Referer headers, logs and chat link previews — so a link
+ * There is deliberately no sign-in link. A URL is not a private channel: it
+ * lands in history, Referer headers, logs and chat link previews: so a link
  * carrying, or leading to, a working credential is never built here.
  */
 function CredentialsDialog({

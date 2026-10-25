@@ -56,7 +56,7 @@ export function toPriceUnit(wire: PriceUnitWire): PriceUnit {
     code: wire.code ?? '',
     symbol: wire.symbol ?? '',
     baseCurrency: wire.baseCurrency ?? '',
-    // Kept as the string the API sends — a rate is a decimal that a float would
+    // Kept as the string the API sends: a rate is a decimal that a float would
     // round, and nothing above this layer does arithmetic on it.
     conversionRate: wire.conversionRate ?? '0',
     status: toStatus(wire.status),
@@ -135,7 +135,7 @@ export function usePriceUnits(query: PriceUnitQuery) {
 /**
  * Create and edit share the draft; the wire splits them.
  *
- * Create sends the whole record — the rate stringified, because the API stores
+ * Create sends the whole record: the rate stringified, because the API stores
  * it as a string. Update sends **only the name**: the backend rejects a change
  * to the code, symbol, base currency or rate, so sending them would be an error
  * the form has already prevented by rendering them read-only. Metadata is sent
@@ -197,7 +197,7 @@ export function usePriceUnit(id: string) {
   })
 }
 
-/** Delete — `DELETE` by id. Takes the record id. */
+/** Delete: `DELETE` by id. Takes the record id. */
 export function useDeletePriceUnit() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

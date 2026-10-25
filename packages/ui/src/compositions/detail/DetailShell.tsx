@@ -10,11 +10,11 @@ import { DetailHeader } from './DetailHeader'
  * The one shell every detail page opens with.
  *
  * Before this, detail pages used two different headers with two different
- * breadcrumb styles, and only some got a summary strip — so the flagship plan
+ * breadcrumb styles, and only some got a summary strip: so the flagship plan
  * page looked unlike the rest. This is the single opening: a breadcrumb, a large
  * title, status pills under the title, a right-hand cluster ("ID" copy chip,
- * More menu; see `DetailHeaderCluster`), and — the
- * part that makes a detail page worth visiting — a **metric rail** of how the
+ * More menu; see `DetailHeaderCluster`), and: the
+ * part that makes a detail page worth visiting: a **metric rail** of how the
  * record is doing. The body (tabs or sections) is `children`.
  */
 export const DetailShellProvenance = provenance({
@@ -31,7 +31,7 @@ export interface DetailCrumb {
 }
 
 /**
- * The detail page's own breadcrumb — where this record sits, and the way back.
+ * The detail page's own breadcrumb: where this record sits, and the way back.
  *
  * A real trail ("Customers / Customer details"), not a lone back button: it names
  * the parent list and the kind of page, never the record id. The title still
@@ -79,7 +79,7 @@ export function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
 }
 
 export interface DetailShellProps {
-  /** The breadcrumb trail. Preferred over `breadcrumb` — every detail page's is the same shape. */
+  /** The breadcrumb trail. Preferred over `breadcrumb`: every detail page's is the same shape. */
   trail?: DetailCrumb[]
   /** A freeform breadcrumb node, for anything the `trail` shape does not fit. */
   breadcrumb?: ReactNode
@@ -112,12 +112,12 @@ export interface DetailShellProps {
  * The vendored `TabsList` is `inline-flex w-fit` with overflow left visible,
  * so at 390px the four-tab strip (Overview / Entitlements / Credit Grants /
  * Information) paints its later children outside the 373px strip, where the
- * viewport clips them — "Information" could not be reached by touch scroll at
+ * viewport clips them: "Information" could not be reached by touch scroll at
  * all, and on the plan page that tab is the only place the plan ID and
  * description live. A whole field of data was simply inaccessible on a phone.
  *
  * Written as a descendant rule on the body rather than a prop, because the
- * page owns its `<Tabs>` and every detail page needs this — a prop is one each
+ * page owns its `<Tabs>` and every detail page needs this: a prop is one each
  * page can forget. `data-slot` is the vendor's public targeting contract, so
  * this composes over the registry instead of forking it.
  *

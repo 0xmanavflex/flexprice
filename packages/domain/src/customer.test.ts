@@ -12,7 +12,7 @@ import {
  * Every limit here mirrors a `validate:` tag on the backend's
  * `CreateCustomerRequest`. That is the whole point of the file: a client rule
  * that is *looser* than the server's does not make the server accept more, it
- * makes the form accept a value the save then rejects — and the rejection
+ * makes the form accept a value the save then rejects: and the rejection
  * arrives as a server-worded message about a field the person has already
  * scrolled past. A client rule that is *tighter* is its own bug: it refuses
  * something the product allows.

@@ -19,7 +19,7 @@ import { DetailTable } from '../../shared/DetailTable'
 /**
  * A plan's or add-on's credit grants: a titled, flush section holding the full table.
  *
- * Cadence carries the period where there is one — "Recurring · Monthly" — because
+ * Cadence carries the period where there is one: "Recurring · Monthly": because
  * a recurring grant only means something with the period it refreshes on beside
  * it.
  */
@@ -93,7 +93,7 @@ function CreditGrantTableInner({
           empty={{
             scene: 'catalog',
             title: 'No credit grants yet',
-            description: `Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`,
+            description: `Credit grants hand subscribers a balance to spend against usage: a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`,
           }}
         >
           {null}

@@ -6,7 +6,7 @@ import { env } from '@/env'
 import { useSession } from '@/app/session'
 import { mutationMessage } from '../settings/panelKit'
 
-/** The token the mocked build signs every request with — the same one `useEnvironments` uses. */
+/** The token the mocked build signs every request with: the same one `useEnvironments` uses. */
 const MOCK_TOKEN = 'mock-session-token'
 
 export interface EnvironmentCopyFormPageProps {

@@ -62,12 +62,12 @@ import { DataExportDialog, RunExportDialog, S3ConnectionDialog } from './ExportF
 /**
  * The Exports flow, as V1 has it, on the console's kit:
  *
- * 1. **Exports** — what exports do, the destinations (Amazon S3), and every
+ * 1. **Exports**: what exports do, the destinations (Amazon S3), and every
  *    export below.
- * 2. **Amazon S3** — the S3 connections, each with its export count; connect
+ * 2. **Amazon S3**: the S3 connections, each with its export count; connect
  *    one, open one, or delete one.
- * 3. **A connection** — its exports; create one, open one, or delete one.
- * 4. **An export** — pause or resume it, run it now, delete it; Overview and
+ * 3. **A connection**: its exports; create one, open one, or delete one.
+ * 4. **An export**: pause or resume it, run it now, delete it; Overview and
  *    Runs tabs, the runs with their status, window and file.
  *
  * Every write is a promise from the page: success is a toast, a failure stays

@@ -89,7 +89,7 @@ export function toRevenueOverview(wire: RevenueDashboardWire): RevenueOverview {
 }
 
 /**
- * Invoiced revenue for a window — `POST /dashboard/revenue-dashboard`, reached
+ * Invoiced revenue for a window: `POST /dashboard/revenue-dashboard`, reached
  * with `fetch` because the SDK has no binding for it. See `@fp/api/revenue`.
  */
 export function useRevenueOverview(
@@ -162,7 +162,7 @@ export function revenueAnalyticsWindows(
 }
 
 /**
- * Net revenue per day — `POST /analytics/revenue` at day granularity, grouped
+ * Net revenue per day: `POST /analytics/revenue` at day granularity, grouped
  * by currency so no two currencies share a point.
  *
  * A window longer than the API's 90 days is asked for in pieces, in parallel,
@@ -238,7 +238,7 @@ export interface InvoicedRevenue {
 }
 
 /**
- * Adds decimal strings exactly — no float ever holds an amount.
+ * Adds decimal strings exactly: no float ever holds an amount.
  *
  * `Money` deliberately has no `add`: an invoice's own total is the backend's
  * answer. This is not that. It adds whole invoice totals the backend already
@@ -302,7 +302,7 @@ const INVOICE_PAGE = 1000
 const INVOICE_PAGES = 10
 
 /**
- * Invoiced revenue for a window — every FINALIZED invoice created in it, from
+ * Invoiced revenue for a window: every FINALIZED invoice created in it, from
  * `POST /invoices/search` (`invoice_status` plus `created_at` after/before),
  * paged until the total is read. Works for every tenant; nothing to enable.
  */

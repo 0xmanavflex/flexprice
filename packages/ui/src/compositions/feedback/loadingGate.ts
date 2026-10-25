@@ -6,7 +6,7 @@
  * reader cannot tell slow from broken. So a load passes through phases:
  *
  *   idle      not loading
- *   reserved  loading, but quick so far — the skeleton's space is held (so the
+ *   reserved  loading, but quick so far: the skeleton's space is held (so the
  *             layout does not jump when it arrives) without drawing it
  *   visible   still loading after `delayMs`: draw the skeleton, and keep it
  *             drawn for at least `minMs` so it does not strobe

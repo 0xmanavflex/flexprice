@@ -1,7 +1,7 @@
 /**
  * API keys.
  *
- * Three operations and no fourth: list, create, delete. There is no update —
+ * Three operations and no fourth: list, create, delete. There is no update:
  * matching V1, and matching the API, which has no route for it. A key's name
  * is fixed at creation; renaming one means issuing a new key and deleting the
  * old.
@@ -10,7 +10,7 @@
  * create response carries the key material; every subsequent read carries only
  * a `displayId` prefix. If the UI does not show it at that moment, it is gone
  * and the only remedy is another key. That is why `CreatedApiKey` is a separate
- * type from `ApiKey` — the two are not interchangeable, and a component that
+ * type from `ApiKey`: the two are not interchangeable, and a component that
  * takes an `ApiKey` must not be reachable with a secret in hand.
  */
 import { z } from 'zod'
@@ -57,7 +57,7 @@ export interface ApiKey {
   id: string
   name: string
   /**
-   * The only part of the key ever shown after creation — a prefix the API
+   * The only part of the key ever shown after creation: a prefix the API
    * keeps so a person can tell two keys apart. Never the whole secret.
    */
   displayId: string
@@ -72,7 +72,7 @@ export interface ApiKey {
   createdAt: Date | null
   updatedAt: Date | null
   expiresAt: Date | null
-  /** Null when the key has never been used — a useful "safe to delete" signal. */
+  /** Null when the key has never been used: a useful "safe to delete" signal. */
   lastUsedAt: Date | null
 }
 
@@ -85,7 +85,7 @@ export function isActive(key: ApiKey, now: Date = new Date()): boolean {
 }
 
 /**
- * A newly created key — the secret, and the record it belongs to.
+ * A newly created key: the secret, and the record it belongs to.
  *
  * **`secret` exists exactly once, in the create mutation's result.** It is not
  * persisted anywhere, is not on `ApiKey`, and cannot be re-fetched. A screen
@@ -102,7 +102,7 @@ export interface CreatedApiKey {
 /**
  * Creating a key.
  *
- * `expiresAt` is optional — a key with no expiry never expires. A
+ * `expiresAt` is optional: a key with no expiry never expires. A
  * `serviceAccountId` issues the key against a machine identity instead of the
  * signed-in person, which is how a service account gets credentials at all.
  */

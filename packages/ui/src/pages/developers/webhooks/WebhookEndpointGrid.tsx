@@ -18,7 +18,7 @@ import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared
 import { EntityCell, type EntityColumn, dateColumn, pillColumn } from '../../shared/cells'
 
 /**
- * The Endpoints list — the first screen of Svix's app portal.
+ * The Endpoints list: the first screen of Svix's app portal.
  *
  * One row per endpoint: its URL (with the description beneath, as Svix shows
  * it), whether it is enabled, what it subscribes to, and its error rate over

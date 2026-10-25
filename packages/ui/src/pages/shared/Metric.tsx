@@ -22,7 +22,7 @@ export type Sentiment = 'positive' | 'negative' | 'neutral'
 
 export interface MetricProps {
   label: string
-  /** Already formatted — a Money element, a count, a percentage. */
+  /** Already formatted: a Money element, a count, a percentage. */
   value: ReactNode
   hint?: string
   change?: {

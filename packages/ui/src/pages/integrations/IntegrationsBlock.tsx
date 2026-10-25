@@ -34,7 +34,7 @@ import { provenance } from '@ui/provenance'
  * The page's query state is its own to show: loading is a grid of card-shaped
  * placeholders, a failure is an `ErrorState` with a retry, an empty catalogue
  * is the first-run state, and a search or category that matches nothing is a
- * filtered miss with a way out — four different answers, not one line.
+ * filtered miss with a way out: four different answers, not one line.
  */
 export const IntegrationsBlockProvenance = provenance({
   source: 'composition',

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
  * The value, after it has stopped changing for `ms`.
  *
  * For search and filter inputs: the box updates on every keystroke, but the
- * query key — and so the request — follows only once typing pauses. Without it
+ * query key: and so the request: follows only once typing pauses. Without it
  * a six-letter search is six requests, five of which are answered after they
  * stopped mattering.
  *

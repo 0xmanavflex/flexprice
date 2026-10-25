@@ -31,7 +31,7 @@ import { provenance } from '@ui/provenance'
 /**
  * Create or edit a feature.
  *
- * Replaces `AddFeature.tsx` — 1,106 lines holding a bespoke form hook and four
+ * Replaces `AddFeature.tsx`: 1,106 lines holding a bespoke form hook and four
  * `useState` slices. This holds one form value and hands it to the domain
  * schema, which is a discriminated union: the type decides whether a meter
  * exists, the aggregation decides which meter fields are needed.
@@ -330,7 +330,7 @@ export function FeatureForm(props: FeatureFormProps) {
         label="Lookup key"
         hint={
           isEdit
-            ? 'Fixed once set — integrations key off it.'
+            ? 'Fixed once set: integrations key off it.'
             : 'Stable identifier used by the API. Follows the name until you edit it.'
         }
         error={message('lookupKey')}
@@ -374,7 +374,7 @@ export function FeatureForm(props: FeatureFormProps) {
         hint={
           groups.length > 0
             ? 'File the feature under a tag.'
-            : 'File the feature under a tag. None exist yet — create one under Tags.'
+            : 'File the feature under a tag. None exist yet: create one under Tags.'
         }
         error={message('groupId')}
       >

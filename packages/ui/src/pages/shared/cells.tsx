@@ -15,7 +15,7 @@ import { Money } from './Money'
  * `EntityList` takes a plain array of `EntityColumn`s, and this is where those
  * come from. A list page should never hand-write a `<span className="block
  * truncate tabular-nums">`: it says `dateColumn('createdAt', 'Created', …)` and
- * gets the one agreed treatment — the same truncation, the same em dash for
+ * gets the one agreed treatment: the same truncation, the same em dash for
  * absent values, the same tabular figures for anything numeric.
  *
  * That is the whole point of putting them here rather than in each grid. With
@@ -30,7 +30,7 @@ import { Money } from './Money'
  *   does in a list of invoices; what it actually does is put the amount an
  *   arm's length from the row it belongs to. Numbers get `tabular-nums` so the
  *   digits still line up. The one exception is `align: 'center'`, for a narrow
- *   column that is nothing but a count — see the prop.
+ *   column that is nothing but a count: see the prop.
  *
  *   **Medium is the heaviest weight.** Nothing here is bold. In a table, weight
  *   is the strongest signal there is, and a bold name column spends it on the
@@ -51,8 +51,8 @@ export const CellsProvenance = provenance({
  *
  * Deliberately not a TanStack `ColumnDef`. `EntityList` builds those, and a
  * caller that hands over a `ColumnDef` can reach past every layout decision
- * the shared table exists to make — the padding, the truncation, the header
- * type — which is how twelve grids stopped looking alike in the first place.
+ * the shared table exists to make: the padding, the truncation, the header
+ * type: which is how twelve grids stopped looking alike in the first place.
  * This carries what a list actually varies: what the column is called, what to
  * draw, how wide it wants to be, and whether it sorts.
  */
@@ -79,7 +79,7 @@ export interface EntityColumn<T> {
    */
   width?: number | undefined
   /**
-   * Never scaled — the column is this many pixels and no other.
+   * Never scaled: the column is this many pixels and no other.
    *
    * For the checkbox and the `⋯` menu, whose contents do not get more readable
    * with more room.
@@ -95,20 +95,20 @@ export interface EntityColumn<T> {
   hideable?: boolean | undefined
   /** Starts hidden, and can be switched on from the `⋯` menu. */
   hiddenByDefault?: boolean | undefined
-  /** Extra classes on the `<td>`. Layout only — the helpers own the type. */
+  /** Extra classes on the `<td>`. Layout only: the helpers own the type. */
   cellClassName?: string | undefined
   /**
    * `center` centres the header and the cell. Left is the default and the
    * rule; see the note at the top of this file for why amounts stay left.
    *
-   * The exception is a narrow column of counts — Charges, Entitlements,
+   * The exception is a narrow column of counts: Charges, Entitlements,
    * Credit grants, Contracts on the catalogue lists. There the number *is*
    * the column: there is no label beside it for the eye to start from, so
    * left-aligning a one or two digit figure under a wider header leaves it
    * adrift. The redesign asks for these centred and it is right about them.
    */
   /**
-   * `end` right-aligns header and cell — only for a document-shaped table, such
+   * `end` right-aligns header and cell: only for a document-shaped table, such
    * as an invoice preview, that must read like the invoice it previews.
    */
   align?: 'start' | 'center' | 'end' | undefined
@@ -121,7 +121,7 @@ export interface EntityColumn<T> {
 /**
  * The tones a pill can carry, as tokens.
  *
- * Not a colour, and not a class — a *meaning*. A caller that wants a red pill
+ * Not a colour, and not a class: a *meaning*. A caller that wants a red pill
  * has to decide the thing is a failure, which is the decision that should be
  * reviewed. The mapping to tokens lives here so the whole console's greens are
  * one green.
@@ -141,7 +141,7 @@ export interface PillProps {
   tone?: PillTone
   /** `sm` is the quieter chip that sits beside a name; `default` is the column pill. */
   size?: 'default' | 'sm'
-  /** Replaces the dot — a feature type's glyph, say. */
+  /** Replaces the dot: a feature type's glyph, say. */
   icon?: ReactNode
   children: ReactNode
   className?: string
@@ -255,8 +255,8 @@ export function Formula({ value }: { value: string | null }) {
 const NAME_TEXT = 'text-foreground text-[15px] font-medium'
 
 /**
- * The name cell: the row's name, truncating, with an optional sub-label — a
- * small chip or muted text — that never outweighs it.
+ * The name cell: the row's name, truncating, with an optional sub-label: a
+ * small chip or muted text: that never outweighs it.
  */
 export function EntityCell({ name, sub }: { name: string; sub?: ReactNode }) {
   return (
@@ -324,7 +324,7 @@ export function FeatureTypePill({ type, label }: FeatureTypePillProps) {
   )
 }
 
-/** Nothing here — said out loud, rather than left blank. A blank cell reads as
+/** Nothing here: said out loud, rather than left blank. A blank cell reads as
  *  a value that failed to load. */
 export function EmDash() {
   return <span className="text-muted-foreground">—</span>
@@ -345,7 +345,7 @@ export interface ColumnOptions {
 
 /** Only the keys that were actually given, so `exactOptionalPropertyTypes`
  *  does not see an explicit `undefined` where the field is optional. The
- *  return type is `ColumnOptions` and not `Partial<EntityColumn>` on purpose —
+ *  return type is `ColumnOptions` and not `Partial<EntityColumn>` on purpose:
  *  the latter carries `cell` and `text`, whose row type would then collapse
  *  against the caller's `T`. */
 function spreadOptions(options: ColumnOptions | undefined): ColumnOptions {
@@ -563,7 +563,7 @@ export function textColumn<T>(
 }
 
 /**
- * An identifier — a lookup key, a ULID.
+ * An identifier: a lookup key, a ULID.
  *
  * Monospaced and clipped with a tooltip. This is the column the truncation
  * rule was written for: an un-clipped 26-character ULID painted straight over
@@ -631,7 +631,7 @@ export function dateColumn<T>(
 }
 
 /**
- * An amount — left-aligned like everything else, with tabular figures.
+ * An amount: left-aligned like everything else, with tabular figures.
  *
  * `truncate` is always on. A column of amounts is exactly where an overlong
  * value does the most damage, and `Money` keeps the full figure in its
@@ -668,7 +668,7 @@ export function moneyColumn<T>(
   }
 }
 
-/** A plain number — a count, a quantity. Tabular, so a column of them scans. */
+/** A plain number: a count, a quantity. Tabular, so a column of them scans. */
 export function numberColumn<T>(
   id: string,
   header: string,
@@ -717,7 +717,7 @@ export interface PillSpec {
   icon?: ReactNode
 }
 
-/** A status, a type, a lifecycle — anything that is one of a small set. */
+/** A status, a type, a lifecycle: anything that is one of a small set. */
 export function pillColumn<T>(
   id: string,
   header: string,

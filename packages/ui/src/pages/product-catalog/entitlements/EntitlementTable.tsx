@@ -14,8 +14,8 @@ import { DetailTable } from '../../shared/DetailTable'
 /**
  * An entitlements section: a flush `Section` with a `SimpleTable`.
  *
- * The "Included" column reads per feature type — a metered allowance as a number
- * or "Unlimited", a boolean as Yes/No, a static value as itself — because "what
+ * The "Included" column reads per feature type: a metered allowance as a number
+ * or "Unlimited", a boolean as Yes/No, a static value as itself: because "what
  * does this include of this feature" is answered differently for each.
  */
 export const EntitlementTableProvenance = provenance({

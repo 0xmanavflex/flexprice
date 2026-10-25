@@ -52,7 +52,7 @@ const SessionContext = createContext<SessionValue | null>(null)
  * Both are hydrated synchronously from `localStorage` in the initialiser rather
  * than in an effect. An effect would mean the first render is always signed
  * out, so the route guard would bounce a returning user to `/sign-in` and then
- * bounce them back — a visible flash on every refresh, and a lost deep link.
+ * bounce them back: a visible flash on every refresh, and a lost deep link.
  *
  * ## Why the environment is cleared on a tenant change
  *
@@ -75,7 +75,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    * `signIn` has to compare the incoming tenant against the outgoing one, and
    * has to stay referentially stable so it can be a dependency elsewhere. The
    * updater form of `setSession` would give it the previous value, but the
-   * comparison has a side effect — dropping the environment — and React invokes
+   * comparison has a side effect: dropping the environment: and React invokes
    * updaters twice under StrictMode. So the previous value is tracked here
    * instead, where reading it is not part of a render.
    */
@@ -112,7 +112,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
      * The cache is the other half of signing out.
      *
      * Every session query is keyed by token, so the *next* user cannot read
-     * this one's rows — but the entries are still resident, and a devtools
+     * this one's rows: but the entries are still resident, and a devtools
      * panel or a stray un-keyed query would still surface a previous user's
      * customers and invoices to whoever sits down next. Clearing is the only
      * version of "signed out" that is true of the whole tab.
@@ -122,8 +122,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   /*
    * The previous environment id, tracked with a ref for the same reason as the
-   * session above: switching environments has a side effect — dropping the old
-   * environment's cached data — and that must run once per actual switch, not
+   * session above: switching environments has a side effect: dropping the old
+   * environment's cached data: and that must run once per actual switch, not
    * inside a state updater React invokes twice under StrictMode.
    */
   const latestEnvironmentId = useRef(environmentId)
@@ -138,14 +138,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
        */
       setActiveEnvironmentId(id)
       /*
-       * A real switch — from one environment to a different one.
+       * A real switch: from one environment to a different one.
        *
        * Cached rows are keyed by environment (see `createQueryClient`), so the
        * new environment can never be served the old one's data. What remains is
        * the old environment's requests still in flight: left alone they would
        * finish, or retry, with the *new* header while filed under the *old*
        * key. They are cancelled. Everything already cached is marked stale
-       * without refetching it — an unmounted old-environment page has no
+       * without refetching it: an unmounted old-environment page has no
        * business spending requests, and if the user switches back it is shown
        * and refreshed.
        *
@@ -155,7 +155,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (previous !== null && previous !== id) {
         void queryClient.cancelQueries()
         void queryClient.invalidateQueries({ refetchType: 'none' })
-        // Filters name rows — a customer, a plan, a status that exists here
+        // Filters name rows: a customer, a plan, a status that exists here
         // and not there. Carried across a switch they would silently empty
         // every list in the new environment.
         clearListMemory(globalThis.sessionStorage)
@@ -193,7 +193,7 @@ export function useSession(): SessionValue {
 /**
  * A live mirror of the session, for reading outside React's render cycle.
  *
- * `AuthSource` is a pair of async getters, deliberately — see the note on it in
+ * `AuthSource` is a pair of async getters, deliberately: see the note on it in
  * `@fp/api`. They are called per request, from inside the SDK, long after the
  * render that built them. Closing over `session` would capture whatever value
  * was current when the client was constructed, so a sign-in or an environment

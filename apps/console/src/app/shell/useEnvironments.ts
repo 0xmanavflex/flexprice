@@ -15,19 +15,19 @@ import { useSession } from '../session'
  *
  * This used to hold a two-item array and a long note about why it could not be
  * a request. The note was right about the cause and is worth keeping in one
- * line: `environment.go` carries a swagger annotation on 1 of its 5 handlers —
- * the clone — so `GET /environments` and `POST /environments` are live,
+ * line: `environment.go` carries a swagger annotation on 1 of its 5 handlers:
+ * the clone: so `GET /environments` and `POST /environments` are live,
  * RBAC-protected routes absent from the OpenAPI document and therefore from
  * the SDK (`docs/api-contract-gap.md`).
  *
  * What changed is where that gap is absorbed. It is not absorbed here, and it
- * is still not a `@fp/sdk-adapter` shim — a shim needs a removal issue, and
+ * is still not a `@fp/sdk-adapter` shim: a shim needs a removal issue, and
  * inventing an issue number to satisfy a lint rule is how a temporary layer
  * becomes permanent. It is absorbed in `@fp/api`'s `session.ts`, which is the
  * documented home for exactly these routes and speaks `fetch` for them, behind
  * `@fp/query`'s `useEnvironmentList` / `useCreateEnvironment`. So this hook is
  * an ordinary consumer of the one data door, like every other hook in the app,
- * and when the handlers are annotated nothing here changes at all — the change
+ * and when the handlers are annotated nothing here changes at all: the change
  * is one file deep in `@fp/api`.
  *
  * ## The active id is not stored here
@@ -36,7 +36,7 @@ import { useSession } from '../session'
  * is persisted across reloads and it is what the API client puts in
  * `X-Environment-ID` on every request. A second `useState` copy here would be
  * a second answer to "which environment am I in", and the two would disagree
- * exactly when it matters — a switch that repaints the header while every
+ * exactly when it matters: a switch that repaints the header while every
  * query still reads the old environment.
  */
 
@@ -50,9 +50,9 @@ export interface UseEnvironments {
    * why V1 puts a "talk to us" panel behind it.
    *
    * Still `false`, and still an assumption rather than a reading. The API does
-   * enforce per-type quotas — a create past the limit comes back as
+   * enforce per-type quotas: a create past the limit comes back as
    * `validation_error: You have reached the maximum limit of 2 development
-   * environment(s)` — but it only says so in response to an attempt, and there
+   * environment(s)`: but it only says so in response to an attempt, and there
    * is no endpoint that reports the quota up front. Probing it would mean
    * creating a production environment to find out whether one may be created,
    * which is not a question worth answering that way. So the safe assumption
@@ -65,12 +65,12 @@ export interface UseEnvironments {
 /**
  * A token under mocks, so there is one code path and not two.
  *
- * `useEnvironmentList` is disabled without a token — correctly, since a
+ * `useEnvironmentList` is disabled without a token: correctly, since a
  * signed-out request is a guaranteed 401. Storybook, the e2e run and a plain
  * `pnpm dev` with no backend have no token and still need a shell, so they get
  * a token-shaped constant and MSW answers `GET /environments` with the real
- * response shape (see `mocks/handlers.ts`). The alternative — a `useMocks`
- * branch returning a hardcoded array — is a path the real build never runs,
+ * response shape (see `mocks/handlers.ts`). The alternative: a `useMocks`
+ * branch returning a hardcoded array: is a path the real build never runs,
  * which is how mocked code rots.
  */
 const MOCK_TOKEN = 'mock-session-token'
@@ -88,13 +88,13 @@ function toShell(environment: Environment): ShellEnvironment {
  *
  * `current` cannot be absent: the shell renders an environment in the
  * breadcrumb on every page, and the switcher's trigger needs a name. So the
- * in-flight and failed states get a labelled placeholder with an **empty id** —
+ * in-flight and failed states get a labelled placeholder with an **empty id**:
  * it names no environment, nothing can be selected into it, and it is never
  * written to the session, so no request is ever made "in" it. Fabricating a
  * plausible `Sandbox` here would be the one genuinely dangerous option: it
  * would read as a working console pointed somewhere safe.
  *
- * `kind` is `sandbox` for the same reason `toEnvironment` defaults there —
+ * `kind` is `sandbox` for the same reason `toEnvironment` defaults there:
  * only production is marked, and marking a placeholder as production would
  * teach people to ignore the mark.
  */
@@ -118,7 +118,7 @@ export function useEnvironments(): UseEnvironments {
   /*
    * The same precedence `useAuthSource` uses, deliberately: the development
    * API-key override wins over a signed-in token. It has to be the same
-   * identity — the list decides which environment id goes in `X-Environment-ID`
+   * identity: the list decides which environment id goes in `X-Environment-ID`
    * on every other request, so fetching it as a different principal than the
    * one making those requests is how you get a list of environments none of
    * them may enter.
@@ -136,7 +136,7 @@ export function useEnvironments(): UseEnvironments {
    * of the ids the server just returned.
    *
    * The first is a fresh browser, with nothing persisted. The second is the
-   * one that actually hurts — an id persisted from another tenant, or from an
+   * one that actually hurts: an id persisted from another tenant, or from an
    * environment since deleted. `X-Environment-ID` naming an environment this
    * token cannot reach makes every call 403, so the console loads, looks
    * signed in, and shows nothing anywhere. Re-defaulting is what turns that
@@ -161,7 +161,7 @@ export function useEnvironments(): UseEnvironments {
       mutate(draft, {
         onSuccess: (created) => {
           // Switching to what you just made is the only reason to have made
-          // it — but only when the response named it. A 2xx with no id still
+          // it: but only when the response named it. A 2xx with no id still
           // created something; the invalidated list will show it, and
           // switching to an id we do not have would strand the console in an
           // environment that 403s everything.
@@ -178,7 +178,7 @@ export function useEnvironments(): UseEnvironments {
    * While the list is in flight the header reads "Loading environments" and
    * the switcher's menu is empty; if the request fails it reads "Environments
    * unavailable" and stays empty. Neither is a state the rest of the console
-   * can work in — without an environment id every other call 403s — and
+   * can work in: without an environment id every other call 403s: and
    * neither pretends otherwise. The one thing not done here is telling the
    * person *why* it failed; the switcher has no room for an error, and the
    * page underneath is already showing the same failure with the room to

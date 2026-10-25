@@ -48,7 +48,7 @@ export function IntegrationMarks({ integrations }: { integrations: CustomerInteg
 }
 
 /**
- * The list column: each provider's 24px logo, side by side — a customer can be
+ * The list column: each provider's 24px logo, side by side: a customer can be
  * mapped in several. Hover (or focus) a logo for the customer's id at that
  * provider; the cell itself carries no ids, so it stays narrow.
  */

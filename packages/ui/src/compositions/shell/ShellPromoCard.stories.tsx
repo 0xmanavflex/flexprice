@@ -67,7 +67,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 
 export const Default: Story = {}
 
-/** With a call to action — the reason the card is there. */
+/** With a call to action: the reason the card is there. */
 export const WithCta: Story = {
   args: { cta: { label: 'Read the docs', onClick: fn() } },
   play: async ({ canvasElement, args }) => {

@@ -14,7 +14,7 @@ import {
  *
  * The same total, both-spellings parser the catalogue lists use: a filtered
  * list is a shareable link, and a hand-edited URL shows the first page rather
- * than an error. No `view` — a billing list is a table, so there is no layout
+ * than an error. No `view`: a billing list is a table, so there is no layout
  * to read off the URL.
  */
 const STATUSES = new Set<string>(Object.values(CustomerStatus))

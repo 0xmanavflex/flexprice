@@ -7,7 +7,7 @@ import {
   FeatureType,
 } from '@fp/domain'
 
-/** Features as plain domain values — no client, no provider, no network. */
+/** Features as plain domain values: no client, no provider, no network. */
 export const featureFixtures: Feature[] = [
   {
     id: 'feat_01',
@@ -70,7 +70,7 @@ export const featureFixtures: Feature[] = [
     updatedAt: new Date('2026-03-10T00:00:00Z'),
   },
   {
-    // Archived, no lookup key and no description — the row a hand-written demo omits.
+    // Archived, no lookup key and no description: the row a hand-written demo omits.
     id: 'feat_05',
     name: 'Retention window',
     lookupKey: '',

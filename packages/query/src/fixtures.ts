@@ -2,7 +2,7 @@
  * The mock corpus, for development and tests only.
  *
  * Exposed through the `@fp/query/fixtures` subpath rather than left for an app
- * to reach into `src/` — a deep import into another package's internals is the
+ * to reach into `src/`: a deep import into another package's internals is the
  * kind of thing that works until it doesn't.
  *
  * Import it **dynamically**, inside the branch that decides to use mocks, so it
@@ -32,7 +32,7 @@ export interface Corpus {
 /**
  * `coupons`, `priceUnits`, `entitlements` and `creditgrants` are the corpora not
  * descended from a capture: the capture environment had none, so an empty search
- * would leave those surfaces undemonstrable. Their rows are authored — but
+ * would leave those surfaces undemonstrable. Their rows are authored: but
  * authored *to shape*, every field matching `@flexprice/sdk`'s response models
  * (snake_case: a coupon's `amount_off` + `currency`; a price unit's `code` /
  * `symbol` / `base_currency` / `conversion_rate`; an entitlement's `usage_limit` /

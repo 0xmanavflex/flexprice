@@ -2,7 +2,7 @@
  * How invoices are numbered, and when they are due.
  *
  * `GET/PUT /settings/invoice_config`. One record per environment: the sandbox
- * and production number their invoices independently, which is the point —
+ * and production number their invoices independently, which is the point:
  * a test invoice must never consume a production sequence number.
  *
  * The model is total. `PUT /settings/{key}` merges at the top level, so an
@@ -19,7 +19,7 @@ import { z } from 'zod'
  * Exactly five, and the backend rejects anything else
  * (`internal/types/invoice.go`). Unlike most enums in this package these are
  * worth validating against, because a sixth value is not a deployment being
- * ahead of this console — it is a save the API will refuse.
+ * ahead of this console: it is a save the API will refuse.
  */
 export const INVOICE_NUMBER_FORMATS = ['YYYYMM', 'YYYYMMDD', 'YYMMDD', 'YY', 'YYYY'] as const
 export type InvoiceNumberFormat = (typeof INVOICE_NUMBER_FORMATS)[number]
@@ -33,7 +33,7 @@ export const INVOICE_NUMBER_FORMAT_LABEL: Record<InvoiceNumberFormat, string> = 
 }
 
 export interface InvoiceConfig {
-  /** Leading literal, e.g. `INV`. Required — the backend rejects an empty one. */
+  /** Leading literal, e.g. `INV`. Required: the backend rejects an empty one. */
   prefix: string
   /** Between the parts, e.g. `-`. Empty is explicitly valid: `INV2026090001`. */
   separator: string
@@ -50,7 +50,7 @@ export interface InvoiceConfig {
    * The zone the date segment is rendered in.
    *
    * Any IANA name (`Asia/Kolkata`), or one of the abbreviations the backend
-   * resolves (`IST`, `PST`, `CET`, …). Free text, not a dropdown — V1 renders
+   * resolves (`IST`, `PST`, `CET`, …). Free text, not a dropdown: V1 renders
    * it as an input for the same reason: there are ~600 valid answers.
    */
   timezone: string
@@ -71,7 +71,7 @@ export interface InvoiceConfig {
   /**
    * Whether buying credits settles its own transaction without a review step.
    *
-   * Absent from a default read — the backend omits it while false — so it
+   * Absent from a default read: the backend omits it while false: so it
    * arrives here as `false` and is sent on every write. Modelled rather than
    * ignored because ignoring it is how a tenant that switched it on has it
    * switched off by an unrelated save.
@@ -83,7 +83,7 @@ export interface InvoiceConfig {
  * What an invoice number will look like, without asking the server.
  *
  * Preview text for the editor. It renders a given date in the configured
- * format, and it cannot know the next sequence number — `startSequence` is the
+ * format, and it cannot know the next sequence number: `startSequence` is the
  * only one it can honestly show, so a caller should label it an example rather
  * than the next number.
  */
@@ -131,7 +131,7 @@ const wholeNumber = (label: string) =>
 /**
  * The write contract, as the backend states it.
  *
- * The bounds are not house style — they are `internal/types/invoice.go`'s own
+ * The bounds are not house style: they are `internal/types/invoice.go`'s own
  * `validate` tags. Rejecting here means a form field goes red; letting it
  * through means a 400 whose message the user cannot map to a field.
  */

@@ -50,8 +50,8 @@ type Dialog = 'void' | 'payment-status' | 'recalculate' | null
 
 /**
  * One invoice, read through `useInvoice`, with its issuer (`useTenant`),
- * payments and credit memos (filtered to this invoice). Every action — finalize,
- * record payment, recalculate, void, send, retry — runs here, outside the view.
+ * payments and credit memos (filtered to this invoice). Every action: finalize,
+ * record payment, recalculate, void, send, retry: runs here, outside the view.
  */
 export function InvoiceDetailPage({
   invoiceId,

@@ -11,7 +11,7 @@ import { PasswordResetUnavailable, requestPasswordReset } from '@/app/auth/passw
  * to the Flexprice API, so there is no cache to touch and nothing a retry on
  * focus could usefully do. Local state is the honest size of the problem.
  *
- * The confirmation never says whether the address has an account — the form
+ * The confirmation never says whether the address has an account: the form
  * component owns that wording, and the reason is that a different answer either
  * way turns this page into a way of discovering who has one.
  */

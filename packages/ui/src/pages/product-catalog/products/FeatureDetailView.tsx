@@ -33,7 +33,7 @@ import { DetailTable } from '../../shared/DetailTable'
  *
  * Charges and Entitlements were tabs of their own, each holding one table, and
  * Overview held a truncated copy of the charges plus a Usage panel that was
- * always empty — Flexprice reports no usage, customers or billed amount per
+ * always empty: Flexprice reports no usage, customers or billed amount per
  * feature, so there was never anything to draw. The redesign puts both tables
  * on Overview beside the test-event and metadata rail, which is the whole of
  * what this page can actually say, and leaves Information for the fields.
@@ -386,7 +386,7 @@ function EntitlementsSection({
 /**
  * Everything the page can actually say about a feature, on one screen.
  *
- * Left: who bills for it (Charges) and who includes it (Entitlements) — the
+ * Left: who bills for it (Charges) and who includes it (Entitlements): the
  * full tables, not a four-row preview of one of them. Right: how to send it an
  * event, and the metadata carried with the record.
  *
@@ -492,7 +492,7 @@ function TestEventPanel({ feature, apiBaseUrl }: { feature: Feature; apiBaseUrl?
  * The create form, shown read-only: **Details** then **Metering**, the same
  * cards with the same rows, labels and hints in the same order, so someone
  * who just filled the form finds each field where they left it. Editing stays
- * in one place — "Edit details" in the header's ⋯ menu opens the real form.
+ * in one place: "Edit details" in the header's ⋯ menu opens the real form.
  *
  * Ids and timestamps are not create-form fields: the header's ID chip carries
  * the id, and the right-hand rail (test event, metadata) is shared with
@@ -530,7 +530,7 @@ function InformationTab({
             value: feature.lookupKey,
             ...(feature.lookupKey ? { display: mono(feature.lookupKey) } : {}),
             placeholder: 'None',
-            hint: 'Fixed once set — integrations key off it.',
+            hint: 'Fixed once set: integrations key off it.',
             readOnly: true,
           },
           {
@@ -591,7 +591,7 @@ function InformationTab({
               hint: 'How events are combined into a usage number.',
               readOnly: true,
             },
-            // Only when the aggregation has one — the form hides it too.
+            // Only when the aggregation has one: the form hides it too.
             ...(feature.aggregationField
               ? [
                   {

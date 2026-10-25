@@ -52,7 +52,7 @@ import { queryKeys } from './keys'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
- * The webhook portal — V1's Svix integration, minus `svix-react`.
+ * The webhook portal: V1's Svix integration, minus `svix-react`.
  *
  * `GET /webhooks/dashboard` hands out a Svix app-portal token for this
  * environment's application; every hook below uses it to call Svix directly,

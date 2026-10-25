@@ -8,7 +8,7 @@ import { FitToWindow } from '../layout/FitToWindow'
  *
  * `DataGridPagination` already reads the table instance for the rows-per-page
  * select, the "1 – 22 of 64" range and the numbered pages, so none of that is
- * restated here — restating it is how a footer starts disagreeing with the
+ * restated here: restating it is how a footer starts disagreeing with the
  * table above it. This adds the one control the registry does not ship, and
  * puts it on the opposite end.
  *

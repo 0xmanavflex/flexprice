@@ -25,8 +25,8 @@ export interface CatalogDetailFrameProps {
   /** Accessible name of the More button. */
   menuLabel: string
   /**
-   * Every header action — Edit, state changes such as Activate, Archive or
-   * Delete — in display order. The header has no inline buttons.
+   * Every header action: Edit, state changes such as Activate, Archive or
+   * Delete: in display order. The header has no inline buttons.
    */
   menu?: CatalogMenuItem[]
   tabs: DetailTabSpec[]

@@ -18,7 +18,7 @@ import { sortWithTieBreak } from './listSort'
  *
  * Reached through `POST /addons/search` (`client.addons.queryAddon`), the same
  * search shape features and plans use. The add-on shares a plan's charges and
- * entitlements, but the list needs only the name/status shell — the rest is the
+ * entitlements, but the list needs only the name/status shell: the rest is the
  * editor's concern.
  */
 
@@ -128,7 +128,7 @@ export function useAddons(query: AddonQuery) {
 /**
  * Create and edit share the details draft; the wire splits them.
  *
- * Create requires the lookup key; update does not accept one — an integration
+ * Create requires the lookup key; update does not accept one: an integration
  * keys off it, so it is fixed once set. Empty optional fields are dropped rather
  * than sent as `""`, which is a different value to the API than absent.
  */
@@ -192,7 +192,7 @@ export function useAddon(id: string) {
   })
 }
 
-/** Delete — `DELETE` by id. Takes the record id. */
+/** Delete: `DELETE` by id. Takes the record id. */
 export function useDeleteAddon() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -208,7 +208,7 @@ export function useDeleteAddon() {
 }
 
 /**
- * Push an add-on's current prices to the contracts that carry it — the same
+ * Push an add-on's current prices to the contracts that carry it: the same
  * reconciling workflow plans have. It returns a workflow handle; the sync
  * completes asynchronously.
  */

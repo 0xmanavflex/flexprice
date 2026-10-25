@@ -57,17 +57,17 @@ import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
  * ## Every hook here takes an environment id
  *
  * These records are per environment, and the route refuses to answer without
- * `X-Environment-ID` — 403, not an empty result. The id is a parameter rather
+ * `X-Environment-ID`: 403, not an empty result. The id is a parameter rather
  * than something read from context for two reasons. It is the same shape as
  * `useCurrentUser(token)`: the session holds it, and the hooks that need it
  * say so. And it is what the query key is built from, so passing it explicitly
- * makes the key and the request header provably the same value — a hook that
+ * makes the key and the request header provably the same value: a hook that
  * keyed on one environment and fetched another would file the new
  * environment's settings under the old one's key during a switch, which is a
  * cache poisoning nobody would find.
  *
  * `null` means "no environment yet" and disables the query. No request, no
- * error, no spinner — the state a console is in for the first moment after
+ * error, no spinner: the state a console is in for the first moment after
  * sign-in.
  *
  * The **token** is not a parameter, because a token in a hook signature is a
@@ -78,7 +78,7 @@ import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
  *
  * A read always succeeds with something renderable: a key that has never been
  * written answers 200 with the backend's defaults. A write sends the whole
- * value — `PUT` merges the top level and nothing below it, so a partial
+ * value: `PUT` merges the top level and nothing below it, so a partial
  * `sections` array is a deletion, not an edit. A reset deletes the stored row
  * and reads back what the server then says the defaults are, which is the only
  * definition of "defaults" that cannot drift from the server's.
@@ -402,7 +402,7 @@ function toOnboardingAction(value: unknown): OnboardingActionConfig {
         action: OnboardingAction.CreateSubscription,
         planId: str(wire, 'plan_id'),
         billingCycle: cycle === 'anniversary' || cycle === 'calendar' ? cycle : null,
-        // Kept as the string the API sent — see the note on `instant` in the
+        // Kept as the string the API sent: see the note on `instant` in the
         // domain model. A `Date` round-trip would move a local midnight.
         startDate: typeof wire['start_date'] === 'string' ? wire['start_date'] : null,
       }
@@ -649,13 +649,13 @@ function useSettingQuery<T>(
  * The mutation writes the API's own response into the cache and then marks the
  * entry stale **without refetching**. That is deliberate, and it is the
  * strangest thing in this file, so: a GET issued immediately after a PUT can
- * be served by a replica that has not seen the write. Verified live — a PUT
+ * be served by a replica that has not seen the write. Verified live: a PUT
  * setting `grace_period_days` to 4 was followed by a GET answering 3, and the
  * next second by one answering 4. An invalidation that refetches at once
  * therefore has a real chance of replacing a correct value with the one the
  * user just changed, which reads as "my save did not take".
  *
- * So the response — which cannot be stale, it *is* the write — becomes the
+ * So the response: which cannot be stale, it *is* the write: becomes the
  * cache contents, and `refetchType: 'none'` leaves the entry stale so the next
  * mount or manual refresh fetches it again, by which time the replicas agree.
  */
@@ -694,7 +694,7 @@ function useSettingUpdate<T>(
  * Puts a setting back to the backend's defaults.
  *
  * Delete, then read. Deleting removes the stored row; the read is what says
- * what the defaults now are — asking the server beats keeping a copy of its
+ * what the defaults now are: asking the server beats keeping a copy of its
  * defaults here, which would be a second source of truth that drifts the first
  * time a default changes.
  *
@@ -795,7 +795,7 @@ export function useResetCustomCurrencyConfig(
  * What a customer sees in their own portal.
  *
  * The whole tree, not a projection of it. A panel edits it with the `with…`
- * helpers in `@fp/domain` and passes the result back whole — see the header of
+ * helpers in `@fp/domain` and passes the result back whole: see the header of
  * `customerPortalConfig.ts` for what happens to a portal saved from a
  * partially-modelled copy.
  */
@@ -839,7 +839,7 @@ export function useResetCustomerOnboarding(
 /**
  * When a low wallet balance raises an alarm, tenant-wide.
  *
- * Not `useAlertSettings` — that is `/alerts/setting`, which holds per-entity
+ * Not `useAlertSettings`: that is `/alerts/setting`, which holds per-entity
  * records with their own ids. See the header of `walletAlertConfig.ts`.
  */
 export function useWalletAlertConfig(
@@ -863,7 +863,7 @@ export function useResetWalletAlertConfig(
 /**
  * SAML single sign-on, and whether this deployment has any.
  *
- * **Any read failure means unavailable — not just a 404.** This is the one
+ * **Any read failure means unavailable: not just a 404.** This is the one
  * rule in this file that looks like sloppiness and is not, so it is worth
  * stating plainly: a 500, a timeout, a CORS failure and a 403 all resolve to
  * `{available: false}`, exactly as a 404 does. The hosted deployment answers
@@ -872,7 +872,7 @@ export function useResetWalletAlertConfig(
  * `auth.saml.enabled` is set.
  *
  * The reason is what a failed read would otherwise let a user do. If a 500
- * rendered the SSO form with its defaults — SSO off, no IdP, no certificate —
+ * rendered the SSO form with its defaults: SSO off, no IdP, no certificate:
  * the screen would be indistinguishable from a tenant that has never
  * configured SSO, and the obvious next action, pressing Save, would overwrite
  * a **live, working** SAML configuration with empty strings and lock every

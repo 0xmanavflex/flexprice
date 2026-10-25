@@ -1,7 +1,7 @@
 /**
  * Where a settings query is, in terms a panel can branch on.
  *
- *   `ready`    data is on screen — always wins over a spinner or an error
+ *   `ready`    data is on screen: always wins over a spinner or an error
  *   `loading`  a request is actually running (or paused offline and will resume)
  *   `idle`     nothing is running and nothing will: the query is disabled
  *

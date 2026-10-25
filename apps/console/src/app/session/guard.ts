@@ -5,9 +5,9 @@ import { readSession } from './storage'
  * Whether the console should insist on a sign-in, asked outside React.
  *
  * The route guard runs in TanStack's `beforeLoad`, which is not a component and
- * has no access to context. That is the right place for it — a guard that runs
+ * has no access to context. That is the right place for it: a guard that runs
  * during render has already mounted the shell, so a signed-out visitor sees the
- * sidebar flash before being redirected — and it works here only because the
+ * sidebar flash before being redirected: and it works here only because the
  * session is in `localStorage`, which is synchronous. `readSession()` and the
  * provider's initial state are the same read, so the two never disagree.
  *
@@ -39,7 +39,7 @@ export function needsSignIn(): boolean {
  *
  * Deliberately not `!needsSignIn()`. The two differ exactly in the bypass
  * cases, and that difference is the point: under mocks nobody is signed in,
- * they simply do not need to be, so `/sign-in` should still *render* — it is a
+ * they simply do not need to be, so `/sign-in` should still *render*: it is a
  * surface the fixture-backed end-to-end suite and Storybook have to be able to
  * reach. Only an actual session makes the page pointless, which is what this
  * answers.

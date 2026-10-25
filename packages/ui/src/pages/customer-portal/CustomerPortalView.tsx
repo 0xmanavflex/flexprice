@@ -20,7 +20,7 @@ import type { CustomerPortalViewProps } from './types'
 
 /**
  * The customer portal: what a merchant's customer sees behind their portal
- * link — Overview, Usage, Credits and Invoices, with paying, buying credits,
+ * link: Overview, Usage, Credits and Invoices, with paying, buying credits,
  * auto top-up and saving cards. Presentational: the app passes data and
  * actions; this holds only which dialog is open.
  */

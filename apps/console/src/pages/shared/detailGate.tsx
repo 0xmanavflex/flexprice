@@ -20,7 +20,7 @@ export interface DetailGateOptions {
   onBack: () => void
   /**
    * The record's API path, e.g. `/invoices/inv_1`. On a 404 the record is
-   * looked for in the person's other environments before "not found" — a
+   * looked for in the person's other environments before "not found": a
    * shared link names the record, not its environment.
    */
   recordPath?: string

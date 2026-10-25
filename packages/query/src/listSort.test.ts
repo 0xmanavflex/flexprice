@@ -16,7 +16,7 @@ describe('sortWithTieBreak', () => {
     ])
   })
 
-  it('leaves a sort by id alone — it is already a total order', () => {
+  it('leaves a sort by id alone: it is already a total order', () => {
     expect(sortWithTieBreak('id', 'asc')).toEqual([{ field: 'id', direction: 'asc' }])
   })
 })

@@ -21,7 +21,7 @@ export interface SupportChatVisibilityHandlers {
 export interface SupportChatAdapter {
   /** Load the SDK and identify the user. Rejects if the SDK cannot load or config is invalid. */
   init(user: SupportChatUser): Promise<void>
-  /** Open the messenger. Never throws — a no-op if init failed or has not completed. */
+  /** Open the messenger. Never throws: a no-op if init failed or has not completed. */
   show(): void
   /** Register visibility handlers. The returned function removes them. */
   subscribe(handlers: SupportChatVisibilityHandlers): () => void

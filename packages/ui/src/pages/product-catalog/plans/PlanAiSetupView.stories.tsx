@@ -142,7 +142,7 @@ export const Drafting: Story = {
 
 /**
  * The review. Nothing has been created at this point, which is the whole
- * reason this screen exists — a model reading a pricing page will sometimes
+ * reason this screen exists: a model reading a pricing page will sometimes
  * invent a tier, and the cost of finding out afterwards is a catalogue
  * someone unpicks by hand.
  */

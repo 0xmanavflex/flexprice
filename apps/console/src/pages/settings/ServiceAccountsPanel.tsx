@@ -38,14 +38,14 @@ import { useDraft } from './useDraft'
 const SERVICE_ACCOUNT_DOCS_URL = 'https://docs.flexprice.io/docs/rbac/service-accounts/create'
 
 /**
- * Service accounts — the identities that are not people. Lives under
+ * Service accounts: the identities that are not people. Lives under
  * Developers (`/service-accounts`).
  *
  * The same `/users` endpoints as Team, discriminated by `type`, which is why
  * the two tables look alike. They differ in three ways that matter and are
  * reflected here: a service account has no email (the field is always empty on
  * the wire, so there is no column for it), it is *renamed* rather than having
- * its profile edited, and at least one role is required at creation — a
+ * its profile edited, and at least one role is required at creation: a
  * machine identity with no permissions can authenticate and then do nothing,
  * which is a confusing way to fail.
  *

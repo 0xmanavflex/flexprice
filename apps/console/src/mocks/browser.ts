@@ -15,5 +15,5 @@ export async function startMocks(): Promise<void> {
     onUnhandledRequest: 'warn',
     serviceWorker: { url: '/mockServiceWorker.js' },
   })
-  console.info('[mocks] serving the captured corpus — no requests reach a real backend')
+  console.info('[mocks] serving the captured corpus: no requests reach a real backend')
 }

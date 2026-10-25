@@ -103,7 +103,7 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
     a11y: {
-      // Base UI's portal focus guards — see AppShell.stories.tsx.
+      // Base UI's portal focus guards: see AppShell.stories.tsx.
       config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
     },
   },
@@ -158,8 +158,8 @@ export const Playground: Story = {}
 /**
  * Information is the create form, read-only.
  *
- * It was three idioms for one thing — a small editable card, an
- * "Event and aggregation" panel and a box of ids — in an order that matched
+ * It was three idioms for one thing: a small editable card, an
+ * "Event and aggregation" panel and a box of ids: in an order that matched
  * nothing anyone had just filled in. It is the form's own shape now, so this
  * asserts the form's card titles rather than the old panel's name.
  */
@@ -190,7 +190,7 @@ export const Overview: Story = {
   args: { tab: 'overview', chargeCount: 8, entitlementCount: 8 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // Both tables on one tab, beside the rail — this is the whole page.
+    // Both tables on one tab, beside the rail: this is the whole page.
     await expect(
       canvas.getByText('Every plan and add-on that bills for this feature'),
     ).toBeInTheDocument()
@@ -291,7 +291,7 @@ export const ManyRows: Story = {
 /**
  * A boolean feature has no meter, so nothing prices it and there is no event
  * to send. Overview is its entitlements and its metadata, and the tabs are
- * still the same two — the page no longer rearranges itself by type.
+ * still the same two: the page no longer rearranges itself by type.
  */
 export const BooleanFeature: Story = {
   args: { featureType: FeatureType.Boolean, tab: 'overview', entitlementCount: 4 },

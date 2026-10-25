@@ -8,7 +8,7 @@ import { provenance } from '@ui/provenance'
  * A console panel: a soft outer tray, a title row, and a white inner surface.
  *
  * The tray is what makes a dashboard read as one grid of related things instead
- * of a heap of boxes — the title and its one-line description sit on the tray,
+ * of a heap of boxes: the title and its one-line description sit on the tray,
  * the content sits on the page-coloured surface inside it. Charts, meters and
  * usage lists all land in the inner surface, so give them their own padding.
  */
@@ -24,7 +24,7 @@ export interface PanelProps {
   hint?: string | undefined
   /** One quiet line under the title. */
   description?: string | undefined
-  /** Top-right of the title row — a link or a button. */
+  /** Top-right of the title row: a link or a button. */
   action?: ReactNode
   className?: string | undefined
   children: ReactNode

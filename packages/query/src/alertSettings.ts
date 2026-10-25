@@ -26,7 +26,7 @@ import { useFlexprice } from './provider'
  * with their own ids. A screen that edits one believing it is editing the other
  * changes nothing the user expects and silently leaves the real setting alone.
  *
- * The update route takes **only** `config` — the watched entity is fixed at
+ * The update route takes **only** `config`: the watched entity is fixed at
  * creation, so `toUpdateAlertSettingRequest` has no `entityId` to send and an
  * editor must not offer to repoint an alert.
  */
@@ -64,7 +64,7 @@ const ALERT_THRESHOLD_TYPES = new Set<string>(Object.values(AlertThresholdType))
 /**
  * One severity's threshold, or null when it is not configured.
  *
- * A threshold object with no number in it is not a threshold — the API can send
+ * A threshold object with no number in it is not a threshold: the API can send
  * `{}` for a severity that was never set, and treating that as `"0"` would
  * render an alert that appears to fire at zero.
  */
@@ -133,7 +133,7 @@ export function toAlertSetting(wire: AlertSettingWire): AlertSetting {
  * Domain query out, `AlertSettingsFilter` in.
  *
  * `entityType`, `entityId` and `enabled` are declared on the filter model and
- * remapped to `entity_type`, `entity_id`, `enabled` by the SDK — so they are
+ * remapped to `entity_type`, `entity_id`, `enabled` by the SDK: so they are
  * written camelCase here. `enabled` is sent only when the query takes a side:
  * `false` is a real filter value, so the null check is `!== null`, not falsy.
  */
@@ -215,7 +215,7 @@ export function toAlertConfigRequest(config: AlertSettingConfig): Record<string,
  * The create request.
  *
  * `parentEntityId` is required when the watched entity is a line item or a
- * group — it names the subscription that owns it — and must be absent for a
+ * group: it names the subscription that owns it: and must be absent for a
  * subscription-level alert, so it is spread in rather than sent empty.
  */
 export function toCreateAlertSettingRequest(draft: CreateAlertSetting): Record<string, unknown> {
@@ -228,7 +228,7 @@ export function toCreateAlertSettingRequest(draft: CreateAlertSetting): Record<s
   }
 }
 
-/** The update request. Only `config` — the watched entity cannot be changed. */
+/** The update request. Only `config`: the watched entity cannot be changed. */
 export function toUpdateAlertSettingRequest(config: AlertSettingConfig): Record<string, unknown> {
   return { config: toAlertConfigRequest(config) }
 }

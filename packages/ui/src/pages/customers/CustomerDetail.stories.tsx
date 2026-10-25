@@ -168,7 +168,7 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
     a11y: {
-      // Base UI's portal focus guards — see AppShell.stories.tsx.
+      // Base UI's portal focus guards: see AppShell.stories.tsx.
       config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
     },
   },
@@ -396,7 +396,7 @@ export const NoSampleEventsWithoutHandler: Story = {
 
 /**
  * The header shows the ids and email as copy chips, never as text under the
- * name. The external id leads — it is what the customer's systems use — and
+ * name. The external id leads: it is what the customer's systems use: and
  * the internal id has its own chip beside it.
  */
 export const HeaderCopyChips: Story = {
@@ -441,7 +441,7 @@ export const HeaderEditInPlace: Story = {
   },
 }
 
-/** A customer with nothing on them yet — every section states what will appear. */
+/** A customer with nothing on them yet: every section states what will appear. */
 export const Empty: Story = {
   args: { subscriptions: [], invoices: [] },
   play: async ({ canvasElement }) => {

@@ -36,11 +36,11 @@ import type {
 } from '@fp/ui/pages'
 
 /**
- * Home — the console overview, wired to what the API can actually answer.
+ * Home: the console overview, wired to what the API can actually answer.
  *
  * This file is where the honesty of the surface is decided. `DashboardHome` is
  * presentational; it renders whatever panel status it is handed. Choosing that
- * status — ready, empty, or unavailable — is this component's whole job, and
+ * status: ready, empty, or unavailable: is this component's whole job, and
  * the rule it follows is that a number reaches the screen only if a request
  * returned it.
  *
@@ -105,7 +105,7 @@ const pickedDay = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
 })
 
-/** Midnight UTC `daysAgo` days back — the boundary every window is cut on. */
+/** Midnight UTC `daysAgo` days back: the boundary every window is cut on. */
 function dayStart(daysAgo: number): Date {
   const date = new Date(Date.now() - daysAgo * DAY_MS)
   date.setUTCHours(0, 0, 0, 0)
@@ -125,7 +125,7 @@ const dayLabel = new Intl.DateTimeFormat(undefined, {
 /*
  * The subscription matrix's axis, which carries the day alone.
  *
- * Its columns are narrow — seven of them share the half-width panel — and
+ * Its columns are narrow: seven of them share the half-width panel: and
  * "24 Sep" under each one either wraps or ellipses. The month is already in
  * the panel's own description ("New in the last 7 days"), so repeating it
  * seven times spends the only horizontal room the axis has on the one part
@@ -161,7 +161,7 @@ function bucketLabel(start: Date, last: Date): string {
  * Percentage change between two windows, or `null` when there is nothing to
  * compare against.
  *
- * Growth from zero is not a percentage — it is "the first one" — and printing
+ * Growth from zero is not a percentage: it is "the first one": and printing
  * `+100%` or `+∞%` for it is the kind of confident nonsense this surface exists
  * to avoid.
  */
@@ -222,7 +222,7 @@ export function HomePage() {
 
   /*
    * Newest first, so once a row falls before the window every row after it is
-   * older still — which makes the new-customer count exact, unless the whole
+   * older still: which makes the new-customer count exact, unless the whole
    * page is inside the window, in which case the panel says the figure is a floor.
    */
   const customers = useCustomers({
@@ -248,7 +248,7 @@ export function HomePage() {
   /*
    * A page large enough that every row inside the window is on it. Sorted
    * newest-first by the server, so once the rows fall out of the window the
-   * rest are older still — which is what makes counting them here exact rather
+   * rest are older still: which is what makes counting them here exact rather
    * than a sample. When the page is full and still inside the window, the
    * panel says so (`basedOn`) instead of presenting a floor as a total.
    */
@@ -269,7 +269,7 @@ export function HomePage() {
 
   /*
    * Revenue: the report library's `invoice_total` (finalized invoices by
-   * finalization date), as on Reports — the total and its change against the
+   * finalization date), as on Reports: the total and its change against the
    * window before, by day for the chart, and by customer for the leaders.
    * Every currency first, to find the one billed most; then that one.
    */
@@ -498,7 +498,7 @@ function toRevenuePanel(
 /**
  * The report's days as chart points: one per UTC day of the window (a quiet
  * day is a zero, not a gap), or one per week under the weekly granularity.
- * Hourly reads as daily — an invoice total has no meaningful hour.
+ * Hourly reads as daily: an invoice total has no meaningful hour.
  */
 function revenuePoints(
   days: { bucket: Date; value: number }[],
@@ -525,8 +525,8 @@ function revenuePoints(
 
 /**
  * Change between two priced subtotals. Only comparable in one currency, and
- * the server's two decimal strings are compared as a ratio — never summed or
- * displayed — so the browser does no money arithmetic.
+ * the server's two decimal strings are compared as a ratio: never summed or
+ * displayed: so the browser does no money arithmetic.
  */
 function revenueChange(current: Money | null, prior: Money | null): number | null {
   if (current === null || prior === null || current.currency !== prior.currency) return null
@@ -665,7 +665,7 @@ function toSubscriptionsPanel(
    *
    * A day per column only while the window is short enough for it. `PillColumns`
    * draws a countable stack of segments per column, which is a low-cardinality
-   * mark by design — ninety of them would be slivers, and the gaps alone would
+   * mark by design: ninety of them would be slivers, and the gaps alone would
    * be wider than the panel. So a long window is bucketed rather than
    * truncated: every subscription inside it is still counted, in a column that
    * spans several days and says so on the axis.
@@ -713,7 +713,7 @@ function toInvoicesPanel(
   if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
 
   const window = windows.current
-  // Issued inside the window — "finalized in the last 7 days", in the domain's
+  // Issued inside the window: "finalized in the last 7 days", in the domain's
   // vocabulary. A draft has no issue date and is not finalized, so it is out.
   const issued = page.invoices.filter(
     (row) => row.issuedAt !== null && row.issuedAt >= window.start && row.issuedAt < window.end,

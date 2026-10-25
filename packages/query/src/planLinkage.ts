@@ -11,14 +11,14 @@ import { LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
  * What a plan contains, beyond the charges the row already carries.
  *
  * The plan itself answers none of this, so it is read for the rows on screen
- * and no more. Three reads, chosen by what each route can actually filter —
+ * and no more. Three reads, chosen by what each route can actually filter:
  * every one of these was checked against the live API rather than inferred
  * from the SDK's types, which describe less than the routes accept:
  *
  *   - one `POST /entitlements/search` over the visible plan ids
  *     (`entityType: PLAN`, `entityIds`), each result naming its plan;
  *   - one `GET /creditgrants?plan_ids=…` over the same ids. The SDK has no
- *     list method, so this goes through `@fp/api` (`creditGrants.ts`) — worth
+ *     list method, so this goes through `@fp/api` (`creditGrants.ts`): worth
  *     it, because the alternative is one request per row;
  *   - one `limit: 1` subscription count **per plan**, read for its
  *     `pagination.total`. `POST /subscriptions/search` filters on a single
@@ -29,7 +29,7 @@ import { LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
  *     the features grid uses, so a plan counted for one grid is not counted
  *     again for the other.
  *
- * A count that could not be read is `undefined`, not zero — "we could not find
+ * A count that could not be read is `undefined`, not zero: "we could not find
  * out" and "there are none" must not render the same.
  */
 export interface PlanLinkage {

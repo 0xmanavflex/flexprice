@@ -28,8 +28,8 @@ export interface FormPreviewProps {
   title: string
   /**
    * `rail` is the left-ruled column a form sits beside; `card` is a boxed
-   * panel. A form rail should not look like a card — it is part of the form,
-   * not a thing on the page — but a saved plan's preview is a pricing card
+   * panel. A form rail should not look like a card: it is part of the form,
+   * not a thing on the page: but a saved plan's preview is a pricing card
    * and the redesign asks for it to read as one.
    */
   variant?: 'rail' | 'card'
@@ -108,7 +108,7 @@ export function PreviewAmount({
 /**
  * A titled group: `PreviewRows` for label/value pairs, or any text.
  *
- * `jumpTo` turns the title into a link to the element with that id — the
+ * `jumpTo` turns the title into a link to the element with that id: the
  * preview summarises tables further down the page, and the title is the
  * obvious way to get to the one you are reading about.
  */

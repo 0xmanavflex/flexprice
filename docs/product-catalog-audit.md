@@ -39,27 +39,27 @@ hidden ones are the three that decide what a customer pays.
 
 ## 2. Features
 
-### 2.1 The list — `Features.tsx` (353 lines)
+### 2.1 The list: `Features.tsx` (353 lines)
 
 Columns: Feature name · Group · Type · Status · Updated at · row menu.
 Filters: name, created-at, status (published/archived), type, group.
 Sorts: name, created-at, updated-at.
-Row menu: **Edit** — which opens a drawer, not the page the feature was created on.
+Row menu: **Edit**: which opens a drawer, not the page the feature was created on.
 
-### 2.2 Creating one — `AddFeature.tsx` (1,106 lines, the second-largest file in V1)
+### 2.2 Creating one: `AddFeature.tsx` (1,106 lines, the second-largest file in V1)
 
 A full page, two columns. Left: three stacked cards. Right: a live cURL preview
 of the event you would send.
 
-**Card 1 — Feature details**
+**Card 1: Feature details**
 
 - **Name.** Typing it silently derives `lookup_key` as `feat-<slug>` *and* sets
   the meter's name. One keystroke writes three fields.
 - **Type.** Four options, each with a one-line description and an icon:
-  - `METERED` — "varying usage that needs to be measured, i.e. API calls, LLM tokens"
-  - `BOOLEAN` — "customers can either have access or not, i.e. SSO"
-  - `STATIC` — "can be configured per customer, i.e. log retention period"
-  - `CONFIG` — "structured key-value configuration, i.e. feature flags, limits map"
+  - `METERED`: "varying usage that needs to be measured, i.e. API calls, LLM tokens"
+  - `BOOLEAN`: "customers can either have access or not, i.e. SSO"
+  - `STATIC`: "can be configured per customer, i.e. log retention period"
+  - `CONFIG`: "structured key-value configuration, i.e. feature flags, limits map"
 - Then a row of **`+` chips**: Lookup key · Unit name · Display unit name (metered
   only) · Feature description · Add group.
 
@@ -68,31 +68,31 @@ of the event you would send.
   appeared. The controls physically move as you use them. The branching is
   spelled out in a nested conditional roughly 120 lines long.
 
-**Card 2 — Event details** *(metered only)*
+**Card 2: Event details** *(metered only)*
 
-- **Event name** — the string your code sends.
-- **Event filters** — optional key / values pairs, behind another `+` chip.
+- **Event name**: the string your code sends.
+- **Event filters**: optional key / values pairs, behind another `+` chip.
 
-**Card 3 — Aggregation** *(metered only)*
+**Card 3: Aggregation** *(metered only)*
 
 - **Aggregation type**, eight options: `SUM`, `COUNT`, `COUNT_UNIQUE`,
   `SUM_WITH_MULTIPLIER`, `LATEST`, `MAX`, `WEIGHTED_SUM`, `AVG`.
-- Then **either** an *Aggregation field* **or** a *Custom expression* — a toggle
+- Then **either** an *Aggregation field* **or** a *Custom expression*: a toggle
   enforcing XOR by clearing whichever side is hidden. The expression is **CEL**.
   Only `SUM`, `AVG`, `MAX`, `LATEST` accept one; switching to another type
   silently drops what you wrote.
-- **Multiplier** — required and must be > 0 when the type is `SUM_WITH_MULTIPLIER`.
+- **Multiplier**: required and must be > 0 when the type is `SUM_WITH_MULTIPLIER`.
 - **Group by** and **bucket size**, behind further chips.
 
 **Validation runs in three independent places:**
 
-1. `validateFeature` — a Zod schema (`FEATURE_SCHEMA`).
-2. `validateMeter` — a hand-written function with its own error map.
-3. `isCtaDisabled` — a third `useMemo` re-deriving readiness from scratch.
+1. `validateFeature`: a Zod schema (`FEATURE_SCHEMA`).
+2. `validateMeter`: a hand-written function with its own error map.
+3. `isCtaDisabled`: a third `useMemo` re-deriving readiness from scratch.
 
 Three answers to "is this ready to save", maintained separately.
 
-### 2.3 Editing one — `FeatureDrawer.tsx`
+### 2.3 Editing one: `FeatureDrawer.tsx`
 
 A drawer with **six fields**: name, description, group, unit singular, unit
 plural, display unit singular/plural, conversion factor.
@@ -100,7 +100,7 @@ plural, display unit singular/plural, conversion factor.
 **Type, event name, aggregation and filters are not editable.** Everything
 decided on the hard screen is permanent, and nothing on that screen says so.
 
-### 2.4 The detail page — `FeatureDetails.tsx` (558 lines)
+### 2.4 The detail page: `FeatureDetails.tsx` (558 lines)
 
 Linked entitlements (Plan/Addon · Billing timing · Billing period · Value),
 a Charges card, an "Ingest an event" action, and Alert Settings.
@@ -109,11 +109,11 @@ a Charges card, an "Ingest an event" action, and Alert Settings.
 
 ## 3. Plans
 
-### 3.1 The list — `Plans.tsx`
+### 3.1 The list: `Plans.tsx`
 
 Columns: Name · Status · Updated at. Row menu: Edit · Duplicate · Archive · Copy ID.
 
-### 3.2 Creating one — `PlanDrawer.tsx`
+### 3.2 Creating one: `PlanDrawer.tsx`
 
 A drawer with **four fields**: plan name, lookup key, description, metadata.
 
@@ -121,14 +121,14 @@ On success it navigates to the plan's detail page. **The plan now exists and
 charges nothing.** Nothing in the flow says so, and nothing takes you to the
 next step.
 
-### 3.3 Adding the prices — `EntityChargesPage.tsx`
+### 3.3 Adding the prices: `EntityChargesPage.tsx`
 
 A **separate page** at `/product-catalog/plans/:planId/add-charges`, reached by
 a `+ Add charge` button on a card inside the Overview tab. It is permissioned
-on `price`, not `plan` — so a user can create a plan and then be refused the
+on `price`, not `plan`: so a user can create a plan and then be refused the
 ability to price it.
 
-You first pick a pricing model — **Fixed charges** or **Usage charges** — then
+You first pick a pricing model: **Fixed charges** or **Usage charges**: then
 fill in per-charge forms:
 
 *Fixed* (`RecurringChargesForm`, 660 lines): amount, currency, billing period,
@@ -140,28 +140,28 @@ group · advance/arrear · start date.
 
 Billing models: **Flat Fee · Package · Volume Tiered · Slab Tiered ·
 Percentage Fee**. Volume vs Slab is the difference between "your whole usage is
-priced at the tier you land in" and "each tier is priced separately" — a
+priced at the tier you land in" and "each tier is priced separately": a
 distinction worth real money, offered as two adjacent words with no illustration.
 
-### 3.4 The detail page — four tabs
+### 3.4 The detail page: four tabs
 
 `Overview` · `Entitlements` · `Credit Grants` · `Information`.
 
-Entitlements are added from **a drawer on the Entitlements tab** — the third
+Entitlements are added from **a drawer on the Entitlements tab**: the third
 surface on which a plan gets configured.
 
 ### 3.5 Where a plan is configured, counted
 
-1. `PlanDrawer` — name and key
-2. `EntityChargesPage` — prices (a different page)
-3. `AddEntitlementDrawer` — entitlements (a drawer on a tab)
-4. `PlanCreditGrantsTab` — credit grants (another tab)
+1. `PlanDrawer`: name and key
+2. `EntityChargesPage`: prices (a different page)
+3. `AddEntitlementDrawer`: entitlements (a drawer on a tab)
+4. `PlanCreditGrantsTab`: credit grants (another tab)
 
 **Four containers for one object.**
 
 ---
 
-## 4. Addons, Cost Sheets — the same machine under three names
+## 4. Addons, Cost Sheets: the same machine under three names
 
 | | Plan | Addon | Cost Sheet |
 |---|---|---|---|
@@ -174,25 +174,25 @@ charges component. They are three nav items, three list pages, three drawers and
 three detail pages.
 
 The one real difference is **direction of money**: a cost sheet records what
-usage *costs you*, so margin is visible. Nothing in the UI says that — it reads
+usage *costs you*, so margin is visible. Nothing in the UI says that: it reads
 as a third kind of plan.
 
 ---
 
 ## 5. Coupons, Price Units, Groups
 
-**Coupons** — list: name · type · discount · redemptions · status · updated.
+**Coupons**: list: name · type · discount · redemptions · status · updated.
 Drawer for create and edit. The model carries `type` (fixed | percentage),
 `cadence` (once | repeated | forever), `duration_in_periods`, `currency`,
 `coupon_code`, `redeem_after` / `redeem_before`, `max_redemptions`, and a free-form
 `rules` object. Cadence × duration is a genuine product decision presented as two
 unrelated fields.
 
-**Price Units** — name · code · symbol · base currency · conversion rate. This is
+**Price Units**: name · code · symbol · base currency · conversion rate. This is
 how you bill in credits or tokens instead of dollars. It is item 6 of 7 and
 means nothing until a price references it.
 
-**Groups** — name · type (`price` | `feature`) · status. A tag over a set of
+**Groups**: name · type (`price` | `feature`) · status. A tag over a set of
 features or prices. Item 7, and meaningless until items 1 and 2 exist.
 
 ---
@@ -207,7 +207,7 @@ Ordered by how much it costs a finance person.
 
 2. **The hardest screen in the product is the first one you meet.** Eight
    aggregation types, a CEL expression toggle, a multiplier, bucket size and
-   group-by — before you have priced anything. Nobody can choose between `SUM`
+   group-by: before you have priced anything. Nobody can choose between `SUM`
    and `SUM_WITH_MULTIPLIER` from the descriptions given.
 
 3. **The irreversible decision is unmarked.** Type and meter are create-only;
@@ -237,17 +237,17 @@ Ordered by how much it costs a finance person.
 
 ## 7. Directions for V2
 
-Five options. They are not mutually exclusive — E is a prerequisite for all of
-them — but A through D are genuinely different products.
+Five options. They are not mutually exclusive: E is a prerequisite for all of
+them: but A through D are genuinely different products.
 
-### A. The Pricing Workbench — one object, one screen
+### A. The Pricing Workbench: one object, one screen
 
 One screen per plan: details, charges, entitlements and a **live bill preview**,
 all visible together. Kill the separate charges page, the entitlements drawer
 and the credit-grants tab.
 
 *The claim:* the four-container problem and the no-money problem are the same
-problem — configuration is spread out, so nothing can show the total.
+problem: configuration is spread out, so nothing can show the total.
 
 **ReUI:** `wizard-4` (its live-invoice-preview sidebar recalculates as you edit
 — the exact pattern) · `form-3` (editable line-items table with live
@@ -257,7 +257,7 @@ subtotal/tax/total) · `data-grid-expansion-3` (a charge expands into its tiers)
 *Cost:* the heaviest build. *Payoff:* the only option that makes price and
 outcome visible at the same time.
 
-### B. Outcome-first — start from the bill, work backwards
+### B. Outcome-first: start from the bill, work backwards
 
 The front door is not a list of entities. It is **"what should a customer pay?"**
 You describe the bill; features and meters get created on demand as you name
@@ -273,13 +273,13 @@ line-item builder · `wizard-1` (3 steps, per-step validation, review summary) �
 *Cost:* medium. *Risk:* fights the API's object model; needs care so that what
 gets created is still editable afterwards.
 
-### C. Two doors — Simple and Advanced
+### C. Two doors: Simple and Advanced
 
 Accept that there are two users. **Simple** is a three-step guided flow covering
 the 80% case (flat fee, per-unit, tiered). **Advanced** is today's full surface,
 one click away, unchanged.
 
-*The claim:* the current screen is not too complex for its job — it is too
+*The claim:* the current screen is not too complex for its job: it is too
 complex for *most* jobs.
 
 **ReUI:** `wizard-1` for Simple · existing forms for Advanced · a `Tabs` or
@@ -288,7 +288,7 @@ segmented control to switch · `@reui/alert` to explain what Advanced adds.
 *Cost:* lowest. *Risk:* two code paths for one object, forever. Worth it only if
 Simple genuinely covers most cases.
 
-### D. Recipes — start from a named pricing pattern
+### D. Recipes: start from a named pricing pattern
 
 The first screen is a grid of patterns: **Seat-based · Credit pack · Usage tiers
 · Freemium with overage · Flat subscription · Hybrid**. Picking one pre-creates
@@ -303,7 +303,7 @@ status, currency-prefixed pricing, toggles, multi-select) for the edit step ·
 `wizard-6` (five-step product wizard with a per-variant matrix) if patterns need
 variants · `@reui/badge` for "what this recipe creates".
 
-*Cost:* medium. *Payoff:* the highest leverage on "no need to think" — the
+*Cost:* medium. *Payoff:* the highest leverage on "no need to think": the
 structural decisions are pre-made and correct.
 
 ### E. Fix the information architecture (do this regardless)
@@ -320,7 +320,7 @@ Addons stop being a nav item and become a tab on Plans, since they are the same
 object. Cost Sheets move to Setup, where their different direction of money can
 be stated once.
 
-**ReUI:** no new blocks — this is the existing `ShellNav`, already built.
+**ReUI:** no new blocks: this is the existing `ShellNav`, already built.
 
 ---
 
@@ -335,8 +335,8 @@ D attacks the real failure: the catalogue asks a finance person to make
 only have *commercial* ones (£99 a seat, 10k calls included, then 0.2p each). A
 recipe makes the structural choices and leaves the commercial ones.
 
-A's live preview is the single highest-value element in any of these — "this
-customer would be billed £X" — and `wizard-4` ships it. It can be added to D's
+A's live preview is the single highest-value element in any of these: "this
+customer would be billed £X": and `wizard-4` ships it. It can be added to D's
 edit step without building the whole workbench.
 
 B is the most interesting and the most dangerous; it is worth revisiting once

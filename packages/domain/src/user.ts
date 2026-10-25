@@ -1,5 +1,5 @@
 /**
- * A member of the tenant — a person or a machine.
+ * A member of the tenant: a person or a machine.
  *
  * The Team screen and the Service Accounts screen are the *same* endpoint,
  * `POST /users/search`, filtered differently: the API carries one record type
@@ -9,7 +9,7 @@
  * distinction is one field, and the two screens are two queries.
  *
  * What the API does *not* carry is worth stating, because a table will want it:
- * a user record has no `created_at`, `updated_at` or `status` — verified live.
+ * a user record has no `created_at`, `updated_at` or `status`: verified live.
  * There is no "joined on" column to render and no way to show a deactivated
  * member, because a removed member is deleted rather than archived.
  */
@@ -17,7 +17,7 @@ import { z } from 'zod'
 
 /**
  * Person or machine. The API's own spelling, so it is also the value sent as
- * `UserFilter.type` — which the list endpoint *requires*: verified live, a
+ * `UserFilter.type`: which the list endpoint *requires*: verified live, a
  * search body with no `type` returns `{items: [], total: 0}` rather than
  * everything, and a body with no fields at all answers 500.
  */
@@ -37,7 +37,7 @@ export interface Member {
   id: string
   /** Display name. Empty for a person who never set one. */
   name: string
-  /** Always empty for a service account — the API says so explicitly. */
+  /** Always empty for a service account: the API says so explicitly. */
   email: string
   type: MemberType
   /** RBAC role ids, e.g. `['super_admin']`. Assignable, never editable. */
@@ -65,7 +65,7 @@ export function memberDisplayName(member: Member): string {
  * What the list can ask for. Product vocabulary, not transport.
  *
  * `search` and `roles` are deliberately *page* filters rather than request
- * fields, and that is not a shortcut — see `toMemberFilter` in `@fp/query`.
+ * fields, and that is not a shortcut: see `toMemberFilter` in `@fp/query`.
  * `UserFilter` declares both `filters` and `roles`, and the endpoint ignores
  * them: verified live, a `contains` filter for `"zzzznomatch"` returned the
  * matching-nothing row anyway, and `roles: ['event_reader']` returned a user
@@ -113,7 +113,7 @@ export function matchesMemberQuery(member: Member, query: MemberQuery): boolean 
  *
  * `POST /users` with `type: 'user'`. The API documents `email` as required for
  * a person and `roles` as required for a service account, so the two drafts are
- * separate schemas rather than one with everything optional — a form that can
+ * separate schemas rather than one with everything optional: a form that can
  * submit a person with no email is a form that fails at the network.
  *
  * Roles are optional on an invite: a member can be created with none and have
@@ -134,7 +134,7 @@ export function emptyInvite(): InviteMember {
 /**
  * Creating a service account.
  *
- * No email — the API returns one empty for service accounts — and at least one
+ * No email: the API returns one empty for service accounts: and at least one
  * role, because a machine identity with no permissions can do nothing and the
  * API requires `roles` for this type.
  */
@@ -153,7 +153,7 @@ export function emptyServiceAccount(): CreateServiceAccount {
  * Renaming a member.
  *
  * A person's own record is edited through `PUT /users/me` (`updateUser`), which
- * takes only a name and metadata — an email cannot be changed. A service
+ * takes only a name and metadata: an email cannot be changed. A service
  * account is renamed through `PUT /users/{id}` (`updateServiceAccount`), which
  * takes only a name.
  */

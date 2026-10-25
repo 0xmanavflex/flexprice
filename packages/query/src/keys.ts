@@ -1,7 +1,7 @@
 /**
  * Query keys, in one place.
  *
- * Keys assembled inline drift — `['customer', id]` in one file and
+ * Keys assembled inline drift: `['customer', id]` in one file and
  * `['customers', id]` in another means an invalidation that silently misses,
  * and a stale screen nobody can reproduce. A factory makes the key structure a
  * single fact, and `as const` makes a typo a type error.
@@ -32,9 +32,9 @@ export const queryKeys = {
     detail: (id: string) => ['customers', 'detail', id] as const,
     /** Every customer's entitlement usage, whole or narrowed to a contract. */
     usageAll: () => ['customers', 'usage'] as const,
-    /** Entitlement usage for one customer — `GET /customers/usage`. */
+    /** Entitlement usage for one customer: `GET /customers/usage`. */
     usage: (id: string) => ['customers', 'usage', id] as const,
-    /** The same read narrowed to one contract — `?subscription_ids=`. Under `usage(id)`. */
+    /** The same read narrowed to one contract: `?subscription_ids=`. Under `usage(id)`. */
     contractUsage: (id: string, subscriptionId: string) =>
       ['customers', 'usage', id, { subscriptionId }] as const,
   },
@@ -151,7 +151,7 @@ export const queryKeys = {
   integrations: {
     all: () => ['integrations'] as const,
   },
-  /** A customer's provider mappings — `GET /integrations/mappings`. */
+  /** A customer's provider mappings: `GET /integrations/mappings`. */
   integrationLinks: {
     all: () => ['integrationLinks'] as const,
     forCustomer: (customerId: string) => ['integrationLinks', 'customer', customerId] as const,
@@ -233,7 +233,7 @@ export const queryKeys = {
    * environment: the sandbox and production have different invoice prefixes,
    * different portal trees, different currencies. Keying only by the settings
    * key would file both under one entry, and switching environments would
-   * render the previous one's configuration — briefly, believably, and into a
+   * render the previous one's configuration: briefly, believably, and into a
    * form whose next save would write it to the wrong environment.
    *
    * It is not enough that the console invalidates everything on a switch.

@@ -67,8 +67,8 @@ function isNonEmptyString(value: unknown): value is string {
  * The stored session, or null.
  *
  * Anything that is not a complete, token-bearing record reads as signed out.
- * A half-written entry — a token-less object from an older shape of this file,
- * a value someone edited in devtools — must not sign a user in to a console
+ * A half-written entry: a token-less object from an older shape of this file,
+ * a value someone edited in devtools: must not sign a user in to a console
  * whose every request will then 401.
  */
 export function readSession(): StoredSession | null {
@@ -90,7 +90,7 @@ export function readSession(): StoredSession | null {
 
   return {
     token: record['token'],
-    // The ids are informational — the token is what authenticates. A session
+    // The ids are informational: the token is what authenticates. A session
     // missing them is still usable, so they degrade to empty rather than
     // rejecting the whole record.
     userId: typeof record['userId'] === 'string' ? record['userId'] : '',

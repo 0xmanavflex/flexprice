@@ -38,7 +38,7 @@ import { useDraft } from './useDraft'
 /**
  * How invoices are numbered, and when they fall due.
  *
- * `GET/PUT/DELETE /settings/invoice_config`, one record per environment — the
+ * `GET/PUT/DELETE /settings/invoice_config`, one record per environment: the
  * sandbox and production number their invoices independently so a test invoice
  * can never consume a production sequence number. That is why every hook here
  * takes the session's `environmentId`, and why there is an explicit "pick an
@@ -47,14 +47,14 @@ import { useDraft } from './useDraft'
  *
  * ## The preview is the point
  *
- * Eight settings combine into one string nobody can assemble in their head —
+ * Eight settings combine into one string nobody can assemble in their head:
  * `INV-202609-00001`. V1 shows that string as you type and it is the single
  * most useful thing on the screen, so it leads here too. It is rendered from
  * the *parsed* draft: a half-typed sequence length would otherwise preview as
  * `INV-202609-NaN`, which teaches the reader nothing except distrust.
  *
  * It is labelled an example rather than "next", deliberately. `startSequence`
- * is the only number this console can honestly show — the live counter lives
+ * is the only number this console can honestly show: the live counter lives
  * in the database and is not exposed.
  *
  * ## The ninth field nobody can see
@@ -62,7 +62,7 @@ import { useDraft } from './useDraft'
  * `auto_complete_purchased_credit_transaction` is omitted by the API while it
  * is false, so a default read has eight keys and the model has nine. The
  * mapper sends it on every write regardless, which is what stops a tenant who
- * switched it on having it switched off by an unrelated save — so it is edited
+ * switched it on having it switched off by an unrelated save: so it is edited
  * here rather than quietly carried.
  */
 export function InvoicesPanel() {
@@ -98,8 +98,8 @@ export function InvoicesPanel() {
   if (phase === 'loading' || !config.data) return <PanelLoading rows={6} />
 
   // Keyed on the environment rather than on the record: the draft should
-  // survive a save — the mutation writes its own response into this cache
-  // entry — and be re-seeded only when the environment underneath it changes.
+  // survive a save: the mutation writes its own response into this cache
+  // entry: and be re-seeded only when the environment underneath it changes.
   return <InvoiceForm key={environmentId} environmentId={environmentId} config={config.data} />
 }
 
@@ -301,7 +301,7 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
               <TextRow
                 id="invoice-timezone"
                 title="Timezone"
-                description="Any IANA name — Asia/Kolkata, America/New_York — or an abbreviation such as IST. It decides which day the date segment lands on."
+                description="Any IANA name: Asia/Kolkata, America/New_York: or an abbreviation such as IST. It decides which day the date segment lands on."
                 required
                 busy={busy}
                 placeholder="UTC"

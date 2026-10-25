@@ -98,7 +98,7 @@ export const DerivedStatusSaysSo: Story = {
   },
 }
 
-/** A stored status needs no caveat — the server did the filtering. */
+/** A stored status needs no caveat: the server did the filtering. */
 export const StoredStatusIsSilent: Story = {
   args: { query: { ...fixtureQuery, statuses: [InvoiceStatus.Draft] } },
   play: async ({ canvasElement }) => {
@@ -110,7 +110,7 @@ export const StoredStatusIsSilent: Story = {
 
 export const Loading: Story = { args: { invoices: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     invoices: [],
@@ -159,7 +159,7 @@ export const PaginationReportsDomainQuery: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: /next|go to next page/i }))
 
     // The grid can also fire onQueryChange as it settles, so the Next click is
-    // not necessarily call[0]. Wait for — then read — the call that reported
+    // not necessarily call[0]. Wait for: then read: the call that reported
     // page 2, rather than racing whichever call landed first.
     const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
     const reportedPage = () =>

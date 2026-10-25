@@ -79,7 +79,7 @@ export const OverLimit: Story = {
   },
 }
 
-/** Unlimited is not 100%, and not 0% — there is no denominator. */
+/** Unlimited is not 100%, and not 0%: there is no denominator. */
 export const Unlimited: Story = {
   args: { limit: null },
   play: async ({ canvasElement }) => {

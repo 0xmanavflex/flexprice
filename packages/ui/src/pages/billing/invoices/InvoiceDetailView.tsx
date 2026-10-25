@@ -100,7 +100,7 @@ export interface InvoiceDetailViewProps {
   onUpdatePaymentStatus?: () => void
   /**
    * Why the payment status cannot be set by hand right now (void, payments
-   * recorded…) — `manualPaymentStatusBlocked`. Shown as the disabled item's hint.
+   * recorded…): `manualPaymentStatusBlocked`. Shown as the disabled item's hint.
    */
   paymentStatusBlocked?: string | null
   /** Saves the invoice's metadata map. Omitted, the metadata card is read-only. */

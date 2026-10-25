@@ -21,7 +21,7 @@ export type CustomerFormPageProps = {
  *
  * Same single-page form both ways (`CustomerForm`). Create ends
  * on the new customer's detail page; edit returns to the one it came from. The
- * data layer is the hooks the dialog used — nothing about saving changed.
+ * data layer is the hooks the dialog used: nothing about saving changed.
  */
 export function CustomerFormPage(props: CustomerFormPageProps) {
   const { onCancel } = props

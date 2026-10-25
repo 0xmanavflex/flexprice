@@ -222,7 +222,7 @@ describe('toPendingSchedules', () => {
     })
   })
 
-  it('sends a metered charge with its meter, bands, bucket and commitment — and no quantity', () => {
+  it('sends a metered charge with its meter, bands, bucket and commitment: and no quantity', () => {
     const request = toCreateLineItemRequest({
       charge: {
         type: 'USAGE',

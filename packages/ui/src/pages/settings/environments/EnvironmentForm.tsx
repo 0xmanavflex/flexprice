@@ -43,13 +43,13 @@ import { provenance } from '@ui/provenance'
  * each with a two-line explainer of what it means, and the Create button below.
  *
  * Production is self-serve for almost nobody, so when it cannot be created here
- * the card stays selectable — choosing it is how someone asks for it — but
+ * the card stays selectable: choosing it is how someone asks for it: but
  * "Create environment" is disabled and V1's "requires an approval" note takes
  * its place, with V1's three ways to reach us: Slack, email, or a booked call.
  *
  * Where the workspace pays Flexprice itself (self-billing), production is the
  * upgrade: in the trial, choosing it shows what the upgrade costs and what it
- * brings, and the button becomes **Upgrade** — paying creates the production
+ * brings, and the button becomes **Upgrade**: paying creates the production
  * environment (the API names it "Production"), so there is no name to type.
  * Once live with a production environment, choosing it says so and offers to
  * switch to it.

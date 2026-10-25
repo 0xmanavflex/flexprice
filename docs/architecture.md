@@ -8,7 +8,7 @@ Flexprice's stack and migration constraints.
 
 Watchtower V2 is a reference implementation, not a template to duplicate
 line-for-line. Its Base UI / Tailwind v4 / React Compiler / Nx choices are
-evaluated separately from its architectural principles — the Flexprice dashboard
+evaluated separately from its architectural principles: the Flexprice dashboard
 that actually has to migrate is React + Radix + Tailwind v3, and that is a real
 constraint, not an inconvenience.
 
@@ -58,10 +58,10 @@ transport vocabulary stops at the domain layer.
 | Package | Holds | Depends on |
 |---|---|---|
 | `@fp/api` | SDK client construction, browser auth, one error shape | `@flexprice/sdk` |
-| `@fp/query` | TanStack Query, query keys — **the only data door** | `@fp/api`, `@fp/domain` |
-| `@fp/domain` | Product vocabulary; transport types stop here | — |
-| `@fp/actions` | Product capabilities, declared once | — (nothing) |
-| `@fp/ui` | ReUI primitives + Flexprice compositions | — |
+| `@fp/query` | TanStack Query, query keys: **the only data door** | `@fp/api`, `@fp/domain` |
+| `@fp/domain` | Product vocabulary; transport types stop here |: |
+| `@fp/actions` | Product capabilities, declared once |: (nothing) |
+| `@fp/ui` | ReUI primitives + Flexprice compositions |: |
 | `@fp/sdk-adapter` | **Temporary.** Contract gaps, with removal issues | `@fp/api` |
 
 ## Decision: `actions` is a seam, not a platform
@@ -75,7 +75,7 @@ shape the frontend architecture.
 
 The distinction that keeps it honest: **`actions` describes what the product can
 do, not how the UI talks to the backend.** `createPlan()`, `grantCredits()`,
-`changeSubscription()`, `updateBudget()` — each declared once with its input
+`changeSubscription()`, `updateBudget()`: each declared once with its input
 schema, required permissions and risk level, then reachable from a button, the
 command palette, or an agent through the same gate.
 
@@ -84,20 +84,20 @@ Two constraints hold it to a seam:
 1. **The core UI does not depend on it.** A button may invoke an action, but
    components, pages and the design system build and render without the package.
    No component becomes AI-aware.
-2. **It calls nothing.** No dependency on `@fp/query`, `@fp/api` or the SDK —
+2. **It calls nothing.** No dependency on `@fp/query`, `@fp/api` or the SDK:
    an action's `run` is supplied by the app that registers it. The layering
    above is therefore a fact, not a convention.
 
 What is explicitly out of scope until a real consumer asks: an agent runtime,
 prompt handling, planning, a chat surface. The value today is that a capability
 is declared once and reachable by a person and an agent through one permission
-check — not that an agent platform has been built.
+check: not that an agent platform has been built.
 
 What is already enforced, with tests:
 
 - an agent gets no more than the user it acts for; there is one `invoke()`
 - sensitive actions (destructive, financial, customer-visible) require explicit
-  confirmation of *that* invocation — approval never carries to the next call
+  confirmation of *that* invocation: approval never carries to the next call
 - permission is checked before confirmation is requested
 - the palette and the agent are shown the identical capability set
 - a WebMCP call routes back through the same gates rather than around them
@@ -117,7 +117,7 @@ Rules that live only in prose are not rules. The V1 repo's `AGENTS.md` forbids
 |---|---|
 | UI may not import API clients, services or DTOs | ESLint import boundaries |
 | Layer direction is one-way | ESLint import boundaries |
-| Component provenance (ReUI / composition / custom) | TypeScript — `custom` requires a `reason` |
+| Component provenance (ReUI / composition / custom) | TypeScript: `custom` requires a `reason` |
 | A shim has a removal issue | `shims.test.ts` |
 | Component states exist | Storybook story = browser test + a11y test |
 | Type safety | `tsc`, no `any` |
@@ -128,8 +128,8 @@ Rules that live only in prose are not rules. The V1 repo's `AGENTS.md` forbids
 Found while building `@fp/domain`, and worth stating as a rule rather than a
 detail.
 
-The backend serializes monetary amounts as decimal **strings** — the SDK types
-`amountDue`, `amountPaid`, `total` and the rest as `string | undefined` —
+The backend serializes monetary amounts as decimal **strings**: the SDK types
+`amountDue`, `amountPaid`, `total` and the rest as `string | undefined`:
 specifically so precision survives the wire. The V1 dashboard calls
 `parseFloat` **101 times**, converting those exact decimals into IEEE-754
 doubles, and separately declares `decimal.js` as a dependency that no file
@@ -145,7 +145,7 @@ Intl.format(Number(same string))          ->  $12,345,678,901,234,568.00
 `@fp/domain` therefore carries a `Money` type that keeps the exact string,
 pairs it with its currency, formats through `Intl.NumberFormat` (which accepts
 a string and formats the exact decimal), and compares digit by digit. No
-dependency required — `Money` is ~90 lines and pure.
+dependency required: `Money` is ~90 lines and pure.
 
 Two deliberate absences:
 
@@ -165,7 +165,7 @@ The rule for migration: a `parseFloat` on an API amount is a bug, and there are
 |---|---|
 | **Base library** | `base-nova` (Base UI) for all new V2/ReUI work. Existing Radix components keep working through the migration. |
 | **Block surface** | **Card** by default. Frame only where there is an explicit layout reason, stated. |
-| **`@fp/ui`** | Stays thin — `primitives/`, `compositions/`, `flexprice/`, `provenance/`. V1 reached 616 component files, 371 in one `molecules/` folder. Thin is the feature. |
+| **`@fp/ui`** | Stays thin: `primitives/`, `compositions/`, `flexprice/`, `provenance/`. V1 reached 616 component files, 371 in one `molecules/` folder. Thin is the feature. |
 
 ### The migration rule
 
@@ -174,7 +174,7 @@ The rule for migration: a `parseFloat` on an API amount is a bug, and there are
 
 This is the rule that stops the team spending months "finishing the migration"
 before shipping anything. V1 surfaces move when they are touched for another
-reason — not on a schedule, and not as a gate.
+reason: not on a schedule, and not as a gate.
 
 ### The three proofs
 
@@ -183,8 +183,8 @@ the foundation is right:
 
 | Migration | Validates |
 |---|---|
-| **Data Grid** | ReUI + TanStack, filtering/sorting, dense billing data — against 55 hand-rolled tables |
-| **Subscription / Price form** | RHF + Zod, complex validation and state — against 1,036 `useState`s and a 1,281-line form |
+| **Data Grid** | ReUI + TanStack, filtering/sorting, dense billing data: against 55 hand-rolled tables |
+| **Subscription / Price form** | RHF + Zod, complex validation and state: against 1,036 `useState`s and a 1,281-line form |
 | **Billing Overview** | Compositions, the Card surface, domain vocabulary end to end |
 
 ### Sequence
@@ -205,7 +205,7 @@ Migrate V1 surfaces as they are touched
 ## Decision: complex workflows are pages, not modals
 
 New multi-field or multi-step creation and edit flows get a dedicated route and
-a stepper. Modals are reserved for lightweight, self-contained interactions —
+a stepper. Modals are reserved for lightweight, self-contained interactions:
 confirmation, a quick action, a genuinely small form.
 
 **Prefer a stepper whenever a form has meaningful sequencing, or touches more
@@ -215,7 +215,7 @@ principle rather than a size limit: without one, the answer is eventually
 
 Why it matters, concretely: a modal has no room for validation summaries, no
 review step, no browser history, and no URL. V1's `PriceOverrideDialog.tsx` is
-**807 lines** inside a dialog, and `SubscriptionForm.tsx` is **1,281 lines** —
+**807 lines** inside a dialog, and `SubscriptionForm.tsx` is **1,281 lines**:
 neither can be linked to, resumed, or navigated back out of.
 
 ### The shape a stepper takes
@@ -236,7 +236,7 @@ SDK
 
 The step components stay presentational. A step receives its values and emits
 changes; it does not fetch, does not know which step number it is, and does not
-decide what happens next. That is orchestration, and it belongs to the route —
+decide what happens next. That is orchestration, and it belongs to the route:
 for exactly the reason the grid does not own its own query.
 
 Applied to subscriptions, the eventual shape is Customer → Plan → Prices →
@@ -246,7 +246,7 @@ is not conflated with multi-step routing.
 
 ## Decision: who owns what in a workflow
 
-Two rules, both aimed at the same failure — a stepper that grows into an
+Two rules, both aimed at the same failure: a stepper that grows into an
 application.
 
 > **The Stepper owns presentation, not workflow state.** Step state belongs to
@@ -256,7 +256,7 @@ application.
 > **A form step owns its domain value, not the entire wizard.** Steps
 > communicate validated domain values upward; the wizard composes them.
 
-This is the same separation the invoice grid already demonstrates — the grid
+This is the same separation the invoice grid already demonstrates: the grid
 does not own its query, and the stepper does not own its position. In both
 cases the route does, because the route is the thing with a URL.
 
@@ -277,6 +277,6 @@ transport-contract problem; workflow composition is a UI-architecture problem,
 and the two can proceed in parallel. Backend owns the annotation epic; the
 console proves the composition meanwhile.
 
-The milestone is **"prove the workflow composition"** — a stepper, one real
-step, and step state in the URL — not "build the subscription wizard". The
+The milestone is **"prove the workflow composition"**: a stepper, one real
+step, and step state in the URL: not "build the subscription wizard". The
 remaining five steps are placeholders until the architecture is shown to hold.

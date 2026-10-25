@@ -72,7 +72,7 @@ function FeaturesListBody({
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New feature</Button>}
         emptyTitle="Nothing is being measured yet"
-        emptyDescription="A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
+        emptyDescription="A feature is what you meter or gate: API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
       >
         <FeatureGrid
           features={paginate(matches, query.page, query.pageSize)}

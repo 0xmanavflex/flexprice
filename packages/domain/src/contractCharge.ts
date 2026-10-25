@@ -11,8 +11,8 @@ import { type PriceOverride } from './priceOverride'
  * Adding and editing a charge on one contract.
  *
  * A contract charge is a price (what it costs, shared with the charge editor on
- * the plan page) plus the terms only a contract has: how many, from when, and —
- * for a metered charge — the bucket usage is summed in and any commitment.
+ * the plan page) plus the terms only a contract has: how many, from when, and:
+ * for a metered charge: the bucket usage is summed in and any commitment.
  */
 
 export const BucketSize = {

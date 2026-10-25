@@ -69,7 +69,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 export const TwoColumns: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // A term per item, and each value beside it — the pairing, not loose text.
+    // A term per item, and each value beside it: the pairing, not loose text.
     await expect(canvas.getAllByRole('term')).toHaveLength(items.length)
     await expect(canvas.getByText('WELCOME25')).toBeVisible()
   },
@@ -80,7 +80,7 @@ export const OneColumn: Story = {
   args: { columns: 1 },
 }
 
-/** A wide value — a description, metadata — spans both columns. */
+/** A wide value: a description, metadata: spans both columns. */
 export const WithFullWidthRow: Story = {
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText(/applied automatically/i)).toBeVisible()

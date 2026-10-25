@@ -48,7 +48,7 @@ export interface FormCardProps {
   /** Whether the card holds fields the form cannot be submitted without. */
   status?: 'required' | 'optional'
   /**
-   * Anything else for the title row's right side — a count, an Edit link, a
+   * Anything else for the title row's right side: a count, an Edit link, a
    * qualifier like "2 overridden". Sits after the status badge.
    */
   adornment?: ReactNode

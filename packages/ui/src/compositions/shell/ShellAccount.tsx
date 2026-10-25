@@ -54,7 +54,7 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
    * A display name that fell back to the email address is not a second fact.
    *
    * Nothing guarantees a person has a name on file, and when they do not the
-   * console hands us the email for both — so printing it twice, one line above
+   * console hands us the email for both: so printing it twice, one line above
    * the other, read as a bug in the account rather than a gap in the profile.
    */
   const nameIsEmail = user.name.trim().toLowerCase() === user.email.trim().toLowerCase()
@@ -98,7 +98,7 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
           >
             {/*
               `DropdownMenuLabel` is Base UI's `Menu.GroupLabel`, which throws
-              when it is not inside a `Menu.Group` — and the throw takes the
+              when it is not inside a `Menu.Group`: and the throw takes the
               whole menu with it, so the symptom is an account menu that opens
               to nothing.
             */}

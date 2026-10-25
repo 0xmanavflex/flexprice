@@ -16,7 +16,7 @@ import { ChargeSheet } from './ChargeSheet'
 
 /**
  * One charge, opened from its row or from a flag: a box per part that exists,
- * and the version history under them. Presentational — the charge and what is
+ * and the version history under them. Presentational: the charge and what is
  * known about it go in, "edit this part" comes out. No network.
  */
 const meta = {
@@ -138,7 +138,7 @@ export const CommitmentPerPeriod: Story = {
 
 /**
  * A commitment on every bucket, with two windows of the day at their own
- * figure. The dashed row answers the question a window raises — what happens
+ * figure. The dashed row answers the question a window raises: what happens
  * the rest of the time.
  */
 export const CommitmentWindowed: Story = {
@@ -207,7 +207,7 @@ export const CommitmentWindowedHourly: Story = {
 /**
  * Every part at once, opened at the commitment.
  *
- * Boxes keep their fixed order whatever was clicked — the ring says where the
+ * Boxes keep their fixed order whatever was clicked: the ring says where the
  * click landed, the order stays learnable.
  */
 export const OpenedAtASection: Story = {

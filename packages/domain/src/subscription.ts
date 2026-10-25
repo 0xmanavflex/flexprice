@@ -51,7 +51,7 @@ export interface Subscription {
   status: SubscriptionStatus
   /** Currency code, uppercased. Empty when the API sends none. */
   currency: string
-  /** The billing cadence as a word — "Monthly", "Half-yearly". */
+  /** The billing cadence as a word: "Monthly", "Half-yearly". */
   billingPeriodLabel: string
   /**
    * The cycle currently being billed.
@@ -117,7 +117,7 @@ export const SUBSCRIPTION_BILLING_PERIODS = [
 ] as const
 
 /**
- * What the contract list can filter on — V1's fields, by their wire names.
+ * What the contract list can filter on: V1's fields, by their wire names.
  * Customer and plan choices are the account's own records; the page fills them
  * in with `withFilterOptions`.
  */
@@ -195,7 +195,7 @@ const optionalAmount = (message: string) =>
     .refine((value) => value === '' || PHASE_DECIMAL.test(value), message)
 
 /**
- * A discount on a phase: a coupon on the whole phase, or — with `priceId` — on
+ * A discount on a phase: a coupon on the whole phase, or: with `priceId`: on
  * one of its charges. Sent by coupon id, as V1 does, since a coupon need not
  * carry a redemption code.
  */
@@ -232,7 +232,7 @@ export const subscriptionPhaseSchema = z.object({
   ),
   discounts: z.array(subscriptionDiscountSchema),
   /**
-   * Charges for this contract (or this phase) alone, beyond the plan's — each
+   * Charges for this contract (or this phase) alone, beyond the plan's: each
    * already checked by the add-charge form it came from.
    */
   extraCharges: z.array(z.custom<AddContractCharge>()),
@@ -406,9 +406,9 @@ export const INHERITANCE_WITH_THRESHOLD =
 
 /**
  * Why a customer cannot inherit a contract, as the API decides it:
- * - `OwnContract` — it has a contract of its own (active, trialing or draft)
+ * - `OwnContract`: it has a contract of its own (active, trialing or draft)
  *   that is not under the paying customer.
- * - `OtherParent` — it already inherits, or is grouped under, another
+ * - `OtherParent`: it already inherits, or is grouped under, another
  *   customer's contract.
  */
 export const InheritanceBlock = {
@@ -423,7 +423,7 @@ export const INHERITANCE_BLOCK_LABEL: Record<InheritanceBlock, string> = {
 }
 
 /**
- * The rules for starting a contract, in the order the form asks them — V1's:
+ * The rules for starting a contract, in the order the form asks them: V1's:
  * customer and plan with the contract's dates; phases, each with its own
  * charges then discounts; commitments (on the contract and on usage charges);
  * entitlement overrides and credit grants; taxes; add-ons; and the billing
@@ -481,7 +481,7 @@ export const createSubscriptionSchema = z
     creditGrants: z.array(createCreditGrantSchema),
     /** Whether the grants differ from the plan's, and so must be sent. */
     creditGrantsChanged: z.boolean(),
-    /** Tax rates applied to the contract's invoices — prefilled from the customer, as V1 does. */
+    /** Tax rates applied to the contract's invoices: prefilled from the customer, as V1 does. */
     taxes: z.array(
       z.object({
         taxRateCode: z.string().min(1),
@@ -688,7 +688,7 @@ const COMMITMENT_PERIOD_NOUN: Record<BillingPeriod, [one: string, many: string]>
 }
 
 /**
- * The commitment period as "month", "year", "2 weeks" — what follows "per".
+ * The commitment period as "month", "year", "2 weeks": what follows "per".
  * Twelve months reads as a year, as the old console wrote it.
  */
 export function commitmentPeriodNoun(period: BillingPeriod, count = 1): string {
@@ -763,7 +763,7 @@ export interface SubscriptionSchedule {
   canBeCancelled: boolean
 }
 
-/** One billed line on a subscription — a fixed charge or a metered one. */
+/** One billed line on a subscription: a fixed charge or a metered one. */
 export interface SubscriptionLine {
   id: string
   name: string
@@ -809,8 +809,8 @@ export interface LineLineage {
  * Changing a charge's price on a contract never edits it in place: the API ends
  * the line (its `end_date`) and starts a new one whose price points back to the
  * one it replaced (`parent_price_id`). Linking those ids end to end turns the
- * ended lines back into what they are — earlier versions of one charge, kept
- * inactive, not deleted — so the table shows each charge once and its history
+ * ended lines back into what they are: earlier versions of one charge, kept
+ * inactive, not deleted: so the table shows each charge once and its history
  * lists every price it has had.
  */
 export function lineLineages(lines: readonly SubscriptionLine[]): LineLineage[] {
@@ -955,7 +955,7 @@ export interface CancelSubscription {
 }
 
 /**
- * Pausing a contract: `POST /subscriptions/{id}/pause`, as V1 sends it — a
+ * Pausing a contract: `POST /subscriptions/{id}/pause`, as V1 sends it: a
  * proration choice and an optional reason. Billing stops until it is resumed.
  */
 export interface PauseSubscription {

@@ -40,7 +40,7 @@ import { useDraft } from './useDraft'
  * A tenant's own currencies, and what they are worth.
  *
  * `GET/PUT/DELETE /settings/custom_currency_config`. A custom currency is a
- * unit you invoice in that no central bank issues — credits, tokens, minutes,
+ * unit you invoice in that no central bank issues: credits, tokens, minutes,
  * seats. It needs a name and a symbol to be printed, and a conversion factor
  * so an invoice denominated in credits can be settled in money.
  *
@@ -71,7 +71,7 @@ import { useDraft } from './useDraft'
  * ## A code is fixed once it is added
  *
  * The code is the record key. Editing it live would rename the key on every
- * keystroke — `u`, `us`, `usd` — which changes the React key under the cursor
+ * keystroke: `u`, `us`, `usd`: which changes the React key under the cursor
  * and steals focus mid-word, and briefly writes keys the schema rejects. A
  * currency is three letters, a name and a symbol; removing and re-adding one
  * is cheaper than a rename that fights the person doing it.
@@ -136,7 +136,7 @@ function CurrencyForm({
    * The fiat codes every custom currency quotes.
    *
    * Held here rather than derived on every render because it has to survive
-   * having no custom currencies at all — `quotedFiatCurrencies` reads the set
+   * having no custom currencies at all: `quotedFiatCurrencies` reads the set
    * off the first currency, so with none there would be nowhere for a
    * just-added fiat to live until a currency existed to hold it.
    */
@@ -272,7 +272,7 @@ function CurrencyForm({
           <SettingsBlock label="Fiat currencies">
             {fiats.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                No fiat currencies yet. Add the ones you invoice in — usd, eur — before defining a
+                No fiat currencies yet. Add the ones you invoice in: usd, eur: before defining a
                 custom currency.
               </p>
             ) : (
@@ -378,7 +378,7 @@ function CurrencyForm({
                 <EmptyState
                   size="inline"
                   title="No custom currencies"
-                  description="A custom currency is a unit no central bank issues — credits, tokens, minutes. Add one to price in it; until then invoices use ordinary fiat currency."
+                  description="A custom currency is a unit no central bank issues: credits, tokens, minutes. Add one to price in it; until then invoices use ordinary fiat currency."
                 />
               </div>
             ) : (
@@ -525,7 +525,7 @@ function CurrencyForm({
                     id="currency-add-code"
                     aria-label="Currency code"
                     disabled={busy}
-                    placeholder="Three letters, e.g. cre — fixed once added"
+                    placeholder="Three letters, e.g. cre: fixed once added"
                     autoComplete="off"
                     spellCheck={false}
                     aria-invalid={codeIssue ? true : undefined}

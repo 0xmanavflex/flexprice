@@ -33,7 +33,7 @@ import {
 import { useDraft } from './useDraft'
 
 /**
- * When a low wallet balance should raise an alarm — for every wallet at once.
+ * When a low wallet balance should raise an alarm: for every wallet at once.
  *
  * `GET/PUT/DELETE /settings/wallet_balance_alert_config`.
  *
@@ -62,7 +62,7 @@ import { useDraft } from './useDraft'
  *
  * ## Saving
  *
- * The whole config goes back on every save — `PUT` merges the top level only,
+ * The whole config goes back on every save: `PUT` merges the top level only,
  * and a partially-sent object is a deletion of what it leaves out. A severity
  * that is switched off is sent as an explicit `null` rather than omitted, which
  * is what makes "stop warning me" writable at all.
@@ -122,7 +122,7 @@ function WalletAlertsForm({
   const percentage = draft.value.thresholdType === AlertThresholdType.Percentage
 
   function setSeverity(severity: AlertSeverity, next: WalletAlertThreshold) {
-    // `null`, never a removed key: the model has no "absent" — see the note on
+    // `null`, never a removed key: the model has no "absent": see the note on
     // `exactOptionalPropertyTypes` in `walletAlertConfig.ts`.
     draft.update((current) => ({ ...current, [severity]: next }))
   }
@@ -142,7 +142,7 @@ function WalletAlertsForm({
             <InfoIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
             <p>
               One setting for every wallet in this environment, with up to three escalating
-              thresholds. Each is independent — set only the ones you want to hear about.
+              thresholds. Each is independent: set only the ones you want to hear about.
             </p>
           </div>
 
@@ -173,7 +173,7 @@ function WalletAlertsForm({
             hint={
               percentage
                 ? 'A share of the wallet’s starting balance, from 0 to 100.'
-                : 'A raw balance. No currency is shown because this covers wallets in every currency you hold — 100 means a hundred of whatever that wallet is counted in.'
+                : 'A raw balance. No currency is shown because this covers wallets in every currency you hold: 100 means a hundred of whatever that wallet is counted in.'
             }
           >
             <div role="group" aria-label="Threshold type" className="flex gap-1.5">
@@ -259,7 +259,7 @@ function WalletAlertsForm({
                     >
                       Add
                     </Button>
-                    <span className="text-muted-foreground text-sm">Not set — nothing fires.</span>
+                    <span className="text-muted-foreground text-sm">Not set: nothing fires.</span>
                   </div>
                 )}
               </FormRow>

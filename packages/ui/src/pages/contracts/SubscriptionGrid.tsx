@@ -39,7 +39,7 @@ import {
  *
  * The redesign asks for it. There is no MRR field on `SubscriptionResponse`,
  * and a case-insensitive sweep of the whole SDK for `mrr` or `arr` returns
- * nothing at all — the concept does not exist in this API. It also cannot be
+ * nothing at all: the concept does not exist in this API. It also cannot be
  * assembled on the client: a subscription's recurring amount lives across its
  * line items, and `money.ts` refuses arithmetic on principle, because a UI
  * that recomputes a total will eventually disagree with the invoice the
@@ -53,15 +53,15 @@ import {
  * ## "Past due" is not a status
  *
  * The redesign's tab list has one. `SubscriptionStatus` is `active`,
- * `trialing`, `paused`, `cancelled`, `incomplete` — and `subscriptionStatus`
+ * `trialing`, `paused`, `cancelled`, `incomplete`: and `subscriptionStatus`
  * on the wire is the same set. Past due is a property of an *invoice*: it is
  * a finalized invoice with a balance and a due date in the past. Offering it
  * here would send a request the API cannot filter, get every subscription
  * back, and show an unfiltered list under a control insisting it was
  * filtered.
  *
- * So the option is dropped, and `Incomplete` — which is real, and was
- * previously unreachable from the toolbar — takes a place in the dropdown
+ * So the option is dropped, and `Incomplete`: which is real, and was
+ * previously unreachable from the toolbar: takes a place in the dropdown
  * instead. Finding past-due accounts is the Invoices list's job, where the
  * concept is genuinely defined.
  */
@@ -160,7 +160,7 @@ export function SubscriptionGrid({
    * other half.
    *
    * The en dash is the range dash, and the two dates are deliberately not
-   * abbreviated differently from every other date on the page — `dateStyle:
+   * abbreviated differently from every other date on the page: `dateStyle:
    * 'medium'` is what `dateColumn` uses, so the column reads as dates rather
    * than as a code.
    */
@@ -268,14 +268,14 @@ export function SubscriptionGrid({
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search contracts…"
       /*
-       * Status in the dropdown, and not also in a filter builder — two
+       * Status in the dropdown, and not also in a filter builder: two
        * controls writing `query.statuses` disagree on first interaction.
        *
        * No counts: `fetchSubscriptions` narrows status on the page it
        * received rather than pushing it down, so there is no per-status
        * server total to read. `SubscriptionFilter` does carry a
        * `subscription_status` array, so honest counts are available the day
-       * the fetch sends it — until then the dropdown shows no number rather
+       * the fetch sends it: until then the dropdown shows no number rather
        * than counting the rows it happens to hold.
        */
       filter={granularFilter({

@@ -153,7 +153,7 @@ export interface CustomerDetailProps {
   /** Open an invoice from a row action. */
   onOpenInvoice?: (invoiceId: string) => void
   /**
-   * The Invoices tab's row menu for one invoice — finalize, record payment,
+   * The Invoices tab's row menu for one invoice: finalize, record payment,
    * void… The page decides which apply; a destructive one sits last, apart.
    */
   invoiceActions?: (invoice: Invoice) => InvoiceRowAction[]
@@ -163,12 +163,12 @@ export interface CustomerDetailProps {
   /** Open one contract's own page, from a Contracts row or a running-contract card. Omitted, rows are not links. */
   onOpenContract?: (subscriptionId: string) => void
   subscriptionsLoading?: boolean
-  /** The contracts read failed — shown as such, never as "no contracts". */
+  /** The contracts read failed: shown as such, never as "no contracts". */
   subscriptionsError?: boolean
   /** Refetch the contracts; the Contracts error panel offers it as Try again. */
   onRetrySubscriptions?: () => void
   invoicesLoading?: boolean
-  /** The invoices read failed — shown as such, never as "no invoices" or a count of 0. */
+  /** The invoices read failed: shown as such, never as "no invoices" or a count of 0. */
   invoicesError?: boolean
   /** Refetch the invoices; the Invoices error panel offers it as Try again. */
   onRetryInvoices?: () => void
@@ -178,7 +178,7 @@ export interface CustomerDetailProps {
    */
   payments?: Payment[] | undefined
   paymentsLoading?: boolean | undefined
-  /** The payments read failed — shown as such, never as "no payments". */
+  /** The payments read failed: shown as such, never as "no payments". */
   paymentsError?: boolean | undefined
   onRetryPayments?: (() => void) | undefined
   /**
@@ -198,7 +198,7 @@ export interface CustomerDetailProps {
    */
   events?: ReactNode
   /**
-   * The Usage section's contents — the per-feature quota cards.
+   * The Usage section's contents: the per-feature quota cards.
    *
    * A slot rather than a data prop because the quota read is a separate
    * endpoint (`GET /customers/usage`) with its own loading and failure states,
@@ -211,7 +211,7 @@ export interface CustomerDetailProps {
    * The Overview's Entitlements section: each feature the customer is
    * entitled to, what grants it, and how much is used (`GET /customers/usage`).
    * Omitted, the section is not drawn; loaded and empty, it is not drawn
-   * either — as in V1, a customer with no entitlements has nothing to show.
+   * either: as in V1, a customer with no entitlements has nothing to show.
    */
   entitlements?: TenantFeatureUsage[] | undefined
   entitlementsLoading?: boolean | undefined

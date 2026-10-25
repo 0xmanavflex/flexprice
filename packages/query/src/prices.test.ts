@@ -166,7 +166,7 @@ describe('usage windows', () => {
    * On update the field carries three meanings, and getting them round the
    * wrong way is silent: absent inherits the existing price's window, the
    * sentinel clears it, a value replaces it. So "the user removed the window"
-   * cannot be expressed by omission — it has to say `none`.
+   * cannot be expressed by omission: it has to say `none`.
    */
   it('states the window on update rather than leaving it to inherit', () => {
     expect(toUpdatePriceRequest(usage({ bucketSize: PriceWindowSize.Hour }))['bucketSize']).toBe(

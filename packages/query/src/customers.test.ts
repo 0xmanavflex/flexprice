@@ -194,7 +194,7 @@ describe('fetchCustomers', () => {
    * This is a regression guard, not a tautology. Search and status used to be
    * applied to the fetched page here, which made a search find only the
    * matches inside the current 25 rows while `total` kept reporting every
-   * customer — so the pager offered pages that came back empty. Both are
+   * customer: so the pager offered pages that came back empty. Both are
    * server-side now, and re-adding a `.filter()` would silently bring that
    * back: the rows would still look right on page one.
    */

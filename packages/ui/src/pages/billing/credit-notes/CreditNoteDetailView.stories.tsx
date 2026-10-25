@@ -7,7 +7,7 @@ import { CreditSettlement, type CreditNoteDocument } from './creditNoteDocument'
 /**
  * A credit memo as a document: amount credited, the invoice it credits, each
  * line invoiced beside credited, and a footer saying how it settled.
- * Presentational — the document goes in, intent comes out. No network.
+ * Presentational: the document goes in, intent comes out. No network.
  */
 const meta = {
   title: 'App/Billing/Credit memos/Credit memo detail',
@@ -41,7 +41,7 @@ const BASE: CreditNoteDocument = {
   memo: 'Double-charged for the September seat uplift.',
   settlement: CreditSettlement.Adjusted,
   lines: [
-    { id: 'l1', description: 'Platform fee — September', invoiced: '1800', credited: '200' },
+    { id: 'l1', description: 'Platform fee: September', invoiced: '1800', credited: '200' },
     { id: 'l2', description: 'Additional seats (4)', invoiced: '480', credited: '120' },
   ],
   metadata: { raised_by: 'support' },
@@ -60,7 +60,7 @@ export const Adjusted: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     // The figure appears in the header and again in the footer sentence, which
-    // is the point of the footer — so scope to the one being asserted.
+    // is the point of the footer: so scope to the one being asserted.
     await expect(await canvas.findByText('Amount credited')).toBeVisible()
     await expect(canvas.getAllByText('$320.00').length).toBeGreaterThan(0)
 
@@ -144,7 +144,7 @@ export const Voided: Story = {
  * A line the invoice no longer has.
  *
  * One unmatched line makes the invoiced total a guess, so it is withheld
- * rather than quietly summing the lines that did match — an em dash says "we
+ * rather than quietly summing the lines that did match: an em dash says "we
  * do not know", where a figure would have said "this is all of it".
  */
 export const UnmatchedLine: Story = {
@@ -152,7 +152,7 @@ export const UnmatchedLine: Story = {
     document: {
       ...BASE,
       lines: [
-        { id: 'l1', description: 'Platform fee — September', invoiced: '1800', credited: '200' },
+        { id: 'l1', description: 'Platform fee: September', invoiced: '1800', credited: '200' },
         { id: 'l2', description: 'A line since removed', invoiced: null, credited: '120' },
       ],
     },

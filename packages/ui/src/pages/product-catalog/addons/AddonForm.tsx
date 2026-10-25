@@ -20,8 +20,8 @@ import { provenance } from '@ui/provenance'
  * validated `CreateAddon`, holding no state of its own beyond the field values
  * and never importing `@fp/query`. The page wires it to a mutation.
  *
- * The lookup key is fixed once set — the update endpoint does not accept a new
- * one, because integrations key off it — so on an edit the field is shown
+ * The lookup key is fixed once set: the update endpoint does not accept a new
+ * one, because integrations key off it: so on an edit the field is shown
  * read-only rather than removed, which would hide the value the person is
  * looking for.
  */
@@ -110,7 +110,7 @@ export function AddonForm({
           required={!isEdit}
           hint={
             isEdit
-              ? 'Fixed once set — integrations key off it.'
+              ? 'Fixed once set: integrations key off it.'
               : 'Stable identifier used by the API. Lowercase, numbers, hyphens and underscores.'
           }
           error={errors.lookupKey?.message}

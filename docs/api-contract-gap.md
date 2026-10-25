@@ -1,4 +1,4 @@
-# The API contract gap — a Phase 0, not a frontend problem
+# The API contract gap: a Phase 0, not a frontend problem
 
 V2 makes `@flexprice/sdk` the single contract with the backend. That decision
 stands. What follows is the prerequisite it exposed, and the sequencing it
@@ -6,7 +6,7 @@ implies.
 
 **The decision: fix it upstream. Do not bake today's incomplete annotations into
 V2.** The frontend should not permanently compensate for a backend contract
-problem — that is how the 47 hand-written API classes and 53 DTO files got
+problem: that is how the 47 hand-written API classes and 53 DTO files got
 written the first time.
 
 ## The measurement
@@ -22,7 +22,7 @@ Counting exported `gin` handlers in `flexprice/internal/api/v1/*.go` against
 
 An unannotated handler is a live, RBAC-protected endpoint that swaggo never
 sees. It is therefore missing from the spec, from all four generated SDKs, and
-from the MCP server — while working perfectly well in production, which is why
+from the MCP server: while working perfectly well in production, which is why
 this has gone unnoticed.
 
 ## Where the gaps are
@@ -48,7 +48,7 @@ Three consequences, in order of severity:
    undocumented. This is why portal migration is Phase 4 and not Phase 2.
 
 2. **Session bootstrap cannot go through the SDK.** `GET /environments` is a
-   live route — `internal/api/router.go:193` registers it — but only
+   live route: `internal/api/router.go:193` registers it: but only
    `CloneEnvironment` is annotated, so the SDK's `environments` resource has
    exactly one method. Every call except the discovery routes needs an
    `X-Environment-ID`, and listing environments is how one gets chosen. The most
@@ -94,26 +94,26 @@ endpoint the cleanup will add. Phases 3 and 4 are the gates that do.
 
 All Flexprice frontends consume the same generated SDK and the same contract
 conventions. The portal does not get started as "another app on whatever SDK
-exists today" — that is how a second contract gets born.
+exists today": that is how a second contract gets born.
 
 ## Phase 0, concretely
 
 Adding `@Summary` / `@Param` / `@Success` / `@Router` comments to the
 unannotated handlers is mechanical, carries no runtime risk, and pays out four
-times from one edit: the spec, three SDKs, and the MCP server all improve — for
+times from one edit: the spec, three SDKs, and the MCP server all improve: for
 Flexprice's customers as much as for this repo. Order by what V2 needs:
 
-1. `auth.go`, `environment.go` — unblocks sign-in and environment selection
-2. `customer_portal.go` — unblocks the portal app entirely
+1. `auth.go`, `environment.go`: unblocks sign-in and environment selection
+2. `customer_portal.go`: unblocks the portal app entirely
 3. `settings.go`, `onboarding.go`, `dashboard.go`, `meter.go`, `connection.go`
-4. `webhook.go` — its 60 *event* schemas are documented; its 12 handlers are not
+4. `webhook.go`: its 60 *event* schemas are documented; its 12 handlers are not
 
 Then re-run the Speakeasy pipeline and publish.
 
 **Also fold in two fixes while the annotations are being written:**
 
 - **`types.Duration` is both an object and an enum.** It carries
-  `properties: { unit, value }` *and* `enum: ["3600000000000"]` — the Go
+  `properties: { unit, value }` *and* `enum: ["3600000000000"]`: the Go
   constant `EntitlementGrantMinDuration` leaking onto the type that holds it. A
   schema cannot be both. Speakeasy tolerates it; strict OpenAPI tooling rejects
   the document outright (`Expected SchemaObject, received string`).
@@ -121,21 +121,21 @@ Then re-run the Speakeasy pipeline and publish.
 - **`.speakeasy/overlays/typescript-auth.yaml` is not in the published build.**
   The overlay declaring `BearerAuth` (JWT) and `EnvironmentId` already exists in
   the backend repo, but `@flexprice/sdk@2.1.30` still types its security as
-  `{ apiKeyAuth: string }` — the one credential that must never reach a browser.
+  `{ apiKeyAuth: string }`: the one credential that must never reach a browser.
   Until the overlay ships, `@fp/api` injects both headers through an
   `HTTPClient` `beforeRequest` hook and never populates `security`. When it
   lands, that hook becomes the SDK's own typed option and the workaround goes.
 
 ## If Phase 0 slips
 
-V2 still proceeds. The mismatch is isolated in exactly one place —
-`packages/sdk-adapter` — rather than spread through the portal or the query
+V2 still proceeds. The mismatch is isolated in exactly one place:
+`packages/sdk-adapter`: rather than spread through the portal or the query
 layer. That package:
 
 - requires every shim to name its endpoint, its reason, and a **removal issue**,
   validated by `shims.test.ts` against `owner/repo#123`
 - is imported by `@fp/query` only, never by an app or a component
-- fails its own test suite if it grows past 5 entries — a tripwire, not a cap
+- fails its own test suite if it grows past 5 entries: a tripwire, not a cap
 - **is deleted when it reaches zero**
 
 It currently holds **zero shims**, and the foundation does not depend on one.

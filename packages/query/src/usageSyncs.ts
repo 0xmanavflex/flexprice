@@ -5,7 +5,7 @@ import { queryKeys } from './keys'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
- * Usage syncs, through `POST /usage-records/search` — a route the SDK has no
+ * Usage syncs, through `POST /usage-records/search`: a route the SDK has no
  * method for, so this reads the raw snake_case body (see `@fp/api`
  * `usageRecords.ts`). Whether a record is synced is a server-side filter;
  * search narrows the returned page.

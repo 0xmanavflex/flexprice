@@ -97,7 +97,7 @@ import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 
 /**
- * A plan's detail page — the hub where a plan is completed.
+ * A plan's detail page: the hub where a plan is completed.
  *
  * Header: icon tile, name, lookup key as a copyable id, badges and one ⋯ menu
  * holding every action on the plan as a whole (sync, edit, duplicate, archive). Tabs: Charges,
@@ -114,7 +114,7 @@ import { subTab } from '../shared/subTab'
  * Charges, Entitlements and Credit grants were a tab each, holding one table
  * apiece, so seeing what a plan actually contains meant three clicks and
  * remembering the first two. They are all on Overview now, beside the
- * customer's-eye rail — the same shape the feature detail page uses, and what
+ * customer's-eye rail: the same shape the feature detail page uses, and what
  * the redesign shows.
  */
 export const PLAN_TABS = ['overview', 'information'] as const
@@ -360,7 +360,7 @@ export function PlanDetailPage({
 }
 
 /**
- * Charges — what the plan bills, as one searchable table. "Add charge" opens a
+ * Charges: what the plan bills, as one searchable table. "Add charge" opens a
  * dialog that asks Fixed or Usage first; a row's Edit opens the form directly.
  * An edit is saved as a new price version; terminate ends a charge behind a confirm.
  */
@@ -368,7 +368,7 @@ export function PlanDetailPage({
  * Everything a plan contains, on one screen.
  *
  * Charges, entitlements and credit grants were a tab each, holding one table
- * apiece — so the answer to "what is in this plan?" was spread across three
+ * apiece: so the answer to "what is in this plan?" was spread across three
  * clicks. They stack here instead, beside the customer's-eye rail, which is
  * the whole point of the rail: the price being edited and the price a
  * customer would be shown, side by side.
@@ -501,7 +501,7 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
 }
 
 /**
- * Entitlements — what the plan includes of each feature. The last column shows
+ * Entitlements: what the plan includes of each feature. The last column shows
  * the plan's usage price for a metered feature, found by matching the feature's
  * meter to a usage charge; usage beyond the value bills at that price.
  */
@@ -516,7 +516,7 @@ function EntitlementsSection({ planId }: { planId: string }) {
   const [form, setForm] = useState<'add' | Entitlement | null>(null)
   const [removing, setRemoving] = useState<Entitlement | null>(null)
 
-  // Only features not already entitled can be added — a feature is granted once.
+  // Only features not already entitled can be added: a feature is granted once.
   const granted = new Set((entitlements.data ?? []).map((e) => e.featureId))
   const options = featureOptions.filter((f) => !granted.has(f.id))
   const editing = form !== null && form !== 'add' ? form : null
@@ -627,7 +627,7 @@ function EntitlementsSection({ planId }: { planId: string }) {
   )
 }
 
-/** Credit grants — the balances the plan hands its subscribers. */
+/** Credit grants: the balances the plan hands its subscribers. */
 function CreditGrantsSection({ planId }: { planId: string }) {
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
   const create = useCreateCreditGrant()
@@ -711,7 +711,7 @@ function CreditGrantsSection({ planId }: { planId: string }) {
 }
 
 /**
- * Information — the plan record. One pencil on the card edits its fields in
+ * Information: the plan record. One pencil on the card edits its fields in
  * place; the metadata card on the right edits, adds and removes key/value fields.
  */
 function InformationTab({

@@ -5,7 +5,7 @@ import { BillingModel, TierMode, nonNegativeAmount, tiersSchema } from './price'
  * A price override, as a schema rather than as twelve pieces of state.
  *
  * V1's `PriceOverrideDialog.tsx` is 807 lines holding **twelve `useState`
- * hooks** — billing model, tier mode, a tiers array, transform quantity, an
+ * hooks**: billing model, tier mode, a tiers array, transform quantity, an
  * effective date, bucket size, quantity, commitment, plus a duplicate copy of
  * the commitment kept only to diff against. The rules relating those fields
  * are spread across render branches and effects, so "is this form valid" has
@@ -15,13 +15,13 @@ import { BillingModel, TierMode, nonNegativeAmount, tiersSchema } from './price'
  * which other fields exist at all. Written as one, validation stops being
  * conditional rendering and becomes a type.
  *
- * These are *product* rules, not form plumbing — a tiered price with
- * overlapping tiers is wrong no matter what draws it — so they live in the
+ * These are *product* rules, not form plumbing: a tiered price with
+ * overlapping tiers is wrong no matter what draws it: so they live in the
  * domain, and the UI and any agent-driven action validate identically.
  *
  * The pricing enums and the tier schema this builds on are defined once in
- * `./price` — a charge and an override are the same money, described the same
- * way — and re-exported here so this file's long-standing callers and tests
+ * `./price`: a charge and an override are the same money, described the same
+ * way: and re-exported here so this file's long-standing callers and tests
  * keep their import site.
  */
 

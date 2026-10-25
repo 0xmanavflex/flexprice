@@ -177,7 +177,7 @@ export const Linkage: Story = {
 /**
  * The columns the handoff asks for, in its order.
  *
- * §3: "Name, Type, Event name, Aggregation, Group, Entitlements, Contracts —
+ * §3: "Name, Type, Event name, Aggregation, Group, Entitlements, Contracts:
  * aggregation as a formula, group as a chip; Status, Updated and Charges
  * removed". Key, Unit, Used in and Status are real and stay in the `⋯` menu
  * rather than being dropped.
@@ -225,7 +225,7 @@ export const AddEntitlement: Story = {
      * Wait for the menu to actually go.
      *
      * Base UI leaves `aria-hidden` focus guards in the DOM while a popup
-     * closes, and the a11y scan runs the moment `play` returns — so on a
+     * closes, and the a11y scan runs the moment `play` returns: so on a
      * loaded runner it caught them mid-teardown and failed `aria-hidden-focus`,
      * green here and red in CI. Waiting removes the race; muting the rule
      * would have hidden a real one later.
@@ -250,7 +250,7 @@ export const Layout: Story = {
 
 export const Loading: Story = { args: { features: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     features: [],
@@ -299,7 +299,7 @@ export const PaginationReportsDomainQuery: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: /next|go to next page/i }))
 
     // The grid can also fire onQueryChange as it settles, so the Next click is
-    // not necessarily call[0]. Wait for — then read — the call that reported
+    // not necessarily call[0]. Wait for: then read: the call that reported
     // page 2, rather than racing whichever call landed first.
     const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
     const reportedPage = () =>

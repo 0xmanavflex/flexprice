@@ -9,7 +9,7 @@ import { provenance } from '@ui/provenance'
 import { InfoHint } from './InfoHint'
 
 /**
- * A label, a control, its hint and its error — wired together.
+ * A label, a control, its hint and its error: wired together.
  *
  * The layout and typography are the stock shadcn `Field` parts; this only adds
  * the wiring people forget: `htmlFor` to the control, `aria-describedby` to

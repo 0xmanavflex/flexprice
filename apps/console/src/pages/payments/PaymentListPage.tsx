@@ -12,7 +12,7 @@ export interface PaymentListPageProps {
 }
 
 /**
- * The wiring layer, and nothing else — the same shape as `InvoiceListPage`.
+ * The wiring layer, and nothing else: the same shape as `InvoiceListPage`.
  *
  * Fetches, turns an error into a sentence, and hands the grid plain props. No
  * `useState`: the query lives in the URL. Recording a payment and opening one

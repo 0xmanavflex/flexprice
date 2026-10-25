@@ -27,11 +27,11 @@ import { useCurrentUser } from './session'
  * Status matters as much as the answer, and is what keeps a page from
  * flashing "Access denied" before roles arrive:
  *
- * - `loading` — the user or the catalogue is not in yet. Callers wait.
- * - `ready` — answers are real.
- * - `error` — either read failed. Everything is denied (fail closed, as V1);
+ * - `loading`: the user or the catalogue is not in yet. Callers wait.
+ * - `ready`: answers are real.
+ * - `error`: either read failed. Everything is denied (fail closed, as V1);
  *   the API would refuse anyway.
- * - `unrestricted` — no session token (a dev build signed in by API key).
+ * - `unrestricted`: no session token (a dev build signed in by API key).
  *   There is no principal to read, so the console shows everything and the
  *   API stays the judge.
  */
@@ -93,7 +93,7 @@ export function toAccessControl(input: {
  * `environmentId` gates the catalogue read: `/rbac/roles` needs the
  * `X-Environment-ID` header, and before the shell has chosen an environment
  * (a fresh sign-in, a new tab) the request would go out without it and be
- * refused with a 403 — which read as "Access denied" until a reload. Access
+ * refused with a 403: which read as "Access denied" until a reload. Access
  * stays `loading` until an environment is known.
  */
 export function useAccessControl(

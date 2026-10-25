@@ -41,7 +41,7 @@ import {
  * and when it last changed.
  *
  * **The "entity" filter is not here.** `GroupQuery` has no `entityTypes`
- * field, and `toGroupFilter` sends none — so a filter would have to narrow the
+ * field, and `toGroupFilter` sends none: so a filter would have to narrow the
  * twenty-five rows already fetched while the footer kept reporting the
  * server's total, which is the failure `search.ts` was written to stop
  * repeating. The type is a column and a sort away from being useful; making
@@ -51,7 +51,7 @@ import {
  * Worth noting against the redesign's copy: `GroupEntityType` is only
  * `price | feature`. There is no plan group and no add-on group to offer.
  *
- * **No counts beside the status options** — `useCatalogStats` does not cover
+ * **No counts beside the status options**: `useCatalogStats` does not cover
  * groups, and counting the rows on screen answers a different question.
  */
 export const GroupGridProvenance = provenance({
@@ -225,8 +225,8 @@ export function GroupGrid({
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search tags…"
       /*
-       * No filter control. `useGroups` applies status on the page — "Status is
-       * not a server-side filter here" (query/src/groups.ts) — so a filter
+       * No filter control. `useGroups` applies status on the page: "Status is
+       * not a server-side filter here" (query/src/groups.ts): so a filter
        * would narrow the rows already fetched while the footer went on
        * reporting the server's total. That mismatch is the reason
        * `NoEntityFilter` exists, and it fails the moment one is added.
@@ -267,7 +267,7 @@ export function GroupGrid({
         scene: 'settings',
         title: 'No tags yet',
         description:
-          'A tag bundles prices or features so they can be filtered, reported and invoiced together — a product line, a region, a tier.',
+          'A tag bundles prices or features so they can be filtered, reported and invoiced together: a product line, a region, a tier.',
         guides: GUIDES,
       }}
     />

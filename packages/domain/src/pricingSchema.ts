@@ -2,7 +2,7 @@
  * A pricing schema: what the parser answers with, and what gets created.
  *
  * `POST /ai/pricing/parse-gemini` turns a description of a pricing page into
- * this shape. Nothing here is persisted — it is the plan of what *will* be
+ * this shape. Nothing here is persisted: it is the plan of what *will* be
  * created, shown for review first, and only then applied as features, plans,
  * prices, entitlements and credit grants.
  *
@@ -41,7 +41,7 @@ export interface PricingEntitlement {
 }
 
 export interface PricingPrice {
-  /** Main currency units — $20/month is 20, not 2000. */
+  /** Main currency units: $20/month is 20, not 2000. */
   amount: number
   currency: string
   billingPeriod: PricingBillingPeriod
@@ -113,7 +113,7 @@ function billingPeriod(value: unknown): PricingBillingPeriod {
 /**
  * The wire body, in whatever state the model left it, as a schema.
  *
- * Snake_case in, camelCase out — the rest of the console speaks camelCase and
+ * Snake_case in, camelCase out: the rest of the console speaks camelCase and
  * the boundary is here, not in the screen. Missing lists become empty ones and
  * a missing currency becomes USD, which is what V1's normaliser did; anything
  * that cannot be defaulted is left for `pricingSchemaProblems` to report.

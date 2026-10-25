@@ -6,7 +6,7 @@ import { useFlexprice } from './provider'
 import type { UsageAnalyticsQuery } from './events'
 
 /**
- * Revenue against cost for one customer — `POST /costs/analytics`
+ * Revenue against cost for one customer: `POST /costs/analytics`
  * (`client.costs.getDetailedCostAnalytics`), what V1's Analytics tab reads for
  * its Revenue, Cost, Margin and Margin % figures.
  *

@@ -3,7 +3,7 @@
  *
  * This is the ingest record, not a billed quantity: it says what a customer's
  * system sent and when, so a bill can be traced back to what caused it. The
- * `properties` bag is whatever the sender attached — the debugger shows it
+ * `properties` bag is whatever the sender attached: the debugger shows it
  * verbatim, so it stays `unknown` values rather than being interpreted here.
  */
 export interface RawEvent {
@@ -27,7 +27,7 @@ export interface RawEventQuery {
   /** The sender's customer id. Exact match, server-side. */
   customer: string
   source: string
-  /** Newest first by default — a debugger is asked "what just happened". */
+  /** Newest first by default: a debugger is asked "what just happened". */
   sortDirection: 'asc' | 'desc'
 }
 

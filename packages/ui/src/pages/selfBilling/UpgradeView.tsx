@@ -23,7 +23,7 @@ import { provenance } from '@ui/provenance'
 /**
  * Upgrade: on the left (gray gradient) the price and how billing works, so it
  * is clear what is paid when; on the right the billing details. Every Upgrade
- * button lands here — the trial, the locked account, the pill.
+ * button lands here: the trial, the locked account, the pill.
  *
  * Company and address come from Settings → Organization: when they are there
  * the form opens filled in and says so; the first time it opens empty and says

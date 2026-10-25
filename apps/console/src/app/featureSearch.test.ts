@@ -68,7 +68,7 @@ describe('parseFeatureSearch', () => {
  * TanStack serialises the query object as it stands, so navigation writes
  * `types`, `pageSize`, `search`, `sortBy`. The parser only read the short
  * hand-written spellings, so every filter and sort reverted the instant it was
- * applied — no error, just a control that did nothing.
+ * applied: no error, just a control that did nothing.
  */
 describe('round-trips what the router writes', () => {
   it('reads the long names TanStack emits', () => {

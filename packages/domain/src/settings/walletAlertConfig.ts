@@ -1,5 +1,5 @@
 /**
- * When a low wallet balance should raise an alarm — tenant-wide.
+ * When a low wallet balance should raise an alarm: tenant-wide.
  *
  * `GET/PUT /settings/wallet_balance_alert_config`.
  *
@@ -8,7 +8,7 @@
  * subscription, each with its own id. This is one environment-wide default
  * behind a settings key, with no id at all. The two are edited on different
  * screens and a change to one is invisible in the other, so confusing them
- * produces the worst kind of bug — a save that appears to work and changes
+ * produces the worst kind of bug: a save that appears to work and changes
  * nothing the user was looking at.
  *
  * The thresholds, though, are the same idea, so the vocabulary is shared
@@ -87,7 +87,7 @@ export type WalletAlertThreshold = WalletAlertConfig['critical']
  *
  * Note what the live default is: alerting *off*, with a critical threshold of
  * "below 0" already sitting there. A screen that reads the threshold as proof
- * the alert is configured would show an alarm nobody set — `alertEnabled` is
+ * the alert is configured would show an alarm nobody set: `alertEnabled` is
  * the only field that says whether anything fires.
  */
 export function defaultWalletAlertConfig(): WalletAlertConfig {

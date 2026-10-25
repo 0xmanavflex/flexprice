@@ -19,7 +19,7 @@ export interface TaxListPageProps {
  * a confirmed delete.
  *
  * The list stays URL-driven; the pending delete is the only local state. An edit
- * cannot change the value or scope — invoices carry them.
+ * cannot change the value or scope: invoices carry them.
  */
 export function TaxListPage({
   query,

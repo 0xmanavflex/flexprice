@@ -23,7 +23,7 @@ import { providerLabel } from './usageSyncProviders'
  * The Usage Syncs list, on the shared `EntityList`.
  *
  * Read-only: a row is one customer's usage on one subscription for one billing
- * period, and the interesting column is **Synced** — which marketplaces
+ * period, and the interesting column is **Synced**: which marketplaces
  * received it. The status filter is a server-side filter on
  * `POST /usage-records/search`; search narrows the page by customer,
  * subscription or plan id.

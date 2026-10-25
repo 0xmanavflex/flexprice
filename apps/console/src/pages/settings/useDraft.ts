@@ -4,15 +4,15 @@ import { useCallback, useState, type FormEvent } from 'react'
  * A form draft validated by a domain zod schema, without a form library.
  *
  * `react-hook-form` and `@hookform/resolvers` are dependencies of `@fp/ui`,
- * not of this app — the components that use them live in the package, and the
+ * not of this app: the components that use them live in the package, and the
  * app composes those. Rather than add a form library to `apps/console` for
  * four short forms, these bind the domain schema directly: hold a draft, parse
  * it on submit, and show the schema's own messages.
  *
  * That keeps the important half unchanged. The validation authority is still
  * `updateTenantSchema` / `inviteMemberSchema` / `createApiKeySchema` /
- * `createServiceAccountSchema` — the same objects the package's forms resolve
- * against — so a rule added to a schema reaches this screen without anybody
+ * `createServiceAccountSchema`: the same objects the package's forms resolve
+ * against: so a rule added to a schema reaches this screen without anybody
  * remembering to mirror it.
  *
  * Errors appear on submit, not on every keystroke: an email that is invalid
@@ -33,10 +33,10 @@ export interface Parser<T> {
 
 export interface Draft<T> {
   value: T
-  /** A string field, by dot path — `name`, `address.line1`. */
+  /** A string field, by dot path: `name`, `address.line1`. */
   text: (path: string) => string
   setText: (path: string, next: string) => void
-  /** Anything that is not a plain string field — a role array, an enum. */
+  /** Anything that is not a plain string field: a role array, an enum. */
   update: (updater: (current: T) => T) => void
   error: (path: string) => string | undefined
   handleSubmit: (onValid: (parsed: T) => void) => (event: FormEvent) => void

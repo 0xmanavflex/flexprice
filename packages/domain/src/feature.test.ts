@@ -48,7 +48,7 @@ describe('feature type decides whether a meter exists', () => {
     expect(paths({ name: 'API calls', type: FeatureType.Metered })).toContain('meter')
   })
 
-  // The union is what stops a leftover meter riding along after a type switch —
+  // The union is what stops a leftover meter riding along after a type switch:
   // the bug twelve parallel useStates make easy.
   it('drops a meter from a non-metered feature', () => {
     const result = parse({ name: 'Seats', type: FeatureType.Boolean, meter: meter() })
@@ -126,7 +126,7 @@ describe('SUM_WITH_MULTIPLIER', () => {
     ).toContain('meter.multiplier')
   })
 
-  // V1 writes `multiplier <= 0` against a *string*, which is always false — so
+  // V1 writes `multiplier <= 0` against a *string*, which is always false: so
   // a zero multiplier passes validation there and silently bills nothing.
   it('rejects a zero multiplier, which V1 lets through', () => {
     expect(errors(withMultiplier('0'))).toContain('Must be greater than zero')
@@ -153,7 +153,7 @@ describe('emptyFeature', () => {
 
       const result = parse(value)
       if (!result.success) {
-        // Blank text fails, but never structure — switching type cannot land
+        // Blank text fails, but never structure: switching type cannot land
         // somewhere incoherent.
         for (const issue of result.error.issues) {
           expect(issue.path.join('.')).toMatch(/name|eventName/)

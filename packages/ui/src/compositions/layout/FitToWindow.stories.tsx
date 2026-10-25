@@ -52,7 +52,7 @@ export const StateIsPressedNotLabel: Story = {
 
     await userEvent.click(button)
     await expect(args.onPressedChange).toHaveBeenCalledWith(true)
-    // The name did not change — only the state would have.
+    // The name did not change: only the state would have.
     await expect(canvas.getByRole('button', { name: 'Fit to window' })).toBeInTheDocument()
   },
 }

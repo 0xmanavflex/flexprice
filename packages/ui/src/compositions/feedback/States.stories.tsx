@@ -7,7 +7,7 @@ import { GridToolbar } from '../tables/GridToolbar'
 import { ListState, type ListStateProps } from './States'
 
 /**
- * Every state a list can be in, as stories — which is the point of designing
+ * Every state a list can be in, as stories: which is the point of designing
  * them once. A screen that uses `ListState` inherits all of them, tested.
  *
  * The children here are a stand-in for a real grid, because the empty states
@@ -160,7 +160,7 @@ export const Loading: Story = {
 }
 
 /**
- * Nothing created yet — and the list is still a list.
+ * Nothing created yet: and the list is still a list.
  *
  * This is the regression the arrangement exists to prevent: the empty state
  * used to be returned *instead of* the grid, so the search box, the filters,
@@ -188,7 +188,7 @@ export const EmptyNoData: Story = {
 }
 
 /**
- * A filter matched nothing — a different situation with a different offer.
+ * A filter matched nothing: a different situation with a different offer.
  *
  * Showing "create your first feature" to someone who just typed a search is
  * the confusion this separation prevents. The toolbar stays for the more
@@ -224,7 +224,7 @@ export const ErrorRetryable: Story = {
 /**
  * Permission denied offers no retry.
  *
- * "Try again" on a permission error is worse than nothing — it invites someone
+ * "Try again" on a permission error is worse than nothing: it invites someone
  * to keep pressing a button that will always fail.
  */
 export const ErrorDenied: Story = {

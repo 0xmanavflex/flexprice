@@ -7,14 +7,14 @@ upfront. This is how we keep drift visible instead of discovering it at the end.
 
 Visual decisions live in `UI_SOURCE_OF_TRUTH.md`; this file covers how components are labelled and protected.
 
-## 1. Provenance — every product component declares where it came from
+## 1. Provenance: every product component declares where it came from
 
 Every component in `packages/ui/src/pages/**` and `packages/ui/src/compositions/**`
 exports a `provenance({...})` (see `packages/ui/src/provenance/`):
 
-- `source: 'reui'` — straight from the registry, we own none of its markup. List the `registry` items.
-- `source: 'composition'` — Flexprice behaviour composed over ReUI parts. List what it `composes`. **This is the default and the preferred way to differ.**
-- `source: 'custom'` — built here because ReUI could not express it. Requires a written `reason`. The type forces the reason at authoring time, not at review.
+- `source: 'reui'`: straight from the registry, we own none of its markup. List the `registry` items.
+- `source: 'composition'`: Flexprice behaviour composed over ReUI parts. List what it `composes`. **This is the default and the preferred way to differ.**
+- `source: 'custom'`: built here because ReUI could not express it. Requires a written `reason`. The type forces the reason at authoring time, not at review.
 
 A component that started as a registry item but has been changed is a
 **composition**, not a `reui`. Re-labelling it is the signal that it deviated.
@@ -33,7 +33,7 @@ semantic tokens only.
 
 ReUI primitives and premium blocks are copied source under
 `packages/ui/src/components/{primitives,reui,blocks,examples,ui}/**`. They carry a
-`// @ts-nocheck — vendored` header (see `scripts/vendor-suppress.mjs`), and the rule is:
+`// @ts-nocheck: vendored` header (see `scripts/vendor-suppress.mjs`), and the rule is:
 **an upstream fix stays a re-install.** Do not hand-patch a vendored file; that silently loses
 the upgrade path.
 
@@ -49,18 +49,18 @@ instance of a primitive, so no component looked stock.
 
 ## 3. Changelogs from the start
 
-`packages/ui/CHANGELOG.md` records every material change to the shared UI —
+`packages/ui/CHANGELOG.md` records every material change to the shared UI:
 seeded from the beginning of V2, not started at the end. A change that alters a
 component's look, API, or provenance gets a line the same commit it lands. This
 is what makes "is this still stock base6?" answerable by reading, not archaeology.
 
-Entry shape: `- <date> — <component/area>: <what changed> (<why / provenance shift>)`.
+Entry shape: `- <date>: <component/area>: <what changed> (<why / provenance shift>)`.
 
 ## 4. Guardrails ship with new components
 
 A new shared component lands with, in the same change:
 1. its `provenance(...)` export,
-2. a Storybook story exercising each state (the story *is* the test — a11y +
+2. a Storybook story exercising each state (the story *is* the test: a11y +
    interaction run on it), and
 3. a `CHANGELOG.md` line.
 

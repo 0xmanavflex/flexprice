@@ -26,7 +26,7 @@ export type Failure = ListFailure
 /**
  * An error, as a sentence somebody can act on.
  *
- * `noun` is the thing that failed, in the product's words — "your
+ * `noun` is the thing that failed, in the product's words: "your
  * organisation", "the members list". One mapping with every list and detail
  * page (`toListFailure`), so a 403 never offers a retry and a timeout never
  * reads as "offline".
@@ -79,8 +79,8 @@ export function PanelUnavailable({
  *
  * Mutations get their own path because the useful case is the opposite of a
  * query's: a failed save is almost always a 400 whose body explains the rule
- * that was broken — "You have reached the maximum limit of 2 development
- * environment(s)" — and collapsing that into "something went wrong" throws away
+ * that was broken: "You have reached the maximum limit of 2 development
+ * environment(s)": and collapsing that into "something went wrong" throws away
  * the only sentence that helps. A failed create being invisible is a bug this
  * console already has elsewhere; it is not repeated here.
  */
@@ -94,7 +94,7 @@ export function mutationMessage(error: unknown, fallback: string): string | null
 /**
  * A panel that could not load.
  *
- * The retry button is withheld when retrying cannot help — pressing "Try
+ * The retry button is withheld when retrying cannot help: pressing "Try
  * again" against a 403 forever is worse than being told plainly that the
  * answer will not change.
  */
@@ -195,7 +195,7 @@ export function Panel({ children }: { children: ReactNode }) {
 }
 
 /**
- * The same stack, at full width — for the panels that are mostly a table.
+ * The same stack, at full width: for the panels that are mostly a table.
  *
  * `fill` makes it take the rest of the page body, for a panel whose only
  * content is its first-run `EmptyState`: a `size="page"` block centres in the
@@ -245,7 +245,7 @@ export function PanelFirstRun({
                 variant="outline"
                 nativeButton={false}
                 // `role="link"`: Base UI marks a non-native button `role="button"`,
-                // and this navigates — it should be announced as the link it is.
+                // and this navigates: it should be announced as the link it is.
                 render={<a href={docsHref} target="_blank" rel="noreferrer" role="link" />}
               >
                 {docsLabel}

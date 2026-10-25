@@ -131,7 +131,7 @@ export function useDataExports(query: DataExportQuery) {
   })
 }
 
-/** One export — `GET /tasks/scheduled/{id}`. */
+/** One export: `GET /tasks/scheduled/{id}`. */
 export function useDataExport(id: string) {
   const client = useFlexprice()
   return useQuery({
@@ -207,7 +207,7 @@ function useRefreshExports() {
   return () => void queryClient.invalidateQueries({ queryKey: queryKeys.dataExports.all() })
 }
 
-/** Creates an export — `POST /tasks/scheduled`. */
+/** Creates an export: `POST /tasks/scheduled`. */
 export function useCreateDataExport() {
   const client = useFlexprice()
   const refresh = useRefreshExports()
@@ -230,7 +230,7 @@ export function useCreateDataExport() {
   })
 }
 
-/** Pauses or resumes an export — `PUT /tasks/scheduled/{id}`. */
+/** Pauses or resumes an export: `PUT /tasks/scheduled/{id}`. */
 export function useSetDataExportEnabled() {
   const client = useFlexprice()
   const refresh = useRefreshExports()
@@ -241,7 +241,7 @@ export function useSetDataExportEnabled() {
   })
 }
 
-/** Deletes an export — `DELETE /tasks/scheduled/{id}`. */
+/** Deletes an export: `DELETE /tasks/scheduled/{id}`. */
 export function useDeleteDataExport() {
   const client = useFlexprice()
   const refresh = useRefreshExports()
@@ -251,7 +251,7 @@ export function useDeleteDataExport() {
   })
 }
 
-/** Runs an export now, for its current interval or a chosen window — `POST /tasks/scheduled/{id}/run`. */
+/** Runs an export now, for its current interval or a chosen window: `POST /tasks/scheduled/{id}/run`. */
 export function useRunDataExport() {
   const client = useFlexprice()
   const refresh = useRefreshExports()
@@ -302,7 +302,7 @@ export function toExportRun(wire: ExportRunWire): ExportRun {
   }
 }
 
-/** An export's runs — `GET /tasks?scheduled_task_id=…&task_type=EXPORT`. */
+/** An export's runs: `GET /tasks?scheduled_task_id=…&task_type=EXPORT`. */
 export function useExportRuns(exportId: string, query: ExportRunQuery) {
   const client = useFlexprice()
   return useQuery({
@@ -326,7 +326,7 @@ export function useExportRuns(exportId: string, query: ExportRunQuery) {
   })
 }
 
-/** A short-lived link to the file a run wrote — `GET /tasks/{id}/download`. */
+/** A short-lived link to the file a run wrote: `GET /tasks/{id}/download`. */
 export function useDownloadExportRun() {
   const client = useFlexprice()
   return useMutation({
@@ -368,7 +368,7 @@ async function credentials(auth: ReturnType<typeof useFlexpriceAuth>, verb: stri
   return { token, environmentId: environmentId ?? '' }
 }
 
-/** The environment's S3 connections — `GET /connections`, narrowed to `s3`. */
+/** The environment's S3 connections: `GET /connections`, narrowed to `s3`. */
 export function useS3Connections() {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
@@ -404,7 +404,7 @@ export function toCreateS3ConnectionRequest(draft: CreateS3Connection) {
   }
 }
 
-/** Connects an S3 bucket — `POST /connections`. */
+/** Connects an S3 bucket: `POST /connections`. */
 export function useCreateS3Connection() {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()

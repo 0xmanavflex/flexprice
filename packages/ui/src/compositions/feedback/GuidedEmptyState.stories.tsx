@@ -138,7 +138,7 @@ export const OnlyFirstThreeGuides: Story = {
 export const GuidesOpenDocs: Story = {
   play: async ({ canvasElement }) => {
     const link = within(canvasElement).getByRole('link', {
-      name: 'Send usage events — read docs',
+      name: 'Send usage events: read docs',
     })
     await expect(link).toHaveAttribute('href', 'https://docs.flexprice.io/docs/events')
     await expect(link).toHaveAttribute('target', '_blank')

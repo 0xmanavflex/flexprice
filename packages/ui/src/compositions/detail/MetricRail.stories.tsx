@@ -20,7 +20,7 @@ type PlaygroundArgs = ComponentProps<typeof MetricRail> & {
 
 /**
  * The metric rail leads a detail page with numbers, not attributes. These
- * stories are the shapes it takes across entities — a plan's money and counts,
+ * stories are the shapes it takes across entities: a plan's money and counts,
  * a coupon's redemptions.
  */
 const meta = {
@@ -93,7 +93,7 @@ export const Redemptions: Story = {
 
 export const LeadsWithNumbers: Story = {
   play: async ({ canvasElement }) => {
-    // The value, not the label, is the large element — a KPI, not a field.
+    // The value, not the label, is the large element: a KPI, not a field.
     await expect(within(canvasElement).getByText('128')).toBeInTheDocument()
   },
 }
@@ -121,7 +121,7 @@ export const OmittedWhenEveryTileIsBlank: Story = {
   },
 }
 
-/** One real number is enough to earn the rail — the blank tiles ride along. */
+/** One real number is enough to earn the rail: the blank tiles ride along. */
 export const OneRealValueKeepsTheRail: Story = {
   args: {
     metrics: [

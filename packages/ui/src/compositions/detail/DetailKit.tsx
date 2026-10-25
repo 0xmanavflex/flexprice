@@ -410,7 +410,7 @@ export interface OverviewTile {
  * muted detail line per tile.
  *
  * - `grid` (default): a 2 x 2 box, the first thing in an Overview or Usage tab.
- * - `row`: every tile on one line — a report's headline figures.
+ * - `row`: every tile on one line: a report's headline figures.
  * - `flush`: the same row with no frame of its own, along the top of a panel's
  *   surface, ruled off from the chart under it.
  */

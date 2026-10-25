@@ -22,14 +22,14 @@ import { useFlexprice } from './provider'
  * Three things were verified live and each of them changes the code:
  *
  *   1. **`type` is mandatory.** A body of `{limit, offset}` with no `type`
- *      returns `{items: [], total: 0}` — not everything, *nothing* — and a body
+ *      returns `{items: [], total: 0}`: not everything, *nothing*: and a body
  *      of `{}` answers 500. So `toMemberFilter` always sends one.
  *   2. **`filters` and `roles` are ignored.** `UserFilter` declares both, the
  *      SDK serialises both, and the endpoint pays attention to neither: a
  *      `contains` filter for `"zzzznomatch"` returned the row it cannot match,
  *      and `roles: ['event_reader']` returned a user whose only role is
  *      `super_admin`. Sending them would produce a search box that appears to
- *      work and quietly shows wrong results — exactly the defect class
+ *      work and quietly shows wrong results: exactly the defect class
  *      `docs/audit/live-api-verification.md` records. So search and role
  *      narrowing are applied on the page, and said so.
  *   3. **`status` must not be sent.** `status: 'published'` returns zero rows;
@@ -86,7 +86,7 @@ export function toMember(wire: UserWire): Member {
 /**
  * Domain query out, `UserFilter` in.
  *
- * Only `type`, `limit` and `offset` — the three fields the endpoint honours.
+ * Only `type`, `limit` and `offset`: the three fields the endpoint honours.
  * Page numbers are 1-based; offsets are not.
  */
 export function toMemberFilter(query: MemberQuery): Record<string, unknown> {
@@ -108,7 +108,7 @@ export async function fetchMembers(client: Flexprice, query: MemberQuery): Promi
   const members = (response.items ?? []).map((item) => toMember(item as UserWire))
 
   return {
-    // Search and role narrowing are not server-side filters here — see the
+    // Search and role narrowing are not server-side filters here: see the
     // module note. Stated rather than hidden: this narrows the current page,
     // not the whole set, and `total` still counts the whole set.
     members: members.filter((member) => matchesMemberQuery(member, query)),
@@ -174,7 +174,7 @@ export function toInviteMemberRequest(draft: InviteMember): Record<string, unkno
 /**
  * Create a service account. `POST /users` with `type: 'service_account'`.
  *
- * No email — the API returns one empty for this type — and `roles` is required.
+ * No email: the API returns one empty for this type: and `roles` is required.
  * The create response can carry a `password`; it is deliberately not surfaced,
  * because a service account is authenticated with an API key issued against it
  * (see `apiKeys.ts`), not with a password.
@@ -190,7 +190,7 @@ export function toCreateServiceAccountRequest(
 }
 
 /**
- * Invite a teammate — `POST /users` with `type: 'user'`.
+ * Invite a teammate: `POST /users` with `type: 'user'`.
  *
  * Resolves with the new member and the one-time password the API generates for
  * them. The password is returned once and stored nowhere, so the caller must
@@ -232,7 +232,7 @@ export function useCreateServiceAccount() {
 /**
  * Rename **yourself**.
  *
- * `PUT /users/me` — the route takes no id, so this can only ever edit the
+ * `PUT /users/me`: the route takes no id, so this can only ever edit the
  * signed-in person's own record. There is no API for renaming another member;
  * a service account is renamed with `useRenameServiceAccount` below. Worth
  * naming precisely, because "update user" reads like it takes an id.
@@ -258,7 +258,7 @@ export function useUpdateOwnProfile() {
  *
  * The roles are normalized before they are sent, so super-admin exclusivity
  * holds at the network boundary and not only in whichever picker produced the
- * list — the rule lives in `@fp/domain`, and this is the one place that has to
+ * list: the rule lives in `@fp/domain`, and this is the one place that has to
  * apply it on the way out.
  */
 export function useUpdateMemberRoles() {
@@ -283,7 +283,7 @@ export function useUpdateMemberRoles() {
 /**
  * Remove a person from the tenant. `POST /users/{id}/remove`.
  *
- * A hard removal, not an archive — there is no status to set them back to, so
+ * A hard removal, not an archive: there is no status to set them back to, so
  * this is not reversible from the console.
  */
 export function useRemoveMember() {

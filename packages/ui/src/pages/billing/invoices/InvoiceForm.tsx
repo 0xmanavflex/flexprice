@@ -81,14 +81,14 @@ import type { EditableLine } from './InvoiceLinesEditor'
  * It follows V1's invoice page: invoice details (customer, number, dates,
  * currency), who it is from and who it bills, the line items with their notes
  * and service periods, the customer's taxes, a memo and metadata, and a summary.
- * Every field here reaches the API — nothing is drawn that is not sent.
+ * Every field here reaches the API: nothing is drawn that is not sent.
  *
  * Editing adds what only an existing invoice has: its status and payment
  * status, and re-applying discounts. Fields the API cannot change after
  * creation (customer, number, issue date, currency, memo) are shown, not
  * offered. A finalized invoice changes in place, except that changing its lines
  * or re-applying discounts makes the API void it and carry the edit onto a new
- * draft — the form says so and asks before saving.
+ * draft: the form says so and asks before saving.
  *
  * Preview of the layout it keeps: https://reui.io/blocks/application/form/form-3
  */
@@ -190,9 +190,9 @@ export interface InvoiceCreateProps extends CommonProps {
 export interface InvoiceEditProps extends CommonProps {
   mode: 'edit'
   invoice: EditableInvoice
-  /** Where the payment status may go — `manualPaymentStatusChoices`. */
+  /** Where the payment status may go: `manualPaymentStatusChoices`. */
   paymentChoices: readonly PaymentStatus[]
-  /** Why the payment status cannot be set by hand, or null — `manualPaymentStatusBlocked`. */
+  /** Why the payment status cannot be set by hand, or null: `manualPaymentStatusBlocked`. */
   paymentStatusBlocked: string | null
   onSave: (draft: InvoiceEditDraft) => void
 }
@@ -974,7 +974,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                               {edit.invoice.paymentStatus
                                 ? PAYMENT_STATUS_LABEL[edit.invoice.paymentStatus]
                                 : 'Not set'}{' '}
-                              — {edit.paymentStatusBlocked.toLowerCase()}.
+                             : {edit.paymentStatusBlocked.toLowerCase()}.
                             </p>
                           ) : (
                             <OptionSelect
@@ -1004,7 +1004,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                                     value: choice,
                                     label:
                                       choice === edit?.invoice.paymentStatus
-                                        ? `${PAYMENT_STATUS_LABEL[choice]} — record an amount`
+                                        ? `${PAYMENT_STATUS_LABEL[choice]}: record an amount`
                                         : PAYMENT_STATUS_LABEL[choice],
                                   })),
                               ]}

@@ -12,7 +12,7 @@ import { provenance } from '@ui/provenance'
 import { OptionBody, type Option } from './OptionSelect'
 
 /**
- * A stock `Combobox` over an options array — the searchable picker for long or
+ * A stock `Combobox` over an options array: the searchable picker for long or
  * dynamic lists (features, meters, currencies, timezones, plans).
  */
 export const OptionComboboxProvenance = provenance({
@@ -33,7 +33,7 @@ export interface OptionComboboxProps {
    *
    * This control has always filtered as you type, but with the trigger hidden
    * it reads as a plain select: people open it, see no search box, and scroll.
-   * For a picker over a catalogue — features, plans, customers — say what it
+   * For a picker over a catalogue: features, plans, customers: say what it
    * is. For a short, fixed list it is noise.
    */
   searchable?: boolean

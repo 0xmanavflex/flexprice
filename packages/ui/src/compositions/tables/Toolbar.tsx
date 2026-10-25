@@ -8,7 +8,7 @@ import { useDebouncedSearch } from './useDebouncedSearch'
  * The search-and-filter bar above a list.
  *
  * It reports what the user asked for and renders what it is given. The route owns the query, so the
- * toolbar and the grid below it cannot disagree about the current filter — they
+ * toolbar and the grid below it cannot disagree about the current filter: they
  * are both reading the same URL. The search field keeps local state and pushes
  * to the route after a 250ms pause (Enter or blur pushes at once); an outside
  * change to `search`, such as Clear filters, replaces what is typed.
@@ -27,7 +27,7 @@ export interface ToolbarProps {
   onSearchChange: (value: string) => void
   searchPlaceholder?: string
   searchLabel?: string
-  /** Filter controls — selects, chips, whatever the surface needs. */
+  /** Filter controls: selects, chips, whatever the surface needs. */
   filters?: ReactNode
   /** Rendered when anything is narrowing the list. */
   activeFilterCount?: number
@@ -68,7 +68,7 @@ export function Toolbar({
         <Button type="button" variant="ghost" size="sm" onClick={onClear}>
           Clear filters
           {/* The count is in the label, not only in a badge, so it is spoken. */}
-          <span className="sr-only"> — {activeFilterCount} active</span>
+          <span className="sr-only">: {activeFilterCount} active</span>
           <span aria-hidden className="text-muted-foreground ml-1">
             ({activeFilterCount})
           </span>

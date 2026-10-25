@@ -13,7 +13,7 @@ import { queryKeys } from './keys'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
- * Credit notes, through `GET /creditnotes` — a route the SDK has no method for,
+ * Credit notes, through `GET /creditnotes`: a route the SDK has no method for,
  * so this reads the raw snake_case body (see `@fp/api` `creditNotes.ts`).
  * Status is a server-side filter; search narrows the returned page.
  */
@@ -247,7 +247,7 @@ export function useCreateCreditNote() {
   })
 }
 
-/** Lock a draft and apply it — `POST /creditnotes/{id}/finalize`. */
+/** Lock a draft and apply it: `POST /creditnotes/{id}/finalize`. */
 export function useFinalizeCreditNote() {
   const client = useFlexprice()
   const invalidate = useInvalidateCreditNotes()

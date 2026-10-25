@@ -29,8 +29,8 @@ import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared
  *
  * ## No customer or receipt column
  *
- * `PaymentResponse` carries neither a customer nor a receipt number — only the
- * invoice it was paid against — so the list shows what V1 showed: when, which
+ * `PaymentResponse` carries neither a customer nor a receipt number: only the
+ * invoice it was paid against: so the list shows what V1 showed: when, which
  * invoice, how much, how, and the gateway's own reference for the charge.
  *
  * ## Method is the customer's, not the processor's
@@ -68,7 +68,7 @@ const STATUS_TONE: Record<PaymentStatus, PillTone> = {
  * The wire's `CARD`, `ACH_DEBIT` and friends, as words.
  *
  * Title-cased from the enum rather than mapped through a lookup: the set is
- * open — a gateway can report a method this build has never heard of — and a
+ * open: a gateway can report a method this build has never heard of: and a
  * lookup would render the new one blank. Splitting on the underscore is not
  * elegant, but it degrades into something readable instead of into nothing.
  */
@@ -283,7 +283,7 @@ export function PaymentGrid({
           scene: 'payments',
           title: 'No money has moved yet',
           description:
-            'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
+            'A payment is a collection against an invoice: taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
           guides: GUIDES,
         }}
       />

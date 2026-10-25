@@ -17,7 +17,7 @@
  * completely different problems.
  *
  * Ported from V1's `src/types/dto/Events.ts`, checked against a live
- * `GET /events/lookup` rather than taken from the types alone — the customer
+ * `GET /events/lookup` rather than taken from the types alone: the customer
  * object is keyed `external_id` there, not `external_customer_id` as the V1
  * interface claims.
  */
@@ -58,7 +58,7 @@ export interface EventDebugStageResult {
    * The readable rows above are a summary and a summary is a judgement about
    * what matters. A debugger has to be able to show the thing itself, because
    * the field that explains a given event is often one nobody thought to
-   * surface — V1 puts the raw JSON behind every step for the same reason.
+   * surface: V1 puts the raw JSON behind every step for the same reason.
    */
   raw: Record<string, unknown>
 }
@@ -143,7 +143,7 @@ export const EVENT_DEBUG_STAGE_WIRE: Record<EventDebugStage, string> = {
  *
  * Not derivable from `EVENT_DEBUG_STAGE_WIRE`: the meter stage is keyed `meter_matching`
  * on the tracker but reported as `meter_lookup` when it is the failure point.
- * Deriving one from the other silently swallowed every meter failure — the
+ * Deriving one from the other silently swallowed every meter failure: the
  * worst of the five to lose, since "no meter listens for that event name" is
  * the most common reason an event does not bill.
  */

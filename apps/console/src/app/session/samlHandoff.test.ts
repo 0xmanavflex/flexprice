@@ -45,7 +45,7 @@ describe('parseFragment', () => {
     })
   })
 
-  it('keeps a JWT whole — its padding is not a parameter separator', () => {
+  it('keeps a JWT whole: its padding is not a parameter separator', () => {
     const jwt = 'eyJhbGci.eyJzdWIi.c2lnbmF0dXJl=='
     expect(parseFragment(`#token=${encodeURIComponent(jwt)}&tenant_id=ten_1`)?.token).toBe(jwt)
   })
@@ -88,7 +88,7 @@ describe('readHandoff', () => {
 
   /*
    * The tenant alone cannot tell one login from another, because every login
-   * to a tenant carries the same value — which is the whole reason the nonce
+   * to a tenant carries the same value: which is the whole reason the nonce
    * travels as RelayState. A second login to the same tenant, started
    * elsewhere, must not be accepted here.
    */

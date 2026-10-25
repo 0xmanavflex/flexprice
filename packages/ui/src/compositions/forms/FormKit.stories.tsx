@@ -15,9 +15,9 @@ const PERIODS = [
   { value: 'ANNUAL', label: 'Annual' },
 ]
 const CURRENCIES = [
-  { value: 'usd', label: 'USD — US dollar' },
-  { value: 'eur', label: 'EUR — Euro' },
-  { value: 'inr', label: 'INR — Indian rupee' },
+  { value: 'usd', label: 'USD: US dollar' },
+  { value: 'eur', label: 'EUR: Euro' },
+  { value: 'inr', label: 'INR: Indian rupee' },
 ]
 
 interface DemoProps {

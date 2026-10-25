@@ -5,8 +5,8 @@ import { chargePriceLabel } from '@fp/ui/pages'
  * A catalogue record's full price history as the charges table reads it: one
  * row per charge (its newest version), and per row the versions it has had.
  *
- * Earlier prices are not deleted when a charge is edited — the API ends them
- * and starts a new version — so they arrive here as ended prices and leave as
+ * Earlier prices are not deleted when a charge is edited: the API ends them
+ * and starts a new version: so they arrive here as ended prices and leave as
  * the History of the charge they belong to, inactive, with their dates.
  */
 export function priceHistoryRows(prices: readonly Charge[]): {

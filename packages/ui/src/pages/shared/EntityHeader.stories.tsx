@@ -44,7 +44,7 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
     a11y: {
-      // Base UI's portal focus guards — see AppShell.stories.tsx.
+      // Base UI's portal focus guards: see AppShell.stories.tsx.
       config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
     },
   },

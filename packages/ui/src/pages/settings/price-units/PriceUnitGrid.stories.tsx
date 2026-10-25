@@ -30,7 +30,7 @@ export const Populated: Story = {
     await expect(await canvas.findByText('Credits')).toBeInTheDocument()
 
     // The rate reads as an equation, and the string the API sent is printed
-    // verbatim — parsing it to a number to reformat would throw away the
+    // verbatim: parsing it to a number to reformat would throw away the
     // precision the string exists to preserve.
     await expect(canvas.getByText('1 CRD = 0.01 USD')).toBeInTheDocument()
     await expect(canvas.getByText('1 TOK = 0.0000025 USD')).toBeInTheDocument()
@@ -39,7 +39,7 @@ export const Populated: Story = {
 }
 
 /**
- * No status dropdown — status is a column and an entry in the filter popover.
+ * No status dropdown: status is a column and an entry in the filter popover.
  *
  * A tenant has a handful of price units, and the Status column says what a
  * dropdown would. Asserted so the toolbar does not quietly regrow one; the
@@ -75,7 +75,7 @@ export const Layout: Story = {
 
 export const Loading: Story = { args: { priceUnits: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     priceUnits: [],

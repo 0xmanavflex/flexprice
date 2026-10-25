@@ -43,9 +43,9 @@ export interface CustomerPortalData {
 }
 
 /**
- * What the portal can do. Each write resolves when it is done — with the
+ * What the portal can do. Each write resolves when it is done: with the
  * gateway page it opened in a new tab, if it opened one (the dialog then keeps
- * that link on screen) — and rejects with a message the customer can read.
+ * that link on screen): and rejects with a message the customer can read.
  */
 export interface CustomerPortalActions {
   onViewChange: (view: PortalView) => void

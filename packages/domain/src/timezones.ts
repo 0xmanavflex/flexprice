@@ -3,7 +3,7 @@ import ZONES from './timezones.json' with { type: 'json' }
 /**
  * Time zones a person can actually find.
  *
- * The picker listed bare IANA names — `Asia/Kolkata` and nothing else — so
+ * The picker listed bare IANA names: `Asia/Kolkata` and nothing else: so
  * someone looking for their own zone had to already know its IANA spelling.
  * Typing "IST" found nothing, and neither did "+5:30".
  *
@@ -13,7 +13,7 @@ import ZONES from './timezones.json' with { type: 'json' }
  * Why the abbreviations are partly a list: `Intl` returns a real abbreviation
  * only for US zones. Everywhere else `timeZoneName: 'short'` gives "GMT+5:30",
  * which is the offset again, not what anyone calls the zone. Checked, not
- * assumed — see the test. So the common ones are named here and the rest fall
+ * assumed: see the test. So the common ones are named here and the rest fall
  * back to whatever `Intl` knows.
  */
 
@@ -22,7 +22,7 @@ import ZONES from './timezones.json' with { type: 'json' }
  *
  * Standard time, not daylight: someone searching "CET" in July still means
  * Berlin. Where `Intl` does give a name it wins, because it is correct for
- * today — it answers EDT in summer and EST in winter.
+ * today: it answers EDT in summer and EST in winter.
  */
 const KNOWN_ABBREVIATIONS: Record<string, string> = {
   'Asia/Kolkata': 'IST',
@@ -81,7 +81,7 @@ const KNOWN_ABBREVIATIONS: Record<string, string> = {
 export interface TimezoneOption {
   /** The IANA name, which is the stored value. */
   zone: string
-  /** "IST", "PDT" — absent when nothing names this zone. */
+  /** "IST", "PDT": absent when nothing names this zone. */
   abbreviation: string | null
   /** "UTC+05:30". */
   offset: string

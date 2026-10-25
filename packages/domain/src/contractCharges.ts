@@ -1,7 +1,7 @@
 import { BillingPeriod, type Charge } from './price'
 
 /**
- * Which of a plan's charges a new contract will actually bill — the backend's
+ * Which of a plan's charges a new contract will actually bill: the backend's
  * rule (`filterValidPricesForSubscription` and `IsCadenceAllowed` in the
  * subscription service), so the form never shows a charge as billable when
  * the API will drop it.
@@ -10,7 +10,7 @@ import { BillingPeriod, type Charge } from './price'
  *   one-time, or whose billing period equals the contract's. The period count
  *   is not compared, matching the API.
  * - **Opt-in:** charges in the contract's currency at another cadence that
- *   still fits — equal to, dividing, or a whole multiple of the contract's
+ *   still fits: equal to, dividing, or a whole multiple of the contract's
  *   (monthly on a quarterly contract, annual on a monthly one). They attach
  *   only when listed in `include_price_ids`.
  * - **Not billed:** another currency, or a cadence that does not fit

@@ -18,7 +18,7 @@ const COMPLETE = {
 
 describe('samlConfigSchema', () => {
   /**
-   * A half-filled configuration is a legitimate save — somebody is waiting on
+   * A half-filled configuration is a legitimate save: somebody is waiting on
    * a certificate from their IdP. A half-filled configuration that is
    * *enabled* locks every user out of the tenant.
    */

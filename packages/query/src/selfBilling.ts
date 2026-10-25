@@ -176,8 +176,8 @@ export function useSelfBillingSummary(options: { enabled?: boolean } = {}) {
 }
 
 /**
- * Refetches the status and the summary — after a checkout settles, the pill and
- * the lock follow — and the environment list: activation creates the
+ * Refetches the status and the summary: after a checkout settles, the pill and
+ * the lock follow: and the environment list: activation creates the
  * production environment, which "Open production" has to find.
  */
 export function useRefreshSelfBilling() {

@@ -8,7 +8,7 @@ import type { ChartTone } from './charts'
 /**
  * A segmented arc gauge.
  *
- * `@reui/chart-7` draws its metric as ticks radiating around a 180° arc — a
+ * `@reui/chart-7` draws its metric as ticks radiating around a 180° arc: a
  * lit run against a faint track, with a soft blurred copy of the lit ticks
  * underneath so the active part reads as glowing rather than merely coloured.
  * The block hard-wires two demo metrics and an avatar stack, so what is reused
@@ -16,14 +16,14 @@ import type { ChartTone } from './charts'
  * 180°-to-360° sweep, the cropped viewBox that trims the dead space above the
  * arc, and the two-pass render.
  *
- * A gauge is the right mark only when "full" means something — a rate against
+ * A gauge is the right mark only when "full" means something: a rate against
  * 100%, usage against a commitment, keys active out of keys issued. For a
  * quantity with no ceiling it is the wrong shape at any radius, because the
  * sweep implies a maximum that does not exist. `max` is required for that
  * reason: there is no version of this component that will invent one.
  *
  * Its tone defaults to `good` because the reading is usually health, and health
- * is state — the one thing status colour is reserved for. Pass `warning` or
+ * is state: the one thing status colour is reserved for. Pass `warning` or
  * `critical` when the page has decided the reading is bad; the component does
  * not threshold on its own, because where "bad" starts is a product question
  * and a shared chart component is the wrong place to answer it.
@@ -46,7 +46,7 @@ const TICK_LENGTH = 23
 export interface ArcGaugeProps {
   /** The current reading. */
   value: number
-  /** The reading a full arc means. Required — a gauge without a ceiling is the wrong mark. */
+  /** The reading a full arc means. Required: a gauge without a ceiling is the wrong mark. */
   max: number
   /** The figure in the middle, already formatted. Defaults to `value`/`max` as a percentage. */
   display?: ReactNode | undefined
@@ -154,7 +154,7 @@ export function ArcGauge({
       {/*
        * The figure is real text under the arc, not a label inside the SVG, so
        * it reflows, scales with the reader's font size and is selectable.
-       * `aria-hidden` because the button above already reads the same figure —
+       * `aria-hidden` because the button above already reads the same figure:
        * without it every gauge announces itself twice.
        */}
       {/*

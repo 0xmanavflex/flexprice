@@ -87,7 +87,7 @@ export const Populated: Story = {
 /**
  * Three of the redesign's seven columns have no field, so they are absent.
  *
- * `AddonWire` carries no type, no price and no subscriber count — an add-on's
+ * `AddonWire` carries no type, no price and no subscriber count: an add-on's
  * charges are a later surface. Omitted rather than dashed on every row, and
  * asserted here so nobody adds them back with a placeholder.
  */
@@ -106,7 +106,7 @@ export const OmitsUnsourcedColumns: Story = {
     await expect(canvas.queryByRole('columnheader', { name: /^price$/i })).toBeNull()
     await expect(canvas.queryByRole('columnheader', { name: /subscribers/i })).toBeNull()
 
-    // Type is sourced now — it is read off the add-on's expanded prices.
+    // Type is sourced now: it is read off the add-on's expanded prices.
     await expect(canvas.getByRole('columnheader', { name: /^type$/i })).toBeInTheDocument()
     await expect(canvas.getByRole('columnheader', { name: /lookup key/i })).toBeInTheDocument()
   },
@@ -128,7 +128,7 @@ export const Layout: Story = {
 
 export const Loading: Story = { args: { addons: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     addons: [],
@@ -190,7 +190,7 @@ export const PaginationReportsDomainQuery: Story = {
  * The add-on list carries the same Type pill and counts as Plans.
  *
  * §3 of the handoff: "Add-on, Type, Charges, Entitlements, Contracts,
- * Status, Lookup key — same Type pill and counts as Plans". Contracts is
+ * Status, Lookup key: same Type pill and counts as Plans". Contracts is
  * absent and that is deliberate: `POST /subscriptions/search` accepts both
  * `addon_id` and `addon_ids` and ignores both, so every add-on would show
  * the environment's whole subscription count. Checked live.

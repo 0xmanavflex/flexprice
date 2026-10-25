@@ -15,7 +15,7 @@ export interface GroupListPageProps {
 /**
  * The group surface: a list, a compact full page to create one (`/groups/new`), and a confirmed delete.
  *
- * The API has no group update, so there is no edit and no inline rename — a
+ * The API has no group update, so there is no edit and no inline rename: a
  * wrong name means delete and recreate. The list stays URL-driven; the pending
  * delete is the only local state.
  */
@@ -53,7 +53,7 @@ export function GroupListPage({ query, onQueryChange, onCreateGroup }: GroupList
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateGroup}>New tag</Button>}
           emptyTitle="No tags yet"
-          emptyDescription="Tags bundle prices or features so they report and invoice together — a product line, a region. Create the first to start."
+          emptyDescription="Tags bundle prices or features so they report and invoice together: a product line, a region. Create the first to start."
         >
           <GroupGrid
             groups={rows}

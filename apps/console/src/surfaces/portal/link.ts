@@ -3,7 +3,7 @@ import { type ApiUrls, REGION_IDS, type RegionId } from '../publicApi'
 
 /**
  * The customer portal's address: `/<region>[/<view>][?range=…&invoice=…]`,
- * or `/[<view>]` with no region — this deployment's own portal, served by
+ * or `/[<view>]` with no region: this deployment's own portal, served by
  * the API the console itself uses (`ownApiOrigin`). The console's "Open
  * customer portal" builds that form when the deployment names no region, so
  * the link works without `VITE_PUBLIC_API_URLS`.

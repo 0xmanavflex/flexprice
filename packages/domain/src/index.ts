@@ -1,14 +1,14 @@
 /**
  * The product's vocabulary.
  *
- * Everything here is pure and dependency-free — no SDK, no HTTP, no React.
+ * Everything here is pure and dependency-free: no SDK, no HTTP, no React.
  * Transport types stop below this layer: `@fp/query` fetches a
  * `CustomerResponse` and hands the UI a domain model, so no component ever
  * receives a `WalletResponse`.
  *
  * That boundary is also where Flexprice's internal language becomes the
- * product's. Watchtower established the pattern — a recurring credit grant is
- * presented as a *monthly budget*, a one-time grant as a *top-up* — and the
+ * product's. Watchtower established the pattern: a recurring credit grant is
+ * presented as a *monthly budget*, a one-time grant as a *top-up*: and the
  * same translation belongs here, once, rather than in each screen that renders
  * it.
  *
@@ -539,13 +539,13 @@ export type {
 } from './alertSetting'
 
 /**
- * The seven `/settings/{key}` records — invoice numbering, subscription
+ * The seven `/settings/{key}` records: invoice numbering, subscription
  * dunning, custom currencies, the customer portal, onboarding automation,
  * wallet alerts and SAML.
  *
  * Enumerated here rather than `export *`-ed, like everything else in this
  * file, so that what the package offers is readable in one place. The keys
- * themselves live in `settings/`, one file each — and mind that the
+ * themselves live in `settings/`, one file each: and mind that the
  * tenant-wide wallet alert config is not the per-entity `alertSetting.ts`
  * above.
  */

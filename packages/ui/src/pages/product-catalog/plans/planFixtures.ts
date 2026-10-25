@@ -1,7 +1,7 @@
 import { DEFAULT_PLAN_QUERY, type Plan, type PlanQuery, PlanStatus } from '@fp/domain'
 
 /**
- * Plans as plain domain values — no client, no provider, no network.
+ * Plans as plain domain values: no client, no provider, no network.
  *
  * The charge splits cover all four `PlanKind`s between them, so a story that
  * renders this list renders every Type the column can show: flat-rate,
@@ -51,7 +51,7 @@ export const planFixtures: Plan[] = [
     updatedAt: new Date('2026-03-20T00:00:00Z'),
   },
   {
-    // Archived, and priced nothing — the row that shows both edge states.
+    // Archived, and priced nothing: the row that shows both edge states.
     id: 'plan_04',
     name: 'Legacy Team',
     lookupKey: 'plan_legacy_team',
@@ -66,7 +66,7 @@ export const planFixtures: Plan[] = [
     updatedAt: new Date('2026-01-05T00:00:00Z'),
   },
   {
-    // No lookup key and no description — the row a hand-written demo omits.
+    // No lookup key and no description: the row a hand-written demo omits.
     id: 'plan_05',
     name: 'Enterprise',
     lookupKey: '',

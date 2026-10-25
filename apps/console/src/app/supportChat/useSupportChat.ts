@@ -41,7 +41,7 @@ export function useSupportChat(adapter: SupportChatAdapter, flow: SupportChatFlo
   const { data: tenant, isLoading: isTenantLoading } = useTenant(tenantId ?? '')
   const tenantCreatedAt = tenant?.createdAt?.getTime()
 
-  // V2's user carries no display name, so the tenant name stands in — which was
+  // V2's user carries no display name, so the tenant name stands in: which was
   // also the only name V1 sent before Pylon.
   const displayName = tenantName
 
@@ -133,7 +133,7 @@ export function useSupportChat(adapter: SupportChatAdapter, flow: SupportChatFlo
   }, [adapter])
 
   // Boot the provider and wire visibility events. Rebinds on identity change without
-  // disposing the adapter — dispose() is terminal (see the effect below) and must fire once.
+  // disposing the adapter: dispose() is terminal (see the effect below) and must fire once.
   useEffect(() => {
     if (!userId) return
 
@@ -168,8 +168,8 @@ export function useSupportChat(adapter: SupportChatAdapter, flow: SupportChatFlo
     }
   }, [adapter, userId, userEmail, displayName, tenantCreatedAt, tenantId])
 
-  // Tied only to the adapter instance, so this fires once — on unmount, or if the
-  // memoised adapter is ever replaced — never on an identity-only re-run above.
+  // Tied only to the adapter instance, so this fires once: on unmount, or if the
+  // memoised adapter is ever replaced: never on an identity-only re-run above.
   useEffect(() => {
     return () => {
       adapter.dispose()

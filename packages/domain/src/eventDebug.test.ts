@@ -4,7 +4,7 @@ import { EVENT_DEBUG_STAGES, eventDebugSummary, toEventDebug } from './eventDebu
 /**
  * A real `GET /events/lookup` response, trimmed to the fields this reads.
  *
- * Captured from the live API rather than written from V1's interfaces — which
+ * Captured from the live API rather than written from V1's interfaces: which
  * is how the `external_id` / `external_customer_id` discrepancy on the
  * customer object turned up.
  */

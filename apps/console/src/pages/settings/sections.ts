@@ -1,7 +1,7 @@
 /**
  * The information architecture of Settings, as data.
  *
- * Two levels — a section rail and a tab strip inside it — and both are declared
+ * Two levels: a section rail and a tab strip inside it: and both are declared
  * here rather than in the page, for the same reason `placeholderRoutes.ts`
  * exists: the shape of the screen is a list somebody maintains, and a list in
  * one place can be read, tested and linked against. The URL codec
@@ -20,8 +20,8 @@
  * somewhere to say so.
  *
  * Absent from the generated SDK and absent from the server are different
- * claims — `/settings/:key` answers 200 in production and `@fp/api`'s
- * `settings.ts` reaches it with `fetch` — and only the second makes a tab
+ * claims: `/settings/:key` answers 200 in production and `@fp/api`'s
+ * `settings.ts` reaches it with `fetch`: and only the second makes a tab
  * unavailable.
  *
  * A listed unavailable tab stays selectable, because "you cannot get there"
@@ -170,8 +170,8 @@ export const RAIL_SECTIONS: readonly SettingsSectionSpec[] = SETTINGS_SECTIONS.f
 /**
  * The tab a section opens on.
  *
- * `SettingsShell` reports a section change and nothing else — it cannot know
- * which tab the new section should land on — so the page reads this and writes
+ * `SettingsShell` reports a section change and nothing else: it cannot know
+ * which tab the new section should land on: so the page reads this and writes
  * both ids into one history entry.
  *
  * Total rather than asserting: every section in the table above has at least

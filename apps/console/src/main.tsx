@@ -28,7 +28,7 @@ window.addEventListener('vite:preloadError', (event) => {
  *
  * Every surface's domain points at this one deployment; the hostname (or, on a
  * host that names no surface, an `/i/…` or `/p/…` path prefix) picks one, and only that
- * surface's code is loaded — each `import()` below is its own chunk, so the
+ * surface's code is loaded: each `import()` below is its own chunk, so the
  * hosted invoice page and the customer portal never download the console. See
  * `surfaces/surface.ts`.
  */

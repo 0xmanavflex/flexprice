@@ -156,7 +156,7 @@ export const WithoutMetrics: Story = {
   },
 }
 
-/** A rail whose every tile is blank is dropped too — no fake instrument panel. */
+/** A rail whose every tile is blank is dropped too: no fake instrument panel. */
 export const WithBlankMetrics: Story = {
   args: {
     metrics: [
@@ -180,7 +180,7 @@ const TABS = ['Overview', 'Entitlements', 'Credit Grants', 'Information']
  *
  * The vendored `TabsList` leaves its overflow visible, so a four-tab strip
  * painted its later children outside the strip, where the viewport clipped
- * them: "Information" — the only place a plan's ID and description live — was
+ * them: "Information": the only place a plan's ID and description live: was
  * unreachable by touch scroll. The shell now makes any tab strip in its body
  * scroll, so the last tab can be reached at 390.
  */

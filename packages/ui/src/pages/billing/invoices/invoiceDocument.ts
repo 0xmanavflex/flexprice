@@ -96,7 +96,7 @@ export interface StatusChip {
 
 /**
  * The header's status chips: the document state (Draft, Finalized, Void,
- * Skipped), then — for a finalized invoice — what the money did (Paid, Overdue,
+ * Skipped), then: for a finalized invoice: what the money did (Paid, Overdue,
  * Payment failed, Partially paid, or Payment pending when nothing has happened
  * yet). Overdue and failed carry the danger tone.
  */

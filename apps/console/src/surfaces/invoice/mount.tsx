@@ -10,7 +10,7 @@ import { InvoiceSurface } from './InvoiceSurface'
  *
  * Deliberately none of the console's providers: no session, no sign-in
  * redirect, no environment, no region switch. The link's token is the only
- * credential, so an expired or wrong link is a "not found" page here — never
+ * credential, so an expired or wrong link is a "not found" page here: never
  * a bounce to `/sign-in`, which is what an authenticated shell would do with
  * the API's 401.
  */

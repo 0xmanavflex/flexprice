@@ -1,5 +1,5 @@
 /**
- * Granular list filters — field, operator, value — the way V1's query builder
+ * Granular list filters: field, operator, value: the way V1's query builder
  * worked, and the way every `POST /<entity>/search` endpoint evaluates them.
  *
  * A filter is product vocabulary only: which field, which comparison, what to
@@ -74,7 +74,7 @@ export function isRunnableFilter(filter: ListFilter, spec: ListFilterSpec | unde
 
 /**
  * Fills in the choices of `options` fields whose choices are the account's own
- * records — customers, plans — which the page loads and the static spec cannot
+ * records: customers, plans: which the page loads and the static spec cannot
  * know.
  */
 export function withFilterOptions(
@@ -102,7 +102,7 @@ export function runnableFilters(
 
 /**
  * Whether two filter lists ask for the same thing, regardless of property or
- * option order — a URL can spell the same filter either way.
+ * option order: a URL can spell the same filter either way.
  */
 export function sameListFilters(a: readonly ListFilter[], b: readonly ListFilter[]): boolean {
   const key = (filter: ListFilter) =>

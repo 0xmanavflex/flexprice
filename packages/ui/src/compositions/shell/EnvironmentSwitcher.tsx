@@ -32,7 +32,7 @@ export interface EnvironmentSwitcherProps {
   current: ShellEnvironment
   environments: ShellEnvironment[]
   onChange: (id: string) => void
-  /** Absent means creating one is not offered — no dead menu item. */
+  /** Absent means creating one is not offered: no dead menu item. */
   onCreate?: () => void
   /** Rename an environment. Absent means no pencil on the rows. */
   onRename?: (id: string) => void
@@ -73,7 +73,7 @@ const TONE: Record<MockAccountOption['tone'], string> = {
  * Editing a plan in production and editing one in a sandbox are different acts
  * with different consequences, so the kind is a coloured dot (green for
  * production, yellow for a sandbox) beside the name, and the name is the word
- * that carries it — colour alone excludes anyone who cannot distinguish it.
+ * that carries it: colour alone excludes anyone who cannot distinguish it.
  *
  * The menu lists the fetched environments, production first, with a tick on the
  * current one. Environments are managed here rather than on a Settings page:

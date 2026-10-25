@@ -5,7 +5,7 @@ import { featureFixtures } from './featureFixtures'
 import { FeatureForm } from './FeatureForm'
 
 /**
- * The replacement for `AddFeature.tsx` — 1,106 lines and four state slices — 
+ * The replacement for `AddFeature.tsx`: 1,106 lines and four state slices: 
  * proved the same way everything else in this package is: fixtures in, props
  * out, no provider, no network.
  */
@@ -13,7 +13,7 @@ import { FeatureForm } from './FeatureForm'
  * Drives the ReUI Select, which is a combobox rather than a native `<select>`.
  *
  * `userEvent.selectOptions` only works on a real `<select>`, and the options
- * render in a portal outside the story root — so they are found on `screen`.
+ * render in a portal outside the story root: so they are found on `screen`.
  */
 async function chooseOption(label: string, optionName: string | RegExp) {
   await userEvent.click(screen.getByRole('combobox', { name: label }))

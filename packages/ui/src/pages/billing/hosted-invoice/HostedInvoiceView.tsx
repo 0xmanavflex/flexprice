@@ -24,9 +24,9 @@ const FLEXPRICE_URL = 'https://flexprice.io'
 
 /**
  * The page behind a hosted invoice link, on ReUI's `receipt-5` block
- * (`components/blocks/receipt-5`), as installed: one Card with a sidebar —
+ * (`components/blocks/receipt-5`), as installed: one Card with a sidebar:
  * the merchant's mark and the state, the amount, the invoice's essentials and
- * Pay — beside the invoice lines and totals, with Download and Print under it.
+ * Pay: beside the invoice lines and totals, with Download and Print under it.
  *
  * The block is a static demo; this is its layout and parts fed with the
  * invoice. Presentational: the app passes data and handlers.

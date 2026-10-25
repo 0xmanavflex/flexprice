@@ -159,7 +159,7 @@ export const Pills: Story = {
     await expect(canvas.getByText('Success')).toBeInTheDocument()
     await expect(canvas.getByText('Metered')).toBeInTheDocument()
 
-    // 24px, fully rounded — the one pill shape the whole console uses.
+    // 24px, fully rounded: the one pill shape the whole console uses.
     const pill = canvas.getByText('Neutral').closest('span[title]')
     await expect(pill).not.toBeNull()
     const box = (pill as HTMLElement).getBoundingClientRect()
@@ -167,7 +167,7 @@ export const Pills: Story = {
   },
 }
 
-/** Nothing measured, nothing set, nothing yet — said out loud. */
+/** Nothing measured, nothing set, nothing yet: said out loud. */
 export const Absent: Story = {
   render: () => <EmDash />,
   play: async ({ canvasElement }) => {
@@ -198,7 +198,7 @@ const ROW: Row = {
  *
  * The assertions below are the contract eleven migrations depend on: a helper
  * renders a value, an em dash for an absent one, and a `text()` that is a
- * plain string — which is what Export CSV writes.
+ * plain string: which is what Export CSV writes.
  */
 export const ColumnHelpers: Story = {
   render: () => {
@@ -247,7 +247,7 @@ export const ColumnHelpers: Story = {
 /**
  * A long identifier clips; it does not paint over the column beside it.
  *
- * This is a regression test for a real bug — an un-truncated ULID rendered
+ * This is a regression test for a real bug: an un-truncated ULID rendered
  * straight across its neighbour and made two cells unreadable.
  */
 export const LongValuesClip: Story = {

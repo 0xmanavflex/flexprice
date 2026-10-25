@@ -20,7 +20,7 @@ import { RegionProvider, useRegion } from '@/app/region'
  * Start the mock API before rendering, when asked.
  *
  * Dynamically imported so neither MSW nor the fixture corpus reaches a
- * production bundle, and awaited so the first query cannot race the worker —
+ * production bundle, and awaited so the first query cannot race the worker:
  * otherwise the opening request escapes to the network and the screen shows an
  * error that disappears on refresh.
  */
@@ -34,15 +34,15 @@ async function startMocksIfAsked() {
 /**
  * One query client, built here rather than left to the provider.
  *
- * `SessionProvider` has to sit *above* `FlexpriceProvider` — the provider takes
+ * `SessionProvider` has to sit *above* `FlexpriceProvider`: the provider takes
  * the auth getters as a prop, so the session must already exist to supply them
- * — and it also has to reach a query client, because signing out clears the
+ *: and it also has to reach a query client, because signing out clears the
  * cache. Those two requirements point in opposite directions as long as the
  * query client is created inside `FlexpriceProvider`.
  *
  * Creating it here resolves that: the same instance is handed to the outer
  * `QueryClientProvider` and to `FlexpriceProvider`. The nesting is real but
- * harmless — `useQueryClient()` finds the nearer provider, and both hold the
+ * harmless: `useQueryClient()` finds the nearer provider, and both hold the
  * identical client, so there is exactly one cache no matter which one answers.
  */
 const queryClient = createQueryClient({ getEnvironmentId: getActiveEnvironmentId })

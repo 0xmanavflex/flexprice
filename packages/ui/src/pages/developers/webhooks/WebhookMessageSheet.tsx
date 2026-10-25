@@ -23,7 +23,7 @@ import { EmDash } from '../../shared/cells'
 import { WebhookStatusPill, WebhookTime, formatWebhookTime } from './webhookCells'
 
 /**
- * One message — Svix's message page, as a sheet over whichever list opened it.
+ * One message: Svix's message page, as a sheet over whichever list opened it.
  *
  * The event type and when it was created, the payload exactly as it was sent,
  * and every delivery attempt: status, the endpoint URL, the HTTP status the

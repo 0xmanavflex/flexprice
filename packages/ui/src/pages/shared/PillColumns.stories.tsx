@@ -136,7 +136,7 @@ export const TwoSeries: Story = {
   },
 }
 
-/** A column whose parts are tiny still shows them — one segment, never none. */
+/** A column whose parts are tiny still shows them: one segment, never none. */
 export const SmallShares: Story = {
   args: {
     columns: [
@@ -168,7 +168,7 @@ export const AllZero: Story = {
   },
 }
 
-/** No columns at all — the legend survives so the panel is still self-describing. */
+/** No columns at all: the legend survives so the panel is still self-describing. */
 export const NoColumns: Story = {
   args: { columns: [] },
 }
@@ -177,7 +177,7 @@ export const NoColumns: Story = {
  * The mark is `@reui/stats-14`'s, and this is the guard that keeps it so.
  *
  * This component's first version claimed stats-14 in its provenance and drew
- * something else entirely — variable-height stacks of `rounded-full` pills —
+ * something else entirely: variable-height stacks of `rounded-full` pills:
  * and nothing caught it, because every test here asserted on readings and
  * labels rather than on the mark. A provenance note is a claim, and an
  * unchecked claim drifts.
@@ -185,7 +185,7 @@ export const NoColumns: Story = {
  * So these assertions are deliberately about geometry: the slab's height and
  * radius, the 4px gap that sets the gutter, and the fixed row count. If a
  * redesign genuinely moves off the block, delete this story along with the
- * provenance entry — do not loosen it until it passes.
+ * provenance entry: do not loosen it until it passes.
  */
 export const MatchesTheBlocksMark: Story = {
   play: async ({ canvasElement }) => {
@@ -203,11 +203,11 @@ export const MatchesTheBlocksMark: Story = {
 
     for (const slab of Array.from(slabs)) {
       const box = slab.getBoundingClientRect()
-      // `h-3` — 12px, not an elastic share of the column.
+      // `h-3`: 12px, not an elastic share of the column.
       await expect(Math.round(box.height)).toBe(12)
 
       const style = getComputedStyle(slab)
-      // `rounded`, so a slab with corners — never `rounded-full`, which is
+      // `rounded`, so a slab with corners: never `rounded-full`, which is
       // what made this read as a pill stack instead of the block's matrix.
       const radius = Number.parseFloat(style.borderTopLeftRadius)
       await expect(radius).toBeGreaterThan(0)
@@ -236,7 +236,7 @@ export const BarsStandAndTheRampRestarts: Story = {
 
     const isLit = (el: Element) => (el as HTMLElement).style.backgroundColor !== ''
 
-    // Lit at the foot, unlit at the head — never the other way round.
+    // Lit at the foot, unlit at the head: never the other way round.
     const litIndexes = tall.map((el, i) => (isLit(el) ? i : -1)).filter((i) => i >= 0)
     await expect(litIndexes.at(-1)).toBe(tall.length - 1)
     await expect(litIndexes).toEqual(

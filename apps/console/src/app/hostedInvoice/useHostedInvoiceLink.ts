@@ -2,7 +2,7 @@ import { ApiError, serverReason, useInvoiceHostedLink } from '@fp/query'
 import { toast } from '@fp/ui/pages'
 
 /**
- * "Open hosted invoice" on the invoice list's row menu — the invoice's own
+ * "Open hosted invoice" on the invoice list's row menu: the invoice's own
  * `hosted_invoice_url`, as the customer receives it (Stripe's page when the
  * invoice synced to Stripe, otherwise the Flexprice hosted invoice).
  *

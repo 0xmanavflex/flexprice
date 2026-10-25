@@ -3,7 +3,7 @@
 What the admin console does not do, and why. Each entry is either a decision
 (leave it out) or a gap with the condition under which it should be built.
 
-## Bulk imports — gap, not built
+## Bulk imports: gap, not built
 
 The SDK exposes `tasks` (list, get, create, process). `createTask` needs an
 `uploadId` for a file that already exists in storage, and V2 has no upload
@@ -15,14 +15,14 @@ button would therefore open a flow that cannot finish.
   (`tasks.listTasks` / `getTask`) is possible, but only if import *monitoring*
   is explicitly wanted; `ExportListPage` / `dataExports.ts` is the template.
 
-## Checkout — out of admin V2
+## Checkout: out of admin V2
 
 `checkout` is the customer-facing payment-provider flow (hosted session for a
 customer paying). It is not an operator screen, and inventing an admin surface
 for it would misrepresent what it does. Revisit only if a customer-facing
 product is added to this repo.
 
-## Customer portal, onboarding, query, SAML SSO — no new UI
+## Customer portal, onboarding, query, SAML SSO: no new UI
 
 Intended V2 surfaces already exist (Settings panels for portal and onboarding;
 the query/usage views). SAML SSO shows an unavailable state when the backend

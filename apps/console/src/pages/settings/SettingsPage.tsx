@@ -43,19 +43,19 @@ import {
  *
  * The page is wiring and dispatch: it turns `?section=&tab=` into a section
  * and a tab, hands `SettingsShell` a fully controlled pair, and renders the
- * one panel that pair names. Every panel below fetches its own data — there is
+ * one panel that pair names. Every panel below fetches its own data: there is
  * no shared loader, because the panels have nothing in common to load and a
  * page-level spinner would make switching tabs feel slower than it is.
  *
  * ## The one rule the shell hands back
  *
  * `SettingsShell` is fully controlled and reports `onSectionChange` and
- * `onTabChange` separately. Changing section **does not change tab** — the
+ * `onTabChange` separately. Changing section **does not change tab**: the
  * shell cannot know which tab a section should open on. So the section handler
  * here looks up the new section's first tab and writes *both* ids in a single
  * `navigate()`. Two navigations would mean two history entries and one
  * intermediate render at an impossible pair (`section=developers&tab=profile`),
- * which the codec would then correct — a visible flicker and a Back button
+ * which the codec would then correct: a visible flicker and a Back button
  * that goes somewhere nobody was.
  *
  * `replace: true` for the same reason list pages use it: flipping through four
@@ -96,15 +96,15 @@ const SECTION_ICONS: Record<string, ReactNode> = {
  * The sections as the shell wants them.
  *
  * Note what is **not** forwarded: `unavailable`. The shell has a built-in
- * unavailable state, and it is announced and correct for what it describes —
+ * unavailable state, and it is announced and correct for what it describes:
  * "It is not part of this account or environment." That sentence is about a
  * plan or a permission, and it is not true of the eight tabs here: those are
  * missing an API contract, not an entitlement. Forwarding the flag would put
  * a confident wrong explanation on screen, and the shell's copy is not a prop.
  *
  * So the flag stays in this app's own table and drives `SettingsUnavailable`,
- * which is built on the same `EmptyState` composition — the same `role="status"`
- * announcement, the same visual treatment — with copy that names the missing
+ * which is built on the same `EmptyState` composition: the same `role="status"`
+ * announcement, the same visual treatment: with copy that names the missing
  * route. The tab is still listed and still selectable, which is the behaviour
  * the flag was there to guarantee.
  */

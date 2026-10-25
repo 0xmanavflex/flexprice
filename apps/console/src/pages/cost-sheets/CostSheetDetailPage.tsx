@@ -20,7 +20,7 @@ export interface CostSheetDetailPageProps {
  * One cost sheet, in full.
  *
  * A cost sheet exists to weigh cost against price, so the page leads with the
- * numbers that answer that — how many prices it groups and in what currency —
+ * numbers that answer that: how many prices it groups and in what currency:
  * then lists the record itself and the prices it collects. The prices are read
  * through the same `usePrices` hook and `ChargeTable` the plan and add-on use,
  * with `PriceEntityType.CostSheet`; where the corpus carries no cost-sheet

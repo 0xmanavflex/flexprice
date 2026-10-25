@@ -14,7 +14,7 @@ import { useFlexprice } from './provider'
  * **Contracts are not here.** The redesign asks for a Contracts count beside
  * Charges and Entitlements, and the API cannot answer it: `addon_id` and
  * `addon_ids` are both accepted by `POST /subscriptions/search` and both
- * ignored — every add-on comes back with the environment's whole
+ * ignored: every add-on comes back with the environment's whole
  * subscription count. Checked against the live API, and there is no
  * `/addons/:id/subscriptions` either. Counting client-side would mean
  * fetching every subscription and reading its add-ons, which is unbounded.

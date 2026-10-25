@@ -65,9 +65,9 @@ type AddonTab = 'charges' | 'entitlements' | 'credit-grants' | 'subscriptions' |
 /**
  * One add-on, in full.
  *
- * The shared detail shell — a large title with its status badge and lookup key,
+ * The shared detail shell: a large title with its status badge and lookup key,
  * an Edit action, and a metric rail of the numbers that say what the add-on
- * bills — then a set of tabs that mirror the plan: the prices it carries, the
+ * bills: then a set of tabs that mirror the plan: the prices it carries, the
  * entitlements it grants, the credit grants it hands subscribers, and the record
  * itself. An add-on shares a plan's charges, entitlements, and credit grants, so
  * it reuses the exact same read tables and editors rather than restating them.
@@ -78,7 +78,7 @@ type AddonTab = 'charges' | 'entitlements' | 'credit-grants' | 'subscriptions' |
  *
  * The page fetches and composes; every relational section is a presentational
  * component from `@fp/ui`, and every destructive action passes through a
- * `ConfirmDialog` — a charge is terminated, an entitlement or grant removed, only
+ * `ConfirmDialog`: a charge is terminated, an entitlement or grant removed, only
  * after a confirming beat.
  */
 export function AddonDetailPage({
@@ -238,7 +238,7 @@ export function AddonDetailPage({
   )
 }
 
-/** Entitlements — what the add-on includes of each feature. Removal is confirmed. */
+/** Entitlements: what the add-on includes of each feature. Removal is confirmed. */
 function EntitlementsTab({ addonId }: { addonId: string }) {
   const navigate = useNavigate()
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
@@ -250,7 +250,7 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   const [editing, setEditing] = useState<Entitlement | null>(null)
   const [target, setTarget] = useState<Entitlement | null>(null)
 
-  // Only features not already entitled can be added — a feature is granted once.
+  // Only features not already entitled can be added: a feature is granted once.
   const granted = new Set((entitlements.data ?? []).map((e) => e.featureId))
   const toOption = (f: NonNullable<typeof features.data>['features'][number]): FeatureOption => ({
     id: f.id,
@@ -350,7 +350,7 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   )
 }
 
-/** Credit Grants — the balances the add-on hands its subscribers. Removal is confirmed. */
+/** Credit Grants: the balances the add-on hands its subscribers. Removal is confirmed. */
 function CreditGrantsTab({ addonId }: { addonId: string }) {
   const grants = useCreditGrants(CreditGrantScope.Addon, addonId)
   const create = useCreateCreditGrant()
@@ -436,7 +436,7 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
 }
 
 /**
- * Information — one pencil edits the name and description in place; the rest
+ * Information: one pencil edits the name and description in place; the rest
  * is read-only. The metadata card beside it edits, adds and removes fields.
  */
 function InformationTab({

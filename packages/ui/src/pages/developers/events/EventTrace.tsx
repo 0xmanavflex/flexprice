@@ -23,7 +23,7 @@ import { provenance } from '@ui/provenance'
  * This is what makes the Events page a debugger rather than a log. The list
  * answers "did it arrive"; nobody opens it to ask that. They open it because
  * an invoice is wrong, and the question is which of five things did not
- * happen — the customer was not matched, no meter listens for the name, the
+ * happen: the customer was not matched, no meter listens for the name, the
  * meter has no price, no contract carries the price, or the quantity was
  * never counted. Each of those is somebody else's afternoon to find by hand.
  *
@@ -97,7 +97,7 @@ export function EventTrace({
         {/*
           Where the trace starts.
           The five stages are things Flexprice did *after* the event landed,
-          so without this row the list silently assumes the event arrived —
+          so without this row the list silently assumes the event arrived:
           which is the first thing to confirm when nothing else makes sense.
         */}
         <li className="flex gap-3 px-4 py-3">

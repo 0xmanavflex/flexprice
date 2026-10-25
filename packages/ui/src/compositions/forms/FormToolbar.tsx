@@ -7,7 +7,7 @@ import { provenance } from '@ui/provenance'
 /**
  * The bar a create/edit page opens with: close (X) and the one primary
  * action, and, optionally, a stepper centred between them. Create leaves the
- * title out — the breadcrumb already names the page. Edit keeps its title.
+ * title out: the breadcrumb already names the page. Edit keeps its title.
  *
  * There is no Cancel button and no footer: the X is the way back. A staged
  * form swaps the primary for "Next →" until its last step, and shows

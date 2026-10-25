@@ -10,14 +10,14 @@ import type { ChartTone } from './charts'
  *
  * The block's meter is two-state: a segment is either filled or it is track.
  * That answers "how much of the whole", which is the only question a single
- * figure can raise. The console keeps asking a second one — *how the whole
+ * figure can raise. The console keeps asking a second one: *how the whole
  * divides*: revenue by plan, usage by feature, a balance between what is
  * committed and what is left. Extending the same mark rather than reaching for
  * a stacked bar keeps one idiom on the page, so a reader who has learned to
  * count uprights in one panel can read the next one without relearning it.
  *
  * `total` is what separates this from a pie. Given one, the unfilled remainder
- * is drawn as track and the parts are shares *of the ceiling* — how much of a
+ * is drawn as track and the parts are shares *of the ceiling*: how much of a
  * commitment is used, with the rest still to come. Omitted, the parts fill the
  * track and are shares of each other. Those are different claims, and a
  * component that guessed between them would be wrong half the time.
@@ -54,7 +54,7 @@ export interface SplitMeterProps {
    * The reading the track is full at.
    *
    * Omitted, the parts fill the track and read as shares of each other. Given,
-   * anything left over is drawn as unfilled track — the parts are then shares
+   * anything left over is drawn as unfilled track: the parts are then shares
    * of a ceiling, and the gap is the point.
    */
   total?: number | undefined

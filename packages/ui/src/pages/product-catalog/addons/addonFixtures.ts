@@ -1,6 +1,6 @@
 import { DEFAULT_ADDON_QUERY, type Addon, type AddonQuery, AddonStatus } from '@fp/domain'
 
-/** Add-ons as plain domain values — no client, no provider, no network. */
+/** Add-ons as plain domain values: no client, no provider, no network. */
 export const addonFixtures: Addon[] = [
   {
     id: 'addon_01',
@@ -39,7 +39,7 @@ export const addonFixtures: Addon[] = [
     updatedAt: new Date('2026-03-12T00:00:00Z'),
   },
   {
-    // Archived — the row that shows the muted status.
+    // Archived: the row that shows the muted status.
     id: 'addon_04',
     name: 'Legacy SSO',
     lookupKey: 'legacy_sso',
@@ -52,7 +52,7 @@ export const addonFixtures: Addon[] = [
     updatedAt: new Date('2026-01-05T00:00:00Z'),
   },
   {
-    // No lookup key and no description — the row a hand-written demo omits.
+    // No lookup key and no description: the row a hand-written demo omits.
     id: 'addon_05',
     name: 'Onboarding',
     lookupKey: '',

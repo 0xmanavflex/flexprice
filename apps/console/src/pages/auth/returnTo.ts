@@ -4,7 +4,7 @@
  * The guard puts that address in `?redirect=`, which is enough for a password
  * sign-in on the same page. Google and SSO leave the console for the
  * provider and come back to a different route (`/sign-up/confirm`,
- * `/auth/callback`) with no `?redirect=` — so the address is also kept for the
+ * `/auth/callback`) with no `?redirect=`: so the address is also kept for the
  * tab in session storage when sign-in begins, and whichever route finishes
  * the sign-in takes it from there. A shared `/invoices/inv_1?tab=payments`
  * then opens as itself after any of the three.

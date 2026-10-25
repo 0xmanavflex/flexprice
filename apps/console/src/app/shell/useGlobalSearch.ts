@@ -41,7 +41,7 @@ export function searchableDestinations(): { items: ShellSearchItem[]; paths: Map
     paths.set(id, action.path)
   }
 
-  // "Open Pylon" / "Open Intercom", only when a provider is configured — as V1's palette.
+  // "Open Pylon" / "Open Intercom", only when a provider is configured: as V1's palette.
   if (isSupportChatAvailable()) {
     items.push({
       id: SUPPORT_CHAT_ACTION_ID,

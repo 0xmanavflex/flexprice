@@ -181,7 +181,7 @@ describe('toCreateAlertSettingRequest', () => {
 })
 
 describe('toUpdateAlertSettingRequest', () => {
-  it('sends only the config — the watched entity cannot be repointed', () => {
+  it('sends only the config: the watched entity cannot be repointed', () => {
     const request = toUpdateAlertSettingRequest(toAlertSettingConfig(toAlertSetting(settingWire)))
     expect(Object.keys(request)).toEqual(['config'])
     expect(request['config']).toMatchObject({

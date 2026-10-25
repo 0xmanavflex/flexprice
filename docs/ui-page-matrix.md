@@ -14,11 +14,11 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, MetricRail, RowActionsMenu, Section, SortMenu | AddonSubscriptionsView, ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, MetadataCard, PencilIcon, Pill, PuzzleIcon, RefreshCwIcon |
 | addons | `AddonFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AddonForm, AppFailure, LoadingRows, PageBody |
 | addons | `AddonListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | AddonGrid, Button, ListState, PageBody |
-| auth | `AuthCallbackPage` | Other | — | AuthFrame, Button |
+| auth | `AuthCallbackPage` | Other |: | AuthFrame, Button |
 | auth | `ForgotPasswordPage` | Other | Field | AuthFrame, ForgotPasswordForm |
 | auth | `ResetPasswordPage` | Other | Field | AuthFrame, SetPasswordForm |
 | auth | `SignInPage` | Other | Field | RegionField, SignInScreen |
-| auth | `SignUpConfirmPage` | Other | — | SignUpConfirmScreen |
+| auth | `SignUpConfirmPage` | Other |: | SignUpConfirmScreen |
 | auth | `SignUpPage` | Other | Field | RegionField, SignUpScreen |
 | cost-sheets | `CostSheetDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, Field, FormCard, MetricRail, Section | ArchiveIcon, CalculatorIcon, CatalogDetailFrame, CatalogStatusBadge, CostMarginCard, EditableCard, MetadataCard, PencilIcon, Pill |
 | cost-sheets | `CostSheetFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, CostSheetForm, LoadingRows, PageBody |
@@ -47,7 +47,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |
 | home | `HomePage` | Dashboard | Panel | CUSTOM_RANGE_ID, DashboardHome |
 | integrations | `IntegrationListPage` | List | ConfirmDialog, ConnectorCard, EmptyState, Field, WorkflowStepper | ConnectIntegrationSheet, ConnectionContext, IntegrationLogo, IntegrationsBlock, ManageConnectionSheet |
-| integrations | `OAuthCallbackPage` | Other | — | Button, ErrorState, PageBody, PageLoadingState |
+| integrations | `OAuthCallbackPage` | Other |: | Button, ErrorState, PageBody, PageLoadingState |
 | invoices | `InvoiceDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SortMenu | InvoiceDetailView, InvoicePendingAction, PaymentStatusDialog |
 | invoices | `InvoiceEditPage` | Form | ConfirmDialog, Field | AppFailure, EditableInvoice, EditableLine, InvoiceEditDraft, InvoiceForm, LoadingRows, PageBody |
 | invoices | `InvoiceFormPage` | Form | ConfirmDialog, Field | InvoiceForm, LoadingRows, PageBody |
@@ -64,11 +64,11 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | price-units | `PriceUnitListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |
 | pricing-widget | `PricingWidgetPage` | Other | EmptyState | PricingCatalogBlock |
 | revenue | `ReportsPage` | Other | DetailTabs, EntityList, FilterBar, Panel, SortMenu | AgingBucket, CustomerRevenueRow, OverdueCustomerRow, PayerRow, ReportStatus, RevenueReport |
-| selfBilling | `CheckoutReturnPage` | Other | — | CheckoutReturnView, NextStep |
+| selfBilling | `CheckoutReturnPage` | Other |: | CheckoutReturnView, NextStep |
 | selfBilling | `UpgradePage` | Other | Field | PageLoadingState, UpgradeView |
 | selfBilling | `UsageBillingPage` | Other | Section, SimpleTable | UsageBillingView |
 | settings | `SettingsPage` | Settings | DetailTabs, EmptyState | BadgeDollarSignIcon, BellIcon, Building2Icon, CoinsIcon, EmbeddedPageContext, GaugeIcon, PaletteIcon, PercentIcon, ReceiptTextIcon, RepeatIcon, SettingsSection, SettingsShell, SmileIcon, TagIcon, TicketPercentIcon, UsersIcon, WriteGate |
-| subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
+| subscriptions | `CustomerSubscriptionFormPage` | Form |: | AppFailure, LoadingRows, PageBody |
 | subscriptions | `SubscriptionDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Properties, RowActionsMenu, Section, SortMenu | DateInput, EntityAlertDialog, Input, OptionSelect, SubscriptionDetailView, SubscriptionPart, Switch |
 | subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, FormPage, RowActionsMenu, Section, SimpleTable, SortMenu, WorkflowStepper | SubscriptionForm |
 | subscriptions | `SubscriptionListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, OptionSelect, PageBody, SubscriptionGrid |

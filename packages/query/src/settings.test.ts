@@ -13,7 +13,7 @@ import { queryKeys } from './keys'
  *
  * The same harness `session.test.ts` explains at length: this package's vitest
  * environment is `node` and it has no renderer, so the three functions that
- * need React — `useQuery`, `useMutation`, `useQueryClient` — are recorders and
+ * need React: `useQuery`, `useMutation`, `useQueryClient`: are recorders and
  * everything else is the real thing. What a hook *configures* is what is under
  * test, and it is where these bugs live: a key that forgets the environment, a
  * guard that lets a request fire with no environment to send, a reset that
@@ -24,7 +24,7 @@ import { queryKeys } from './keys'
  * call-ordering invariant needs a React, and there is none in this process.
  *
  * The network edge is a stubbed global `fetch`, because `@fp/api`'s settings
- * module speaks `fetch` directly — these routes have no SDK.
+ * module speaks `fetch` directly: these routes have no SDK.
  */
 
 const SERVER = 'https://api.test.flexprice.io/v1'
@@ -507,7 +507,7 @@ describe('useInvoiceConfig', () => {
    * Two environments must not share an entry. Invalidating on a switch is not
    * enough: invalidation marks an entry stale, it does not remove it, so a
    * settings screen mounted after a switch renders the previous environment's
-   * configuration while the refetch is in flight — into a form whose next
+   * configuration while the refetch is in flight: into a form whose next
    * save writes it to the wrong environment.
    */
   it('gives two environments two different entries', () => {
@@ -567,8 +567,8 @@ describe('useUpdateInvoiceConfig', () => {
   /**
    * Seed the cache from the response, then mark the entry stale *without*
    * refetching. A GET issued immediately after a PUT can be served by a
-   * replica that has not seen the write — verified live, a PUT of
-   * `grace_period_days: 4` followed by a GET answering 3 — so an invalidation
+   * replica that has not seen the write: verified live, a PUT of
+   * `grace_period_days: 4` followed by a GET answering 3: so an invalidation
    * that refetches at once can replace the saved value with the old one and
    * make a successful save look like it did nothing.
    */
@@ -610,7 +610,7 @@ describe('useResetInvoiceConfig', () => {
   })
 
   /**
-   * A 404 on the delete means there was no stored row — this environment was
+   * A 404 on the delete means there was no stored row: this environment was
    * already on the defaults, which is exactly what the caller asked for.
    */
   it('treats a 404 from the delete as success', async () => {
@@ -665,7 +665,7 @@ describe('useSamlConfig', () => {
    * **Any** read failure means unavailable, not just the 404 the hosted
    * deployment answers. If a 500 rendered the form with its defaults, the
    * screen would be indistinguishable from a tenant that has never configured
-   * SSO — and pressing Save would overwrite a live SAML configuration with
+   * SSO: and pressing Save would overwrite a live SAML configuration with
    * empty strings, locking every user of that tenant out of the console.
    */
   it.each([

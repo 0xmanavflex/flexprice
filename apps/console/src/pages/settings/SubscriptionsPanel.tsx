@@ -27,8 +27,8 @@ import { useDraft } from './useDraft'
  * What happens to a subscription that is not paid for.
  *
  * `GET/PUT/DELETE /settings/subscription_config`. Two fields that read as one
- * sentence — after `gracePeriodDays` of non-payment, cancel the subscription,
- * or do not — which is why the screen is built around a sentence rather than
+ * sentence: after `gracePeriodDays` of non-payment, cancel the subscription,
+ * or do not: which is why the screen is built around a sentence rather than
  * around two inputs.
  *
  * ## The grace period survives the switch
@@ -44,7 +44,7 @@ import { useDraft } from './useDraft'
  *
  * `subscriptionConfigSchema` accepts 0 because the backend does, but a
  * zero-day grace period is "cancel on the same day the invoice is raised",
- * which is never a deliberate setting — it is a cleared field that was saved.
+ * which is never a deliberate setting: it is a cleared field that was saved.
  * So the floor is enforced here, at the point where somebody meant something,
  * and only while the rule is switched on.
  */
@@ -131,7 +131,7 @@ function SubscriptionForm({
       ...current,
       autoCancellationEnabled: next,
       // Switching the rule off hides the input, so a half-cleared number would
-      // fail validation on a field nobody can see — an invisible failure, and
+      // fail validation on a field nobody can see: an invisible failure, and
       // the save would simply do nothing. The stored value comes back instead.
       gracePeriodDays:
         !next && !Number.isFinite(current.gracePeriodDays)

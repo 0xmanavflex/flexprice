@@ -7,7 +7,7 @@ export interface WebhookEndpointCreatePageProps {
   onCreated: (endpointId: string) => void
 }
 
-/** Add an endpoint — Svix's "Add Endpoint", with V1's Svix Play shortcut. */
+/** Add an endpoint: Svix's "Add Endpoint", with V1's Svix Play shortcut. */
 export function WebhookEndpointCreatePage(props: WebhookEndpointCreatePageProps) {
   return (
     <WebhookPortalGate>

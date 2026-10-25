@@ -294,7 +294,7 @@ export const Create: Story = {
  * The first step opens as one question.
  *
  * Customer and plan are one step, but the plan half is withheld until there is
- * a customer — the step grows into itself rather than opening as a wall of
+ * a customer: the step grows into itself rather than opening as a wall of
  * fields for a decision that has not been made yet.
  */
 export const PlanAppearsAfterTheCustomer: Story = {
@@ -552,7 +552,7 @@ export const ConfiguresAChargeCommitment: Story = {
 
 /**
  * A monthly contract bills monthly and one-time charges. A quarterly charge
- * fits and can be opted in; a weekly one never bills here — and the phase's
+ * fits and can be opted in; a weekly one never bills here: and the phase's
  * charge list says only what will bill.
  */
 export const ChargesAtOtherCadences: Story = {
@@ -583,7 +583,7 @@ export const ChargesAtOtherCadences: Story = {
   },
 }
 
-/** A fixed charge can be billed at another quantity — 25 seats — and the review says so. */
+/** A fixed charge can be billed at another quantity: 25 seats: and the review says so. */
 export const SetsAFixedChargeQuantity: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 2 },
   play: async ({ args, canvasElement }) => {
@@ -979,7 +979,7 @@ export const ChoosesWhoPays: Story = {
 /**
  * Customers inherit the contract: picked by name, shown as chips, and sent by
  * external id. A customer with a contract of its own is listed but cannot be
- * picked, and says why — the API would refuse it.
+ * picked, and says why: the API would refuse it.
  */
 export const InheritsCustomers: Story = {
   args: {
@@ -1078,7 +1078,7 @@ export const ReviewAndSubmit: Story = {
 }
 
 /**
- * The review counts the charges this deal changes rather than listing them —
+ * The review counts the charges this deal changes rather than listing them:
  * a contract can change dozens; the charges step shows each one.
  */
 export const ReviewCountsChangedCharges: Story = {
@@ -1125,7 +1125,7 @@ export const SubmitError: Story = {
 }
 
 /**
- * The review is one card per step, each with its Edit — the reference's
+ * The review is one card per step, each with its Edit: the reference's
  * summary, not a second copy of each step. There is no first-invoice estimate:
  * nothing in the API can make one.
  */

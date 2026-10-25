@@ -5,7 +5,7 @@
  * (`VITE_FLEXPRICE_API_URL`). A public page cannot: a hosted invoice link
  * (`/us/<token>`) and a customer portal link (`/us?token=…`) name their region
  * in the URL, and one deployment serves every
- * region's links. So the browser picks the API itself, from this map — there
+ * region's links. So the browser picks the API itself, from this map: there
  * is no edge router in front choosing a build per region.
  *
  * `VITE_PUBLIC_API_URLS` maps each region to that region's API origin, e.g.

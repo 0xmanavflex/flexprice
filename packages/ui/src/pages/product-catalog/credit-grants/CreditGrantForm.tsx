@@ -55,7 +55,7 @@ export interface CreditGrantFormProps<T> {
    */
   onCancel?: (() => void) | undefined
   submitLabel?: string
-  /** Opens on this grant instead of a blank one — editing a plan's grant on a contract. */
+  /** Opens on this grant instead of a blank one: editing a plan's grant on a contract. */
   defaultValue?: T
 }
 

@@ -24,7 +24,7 @@ import {
  * Flexprice Cloud customer), locked or not, and the billing email to the
  * Flexprice Cloud customer only: Organization's billing email is what the
  * workspace's own customers see, so it is never touched here. A changed company
- * name is written to Organization first — except on a locked account, whose
+ * name is written to Organization first: except on a locked account, whose
  * writes the API refuses. The checkout id waits in
  * session storage for the page Stripe returns to.
  */

@@ -105,18 +105,18 @@ import { provenance } from '@ui/provenance'
 /**
  * Create a contract (subscription), in five steps:
  *
- * 1. **Contract** — the customer, then the plan (its billing period and
+ * 1. **Contract**: the customer, then the plan (its billing period and
  *    currency), and the contract's dates: when it starts and ends, the day it
  *    bills on, a free trial, and proration (off unless turned on).
- * 2. **Charges & add-ons** — the plan's charges as a searchable table (price,
+ * 2. **Charges & add-ons**: the plan's charges as a searchable table (price,
  *    quantity, commitment and coupon from each row), the contract's discount
  *    and its add-ons. A contract with more than one phase shows each
  *    phase's charges in its own card instead.
- * 3. **Commitments & benefits** — the contract-wide commitment, then the plan's
+ * 3. **Commitments & benefits**: the contract-wide commitment, then the plan's
  *    entitlements, credit grants and taxes.
- * 4. **Billing** — payment terms, who pays (this customer, another one, and
+ * 4. **Billing**: payment terms, who pays (this customer, another one, and
  *    customers that inherit the contract), and the remaining settings.
- * 5. **Review** — one card per step, each with its Edit.
+ * 5. **Review**: one card per step, each with its Edit.
  *
  * There is no running summary or first-invoice estimate: the API has nothing
  * to estimate one with, so the form does not guess. Save as draft sits in the
@@ -210,7 +210,7 @@ export interface SubscriptionFormProps {
   priceUnits?: PriceUnitOption[]
   customerLocked?: boolean
   /**
-   * Customers (by id) that cannot inherit this contract, and why — the API
+   * Customers (by id) that cannot inherit this contract, and why: the API
    * refuses a child that has a contract of its own or inherits another one.
    * Loaded for the chosen customer; they are listed but cannot be picked.
    */
@@ -234,9 +234,9 @@ const FALLBACK_CURRENCIES = currencyCodes()
 
 /**
  * Step ids are URL-safe and mirrored by the console's route
- * (`app/subscriptionSteps.ts`). The ids predate the titles — `plan` is
+ * (`app/subscriptionSteps.ts`). The ids predate the titles: `plan` is
  * "Contract", `phases` is "Charges & add-ons", `commitments` is "Commitments &
- * benefits" — and are kept so links already shared still land.
+ * benefits": and are kept so links already shared still land.
  *
  * Customer and plan are **one** step: the customer decides the currency, the
  * plan decides the billing periods on offer, and picking them a page apart
@@ -520,7 +520,7 @@ export function SubscriptionForm({
 
   /*
    * The charges this contract will bill, by the API's own rule: in the
-   * contract's currency, one-time or on its billing period — plus any charge at
+   * contract's currency, one-time or on its billing period: plus any charge at
    * another cadence that fits and was opted into. Everything the form shows as
    * billable comes from this, so it never lists a charge the API would drop.
    */
@@ -1196,7 +1196,7 @@ function CloseSubForm({ label, onClick }: { label: string; onClick: () => void }
 /**
  * Charges the contract does not bill by default: those at another cadence that
  * fits (which can be opted in, as V1's "additional plan prices"), and those it
- * cannot bill at all — said plainly, so nothing looks billable that is not.
+ * cannot bill at all: said plainly, so nothing looks billable that is not.
  */
 function OtherCadences({
   selection,
@@ -1412,10 +1412,10 @@ function ChargeFlag({
 
 /**
  * A phase's charges as the reference's searchable table: any added to this
- * contract alone first, then the plan's — a type and a status filter, twenty a
- * page. A fixed charge's quantity is edited in its row; everything else — a new
+ * contract alone first, then the plan's: a type and a status filter, twenty a
+ * page. A fixed charge's quantity is edited in its row; everything else: a new
  * price, a usage charge's commitment, a coupon on just that charge, back to the
- * plan — is in the row's one menu, and each change shows as a chip under the
+ * plan: is in the row's one menu, and each change shows as a chip under the
  * name that reopens it.
  */
 function ChargesTable({
@@ -1791,7 +1791,7 @@ function extraChargeSummary(extra: AddContractCharge): string {
 
 /**
  * A phase's discounts: coupons on the whole phase, listed, and a picker that
- * opens from "Add coupon" — or from a charge's menu, aimed at that charge.
+ * opens from "Add coupon": or from a charge's menu, aimed at that charge.
  */
 function PhaseDiscounts({
   discounts,
@@ -1940,8 +1940,8 @@ function PhaseDiscounts({
 /**
  * The contract's own discount: one coupon on the whole contract, or none. A
  * coupon on one charge is applied from that charge's menu, so this card leaves
- * those alone. Both are the phase's discounts underneath — this one without a
- * charge — so the request is the same either way.
+ * those alone. Both are the phase's discounts underneath: this one without a
+ * charge: so the request is the same either way.
  */
 function DiscountCard({
   discounts,
@@ -2002,11 +2002,11 @@ function PhaseNumber({ n }: { n: number }) {
 
 /**
  * The contract's charges. A contract of one phase is one card: the charges
- * table, then the discounts — the dates (and proration) are the contract's own,
+ * table, then the discounts: the dates (and proration) are the contract's own,
  * asked on the first step. "Add phase" splits it once it has an end date.
  *
  * With more than one phase it is a timeline: each phase a card with its dates,
- * its charges and then its discounts — and, after the last, the dashed button
+ * its charges and then its discounts: and, after the last, the dashed button
  * that adds the next phase. Phase 1 starts with the contract; each later phase
  * starts where the one before it ends, so only ends are chosen after the first.
  */
@@ -2467,7 +2467,7 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
 
 /**
  * Add-ons the contract starts with: a table once there is one, and a picker
- * under it for the next. An add-on has no quantity on a new contract — the
+ * under it for the next. An add-on has no quantity on a new contract: the
  * API takes none.
  */
 function AddonsSection({
@@ -3201,8 +3201,8 @@ function BillingStep({
 
 /**
  * Everything the contract will be, one card per step, each with its Edit.
- * A row names what was chosen and how many — the step itself holds the
- * detail — except the charges this deal changes, which are listed one by one
+ * A row names what was chosen and how many: the step itself holds the
+ * detail: except the charges this deal changes, which are listed one by one
  * (the first eight, then how many more) so a long plan still says exactly
  * what differs from it.
  */

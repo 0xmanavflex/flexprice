@@ -7,13 +7,13 @@ import { provenance } from '@ui/provenance'
  * nothing to show.
  *
  * Drawn here rather than imported. The reference (hairline.lucasmarkes.com)
- * shows what a figure can be — a line drawing that leans toward the pointer —
+ * shows what a figure can be: a line drawing that leans toward the pointer:
  * but a dependency would bring thirty-three figures for the dozen we use, and a
  * second visual language. These share Flexprice's tokens: strokes are
  * `currentColor`, so a figure is as muted as the text around it in both themes.
  *
  * Three layers (back, mid, front) so the pointer can shift them by different
- * amounts. That is the whole interaction: no state, no re-render — the pointer
+ * amounts. That is the whole interaction: no state, no re-render: the pointer
  * writes two CSS variables and the stylesheet does the rest.
  *
  * Motion is a choice per use, not a default everywhere:

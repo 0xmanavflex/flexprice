@@ -18,7 +18,7 @@ import { provenance } from '@ui/provenance'
 import { WebhookEventTypePicker } from './WebhookEventTypePicker'
 
 /**
- * New endpoint — Svix's "Add Endpoint" page.
+ * New endpoint: Svix's "Add Endpoint" page.
  *
  * The URL, an optional description, and which event types to subscribe to.
  * "Use Svix Play" fills the URL with a throwaway public inbox, for trying the

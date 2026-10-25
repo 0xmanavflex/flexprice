@@ -134,7 +134,7 @@ function leaves(entries: NavEntry[] = ALL): NavEntry[] {
  * Which entry a path belongs to.
  *
  * Longest match wins, so `/features/new` resolves to `features` rather than to
- * `/` — which would otherwise match everything. A row that selects a Settings
+ * `/`: which would otherwise match everything. A row that selects a Settings
  * tab also has to match the search, and beats the bare `/settings` row when it
  * does. `search` is a query string, with or without the leading `?`.
  */
@@ -195,7 +195,7 @@ export function parentForNavId(id: string | undefined): NavEntry | undefined {
 /**
  * The crumbs for a path: the group, then the page.
  *
- * The group is not a link — it is a heading with no page of its own, and a
+ * The group is not a link: it is a heading with no page of its own, and a
  * crumb that navigates somewhere the user did not name is worse than one that
  * does nothing.
  */
@@ -222,7 +222,7 @@ function toItems(entries: NavEntry[], icons: Record<string, React.ReactNode>): S
 
 /** Builds what the shell renders. */
 export function toNavGroups(icons: Record<string, React.ReactNode> = {}): ShellNavGroup[] {
-  // The primary tree carries no heading — a lone label over the main section
+  // The primary tree carries no heading: a lone label over the main section
   // names the obvious. The footer group is pinned to the bottom of the rail.
   return [
     { id: 'main', items: toItems(NAV, icons) },

@@ -126,7 +126,7 @@ export const SwitchesSection: Story = {
   },
 }
 
-/** With counts beside the labels — open invoices, linked charges. */
+/** With counts beside the labels: open invoices, linked charges. */
 export const WithCounts: Story = {
   args: {
     items: [

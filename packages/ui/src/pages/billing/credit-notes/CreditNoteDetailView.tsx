@@ -21,7 +21,7 @@ import { creditNoteChips, settlementNote, type CreditNoteDocument } from './cred
  * One credit memo, as a document rather than a list of fields.
  *
  * The page it replaced was two locked key/value cards, which could say what
- * was credited but never *against what* — the one comparison a credit memo
+ * was credited but never *against what*: the one comparison a credit memo
  * exists to let someone make. Here each line is a pair, invoiced beside
  * credited, and the footer answers the question the reader actually arrived
  * with: so what happened to the money.

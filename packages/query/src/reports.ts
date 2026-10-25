@@ -3,7 +3,7 @@ import { ApiError, ErrorKind, runReport, type ReportQuery, type ReportResult } f
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
- * One analytics report — `POST /analytics/reports/{key}/query`, the report
+ * One analytics report: `POST /analytics/reports/{key}/query`, the report
  * library's single endpoint. Keyed by the report and the whole query, so a
  * change of range, grain, currency or comparison is its own read.
  *

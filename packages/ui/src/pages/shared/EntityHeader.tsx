@@ -27,7 +27,7 @@ export interface EntityHeaderProps {
 /**
  * The detail-page header for records that need a custom tile (an avatar, say):
  * the tile, the name and the small pills under it on the left; on the right the
- * shared `DetailHeaderCluster` — "ID"/email copy chips, then a single More menu
+ * shared `DetailHeaderCluster`: "ID"/email copy chips, then a single More menu
  * that holds every action (no inline buttons).
  * There is no subtitle line. The trail is published to the shell's header
  * breadcrumb, not drawn here.

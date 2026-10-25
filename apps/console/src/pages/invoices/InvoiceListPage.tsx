@@ -28,7 +28,7 @@ export interface InvoiceListPageProps {
  *
  * The page is where `@fp/query` and `@fp/ui` are allowed to meet. It fetches,
  * turns an error into a sentence, and hands the grid plain props. It contains
- * no table logic, and `InvoiceGrid` contains no fetching — neither knows the
+ * no table logic, and `InvoiceGrid` contains no fetching: neither knows the
  * other's business, which is the whole architectural claim being tested here.
  *
  * Note what is absent: any `useState`. The query lives in the URL, so this
@@ -79,7 +79,7 @@ export function InvoiceListPage({
    * second from a balance plus a due date in the past; neither is a field, so
    * `toInvoiceFilter` drops them and the API answers with everything. Without
    * the pass below the reader would get an unfiltered ledger under a control
-   * insisting it was filtered — the one failure mode a billing console must
+   * insisting it was filtered: the one failure mode a billing console must
    * not have.
    *
    * So the narrowing happens here, over the page that came back, and the grid
@@ -87,7 +87,7 @@ export function InvoiceListPage({
    *
    * `total` is *not* corrected. It used to be overwritten with the narrowed
    * count, which made the footer claim the ledger had three invoices and, worse,
-   * collapsed pagination to a single page — so the next page, where the other
+   * collapsed pagination to a single page: so the next page, where the other
    * paid invoices are, could never be reached. The server's total stays the
    * server's; the grid explains the difference.
    */
@@ -102,13 +102,13 @@ export function InvoiceListPage({
     <>
       <PageBody>
         {/*
-         * Through `ListState`, like every other list — not a hand-rolled early
+         * Through `ListState`, like every other list: not a hand-rolled early
          * return, which is what this was.
          *
          * The distinction matters here more than anywhere else in the console.
          * Replacing the grid with a first-run panel also removes the toolbar,
          * and the toolbar is where the status filter lives. An invoice the
-         * default query does not return — a skipped one, say — then leaves the
+         * default query does not return: a skipped one, say: then leaves the
          * ledger looking empty with no control on screen to go and find it.
          * The reader is told "no invoices yet" and given no way to discover
          * that this is false. `ListState` keeps the toolbar up and puts the

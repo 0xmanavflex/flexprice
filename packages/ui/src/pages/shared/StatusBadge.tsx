@@ -8,7 +8,7 @@ import { Pill, type PillTone } from './cells'
  *
  * Colour is carried by the 6px dot rather than a fill. With five statuses down
  * eighteen dense rows, tinted fills turn the status column into a traffic
- * light — every row shouting at once, which is the same as none of them
+ * light: every row shouting at once, which is the same as none of them
  * shouting. A ring of neutral pills with one red dot in it reads instantly.
  *
  * The label is always spelled out beside the dot, so tone is never the only
@@ -18,7 +18,7 @@ import { Pill, type PillTone } from './cells'
 export const StatusBadgeProvenance = provenance({
   source: 'composition',
   composes: [],
-  note: 'Dot-pill status, colour on the dot — so a dense column is not a traffic light.',
+  note: 'Dot-pill status, colour on the dot: so a dense column is not a traffic light.',
 })
 
 /** The dot colour each status carries. */
@@ -50,7 +50,7 @@ export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
     <Pill tone={INVOICE_TONE[status]}>
       {INVOICE_LABEL[status]}
       {/* Colour alone cannot carry "this one needs you". */}
-      {needsAttention(status) ? <span className="sr-only"> — needs attention</span> : null}
+      {needsAttention(status) ? <span className="sr-only">: needs attention</span> : null}
     </Pill>
   )
 }
@@ -80,8 +80,8 @@ const TEXT_TONE: Record<string, PillTone> = {
 /**
  * The one status chip shape: a bordered pill with a coloured dot.
  *
- * Exported so a table that needs a status the shared badges do not cover yet —
- * a subscription's lifecycle, a payment's state — composes the *same* chip from
+ * Exported so a table that needs a status the shared badges do not cover yet:
+ * a subscription's lifecycle, a payment's state: composes the *same* chip from
  * its own tone/label map, rather than inventing a differently-shaped badge.
  * Every status across the console reads as one system this way.
  */
@@ -108,7 +108,7 @@ export function FeatureTypeBadge({ type }: FeatureTypeBadgeProps) {
 
 /**
  * The shared catalogue status: published or archived, drawn like every status
- * here — a dot pill. Features, plans and add-ons all use it, so a Published
+ * here: a dot pill. Features, plans and add-ons all use it, so a Published
  * chip is the same object in every catalogue table.
  */
 export type CatalogStatus = 'published' | 'archived'

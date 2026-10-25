@@ -14,7 +14,7 @@ All 22 are free. Install with `npx shadcn@latest add @reui/<name>`.
 | ✅ | `data-grid` | Every list screen |
 | ✅ | `stepper` | Subscription and plan wizards |
 | ✅ | `frame` | Bordered content groups |
-| ✅ | `rating` | — |
+| ✅ | `rating` |: |
 | ➕ | `alert` | Page and inline callouts |
 | ➕ | `filters` | Filter builder on list screens |
 | ➕ | `icon-tile` | Source marks, list row media |
@@ -28,10 +28,10 @@ All 22 are free. Install with `npx shadcn@latest add @reui/<name>`.
 | ➕ | `tree` | Groups, nested entitlements |
 | ➕ | `cascader` | Dependency of `filters` |
 | ➕ | `scrollspy` | Section nav on long editors |
-| — | `event-calendar` | |
-| — | `gantt` | |
-| — | `kanban` | |
-| — | `phone-input` | |
+|: | `event-calendar` | |
+|: | `gantt` | |
+|: | `kanban` | |
+|: | `phone-input` | |
 
 ---
 

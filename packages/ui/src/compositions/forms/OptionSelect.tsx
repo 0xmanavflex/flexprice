@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
 
 /**
- * A stock `Select` fed from an options array — the short-list picker (≤ ~8
+ * A stock `Select` fed from an options array: the short-list picker (≤ ~8
  * fixed values: billing period, cadence, type). Longer or searchable lists use
  * `OptionCombobox`.
  */

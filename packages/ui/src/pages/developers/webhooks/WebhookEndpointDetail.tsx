@@ -56,7 +56,7 @@ import { WebhookEventTypePicker } from './WebhookEventTypePicker'
 import { WebhookTime } from './webhookCells'
 
 /**
- * One endpoint — Svix's endpoint page.
+ * One endpoint: Svix's endpoint page.
  *
  * The header carries the URL, whether the endpoint is enabled, its id, and the
  * menu Svix puts there (disable, recover failed messages, delete). Under it
@@ -501,7 +501,7 @@ function FirstDelivery({
     {
       id: 'enabled',
       label: endpoint.disabled
-        ? 'Endpoint is disabled — enable it to receive events'
+        ? 'Endpoint is disabled: enable it to receive events'
         : 'Endpoint is enabled',
       done: !endpoint.disabled,
     },

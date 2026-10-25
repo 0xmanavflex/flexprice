@@ -66,7 +66,7 @@ export const OverSoftLimit: Story = {
   },
 }
 
-/** No denominator, so no bar — and no "soft limit" on something with no limit. */
+/** No denominator, so no bar: and no "soft limit" on something with no limit. */
 export const Unlimited: Story = {
   args: { feature: 'Active users', used: 3412, limit: null, unit: 'users', softLimit: true },
   play: async ({ canvasElement }) => {

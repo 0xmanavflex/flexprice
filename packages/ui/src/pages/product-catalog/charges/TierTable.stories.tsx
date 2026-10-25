@@ -7,7 +7,7 @@ import { TierTable } from './TierTable'
 
 /**
  * The tier bands editor. Controlled: the story owns the array, the table draws
- * it. The invariants — derived `From`, an always-unbounded last band — are shown
+ * it. The invariants: derived `From`, an always-unbounded last band: are shown
  * by construction rather than validated after the fact.
  */
 const meta = {

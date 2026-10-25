@@ -71,7 +71,7 @@ describe('toAccessControl', () => {
   })
 })
 
-describe('toAccessControl — first load', () => {
+describe('toAccessControl: first load', () => {
   it('stays loading, never denied, while the catalogue has not been read', () => {
     // Before an environment is chosen the catalogue is not requested at all.
     const access = toAccessControl({ ...base, user: user(['super_admin']), catalogue: undefined })

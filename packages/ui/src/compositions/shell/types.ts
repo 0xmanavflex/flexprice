@@ -28,8 +28,8 @@ export interface ShellNavGroup {
 /**
  * An environment, and whether it is the live one.
  *
- * `kind` is separate from the name because the name is arbitrary — a tenant may
- * call production "Main" — and the interface has to treat live data differently
+ * `kind` is separate from the name because the name is arbitrary: a tenant may
+ * call production "Main": and the interface has to treat live data differently
  * regardless of what it was named.
  */
 export interface ShellEnvironment {

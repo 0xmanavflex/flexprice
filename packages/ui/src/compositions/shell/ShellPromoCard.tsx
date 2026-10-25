@@ -9,12 +9,12 @@ import { provenance } from '@ui/provenance'
  *
  * The shape ReUI's app-shell blocks use: an illustration, a title, a line of
  * copy and a call to action, pinned above the account. It lives in the sidebar's
- * `pinned` slot, which the rail hides when collapsed — a promo has no business
+ * `pinned` slot, which the rail hides when collapsed: a promo has no business
  * competing with navigation in a 64px column.
  *
  * Dismissible, and the dismissal sticks: with a `dismissKey` the card writes to
  * `localStorage` so it does not come back on the next load. The read is guarded
- * (private-mode browsers throw), and the card simply shows if the read fails —
+ * (private-mode browsers throw), and the card simply shows if the read fails:
  * a promo you cannot hide is a nuisance; a promo that vanishes is not a bug.
  */
 export const ShellPromoCardProvenance = provenance({

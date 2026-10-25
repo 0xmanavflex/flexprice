@@ -10,7 +10,7 @@ import type { ShellEnvironment } from './types'
  *
  * Two environments is the tenant on day one; eight is the tenant the list was
  * designed for, and is where grouping stops being decoration. Past a dozen this
- * becomes a command palette — see the note on the component.
+ * becomes a command palette: see the note on the component.
  */
 const two: ShellEnvironment[] = [
   { id: 'prod', name: 'Production', kind: 'production' },
@@ -87,11 +87,11 @@ const meta = {
     a11y: {
       config: {
         rules: [
-          // Base UI's portal focus guards — see AppShell.stories.tsx.
+          // Base UI's portal focus guards: see AppShell.stories.tsx.
           { id: 'aria-hidden-focus', enabled: false },
           // The environment list scrolls once it is long. axe wants a scrollable
           // region to be tabbable or to hold tabbable content; a menu holds
-          // neither, because it is driven by arrow keys — Base UI moves focus
+          // neither, because it is driven by arrow keys: Base UI moves focus
           // between the menuitems and scrolls the focused one into view. The
           // region is reachable by keyboard, just not by Tab, so the rule is a
           // false positive for a menu list.
@@ -152,7 +152,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 }
 
 /**
- * Production is marked green and a sandbox yellow — and not only by colour.
+ * Production is marked green and a sandbox yellow: and not only by colour.
  *
  * Editing a live plan must not look identical to editing a sandbox one, and
  * the marker has to survive someone who cannot distinguish the colour.
@@ -227,7 +227,7 @@ export const InBreadcrumb: Story = {
 }
 
 /**
- * One flat list, production first, with a tick on the current one — and, at
+ * One flat list, production first, with a tick on the current one: and, at
  * eight, past the ~three rows the menu shows, so the list scrolls inside its
  * cap rather than running off the screen. No section headings: the mark on each
  * row already says which kind it is.
@@ -334,7 +334,7 @@ export const DeletesFromTheRow: Story = {
  *
  * The environments scroll inside their cap; create sits below that scroll
  * area, so "New environment" is reachable without scrolling to the end of
- * eight environments first — the whole point of pinning it.
+ * eight environments first: the whole point of pinning it.
  */
 export const ManyWithPinnedActions: Story = {
   args: { environments: eight, current: eight[3]!, onCreate: fn(), onRename: fn() },

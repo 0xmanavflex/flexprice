@@ -22,7 +22,7 @@ export interface SubscriptionListPageProps {
 }
 
 /**
- * The wiring layer, and nothing else — the same shape as `CouponListPage`.
+ * The wiring layer, and nothing else: the same shape as `CouponListPage`.
  *
  * Fetches, turns an error into a sentence, and hands the grid plain props. No
  * `useState`: the query lives in the URL, so a filtered list is a link.
