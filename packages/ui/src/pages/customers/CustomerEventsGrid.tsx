@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -20,6 +20,8 @@ export interface CustomerEvent {
   source: string
   /** Already formatted for display; empty when the event carries no timestamp. */
   receivedAt: string
+  /** The same moment in epoch milliseconds, for sorting; 0 when unknown. */
+  receivedAtMs?: number | undefined
 }
 
 const summarize = (properties: Record<string, string>) =>
@@ -48,6 +50,14 @@ export interface CustomerEventsGridProps extends Partial<SubTabQuery> {
   onRefresh?: (() => void) | undefined
   /** A refresh is in flight: the button is disabled and its icon spins. */
   isRefreshing?: boolean | undefined
+  /**
+   * Loads the next page of events. Given, the list grows as it is scrolled
+   * (and from a "Load more" button) instead of stopping at one page.
+   */
+  onLoadMore?: (() => void) | undefined
+  /** There are more events to load. */
+  hasMore?: boolean | undefined
+  isLoadingMore?: boolean | undefined
 }
 
 export function CustomerEventsGrid({
@@ -62,12 +72,29 @@ export function CustomerEventsGrid({
   onOpenEvent,
   onRefresh,
   isRefreshing = false,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
 }: CustomerEventsGridProps) {
   const [selected, setSelected] = useState<CustomerEvent | null>(null)
-  const capped =
-    total !== undefined && total > events.length
+  const capped = onLoadMore
+    ? undefined
+    : total !== undefined && total > events.length
       ? `Showing the latest ${events.length} of ${total} events.`
       : truncationNote(events.length, CUSTOMER_EVENTS_LIMIT)
+
+  // Reaching the end of the list asks for the next page, so it reads as one
+  // continuous log; the button below does the same for keyboard and AT users.
+  const sentinel = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const node = sentinel.current
+    if (!node || !onLoadMore || !hasMore || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting) && !isLoadingMore) onLoadMore()
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [onLoadMore, hasMore, isLoadingMore])
 
   return (
     <>
@@ -98,7 +125,7 @@ export function CustomerEventsGrid({
           isRetrying={isRetrying}
           columns={4}
           loadingLabel="Loading events"
-          truncation={capped}
+          {...(capped ? { truncation: capped } : {})}
           empty={{
             scene: 'customers',
             title: 'No events yet',
@@ -109,6 +136,13 @@ export function CustomerEventsGrid({
             label="Recent events"
             noun="events"
             rows={events}
+            // Every loaded event on one page: the list grows by loading more,
+            // not by paging through what is already here.
+            {...(onLoadMore ? { pageSize: Math.max(events.length, 1), footer: false } : {})}
+            facets={[
+              { id: 'name', label: 'Event', value: (e: CustomerEvent) => e.name },
+              { id: 'source', label: 'Source', value: (e: CustomerEvent) => e.source || '—' },
+            ]}
             getRowId={(event) => event.id}
             onRowClick={(event) => (onOpenEvent ? onOpenEvent(event.id) : setSelected(event))}
             columns={[
@@ -134,11 +168,19 @@ export function CustomerEventsGrid({
               {
                 key: 'at',
                 header: 'Received',
+                sortBy: (e) => e.receivedAtMs ?? 0,
                 cell: (e) => <span className="text-muted-foreground">{e.receivedAt || '—'}</span>,
               },
             ]}
             empty="No events yet. Events ingested for this customer appear here as they arrive."
           />
+          {onLoadMore && hasMore ? (
+            <div ref={sentinel} className="flex justify-center border-t py-3">
+              <Button variant="outline" size="sm" onClick={onLoadMore} disabled={isLoadingMore}>
+                {isLoadingMore ? 'Loading…' : 'Load more events'}
+              </Button>
+            </div>
+          ) : null}
         </SubTabState>
       </Section>
 

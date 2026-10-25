@@ -355,7 +355,13 @@ export {
 } from './taxRates'
 export type { TaxRatePage, TaxRateWire } from './taxRates'
 
-export { fetchRawEvents, toRawEvent, toRawEventFilter, useRawEvents } from './rawEvents'
+export {
+  fetchRawEvents,
+  toRawEvent,
+  toRawEventFilter,
+  useRawEvents,
+  useRawEventsInfinite,
+} from './rawEvents'
 export type { RawEventPage, RawEventWire } from './rawEvents'
 
 export {

@@ -125,3 +125,24 @@ export const Truncated: Story = {
     ).toBeInTheDocument()
   },
 }
+
+/** A longer log loads as it is scrolled; the button does the same by hand. */
+export const LoadsMore: Story = {
+  args: { events: makeEvents(50), total: 1204, hasMore: true, onLoadMore: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText(/Showing the latest/)).not.toBeInTheDocument()
+    await userEvent.click(await canvas.findByRole('button', { name: 'Load more events' }))
+    await expect(args.onLoadMore).toHaveBeenCalled()
+  },
+}
+
+/** The next page is on its way: the button waits. */
+export const LoadingMore: Story = {
+  args: { events: makeEvents(50), hasMore: true, isLoadingMore: true, onLoadMore: fn() },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByRole('button', { name: 'Loading…' }),
+    ).toBeDisabled()
+  },
+}

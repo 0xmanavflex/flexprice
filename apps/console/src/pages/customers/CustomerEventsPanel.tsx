@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useCustomerNames, useEventDebug, useFeatureNames, useRawEvents } from '@fp/query'
+import { useCustomerNames, useEventDebug, useFeatureNames, useRawEventsInfinite } from '@fp/query'
 import {
   CUSTOMER_EVENTS_LIMIT,
   CustomerEventsGrid,
@@ -11,7 +11,8 @@ import { toTraceError } from '@/pages/events/EventListPage'
 import { subTab } from '@/pages/shared/subTab'
 
 /**
- * A customer's newest ingested events.
+ * A customer's ingested events, newest first, loaded a page at a time as the
+ * list is scrolled.
  *
  * Mounted only while the Events tab is open, so the read waits until someone
  * looks, and only with a real external id: an empty id would drop the customer
@@ -22,8 +23,7 @@ import { subTab } from '@/pages/shared/subTab'
  * ingested version. The trace is read only while the sheet is open.
  */
 export function CustomerEventsPanel({ externalId }: { externalId: string }) {
-  const events = useRawEvents({
-    page: 1,
+  const events = useRawEventsInfinite({
     pageSize: CUSTOMER_EVENTS_LIMIT,
     sortDirection: 'desc',
     customer: externalId,
@@ -31,7 +31,8 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
     source: '',
   })
   const [openId, setOpenId] = useState<string | null>(null)
-  const selected = events.data?.events.find((event) => event.id === openId) ?? null
+  const loaded = events.data?.pages.flatMap((page) => page.events) ?? []
+  const selected = loaded.find((event) => event.id === openId) ?? null
   const debug = useEventDebug(selected)
   const processed = debug.data?.processedUsage ?? []
   const customerNames = useCustomerNames(processed.map((usage) => usage.customerId))
@@ -41,12 +42,17 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
   return (
     <>
       <CustomerEventsGrid
-        events={(events.data?.events ?? []).map(toCustomerEvent)}
-        total={events.data?.total}
+        events={loaded.map(toCustomerEvent)}
+        total={events.data?.pages[0]?.total}
         onOpenEvent={setOpenId}
         onRefresh={() => void events.refetch()}
-        isRefreshing={events.isFetching && !events.isPending}
-        {...subTab(events, 'events')}
+        isRefreshing={events.isFetching && !events.isPending && !events.isFetchingNextPage}
+        onLoadMore={() => void events.fetchNextPage()}
+        hasMore={events.hasNextPage && !events.isFetchNextPageError}
+        isLoadingMore={events.isFetchingNextPage}
+        // A later page failing keeps the events already shown; only a failed
+        // first read is the tab's error.
+        {...subTab({ ...events, error: events.data ? null : events.error }, 'events')}
       />
       <EventDetailSheet
         event={selected}
@@ -84,6 +90,7 @@ function toCustomerEvent(event: {
           event.timestamp,
         )
       : '',
+    receivedAtMs: event.timestamp?.getTime() ?? 0,
     properties: Object.fromEntries(
       Object.entries(event.properties).map(([key, value]) => [
         key,
