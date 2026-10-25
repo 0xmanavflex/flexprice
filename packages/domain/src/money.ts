@@ -179,7 +179,11 @@ export function perUnit(value: Money, quantity: string, places = 6): Money | nul
   return { amount: `${sign}${whole}${fraction ? `.${fraction}` : ''}`, currency: value.currency }
 }
 
-/** A currency code as its symbol ("$"), or the code itself when there is none. */
+/**
+ * A currency code as its symbol, or the code itself when there is none. The
+ * full symbol, not the narrow one, so dollars stay apart: "$" is US dollars,
+ * "CA$" and "A$" the Canadian and Australian ones.
+ */
 export function currencySymbol(currency: string): string {
   const code = currency.trim().toUpperCase()
   if (!/^[A-Z]{3}$/.test(code)) return code
@@ -188,7 +192,7 @@ export function currencySymbol(currency: string): string {
       new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: code,
-        currencyDisplay: 'narrowSymbol',
+        currencyDisplay: 'symbol',
       })
         .formatToParts(0)
         .find((part) => part.type === 'currency')?.value ?? code
