@@ -148,6 +148,7 @@ export function SubscriptionFormPage({
       onCustomerChange={setChosenCustomer}
       meters={formOptions.meters}
       priceUnits={formOptions.units}
+      couponsStatus={coupons.isPending ? 'loading' : coupons.isError ? 'failed' : 'ready'}
       coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
         value: coupon.id,
         label: coupon.name,
