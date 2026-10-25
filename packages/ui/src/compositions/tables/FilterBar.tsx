@@ -102,6 +102,12 @@ export interface FilterBarProps {
    * search endpoints, which AND every condition and know no grouping.
    */
   flat?: boolean
+  /**
+   * Reshapes every change before the bar keeps it as its draft, so the chips
+   * on screen are always the rules the caller hears about (for example, one
+   * metadata filter per key). Omitted, the change is kept as made.
+   */
+  normalize?: ((query: FilterQuery) => FilterQuery) | undefined
 }
 
 /** Whether a query is one level of AND-ed rules. */
@@ -170,6 +176,7 @@ export function FilterBar({
   showClear = true,
   trigger,
   flat = false,
+  normalize,
 }: FilterBarProps) {
   /*
    * The bar owns the tree; the caller owns what it *means*.
@@ -238,7 +245,8 @@ export function FilterBar({
       {...(flat
         ? { className: FLAT_CLASS, onBeforeQueryChange: (next: FilterQuery) => isFlatAnd(next) }
         : {})}
-      onQueryChange={(next: FilterQuery) => {
+      onQueryChange={(change: FilterQuery) => {
+        const next = normalize ? normalize(change) : change
         // Optimistic: the draft owns the tree between commits, and `seen` is
         // left to the render guard so the caller's echo: however late: is
         // recognised as an echo rather than an outside edit.
@@ -597,6 +605,23 @@ export function granularFilter({
     ),
     activeCount: valid.length,
     flat: true,
+    // The chips themselves keep one metadata pair per key, so a duplicated or
+    // re-picked key never leaves a second chip the request does not send.
+    normalize: (query: FilterQuery): FilterQuery => {
+      const keyOf = (node: FilterQuery['rules'][number]): string | null => {
+        if (node.type !== 'rule') return null
+        const field = node.path[0] ?? ''
+        const spec = specs.find((entry) => entry.field === field)
+        if (spec?.kind !== 'keyvalue' || typeof node.value !== 'string') return null
+        const pair = splitKeyValue(node.value)
+        return pair ? `${field}\u0000${pair.key}` : null
+      }
+      const rules = query.rules.filter((node, index) => {
+        const key = keyOf(node)
+        return key === null || !query.rules.slice(index + 1).some((later) => keyOf(later) === key)
+      })
+      return rules.length === query.rules.length ? query : { ...query, rules }
+    },
     onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
       const next = flat.map((entry): ListFilter => {
         const spec = specs.find((candidate) => candidate.field === entry.field)

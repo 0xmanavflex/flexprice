@@ -178,6 +178,8 @@ export interface EntityFilter {
   quick?: EntityQuickSelect | undefined
   /** AND-only conditions, no groups: what the search endpoints can run. */
   flat?: boolean | undefined
+  /** Reshapes each change before the bar keeps it (see `FilterBar`'s `normalize`). */
+  normalize?: ((query: FilterQuery) => FilterQuery) | undefined
 }
 
 /** The inline select next to the search box: one value, `all` for none. */
@@ -947,6 +949,7 @@ export function EntityList<T extends object>({
             query={filter.query}
             onQueryChange={filter.onQueryChange}
             {...(filter.flat ? { flat: true } : {})}
+            {...(filter.normalize ? { normalize: filter.normalize } : {})}
             trigger={
               <Button
                 type="button"
