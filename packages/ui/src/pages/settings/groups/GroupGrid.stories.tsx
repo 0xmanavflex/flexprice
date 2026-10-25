@@ -154,7 +154,7 @@ export const FilteredEmpty: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText(/no groups match these filters/i),
+      await within(canvasElement).findByText(/no tags match these filters/i),
     ).toBeInTheDocument()
   },
 }
@@ -171,9 +171,9 @@ export const FirstRun: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('No groups yet')).toBeInTheDocument()
+    await expect(await canvas.findByText('No tags yet')).toBeInTheDocument()
     await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
-    const create = canvas.getAllByRole('button', { name: /new group/i })
+    const create = canvas.getAllByRole('button', { name: /new tag/i })
     await expect(create.length).toBe(1)
     await userEvent.click(create[0]!)
     await expect(args.onCreate).toHaveBeenCalledOnce()
@@ -184,7 +184,7 @@ export const Error: Story = {
   args: {
     groups: [],
     total: 0,
-    error: 'You do not have access to groups in this environment.',
+    error: 'You do not have access to tags in this environment.',
     onRetry: fn(),
   },
   play: async ({ canvasElement, args }) => {
@@ -247,7 +247,7 @@ function GroupGridPlayground({ rows, page, pageSize, status, hasError, ...rest }
       total={all.length}
       query={{ ...query, page: current }}
       onQueryChange={setQuery}
-      error={hasError ? 'You do not have access to groups in this environment.' : null}
+      error={hasError ? 'You do not have access to tags in this environment.' : null}
     />
   )
 }

@@ -292,7 +292,7 @@ test.describe('live flows', () => {
   test('group: create feature group, then delete', async () => {
     const name = `${run}-group`
     await open('/groups')
-    await page.getByRole('button', { name: 'New group' }).first().click()
+    await page.getByRole('button', { name: 'New tag' }).first().click()
     const main = page.getByRole('main')
     await fill(main, 'Name', name)
     await fill(main, 'Lookup key', `${run}-group`)
@@ -301,7 +301,7 @@ test.describe('live flows', () => {
     await open('/groups')
     await search(name)
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
-    await removeFrom('/groups', name, 'Delete group', 'Delete group')
+    await removeFrom('/groups', name, 'Delete tag', 'Delete tag')
   })
 
   test('add-on: create, edit', async () => {

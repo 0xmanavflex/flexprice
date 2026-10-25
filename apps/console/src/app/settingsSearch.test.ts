@@ -43,6 +43,10 @@ describe('parseSettingsSearch', () => {
       section: 'tags',
       tab: 'tags',
     })
+    expect(parseSettingsSearch({ section: 'groups' })).toEqual({
+      section: 'tags',
+      tab: 'tags',
+    })
   })
 
   it('opens Wallet alerts on its only tab now that Alert rules is gone', () => {

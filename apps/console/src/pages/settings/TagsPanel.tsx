@@ -73,7 +73,7 @@ export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }
       <SettingsTable<Group>
         label="Tags"
         noun="tags"
-        hint="Group prices and features so they can be filtered, reported and invoiced together."
+        hint="Tag prices and features so they can be filtered, reported and invoiced together."
         rows={rows}
         isLoading={groups.isPending}
         getRowId={(group) => group.id}

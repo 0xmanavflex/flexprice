@@ -118,7 +118,6 @@ export const SECONDARY: NavEntry[] = [
     query: { section: 'tags', tab: 'tags' },
   },
   { id: 'price-units', label: 'Price Units', path: '/price-units' },
-  { id: 'groups', label: 'Groups', path: '/groups' },
 ]
 
 const ALL: NavEntry[] = [...NAV, ...FOOTER_NAV, ...SECONDARY]
@@ -186,7 +185,7 @@ export function labelForNavId(id: string): string | undefined {
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
   // Discounts, Taxes, Cost Tracking and Tags are rows of Settings that keep their own routes.
-  if (id.startsWith('settings-') || id === 'groups')
+  if (id.startsWith('settings-'))
     return SECONDARY.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),

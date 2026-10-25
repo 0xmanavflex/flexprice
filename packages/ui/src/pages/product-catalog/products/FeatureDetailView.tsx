@@ -542,7 +542,7 @@ function InformationTab({
           },
           {
             key: 'label',
-            label: 'Label',
+            label: 'Tag',
             value: groupName ?? '',
             placeholder: 'None',
             hint: 'The label the feature is filed under.',

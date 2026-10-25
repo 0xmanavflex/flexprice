@@ -44,7 +44,7 @@ function detailPageLabel(listLabel: string): string {
     Payments: 'Payment details',
     'Credit memos': 'Credit memo details',
     'Price Units': 'Price unit details',
-    Groups: 'Group details',
+    Tags: 'Tag details',
     'Cost sheets': 'Cost sheet details',
     Webhooks: 'Webhook details',
   }

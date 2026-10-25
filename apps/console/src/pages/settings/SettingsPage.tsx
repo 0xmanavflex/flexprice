@@ -87,7 +87,6 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   subscription: <RepeatIcon aria-hidden className="size-4" />,
   currency: <BadgeDollarSignIcon aria-hidden className="size-4" />,
   alerts: <BellIcon aria-hidden className="size-4" />,
-  groups: <TagIcon aria-hidden className="size-4" />,
   tags: <TagIcon aria-hidden className="size-4" />,
   'customer-experience': <SmileIcon aria-hidden className="size-4" />,
   appearance: <PaletteIcon aria-hidden className="size-4" />,

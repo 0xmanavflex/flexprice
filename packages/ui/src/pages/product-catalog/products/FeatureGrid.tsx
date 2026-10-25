@@ -234,9 +234,9 @@ export function FeatureGrid({
         skeleton: <Skeleton className="h-6 w-32 rounded-md" />,
       },
       {
-        // The label the feature is filed under, as a chip.
+        // The tag the feature is filed under, as a chip.
         id: 'group',
-        header: 'Group',
+        header: 'Tag',
         width: 140,
         text: (row) => (row.groupId ? (groupName?.(row.groupId) ?? row.groupId) : ''),
         cell: (row) => {

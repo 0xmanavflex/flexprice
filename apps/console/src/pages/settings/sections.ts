@@ -82,12 +82,6 @@ export const SETTINGS_SECTIONS = [
     tabs: [],
   },
   {
-    id: 'groups',
-    label: 'Groups',
-    href: '/groups',
-    tabs: [],
-  },
-  {
     id: 'taxes',
     label: 'Taxes',
     href: '/taxes',
@@ -147,6 +141,7 @@ export const SETTINGS_SECTIONS = [
  */
 export const SECTION_ALIASES: Readonly<Record<string, { section: string; tab: string }>> = {
   labels: { section: 'tags', tab: 'tags' },
+  groups: { section: 'tags', tab: 'tags' },
 }
 
 /**

@@ -1414,7 +1414,7 @@ function GroupsRouteComponent() {
   const navigate = useNavigate()
 
   return (
-    <SettingsListFrame sectionId="groups">
+    <SettingsListFrame sectionId="tags">
       <GroupListPage
         query={query}
         onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}

@@ -220,14 +220,14 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/groups',
     reference: 'pages/catalog.tsx',
     pattern: 'list',
-    ready: { heading: 'Groups', rows: true },
+    ready: { heading: 'Tags', rows: true },
   },
   {
     name: 'group-new',
     route: '/groups/new',
     reference: 'pages/catalog.tsx',
     pattern: 'create',
-    ready: { text: 'Create group' },
+    ready: { text: 'Create tag' },
   },
 
   // Billing

@@ -31,7 +31,7 @@ export const ALERT_ENTITY_TYPE_LABEL: Record<AlertEntityType, string> = {
   [AlertEntityType.Feature]: 'Feature',
   [AlertEntityType.Subscription]: 'Subscription',
   [AlertEntityType.SubscriptionLineItem]: 'Line item',
-  [AlertEntityType.Group]: 'Group',
+  [AlertEntityType.Group]: 'Tag',
   [AlertEntityType.EntitlementGrant]: 'Entitlement grant',
 }
 

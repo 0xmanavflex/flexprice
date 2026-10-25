@@ -195,7 +195,7 @@ export const DefaultColumns: Story = {
       'Type',
       'Event name',
       'Aggregation',
-      'Group',
+      'Tag',
       'Entitlements',
       'Contracts',
     ])

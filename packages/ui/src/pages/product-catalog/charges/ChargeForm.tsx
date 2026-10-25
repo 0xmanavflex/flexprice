@@ -744,8 +744,8 @@ export function ChargeForm({
         <div className="grid gap-5 sm:grid-cols-2">
           {priceOptions.groups.length > 0 ? (
             <Field
-              label="Price group"
-              hint="Optional. Groups related prices for reporting and bulk changes."
+              label="Tag"
+              hint="Optional. Tags related prices for reporting and bulk changes."
             >
               {({ id }) => (
                 <Controller
@@ -757,7 +757,7 @@ export function ChargeForm({
                       value={(field.value as string | undefined) ?? ''}
                       onValueChange={(value) => field.onChange(value || undefined)}
                       options={[...priceOptions.groups]}
-                      placeholder="No group"
+                      placeholder="No tag"
                       disabled={isSubmitting}
                     />
                   )}
