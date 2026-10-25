@@ -43,8 +43,8 @@ describe('keys suggested from a name', () => {
     expect(suggestTaxCode('')).toBe('')
   })
 
-  it('gives a tax code letters and numbers only', () => {
-    expect(suggestTaxCode('GST 18%')).toBe('taxgst18')
+  it('gives a tax code the tax- prefix, as V1 does', () => {
+    expect(suggestTaxCode('GST 18%')).toBe('tax-gst-18')
     expect(createTaxRateSchema.shape.code.safeParse(suggestTaxCode('GST 18%')).success).toBe(true)
   })
 
@@ -185,6 +185,7 @@ describe('tax rate', () => {
 
   it('requires an alphanumeric code', () => {
     expect(createTaxRateSchema.safeParse({ ...ok, code: 'a b' }).success).toBe(false)
+    expect(createTaxRateSchema.safeParse({ ...ok, code: 'tax-gst_18' }).success).toBe(true)
   })
 
   it('edit covers name, code, description, metadata and status only', () => {

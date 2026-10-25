@@ -114,7 +114,7 @@ export function TaxRateCreateForm({
           <FormRow
             label="Code"
             required
-            hint="Letters and numbers. Case-sensitive."
+            hint="Letters, numbers, hyphens and underscores. Case-sensitive."
             error={errors.code?.message}
           >
             {({ id, ...field }) => (

@@ -103,13 +103,15 @@ const taxCode = z
   .string()
   .trim()
   .min(1, 'Enter a code')
-  .regex(/^[A-Za-z0-9]+$/, 'Use letters and numbers only')
+  // The API only requires a code; hyphens and underscores are kept so the
+  // suggested `tax-gst-18` is valid.
+  .regex(/^[A-Za-z0-9_-]+$/, 'Use letters, numbers, hyphens and underscores')
 
 /**
  * A tax rate draft. Only percentage rates are offered: the backend has no
  * other type: so there is no type field; the request mapper sends
  * `percentage`. The value is a decimal string in 0–100 (`"18"`, not `0.18`).
- * The code is case-sensitive alphanumeric. No scope: it is optional on the
+ * The code is case-sensitive: letters, numbers, hyphens and underscores. No scope: it is optional on the
  * wire and not something a person setting up a rate chooses, so the backend's
  * default applies.
  */
