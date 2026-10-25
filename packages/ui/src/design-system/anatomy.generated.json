@@ -1101,6 +1101,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "FeatureForm",
         "UsageTermsFields",
         "WebhookEventTypePicker"
       ],
@@ -3303,8 +3304,10 @@
       "file": "src/pages/product-catalog/products/FeatureForm.tsx",
       "layer": "surface",
       "composes": [
+        "CheckboxRow",
         "Field",
         "FormCard",
+        "FormDisclosure",
         "FormPage",
         "FormRow",
         "OptionSelect",
@@ -3823,7 +3826,8 @@
         "FormCard"
       ],
       "usedBy": [
-        "CustomerForm"
+        "CustomerForm",
+        "FeatureForm"
       ],
       "story": "./src/compositions/forms/FormDisclosure.stories.tsx"
     },
