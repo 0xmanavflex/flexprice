@@ -98,7 +98,7 @@ export const CodeFollowsName: Story = {
     const field = canvas.getByRole('textbox', { name: /^code/i })
 
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Pro')
-    await expect(field).toHaveValue('taxacmepro')
+    await expect(field).toHaveValue('tax-acme-pro')
 
     await userEvent.clear(field)
     await userEvent.type(field, 'mine')

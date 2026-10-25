@@ -401,7 +401,7 @@ test.describe('live flows', () => {
     await page.getByRole('button', { name: 'Add tax' }).first().click()
     const main = page.getByRole('main')
     await fill(main, 'Name', name)
-    await fill(main, 'Code', `E2E${tag}`)
+    await fill(main, 'Code', `tax-e2e-${tag}`)
     await fill(main, 'Rate (%)', '7.5')
     await submitPage()
     await search(name)
