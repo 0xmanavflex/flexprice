@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useCustomerNames, useEventDebug, useFeatureNames, useRawEventsInfinite } from '@fp/query'
 import {
@@ -32,6 +32,13 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
     source: '',
   })
   const [openId, setOpenId] = useState<string | null>(null)
+  // Kept stable across renders: the grid restarts a rate limit's cooldown
+  // when this changes, so it must change only with the failure itself.
+  const failedNextPage = events.isFetchNextPageError
+  const loadMoreError = useMemo(
+    () => (failedNextPage ? toListFailure(events.error, 'more events') : null),
+    [failedNextPage, events.error],
+  )
   const loaded = events.data?.pages.flatMap((page) => page.events) ?? []
   const selected = loaded.find((event) => event.id === openId) ?? null
   const debug = useEventDebug(selected)
@@ -51,9 +58,7 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
         onLoadMore={() => void events.fetchNextPage()}
         hasMore={events.hasNextPage}
         isLoadingMore={events.isFetchingNextPage}
-        loadMoreError={
-          events.isFetchNextPageError ? toListFailure(events.error, 'more events') : null
-        }
+        loadMoreError={loadMoreError}
         // A later page failing keeps the events already shown; only a failed
         // first read is the tab's error.
         {...subTab({ ...events, error: events.data ? null : events.error }, 'events')}
