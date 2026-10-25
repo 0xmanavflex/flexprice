@@ -72,6 +72,17 @@ function CouponBody({
   onSave,
 }: Omit<ChargeCouponDialogProps, 'charge'>) {
   const [chosen, setChosen] = useState(couponId ?? '')
+  // Apply coupon is offered on every charge, so the catalogue can be empty:
+  // say where coupons come from instead of an empty list.
+  if (coupons.length === 0 && !couponId) {
+    return (
+      <Composer submitLabel="Apply coupon" onSubmit={() => undefined} onCancel={onClose} disabled>
+        <p className="text-muted-foreground -mt-2 text-sm">
+          No coupons yet. Create one under Product catalog → Coupons, then apply it here.
+        </p>
+      </Composer>
+    )
+  }
   return (
     <Composer
       submitLabel={couponId ? 'Save coupon' : 'Apply coupon'}

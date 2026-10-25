@@ -61,3 +61,13 @@ export const Closed: Story = {
     await expect(within(canvasElement).queryByRole('dialog')).toBeNull()
   },
 }
+
+/** Offered on every charge, so the catalogue can be empty: it says where coupons come from. */
+export const NoCouponsYet: Story = {
+  args: { coupons: [] },
+  play: async () => {
+    const dialog = within(await screen.findByRole('dialog', { name: 'Apply coupon · API calls' }))
+    await expect(dialog.getByText(/No coupons yet/)).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Apply coupon' })).toBeDisabled()
+  },
+}

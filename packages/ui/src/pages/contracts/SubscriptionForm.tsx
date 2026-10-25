@@ -1827,27 +1827,28 @@ function PhaseDiscounts({
     <SubSection
       title="Discounts"
       description={`Coupons on all of ${phaseLabel}. A coupon on one charge is applied from that charge's menu.`}
+      // Offered even with no coupons in the catalogue, so it is clear where a
+      // discount goes; the picker then says there is nothing to choose yet.
       action={
-        coupons.length > 0 ? (
-          <AddButton
-            onClick={() => onPicking('all')}
-            disabled={picking !== null}
-            label={`Add a coupon to ${phaseLabel}`}
-          >
-            Add coupon
-          </AddButton>
-        ) : null
+        <AddButton
+          onClick={() => onPicking('all')}
+          disabled={picking !== null}
+          label={`Add a coupon to ${phaseLabel}`}
+        >
+          Add coupon
+        </AddButton>
       }
     >
       <Frame
         footer={
-          coupons.length === 0 ? (
-            discounts.length === 0 ? null : (
-              <p className="text-muted-foreground py-1.5 text-xs">
-                No coupons yet. Create one under Product catalog → Coupons to discount a phase.
+          picking === null ? null : coupons.length === 0 ? (
+            <div className="flex items-center justify-between gap-3 py-1.5">
+              <p className="text-muted-foreground text-xs">
+                No coupons yet. Create one under Product catalog → Coupons, then apply it here.
               </p>
-            )
-          ) : picking === null ? null : (
+              <CloseSubForm label={`Close coupon picker for ${phaseLabel}`} onClick={close} />
+            </div>
+          ) : (
             <div className="grid gap-2 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-start">
               <label htmlFor={`${idBase}-coupon`} className="sr-only">
                 Coupon for {phaseLabel}
@@ -1894,17 +1895,7 @@ function PhaseDiscounts({
         }
       >
         {discounts.length === 0 ? (
-          <EmptyLine
-            action={
-              coupons.length === 0 ? (
-                <span className="text-muted-foreground text-xs">
-                  No coupons yet. Create one under Product catalog → Coupons to discount a phase.
-                </span>
-              ) : null
-            }
-          >
-            No discounts on {phaseLabel}.
-          </EmptyLine>
+          <EmptyLine>No discounts on {phaseLabel}.</EmptyLine>
         ) : (
           <ul className="divide-y">
             {discounts.map((discount, index) => (
@@ -2141,9 +2132,7 @@ function PhasesStep({
           }
           onEditExtra={(at) => setEditingExtra({ phase: index, index: at })}
           couponOf={(priceId) => couponOn(index, priceId)}
-          {...(coupons.length > 0
-            ? { onCoupon: (priceId: string) => setCouponing({ phase: index, priceId }) }
-            : {})}
+          onCoupon={(priceId) => setCouponing({ phase: index, priceId })}
           onReset={(priceId) => {
             update(index, {
               priceOverrides: phase.priceOverrides.filter((o) => o.priceId !== priceId),
