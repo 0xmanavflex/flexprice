@@ -156,7 +156,7 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
             <div className="flex w-full flex-wrap items-center justify-end gap-3">
               <ActionError message={saveError} />
               {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" variant="outline" disabled={busy}>
                 {busy ? 'Saving…' : 'Save changes'}
               </Button>
             </div>
