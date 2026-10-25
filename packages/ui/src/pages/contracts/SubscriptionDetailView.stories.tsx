@@ -1890,7 +1890,8 @@ export const AddsChargeAlerts: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Commitment: open API requests' }))
     const sheet = within(await body.findByRole('dialog'))
     const alerts = within(sheet.getByRole('region', { name: 'Alerts' }))
-    await expect(alerts.getByText(/No alerts on this charge/)).toBeVisible()
+    // The sheet slides in: wait for it rather than checking mid-animation.
+    await waitFor(() => expect(alerts.getByText(/No alerts on this charge/)).toBeVisible())
     await userEvent.click(alerts.getByRole('button', { name: 'Add alerts' }))
     const dialog = within(await body.findByRole('dialog', { name: 'Add alerts' }))
     await expect(dialog.getByRole('textbox', { name: /^Warning threshold/ })).toHaveValue('80')

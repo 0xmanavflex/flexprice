@@ -1,4 +1,5 @@
 import { useEffect, useState, type ComponentProps } from 'react'
+import { expect, within } from 'storybook/test'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CheckboxRow } from './CheckboxRow'
 
@@ -34,3 +35,16 @@ export const Playground: Story = {
 
 export const Default: Story = {}
 export const Disabled: Story = { args: { disabled: true } }
+
+/** A choice that needs a sentence: the description sits under the label and describes the box. */
+export const WithDescription: Story = {
+  args: {
+    checked: false,
+    children: 'Billing admin',
+    description: 'Manage invoices, payments and contracts.',
+  },
+  play: async ({ canvasElement }) => {
+    const box = within(canvasElement).getByRole('checkbox', { name: 'Billing admin' })
+    await expect(box).toHaveAccessibleDescription('Manage invoices, payments and contracts.')
+  },
+}
