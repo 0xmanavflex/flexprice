@@ -19,7 +19,12 @@ import {
 } from '@fp/domain'
 import { LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 import { queryKeys } from './keys'
-import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
+import {
+  nameContainsFilter,
+  statusFilterField,
+  toFilterConditions,
+  toMetadataFilter,
+} from './search'
 import { useFlexprice } from './provider'
 import { type SubscriptionWire, toSubscription } from './subscriptions'
 import { type InvoicePage, fetchInvoices } from './invoices'
@@ -105,6 +110,8 @@ const SORT_FIELD: Record<CustomerSortField, string> = {
 }
 
 export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> {
+  const conditions = toFilterConditions(query.filters ?? [], CUSTOMER_FILTERS)
+  const metadata = toMetadataFilter(query.filters ?? [], CUSTOMER_FILTERS)
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
@@ -113,14 +120,16 @@ export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> 
     // instead of a mappings request per row.
     expand: 'integrations',
     ...statusFilterField(query.statuses, Object.values(CustomerStatus)),
-    ...(query.search.trim() || (query.filters?.length ?? 0) > 0
+    ...(query.search.trim() || conditions.length > 0
       ? {
           filters: [
             ...(query.search.trim() ? nameContainsFilter(query.search.trim()) : []),
-            ...toFilterConditions(query.filters ?? [], CUSTOMER_FILTERS),
+            ...conditions,
           ],
         }
       : {}),
+    // Metadata pairs are the search's own map, every pair matching.
+    ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
   }
 }
 

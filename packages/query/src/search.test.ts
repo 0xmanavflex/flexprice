@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { FilterOp, type ListFilterSpec } from '@fp/domain'
-import { toFilterConditions } from './search'
+import { toFilterConditions, toMetadataFilter } from './search'
 
 const SPECS: ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },
   { field: 'status', label: 'Status', kind: 'options', options: [] },
   { field: 'created_at', label: 'Created', kind: 'date' },
   { field: 'amount_due', label: 'Amount due', kind: 'number' },
+  { field: 'metadata', label: 'Metadata', kind: 'keyvalue' },
 ]
 
 describe('toFilterConditions', () => {
@@ -43,5 +44,23 @@ describe('toFilterConditions', () => {
 
   it('drops incomplete filters', () => {
     expect(toFilterConditions([{ field: 'name', op: FilterOp.Eq, value: '' }], SPECS)).toEqual([])
+  })
+})
+
+describe('toMetadataFilter', () => {
+  it('sends key/value pairs as the metadata map, not as conditions', () => {
+    const filters = [
+      { field: 'metadata', op: FilterOp.Eq, value: 'region=eu' },
+      { field: 'metadata', op: FilterOp.Eq, value: 'tier=gold' },
+      { field: 'name', op: FilterOp.Contains, value: 'Acme' },
+    ]
+    expect(toMetadataFilter(filters, SPECS)).toEqual({ region: 'eu', tier: 'gold' })
+    expect(toFilterConditions(filters, SPECS)).toEqual([
+      expect.objectContaining({ field: 'name', operator: 'contains' }),
+    ])
+  })
+
+  it('is empty without key/value filters', () => {
+    expect(toMetadataFilter([], SPECS)).toEqual({})
   })
 })

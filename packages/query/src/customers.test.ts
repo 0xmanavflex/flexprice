@@ -106,13 +106,20 @@ describe('toCustomerFilter', () => {
     ])
   })
 
+  it('sends a metadata filter as the metadata map of the search (the SDK model declares it)', () => {
+    const filter = toCustomerFilter({
+      ...ALL_CUSTOMERS,
+      filters: [{ field: 'metadata', op: 'eq', value: 'region=eu' }],
+    })
+    expect(filter['metadata']).toEqual({ region: 'eu' })
+    expect(filter).not.toHaveProperty('filters')
+  })
+
   it('trims the search term, and sends nothing for a blank one', () => {
     expect(toCustomerFilter({ ...ALL_CUSTOMERS, search: '  acme  ' })['filters']).toEqual([
       { field: 'name', operator: 'contains', dataType: 'string', value: { string: 'acme' } },
     ])
-    expect(toCustomerFilter({ ...ALL_CUSTOMERS, search: '   ' })).not.toHaveProperty(
-      'filters',
-    )
+    expect(toCustomerFilter({ ...ALL_CUSTOMERS, search: '   ' })).not.toHaveProperty('filters')
   })
 
   it('sends one selected status as the server-side field', () => {
@@ -124,9 +131,7 @@ describe('toCustomerFilter', () => {
   })
 
   it('sends no status when none or all are selected', () => {
-    expect(toCustomerFilter({ ...ALL_CUSTOMERS, statuses: [] })).not.toHaveProperty(
-      'status',
-    )
+    expect(toCustomerFilter({ ...ALL_CUSTOMERS, statuses: [] })).not.toHaveProperty('status')
     expect(
       toCustomerFilter({
         ...ALL_CUSTOMERS,

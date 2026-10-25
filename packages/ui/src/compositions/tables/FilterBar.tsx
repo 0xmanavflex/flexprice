@@ -18,9 +18,11 @@ import type {
   FilterQuery,
 } from '@ui/components/reui/filters/filters-types'
 import { Calendar } from '@ui/components/primitives/calendar'
+import { Input } from '@ui/components/primitives/input'
 import {
   FILTER_OPS,
   runnableFilters,
+  splitKeyValue,
   type FilterKind,
   type FilterOp,
   type ListFilter,
@@ -421,6 +423,59 @@ const KIND_TYPE: Record<FilterKind, 'text' | 'select' | 'number'> = {
   options: 'select',
   number: 'number',
   date: 'text',
+  keyvalue: 'text',
+}
+
+/** `key=value` as the chip reads it: `region = eu`. */
+function formatKeyValue(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const pair = splitKeyValue(value)
+  return pair ? `${pair.key} = ${pair.value}` : ''
+}
+
+/**
+ * The key/value step: a key and a value, applied together as `key=value`. A
+ * pair without a key cannot be applied.
+ */
+function FilterKeyValueEditor({
+  value,
+  commit,
+  autoFocusProps,
+}: FilterEditorProps<string, unknown>) {
+  const initial = typeof value === 'string' ? splitKeyValue(value) : null
+  const [key, setKey] = useState(initial?.key ?? '')
+  const [text, setText] = useState(initial?.value ?? '')
+  const apply = () => {
+    if (key.trim()) commit(`${key.trim()}=${text}`)
+  }
+  return (
+    <form
+      className="flex w-64 flex-col gap-2 p-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        apply()
+      }}
+    >
+      <Input
+        aria-label="Metadata key"
+        placeholder="key"
+        value={key}
+        className="h-8 font-mono text-xs"
+        onChange={(event) => setKey(event.target.value)}
+        {...autoFocusProps}
+      />
+      <Input
+        aria-label="Metadata value"
+        placeholder="value"
+        value={text}
+        className="h-8"
+        onChange={(event) => setText(event.target.value)}
+      />
+      <Button type="submit" variant="outline" size="sm" className="h-8" disabled={!key.trim()}>
+        Apply
+      </Button>
+    </form>
+  )
 }
 
 const dayLabel = new Intl.DateTimeFormat(undefined, {
@@ -484,6 +539,13 @@ export function granularFilter({
           editor: FilterDayEditor,
           renderValue: ({ value }: { value: unknown }) => formatDay(value),
           valueText: ({ value }: { value: unknown }) => formatDay(value),
+        }
+      : {}),
+    ...(spec.kind === 'keyvalue'
+      ? {
+          editor: FilterKeyValueEditor,
+          renderValue: ({ value }: { value: unknown }) => formatKeyValue(value),
+          valueText: ({ value }: { value: unknown }) => formatKeyValue(value),
         }
       : {}),
   }))

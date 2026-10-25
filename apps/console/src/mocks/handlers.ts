@@ -485,15 +485,17 @@ const search = (path: string, key: string) =>
           ? body.subscription_status
           : ['active']
         : undefined
+    // As the API: a `metadata` map keeps the rows whose metadata holds every pair.
+    const metadata = (body as { metadata?: Record<string, string> }).metadata
+    const pairs = metadata ? Object.entries(metadata) : []
+    const matching = source.items.filter((row) => {
+      if (wanted?.length && !wanted.includes(readString(row, 'subscription_status'))) return false
+      if (pairs.length === 0) return true
+      const held = (row['metadata'] ?? {}) as Record<string, unknown>
+      return pairs.every(([k, v]) => held[k] === v)
+    })
     const result = page(
-      wanted?.length
-        ? {
-            ...source,
-            items: source.items.filter((row) =>
-              wanted.includes(readString(row, 'subscription_status')),
-            ),
-          }
-        : source,
+      wanted?.length || pairs.length > 0 ? { ...source, items: matching } : source,
       body,
     )
     const payload =

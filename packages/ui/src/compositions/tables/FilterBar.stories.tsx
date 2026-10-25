@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
-import { FilterBar, type FlatFilter, emptyFilterQuery } from './FilterBar'
+import type { ListFilter } from '@fp/domain'
+import { FilterBar, type FlatFilter, emptyFilterQuery, granularFilter } from './FilterBar'
 
 /**
  * Filtering over `@reui/filters`, in the inline `advanced` chrome (the
@@ -192,5 +193,53 @@ export const SelectsConditionAndValue: Story = {
     await expect(canvasElement.querySelector('[data-slot="filter-chip"]')).toHaveTextContent(
       /active/i,
     )
+  },
+}
+
+function MetadataFilterBar({ onChange }: { onChange: (filters: ListFilter[]) => void }) {
+  const [filters, setFilters] = useState<ListFilter[]>([])
+  return (
+    <FilterBar
+      {...granularFilter({
+        specs: [{ field: 'metadata', label: 'Metadata', kind: 'keyvalue' }],
+        filters,
+        onChange: (next) => {
+          setFilters(next)
+          onChange(next)
+        },
+      })}
+    />
+  )
+}
+
+/** A key/value field (metadata): a key and a value, applied together, read back as `key = value`. */
+export const MetadataKeyValue: Story = {
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          { id: 'aria-input-field-name', enabled: false },
+          { id: 'aria-dialog-name', enabled: false },
+        ],
+      },
+    },
+  },
+  args: { onQueryChange: fn() },
+  render: (args) => <MetadataFilterBar onChange={args.onQueryChange as never} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /filter/i }))
+    await userEvent.click(await screen.findByRole('option', { name: /metadata/i }))
+    // One condition ("is"); the picker may offer it before the value step.
+    const condition = screen.queryByRole('option', { name: /^is$/i })
+    if (condition) await userEvent.click(condition)
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Metadata key' }), 'region')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Metadata value' }), 'eu')
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    await expect(args.onQueryChange).toHaveBeenLastCalledWith([
+      { field: 'metadata', op: 'eq', value: 'region=eu' },
+    ])
+    await expect(await canvas.findByText('region = eu')).toBeVisible()
   },
 }

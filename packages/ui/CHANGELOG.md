@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-26
+
+- FilterBar: a `keyvalue` filter kind (domain `FilterKind`), for metadata. Its value step is a key and a value applied together (`FilterKeyValueEditor`), read back on the chip as `key = value`; the only condition is "is". The customers list offers a Metadata filter, sent as the search's `metadata` map (every pair must match) rather than a filter condition. Source: walkthrough QA 1.2.
+
 ## 2026-10-25
 
 - CheckboxRow: optional `description`, a muted line under the label that is also the checkbox's accessible description. Settings → invite and edit roles now lists each role as a checkbox row with what it grants (was toggle buttons with the permissions in a `title` tooltip). Source: walkthrough QA 7.6.
