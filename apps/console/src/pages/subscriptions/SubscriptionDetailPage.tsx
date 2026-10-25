@@ -49,6 +49,7 @@ import {
   useSubscriptionTaxes,
   useSubscriptionUsage,
   useUpdateAlertSetting,
+  useAddLineItemAlert,
   useUpdateSubscriptionLineItem,
   useActivityLog,
   serverReason,
@@ -155,6 +156,7 @@ export function SubscriptionDetailPage({
   const addCoupon = useAddSubscriptionCoupon(subscriptionId)
   const removeCoupon = useRemoveSubscriptionCoupon(subscriptionId)
   const updateAlert = useUpdateAlertSetting()
+  const addLineAlert = useAddLineItemAlert(subscriptionId)
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
@@ -231,6 +233,7 @@ export function SubscriptionDetailPage({
         onSaveChargeAlert={({ settingId, config }) =>
           updateAlert.mutateAsync({ id: settingId, config })
         }
+        onCreateChargeAlert={(draft) => addLineAlert.mutateAsync(draft)}
         onAddTax={(draft) => createTax.mutateAsync(draft)}
         onRemoveAddon={(addon) => removeAddon.mutateAsync(addon.id)}
         onRemoveTax={(tax) => removeTax.mutateAsync(tax.id)}

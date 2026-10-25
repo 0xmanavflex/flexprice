@@ -73,6 +73,7 @@ import {
   type SubscriptionUsage,
   type SubscriptionUsageCharge,
   type TenantFeatureUsage,
+  emptyAlertSettingConfig,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
@@ -223,6 +224,12 @@ export interface SubscriptionDetailViewProps {
   onSaveChargeAlert?:
     | ((draft: { settingId: string; config: AlertSettingConfig }) => Promise<unknown> | void)
     | undefined
+  /**
+   * Adds alerts to a usage charge that has none: `lineId` is the subscription
+   * line item the setting watches.
+   */
+  onCreateChargeAlert?:
+    ((draft: { lineId: string; config: AlertSettingConfig }) => Promise<unknown> | void) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
   /** A charge's row menu: take its coupon off. Resolves when done. */
   onRemoveCoupon?: ((coupon: SubscriptionCoupon) => Promise<unknown>) | undefined
@@ -393,6 +400,7 @@ export function SubscriptionDetailView({
   onAddAddon,
   onAddCoupon,
   onSaveChargeAlert,
+  onCreateChargeAlert,
   onAddTax,
   onRemoveAddon,
   onRemoveTax,
@@ -428,8 +436,10 @@ export function SubscriptionDetailView({
   const [section, setSection] = useState<ContractSectionKind | null>(null)
   /** Set while Change coupon is open, so the submit is scoped to that charge. */
   const [couponLineId, setCouponLineId] = useState<string | null>(null)
+  /** The alert being edited; no `settingId` while a new one is being added. */
   const [alertEdit, setAlertEdit] = useState<{
-    settingId: string
+    settingId?: string
+    lineId: string
     config: AlertSettingConfig
   } | null>(null)
   // One confirm for every removal on the page: what it says, and what it runs.
@@ -599,9 +609,15 @@ export function SubscriptionDetailView({
         : [ChargeSection.Price, ChargeSection.Commitment]
     if (onAddCoupon) sections.push(ChargeSection.Discount)
     const alerts = chargeRows.details.get(charge.id)?.alerts
-    if (onSaveChargeAlert && alerts?.some((alert) => alert.settingId)) {
-      sections.push(ChargeSection.Alerts)
-    }
+    const hasSetting = alerts?.some((alert) => alert.settingId) ?? false
+    // Alerts can be added to a usage charge only once the alerts have loaded,
+    // so a slow read never offers a second setting beside an existing one.
+    const canAdd =
+      onCreateChargeAlert &&
+      line.kind === 'usage' &&
+      chargeAlerts?.data !== undefined &&
+      !(alerts && alerts.length > 0)
+    if ((onSaveChargeAlert && hasSetting) || canAdd) sections.push(ChargeSection.Alerts)
     return sections
   }
   const editCharge = (charge: Charge, part?: ChargeSection) => {
@@ -613,11 +629,16 @@ export function SubscriptionDetailView({
       setSection('coupon')
       return
     }
-    if (part === ChargeSection.Alerts && onSaveChargeAlert) {
+    if (part === ChargeSection.Alerts) {
       const draft = chargeAlertDraft(chargeRows.details.get(charge.id)?.alerts ?? [])
-      if (draft) {
+      if (draft && onSaveChargeAlert) {
         setSaveError(null)
-        setAlertEdit(draft)
+        setAlertEdit({ ...draft, lineId: line.id })
+        return
+      }
+      if (!draft && onCreateChargeAlert) {
+        setSaveError(null)
+        setAlertEdit({ lineId: line.id, config: emptyAlertSettingConfig() })
         return
       }
     }
@@ -1622,13 +1643,14 @@ export function SubscriptionDetailView({
           setAlertEdit(null)
           setSaveError(null)
         }}
-        title="Alert settings"
+        title={alertEdit?.settingId ? 'Alert settings' : 'Add alerts'}
         isPending={saving}
       >
         {alertEdit ? (
           <ChargeAlertForm
-            key={alertEdit.settingId}
+            key={alertEdit.settingId ?? alertEdit.lineId}
             initial={alertEdit.config}
+            {...(alertEdit.settingId ? {} : { chooseSeverities: true, submitLabel: 'Add alerts' })}
             pending={saving}
             error={saveError}
             onCancel={() => {
@@ -1636,10 +1658,13 @@ export function SubscriptionDetailView({
               setSaveError(null)
             }}
             onSubmit={(config) => {
-              if (!onSaveChargeAlert) return
+              const { settingId, lineId } = alertEdit
+              const save = settingId
+                ? onSaveChargeAlert?.({ settingId, config })
+                : onCreateChargeAlert?.({ lineId, config })
               setSaving(true)
               setSaveError(null)
-              Promise.resolve(onSaveChargeAlert({ settingId: alertEdit.settingId, config }))
+              Promise.resolve(save)
                 .then(() => setAlertEdit(null))
                 .catch((error: unknown) =>
                   setSaveError(

@@ -3411,10 +3411,15 @@ export const handlers = [
       parent_entity_id?: string
       entity_id?: string
       enabled?: boolean
+      status?: string
       limit?: number
       offset?: number
     }
     let rows = [...alertSettings]
+    // As the API: a status filter leaves out settings in another state.
+    if (body.status) {
+      rows = rows.filter((row) => (readString(row, 'status') || 'published') === body.status)
+    }
     if (body.entity_type) {
       rows = rows.filter((row) => readString(row, 'entity_type') === body.entity_type)
     }

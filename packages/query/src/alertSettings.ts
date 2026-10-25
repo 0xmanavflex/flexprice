@@ -233,16 +233,67 @@ export function toUpdateAlertSettingRequest(config: AlertSettingConfig): Record<
   return { config: toAlertConfigRequest(config) }
 }
 
+async function createSetting(client: Flexprice, draft: CreateAlertSetting) {
+  const wire = await call(() =>
+    client.alertSettings.createAlertSettings(toCreateAlertSettingRequest(draft) as never),
+  )
+  return toAlertSetting(wire as AlertSettingWire)
+}
+
+async function updateSetting(client: Flexprice, id: string, config: AlertSettingConfig) {
+  const wire = await call(() =>
+    client.alertSettings.updateAlertSettings(id, toUpdateAlertSettingRequest(config) as never),
+  )
+  return toAlertSetting(wire as AlertSettingWire)
+}
+
 export function useCreateAlertSetting() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (draft: CreateAlertSetting) => {
-      const wire = await call(() =>
-        client.alertSettings.createAlertSettings(toCreateAlertSettingRequest(draft) as never),
+      return createSetting(client, draft)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.alertSettings.all() })
+    },
+  })
+}
+
+/**
+ * Alerts on one contract line item. The contract's alert read lists only live
+ * settings with thresholds, so a line that looks bare can still hold a
+ * switched-off or empty setting: that one is updated rather than a second
+ * created beside it.
+ */
+export function useAddLineItemAlert(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ lineId, config }: { lineId: string; config: AlertSettingConfig }) => {
+      const found = await call(() =>
+        client.alertSettings.queryAlertSettings({
+          entityType: AlertEntityType.SubscriptionLineItem,
+          entityId: lineId,
+          parentEntityId: subscriptionId,
+          // Archived settings are left out by the server, so the first page
+          // holds the line's live setting however many were archived before it.
+          status: 'published',
+          limit: 10,
+        }),
       )
-      return toAlertSetting(wire as AlertSettingWire)
+      const existing = (found.items ?? []).find((item) => item.id && item.entityId === lineId)
+      return existing?.id
+        ? updateSetting(client, existing.id, config)
+        : createSetting(client, {
+            entityType: AlertEntityType.SubscriptionLineItem,
+            entityId: lineId,
+            parentEntityId: subscriptionId,
+            parentEntityType: AlertEntityType.Subscription,
+            config,
+          })
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.alertSettings.all() })
@@ -256,10 +307,7 @@ export function useUpdateAlertSetting() {
 
   return useMutation({
     mutationFn: async ({ id, config }: { id: string; config: AlertSettingConfig }) => {
-      const wire = await call(() =>
-        client.alertSettings.updateAlertSettings(id, toUpdateAlertSettingRequest(config) as never),
-      )
-      return toAlertSetting(wire as AlertSettingWire)
+      return updateSetting(client, id, config)
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.alertSettings.all() })

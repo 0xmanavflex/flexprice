@@ -29,6 +29,7 @@ import {
   BellIcon,
   ClockIcon,
   PencilIcon,
+  PlusIcon,
   RotateCcwIcon,
   ScaleIcon,
   TicketPercentIcon,
@@ -127,6 +128,7 @@ function Box({
   title,
   badge,
   onEdit,
+  addLabel,
   focused,
   children,
 }: {
@@ -135,6 +137,11 @@ function Box({
   title: string
   badge?: string | undefined
   onEdit?: (() => void) | undefined
+  /**
+   * Set when the part is empty and editing it creates it: the header action
+   * is then the section Add button ("Add alerts") rather than Edit.
+   */
+  addLabel?: string | undefined
   focused: boolean
   children: ReactNode
 }) {
@@ -163,7 +170,12 @@ function Box({
               </Badge>
             ) : null}
           </FrameTitle>
-          {onEdit ? (
+          {onEdit && addLabel ? (
+            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onEdit}>
+              <PlusIcon aria-hidden />
+              {addLabel}
+            </Button>
+          ) : onEdit ? (
             <Button
               variant="ghost"
               size="sm"
@@ -488,20 +500,28 @@ export function ChargeSheet({
             </Box>
           ) : null}
 
-          {detail?.alerts && detail.alerts.length > 0 ? (
+          {/* Shown empty only where alerts can be added from here. */}
+          {(detail?.alerts && detail.alerts.length > 0) || editAt(ChargeSection.Alerts) ? (
             <Box
               section={ChargeSection.Alerts}
               icon={<BellIcon aria-hidden className="text-warning-foreground" />}
               title="Alerts"
               onEdit={editAt(ChargeSection.Alerts)}
+              {...(detail?.alerts?.length ? {} : { addLabel: 'Add alerts' })}
               focused={section === ChargeSection.Alerts}
             >
-              <Facts
-                items={detail.alerts.map((alert) => [
-                  `${alert.level}, ${alert.condition ?? 'above'}`,
-                  alert.value,
-                ])}
-              />
+              {detail?.alerts?.length ? (
+                <Facts
+                  items={detail.alerts.map((alert) => [
+                    `${alert.level}, ${alert.condition ?? 'above'}`,
+                    alert.value,
+                  ])}
+                />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No alerts on this charge. Add thresholds to be told when its usage crosses them.
+                </p>
+              )}
             </Box>
           ) : null}
 

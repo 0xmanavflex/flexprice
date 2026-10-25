@@ -517,6 +517,7 @@ export {
   useCreateAlertSetting,
   useDeleteAlertSetting,
   useUpdateAlertSetting,
+  useAddLineItemAlert,
   toAlertConfigRequest,
 } from './alertSettings'
 export type { AlertSettingPage, AlertSettingWire } from './alertSettings'

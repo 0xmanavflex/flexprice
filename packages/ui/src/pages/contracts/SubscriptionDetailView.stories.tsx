@@ -1869,6 +1869,47 @@ export const EditsChargeAlerts: Story = {
   },
 }
 
+/** A usage charge with no alerts offers Add, which creates a setting on its line item. */
+export const AddsChargeAlerts: Story = {
+  args: {
+    ...BASE,
+    onCreateChargeAlert: fn(async () => undefined),
+    chargeAlerts: ready(new Map()),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(canvas.getByRole('button', { name: 'Commitment: open API requests' }))
+    const sheet = within(await body.findByRole('dialog'))
+    const alerts = within(sheet.getByRole('region', { name: 'Alerts' }))
+    await expect(alerts.getByText(/No alerts on this charge/)).toBeVisible()
+    await userEvent.click(alerts.getByRole('button', { name: 'Add alerts' }))
+    const dialog = within(await body.findByRole('dialog', { name: 'Add alerts' }))
+    await expect(dialog.getByRole('textbox', { name: /^Warning threshold/ })).toHaveValue('80')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add alerts' }))
+    await waitFor(() =>
+      expect(args.onCreateChargeAlert).toHaveBeenCalledWith({
+        lineId: 'line_2',
+        config: expect.objectContaining({
+          alertEnabled: true,
+          warning: { condition: 'above', threshold: '80' },
+        }),
+      }),
+    )
+  },
+}
+
+/** A fixed charge has no usage to watch, so its sheet offers no alerts. */
+export const NoAlertsOnFixedCharge: Story = {
+  args: { ...BASE, onCreateChargeAlert: fn(), chargeAlerts: ready(new Map()) },
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByText('Platform fee'))
+    const sheet = within(await screen.findByRole('dialog'))
+    await expect(sheet.queryByRole('region', { name: 'Alerts' })).toBeNull()
+  },
+}
+
 export const EditCommitmentFromFlag: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

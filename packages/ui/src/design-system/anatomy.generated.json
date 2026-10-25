@@ -988,6 +988,7 @@
         "ActivityLog",
         "ConfirmDialog",
         "PencilIcon",
+        "PlusIcon",
         "Sheet"
       ],
       "usedBy": [
@@ -5831,6 +5832,7 @@
       "usedBy": [
         "AddonGrid",
         "ChargeCommitmentDialog",
+        "ChargeSheet",
         "ChargeTable",
         "ConnectionExports",
         "ContractIntegrations",
