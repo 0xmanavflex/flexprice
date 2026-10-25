@@ -278,12 +278,13 @@ export function useAddLineItemAlert(subscriptionId: string) {
           entityType: AlertEntityType.SubscriptionLineItem,
           entityId: lineId,
           parentEntityId: subscriptionId,
+          // Archived settings are left out by the server, so the first page
+          // holds the line's live setting however many were archived before it.
+          status: 'published',
           limit: 10,
         }),
       )
-      const existing = (found.items ?? []).find(
-        (item) => item.id && item.entityId === lineId && item.status !== 'archived',
-      )
+      const existing = (found.items ?? []).find((item) => item.id && item.entityId === lineId)
       return existing?.id
         ? updateSetting(client, existing.id, config)
         : createSetting(client, {
