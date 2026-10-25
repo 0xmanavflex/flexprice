@@ -305,3 +305,39 @@ export const KeyboardNavigation: Story = {
     await expect(args.onTabChange).toHaveBeenLastCalledWith('events')
   },
 }
+
+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+const inr = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'INR' })
+
+/**
+ * Revenue in two currencies of very different size: each line keeps its own
+ * scale (the rupee line does not flatten the dollar one), and the header gives
+ * each currency's peak in its own symbol rather than one min and max across both.
+ */
+export const RevenueInTwoCurrencies: Story = {
+  args: {
+    tabs: [
+      {
+        id: 'revenue',
+        label: 'Revenue',
+        value: '$4,200.00',
+        points: Array.from({ length: 14 }, (_, day) => {
+          const dollars = 200 + ((day * 37) % 120)
+          const rupees = 900000 + ((day * 53_000) % 400000)
+          return { label: `Oct ${day + 1}`, value: dollars, extra: { USD: dollars, INR: rupees } }
+        }),
+        series: [
+          { id: 'USD', label: 'USD', format: (value: number) => usd.format(value) },
+          { id: 'INR', label: 'INR', format: (value: number) => inr.format(value) },
+        ],
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('img', { name: /Revenue in USD and INR/ })).toBeInTheDocument()
+    await expect(canvas.queryByText(/^Min/)).toBeNull()
+    await expect(canvas.getByText('$311.00')).toBeVisible()
+    await expect(canvas.getByText(/₹1,2/)).toBeVisible()
+  },
+}
