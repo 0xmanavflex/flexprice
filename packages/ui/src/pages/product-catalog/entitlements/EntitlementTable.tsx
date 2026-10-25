@@ -1,6 +1,7 @@
 import { RBAC_ENTITY } from '@fp/domain'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
-import { CheckCircle2Icon, GaugeIcon, PlusIcon, SlidersHorizontalIcon, TypeIcon } from '@ui/icons'
+import { PlusIcon } from '@ui/icons'
+import { FEATURE_TYPE_GLYPH } from '../../shared/cells'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -41,12 +42,9 @@ export interface EntitlementTableProps extends Partial<SubTabQuery> {
   showTitle?: boolean
 }
 
-const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
-  [FeatureType.Metered]: GaugeIcon,
-  [FeatureType.Boolean]: CheckCircle2Icon,
-  [FeatureType.Static]: TypeIcon,
-  [FeatureType.Config]: SlidersHorizontalIcon,
-}
+/** The agreed glyph per feature type, shared with every other catalogue table. */
+const TYPE_ICON: Record<FeatureType, (typeof FEATURE_TYPE_GLYPH)[keyof typeof FEATURE_TYPE_GLYPH]> =
+  FEATURE_TYPE_GLYPH
 
 const TYPE_LABEL: Record<FeatureType, string> = {
   [FeatureType.Metered]: 'Metered',
