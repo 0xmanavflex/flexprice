@@ -1,4 +1,4 @@
-import { InvoiceStatus, PaymentStatus } from '@fp/domain'
+import { InvoiceStatus, PaymentStatus, type ActivityField } from '@fp/domain'
 
 export interface InvoiceLine {
   id: string
@@ -29,6 +29,8 @@ export interface InvoiceActivity {
   at: string
   status: 'completed' | 'active' | 'pending' | 'issue'
   summary: string
+  /** The record's values, one label per line. */
+  fields?: readonly ActivityField[]
   /** A second line, such as the amount paid. */
   detail?: string
   /** The record, drawn in front of the summary. */

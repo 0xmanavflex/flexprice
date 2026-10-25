@@ -690,6 +690,7 @@ export function SubscriptionDetailView({
     title: event.title,
     at: event.at,
     summary: event.summary,
+    ...(event.fields ? { fields: event.fields } : {}),
     ...(event.detail ? { detail: event.detail } : {}),
     ...(event.record ? { record: event.record } : {}),
     ...(event.by ? { by: event.by } : {}),

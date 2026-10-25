@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-25
 
+- ActivityLog: an entry's values render as muted label / value pairs (`fields`, a `dl`) under the highlighted record, instead of one dot-joined sentence ("$35.00 · $35.00 due · Voided" is now Total / Due / Status). `summary` and `detail` stay for callers that write a sentence. Titles read "Contract …" and "Credit memo …", not "Subscription …" / "Credit note …". Source: walkthrough QA 1.7.
 - Entitlement usage: the "Over the included amount by N" line under the bar is gone (the red reading and bar say it). A row granted by several sources shows the first and a "+N" that opens, on hover or press, a popover listing every source as a link (was a `title` attribute). Source: walkthrough QA 5.13.
 - ChargeTable: new Billing timing column (In advance / In arrears) and an "In effect" column (start → end, "Ongoing", "Always") on every charges table, shown by default in the wide layout and in the column menu in the narrow one; a Status column (Active / Changed / Ended) off by default; the Status filter is always offered on the full table. `DetailTable` columns gain `hiddenByDefault`. Source: walkthrough QA 3.7–3.9.
 - Customer detail: an archived customer is read-only. An info strip above the tabs says so, and the page runs under a scoped `writeLock` (nested `AccessProvider` + `AccessScope`), so every write control on it (header menu, inline edits, section actions, wallet and tax panels) is disabled with that reason. Source: walkthrough QA 1.3.

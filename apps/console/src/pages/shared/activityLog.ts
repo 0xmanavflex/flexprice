@@ -3,6 +3,7 @@ import {
   activitySourceLabel,
   describeActivity,
   type ActivityEntry,
+  type ActivityField,
 } from '@fp/domain'
 import type { ActivityLogEntry } from '@fp/ui/compositions'
 
@@ -37,8 +38,7 @@ export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
     title: entry.title,
     at: entry.occurredAt ? stamp(entry.occurredAt) : '',
     ...(facts.record ? { record: facts.record } : {}),
-    ...(facts.summary ? { summary: facts.summary } : {}),
-    ...(facts.detail ? { detail: facts.detail } : {}),
+    ...(facts.fields ? { fields: facts.fields } : {}),
     ...(by ? { by } : {}),
     ...(href ? { href } : {}),
   }
@@ -51,6 +51,7 @@ export function railActivity(entries: ActivityEntry[]): Array<{
   at: string
   status: 'completed'
   summary: string
+  fields?: readonly ActivityField[]
   detail?: string
   record?: string
   by?: string
@@ -64,6 +65,7 @@ export function railActivity(entries: ActivityEntry[]): Array<{
       at: row.at,
       status: 'completed' as const,
       summary: row.summary ?? '',
+      ...(row.fields ? { fields: row.fields } : {}),
       ...(row.detail ? { detail: row.detail } : {}),
       ...(row.record ? { record: row.record } : {}),
       ...(row.by ? { by: row.by } : {}),
