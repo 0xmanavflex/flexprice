@@ -9,12 +9,17 @@ import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
  *
  * Pass `null` to wait (for a currency not yet chosen, say).
  */
-export function useReport(key: string, query: ReportQuery | null) {
+export function useReport(
+  key: string,
+  query: ReportQuery | null,
+  options: { handleErrors?: boolean } = {},
+) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
   return useQuery<ReportResult>({
     queryKey: ['reports', key, query],
     enabled: query !== null,
+    ...(options.handleErrors ? { throwOnError: false } : {}),
     queryFn: async () => {
       const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
       if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to read reports.')
