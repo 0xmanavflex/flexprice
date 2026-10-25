@@ -280,7 +280,7 @@ export const MetadataKeyCannotHoldEquals: Story = {
 
 /** Metadata holds one value per key: a second pick on the same key replaces the first chip. */
 export const MetadataOneChipPerKey: Story = {
-  parameters: MetadataKeyCannotHoldEquals.parameters,
+  parameters: { ...MetadataKeyCannotHoldEquals.parameters },
   args: { onQueryChange: fn() },
   render: (args) => <MetadataFilterBar onChange={args.onQueryChange as never} />,
   play: async ({ canvasElement, args }) => {
