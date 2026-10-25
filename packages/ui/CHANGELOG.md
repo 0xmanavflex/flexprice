@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- PillColumns: optional `legend` (default on). Home's "New contracts by plan" card turns it off, so the plan names are not listed under the chart; each column still reads out its full breakdown. From the uncommitted work on `fix/reports-full-window`.
 - FilterBar: a `keyvalue` filter kind (domain `FilterKind`), for metadata. Its value step is a key and a value applied together (`FilterKeyValueEditor`), read back on the chip as `key = value`; the only condition is "is". The customers list offers a Metadata filter, sent as the search's `metadata` map (every pair must match) rather than a filter condition. Source: walkthrough QA 1.2.
 
 ## 2026-10-25

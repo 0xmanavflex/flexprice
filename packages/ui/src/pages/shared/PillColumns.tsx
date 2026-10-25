@@ -104,6 +104,8 @@ export interface PillColumnsProps {
   format?: ((value: number) => string) | undefined
   /** Accessible name for the plot as a whole. */
   label: string
+  /** Plan names and counts under the chart. Off when the card should not name them. */
+  legend?: boolean | undefined
   className?: string | undefined
 }
 
@@ -113,6 +115,7 @@ export function PillColumns({
   rows = 7,
   format = formatWhole,
   label,
+  legend = true,
   className,
 }: PillColumnsProps) {
   // One step per row, from the lead tone, so a page can still recolour the
@@ -194,7 +197,7 @@ export function PillColumns({
         })}
       </div>
 
-      {series.length === 0 ? null : (
+      {!legend || series.length === 0 ? null : (
         <>
           <Separator />
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-1.5">

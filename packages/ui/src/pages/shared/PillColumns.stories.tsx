@@ -119,6 +119,21 @@ export const LegendAndReadings: Story = {
   },
 }
 
+/**
+ * Without the legend (Home's contracts card): the plan names are not listed
+ * under the chart, and each column still reads out its full breakdown.
+ */
+export const WithoutLegend: Story = {
+  args: { legend: false },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText(series[0]!.label)).toBeNull()
+    await expect(
+      canvas.getByRole('button', { name: /Fri: 38 total, Starter 18, Growth 14, Scale 6/ }),
+    ).toBeInTheDocument()
+  },
+}
+
 /** Two series is where a legend starts mattering, and the common revenue case. */
 export const TwoSeries: Story = {
   args: {

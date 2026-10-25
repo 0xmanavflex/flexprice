@@ -915,6 +915,7 @@ function SubscriptionsCard({
               <PillColumns
                 columns={columns}
                 series={series}
+                legend={false}
                 label={`New contracts by plan, ${rangeLabel}`}
               />
               {subscriptions.stale ? (
