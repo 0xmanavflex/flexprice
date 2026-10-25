@@ -237,7 +237,9 @@ export interface MetricTab {
   points: MetricPoint[]
   /**
    * Extra lines drawn with `points[].extra`. When set, each one is plotted and
-   * `value` is the headline only.
+   * `value` is the headline only. With more than one, each line has its own
+   * scale, so two currencies (or any two units) share the chart without the
+   * smaller one flattening against the larger.
    */
   series?: ChartSeries[] | undefined
   /** Formats a point for the tooltip. Defaults to a locale-grouped integer. */
@@ -451,9 +453,7 @@ function MetricSeries({
     )
   }
 
-  const lines = tab.series?.length
-    ? tab.series
-    : [{ id: 'value', label: tab.label, format }]
+  const lines = tab.series?.length ? tab.series : [{ id: 'value', label: tab.label, format }]
   const values = tab.points.flatMap((point) =>
     lines.map((line) => (line.id === 'value' ? point.value : (point.extra?.[line.id] ?? 0))),
   )
@@ -471,20 +471,47 @@ function MetricSeries({
 
   return (
     <div className="flex flex-col">
-      <div className="text-muted-foreground mb-2 flex justify-end gap-3 text-xs">
-        <span>
-          Min <span className="text-foreground font-medium tabular-nums">{format(min)}</span>
-        </span>
-        <span>
-          Max <span className="text-foreground font-medium tabular-nums">{format(max)}</span>
-        </span>
+      <div className="text-muted-foreground mb-2 flex flex-wrap justify-end gap-3 text-xs">
+        {multi ? (
+          // One peak per line, in its own unit: a minimum and maximum across
+          // currencies would compare figures that cannot be compared.
+          lines.map((line, index) => {
+            const peak = Math.max(...tab.points.map((point) => point.extra?.[line.id] ?? 0))
+            return (
+              <span key={line.id} className="inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="size-2 rounded-full"
+                  style={{ background: toneColor(seriesTone(index)) }}
+                />
+                {line.label}
+                <span className="text-foreground font-medium tabular-nums">
+                  {(line.format ?? format)(peak)}
+                </span>
+              </span>
+            )
+          })
+        ) : (
+          <>
+            <span>
+              Min <span className="text-foreground font-medium tabular-nums">{format(min)}</span>
+            </span>
+            <span>
+              Max <span className="text-foreground font-medium tabular-nums">{format(max)}</span>
+            </span>
+          </>
+        )}
       </div>
       <ChartContainer
         config={config}
         className="aspect-auto w-full"
         style={{ height } as CSSProperties}
         role="img"
-        aria-label={`${tab.label} over ${tab.points.length} buckets, from ${format(min)} to ${format(max)}`}
+        aria-label={
+          multi
+            ? `${tab.label} in ${lines.map((line) => line.label).join(' and ')}, over ${tab.points.length} buckets`
+            : `${tab.label} over ${tab.points.length} buckets, from ${format(min)} to ${format(max)}`
+        }
       >
         <AreaChart
           accessibilityLayer
@@ -497,7 +524,14 @@ function MetricSeries({
         >
           <defs>
             {lines.map((line) => (
-              <linearGradient key={line.id} id={`${chartId}-${line.id}`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient
+                key={line.id}
+                id={`${chartId}-${line.id}`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
                 <stop offset="0%" stopColor={`var(--color-${line.id})`} stopOpacity={0.12} />
                 <stop offset="100%" stopColor={`var(--color-${line.id})`} stopOpacity={0.01} />
               </linearGradient>
@@ -512,7 +546,18 @@ function MetricSeries({
             tick={{ fontSize: 12 }}
             minTickGap={24}
           />
-          <YAxis hide domain={[(low: number) => low * 0.85, (high: number) => high * 1.05]} />
+          {multi ? (
+            lines.map((line) => (
+              <YAxis
+                key={line.id}
+                yAxisId={line.id}
+                hide
+                domain={[(low: number) => low * 0.85, (high: number) => high * 1.05]}
+              />
+            ))
+          ) : (
+            <YAxis hide domain={[(low: number) => low * 0.85, (high: number) => high * 1.05]} />
+          )}
           <ChartTooltip
             content={
               <ChartTooltipContent
@@ -529,6 +574,7 @@ function MetricSeries({
               key={line.id}
               type="monotone"
               dataKey={line.id}
+              {...(multi ? { yAxisId: line.id } : {})}
               stroke={`var(--color-${line.id})`}
               strokeWidth={1.5}
               fill={multi ? 'transparent' : `url(#${chartId}-${line.id})`}
