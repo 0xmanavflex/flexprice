@@ -1,5 +1,5 @@
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Controller, type FieldErrors, type Resolver, type UseFormRegister } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
@@ -98,7 +98,9 @@ import { ChargeCommitmentDialog, commitmentText } from './ChargeCommitmentDialog
 import {
   ChargeCouponDialog,
   type ChargeCouponOption,
+  type CouponsStatus,
   couponOptionLabel,
+  noCouponsText,
 } from './ChargeCouponDialog'
 import { provenance } from '@ui/provenance'
 
@@ -194,6 +196,11 @@ export interface SubscriptionFormProps {
   onCustomerChange?: (customerId: string) => void
   /** Coupons a phase or charge can be discounted with. */
   coupons?: readonly SubscriptionCouponOption[]
+  /**
+   * Whether the coupon list has arrived. While it loads or after it fails,
+   * the pickers say so rather than "No coupons yet".
+   */
+  couponsStatus?: CouponsStatus
   /** Rates that can be added to the contract. */
   taxRates?: readonly SubscriptionTaxRateOption[]
   /**
@@ -323,6 +330,7 @@ export function SubscriptionForm({
   onPlanChange,
   onCustomerChange,
   coupons = [],
+  couponsStatus = 'ready',
   taxRates = [],
   createTaxRateHref,
   customerTaxes = null,
@@ -1058,10 +1066,18 @@ export function SubscriptionForm({
       // The charges table needs the room; every other step keeps the narrow measure.
       width={flow.step === 'phases' ? 'medium' : 'narrow'}
     >
-      {content[flow.step]}
+      <CouponsStatusContext.Provider value={couponsStatus}>
+        {content[flow.step]}
+      </CouponsStatusContext.Provider>
     </FormPage>
   )
 }
+
+/**
+ * The coupon list's status, for the pickers deep in the phases step; a
+ * context rather than a prop through every step between.
+ */
+const CouponsStatusContext = createContext<CouponsStatus>('ready')
 
 /* ------------------------------------------------------------------------- */
 /* Pricing text                                                              */
@@ -1811,6 +1827,7 @@ function PhaseDiscounts({
   onPicking: (target: string | null) => void
   onChange: (next: SubscriptionDiscount[]) => void
 }) {
+  const couponsStatus = useContext(CouponsStatusContext)
   const [couponId, setCouponId] = useState('')
   const idBase = `discount-${phaseLabel.toLowerCase().replace(/\s+/g, '-')}`
   const couponName = (id: string) => coupons.find((c) => c.value === id)?.label ?? id
@@ -1827,27 +1844,26 @@ function PhaseDiscounts({
     <SubSection
       title="Discounts"
       description={`Coupons on all of ${phaseLabel}. A coupon on one charge is applied from that charge's menu.`}
+      // Offered even with no coupons in the catalogue, so it is clear where a
+      // discount goes; the picker then says there is nothing to choose yet.
       action={
-        coupons.length > 0 ? (
-          <AddButton
-            onClick={() => onPicking('all')}
-            disabled={picking !== null}
-            label={`Add a coupon to ${phaseLabel}`}
-          >
-            Add coupon
-          </AddButton>
-        ) : null
+        <AddButton
+          onClick={() => onPicking('all')}
+          disabled={picking !== null}
+          label={`Add a coupon to ${phaseLabel}`}
+        >
+          Add coupon
+        </AddButton>
       }
     >
       <Frame
         footer={
-          coupons.length === 0 ? (
-            discounts.length === 0 ? null : (
-              <p className="text-muted-foreground py-1.5 text-xs">
-                No coupons yet. Create one under Product catalog → Coupons to discount a phase.
-              </p>
-            )
-          ) : picking === null ? null : (
+          picking === null ? null : coupons.length === 0 ? (
+            <div className="flex items-center justify-between gap-3 py-1.5">
+              <p className="text-muted-foreground text-xs">{noCouponsText(couponsStatus)}</p>
+              <CloseSubForm label={`Close coupon picker for ${phaseLabel}`} onClick={close} />
+            </div>
+          ) : (
             <div className="grid gap-2 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-start">
               <label htmlFor={`${idBase}-coupon`} className="sr-only">
                 Coupon for {phaseLabel}
@@ -1894,17 +1910,7 @@ function PhaseDiscounts({
         }
       >
         {discounts.length === 0 ? (
-          <EmptyLine
-            action={
-              coupons.length === 0 ? (
-                <span className="text-muted-foreground text-xs">
-                  No coupons yet. Create one under Product catalog → Coupons to discount a phase.
-                </span>
-              ) : null
-            }
-          >
-            No discounts on {phaseLabel}.
-          </EmptyLine>
+          <EmptyLine>No discounts on {phaseLabel}.</EmptyLine>
         ) : (
           <ul className="divide-y">
             {discounts.map((discount, index) => (
@@ -2141,9 +2147,7 @@ function PhasesStep({
           }
           onEditExtra={(at) => setEditingExtra({ phase: index, index: at })}
           couponOf={(priceId) => couponOn(index, priceId)}
-          {...(coupons.length > 0
-            ? { onCoupon: (priceId: string) => setCouponing({ phase: index, priceId }) }
-            : {})}
+          onCoupon={(priceId) => setCouponing({ phase: index, priceId })}
           onReset={(priceId) => {
             update(index, {
               priceOverrides: phase.priceOverrides.filter((o) => o.priceId !== priceId),
@@ -2223,6 +2227,7 @@ function PhasesStep({
   const couponingCharge = couponing
     ? charges.find((charge) => charge.id === couponing.priceId)
     : undefined
+  const couponsStatus = useContext(CouponsStatusContext)
   const couponDialog = (
     <ChargeCouponDialog
       charge={
@@ -2232,6 +2237,7 @@ function PhasesStep({
       }
       couponId={couponing ? couponOn(couponing.phase, couponing.priceId)?.value : undefined}
       coupons={coupons}
+      status={couponsStatus}
       onClose={() => setCouponing(null)}
       onSave={(couponId) => {
         if (couponing) {
