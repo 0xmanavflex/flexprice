@@ -595,6 +595,9 @@ export function SubscriptionForm({
   const statusConflict = (draft: CreateSubscription): string | null => {
     const added = draft.phases.some((phase) => phase.extraCharges.length > 0)
     const trial = (draft.trialPeriodDays ?? 0) > 0
+    // A contract dated after today is created incomplete until it starts, and
+    // the API takes neither added charges nor add-ons on one.
+    const future = contractDay(draft.startDate || today) > today
     if (added && draft.draft) {
       return 'A draft contract cannot take the charges added here. Create it instead, or remove those charges and add them once it is active.'
     }
@@ -604,9 +607,18 @@ export function SubscriptionForm({
     if (draft.addons.length > 0 && trial && !draft.draft) {
       return 'A contract with a free trial starts as trialing, and add-ons cannot be attached then. Remove the trial or the add-ons, or add them after the trial.'
     }
+    if ((added || draft.addons.length > 0) && future && !draft.draft) {
+      return 'A contract that starts after today is created incomplete, and the charges or add-ons added here need it active. Start it today, or add them once it has started.'
+    }
     return null
   }
   const [conflict, setConflict] = useState<string | null>(null)
+  // Any change may resolve it, and a stale one would hide the API's own error:
+  // it is cleared on the next edit and checked again on the next submit.
+  useEffect(() => {
+    const subscription = form.watch(() => setConflict(null))
+    return () => subscription.unsubscribe()
+  }, [form])
 
   const submitWith = (patch: Partial<CreateSubscription>) =>
     form.handleSubmit(
