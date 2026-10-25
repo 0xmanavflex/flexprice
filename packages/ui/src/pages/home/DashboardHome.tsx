@@ -293,6 +293,9 @@ export interface DashboardHomeProps {
   granularityOptions: FilterOption[]
   granularity: string
   onGranularityChange: (granularity: string) => void
+  /** Which metric tab is open. Omitted, the chart keeps it until the page unmounts. */
+  metric?: string | undefined
+  onMetricChange?: ((metric: string) => void) | undefined
 
   /** Words for the window, e.g. "last 7 days". Used in the panels' subtitles. */
   rangeLabel: string
@@ -559,6 +562,8 @@ function MetricsSection({
   filters,
   onQuickstart,
   widen,
+  metric: metricProp,
+  onMetricChange,
 }: {
   events: EventsPanel
   revenue?: RevenuePanel | undefined
@@ -568,11 +573,14 @@ function MetricsSection({
   onQuickstart: () => void
   /** Widens the range, or `null` when it is already the widest on offer. */
   widen: Exit | null
+  metric?: string | undefined
+  onMetricChange?: ((metric: string) => void) | undefined
 }) {
-  // Which metric you are looking at is view state, not data, so it lives here
-  // rather than in the props. `MetricChart` holds none of its own. Revenue is
-  // what the overview is opened for, so it is the tab you land on.
-  const [metric, setMetric] = useState(METRIC_REVENUE)
+  // Revenue is the tab the overview opens on. A page that keeps the choice in
+  // the URL passes `metric`; otherwise it lasts only while this view is mounted.
+  const [localMetric, setLocalMetric] = useState(METRIC_REVENUE)
+  const metric = metricProp ?? localMetric
+  const setMetric = (id: string) => (onMetricChange ? onMetricChange(id) : setLocalMetric(id))
 
   const eventsReady = events.status === 'ready'
   const customersReady = customers.status === 'ready'
@@ -1196,6 +1204,8 @@ export function DashboardHome({
   granularityOptions,
   granularity,
   onGranularityChange,
+  metric,
+  onMetricChange,
   rangeLabel,
   events,
   revenue,
@@ -1220,6 +1230,8 @@ export function DashboardHome({
         events={events}
         {...(revenue ? { revenue } : {})}
         customers={customers}
+        {...(metric ? { metric } : {})}
+        {...(onMetricChange ? { onMetricChange } : {})}
         filters={
           <ChartFilters
             granularityOptions={granularityOptions}
