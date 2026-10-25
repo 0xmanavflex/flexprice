@@ -217,5 +217,7 @@ export function useSyncAddonPrices() {
 
   return useMutation({
     mutationFn: (id: string) => call(() => client.addons.syncAddonPrices(id)),
+    // A failure is told through the shared toasts; the page announces a start.
+    meta: { notify: { error: 'Could not start the sync.' } },
   })
 }
