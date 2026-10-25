@@ -585,9 +585,41 @@ export function SubscriptionForm({
     return flow.steps.find((s) => STEP_FIELDS[s.id]?.some((field) => failed[field] !== undefined))
       ?.id
   }
+  /**
+   * What the API will refuse about this contract's status, said before the
+   * request rather than after it. Charges added here are attached as line
+   * items, which the API takes only on an active contract: not on a draft, and
+   * not on a contract with a free trial (it starts trialing). Add-ons are
+   * refused while trialing too.
+   */
+  const statusConflict = (draft: CreateSubscription): string | null => {
+    const added = draft.phases.some((phase) => phase.extraCharges.length > 0)
+    const trial = (draft.trialPeriodDays ?? 0) > 0
+    if (added && draft.draft) {
+      return 'A draft contract cannot take the charges added here. Create it instead, or remove those charges and add them once it is active.'
+    }
+    if (added && trial) {
+      return 'A contract with a free trial starts as trialing, and the charges added here need an active one. Remove the trial or those charges, or add them after the trial.'
+    }
+    if (draft.addons.length > 0 && trial && !draft.draft) {
+      return 'A contract with a free trial starts as trialing, and add-ons cannot be attached then. Remove the trial or the add-ons, or add them after the trial.'
+    }
+    return null
+  }
+  const [conflict, setConflict] = useState<string | null>(null)
+  // Any change may resolve it, and a stale one would hide the API's own error:
+  // it is cleared on the next edit and checked again on the next submit.
+  useEffect(() => {
+    const subscription = form.watch(() => setConflict(null))
+    return () => subscription.unsubscribe()
+  }, [form])
+
   const submitWith = (patch: Partial<CreateSubscription>) =>
     form.handleSubmit(
       (draft) => {
+        const blocked = statusConflict({ ...draft, ...patch })
+        setConflict(blocked)
+        if (blocked) return
         if (payerMissing()) {
           form.setError('invoicingCustomerExternalId', { type: 'required', message: CHOOSE_PAYER })
           flow.goTo('billing')
@@ -1055,7 +1087,7 @@ export function SubscriptionForm({
         formId: FORM_ID,
         onCancel,
         isSubmitting,
-        submitError,
+        submitError: conflict ?? submitError,
         actions: (
           <Button type="button" variant="outline" onClick={saveDraft} disabled={isSubmitting}>
             Save as draft

@@ -487,8 +487,10 @@ export function SubscriptionDetailView({
   const title = `${s.customerName} on ${s.planName}`
 
   const canEditCharges = !isCancelled && !isCancelling
+  // The API adds a charge only to an active contract (not a draft, trial,
+  // pause or one not yet started), so it is offered only there.
   const canAddCharge =
-    Boolean(onAddCharge) && canEditCharges && s.status !== SubscriptionStatus.Trialing
+    Boolean(onAddCharge) && canEditCharges && s.status === SubscriptionStatus.Active
 
   // A fixed charge is edited through its quantity (and flat price), previewed
   // before it is saved; a metered one through the full price form.
@@ -1054,7 +1056,13 @@ export function SubscriptionDetailView({
                 title="Add-ons"
                 showTitle
                 part={addons ?? NO_PART}
-                create={createFor('addon', 'Add add-on', onAddAddon)}
+                // Add-ons attach only to an active or draft (incomplete) contract.
+                create={
+                  s.status === SubscriptionStatus.Active ||
+                  s.status === SubscriptionStatus.Incomplete
+                    ? createFor('addon', 'Add add-on', onAddAddon)
+                    : undefined
+                }
                 failure="Add-ons could not be loaded"
                 emptyTitle="No add-ons"
                 scene="catalog"

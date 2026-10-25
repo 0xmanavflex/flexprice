@@ -1604,6 +1604,15 @@ export const CancelledPricingIsReadOnly: Story = {
 }
 
 /** A contract still in its trial takes no new charges, but existing ones stay editable. */
+/** The API adds charges only to an active contract, so a draft or paused one offers none. */
+export const OnlyActiveCanAddCharge: Story = {
+  args: withSubscription({ status: SubscriptionStatus.Paused }),
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+  },
+}
+
 export const TrialingCannotAddCharge: Story = {
   args: withSubscription({ status: SubscriptionStatus.Trialing }),
   play: async ({ canvasElement }) => {
