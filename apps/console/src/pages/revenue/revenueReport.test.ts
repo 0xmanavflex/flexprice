@@ -263,4 +263,19 @@ describe('alignToWindow at a partial first bucket', () => {
     const out = alignToWindow([{ at: new Date('2026-09-24T00:00:00Z'), value: 3 }], window, 'day')
     expect(out.reduce((sum, point) => sum + (point.value ?? 0), 0)).toBe(0)
   })
+
+  it('does not add two weekly averages when the series is not additive', () => {
+    const out = alignToWindow(
+      [
+        { at: new Date('2026-09-21T00:00:00Z'), value: 7 },
+        { at: new Date('2026-09-28T00:00:00Z'), value: 5 },
+      ],
+      window,
+      'week',
+      false,
+      null,
+      false,
+    )
+    expect(out[0]?.value).toBe(5)
+  })
 })

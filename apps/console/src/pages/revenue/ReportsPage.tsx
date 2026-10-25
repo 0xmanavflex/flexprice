@@ -432,6 +432,7 @@ export function ReportsPage({
           payGrain,
           false,
           null,
+          false,
         ).map((point) => ({
           label: point.label,
           days: point.value === null ? null : Math.round(point.value),

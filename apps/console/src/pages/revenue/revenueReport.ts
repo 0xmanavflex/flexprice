@@ -211,6 +211,8 @@ function reachesInto(at: Date, start: Date, grain: Grain): boolean {
  * One point per bucket in the window. A report timeseries omits months with
  * nothing to add up, which draws a two-bar chart for a twelve-month filter.
  * Missing buckets are zero, in order, including a comparison when one was asked for.
+ * A bucket that starts before the window is folded into the first one only when
+ * `additive`: averages cannot be added together.
  */
 export function alignToWindow(
   points: DatedAmount[],
@@ -218,6 +220,7 @@ export function alignToWindow(
   grain: Grain,
   comparing = false,
   emptyValue: number | null = 0,
+  additive = true,
 ): { label: string; value: number | null; previous?: number | null }[] {
   const buckets = emptyBuckets(window, grain)
   const seen = new Set<string>()
@@ -225,7 +228,8 @@ export function alignToWindow(
   const start = utcMidnight(window.start)
   for (const point of points) {
     if (Number.isNaN(point.at.getTime())) continue
-    const at = point.at < start && reachesInto(point.at, start, grain) ? start : point.at
+    const at =
+      additive && point.at < start && reachesInto(point.at, start, grain) ? start : point.at
     if (at < start || at >= window.end) continue
     const { key } = bucketOf(at, grain, window.start)
     const bucket = buckets.get(key)
