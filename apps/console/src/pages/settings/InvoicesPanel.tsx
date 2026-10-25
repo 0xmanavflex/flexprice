@@ -411,7 +411,7 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 >
                   Reset to defaults
                 </Button>
-                <Button type="submit" disabled={busy}>
+                <Button type="submit" variant="outline" disabled={busy}>
                   {update.isPending ? 'Saving…' : 'Save changes'}
                 </Button>
               </div>

@@ -238,7 +238,7 @@ function PortalForm({
               {!saveError && reset.isSuccess ? (
                 <ActionNote message="Back to the defaults." />
               ) : null}
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" variant="outline" disabled={busy}>
                 {update.isPending ? 'Saving…' : 'Save changes'}
               </Button>
             </div>
