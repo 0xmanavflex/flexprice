@@ -732,7 +732,8 @@ function InvoiceDocumentArticle({
         </dl>
       </div>
 
-      <div className="grid gap-6 px-8 py-8 sm:grid-cols-2">
+      {/* Side by side from the left, not spread to the edges of a wide invoice. */}
+      <div className="flex flex-wrap gap-x-16 gap-y-6 px-8 py-8">
         {invoice.from ? <Party heading="Bill from" party={invoice.from} withLogo /> : null}
         <Party heading="Bill to" party={invoice.billTo} />
         {invoice.payment ? (
