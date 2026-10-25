@@ -1829,6 +1829,7 @@
         "FormCard",
         "FormPage",
         "FormRow",
+        "MetadataFields",
         "OptionSelect"
       ],
       "usedBy": [],
@@ -4943,6 +4944,18 @@
       ],
       "story": "./src/compositions/detail/MetadataCard.stories.tsx"
     },
+    "MetadataFields": {
+      "file": "src/compositions/forms/MetadataFields.tsx",
+      "layer": "composition",
+      "composes": [
+        "PlusIcon"
+      ],
+      "usedBy": [
+        "CouponCreateForm",
+        "PlanForm"
+      ],
+      "story": "./src/compositions/forms/MetadataFields.stories.tsx"
+    },
     "MeteredEntitlementFields": {
       "file": "src/pages/product-catalog/entitlements/MeteredEntitlementFields.tsx",
       "layer": "surface",
@@ -5720,6 +5733,7 @@
         "FormCard",
         "FormPage",
         "FormRow",
+        "MetadataFields",
         "PencilIcon",
         "PlusIcon"
       ],
@@ -5852,6 +5866,7 @@
         "InvoiceGrid",
         "Mark",
         "MetadataCard",
+        "MetadataFields",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "PlanForm",
@@ -8558,6 +8573,13 @@
       "component": "LabelWithHint",
       "uses": [
         "LabelWithHint"
+      ]
+    },
+    "./src/compositions/forms/MetadataFields.stories.tsx": {
+      "title": "Building blocks/Forms/MetadataFields",
+      "component": "MetadataFields",
+      "uses": [
+        "MetadataFields"
       ]
     },
     "./src/compositions/forms/OptionCombobox.stories.tsx": {

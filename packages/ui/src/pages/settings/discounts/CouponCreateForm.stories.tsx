@@ -90,3 +90,23 @@ export const FixedAmountShowsCurrency: Story = {
     await expect(amount.closest('[data-slot="input-group"]')).toHaveTextContent('$')
   },
 }
+
+/** A repeated metadata key is said under the rows, and the coupon is not created. */
+export const MetadataProblemBlocksCreate: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Launch')
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Percent/ }), '20')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add field' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Value 1' }), 'orphan')
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Every value needs a key.')
+    await userEvent.click(canvas.getByRole('button', { name: /create coupon/i }))
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+    // Fixing the row lets it through, with the metadata.
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Key 1' }), 'campaign')
+    await userEvent.click(canvas.getByRole('button', { name: /create coupon/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: { campaign: 'orphan' } }),
+    )
+  },
+}

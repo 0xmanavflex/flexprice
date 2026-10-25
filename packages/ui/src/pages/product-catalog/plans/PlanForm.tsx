@@ -20,6 +20,7 @@ import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
+import { MetadataFields } from '@ui/compositions/forms/MetadataFields'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import { useFormSteps } from '@ui/compositions/forms/useFormSteps'
 import { provenance } from '@ui/provenance'
@@ -170,14 +171,26 @@ export function PlanForm({
       setAdding(null)
       onStepChange?.(id)
     },
+    // Details is left only with valid metadata rows: they live on that step,
+    // so a problem must be fixed there rather than block Create plan unseen.
     validate: (id) =>
-      id === 'details' ? form.trigger(['name', 'lookupKey', 'description']) : true,
+      id === 'details'
+        ? metadataProblem
+          ? false
+          : form.trigger(['name', 'lookupKey', 'description'])
+        : true,
     unlockAll: isEdit,
   })
 
-  const submitAll = form.handleSubmit((plan) =>
-    onSubmit({ plan, charges, entitlements, creditGrants: grants }),
-  )
+  // What is wrong with the metadata rows, if anything; the plan is not sent while there is.
+  const [metadataProblem, setMetadataProblem] = useState<string | null>(null)
+  const submitAll = form.handleSubmit((plan) => {
+    if (metadataProblem) {
+      flow.goTo('details')
+      return
+    }
+    onSubmit({ plan, charges, entitlements, creditGrants: grants })
+  })
 
   const featureName = (id: string) => features.find((f) => f.id === id)?.name ?? id
   const grantable = features.filter((f) => !entitlements.some((e) => e.featureId === f.id))
@@ -226,6 +239,32 @@ export function PlanForm({
           )}
         </FormRow>
       </FormCard>
+      {/* On create only: an existing plan edits its metadata in place on its page. */}
+      {isEdit ? null : (
+        <FormCard title="Metadata" status="optional">
+          <FormRow
+            label="Fields"
+            hint="Free-form key/value pairs kept with the plan, for your own systems. Optional."
+            align="start"
+          >
+            {() => (
+              <MetadataFields
+                label="Plan metadata"
+                defaultValue={form.getValues('metadata')}
+                disabled={isSubmitting}
+                onChange={(metadata, problem) => {
+                  setMetadataProblem(problem)
+                  form.setValue(
+                    'metadata',
+                    Object.keys(metadata).length > 0 ? metadata : undefined,
+                    { shouldDirty: true },
+                  )
+                }}
+              />
+            )}
+          </FormRow>
+        </FormCard>
+      )}
       <p className="text-muted-foreground text-xs">
         {isEdit
           ? 'Charges, entitlements and credit grants are edited in place on the plan page.'
