@@ -170,10 +170,30 @@ export function perUnit(value: Money, quantity: string, places = 6): Money | nul
   const scaledNumerator = shift >= 0 ? numerator * 10n ** BigInt(shift) : numerator
   const scaledDenominator = shift >= 0 ? denominator : denominator * 10n ** BigInt(-shift)
   const quotient = scaledNumerator / scaledDenominator
-  const rounded = (scaledNumerator % scaledDenominator) * 2n >= scaledDenominator ? quotient + 1n : quotient
+  const rounded =
+    (scaledNumerator % scaledDenominator) * 2n >= scaledDenominator ? quotient + 1n : quotient
   const digits = rounded.toString().padStart(places + 1, '0')
   const whole = digits.slice(0, digits.length - places)
   const fraction = digits.slice(digits.length - places).replace(/0+$/, '')
   const sign = amount[1] && rounded !== 0n ? '-' : ''
   return { amount: `${sign}${whole}${fraction ? `.${fraction}` : ''}`, currency: value.currency }
+}
+
+/** A currency code as its symbol ("$"), or the code itself when there is none. */
+export function currencySymbol(currency: string): string {
+  const code = currency.trim().toUpperCase()
+  if (!/^[A-Z]{3}$/.test(code)) return code
+  try {
+    return (
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: code,
+        currencyDisplay: 'narrowSymbol',
+      })
+        .formatToParts(0)
+        .find((part) => part.type === 'currency')?.value ?? code
+    )
+  } catch {
+    return code
+  }
 }

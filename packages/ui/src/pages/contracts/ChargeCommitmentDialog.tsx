@@ -12,6 +12,7 @@ import {
   WINDOW_BILLING_MODEL_LABEL,
   WindowBillingModel,
   chargeCommitmentSchema,
+  currencySymbol,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -150,25 +151,6 @@ function emptyCommitment(
     windowed: false,
     windows: [],
     ...(priceBase ? { priceBase } : {}),
-  }
-}
-
-/** A currency code as its symbol ("$"), or the code itself when there is none. */
-function currencySymbol(currency: string): string {
-  const code = currency.trim().toUpperCase()
-  if (!/^[A-Z]{3}$/.test(code)) return code
-  try {
-    return (
-      new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: code,
-        currencyDisplay: 'narrowSymbol',
-      })
-        .formatToParts(0)
-        .find((part) => part.type === 'currency')?.value ?? code
-    )
-  } catch {
-    return code
   }
 }
 
