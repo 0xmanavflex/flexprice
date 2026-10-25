@@ -1,5 +1,5 @@
 /**
- * RBAC roles — read-only, and one rule that has to live here.
+ * RBAC roles: read-only, and one rule that has to live here.
  *
  * Roles are defined by the backend and can only be *assigned*: there is no
  * create, update or delete on `/rbac/roles`. Verified live, the five roles are
@@ -52,7 +52,7 @@ export function grantsEverything(role: Role): boolean {
 /**
  * Settle a role selection so super admin is always exclusive.
  *
- * Total, and safe to apply to any list from any source — a picker, a form
+ * Total, and safe to apply to any list from any source: a picker, a form
  * default, a bulk assignment, a response being echoed back. Selecting super
  * admin clears everything else; it is the only role that can coexist with
  * nothing. Duplicates are removed and order is preserved.
@@ -66,7 +66,7 @@ export function normalizeRoleSelection(roles: readonly string[]): string[] {
  * Add or remove one role, keeping super admin exclusive.
  *
  * Selecting super admin clears every other role. Selecting any *other* role
- * while super admin is held replaces super admin rather than adding to it —
+ * while super admin is held replaces super admin rather than adding to it:
  * the alternative is a checkbox that appears to do nothing, because the
  * normalized result would drop what was just ticked.
  */

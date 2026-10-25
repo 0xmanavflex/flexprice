@@ -1,8 +1,8 @@
 /**
  * One workflow execution, as the Workflows list reads it.
  *
- * Flexprice runs long operations — syncing prices, processing a billing
- * period, exporting data — as workflows, and this is the record of one attempt.
+ * Flexprice runs long operations: syncing prices, processing a billing
+ * period, exporting data: as workflows, and this is the record of one attempt.
  * The list is a monitor: what ran, whether it finished, how long it took.
  */
 export const WorkflowStatus = {

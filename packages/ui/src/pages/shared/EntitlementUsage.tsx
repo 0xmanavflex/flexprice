@@ -15,8 +15,8 @@ import { UsageMeter } from './UsageMeter'
 /**
  * Entitlements with how much of each has been used.
  *
- * V1 showed this on the customer overview as one table — feature, the plan or
- * contract that grants it, its value, and a usage bar — and V2 had dropped it.
+ * V1 showed this on the customer overview as one table: feature, the plan or
+ * contract that grants it, its value, and a usage bar: and V2 had dropped it.
  * The same table now serves the customer overview and a contract's
  * Entitlements section, so the two cannot drift: a contract simply passes no
  * sources, because it is the source.
@@ -40,11 +40,11 @@ export const EntitlementUsageProvenance = provenance({
 })
 
 export interface EntitlementUsageProps {
-  /** The feature's name — the meter's accessible name. */
+  /** The feature's name: the meter's accessible name. */
   feature: string
   /** Used so far this period. `undefined` when nothing reported it, which renders a dash. */
   used: number | undefined
-  /** `null` is unlimited — not zero, and not infinity. */
+  /** `null` is unlimited: not zero, and not infinity. */
   limit: number | null
   /** The plural unit, folded into the reading: "calls", "tokens". */
   unit?: string | undefined
@@ -92,7 +92,7 @@ export function EntitlementUsage({
   )
 }
 
-/** What grants an entitlement — a plan, an add-on, a contract. */
+/** What grants an entitlement: a plan, an add-on, a contract. */
 export interface EntitlementSourceLink {
   label: string
   /** Opens it. Omitted, the name is plain text. */
@@ -129,7 +129,7 @@ export interface EntitlementUsageTableProps {
 const measured = (row: EntitlementUsageRow) =>
   row.featureType === undefined || row.featureType === '' || row.featureType === 'metered'
 
-/** What the entitlement grants, in words — V1's "Value" column. */
+/** What the entitlement grants, in words: V1's "Value" column. */
 export function entitlementValue(row: EntitlementUsageRow, locale?: string): string {
   if (!row.enabled) return 'Not included'
   if (row.featureType === 'boolean') return 'Included'
@@ -287,7 +287,7 @@ export function EntitlementUsageTable({ rows, locale }: EntitlementUsageTablePro
 /**
  * A decimal string the API sent, as a count for display.
  *
- * These are counts — events, seats, calls — not money, so reading them as
+ * These are counts: events, seats, calls: not money, so reading them as
  * numbers is display formatting. `undefined` for anything unparseable, which
  * renders as a dash rather than a zero.
  */
@@ -315,7 +315,7 @@ function usageFields(usage: TenantFeatureUsage) {
 /**
  * A customer's entitlements, from `GET /customers/usage`, as table rows.
  *
- * `onOpenSource` decides what a source name opens — a plan, a contract — and
+ * `onOpenSource` decides what a source name opens: a plan, a contract: and
  * returns `undefined` to leave it as text.
  */
 export function entitlementRowsFromUsage(

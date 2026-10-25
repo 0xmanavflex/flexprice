@@ -2,7 +2,7 @@ import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * An add-on, as the list reads it.
  *
- * V1's addon is "a plan that cannot be sold alone" — the same name/lookup/status
+ * V1's addon is "a plan that cannot be sold alone": the same name/lookup/status
  * shell, the same charges and entitlements attached afterwards. This is only the
  * list's read model; the charges the editor shares with plans are a later
  * surface.
@@ -50,7 +50,7 @@ export const ADDON_SORT_LABEL: Record<AddonSortField, string> = {
   [AddonSortField.UpdatedAt]: 'Updated',
 }
 
-/** Table or cards. A layout, not a filter — kept out of the fetch key. */
+/** Table or cards. A layout, not a filter: kept out of the fetch key. */
 export const AddonView = {
   Table: 'table',
   Cards: 'cards',
@@ -79,7 +79,7 @@ export const DEFAULT_ADDON_QUERY: AddonQuery = {
   view: AddonView.Table,
   filters: [],
 }
-/** What the add-on list can filter on — V1's fields, by their wire names. */
+/** What the add-on list can filter on: V1's fields, by their wire names. */
 export const ADDON_FILTERS: readonly ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },
   { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
@@ -98,13 +98,13 @@ export const ADDON_FILTERS: readonly ListFilterSpec[] = [
 /**
  * The rules for creating or editing an add-on's details.
  *
- * The details step only — name, the stable lookup key, a description. The
+ * The details step only: name, the stable lookup key, a description. The
  * charges and entitlements an add-on carries are the surface it shares with a
  * plan, added after the shell exists, the same way V1's drawer creates the
  * add-on and a separate page prices it.
  *
  * `lookupKey` is required here because the create endpoint requires it; on an
- * edit it is fixed (the update endpoint does not accept a new one — integrations
+ * edit it is fixed (the update endpoint does not accept a new one: integrations
  * key off it), so the form shows it read-only rather than dropping it from the
  * schema.
  */

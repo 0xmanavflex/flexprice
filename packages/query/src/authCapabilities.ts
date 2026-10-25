@@ -17,7 +17,7 @@ export { PASSWORD_ONLY } from '@fp/api'
  * Three settings that are not the usual defaults, each for a reason:
  *
  *   - **`retry: false`.** `fetchAuthCapabilities` already resolves rather than
- *     rejects, so there is no rejection to retry — a retry policy here would be
+ *     rejects, so there is no rejection to retry: a retry policy here would be
  *     dead configuration that reads as though it does something.
  *   - **`placeholderData: PASSWORD_ONLY`.** The sign-in form must render on the
  *     first frame. Waiting for this answer would put a spinner in front of a
@@ -41,7 +41,7 @@ export function useAuthCapabilities(): UseQueryResult<AuthCapabilities> {
   })
 }
 
-/** The capabilities, never undefined — the shape pages actually want. */
+/** The capabilities, never undefined: the shape pages actually want. */
 export function useAuthCapabilitiesValue(): AuthCapabilities {
   return useAuthCapabilities().data ?? PASSWORD_ONLY
 }

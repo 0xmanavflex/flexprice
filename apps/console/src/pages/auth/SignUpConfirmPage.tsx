@@ -22,8 +22,8 @@ export { messageForConfirmError }
  * carries the new tenant, becomes the console's session; and the link's own
  * session is dropped, along with the tokens in the address bar.
  *
- * A link followed a second time finds the account already made — its token
- * already names a tenant — and simply signs the person in.
+ * A link followed a second time finds the account already made: its token
+ * already names a tenant: and simply signs the person in.
  */
 export function SignUpConfirmPage() {
   const navigate = useNavigate()

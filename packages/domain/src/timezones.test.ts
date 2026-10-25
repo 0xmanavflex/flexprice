@@ -19,7 +19,7 @@ describe('toTimezoneOption', () => {
   /*
    * The reason the list exists.
    *
-   * `Intl` answers "GMT+5:30" for `timeZoneName: 'short'` outside the US —
+   * `Intl` answers "GMT+5:30" for `timeZoneName: 'short'` outside the US:
    * the offset again, not a name. If a future runtime starts answering "IST"
    * this still passes, because Intl's answer is preferred and would be right.
    */
@@ -49,7 +49,7 @@ describe('toTimezoneOption', () => {
     const matches = (zone: string, term: string) =>
       toTimezoneOption(zone, JANUARY).searchText.includes(term.toLowerCase())
 
-    it('finds a zone by its abbreviation — the reported bug', () => {
+    it('finds a zone by its abbreviation: the reported bug', () => {
       expect(matches('Asia/Kolkata', 'IST')).toBe(true)
       expect(matches('Asia/Singapore', 'SGT')).toBe(true)
       expect(matches('America/Los_Angeles', 'PST')).toBe(true)

@@ -18,7 +18,7 @@ import { provenance } from '@ui/provenance'
  *
  * The signature V2 improvement: a customer's-eye view of the plan that updates
  * as charges are drafted. It reuses the pricing-card idiom from `PlanGrid`'s
- * cards view — a name, one headline price, then what the plan carries — and adds
+ * cards view: a name, one headline price, then what the plan carries: and adds
  * the thing a pricing card cannot show on its own: **an example bill**, so the
  * person pricing the plan sees what a month actually costs at a sample level of
  * usage, tiers and packages resolved, before anyone is billed for real.
@@ -45,14 +45,14 @@ export interface PlanPreviewCardProps {
   /** Credits the plan hands out, one line per grant. */
   credits?: PreviewLine[]
   locale?: string
-  /** Passed to the rail — `sticky top-6` on a detail page, nothing on a form. */
+  /** Passed to the rail: `sticky top-6` on a detail page, nothing on a form. */
   className?: string
   /** `card` boxes it, for a saved plan; `rail` is the form's column. */
   variant?: 'rail' | 'card'
   /**
    * Element ids the section titles jump to, when the preview sits beside the
    * tables it summarises. Omitted on a form, where there is nothing to jump
-   * to — the tables do not exist yet.
+   * to: the tables do not exist yet.
    */
   onJump?: ((target: string) => void) | undefined
   jumpTargets?: { charges?: string; included?: string; credits?: string }
@@ -91,7 +91,7 @@ export function creditLine(g: {
 
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
-/** One "Included" line for an entitlement, staged or saved — both share these fields. */
+/** One "Included" line for an entitlement, staged or saved: both share these fields. */
 export function includedLine(e: {
   key: string
   name: string

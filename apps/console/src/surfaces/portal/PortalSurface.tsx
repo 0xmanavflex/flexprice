@@ -323,7 +323,7 @@ async function settle(run: () => Promise<unknown>): Promise<null> {
 
 /**
  * Runs a write that may answer with a gateway page, and opens that page in a
- * new tab — opened on the click itself so pop-up blockers allow it, then
+ * new tab: opened on the click itself so pop-up blockers allow it, then
  * pointed at the gateway once the API answers, and the URL is handed back so
  * the dialog can keep it on screen. The portal refetches when the customer
  * comes back to it. `required`: no page in the answer is an error.

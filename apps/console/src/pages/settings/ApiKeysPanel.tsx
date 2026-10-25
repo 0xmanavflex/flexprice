@@ -34,13 +34,13 @@ import { useDraft } from './useDraft'
 const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
 
 /**
- * API keys — list, issue, revoke. Lives in Settings; `/api-keys` redirects to its section.
+ * API keys: list, issue, revoke. Lives in Settings; `/api-keys` redirects to its section.
  *
  * ## A snippet list, not a data table
  *
  * A key is something you look at, copy and occasionally revoke; nobody sorts,
- * filters or pages through them. So each key is one compact row — name and
- * dates on the left, the masked key in monospace, Revoke —
+ * filters or pages through them. So each key is one compact row: name and
+ * dates on the left, the masked key in monospace, Revoke:
  * inside one outline, with no toolbar beyond the create button. Deliberate
  * deviation from the shared table, by product request.
  *
@@ -51,7 +51,7 @@ const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
  * deliberately **not** put in the query cache, so a refetch, a remount or a
  * reload loses it for good. The create dialog turns into the secret's one
  * render: copy button, a plain sentence saying this is the only time, and an
- * explicit "I have saved it" to close — not a timer, not a click elsewhere.
+ * explicit "I have saved it" to close: not a timer, not a click elsewhere.
  */
 export function ApiKeysPanel() {
   const keys = useApiKeys(DEFAULT_API_KEY_QUERY)
@@ -128,7 +128,7 @@ export function ApiKeysPanel() {
           void create
             .mutateAsync(draft)
             .then((result) => {
-              // The secret is held in component state and nowhere else —
+              // The secret is held in component state and nowhere else:
               // putting it in the cache is what would let it outlive the
               // one moment it is meant to be visible.
               setIssued(result)
@@ -268,7 +268,7 @@ function CreateKeyDialog({
   const type = draft.value.type
 
   /*
-   * `ISSUABLE_API_KEY_TYPES` is declared `ApiKeyType[]` — wider than the two
+   * `ISSUABLE_API_KEY_TYPES` is declared `ApiKeyType[]`: wider than the two
    * literals `createApiKeySchema` accepts, because `integration` is a real key
    * type that simply cannot be issued from here. Narrowed rather than cast, so
    * a type added to that list which the schema rejects loses its button

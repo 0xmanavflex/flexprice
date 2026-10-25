@@ -1,7 +1,7 @@
 import { type AccessRequirement, RBAC_ENTITY as E, type RbacEntity } from '@fp/domain'
 
 /**
- * What each console route needs, in one table — V1's `requirePermission`
+ * What each console route needs, in one table: V1's `requirePermission`
  * handles (`core/routes/Routes.tsx`), mapped onto V2's routes.
  *
  * - `require` gates the page: a loader while access loads, "Access denied"
@@ -119,7 +119,7 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   // Settings gates each panel itself (`SettingsPage`), as V1's tabs do.
   '/settings': OPEN,
   // The tenant's own Flexprice account: open to anyone signed in, and to a
-  // locked account above all — paying is its way back.
+  // locked account above all: paying is its way back.
   '/settings/usage-billing': OPEN,
   '/settings/usage-billing/go-live': OPEN,
   '/billing/checkout/success': OPEN,

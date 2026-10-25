@@ -137,6 +137,21 @@ export const AdvancedOpen: Story = {
   },
 }
 
+/** Each option's (i) explains both choices, not only the selected one. */
+export const ExplainsAdvancedOptions: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Advanced' }))
+    // Field also states its hint as the control's description.
+    await expect(
+      canvas.getByRole('combobox', { name: 'Window starts' }),
+    ).toHaveAccessibleDescription(/On first use: .* Calendar boundary: /)
+    await expect(canvas.getByRole('combobox', { name: 'Stacking' })).toHaveAccessibleDescription(
+      /Additive: .* Parallel: /,
+    )
+  },
+}
+
 /** Edit forms cannot remove a limit once set: the switch is locked off. */
 export const LockedLimit: Story = {
   args: { lockUnlimited: true },

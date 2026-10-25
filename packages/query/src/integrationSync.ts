@@ -4,7 +4,7 @@ import { queryKeys } from './keys'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
- * Push a customer to the providers that sync customers outbound — V1's
+ * Push a customer to the providers that sync customers outbound: V1's
  * "Push to Integration". A push can create the provider record, which the
  * backend maps back, so the customer's integration marks are refreshed.
  */

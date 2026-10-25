@@ -11,7 +11,7 @@ import type { ShellEnvironment, ShellNavGroup } from './types'
 /**
  * The shell, in the arrangements that actually occur.
  *
- * Every one is reached by passing props — no router, no provider, no session.
+ * Every one is reached by passing props: no router, no provider, no session.
  * "In the catalogue, in production, with an empty coupon list" is a story,
  * which is only possible because the shell holds no state of its own.
  */
@@ -106,7 +106,7 @@ const meta = {
       config: {
         /*
          * Base UI renders `aria-hidden` focus guards with `tabindex="0"` on
-         * either side of every portalled surface — menu, popover, dialog. Axe
+         * either side of every portalled surface: menu, popover, dialog. Axe
          * flags them, correctly, and we cannot fix them without forking the
          * library. The rule stays on everywhere else; this file is the one
          * that opens portals.
@@ -333,7 +333,7 @@ export const Sandbox: Story = {
  * Search is a button that opens a dialog, not a field that sits there.
  *
  * An always-present input is a tab stop on every screen and an implicit
- * promise to filter *something* — but what it searches changes by page, which
+ * promise to filter *something*: but what it searches changes by page, which
  * is how the current dashboard ends up with a box that sometimes does nothing.
  *
  * The dialog is a portal, so it is asserted on the document rather than on the
@@ -445,7 +445,7 @@ export const WithPinnedContent: Story = {
 /**
  * Create, in the header, from every screen.
  *
- * The things a finance person starts cold — a subscription, a customer — do
+ * The things a finance person starts cold: a subscription, a customer: do
  * not live on the screen they happen to be looking at, so reaching them costs
  * a navigation and a search before any work begins.
  *
@@ -468,7 +468,7 @@ export const CreateMenu: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // Beside the breadcrumb, in the header — not in the sidebar, and not on
+    // Beside the breadcrumb, in the header: not in the sidebar, and not on
     // the page.
     await expect(canvas.getByRole('button', { name: /create/i })).toBeVisible()
   },

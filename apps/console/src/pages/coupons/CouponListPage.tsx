@@ -15,7 +15,7 @@ export interface CouponListPageProps {
 }
 
 /**
- * The wiring layer, and nothing else — the same shape as `AddonListPage`.
+ * The wiring layer, and nothing else: the same shape as `AddonListPage`.
  *
  * Replaces V1's `Coupons.tsx`. Fetches, turns an error into a sentence, and
  * hands the grid plain props. The query lives in the URL; create is a full page
@@ -55,7 +55,7 @@ export function CouponListPage({
           }
           createAction={<Button onClick={onCreate}>New coupon</Button>}
           emptyTitle="No coupons yet"
-          emptyDescription="Coupons apply a discount to a contract or an invoice — once, for a set number of periods, or forever. Create the first to offer one."
+          emptyDescription="Coupons apply a discount to a contract or an invoice: once, for a set number of periods, or forever. Create the first to offer one."
         >
           <CouponGrid
             coupons={rows}

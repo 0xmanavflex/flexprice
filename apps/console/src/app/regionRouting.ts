@@ -17,7 +17,7 @@ function safeOrigin(url: string): string | null {
   }
 }
 
-/** The region whose canonical origin — or alias — matches where the browser is. */
+/** The region whose canonical origin: or alias: matches where the browser is. */
 export function regionOfOrigin(
   origin: string,
   urls: Record<RegionId, string>,

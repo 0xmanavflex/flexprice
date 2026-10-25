@@ -13,7 +13,7 @@ import { GroupGrid } from './GroupGrid'
 /**
  * The group list, over the shared `EntityList`.
  *
- * Groups as plain domain values — no client, no provider, no network.
+ * Groups as plain domain values: no client, no provider, no network.
  */
 const groupFixtures: Group[] = [
   {
@@ -37,7 +37,7 @@ const groupFixtures: Group[] = [
     updatedAt: new Date('2026-02-28T00:00:00Z'),
   },
   {
-    // No lookup key — the row a hand-written demo omits.
+    // No lookup key: the row a hand-written demo omits.
     id: 'grp_03',
     name: 'EU prices',
     lookupKey: '',
@@ -48,7 +48,7 @@ const groupFixtures: Group[] = [
     updatedAt: new Date('2026-03-15T00:00:00Z'),
   },
   {
-    // Archived, and holding nothing — the row that shows both edge states.
+    // Archived, and holding nothing: the row that shows both edge states.
     id: 'grp_04',
     name: 'Legacy bundle',
     lookupKey: 'legacy_bundle',
@@ -59,7 +59,7 @@ const groupFixtures: Group[] = [
     updatedAt: new Date('2026-01-05T00:00:00Z'),
   },
   {
-    // No timestamps — the row a hand-written demo omits.
+    // No timestamps: the row a hand-written demo omits.
     id: 'grp_05',
     name: 'Beta features',
     lookupKey: 'beta_features',
@@ -104,7 +104,7 @@ export const Populated: Story = {
 
     await expect(await canvas.findByText('Enterprise prices')).toBeInTheDocument()
 
-    // A group holds prices or features — and only those two. There is no
+    // A group holds prices or features: and only those two. There is no
     // plan group and no add-on group in `GroupEntityType`.
     await expect(canvas.getAllByText('Prices').length).toBeGreaterThan(0)
     await expect(canvas.getAllByText('Features').length).toBeGreaterThan(0)
@@ -144,7 +144,7 @@ export const Layout: Story = {
 
 export const Loading: Story = { args: { groups: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     groups: [],
@@ -154,7 +154,7 @@ export const FilteredEmpty: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText(/no groups match these filters/i),
+      await within(canvasElement).findByText(/no tags match these filters/i),
     ).toBeInTheDocument()
   },
 }
@@ -171,9 +171,9 @@ export const FirstRun: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('No groups yet')).toBeInTheDocument()
+    await expect(await canvas.findByText('No tags yet')).toBeInTheDocument()
     await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
-    const create = canvas.getAllByRole('button', { name: /new group/i })
+    const create = canvas.getAllByRole('button', { name: /new tag/i })
     await expect(create.length).toBe(1)
     await userEvent.click(create[0]!)
     await expect(args.onCreate).toHaveBeenCalledOnce()
@@ -184,7 +184,7 @@ export const Error: Story = {
   args: {
     groups: [],
     total: 0,
-    error: 'You do not have access to groups in this environment.',
+    error: 'You do not have access to tags in this environment.',
     onRetry: fn(),
   },
   play: async ({ canvasElement, args }) => {
@@ -247,7 +247,7 @@ function GroupGridPlayground({ rows, page, pageSize, status, hasError, ...rest }
       total={all.length}
       query={{ ...query, page: current }}
       onQueryChange={setQuery}
-      error={hasError ? 'You do not have access to groups in this environment.' : null}
+      error={hasError ? 'You do not have access to tags in this environment.' : null}
     />
   )
 }

@@ -11,7 +11,7 @@ interface FlexpriceContextValue {
    * Carried for the hooks that cannot go through the client at all: the
    * `/settings/{key}` family, `/webhooks/dashboard` and `/tenants/billing` are
    * missing from the OpenAPI document (or, for the last, present at the wrong
-   * path), so `@fp/api` reaches them with `fetch` — and a bare `fetch` has no
+   * path), so `@fp/api` reaches them with `fetch`: and a bare `fetch` has no
    * `beforeRequest` hook putting the JWT and the environment on it.
    *
    * Exposing the getters rather than a token means those hooks authenticate
@@ -44,7 +44,7 @@ export interface FlexpriceProviderProps {
  * Holds the one API client and the one query client.
  *
  * The client is built from `auth` getters rather than values, so a token
- * refresh or an environment switch needs no remount — see `@fp/api`.
+ * refresh or an environment switch needs no remount: see `@fp/api`.
  */
 export function FlexpriceProvider({
   serverURL,
@@ -94,7 +94,7 @@ export function useFlexpriceServerURL(): string {
 /**
  * How to authenticate a request the SDK cannot make.
  *
- * For the `fetch`-based hooks only — see the note on `FlexpriceContextValue`.
+ * For the `fetch`-based hooks only: see the note on `FlexpriceContextValue`.
  * A hook calls `await auth.getToken()` inside its query function, where being
  * async costs nothing, rather than taking a token as an argument: a token in a
  * hook signature is a token in a component, and eventually a token in a query

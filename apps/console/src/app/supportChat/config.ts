@@ -14,7 +14,7 @@ import {
 /** Behaviour knobs for the messenger. */
 export interface SupportChatFlowConfig {
   /**
-   * Hide the provider's floating launcher. Off: the launcher is the way in —
+   * Hide the provider's floating launcher. Off: the launcher is the way in:
    * it stays in the bottom-left corner, and there is no header Help button.
    */
   hideDefaultLauncher: boolean

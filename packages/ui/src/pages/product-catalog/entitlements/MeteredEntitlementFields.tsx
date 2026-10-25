@@ -35,6 +35,19 @@ export interface MeteredEntitlementFieldsProps {
 
 type Reset = { value: UsageResetPeriod; label: string }
 
+/**
+ * The (i) text for the Advanced options. Each explains both choices, not only
+ * the selected one, so the reader can tell what switching would do. Wording
+ * follows the API: `grant_allocation_behavior` (first_usage / unit_start) and
+ * `aggregation_mode` (additive / parallel).
+ */
+const VALUE_TYPE_HINT =
+  'What the allowance counts. Quantity: units of the metered usage, such as 10,000 API calls. Amount: the priced value of that usage, such as $50 of calls.'
+const WINDOW_STARTS_HINT =
+  "When a usage window opens. On first use: the window opens at the customer's first event, so a daily allowance runs 24 hours from then. Calendar boundary: windows line up with the clock (midnight for daily, the start of the week for weekly), whenever usage begins. Applies to daily and weekly windows; a billing-period window always follows the billing period."
+const STACKING_HINT =
+  'How this allowance combines with others on the same feature, such as a plan and an add-on. Additive: the amounts are summed into one pool the customer draws from. Parallel: each keeps its own pool and window, and usage is counted against each separately.'
+
 /** "Hourly" is in the redesign's list but not in the API's enum, so it is not offered. */
 const BASE_RESETS: Reset[] = [
   { value: UsageResetPeriod.Monthly, label: 'Every billing period' },
@@ -71,10 +84,11 @@ export function MeteredEntitlementFields({
 
   return (
     <div className="flex flex-col gap-5">
-      <Field label="Value type" hint="Whether the allowance is a set number or unlimited.">
-        {({ id }) => (
+      <Field label="Value type" hint={VALUE_TYPE_HINT}>
+        {({ id, ...field }) => (
           <OptionSelect
             id={id}
+            {...field}
             value={valueType}
             onValueChange={(next) => setValueType(next as 'quantity' | 'amount')}
             disabled={disabled}
@@ -125,9 +139,10 @@ export function MeteredEntitlementFields({
 
         <div className={cn(unlimited && 'pointer-events-none opacity-50')}>
           <Field label="Usage resets" hint="When the used amount returns to zero.">
-            {({ id }) => (
+            {({ id, ...field }) => (
               <OptionSelect
                 id={id}
+                {...field}
                 value={current}
                 onValueChange={(value) => onResetPeriodChange(value as UsageResetPeriod)}
                 disabled={disabled || unlimited}
@@ -169,17 +184,11 @@ export function MeteredEntitlementFields({
           {advanced ? (
             <div className="flex flex-col gap-4 border-t p-3.5">
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field
-                  label="Window starts"
-                  hint={
-                    windowStart === 'first-use'
-                      ? "Starts at the customer's first event."
-                      : 'Starts at each period boundary.'
-                  }
-                >
-                  {({ id }) => (
+                <Field label="Window starts" hint={WINDOW_STARTS_HINT}>
+                  {({ id, ...field }) => (
                     <OptionSelect
                       id={id}
+                      {...field}
                       value={windowStart}
                       onValueChange={(next) => setWindowStart(next as 'first-use' | 'calendar')}
                       disabled={disabled}
@@ -190,17 +199,11 @@ export function MeteredEntitlementFields({
                     />
                   )}
                 </Field>
-                <Field
-                  label="Stacking"
-                  hint={
-                    stacking === 'additive'
-                      ? 'Plan and add-ons share one pool.'
-                      : 'Each source gets its own window.'
-                  }
-                >
-                  {({ id }) => (
+                <Field label="Stacking" hint={STACKING_HINT}>
+                  {({ id, ...field }) => (
                     <OptionSelect
                       id={id}
+                      {...field}
                       value={stacking}
                       onValueChange={(next) => setStacking(next as 'additive' | 'parallel')}
                       disabled={disabled}

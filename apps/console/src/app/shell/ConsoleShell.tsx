@@ -179,7 +179,7 @@ export function ConsoleShell({
 
   // A detail page hands up "list, page": the list crumb becomes a link back
   // and the page type ("Customer details") is appended, never the record id.
-  // The group crumb goes where the sidebar's group goes — its first page.
+  // The group crumb goes where the sidebar's group goes: its first page.
   // The page crumb is a link whenever you are somewhere under it.
   const pagePath = activeItemId ? pathForNavId(activeItemId) : undefined
   const pageHref = activeItemId ? hrefForNavId(activeItemId) : undefined
@@ -217,11 +217,11 @@ export function ConsoleShell({
         {...(onSignOut ? { onSignOut } : {})}
         {...(headerLeading ? { headerLeading } : {})}
         /*
-         * The environment leads the trail, and it is where you change it too — the
+         * The environment leads the trail, and it is where you change it too: the
          * switcher moved out of the sidebar and became this first crumb. The one
          * place people look while working is the top of the page they are working
          * on, so the most consequential control in the product lives there and
-         * nowhere else — including managing environments: create and rename are
+         * nowhere else: including managing environments: create and rename are
          * in the switcher itself, not on a Settings page. Production is marked
          * green and sandbox yellow, because a two-state signal beats
          * colour-versus-nothing.
@@ -256,7 +256,7 @@ export function ConsoleShell({
         }
         /*
          * Create sits in the header rather than on each page, because the things
-         * people start cold — a subscription, a customer — do not live on the
+         * people start cold: a subscription, a customer: do not live on the
          * screen they happen to be looking at.
          */
         headerActions={

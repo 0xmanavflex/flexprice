@@ -8,7 +8,7 @@ import {
   money,
 } from '@fp/domain'
 
-/** Coupons as plain domain values — no client, no provider, no network. */
+/** Coupons as plain domain values: no client, no provider, no network. */
 export const couponFixtures: Coupon[] = [
   {
     id: 'coupon_01',
@@ -37,7 +37,7 @@ export const couponFixtures: Coupon[] = [
     percentageOff: null,
     cadence: CouponCadence.Once,
     durationInPeriods: null,
-    // Unlimited redemptions — the row that shows the ∞ ceiling.
+    // Unlimited redemptions: the row that shows the ∞ ceiling.
     maxRedemptions: null,
     totalRedemptions: 87,
     redeemAfter: null,
@@ -54,7 +54,7 @@ export const couponFixtures: Coupon[] = [
     type: CouponType.Percentage,
     amountOff: null,
     percentageOff: '25',
-    // Repeating — the only cadence that reads with a period count beside it.
+    // Repeating: the only cadence that reads with a period count beside it.
     cadence: CouponCadence.Repeated,
     durationInPeriods: 3,
     maxRedemptions: 1000,
@@ -85,7 +85,7 @@ export const couponFixtures: Coupon[] = [
     updatedAt: new Date('2026-03-28T00:00:00Z'),
   },
   {
-    // Archived, and fully redeemed — the muted row at its ceiling.
+    // Archived, and fully redeemed: the muted row at its ceiling.
     id: 'coupon_05',
     name: 'Black Friday 2025',
     code: 'BF2025',
@@ -104,7 +104,7 @@ export const couponFixtures: Coupon[] = [
     updatedAt: new Date('2025-12-03T00:00:00Z'),
   },
   {
-    // No code and no redeem window — the row a hand-written demo omits.
+    // No code and no redeem window: the row a hand-written demo omits.
     id: 'coupon_06',
     name: 'Referral reward',
     code: '',

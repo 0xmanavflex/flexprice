@@ -150,7 +150,7 @@ export const CountryIsSearchable: Story = {
  * Time zones are found by abbreviation and offset, which is the reported bug.
  *
  * The options were bare IANA names, so someone looking for their own zone had
- * to know its spelling — "IST" and "+05:30" both found nothing.
+ * to know its spelling: "IST" and "+05:30" both found nothing.
  */
 export const TimezoneFoundByAbbreviation: Story = {
   play: async ({ canvasElement }) => {
@@ -160,8 +160,8 @@ export const TimezoneFoundByAbbreviation: Story = {
     await userEvent.type(timezone, 'IST')
     /*
      * Matched on the abbreviation, not on a zone name.
-     * Which IANA spelling a runtime enumerates is its own business — this one
-     * offers `Asia/Calcutta` where another offers `Asia/Kolkata` — so the
+     * Which IANA spelling a runtime enumerates is its own business: this one
+     * offers `Asia/Calcutta` where another offers `Asia/Kolkata`: so the
      * assertion is that searching "IST" finds an IST zone, which is the thing
      * that was broken.
      */

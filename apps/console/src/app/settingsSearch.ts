@@ -28,7 +28,7 @@ import {
  *      always consistent.
  *
  * Because the tab is resolved against the section, the output is a fixed point
- * — parsing it again returns it unchanged — which is what keeps a reload from
+ *: parsing it again returns it unchanged: which is what keeps a reload from
  * moving the user.
  */
 export interface SettingsQuery {
@@ -41,7 +41,7 @@ export interface SettingsQuery {
  *
  * Handed to `stripSearchParams` on the route so the default pair stays out of
  * the address bar, exactly as the list routes keep their default query out of
- * it — `/settings` rather than `/settings?section=organization&tab=profile`.
+ * it: `/settings` rather than `/settings?section=organization&tab=profile`.
  */
 export const DEFAULT_SETTINGS_QUERY: SettingsQuery = {
   section: DEFAULT_SECTION.id,

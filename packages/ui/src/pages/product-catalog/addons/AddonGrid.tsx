@@ -27,7 +27,7 @@ import {
   textColumn,
 } from '../../shared/cells'
 
-/** A figure, or a dash — zero and unknown read the same, as on the plans grid. */
+/** A figure, or a dash: zero and unknown read the same, as on the plans grid. */
 function count(value: number | undefined, locale: string | undefined) {
   if (!value) return <EmDash />
   return <span className="tabular-nums">{new Intl.NumberFormat(locale).format(value)}</span>
@@ -37,7 +37,7 @@ function count(value: number | undefined, locale: string | undefined) {
  * The add-on list, over the shared `EntityList`.
  *
  * **Three of the redesign's seven columns are not here.** An add-on's read
- * model is the name/key/status shell and nothing else — `AddonWire` carries no
+ * model is the name/key/status shell and nothing else: `AddonWire` carries no
  * `type`, no price and no subscriber count, because an add-on's charges are
  * the surface it shares with a plan and are attached after the shell exists.
  * So `Type (Recurring/One-time)`, `Price` and `Subscribers` have no field to
@@ -47,7 +47,7 @@ function count(value: number | undefined, locale: string | undefined) {
  * They are omitted rather than dashed. A column whose every row is an em dash
  * spends width promising a value that will never arrive, and three of them
  * would leave a table that looks broken rather than one that is honest.
- * `Description` takes their place — it is real, it was on the previous grid,
+ * `Description` takes their place: it is real, it was on the previous grid,
  * and without it an add-on row is four columns of metadata with nothing
  * saying what the add-on *is*.
  *
@@ -90,7 +90,7 @@ const GUIDES: EntityGuide[] = [
 /**
  * What an add-on contains, as the grid shows it.
  *
- * Contracts are absent on purpose — see `useAddonLinkage`; the subscriptions
+ * Contracts are absent on purpose: see `useAddonLinkage`; the subscriptions
  * search ignores an add-on filter, so the figure cannot be read.
  */
 export interface AddonLinkage {
@@ -147,7 +147,7 @@ export function AddonGrid({
         hideable: false,
       }),
       {
-        // Read off the charge mix, as on plans — the same question, a
+        // Read off the charge mix, as on plans: the same question, a
         // different noun, so "Hybrid add-on" rather than "Hybrid plan".
         id: 'kind',
         header: 'Type',
@@ -303,7 +303,7 @@ export function AddonGrid({
         scene: 'catalog',
         title: 'No add-ons yet',
         description:
-          'An add-on is a priced extra sold alongside a plan — extra seats, a support tier, a burst of capacity. Create the shell here, then give it charges.',
+          'An add-on is a priced extra sold alongside a plan: extra seats, a support tier, a burst of capacity. Create the shell here, then give it charges.',
         guides: GUIDES,
       }}
     />

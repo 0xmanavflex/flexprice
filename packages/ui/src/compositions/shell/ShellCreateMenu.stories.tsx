@@ -22,7 +22,7 @@ const meta = {
   component: ShellCreateMenu,
   parameters: {
     a11y: {
-      // Base UI's portal focus guards — see AppShell.stories.tsx.
+      // Base UI's portal focus guards: see AppShell.stories.tsx.
       config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
     },
   },

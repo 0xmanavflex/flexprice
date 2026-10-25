@@ -7,7 +7,7 @@ import { provenance } from '@ui/provenance'
  *
  * Three states that a plain progress bar gets wrong:
  *
- * - **Unlimited.** Not 100%, and not 0% — there is no denominator, so a bar is
+ * - **Unlimited.** Not 100%, and not 0%: there is no denominator, so a bar is
  *   the wrong shape entirely and it says so in words instead.
  * - **Over the limit.** The bar caps at full but the number keeps counting, so
  *   "1,200 of 1,000" stays readable rather than silently clamping.
@@ -29,12 +29,12 @@ export const UsageMeterProvenance = provenance({
 export interface UsageMeterProps {
   label: string
   used: number
-  /** null means unlimited — not zero, and not infinity. */
+  /** null means unlimited: not zero, and not infinity. */
   limit: number | null
   unit?: string
   locale?: string
   /**
-   * Keep the label for assistive tech only — for a table cell whose row
+   * Keep the label for assistive tech only: for a table cell whose row
    * already names the feature in its own column.
    */
   hideLabel?: boolean

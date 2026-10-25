@@ -4,7 +4,7 @@ import { z } from 'zod'
 /**
  * A customer, as the billing list reads it.
  *
- * A customer is who you bill — a name, the ways to reach them, and the external
+ * A customer is who you bill: a name, the ways to reach them, and the external
  * id that ties the record back to your own system. V1 spread these across a
  * handful of half-overlapping views; this is only the list's read model. The
  * subscriptions, invoices and payments that hang off a customer are their own
@@ -87,7 +87,7 @@ export const CUSTOMER_TAX_TREATMENT_LABEL: Record<CustomerTaxTreatment, string> 
  * Everything the list model carries, plus the fields a single customer's page
  * shows: the postal address, a phone number, the billing timezone, whether they
  * are taxed, and whatever metadata your own system attached. All optional on the
- * wire, so all default to empty rather than absent — a detail page renders a
+ * wire, so all default to empty rather than absent: a detail page renders a
  * dash, not a hole. Deliberately no `plan`, `currency` or `payment method`: a
  * customer has none of those, they belong to its subscriptions and wallets.
  */
@@ -174,7 +174,7 @@ export function isCustomerQueryFiltered(query: CustomerQuery): boolean {
   )
 }
 
-/** What the customer list can filter on — V1's fields, by their wire names. */
+/** What the customer list can filter on: V1's fields, by their wire names. */
 export const CUSTOMER_FILTERS: readonly ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },
   { field: 'external_id', label: 'External ID', kind: 'text' },
@@ -194,7 +194,7 @@ export const CUSTOMER_FILTERS: readonly ListFilterSpec[] = [
 const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} characters or fewer`)
 
 /**
- * A customer draft — what V1's drawer collects, plus the timezone and metadata
+ * A customer draft: what V1's drawer collects, plus the timezone and metadata
  * the backend accepts. `externalId` and `name` are the only required fields.
  * Optional text fields are `''` when blank (a form's natural empty), and the
  * query layer drops them from the request. The country is an ISO 3166-1
@@ -203,7 +203,7 @@ const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} cha
 export const createCustomerSchema = z.object({
   externalId: z.string().trim().min(1, 'Enter an external ID').max(255),
   // 255 and 20 are the API's own limits (`CreateCustomerRequest`: `max=255` on
-  // name, `max=20` on contact). A form that accepts more does not accept more —
+  // name, `max=20` on contact). A form that accepts more does not accept more:
   // it collects a value the save then rejects, with a server message about a
   // field the person has already stopped looking at.
   name: z.string().trim().min(1, 'Enter a name').max(255, 'Use 255 characters or fewer'),

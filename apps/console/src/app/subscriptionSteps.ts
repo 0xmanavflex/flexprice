@@ -41,7 +41,7 @@ export const DEFAULT_STEP: SubscriptionStepId = 'plan'
 /**
  * Reads the step from the URL, totally.
  *
- * An unknown or hand-edited step lands on the first one rather than throwing —
+ * An unknown or hand-edited step lands on the first one rather than throwing:
  * the same rule the invoice search params follow. A wizard that 500s on a
  * mistyped URL is worse than one that starts over.
  */

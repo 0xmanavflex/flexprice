@@ -38,39 +38,39 @@ fix, and mixing a second primitive library is how a design system dies.
 
 ## What exists
 
-Deliberately a small representative set — enough vocabulary to build real
+Deliberately a small representative set: enough vocabulary to build real
 screens, not a catalogue of everything the registry offers. 30 vendored files
 is already the point at which "reuse before you build" stops being checkable.
 
-**Primitives** — vendored from ReUI, never hand-edited:
+**Primitives**: vendored from ReUI, never hand-edited:
 `avatar` · `button` · `card` · `checkbox` · `dialog` · `dropdown-menu` ·
 `input` · `label` · `popover` · `radio-group` · `select` · `separator` ·
 `skeleton` · `spinner` · `tabs` · `tooltip`, plus ReUI's own `badge`,
 `data-grid` and `stepper`.
 
-**Compositions** — generic behaviour over ReUI parts, knowing nothing about
+**Compositions**: generic behaviour over ReUI parts, knowing nothing about
 billing:
 
 | | What it owns |
 |---|---|
 | `Field` | label/control/hint/error association, including `aria-describedby` reaching **both** hint and error |
 | `Section` | a region labelled by a real heading, with a scoped action slot |
-| `EmptyState` | distinguishes "none yet" from "none matching" — different situations, different offers |
+| `EmptyState` | distinguishes "none yet" from "none matching": different situations, different offers |
 | `Toolbar` | controlled search + filter landmark for list surfaces |
 | `WorkflowStepper` | ReUI's stepper re-addressed by stable id, for URL-safe workflow state |
 
-**Flexprice** — components that speak billing:
+**Flexprice**: components that speak billing:
 
 | | Why it is not generic |
 |---|---|
 | `Money` | takes a domain `Money`; cannot be handed a number that has been through a float |
-| `Metric` | direction and sentiment are **separate** inputs — up is good for revenue, bad for failed payments |
+| `Metric` | direction and sentiment are **separate** inputs: up is good for revenue, bad for failed payments |
 | `InvoiceStatusBadge` | one place mapping domain statuses to accessible variants |
 | `UsageMeter` | models unlimited, over-limit and zero-allowance, which no generic progress bar does |
 
 ## The showcase
 
-Storybook is the visual contract. It is not a second artifact that can drift —
+Storybook is the visual contract. It is not a second artifact that can drift:
 the same story file is the workbench, a browser test and an accessibility
 check.
 
@@ -94,7 +94,7 @@ pnpm --filter @fp/ui test:stories     # every story, in a real browser, with a11
 ```
 
 75 story tests across 13 files. Every one renders from domain fixtures with
-**no QueryClient, no SDK, no API mocks, no providers and no network** — the
+**no QueryClient, no SDK, no API mocks, no providers and no network**: the
 property that makes `@fp/ui` presentational in fact rather than by convention.
 
 ## Two accessibility defects the gate caught
@@ -106,11 +106,11 @@ Neither was visible by eye, and both would have shipped.
    comfortably and are the right density for a table anyway.
 2. **`text-success` fails as a foreground.** It is a background-tuned green.
    There is no text-on-card success token, and adding one would breach the
-   no-new-tokens rule — so `Metric` renders its change as a tinted badge,
+   no-new-tokens rule: so `Metric` renders its change as a tinted badge,
    reusing variants already validated.
 
 A third, in ReUI itself: its `Stepper` declares `role="tablist"` with no
-`role="tab"` children. Fixed by composing around it — worth reporting upstream.
+`role="tab"` children. Fixed by composing around it: worth reporting upstream.
 
 ## What "migrated" should mean from here
 

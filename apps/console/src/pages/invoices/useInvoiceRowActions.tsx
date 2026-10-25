@@ -38,7 +38,7 @@ export interface InvoiceRowActionOptions {
 }
 
 /**
- * V1's invoice row menu, offered only where the invoice's status allows it —
+ * V1's invoice row menu, offered only where the invoice's status allows it:
  * shared by the invoice list and a customer's Invoices tab. Past draft, it
  * also opens the invoice's hosted link (the invoice page copies it).
  *

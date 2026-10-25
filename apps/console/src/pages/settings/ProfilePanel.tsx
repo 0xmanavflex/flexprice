@@ -18,7 +18,7 @@ import {
 import { useDraft } from './useDraft'
 
 /**
- * The organisation itself — its name, and who to bill and contact.
+ * The organisation itself: its name, and who to bill and contact.
  *
  * Two hooks rather than one: the tenant can only be fetched by id, and the only
  * id this console may ask for is its own, which arrives with `GET /users/me`.
@@ -27,7 +27,7 @@ import { useDraft } from './useDraft'
  * ## The three fields V1 had and never showed
  *
  * `email`, `help_email` and `phone` are in V1's update schema and have no
- * inputs anywhere in V1's form — the payload carried three keys the screen
+ * inputs anywhere in V1's form: the payload carried three keys the screen
  * could not set, so the only way to change a billing email was an API call.
  * They are real fields on `billing_details`; they are wired here.
  *
@@ -61,7 +61,7 @@ export function ProfilePanel() {
   }
 
   // `useTenant` is disabled until the id arrives, so the loading state has to
-  // cover both hops — otherwise the panel renders an empty form for one frame
+  // cover both hops: otherwise the panel renders an empty form for one frame
   // and then replaces it, which looks like the form resetting itself. But a
   // disabled query is `isPending` for ever: once `/users/me` has answered
   // without a tenant id, nothing is coming, and the panel says so.

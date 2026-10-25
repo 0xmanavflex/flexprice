@@ -24,7 +24,7 @@ import { ALL_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
  *     change would cost more than it tells anyone.
  */
 /**
- * How to count each entity, and — by being the only list — what can be counted.
+ * How to count each entity, and: by being the only list: what can be counted.
  *
  * One map rather than a list of ids beside a switch: the two drift, and the
  * half that is only a type quietly stops matching the half that runs.
@@ -38,7 +38,7 @@ export type CountableId = 'features' | 'plans' | 'customers' | 'subscriptions' |
  * Every counter is declared as returning `Promise<unknown>` on purpose.
  *
  * Left to infer, the map's five entries keep five *different* response types,
- * so `COUNTERS[id]` — where `id` is the union — is a union of function
+ * so `COUNTERS[id]`: where `id` is the union: is a union of function
  * signatures, and TypeScript will not call one of those: it has no single
  * signature to check the call against, and picks the first, which then fails
  * against the rest ("`ListInvoicesResponse` is not assignable to
@@ -78,7 +78,7 @@ const COUNT_STALE_MS = 5 * 60_000
  * This is the cheap way to ask "how many?": a `limit: 1` request whose answer
  * is `pagination.total`. A screen that needs only a total (a stat tile, a
  * "12 customers" caption) must use this instead of fetching a page of rows and
- * reading its `total` — that is a hundred rows moved to display one number.
+ * reading its `total`: that is a hundred rows moved to display one number.
  *
  * The key is shared, so the sidebar's count and a page's count are one request
  * and one answer. Absent (`undefined`) while unknown or failed, never zero.
@@ -99,7 +99,7 @@ export function useCount(id: CountableId, options: { enabled?: boolean } = {}) {
  * How many invoices carry the given statuses, exactly, for one row of
  * response.
  *
- * Only statuses the API can filter on are accepted — a derived status
+ * Only statuses the API can filter on are accepted: a derived status
  * (overdue, paid) is computed on the client from a due date and a balance, and
  * asking the server for it would silently return the wrong number. Passing one
  * disables the query rather than answering with a lie; read it off the rows
@@ -139,7 +139,7 @@ export function useInvoiceCount(
 /**
  * Counts for the ids given. Pass only what the active section needs.
  *
- * A failed count is reported as absent rather than zero — "we could not find
+ * A failed count is reported as absent rather than zero: "we could not find
  * out" and "there are none" are different, and rendering a confident `0` for
  * the first is a lie the sidebar has no business telling.
  */

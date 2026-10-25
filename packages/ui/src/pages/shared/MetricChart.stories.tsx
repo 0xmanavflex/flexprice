@@ -204,7 +204,7 @@ export const NoData: Story = {
   },
 }
 
-/** A real series that happens to be flat at zero — not the same as no series. */
+/** A real series that happens to be flat at zero: not the same as no series. */
 export const AllZero: Story = {
   args: {
     tabs: [

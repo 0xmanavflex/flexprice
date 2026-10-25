@@ -7,7 +7,7 @@ import type { SupabaseConfig } from '@/env'
  *
  * It is never the console's session. Sign-in stays `POST /auth/login` and the
  * token stays in `SessionProvider`, so `persistSession` and `autoRefreshToken`
- * are off — supabase-js writes nothing to `localStorage` and refreshes nothing
+ * are off: supabase-js writes nothing to `localStorage` and refreshes nothing
  * in the background. `detectSessionInUrl` is on because both email links (the
  * recovery link and the sign-up confirmation) put their tokens in the URL
  * fragment, and the implicit flow is pinned because the PKCE verifier would

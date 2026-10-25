@@ -2,7 +2,7 @@
 
 Every `@fp/query` module was run against the **live** backend
 (`https://api.cloud.flexprice.io/v1`, tenant `tenant_01KVSNYVMBNGWZZQGBQG0G7M2V`,
-environment `env_01KVSNYVPMAP6JJGDF177V2DE6` — "Sandbox"), using each module's
+environment `env_01KVSNYVPMAP6JJGDF177V2DE6`: "Sandbox"), using each module's
 own `to<X>Filter` to build the request and its own `to<X>` to map the response.
 Reads only; nothing in the tenant was created, changed or deleted.
 
@@ -25,50 +25,50 @@ rather than laxer than it.
 
 | Module                             | SDK operation                                             | Live status                                                         |
 | ---------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
-| `plans`                            | `plans.queryPlan` → `POST /plans/search`                  | **Fixed** — search was dropped on the wire                          |
+| `plans`                            | `plans.queryPlan` → `POST /plans/search`                  | **Fixed**: search was dropped on the wire                          |
 | `plans` (detail)                   | `plans.getPlan` → `GET /plans/{id}`                       | OK                                                                  |
-| `plans` (subscriber rail)          | `subscriptions.querySubscription`                         | **Fixed** — `plan_id` stripped, rail counted the whole tenant       |
-| `features`                         | `features.queryFeature` → `POST /features/search`         | OK — `name_contains` and `expand=meters` both honoured              |
-| `addons`                           | `addons.queryAddon` → `POST /addons/search`               | **Fixed** — search was dropped on the wire                          |
-| `coupons`                          | `coupons.queryCoupon` → `POST /coupons/search`            | **Fixed** — search was dropped on the wire                          |
-| `coupons` (associations)           | `couponAssociations.listCouponAssociations`               | Unverified — tenant has no associations                             |
+| `plans` (subscriber rail)          | `subscriptions.querySubscription`                         | **Fixed**: `plan_id` stripped, rail counted the whole tenant       |
+| `features`                         | `features.queryFeature` → `POST /features/search`         | OK: `name_contains` and `expand=meters` both honoured              |
+| `addons`                           | `addons.queryAddon` → `POST /addons/search`               | **Fixed**: search was dropped on the wire                          |
+| `coupons`                          | `coupons.queryCoupon` → `POST /coupons/search`            | **Fixed**: search was dropped on the wire                          |
+| `coupons` (associations)           | `couponAssociations.listCouponAssociations`               | Unverified: tenant has no associations                             |
 | `customers`                        | `customers.queryCustomer` → `POST /customers/search`      | OK                                                                  |
-| `subscriptions`                    | `subscriptions.querySubscription`                         | **Fixed** — no `expand`, so every Customer cell rendered a raw ULID |
-| `invoices`                         | `invoices.queryInvoice` → `POST /invoices/search`         | OK — verified against one real invoice                              |
-| `payments`                         | `payments.listPayments` → `GET /payments`                 | Unverified — tenant has no payments                                 |
-| `taxRates`                         | `taxRates.getTaxRates` → `GET /taxes/rates`               | Unverified — tenant has no tax rates                                |
-| `priceUnits`                       | `priceUnits.queryPriceUnit` → `POST /prices/units/search` | **Fixed** (by inference) — unverified mapper, tenant has none       |
-| `groups`                           | `groups.queryGroup` → `POST /groups/search`               | Unverified — tenant has no groups                                   |
-| `costSheets`                       | `costs.queryCostsheet` → `POST /costs/search`             | Unverified — tenant has no cost sheets                              |
-| `prices`                           | `prices.queryPrice` → `POST /prices/search`               | OK — verified against 2 real prices                                 |
-| `entitlements`                     | `entitlements.queryEntitlement`                           | Unverified — the tenant's plan grants none                          |
-| `creditGrants`                     | `creditGrants.getPlanCreditGrants`                        | Unverified — the tenant's plan has none                             |
+| `subscriptions`                    | `subscriptions.querySubscription`                         | **Fixed**: no `expand`, so every Customer cell rendered a raw ULID |
+| `invoices`                         | `invoices.queryInvoice` → `POST /invoices/search`         | OK: verified against one real invoice                              |
+| `payments`                         | `payments.listPayments` → `GET /payments`                 | Unverified: tenant has no payments                                 |
+| `taxRates`                         | `taxRates.getTaxRates` → `GET /taxes/rates`               | Unverified: tenant has no tax rates                                |
+| `priceUnits`                       | `priceUnits.queryPriceUnit` → `POST /prices/units/search` | **Fixed** (by inference): unverified mapper, tenant has none       |
+| `groups`                           | `groups.queryGroup` → `POST /groups/search`               | Unverified: tenant has no groups                                   |
+| `costSheets`                       | `costs.queryCostsheet` → `POST /costs/search`             | Unverified: tenant has no cost sheets                              |
+| `prices`                           | `prices.queryPrice` → `POST /prices/search`               | OK: verified against 2 real prices                                 |
+| `entitlements`                     | `entitlements.queryEntitlement`                           | Unverified: the tenant's plan grants none                          |
+| `creditGrants`                     | `creditGrants.getPlanCreditGrants`                        | Unverified: the tenant's plan has none                             |
 | `counts` (`useNavCounts`)          | five `limit:1` search calls                               | OK                                                                  |
 | `catalogStats` (`useCatalogStats`) | `limit:1` × total/published/archived                      | OK                                                                  |
 
 "Unverified" means the request shape was confirmed live (the endpoint returned
 `200` with a well-formed envelope) but **the mapper never ran on a real record**
 because the tenant holds no rows. Those mappers were checked statically against
-the SDK's declared response models — every field each `…Wire` reads exists on
-the corresponding `…Response` — which is evidence of consistency, not proof of
+the SDK's declared response models: every field each `…Wire` reads exists on
+the corresponding `…Response`: which is evidence of consistency, not proof of
 correctness. They should not be treated as verified.
 
 ---
 
-## Problem 1 — the search box did nothing on four lists
+## Problem 1: the search box did nothing on four lists
 
 `toPlanFilter`, `toAddonFilter`, `toCouponFilter` and `toPriceUnitFilter` all
 sent `nameContains`. None of the four SDK filter models declares that field
 (only `FeatureFilter` does), so zod stripped it before the request was sent.
 
-Evidence, plans, before the fix — built vs. actually sent:
+Evidence, plans, before the fix: built vs. actually sent:
 
 ```
 BUILT : {limit:25, offset:0, sort:[…], expand:"prices", nameContains:"a"}
 SENT  : {"expand":"prices","limit":25,"offset":0,"sort":[{"direction":"asc","field":"name"}]}
 ```
 
-The search term is simply gone. Bypassing the SDK does not help either — the
+The search term is simply gone. Bypassing the SDK does not help either: the
 backend ignores the field on these routes as well:
 
 ```
@@ -102,11 +102,11 @@ price units, so the DSL was only confirmed to be _accepted_ there (`200`, no
 error), not to _match_. Flagging that honestly: it is inference from the other
 three, not a verified result.
 
-## Problem 2 — every subscription's Customer column showed a raw ULID
+## Problem 2: every subscription's Customer column showed a raw ULID
 
 `toSubscriptionFilter` sent no `expand`. The live search embeds `plan` by
 default but **not** `customer`, so `toSubscription` fell through its whole
-fallback chain — `customer?.name || customer?.email || customerId` — and landed
+fallback chain: `customer?.name || customer?.email || customerId`: and landed
 on the id:
 
 ```
@@ -121,7 +121,7 @@ note in `features.ts`, and it would have shipped as "why is the customer column
 full of ULIDs".
 
 Note the value is **singular**. `expand: 'customers'` is accepted and silently
-does nothing — it returns `200` with no `customer` on the row, which is the most
+does nothing: it returns `200` with no `customer` on the row, which is the most
 expensive possible way to be wrong:
 
 ```
@@ -131,7 +131,7 @@ expand="customers" -> hasCustomer:false
 **Fix.** `toSubscriptionFilter` now sends `expand: 'customer,plan'`. `plan` is
 named explicitly rather than relied on as an undocumented default.
 
-## Problem 3 — the plan subscriber rail counted the whole tenant
+## Problem 3: the plan subscriber rail counted the whole tenant
 
 `usePlanSubscriptions` sent `{ plan_id: planId, limit: 100 }` in snake_case.
 `SubscriptionFilter` declares `planId` (and remaps it to `plan_id` on the wire
@@ -152,7 +152,7 @@ result to detect.
 
 ---
 
-## Verified correct — worth recording, because each was a plausible failure
+## Verified correct: worth recording, because each was a plausible failure
 
 **`pagination.total` is universal.** Every list endpoint returns
 `{items, pagination:{total, limit, offset}}`. None returns a top-level `total`
@@ -174,7 +174,7 @@ checked and accepted: `name`, `created_at`, `updated_at` (plans, add-ons,
 coupons, features, groups, price units), `code` (price units), `start_date`
 (subscriptions), `issue_date`, `due_date`, `amount_due`, `invoice_status`
 (invoices). An unknown field returns an explicit error rather than ignoring the
-sort — `"Unknown field name 'bogus_field' in feature query"` — so a typo here
+sort: `"Unknown field name 'bogus_field' in feature query"`: so a typo here
 would be visible, not silent. Ordering was confirmed to actually change against
 the three features in the tenant.
 
@@ -187,7 +187,7 @@ the meter name.
 **`costSheets`' odd `queryFilter` nesting is correct as written.** It is the one
 filter that nests paging, and the SDK emits it camelCase while every other field
 on every other endpoint is snake_case. That looked like an SDK bug, so it was
-probed directly — the backend accepts `queryFilter` and **ignores**
+probed directly: the backend accepts `queryFilter` and **ignores**
 `query_filter`:
 
 ```
@@ -197,7 +197,7 @@ probed directly — the backend accepts `queryFilter` and **ignores**
 
 So the mapper and the SDK are both right. Leave it alone.
 
-**The invoice mapper is verified** — see the next section for why that was not
+**The invoice mapper is verified**: see the next section for why that was not
 obvious.
 
 ## The tenant is not as empty as it looks
@@ -246,7 +246,7 @@ Filtering by it exercised `toInvoice` on a real record, which maps correctly:
 ## Fixture corpus
 
 No fixture was found to contradict the live API in a way that required
-regenerating it, and no capture was run — `packages/query/src/__fixtures__/generated/`
+regenerating it, and no capture was run: `packages/query/src/__fixtures__/generated/`
 is untouched. `coupons.json` is an authored corpus and was left alone as
 instructed.
 

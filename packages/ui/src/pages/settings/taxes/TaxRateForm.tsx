@@ -25,7 +25,7 @@ import { provenance } from '@ui/provenance'
  * because invoices already carry the value and scope.
  *
  * Presentational: each emits a validated draft and never imports `@fp/query`.
- * The percentage stays a string end to end — it is never parsed into a number.
+ * The percentage stays a string end to end: it is never parsed into a number.
  */
 export const TaxRateFormProvenance = provenance({
   source: 'composition',

@@ -17,7 +17,7 @@ describe('completeAccount, for an account that already exists', () => {
    * The API reads the tenant from the token's `app_metadata.tenant_id` and
    * refuses with "Invalid token claims" when it is missing. The session object
    * can name a tenant the token does not, because the token was minted
-   * earlier — so the token is refreshed rather than passed on as it arrived.
+   * earlier: so the token is refreshed rather than passed on as it arrived.
    */
   it('signs in with a freshly minted token, not the one the link carried', async () => {
     const refresh = vi.fn(async () => 'token.minted.now')

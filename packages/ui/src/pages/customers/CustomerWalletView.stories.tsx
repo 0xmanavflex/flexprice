@@ -317,7 +317,7 @@ export const TransactionsFailed: Story = {
   },
 }
 
-/** An unreadable balance is shown as unknown — a dash, never 0 credits. */
+/** An unreadable balance is shown as unknown: a dash, never 0 credits. */
 export const UnreadableBalance: Story = {
   args: {
     wallets: makeWallets(1, WalletStatus.Active, 10000, 7500).map((wallet) => ({

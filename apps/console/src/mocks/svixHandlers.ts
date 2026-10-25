@@ -6,8 +6,8 @@ import { http, HttpResponse } from 'msw'
  *
  * `GET /webhooks/dashboard` (see `handlers.ts`) hands out
  * `sk_app_DEMO_not_a_real_token.us`, so the console sends everything below to
- * `https://api.us.svix.com/api/v1/…`. State is in memory and mutable — create
- * an endpoint, rotate its secret, resend a message — so every screen can be
+ * `https://api.us.svix.com/api/v1/…`. State is in memory and mutable: create
+ * an endpoint, rotate its secret, resend a message: so every screen can be
  * driven end to end. Shapes follow the Svix OpenAPI models (camelCase, numeric
  * `status`: 0 success, 1 pending, 2 fail, 3 sending); nothing here was
  * captured from a real tenant.

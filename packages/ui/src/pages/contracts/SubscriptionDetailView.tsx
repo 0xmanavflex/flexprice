@@ -165,7 +165,7 @@ export interface SubscriptionDetailViewProps {
   lines: SubscriptionPart<SubscriptionLine[]>
   /**
    * Every line the contract has had, ended ones included. When present, each
-   * charge is shown once — its current version — and its earlier prices are
+   * charge is shown once: its current version: and its earlier prices are
    * kept as inactive versions in its history rather than dropping out.
    */
   lineHistory?: SubscriptionLine[] | undefined
@@ -287,7 +287,7 @@ const LINE_SOURCE_LABEL: Record<SubscriptionLine['source'], string> = {
  * A contract's lines, as the shared charges table reads them.
  *
  * The line already carries its price (`line.charge`), so this is not a
- * conversion — it is the pairing of that price with what the contract knows
+ * conversion: it is the pairing of that price with what the contract knows
  * about it, and a way back to the line for the actions. A line with no price
  * bills nothing and has no row.
  *
@@ -300,7 +300,7 @@ interface CommitmentRow {
   charge: Charge
   name: string
   commitment: ChargeCommitmentDetail
-  /** "per month", "every minute" — what the figure is measured against. */
+  /** "per month", "every minute": what the figure is measured against. */
   per: string
 }
 
@@ -889,7 +889,7 @@ export function SubscriptionDetailView({
                 it simply has one fewer section.
 
                 A commitment is set on a charge, so a row opens that charge's
-                sheet at its commitment rather than offering an editor here —
+                sheet at its commitment rather than offering an editor here:
                 one place to change it, reached from either direction.
               */}
               {commitmentRows.length > 0 ? (
@@ -2022,7 +2022,7 @@ function PaymentCell({ row }: { row: Invoice }) {
  */
 /**
  * A contract section, scoped to the entity its rows and Add button write
- * (an entitlement, a credit grant…) — the contract's own scope otherwise.
+ * (an entitlement, a credit grant…): the contract's own scope otherwise.
  */
 function PartSection<T>({
   entity,

@@ -4,13 +4,13 @@ import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
 /**
- * The counts a catalogue list shows above itself — total, and the split by
+ * The counts a catalogue list shows above itself: total, and the split by
  * status.
  *
  * Each is one `limit: 1` request read for its `pagination.total`, the same trick
  * the sidebar counts use: every list endpoint reports the total regardless of
  * how many rows come back, so a count costs one row, not a page. The status
- * split is the server's, sent as the filter's `status` field — not derived from
+ * split is the server's, sent as the filter's `status` field: not derived from
  * the page on screen, which only ever holds twenty-five rows.
  *
  * Typed loosely per entity because each SDK resource has its own filter shape
@@ -43,7 +43,7 @@ async function fetchCount(
 }
 
 export interface CatalogStats {
-  /** Undefined until known — distinct from a real zero, so the strip shows a
+  /** Undefined until known: distinct from a real zero, so the strip shows a
    *  dash rather than a confident "0" it has not confirmed. */
   total: number | undefined
   published: number | undefined

@@ -12,7 +12,7 @@ export const SEARCH_DEBOUNCE_MS = 250
  * `clear` empties the field and the route together.
  *
  * `value` is the route's copy. When it changes to something this hook did not
- * itself push — "Clear filters", back/forward, a saved view — the draft follows
+ * itself push: "Clear filters", back/forward, a saved view: the draft follows
  * it. When it merely echoes what was pushed, the draft is left alone, so a
  * slow round trip cannot overwrite what the user has typed since.
  */

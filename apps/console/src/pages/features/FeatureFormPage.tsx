@@ -22,7 +22,7 @@ export type FeatureFormPageProps = {
  *
  * Same single-page form both ways (`FeatureForm`). Create
  * ends on the new feature's detail page; edit returns to the one it came from.
- * The data layer is the hooks the dialogs used — nothing about saving changed.
+ * The data layer is the hooks the dialogs used: nothing about saving changed.
  */
 export function FeatureFormPage(props: FeatureFormPageProps) {
   const { onCancel } = props
@@ -34,7 +34,7 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
    *
    * This used to fetch the first hundred groups of *any* kind and keep the
    * feature ones in the browser. With a hundred price groups ahead of them
-   * the picker came back empty, which reads as "there are no labels" — the
+   * the picker came back empty, which reads as "there are no labels": the
    * bug this page was reported for. `entityType` is a filter the search
    * endpoint honours, checked against the live API.
    */

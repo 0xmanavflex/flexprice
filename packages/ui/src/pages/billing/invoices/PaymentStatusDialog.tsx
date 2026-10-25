@@ -26,7 +26,7 @@ export interface PaymentStatusDialogProps {
   onOpenChange: (open: boolean) => void
   /** The invoice's payment status now; null when the API sent none. */
   current: PaymentStatus | null
-  /** The statuses it may move to — `manualPaymentStatusChoices`. */
+  /** The statuses it may move to: `manualPaymentStatusChoices`. */
   choices: readonly PaymentStatus[]
   amountDue: Money
   /** What has been paid so far, as the API reports it. */
@@ -51,7 +51,7 @@ const DECIMAL = /^\d+(\.\d+)?$/
  * Set an invoice's payment status by hand, for money that moved outside
  * Flexprice.
  *
- * Opens on what the invoice says now — its status and its amounts — and offers
+ * Opens on what the invoice says now: its status and its amounts: and offers
  * only the moves the API accepts from there. Pending can carry the amount paid
  * so far, which is how a partial payment is recorded; the other statuses set
  * the balance themselves (paid in full, or owed in full).

@@ -22,7 +22,7 @@ function ownApiOrigin(): string | null {
  *
  * Like the hosted invoice, none of the console's providers: no session, no
  * sign-in redirect, no environment. The portal link's token is the only
- * credential, so an expired link is an "expired" page here — never a bounce
+ * credential, so an expired link is an "expired" page here: never a bounce
  * to `/sign-in`, which the customer has no account for. Light and dark follow
  * the customer's system.
  */

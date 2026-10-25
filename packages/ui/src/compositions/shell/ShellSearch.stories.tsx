@@ -155,7 +155,7 @@ export const IgnoresKeylessKeydown: Story = {
  * Without `onSelect` there is no field.
  *
  * An input that takes a query, closes the dialog and drops it teaches that
- * search is broken rather than absent — and it was doing exactly that in the
+ * search is broken rather than absent: and it was doing exactly that in the
  * console, where no global search endpoint is wired. The unavailable state
  * says so, and names the per-list search boxes that do work. The `/` hint and
  * the shortcuts are not advertised either.

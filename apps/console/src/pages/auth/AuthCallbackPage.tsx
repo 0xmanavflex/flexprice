@@ -52,7 +52,7 @@ export function AuthCallbackPage() {
      *
      * `replaceState` rather than assigning `location.hash`, which would push a
      * history entry still containing the token. A refused token is cleared
-     * too — it is no less worth leaving in history for having been rejected.
+     * too: it is no less worth leaving in history for having been rejected.
      */
     try {
       const { pathname, search } = globalThis.location

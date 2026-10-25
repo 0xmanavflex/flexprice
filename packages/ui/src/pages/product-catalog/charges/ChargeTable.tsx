@@ -29,7 +29,7 @@ import { ChargeSheet } from './ChargeSheet'
 /**
  * A charges section: what a plan, add-on, contract or cost sheet bills.
  *
- * One table everywhere charges appear, and one row per charge — no expansion,
+ * One table everywhere charges appear, and one row per charge: no expansion,
  * no nested table. A row carries the charge, its price, a quantity where there
  * is one, and *flags*: Price changed, Discount, Commitment, Alerts, History.
  * Everything a flag stands for lives in the charge sheet the flag opens, at
@@ -61,7 +61,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /**
    * What is special about each charge, by charge id.
    *
-   * Absent for a page that cannot read it — a plan's charges are prices and
+   * Absent for a page that cannot read it: a plan's charges are prices and
    * carry no override, coupon or commitment, so the plan page sends nothing and
    * no row shows a flag. A contract's are line items and carry most of it.
    */
@@ -70,14 +70,14 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
    * The container's own billing frequency.
    *
    * A charge names its period only when it differs from this, so the common
-   * case — every charge billed as the plan is — does not repeat the same word
+   * case: every charge billed as the plan is: does not repeat the same word
    * down the column. Absent means every charge states its own.
    */
   period?: BillingPeriod | string
   /**
-   * `summary` shows only the changed charges and a link to the rest — the
+   * `summary` shows only the changed charges and a link to the rest: the
    * contract Overview. `full` shows every charge, narrowed by the Status filter
-   * (Active, Changed, Ended) beside the billing model — the Charges tab.
+   * (Active, Changed, Ended) beside the billing model: the Charges tab.
    */
   variant?: 'summary' | 'full'
   /** `narrow` is the table beside a side rail: no quantity column, flags compact. */
@@ -87,7 +87,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
    *
    * A contract's charges arrive from its plan, from an add-on, or from the
    * contract alone, and which is the most useful thing to know about a row
-   * there — more than the billing model, which is the default. It goes in the
+   * there: more than the billing model, which is the default. It goes in the
    * line rather than a column so the four columns the redesign specifies stay
    * four. Narrowing by it is the `facets` prop's job.
    */
@@ -100,7 +100,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** The add button's wording, e.g. "Add charge" on a contract. */
   addLabel?: string
   onEdit?: (charge: Charge) => void
-  /** `false` leaves a row's Edit out — a contract cannot reprice every line. */
+  /** `false` leaves a row's Edit out: a contract cannot reprice every line. */
   canEdit?: (charge: Charge) => boolean
   onTerminate?: (charge: Charge) => void
   /** The destructive item's wording; "Terminate" on a catalogue, "End charge" on a contract. */
@@ -149,7 +149,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
 }
 
 /** The "value" a charge bills, summarised for the table. */
-/** A charge's price as one line, e.g. "$0.002 per call" — the table's Price cell. */
+/** A charge's price as one line, e.g. "$0.002 per call": the table's Price cell. */
 export function chargePriceLabel(charge: Charge): string {
   return valueOf(charge)
 }
@@ -200,8 +200,8 @@ const STATUS_TONE: Record<string, PillTone> = {
  * The grey line under a charge's name: fixed or usage, then one more thing.
  *
  * Which "one more thing" is the most useful fact about *this* charge right
- * now — that it has ended, that it has not started, that it bills on a
- * different cycle from everything around it — falling back to the billing
+ * now: that it has ended, that it has not started, that it bills on a
+ * different cycle from everything around it: falling back to the billing
  * model, which is the answer when nothing else is unusual.
  */
 function kindLine(
@@ -458,7 +458,7 @@ export function ChargeTable({
       header: '',
       className: 'w-12',
       cell: (charge: Charge) => (
-        // The row opens the sheet, so the menu's own click must not reach it —
+        // The row opens the sheet, so the menu's own click must not reach it:
         // the sheet is a dialog, and opening one dismisses the menu that was
         // being opened.
         <span className="flex justify-end" onClick={(event) => event.stopPropagation()}>

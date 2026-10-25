@@ -20,7 +20,7 @@ import { ALL_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
  *
  * Reached through `POST /plans/search`, the same documented search endpoint the
  * counts use. `expand: 'prices'` is asked for so a row can say how many charges
- * a plan carries — the number that distinguishes a plan that bills from a plan
+ * a plan carries: the number that distinguishes a plan that bills from a plan
  * that is only a name so far. Without it the API returns `prices` only as ids
  * or not at all, and the "Charges" column would read 0 for everything.
  */
@@ -158,7 +158,7 @@ export function usePlans(query: PlanQuery, options: { enabled?: boolean } = {}) 
 /**
  * The plan details draft, mapped to the wire.
  *
- * A plan's lookup key is optional and editable — unlike an add-on's — so it is
+ * A plan's lookup key is optional and editable: unlike an add-on's: so it is
  * sent whenever present in either direction. Empty optional fields are dropped
  * on create (absent and `""` are different to the API) but sent as `""` on
  * update, so clearing the text on an edit actually clears it.
@@ -230,7 +230,7 @@ export function usePlan(id: string) {
 /**
  * Archive a plan.
  *
- * A soft delete — `DELETE /plans/{id}` retires the plan without erasing the
+ * A soft delete: `DELETE /plans/{id}` retires the plan without erasing the
  * history that referenced it. The list and the plan's own detail are stale
  * afterwards, so both are invalidated.
  */
@@ -284,7 +284,7 @@ export function useClonePlan() {
  *
  * A plan's prices and its subscriptions can drift once a charge is edited; this
  * runs the backend workflow that reconciles them. It returns a workflow handle,
- * not a finished result — the sync completes asynchronously.
+ * not a finished result: the sync completes asynchronously.
  */
 export function useSyncPlanPrices() {
   const client = useFlexprice()
@@ -298,14 +298,14 @@ export function useSyncPlanPrices() {
  * One row of the plan's subscriber list, for the detail page's metric rail.
  *
  * Deliberately a light mapping, not a full `Subscription` domain model: the rail
- * leads with how many customers are actually on the plan — the one number that
- * says whether it is in use — so it needs only an id, a status to count the
+ * leads with how many customers are actually on the plan: the one number that
+ * says whether it is in use: so it needs only an id, a status to count the
  * active ones, and the currency they bill in. A subscriptions *section* would
  * want the whole record; a metric does not.
  */
 export interface PlanSubscriptionRow {
   id: string
-  /** `active`, `cancelled`, … — whatever the API sent, so the page can count it. */
+  /** `active`, `cancelled`, …: whatever the API sent, so the page can count it. */
   status: string
   currency: string
 }
@@ -315,8 +315,8 @@ export interface PlanSubscriptionRow {
  *
  * Reached through `POST /subscriptions/search` scoped to this plan; scoping is
  * what makes the rail count *this* plan's subscribers rather than the whole
- * book. A generous `limit` because the rail tallies them — a plan's subscriber
- * list is a page, not a stream — and the status field is read under a few
+ * book. A generous `limit` because the rail tallies them: a plan's subscriber
+ * list is a page, not a stream: and the status field is read under a few
  * spellings, since the capture and the SDK camelCasing disagree on it.
  *
  * The scope key is `planId`, **camelCase**. The SDK parses this body through a

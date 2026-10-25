@@ -228,7 +228,7 @@ export function alignToWindow(
 
 /**
  * Net revenue per bucket for one currency, with the previous window's buckets
- * laid over by position — the first week against the first week before it.
+ * laid over by position: the first week against the first week before it.
  */
 export function revenueSeries(
   days: RevenueDayRow[],

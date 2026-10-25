@@ -55,8 +55,8 @@ const COLUMNS = [
 /**
  * The one list table.
  *
- * These stories are the layout's test suite. The numbers in `Layout` below —
- * 44, 60, 40, 288 — are the design, and they are asserted here rather than
+ * These stories are the layout's test suite. The numbers in `Layout` below:
+ * 44, 60, 40, 288: are the design, and they are asserted here rather than
  * eyeballed because every one of them drifted at least once across the twelve
  * hand-built grids this replaces.
  */
@@ -64,7 +64,7 @@ const COLUMNS = [
  * Typed against the concrete row rather than `typeof EntityList`.
  *
  * Storybook resolves a generic component's props by instantiating its type
- * parameter, which lands on `object` — and then `EntityColumn<Widget>[]` no
+ * parameter, which lands on `object`: and then `EntityColumn<Widget>[]` no
  * longer fits `EntityColumn<object>[]`, because the column's `cell` takes the
  * row. Naming the instantiation once here keeps every story's args honest.
  */
@@ -288,7 +288,7 @@ export const Default: Story = {
  * The measurements, asserted.
  *
  * Header 44px, rows 60px, 16px of padding a side, the search box 288px. The
- * header carries no rule beneath it and the last row carries none under it —
+ * header carries no rule beneath it and the last row carries none under it:
  * the two borders that make a table look like a spreadsheet.
  */
 export const Layout: Story = {

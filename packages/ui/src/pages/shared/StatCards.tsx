@@ -4,13 +4,13 @@ import { provenance } from '@ui/provenance'
 /**
  * A row of summary counts above a list.
  *
- * The billing dashboards this borrows from open a list with its shape — how many
- * there are, and the split that matters — before the rows themselves. Each stat
+ * The billing dashboards this borrows from open a list with its shape: how many
+ * there are, and the split that matters: before the rows themselves. Each stat
  * is a `Metric` card, so the number treatment (tabular figures, the loading
  * shimmer) is the one already used everywhere else.
  *
  * Presentational: it takes numbers and renders. A value of `undefined` is a real
- * state — "not counted yet" — and shows a dash rather than a confident zero.
+ * state: "not counted yet": and shows a dash rather than a confident zero.
  */
 export const StatCardsProvenance = provenance({
   source: 'composition',

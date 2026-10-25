@@ -208,11 +208,11 @@ Per-run evidence (reports, and screenshots / video / trace / logs for failed jou
 - **Live journeys need configuration.** Without `E2E_LIVE=1` and the credentials they are SKIPPED, by design.
 - **Leftover live data.** Journeys that archive rather than delete (coupons, plans) or create features leave `e2e-<timestamp>-…` records in the dedicated environment; nothing outside it is touched (three isolation guards in `live-flows.spec.ts`).
 - **Skipped in the recorded runs (12):** `live-auth--signs-in-and-renders-rows-the-backend-actually-returned-cd13c9`, `live-auth--refuses-a-wrong-password-without-volunteering-whether-the-ac-d34542`, `live-flows--feature-boolean-create-edit-325030`, `live-flows--feature-metered-create-and-edit-be9a6e`, `live-flows--group-create-feature-group-then-delete-0e50b3`, `live-flows--add-on-create-edit-f0efc5`, `live-flows--coupon-create-percentage-rename-archive-cda607`, `live-flows--price-unit-create-rename-b96f0d`, `live-flows--cost-sheet-create-edit-delete-4d64f7`, `live-flows--tax-rate-create-edit-delete-90d049`, `live-flows--customer-create-edit-delete-78ae1d`, `live-flows--plan-create-edit-charges-entitlement-credit-grant-archive-ecdadb`.
-- **Routes no journey visits** (approximate — a literal search of the specs for each route's path): `/sign-up`, `/auth/callback`, `/auth/signup/confirmation`, `/sign-up/confirm`, `/forgot-password`, `/reset-password`, `/plans/ai`, `/revenue`, `/tools/integrations/oauth/callback`, `/webhooks`, `/webhooks/new`, `/webhooks/$endpointId`.
+- **Routes no journey visits** (approximate: a literal search of the specs for each route's path): `/sign-up`, `/auth/callback`, `/auth/signup/confirmation`, `/sign-up/confirm`, `/forgot-password`, `/reset-password`, `/plans/ai`, `/revenue`, `/tools/integrations/oauth/callback`, `/webhooks`, `/webhooks/new`, `/webhooks/$endpointId`.
 
 ## Journeys
 
-### addons — `apps/console/e2e/addons.spec.ts`
+### addons: `apps/console/e2e/addons.spec.ts`
 
 #### addons--creates-an-add-on-on-a-full-page-and-lands-on-its-detail-53a2a1
 
@@ -220,7 +220,7 @@ Per-run evidence (reports, and screenshots / video / trace / logs for failed jou
 
 - **Area:** addons
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/addons--creates-an-add-on-on-a-full-page-and-lands-on-its-detail-53a2a1/summary.md` in the run's artifact
 
@@ -251,7 +251,7 @@ Expected:
 
 - **Area:** addons
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/addons--cancel-on-the-create-page-returns-to-the-list-c6e0b8/summary.md` in the run's artifact
 
@@ -276,7 +276,7 @@ Expected:
 
 - **Area:** addons
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/addons--row-edit-opens-the-detail-page-in-edit-mode-lookup-key-read-d1ee16/summary.md` in the run's artifact
 
@@ -307,7 +307,7 @@ Expected:
 
 - **Area:** addons
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/addons--the-add-on-details-pencil-edits-in-place-without-navigating-17f519/summary.md` in the run's artifact
 
@@ -332,7 +332,7 @@ Expected:
 
 </details>
 
-### auth — `apps/console/e2e/auth.spec.ts`
+### auth: `apps/console/e2e/auth.spec.ts`
 
 #### auth--turns-a-signed-out-visitor-away-then-lets-the-demo-account-t-65fcff
 
@@ -340,7 +340,7 @@ Expected:
 
 - **Area:** auth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/auth--turns-a-signed-out-visitor-away-then-lets-the-demo-account-t-65fcff/summary.md` in the run's artifact
 
@@ -374,7 +374,7 @@ Expected:
 
 - **Area:** auth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/auth--a-shared-link-opens-as-itself-after-signing-in-query-string-045f5f/summary.md` in the run's artifact
 
@@ -407,7 +407,7 @@ Expected:
 
 - **Area:** auth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 535ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/auth--does-not-bounce-a-deep-link-through-a-sign-in-first-2fc391/summary.md` in the run's artifact
 
@@ -431,7 +431,7 @@ Expected:
 
 - **Area:** auth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/auth--renders-the-form-at-its-own-address-8a8ed0/summary.md` in the run's artifact
 
@@ -457,7 +457,7 @@ Expected:
 
 - **Area:** auth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/auth--refuses-an-empty-email-instead-of-asking-the-backend-about-i-168da7/summary.md` in the run's artifact
 
@@ -488,7 +488,7 @@ Expected:
 
 - **Area:** auth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/auth--shows-one-sentence-when-the-credentials-are-rejected-and-kee-8a2779/summary.md` in the run's artifact
 
@@ -501,7 +501,7 @@ Steps:
 3. _API's own 403 body, so this exercises the real error mapping._
 4. `signIn.signIn('person@example.com', 'wrong-password')`
 5. _Not "Failed to get user", which is the backend's call stack and reads as_
-6. _a system fault — the user retries the same password. And not "User not_
+6. _a system fault: the user retries the same password. And not "User not_
 7. _found", which would turn the form into an account-enumeration oracle._
 8. _Retyping an email you already typed correctly is the small insult that_
 9. _makes a login feel hostile. The password is cleared because it is the_
@@ -521,7 +521,7 @@ Expected:
 
 </details>
 
-### catalog — `apps/console/e2e/catalog.spec.ts`
+### catalog: `apps/console/e2e/catalog.spec.ts`
 
 #### catalog--renders-its-grid-of-records-773633
 
@@ -529,7 +529,7 @@ Expected:
 
 - **Area:** catalog
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/catalog--renders-its-grid-of-records-773633/summary.md` in the run's artifact
 
@@ -554,7 +554,7 @@ Expected:
 
 - **Area:** catalog
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/catalog--reflects-the-search-into-the-url-and-survives-a-reload-aa9343/summary.md` in the run's artifact
 
@@ -566,7 +566,7 @@ Steps:
 2. `plans.search.fill('pro')`
 3. _The core V2 promise: the URL is the source of truth for the query. A_
 4. _filtered list is therefore a link, not a transient piece of component_
-5. _state — the query string carries the term._
+5. _state: the query string carries the term._
 6. _And because the URL is the source of truth, a reload rebuilds the filter_
 7. _from the address rather than resetting it: the field comes back filled._
 8. `page.reload()`
@@ -586,7 +586,7 @@ Expected:
 
 - **Area:** catalog
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/catalog--opens-a-plan-at-its-own-url-acfb73/summary.md` in the run's artifact
 
@@ -612,7 +612,7 @@ Expected:
 
 - **Area:** catalog
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/catalog--opens-a-coupon-whose-detail-shows-its-terms-9d1e9a/summary.md` in the run's artifact
 
@@ -631,7 +631,7 @@ Expected:
 
 </details>
 
-### cost-sheets — `apps/console/e2e/cost-sheets.spec.ts`
+### cost-sheets: `apps/console/e2e/cost-sheets.spec.ts`
 
 #### cost-sheets--creates-a-cost-sheet-on-a-full-page-and-lands-on-its-detail-ac694e
 
@@ -639,7 +639,7 @@ Expected:
 
 - **Area:** cost sheets
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/cost-sheets--creates-a-cost-sheet-on-a-full-page-and-lands-on-its-detail-ac694e/summary.md` in the run's artifact
 
@@ -669,7 +669,7 @@ Expected:
 
 - **Area:** cost sheets
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/cost-sheets--cancel-on-the-create-page-returns-to-the-list-a30a7e/summary.md` in the run's artifact
 
@@ -695,7 +695,7 @@ Expected:
 
 - **Area:** cost sheets
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/cost-sheets--row-edit-opens-the-detail-page-in-edit-mode-d4f19e/summary.md` in the run's artifact
 
@@ -724,7 +724,7 @@ Expected:
 
 - **Area:** cost sheets
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/cost-sheets--deletes-a-cost-sheet-after-confirming-534869/summary.md` in the run's artifact
 
@@ -744,7 +744,7 @@ Expected:
 
 </details>
 
-### coupons — `apps/console/e2e/coupons.spec.ts`
+### coupons: `apps/console/e2e/coupons.spec.ts`
 
 #### coupons--creates-a-coupon-on-a-full-page-and-lands-on-its-detail-456680
 
@@ -752,7 +752,7 @@ Expected:
 
 - **Area:** coupons
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/coupons--creates-a-coupon-on-a-full-page-and-lands-on-its-detail-456680/summary.md` in the run's artifact
 
@@ -784,7 +784,7 @@ Expected:
 
 - **Area:** coupons
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/coupons--cancel-on-the-create-page-returns-to-the-list-968baf/summary.md` in the run's artifact
 
@@ -809,7 +809,7 @@ Expected:
 
 - **Area:** coupons
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/coupons--edits-a-coupon-in-place-from-the-coupon-details-card-edb6b3/summary.md` in the run's artifact
 
@@ -834,7 +834,7 @@ Expected:
 
 </details>
 
-### credit-note-create — `apps/console/e2e/credit-note-create.spec.ts`
+### credit-note-create: `apps/console/e2e/credit-note-create.spec.ts`
 
 #### credit-note-create--creates-a-draft-credit-memo-finalizes-it-then-voids-it-3099a8
 
@@ -842,7 +842,7 @@ Expected:
 
 - **Area:** credit note create
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/credit-note-create--creates-a-draft-credit-memo-finalizes-it-then-voids-it-3099a8/summary.md` in the run's artifact
 
@@ -878,7 +878,7 @@ Expected:
 
 </details>
 
-### credit-notes — `apps/console/e2e/credit-notes.spec.ts`
+### credit-notes: `apps/console/e2e/credit-notes.spec.ts`
 
 #### credit-notes--lists-credit-memos-with-their-status-and-invoice-373c22
 
@@ -886,7 +886,7 @@ Expected:
 
 - **Area:** credit notes
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/credit-notes--lists-credit-memos-with-their-status-and-invoice-373c22/summary.md` in the run's artifact
 
@@ -911,7 +911,7 @@ Expected:
 
 - **Area:** credit notes
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 4.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/credit-notes--opens-a-memo-and-recovers-from-a-missing-related-invoice-bf88b0/summary.md` in the run's artifact
 
@@ -945,7 +945,7 @@ Expected:
 
 - **Area:** credit notes
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/credit-notes--puts-the-search-in-the-url-and-survives-a-reload-075cdd/summary.md` in the run's artifact
 
@@ -967,7 +967,7 @@ Expected:
 
 </details>
 
-### customer-portal — `apps/console/e2e/customer-portal.spec.ts`
+### customer-portal: `apps/console/e2e/customer-portal.spec.ts`
 
 #### customer-portal--the-credits-tab-lists-top-ups-asking-for-credits-as-the-api-d9611b
 
@@ -975,7 +975,7 @@ Expected:
 
 - **Area:** customer portal
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 509ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customer-portal--the-credits-tab-lists-top-ups-asking-for-credits-as-the-api-d9611b/summary.md` in the run's artifact
 
@@ -995,7 +995,7 @@ Expected:
 
 </details>
 
-### customer-tax — `apps/console/e2e/customer-tax.spec.ts`
+### customer-tax: `apps/console/e2e/customer-tax.spec.ts`
 
 #### customer-tax--attaches-a-tax-rate-to-a-customer-edits-it-then-removes-it-090605
 
@@ -1003,7 +1003,7 @@ Expected:
 
 - **Area:** customer tax
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customer-tax--attaches-a-tax-rate-to-a-customer-edits-it-then-removes-it-090605/summary.md` in the run's artifact
 
@@ -1039,7 +1039,7 @@ Expected:
 
 </details>
 
-### customer-wallet — `apps/console/e2e/customer-wallet.spec.ts`
+### customer-wallet: `apps/console/e2e/customer-wallet.spec.ts`
 
 #### customer-wallet--creates-tops-up-and-terminates-a-wallet-b6f26d
 
@@ -1047,7 +1047,7 @@ Expected:
 
 - **Area:** customer wallet
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 4.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customer-wallet--creates-tops-up-and-terminates-a-wallet-b6f26d/summary.md` in the run's artifact
 
@@ -1094,7 +1094,7 @@ Expected:
 
 </details>
 
-### customers — `apps/console/e2e/customers.spec.ts`
+### customers: `apps/console/e2e/customers.spec.ts`
 
 #### customers--opens-the-customer-portal-from-the-row-menu-in-a-new-tab-907062
 
@@ -1102,7 +1102,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--opens-the-customer-portal-from-the-row-menu-in-a-new-tab-907062/summary.md` in the run's artifact
 
@@ -1128,7 +1128,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--the-row-menu-opens-the-portal-but-does-not-copy-its-link-d5b4b4/summary.md` in the run's artifact
 
@@ -1153,7 +1153,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--creates-a-customer-on-its-own-page-and-lands-on-its-detail-bb6072/summary.md` in the run's artifact
 
@@ -1194,7 +1194,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--edits-a-customer-on-its-own-prepopulated-page-8a1221/summary.md` in the run's artifact
 
@@ -1223,7 +1223,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--deletes-a-customer-after-confirming-020c52/summary.md` in the run's artifact
 
@@ -1249,7 +1249,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--unlinking-from-related-refreshes-both-the-rail-and-header-0a844b/summary.md` in the run's artifact
 
@@ -1282,7 +1282,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--edits-phone-inline-on-the-information-tab-78ca2e/summary.md` in the run's artifact
 
@@ -1308,7 +1308,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--opens-the-billing-edit-page-from-the-header-4da3b4/summary.md` in the run's artifact
 
@@ -1332,7 +1332,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--copies-the-customer-portal-link-from-the-header-menu-20a437/summary.md` in the run's artifact
 
@@ -1360,7 +1360,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--refreshes-the-events-tab-on-demand-8c2879/summary.md` in the run's artifact
 
@@ -1384,7 +1384,7 @@ Expected:
 
 - **Area:** customers
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/customers--pushes-the-customer-to-stripe-from-the-related-integration-976a5f/summary.md` in the run's artifact
 
@@ -1404,7 +1404,7 @@ Expected:
 
 </details>
 
-### data-states — `apps/console/e2e/data-states.spec.ts`
+### data-states: `apps/console/e2e/data-states.spec.ts`
 
 #### data-states--a-failed-load-is-an-error-with-a-working-retry-not-an-empty-31c1bc
 
@@ -1412,7 +1412,7 @@ Expected:
 
 - **Area:** data states
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/data-states--a-failed-load-is-an-error-with-a-working-retry-not-an-empty-31c1bc/summary.md` in the run's artifact
 
@@ -1424,7 +1424,7 @@ Steps:
 2. `page.goto('/plans')`
 3. _Forbidden is not retryable, and it must not read as "No plans yet"._
 4. _The API's own reason is shown in preference to a generic line about_
-5. _roles — `serverReason` in `listFailure.ts`. Here that reason is the_
+5. _roles: `serverReason` in `listFailure.ts`. Here that reason is the_
 6. _injected "boom"; the fallback copy only appears when the server sends_
 7. _none, so asserting on the fallback would test the wrong branch._
 
@@ -1443,7 +1443,7 @@ Expected:
 
 - **Area:** data states
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 5.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/data-states--a-server-error-offers-retry-and-recovers-without-a-reload-9cf1fd/summary.md` in the run's artifact
 
@@ -1470,7 +1470,7 @@ Expected:
 
 - **Area:** data states
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/data-states--a-slow-response-shows-a-skeleton-never-an-empty-state-and-th-7bd147/summary.md` in the run's artifact
 
@@ -1494,7 +1494,7 @@ Expected:
 
 - **Area:** data states
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/data-states--a-search-miss-says-so-and-offers-to-clear-without-pretending-72374d/summary.md` in the run's artifact
 
@@ -1516,7 +1516,7 @@ Expected:
 
 </details>
 
-### entitlement-usage — `apps/console/e2e/entitlement-usage.spec.ts`
+### entitlement-usage: `apps/console/e2e/entitlement-usage.spec.ts`
 
 #### entitlement-usage--shows-entitlement-usage-on-a-contract-and-on-its-customer-s-18729b
 
@@ -1524,7 +1524,7 @@ Expected:
 
 - **Area:** entitlement usage
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/entitlement-usage--shows-entitlement-usage-on-a-contract-and-on-its-customer-s-18729b/summary.md` in the run's artifact
 
@@ -1550,7 +1550,7 @@ Expected:
 
 </details>
 
-### entity-integrations — `apps/console/e2e/entity-integrations.spec.ts`
+### entity-integrations: `apps/console/e2e/entity-integrations.spec.ts`
 
 #### entity-integrations--invoice-mapping-stays-consistent-across-related-header-and-l-2e2e55
 
@@ -1558,7 +1558,7 @@ Expected:
 
 - **Area:** entity integrations
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/entity-integrations--invoice-mapping-stays-consistent-across-related-header-and-l-2e2e55/summary.md` in the run's artifact
 
@@ -1593,7 +1593,7 @@ Expected:
 
 - **Area:** entity integrations
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/entity-integrations--plan-links-from-the-overflow-and-shows-mappings-beside-metad-9d910d/summary.md` in the run's artifact
 
@@ -1620,7 +1620,7 @@ Expected:
 
 </details>
 
-### event-trace — `apps/console/e2e/event-trace.spec.ts`
+### event-trace: `apps/console/e2e/event-trace.spec.ts`
 
 #### event-trace--opening-an-event-traces-it-through-the-five-stages-875af3
 
@@ -1628,7 +1628,7 @@ Expected:
 
 - **Area:** event trace
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/event-trace--opening-an-event-traces-it-through-the-five-stages-875af3/summary.md` in the run's artifact
 
@@ -1652,7 +1652,7 @@ Expected:
 
 </details>
 
-### events — `apps/console/e2e/events.spec.ts`
+### events: `apps/console/e2e/events.spec.ts`
 
 #### events--renders-the-ingest-log-newest-first-319a86
 
@@ -1660,7 +1660,7 @@ Expected:
 
 - **Area:** events
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/events--renders-the-ingest-log-newest-first-319a86/summary.md` in the run's artifact
 
@@ -1687,7 +1687,7 @@ Expected:
 
 - **Area:** events
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/events--puts-the-event-name-search-in-the-url-and-survives-a-reload-1a7db2/summary.md` in the run's artifact
 
@@ -1715,7 +1715,7 @@ Expected:
 
 - **Area:** events
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/events--opens-an-event-to-its-verbatim-properties-5e1d30/summary.md` in the run's artifact
 
@@ -1734,7 +1734,7 @@ Expected:
 
 </details>
 
-### exports — `apps/console/e2e/exports.spec.ts`
+### exports: `apps/console/e2e/exports.spec.ts`
 
 #### exports--lists-scheduled-exports-with-their-bucket-and-status-99fa3b
 
@@ -1742,7 +1742,7 @@ Expected:
 
 - **Area:** exports
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/exports--lists-scheduled-exports-with-their-bucket-and-status-99fa3b/summary.md` in the run's artifact
 
@@ -1766,7 +1766,7 @@ Expected:
 
 - **Area:** exports
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/exports--puts-the-search-in-the-url-and-survives-a-reload-4d22d4/summary.md` in the run's artifact
 
@@ -1794,7 +1794,7 @@ Expected:
 
 - **Area:** exports
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 5.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/exports--connects-s3-creates-an-export-on-it-pauses-it-and-runs-it-no-e9c64f/summary.md` in the run's artifact
 
@@ -1834,7 +1834,7 @@ Expected:
 
 </details>
 
-### features — `apps/console/e2e/features.spec.ts`
+### features: `apps/console/e2e/features.spec.ts`
 
 #### features--creates-a-metered-feature-on-a-single-full-page-9d028b
 
@@ -1842,7 +1842,7 @@ Expected:
 
 - **Area:** features
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/features--creates-a-metered-feature-on-a-single-full-page-9d028b/summary.md` in the run's artifact
 
@@ -1877,7 +1877,7 @@ Expected:
 
 - **Area:** features
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/features--edits-a-feature-on-its-own-page-with-the-lookup-key-read-onl-3b645f/summary.md` in the run's artifact
 
@@ -1905,7 +1905,7 @@ Expected:
 
 - **Area:** features
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/features--clones-a-feature-under-a-new-name-1f1fac/summary.md` in the run's artifact
 
@@ -1931,7 +1931,7 @@ Expected:
 
 - **Area:** features
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/features--deletes-a-feature-after-confirming-c0da2b/summary.md` in the run's artifact
 
@@ -1956,7 +1956,7 @@ Expected:
 
 - **Area:** features
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/features--opens-the-create-page-at-features-new-0f76a5/summary.md` in the run's artifact
 
@@ -1978,7 +1978,7 @@ Expected:
 
 - **Area:** features
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/features--edits-from-the-detail-page-e0bc8f/summary.md` in the run's artifact
 
@@ -1989,7 +1989,7 @@ Steps:
 1. `page.goto('/features')`
 2. `list(page).rows().first().getByRole('cell').nth(2).click()`
 3. _Information is the create form's own shape, locked: the same cards, the_
-4. _same labels, the same order — and no second, smaller editor beside the_
+4. _same labels, the same order: and no second, smaller editor beside the_
 5. _real one. So the tab reads, and nothing on it offers to edit._
 6. `page.getByRole('tab', { name: 'Information' }).click()`
 7. _The shared rail's metadata card keeps its own Edit; the form cards have none._
@@ -2008,7 +2008,7 @@ Expected:
 
 </details>
 
-### groups — `apps/console/e2e/groups.spec.ts`
+### groups: `apps/console/e2e/groups.spec.ts`
 
 #### groups--creates-a-group-on-its-own-page-2e6163
 
@@ -2016,7 +2016,7 @@ Expected:
 
 - **Area:** groups
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/groups--creates-a-group-on-its-own-page-2e6163/summary.md` in the run's artifact
 
@@ -2047,7 +2047,7 @@ Expected:
 
 - **Area:** groups
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/groups--cancel-returns-to-the-list-without-saving-fab13b/summary.md` in the run's artifact
 
@@ -2070,7 +2070,7 @@ Expected:
 
 - **Area:** groups
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/groups--deletes-a-group-after-confirming-c0f50e/summary.md` in the run's artifact
 
@@ -2090,7 +2090,7 @@ Expected:
 
 </details>
 
-### integrations — `apps/console/e2e/integrations.spec.ts`
+### integrations: `apps/console/e2e/integrations.spec.ts`
 
 #### integrations--shows-the-catalogue-with-connection-status-a73f78
 
@@ -2098,7 +2098,7 @@ Expected:
 
 - **Area:** integrations
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/integrations--shows-the-catalogue-with-connection-status-a73f78/summary.md` in the run's artifact
 
@@ -2122,7 +2122,7 @@ Expected:
 
 - **Area:** integrations
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/integrations--links-a-provider-to-its-setup-guide-6a4565/summary.md` in the run's artifact
 
@@ -2145,7 +2145,7 @@ Expected:
 
 - **Area:** integrations
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/integrations--connects-a-provider-keeps-the-key-hidden-and-shows-it-connec-833243/summary.md` in the run's artifact
 
@@ -2184,7 +2184,7 @@ Expected:
 
 - **Area:** integrations
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/integrations--manages-a-connection-and-disconnects-it-after-confirming-5cc1b6/summary.md` in the run's artifact
 
@@ -2207,7 +2207,7 @@ Expected:
 
 </details>
 
-### invoice-actions — `apps/console/e2e/invoice-actions.spec.ts`
+### invoice-actions: `apps/console/e2e/invoice-actions.spec.ts`
 
 #### invoice-actions--creates-a-draft-invoice-from-the-form-3a922c
 
@@ -2215,7 +2215,7 @@ Expected:
 
 - **Area:** invoice actions
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-actions--creates-a-draft-invoice-from-the-form-3a922c/summary.md` in the run's artifact
 
@@ -2252,7 +2252,7 @@ Expected:
 
 - **Area:** invoice actions
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-actions--opens-an-invoice-from-the-list-and-shows-real-lines-566635/summary.md` in the run's artifact
 
@@ -2271,7 +2271,7 @@ Expected:
 
 </details>
 
-### invoice-edit — `apps/console/e2e/invoice-edit.spec.ts`
+### invoice-edit: `apps/console/e2e/invoice-edit.spec.ts`
 
 #### invoice-edit--opens-on-the-invoice-as-it-is-with-nothing-to-save-yet-8df1e7
 
@@ -2279,7 +2279,7 @@ Expected:
 
 - **Area:** invoice edit
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-edit--opens-on-the-invoice-as-it-is-with-nothing-to-save-yet-8df1e7/summary.md` in the run's artifact
 
@@ -2304,7 +2304,7 @@ Expected:
 
 - **Area:** invoice edit
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-edit--cancel-goes-back-without-saving-90df87/summary.md` in the run's artifact
 
@@ -2330,7 +2330,7 @@ Expected:
 
 - **Area:** invoice edit
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-edit--a-draft-line-is-renamed-in-place-2983a5/summary.md` in the run's artifact
 
@@ -2355,7 +2355,7 @@ Expected:
 
 - **Area:** invoice edit
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 4.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-edit--a-finalized-invoice-asks-before-its-lines-replace-it-then-op-8f45fb/summary.md` in the run's artifact
 
@@ -2378,7 +2378,7 @@ Expected:
 
 </details>
 
-### invoice-hosted-link — `apps/console/e2e/invoice-hosted-link.spec.ts`
+### invoice-hosted-link: `apps/console/e2e/invoice-hosted-link.spec.ts`
 
 #### invoice-hosted-link--opens-the-hosted-invoice-from-the-list-row-menu-in-a-new-tab-97553e
 
@@ -2386,7 +2386,7 @@ Expected:
 
 - **Area:** invoice hosted link
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-hosted-link--opens-the-hosted-invoice-from-the-list-row-menu-in-a-new-tab-97553e/summary.md` in the run's artifact
 
@@ -2413,7 +2413,7 @@ Expected:
 
 - **Area:** invoice hosted link
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-hosted-link--the-list-row-menu-opens-the-hosted-invoice-but-does-not-copy-7ea9ad/summary.md` in the run's artifact
 
@@ -2438,7 +2438,7 @@ Expected:
 
 - **Area:** invoice hosted link
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-hosted-link--the-invoice-page-copies-its-hosted-link-from-more-10d43c/summary.md` in the run's artifact
 
@@ -2468,7 +2468,7 @@ Expected:
 
 - **Area:** invoice hosted link
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoice-hosted-link--a-draft-offers-no-hosted-link-611afb/summary.md` in the run's artifact
 
@@ -2487,7 +2487,7 @@ Expected:
 
 </details>
 
-### invoices-blocks — `apps/console/e2e/invoices-blocks.spec.ts`
+### invoices-blocks: `apps/console/e2e/invoices-blocks.spec.ts`
 
 #### invoices-blocks--the-invoice-list-opens-the-invoice-creator-7fa7d4
 
@@ -2495,7 +2495,7 @@ Expected:
 
 - **Area:** invoices blocks
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoices-blocks--the-invoice-list-opens-the-invoice-creator-7fa7d4/summary.md` in the run's artifact
 
@@ -2520,7 +2520,7 @@ Expected:
 
 - **Area:** invoices blocks
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/invoices-blocks--an-invoice-opens-the-billing-detail-block-dc5eb3/summary.md` in the run's artifact
 
@@ -2538,7 +2538,7 @@ Expected:
 
 </details>
 
-### journeys — `apps/console/e2e/journeys.spec.ts`
+### journeys: `apps/console/e2e/journeys.spec.ts`
 
 #### journeys--a-new-customer-is-put-on-a-contract-and-its-first-invoice-ap-0a35fb
 
@@ -2546,7 +2546,7 @@ Expected:
 
 - **Area:** journeys
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 4.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/journeys--a-new-customer-is-put-on-a-contract-and-its-first-invoice-ap-0a35fb/summary.md` in the run's artifact
 
@@ -2583,7 +2583,7 @@ Expected:
 
 - **Area:** journeys
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 4.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/journeys--an-invoice-is-finalized-then-a-payment-recorded-against-it-s-1fad38/summary.md` in the run's artifact
 
@@ -2633,7 +2633,7 @@ Expected:
 
 - **Area:** journeys
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/journeys--a-new-customer-s-wallet-is-created-and-topped-up-446237/summary.md` in the run's artifact
 
@@ -2667,7 +2667,7 @@ Expected:
 
 - **Area:** journeys
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/journeys--a-plan-is-created-with-a-charge-and-its-detail-lists-the-cha-231b3d/summary.md` in the run's artifact
 
@@ -2696,7 +2696,7 @@ Expected:
 
 </details>
 
-### lifecycle-persistence — `apps/console/e2e/lifecycle-persistence.spec.ts`
+### lifecycle-persistence: `apps/console/e2e/lifecycle-persistence.spec.ts`
 
 #### lifecycle-persistence--a-created-invoice-is-a-draft-finalizing-it-sticks-and-the-li-64adbd
 
@@ -2704,7 +2704,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 4.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--a-created-invoice-is-a-draft-finalizing-it-sticks-and-the-li-64adbd/summary.md` in the run's artifact
 
@@ -2725,7 +2725,7 @@ Steps:
 11. `page.getByRole('menuitem', { name: 'Finalize invoice' }).click()`
 12. _Let the menu finish its exit animation before reopening it. Clicking the_
 13. _trigger mid-animation reopens the closing menu, and an Escape sent to that_
-14. _menu is sometimes dropped — it stays open and its backdrop swallows the_
+14. _menu is sometimes dropped: it stays open and its backdrop swallows the_
 15. _breadcrumb click below._
 16. `page.getByRole('button', { name: 'More actions' }).click()`
 17. `menu.press('Escape')`
@@ -2753,7 +2753,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--add-on-in-place-edit-saves-and-the-detail-reflects-it-8532b3/summary.md` in the run's artifact
 
@@ -2782,7 +2782,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--coupon-in-place-edit-saves-and-the-detail-reflects-it-313b2f/summary.md` in the run's artifact
 
@@ -2811,7 +2811,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--cost-sheet-in-place-edit-saves-and-the-detail-reflects-it-ede6d6/summary.md` in the run's artifact
 
@@ -2840,7 +2840,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--price-unit-inline-edit-persists-across-a-reload-bf5c63/summary.md` in the run's artifact
 
@@ -2868,7 +2868,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--cancelling-a-contract-at-period-end-is-reflected-on-the-deta-b7366d/summary.md` in the run's artifact
 
@@ -2894,7 +2894,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--finalize-now-creates-an-open-invoice-that-can-be-voided-from-0ca77e/summary.md` in the run's artifact
 
@@ -2924,7 +2924,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--cancelling-a-contract-immediately-marks-it-cancelled-06e748/summary.md` in the run's artifact
 
@@ -2954,7 +2954,7 @@ Expected:
 
 - **Area:** lifecycle persistence
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 6.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/lifecycle-persistence--a-future-dated-contract-is-incomplete-until-it-is-activated-4b0a23/summary.md` in the run's artifact
 
@@ -2998,7 +2998,7 @@ Expected:
 
 </details>
 
-### list-memory — `apps/console/e2e/list-memory.spec.ts`
+### list-memory: `apps/console/e2e/list-memory.spec.ts`
 
 #### list-memory--a-filtered-list-comes-back-filtered-c6b0ae
 
@@ -3006,7 +3006,7 @@ Expected:
 
 - **Area:** list memory
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/list-memory--a-filtered-list-comes-back-filtered-c6b0ae/summary.md` in the run's artifact
 
@@ -3015,7 +3015,7 @@ Expected:
 Steps:
 
 1. `filterFeatures(page, 'api')`
-2. _Into a feature and back out through the breadcrumb — an in-app navigation,_
+2. _Into a feature and back out through the breadcrumb: an in-app navigation,_
 3. _which is the one that used to drop the filter._
 4. `page.getByRole('table').getByRole('row').nth(1).click()`
 
@@ -3033,7 +3033,7 @@ Expected:
 
 - **Area:** list memory
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 4.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/list-memory--clearing-the-filter-is-remembered-too-c0d427/summary.md` in the run's artifact
 
@@ -3062,7 +3062,7 @@ Expected:
 
 - **Area:** list memory
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/list-memory--a-link-that-names-a-filter-wins-over-the-remembered-one-89aa2a/summary.md` in the run's artifact
 
@@ -3071,7 +3071,7 @@ Expected:
 Steps:
 
 1. `filterFeatures(page, 'api')`
-2. _Arriving with an explicit query is someone asking for that query — a_
+2. _Arriving with an explicit query is someone asking for that query: a_
 3. _shared link must not quietly become the recipient's saved view._
 4. `page.goto('/features?q=token')`
 
@@ -3083,7 +3083,7 @@ Expected:
 
 </details>
 
-### live-auth — `apps/console/e2e/live-auth.spec.ts`
+### live-auth: `apps/console/e2e/live-auth.spec.ts`
 
 #### live-auth--signs-in-and-renders-rows-the-backend-actually-returned-cd13c9
 
@@ -3091,7 +3091,7 @@ Expected:
 
 - **Area:** live auth (live)
 - **Preconditions and data:** Live: a deployed or locally served console against the real API. Needs `E2E_LIVE=1`, `E2E_USER`, `E2E_PASSWORD`, `E2E_BASE_URL`, and `E2E_ENVIRONMENT` for the catalogue check. Skipped without them.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** SKIPPED, 0ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Skip reason:** Live sign-in is opt-in: set E2E_LIVE=1, E2E_USER, E2E_PASSWORD and E2E_BASE_URL (see the note at the top of this file).
 - **Report:** `e2e-results/journeys/live-auth--signs-in-and-renders-rows-the-backend-actually-returned-cd13c9/summary.md` in the run's artifact
@@ -3103,11 +3103,11 @@ Steps:
 1. `signIn.goto()`
 2. `signIn.signIn(email as string, password as string)`
 3. _Signing in leaves the sign-in screen. If the credentials were refused,_
-4. _the form is still here with its one sentence — which is the failure worth_
+4. _the form is still here with its one sentence: which is the failure worth_
 5. _seeing in the trace, so it is asserted before anything else._
 6. _An environment has to be *chosen* before rows mean anything. The console_
 7. _opens in whichever one the API listed first, which on a tenant with more_
-8. _than one `development` environment is an accident — so the test names the_
+8. _than one `development` environment is an accident: so the test names the_
 9. _environment it means instead of asserting against a coin flip._
 10. `shell.switchEnvironment(environment as string)`
 11. _The catalogue is the proof. Reaching it means the JWT was accepted, an_
@@ -3137,7 +3137,7 @@ Expected:
 
 - **Area:** live auth (live)
 - **Preconditions and data:** Live: a deployed or locally served console against the real API. Needs `E2E_LIVE=1`, `E2E_USER`, `E2E_PASSWORD`, `E2E_BASE_URL`, and `E2E_ENVIRONMENT` for the catalogue check. Skipped without them.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** SKIPPED, 0ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Skip reason:** Live sign-in is opt-in: set E2E_LIVE=1, E2E_USER, E2E_PASSWORD and E2E_BASE_URL (see the note at the top of this file).
 - **Report:** `e2e-results/journeys/live-auth--refuses-a-wrong-password-without-volunteering-whether-the-ac-d34542/summary.md` in the run's artifact
@@ -3164,7 +3164,7 @@ Expected:
 
 </details>
 
-### live-flows — `apps/console/e2e/live-flows.spec.ts`
+### live-flows: `apps/console/e2e/live-flows.spec.ts`
 
 #### live-flows--feature-boolean-create-edit-325030
 
@@ -3578,7 +3578,7 @@ Expected:
 
 </details>
 
-### payment-record — `apps/console/e2e/payment-record.spec.ts`
+### payment-record: `apps/console/e2e/payment-record.spec.ts`
 
 #### payment-record--records-a-payment-processes-a-pending-one-then-deletes-it-b0acfb
 
@@ -3586,7 +3586,7 @@ Expected:
 
 - **Area:** payment record
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 5.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/payment-record--records-a-payment-processes-a-pending-one-then-deletes-it-b0acfb/summary.md` in the run's artifact
 
@@ -3625,7 +3625,7 @@ Expected:
 
 </details>
 
-### plan-charges — `apps/console/e2e/plan-charges.spec.ts`
+### plan-charges: `apps/console/e2e/plan-charges.spec.ts`
 
 #### plan-charges--keeps-pricing-on-information-and-jumps-back-to-its-overview-84f378
 
@@ -3633,7 +3633,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 4.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--keeps-pricing-on-information-and-jumps-back-to-its-overview-84f378/summary.md` in the run's artifact
 
@@ -3672,7 +3672,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--adds-then-edits-a-charge-in-place-85569e/summary.md` in the run's artifact
 
@@ -3705,7 +3705,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--a-repriced-charge-keeps-its-old-price-as-an-inactive-version-f67fa9/summary.md` in the run's artifact
 
@@ -3752,7 +3752,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--adds-then-edits-an-entitlement-5a7ca8/summary.md` in the run's artifact
 
@@ -3787,7 +3787,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--adds-then-edits-a-credit-grant-8b9988/summary.md` in the run's artifact
 
@@ -3819,7 +3819,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--creates-a-plan-on-a-full-page-staging-a-charge-7d8f26/summary.md` in the run's artifact
 
@@ -3849,7 +3849,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--edits-a-plan-on-its-own-page-prepopulated-ac52b6/summary.md` in the run's artifact
 
@@ -3873,7 +3873,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--the-plan-details-pencil-edits-in-place-85598f/summary.md` in the run's artifact
 
@@ -3901,7 +3901,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--opens-the-stepped-edit-page-from-the-edit-details-menu-item-d27079/summary.md` in the run's artifact
 
@@ -3925,7 +3925,7 @@ Expected:
 
 - **Area:** plan charges
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/plan-charges--starts-a-plan-from-the-list-on-the-create-page-111bbf/summary.md` in the run's artifact
 
@@ -3942,7 +3942,7 @@ Expected:
 
 </details>
 
-### price-units — `apps/console/e2e/price-units.spec.ts`
+### price-units: `apps/console/e2e/price-units.spec.ts`
 
 #### price-units--creates-a-price-unit-on-its-own-page-1bd29c
 
@@ -3950,7 +3950,7 @@ Expected:
 
 - **Area:** price units
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/price-units--creates-a-price-unit-on-its-own-page-1bd29c/summary.md` in the run's artifact
 
@@ -3984,7 +3984,7 @@ Expected:
 
 - **Area:** price units
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/price-units--cancel-returns-to-the-list-e82778/summary.md` in the run's artifact
 
@@ -4007,7 +4007,7 @@ Expected:
 
 - **Area:** price units
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/price-units--the-general-pencil-edits-the-name-in-place-27af08/summary.md` in the run's artifact
 
@@ -4038,7 +4038,7 @@ Expected:
 
 - **Area:** price units
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/price-units--promotes-the-sandbox-plans-and-features-to-production-from-t-7feb37/summary.md` in the run's artifact
 
@@ -4068,7 +4068,7 @@ Expected:
 
 - **Area:** price units
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/price-units--opens-as-a-dialog-from-the-environment-switcher-and-closes-o-0bb96c/summary.md` in the run's artifact
 
@@ -4105,7 +4105,7 @@ Expected:
 
 - **Area:** price units
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 892ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/price-units--the-old-environments-new-address-lands-on-home-2e8006/summary.md` in the run's artifact
 
@@ -4121,7 +4121,7 @@ Expected:
 
 </details>
 
-### pricing-widget — `apps/console/e2e/pricing-widget.spec.ts`
+### pricing-widget: `apps/console/e2e/pricing-widget.spec.ts`
 
 #### pricing-widget--pricing-widget-shows-the-plan-catalogue-block-218b56
 
@@ -4129,7 +4129,7 @@ Expected:
 
 - **Area:** pricing widget
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 901ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/pricing-widget--pricing-widget-shows-the-plan-catalogue-block-218b56/summary.md` in the run's artifact
 
@@ -4151,7 +4151,7 @@ Expected:
 
 </details>
 
-### rbac — `apps/console/e2e/rbac.spec.ts`
+### rbac: `apps/console/e2e/rbac.spec.ts`
 
 #### rbac--a-reader-sees-lists-with-writes-disabled-and-is-denied-creat-a86fa6
 
@@ -4159,7 +4159,7 @@ Expected:
 
 - **Area:** rbac
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/rbac--a-reader-sees-lists-with-writes-disabled-and-is-denied-creat-a86fa6/summary.md` in the run's artifact
 
@@ -4188,7 +4188,7 @@ Expected:
 
 - **Area:** rbac
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/rbac--a-writer-can-create-but-tenant-settings-stay-super-admin-onl-d6d242/summary.md` in the run's artifact
 
@@ -4216,7 +4216,7 @@ Expected:
 
 - **Area:** rbac
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/rbac--a-super-admin-manages-members-but-never-their-own-roles-303a5d/summary.md` in the run's artifact
 
@@ -4242,7 +4242,7 @@ Expected:
 
 - **Area:** rbac
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/rbac--a-first-load-with-no-environment-chosen-yet-waits-and-never-bcb20f/summary.md` in the run's artifact
 
@@ -4261,7 +4261,7 @@ Expected:
 
 </details>
 
-### redesign-navigation — `apps/console/e2e/redesign-navigation.spec.ts`
+### redesign-navigation: `apps/console/e2e/redesign-navigation.spec.ts`
 
 #### redesign-navigation--subscriptions-redirects-and-retains-its-search-across-reload-e5f2d6
 
@@ -4269,7 +4269,7 @@ Expected:
 
 - **Area:** redesign navigation
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/redesign-navigation--subscriptions-redirects-and-retains-its-search-across-reload-e5f2d6/summary.md` in the run's artifact
 
@@ -4295,7 +4295,7 @@ Expected:
 
 - **Area:** redesign navigation
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/redesign-navigation--credit-notes-redirects-and-retains-its-search-across-reload-65977d/summary.md` in the run's artifact
 
@@ -4321,7 +4321,7 @@ Expected:
 
 - **Area:** redesign navigation
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/redesign-navigation--products-redirects-and-retains-its-search-across-reload-27d91f/summary.md` in the run's artifact
 
@@ -4347,7 +4347,7 @@ Expected:
 
 - **Area:** redesign navigation
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/redesign-navigation--a-legacy-contract-record-bookmark-opens-the-same-record-2938d4/summary.md` in the run's artifact
 
@@ -4373,7 +4373,7 @@ Expected:
 
 - **Area:** redesign navigation
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/redesign-navigation--api-keys-live-under-developers-and-the-old-settings-link-sti-9c1670/summary.md` in the run's artifact
 
@@ -4392,7 +4392,7 @@ Expected:
 
 </details>
 
-### resource-edit — `apps/console/e2e/resource-edit.spec.ts`
+### resource-edit: `apps/console/e2e/resource-edit.spec.ts`
 
 #### resource-edit--edits-an-add-on-in-place-from-its-detail-page-fbb910
 
@@ -4400,7 +4400,7 @@ Expected:
 
 - **Area:** resource edit
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/resource-edit--edits-an-add-on-in-place-from-its-detail-page-fbb910/summary.md` in the run's artifact
 
@@ -4430,7 +4430,7 @@ Expected:
 
 - **Area:** resource edit
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/resource-edit--edits-a-coupon-in-place-from-its-detail-page-7ced5f/summary.md` in the run's artifact
 
@@ -4456,7 +4456,7 @@ Expected:
 
 - **Area:** resource edit
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/resource-edit--edits-a-cost-sheet-in-place-from-its-detail-page-972ceb/summary.md` in the run's artifact
 
@@ -4476,7 +4476,7 @@ Expected:
 
 </details>
 
-### self-billing — `apps/console/e2e/self-billing.spec.ts`
+### self-billing: `apps/console/e2e/self-billing.spec.ts`
 
 #### self-billing--no-pill-while-self-billing-is-off-80278e
 
@@ -4484,7 +4484,7 @@ Expected:
 
 - **Area:** self billing
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/self-billing--no-pill-while-self-billing-is-off-80278e/summary.md` in the run's artifact
 
@@ -4512,7 +4512,7 @@ Expected:
 
 - **Area:** self billing
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/self-billing--a-trial-shows-its-pill-on-every-page-and-the-card-leads-to-b-f03e23/summary.md` in the run's artifact
 
@@ -4544,7 +4544,7 @@ Expected:
 
 - **Area:** self billing
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/self-billing--upgrading-goes-to-checkout-and-comes-back-live-4287e2/summary.md` in the run's artifact
 
@@ -4580,7 +4580,7 @@ Expected:
 
 - **Area:** self billing
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 834ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/self-billing--leaving-checkout-before-paying-says-nothing-was-charged-445e1f/summary.md` in the run's artifact
 
@@ -4605,7 +4605,7 @@ Expected:
 
 - **Area:** self billing
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 3.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/self-billing--a-locked-account-reads-everything-and-changes-nothing-facf53/summary.md` in the run's artifact
 
@@ -4648,7 +4648,7 @@ Expected:
 
 - **Area:** self billing
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/self-billing--the-environment-switcher-walks-the-account-states-on-mocks-ae5a5a/summary.md` in the run's artifact
 
@@ -4681,7 +4681,7 @@ Expected:
 
 - **Area:** self billing
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/self-billing--in-the-trial-creating-production-is-the-upgrade-and-paying-l-8f2565/summary.md` in the run's artifact
 
@@ -4716,7 +4716,7 @@ Expected:
 
 </details>
 
-### settings-experience — `apps/console/e2e/settings-experience.spec.ts`
+### settings-experience: `apps/console/e2e/settings-experience.spec.ts`
 
 #### settings-experience--portal-switching-a-section-off-saves-and-survives-leaving-th-7c1d84
 
@@ -4724,7 +4724,7 @@ Expected:
 
 - **Area:** settings experience
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/settings-experience--portal-switching-a-section-off-saves-and-survives-leaving-th-7c1d84/summary.md` in the run's artifact
 
@@ -4756,7 +4756,7 @@ Expected:
 
 - **Area:** settings experience
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/settings-experience--onboarding-adding-a-step-saves-it-into-the-workflow-48bd0c/summary.md` in the run's artifact
 
@@ -4785,7 +4785,7 @@ Expected:
 
 - **Area:** settings experience
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 873ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/settings-experience--team-is-a-single-page-with-no-tab-strip-and-the-old-members-3ae4a1/summary.md` in the run's artifact
 
@@ -4808,7 +4808,7 @@ Expected:
 
 - **Area:** settings experience
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 863ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/settings-experience--team-is-a-single-page-with-no-tab-strip-and-the-old-roles-li-54d4b6/summary.md` in the run's artifact
 
@@ -4831,7 +4831,7 @@ Expected:
 
 - **Area:** settings experience
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 902ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/settings-experience--team-is-a-single-page-with-no-tab-strip-and-the-old-sso-link-c5d196/summary.md` in the run's artifact
 
@@ -4848,7 +4848,7 @@ Expected:
 
 </details>
 
-### settings-tags — `apps/console/e2e/settings-tags.spec.ts`
+### settings-tags: `apps/console/e2e/settings-tags.spec.ts`
 
 #### settings-tags--labels-the-old-address-lands-on-the-tags-tab-in-settings-3e3ca5
 
@@ -4856,7 +4856,7 @@ Expected:
 
 - **Area:** settings tags
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 922ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/settings-tags--labels-the-old-address-lands-on-the-tags-tab-in-settings-3e3ca5/summary.md` in the run's artifact
 
@@ -4882,7 +4882,7 @@ Expected:
 
 - **Area:** settings tags
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 929ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/settings-tags--an-old-section-labels-link-resolves-to-tags-8ac317/summary.md` in the run's artifact
 
@@ -4904,7 +4904,7 @@ Expected:
 
 - **Area:** settings tags
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/settings-tags--creates-a-tag-in-a-dialog-without-leaving-settings-57d34c/summary.md` in the run's artifact
 
@@ -4928,7 +4928,7 @@ Expected:
 
 </details>
 
-### shared-link-environment — `apps/console/e2e/shared-link-environment.spec.ts`
+### shared-link-environment: `apps/console/e2e/shared-link-environment.spec.ts`
 
 #### shared-link-environment--opens-a-shared-invoice-from-another-environment-and-switches-4bc7d4
 
@@ -4936,7 +4936,7 @@ Expected:
 
 - **Area:** shared link environment
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.6s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shared-link-environment--opens-a-shared-invoice-from-another-environment-and-switches-4bc7d4/summary.md` in the run's artifact
 
@@ -4965,7 +4965,7 @@ Expected:
 
 - **Area:** shared link environment
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shared-link-environment--a-record-no-environment-has-is-still-not-found-3daf87/summary.md` in the run's artifact
 
@@ -4981,7 +4981,7 @@ Expected:
 
 </details>
 
-### shell — `apps/console/e2e/shell.spec.ts`
+### shell: `apps/console/e2e/shell.spec.ts`
 
 #### shell--navigates-the-catalogue-and-keeps-each-surface-addressable-af8caf
 
@@ -4989,7 +4989,7 @@ Expected:
 
 - **Area:** shell
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shell--navigates-the-catalogue-and-keeps-each-surface-addressable-af8caf/summary.md` in the run's artifact
 
@@ -5018,7 +5018,7 @@ Expected:
 
 - **Area:** shell
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shell--opens-a-surface-directly-by-its-url-717f46/summary.md` in the run's artifact
 
@@ -5043,7 +5043,7 @@ Expected:
 
 - **Area:** shell
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shell--settings-lists-the-pages-that-configure-the-product-in-one-f-a49eb0/summary.md` in the run's artifact
 
@@ -5073,7 +5073,7 @@ Expected:
 
 - **Area:** shell
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shell--the-footer-holds-integrations-and-documentation-not-settings-b28517/summary.md` in the run's artifact
 
@@ -5103,7 +5103,7 @@ Expected:
 
 - **Area:** shell
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shell--the-create-menu-opens-the-create-flows-not-the-lists-cc2549/summary.md` in the run's artifact
 
@@ -5131,7 +5131,7 @@ Expected:
 
 - **Area:** shell
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shell--renames-an-environment-from-the-switcher-e451de/summary.md` in the run's artifact
 
@@ -5160,7 +5160,7 @@ Expected:
 
 - **Area:** shell
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shell--switching-environment-leaves-an-id-addressed-page-for-its-li-3b481a/summary.md` in the run's artifact
 
@@ -5192,7 +5192,7 @@ Expected:
 
 - **Area:** shell
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.1s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/shell--a-product-catalogue-parent-routes-to-its-first-child-rather-3c921c/summary.md` in the run's artifact
 
@@ -5200,7 +5200,7 @@ Expected:
 
 Steps:
 
-1. _A group heading has no page of its own — clicking it must reach the first_
+1. _A group heading has no page of its own: clicking it must reach the first_
 2. _child, not do nothing. The child is what the person wanted anyway._
 3. `shell.goto('/')`
 4. `shell.go('Product catalog')`
@@ -5212,7 +5212,7 @@ Expected:
 
 </details>
 
-### subscription-create — `apps/console/e2e/subscription-create.spec.ts`
+### subscription-create: `apps/console/e2e/subscription-create.spec.ts`
 
 #### subscription-create--creates-a-contract-through-the-steps-and-posts-it-996a71
 
@@ -5220,7 +5220,7 @@ Expected:
 
 - **Area:** subscription create
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-create--creates-a-contract-through-the-steps-and-posts-it-996a71/summary.md` in the run's artifact
 
@@ -5273,7 +5273,7 @@ Expected:
 
 - **Area:** subscription create
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-create--creates-a-contract-that-other-customers-inherit-a91f8c/summary.md` in the run's artifact
 
@@ -5310,7 +5310,7 @@ Expected:
 
 </details>
 
-### subscription-depth — `apps/console/e2e/subscription-depth.spec.ts`
+### subscription-depth: `apps/console/e2e/subscription-depth.spec.ts`
 
 #### subscription-depth--contract-detail-overview-shows-the-upcoming-invoice-and-enti-07282c
 
@@ -5318,7 +5318,7 @@ Expected:
 
 - **Area:** subscription depth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-depth--contract-detail-overview-shows-the-upcoming-invoice-and-enti-07282c/summary.md` in the run's artifact
 
@@ -5355,7 +5355,7 @@ Expected:
 
 - **Area:** subscription depth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-depth--contract-detail-charges-tab-lists-the-contract-charges-f72862/summary.md` in the run's artifact
 
@@ -5383,7 +5383,7 @@ Expected:
 
 - **Area:** subscription depth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-depth--contract-detail-overview-keeps-every-add-section-and-adds-a-36842c/summary.md` in the run's artifact
 
@@ -5413,7 +5413,7 @@ Expected:
 
 - **Area:** subscription depth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.3s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-depth--adds-a-one-time-credit-grant-to-a-contract-with-the-start-da-f55230/summary.md` in the run's artifact
 
@@ -5444,7 +5444,7 @@ Expected:
 
 - **Area:** subscription depth
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-depth--a-changed-contract-price-stays-as-an-inactive-version-not-go-2647c6/summary.md` in the run's artifact
 
@@ -5481,7 +5481,7 @@ Expected:
 
 </details>
 
-### subscription-detail — `apps/console/e2e/subscription-detail.spec.ts`
+### subscription-detail: `apps/console/e2e/subscription-detail.spec.ts`
 
 #### subscription-detail--opens-a-contract-from-the-list-and-cancels-it-4c7526
 
@@ -5489,7 +5489,7 @@ Expected:
 
 - **Area:** subscription detail
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-detail--opens-a-contract-from-the-list-and-cancels-it-4c7526/summary.md` in the run's artifact
 
@@ -5518,7 +5518,7 @@ Expected:
 
 - **Area:** subscription detail
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-detail--opens-a-trialing-contract-instead-of-not-found-09b656/summary.md` in the run's artifact
 
@@ -5541,7 +5541,7 @@ Expected:
 
 - **Area:** subscription detail
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-detail--lists-a-trialing-contract-under-the-trialing-filter-5649d9/summary.md` in the run's artifact
 
@@ -5563,7 +5563,7 @@ Expected:
 
 - **Area:** subscription detail
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/subscription-detail--lists-a-trialing-contract-with-no-status-filter-chosen-914148/summary.md` in the run's artifact
 
@@ -5580,7 +5580,7 @@ Expected:
 
 </details>
 
-### tax-rates — `apps/console/e2e/tax-rates.spec.ts`
+### tax-rates: `apps/console/e2e/tax-rates.spec.ts`
 
 #### tax-rates--creates-a-tax-rate-on-its-own-page-de4865
 
@@ -5588,7 +5588,7 @@ Expected:
 
 - **Area:** tax rates
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.8s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/tax-rates--creates-a-tax-rate-on-its-own-page-de4865/summary.md` in the run's artifact
 
@@ -5620,7 +5620,7 @@ Expected:
 
 - **Area:** tax rates
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.4s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/tax-rates--cancel-returns-to-the-list-without-saving-d42d81/summary.md` in the run's artifact
 
@@ -5643,7 +5643,7 @@ Expected:
 
 - **Area:** tax rates
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.0s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/tax-rates--edits-a-tax-rate-from-the-row-menu-on-its-own-page-2d87d2/summary.md` in the run's artifact
 
@@ -5672,7 +5672,7 @@ Expected:
 
 - **Area:** tax rates
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.9s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/tax-rates--deletes-a-tax-rate-after-confirming-47c082/summary.md` in the run's artifact
 
@@ -5692,7 +5692,7 @@ Expected:
 
 </details>
 
-### usage-syncs — `apps/console/e2e/usage-syncs.spec.ts`
+### usage-syncs: `apps/console/e2e/usage-syncs.spec.ts`
 
 #### usage-syncs--lists-usage-records-with-where-they-were-synced-33c47e
 
@@ -5700,7 +5700,7 @@ Expected:
 
 - **Area:** usage syncs
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 792ms (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/usage-syncs--lists-usage-records-with-where-they-were-synced-33c47e/summary.md` in the run's artifact
 
@@ -5724,7 +5724,7 @@ Expected:
 
 - **Area:** usage syncs
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.2s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/usage-syncs--opens-the-sync-entries-for-a-record-9324d2/summary.md` in the run's artifact
 
@@ -5748,7 +5748,7 @@ Expected:
 
 - **Area:** usage syncs
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/usage-syncs--puts-the-search-in-the-url-and-survives-a-reload-0b33e0/summary.md` in the run's artifact
 
@@ -5770,7 +5770,7 @@ Expected:
 
 </details>
 
-### workflows — `apps/console/e2e/workflows.spec.ts`
+### workflows: `apps/console/e2e/workflows.spec.ts`
 
 #### workflows--lists-workflow-runs-with-their-type-status-and-duration-6438b5
 
@@ -5778,7 +5778,7 @@ Expected:
 
 - **Area:** workflows
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 1.7s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/workflows--lists-workflow-runs-with-their-type-status-and-duration-6438b5/summary.md` in the run's artifact
 
@@ -5803,7 +5803,7 @@ Expected:
 
 - **Area:** workflows
 - **Preconditions and data:** Mocked console (`VITE_USE_MOCKS=true`, MSW fixture corpus); no account, no network. A signed-in demo session is seeded into `localStorage` before each test. `beforeEach` setup in the file runs before it.
-- **Dependencies:** None — independent of other journeys.
+- **Dependencies:** None: independent of other journeys.
 - **Status:** PASS, 2.5s (mocked build (localhost), 2026-10-23T17:51:46.055Z)
 - **Report:** `e2e-results/journeys/workflows--puts-the-search-in-the-url-and-survives-a-reload-353162/summary.md` in the run's artifact
 

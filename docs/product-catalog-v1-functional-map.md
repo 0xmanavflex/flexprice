@@ -1,4 +1,4 @@
-# V1 product catalogue — the complete functional map
+# V1 product catalogue: the complete functional map
 
 Every field, every enum, every constraint the current product catalogue exposes.
 Read from `flexprice-front` source, not from screenshots. This exists so the V2
@@ -52,7 +52,7 @@ charge structure pointed at cost rather than price.
 | `description` | string | |
 | `group_id` | Group id | Group must have `entity_type = feature` |
 | `unit_singular` / `unit_plural` | string | Metered only. Typing singular auto-fills plural + "s" |
-| `reporting_unit` | `{ unit_singular, unit_plural, conversion_rate }` | Metered only. A *display* unit — e.g. store tokens, show "1K tokens". `conversion_rate` defaults to `0.01` if blank/invalid |
+| `reporting_unit` | `{ unit_singular, unit_plural, conversion_rate }` | Metered only. A *display* unit: e.g. store tokens, show "1K tokens". `conversion_rate` defaults to `0.01` if blank/invalid |
 | `metadata` | object | |
 
 ### 1.2 Feature type semantics
@@ -64,7 +64,7 @@ charge structure pointed at cost rather than price.
 | `STATIC` | A value configured per customer | No | `static_value` |
 | `CONFIG` | A structured key/value block | No | `config_value` (JSON) |
 
-### 1.3 Meter — metered features only, **create-only**
+### 1.3 Meter: metered features only, **create-only**
 
 | Field | Values | Notes |
 |---|---|---|
@@ -75,7 +75,7 @@ charge structure pointed at cost rather than price.
 | `aggregation.expression` | CEL string | **XOR with `field`.** Only `SUM`, `AVG`, `MAX`, `LATEST` accept one. Switching to any other type silently clears it |
 | `aggregation.multiplier` | number > 0 | Required for `SUM_WITH_MULTIPLIER` |
 | `aggregation.group_by` | string | Splits usage by a property |
-| `aggregation.bucket_size` | `MINUTE` `15MIN` `30MIN` `HOUR` `3HOUR` `6HOUR` `12HOUR` `DAY` `WEEK` `MONTH` | Windows usage before aggregating — e.g. per-hour `MAX` |
+| `aggregation.bucket_size` | `MINUTE` `15MIN` `30MIN` `HOUR` `3HOUR` `6HOUR` `12HOUR` `DAY` `WEEK` `MONTH` | Windows usage before aggregating: e.g. per-hour `MAX` |
 | `reset_usage` | `BILLING_PERIOD` \| `NEVER` | Whether the counter resets each period |
 
 ### 1.4 Alert settings
@@ -88,7 +88,7 @@ plus `alert_enabled`.
 Drawer, six fields: `name`, `description`, `group_id`, `unit_singular`,
 `unit_plural`, `reporting_unit.*`.
 
-**Not editable:** `type`, and the entire meter — event name, aggregation,
+**Not editable:** `type`, and the entire meter: event name, aggregation,
 filters, bucket size, reset. This is correct behaviour (past invoices would stop
 reconciling) but V1 never says so.
 
@@ -104,16 +104,16 @@ reconciling) but V1 never says so.
 
 Everything that makes a plan a plan is attached afterwards:
 
-- **Charges** — `EntityChargesPage`, a separate route, permissioned on `price`
-- **Entitlements** — `AddEntitlementDrawer`, on a tab
-- **Credit Grants** — `CreditGrantModal`, on another tab
+- **Charges**: `EntityChargesPage`, a separate route, permissioned on `price`
+- **Entitlements**: `AddEntitlementDrawer`, on a tab
+- **Credit Grants**: `CreditGrantModal`, on another tab
 
 Plan actions: edit · duplicate · archive · copy id · sync to integrations ·
 view workflows.
 
 ---
 
-## 3. Charge (Price) — the largest surface in the catalogue
+## 3. Charge (Price): the largest surface in the catalogue
 
 `src/models/Price.ts`, `UsagePricingForm.tsx` (816 lines),
 `RecurringChargesForm.tsx` (660 lines)
@@ -140,14 +140,14 @@ view workflows.
 | `metadata` | |
 | `parent_price_id` | Set when a subscription overrides a plan price |
 
-### 3.2 Billing models — five choices over three backend values
+### 3.2 Billing models: five choices over three backend values
 
 | UI label | Backend | Extra config |
 |---|---|---|
 | Flat Fee | `FLAT_FEE` | `amount` |
 | Package | `PACKAGE` | `transform_quantity: { divide_by, round: up\|down }` |
-| Volume Tiered | `TIERED` + `tier_mode: VOLUME` | `tiers[]` — all units priced at the tier reached |
-| Slab Tiered | `TIERED` + `tier_mode: SLAB` | `tiers[]` — each tier priced separately |
+| Volume Tiered | `TIERED` + `tier_mode: VOLUME` | `tiers[]`: all units priced at the tier reached |
+| Slab Tiered | `TIERED` + `tier_mode: SLAB` | `tiers[]`: each tier priced separately |
 | Percentage Fee | `FLAT_FEE` + decimal + a metadata marker | percentage of billable value |
 
 `tiers[]` = `[{ up_to: number \| null, unit_amount, flat_amount }]`. Only the
@@ -159,8 +159,8 @@ earlier tiers defensively.
 | Field | Notes |
 |---|---|
 | `meter_id` | Chosen by picking a **metered Feature** |
-| `filter_values` | `Record<string, string[]>` — charge only for a slice of the meter's events |
-| `bucket_size` | Price-level windowing. **Rejected by the API if the meter already defines one** — the form disables the control and drops the stale value |
+| `filter_values` | `Record<string, string[]>`: charge only for a slice of the meter's events |
+| `bucket_size` | Price-level windowing. **Rejected by the API if the meter already defines one**: the form disables the control and drops the stale value |
 
 `ONETIME` is not offered as a usage billing period; older records fall back to
 `MONTHLY`.
@@ -206,11 +206,11 @@ the stored unit (e.g. "5 M tokens" → `5000000`).
 | `name` | string |
 | `credits` | number |
 | `cadence` | `ONETIME` \| `RECURRING` |
-| `period` | `DAILY` `WEEKLY` `MONTHLY` `QUARTERLY` `HALF_YEARLY` `ANNUAL` — recurring only |
+| `period` | `DAILY` `WEEKLY` `MONTHLY` `QUARTERLY` `HALF_YEARLY` `ANNUAL`: recurring only |
 | `period_count` | number |
 | `expiration_type` | `NEVER` \| `DURATION` \| `BILLING_CYCLE` |
 | `expiration_duration` + `expiration_duration_unit` | number + `DAY` `WEEK` `MONTH` `YEAR` |
-| `priority` | number — which grant is consumed first |
+| `priority` | number: which grant is consumed first |
 | `scope` | `PLAN` \| `SUBSCRIPTION` \| `ADDON` |
 | `conversion_rate` / `topup_conversion_rate` | credit ↔ money |
 | `credit_grant_anchor`, `start_date`, `end_date` | |
@@ -219,22 +219,22 @@ the stored unit (e.g. "5 M tokens" → `5000000`).
 
 ## 6. Addon · Cost Sheet · Coupon · Price Unit · Group
 
-**Addon** — `name`, `description`, `lookup_key`, `metadata` + Charges +
+**Addon**: `name`, `description`, `lookup_key`, `metadata` + Charges +
 Entitlements + Credit Grants. Structurally a Plan that cannot be sold alone;
 shares `EntityChargesPage` outright.
 
-**Cost Sheet** — `name`, `description`, `lookup_key` + Charges. The same charge
+**Cost Sheet**: `name`, `description`, `lookup_key` + Charges. The same charge
 machinery pointed at **cost**, so margin can be computed.
 
-**Coupon** — `type: fixed \| percentage`, `amount_off` \| `percentage_off`,
+**Coupon**: `type: fixed \| percentage`, `amount_off` \| `percentage_off`,
 `currency`, `cadence: once \| repeated \| forever`, `duration_in_periods`,
 `coupon_code`, `redeem_after` / `redeem_before`, `max_redemptions`,
 `total_redemptions`, `rules`.
 
-**Price Unit** — `name`, `code` (3 chars), `symbol`, `base_currency`,
+**Price Unit**: `name`, `code` (3 chars), `symbol`, `base_currency`,
 `conversion_rate`.
 
-**Group** — `name`, `lookup_key`, `entity_type: price \| feature`, `entity_ids[]`.
+**Group**: `name`, `lookup_key`, `entity_type: price \| feature`, `entity_ids[]`.
 
 ---
 
@@ -249,7 +249,7 @@ machinery pointed at **cost**, so margin can be computed.
 | Plan itself | 4 |
 
 **A fully configured plan with three charges and four entitlements is well over
-a hundred decisions.** That is not accidental complexity to be designed away —
+a hundred decisions.** That is not accidental complexity to be designed away:
 it is the product. The design problem is that V1 presents all of it at one
 altitude, in five containers, with no indication of which decisions are load
 bearing.
@@ -269,14 +269,14 @@ bearing.
 
 ### Changes
 
-1. **Containers.** A Plan is configured on one screen — Details, Charges,
-   Entitlements, Credit Grants — instead of a drawer, a separate route, a
+1. **Containers.** A Plan is configured on one screen: Details, Charges,
+   Entitlements, Credit Grants: instead of a drawer, a separate route, a
    drawer on a tab, and a modal on another tab.
 
 2. **Altitude, not omission.** Every charge field stays on the charge editor.
    The ~6 that most charges set sit at the top; the other ~16 sit under
    **Advanced** *inside the same panel*. Advanced is open by default once any
-   field in it is non-default, and its header counts what is set — so nothing
+   field in it is non-default, and its header counts what is set: so nothing
    is ever hidden without saying so.
 
 3. **Consequence beside control.** `aggregation.type` keeps its name and its
@@ -287,13 +287,13 @@ bearing.
 4. **Irreversibility, stated.** Feature `type` and the whole meter are
    create-only. The form says so at the point of decision.
 
-5. **One validity check.** V1 has three — a Zod schema, a hand-written meter
+5. **One validity check.** V1 has three: a Zod schema, a hand-written meter
    validator, and a separately derived disabled state. V2 has the domain schema
    and nothing else.
 
 6. **Plans read as pricing.** The Plans surface leads with a pricing
-   representation — plans side by side with their charges and entitlements, the
-   way a customer would see them — because that is the artefact being designed.
+   representation: plans side by side with their charges and entitlements, the
+   way a customer would see them: because that is the artefact being designed.
    The full editor is one click behind it, not replaced by it.
 
 7. **Features are first class.** Feature creation stays a full page with the

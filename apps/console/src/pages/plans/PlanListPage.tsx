@@ -37,7 +37,7 @@ export function PlanListPage({
   const [archiving, setArchiving] = useState<Plan | null>(null)
   const failure = toListFailure(plans.error, 'plans')
   const rows = useMemo(() => plans.data?.plans ?? [], [plans.data])
-  // What each plan contains — entitlements, credit grants, contracts — read
+  // What each plan contains: entitlements, credit grants, contracts: read
   // for the rows on screen. None of it is on the plan itself.
   const linked = usePlanLinkage(useMemo(() => rows.map((plan) => plan.id), [rows]))
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -62,7 +62,7 @@ export function PlanListPage({
           onClearFilters={clearFilters}
           createAction={<Button onClick={() => onCreatePlan()}>New plan</Button>}
           emptyTitle="No plans yet"
-          emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants — create the first to start selling."
+          emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants: create the first to start selling."
         >
           <PlanGrid
             plans={rows}

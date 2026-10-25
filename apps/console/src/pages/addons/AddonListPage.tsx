@@ -18,7 +18,7 @@ export interface AddonListPageProps {
  * The add-on surface: a list. Create and edit are full pages (`AddonFormPage`);
  * names rename inline in the row.
  *
- * The list stays URL-driven — a filtered view is a link.
+ * The list stays URL-driven: a filtered view is a link.
  */
 export function AddonListPage({
   query,
@@ -56,7 +56,7 @@ export function AddonListPage({
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateAddon}>New add-on</Button>}
           emptyTitle="No add-ons yet"
-          emptyDescription="Add-ons are optional extras customers buy alongside a plan — extra seats, priority support. Create the first to offer one."
+          emptyDescription="Add-ons are optional extras customers buy alongside a plan: extra seats, priority support. Create the first to offer one."
         >
           <AddonGrid
             linkage={linked.byAddon}

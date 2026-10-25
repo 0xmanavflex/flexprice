@@ -18,7 +18,7 @@ import { WorkflowStepper } from './WorkflowStepper'
  * Create and Edit share it: the same body measure, and the actions sit in the
  * card under the fields. Edit is the same form prepopulated, so a person who has
  * created a plan already knows how to edit one. The surface is the reference
- * `Section` (never the Card primitive): it opens with what this form is for —
+ * `Section` (never the Card primitive): it opens with what this form is for:
  * the title. The shell still owns the breadcrumb.
  *
  * Layout only: the `<form>` (and its state) lives in the caller. Pass the
@@ -34,7 +34,7 @@ export const FormPageProvenance = provenance({
     'compositions/use-form-steps',
     'ui/field',
   ],
-  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, primary CTA; Previous/Next for a staged form) with the form beneath it — plus, optionally, a c-stepper-1 style stepper in the toolbar — or the Section surface with the actions at its foot.',
+  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, primary CTA; Previous/Next for a staged form) with the form beneath it: plus, optionally, a c-stepper-1 style stepper in the toolbar: or the Section surface with the actions at its foot.',
 })
 
 /** A stepper in the header: the form's `useFormSteps` flow, drawn as the header stepper. */

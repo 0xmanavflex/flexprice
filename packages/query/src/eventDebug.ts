@@ -7,7 +7,7 @@ import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 /**
  * Why one event did or did not bill.
  *
- * Read only when a sheet is open on an event, never for a list — the lookup
+ * Read only when a sheet is open on an event, never for a list: the lookup
  * walks five stages server-side and is far heavier than the row it explains.
  *
  * The window is taken from the event's own timestamp, widened by a day each

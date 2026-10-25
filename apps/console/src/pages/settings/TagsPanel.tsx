@@ -38,14 +38,14 @@ const ENTITY_OPTIONS = Object.values(GroupEntityType).map((value) => ({
 }))
 
 /**
- * Tags (formerly Labels) — the groups that tag prices and features for
+ * Tags (formerly Labels): the groups that tag prices and features for
  * reporting and filters.
  *
  * Tags are the console's name for the API's groups, so this reads and writes
  * the same records as the Groups pages. Creating one happens in a dialog on
  * this page: a tag is three fields, and leaving Settings for a full page to
  * fill them in is a lot of navigation for very little form. The groups API has
- * no update route, so there is no edit here either — Open goes to the detail
+ * no update route, so there is no edit here either: Open goes to the detail
  * page, which is where a group's members are managed.
  */
 export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }) {
@@ -73,7 +73,7 @@ export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }
       <SettingsTable<Group>
         label="Tags"
         noun="tags"
-        hint="Group prices and features so they can be filtered, reported and invoiced together."
+        hint="Tag prices and features so they can be filtered, reported and invoiced together."
         rows={rows}
         isLoading={groups.isPending}
         getRowId={(group) => group.id}

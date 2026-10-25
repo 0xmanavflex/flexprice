@@ -28,7 +28,7 @@ const dayLabel = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'nume
  * Without a cost sheet the cost read fails or comes back empty; cost and
  * margin then read "—" and revenue falls back to the usage read's own total.
  *
- * Rendered only for a customer with an external id — analytics are matched by
+ * Rendered only for a customer with an external id: analytics are matched by
  * it, and without one the query would read the whole tenant.
  */
 export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {

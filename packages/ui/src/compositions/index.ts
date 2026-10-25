@@ -1,7 +1,7 @@
 /**
  * Generic behaviour composed over ReUI parts.
  *
- * Nothing here knows what an invoice is — that is `../pages`. A composition
+ * Nothing here knows what an invoice is: that is `../pages`. A composition
  * is the preferred way to differ from the registry, because it leaves the
  * registry component untouched and upgradeable.
  */

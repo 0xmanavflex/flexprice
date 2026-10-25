@@ -72,15 +72,15 @@ import type { EntityColumn } from './cells'
  *
  * Twenty list screens, one component. Before this there were twelve grids,
  * each a hand-assembled `DataGrid` with its own `tableLayout`, its own toolbar
- * order, its own idea of a row's height and its own empty state — which is why
+ * order, its own idea of a row's height and its own empty state: which is why
  * no two of them lined up, and why fixing the padding meant fixing it twelve
  * times and missing two.
  *
  * So the layout is *not* a prop. A caller supplies rows, columns and the
  * handlers for what it wants told about; the header band, the row height, the
  * cell padding, the pinning rule, the toolbar order and the footer are decided
- * here, once. The generic escape hatches that would let a page differ — a
- * `tableLayout` passthrough, a `tableClassNames`, a raw `ColumnDef` — are
+ * here, once. The generic escape hatches that would let a page differ: a
+ * `tableLayout` passthrough, a `tableClassNames`, a raw `ColumnDef`: are
  * deliberately absent, because every one of them is a way for the twenty to
  * drift apart again.
  *
@@ -92,13 +92,13 @@ import type { EntityColumn } from './cells'
  *   three nested rectangles saying the same thing. `border` is the one switch:
  *   it draws a rounded outline around the rows (not the toolbar) for a table
  *   that sits among other panels with no `Section` of its own around it. It is
- *   the same table either way — list pages, detail tables and settings tables
+ *   the same table either way: list pages, detail tables and settings tables
  *   all render through here.
  *
  *   **The page scrolls, not the table.** Sticky headers are off. A table with
  *   its own vertical scrollbar inside a page that also scrolls gives you two
  *   scrollbars and a body that is shorter than the screen; at twenty-five rows
- *   the page scroll is the honest one. Horizontal is different — a wide table
+ *   the page scroll is the honest one. Horizontal is different: a wide table
  *   scrolls sideways *within* the page, which is why the scroll area is here
  *   at all.
  *
@@ -106,11 +106,11 @@ import type { EntityColumn } from './cells'
  *   column so the set exactly spans the content width, rather than leaving the
  *   dead band on the right that a fixed-width table always leaves on a wide
  *   screen. When the page is too narrow the same scale runs backwards, down to
- *   {@link MIN_SCALE} — six per cent — after which the table gives up and
+ *   {@link MIN_SCALE}: six per cent: after which the table gives up and
  *   scrolls instead of squeezing a date column into nothing.
  *
  *   **Pinning is a consequence, not a setting.** The checkbox and `⋯` columns
- *   pin — and grow their divider — exactly when the table actually overflows.
+ *   pin: and grow their divider: exactly when the table actually overflows.
  *   Pinned columns on a table that fits are a divider and a shadow drawn
  *   around nothing.
  */
@@ -121,7 +121,7 @@ export const EntityListProvenance = provenance({
 })
 
 /* ------------------------------------------------------------------ *
- * Layout constants — the numbers the design fixes
+ * Layout constants: the numbers the design fixes
  * ------------------------------------------------------------------ */
 
 /** The `⋯` row-actions column. Wide enough for a 28px button and no wider. */
@@ -130,8 +130,8 @@ const ACTIONS_WIDTH = 40
  * How far the set of columns may be squeezed below its natural width before
  * the table stops squeezing and scrolls sideways instead.
  *
- * Six per cent is roughly the slack in a comfortable column — the difference
- * between "Updated" with room to breathe and "Updated" against its own edge —
+ * Six per cent is roughly the slack in a comfortable column: the difference
+ * between "Updated" with room to breathe and "Updated" against its own edge:
  * and nothing past it buys legibility, it only takes it.
  */
 const MIN_SCALE = 0.94
@@ -144,8 +144,8 @@ const ACTIONS_ID = '__actions'
 
 /**
  * The one component every cell renders through. `flexRender` mounts a function
- * `cell` as a component, so an inline arrow — a new type each time the columns
- * are rebuilt, which is every render of a parent that builds them inline —
+ * `cell` as a component, so an inline arrow: a new type each time the columns
+ * are rebuilt, which is every render of a parent that builds them inline:
  * remounted every cell on any re-render and closed an open row menu under the
  * pointer. The column's own renderer rides on `meta.renderCell` instead.
  */
@@ -342,7 +342,7 @@ function HeaderLabel({ title, className }: { title: string; className?: string }
       /*
        * `flex` only when centring.
        * Adding it unconditionally changed the box of every table header in
-       * the app — fourteen visual baselines moved for a change that was
+       * the app: fourteen visual baselines moved for a change that was
        * meant to touch four count columns.
        */
       className={cn(
@@ -359,7 +359,7 @@ function HeaderLabel({ title, className }: { title: string; className?: string }
  * A sortable heading.
  *
  * The arrow appears only once the column is sorted. A permanent up-down
- * chevron on every sortable column — the registry's own default — puts nine
+ * chevron on every sortable column: the registry's own default: puts nine
  * identical glyphs across the header, and the one that means "this is the
  * sort" is then indistinguishable from the eight that mean "this could be".
  */
@@ -614,8 +614,8 @@ export function EntityList<T extends object>({
      *
      * The frame's width is decided by the page; the table's is decided by the
      * column sizes this observer then sets. Measuring the table would close
-     * that loop — wider columns, wider table, wider measurement, wider columns
-     * — and a ResizeObserver that feeds itself is the classic way to get the
+     * that loop: wider columns, wider table, wider measurement, wider columns
+     *: and a ResizeObserver that feeds itself is the classic way to get the
      * browser's "loop completed with undelivered notifications" warning and a
      * table that grows a pixel per frame.
      */
@@ -642,7 +642,7 @@ export function EntityList<T extends object>({
    * One pass: the fixed columns keep their widths, whatever is left is shared
    * between the rest in proportion to the widths they asked for, and the scale
    * is floored at `MIN_SCALE`. Hitting the floor is precisely the case where
-   * the table must scroll, which is also what turns pinning on — one number
+   * the table must scroll, which is also what turns pinning on: one number
    * decides both, so the divider cannot appear on a table that fits.
    */
   const { sizing, overflows } = useMemo(() => {
@@ -668,7 +668,7 @@ export function EntityList<T extends object>({
      *
      * `clientWidth` is a rounded integer and the frame's real width is
      * routinely fractional, so a set of columns summing to exactly
-     * `clientWidth` can still land a fraction over the true box — which the
+     * `clientWidth` can still land a fraction over the true box: which the
      * scroll area answers with a scrollbar for one pixel of content. Giving
      * the pixel up is invisible; the spurious scrollbar is not.
      */
@@ -684,7 +684,7 @@ export function EntityList<T extends object>({
 
     /*
      * Rounding leaves a few pixels over. When there is room to spare they go
-     * to the widest flexible column — usually the name — so the set spans the
+     * to the widest flexible column: usually the name: so the set spans the
      * frame *exactly*. A one-pixel shortfall is a one-pixel pale stripe down
      * the right edge of the header band, and it is surprisingly visible.
      */
@@ -793,7 +793,7 @@ export function EntityList<T extends object>({
         ? {
             // `start`/`end`, not `left`/`right`: v9 renamed the axis to the
             // logical one, and a `{ left, right }` object type-checks against
-            // the loose state slot and then reads as *no pinning at all* — the
+            // the loose state slot and then reads as *no pinning at all*: the
             // table asks for `start.length` and gets `undefined`.
             start: [],
             end: [

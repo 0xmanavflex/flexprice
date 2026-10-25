@@ -1,4 +1,4 @@
-# Portal redesign — still to do
+# Portal redesign: still to do
 
 Written October 16, 2026, from `docs/portal-redesign-action-plan.txt` and the work recorded after it. Items already shipped are left out. Caveats on shipped items are listed only where the plan still calls the item incomplete.
 

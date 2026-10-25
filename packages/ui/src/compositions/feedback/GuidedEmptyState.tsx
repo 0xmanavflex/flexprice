@@ -98,7 +98,7 @@ export function GuideGrid({
           href={guide.href}
           target="_blank"
           rel="noreferrer"
-          aria-label={`${guide.title} — read docs`}
+          aria-label={`${guide.title}: read docs`}
           className="group bg-background hover:border-foreground/15 flex min-w-0 flex-col gap-3 rounded-xl border p-6 transition-colors"
         >
           {guide.icon ? (

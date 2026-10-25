@@ -36,18 +36,18 @@ import {
 } from './revenueReport'
 
 /**
- * Reports — the analytics report library, on the console's report components.
+ * Reports: the analytics report library, on the console's report components.
  *
  * Every figure comes from `POST /analytics/reports/{key}/query`, one report per
  * panel, on the same range, grain, currency and comparison:
  *
- *   - **Revenue** — `invoice_total`: scalar (headline and totals), timeseries
+ *   - **Revenue**: `invoice_total`: scalar (headline and totals), timeseries
  *     (the chart) and breakdown by customer (the Customers tab).
- *   - **ARPU** — `arpu`.
- *   - **Receivables** — `total_receivables` (outstanding) and
+ *   - **ARPU**: `arpu`.
+ *   - **Receivables**: `total_receivables` (outstanding) and
  *     `receivables_aging` by bucket and by customer.
- *   - **Payments** — `days_to_pay`: scalar, timeseries and breakdown by customer.
- *   - **Usage** — `events_volume`, with `credit_consumption` and `credit_topups`.
+ *   - **Payments**: `days_to_pay`: scalar, timeseries and breakdown by customer.
+ *   - **Usage**: `events_volume`, with `credit_consumption` and `credit_topups`.
  *
  * The usage and contract split of revenue is the one figure no report gives:
  * it stays on the revenue dashboard (`POST /dashboard/revenue-dashboard`).

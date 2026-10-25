@@ -12,7 +12,7 @@ import { CostSheetGrid } from './CostSheetGrid'
 /**
  * The cost sheet list, over the shared `EntityList`.
  *
- * Cost sheets as plain domain values — no client, no provider, no network.
+ * Cost sheets as plain domain values: no client, no provider, no network.
  */
 const costSheetFixtures: CostSheet[] = [
   {
@@ -36,7 +36,7 @@ const costSheetFixtures: CostSheet[] = [
     updatedAt: new Date('2026-02-20T00:00:00Z'),
   },
   {
-    // No lookup key and no prices yet — the sheet a hand-written demo omits.
+    // No lookup key and no prices yet: the sheet a hand-written demo omits.
     id: 'cs_03',
     name: 'Storage egress',
     lookupKey: '',
@@ -47,7 +47,7 @@ const costSheetFixtures: CostSheet[] = [
     updatedAt: null,
   },
   {
-    // Archived — the muted row.
+    // Archived: the muted row.
     id: 'cs_04',
     name: 'Legacy vendor',
     lookupKey: 'legacy_vendor',
@@ -143,7 +143,7 @@ export const Populated: Story = {
     const canvas = within(canvasElement)
 
     await expect(await canvas.findByText('AI inference costs')).toBeInTheDocument()
-    // Line items is the count the API gives — the prices themselves were
+    // Line items is the count the API gives: the prices themselves were
     // collapsed to a number long before this component saw them.
     await expect(canvas.getByText('12')).toBeInTheDocument()
     // A sheet with no description says so rather than rendering blank.
@@ -186,7 +186,7 @@ export const Layout: Story = {
 
 export const Loading: Story = { args: { costSheets: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     costSheets: [],

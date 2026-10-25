@@ -16,7 +16,7 @@ import type { ChartTone } from './charts'
  * its centre sits near the foot of the box, the running total floating in the
  * gap, and a divided footer reading the slices out. The block binds all of that
  * to its own capital-inflow figures and takes no props, so what is reused is
- * the geometry — the angles, the radii, the `cy` that makes the arc sit right,
+ * the geometry: the angles, the radii, the `cy` that makes the arc sit right,
  * the 1° padding and 3px corners that keep adjacent slices distinct.
  *
  * The footer is not decoration and not optional: it is the legend. A donut with
@@ -50,7 +50,7 @@ export interface DonutSlice {
   /**
    * Which token paints it.
    *
-   * Status tones (`good`/`warning`/`critical`) when the slices are *states* —
+   * Status tones (`good`/`warning`/`critical`) when the slices are *states*:
    * paid, open, overdue. Categorical tones (`series-*`) when they are merely
    * different things. Mixing the two teaches people that a colour means
    * nothing, which is the one thing a status colour cannot survive.
@@ -62,7 +62,7 @@ export interface HalfDonutProps {
   slices: DonutSlice[]
   /** Small caption above the centre figure, e.g. "Invoices". */
   centerLabel: string
-  /** The centre figure, already formatted — a count, a `<Money>`, a percentage. */
+  /** The centre figure, already formatted: a count, a `<Money>`, a percentage. */
   centerValue: ReactNode
   /** Formats slice values for the tooltip and footer. Defaults to a locale-grouped integer. */
   format?: ((value: number) => string) | undefined
@@ -97,7 +97,7 @@ export function HalfDonut({
   const empty = unknown || status === 'empty' || total <= 0
 
   // Recharts needs something with a non-zero value to draw an arc at all, so an
-  // all-zero window is drawn as one full muted ring — the track, not a slice.
+  // all-zero window is drawn as one full muted ring: the track, not a slice.
   const data = empty
     ? [{ id: '__track__', label: centerLabel, value: 1, tone: 'neutral' as ChartTone }]
     : slices.filter((slice) => slice.value > 0)

@@ -5,7 +5,7 @@ import { z } from 'zod'
  *
  * Kept in the domain with every other schema rather than inlined in the form.
  * Email formatting is not a billing rule, but a rule that lives in one place
- * except when it does not is a rule nobody can rely on — and the exception is
+ * except when it does not is a rule nobody can rely on: and the exception is
  * always the first thing to drift.
  */
 export const signInSchema = z.object({
@@ -22,7 +22,7 @@ export type SignInCredentials = z.infer<typeof signInSchema>
 /**
  * A new account: a work email and a password typed twice.
  *
- * Eight characters, because that is what the API enforces —
+ * Eight characters, because that is what the API enforces:
  * `SignUpRequest.Password` is `binding:"omitempty,min=8"`. A shorter minimum
  * here does not make shorter passwords work; it makes the form accept one and
  * the server reject it, which reads as a broken sign-up rather than as a rule.

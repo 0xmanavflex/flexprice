@@ -5,14 +5,14 @@
  *
  * ## Why this is not five booleans
  *
- * V1's portal screen renders five switches — show usage, show credits, show
- * invoices, and so on — because five switches is what its form needed. The
+ * V1's portal screen renders five switches: show usage, show credits, show
+ * invoices, and so on: because five switches is what its form needed. The
  * setting is not five switches. It is an **ordered tree**: sections, each with
  * a label and a position, each holding ordered tabs, each tab typed, and two
  * tab types carrying a payload of their own (which metric cards to show; which
  * date presets the usage graph offers).
  *
- * Arrays are replaced wholesale by the write — the backend merges the top
+ * Arrays are replaced wholesale by the write: the backend merges the top
  * level of the value and nothing below it. So a screen that reads the tree,
  * projects it down to five booleans and PUTs the booleans back does not
  * "ignore" the rest of the tree, it **deletes** it: every label, every
@@ -22,7 +22,7 @@
  *
  * ## Why there is no passthrough for unknown fields
  *
- * The tempting defence — keep unrecognised keys and write them back — does not
+ * The tempting defence: keep unrecognised keys and write them back: does not
  * work here and would be worse than not trying. The write path converts the
  * merged value into the backend's Go struct before saving
  * (`internal/ee/service/settings.go`), so **any field the struct does not
@@ -39,7 +39,7 @@ import { z } from 'zod'
  * The tab types the portal understands.
  *
  * The backend types `tab.type` as an unconstrained string, so this list is
- * V1's and is for labelling and for an "add a tab" menu — not for validation.
+ * V1's and is for labelling and for an "add a tab" menu: not for validation.
  * `PortalTab.type` stays a `string` accordingly: an unrecognised type is a
  * portal configured by something newer, and it must survive being read,
  * rendered as best we can, and written back.
@@ -108,7 +108,7 @@ export type PortalUsageGraph = z.infer<typeof portalUsageGraphSchema>
 /**
  * One tab.
  *
- * `id` is the API's own string id — a stringified integer (`"1"`, `"11"`),
+ * `id` is the API's own string id: a stringified integer (`"1"`, `"11"`),
  * unique only within its section. Sorting on it would be lexicographic
  * nonsense (`"10"` before `"2"`), which is what `order` is for.
  */
@@ -137,7 +137,7 @@ export type PortalSection = z.infer<typeof portalSectionSchema>
 /**
  * The portal's colours.
  *
- * Three, and only three — the backend struct has `primary_color`,
+ * Three, and only three: the backend struct has `primary_color`,
  * `secondary_color` and `tertiary_color`. V1's theme editor also offers a
  * background, a surface, a border, a logo and a font, none of which the server
  * has ever stored. Empty strings are the norm; the live default is `{}`.
@@ -160,7 +160,7 @@ export type CustomerPortalConfig = z.infer<typeof customerPortalConfigSchema>
 /**
  * Sections in the order the portal renders them.
  *
- * The API does not promise the array is sorted — the live value happens to
+ * The API does not promise the array is sorted: the live value happens to
  * come back with `order` 1..4 in array order, which is exactly the kind of
  * accident a screen should not depend on. Ties keep their array position:
  * `Array.prototype.sort` is stable, and an arbitrary reshuffle of two
@@ -192,8 +192,8 @@ export function visibleTabTypes(config: CustomerPortalConfig): string[] {
 /**
  * Edits, as whole-config replacements.
  *
- * Each returns a new config with one thing changed and everything else — every
- * sibling tab, every ordering, the theme — carried through untouched. That is
+ * Each returns a new config with one thing changed and everything else: every
+ * sibling tab, every ordering, the theme: carried through untouched. That is
  * the only safe way to edit a value that is written whole: a panel that builds
  * a fresh object out of its form fields is the five-booleans bug wearing
  * different clothes.
@@ -309,7 +309,7 @@ function mapTab(
  *
  * Not the backend's defaults. The default tree is four sections and ten tabs,
  * and reproducing it here would be a second source of truth that drifts the
- * first time the backend adds a tab — the exact trap V1 fell into, where a
+ * first time the backend adds a tab: the exact trap V1 fell into, where a
  * client-side default tree is deep-merged over the server's and quietly
  * reorders it. This is what a screen renders before the first fetch resolves.
  */

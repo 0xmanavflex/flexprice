@@ -150,7 +150,7 @@ export interface RevenueReportProps {
     usage: ReportFigure
     contract: ReportFigure
     usageShare: string
-    /** `month`, `week` or `day` — what one bar is. */
+    /** `month`, `week` or `day`: what one bar is. */
     grain: string
     series: RevenuePoint[]
   }

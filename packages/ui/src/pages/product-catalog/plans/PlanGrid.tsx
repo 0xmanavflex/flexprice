@@ -47,7 +47,7 @@ import {
  * has, what a row's menu offers, and how a `PlanQuery` maps onto the shared
  * table's flat callbacks.
  *
- * The counts beside each plan — entitlements, credit grants, contracts — are
+ * The counts beside each plan: entitlements, credit grants, contracts: are
  * not on `PlanWire`; `linkage` carries them, read for the rows on screen by
  * `usePlanLinkage`. A figure that could not be read stays blank rather than
  * showing a zero nobody verified.
@@ -74,7 +74,7 @@ const SORT_OPTIONS = Object.values(PlanSortField).map((value) => ({
 const PERIOD_SHORT: Record<string, string | undefined> = BILLING_PERIOD_SHORT
 
 /**
- * The headline price, as a pricing page writes it — `$29 /mo`.
+ * The headline price, as a pricing page writes it: `$29 /mo`.
  *
  * `amount` is the string the API already formatted, never a float this side
  * re-derives (`money.ts` forbids client-side money arithmetic), and `period`
@@ -188,7 +188,7 @@ export function PlanGrid({
      *
      * Zero reads as a dash, as the redesign has it: a row of noughts across
      * an empty plan is harder to scan past than blanks, and "none" is what
-     * the dash means here. Unknown — the linkage could not be read — is the
+     * the dash means here. Unknown: the linkage could not be read: is the
      * same dash, because the distinction is not one the grid can usefully
      * draw; it is still kept in the data, where `undefined` and `0` stay
      * apart for anything that needs them.
@@ -267,7 +267,7 @@ export function PlanGrid({
       // Base price, Updated and Created are real and all three were on the
       // grid before. The redesign's layout does not spend a column on any of
       // them, so they stay one click away in the `⋯` menu rather than being
-      // dropped — nothing that existed is lost.
+      // dropped: nothing that existed is lost.
       {
         id: 'basePrice',
         header: 'Base price',
@@ -412,7 +412,7 @@ export function PlanGrid({
         scene: 'catalog',
         title: 'No plans yet',
         description:
-          'A plan is what a customer subscribes to — a set of charges sold together under one name. Create one, price it, and it is ready to sell.',
+          'A plan is what a customer subscribes to: a set of charges sold together under one name. Create one, price it, and it is ready to sell.',
         guides: GUIDES,
       }}
     />

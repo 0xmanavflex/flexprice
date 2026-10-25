@@ -54,7 +54,7 @@ export const COST_SHEET_SORT_LABEL: Record<CostSheetSortField, string> = {
   [CostSheetSortField.UpdatedAt]: 'Updated',
 }
 
-/** Table or cards. A layout, not a filter — kept out of the fetch key. */
+/** Table or cards. A layout, not a filter: kept out of the fetch key. */
 export const CostSheetView = {
   Table: 'table',
   Cards: 'cards',
@@ -83,7 +83,7 @@ export const DEFAULT_COST_SHEET_QUERY: CostSheetQuery = {
   view: CostSheetView.Table,
   filters: [],
 }
-/** What the cost sheet list can filter on — V1's fields, by their wire names. */
+/** What the cost sheet list can filter on: V1's fields, by their wire names. */
 export const COST_SHEET_FILTERS: readonly ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },
   { field: 'lookup_key', label: 'Lookup key', kind: 'text' },

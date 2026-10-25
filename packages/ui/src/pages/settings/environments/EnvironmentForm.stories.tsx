@@ -141,7 +141,7 @@ export const SandboxWarning: Story = {
  * Production withheld: still selectable, but create is disabled.
  *
  * Choosing Production is how someone asks for it, so the card is not greyed
- * out. What changes is the way forward — "Create environment" is disabled and
+ * out. What changes is the way forward: "Create environment" is disabled and
  * V1's approval note takes its place, with Slack, email and a booked call.
  */
 export const ProductionUnavailable: Story = {

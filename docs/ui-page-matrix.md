@@ -11,7 +11,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
 | PlaceholderPage.tsx | `PlaceholderPage` | Other | EmptyState, PageHeader | Button, PageBody |
-| addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, MetricRail, RowActionsMenu, Section, SortMenu | AddonSubscriptionsView, ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, MetadataCard, PencilIcon, Pill, PuzzleIcon |
+| addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, MetricRail, RowActionsMenu, Section, SortMenu | AddonSubscriptionsView, ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, MetadataCard, PencilIcon, Pill, PuzzleIcon, RefreshCwIcon |
 | addons | `AddonFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AddonForm, AppFailure, LoadingRows, PageBody |
 | addons | `AddonListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | AddonGrid, Button, ListState, PageBody |
 | auth | `AuthCallbackPage` | Other | — | AuthFrame, Button |

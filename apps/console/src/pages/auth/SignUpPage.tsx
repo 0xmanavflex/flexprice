@@ -114,8 +114,8 @@ export function SignUpPage() {
 }
 
 /**
- * Supabase's own words for a refused sign-up are worth showing — they carry the
- * password policy and rate limits the project enforces — except a bare network
+ * Supabase's own words for a refused sign-up are worth showing: they carry the
+ * password policy and rate limits the project enforces: except a bare network
  * failure, which reads better as ours.
  */
 function supabaseMessage(cause: unknown): string {

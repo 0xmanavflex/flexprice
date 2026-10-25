@@ -172,7 +172,7 @@ export const Unmatched: Story = {
  * The trace is the reason this sheet exists.
  *
  * Without it the sheet is a payload viewer, and the question people open it
- * with — "why is this not on the invoice?" — goes unanswered.
+ * with: "why is this not on the invoice?": goes unanswered.
  */
 export const Traced: Story = {
   args: { debug: TRACED, onOpenSubscription: fn() },
@@ -200,7 +200,7 @@ export const FailedAtTheMeter: Story = {
     ).toBeVisible()
     await expect(sheet.getByText('No meter is configured for "api_call".')).toBeVisible()
     await expect(sheet.getAllByLabelText('Failed')).toHaveLength(1)
-    // Three skipped, not three more failures — one red row, not four.
+    // Three skipped, not three more failures: one red row, not four.
     await expect(sheet.getAllByLabelText('Not reached')).toHaveLength(3)
   },
 }
@@ -296,7 +296,7 @@ export const TracePending: Story = {
   },
 }
 
-/** An untraceable event still shows its payload — the sheet is not useless. */
+/** An untraceable event still shows its payload: the sheet is not useless. */
 export const TraceFailed: Story = {
   args: {
     debugError: 'This event is outside the window the trace searches.',
@@ -315,7 +315,7 @@ export const TraceFailed: Story = {
  * response.
  *
  * The five stages are things Flexprice did *after* ingestion, so without the
- * Ingested row the list quietly assumes the event arrived — the first thing
+ * Ingested row the list quietly assumes the event arrived: the first thing
  * to confirm when nothing else makes sense. And the readable rows are a
  * summary: the field that explains a given event is often one nobody thought
  * to surface, so the raw response stays one click away.

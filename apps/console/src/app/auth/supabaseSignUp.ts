@@ -18,7 +18,7 @@ export { ConfirmationLinkInvalid, EmailNotConfirmed }
  *   2. The link lands on `/auth/signup/confirmation` with a session in the URL fragment.
  *      {@link readConfirmedSession} reads it, the page calls `POST /auth/signup`
  *      with its token, and {@link refreshedToken} swaps that token for one
- *      carrying the new tenant — the backend puts `tenant_id` into the user's
+ *      carrying the new tenant: the backend puts `tenant_id` into the user's
  *      `app_metadata`, and only a refreshed token has it.
  *
  * A self-hosted build has no Supabase; {@link supabaseSignUpFor} says so and the
@@ -34,7 +34,7 @@ export function supabaseSignUpFor(region: string): boolean {
  * V1's confirmation path, kept on purpose. The Supabase projects' Redirect URLs
  * already allow it on every origin V1 runs on, localhost included. Anything not
  * on that list is not refused: GoTrue silently sends the browser to the
- * project's Site URL — prod — instead. That is how Google sign-in from a local
+ * project's Site URL: prod: instead. That is how Google sign-in from a local
  * V2 ended up on the production dashboard while it returned to `/sign-up/confirm`.
  */
 export const SIGN_UP_CONFIRM_PATH = '/auth/signup/confirmation'
@@ -61,7 +61,7 @@ function configFor(region: string) {
 
 /**
  * Registers the email and password with Supabase, which emails a confirmation
- * link. Resolves the same way whether or not the address is already taken —
+ * link. Resolves the same way whether or not the address is already taken:
  * Supabase does not say, and neither does the screen that follows.
  */
 export async function startSignUp(region: string, email: string, password: string): Promise<void> {
@@ -79,8 +79,8 @@ export async function startSignUp(region: string, email: string, password: strin
  * The same two-halves shape as email sign-up, with Google standing in for the
  * inbox: Supabase authenticates, then the browser comes back to
  * `/auth/signup/confirmation` with a session in the fragment, and that page either
- * creates the Flexprice account or — when the user already has one, so the
- * session's `app_metadata` already names a tenant — simply signs them in.
+ * creates the Flexprice account or: when the user already has one, so the
+ * session's `app_metadata` already names a tenant: simply signs them in.
  * Nothing new is needed there; it already distinguishes the two.
  *
  * Returns the URL rather than navigating, so the caller owns the page
@@ -113,7 +113,7 @@ export interface ConfirmedSession {
   email: string
   userId: string
   accessToken: string
-  /** Set when the account already exists — the link was followed a second time. */
+  /** Set when the account already exists: the link was followed a second time. */
   tenantId: string | null
 }
 
@@ -173,14 +173,14 @@ export async function forgetConfirmation(region: string): Promise<void> {
 /**
  * A sign-up that stopped half way, picked up at sign-in.
  *
- * If the confirmation page never finished — the tab was closed, the request
- * failed, the link was opened twice — Supabase has a confirmed user and
+ * If the confirmation page never finished: the tab was closed, the request
+ * failed, the link was opened twice: Supabase has a confirmed user and
  * Flexprice has none, so `POST /auth/login` refuses and the one-use link is
  * spent. V1 recovered by signing in through Supabase; so does this.
  *
  * Called only after `POST /auth/login` refused. Resolves with the confirmed
  * session when there is an account to finish (no tenant yet), and with null
- * when there is not — wrong password, or a user who already has an organisation
+ * when there is not: wrong password, or a user who already has an organisation
  * and was refused for another reason, which must stand. Rejects with
  * {@link EmailNotConfirmed} when the password is right but the email was never
  * confirmed, which is worth saying.
@@ -240,7 +240,7 @@ export async function completeAccount(
      *
      * The API reads the tenant from the token's `app_metadata.tenant_id`, and
      * `ValidateToken` returns an empty tenant rather than an error when it is
-     * missing — the middleware then refuses with "Invalid token claims". The
+     * missing: the middleware then refuses with "Invalid token claims". The
      * session *object* can carry a tenant the *token* does not, because the
      * token was minted earlier; `confirmed.tenantId` is read from the former.
      * Refreshing mints one from the current metadata, which is what V1 does

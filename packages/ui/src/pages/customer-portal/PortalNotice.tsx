@@ -5,7 +5,7 @@ import { provenance } from '@ui/provenance'
 
 /**
  * The portal when there is nothing to show: a link that is wrong or has
- * expired, or a portal that failed to load. No sign-in offered — the customer
+ * expired, or a portal that failed to load. No sign-in offered: the customer
  * has no Flexprice account; their link is the credential.
  */
 export const PortalNoticeProvenance = provenance({

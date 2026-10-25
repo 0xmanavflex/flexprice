@@ -1,6 +1,6 @@
 # E2E testing: release verification, reports and Slack
 
-The journey inventory — every journey, what it does and its last recorded result — is
+The journey inventory: every journey, what it does and its last recorded result: is
 [`docs/e2e-journeys.md`](e2e-journeys.md). This page is how the suite runs.
 
 ## Two suites, two triggers
@@ -27,7 +27,7 @@ push to main
        1. reads that Pipeline run's jobs: continues only if the "Deploy main" job
           succeeded AND its "Deploy" step concluded success (not skipped)
        2. polls <E2E_BASE_URL>/meta.json until it serves the released commit
-          (every build publishes its commit there — apps/console/app-version.ts)
+          (every build publishes its commit there: apps/console/app-version.ts)
        3. checks the API at E2E_API_URL answers
        4. runs the live journeys against production, one at a time
        5. uploads e2e-results (always)
@@ -40,7 +40,7 @@ run whose deploy failed, was skipped (no Vercel secrets) or was cancelled by a n
 
 It cannot affect a release. Pipeline has already finished when it starts, nothing in
 Pipeline `needs:` it, and it never calls or re-runs a deploy, so a failure can only fail
-_this_ workflow. Pipeline's own conclusion is deliberately not used as the signal — its last
+_this_ workflow. Pipeline's own conclusion is deliberately not used as the signal: its last
 stage (mocked suites) runs after the deploy, so it can go red while the release is live.
 
 Concurrency is one run per released commit (`e2e-release-<sha>`, queued, not cancelled), so
@@ -59,7 +59,7 @@ Settings → Secrets and variables → Actions.
 | `E2E_ENVIRONMENT`       | Variable | optional    | Environment whose rows the read-only catalogue journey asserts on; that journey is SKIPPED without it                                              |
 | `E2E_RETRIES`           | Variable | optional    | Retries per journey, default `0` (see Retries)                                                                                                     |
 | `E2E_SLACK_CHANNEL_ID`  | Variable | for videos  | Channel id (`C…`) for the bot-token report                                                                                                         |
-| `E2E_USER`              | Secret   | yes         | The dedicated E2E account's email — never a person's                                                                                               |
+| `E2E_USER`              | Secret   | yes         | The dedicated E2E account's email: never a person's                                                                                               |
 | `E2E_PASSWORD`          | Secret   | yes         | Its password                                                                                                                                       |
 | `E2E_SLACK_WEBHOOK_URL` | Secret   | yes*        | Incoming webhook for the report. *Either this or the bot token                                                                                     |
 | `E2E_SLACK_BOT_TOKEN`   | Secret   | for videos  | Bot token (`xoxb-…`) with `chat:write`, `files:write`, `channels:history` (`groups:history` for a private channel); the bot must be in the channel |
@@ -70,7 +70,7 @@ the videos are uploaded through Slack's external-upload API and shared as the sa
 as the report.
 
 The test account must be dedicated to E2E: its tenant may be shared, but every write goes to
-`E2E_ENV_ID` only — the live specs abort if the console is in any other environment and
+`E2E_ENV_ID` only: the live specs abort if the console is in any other environment and
 block any non-GET request carrying a different `X-Environment-ID`.
 
 ## Reports
@@ -94,7 +94,7 @@ e2e-results/
   every journey, so a run that is interrupted or times out keeps everything that completed.
   Journeys that never ran are listed as `NOT RUN` and the run as `PARTIAL`.
 - `logs/` holds the browser console errors, failed / 4xx / 5xx requests (method, path and
-  status only — no headers, bodies or query strings), the test's stdout and the full error.
+  status only: no headers, bodies or query strings), the test's stdout and the full error.
 
 ### Videos and evidence only for failures
 
@@ -126,7 +126,7 @@ a retry is called out as a finding.
 - Screenshots and videos show the screen: the password field is always masked, but the
   sign-in journeys in `live-auth.spec.ts` type the account email visibly, so a failure there
   can show `E2E_USER` in its recording. No token, cookie or webhook is ever on screen.
-- Only `e2e-results/` is uploaded by the release workflow — never `test-results/` or the HTML
+- Only `e2e-results/` is uploaded by the release workflow: never `test-results/` or the HTML
   report, which hold raw traces.
 
 ## The Slack report
@@ -159,7 +159,7 @@ pnpm test:e2e:report e2e/customers.spec.ts e2e/invoice-edit.spec.ts   # a group,
 E2E_PORT=3310 pnpm test:e2e         # when something else already holds :3000
 ```
 
-Live journeys, with the dedicated account (never your own) — against a deployed frontend:
+Live journeys, with the dedicated account (never your own): against a deployed frontend:
 
 ```bash
 E2E_USER=… E2E_PASSWORD=… E2E_ENV_ID=… E2E_ENV_PREFIX=… E2E_ENVIRONMENT=… \

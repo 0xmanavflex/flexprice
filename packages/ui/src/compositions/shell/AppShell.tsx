@@ -24,8 +24,8 @@ import type { ShellNavGroup, ShellUser } from './types'
  *
  * One inset sidebar that collapses to icons, with the brand mark and the
  * tenant's name at the top, nested navigation below, and the account menu at
- * the bottom. The header carries the breadcrumb — which leads
- * with the environment switcher — and, top-right, search beside whatever one
+ * the bottom. The header carries the breadcrumb: which leads
+ * with the environment switcher: and, top-right, search beside whatever one
  * control belongs to the whole page rather than to its content.
  *
  * This replaces a two-level rail, and the reason is the product's own shape:
@@ -59,7 +59,7 @@ export interface AppShellProps {
   /** Global search: static items, async results and the select handler. */
   search?: ShellSearchProps
 
-  /** Pinned above the footer — an allowance, a usage meter, an alert count. */
+  /** Pinned above the footer: an allowance, a usage meter, an alert count. */
   pinned?: ReactNode
   breadcrumb?: ReactNode
   /** Sits in the header, to the left of search. */
@@ -121,7 +121,7 @@ export function AppShell({
         <Sidebar collapsible="icon" variant="inset" aria-label="Main">
           <SidebarHeader className="px-3 pt-3">
             {/*
-              The Flexprice mark, then the tenant this console is signed in to —
+              The Flexprice mark, then the tenant this console is signed in to:
               its name from `/users/me`, falling back to the product name until
               that resolves. The name drops out in the icon rail.
             */}

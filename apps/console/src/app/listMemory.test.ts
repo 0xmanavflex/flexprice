@@ -62,7 +62,7 @@ describe('rememberQuery / rememberedQuery', () => {
     rememberQuery(storage, 'env_sandbox', 'customers', { ...DEFAULTS, search: 'acme' })
     rememberQuery(storage, 'env_production', 'invoices', { ...DEFAULTS, search: 'INV-9' })
     // Switching back finds nothing: the sandbox entry did not survive, which is
-    // the point — those filters named sandbox rows.
+    // the point: those filters named sandbox rows.
     expect(rememberedQuery(storage, 'env_sandbox', 'customers')).toBeNull()
     expect(rememberedQuery(storage, 'env_production', 'invoices')).toMatchObject({
       search: 'INV-9',
@@ -103,7 +103,7 @@ describe('isBareQuery', () => {
    * The shape that actually reaches this code.
    *
    * `stripSearchParams` takes every default out of the URL, so a bare list is
-   * an empty object — not a full default query. Treating an absent key as
+   * an empty object: not a full default query. Treating an absent key as
    * anything but its default made every URL look non-bare, which silently
    * disabled restoring altogether.
    */
@@ -157,7 +157,7 @@ describe('restoreTarget', () => {
     expect(restoreTarget({}, {}, DEFAULTS)).toBeNull()
   })
 
-  it('leaves a URL that says something alone — a link wins', () => {
+  it('leaves a URL that says something alone: a link wins', () => {
     const remembered = { ...DEFAULTS, search: 'acme' }
     const fromLink = { ...DEFAULTS, statuses: ['archived'] }
     expect(restoreTarget(remembered, fromLink, DEFAULTS)).toBeNull()
@@ -169,7 +169,7 @@ describe('restoreTarget', () => {
 
   it('does nothing when the remembered query is itself the default', () => {
     // "Clear filters" is remembered like any other change, so coming back must
-    // not re-apply what was cleared — and must not spend a navigation saying so.
+    // not re-apply what was cleared: and must not spend a navigation saying so.
     expect(restoreTarget({ ...DEFAULTS }, { ...DEFAULTS }, DEFAULTS)).toBeNull()
   })
 })

@@ -8,7 +8,7 @@ import { provenance } from '@ui/provenance'
  * Light and dark, as one button.
  *
  * Two states, not three. `next-themes` also offers `system`, and a three-way
- * control has to be a menu — which is a lot of chrome for a preference most
+ * control has to be a menu: which is a lot of chrome for a preference most
  * people set once. `system` is still the *initial* value, so someone who has
  * never touched this gets what their OS asked for; pressing it just pins the
  * one they are looking at.

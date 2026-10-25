@@ -852,7 +852,7 @@ export const ContractSpecificCharges: Story = {
 }
 
 /**
- * A contract that follows its plan still gets the section — it says so.
+ * A contract that follows its plan still gets the section: it says so.
  *
  * The old Overview dropped the section entirely, which read as "this contract
  * has no charges" rather than "none of them were changed". The summary states
@@ -1269,7 +1269,7 @@ export const UnlinkIntegration: Story = {
     /*
      * Wait for the dialog to go before the a11y scan.
      *
-     * Its confirm button is the vendored base-nova `destructive` variant — a
+     * Its confirm button is the vendored base-nova `destructive` variant: a
      * soft fill whose text sits at 3.82:1 on its own tint, the design-token
      * gap `ConfirmDialog.stories.tsx` documents and mutes. Here the dialog is
      * already closing, so waiting keeps `color-contrast` enabled for the rest
@@ -1310,7 +1310,7 @@ export const EditPlanLink: Story = {
 /** V1's charge row: copy the line item id, and apply or remove a coupon on just this charge. */
 export const ChargeRowCouponActions: Story = {
   // Ends on the Remove coupon confirm, whose destructive button is the vendored
-  // soft fill at 3.82:1 (see ConfirmDialog.stories.tsx) — whether axe sees it
+  // soft fill at 3.82:1 (see ConfirmDialog.stories.tsx): whether axe sees it
   // depends on timing, which made this story flaky in CI.
   parameters: {
     a11y: {
@@ -1568,7 +1568,7 @@ export const ChargeSaveFails: Story = {
 }
 
 /**
- * A cancelled contract cannot be edited — but it can still be read.
+ * A cancelled contract cannot be edited: but it can still be read.
  *
  * The row menu stays, because "View details" and "Copy price ID" are not
  * edits and someone reconciling a cancelled contract needs both. What goes is

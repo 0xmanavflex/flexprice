@@ -6,7 +6,7 @@ import { ApiError, ErrorKind } from '@fp/api'
  *
  * The retry policy is the payoff from normalizing errors in `@fp/api`: because
  * every rejection is an `ApiError` carrying a `kind`, the client can tell a
- * flaky network from a refusal. Retrying a 403 three times cannot succeed — it
+ * flaky network from a refusal. Retrying a 403 three times cannot succeed: it
  * just makes the user wait three times longer to be told no, and triples the
  * load on an endpoint that is already saying no.
  *

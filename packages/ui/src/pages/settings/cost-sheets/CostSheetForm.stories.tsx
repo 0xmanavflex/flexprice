@@ -2,7 +2,7 @@ import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { CostSheetForm } from './CostSheetForm'
 
-/** Create or edit a cost sheet — the full-page body. Fixtures in, a validated draft out. */
+/** Create or edit a cost sheet: the full-page body. Fixtures in, a validated draft out. */
 const trail: { label: string }[] = [{ label: 'Cost sheets' }, { label: 'Create cost sheet' }]
 
 const withHeight: Decorator = (Story) => (

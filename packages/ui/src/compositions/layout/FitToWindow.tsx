@@ -10,7 +10,7 @@ import { provenance } from '@ui/provenance'
  * neighbouring control turns it off, because an explicit choice should not be
  * silently overridden the next time the window moves. That is the whole
  * contract, and it is why this is a toggle rather than a page-size option
- * called "auto" — "auto" in a list of numbers cannot express being cancelled
+ * called "auto": "auto" in a list of numbers cannot express being cancelled
  * by picking a number.
  *
  * Icon-only: a maximise glyph beside the pagination is enough, and the label it

@@ -42,7 +42,7 @@ import { provenance } from '@ui/provenance'
  *
  * The bargain the charges table makes is that a row stays one line because
  * everything else is one click away *in a known place*. This is that place: a
- * box per part that exists — Price, Commitment, Discount, Alerts — and the
+ * box per part that exists: Price, Commitment, Discount, Alerts: and the
  * version history under them. Opened from a flag, it scrolls to that box and
  * rings it, so the click lands where the eye already was.
  *
@@ -50,8 +50,8 @@ import { provenance } from '@ui/provenance'
  * else is one box, not five empty ones, and no box explains in a paragraph
  * what its own figures already say.
  *
- * The boxes run in the same order as the flags — Price, Discount, Commitment,
- * Alerts, History — because a flag is a promise about where its click lands.
+ * The boxes run in the same order as the flags: Price, Discount, Commitment,
+ * Alerts, History: because a flag is a promise about where its click lands.
  * The prototype put Commitment second and the handoff calls that out as a
  * quirk to fix rather than copy: two orders for the same five things is one
  * order too many.
@@ -67,7 +67,7 @@ export interface ChargeSheetProps {
   charge: Charge | null
   /** What else is known about it; without this the sheet is the price alone. */
   detail?: ChargeDetail | undefined
-  /** Which box to scroll to and ring — the flag that was clicked. */
+  /** Which box to scroll to and ring: the flag that was clicked. */
   section?: ChargeSection | undefined
   onClose: () => void
   /** Wires each box's "Edit". A box with no handler shows no button. */
@@ -140,7 +140,7 @@ function Box({
 }) {
   // A `section` around the frame, not a bare `div`: `FrameHeader` renders a
   // `<header>`, and a `<header>` outside sectioning content is a *banner*
-  // landmark — four boxes would mean four banners on one page, which axe
+  // landmark: four boxes would mean four banners on one page, which axe
   // rightly refuses. Inside a named section it is the section's header.
   return (
     <section
@@ -219,7 +219,7 @@ function TierList({ tiers }: { tiers: Charge['tiers'] }) {
  * Per period: one figure, per the billing period or its own duration.
  * Per bucket, all day: the same figure applies to every bucket.
  * Per bucket with windows: those windows carry their own figure, and a dashed
- * row says what the rest of the day does — which is the question a reader asks
+ * row says what the rest of the day does: which is the question a reader asks
  * the moment they see a window, and the prototype answers in the same place.
  */
 /** "every hour" when the charge has a bucket; otherwise the billing period ("every month"). */

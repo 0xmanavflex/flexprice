@@ -37,7 +37,7 @@ import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from 
  * expiry is a date passing, not a status the API stores or can count. It could
  * be derived per row from `redeemBefore`, but then the dropdown would carry a
  * number counted from the twenty-five rows on screen while every other option
- * carries the server's total — two kinds of number in one control, one of them
+ * carries the server's total: two kinds of number in one control, one of them
  * wrong. So the dropdown offers what the server can actually count, and expiry
  * stays visible in the "Valid until" column where a date belongs.
  *
@@ -56,7 +56,7 @@ const SORT_OPTIONS = Object.values(CouponSortField).map((value) => ({
 }))
 
 /**
- * What the coupon takes off — an amount, or a percentage.
+ * What the coupon takes off: an amount, or a percentage.
  *
  * `formatMoney` rather than any arithmetic here: `money.ts` forbids doing sums
  * on money in the browser, and a discount is exactly the figure someone would
@@ -73,7 +73,7 @@ function discountLabel(coupon: Coupon, locale?: string): string | null {
  * How long the discount lasts.
  *
  * Only `repeated` reads with a number beside it. The unit is **periods**, not
- * months — the spec's "· N mo" would be asserting a billing cadence the field
+ * months: the spec's "· N mo" would be asserting a billing cadence the field
  * does not carry, and a quarterly plan's three periods are nine months.
  */
 function durationLabel(coupon: Coupon): string {
@@ -83,7 +83,7 @@ function durationLabel(coupon: Coupon): string {
   return `${base} · ${periods} ${periods === 1 ? 'period' : 'periods'}`
 }
 
-/** Used against the ceiling. A null ceiling is unlimited, said out loud —
+/** Used against the ceiling. A null ceiling is unlimited, said out loud:
  *  a blank there would read as a redemption cap that failed to load. */
 function redemptionsLabel(coupon: Coupon, locale?: string): string {
   const format = (value: number) => new Intl.NumberFormat(locale).format(value)
@@ -126,7 +126,7 @@ export interface CouponGridProps {
   onCouponClick?: (coupon: Coupon) => void
   /** The primary create action; renders a "New coupon" CTA at the toolbar's end. */
   onCreate?: () => void
-  /** Row menu: rename the coupon — the one field the API will take. */
+  /** Row menu: rename the coupon: the one field the API will take. */
   onEdit?: ((coupon: Coupon) => void) | undefined
   /** Row menu: archive the coupon. Rendered destructive, under a separator. */
   onArchive?: ((coupon: Coupon) => void) | undefined
@@ -280,7 +280,7 @@ export function CouponGrid({
         scene: 'settings',
         title: 'No coupons yet',
         description:
-          'A coupon takes an amount or a percentage off a contract — once, for a few periods, or forever. Create one and apply it at checkout or on an existing contract.',
+          'A coupon takes an amount or a percentage off a contract: once, for a few periods, or forever. Create one and apply it at checkout or on an existing contract.',
         guides: GUIDES,
       }}
     />

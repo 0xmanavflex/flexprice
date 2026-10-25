@@ -55,7 +55,7 @@ export function SettingsBlock({
 
 /**
  * The info block a form-type setting may open with: what the fields add up to,
- * said once, above them. Not a subtitle — it is part of the form's content.
+ * said once, above them. Not a subtitle: it is part of the form's content.
  */
 export function InfoBlock({ children }: { children: ReactNode }) {
   return (
@@ -73,7 +73,7 @@ export const HINT_DELAY_MS = 3000
  * A one-line explanation, on hover, after a deliberate pause.
  *
  * Settings has no subtitles: the empty states do the educating. Where one line
- * really helps, it waits here — three seconds of hovering, so it never gets in
+ * really helps, it waits here: three seconds of hovering, so it never gets in
  * the way of someone who already knows. With `children` the hint hangs off
  * them (a button, a label); without, it hangs off a small (i).
  */

@@ -28,7 +28,7 @@ import { sortWithTieBreak } from './listSort'
  * live routes that carry no swagger annotation, so they are absent from the
  * OpenAPI document and from every generated client. Both are reachable through
  * the documented `POST /features/search`, whose filter carries `featureIds`,
- * `lookupKey`, `nameContains`, `limit`/`offset` and `sort` — strictly more
+ * `lookupKey`, `nameContains`, `limit`/`offset` and `sort`: strictly more
  * capable than the GET it replaces. That is a documented endpoint doing what it
  * was designed for, not a workaround, so this needs no shim. See
  * `docs/api-contract-gap.md`.
@@ -147,13 +147,13 @@ const SORT_FIELD: Record<FeatureSortField, string> = {
  * Domain query out, `FeatureFilter` in. Page numbers are 1-based; offsets are not.
  *
  * `expand: 'meters'` is load-bearing, not an optimisation. The API returns
- * `meter_id` but embeds the meter object **only** when asked — see
+ * `meter_id` but embeds the meter object **only** when asked: see
  * `internal/ee/service/feature.go`, which populates `response.Items[i].Meter`
  * behind `filter.GetExpand().Has(types.ExpandMeters)`.
  *
  * Without it every metered feature arrives with no event name and no
- * aggregation, and the grid's "Measured by" column — the entire reason a
- * metered row is interesting — renders an em dash. Unit tests did not catch
+ * aggregation, and the grid's "Measured by" column: the entire reason a
+ * metered row is interesting: renders an em dash. Unit tests did not catch
  * this because the fixture I wrote embedded a meter; the captured response
  * does not.
  */
@@ -303,7 +303,7 @@ export function useFeatures(query: FeatureQuery, options: { enabled?: boolean } 
   const client = useFlexprice()
 
   // `view` is a layout, not a filter: it changes nothing about what is fetched,
-  // so it stays out of the key — toggling table/cards must not miss the cache.
+  // so it stays out of the key: toggling table/cards must not miss the cache.
   const { view: _view, ...key } = query
 
   return useQuery({
@@ -369,7 +369,7 @@ export function useUpdateFeature() {
   })
 }
 
-/** Archive/delete a feature — `DELETE /features/{id}`. Takes the feature id. */
+/** Archive/delete a feature: `DELETE /features/{id}`. Takes the feature id. */
 export function useDeleteFeature() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

@@ -6,7 +6,7 @@
  *     UI  ->  @fp/query  ->  @fp/api  ->  @flexprice/sdk  ->  backend
  *
  * Importing `@fp/api`, `@flexprice/sdk` or a service from a component is an
- * ESLint error rather than a review comment. The reason is not tidiness — it is
+ * ESLint error rather than a review comment. The reason is not tidiness: it is
  * that a component which knows how its data arrives cannot be rendered in a
  * story, cannot be tested without a network, and cannot survive the API
  * changing shape. Watchtower V2 enforces the same rule; this is that rule with
@@ -139,6 +139,7 @@ export {
 export type { PlanPage, PlanSubscriptionRow, PlanWire } from './plans'
 
 export {
+  useSyncAddonPrices,
   fetchAddons,
   toAddon,
   toAddonFilter,
@@ -402,7 +403,7 @@ export type { CreditGrantWire } from './creditGrants'
  * `GET/PUT/DELETE /settings/:key` had no SDK module, and therefore no hook,
  * and that those screens should render an unavailable state. The first half
  * was true and the conclusion was wrong: the routes are live and answer 200
- * today — only SAML is genuinely absent, and only because the deployment does
+ * today: only SAML is genuinely absent, and only because the deployment does
  * not mount it. `settings.ts` is the correction, reaching them the way
  * `session.ts` reaches the other undocumented routes.
  */
@@ -459,7 +460,7 @@ export type { TenantBillingUsageWire, TenantWire } from './tenant'
 /**
  * The `/settings/{key}` family: one query hook and two mutations per key,
  * plus the SAML read and the Svix portal handoff. Every one of them takes the
- * active environment id — these records are per environment, and so are their
+ * active environment id: these records are per environment, and so are their
  * cache entries. See `settings.ts`.
  */
 export {

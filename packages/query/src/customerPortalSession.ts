@@ -3,7 +3,7 @@ import { ApiError, ErrorKind, createCustomerPortalSession } from '@fp/api'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
- * Mints a customer portal session for one customer, by external id — what
+ * Mints a customer portal session for one customer, by external id: what
  * "Open customer portal" and "Copy portal link" need. Resolves the session
  * token; the app turns it into a link to its portal surface.
  */

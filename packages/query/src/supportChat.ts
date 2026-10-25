@@ -3,7 +3,7 @@ import { ApiError, ErrorKind, fetchSupportChatToken } from '@fp/api'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
- * A fetcher for the support chat's identity hash — `POST /users/chat/verify`.
+ * A fetcher for the support chat's identity hash: `POST /users/chat/verify`.
  *
  * A function rather than a query, as V1 has it: the widget asks once, when it
  * boots, and the hash is handed straight to it. Resolves to the hash, or to an

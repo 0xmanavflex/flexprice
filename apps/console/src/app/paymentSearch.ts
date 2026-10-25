@@ -10,7 +10,7 @@ import {
  *
  * The same total, both-spellings parser the catalogue lists use: a filtered
  * list is a shareable link, and a hand-edited URL shows the first page rather
- * than an error. There is no `view` — a payment is only ever a row.
+ * than an error. There is no `view`: a payment is only ever a row.
  */
 const STATUSES = new Set<string>(Object.values(PaymentStatus))
 const SORT_FIELDS = new Set<string>(Object.values(PaymentSortField))

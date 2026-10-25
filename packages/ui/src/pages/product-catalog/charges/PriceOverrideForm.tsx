@@ -29,7 +29,7 @@ import { provenance } from '@ui/provenance'
  * structurally valid shape rather than leaving the previous model's fields
  * lying around.
  *
- * It is presentational in the same sense `InvoiceGrid` is — it takes a default
+ * It is presentational in the same sense `InvoiceGrid` is: it takes a default
  * value and emits a validated `PriceOverride` on submit. It does not fetch, it
  * does not know what a subscription is, and it cannot import `@fp/query`.
  *

@@ -15,7 +15,7 @@ import {
  * The feature query, as URL search params.
  *
  * Same rule as invoices: the route owns the query, so a filtered list is a
- * shareable link and the grid stays stateless. Parsing is total — a hand-edited
+ * shareable link and the grid stays stateless. Parsing is total: a hand-edited
  * URL shows the first page rather than an error.
  */
 const TYPES = new Set<string>(Object.values(FeatureType))
@@ -26,14 +26,14 @@ const MAX_PAGE_SIZE = 100
 /**
  * A param under either spelling.
  *
- * The short names are what a person writes by hand — `?q=api&type=metered`
+ * The short names are what a person writes by hand: `?q=api&type=metered`
  * beats `?search=api&types=%5B%22metered%22%5D`. The long names are what
  * TanStack writes, because it serialises the query object as it stands.
  *
  * Reading both is what makes the round trip work. Reading only the short ones
  * meant every filter and sort reverted the instant it was applied: navigate
  * wrote `types`, the parser looked for `type`, found nothing, and returned the
- * default — with no error anywhere.
+ * default: with no error anywhere.
  */
 function param(raw: Record<string, unknown>, short: string, long: string): unknown {
   const value = raw[short]

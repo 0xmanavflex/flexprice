@@ -8,7 +8,7 @@ import { Button } from '@fp/ui/primitives'
  * `toggleRole` is not a plain set toggle: picking **super admin** replaces the
  * whole selection, and picking anything else drops super admin. That is the
  * domain's rule, not this component's, and the reason is that "super admin
- * plus event reader" is a sentence with no meaning — the first already grants
+ * plus event reader" is a sentence with no meaning: the first already grants
  * the second. So the control does not offer the combination and does not have
  * to explain afterwards why it was rejected.
  *
@@ -22,7 +22,7 @@ export interface RolePickerProps {
   selected: string[]
   onChange: (roles: string[]) => void
   disabled?: boolean
-  /** Names the group for assistive tech — "Roles for Dana", not just "Roles". */
+  /** Names the group for assistive tech: "Roles for Dana", not just "Roles". */
   label: string
 }
 

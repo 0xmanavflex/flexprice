@@ -20,14 +20,14 @@ import { InvoiceForm } from '@fp/ui/pages'
 import { customerParty, tenantParty } from './invoiceParties'
 
 export interface InvoiceFormPageProps {
-  /** Start with this customer chosen — the customer page's "Create invoice", as in V1. */
+  /** Start with this customer chosen: the customer page's "Create invoice", as in V1. */
   customerId?: string
   onCancel: () => void
   onDone: (invoiceId: string) => void
 }
 
 /**
- * Raise a one-off invoice — `POST /invoices`, as V1's create page does.
+ * Raise a one-off invoice: `POST /invoices`, as V1's create page does.
  *
  * Feeds the shared invoice form what V1 shows around the fields: who it is
  * from (the tenant), who it bills (the chosen customer's address), and the

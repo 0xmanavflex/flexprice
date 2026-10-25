@@ -1,11 +1,11 @@
 /**
- * The tenant — the organisation itself, and what it is paying Flexprice.
+ * The tenant: the organisation itself, and what it is paying Flexprice.
  *
  * Two unrelated things behind one noun, so they are two models:
  *
  *   - `Tenant` is the organisation's own record: name, billing contact,
  *     address. Read with `GET /tenants/{id}`, written with `PUT /tenants`.
- *   - `TenantBillingUsage` is *Flexprice's* bill to this tenant — the plan it
+ *   - `TenantBillingUsage` is *Flexprice's* bill to this tenant: the plan it
  *     is on and the entitlement usage against it. V1 lost this screen entirely:
  *     its `TenantApi.getTenantBillingDetails` is dead code that nothing calls.
  *
@@ -91,7 +91,7 @@ const optionalEmail = z
  *
  * Every field except the name is optional and sent as `""` when cleared, so
  * emptying a billing email actually clears it rather than leaving the previous
- * value in place — `PUT /tenants` merges what it is given.
+ * value in place: `PUT /tenants` merges what it is given.
  */
 export const updateTenantSchema = z.object({
   name: z.string().trim().min(1, 'Enter an organisation name'),
@@ -129,7 +129,7 @@ export function toUpdateTenantDraft(tenant: Tenant): UpdateTenant {
 }
 
 /**
- * Where an entitlement comes from — the `sources[]` of a usage summary row.
+ * Where an entitlement comes from: the `sources[]` of a usage summary row.
  *
  * A feature can be granted by more than one contract, plan or add-on; the
  * usage on its row is the customer's total across all of them.
@@ -139,7 +139,7 @@ export interface EntitlementUsageSource {
   subscriptionId: string
   /** The plan, add-on or subscription that grants it. */
   entityId: string
-  /** `plan`, `addon`, `subscription` — as the API spells it. */
+  /** `plan`, `addon`, `subscription`: as the API spells it. */
   entityType: string
   entityName: string
   /** `MONTHLY`, `NEVER`, … as the API spells it; `''` when not sent. */
@@ -152,13 +152,13 @@ export interface EntitlementUsageSource {
  * One entitlement the tenant's Flexprice plan grants, and how much is used.
  *
  * `currentUsage` and `usagePercent` are the strings the API sent, never floats
- * — the same decimal-as-string rule the rest of the money layer follows.
+ *: the same decimal-as-string rule the rest of the money layer follows.
  * `limit` is null when the entitlement is unlimited.
  */
 export interface TenantFeatureUsage {
   featureId: string
   featureName: string
-  /** `metered`, `static`, `boolean`, `config` — the feature's own type. */
+  /** `metered`, `static`, `boolean`, `config`: the feature's own type. */
   featureType: string
   /** Null when unlimited. */
   limit: number | null

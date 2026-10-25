@@ -13,7 +13,7 @@ import { CreditGrantTable } from './CreditGrantTable'
 
 /**
  * A plan's credit grants, as a read table. Cadence carries the period where
- * there is one — "Recurring · Monthly" — because a recurring grant only means
+ * there is one: "Recurring · Monthly": because a recurring grant only means
  * something with the period it refreshes on beside it. No network.
  */
 const meta = {

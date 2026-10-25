@@ -38,7 +38,7 @@ export function failureMessage(error: unknown, fallback: string): string {
  *
  * A mutation opts in with `meta.notify`: when it succeeds the `success` line
  * shows ("Contract created"); when the API refuses it, the API's reason shows,
- * under the `error` line. Client-side validation is not a toast — it stays in
+ * under the `error` line. Client-side validation is not a toast: it stays in
  * the form, at the field and in the summary at the top. A locked account's
  * refusal is left to its own dialog (`AccountLock`).
  */

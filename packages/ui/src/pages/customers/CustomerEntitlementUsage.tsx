@@ -19,7 +19,7 @@ export interface CustomerEntitlementUsageRow {
   name: string
   /** `metered`, `static`, `boolean`, `config`. Only a metered feature has usage. */
   type: string
-  /** Undefined when the API sent something unreadable — a dash, not a zero. */
+  /** Undefined when the API sent something unreadable: a dash, not a zero. */
   used: number | undefined
   /** Null when unlimited. */
   limit: number | null
@@ -41,7 +41,7 @@ export interface CustomerEntitlementUsageProps {
  * The table is the overview's `EntitlementUsageTable`, so the two tabs agree on
  * every state: an unlimited allowance reads "Unlimited" with no bar, an
  * over-limit one turns red, a boolean reads "Included". This adds only the
- * Analytics frame around it — the titled section and the loading, empty and
+ * Analytics frame around it: the titled section and the loading, empty and
  * failed states.
  */
 export function CustomerEntitlementUsage({

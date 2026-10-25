@@ -92,7 +92,7 @@ describe('toCouponFilter', () => {
   })
 
   // `CouponFilter` has no `nameContains`, and the SDK strips keys its generated
-  // schema does not declare — so a name search has to go through the filter DSL
+  // schema does not declare: so a name search has to go through the filter DSL
   // or it never reaches the network at all.
   it('searches by name through the filter DSL', () => {
     expect(toCouponFilter({ ...DEFAULT_COUPON_QUERY, search: 'launch' })).toMatchObject({

@@ -99,7 +99,7 @@ describe('toCreateSubscriptionRequest', () => {
 
   it('names the inherited customers alone, beside a commitment, as V1 sends them', () => {
     // The API refuses `invoicing_customer_external_id` beside inherited
-    // customers, so a parent contract sends only the children — the contract's
+    // customers, so a parent contract sends only the children: the contract's
     // own customer pays. The commitment rides on the parent unchanged.
     const request = toCreateSubscriptionRequest({
       ...base,
@@ -161,7 +161,7 @@ describe('toCreateSubscriptionRequest', () => {
   })
 })
 
-describe('toCreateSubscriptionRequest — V1 contract fields', () => {
+describe('toCreateSubscriptionRequest: V1 contract fields', () => {
   it('sends a single phase at the top level: discounts, commitments, taxes, add-ons, billing', () => {
     const request = toCreateSubscriptionRequest({
       ...base,
@@ -344,7 +344,7 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
     ])
   })
 
-  it('sends charges for this contract alone as line_items — on the contract, or on each phase', () => {
+  it('sends charges for this contract alone as line_items: on the contract, or on each phase', () => {
     const extra = {
       charge: {
         type: 'FIXED' as const,

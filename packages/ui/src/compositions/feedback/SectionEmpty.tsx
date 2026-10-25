@@ -10,7 +10,7 @@ import { SceneIllustration, type EmptyScene } from './SceneIllustration'
  * (entitlements above credit grants) shows the same block in the same place.
  * The create action is never here: it stays in the card's `Section` header,
  * top right, whether the card has rows or not. `action` is for a way out that
- * is not creating — "Try again" on a failed load.
+ * is not creating: "Try again" on a failed load.
  */
 export const SectionEmptyProvenance = provenance({
   source: 'composition',

@@ -8,7 +8,7 @@ import type { ChartTone } from './charts'
 /**
  * `@reui/stats-14`'s segment matrix.
  *
- * The block draws a fixed grid of short slabs — `h-3 rounded`, a 2px gutter —
+ * The block draws a fixed grid of short slabs: `h-3 rounded`, a 2px gutter:
  * and encodes the value by how many of them are lit. The unlit remainder stays
  * on the track, so a short day is a short run of colour, not a shorter box.
  * The lit slabs step down one hue, `indigo-600` to `indigo-100` in the block;
@@ -16,8 +16,8 @@ import type { ChartTone } from './charts'
  *
  * The block has a single series, so every slab in a column is the next step of
  * that ramp. A subscription day is several plans, and the footer has to say
- * which shade is which. Each series takes one step of the same ramp — the
- * first series the full tone, the next a step lighter — and its slabs stack
+ * which shade is which. Each series takes one step of the same ramp: the
+ * first series the full tone, the next a step lighter: and its slabs stack
  * from the foot. Height is still the day's total; colour is which plan.
  */
 export const PillColumnsProvenance = provenance({
@@ -41,7 +41,7 @@ export interface PillSeries {
 
 /** One column: an x-axis category and its value per series. */
 export interface PillColumn {
-  /** Axis label under the column. Short — the design uses a bare day number. */
+  /** Axis label under the column. Short: the design uses a bare day number. */
   label: string
   /** Value per series id. A missing id counts as zero. */
   values: Record<string, number>
@@ -52,7 +52,7 @@ export interface PillColumn {
  *
  * `lit` of them are coloured and they sit at the *foot*, so the bar stands on
  * the axis with the muted track above it. The ramp is indexed by position
- * within the lit run, counted from its head — so the top slab of every bar is
+ * within the lit run, counted from its head: so the top slab of every bar is
  * the full tone no matter how tall the bar is, and the shade fades downward.
  *
  * That is the design's mark, and it is not the same as colouring by series.
@@ -78,7 +78,7 @@ function columnSlabs(lit: number, rows: number, ramp: string[]): Array<string | 
 const RAMP_OPACITY = [100, 85, 70, 55, 40, 28, 16]
 
 /**
- * One tone stepped down by opacity — the reference's `bg-blue-600` to
+ * One tone stepped down by opacity: the reference's `bg-blue-600` to
  * `bg-blue-600/16`. Seven rows use its exact steps; any other row count
  * interpolates between the same ends.
  */
@@ -206,7 +206,7 @@ export function PillColumns({
               return (
                 /* No swatch. Every column runs the same ramp, so a dot here
                    would key a colour that does not distinguish anything in the
-                   plot — it would read as "Studio is the dark blue one" when
+                   plot: it would read as "Studio is the dark blue one" when
                    the dark blue is simply the top of each bar. */
                 <li key={item.id} className="flex items-baseline gap-2 text-sm">
                   <span className="text-muted-foreground">{item.label}</span>

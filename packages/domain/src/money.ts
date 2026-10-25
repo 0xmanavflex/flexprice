@@ -1,8 +1,8 @@
 /**
  * Money, without floats.
  *
- * The backend serializes monetary amounts as decimal *strings* — the SDK types
- * `amountDue`, `amountPaid`, `total` and the rest as `string | undefined` —
+ * The backend serializes monetary amounts as decimal *strings*: the SDK types
+ * `amountDue`, `amountPaid`, `total` and the rest as `string | undefined`:
  * precisely so that precision survives the wire. The V1 dashboard then calls
  * `parseFloat` on them in 101 places, which converts an exact decimal into the
  * nearest IEEE-754 double. It also declares `decimal.js` as a dependency that
@@ -20,7 +20,7 @@
  * Note what is deliberately absent: arithmetic. Totals, tax, proration and
  * discounts are the backend's answer, and a UI that recomputes them will
  * eventually disagree with the invoice the customer was actually charged. If
- * you need a sum the API did not send, that is an API gap — not a reason to add
+ * you need a sum the API did not send, that is an API gap: not a reason to add
  * `addMoney`.
  */
 export interface Money {
@@ -42,7 +42,7 @@ export class InvalidMoneyError extends Error {
 /**
  * Builds a `Money` from what the API sent.
  *
- * Rejects anything that is not a plain decimal — including `"1e3"`, `"NaN"` and
+ * Rejects anything that is not a plain decimal: including `"1e3"`, `"NaN"` and
  * `""`. An amount that reached the UI malformed is a bug worth surfacing at the
  * boundary rather than rendering as `$NaN` three components later.
  */
@@ -83,7 +83,7 @@ export function formatMoney(value: Money, locale?: string): string {
     currencyDisplay: 'narrowSymbol',
     currency: value.currency,
     // ES2023 (Intl.NumberFormat v3) accepts a string here and formats the exact
-    // decimal — which is the entire point of this module, and is covered by a
+    // decimal: which is the entire point of this module, and is covered by a
     // test asserting the large-value case a double gets wrong.
     //
     // TypeScript's lib types still narrow the parameter to
@@ -115,7 +115,7 @@ function compareDigits(a: string, b: string): number {
  *
  * Compares digit by digit rather than converting, so `"0.1"` plus `"0.2"`
  * cannot become `0.30000000000000004`, and a 20-digit amount still sorts
- * correctly. Throws on mismatched currencies — comparing USD to EUR is a
+ * correctly. Throws on mismatched currencies: comparing USD to EUR is a
  * question with no answer, and returning one would hide the bug.
  */
 export function compareMoney(a: Money, b: Money): number {
@@ -150,8 +150,8 @@ export function isNegativeMoney(value: Money): boolean {
 const PLAIN_DECIMAL = /^(-)?(\d+)(?:\.(\d+))?$/
 
 /**
- * An amount shared out over a quantity — a line's unit price, shown beside
- * its quantity — computed exactly on scaled integers, never in floating
+ * An amount shared out over a quantity: a line's unit price, shown beside
+ * its quantity: computed exactly on scaled integers, never in floating
  * point. Rounded half away from zero to `places` decimals. `null` when the
  * quantity is not a positive number, since nothing is divided then.
  */

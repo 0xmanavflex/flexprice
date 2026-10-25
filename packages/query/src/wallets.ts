@@ -202,7 +202,7 @@ function toCooldown(
   return { cooldownValue: String(wire.value), cooldownUnit: wire.unit as AutoTopupCooldownUnit }
 }
 
-/** A customer's wallets — `GET /customers/{id}/wallets`. */
+/** A customer's wallets: `GET /customers/{id}/wallets`. */
 export function useCustomerWallets(customerId: string) {
   const client = useFlexprice()
 
@@ -217,12 +217,12 @@ export function useCustomerWallets(customerId: string) {
   })
 }
 
-/** One wallet's ledger, newest first — `GET /wallets/{id}/transactions`. */
+/** One wallet's ledger, newest first: `GET /wallets/{id}/transactions`. */
 /**
  * One wallet's real-time balance: `GET /wallets/{id}/balance/real-time`.
  *
- * The wallet list carries only the stored balance — what was left at the last
- * invoice — so a wallet read from it looks untouched until the next invoice,
+ * The wallet list carries only the stored balance: what was left at the last
+ * invoice: so a wallet read from it looks untouched until the next invoice,
  * however much usage has run since. This read nets that pending usage off,
  * which is V1's "Ongoing balance" and the figure that can go negative.
  *
@@ -346,7 +346,7 @@ export function useUpdateWalletAlerts(walletId: string) {
   })
 }
 
-/** A wallet's metadata — `PUT /wallets/{id}` with the whole map. */
+/** A wallet's metadata: `PUT /wallets/{id}` with the whole map. */
 export function useUpdateWalletMetadata(walletId: string) {
   const client = useFlexprice()
   const invalidate = useInvalidateWallets()

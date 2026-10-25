@@ -7,12 +7,12 @@ import { CheckboxRow } from '@ui/compositions/forms/CheckboxRow'
 import { provenance } from '@ui/provenance'
 
 /**
- * Choose which event types an endpoint receives — Svix's "Subscribe to events"
+ * Choose which event types an endpoint receives: Svix's "Subscribe to events"
  * tree.
  *
  * Grouped by name prefix with a checkbox per group, and a search across names.
  * Nothing checked means *every* event type, which is Svix's own default and
- * the note under the list says so — an empty selection is not "nothing".
+ * the note under the list says so: an empty selection is not "nothing".
  */
 export const WebhookEventTypePickerProvenance = provenance({
   source: 'composition',

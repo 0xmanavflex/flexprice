@@ -33,7 +33,7 @@ import { FormHead } from './AuthFrame'
  *   - the email is kept, the password is cleared, and focus moves to the
  *     password. Retyping an email you already typed correctly is the small
  *     insult that makes a login feel hostile.
- *   - the message is one sentence about what went wrong — "That email and
+ *   - the message is one sentence about what went wrong: "That email and
  *     password do not match." Not "Invalid credentials", which reads as a
  *     system fault rather than a typo, and not a list of possibilities.
  *   - the error sits above the form and is announced, because a message below
@@ -51,7 +51,7 @@ export interface SignInFormProps {
   isSubmitting?: boolean
   /** A failure, already a sentence. The form never sees an ApiError. */
   error?: string | null
-  /** Rendered under a divider — SSO, magic link, whatever the deployment has. */
+  /** Rendered under a divider: SSO, magic link, whatever the deployment has. */
   alternatives?: React.ReactNode
   /**
    * Seed the form's initial email/password. Used to pre-fill demo credentials
@@ -61,7 +61,7 @@ export interface SignInFormProps {
   defaultValues?: { email?: string; password?: string }
   /** Drawn first in the fields, e.g. the data-region picker. */
   region?: React.ReactNode
-  /** A note above the fields — under mocks, that the demo credentials are filled in. */
+  /** A note above the fields: under mocks, that the demo credentials are filled in. */
   hint?: React.ReactNode
 }
 
@@ -92,12 +92,12 @@ export function SignInForm({
   // `resetField`, not `setValue`: it restores the field to untouched-and-empty
   // without running the resolver. `setValue` re-validated the whole form, so a
   // rejected sign-in also raised "Enter your email" on a field that was filled
-  // in correctly — two alerts for one event, one of them scolding the user for
+  // in correctly: two alerts for one event, one of them scolding the user for
   // something the application had just done itself.
   useEffect(() => {
     if (!error) return
     // `defaultValue: ''` explicitly, because a bare `resetField` restores the
-    // field's *default* — and under mocks that default is the pre-filled demo
+    // field's *default*: and under mocks that default is the pre-filled demo
     // password. Clearing a rejected password only to put a password straight
     // back is the one thing this branch exists to prevent.
     form.resetField('password', { defaultValue: '' })

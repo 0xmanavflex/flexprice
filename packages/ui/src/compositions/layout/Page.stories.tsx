@@ -6,7 +6,7 @@ import { GridToolbar } from '../tables/GridToolbar'
 import { PageBody, PageHeader, PageToolbar } from './Page'
 
 /**
- * The shared page skeleton — header, toolbar, body — so no screen invents its
+ * The shared page skeleton: header, toolbar, body: so no screen invents its
  * own. Layout only. These stories exercise `PageHeader` and compose the whole
  * shape in `FullLayout`.
  */
@@ -63,7 +63,7 @@ export const Header: Story = {
   },
 }
 
-/** The one thing this page is for — a single action, not a row of them. */
+/** The one thing this page is for: a single action, not a row of them. */
 export const WithAction: Story = {
   args: {
     action: <Button>New coupon</Button>,

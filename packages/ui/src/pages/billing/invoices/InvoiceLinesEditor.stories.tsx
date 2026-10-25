@@ -74,7 +74,7 @@ export const RemovesALine: Story = {
   },
 }
 
-/** A new row starts blank at quantity 1 — the common case, and a valid one. */
+/** A new row starts blank at quantity 1: the common case, and a valid one. */
 export const AddsALine: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

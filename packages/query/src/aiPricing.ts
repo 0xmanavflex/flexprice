@@ -77,7 +77,7 @@ export interface ApplyResult {
   planIds: Record<string, string>
 }
 
-/** The steps this schema will actually run — the empty ones are not shown. */
+/** The steps this schema will actually run: the empty ones are not shown. */
 export function applySteps(schema: PricingSchema): ApplyStep[] {
   const steps: ApplyStep[] = ['features', 'plans', 'prices']
   if (schema.plans.some((plan) => plan.entitlements.length > 0)) steps.push('entitlements')
@@ -90,7 +90,7 @@ export function applySteps(schema: PricingSchema): ApplyStep[] {
  * A usage charge as a `CreateCharge`, so the console's own mapper sends it.
  *
  * Building the wire body here instead would be a second place that has to
- * know what the prices API takes — `toChargeRequest` already does, and is
+ * know what the prices API takes: `toChargeRequest` already does, and is
  * what the charge form goes through.
  */
 function toUsageCharge(charge: PricingUsageCharge, meterId: string): CreateCharge {
@@ -131,7 +131,7 @@ function toFixedPrice(price: PricingPlan['prices'][number]): CreateCharge {
  * Writes the schema: features, then plans, then everything that points at
  * them.
  *
- * Order matters and is not parallelised — a price needs its plan's id and a
+ * Order matters and is not parallelised: a price needs its plan's id and a
  * usage charge needs its feature's meter id. A feature whose lookup key is
  * already taken is adopted rather than duplicated, which is what makes
  * running this twice safe; V1 does the same pre-check.
@@ -157,7 +157,7 @@ export function useApplyPricingSchema() {
       onStep?.('features')
       for (const feature of schema.features) {
         // Adopt an existing feature rather than making a second one with the
-        // same key — this is what lets the flow be run twice without piling up
+        // same key: this is what lets the flow be run twice without piling up
         // duplicates.
         const found = (await call(() =>
           client.features.queryFeature({ lookupKeys: [feature.key], limit: 1, expand: 'meters' }),

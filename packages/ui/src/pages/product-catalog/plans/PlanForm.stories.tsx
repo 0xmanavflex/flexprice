@@ -5,7 +5,7 @@ import { FeatureType } from '@fp/domain'
 import { PlanForm } from './PlanForm'
 
 /**
- * The plan create/edit page — same proof as every form here: fixtures in, a
+ * The plan create/edit page: same proof as every form here: fixtures in, a
  * validated `PlanFormValue` out, no provider, no network. Create is stepped
  * (details, then staged charges, entitlements and credit grants); edit is the
  * details step prepopulated.

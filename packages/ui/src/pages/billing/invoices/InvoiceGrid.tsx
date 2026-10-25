@@ -37,7 +37,7 @@ import {
  * ## Which of those the server can answer
  *
  * `draft`, `open`, `void` and `skipped` are stored, so they go down the wire.
- * `paid` and `overdue` are **derived** — `deriveInvoiceStatus` computes the
+ * `paid` and `overdue` are **derived**: `deriveInvoiceStatus` computes the
  * first from a payment status and the second from a balance plus a due date
  * in the past. Neither is a field, so neither can be asked of the API, and
  * `isStoredInvoiceStatus` is the check that keeps anyone from trying.
@@ -221,7 +221,7 @@ export function InvoiceGrid({
         sortValue: InvoiceSortField.Total,
         ...(locale ? { locale } : {}),
       }),
-      // What is still owed, not what was originally billed — the figure a
+      // What is still owed, not what was originally billed: the figure a
       // collections view is actually reading. Zero is muted so a column of
       // settled invoices does not shout.
       moneyColumn<Invoice>('amountDue', 'Amount due', (row) => row.amountRemaining, {
@@ -294,7 +294,7 @@ export function InvoiceGrid({
     <div className="flex min-w-0 flex-col gap-3">
       {/*
         Sits above the toolbar, where the control that caused it is, rather
-        than in the table body — the body may be full of perfectly good rows,
+        than in the table body: the body may be full of perfectly good rows,
         and the caveat is about what is *missing* from them.
       */}
       {derived ? (
@@ -330,7 +330,7 @@ export function InvoiceGrid({
         searchPlaceholder="Search invoices…"
         /*
          * No counts. The four stored statuses could each be counted with a
-         * `limit: 1` search read for its `pagination.total` — but `paid` and
+         * `limit: 1` search read for its `pagination.total`: but `paid` and
          * `overdue` could not, and a dropdown where four options carry a
          * number and two do not reads as "there are no paid invoices". Either
          * every option can be counted honestly or none of them shows a

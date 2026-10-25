@@ -1,7 +1,7 @@
 /**
  * A payment, as the list reads it.
  *
- * A payment is money moving against an invoice — a collection that succeeded,
+ * A payment is money moving against an invoice: a collection that succeeded,
  * one still in flight, or one that failed and needs chasing. The API's
  * `PaymentResponse` carries ~30 optional fields and a lifecycle far finer than
  * a list needs: it distinguishes `INITIATED` from `PENDING` from `PROCESSING`,
@@ -20,7 +20,7 @@ import type { Money } from './money'
  *
  * The wire's nine values fold to six: the three flavours of "not done yet"
  * become one `pending`, and both refund shapes become one `refunded`. What is
- * left is the set a collections view acts on — did it land, is it still going,
+ * left is the set a collections view acts on: did it land, is it still going,
  * did it fail, was it reversed.
  */
 export const PaymentStatus = {
@@ -77,15 +77,15 @@ export interface Payment {
   id: string
   amount: Money
   status: PaymentStatus
-  /** How the money moved — card, ACH, and so on. Empty when the API omits it. */
+  /** How the money moved: card, ACH, and so on. Empty when the API omits it. */
   methodType: string
   /**
-   * Who moved it — the processor the payment was taken through.
+   * Who moved it: the processor the payment was taken through.
    *
    * `PaymentResponse.paymentGateway` on the wire. Distinct from
    * {@link Payment.methodType}: "card" is what the customer presented, Stripe
    * is who charged it, and a collections view chasing a failure needs the
-   * second to know where to go and look. Empty when the API omits it — which
+   * second to know where to go and look. Empty when the API omits it: which
    * it does for anything not collected through a gateway at all.
    */
   gateway: string
@@ -101,7 +101,7 @@ export interface Payment {
 /**
  * How the list is ordered.
  *
- * A payment is an event, so the only axis that reads is when it happened —
+ * A payment is an event, so the only axis that reads is when it happened:
  * there is no name to sort by. One field, kept as a set so the query and the
  * URL parser share the same fact.
  */
@@ -117,7 +117,7 @@ export const PAYMENT_SORT_LABEL: Record<PaymentSortField, string> = {
 /**
  * What the user is asking for: which payments, in what order, on which page.
  *
- * Product vocabulary, not transport, and it has to survive a URL round-trip —
+ * Product vocabulary, not transport, and it has to survive a URL round-trip:
  * the page keeps this in search params rather than in component state. There is
  * no `view`: a payment is a row, not a card.
  */

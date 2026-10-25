@@ -13,7 +13,7 @@ import {
  * `useForm`, with validation that waits for the person.
  *
  * `onTouched` alone flags a field the moment it loses focus, so clicking into
- * an input and out again — before typing a thing — paints "Enter a name" in
+ * an input and out again: before typing a thing: paints "Enter a name" in
  * red. This keeps `onTouched` for what it is good at and drops only that case:
  *
  *   - a field left **empty** is not judged until the form is submitted (or a

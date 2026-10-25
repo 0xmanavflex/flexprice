@@ -4,7 +4,7 @@ import { z } from 'zod'
 /**
  * A group, as the list reads it.
  *
- * A group bundles catalogue entities — prices or features — so they can be
+ * A group bundles catalogue entities: prices or features: so they can be
  * filtered, reported and invoiced together, the way a product line or a region
  * is. A group is of one kind: it holds prices, or it holds features, never both.
  * V1 keeps the fields across a drawer and a read-only detail page; this is only
@@ -68,7 +68,7 @@ export const GROUP_SORT_LABEL: Record<GroupSortField, string> = {
   [GroupSortField.UpdatedAt]: 'Updated',
 }
 
-/** Table or cards. A layout, not a filter — kept out of the fetch key. */
+/** Table or cards. A layout, not a filter: kept out of the fetch key. */
 export const GroupView = {
   Table: 'table',
   Cards: 'cards',
@@ -88,8 +88,8 @@ export interface GroupQuery {
   /**
    * Only the groups that hold this kind of thing.
    *
-   * Server-side. The pickers want one kind — a feature form offers feature
-   * labels, never price ones — and narrowing a fetched page in the browser
+   * Server-side. The pickers want one kind: a feature form offers feature
+   * labels, never price ones: and narrowing a fetched page in the browser
    * gets that wrong as soon as there are more groups than the page holds.
    */
   entityType?: GroupEntityType
@@ -105,7 +105,7 @@ export const DEFAULT_GROUP_QUERY: GroupQuery = {
   view: GroupView.Table,
   filters: [],
 }
-/** What the group list can filter on — V1's fields, by their wire names. */
+/** What the group list can filter on: V1's fields, by their wire names. */
 export const GROUP_FILTERS: readonly ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },
   { field: 'lookup_key', label: 'Lookup key', kind: 'text' },

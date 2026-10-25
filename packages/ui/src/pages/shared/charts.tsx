@@ -21,7 +21,7 @@ import { provenance } from '@ui/provenance'
  * The series palette (`--chart-1..5`) was derived and contrast-validated once,
  * in both modes, and written into `styles.css`. The failure mode it guards
  * against is a component reaching for a hex or a `bg-indigo-500` because it
- * needed "one more colour" — which is how a validated palette silently becomes
+ * needed "one more colour": which is how a validated palette silently becomes
  * an unvalidated one. So no component in this library takes a colour. They take
  * a `ChartTone`, a closed union, and the mapping to tokens happens in exactly
  * one place below. A call site *cannot* express an unvalidated colour.
@@ -29,7 +29,7 @@ import { provenance } from '@ui/provenance'
  * The categorical/status split is the other half of it. `series-1..5` are the
  * categorical slots, handed out in fixed order and never cycled. `good`,
  * `warning` and `critical` are the status tokens, and they are reserved for
- * *state* — an invoice being overdue, a health reading being bad. Painting a
+ * *state*: an invoice being overdue, a health reading being bad. Painting a
  * category green because green was next in the rotation is how a dashboard
  * teaches people that green means nothing.
  */
@@ -51,7 +51,7 @@ export const ChartsProvenance = provenance({
  *
  * `series-*` are categorical: they mean "this is a different thing from that",
  * and carry no judgement. `good`/`warning`/`critical` are status, and they do
- * carry judgement — which is why they are not in the categorical rotation.
+ * carry judgement: which is why they are not in the categorical rotation.
  * `neutral` is the "everything else"/remainder tone.
  */
 export type ChartTone =
@@ -94,7 +94,7 @@ const SERIES_TONES: ChartTone[] = ['series-1', 'series-2', 'series-3', 'series-4
  * The tone for the nth series.
  *
  * Deliberately **clamps** rather than wrapping. Cycling would give series 1 and
- * series 6 the same colour, which reads as "these two are the same thing" —
+ * series 6 the same colour, which reads as "these two are the same thing":
  * a worse failure than two adjacent series sharing the last slot, because every
  * component here also carries a legend and a tooltip, so identity never rests
  * on colour alone.
@@ -104,7 +104,7 @@ export function seriesTone(index: number): ChartTone {
 }
 
 /**
- * One tone, stepped light-to-dark — a **sequential** ramp.
+ * One tone, stepped light-to-dark: a **sequential** ramp.
  *
  * `@reui/stats-14` paints its segment matrix `indigo-600` down to `indigo-100`,
  * and that graduation is most of why the block reads the way it does. A
@@ -113,7 +113,7 @@ export function seriesTone(index: number): ChartTone {
  * token, and it follows the surface into dark mode on its own.
  *
  * Index 0 is the full tone and the last step is the palest. Sequential, so
- * unlike the categorical slots adjacent steps are *meant* to be close — the
+ * unlike the categorical slots adjacent steps are *meant* to be close: the
  * ΔE ≥ 15 floor is a rule about telling two categories apart, and these are
  * not two categories. Reach for it only when the steps encode magnitude; when
  * they encode identity, use `seriesTone`.
@@ -131,8 +131,8 @@ export function toneRamp(tone: ChartTone, steps: number): string[] {
      * design's ramp was not mixed in this space, and chasing the last two
      * units would mean hard-coding seven stops that only work at one length.
      *
-     * oklab, not oklch, and that is not a detail. White is `oklch(1 0 0)` —
-     * lightness 1, chroma 0, hue *zero* — so an oklch mix interpolates the hue
+     * oklab, not oklch, and that is not a detail. White is `oklch(1 0 0)`:
+     * lightness 1, chroma 0, hue *zero*: so an oklch mix interpolates the hue
      * angle from this blue's 264 degrees down to 0, and the ramp sweeps
      * through violet and pink on the way to pale. It did exactly that on
      * screen. oklab is rectangular: there is no hue angle to rotate, so the
@@ -147,7 +147,7 @@ export function toneRamp(tone: ChartTone, steps: number): string[] {
   })
 }
 
-/** Locale-grouped integers — the default any chart formats numbers with. */
+/** Locale-grouped integers: the default any chart formats numbers with. */
 export function formatWhole(value: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
 }
@@ -157,7 +157,7 @@ export function formatWhole(value: number): string {
  *
  * Not coloured text: `text-success` as small foreground text measures 2.95:1
  * against the card, which fails. The light badge variants put the colour in a
- * tinted fill behind dark text, which passes — and the arrow means the sign is
+ * tinted fill behind dark text, which passes: and the arrow means the sign is
  * not carried by colour alone.
  */
 export function TrendBadge({ percent }: { percent: number }) {
@@ -209,7 +209,7 @@ export interface MetricPoint {
  * One tab, and the series it plots.
  *
  * `value` is a `ReactNode` rather than a number because the headline is often
- * not a bare count — it is `<Money>`, or a duration, or a percentage. The page
+ * not a bare count: it is `<Money>`, or a duration, or a percentage. The page
  * has the domain type; this component does not, and should not start
  * formatting currency.
  */
@@ -248,7 +248,7 @@ export interface MetricTab {
 export interface MetricChartProps {
   /** The tabs across the top, in display order. */
   tabs: MetricTab[]
-  /** Which tab is showing. **The page owns this** — the component holds no state. */
+  /** Which tab is showing. **The page owns this**: the component holds no state. */
   activeTab: string
   onTabChange: (id: string) => void
   /** Sub-label under the plot, e.g. "Last 30 days". */
@@ -510,7 +510,7 @@ function MetricSeries({
 
 /* ---- BlurredEmpty ------------------------------------------------------- */
 
-/** A button in the message card. Label and what it does — nothing else. */
+/** A button in the message card. Label and what it does: nothing else. */
 export interface BlurredEmptyAction {
   label: string
   onClick: () => void
@@ -524,7 +524,7 @@ export interface BlurredEmptyProps {
   description: string
   /** The thing to do about it. */
   action?: BlurredEmptyAction | undefined
-  /** Beside the primary — docs, an import, a sample. */
+  /** Beside the primary: docs, an import, a sample. */
   secondaryAction?: BlurredEmptyAction | undefined
   /** A small drawing above the message. Omit it on a page that is mostly chart. */
   scene?: EmptyScene | undefined
@@ -543,7 +543,7 @@ export interface BlurredEmptyProps {
  * `aria-hidden` keeps it out of the accessibility tree, `inert` takes its
  * controls and its text out of focus and find-in-page, and
  * `pointer-events-none` stops it eating clicks aimed at the card. All three
- * matter — `aria-hidden` alone leaves a tabbable tooltip trigger that a
+ * matter: `aria-hidden` alone leaves a tabbable tooltip trigger that a
  * keyboard user lands on and a screen reader then refuses to describe, which is
  * the worst of both.
  *

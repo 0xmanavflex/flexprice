@@ -12,7 +12,7 @@ import { provenance } from '@ui/provenance'
  *
  * `columns` is the only decision: one column reads as a form, two fills the
  * width of a card the way V1's detail cards do. A value that is missing is the
- * caller's to render — an em dash, "Not set" — because "no code" and "no redeem
+ * caller's to render: an em dash, "Not set": because "no code" and "no redeem
  * window" are not the same absence.
  */
 export const DetailListProvenance = provenance({
@@ -24,7 +24,7 @@ export const DetailListProvenance = provenance({
 export interface DetailItem {
   label: string
   value: ReactNode
-  /** Spans both columns — for wide values like metadata or a description. */
+  /** Spans both columns: for wide values like metadata or a description. */
   full?: boolean
 }
 

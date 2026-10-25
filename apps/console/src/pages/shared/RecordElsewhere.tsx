@@ -17,8 +17,8 @@ export function EnvironmentToaster() {
  * A record this environment does not have, looked for in the others.
  *
  * A link names a record (`/invoices/inv_1`), not the environment it lives in,
- * so whoever opens it — a teammate, or the same person after signing in on a
- * fresh browser — is in whichever environment their console last used. Record
+ * so whoever opens it: a teammate, or the same person after signing in on a
+ * fresh browser: is in whichever environment their console last used. Record
  * ids are unique across environments, so before saying "not found" this asks
  * the other environments the person can reach. When one has it, the console
  * switches there (the page remounts on the switch and loads the record) and

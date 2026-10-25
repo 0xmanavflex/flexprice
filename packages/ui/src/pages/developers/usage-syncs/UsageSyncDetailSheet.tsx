@@ -22,7 +22,7 @@ import { providerLabel } from './usageSyncProviders'
  *
  * Each marketplace the record reached (or was skipped for) is a titled block
  * with its sync entry as the JSON the API returned, in the ReUI `CodeBlock`
- * unchanged — the point is reconciling against the marketplace's own record,
+ * unchanged: the point is reconciling against the marketplace's own record,
  * so nothing here reformats it.
  */
 export const UsageSyncDetailSheetProvenance = provenance({

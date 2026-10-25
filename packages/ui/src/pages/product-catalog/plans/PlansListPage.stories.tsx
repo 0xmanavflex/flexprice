@@ -54,7 +54,7 @@ function PlansListBody({ rows, status, isLoading, hasError, initialSearch }: Pla
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New plan</Button>}
         emptyTitle="No plans yet"
-        emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants — create the first to start selling."
+        emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants: create the first to start selling."
       >
         <PlanGrid
           plans={paginate(matches, query.page, query.pageSize)}

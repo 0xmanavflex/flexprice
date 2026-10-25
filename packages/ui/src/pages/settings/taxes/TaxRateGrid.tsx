@@ -30,16 +30,16 @@ import { type EntityColumn, idColumn, pillColumn, textColumn } from '../../share
  * ## "Applied to" is not here
  *
  * The redesign asks for a count of what each rate is attached to. The
- * capability exists — `GET /taxes/associations`
+ * capability exists: `GET /taxes/associations`
  * (`client.taxAssociations.listTaxAssociations`) takes a `tax_rate_id` and
- * returns a paginated list whose `pagination.total` is exactly that number —
+ * returns a paginated list whose `pagination.total` is exactly that number:
  * but nothing in this repo calls it, and wiring it is a data-layer change
  * rather than a column: one request per rate on screen, or one unfiltered
  * fetch grouped by `tax_rate_id` which is only honest while the whole set
  * fits in a page.
  *
  * So it is omitted rather than shipped as a column of em dashes or, worse, a
- * column of zeros — "this rate applies to nothing" and "we did not ask" look
+ * column of zeros: "this rate applies to nothing" and "we did not ask" look
  * identical in a table and only one of them is true. It is the cheapest of
  * the gaps on these five grids to close, and the only one where the endpoint
  * is already sitting in the SDK.

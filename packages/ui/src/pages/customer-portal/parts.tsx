@@ -20,7 +20,7 @@ import type { Load } from './types'
 /**
  * The customer portal's building blocks, after the portal prototype
  * (`prototype/src/portal/parts.tsx`): the summary cell, empty states, status
- * pills, radio rows, the checkout hand-off and the ledger row — each on kit
+ * pills, radio rows, the checkout hand-off and the ledger row: each on kit
  * and ReUI pieces (IconTile, RadioGroup, Pill, Button, ErrorState).
  */
 export const PortalPartsProvenance = provenance({

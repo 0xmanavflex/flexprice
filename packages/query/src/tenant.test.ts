@@ -112,8 +112,8 @@ describe('toUpdateTenantRequest', () => {
 
 /**
  * `GET /tenants/billing` as it came back live. Trimmed to one metered feature
- * with a limit and one unlimited static feature — the two cases the panel has
- * to render differently — plus the single subscription the tenant is on.
+ * with a limit and one unlimited static feature: the two cases the panel has
+ * to render differently: plus the single subscription the tenant is on.
  */
 const billingUsageWire = {
   usage: {
@@ -242,7 +242,7 @@ describe('isOverLimit', () => {
 })
 
 /**
- * `GET /tenants/billing` — plural, the path the SDK does not have.
+ * `GET /tenants/billing`: plural, the path the SDK does not have.
  *
  * Reached with `fetch`, so this body is the raw JSON: snake_case keys and
  * timestamps as strings, neither of which a generated client is there to
@@ -300,7 +300,7 @@ describe('toTenantBillingWire', () => {
       subscriptionId: 'subs_01',
       planId: 'plan_01',
       planName: 'Free',
-      // `subscription_status`, not `status` — the latter is the row's archival
+      // `subscription_status`, not `status`: the latter is the row's archival
       // state, which is not what a plan card means by status.
       status: 'active',
       billingPeriod: 'MONTHLY',

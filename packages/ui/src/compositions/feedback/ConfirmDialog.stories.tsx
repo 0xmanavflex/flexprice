@@ -97,7 +97,7 @@ export const Destructive: Story = {
   parameters: {
     // The base-nova `destructive` button variant is a soft fill
     // (bg-destructive/10 + destructive-coloured text) at 3.82:1 against its own
-    // tint — a vendored design-token contrast gap, not this dialog's, tracked
+    // tint: a vendored design-token contrast gap, not this dialog's, tracked
     // separately. The `aria-hidden-focus` rule is restated because a story-level
     // `rules` array overwrites the meta's rather than merging.
     a11y: {

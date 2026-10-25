@@ -6,7 +6,7 @@ import { provenance } from '@ui/provenance'
 import { MetricChart, formatWhole } from '../../shared/charts'
 
 /**
- * Delivery activity over the last six hours, across every endpoint — V1's
+ * Delivery activity over the last six hours, across every endpoint: V1's
  * Activity tab, on the shared metric chart: one tab per outcome, the hourly
  * series under it.
  */

@@ -2,7 +2,7 @@ import { InvoiceStatus } from './invoice'
 import { PaymentStatus } from './payment'
 
 /**
- * Setting an invoice's payment status by hand — `PUT /invoices/{id}/payment` —
+ * Setting an invoice's payment status by hand: `PUT /invoices/{id}/payment`:
  * for money that moved outside Flexprice.
  *
  * The backend allows it only on a draft or finalized invoice with no succeeded

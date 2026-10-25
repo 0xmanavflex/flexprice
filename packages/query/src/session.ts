@@ -31,7 +31,7 @@ import { useFlexpriceServerURL } from './provider'
  * Sign-in is a mutation and not a query because it is an exchange: an email
  * and a password go out, a token comes back, and nothing about it should be
  * cached, retried or refetched on focus. Who the token belongs to, and which
- * environments it can act in, are queries — they answer the same way every
+ * environments it can act in, are queries: they answer the same way every
  * time until the token changes.
  *
  * Both reads are keyed by the token rather than by nothing. A signed-out user
@@ -55,7 +55,7 @@ export function useSignIn() {
   })
 }
 
-/** Create an account — `POST /auth/signup`, which answers with a session like sign-in. */
+/** Create an account: `POST /auth/signup`, which answers with a session like sign-in. */
 export function useSignUp() {
   const serverURL = useFlexpriceServerURL()
 
@@ -65,7 +65,7 @@ export function useSignUp() {
 }
 
 /**
- * Creates the account behind a confirmed Supabase sign-up — `POST /auth/signup`
+ * Creates the account behind a confirmed Supabase sign-up: `POST /auth/signup`
  * with the confirmed session's access token, as the hosted regions require.
  * See `signUp` in `@fp/api`.
  */
@@ -162,7 +162,7 @@ export function useRecordEnvironment(
  * Creates an environment, then makes the list say so.
  *
  * `POST /environments` is as undocumented as the list it adds to, and lives in
- * `@fp/api`'s `session.ts` for the same reason — see the note there, and
+ * `@fp/api`'s `session.ts` for the same reason: see the note there, and
  * `docs/api-contract-gap.md`. It is a real route: the hosted API answers a
  * malformed-by-quota create with a `validation_error` naming the tenant's
  * per-type limit, which is a handler that ran.
@@ -262,7 +262,7 @@ export interface CopyEnvironment {
 }
 
 /**
- * Copy an environment's published plans and features into another — V1's
+ * Copy an environment's published plans and features into another: V1's
  * "Copy environment", and how a sandbox setup is taken live. The API queues the
  * copy and answers at once; when it made a new environment, the list is
  * refreshed so the switcher shows it.

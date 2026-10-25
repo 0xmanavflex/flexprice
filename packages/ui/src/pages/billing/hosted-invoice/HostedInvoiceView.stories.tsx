@@ -216,7 +216,7 @@ export const LongChargeName: Story = {
       lines: [
         {
           id: 'li_long',
-          name: 'Enterprise analytics workspace — premium support and dedicated region add-on',
+          name: 'Enterprise analytics workspace: premium support and dedicated region add-on',
           quantity: '1',
           amount: DEMO_HOSTED_INVOICE.lines[0]!.amount,
         },

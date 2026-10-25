@@ -7,7 +7,7 @@ import { env } from '@/env'
 import { useSession } from '@/app/session'
 import { mutationMessage } from '../settings/panelKit'
 
-/** The token the mocked build signs every request with — the same one `useEnvironments` uses. */
+/** The token the mocked build signs every request with: the same one `useEnvironments` uses. */
 const MOCK_TOKEN = 'mock-session-token'
 
 export interface EnvironmentFormPageProps {
@@ -24,7 +24,7 @@ export interface EnvironmentFormPageProps {
  *
  * Without self-billing it is the approval note (the contact buttons), unless
  * `VITE_PLATFORM_CONFIG` allows production outright, as V1's config does. In the
- * trial — and while locked — it is the upgrade: paying creates the production
+ * trial: and while locked: it is the upgrade: paying creates the production
  * environment (the API raises the limit and creates "Production" on
  * activation). Live, with production already there, it is that environment;
  * live without one (rare), it is an ordinary create.
@@ -71,7 +71,7 @@ function useProductionOffer(
  *
  * Opened from the environment switcher. It stays open on failure with the
  * API's own sentence under the fields (a tenant limit is a real 400), and on
- * success switches the console into what was just made — but only when the
+ * success switches the console into what was just made: but only when the
  * response named it, since switching to an unknown id would 403 everything.
  */
 export function EnvironmentFormPage({

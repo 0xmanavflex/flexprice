@@ -15,7 +15,7 @@ export interface GroupListPageProps {
 /**
  * The group surface: a list, a compact full page to create one (`/groups/new`), and a confirmed delete.
  *
- * The API has no group update, so there is no edit and no inline rename — a
+ * The API has no group update, so there is no edit and no inline rename: a
  * wrong name means delete and recreate. The list stays URL-driven; the pending
  * delete is the only local state.
  */
@@ -51,9 +51,9 @@ export function GroupListPage({ query, onQueryChange, onCreateGroup }: GroupList
           isFiltered={isFiltered}
           onRetry={() => void groups.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={onCreateGroup}>New group</Button>}
-          emptyTitle="No groups yet"
-          emptyDescription="Groups bundle prices or features so they report and invoice together — a product line, a region. Create the first to start."
+          createAction={<Button onClick={onCreateGroup}>New tag</Button>}
+          emptyTitle="No tags yet"
+          emptyDescription="Tags bundle prices or features so they report and invoice together: a product line, a region. Create the first to start."
         >
           <GroupGrid
             groups={rows}
@@ -72,9 +72,9 @@ export function GroupListPage({ query, onQueryChange, onCreateGroup }: GroupList
         onOpenChange={(open) => {
           if (!open) closeDelete()
         }}
-        title={`Delete ${deleting?.name ?? 'group'}?`}
-        description="The group is removed; the prices or features in it are not. This cannot be undone."
-        confirmLabel="Delete group"
+        title={`Delete ${deleting?.name ?? 'tag'}?`}
+        description="The tag is removed; the prices or features in it are not. This cannot be undone."
+        confirmLabel="Delete tag"
         onConfirm={() => {
           if (deleting) remove.mutate(deleting.id, { onSuccess: closeDelete })
         }}
@@ -95,12 +95,12 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return serverReason(error) ?? 'You do not have permission to change groups here.'
+        return serverReason(error) ?? 'You do not have permission to change tags here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return serverReason(error) ?? 'Could not save the group. Try again.'
+        return serverReason(error) ?? 'Could not save the tag. Try again.'
     }
   }
-  return 'Could not save the group. Try again.'
+  return 'Could not save the tag. Try again.'
 }

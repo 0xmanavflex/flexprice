@@ -155,7 +155,7 @@ export async function fetchCustomers(
    *
    * One deliberate narrowing of behaviour: search matches the **name** only,
    * where the browser version also matched email and external id. The filter
-   * DSL conjoins its conditions — Ent's `Where(...)` ANDs them — so one box
+   * DSL conjoins its conditions: Ent's `Where(...)` ANDs them: so one box
    * across three fields would need an OR the API does not offer. Email and
    * external id remain searchable as their own `contains` filters in the filter
    * bar (`CUSTOMER_FILTERS`), which do work across every page.
@@ -181,8 +181,8 @@ export function useCustomers(query: CustomerQuery, options: { enabled?: boolean 
  * The detail read model, richer than the list's.
  *
  * `GET /customers/{id}` (`client.customers.getCustomer`) returns the fuller
- * record — the postal address, a phone, the timezone, the tax treatment and any
- * metadata — that the search list drops. Everything optional collapses to empty
+ * record: the postal address, a phone, the timezone, the tax treatment and any
+ * metadata: that the search list drops. Everything optional collapses to empty
  * rather than absent, so the detail page renders a dash, never a hole.
  */
 export interface CustomerDetailWire extends CustomerWire {
@@ -290,7 +290,7 @@ export function useCustomerSubscriptions(externalId: string) {
  * `externalCustomerId` instead (that is what the global list's search box does),
  * so this reuses `fetchInvoices` with the external id as the filter. Gated on a
  * real id so it does not fetch the whole book while the customer is still
- * loading. Returns the same `InvoicePage` the list does — status is derived, so
+ * loading. Returns the same `InvoicePage` the list does: status is derived, so
  * a draft reads "Draft" and a past-due one "Overdue".
  */
 export function useCustomerInvoices(externalId: string) {
@@ -305,19 +305,19 @@ export function useCustomerInvoices(externalId: string) {
 }
 
 /**
- * A customer's entitlement usage — the per-feature quotas their detail page shows.
+ * A customer's entitlement usage: the per-feature quotas their detail page shows.
  *
  * `GET /customers/usage` (`client.customers.getCustomerUsageSummary`), which
  * takes the customer as a **query parameter**, not a path segment: there is no
  * `/customers/{id}/usage`. It is the only endpoint in the API that answers
- * "how much of this allowance has been used" per feature — `/entitlements/search`
+ * "how much of this allowance has been used" per feature: `/entitlements/search`
  * knows the caps but not the usage, and `/events/analytics` knows usage over a
  * window the caller picks, which is not the same thing as usage within the
  * entitlement's own reset period.
  *
  * The payload is a `CustomerUsageSummaryResponse`, which is byte-for-byte the
  * `usage` half of `getTenantBillingUsage`. So this reuses `toFeatureUsage`
- * rather than restating the mapping — including the part that matters most,
+ * rather than restating the mapping: including the part that matters most,
  * that `total_limit: null` is *unlimited* and must not collapse to zero.
  *
  * Unlike the tenant route, the generated SDK path for this one is correct, so
@@ -361,7 +361,7 @@ export async function fetchCustomerUsageSummary(
 /**
  * One customer's feature quotas, by internal id.
  *
- * Keyed on the internal `customerId` — this endpoint takes that, not the
+ * Keyed on the internal `customerId`: this endpoint takes that, not the
  * external id the subscription and invoice reads need. Gated on a real id so it
  * sits idle rather than asking about the empty string.
  */
@@ -483,7 +483,7 @@ export interface IntegrationMappingWire {
 
 /**
  * Published mappings only, one per provider, named from the integration
- * catalogue exactly as the customer list names its marks — the catalogue `id`
+ * catalogue exactly as the customer list names its marks: the catalogue `id`
  * is what picks the logo.
  */
 export function toIntegrationLinks(wires: IntegrationMappingWire[] | undefined): IntegrationLink[] {
@@ -508,7 +508,7 @@ export function toIntegrationLinks(wires: IntegrationMappingWire[] | undefined):
   return links
 }
 
-/** Where a customer is mapped in each connected provider — `GET /integrations/mappings`. */
+/** Where a customer is mapped in each connected provider: `GET /integrations/mappings`. */
 export function useCustomerIntegrationLinks(customerId: string) {
   const client = useFlexprice()
 
@@ -537,7 +537,7 @@ function invalidateIntegrationLinks(
   void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
 }
 
-/** Map this customer to their record in a provider — `POST /integrations/link`. */
+/** Map this customer to their record in a provider: `POST /integrations/link`. */
 export function useLinkCustomerIntegration(customerId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -562,7 +562,7 @@ export function useLinkCustomerIntegration(customerId: string) {
   })
 }
 
-/** Remove a provider mapping — `DELETE /integrations/link`, which carries a body. */
+/** Remove a provider mapping: `DELETE /integrations/link`, which carries a body. */
 export function useUnlinkCustomerIntegration(customerId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()

@@ -19,7 +19,7 @@ import { useFlexprice } from './provider'
 /**
  * Charges: the translation between the product's "charge" and the API's price.
  *
- * A plan's money is not on the plan — it is a set of `Price` records tagged with
+ * A plan's money is not on the plan: it is a set of `Price` records tagged with
  * an `entity_type`, reached through `/prices/*`. This module is the one place
  * that knows a charge *is* a price: it reads them with `POST /prices/search`,
  * writes them with `POST /prices/bulk`, and maps the wire's price shape to and
@@ -162,7 +162,7 @@ export function toCharge(wire: ChargeWire): Charge {
  * A charge draft, as a `CreatePriceRequest` for the bulk endpoint.
  *
  * The inverse of `toCharge`: fills the fields the API requires (`priceUnitType`
- * defaults to FIAT — the currency case), and sends only what the chosen billing
+ * defaults to FIAT: the currency case), and sends only what the chosen billing
  * model uses. A usage charge carries its meter; a tiered charge its bands, with
  * a missing flat amount defaulted to `"0"` the way the backend expects.
  */
@@ -236,7 +236,7 @@ export function toChargeRequest(
  * Clears a usage window on the successor price.
  *
  * An absent `bucket_size` means "inherit", so removal needs a value of its own.
- * The API spells it `none`, lowercase, and it is not a `WindowSize` — hence the
+ * The API spells it `none`, lowercase, and it is not a `WindowSize`: hence the
  * literal here rather than a member of `PriceWindowSize`.
  */
 const BUCKET_SIZE_NONE = 'none'
@@ -246,7 +246,7 @@ const BUCKET_SIZE_NONE = 'none'
  *
  * Only the price itself moves: the amount or bands, the model, the display name.
  * Currency, period, meter and cadence are fixed once a price exists, so they are
- * never sent. `effectiveFrom` is what makes the change a new *version* — the old
+ * never sent. `effectiveFrom` is what makes the change a new *version*: the old
  * price keeps billing until that date rather than being rewritten in place.
  */
 export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknown> {
@@ -261,7 +261,7 @@ export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknow
      * The API reads three cases off this field: absent means "keep whatever the
      * existing price had", the sentinel `'none'` clears it on the successor, and
      * a value replaces it. Absent is therefore not usable as "the user cleared
-     * it" — a window could never be removed. So a usage charge always says which
+     * it": a window could never be removed. So a usage charge always says which
      * of the two it means, and a fixed charge says nothing because the API
      * refuses the field there at all.
      */
@@ -324,7 +324,7 @@ async function fetchEntityCharges(
  *
  * `expand: 'meters'` so a usage charge's row can name the feature it meters
  * without a second request. A generous `limit` because a plan's charges are a
- * handful, not a page — the detail page shows them all, not a slice.
+ * handful, not a page: the detail page shows them all, not a slice.
  */
 export function usePrices(entityType: PriceEntityType, entityId: string) {
   const client = useFlexprice()
@@ -338,7 +338,7 @@ export function usePrices(entityType: PriceEntityType, entityId: string) {
 }
 
 /**
- * Every price an entity has had, ended ones included — `allow_expired_prices`.
+ * Every price an entity has had, ended ones included: `allow_expired_prices`.
  *
  * The plain list leaves out a price once it ends, so editing a charge made its
  * earlier price vanish: the API had ended it and created a new version, not
@@ -429,7 +429,7 @@ type PriceWithParent = ChargeWire & {
  * the prices that bill that meter are found with `meterIds` on
  * `POST /prices/search`.
  *
- * The expand values are **plural** — `addons` and `meters`, not `addon` and
+ * The expand values are **plural**: `addons` and `meters`, not `addon` and
  * `meter`. This route does not ignore an unknown one the way the subscription
  * search does; it answers `400 validation_error` naming the field, so the
  * whole query failed and the Charges tab on every feature showed an error.

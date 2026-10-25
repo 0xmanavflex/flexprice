@@ -11,7 +11,7 @@ import { provenance } from '@ui/provenance'
  * anywhere. A broken build looked exactly like an empty list.
  *
  * A blank screen is the one outcome never worth shipping. Whatever went wrong,
- * something has to say so — and say what to do about it.
+ * something has to say so: and say what to do about it.
  */
 export const AppFailureProvenance = provenance({
   source: 'composition',

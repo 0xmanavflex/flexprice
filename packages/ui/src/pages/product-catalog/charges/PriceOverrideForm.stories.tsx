@@ -8,7 +8,7 @@ import { PriceOverrideForm } from './PriceOverrideForm'
  * The form proof, run the same way as the grid: fixture -> UI -> story -> test.
  *
  * Again there is no provider here and no network. The pressure this applies is
- * different from the grid's, though — the question is whether RHF plus the
+ * different from the grid's, though: the question is whether RHF plus the
  * domain schema actually removes V1's state machine, or merely relocates it.
  * The interaction stories below are the evidence: switching billing model, the
  * tier rules, and a valid submit all behave without this component owning a
@@ -73,7 +73,7 @@ export const Playground: StoryObj<ComponentProps<typeof PriceOverrideForm> & { s
   },
 }
 
-/** Opens on a flat fee — the simplest model, and the most common. */
+/** Opens on a flat fee: the simplest model, and the most common. */
 export const Default: Story = {}
 
 export const FlatFee: Story = {
@@ -130,7 +130,7 @@ export const SubmitError: Story = {
  * Validation comes from the domain schema, not from the form.
  *
  * The message asserted here is the same string `priceOverride.test.ts` asserts
- * against the schema directly — one rule, one wording, whether it is reached
+ * against the schema directly: one rule, one wording, whether it is reached
  * through this form or through an action.
  */
 export const ValidationFromDomain: Story = {
@@ -175,7 +175,7 @@ export const SwitchingModelResets: Story = {
 /**
  * The unbounded final band cannot be removed.
  *
- * Remove it and usage above the last ceiling is not billed — revenue lost
+ * Remove it and usage above the last ceiling is not billed: revenue lost
  * silently, which is why this is a disabled control rather than a validation
  * message after the fact.
  */
@@ -249,7 +249,7 @@ export const AddingATierKeepsTheOpenBandLast: Story = {
 /**
  * A valid submit hands back a parsed domain value.
  *
- * `divideBy` arrives as a number and `amount` as an exact decimal string —
+ * `divideBy` arrives as a number and `amount` as an exact decimal string:
  * the form does the coercion so no caller has to, and nothing downstream has
  * to guess which fields are strings.
  */

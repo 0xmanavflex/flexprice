@@ -11,7 +11,7 @@ import { regionHref, regionOfOrigin, type RegionId } from './regionRouting'
  * It used to swap `VITE_FLEXPRICE_API_URL` in place: the same page, pointed at
  * another region's API. That is the wrong shape for what these regions are.
  * Each one is a separate deployment with its own accounts, its own identity
- * provider and its own data — so talking to the US API from the India
+ * provider and its own data: so talking to the US API from the India
  * dashboard means carrying an India session to a backend that never issued it.
  * Picking a region now goes to that region's dashboard, which is also what V1
  * does (`switchRegion` in `utils/region/regionUtils.ts`).
@@ -27,8 +27,8 @@ import { regionHref, regionOfOrigin, type RegionId } from './regionRouting'
  * so a host that is an alias of a region (`us.app.flexprice.io`) is not shown
  * a switcher inviting it to "move" to the region it is already in.
  *
- * Unset and unrecognised means not part of the hosted set — self-hosted, a
- * preview build, mocks — and the switcher does not appear at all. There is
+ * Unset and unrecognised means not part of the hosted set: self-hosted, a
+ * preview build, mocks: and the switcher does not appear at all. There is
  * nowhere for it to go that would make sense.
  */
 
@@ -45,7 +45,7 @@ interface RegionState {
   region: RegionId
   /** Navigates to that region's dashboard, keeping the current page. */
   setRegion: (region: RegionId) => void
-  /** The API this console talks to. Its own — never another region's. */
+  /** The API this console talks to. Its own: never another region's. */
   serverURL: string
 }
 

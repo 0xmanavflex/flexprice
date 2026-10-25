@@ -40,7 +40,7 @@ import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
  * Turns whatever is in `?tab=` into a real section, defaulting to Overview.
  *
  * Exported so the route can validate its search param against the same list the
- * page renders — one source of truth for which sections exist. The retired
+ * page renders: one source of truth for which sections exist. The retired
  * `?tab=subscriptions` is not in that list, so it lands on Overview, where the
  * contracts now live.
  */
@@ -62,8 +62,8 @@ export interface CustomerDetailPageProps {
 /**
  * The wiring layer for a customer's detail page.
  *
- * Reads the customer, then — because the subscription and invoice endpoints are
- * keyed by the *external* id — scopes those to what the customer record reports.
+ * Reads the customer, then: because the subscription and invoice endpoints are
+ * keyed by the *external* id: scopes those to what the customer record reports.
  * The two scoped hooks are gated on that id, so they sit idle until it is known
  * rather than fetching the whole book. All presentation is `CustomerDetail`'s;
  * this only fetches, maps an error to a sentence, and hands over the data.
@@ -153,8 +153,8 @@ export function CustomerDetailPage({
 
   // An archived customer is read-only (CustomerDetail shows why). The page's
   // own write handlers are withheld too, so controls that do not consult the
-  // access scope — inline edits, metadata, integration links, the wallet and
-  // tax panels — cannot write either.
+  // access scope: inline edits, metadata, integration links, the wallet and
+  // tax panels: cannot write either.
   const archived = customer.data.status === CustomerStatus.Archived
 
   return (
@@ -361,7 +361,7 @@ export function CustomerDetailPage({
 }
 
 /**
- * A customer's entitlement quotas, one table row per entitled feature — the
+ * A customer's entitlement quotas, one table row per entitled feature: the
  * table V1 shows, in place of the cards this used to draw.
  *
  * Reads `GET /customers/usage`, the only endpoint that answers "how much of
@@ -401,7 +401,7 @@ function UsageSection({
 /**
  * A decimal string the API sent, as a number for display.
  *
- * These are counts — events, seats, calls — not money, so reading them as
+ * These are counts: events, seats, calls: not money, so reading them as
  * numbers is display formatting rather than the arithmetic `money.ts` forbids.
  * `undefined` for anything unparseable, which renders as a dash rather than a
  * zero: "the API sent something we could not read" is not "nothing was used".

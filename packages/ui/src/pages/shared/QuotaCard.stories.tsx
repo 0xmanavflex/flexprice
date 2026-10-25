@@ -181,7 +181,7 @@ export const OverQuota: Story = {
   },
 }
 
-/** Exactly at the limit — full bar, nothing left, and not yet an overage. */
+/** Exactly at the limit: full bar, nothing left, and not yet an overage. */
 export const Exhausted: Story = {
   args: { used: 5000, percentUsed: 100 },
   play: async ({ canvasElement }) => {

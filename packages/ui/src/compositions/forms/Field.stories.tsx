@@ -47,7 +47,7 @@ export const Required: Story = { args: { required: true } }
 /**
  * The wiring is the whole component, so it is what gets asserted.
  *
- * `aria-describedby` must reach *both* the hint and the error — the common bug
+ * `aria-describedby` must reach *both* the hint and the error: the common bug
  * is that adding an error silently replaces the hint for screen reader users.
  */
 export const WiresLabelHintAndError: Story = {

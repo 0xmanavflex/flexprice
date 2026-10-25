@@ -21,7 +21,7 @@ import type { EntityColumn } from './cells'
  *
  * A list page hands `EntityList` a server-paged slice and handlers for search,
  * sort and paging. A detail page has the whole set in memory, so this keeps
- * that state itself — search, a status facet, sort, page — and gives
+ * that state itself: search, a status facet, sort, page: and gives
  * `EntityList` exactly what a list page would. Same toolbar, same header band,
  * same rows, same footer; only the place the state lives is different.
  *
@@ -119,7 +119,7 @@ export function DetailTable<T extends object>({
   const toolsSlot = useContext(SectionToolsContext)
   const toolsEl = toolsSlot?.el ?? null
   // A titled section keeps filter and sort beside its title. A tab that is
-  // only a table has no title — the tab is the name — so the search bar stays.
+  // only a table has no title: the tab is the name: so the search bar stays.
   const inHeader = Boolean(toolsEl) && Boolean(toolsSlot?.titled) && toolbar
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Record<string, string[]>>({})

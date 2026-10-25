@@ -11,7 +11,7 @@ import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
 /**
- * API keys. List, create, delete — and no update, because the API has none.
+ * API keys. List, create, delete: and no update, because the API has none.
  *
  * `GET /secrets/api/keys`, `POST /secrets/api/keys`,
  * `DELETE /secrets/api/keys/{id}`. The list takes `limit`, `offset` and
@@ -68,7 +68,7 @@ export function toApiKey(wire: ApiKeyWire): ApiKey {
     serviceAccountName: wire.serviceAccountName ?? '',
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
-    // A key with no expiry never expires — a real absence, not a missing value.
+    // A key with no expiry never expires: a real absence, not a missing value.
     expiresAt: wire.expiresAt ?? null,
     lastUsedAt: wire.lastUsedAt ?? null,
   }
@@ -96,7 +96,7 @@ export async function fetchApiKeys(client: Flexprice, query: ApiKeyQuery): Promi
   const offset = (query.page - 1) * query.pageSize
   const response = await call(() =>
     // Positional, and the third argument must be `undefined` rather than `''`
-    // for "any status" — an empty string is a value the backend would filter on.
+    // for "any status": an empty string is a value the backend would filter on.
     client.secrets.listApiKeys(query.pageSize, offset, query.status || undefined),
   )
 
@@ -120,7 +120,7 @@ export function useApiKeys(query: ApiKeyQuery = DEFAULT_API_KEY_QUERY) {
  * The create request.
  *
  * `expiresAt` is a `Date` on the wire model and is omitted entirely when the
- * key never expires — sending `null` is not the same as not sending it, and the
+ * key never expires: sending `null` is not the same as not sending it, and the
  * SDK's zod schema would reject the null. `serviceAccountId` is likewise
  * omitted rather than sent empty: present, it issues the key against a machine
  * identity; absent, against the signed-in person.
@@ -134,7 +134,7 @@ export function toCreateApiKeyRequest(draft: CreateApiKey): Record<string, unkno
   }
 }
 
-/** The create response: `{apiKey, secret}` — the material and the record. */
+/** The create response: `{apiKey, secret}`: the material and the record. */
 export interface CreateApiKeyWire {
   apiKey?: string | undefined
   secret?: ApiKeyWire | undefined
@@ -154,7 +154,7 @@ export function toCreatedApiKey(wire: CreateApiKeyWire): CreatedApiKey {
  * on nothing else: the list endpoint returns a `displayId` prefix, there is no
  * "reveal" route, and re-reading the key after this mutation resolves returns a
  * record with no key material in it. A caller must surface `data.secret` to the
- * person at the moment this settles — once the component holding it unmounts,
+ * person at the moment this settles: once the component holding it unmounts,
  * the secret is unrecoverable and the only remedy is deleting the key and
  * issuing another.
  *
@@ -182,7 +182,7 @@ export function useCreateApiKey() {
 /**
  * Revoke a key. `DELETE /secrets/api/keys/{id}`.
  *
- * Immediate and irreversible from the console — there is no update route to
+ * Immediate and irreversible from the console: there is no update route to
  * put one back, so a revoked key is replaced rather than restored.
  */
 export function useDeleteApiKey() {

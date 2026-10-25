@@ -81,11 +81,11 @@ export const Populated: Story = {
     await expect(await canvas.findByText('Launch 20% off')).toBeInTheDocument()
 
     // A percentage prints the API's own string; a fixed amount goes through
-    // formatMoney. Neither is computed here — money.ts forbids the arithmetic.
+    // formatMoney. Neither is computed here: money.ts forbids the arithmetic.
     await expect(canvas.getByText('20%')).toBeInTheDocument()
     await expect(canvas.getByText('$50.00')).toBeInTheDocument()
 
-    // Only `repeated` reads with a count beside it, and the unit is periods —
+    // Only `repeated` reads with a count beside it, and the unit is periods:
     // not months, which the cadence does not say.
     await expect(canvas.getByText('Repeating · 3 periods')).toBeInTheDocument()
     await expect(canvas.getAllByText('One-time').length).toBeGreaterThan(0)
@@ -112,7 +112,7 @@ export const Layout: Story = {
 
 export const Loading: Story = { args: { coupons: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     coupons: [],

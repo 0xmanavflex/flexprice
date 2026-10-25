@@ -118,7 +118,6 @@ export const SECONDARY: NavEntry[] = [
     query: { section: 'tags', tab: 'tags' },
   },
   { id: 'price-units', label: 'Price Units', path: '/price-units' },
-  { id: 'groups', label: 'Groups', path: '/groups' },
 ]
 
 const ALL: NavEntry[] = [...NAV, ...FOOTER_NAV, ...SECONDARY]
@@ -135,7 +134,7 @@ function leaves(entries: NavEntry[] = ALL): NavEntry[] {
  * Which entry a path belongs to.
  *
  * Longest match wins, so `/features/new` resolves to `features` rather than to
- * `/` — which would otherwise match everything. A row that selects a Settings
+ * `/`: which would otherwise match everything. A row that selects a Settings
  * tab also has to match the search, and beats the bare `/settings` row when it
  * does. `search` is a query string, with or without the leading `?`.
  */
@@ -186,7 +185,7 @@ export function labelForNavId(id: string): string | undefined {
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
   // Discounts, Taxes, Cost Tracking and Tags are rows of Settings that keep their own routes.
-  if (id.startsWith('settings-') || id === 'groups')
+  if (id.startsWith('settings-'))
     return SECONDARY.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),
@@ -196,7 +195,7 @@ export function parentForNavId(id: string | undefined): NavEntry | undefined {
 /**
  * The crumbs for a path: the group, then the page.
  *
- * The group is not a link — it is a heading with no page of its own, and a
+ * The group is not a link: it is a heading with no page of its own, and a
  * crumb that navigates somewhere the user did not name is worse than one that
  * does nothing.
  */
@@ -223,7 +222,7 @@ function toItems(entries: NavEntry[], icons: Record<string, React.ReactNode>): S
 
 /** Builds what the shell renders. */
 export function toNavGroups(icons: Record<string, React.ReactNode> = {}): ShellNavGroup[] {
-  // The primary tree carries no heading — a lone label over the main section
+  // The primary tree carries no heading: a lone label over the main section
   // names the obvious. The footer group is pinned to the bottom of the rail.
   return [
     { id: 'main', items: toItems(NAV, icons) },

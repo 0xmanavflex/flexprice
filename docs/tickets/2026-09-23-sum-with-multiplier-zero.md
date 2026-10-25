@@ -1,7 +1,7 @@
 # Correctness: `SUM_WITH_MULTIPLIER` accepts a zero multiplier
 
 **Type:** product / billing correctness
-**Severity:** high — silent under-billing
+**Severity:** high: silent under-billing
 **Found:** 2026-09-23, during the V2 Features migration
 **Owner:** backend / product (not the frontend migration)
 
@@ -50,7 +50,7 @@ $0 billed
 1. **Backend:** reject a non-positive multiplier on `POST /features` and
    `POST /meters`. Server-side is the only place that covers every client.
 2. **Data:** identify and report affected meters.
-3. **Frontend V1:** fix the comparison — one line — independently of V2.
+3. **Frontend V1:** fix the comparison: one line: independently of V2.
 
 ## Already fixed in V2
 

@@ -29,7 +29,7 @@ import { provenance } from '@ui/provenance'
 import { Status } from '../shared/cells'
 
 /**
- * Settings → Usage & billing: the tenant's own Flexprice account — plan,
+ * Settings → Usage & billing: the tenant's own Flexprice account: plan,
  * trial, usage, invoices, billing details. Not the Billing area for its
  * customers. Built as the other settings panels are: untitled settings blocks,
  * one info strip at the top of a block, actions in its footer bar.
@@ -55,7 +55,7 @@ export interface UsageBillingViewProps {
   /** Settings → Organization's billing email. */
   /**
    * Where Flexprice sends the workspace's invoices, when known. Not
-   * Organization's billing email — that is what the workspace's own customers
+   * Organization's billing email: that is what the workspace's own customers
    * see. The row is left out while the API does not report it.
    */
   billingEmail?: string

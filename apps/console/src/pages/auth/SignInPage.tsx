@@ -37,7 +37,7 @@ import { messageForSignInError } from './signInMessage'
 const DEMO_CREDENTIALS = { email: 'demo@flexprice.io', password: 'demo1234' } as const
 
 /** Shown only under mocks, so it never appears in front of the live API. */
-const DEMO_HINT = 'Demo mode — the sample data is loaded. Just click Sign in.'
+const DEMO_HINT = 'Demo mode: the sample data is loaded. Just click Sign in.'
 
 export { messageForSignInError }
 
@@ -48,7 +48,7 @@ export interface SignInPageProps {
   redirect?: string | undefined
   /**
    * The tenant whose identity provider should handle this login, from
-   * `?sso=`. Its presence is what offers the SSO button — SSO is configured
+   * `?sso=`. Its presence is what offers the SSO button: SSO is configured
    * per tenant, and without one there is no provider to send the browser to.
    */
   ssoTenantId?: string | undefined
@@ -71,7 +71,7 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
   /*
    * Reset runs against Supabase from the browser, not against the Flexprice
    * API, so what decides the link is whether *this region* has a Supabase
-   * project configured — not what `/auth/capabilities` says. A self-hosted
+   * project configured: not what `/auth/capabilities` says. A self-hosted
    * build has none, and correctly shows no link: it has never had reset.
    *
    * The server's answer is honoured too, so that brokering reset later turns
@@ -81,7 +81,7 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
 
   // Under mocks the form is seeded and announces itself; against a real API it
   // stays empty and silent. Spread conditionally rather than passing `undefined`
-  // — the props are exact-optional, so an explicit `undefined` would not type.
+  //: the props are exact-optional, so an explicit `undefined` would not type.
   const demoProps = env.useMocks ? { defaultValues: DEMO_CREDENTIALS, hint: DEMO_HINT } : {}
 
   /*
@@ -90,7 +90,7 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
    * Deliberately not gated on `capabilities.saml.enabled`: that reads
    * password-only on every deployment until the backend grows
    * `/auth/capabilities`, which would hide SSO from every tenant that has it.
-   * It is safe to offer to a tenant without SSO — `startSamlLogin` asks the
+   * It is safe to offer to a tenant without SSO: `startSamlLogin` asks the
    * endpoint first and says so on a 404 rather than navigating the browser
    * onto a JSON error body.
    */
@@ -128,13 +128,13 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
    *
    * Not behind `capabilities.oauth.google`: that reads false on every
    * deployment until the backend serves `/auth/capabilities`, which returns
-   * 404 today — so gating on it hides a Google sign-in that works. The honest
+   * 404 today: so gating on it hides a Google sign-in that works. The honest
    * test is whether the thing it needs is actually present, which is exactly
    * what `supabaseSignUpFor` already answers for sign-up.
    *
    * There is no Flexprice route for this. Google goes through Supabase, as it
    * does in V1 and as sign-up already does here, and comes back to
-   * `/auth/signup/confirmation` — which creates the account or, when the session
+   * `/auth/signup/confirmation`: which creates the account or, when the session
    * already names a tenant, just signs the person in.
    */
   const googleAvailable = supabaseSignUpFor(region)

@@ -87,7 +87,7 @@ export const Basic: Story = {
   args: { variant: 'basic' },
 }
 
-/** Seeded from a query, the way a filtered URL restores its state — the inline
+/** Seeded from a query, the way a filtered URL restores its state: the inline
  * "Status is any of …" chip renders in place. */
 export const WithActiveFilter: Story = {
   args: {
@@ -105,7 +105,7 @@ export const WithActiveFilter: Story = {
 /**
  * A controlled host that round-trips through the SAME shape a real list screen
  * uses: it keeps only the flattened `statuses`, and re-derives `query` from
- * them. That is what turns a half-built rule — operator chosen, value not — into
+ * them. That is what turns a half-built rule: operator chosen, value not: into
  * the empty query the bar hears back, the exact echo that used to wipe the chip
  * mid-flow. The story exists to hold the bar to completing a filter across that
  * echo. See `SelectsConditionAndValue`.
@@ -141,7 +141,7 @@ function ControlledStatusFilter() {
  *
  * Before the fix, picking the operator flattened the rule to a `values: []`
  * condition the host dropped, and the bar read its own echo of the resulting
- * empty query as an outside change and re-seeded the draft — destroying the chip
+ * empty query as an outside change and re-seeded the draft: destroying the chip
  * and the popover the very frame the operator was chosen, so no filter could be
  * completed. This walks the whole flow and asserts the opposite at each step:
  * the value editor opens after the condition (the popover STAYED open), and the
@@ -177,7 +177,7 @@ export const SelectsConditionAndValue: Story = {
     await userEvent.click(await screen.findByRole('option', { name: /is any of/i }))
 
     // The bug was here: the chip used to vanish as the operator committed. If it
-    // survived, the value editor hands off open — a status option is on screen.
+    // survived, the value editor hands off open: a status option is on screen.
     const activeOption = await screen.findByRole('option', { name: /^active$/i })
     await expect(activeOption).toBeInTheDocument()
 

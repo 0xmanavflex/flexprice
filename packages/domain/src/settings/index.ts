@@ -2,14 +2,14 @@
  * The seven settings keys, one file each.
  *
  * Everything behind `GET/PUT/DELETE /settings/{key}`. They share a route and a
- * lifecycle — read, edit, save, reset to the server's defaults — and nothing
+ * lifecycle: read, edit, save, reset to the server's defaults: and nothing
  * else: an invoice numbering scheme and a customer portal's navigation tree
  * have no common shape worth extracting. So they are modelled separately and
  * collected here, rather than generalised into a `Setting<T>` that would make
  * every screen unwrap the same envelope.
  *
- * A folder rather than seven files at `src/` because they are read together —
- * a Settings page is the only thing that imports any of them — and because
+ * A folder rather than seven files at `src/` because they are read together:
+ * a Settings page is the only thing that imports any of them: and because
  * `alertSetting.ts` is next door and is *not* one of these. See the warning at
  * the top of `walletAlertConfig.ts`.
  */

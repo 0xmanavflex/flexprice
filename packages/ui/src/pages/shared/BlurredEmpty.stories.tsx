@@ -7,7 +7,7 @@ const days = ['Mar 1', 'Mar 2', 'Mar 3', 'Mar 4', 'Mar 5', 'Mar 6', 'Mar 7', 'Ma
 
 /**
  * The shape behind the message. Deliberately plausible-looking and deliberately
- * unreadable — it is a texture that says "a chart goes here", and it is inert
+ * unreadable: it is a texture that says "a chart goes here", and it is inert
  * and `aria-hidden` so it can never be mistaken for a reading.
  */
 const placeholder: MetricTab[] = [
@@ -115,7 +115,7 @@ export const Playground = {
  *
  * The chart underneath is decoration, so it must be unreachable three ways at
  * once: out of the accessibility tree, out of the tab order, and out of the way
- * of the pointer. The tab strip behind the card is a real, focusable control —
+ * of the pointer. The tab strip behind the card is a real, focusable control:
  * if `inert` were missing, a keyboard user would land on a tab they cannot see
  * and a screen reader would then decline to tell them what it was.
  */
@@ -156,7 +156,7 @@ export const SingleAction: Story = {
   },
 }
 
-/** A message with nothing to do about it — an explanation, not an invitation. */
+/** A message with nothing to do about it: an explanation, not an invitation. */
 export const NoActions: Story = {
   args: {
     title: 'Revenue analytics unavailable',

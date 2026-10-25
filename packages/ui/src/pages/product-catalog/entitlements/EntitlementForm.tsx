@@ -49,7 +49,7 @@ export interface FeatureOption {
   id: string
   name: string
   type: FeatureType
-  /** Unit label for a metered feature, e.g. "calls" — shown beside the limit. */
+  /** Unit label for a metered feature, e.g. "calls": shown beside the limit. */
   unit?: string
 }
 
@@ -82,7 +82,7 @@ interface SharedProps {
 }
 
 export interface EntitlementCreateFormProps extends SharedProps {
-  /** Features not already entitled — offered as the choice. */
+  /** Features not already entitled: offered as the choice. */
   features: FeatureOption[]
   /** Opens with this feature already chosen, e.g. from the product it was started on. */
   defaultFeatureId?: string

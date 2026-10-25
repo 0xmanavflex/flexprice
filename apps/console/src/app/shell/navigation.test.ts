@@ -136,7 +136,6 @@ describe('the sidebar layout', () => {
       'settings-cost-tracking',
       'settings-tags',
       'price-units',
-      'groups',
     ])
   })
 

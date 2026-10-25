@@ -2,7 +2,7 @@ import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { CouponCreateForm } from './CouponCreateForm'
 
-/** Create a coupon — the full-page body. Fixtures in, a validated `CreateCoupon` out. */
+/** Create a coupon: the full-page body. Fixtures in, a validated `CreateCoupon` out. */
 const trail: { label: string }[] = [{ label: 'Coupons' }, { label: 'Create coupon' }]
 
 const withHeight: Decorator = (Story) => (

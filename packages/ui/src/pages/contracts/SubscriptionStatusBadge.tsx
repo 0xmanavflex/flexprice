@@ -14,7 +14,7 @@ import { GlyphBadge } from '../shared/StatusBadge'
  * A subscription's lifecycle, drawn like every status here: colour on the glyph,
  * neutral surface. It composes the shared {@link GlyphBadge} rather than a new
  * pill, so a subscription's status reads as the same object as an invoice's or a
- * catalogue's — one system across the console.
+ * catalogue's: one system across the console.
  *
  * The shape carries meaning colour cannot: a tick for active, dashes for a
  * trial, a slash for cancelled. Only Incomplete gets the destructive colour,

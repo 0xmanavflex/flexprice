@@ -16,7 +16,7 @@ import { provenance } from '@ui/provenance'
 /**
  * Sorting, as a menu rather than only as a column header.
  *
- * The header carets stay — they are the faster control once you can see the
+ * The header carets stay: they are the faster control once you can see the
  * column. This exists for when you cannot: a nine-column grid scrolled
  * sideways, or a narrow window where the column you want to sort by is off
  * screen. Two radio groups rather than a list of "Name A–Z, Name Z–A, …",
@@ -49,7 +49,7 @@ export interface SortMenuProps<T extends string> {
    *
    * Additive and optional: `EntityList`'s toolbar is a row of equal icon
    * buttons, and the label would make Sort the odd one out. Whatever is passed
-   * must still say what the current sort is — the default's `aria-label` is
+   * must still say what the current sort is: the default's `aria-label` is
    * the model.
    */
   trigger?: ReactNode

@@ -11,7 +11,7 @@
  *
  *   - **A link wins.** Restoring happens only when the URL carries no query at
  *     all. A pasted link, or any navigation that names filters, is obeyed
- *     exactly — otherwise a shared link would silently become someone else's
+ *     exactly: otherwise a shared link would silently become someone else's
  *     saved view.
  *   - **Clearing is remembered too.** Every change is written, including a
  *     reset to the default, so "Clear filters" is not undone by walking away
@@ -98,7 +98,7 @@ export function clearListMemory(storage: MaybeStorage): void {
 }
 
 /**
- * Whether `current` is a bare list URL — the only case a remembered query may
+ * Whether `current` is a bare list URL: the only case a remembered query may
  * replace.
  *
  * The routes strip default values out of the URL (`stripSearchParams`), so the
@@ -126,7 +126,7 @@ export function isBareQuery(
  * The query to restore, or null to leave the URL alone.
  *
  * Null when the URL already says something, when nothing was remembered, or
- * when what was remembered is the default anyway — navigating to replace a
+ * when what was remembered is the default anyway: navigating to replace a
  * default with the same default is a wasted history entry.
  */
 export function restoreTarget(

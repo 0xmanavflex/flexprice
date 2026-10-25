@@ -84,7 +84,7 @@ export function PageBody({
         // `min-h-0` so a list page's grid can fill this region and scroll
         // itself, rather than pushing the pagination footer off the bottom.
         // `overflow-y-auto` so a page whose content is *not* a self-scrolling
-        // grid — a tall form, a reading surface — scrolls here rather than being
+        // grid: a tall form, a reading surface: scrolls here rather than being
         // clipped by the shell's `overflow-hidden` content region. It is inert on
         // a grid page: the grid is `min-h-0 flex-1`, absorbs the slack, and this
         // never overflows to scroll.

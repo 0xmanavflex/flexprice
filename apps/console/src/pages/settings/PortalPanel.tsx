@@ -57,20 +57,20 @@ import { useDraft } from './useDraft'
  *
  * The stored value is not a handful of switches. It is an **ordered tree**:
  * sections, each with a label and a position, each holding ordered tabs, each
- * tab typed, and two tab types carrying a payload of their own — which metric
+ * tab typed, and two tab types carrying a payload of their own: which metric
  * cards to show, which date presets the usage graph offers. Above them sit a
  * format `version` and a typed `theme`.
  *
  * V1's portal screen renders five booleans, because five booleans is what its
  * form needed, and **rebuilds the config object out of those five booleans on
  * save**. Arrays are replaced wholesale by the write, so that is not a partial
- * edit — it is a deletion. Every section label, every ordering and every graph
+ * edit: it is a deletion. Every section label, every ordering and every graph
  * preset a portal was configured with disappears on the next save, with
  * nothing on screen to say so.
  *
  * So this panel never constructs a config. It loads one, edits it through the
- * `with…` helpers in `@fp/domain` — each of which returns the whole tree with
- * one thing changed and everything else carried through untouched — and passes
+ * `with…` helpers in `@fp/domain`: each of which returns the whole tree with
+ * one thing changed and everything else carried through untouched: and passes
  * the whole thing back to the write. Reading goes through `orderedSections` /
  * `orderedTabs` rather than array order, because the API does not promise the
  * arrays are sorted; `order` is what the portal renders by.
@@ -81,8 +81,8 @@ import { useDraft } from './useDraft'
  * ## What is deliberately not editable here
  *
  * Section labels, tab types and the usage graph's preset *vocabulary* are
- * shown but not edited. The tab type list is open — the backend types it as an
- * unconstrained string — and a portal configured by something newer than this
+ * shown but not edited. The tab type list is open: the backend types it as an
+ * unconstrained string: and a portal configured by something newer than this
  * console must survive being read, rendered as best we can, and written back
  * unchanged. Offering a picker over a closed list this build happens to know
  * would quietly narrow somebody else's portal.
@@ -140,7 +140,7 @@ function PortalForm({
       className="contents"
       noValidate
       onSubmit={draft.handleSubmit((value) => {
-        // The tree as it was loaded and mutated — never a rebuilt object.
+        // The tree as it was loaded and mutated: never a rebuilt object.
         update.mutate(value, { onSuccess: (saved) => draft.reset(saved) })
       })}
     >
@@ -168,7 +168,7 @@ function PortalForm({
             </Fact>
             <Fact label="Visible to customers">
               <span className="flex items-center gap-1.5">
-                {visible.length === 0 ? 'Nothing — the portal is empty' : visible.join(', ')}
+                {visible.length === 0 ? 'Nothing: the portal is empty' : visible.join(', ')}
                 <DelayedHint text="Drag to reorder. The eye shows or hides a part of the portal; hiding a section hides all its tabs, and a tab is only reachable if its section is on." />
               </span>
             </Fact>

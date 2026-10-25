@@ -79,7 +79,7 @@ export function toCoupon(wire: CouponWire): Coupon {
     code: wire.couponCode ?? '',
     type,
     // A fixed coupon carries a Money; a percentage coupon carries the raw
-    // string the API sends ("10", not 0.1) — never both.
+    // string the API sends ("10", not 0.1): never both.
     amountOff: type === CouponType.Fixed ? moneyOr(wire.amountOff, wire.currency) : null,
     percentageOff: type === CouponType.Percentage ? (wire.percentageOff ?? '0') : null,
     cadence,
@@ -155,7 +155,7 @@ export function useCoupons(query: CouponQuery) {
   })
 }
 
-/** One coupon, by id — `GET /coupons/{id}` (`client.coupons.getCoupon`). */
+/** One coupon, by id: `GET /coupons/{id}` (`client.coupons.getCoupon`). */
 export function useCoupon(id: string) {
   const client = useFlexprice()
 
@@ -196,7 +196,7 @@ export function useUpdateCoupon() {
 }
 
 /**
- * Archive a coupon — `DELETE /coupons/{id}`, a soft delete.
+ * Archive a coupon: `DELETE /coupons/{id}`, a soft delete.
  *
  * The catalogue never hard-deletes; archiving flips the status so the coupon
  * stops being offered while the record (and its redemption history) survives.
@@ -218,7 +218,7 @@ export function useArchiveCoupon() {
  * The wire shape of one association, after the SDK camelCases the response.
  *
  * `startDate`/`endDate` arrive as `Date` (the SDK parses them). The nested
- * `coupon`, line item and price expansions are ignored here — the "where used"
+ * `coupon`, line item and price expansions are ignored here: the "where used"
  * table needs only the subscription and the window.
  */
 export interface CouponAssociationWire {
@@ -249,7 +249,7 @@ export interface CouponAssociationPage {
 }
 
 /**
- * Where a coupon is used — `GET /coupons/associations`, filtered to this one.
+ * Where a coupon is used: `GET /coupons/associations`, filtered to this one.
  *
  * The endpoint is its own resource (`client.couponAssociations`), reached with
  * the coupon id and `activeOnly` off so the table shows the full history, not
@@ -278,7 +278,7 @@ export function useCouponAssociations(couponId: string) {
 
 /**
  * Domain draft out, `CreateCouponRequest` in. Only the fields the coupon's type
- * uses are sent — a fixed coupon never carries `percentageOff` and vice versa —
+ * uses are sent: a fixed coupon never carries `percentageOff` and vice versa:
  * and `durationInPeriods` only for a repeated cadence. The redemption window
  * goes out as ISO strings, which is what the request takes.
  */
@@ -301,7 +301,7 @@ export function toCreateCouponRequest(draft: CreateCoupon): Record<string, unkno
   }
 }
 
-/** Create a coupon — `POST /coupons`. Call `mutateAsync(draft: CreateCoupon)`. */
+/** Create a coupon: `POST /coupons`. Call `mutateAsync(draft: CreateCoupon)`. */
 export function useCreateCoupon() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

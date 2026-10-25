@@ -5,7 +5,7 @@ import { clientFor } from './supabaseClient'
  * Password reset, which is the one auth flow the Flexprice API does not have.
  *
  * The backend's public auth surface is `POST /auth/signup`, `POST /auth/login`
- * and the SAML routes — there is no reset endpoint on any provider. V1 reached
+ * and the SAML routes: there is no reset endpoint on any provider. V1 reached
  * past the API to Supabase from the browser for exactly this, and this console
  * does the same.
  *
@@ -17,7 +17,7 @@ import { clientFor } from './supabaseClient'
  * parallel is how you get two token lifetimes, two storage keys, and a console
  * whose idea of who is signed in depends on which one you ask.
  *
- * That is enforced here rather than left to convention — `persistSession` and
+ * That is enforced here rather than left to convention: `persistSession` and
  * `autoRefreshToken` are off, so supabase-js writes nothing to `localStorage`
  * and never refreshes anything in the background. The one exception is
  * `detectSessionInUrl`, which has to be on: the recovery link puts its tokens
@@ -65,7 +65,7 @@ export class PasswordResetUnavailable extends Error {
  * Asks Supabase to email a reset link.
  *
  * Resolves whether or not the address has an account. GoTrue does not
- * distinguish, and neither should the caller — the confirmation screen says
+ * distinguish, and neither should the caller: the confirmation screen says
  * "if that address has an account" precisely so this cannot be used to find out
  * who has one.
  */
