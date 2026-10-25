@@ -5,7 +5,7 @@ import { featureFixtures } from './featureFixtures'
 import { FeatureForm } from './FeatureForm'
 
 /**
- * The replacement for `AddFeature.tsx`: 1,106 lines and four state slices: 
+ * The replacement for `AddFeature.tsx`: 1,106 lines and four state slices:
  * proved the same way everything else in this package is: fixtures in, props
  * out, no provider, no network.
  */
@@ -196,8 +196,11 @@ export const DetailsThenMetering: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.getByRole('heading', { name: 'Details' })).toBeInTheDocument()
-    await expect(canvas.getByRole('heading', { name: 'Metering' })).toBeInTheDocument()
+    await expect(canvas.getByRole('heading', { name: 'Feature' })).toBeInTheDocument()
+    // Metering is split into its three parts.
+    for (const name of ['Units', 'Event', 'Aggregation']) {
+      await expect(canvas.getByRole('heading', { name })).toBeInTheDocument()
+    }
     await expect(canvas.queryByRole('complementary')).not.toBeInTheDocument()
     // No feature-level alerts on the form.
     await expect(canvas.queryByText(/usage alerts/i)).not.toBeInTheDocument()
@@ -246,7 +249,9 @@ export const TagField: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('combobox', { name: 'Tag' })).toBeInTheDocument()
+    // The tag sits under Optional details, closed until asked for.
+    await userEvent.click(canvas.getByRole('button', { name: /Optional details/ }))
+    await expect(await canvas.findByRole('combobox', { name: 'Tag' })).toBeInTheDocument()
     await expect(canvas.queryByRole('combobox', { name: 'Group' })).not.toBeInTheDocument()
   },
 }
