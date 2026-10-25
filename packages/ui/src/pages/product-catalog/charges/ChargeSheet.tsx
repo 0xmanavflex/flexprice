@@ -127,6 +127,7 @@ function Box({
   title,
   badge,
   onEdit,
+  editLabel = 'Edit',
   focused,
   children,
 }: {
@@ -135,6 +136,8 @@ function Box({
   title: string
   badge?: string | undefined
   onEdit?: (() => void) | undefined
+  /** "Add" when the part is empty and editing it creates it. */
+  editLabel?: string | undefined
   focused: boolean
   children: ReactNode
 }) {
@@ -170,7 +173,7 @@ function Box({
               className="text-muted-foreground -mr-1.5 h-6 px-2 text-xs"
               onClick={onEdit}
             >
-              Edit
+              {editLabel}
             </Button>
           ) : null}
         </FrameHeader>
@@ -488,20 +491,28 @@ export function ChargeSheet({
             </Box>
           ) : null}
 
-          {detail?.alerts && detail.alerts.length > 0 ? (
+          {/* Shown empty only where alerts can be added from here. */}
+          {(detail?.alerts && detail.alerts.length > 0) || editAt(ChargeSection.Alerts) ? (
             <Box
               section={ChargeSection.Alerts}
               icon={<BellIcon aria-hidden className="text-warning-foreground" />}
               title="Alerts"
               onEdit={editAt(ChargeSection.Alerts)}
+              editLabel={detail?.alerts?.length ? 'Edit' : 'Add'}
               focused={section === ChargeSection.Alerts}
             >
-              <Facts
-                items={detail.alerts.map((alert) => [
-                  `${alert.level}, ${alert.condition ?? 'above'}`,
-                  alert.value,
-                ])}
-              />
+              {detail?.alerts?.length ? (
+                <Facts
+                  items={detail.alerts.map((alert) => [
+                    `${alert.level}, ${alert.condition ?? 'above'}`,
+                    alert.value,
+                  ])}
+                />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No alerts on this charge. Add thresholds to be told when its usage crosses them.
+                </p>
+              )}
             </Box>
           ) : null}
 
