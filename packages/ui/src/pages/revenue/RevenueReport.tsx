@@ -124,6 +124,9 @@ export interface RevenueReportProps {
     range: string
     rangeOptions: FilterOption[]
     onRangeChange: (range: string) => void
+    grain: string
+    grainOptions: FilterOption[]
+    onGrainChange: (grain: string) => void
     compare: string
     compareOptions: FilterOption[]
     onCompareChange: (compare: string) => void
@@ -578,6 +581,14 @@ export function RevenueReport(props: RevenueReportProps) {
               options: filters.rangeOptions,
               onChange: filters.onRangeChange,
               icon: <CalendarIcon aria-hidden className="size-3.5" />,
+            }}
+          />
+          <FilterSelect
+            filter={{
+              label: 'Granularity',
+              value: filters.grain,
+              options: filters.grainOptions,
+              onChange: filters.onGrainChange,
             }}
           />
           <FilterSelect

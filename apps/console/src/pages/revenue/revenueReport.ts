@@ -20,6 +20,18 @@ export const DAY_MS = 86_400_000
 
 export type RangeId = '30d' | '90d' | 'month' | 'quarter' | '12m'
 export type Grain = 'day' | 'week' | 'month'
+export type GrainChoice = 'auto' | Grain
+
+export const GRAIN_OPTIONS: { id: GrainChoice; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'day', label: 'Daily' },
+  { id: 'week', label: 'Weekly' },
+  { id: 'month', label: 'Monthly' },
+]
+
+export function resolveGrain(choice: GrainChoice, auto: Grain): Grain {
+  return choice === 'auto' ? auto : choice
+}
 
 export const RANGE_OPTIONS: { id: RangeId; label: string }[] = [
   { id: '30d', label: 'Last 30 days' },

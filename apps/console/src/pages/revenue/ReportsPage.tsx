@@ -23,6 +23,7 @@ import { useSession } from '@/app/session'
 import type { RevenueSearch } from '@/app/revenueSearch'
 import {
   COMPARE_OPTIONS,
+  GRAIN_OPTIONS,
   DAY_MS,
   RANGE_OPTIONS,
   amountOf,
@@ -31,6 +32,8 @@ import {
   formatAmount,
   percentOf,
   rangeWindow,
+  resolveGrain,
+  type GrainChoice,
   type RangeId,
 } from './revenueReport'
 
@@ -98,6 +101,7 @@ export function ReportsPage({
 
   // One window per range: a fresh `Date` each render would change every query key.
   const window = useMemo(() => rangeWindow(search.range), [search.range])
+  const grain = resolveGrain(search.grain, window.grain)
   const rangeLabel = (
     RANGE_OPTIONS.find((option) => option.id === search.range)?.label ?? 'Last 12 months'
   ).toLowerCase()
@@ -117,7 +121,7 @@ export function ReportsPage({
   const revenueSeries = useCardReport('invoice_total', {
     ...inCurrency,
     shape: 'timeseries',
-    grain: window.grain,
+    grain,
   })
   const revenueByCustomer = useCardReport('invoice_total', {
     ...inCurrency,
@@ -144,7 +148,7 @@ export function ReportsPage({
     dimensions: ['customer_id', 'aging_bucket'],
   })
   // Days to pay has no daily grain.
-  const payGrain = window.grain === 'day' ? 'week' : window.grain
+  const payGrain = grain === 'day' ? 'week' : grain
   const daysReport = useCardReport('days_to_pay', { ...inCurrency, shape: 'scalar' })
   const daysSeries = useCardReport('days_to_pay', {
     ...inCurrency,
@@ -240,7 +244,7 @@ export function ReportsPage({
       previous: point.previous,
     })),
     window,
-    window.grain,
+    grain,
     comparing,
   ).map((point) => ({
     label: point.label,
@@ -326,6 +330,9 @@ export function ReportsPage({
         range: search.range,
         rangeOptions: RANGE_OPTIONS,
         onRangeChange: (next) => onSearchChange({ ...search, range: next as RangeId }),
+        grain: search.grain,
+        grainOptions: GRAIN_OPTIONS,
+        onGrainChange: (next) => onSearchChange({ ...search, grain: next as GrainChoice }),
         compare: search.compare,
         compareOptions: COMPARE_OPTIONS,
         onCompareChange: (next) => onSearchChange({ ...search, compare: next }),
@@ -366,7 +373,7 @@ export function ReportsPage({
         usage: { value: summary ? money(usage) : '—' },
         contract: { value: summary ? money(contract) : '—' },
         usageShare: percentOf(usage, usage + contract),
-        grain: window.grain,
+        grain,
         series: points,
       }}
       customers={{

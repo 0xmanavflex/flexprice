@@ -7,6 +7,7 @@ import {
   daysToPay,
   previousWindow,
   rangeWindow,
+  resolveGrain,
   receivables,
   alignToWindow,
   revenueSeries,
@@ -201,6 +202,7 @@ describe('parseRevenueSearch', () => {
     expect(parseRevenueSearch({ view: 'nope', range: 'forever', compare: 'x' })).toEqual({
       view: 'overview',
       range: '12m',
+      grain: 'auto',
       compare: 'none',
       currency: '',
     })
@@ -209,8 +211,19 @@ describe('parseRevenueSearch', () => {
     ).toEqual({
       view: 'customers',
       range: '12m',
+      grain: 'auto',
       compare: 'previous',
       currency: 'EUR',
     })
+    expect(parseRevenueSearch({ grain: 'week' }).grain).toBe('week')
+    expect(parseRevenueSearch({ grain: 'hourly' }).grain).toBe('auto')
+  })
+})
+
+describe('resolveGrain', () => {
+  it('keeps the range default on auto and honours a chosen grain', () => {
+    expect(resolveGrain('auto', 'week')).toBe('week')
+    expect(resolveGrain('day', 'month')).toBe('day')
+    expect(resolveGrain('month', 'day')).toBe('month')
   })
 })
