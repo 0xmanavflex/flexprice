@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-26
+
+- FilterBar: a `keyvalue` filter kind (domain `FilterKind`), for metadata. Its value step is a key and a value applied together (`FilterKeyValueEditor`), read back on the chip as `key = value`; the only condition is "is". The customers list offers a Metadata filter, sent as the search's `metadata` map (every pair must match) rather than a filter condition. Source: walkthrough QA 1.2.
+
 ## 2026-10-25
 
 - New `MetadataFields` (compositions/forms): key/value metadata as a form field, MetadataCard's edit rows (key, value, remove) with Add field, reporting the map and any problem (a value without a key, a repeated key) to the form. Plan create (3.1) and coupon create (7.2) gain an optional Metadata card using it; a problem blocks the create. Source: walkthrough QA 3.1, 7.2.

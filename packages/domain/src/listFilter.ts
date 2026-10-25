@@ -25,7 +25,7 @@ export const FilterOp = {
 export type FilterOp = (typeof FilterOp)[keyof typeof FilterOp]
 
 /** What a field holds, which decides its operators and its value editor. */
-export type FilterKind = 'text' | 'options' | 'date' | 'number'
+export type FilterKind = 'text' | 'options' | 'date' | 'number' | 'keyvalue'
 
 /** The operators each kind offers, in the order V1 offered them. */
 export const FILTER_OPS: Record<FilterKind, readonly FilterOp[]> = {
@@ -33,6 +33,19 @@ export const FILTER_OPS: Record<FilterKind, readonly FilterOp[]> = {
   options: [FilterOp.In, FilterOp.NotIn],
   date: [FilterOp.Before, FilterOp.After],
   number: [FilterOp.Eq, FilterOp.Gt, FilterOp.Lt],
+  // A key/value pair (metadata) matches when the key holds exactly that value.
+  keyvalue: [FilterOp.Eq],
+}
+
+/**
+ * A `keyvalue` filter's value is one string, `key=value`, split on the first
+ * `=` (a key cannot contain one; a value can). Null when there is no key.
+ */
+export function splitKeyValue(value: string): { key: string; value: string } | null {
+  const at = value.indexOf('=')
+  if (at <= 0) return null
+  const key = value.slice(0, at).trim()
+  return key ? { key, value: value.slice(at + 1) } : null
 }
 
 /** One filterable field on a list. `field` is the wire name the search endpoint filters on. */
@@ -46,7 +59,8 @@ export interface ListFilterSpec {
 
 /**
  * One applied condition. `value` is a string for text, number and date
- * (`YYYY-MM-DD`, a calendar day) and a list for options.
+ * (`YYYY-MM-DD`, a calendar day), `key=value` for a key/value pair, and a list
+ * for options.
  */
 export interface ListFilter {
   field: string
@@ -69,6 +83,8 @@ export function isRunnableFilter(filter: ListFilter, spec: ListFilterSpec | unde
       return typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))
     case 'text':
       return typeof value === 'string' && value.trim() !== ''
+    case 'keyvalue':
+      return typeof value === 'string' && splitKeyValue(value) !== null
   }
 }
 

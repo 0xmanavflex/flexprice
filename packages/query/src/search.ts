@@ -1,4 +1,10 @@
-import { FilterOp, runnableFilters, type ListFilter, type ListFilterSpec } from '@fp/domain'
+import {
+  FilterOp,
+  runnableFilters,
+  splitKeyValue,
+  type ListFilter,
+  type ListFilterSpec,
+} from '@fp/domain'
 
 /**
  * Name search, for the endpoints that have no name-search field.
@@ -96,8 +102,11 @@ export function toFilterConditions(
   filters: readonly ListFilter[],
   specs: readonly ListFilterSpec[],
 ): Record<string, unknown>[] {
-  return runnableFilters(filters, specs).map((filter) => {
+  return runnableFilters(filters, specs).flatMap((filter) => {
     const spec = specs.find((entry) => entry.field === filter.field)!
+    // A key/value pair is not a filter condition: it travels as the search's
+    // own `metadata` map (see `toMetadataFilter`).
+    if (spec.kind === 'keyvalue') return []
     const base = { field: filter.field, operator: filter.op }
     switch (spec.kind) {
       case 'options':
@@ -113,4 +122,22 @@ export function toFilterConditions(
         return { ...base, dataType: 'string', value: { string: (filter.value as string).trim() } }
     }
   })
+}
+
+/**
+ * The key/value filters as the search's `metadata` map (`{ region: 'eu' }`):
+ * every pair must match. Empty when there are none, so it is left out.
+ */
+export function toMetadataFilter(
+  filters: readonly ListFilter[],
+  specs: readonly ListFilterSpec[],
+): Record<string, string> {
+  const metadata: Record<string, string> = {}
+  for (const filter of runnableFilters(filters, specs)) {
+    const spec = specs.find((entry) => entry.field === filter.field)
+    if (spec?.kind !== 'keyvalue') continue
+    const pair = splitKeyValue(filter.value as string)
+    if (pair) metadata[pair.key] = pair.value
+  }
+  return metadata
 }

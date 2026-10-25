@@ -189,6 +189,8 @@ export const CUSTOMER_FILTERS: readonly ListFilterSpec[] = [
     ],
   },
   { field: 'created_at', label: 'Created', kind: 'date' },
+  // Sent as the search's own `metadata` map, not as a filter condition.
+  { field: 'metadata', label: 'Metadata', kind: 'keyvalue' },
 ]
 
 const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} characters or fewer`)

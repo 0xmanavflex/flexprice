@@ -36,6 +36,7 @@ export {
   decodeListFilters,
   encodeListFilters,
   isRunnableFilter,
+  splitKeyValue,
   runnableFilters,
   sameListFilters,
   withFilterOptions,
