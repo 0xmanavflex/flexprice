@@ -139,6 +139,7 @@ export {
 export type { PlanPage, PlanSubscriptionRow, PlanWire } from './plans'
 
 export {
+  useSyncAddonPrices,
   fetchAddons,
   toAddon,
   toAddonFilter,

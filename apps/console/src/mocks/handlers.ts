@@ -2484,6 +2484,13 @@ function sourceFor(key: string): Corpus {
 }
 
 export const handlers = [
+  // Price sync: starts a workflow and answers its handle, as the API does.
+  http.post(`${BASE}/plans/:id/sync/subscriptions`, ({ params }) =>
+    HttpResponse.json({ workflow_id: `sync-plan-${String(params['id'])}`, run_id: 'run_mock' }),
+  ),
+  http.post(`${BASE}/addons/:id/sync/subscriptions`, ({ params }) =>
+    HttpResponse.json({ workflow_id: `sync-addon-${String(params['id'])}`, run_id: 'run_mock' }),
+  ),
   // The Svix API behind the webhook portal — see `svixHandlers.ts`.
   ...svixHandlers,
   // Self-billing, off unless a mock account state is picked — see `selfBillingHandlers.ts`.

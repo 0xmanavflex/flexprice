@@ -206,3 +206,16 @@ export function useDeleteAddon() {
     },
   })
 }
+
+/**
+ * Push an add-on's current prices to the contracts that carry it — the same
+ * reconciling workflow plans have. It returns a workflow handle; the sync
+ * completes asynchronously.
+ */
+export function useSyncAddonPrices() {
+  const client = useFlexprice()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.addons.syncAddonPrices(id)),
+  })
+}
