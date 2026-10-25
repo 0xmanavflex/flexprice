@@ -1,7 +1,7 @@
-import { BracesIcon, CheckCircle2Icon, GaugeIcon, HashIcon, type CircleIcon } from '@ui/icons'
-import { FEATURE_TYPE_LABEL, FeatureType, InvoiceStatus, needsAttention } from '@fp/domain'
+import type { CircleIcon } from '@ui/icons'
+import { FEATURE_TYPE_LABEL, InvoiceStatus, needsAttention, type FeatureType } from '@fp/domain'
 import { provenance } from '@ui/provenance'
-import { Pill, type PillTone } from './cells'
+import { FEATURE_TYPE_GLYPH, Pill, type PillTone } from './cells'
 
 /**
  * A billing status: a bordered pill with a coloured dot.
@@ -89,13 +89,8 @@ export function GlyphBadge({ tone, label }: GlyphBadgeProps) {
   return <Pill tone={TEXT_TONE[tone] ?? 'neutral'}>{label}</Pill>
 }
 
-/** The glyph each feature type carries. */
-const FEATURE_TYPE_ICON: Record<FeatureType, typeof CircleIcon> = {
-  [FeatureType.Metered]: GaugeIcon,
-  [FeatureType.Boolean]: CheckCircle2Icon,
-  [FeatureType.Static]: HashIcon,
-  [FeatureType.Config]: BracesIcon,
-}
+/** The glyph each feature type carries: the agreed set, shared with every table. */
+const FEATURE_TYPE_ICON: Record<FeatureType, typeof CircleIcon> = FEATURE_TYPE_GLYPH
 
 export interface FeatureTypeBadgeProps {
   type: FeatureType

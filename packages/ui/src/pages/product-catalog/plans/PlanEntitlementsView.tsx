@@ -1,6 +1,7 @@
 import { RBAC_ENTITY } from '@fp/domain'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
-import { CheckCircle2Icon, GaugeIcon, PlusIcon, SlidersHorizontalIcon, TypeIcon } from '@ui/icons'
+import { PlusIcon } from '@ui/icons'
+import { FEATURE_TYPE_GLYPH } from '../../shared/cells'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { EmDash } from '../../shared/cells'
 import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
@@ -42,12 +43,9 @@ function valueOf(e: Entitlement): string {
 
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
-const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
-  [FeatureType.Metered]: GaugeIcon,
-  [FeatureType.Boolean]: CheckCircle2Icon,
-  [FeatureType.Static]: TypeIcon,
-  [FeatureType.Config]: SlidersHorizontalIcon,
-}
+/** The agreed glyph per feature type, shared with every other catalogue table. */
+const TYPE_ICON: Record<FeatureType, (typeof FEATURE_TYPE_GLYPH)[keyof typeof FEATURE_TYPE_GLYPH]> =
+  FEATURE_TYPE_GLYPH
 
 function includedOf(e: Entitlement): string {
   if (e.featureType === FeatureType.Metered && e.usageLimit != null) {
@@ -124,7 +122,9 @@ function PlanEntitlementsViewInner({
               return (
                 <span className="flex min-w-0 items-center gap-2.5">
                   <Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />
-                  <span className="min-w-0 truncate font-medium">{e.featureName ?? e.featureId}</span>
+                  <span className="min-w-0 truncate font-medium">
+                    {e.featureName ?? e.featureId}
+                  </span>
                 </span>
               )
             },

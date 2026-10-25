@@ -902,7 +902,6 @@
       "file": "src/pages/shared/StatusBadge.tsx",
       "layer": "surface",
       "composes": [
-        "HashIcon",
         "Pill"
       ],
       "usedBy": [],
@@ -3341,7 +3340,6 @@
       "file": "src/pages/shared/StatusBadge.tsx",
       "layer": "surface",
       "composes": [
-        "HashIcon",
         "Pill"
       ],
       "usedBy": [],
@@ -3982,7 +3980,6 @@
       "file": "src/pages/shared/StatusBadge.tsx",
       "layer": "surface",
       "composes": [
-        "HashIcon",
         "Pill"
       ],
       "usedBy": [
@@ -4125,16 +4122,12 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
-        "CatalogStatusBadge",
         "EmDash",
         "EntityCell",
         "EntityLink",
-        "FeatureTypeBadge",
         "FeatureTypeGlyph",
         "FeatureTypePill",
         "Formula",
-        "GlyphBadge",
-        "InvoiceStatusBadge",
         "Pill",
         "Status"
       ],
@@ -4441,7 +4434,6 @@
       "file": "src/pages/shared/StatusBadge.tsx",
       "layer": "surface",
       "composes": [
-        "HashIcon",
         "Pill"
       ],
       "usedBy": [
