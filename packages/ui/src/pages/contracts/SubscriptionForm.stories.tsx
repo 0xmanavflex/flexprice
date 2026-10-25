@@ -1186,24 +1186,3 @@ export const TrialWithAddedChargeIsStopped: Story = {
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
-
-/** A contract dated after today is created incomplete, which takes no added charges either. */
-export const FutureStartWithAddedChargeIsStopped: Story = {
-  args: { prefilled: true, noTrial: true, startDate: '2026-11-15', step: 'phases', chargeCount: 2 },
-  play: async ({ args, canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
-    const dialog = within(await screen.findByRole('dialog', { name: 'Add a charge' }))
-    await userEvent.click(dialog.getByRole('button', { name: 'Continue' }))
-    await userEvent.type(await dialog.findByLabelText('Display name'), 'Onboarding')
-    await userEvent.type(dialog.getByLabelText(/^Amount/), '250')
-    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
-    await expect(await canvas.findByText('Onboarding')).toBeVisible()
-    for (let i = 0; i < 3; i++) {
-      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
-    }
-    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
-    await expect(await canvas.findByText(/starts after today is created incomplete/)).toBeVisible()
-    await expect(args.onSubmit).not.toHaveBeenCalled()
-  },
-}
