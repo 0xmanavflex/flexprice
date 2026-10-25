@@ -48,8 +48,9 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
         onRefresh={() => void events.refetch()}
         isRefreshing={events.isFetching && !events.isPending && !events.isFetchingNextPage}
         onLoadMore={() => void events.fetchNextPage()}
-        hasMore={events.hasNextPage && !events.isFetchNextPageError}
+        hasMore={events.hasNextPage}
         isLoadingMore={events.isFetchingNextPage}
+        loadMoreFailed={events.isFetchNextPageError}
         // A later page failing keeps the events already shown; only a failed
         // first read is the tab's error.
         {...subTab({ ...events, error: events.data ? null : events.error }, 'events')}

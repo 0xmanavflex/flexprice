@@ -58,7 +58,12 @@ export interface CustomerEventsGridProps extends Partial<SubTabQuery> {
   /** There are more events to load. */
   hasMore?: boolean | undefined
   isLoadingMore?: boolean | undefined
+  /** The last "load more" failed: the list says so and offers a retry. */
+  loadMoreFailed?: boolean | undefined
 }
+
+/** Every loaded row on one table page: the list grows by loading, not paging. */
+const ALL_ROWS = Number.MAX_SAFE_INTEGER
 
 export function CustomerEventsGrid({
   events,
@@ -75,6 +80,7 @@ export function CustomerEventsGrid({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
+  loadMoreFailed = false,
 }: CustomerEventsGridProps) {
   const [selected, setSelected] = useState<CustomerEvent | null>(null)
   const capped = onLoadMore
@@ -88,13 +94,21 @@ export function CustomerEventsGrid({
   const sentinel = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     const node = sentinel.current
-    if (!node || !onLoadMore || !hasMore || typeof IntersectionObserver === 'undefined') return
+    // After a failure the retry is the reader's: scrolling must not loop on it.
+    if (
+      !node ||
+      !onLoadMore ||
+      !hasMore ||
+      loadMoreFailed ||
+      typeof IntersectionObserver === 'undefined'
+    )
+      return
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting) && !isLoadingMore) onLoadMore()
     })
     observer.observe(node)
     return () => observer.disconnect()
-  }, [onLoadMore, hasMore, isLoadingMore])
+  }, [onLoadMore, hasMore, isLoadingMore, loadMoreFailed])
 
   return (
     <>
@@ -138,7 +152,7 @@ export function CustomerEventsGrid({
             rows={events}
             // Every loaded event on one page: the list grows by loading more,
             // not by paging through what is already here.
-            {...(onLoadMore ? { pageSize: Math.max(events.length, 1), footer: false } : {})}
+            {...(onLoadMore ? { pageSize: ALL_ROWS, footer: false } : {})}
             facets={[
               { id: 'name', label: 'Event', value: (e: CustomerEvent) => e.name },
               { id: 'source', label: 'Source', value: (e: CustomerEvent) => e.source || '—' },
@@ -175,9 +189,14 @@ export function CustomerEventsGrid({
             empty="No events yet. Events ingested for this customer appear here as they arrive."
           />
           {onLoadMore && hasMore ? (
-            <div ref={sentinel} className="flex justify-center border-t py-3">
+            <div ref={sentinel} className="flex flex-col items-center gap-2 border-t py-3">
+              {loadMoreFailed && !isLoadingMore ? (
+                <p role="alert" className="text-muted-foreground text-[13px]">
+                  The next events could not be loaded.
+                </p>
+              ) : null}
               <Button variant="outline" size="sm" onClick={onLoadMore} disabled={isLoadingMore}>
-                {isLoadingMore ? 'Loading…' : 'Load more events'}
+                {isLoadingMore ? 'Loading…' : loadMoreFailed ? 'Try again' : 'Load more events'}
               </Button>
             </div>
           ) : null}

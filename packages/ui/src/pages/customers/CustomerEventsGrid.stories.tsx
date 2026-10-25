@@ -146,3 +146,23 @@ export const LoadingMore: Story = {
     ).toBeDisabled()
   },
 }
+
+/** All loaded events stay reachable: nothing hides behind a first page. */
+export const ShowsEveryLoadedEvent: Story = {
+  args: { events: makeEvents(120), hasMore: true, onLoadMore: fn() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findAllByRole('row')).toHaveLength(121)
+  },
+}
+
+/** A later page failed: the list says so and the retry is the reader's. */
+export const LoadMoreFailed: Story = {
+  args: { events: makeEvents(50), hasMore: true, loadMoreFailed: true, onLoadMore: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('The next events could not be loaded.')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Try again' }))
+    await expect(args.onLoadMore).toHaveBeenCalledTimes(1)
+  },
+}
