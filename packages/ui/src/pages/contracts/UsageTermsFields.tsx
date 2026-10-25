@@ -1,5 +1,7 @@
 import {
+  BILLING_PERIOD_LABEL,
   BUCKET_SIZE_LABEL,
+  BillingPeriod,
   BucketSize,
   COMMITMENT_KIND_LABEL,
   CommitmentKind,
@@ -34,6 +36,19 @@ export interface UsageTermsFieldsProps {
 }
 
 const WHOLE_PERIOD = 'NONE'
+const SAME_PERIOD = 'SAME'
+
+/** The same choices as the commitment dialog on an existing charge. */
+const PERIOD_OPTIONS = [
+  { value: SAME_PERIOD, label: 'Same as billing period' },
+  ...[
+    BillingPeriod.Daily,
+    BillingPeriod.Monthly,
+    BillingPeriod.Quarterly,
+    BillingPeriod.HalfYearly,
+    BillingPeriod.Annual,
+  ].map((period) => ({ value: period, label: BILLING_PERIOD_LABEL[period] })),
+]
 
 const BUCKET_OPTIONS = [
   { value: WHOLE_PERIOD, label: 'Whole billing period' },
@@ -135,6 +150,22 @@ export function UsageTermsFields({
               />
             )}
           </Field>
+          <Field label="Commitment period" hint="How long each commitment runs before it resets.">
+            {({ id, ...field }) => (
+              <OptionSelect
+                id={id}
+                {...field}
+                value={commitment.duration || SAME_PERIOD}
+                onValueChange={(next) =>
+                  setCommitment({
+                    duration: next === SAME_PERIOD ? null : (next as BillingPeriod),
+                  })
+                }
+                options={PERIOD_OPTIONS}
+                disabled={disabled}
+              />
+            )}
+          </Field>
           <Field
             label="Overage factor"
             hint="Usage past the commitment is billed at the normal rate times this factor. 1 means no premium."
@@ -153,12 +184,15 @@ export function UsageTermsFields({
             )}
           </Field>
           <div className="flex flex-col justify-end gap-3 pb-1.5">
+            {/* Per bucket needs buckets: without a bucket size it stays off. */}
             <CheckboxRow
-              checked={commitment.windowed}
-              disabled={disabled}
+              checked={commitment.windowed && value.bucketSize !== ''}
+              disabled={disabled || value.bucketSize === ''}
               onCheckedChange={(windowed) => setCommitment({ windowed })}
             >
-              Apply to each bucket
+              {value.bucketSize === ''
+                ? 'Apply to each bucket (set a bucket size first)'
+                : 'Apply to each bucket'}
             </CheckboxRow>
             <CheckboxRow
               checked={commitment.trueUp}

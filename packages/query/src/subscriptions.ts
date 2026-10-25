@@ -1232,7 +1232,10 @@ function commitmentFields(terms: UsageTerms): Record<string, unknown> {
     ...(commitment.kind === CommitmentKind.Quantity
       ? { commitmentQuantity: Number(commitment.value) }
       : { commitmentAmount: Number(commitment.value) }),
-    commitmentWindowed: commitment.windowed,
+    // Per bucket only when there are buckets: the API rejects a windowed
+    // commitment on a charge summed over the whole period.
+    commitmentWindowed: commitment.windowed && terms.bucketSize !== '',
+    ...(commitment.duration ? { commitmentDuration: commitment.duration } : {}),
     commitmentOverageFactor: Number(commitment.overageFactor),
     commitmentTrueUpEnabled: commitment.trueUp,
   }

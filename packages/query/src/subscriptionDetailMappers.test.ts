@@ -276,6 +276,36 @@ describe('toPendingSchedules', () => {
     expect(request['price']).not.toHaveProperty('entityId')
   })
 
+  it("sends a commitment's own period, and per bucket only when there are buckets", () => {
+    const usage = {
+      type: 'USAGE',
+      billingModel: 'FLAT_FEE',
+      currency: 'USD',
+      billingPeriod: 'MONTHLY',
+      invoiceCadence: 'ARREAR',
+      amount: '0.01',
+      meterId: 'meter_1',
+    } as Parameters<typeof toCreateLineItemRequest>[0]['charge']
+    const request = toCreateLineItemRequest({
+      charge: usage,
+      quantity: '1',
+      startDate: '',
+      proration: 'create_prorations',
+      terms: {
+        bucketSize: '',
+        commitment: {
+          kind: 'amount',
+          value: '500',
+          windowed: true,
+          overageFactor: '1',
+          trueUp: false,
+          duration: 'QUARTERLY',
+        },
+      },
+    } as Parameters<typeof toCreateLineItemRequest>[0])
+    expect(request).toMatchObject({ commitmentDuration: 'QUARTERLY', commitmentWindowed: false })
+  })
+
   it('sends a quantity commitment as a quantity', () => {
     const request = toCreateLineItemRequest({
       charge: {
