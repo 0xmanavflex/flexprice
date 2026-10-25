@@ -209,6 +209,8 @@ export type { ChartBoxProps } from './charts/ChartBox'
 export { SortableList, SortableItem, SortableListProvenance } from './tables/SortableList'
 export type { SortableListProps, SortableItemProps } from './tables/SortableList'
 export { CheckboxRow, CheckboxRowProvenance } from './forms/CheckboxRow'
+export { MetadataFields, MetadataFieldsProvenance, metadataOfRows } from './forms/MetadataFields'
+export type { MetadataFieldsProps } from './forms/MetadataFields'
 export type { CheckboxRowProps } from './forms/CheckboxRow'
 
 export { ActivitySection } from './detail/ActivityLog'

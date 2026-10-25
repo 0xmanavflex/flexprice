@@ -112,6 +112,26 @@ export const CreatesWithDetailsOnly: Story = {
   },
 }
 
+/** Metadata is set on create, as on the plan page afterwards. */
+export const CreatesWithMetadata: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add field' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Key 1' }), 'tier')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Value 1' }), 'gold')
+    for (let i = 0; i < 3; i++) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    }
+    await userEvent.click(await canvas.findByRole('button', { name: 'Create plan' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plan: expect.objectContaining({ name: 'Pro', metadata: { tier: 'gold' } }),
+      }),
+    )
+  },
+}
+
 /** A staged item can be edited before the plan exists: the change replaces it, not adds a second. */
 export const EditsAStagedCreditGrant: Story = {
   play: async ({ canvasElement, args }) => {

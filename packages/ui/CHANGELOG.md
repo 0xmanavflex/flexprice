@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-25
 
+- New `MetadataFields` (compositions/forms): key/value metadata as a form field, MetadataCard's edit rows (key, value, remove) with Add field, reporting the map and any problem (a value without a key, a repeated key) to the form. Plan create (3.1) and coupon create (7.2) gain an optional Metadata card using it; a problem blocks the create. Source: walkthrough QA 3.1, 7.2.
 - CheckboxRow: optional `description`, a muted line under the label that is also the checkbox's accessible description. Settings → invite and edit roles now lists each role as a checkbox row with what it grants (was toggle buttons with the permissions in a `title` tooltip). Source: walkthrough QA 7.6.
 - ActivityLog: an entry's values render as muted label / value pairs (`fields`, a `dl`) under the highlighted record, instead of one dot-joined sentence ("$35.00 · $35.00 due · Voided" is now Total / Due / Status). `summary` and `detail` stay for callers that write a sentence. Titles read "Contract …" and "Credit memo …", not "Subscription …" / "Credit note …". Source: walkthrough QA 1.7.
 - Entitlement usage: the "Over the included amount by N" line under the bar is gone (the red reading and bar say it). A row granted by several sources shows the first and a "+N" that opens, on hover or press, a popover listing every source as a link (was a `title` attribute). Source: walkthrough QA 5.13.
