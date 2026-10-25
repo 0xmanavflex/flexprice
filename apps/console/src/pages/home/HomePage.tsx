@@ -53,9 +53,9 @@ import type {
  *     nothing, the `events_volume` report fills it, which covers at most the
  *     last seven days and says so.
  *   - **Customers**: new customers per day from the customer list, newest
- *     first. When the window has none, or the list fails, the
- *     `active_customers` report fills it: customers with a subscription in the
- *     window, as a total with no daily line.
+ *     first. A window with none is a zero. Only when the list cannot be read
+ *     does the `active_customers` report fill it: customers with a subscription
+ *     in the window, as a total with no daily line.
  *   - **Recent subscriptions** from `useSubscriptions`, bucketed here by start
  *     date. Note the deliberate use of `total` from the *rows*, not from the
  *     page: `SubscriptionPage.total` is the unfiltered server total, so a
