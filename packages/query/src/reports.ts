@@ -15,6 +15,8 @@ export function useReport(key: string, query: ReportQuery | null) {
   return useQuery<ReportResult>({
     queryKey: ['reports', key, query],
     enabled: query !== null,
+    // Each card renders its own error.
+    throwOnError: false,
     queryFn: async () => {
       const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
       if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to read reports.')
