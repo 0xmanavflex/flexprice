@@ -76,3 +76,17 @@ export const CloseReturns: Story = {
     await expect(args.onCancel).toHaveBeenCalled()
   },
 }
+
+/** A fixed amount is written in its currency: chosen first, then shown as the amount's sign. */
+export const FixedAmountShowsCurrency: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(canvas.getByRole('combobox', { name: /Discount type/ }))
+    await userEvent.click(await body.findByRole('option', { name: /Fixed/ }))
+    await userEvent.click(canvas.getByRole('combobox', { name: /Currency/ }))
+    await userEvent.click(await body.findByRole('option', { name: /^USD/ }))
+    const amount = canvas.getByRole('textbox', { name: /Amount off/ })
+    await expect(amount.closest('[data-slot="input-group"]')).toHaveTextContent('$')
+  },
+}

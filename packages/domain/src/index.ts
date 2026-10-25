@@ -27,6 +27,7 @@ export {
   money,
   perUnit,
   moneyOr,
+  currencySymbol,
 } from './money'
 export type { Money } from './money'
 export {

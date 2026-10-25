@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   InvalidMoneyError,
+  currencySymbol,
   compareMoney,
   formatMoney,
   isNegativeMoney,
@@ -40,8 +41,11 @@ describe('formatMoney', () => {
     const exact = money('12345678901234567.89', 'USD')
 
     expect(formatMoney(exact, 'en-US')).toBe('$12,345,678,901,234,567.89')
-    expect(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-      .format(Number(exact.amount))).toBe('$12,345,678,901,234,568.00')
+    expect(
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+        Number(exact.amount),
+      ),
+    ).toBe('$12,345,678,901,234,568.00')
   })
 
   it('formats ordinary amounts per locale', () => {
@@ -81,7 +85,11 @@ describe('compareMoney', () => {
   it('sorts a list correctly', () => {
     const amounts = ['100.5', '-3', '0', '100.50', '9.99'].map((a) => money(a, 'USD'))
     expect(amounts.sort(compareMoney).map((m) => m.amount)).toEqual([
-      '-3', '0', '9.99', '100.5', '100.50',
+      '-3',
+      '0',
+      '9.99',
+      '100.5',
+      '100.50',
     ])
   })
 
@@ -101,5 +109,19 @@ describe('predicates', () => {
   it('identifies real negatives and non-zeros', () => {
     expect(isNegativeMoney(money('-0.01', 'USD'))).toBe(true)
     expect(isZeroMoney(money('0.01', 'USD'))).toBe(false)
+  })
+})
+
+describe('currencySymbol', () => {
+  it('keeps dollar currencies apart', () => {
+    expect(currencySymbol('USD')).toBe('$')
+    expect(currencySymbol('CAD')).toBe('CA$')
+    expect(currencySymbol('AUD')).toBe('A$')
+    expect(currencySymbol('EUR')).toBe('€')
+  })
+
+  it('falls back to the code', () => {
+    expect(currencySymbol('tok')).toBe('tok'.toUpperCase())
+    expect(currencySymbol('credits')).toBe('CREDITS')
   })
 })
