@@ -1400,7 +1400,14 @@ export const AddUsageCharge: Story = {
     // Usage terms exist only on a metered charge; quantity does not.
     await expect(dialog.queryByLabelText(/^Quantity/)).toBeNull()
     await userEvent.click(dialog.getByRole('checkbox', { name: 'Add a commitment' }))
-    await userEvent.type(dialog.getByLabelText(/^Commitment/), '500')
+    await userEvent.type(dialog.getByLabelText(/^Commitment \(/), '500')
+    // The commitment can run for its own period, as on an existing charge.
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Commitment period' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Quarterly' }))
+    // Per bucket needs a bucket size first.
+    await expect(
+      dialog.getByRole('checkbox', { name: /Apply to each bucket \(set a bucket size first\)/ }),
+    ).toHaveAttribute('aria-disabled', 'true')
     // A commitment needs a value above zero.
     await userEvent.clear(dialog.getByLabelText(/^Overage factor/))
     await userEvent.type(dialog.getByLabelText(/^Overage factor/), '0.5')
@@ -1430,6 +1437,7 @@ export const AddUsageCharge: Story = {
           windowed: false,
           overageFactor: '1.5',
           trueUp: false,
+          duration: 'QUARTERLY',
         },
       },
     })
@@ -1450,9 +1458,9 @@ export const EditUsageCharge: Story = {
     await expect(dialog.getByLabelText('Display name')).toBeDisabled()
     await expect(dialog.getByLabelText(/^Currency/)).toBeDisabled()
     // Starts on the line's own commitment.
-    await expect(dialog.getByLabelText(/^Commitment/)).toHaveValue('500')
+    await expect(dialog.getByLabelText(/^Commitment \(/)).toHaveValue('500')
     await expect(dialog.getByLabelText(/^Overage factor/)).toHaveValue('1.5')
-    const commitment = dialog.getByLabelText(/^Commitment/)
+    const commitment = dialog.getByLabelText(/^Commitment \(/)
     await userEvent.clear(commitment)
     await userEvent.type(commitment, '800')
     await userEvent.click(dialog.getByRole('button', { name: 'Save charge' }))
@@ -1920,7 +1928,7 @@ export const EditCommitmentFromFlag: Story = {
     await userEvent.click(within(commitment).getByRole('button', { name: 'Edit' }))
     const dialog = within(await screen.findByRole('dialog'))
     await expect(await dialog.findByText('Only this contract changes')).toBeVisible()
-    await expect(dialog.getByLabelText(/^Commitment/)).toHaveValue('500')
+    await expect(dialog.getByLabelText(/^Commitment \(/)).toHaveValue('500')
   },
 }
 

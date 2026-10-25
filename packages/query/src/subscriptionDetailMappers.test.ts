@@ -276,6 +276,36 @@ describe('toPendingSchedules', () => {
     expect(request['price']).not.toHaveProperty('entityId')
   })
 
+  it("sends a commitment's own period, and per bucket only when there are buckets", () => {
+    const usage = {
+      type: 'USAGE',
+      billingModel: 'FLAT_FEE',
+      currency: 'USD',
+      billingPeriod: 'MONTHLY',
+      invoiceCadence: 'ARREAR',
+      amount: '0.01',
+      meterId: 'meter_1',
+    } as Parameters<typeof toCreateLineItemRequest>[0]['charge']
+    const request = toCreateLineItemRequest({
+      charge: usage,
+      quantity: '1',
+      startDate: '',
+      proration: 'create_prorations',
+      terms: {
+        bucketSize: '',
+        commitment: {
+          kind: 'amount',
+          value: '500',
+          windowed: true,
+          overageFactor: '1',
+          trueUp: false,
+          duration: 'QUARTERLY',
+        },
+      },
+    } as Parameters<typeof toCreateLineItemRequest>[0])
+    expect(request).toMatchObject({ commitmentDuration: 'QUARTERLY', commitmentWindowed: false })
+  })
+
   it('sends a quantity commitment as a quantity', () => {
     const request = toCreateLineItemRequest({
       charge: {
@@ -323,6 +353,31 @@ describe('toPendingSchedules', () => {
         amount: '120',
         effectiveFrom: '2026-12-01T00:00:00Z',
       })
+    })
+
+    it('clears a stored commitment period when the edit goes back to the billing period', () => {
+      const price = { priceId: 'p', billingModel: 'FLAT_FEE', amount: '120' } as const
+      const commitment = {
+        kind: 'amount',
+        value: '500',
+        windowed: false,
+        overageFactor: '1',
+        trueUp: false,
+      } as const
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms: { bucketSize: '', commitment: { ...commitment, duration: null } },
+        } as Parameters<typeof toUpdateLineItemRequest>[0]),
+      ).toMatchObject({ commitmentDuration: '' })
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms: { bucketSize: '', commitment: { ...commitment, duration: 'WEEKLY' } },
+        } as Parameters<typeof toUpdateLineItemRequest>[0]),
+      ).toMatchObject({ commitmentDuration: 'WEEKLY' })
     })
 
     it('sends a package size and a tier table in the price unit when the price has one', () => {
