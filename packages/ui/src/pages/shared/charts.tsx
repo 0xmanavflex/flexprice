@@ -203,6 +203,15 @@ export interface MetricPoint {
   /** Axis label, already formatted for the chosen granularity by the page. */
   label: string
   value: number
+  /** Other series on the same buckets, keyed by `MetricSeries.id`. */
+  extra?: Record<string, number> | undefined
+}
+
+/** One line on a tab that plots more than one series, such as a currency. */
+export interface ChartSeries {
+  id: string
+  label: string
+  format?: ((value: number) => string) | undefined
 }
 
 /**
@@ -226,6 +235,11 @@ export interface MetricTab {
   changePercent?: number | undefined
   /** The series drawn while this tab is selected. Empty renders the no-data state. */
   points: MetricPoint[]
+  /**
+   * Extra lines drawn with `points[].extra`. When set, each one is plotted and
+   * `value` is the headline only.
+   */
+  series?: ChartSeries[] | undefined
   /** Formats a point for the tooltip. Defaults to a locale-grouped integer. */
   format?: ((value: number) => string) | undefined
   /**
@@ -396,13 +410,6 @@ function MetricSeries({
   // Namespaces the gradient: two MetricCharts on one page would otherwise
   // define the same SVG id, and the second silently repaints the first.
   const chartId = useId().replace(/:/g, '')
-  // Chart fill: the reference's one blue, light and dark.
-  const config = {
-    value: {
-      label: tab.label,
-      theme: { light: 'var(--color-blue-600)', dark: 'var(--color-blue-400)' },
-    },
-  } satisfies ChartConfig
 
   if (tab.status === 'loading') {
     return (
@@ -444,9 +451,23 @@ function MetricSeries({
     )
   }
 
-  const values = tab.points.map((point) => point.value)
+  const lines = tab.series?.length
+    ? tab.series
+    : [{ id: 'value', label: tab.label, format }]
+  const values = tab.points.flatMap((point) =>
+    lines.map((line) => (line.id === 'value' ? point.value : (point.extra?.[line.id] ?? 0))),
+  )
   const min = Math.min(...values)
   const max = Math.max(...values)
+  const multi = lines.length > 1
+  const config = {
+    ...Object.fromEntries(
+      lines.map((line, index) => [
+        line.id,
+        { label: line.label, color: toneColor(seriesTone(index)) },
+      ]),
+    ),
+  } satisfies ChartConfig
 
   return (
     <div className="flex flex-col">
@@ -467,14 +488,20 @@ function MetricSeries({
       >
         <AreaChart
           accessibilityLayer
-          data={tab.points}
+          data={tab.points.map((point) => ({
+            label: point.label,
+            value: point.value,
+            ...point.extra,
+          }))}
           margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
         >
           <defs>
-            <linearGradient id={`${chartId}-fill`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.12} />
-              <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0.01} />
-            </linearGradient>
+            {lines.map((line) => (
+              <linearGradient key={line.id} id={`${chartId}-${line.id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={`var(--color-${line.id})`} stopOpacity={0.12} />
+                <stop offset="100%" stopColor={`var(--color-${line.id})`} stopOpacity={0.01} />
+              </linearGradient>
+            ))}
           </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
@@ -489,18 +516,25 @@ function MetricSeries({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                formatter={(value) => `${tab.label}: ${format(Number(value))}`}
+                formatter={(value, name) => {
+                  const line = lines.find((entry) => entry.id === name)
+                  const text = (line?.format ?? format)(Number(value))
+                  return `${line?.label ?? tab.label}: ${text}`
+                }}
               />
             }
           />
-          <Area
-            type="monotone"
-            dataKey="value"
-            stroke="var(--color-value)"
-            strokeWidth={1.5}
-            fill={`url(#${chartId}-fill)`}
-            isAnimationActive={!reducedMotion}
-          />
+          {lines.map((line) => (
+            <Area
+              key={line.id}
+              type="monotone"
+              dataKey={line.id}
+              stroke={`var(--color-${line.id})`}
+              strokeWidth={1.5}
+              fill={multi ? 'transparent' : `url(#${chartId}-${line.id})`}
+              isAnimationActive={!reducedMotion}
+            />
+          ))}
         </AreaChart>
       </ChartContainer>
       {caption ? <p className="text-muted-foreground mt-2 text-xs">{caption}</p> : null}

@@ -5,24 +5,22 @@ import {
   reportCurrencies,
   reportScalar,
   reportSeries,
-  useCustomerNames,
-  useCustomers,
   useInvoices,
+  useRevenueOverview,
   useReport,
   useSubscriptions,
-  useUsageAnalytics,
   UsageWindowSize,
 } from '@fp/query'
-import type { ReportResult, UsageAnalytics } from '@fp/query'
+import type { ReportResult } from '@fp/query'
 import {
-  CustomerSortField,
   DEFAULT_INVOICE_QUERY,
   DEFAULT_SUBSCRIPTION_QUERY,
   InvoiceStatus,
   money,
 } from '@fp/domain'
-import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
+import type { Invoice, Subscription } from '@fp/domain'
 import { CUSTOM_RANGE_ID, DashboardHome } from '@fp/ui/pages'
+import { useSession } from '@/app/session'
 import { qualityOf, withoutData } from './queryView'
 import type { QueryView } from './queryView'
 import type {
@@ -46,11 +44,12 @@ import type {
  *
  * Four panels are read from live queries:
  *
- *   - **Revenue and usage ingestion** from `useUsageAnalytics`, the hook over
- *     `POST /events/analytics`. It is the only time-series the platform
- *     exposes.
- *   - **Customers** from `useCustomers`, newest first, counted and bucketed
- *     here by creation date.
+ *   - **Revenue** from the report library's `invoice_total`.
+ *   - **Usage ingestion** from `events_volume`. `POST /events/analytics`
+ *     returns no rows without a customer, so it cannot fill this chart. The
+ *     events report covers at most seven days.
+ *   - **Customers** from the `active_customers` report: customers with a
+ *     subscription in the window. There is no daily series for it.
  *   - **Recent subscriptions** from `useSubscriptions`, bucketed here by start
  *     date. Note the deliberate use of `total` from the *rows*, not from the
  *     page: `SubscriptionPage.total` is the unfiltered server total, so a
@@ -132,7 +131,6 @@ const dayLabel = new Intl.DateTimeFormat(undefined, {
  * that does not change.
  */
 const columnDayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', timeZone: 'UTC' })
-const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric', timeZone: 'UTC' })
 // Parked with `toUsagePanel` until quota-based metrics land.
 // const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
@@ -172,6 +170,7 @@ function change(current: number, prior: number): number | null {
 
 export function HomePage() {
   const navigate = useNavigate()
+  const { environmentId } = useSession()
   const [rangeId, setRangeId] = useState('7d')
   const [granularityId, setGranularityId] = useState('daily')
   // Seeded with the last 30 days, so choosing "Custom range" shows data at once.
@@ -220,29 +219,28 @@ export function HomePage() {
   const granularity =
     granularityOptions.find((entry) => entry.id === granularityId) ?? GRANULARITIES[1]!
 
-  /*
-   * Newest first, so once a row falls before the window every row after it is
-   * older still: which makes the new-customer count exact, unless the whole
-   * page is inside the window, in which case the panel says the figure is a floor.
-   */
-  const customers = useCustomers({
-    page: 1,
-    pageSize: 100,
-    search: '',
-    statuses: [],
-    sortBy: CustomerSortField.CreatedAt,
-    sortDirection: 'desc',
+  // This report has no comparison. Sending `compare` is a 400, even for
+  // `previous_period`.
+  const activeCustomers = useReport('active_customers', {
+    shape: 'scalar',
+    range: reportRange(windows.current),
   })
 
-  const analytics = useUsageAnalytics({
-    window: windows.current,
-    windowSize: granularity.windowSize,
+  // The events report refuses a range longer than a week, so the chart is the
+  // last seven days of the selected window, and the week before it for the change.
+  const eventsEnd = windows.current.end
+  const eventsStart = new Date(Math.max(windows.current.start.getTime(), eventsEnd.getTime() - 6 * DAY_MS))
+  const priorEventsEnd = eventsStart
+  const priorEventsStart = new Date(priorEventsEnd.getTime() - 7 * DAY_MS)
+  const eventsReport = useReport('events_volume', {
+    shape: 'timeseries',
+    range: reportRange({ start: eventsStart, end: eventsEnd }),
+    grain: 'day',
   })
-  // The window before this one, so the tab strip's changes are two real
-  // measurements compared. The granularity is irrelevant to the totals it feeds.
-  const priorAnalytics = useUsageAnalytics({
-    window: windows.prior,
-    windowSize: UsageWindowSize.Day,
+  const priorEventsReport = useReport('events_volume', {
+    shape: 'timeseries',
+    range: reportRange({ start: priorEventsStart, end: priorEventsEnd }),
+    grain: 'day',
   })
 
   /*
@@ -271,7 +269,7 @@ export function HomePage() {
    * Revenue: the report library's `invoice_total` (finalized invoices by
    * finalization date), as on Reports: the total and its change against the
    * window before, by day for the chart, and by customer for the leaders.
-   * Every currency first, to find the one billed most; then that one.
+   * Every currency first, for the headline and so the chart can draw one line each.
    */
   const range = reportRange(windows.current)
   const revenueAll = useReport('invoice_total', {
@@ -280,12 +278,11 @@ export function HomePage() {
     compare: 'previous_period',
   })
   const mainCurrency = largestCurrency(revenueAll.data)
-  const revenueByDay = useReport(
-    'invoice_total',
-    mainCurrency
-      ? { shape: 'timeseries', range, grain: 'day', currency: mainCurrency.toLowerCase() }
-      : null,
-  )
+  const revenueByDay = useReport('invoice_total', {
+    shape: 'timeseries',
+    range,
+    grain: 'day',
+  })
   const revenueByCustomer = useReport(
     'invoice_total',
     mainCurrency
@@ -298,24 +295,21 @@ export function HomePage() {
         }
       : null,
   )
-  const leaderIds = reportBreakdown(
-    revenueByCustomer.data,
-    'invoice_total',
-    ['customer_id'],
-    mainCurrency ?? undefined,
-  ).map((row) => row.keys['customer_id'] ?? '')
-  const leaderNames = useCustomerNames(leaderIds)
+  const billed = useRevenueOverview(environmentId, windows.current)
+  const leaderNames = Object.fromEntries(
+    (billed.data?.customers ?? []).map((row) => [row.customerId, row.name]),
+  )
 
-  const eventsPanel = toEventsPanel(analytics, priorAnalytics, granularity.id)
+  const eventsPanel = toEventsPanel(eventsReport, priorEventsReport, eventsStart.getTime() > windows.current.start.getTime())
   const revenuePanel = toRevenuePanel(
     revenueAll,
     revenueByDay.data,
     revenueByCustomer.data,
-    leaderNames.data ?? {},
+    leaderNames,
     windows,
     granularity.id,
   )
-  const customersPanel = toCustomersPanel(customers, windows)
+  const customersPanel = toCustomersPanel(activeCustomers)
 
   /*
    * Parked until quota-based metrics land.
@@ -349,41 +343,41 @@ export function HomePage() {
 /* ---- Shaping the panels -------------------------------------------------- */
 
 function toEventsPanel(
-  view: QueryView<UsageAnalytics>,
-  prior: QueryView<UsageAnalytics>,
-  granularityId: string,
+  view: QueryView<ReportResult>,
+  prior: QueryView<ReportResult>,
+  limited: boolean,
 ): EventsPanel {
   const meta = qualityOf(view)
-  const data = view.data
-  if (data === undefined) {
+  const points = reportSeries(view.data, 'events_volume')
+  if (view.data === undefined) {
     return { ...meta, status: withoutData(view), points: [], total: null, revenue: null }
   }
-  if (data.points.length === 0) {
+  if (points.length === 0) {
     return { ...meta, status: 'empty', points: [], total: null, revenue: null }
   }
 
-  const format = granularityId === 'hourly' ? hourLabel : dayLabel
-  // A change is two real measurements compared. A prior window that is itself
-  // a held-over copy of another window is not one.
-  const priorData = prior.data !== undefined && !prior.isPlaceholderData ? prior.data : undefined
+  const total = points.reduce((sum, point) => sum + point.value, 0)
+  const priorPoints =
+    prior.data !== undefined && !prior.isPlaceholderData
+      ? reportSeries(prior.data, 'events_volume')
+      : undefined
+  const priorTotal = priorPoints?.reduce((sum, point) => sum + point.value, 0)
 
   return {
     ...meta,
     status: 'ready',
-    points: data.points.map((point) => ({
-      label: format.format(point.timestamp),
-      events: point.eventCount,
+    ...(limited
+      ? { basedOn: 'The last 7 days. The events report covers at most a week.' }
+      : {}),
+    points: points.map((point) => ({
+      label: dayLabel.format(point.bucket),
+      events: point.value,
     })),
-    total: data.eventCount,
-    revenue: data.revenue,
+    total,
+    revenue: null,
     totalChangePercent:
-      priorData === undefined || view.isPlaceholderData
-        ? null
-        : change(data.eventCount, priorData.eventCount),
-    revenueChangePercent:
-      priorData === undefined || view.isPlaceholderData
-        ? null
-        : revenueChange(data.revenue, priorData.revenue),
+      priorTotal === undefined || view.isPlaceholderData ? null : change(total, priorTotal),
+    revenueChangePercent: null,
   }
 }
 
@@ -481,7 +475,8 @@ function toRevenuePanel(
     fixed: null,
     usage: null,
     changePercent: headline.change === null ? null : headline.change * 100,
-    points: revenuePoints(reportSeries(byDay, 'invoice_total', main), windows, granularityId),
+    points: revenuePoints(byDay, reportCurrencies(view.data), main, windows, granularityId),
+    series: reportCurrencies(view.data).map((currency) => ({ id: currency, label: currency })),
     topCustomers: reportBreakdown(byCustomer, 'invoice_total', ['customer_id'], main)
       .filter((row) => row.value > 0)
       .slice(0, TOP_CUSTOMERS)
@@ -501,36 +496,42 @@ function toRevenuePanel(
  * Hourly reads as daily: an invoice total has no meaningful hour.
  */
 function revenuePoints(
-  days: { bucket: Date; value: number }[],
+  result: ReportResult | undefined,
+  currencies: string[],
+  main: string,
   windows: Windows,
   granularityId: string,
-): { label: string; value: number }[] {
-  const byDay = new Map<string, number>()
-  for (const day of days) {
-    const key = day.bucket.toISOString().slice(0, 10)
-    byDay.set(key, (byDay.get(key) ?? 0) + day.value)
-  }
+): { label: string; value: number; extra: Record<string, number> }[] {
+  const byCurrency = new Map(
+    currencies.map((currency) => [
+      currency,
+      new Map(
+        reportSeries(result, 'invoice_total', currency).map((point) => [
+          point.bucket.toISOString().slice(0, 10),
+          point.value,
+        ]),
+      ),
+    ]),
+  )
   const step = granularityId === 'weekly' ? 7 : 1
   const span = spanDays(windows)
-  const points: { label: string; value: number }[] = []
+  const points: { label: string; value: number; extra: Record<string, number> }[] = []
   for (let index = 0; index < span; index += step) {
-    let value = 0
-    for (let offset = index; offset < Math.min(index + step, span); offset += 1) {
-      value += byDay.get(windowDay(windows, offset).toISOString().slice(0, 10)) ?? 0
+    const extra: Record<string, number> = {}
+    for (const currency of currencies) {
+      let value = 0
+      for (let offset = index; offset < Math.min(index + step, span); offset += 1) {
+        value += byCurrency.get(currency)?.get(windowDay(windows, offset).toISOString().slice(0, 10)) ?? 0
+      }
+      extra[currency] = value
     }
-    points.push({ label: dayLabel.format(windowDay(windows, index)), value })
+    points.push({
+      label: dayLabel.format(windowDay(windows, index)),
+      value: extra[main] ?? 0,
+      extra,
+    })
   }
   return points
-}
-
-/**
- * Change between two priced subtotals. Only comparable in one currency, and
- * the server's two decimal strings are compared as a ratio: never summed or
- * displayed: so the browser does no money arithmetic.
- */
-function revenueChange(current: Money | null, prior: Money | null): number | null {
-  if (current === null || prior === null || current.currency !== prior.currency) return null
-  return change(Number(current.amount), Number(prior.amount))
 }
 
 interface Windows {
@@ -562,57 +563,22 @@ function earliest(dates: (Date | null)[]): Date | null {
   return min
 }
 
-function toCustomersPanel(
-  view: QueryView<{ customers: Customer[]; total: number }>,
-  windows: Windows,
-): CustomersPanel {
+function toCustomersPanel(view: QueryView<ReportResult>): CustomersPanel {
   const meta = qualityOf(view)
   const blank = { newCount: null, partial: false, points: [] }
-  const page = view.data
-  if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
+  if (view.data === undefined) return { ...meta, ...blank, status: withoutData(view) }
 
-  const rows = page.customers
-  const total = page.total
-  const window = windows.current
-  const dates = rows.map((row) => row.createdAt).filter((at): at is Date => at !== null)
-  const created = dates.filter((at) => at >= window.start && at < window.end)
-  if (created.length === 0) return { ...meta, ...blank, status: 'empty', newCount: 0 }
-
-  // Every row on the page is new and the server holds more: the count is a floor.
-  const partial = created.length === rows.length && total > rows.length
-
-  // A point per day, oldest first, so a quiet day is a zero rather than a gap.
-  const points = Array.from({ length: spanDays(windows) }, (_, index) => {
-    const start = windowDay(windows, index)
-    const end = new Date(start.getTime() + DAY_MS)
-    return {
-      label: dayLabel.format(start),
-      customers: created.filter((at) => at >= start && at < end).length,
-    }
-  })
-
-  /*
-   * The prior window is only countable when the page reaches back past its
-   * start (newest first, so nothing older is hiding) or already holds every
-   * customer. Otherwise the earlier count would be a floor posing as a total,
-   * and no change is shown.
-   */
-  const priorComplete = total <= rows.length || dates.some((at) => at < windows.prior.start)
-  const priorCount = dates.filter(
-    (at) => at >= windows.prior.start && at < windows.prior.end,
-  ).length
-  const changePercent = partial || !priorComplete ? null : change(created.length, priorCount)
+  const scalar = reportScalar(view.data, 'active_customers')
+  if (scalar.value === null) return { ...meta, ...blank, status: 'empty', newCount: 0 }
 
   return {
     ...meta,
     status: 'ready',
-    newCount: created.length,
-    partial,
-    points,
-    changePercent,
-    basedOn: partial
-      ? `Counted from the newest ${rows.length.toLocaleString()} customers.`
-      : undefined,
+    newCount: scalar.value,
+    partial: false,
+    points: [],
+    changePercent: scalar.change === null ? null : scalar.change * 100,
+    basedOn: 'Customers with a subscription in this period.',
   }
 }
 
