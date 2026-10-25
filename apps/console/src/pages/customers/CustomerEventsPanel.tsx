@@ -8,6 +8,7 @@ import {
   type CustomerEvent,
 } from '@fp/ui/pages'
 import { toTraceError } from '@/pages/events/EventListPage'
+import { toListFailure } from '@/pages/shared/listFailure'
 import { subTab } from '@/pages/shared/subTab'
 
 /**
@@ -50,7 +51,9 @@ export function CustomerEventsPanel({ externalId }: { externalId: string }) {
         onLoadMore={() => void events.fetchNextPage()}
         hasMore={events.hasNextPage}
         isLoadingMore={events.isFetchingNextPage}
-        loadMoreFailed={events.isFetchNextPageError}
+        loadMoreError={
+          events.isFetchNextPageError ? toListFailure(events.error, 'more events') : null
+        }
         // A later page failing keeps the events already shown; only a failed
         // first read is the tab's error.
         {...subTab({ ...events, error: events.data ? null : events.error }, 'events')}

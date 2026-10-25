@@ -58,8 +58,18 @@ export interface CustomerEventsGridProps extends Partial<SubTabQuery> {
   /** There are more events to load. */
   hasMore?: boolean | undefined
   isLoadingMore?: boolean | undefined
-  /** The last "load more" failed: the list says so and offers a retry. */
-  loadMoreFailed?: boolean | undefined
+  /**
+   * The last "load more" failed: the list says why, and offers a retry only
+   * when one can succeed (not after a denial), after any cooldown has passed.
+   */
+  loadMoreError?: LoadMoreError | null | undefined
+}
+
+export interface LoadMoreError {
+  message: string
+  canRetry: boolean
+  /** A rate limit's cooldown: Try again waits this long. */
+  retryAfterMs?: number | undefined
 }
 
 /** Every loaded row on one table page: the list grows by loading, not paging. */
@@ -80,8 +90,18 @@ export function CustomerEventsGrid({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
-  loadMoreFailed = false,
+  loadMoreError = null,
 }: CustomerEventsGridProps) {
+  const loadMoreFailed = loadMoreError !== null
+  // A rate limit's cooldown holds the retry back until it has passed.
+  const [coolingDown, setCoolingDown] = useState(false)
+  useEffect(() => {
+    const wait = loadMoreError?.retryAfterMs
+    if (!wait) return
+    setCoolingDown(true)
+    const timer = setTimeout(() => setCoolingDown(false), wait)
+    return () => clearTimeout(timer)
+  }, [loadMoreError])
   const [selected, setSelected] = useState<CustomerEvent | null>(null)
   const capped = onLoadMore
     ? undefined
@@ -190,14 +210,21 @@ export function CustomerEventsGrid({
           />
           {onLoadMore && hasMore ? (
             <div ref={sentinel} className="flex flex-col items-center gap-2 border-t py-3">
-              {loadMoreFailed && !isLoadingMore ? (
+              {loadMoreError && !isLoadingMore ? (
                 <p role="alert" className="text-muted-foreground text-[13px]">
-                  The next events could not be loaded.
+                  {loadMoreError.message}
                 </p>
               ) : null}
-              <Button variant="outline" size="sm" onClick={onLoadMore} disabled={isLoadingMore}>
-                {isLoadingMore ? 'Loading…' : loadMoreFailed ? 'Try again' : 'Load more events'}
-              </Button>
+              {loadMoreError && !loadMoreError.canRetry ? null : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore || coolingDown}
+                >
+                  {isLoadingMore ? 'Loading…' : loadMoreFailed ? 'Try again' : 'Load more events'}
+                </Button>
+              )}
             </div>
           ) : null}
         </SubTabState>
