@@ -55,9 +55,7 @@ test('Usage keeps to the 7-day limit of the events report on a 12-month range', 
 }) => {
   await page.goto('/reports?view=usage&range=12m')
   await expect(page.getByText('Total events')).toBeVisible({ timeout: 20_000 })
-  await expect(
-    page.getByText('The last 7 days: the events report covers at most a week.'),
-  ).toBeVisible()
+  await expect(page.getByText(/The last 7 days/)).toBeVisible()
 })
 
 test('Home reads its revenue from the same report as Reports', async ({ page }) => {

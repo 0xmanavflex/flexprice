@@ -5,7 +5,6 @@ import {
   reportCurrencies,
   reportScalar,
   reportSeries,
-  useCustomerNames,
   useReport,
   useRevenueOverview,
   type ReportPoint,
@@ -47,15 +46,14 @@ import {
  *   - **Receivables**: `total_receivables` (outstanding) and
  *     `receivables_aging` by bucket and by customer.
  *   - **Payments**: `days_to_pay`: scalar, timeseries and breakdown by customer.
- *   - **Usage**: `events_volume`, with `credit_consumption` and `credit_topups`.
+ *   - **Usage**: `events_volume` (at most seven days), with `credit_consumption`
+ *     and `credit_topups`.
  *
  * The usage and contract split of revenue is the one figure no report gives:
  * it stays on the revenue dashboard (`POST /dashboard/revenue-dashboard`).
  */
 
 /** The widest range the events report answers (its `max_range_days`). */
-const EVENTS_MAX_DAYS = 7
-
 /** How many customers a breakdown lists. */
 const TOP = 50
 
@@ -159,17 +157,18 @@ export function ReportsPage({
     dimensions: ['customer_id'],
     limit: TOP,
   })
-  // The events report covers at most a week (`max_range_days: 7`): the last
-  // seven days of the range, by day, whatever the range is.
+  // `POST /events/analytics` returns no rows without a customer: the tenant
+  // path is disabled on the server. `events_volume` is the count that works,
+  // and it covers at most seven days.
   const eventsStart = new Date(
-    Math.max(window.start.getTime(), window.end.getTime() - (EVENTS_MAX_DAYS - 1) * DAY_MS),
+    Math.max(window.start.getTime(), window.end.getTime() - 6 * DAY_MS),
   )
+  const eventsLimited = eventsStart.getTime() > window.start.getTime()
   const eventsReport = useCardReport('events_volume', {
     range: `${isoDay(eventsStart)}..${isoDay(new Date(window.end.getTime() + DAY_MS))}`,
     shape: 'timeseries',
     grain: 'day',
   })
-  const eventsLimited = eventsStart.getTime() > window.start.getTime()
   const consumed = useCardReport('credit_consumption', {
     range,
     currency: currency.toLowerCase(),
@@ -214,16 +213,12 @@ export function ReportsPage({
     ['customer_id'],
     currency,
   )
-  const names = useCustomerNames([
-    ...customerRevenue.map((row) => row.keys['customer_id'] ?? ''),
-    ...customerAging.map((row) => row.keys['customer_id'] ?? ''),
-    ...customerDays.map((row) => row.keys['customer_id'] ?? ''),
-  ])
-  // The revenue dashboard's per-customer split: usage and contract, and a name.
+  // Names come from the revenue dashboard, which already returns them with the
+  // usage and contract split. Customer search is not called for this page.
   const split = new Map(
     dashboardCustomerRows(overview.data?.customers ?? [], currency).map((row) => [row.id, row]),
   )
-  const nameOf = (id: string) => names.data?.[id] ?? split.get(id)?.name ?? id
+  const nameOf = (id: string) => split.get(id)?.name ?? id
 
   const money = (value: number) => formatAmount(value, currency)
   const moneyOrDash = (value: number | null) => (value === null ? '—' : money(value))
@@ -306,7 +301,6 @@ export function ReportsPage({
 
   const events = reportSeries(eventsReport.data, 'events_volume')
   const eventsTotal = events.reduce((sum, point) => sum + point.value, 0)
-  // The tile reads "Daily average": events per day over the days the report covers.
   const eventDays = Math.max(Math.ceil((window.end.getTime() - eventsStart.getTime()) / DAY_MS), 1)
   const peak = events.reduce<ReportPoint | null>(
     (best, point) => (best === null || point.value > best.value ? point : best),
@@ -443,7 +437,7 @@ export function ReportsPage({
         reason: eventsReport.isError ? 'The events report did not respond.' : undefined,
         onRetry: retry(eventsReport),
         ...(eventsLimited
-          ? { basedOn: 'The last 7 days: the events report covers at most a week.' }
+          ? { basedOn: 'The last 7 days. Usage analytics has no tenant-wide series, and the events report covers at most a week.' }
           : {}),
         series: alignToWindow(
           events.map((point) => ({ at: point.bucket, value: point.value })),

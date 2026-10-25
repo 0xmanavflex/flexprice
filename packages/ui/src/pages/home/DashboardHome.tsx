@@ -175,7 +175,9 @@ export interface RevenuePanel extends PanelMeta {
    * Net revenue per bucket in `total`'s currency. Empty when the tenant has no
    * revenue analytics, in which case the headline stands alone.
    */
-  points: { label: string; value: number }[]
+  points: { label: string; value: number; extra?: Record<string, number> }[]
+  /** One line per currency on the revenue chart. */
+  series?: { id: string; label: string }[] | undefined
   /** The customers billed most in the window, highest first. */
   topCustomers: RevenueCustomerRow[]
   /** Other currencies billed in the window, which the figures above leave out. */
@@ -607,6 +609,14 @@ function MetricsSection({
           ),
         ...changeOf(revenue.status === 'ready' ? revenue.changePercent : null),
         points: revenue.status === 'ready' ? revenue.points : [],
+        ...(revenue.series?.length
+          ? {
+              series: revenue.series.map((line) => ({
+                ...line,
+                format: currencyFormat(line.id),
+              })),
+            }
+          : {}),
         ...(revenue.total ? { format: currencyFormat(revenue.total.currency) } : {}),
         emptyMessage:
           revenue.status === 'empty'
@@ -643,7 +653,7 @@ function MetricsSection({
       points: customersReady
         ? customers.points.map((point) => ({ label: point.label, value: point.customers }))
         : [],
-      emptyMessage: 'No new customers in this period.',
+      emptyMessage: 'Active customers in this period. This figure has no daily series.',
     },
     {
       id: METRIC_EVENTS,
