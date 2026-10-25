@@ -233,16 +233,27 @@ export function toUpdateAlertSettingRequest(config: AlertSettingConfig): Record<
   return { config: toAlertConfigRequest(config) }
 }
 
+async function createSetting(client: Flexprice, draft: CreateAlertSetting) {
+  const wire = await call(() =>
+    client.alertSettings.createAlertSettings(toCreateAlertSettingRequest(draft) as never),
+  )
+  return toAlertSetting(wire as AlertSettingWire)
+}
+
+async function updateSetting(client: Flexprice, id: string, config: AlertSettingConfig) {
+  const wire = await call(() =>
+    client.alertSettings.updateAlertSettings(id, toUpdateAlertSettingRequest(config) as never),
+  )
+  return toAlertSetting(wire as AlertSettingWire)
+}
+
 export function useCreateAlertSetting() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (draft: CreateAlertSetting) => {
-      const wire = await call(() =>
-        client.alertSettings.createAlertSettings(toCreateAlertSettingRequest(draft) as never),
-      )
-      return toAlertSetting(wire as AlertSettingWire)
+      return createSetting(client, draft)
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.alertSettings.all() })
@@ -268,30 +279,20 @@ export function useAddLineItemAlert(subscriptionId: string) {
           entityId: lineId,
           parentEntityId: subscriptionId,
           limit: 10,
-        } as never),
+        }),
       )
       const existing = (found.items ?? []).find(
         (item) => item.id && item.entityId === lineId && item.status !== 'archived',
       )
-      const wire = existing?.id
-        ? await call(() =>
-            client.alertSettings.updateAlertSettings(
-              existing.id!,
-              toUpdateAlertSettingRequest(config) as never,
-            ),
-          )
-        : await call(() =>
-            client.alertSettings.createAlertSettings(
-              toCreateAlertSettingRequest({
-                entityType: AlertEntityType.SubscriptionLineItem,
-                entityId: lineId,
-                parentEntityId: subscriptionId,
-                parentEntityType: AlertEntityType.Subscription,
-                config,
-              }) as never,
-            ),
-          )
-      return toAlertSetting(wire as AlertSettingWire)
+      return existing?.id
+        ? updateSetting(client, existing.id, config)
+        : createSetting(client, {
+            entityType: AlertEntityType.SubscriptionLineItem,
+            entityId: lineId,
+            parentEntityId: subscriptionId,
+            parentEntityType: AlertEntityType.Subscription,
+            config,
+          })
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.alertSettings.all() })
@@ -305,10 +306,7 @@ export function useUpdateAlertSetting() {
 
   return useMutation({
     mutationFn: async ({ id, config }: { id: string; config: AlertSettingConfig }) => {
-      const wire = await call(() =>
-        client.alertSettings.updateAlertSettings(id, toUpdateAlertSettingRequest(config) as never),
-      )
-      return toAlertSetting(wire as AlertSettingWire)
+      return updateSetting(client, id, config)
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.alertSettings.all() })
