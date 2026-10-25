@@ -78,6 +78,9 @@ const dayLabel = new Intl.DateTimeFormat('en-US', {
 })
 
 /** The status of one report read: loading, failed, nothing to show, or ready. */
+const useCardReport = (key: string, query: ReportQuery | null) =>
+  useReport(key, query, { handleErrors: true })
+
 function statusOf(query: { isPending: boolean; isError: boolean; data?: unknown }, empty: boolean) {
   if (query.isPending) return 'loading' as const
   if (query.isError && !query.data) return 'error' as const
@@ -106,37 +109,37 @@ export function ReportsPage({
   const base: Omit<ReportQuery, 'shape'> = { range, ...(compare ? { compare } : {}) }
 
   // Revenue across every currency first: it says which currencies there are.
-  const revenueAll = useReport('invoice_total', { ...base, shape: 'scalar' })
+  const revenueAll = useCardReport('invoice_total', { ...base, shape: 'scalar' })
   const currencies = reportCurrencies(revenueAll.data)
   const currency =
     (search.currency && currencies.includes(search.currency) ? search.currency : currencies[0]) ??
     'USD'
   const inCurrency = { ...base, currency: currency.toLowerCase() }
 
-  const revenueSeries = useReport('invoice_total', {
+  const revenueSeries = useCardReport('invoice_total', {
     ...inCurrency,
     shape: 'timeseries',
     grain: window.grain,
   })
-  const revenueByCustomer = useReport('invoice_total', {
+  const revenueByCustomer = useCardReport('invoice_total', {
     ...inCurrency,
     shape: 'breakdown',
     dimensions: ['customer_id'],
     limit: TOP,
   })
-  const arpuReport = useReport('arpu', { ...inCurrency, shape: 'scalar' })
-  const receivablesReport = useReport('total_receivables', {
+  const arpuReport = useCardReport('arpu', { ...inCurrency, shape: 'scalar' })
+  const receivablesReport = useCardReport('total_receivables', {
     range,
     currency: currency.toLowerCase(),
     shape: 'scalar',
   })
-  const agingReport = useReport('receivables_aging', {
+  const agingReport = useCardReport('receivables_aging', {
     range,
     currency: currency.toLowerCase(),
     shape: 'breakdown',
     dimensions: ['aging_bucket'],
   })
-  const agingByCustomer = useReport('receivables_aging', {
+  const agingByCustomer = useCardReport('receivables_aging', {
     range,
     currency: currency.toLowerCase(),
     shape: 'breakdown',
@@ -144,13 +147,13 @@ export function ReportsPage({
   })
   // Days to pay has no daily grain.
   const payGrain = window.grain === 'day' ? 'week' : window.grain
-  const daysReport = useReport('days_to_pay', { ...inCurrency, shape: 'scalar' })
-  const daysSeries = useReport('days_to_pay', {
+  const daysReport = useCardReport('days_to_pay', { ...inCurrency, shape: 'scalar' })
+  const daysSeries = useCardReport('days_to_pay', {
     ...inCurrency,
     shape: 'timeseries',
     grain: payGrain,
   })
-  const daysByCustomer = useReport('days_to_pay', {
+  const daysByCustomer = useCardReport('days_to_pay', {
     ...inCurrency,
     shape: 'breakdown',
     dimensions: ['customer_id'],
@@ -161,18 +164,18 @@ export function ReportsPage({
   const eventsStart = new Date(
     Math.max(window.start.getTime(), window.end.getTime() - (EVENTS_MAX_DAYS - 1) * DAY_MS),
   )
-  const eventsReport = useReport('events_volume', {
+  const eventsReport = useCardReport('events_volume', {
     range: `${isoDay(eventsStart)}..${isoDay(new Date(window.end.getTime() + DAY_MS))}`,
     shape: 'timeseries',
     grain: 'day',
   })
   const eventsLimited = eventsStart.getTime() > window.start.getTime()
-  const consumed = useReport('credit_consumption', {
+  const consumed = useCardReport('credit_consumption', {
     range,
     currency: currency.toLowerCase(),
     shape: 'scalar',
   })
-  const toppedUp = useReport('credit_topups', {
+  const toppedUp = useCardReport('credit_topups', {
     range,
     currency: currency.toLowerCase(),
     shape: 'scalar',
@@ -386,8 +389,11 @@ export function ReportsPage({
         onOpenCustomer: openCustomer,
       }}
       receivables={{
-        status: statusOf(agingReport, outstanding <= 0 && aging.length === 0),
-        reason: agingReport.isError
+        status: statusOf(
+          receivablesReport.isError && !receivablesReport.data ? receivablesReport : agingReport,
+          outstanding <= 0 && aging.length === 0,
+        ),
+        reason: agingReport.isError || receivablesReport.isError
           ? 'The receivables report did not respond.'
           : 'No finalized invoice has an unpaid balance.',
         onRetry: retry(receivablesReport, agingReport, agingByCustomer),
@@ -395,7 +401,7 @@ export function ReportsPage({
           const amount = aging.find((row) => row.keys['aging_bucket'] === key)?.value ?? 0
           return { ...bucket, amount, display: money(amount) }
         }),
-        outstanding: money(outstanding),
+        outstanding: receivablesReport.data ? money(outstanding) : '—',
         overdue: money(overdue),
         overdueShare: percentOf(overdue, outstanding),
         notYetDue: money(notYetDue),
