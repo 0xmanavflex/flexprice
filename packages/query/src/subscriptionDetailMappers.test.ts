@@ -355,6 +355,31 @@ describe('toPendingSchedules', () => {
       })
     })
 
+    it('clears a stored commitment period when the edit goes back to the billing period', () => {
+      const price = { priceId: 'p', billingModel: 'FLAT_FEE', amount: '120' } as const
+      const commitment = {
+        kind: 'amount',
+        value: '500',
+        windowed: false,
+        overageFactor: '1',
+        trueUp: false,
+      } as const
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms: { bucketSize: '', commitment: { ...commitment, duration: null } },
+        } as Parameters<typeof toUpdateLineItemRequest>[0]),
+      ).toMatchObject({ commitmentDuration: '' })
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms: { bucketSize: '', commitment: { ...commitment, duration: 'WEEKLY' } },
+        } as Parameters<typeof toUpdateLineItemRequest>[0]),
+      ).toMatchObject({ commitmentDuration: 'WEEKLY' })
+    })
+
     it('sends a package size and a tier table in the price unit when the price has one', () => {
       expect(
         toUpdateLineItemRequest({

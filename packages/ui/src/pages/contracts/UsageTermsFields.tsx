@@ -43,6 +43,7 @@ const PERIOD_OPTIONS = [
   { value: SAME_PERIOD, label: 'Same as billing period' },
   ...[
     BillingPeriod.Daily,
+    BillingPeriod.Weekly,
     BillingPeriod.Monthly,
     BillingPeriod.Quarterly,
     BillingPeriod.HalfYearly,

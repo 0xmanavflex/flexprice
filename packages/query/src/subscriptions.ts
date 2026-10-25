@@ -1224,7 +1224,10 @@ export function useUpdateSubscriptionMetadata(environmentId: string | null) {
 const effectiveFrom = (day: string) => (day ? `${day}T00:00:00Z` : undefined)
 
 /** Commitment fields shared by the add and edit requests; the API takes the numbers as numbers. */
-function commitmentFields(terms: UsageTerms): Record<string, unknown> {
+function commitmentFields(
+  terms: UsageTerms,
+  { update = false }: { update?: boolean } = {},
+): Record<string, unknown> {
   const commitment = terms.commitment
   if (!commitment) return {}
   return {
@@ -1235,7 +1238,13 @@ function commitmentFields(terms: UsageTerms): Record<string, unknown> {
     // Per bucket only when there are buckets: the API rejects a windowed
     // commitment on a charge summed over the whole period.
     commitmentWindowed: commitment.windowed && terms.bucketSize !== '',
-    ...(commitment.duration ? { commitmentDuration: commitment.duration } : {}),
+    // On an update an omitted period keeps the stored one; an empty string is
+    // how the API is told to go back to the billing period.
+    ...(commitment.duration
+      ? { commitmentDuration: commitment.duration }
+      : update
+        ? { commitmentDuration: '' }
+        : {}),
     commitmentOverageFactor: Number(commitment.overageFactor),
     commitmentTrueUpEnabled: commitment.trueUp,
   }
@@ -1302,7 +1311,7 @@ export function toUpdateLineItemRequest(draft: EditContractCharge): Record<strin
     billingModel: price.billingModel,
     ...priced,
     ...(draft.terms.bucketSize ? { bucketSize: draft.terms.bucketSize } : {}),
-    ...commitmentFields(draft.terms),
+    ...commitmentFields(draft.terms, { update: true }),
     ...(from ? { effectiveFrom: from } : {}),
   }
 }
