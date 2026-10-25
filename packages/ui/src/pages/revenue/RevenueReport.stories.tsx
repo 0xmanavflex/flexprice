@@ -170,6 +170,7 @@ const BASE: RevenueReportProps = {
 function Harness(props: RevenueReportProps) {
   const [view, setView] = useState<RevenueView>(props.view)
   const [compare, setCompare] = useState(props.filters.compare)
+  const [grain, setGrain] = useState(props.filters.grain)
   return (
     <RevenueReport
       {...props}
@@ -179,7 +180,13 @@ function Harness(props: RevenueReportProps) {
         props.onViewChange(next)
       }}
       comparing={compare !== 'none'}
-      filters={{ ...props.filters, compare, onCompareChange: setCompare }}
+      filters={{
+        ...props.filters,
+        compare,
+        onCompareChange: setCompare,
+        grain,
+        onGrainChange: setGrain,
+      }}
     />
   )
 }

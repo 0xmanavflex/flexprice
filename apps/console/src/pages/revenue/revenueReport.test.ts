@@ -227,3 +227,40 @@ describe('resolveGrain', () => {
     expect(resolveGrain('month', 'day')).toBe('month')
   })
 })
+
+describe('alignToWindow at a partial first bucket', () => {
+  const window = {
+    start: new Date('2026-09-25T00:00:00Z'),
+    end: new Date('2026-10-25T12:00:00Z'),
+  }
+
+  it('keeps a monthly row dated before the window start', () => {
+    const out = alignToWindow(
+      [
+        { at: new Date('2026-09-01T00:00:00Z'), value: 10 },
+        { at: new Date('2026-10-01T00:00:00Z'), value: 5 },
+      ],
+      window,
+      'month',
+    )
+    expect(out.map((point) => point.value)).toEqual([10, 5])
+  })
+
+  it('keeps the weekly row that contains the window start', () => {
+    const out = alignToWindow(
+      [
+        { at: new Date('2026-09-21T00:00:00Z'), value: 7 },
+        { at: new Date('2026-09-14T00:00:00Z'), value: 99 },
+      ],
+      window,
+      'week',
+    )
+    expect(out[0]?.value).toBe(7)
+    expect(out.reduce((sum, point) => sum + (point.value ?? 0), 0)).toBe(7)
+  })
+
+  it('still drops a daily row before the window', () => {
+    const out = alignToWindow([{ at: new Date('2026-09-24T00:00:00Z'), value: 3 }], window, 'day')
+    expect(out.reduce((sum, point) => sum + (point.value ?? 0), 0)).toBe(0)
+  })
+})

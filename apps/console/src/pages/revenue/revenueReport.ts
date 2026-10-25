@@ -197,6 +197,16 @@ export interface DatedAmount {
   previous?: number | null
 }
 
+/** Whether a bucket dated before the window start still reaches into it. */
+function reachesInto(at: Date, start: Date, grain: Grain): boolean {
+  if (grain === 'day') return false
+  const next =
+    grain === 'month'
+      ? new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1))
+      : new Date(at.getTime() + 7 * DAY_MS)
+  return next > start
+}
+
 /**
  * One point per bucket in the window. A report timeseries omits months with
  * nothing to add up, which draws a two-bar chart for a twelve-month filter.
@@ -215,8 +225,9 @@ export function alignToWindow(
   const start = utcMidnight(window.start)
   for (const point of points) {
     if (Number.isNaN(point.at.getTime())) continue
-    if (point.at < start || point.at >= window.end) continue
-    const { key } = bucketOf(point.at, grain, window.start)
+    const at = point.at < start && reachesInto(point.at, start, grain) ? start : point.at
+    if (at < start || at >= window.end) continue
+    const { key } = bucketOf(at, grain, window.start)
     const bucket = buckets.get(key)
     if (!bucket) continue
     bucket.value += point.value
