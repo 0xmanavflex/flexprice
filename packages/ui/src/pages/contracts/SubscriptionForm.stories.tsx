@@ -95,6 +95,8 @@ interface PlaygroundProps {
   endDate?: string
   /** Gives the plan's first charge a free trial of this many days. */
   planTrial?: number
+  /** Opens without the prefilled 14-day trial (a trialing contract takes no added charges). */
+  noTrial?: boolean
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
   /** Customers (by id) that cannot inherit, as the page loads them. */
@@ -108,6 +110,7 @@ interface PlaygroundProps {
 function SubscriptionFormPlayground({
   step: stepArg,
   prefilled,
+  noTrial = false,
   customerLocked,
   isSubmitting,
   submitError,
@@ -196,10 +199,13 @@ function SubscriptionFormPlayground({
       key={`${prefilled}-${customerLocked}`}
       {...(prefilled
         ? {
-            defaultValue:
-              endDate || phase
-                ? { ...PREFILLED, phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
-                : PREFILLED,
+            defaultValue: {
+              ...PREFILLED,
+              ...(noTrial ? { trialPeriodDays: 0 } : {}),
+              ...(endDate || phase
+                ? { phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
+                : {}),
+            },
           }
         : {})}
       customers={customers}
@@ -641,7 +647,7 @@ export const PlanCreditGrants: Story = {
 
 /** A charge for this contract alone is added to the phase with the running contract's own dialog. */
 export const AddsAChargeForThisContract: Story = {
-  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  args: { prefilled: true, noTrial: true, step: 'phases', chargeCount: 2 },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
@@ -686,7 +692,7 @@ export const AddsAChargeForThisContract: Story = {
 
 /** A charge added on this contract can be reopened and changed; the change replaces it. */
 export const EditsAChargeAddedToThisContract: Story = {
-  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  args: { prefilled: true, noTrial: true, step: 'phases', chargeCount: 2 },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
@@ -1149,5 +1155,30 @@ export const ReviewByStep: Story = {
     await expect(canvas.queryByRole('complementary', { name: 'Summary' })).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Edit billing' }))
     await expect(args.onStepChange).toHaveBeenLastCalledWith('billing')
+  },
+}
+
+/**
+ * A free trial makes the contract start trialing, and the API takes added
+ * charges only on an active one: the form says so instead of sending a request
+ * that would fail.
+ */
+export const TrialWithAddedChargeIsStopped: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add a charge' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Continue' }))
+    await userEvent.type(await dialog.findByLabelText('Display name'), 'Onboarding')
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '250')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(await canvas.findByText('Onboarding')).toBeVisible()
+    for (let i = 0; i < 3; i++) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    }
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await expect(await canvas.findByText(/free trial starts as trialing/)).toBeVisible()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
