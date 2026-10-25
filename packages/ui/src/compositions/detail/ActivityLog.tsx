@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
+import type { ActivityField } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { Section } from '../layout/Section'
 
 export const ActivityLogProvenance = provenance({
   source: 'composition',
   composes: ['compositions/section'],
-  note: 'Colourless activity log: one neutral dot for every item, full date and time on its own line, the acted-on record highlighted, "By name" only when a person did it.',
+  note: 'Colourless activity log: one neutral dot for every item, full date and time on its own line, the acted-on record highlighted, its values as muted label / value pairs, "By name" only when a person did it.',
 })
 
 export interface ActivityLogEntry {
@@ -17,6 +18,11 @@ export interface ActivityLogEntry {
   record?: string | undefined
   /** What happened, muted. */
   summary?: string | undefined
+  /**
+   * What the record stood at, one labelled value per line ("Total", "$35.00"),
+   * so several amounts never run together in one sentence.
+   */
+  fields?: readonly ActivityField[] | undefined
   /** A second muted line, such as the amount paid. */
   detail?: string | undefined
   /** Who did it. Omitted when the system did. */
@@ -69,6 +75,16 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
                 {entry.record && entry.summary ? ' ' : null}
                 {entry.summary}
               </p>
+            ) : null}
+            {entry.fields && entry.fields.length > 0 ? (
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 pt-0.5 text-[13px] leading-5">
+                {entry.fields.map((field) => (
+                  <div key={field.label} className="contents">
+                    <dt className="text-muted-foreground">{field.label}</dt>
+                    <dd className="text-foreground min-w-0 truncate tabular-nums">{field.value}</dd>
+                  </div>
+                ))}
+              </dl>
             ) : null}
             {entry.detail ? (
               <p className="text-muted-foreground text-[13px] leading-5">{entry.detail}</p>

@@ -77,7 +77,10 @@ export function CustomerDetailPage({
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
   const portal = useCustomerPortal()
-  const activity = useActivityLog({ customerId })
+  // The most the API returns with state expanded: one contract create alone
+  // writes several rows (contract, invoice, payment), so 20 could push the
+  // contract itself off the rail.
+  const activity = useActivityLog({ customerId, limit: 50 })
   const integrationLinks = useCustomerIntegrationLinks(customerId)
   const integrations = useIntegrations()
   const linkIntegration = useLinkCustomerIntegration(customerId)

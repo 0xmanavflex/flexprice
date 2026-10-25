@@ -108,7 +108,7 @@
       "usedBy": [
         "ChargeSheet"
       ],
-      "story": null
+      "story": "./src/compositions/detail/ActivityLog.stories.tsx"
     },
     "ActivitySection": {
       "file": "src/compositions/detail/ActivityLog.tsx",
@@ -122,7 +122,7 @@
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
-      "story": null
+      "story": "./src/compositions/detail/ActivityLog.stories.tsx"
     },
     "AddCardDialog": {
       "file": "src/pages/customer-portal/PortalDialogs.tsx",
@@ -8261,6 +8261,13 @@
       "component": "ChartBox",
       "uses": [
         "ChartBox"
+      ]
+    },
+    "./src/compositions/detail/ActivityLog.stories.tsx": {
+      "title": "Building blocks/Detail pages/ActivityLog",
+      "component": "ActivitySection",
+      "uses": [
+        "ActivitySection"
       ]
     },
     "./src/compositions/detail/DetailHeader.stories.tsx": {

@@ -11,16 +11,23 @@ describe('toActivityEntry', () => {
       entity: { type: 'invoice', id: 'inv_1', label: 'INV-9' },
       actor: { type: 'user', id: 'usr_1', label: 'Ada' },
       source: 'dashboard',
-      state: { invoice_number: 'INV-9', total: '120.00', currency: 'USD', payment_status: 'UNPAID' },
+      state: {
+        invoice_number: 'INV-9',
+        total: '120.00',
+        currency: 'USD',
+        payment_status: 'UNPAID',
+      },
     })
 
     expect(entry.entityLabel).toBe('INV-9')
     expect(entry.state).toMatchObject({ total: '120.00' })
     expect(describeActivity(entry)).toEqual({
       record: 'INV-9',
-      summary: expect.stringContaining('120'),
+      fields: [
+        { label: 'Total', value: '$120.00' },
+        { label: 'Status', value: 'Unpaid' },
+      ],
     })
-    expect(describeActivity(entry).summary).toContain('Unpaid')
   })
 
   it('shows what was paid and what is still due on an invoice', () => {
@@ -42,8 +49,12 @@ describe('toActivityEntry', () => {
 
     expect(describeActivity(entry)).toEqual({
       record: 'INV-202610-00001',
-      summary: '$2,000.00 · $1,000.00 due · Finalized',
-      detail: '$1,000.00 paid',
+      fields: [
+        { label: 'Total', value: '$2,000.00' },
+        { label: 'Paid', value: '$1,000.00' },
+        { label: 'Due', value: '$1,000.00' },
+        { label: 'Status', value: 'Finalized' },
+      ],
     })
   })
 
@@ -62,7 +73,7 @@ describe('toActivityEntry', () => {
       },
     })
 
-    expect(describeActivity(entry)).toEqual({ summary: 'Draft' })
+    expect(describeActivity(entry)).toEqual({ fields: [{ label: 'Status', value: 'Draft' }] })
   })
 
   it('describes a customer snapshot without repeating ids', () => {
@@ -93,7 +104,11 @@ describe('toActivityEntry', () => {
 
     expect(describeActivity(entry)).toEqual({
       record: 'Acme Corp',
-      summary: 'Taxable · UTC · Published',
+      fields: [
+        { label: 'Tax', value: 'Taxable' },
+        { label: 'Timezone', value: 'UTC' },
+        { label: 'Status', value: 'Published' },
+      ],
     })
     expect(describeActivity(entry).record).not.toBe('actlog-read-1791926997-a')
     expect(activityByline(entry)).toBe('activity-log · API key')
@@ -109,9 +124,8 @@ describe('toActivityEntry', () => {
 
     expect(describeActivity(entry)).toEqual({
       record: 'Prepaid',
-      summary: expect.stringContaining('40'),
+      fields: [{ label: 'Balance', value: '$40.00' }],
     })
-    expect(describeActivity(entry).summary).not.toContain('999')
   })
 
   it('leaves the label empty when the API sent only an id', () => {
@@ -123,7 +137,7 @@ describe('toActivityEntry', () => {
     })
     expect(entry.entityLabel).toBe('')
     expect(describeActivity(entry).record).toBeUndefined()
-    expect(describeActivity(entry).summary).toContain('1,000')
+    expect(describeActivity(entry).fields).toEqual([{ label: 'Amount', value: '$1,000.00' }])
   })
 })
 
@@ -134,5 +148,14 @@ describe('activity titles', () => {
 
   it('keeps every other action readable from its name', () => {
     expect(toActivityEntry({ id: 'b', action: 'invoice.refunded' }).title).toBe('Invoice refunded')
+  })
+
+  it('names entities the way the console does', () => {
+    expect(toActivityEntry({ id: 'c', action: 'subscription.created' }).title).toBe(
+      'Contract created',
+    )
+    expect(toActivityEntry({ id: 'd', action: 'credit_note.created' }).title).toBe(
+      'Credit memo created',
+    )
   })
 })
