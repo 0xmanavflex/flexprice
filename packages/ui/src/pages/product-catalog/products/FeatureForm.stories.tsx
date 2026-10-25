@@ -350,9 +350,11 @@ export const SubmitsAValidatedDomainValue: Story = {
     const canvas = within(canvasElement)
 
     await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
+    await userEvent.click(canvas.getByRole('button', { name: /Optional details/ }))
     await userEvent.clear(canvas.getByLabelText(/^Lookup key/))
     await userEvent.type(canvas.getByLabelText(/^Lookup key/), 'api_calls')
     await userEvent.type(await canvas.findByLabelText(/^Event name/), 'api_call')
+    await userEvent.type(canvas.getByLabelText(/^Event field/), 'calls')
     await submit(canvas)
 
     await expect(args.onSubmit).toHaveBeenCalledWith(
@@ -362,7 +364,8 @@ export const SubmitsAValidatedDomainValue: Story = {
         type: FeatureType.Metered,
         meter: expect.objectContaining({
           eventName: 'api_call',
-          aggregationType: AggregationType.Count,
+          aggregationType: AggregationType.Sum,
+          field: 'calls',
         }),
       }),
     )
@@ -373,6 +376,7 @@ export const SubmitsAValidatedDomainValue: Story = {
 export const LookupKeyFollowsName: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /Optional details/ }))
     await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
     await expect(canvas.getByLabelText(/^Lookup key/)).toHaveValue('feat-api-calls')
 
@@ -394,6 +398,7 @@ export const NoTagsYet: Story = {
   args: { groups: [] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /Optional details/ }))
     await expect(canvas.getByText('Tag')).toBeVisible()
     await expect(canvas.getByText(/none exist yet/i)).toBeVisible()
     await expect(canvas.getByRole('combobox', { name: /tag/i })).toBeDisabled()

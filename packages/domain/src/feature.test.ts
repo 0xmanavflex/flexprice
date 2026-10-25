@@ -88,13 +88,22 @@ describe('aggregation decides which meter fields are required', () => {
     AggregationType.Avg,
     AggregationType.Max,
     AggregationType.Latest,
-    AggregationType.CountUnique,
-    AggregationType.WeightedSum,
   ])('requires a field or expression for %s', (aggregationType) => {
     expect(errors(metered({ aggregationType }))).toContain(
       'This aggregation needs an event field or an expression',
     )
     expect(needsAggregationTarget(aggregationType)).toBe(true)
+  })
+
+  it.each([
+    AggregationType.CountUnique,
+    AggregationType.WeightedSum,
+    AggregationType.SumWithMultiplier,
+  ])('requires a field, not an expression, for %s', (aggregationType) => {
+    expect(errors(metered({ aggregationType }))).toContain('This aggregation needs an event field')
+    expect(
+      errors(metered({ aggregationType, expression: 'tokens * 2', field: 'tokens' })),
+    ).toContain('This aggregation cannot use a custom expression')
   })
 
   // V1 picks which of these to validate by reading `showCustomExpression` out

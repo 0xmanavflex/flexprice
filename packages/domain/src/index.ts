@@ -159,6 +159,7 @@ export {
   createFeatureSchema,
   emptyFeature,
   meterSchema,
+  allowsExpression,
   needsAggregationTarget,
   FEATURE_SORT_LABEL,
   FeatureSortField,

@@ -63,6 +63,16 @@ export function needsAggregationTarget(type: AggregationType): boolean {
   return type !== AggregationType.Count
 }
 
+/** Sum, Average, Max, and Latest may use a CEL expression instead of a field. */
+export function allowsExpression(type: AggregationType): boolean {
+  return (
+    type === AggregationType.Sum ||
+    type === AggregationType.Avg ||
+    type === AggregationType.Max ||
+    type === AggregationType.Latest
+  )
+}
+
 const decimal = z
   .string()
   .trim()
@@ -129,11 +139,28 @@ export const meterSchema = z
       })
     }
 
+    const expressionAllowed = allowsExpression(meter.aggregationType)
+    if (meter.expression && !expressionAllowed) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['expression'],
+        message: 'This aggregation cannot use a custom expression',
+      })
+    }
+    if (meter.field && meter.expression) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['field'],
+        message: 'Use an event field or a custom expression, not both',
+      })
+    }
     if (needsAggregationTarget(meter.aggregationType) && !meter.field && !meter.expression) {
       ctx.addIssue({
         code: 'custom',
         path: ['field'],
-        message: 'This aggregation needs an event field or an expression',
+        message: expressionAllowed
+          ? 'This aggregation needs an event field or an expression'
+          : 'This aggregation needs an event field',
       })
     }
 
@@ -302,6 +329,8 @@ export interface Feature {
   meterBucketSize?: string | null
   /** The meter's aggregation target and options, for prefilling an edit. */
   aggregationField?: string | null
+  /** A CEL expression used instead of `aggregationField`, when the meter has one. */
+  aggregationExpression?: string | null
   aggregationGroupBy?: string | null
   /** Free-form key/value fields, as the API returns them. */
   metadata?: Readonly<Record<string, string>>

@@ -70,6 +70,7 @@ export interface FeatureWire {
           | {
               type?: string | undefined
               field?: string | undefined
+              expression?: string | undefined
               groupBy?: string | undefined
               /** The meter's own usage window, when it is bucketed at the meter level. */
               bucketSize?: string | undefined
@@ -127,6 +128,9 @@ export function toFeature(wire: FeatureWire): Feature {
       .map((f) => ({ key: f.key ?? '', values: f.values ?? [] })),
     meterBucketSize: wire.meter?.aggregation?.bucketSize ? wire.meter.aggregation.bucketSize : null,
     aggregationField: wire.meter?.aggregation?.field ? wire.meter.aggregation.field : null,
+    aggregationExpression: wire.meter?.aggregation?.expression
+      ? wire.meter.aggregation.expression
+      : null,
     aggregationGroupBy: wire.meter?.aggregation?.groupBy ? wire.meter.aggregation.groupBy : null,
     metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,

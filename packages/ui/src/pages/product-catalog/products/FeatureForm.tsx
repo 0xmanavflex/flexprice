@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { get, useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -8,6 +9,7 @@ import {
   FEATURE_TYPE_LABEL,
   FeatureType,
   ResetUsage,
+  allowsExpression,
   createFeatureSchema,
   defaultFeatureLookupKey,
   editFeatureSchema,
@@ -21,7 +23,9 @@ import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { Field } from '@ui/compositions/forms/Field'
+import { CheckboxRow } from '@ui/compositions/forms/CheckboxRow'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
+import { FormDisclosure } from '@ui/compositions/forms/FormDisclosure'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
@@ -88,6 +92,7 @@ interface FormValues {
     eventName: string
     aggregationType: AggregationType
     field: string
+    expression: string
     multiplier: string
     groupBy: string
     resetUsage: ResetUsage
@@ -97,7 +102,12 @@ interface FormValues {
 
 const FORM_ID = 'feature-form'
 
-const TYPES = [FeatureType.Metered, FeatureType.Boolean, FeatureType.Static] as const
+const TYPES = [
+  FeatureType.Metered,
+  FeatureType.Boolean,
+  FeatureType.Static,
+  FeatureType.Config,
+] as const
 
 const TYPE_HINT: Record<FeatureType, string> = {
   [FeatureType.Metered]: 'Measured from events you send. Needs a meter.',
@@ -122,11 +132,6 @@ const AGGREGATION_OPTIONS: Option[] = AGGREGATION_ORDER.map((value) => ({
   description: AGGREGATION_DESCRIPTION[value],
 }))
 
-const RESET_OPTIONS: Option[] = [
-  { value: ResetUsage.BillingPeriod, label: 'Every billing period' },
-  { value: ResetUsage.Never, label: 'Never' },
-]
-
 function emptyValues(): FormValues {
   return {
     type: FeatureType.Metered,
@@ -139,8 +144,9 @@ function emptyValues(): FormValues {
     reportingUnit: { unitSingular: '', unitPlural: '', conversionRate: '' },
     meter: {
       eventName: '',
-      aggregationType: AggregationType.Count,
+      aggregationType: AggregationType.Sum,
       field: '',
+      expression: '',
       multiplier: '',
       groupBy: '',
       resetUsage: ResetUsage.BillingPeriod,
@@ -168,6 +174,7 @@ function fromCreate(draft: CreateFeature | undefined): FormValues {
       eventName: draft.meter.eventName,
       aggregationType: draft.meter.aggregationType,
       field: draft.meter.field ?? '',
+      expression: draft.meter.expression ?? '',
       multiplier: draft.meter.multiplier ?? '',
       groupBy: draft.meter.groupBy ?? '',
       resetUsage: draft.meter.resetUsage,
@@ -197,6 +204,7 @@ function fromFeature(feature: Feature): FormValues {
       eventName: feature.eventName ?? '',
       ...(feature.aggregationType ? { aggregationType: feature.aggregationType } : {}),
       field: feature.aggregationField ?? '',
+      expression: feature.aggregationExpression ?? '',
       groupBy: feature.aggregationGroupBy ?? '',
     },
     filters: (feature.meterFilters ?? []).map((f) => ({
@@ -226,13 +234,14 @@ const hasUnits = (type: FeatureType) => type === FeatureType.Metered
  * sent for them, so an edit leaves whatever thresholds the feature already
  * carries untouched.
  */
-function normalize(values: FormValues, mode: 'create' | 'edit') {
+function normalize(values: FormValues, mode: 'create' | 'edit', useExpression: boolean) {
   const ru = values.reportingUnit
   const units = hasUnits(values.type)
   const hasReportingUnit =
     units && [ru.unitSingular, ru.unitPlural, ru.conversionRate].some((v) => v.trim() !== '')
 
   const filters = values.filters.map((f) => ({ key: f.key, values: splitValues(f.valuesText) }))
+  const expressionOn = useExpression && allowsExpression(values.meter.aggregationType)
   const shared = {
     name: values.name,
     description: values.description,
@@ -256,7 +265,10 @@ function normalize(values: FormValues, mode: 'create' | 'edit') {
             eventName: meter.eventName,
             aggregationType: meter.aggregationType,
             resetUsage: meter.resetUsage,
-            ...(needsAggregationTarget(meter.aggregationType) ? { field: meter.field } : {}),
+            ...(needsAggregationTarget(meter.aggregationType) && !expressionOn
+              ? { field: meter.field }
+              : {}),
+            ...(expressionOn && meter.expression ? { expression: meter.expression } : {}),
             ...(meter.aggregationType === AggregationType.SumWithMultiplier
               ? { multiplier: meter.multiplier }
               : {}),
@@ -275,11 +287,14 @@ export function FeatureForm(props: FeatureFormProps) {
   const feature = props.mode === 'edit' ? props.feature : undefined
   const isEdit = mode === 'edit'
 
+  const [useExpression, setUseExpression] = useState(
+    Boolean(feature?.aggregationExpression?.trim()),
+  )
   const schemaResolver = (isEdit
     ? standardSchemaResolver(editFeatureSchema)
     : standardSchemaResolver(createFeatureSchema)) as unknown as Resolver<FormValues>
   const resolver: Resolver<FormValues> = (values, context, options) => {
-    const candidate = normalize(values, mode) as unknown as FormValues
+    const candidate = normalize(values, mode, useExpression) as unknown as FormValues
     return schemaResolver(candidate, context, options)
   }
 
@@ -294,6 +309,7 @@ export function FeatureForm(props: FeatureFormProps) {
   const type = form.watch('type')
   const aggregationType = form.watch('meter.aggregationType')
   const isMetered = type === FeatureType.Metered
+  const expressionOn = useExpression && allowsExpression(aggregationType)
 
   const filterPath = isEdit ? 'filters' : 'meter.filters'
   const message = (path: string): string | undefined => {
@@ -316,16 +332,46 @@ export function FeatureForm(props: FeatureFormProps) {
     else props.onSubmit(values as unknown as CreateFeature)
   })
 
+  const singularField = form.register('unitSingular', {
+    onChange: (event: { target: { value: string } }) => {
+      if (!form.getFieldState('unitPlural').isDirty) {
+        const singular = event.target.value.trim()
+        form.setValue('unitPlural', singular ? `${singular}s` : '')
+      }
+    },
+  })
+  const reportingSingularField = form.register('reportingUnit.unitSingular', {
+    onChange: (event: { target: { value: string } }) => {
+      if (!form.getFieldState('reportingUnit.unitPlural').isDirty) {
+        const singular = event.target.value.trim()
+        form.setValue('reportingUnit.unitPlural', singular ? `${singular}s` : '')
+      }
+    },
+  })
+
+  const chooseAggregation = (next: AggregationType) => {
+    form.setValue('meter.aggregationType', next, { shouldDirty: true })
+    if (!allowsExpression(next)) {
+      setUseExpression(false)
+      form.setValue('meter.expression', '')
+    }
+  }
+
   const detailsRows = (
     <>
       <FormRow
         label="Name"
-        hint="What the feature is called in the console and on plans."
+        hint="What the feature is called in the console and on plans. Also fills the lookup key and, for a metered feature, the meter name."
         required
         error={message('name')}
       >
         {({ id, ...field }) => <Input id={id} disabled={isSubmitting} {...field} {...nameField} />}
       </FormRow>
+    </>
+  )
+
+  const optionalRows = (
+    <>
       <FormRow
         label="Lookup key"
         hint={
@@ -361,14 +407,6 @@ export function FeatureForm(props: FeatureFormProps) {
           />
         )}
       </FormRow>
-      {/*
-        Always drawn, even with no tags to choose.
-        Hiding the field when the environment has none meant the question was
-        never asked: people filed nothing under a tag because they never
-        learned the field was there, and reported the dropdown as missing. An
-        empty picker says what it is and that there is nothing in it yet,
-        which is information; an absent one is not.
-      */}
       <FormRow
         label="Tag"
         hint={
@@ -511,30 +549,57 @@ export function FeatureForm(props: FeatureFormProps) {
             value={aggregationType}
             options={AGGREGATION_OPTIONS}
             disabled={isEdit}
-            onValueChange={(next) =>
-              form.setValue('meter.aggregationType', next as AggregationType, {
-                shouldDirty: true,
-              })
-            }
+            onValueChange={(next) => chooseAggregation(next as AggregationType)}
           />
         )}
       </FormRow>
 
       {needsAggregationTarget(aggregationType) ? (
         <FormRow
-          label="Event field"
+          label={expressionOn ? 'Custom expression' : 'Event field'}
           required
-          hint="The property on the event to aggregate."
-          error={message('meter.field')}
+          align="start"
+          hint={
+            expressionOn
+              ? 'A CEL expression over the event. It replaces the event field, and only this is saved.'
+              : 'The property on the event to aggregate.'
+          }
+          error={expressionOn ? message('meter.expression') : message('meter.field')}
         >
           {({ id, ...field }) => (
-            <Input
-              id={id}
-              readOnly={isEdit}
-              disabled={isEdit}
-              {...field}
-              {...form.register('meter.field')}
-            />
+            <div className="flex flex-col gap-3">
+              {allowsExpression(aggregationType) ? (
+                <CheckboxRow
+                  checked={useExpression}
+                  disabled={isEdit}
+                  onCheckedChange={(checked) => {
+                    setUseExpression(checked)
+                    if (checked) form.setValue('meter.field', '', { shouldDirty: true })
+                    else form.setValue('meter.expression', '', { shouldDirty: true })
+                  }}
+                >
+                  Use a custom expression
+                </CheckboxRow>
+              ) : null}
+              {expressionOn ? (
+                <Textarea
+                  id={id}
+                  rows={2}
+                  readOnly={isEdit}
+                  disabled={isEdit}
+                  {...field}
+                  {...form.register('meter.expression')}
+                />
+              ) : (
+                <Input
+                  id={id}
+                  readOnly={isEdit}
+                  disabled={isEdit}
+                  {...field}
+                  {...form.register('meter.field')}
+                />
+              )}
+            </div>
           )}
         </FormRow>
       ) : null}
@@ -576,23 +641,11 @@ export function FeatureForm(props: FeatureFormProps) {
         </FormRow>
       ) : null}
 
-      <FormRow
-        label="Reset usage"
-        hint="Whether the usage total starts again each period or keeps building up."
-      >
-        {({ id, ...field }) => (
-          <OptionSelect
-            id={id}
-            aria-describedby={field['aria-describedby']}
-            value={form.watch('meter.resetUsage')}
-            options={RESET_OPTIONS}
-            disabled={isEdit}
-            onValueChange={(next) =>
-              form.setValue('meter.resetUsage', next as ResetUsage, { shouldDirty: true })
-            }
-          />
-        )}
-      </FormRow>
+      {/*
+        Reset stays on the billing period. The control is kept out of the form
+        until a second choice is something we want people to pick.
+        <FormRow label="Reset usage">...</FormRow>
+      */}
     </>
   )
 
@@ -609,7 +662,7 @@ export function FeatureForm(props: FeatureFormProps) {
             id={id}
             placeholder={isMetered ? 'call' : 'seat'}
             {...field}
-            {...form.register('unitSingular')}
+            {...singularField}
           />
         )}
       </FormRow>
@@ -633,7 +686,7 @@ export function FeatureForm(props: FeatureFormProps) {
         error={message('reportingUnit.unitSingular')}
       >
         {({ id, ...field }) => (
-          <Input id={id} {...field} {...form.register('reportingUnit.unitSingular')} />
+          <Input id={id} {...field} {...reportingSingularField} />
         )}
       </FormRow>
       <FormRow
@@ -671,17 +724,24 @@ export function FeatureForm(props: FeatureFormProps) {
     <form id={FORM_ID} onSubmit={submitAll} noValidate>
       <fieldset className="flex min-w-0 flex-col gap-6 border-0 p-0" disabled={isSubmitting}>
         <legend className="sr-only">Feature</legend>
-        <FormCard title="Details">
-          {typeRows}
+        <FormCard title="Feature">
           {detailsRows}
+          {typeRows}
         </FormCard>
         {isMetered ? (
-          <FormCard title="Metering">
-            {eventRows}
-            {aggregationRows}
-            {unitRows}
-          </FormCard>
+          <>
+            <FormCard title="Units">{unitRows}</FormCard>
+            <FormCard title="Event">{eventRows}</FormCard>
+            <FormCard title="Aggregation">{aggregationRows}</FormCard>
+          </>
         ) : null}
+        <FormDisclosure
+          title="Optional details"
+          summary="Lookup key, description, and tag."
+          forceOpen={Boolean(message('lookupKey') || message('description') || message('groupId'))}
+        >
+          {optionalRows}
+        </FormDisclosure>
       </fieldset>
     </form>
   )
