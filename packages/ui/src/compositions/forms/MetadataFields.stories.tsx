@@ -65,3 +65,17 @@ export const RemovesAField: Story = {
 }
 
 export const Disabled: Story = { args: { defaultValue: { region: 'eu' }, disabled: true } }
+
+/** A key named like a JavaScript internal is still just a key. */
+export const ProtoKeyIsAKey: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add field' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Key 1' }), '__proto__')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Value 1' }), 'x')
+    const calls = (args.onChange as ReturnType<typeof fn>).mock.calls
+    const [metadata] = calls[calls.length - 1] as [Record<string, string>]
+    await expect(Object.keys(metadata)).toEqual(['__proto__'])
+    await expect(Object.getPrototypeOf(metadata)).toBe(Object.prototype)
+  },
+}

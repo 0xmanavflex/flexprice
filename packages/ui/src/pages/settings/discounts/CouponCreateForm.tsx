@@ -329,6 +329,7 @@ export function CouponCreateForm({
           {() => (
             <MetadataFields
               label="Coupon metadata"
+              defaultValue={form.getValues('metadata')}
               disabled={isSubmitting}
               onChange={(metadata, problem) => {
                 setMetadataProblem(problem)

@@ -45,11 +45,18 @@ export function metadataOfRows(rows: readonly { key: string; value: string }[]):
       problem ??= 'Every value needs a key.'
       continue
     }
-    if (key in metadata) {
+    if (Object.hasOwn(metadata, key)) {
       problem ??= `The key "${key}" is used twice.`
       continue
     }
-    metadata[key] = row.value
+    // Defined, not assigned: a key such as `__proto__` is kept as a key rather
+    // than setting the map's prototype.
+    Object.defineProperty(metadata, key, {
+      value: row.value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    })
   }
   return { metadata, problem }
 }

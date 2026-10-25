@@ -132,6 +132,20 @@ export const CreatesWithMetadata: Story = {
   },
 }
 
+/** A metadata row with a problem keeps the form on Details, where the row is. */
+export const MetadataProblemStaysOnDetails: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add field' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Value 1' }), 'orphan')
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Every value needs a key.')
+    await expect(canvas.getByRole('textbox', { name: 'Value 1' })).toBeVisible()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
 /** A staged item can be edited before the plan exists: the change replaces it, not adds a second. */
 export const EditsAStagedCreditGrant: Story = {
   play: async ({ canvasElement, args }) => {

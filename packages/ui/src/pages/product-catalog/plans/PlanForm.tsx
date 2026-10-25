@@ -171,8 +171,14 @@ export function PlanForm({
       setAdding(null)
       onStepChange?.(id)
     },
+    // Details is left only with valid metadata rows: they live on that step,
+    // so a problem must be fixed there rather than block Create plan unseen.
     validate: (id) =>
-      id === 'details' ? form.trigger(['name', 'lookupKey', 'description']) : true,
+      id === 'details'
+        ? metadataProblem
+          ? false
+          : form.trigger(['name', 'lookupKey', 'description'])
+        : true,
     unlockAll: isEdit,
   })
 
