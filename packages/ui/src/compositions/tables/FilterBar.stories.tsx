@@ -243,3 +243,37 @@ export const MetadataKeyValue: Story = {
     await expect(await canvas.findByText('region = eu')).toBeVisible()
   },
 }
+
+/** The pair is stored as `key=value`, so a key with "=" is refused, said why. */
+export const MetadataKeyCannotHoldEquals: Story = {
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          { id: 'aria-input-field-name', enabled: false },
+          { id: 'aria-dialog-name', enabled: false },
+          // The story ends with the value step still open and nothing applied,
+          // so the vendored chip's value trigger has no text yet: a gap in the
+          // primitive, not what this story checks.
+          { id: 'button-name', enabled: false },
+        ],
+      },
+    },
+  },
+  args: { onQueryChange: fn() },
+  render: (args) => <MetadataFilterBar onChange={args.onQueryChange as never} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /filter/i }))
+    await userEvent.click(await screen.findByRole('option', { name: /metadata/i }))
+    const condition = screen.queryByRole('option', { name: /^is$/i })
+    if (condition) await userEvent.click(condition)
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Metadata key' }), 'a=b')
+    await expect(screen.getByRole('alert')).toHaveTextContent('A key cannot contain "=".')
+    await expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled()
+    // The bar may report the empty list as the chip opens; it never reports a pair.
+    const calls = (args.onQueryChange as ReturnType<typeof fn>).mock.calls
+    await expect(calls.every(([filters]) => (filters as unknown[]).length === 0)).toBe(true)
+  },
+}

@@ -426,6 +426,24 @@ const KIND_TYPE: Record<FilterKind, 'text' | 'select' | 'number'> = {
   keyvalue: 'text',
 }
 
+/**
+ * One key/value filter per key, the latest kept. Metadata holds one value per
+ * key, so two pairs on the same key can never both match; a second pick
+ * replaces the first instead of leaving two chips the request cannot honour.
+ */
+function latestPairPerKey(filters: ListFilter[], specs: readonly ListFilterSpec[]): ListFilter[] {
+  const keyOf = (filter: ListFilter): string | null => {
+    const spec = specs.find((entry) => entry.field === filter.field)
+    if (spec?.kind !== 'keyvalue' || typeof filter.value !== 'string') return null
+    const pair = splitKeyValue(filter.value)
+    return pair ? `${filter.field}\u0000${pair.key}` : null
+  }
+  return filters.filter((filter, index) => {
+    const key = keyOf(filter)
+    return key === null || !filters.slice(index + 1).some((later) => keyOf(later) === key)
+  })
+}
+
 /** `key=value` as the chip reads it: `region = eu`. */
 function formatKeyValue(value: unknown): string {
   if (typeof value !== 'string') return ''
@@ -445,8 +463,11 @@ function FilterKeyValueEditor({
   const initial = typeof value === 'string' ? splitKeyValue(value) : null
   const [key, setKey] = useState(initial?.key ?? '')
   const [text, setText] = useState(initial?.value ?? '')
+  // The pair is stored as `key=value`, split on the first `=`, so a key may
+  // not hold one (a value may).
+  const keyProblem = key.includes('=') ? 'A key cannot contain "=".' : null
   const apply = () => {
-    if (key.trim()) commit(`${key.trim()}=${text}`)
+    if (key.trim() && !keyProblem) commit(`${key.trim()}=${text}`)
   }
   return (
     <form
@@ -471,7 +492,18 @@ function FilterKeyValueEditor({
         className="h-8"
         onChange={(event) => setText(event.target.value)}
       />
-      <Button type="submit" variant="outline" size="sm" className="h-8" disabled={!key.trim()}>
+      {keyProblem ? (
+        <p role="alert" className="text-destructive text-xs">
+          {keyProblem}
+        </p>
+      ) : null}
+      <Button
+        type="submit"
+        variant="outline"
+        size="sm"
+        className="h-8"
+        disabled={!key.trim() || keyProblem !== null}
+      >
         Apply
       </Button>
     </form>
@@ -575,7 +607,7 @@ export function granularFilter({
             spec?.kind === 'options' ? entry.values.map(String) : String(entry.values[0] ?? ''),
         }
       })
-      onChange(runnableFilters(next, specs))
+      onChange(latestPairPerKey(runnableFilters(next, specs), specs))
     },
   }
 }
