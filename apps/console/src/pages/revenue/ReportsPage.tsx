@@ -28,6 +28,7 @@ import {
   RANGE_OPTIONS,
   amountOf,
   customerRows as dashboardCustomerRows,
+  macRows,
   alignToWindow,
   formatAmount,
   percentOf,
@@ -129,6 +130,12 @@ export function ReportsPage({
     dimensions: ['customer_id'],
     limit: TOP,
   })
+  const macReport = useCardReport('mac_consumption', {
+    range,
+    currency: currency.toLowerCase(),
+    shape: 'breakdown',
+    dimensions: ['customer_id', 'component'],
+  })
   const arpuReport = useCardReport('arpu', { ...inCurrency, shape: 'scalar' })
   const receivablesReport = useCardReport('total_receivables', {
     range,
@@ -164,9 +171,7 @@ export function ReportsPage({
   // `POST /events/analytics` returns no rows without a customer: the tenant
   // path is disabled on the server. `events_volume` is the count that works,
   // and it covers at most seven days.
-  const eventsStart = new Date(
-    Math.max(window.start.getTime(), window.end.getTime() - 6 * DAY_MS),
-  )
+  const eventsStart = new Date(Math.max(window.start.getTime(), window.end.getTime() - 6 * DAY_MS))
   const eventsLimited = eventsStart.getTime() > window.start.getTime()
   const eventsReport = useCardReport('events_volume', {
     range: `${isoDay(eventsStart)}..${isoDay(new Date(window.end.getTime() + DAY_MS))}`,
@@ -252,6 +257,11 @@ export function ReportsPage({
     ...(point.previous != null ? { previous: point.previous } : {}),
   }))
 
+  const mac = macRows(
+    reportBreakdown(macReport.data, 'mac_consumption', ['customer_id', 'component'], currency),
+    nameOf,
+    money,
+  )
   const customerRows: CustomerRevenueRow[] = customerRevenue.map((row) => {
     const id = row.keys['customer_id'] ?? ''
     const known = split.get(id)
@@ -388,15 +398,23 @@ export function ReportsPage({
           total,
         ),
         onOpenCustomer: openCustomer,
+        mac: {
+          status: statusOf(macReport, mac.length === 0),
+          reason: 'The MAC report did not respond.',
+          onRetry: retry(macReport),
+          rows: mac,
+          basedOn: 'Finalized invoice lines with a commitment.',
+        },
       }}
       receivables={{
         status: statusOf(
           receivablesReport.isError && !receivablesReport.data ? receivablesReport : agingReport,
           outstanding <= 0 && aging.length === 0,
         ),
-        reason: agingReport.isError || receivablesReport.isError
-          ? 'The receivables report did not respond.'
-          : 'No finalized invoice has an unpaid balance.',
+        reason:
+          agingReport.isError || receivablesReport.isError
+            ? 'The receivables report did not respond.'
+            : 'No finalized invoice has an unpaid balance.',
         onRetry: retry(receivablesReport, agingReport, agingByCustomer),
         buckets: Object.entries(AGING).map(([key, bucket]) => {
           const amount = aging.find((row) => row.keys['aging_bucket'] === key)?.value ?? 0
@@ -445,7 +463,10 @@ export function ReportsPage({
         reason: eventsReport.isError ? 'The events report did not respond.' : undefined,
         onRetry: retry(eventsReport),
         ...(eventsLimited
-          ? { basedOn: 'The last 7 days. Usage analytics has no tenant-wide series, and the events report covers at most a week.' }
+          ? {
+              basedOn:
+                'The last 7 days. Usage analytics has no tenant-wide series, and the events report covers at most a week.',
+            }
           : {}),
         series: alignToWindow(
           events.map((point) => ({ at: point.bucket, value: point.value })),

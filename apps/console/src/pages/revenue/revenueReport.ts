@@ -2,6 +2,7 @@ import { InvoiceStatus, PaymentStatus, type Invoice, type Money, type Payment } 
 import type {
   AgingBucket,
   CustomerRevenueRow,
+  MacRow,
   OverdueCustomerRow,
   PayerRow,
   RevenuePoint,
@@ -245,9 +246,7 @@ export function alignToWindow(
     value: seen.has(key) ? Math.round(bucket.value * 100) / 100 : emptyValue,
     ...(comparing
       ? {
-          previous: seen.has(key)
-            ? Math.round((previous.get(key) ?? 0) * 100) / 100
-            : emptyValue,
+          previous: seen.has(key) ? Math.round((previous.get(key) ?? 0) * 100) / 100 : emptyValue,
         }
       : {}),
   }))
@@ -271,6 +270,48 @@ export function revenueSeries(
     revenue: Math.round(bucket.value * 100) / 100,
     ...(previous ? { previous: Math.round((before[index]?.value ?? 0) * 100) / 100 } : {}),
   }))
+}
+
+/* ---- MAC consumption ------------------------------------------------------- */
+
+/** Pivots the per-component breakdown into one row per customer. */
+export function macRows(
+  rows: { keys: Record<string, string>; value: number }[],
+  nameOf: (id: string) => string,
+  money: (value: number) => string,
+): MacRow[] {
+  const byCustomer = new Map<string, Record<string, number>>()
+  for (const row of rows) {
+    const id = row.keys['customer_id'] ?? ''
+    const parts = byCustomer.get(id) ?? {}
+    parts[row.keys['component'] ?? ''] = row.value
+    byCustomer.set(id, parts)
+  }
+  return [...byCustomer.entries()]
+    .map(([id, parts]) => {
+      const committed = parts['committed'] ?? 0
+      const consumed = parts['consumed'] ?? 0
+      const overage = parts['overage'] ?? 0
+      const trueUp = parts['true_up'] ?? 0
+      const utilization = committed > 0 ? consumed / committed : null
+      return {
+        id,
+        name: nameOf(id),
+        committed,
+        consumed,
+        overage,
+        trueUp,
+        utilization,
+        display: {
+          committed: money(committed),
+          consumed: money(consumed),
+          overage: money(overage),
+          trueUp: money(trueUp),
+          utilization: utilization === null ? '—' : percentOf(consumed, committed),
+        },
+      }
+    })
+    .sort((a, b) => b.committed - a.committed)
 }
 
 /* ---- Customers ------------------------------------------------------------- */

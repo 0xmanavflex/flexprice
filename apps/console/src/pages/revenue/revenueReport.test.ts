@@ -5,6 +5,7 @@ import {
   change,
   customerRows,
   daysToPay,
+  macRows,
   previousWindow,
   rangeWindow,
   resolveGrain,
@@ -289,5 +290,30 @@ describe('alignToWindow at a partial first bucket', () => {
       false,
     )
     expect(out[0]?.value).toBe(12)
+  })
+})
+
+describe('macRows', () => {
+  it('pivots components per customer and computes utilization', () => {
+    const rows = macRows(
+      [
+        { keys: { customer_id: 'a', component: 'committed' }, value: 200 },
+        { keys: { customer_id: 'a', component: 'consumed' }, value: 50 },
+        { keys: { customer_id: 'a', component: 'true_up' }, value: 150 },
+        { keys: { customer_id: 'b', component: 'consumed' }, value: 10 },
+        { keys: { customer_id: 'b', component: 'committed' }, value: 0 },
+      ],
+      (id) => id.toUpperCase(),
+      String,
+    )
+    expect(rows[0]).toMatchObject({
+      id: 'a',
+      name: 'A',
+      utilization: 0.25,
+      trueUp: 150,
+      overage: 0,
+    })
+    expect(rows[1]).toMatchObject({ id: 'b', utilization: null })
+    expect(rows[1]?.display.utilization).toBe('—')
   })
 })

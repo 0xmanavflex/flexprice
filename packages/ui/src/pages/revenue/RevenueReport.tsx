@@ -91,6 +91,24 @@ export interface CustomerRevenueRow {
   share: number
 }
 
+export interface MacRow {
+  id: string
+  name: string
+  committed: number
+  consumed: number
+  overage: number
+  trueUp: number
+  /** Consumed over committed, 0-1; null without a commitment. */
+  utilization: number | null
+  display: {
+    committed: string
+    consumed: string
+    overage: string
+    trueUp: string
+    utilization: string
+  }
+}
+
 export interface AgingBucket {
   id: string
   label: string
@@ -164,6 +182,7 @@ export interface RevenueReportProps {
     arpu: ReportFigure
     topTenShare: string
     onOpenCustomer?: ((id: string) => void) | undefined
+    mac?: (ReportState & { rows: MacRow[] }) | undefined
   }
 
   receivables: ReportState & {
@@ -869,6 +888,76 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
           )}
         </Surface>
       </Panel>
+
+      {customers.mac ? (
+        <Panel
+          title="MAC consumption"
+          description={`Minimum annual commitment used per customer, invoices in ${rangeLabel}`}
+        >
+          <Surface>
+            {customers.mac.status === 'ready' ? (
+              <DetailTable<MacRow>
+                compact
+                label="MAC consumption by customer"
+                noun="customers"
+                rows={customers.mac.rows}
+                {...(customers.onOpenCustomer
+                  ? { onRowClick: (row: MacRow) => customers.onOpenCustomer?.(row.id) }
+                  : {})}
+                columns={[
+                  {
+                    key: 'name',
+                    header: 'Customer',
+                    width: 220,
+                    sortBy: (row) => row.name,
+                    cell: (row) => <span className="font-medium">{row.name}</span>,
+                  },
+                  {
+                    key: 'committed',
+                    header: 'Committed',
+                    sortBy: (row) => row.committed,
+                    cell: (row) => <span className="tabular-nums">{row.display.committed}</span>,
+                  },
+                  {
+                    key: 'consumed',
+                    header: 'Consumed',
+                    sortBy: (row) => row.consumed,
+                    cell: (row) => <span className="tabular-nums">{row.display.consumed}</span>,
+                  },
+                  {
+                    key: 'utilization',
+                    header: 'Utilization',
+                    sortBy: (row) => row.utilization ?? -1,
+                    cell: (row) => <span className="tabular-nums">{row.display.utilization}</span>,
+                  },
+                  {
+                    key: 'overage',
+                    header: 'Overage',
+                    sortBy: (row) => row.overage,
+                    cell: (row) => (
+                      <span className="text-muted-foreground tabular-nums">
+                        {row.display.overage}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'trueUp',
+                    header: 'True-up',
+                    sortBy: (row) => row.trueUp,
+                    cell: (row) => (
+                      <span className="text-muted-foreground tabular-nums">
+                        {row.display.trueUp}
+                      </span>
+                    ),
+                  },
+                ]}
+              />
+            ) : (
+              <NotReady state={customers.mac} height={200} empty="No commitments in this range" />
+            )}
+          </Surface>
+        </Panel>
+      ) : null}
 
       {customers.status === 'ready' && customers.rows.length > 0 ? (
         <Panel
