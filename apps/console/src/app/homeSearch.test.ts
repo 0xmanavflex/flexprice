@@ -26,4 +26,13 @@ describe('parseHomeSearch', () => {
     )
     expect(parseHomeSearch({})).toEqual(DEFAULT_HOME_SEARCH)
   })
+
+  it('puts a reversed custom span in order', () => {
+    expect(
+      parseHomeSearch({ range: 'custom', from: '2026-09-30', to: '2026-09-01' }),
+    ).toMatchObject({
+      from: '2026-09-01',
+      to: '2026-09-30',
+    })
+  })
 })

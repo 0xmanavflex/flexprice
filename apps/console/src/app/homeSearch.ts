@@ -37,8 +37,11 @@ export function parseHomeSearch(search: Record<string, unknown>): HomeSearch {
   const grain = GRAINS.has(String(search['grain']))
     ? String(search['grain'])
     : DEFAULT_HOME_SEARCH.grain
-  const from = DAY.test(String(search['from'])) ? String(search['from']) : ''
-  const to = DAY.test(String(search['to'])) ? String(search['to']) : ''
+  const first = DAY.test(String(search['from'])) ? String(search['from']) : ''
+  const last = DAY.test(String(search['to'])) ? String(search['to']) : ''
+  // A span typed the wrong way round is the same span: put it in order rather
+  // than hand the date formatter a range it refuses.
+  const [from, to] = first && last && first > last ? [last, first] : [first, last]
   const metric = METRICS.has(String(search['metric']))
     ? String(search['metric'])
     : DEFAULT_HOME_SEARCH.metric

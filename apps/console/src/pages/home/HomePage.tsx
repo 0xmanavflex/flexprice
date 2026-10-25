@@ -211,7 +211,14 @@ export function HomePage({
     }),
     [search.from, search.to, customFallback],
   )
-  const setRangeId = (range: string) => onSearchChange({ ...search, range })
+  // Choosing Custom writes the span it shows into the URL, so the link names
+  // one window rather than "the 30 days before whenever it is opened".
+  const setRangeId = (range: string) =>
+    onSearchChange(
+      range === CUSTOM_RANGE_ID
+        ? { ...search, range, from: formatDay(custom.from), to: formatDay(custom.to) }
+        : { ...search, range },
+    )
   const setGranularityId = (grain: string) => onSearchChange({ ...search, grain })
   const setCustom = (next: DayRange) =>
     onSearchChange({
