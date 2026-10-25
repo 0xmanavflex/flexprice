@@ -476,7 +476,13 @@ function MetricSeries({
           // One peak per line, in its own unit: a minimum and maximum across
           // currencies would compare figures that cannot be compared.
           lines.map((line, index) => {
-            const peak = Math.max(...tab.points.map((point) => point.extra?.[line.id] ?? 0))
+            // The same reading the line plots: `value` is the point's own, the
+            // rest come from `extra`.
+            const peak = Math.max(
+              ...tab.points.map((point) =>
+                line.id === 'value' ? point.value : (point.extra?.[line.id] ?? 0),
+              ),
+            )
             return (
               <span key={line.id} className="inline-flex items-center gap-1.5">
                 <span
