@@ -10338,7 +10338,7 @@
     "HomePage": {
       "file": "apps/console/src/pages/home/HomePage.tsx",
       "pattern": "Dashboard",
-      "route": null,
+      "route": "/",
       "uses": [
         "DashboardHome"
       ]

@@ -19,6 +19,7 @@ import {
   DEFAULT_USAGE_SYNC_QUERY,
   DEFAULT_WORKFLOW_QUERY,
 } from '@fp/domain'
+import { DEFAULT_HOME_SEARCH } from '../homeSearch'
 import { rememberQuery, rememberedQuery, restoreTarget } from '../listMemory'
 import { useSession } from '../session/SessionProvider'
 
@@ -35,6 +36,7 @@ import { useSession } from '../session/SessionProvider'
 // they are shapes, not bags. Read as plain records only here, where the
 // comparison is structural and the keys are not known ahead of time.
 const LISTS: Record<string, Readonly<object>> = {
+  '/': DEFAULT_HOME_SEARCH,
   '/customers': DEFAULT_CUSTOMER_QUERY,
   '/features': DEFAULT_FEATURE_QUERY,
   '/plans': DEFAULT_PLAN_QUERY,
