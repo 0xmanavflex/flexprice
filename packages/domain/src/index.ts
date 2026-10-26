@@ -16,7 +16,18 @@
  * would recreate the 53 hand-written DTO files this architecture removes; the
  * SDK already has them, and they are only interesting once something renders.
  */
-export { activityByline, activitySourceLabel, activityTitle, describeActivity } from './activity'
+export {
+  ACTIVITY_ACTOR_TYPES,
+  ACTIVITY_SOURCES,
+  activityActor,
+  activityByline,
+  activityEntityNoun,
+  activityPaymentStatus,
+  activitySourceLabel,
+  activityStatus,
+  activityTitle,
+  describeActivity,
+} from './activity'
 export type { ActivityEntry, ActivityFacts, ActivityField } from './activity'
 export {
   InvalidMoneyError,

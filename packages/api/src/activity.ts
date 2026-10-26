@@ -14,6 +14,16 @@ export interface ListActivityParams {
   customerId?: string
   entityType?: string
   entityId?: string
+  /** `[start, end)`; the API allows at most 30 days, within the last year. */
+  startTime?: string
+  endTime?: string
+  /** `user`, `api_key`, `customer`, `system`. */
+  actorTypes?: string[]
+  /** Exact action names, `<entity>.<verb>`. */
+  actions?: string[]
+  requestId?: string
+  /** `pagination.next_cursor` from the previous page. */
+  cursor?: string
   limit?: number
 }
 
@@ -31,6 +41,12 @@ export async function listActivity(
       ...(params.customerId ? { customer_id: params.customerId } : {}),
       ...(params.entityType ? { entity_type: params.entityType } : {}),
       ...(params.entityId ? { entity_id: params.entityId } : {}),
+      ...(params.startTime ? { start_time: params.startTime } : {}),
+      ...(params.endTime ? { end_time: params.endTime } : {}),
+      ...(params.actorTypes?.length ? { actor_types: params.actorTypes } : {}),
+      ...(params.actions?.length ? { actions: params.actions } : {}),
+      ...(params.requestId ? { request_id: params.requestId } : {}),
+      ...(params.cursor ? { cursor: params.cursor } : {}),
       expand: ['state'],
       limit: params.limit ?? 20,
     },

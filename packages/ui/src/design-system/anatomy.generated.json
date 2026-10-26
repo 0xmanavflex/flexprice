@@ -100,10 +100,31 @@
       "usedBy": [],
       "story": null
     },
+    "ActivityEventSheet": {
+      "file": "src/pages/customers/CustomerActivityView.tsx",
+      "layer": "surface",
+      "composes": [
+        "CodeIcon",
+        "CopyValue",
+        "CreditCardIcon",
+        "Pill",
+        "Properties",
+        "Section",
+        "Sheet",
+        "SimpleTable",
+        "SubTabState",
+        "Toolbar",
+        "UserIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerActivityView.stories.tsx"
+    },
     "ActivityLog": {
       "file": "src/compositions/detail/ActivityLog.tsx",
       "layer": "composition",
       "composes": [
+        "EyeIcon",
         "Section"
       ],
       "usedBy": [
@@ -115,6 +136,7 @@
       "file": "src/compositions/detail/ActivityLog.tsx",
       "layer": "composition",
       "composes": [
+        "EyeIcon",
         "Section"
       ],
       "usedBy": [
@@ -1371,6 +1393,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "PageShell"
       ],
       "story": null
@@ -1780,6 +1804,8 @@
         "CopyIcon"
       ],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerGrid"
       ],
@@ -1925,6 +1951,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "PageShell",
         "PaymentGrid",
         "PortalOverview",
@@ -2048,6 +2076,26 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "CustomerActivityView": {
+      "file": "src/pages/customers/CustomerActivityView.tsx",
+      "layer": "surface",
+      "composes": [
+        "CodeIcon",
+        "CopyValue",
+        "CreditCardIcon",
+        "Pill",
+        "Properties",
+        "Section",
+        "Sheet",
+        "SimpleTable",
+        "SubTabState",
+        "Toolbar",
+        "UserIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerActivityView.stories.tsx"
     },
     "CustomerAnalyticsView": {
       "file": "src/pages/customers/CustomerAnalyticsView.tsx",
@@ -3256,6 +3304,8 @@
       "composes": [],
       "usedBy": [
         "AcceptInvitationForm",
+        "ActivityLog",
+        "ActivitySection",
         "ChargeTable",
         "ConnectionExports",
         "CustomerDetail",
@@ -5643,11 +5693,13 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "CatalogStatusBadge",
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
         "CreditNoteDetailView",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",
         "DataExportDetail",
@@ -6236,6 +6288,8 @@
         "LockedMark"
       ],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -6673,6 +6727,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
         "ActivityLog",
         "ActivitySection",
         "AddonSubscriptionsView",
@@ -6682,6 +6737,7 @@
         "CostMarginCard",
         "CouponRedemptionsView",
         "CreditGrantTable",
+        "CustomerActivityView",
         "CustomerAnalyticsView",
         "CustomerDetail",
         "CustomerEntitlementUsage",
@@ -6876,8 +6932,10 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
         "ChargeSheet",
         "ConnectIntegrationSheet",
+        "CustomerActivityView",
         "CustomerEventsGrid",
         "EventDetailSheet",
         "ManageConnectionSheet",
@@ -7060,7 +7118,9 @@
         "LockedMark"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "ConnectionExports",
+        "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -7426,8 +7486,10 @@
         "TableSkeleton"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "ChargeTable",
         "CreditGrantTable",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerEntitlementUsage",
         "CustomerEventsGrid",
@@ -7723,7 +7785,10 @@
       "file": "src/compositions/tables/Toolbar.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView"
+      ],
       "story": "./src/compositions/tables/Toolbar.stories.tsx"
     },
     "TotalRow": {
@@ -7974,6 +8039,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerGrid",
         "InvoiceDetailView",
         "ShellAccount",
@@ -8036,6 +8103,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",
         "InvoiceDetailView",
@@ -9144,6 +9213,13 @@
       "uses": [
         "CustomerPortalView",
         "PortalNotice"
+      ]
+    },
+    "./src/pages/customers/CustomerActivityView.stories.tsx": {
+      "title": "Customer created",
+      "component": "CustomerActivityView",
+      "uses": [
+        "CustomerActivityView"
       ]
     },
     "./src/pages/customers/CustomerAnalyticsView.stories.tsx": {
@@ -10274,6 +10350,7 @@
       "pattern": "Detail",
       "route": "/customers/$customerId",
       "uses": [
+        "ActivityEventSheet",
         "ConfirmDialog",
         "CustomerDetail",
         "CustomerEntitlementUsage",
