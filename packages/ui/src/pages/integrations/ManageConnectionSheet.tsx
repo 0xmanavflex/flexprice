@@ -283,7 +283,7 @@ function ManageForm({
         open={confirming}
         onOpenChange={setConfirming}
         title={`Disconnect ${integration.name}?`}
-        description={`Flexprice stops syncing with ${integration.name} and archives this connection. Its webhook stops being verified, and customers lose their ${integration.name} link until you connect again.`}
+        description={`Syncing with ${integration.name} stops and this connection is archived. Connect again to resume.`}
         confirmLabel="Disconnect"
         pendingLabel="Disconnecting…"
         destructive

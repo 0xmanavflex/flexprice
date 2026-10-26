@@ -167,7 +167,7 @@ const INVOICE_STATUS: Record<PortalInvoiceStatus, [PillTone, string]> = {
   open: ['warning', 'Due'],
   overdue: ['danger', 'Overdue'],
   failed: ['danger', 'Payment failed'],
-  processing: ['info', 'Processing'],
+  processing: ['warning', 'Processing'],
   paid: ['success', 'Paid'],
   void: ['neutral', 'Void'],
 }
@@ -183,7 +183,7 @@ export function InvoiceStatusPill({ status }: { status: PortalInvoiceStatus }) {
 
 const SUBSCRIPTION_TONE: Record<PortalSubscriptionStatus, PillTone> = {
   active: 'success',
-  trialing: 'info',
+  trialing: 'trial',
   paused: 'warning',
   cancelled: 'neutral',
   other: 'neutral',

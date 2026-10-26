@@ -26,11 +26,11 @@ import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import {
   type EntityColumn,
-  type PillTone,
   dateColumn,
   pillColumn,
   textColumn,
 } from '../shared/cells'
+import { SUBSCRIPTION_STATUS_TONE } from '../shared/statusTones'
 
 /**
  * The subscription list, on the shared `EntityList`.
@@ -79,13 +79,7 @@ const SORT_OPTIONS = Object.values(SubscriptionSortField).map((value) => ({
 /** How each lifecycle state reads at a glance. Only `active` is a success and
  *  only `cancelled` is a dead end; the rest are states you watch, not states
  *  you celebrate or mourn. */
-const STATUS_TONE: Record<SubscriptionStatus, PillTone> = {
-  [SubscriptionStatus.Active]: 'success',
-  [SubscriptionStatus.Trialing]: 'info',
-  [SubscriptionStatus.Paused]: 'warning',
-  [SubscriptionStatus.Cancelled]: 'neutral',
-  [SubscriptionStatus.Incomplete]: 'warning',
-}
+const STATUS_TONE = SUBSCRIPTION_STATUS_TONE
 
 /** Every URL requested and confirmed 200. */
 const GUIDES: EntityGuide[] = [

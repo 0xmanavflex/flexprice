@@ -106,7 +106,7 @@ export function SettingsShell({
                         aria-current={active ? 'page' : undefined}
                         onClick={() => onSectionChange(entry.id)}
                         className={cn(
-                          'hover:bg-muted focus-visible:ring-ring/50 flex shrink-0 items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap outline-none lg:w-full focus-visible:ring-3 [&_svg]:size-4 [&_svg]:shrink-0',
+                          'hover:bg-muted focus-visible:ring-ring/50 flex shrink-0 items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap outline-none focus-visible:ring-3 lg:w-full [&_svg]:size-4 [&_svg]:shrink-0',
                           active ? 'bg-muted' : 'text-muted-foreground',
                         )}
                       >

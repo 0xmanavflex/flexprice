@@ -31,6 +31,12 @@ export function WebhookMessagePanel({
   return (
     <WebhookMessageSheet
       message={message}
+      // Opened from a link, the sheet shows at once and says it is loading, or why it failed.
+      open={messageId !== null}
+      messageLoading={!known && fetched.isPending}
+      messageError={known ? null : (toWebhookFailure(fetched.error, 'message')?.message ?? null)}
+      onRetry={() => void fetched.refetch()}
+      retrying={!known && fetched.isFetching}
       attempts={attempts.data ?? []}
       attemptsLoading={attempts.isPending}
       attemptsError={toWebhookFailure(attempts.error, 'delivery attempts')?.message ?? null}
