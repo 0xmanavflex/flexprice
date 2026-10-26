@@ -1555,7 +1555,7 @@ export function SubscriptionDetailView({
         submitError={saveError}
         // A contract that has not started yet: a new charge starts with it, never before.
         {...(s.startDate && s.startDate.getTime() > Date.now()
-          ? { earliestStart: localDay(s.startDate) }
+          ? { earliestStart: s.startDate.toISOString() }
           : {})}
         onAdd={(draft) => void run(onAddCharge?.(draft))}
         onEdit={(line, draft) => void run(onEditCharge?.(line, draft))}
@@ -2199,10 +2199,4 @@ function chargeAlertDraft(
     }
   }
   return { settingId, config }
-}
-
-/** A date as its local calendar day, `YYYY-MM-DD`. */
-function localDay(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }

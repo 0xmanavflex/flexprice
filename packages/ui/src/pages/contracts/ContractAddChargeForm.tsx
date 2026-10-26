@@ -51,9 +51,11 @@ export interface ContractAddChargeFormProps {
   /** A charge already drafted (not yet saved) to reopen and change. */
   initial?: AddContractCharge | undefined
   /**
-   * The contract's start (`YYYY-MM-DD`) when it is still in the future. The
-   * API refuses a charge that starts before its contract, so earlier days
-   * cannot be picked and an empty start means "with the contract", not now.
+   * The contract's start, as an ISO instant, when it is still in the future.
+   * The API refuses a charge that starts before its contract, so earlier
+   * (UTC) days cannot be picked, and an empty start, or the contract's own
+   * day, sends that exact instant rather than midnight, which could fall
+   * before a contract that starts later that day.
    */
   earliestStart?: string | undefined
 }
@@ -72,6 +74,7 @@ export function ContractAddChargeForm({
   earliestStart,
 }: ContractAddChargeFormProps) {
   const isUsage = type === PriceType.Usage
+  const earliestDay = earliestStart?.slice(0, 10)
   const [quantity, setQuantity] = useState(initial?.quantity ?? '1')
   const [startDate, setStartDate] = useState(initial?.startDate ?? '')
   const [proration, setProration] = useState<Proration>(initial?.proration ?? PRORATION.Prorate)
@@ -108,7 +111,8 @@ export function ContractAddChargeForm({
         onSubmit({
           charge,
           quantity,
-          startDate: startDate || earliestStart || '',
+          startDate:
+            earliestStart && (!startDate || startDate === earliestDay) ? earliestStart : startDate,
           proration,
           terms,
         })
@@ -148,7 +152,7 @@ export function ContractAddChargeForm({
                   id={id}
                   value={startDate}
                   onValueChange={setStartDate}
-                  {...(earliestStart ? { min: earliestStart } : {})}
+                  {...(earliestDay ? { min: earliestDay } : {})}
                   placeholder={earliestStart ? 'With the contract' : 'Now'}
                   disabled={isSubmitting}
                   aria-describedby={describedBy}

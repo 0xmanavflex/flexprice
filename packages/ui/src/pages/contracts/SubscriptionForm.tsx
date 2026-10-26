@@ -2302,6 +2302,13 @@ function PhasesStep({
       billingPeriod={billingPeriod}
       meters={meters}
       priceUnits={priceUnits}
+      // A phase that starts after today: a charge added to it cannot start
+      // before it, which the API would refuse.
+      {...(() => {
+        const phaseIndex = editingExtra?.phase ?? addingTo
+        const day = phaseIndex === null ? '' : (starts[phaseIndex] ?? '').slice(0, 10)
+        return day && day > today ? { earliestStart: `${day}T00:00:00.000Z` } : {}
+      })()}
       onAdd={(draft) => {
         if (editingExtra) {
           // An edit replaces the charge where it is.

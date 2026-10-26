@@ -1342,14 +1342,14 @@ export const ChargeRowCouponActions: Story = {
   },
 }
 
-/** Add a fixed charge: the full charge form plus quantity, start date and proration. */
 /**
  * A contract that has not started yet: the API refuses a charge that starts
- * before its contract, so an empty start means "with the contract".
+ * before its contract, so an empty start means "with the contract", sent as
+ * its exact start (here mid-day UTC, not midnight).
  */
 export const AddChargeBeforeContractStarts: Story = {
   parameters: menuA11y,
-  args: withSubscription({ startDate: new Date('2099-03-01T00:00:00') }),
+  args: withSubscription({ startDate: new Date('2099-03-01T15:30:00Z') }),
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
@@ -1362,11 +1362,12 @@ export const AddChargeBeforeContractStarts: Story = {
     await userEvent.type(dialog.getByLabelText(/^Amount/), '400')
     await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
     await expect(args.onAddCharge).toHaveBeenCalledWith(
-      expect.objectContaining({ startDate: '2099-03-01' }),
+      expect.objectContaining({ startDate: '2099-03-01T15:30:00.000Z' }),
     )
   },
 }
 
+/** Add a fixed charge: the full charge form plus quantity, start date and proration. */
 export const AddCharge: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {

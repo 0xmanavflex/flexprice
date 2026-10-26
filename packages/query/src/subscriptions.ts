@@ -1269,7 +1269,15 @@ export function toCreateLineItemRequest(draft: AddContractCharge): Record<string
   return {
     ...(charge.displayName ? { displayName: charge.displayName } : {}),
     ...(usage ? {} : { quantity: Number(draft.quantity) || 1 }),
-    ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
+    // A day starts at midnight UTC; an exact instant (a contract that starts
+    // later that day) is sent as it is.
+    ...(draft.startDate
+      ? {
+          startDate: new Date(
+            draft.startDate.includes('T') ? draft.startDate : `${draft.startDate}T00:00:00Z`,
+          ),
+        }
+      : {}),
     ...(usage ? {} : { prorationBehavior: draft.proration }),
     price: {
       ...price,
