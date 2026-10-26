@@ -63,6 +63,7 @@ import {
   currencyCodes,
   INHERITANCE_BLOCK_LABEL,
   InheritanceBlock,
+  contractDateToInstant,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
@@ -2304,10 +2305,17 @@ function PhasesStep({
       priceUnits={priceUnits}
       // A phase that starts after today: a charge added to it cannot start
       // before it, which the API would refuse.
+      // The bound is the phase's start exactly as the request sends it (a day
+      // is midnight UTC, a picked time is kept), so a charge that starts with
+      // the phase is never sent as starting before it.
       {...(() => {
         const phaseIndex = editingExtra?.phase ?? addingTo
-        const day = phaseIndex === null ? '' : (starts[phaseIndex] ?? '').slice(0, 10)
-        return day && day > today ? { earliestStart: `${day}T00:00:00.000Z` } : {}
+        const start = phaseIndex === null ? '' : (starts[phaseIndex] ?? '')
+        if (!start) return {}
+        const at = contractDateToInstant(start)
+        return !Number.isNaN(at.getTime()) && at.getTime() > Date.now()
+          ? { earliestStart: at.toISOString() }
+          : {}
       })()}
       onAdd={(draft) => {
         if (editingExtra) {
