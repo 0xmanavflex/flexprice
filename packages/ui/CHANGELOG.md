@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- Customer activity (R-16): the event sheet's metadata stacks in one column, and its raw payload wraps, so long IDs and values read in the narrow sheet instead of being cut in half or scrolling sideways. `Properties` accepts `columns={1}` (offered in its playground story), and `CopyValue` gains `full`, which the sheet uses so request, actor and event IDs show whole, wrapping, instead of shortened.
 - Cancelled contracts (R-15): the metadata card on the Information tab is read-only, like every other action on a cancelled contract. Before, it still offered Edit.
 - Contract commitment (R-13): True-up stays off and disabled until a commitment amount is set, with a hint saying so. Before, the switch could be on with no amount, and the API then dropped it silently. Clearing the amount also turns it off, so a new amount starts with it off rather than bringing back the old choice; zero counts as no commitment (the API reads it so), and the request never sends true-up on beside one.
 - Price icon (R-11): pricing actions use `CircleDollarSignIcon` instead of a pencil. That covers the wizard's "Override price" item, the "Price changed" flag, the Charges card, the ChargeSheet Price section and the ChargeFlags price section. So configuring a price no longer looks like editing. The pencil stays on real edits (Edit charge, Edit contract, review-step Edit).
