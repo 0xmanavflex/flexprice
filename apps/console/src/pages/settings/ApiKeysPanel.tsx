@@ -13,7 +13,13 @@ import {
   isExpired,
   RBAC_ENTITY,
 } from '@fp/domain'
-import { DEFAULT_API_KEY_QUERY, useApiKeys, useCreateApiKey, useDeleteApiKey } from '@fp/query'
+import {
+  DEFAULT_API_KEY_QUERY,
+  useApiKeys,
+  useCreateApiKey,
+  useCurrentUser,
+  useDeleteApiKey,
+} from '@fp/query'
 import { ConfirmDialog, Field, FormDialog, LoadingRows, WriteGate } from '@fp/ui/compositions'
 import { Badge, Button, Input } from '@fp/ui/primitives'
 import { CheckIcon, CopyIcon } from '@fp/ui/icons'
@@ -29,6 +35,7 @@ import {
   toFailure,
 } from './panelKit'
 import { useDraft } from './useDraft'
+import { currentUserId, isOwnKey } from './apiKeyOwnership'
 import { useSession } from '@/app/session'
 
 /** Where a key is used: the API reference's introduction covers authenticating with one. */
@@ -56,6 +63,10 @@ const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
  */
 export function ApiKeysPanel() {
   const { session } = useSession()
+  // The same `/users/me` the shell loads (shared cache): after SAML sign-in
+  // the session has no user id, so it alone would make no key look like yours.
+  const me = useCurrentUser(session?.token ?? null)
+  const userId = currentUserId(me.data?.id, session?.userId)
   const keys = useApiKeys(DEFAULT_API_KEY_QUERY)
   const create = useCreateApiKey()
   const remove = useDeleteApiKey()
@@ -110,7 +121,7 @@ export function ApiKeysPanel() {
                   <KeyRow
                     key={key.id}
                     apiKey={key}
-                    ownKey={key.ownerId === session?.userId}
+                    ownKey={isOwnKey(key.ownerId, userId)}
                     onRevoke={() => setRevoking(key)}
                   />
                 ))}
