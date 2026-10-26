@@ -1,4 +1,4 @@
-import type { PostHog } from 'posthog-js'
+import type { CaptureResult, PostHog, Properties } from 'posthog-js'
 import { env } from '@/env'
 
 /**
@@ -44,6 +44,55 @@ const fromEnv = (): AnalyticsConfig => ({
   appVersion: env.appVersion,
 })
 
+/**
+ * Query parameters that can carry a credential: a sign-in or reset token, an
+ * OAuth code or state, a signed link. Their values never leave the browser.
+ */
+const SENSITIVE_PARAM = /token|code|state|secret|password|signature|session|key|auth/i
+
+/**
+ * A URL as it may be sent: no fragment (Supabase puts access and refresh
+ * tokens there), sensitive query values redacted, and the token in a hosted
+ * invoice path (`/i/<region>/<token>`) replaced. Anything that is not a URL is
+ * returned unchanged.
+ */
+export function scrubUrl(value: string): string {
+  const absolute = /^https?:\/\//i.test(value)
+  if (!absolute && !value.startsWith('/')) return value
+  let url: URL
+  try {
+    url = new URL(value, 'https://scrub.invalid')
+  } catch {
+    return value
+  }
+  url.hash = ''
+  for (const name of [...url.searchParams.keys()]) {
+    if (SENSITIVE_PARAM.test(name)) url.searchParams.set(name, 'redacted')
+  }
+  url.pathname = url.pathname.replace(/^(\/i\/[^/]+\/)[^/]+/, '$1redacted')
+  return absolute ? url.toString() : `${url.pathname}${url.search}`
+}
+
+function scrubProperties(properties: Properties | undefined): Properties | undefined {
+  if (!properties) return properties
+  const out: Properties = {}
+  for (const [name, value] of Object.entries(properties)) {
+    out[name] = typeof value === 'string' ? scrubUrl(value) : value
+  }
+  return out
+}
+
+/** `before_send`: every URL-shaped property scrubbed, on every event. */
+export function scrubEvent(event: CaptureResult | null): CaptureResult | null {
+  if (!event) return event
+  const scrubbed: CaptureResult = { ...event, properties: scrubProperties(event.properties) ?? {} }
+  const set = scrubProperties(event.$set)
+  const setOnce = scrubProperties(event.$set_once)
+  if (set) scrubbed.$set = set
+  if (setOnce) scrubbed.$set_once = setOnce
+  return scrubbed
+}
+
 let client: PostHog | null = null
 let loading: Promise<PostHog | null> | null = null
 let queue: Array<(posthog: PostHog) => void> = []
@@ -64,14 +113,25 @@ export function startAnalytics(config: AnalyticsConfig = fromEnv()): Promise<Pos
         capture_pageleave: true,
         // Uncaught errors and rejections, as V1's error logging sends them.
         capture_exceptions: true,
-        // Recordings follow the project's own setting, as in V1, with every
-        // input masked: billing forms hold customer and payment details.
-        session_recording: { maskAllInputs: true },
+        // Sign-in, sign-up and password-reset links carry their tokens in the
+        // fragment, and the first page view can be captured before the route
+        // removes it. Never send fragments (events and replays alike), and
+        // scrub sensitive query values from every event.
+        disable_capture_url_hashes: true,
+        before_send: scrubEvent,
+        // The console shows customers, invoices and payments. Clicks are
+        // recorded without the clicked element's text, and recordings (which
+        // follow the project's own setting, as in V1) mask every input and
+        // every piece of text: they show where people go, not what they see.
+        mask_all_text: true,
+        session_recording: { maskAllInputs: true, maskTextSelector: '*' },
       })
       posthog.register({
         app: 'console',
         region: config.region ?? 'self-hosted',
-        ...(config.appVersion ? { app_version: config.appVersion } : {}),
+        // Every build is stamped (`app-version.ts`); `unknown` keeps the
+        // property present on one that somehow was not.
+        app_version: config.appVersion ?? 'unknown',
       })
       client = posthog
       const pending = queue

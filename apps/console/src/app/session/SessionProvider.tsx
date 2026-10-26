@@ -96,6 +96,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // the previous session rather than against some remembered tenant id, so
     // a first sign-in (no previous) has nothing to clear to begin with.
     const previous = latest.current
+    // Someone else signing in over a live session (a SAML or Google callback
+    // in the same tab): forget the previous person before anything is
+    // recorded, rather than when `/users/me` answers for the new one.
+    if (previous && previous.userId !== next.userId) resetAnalytics()
     if (previous && previous.tenantId !== next.tenantId) {
       clearEnvironmentId()
       setActiveEnvironmentId(null)
