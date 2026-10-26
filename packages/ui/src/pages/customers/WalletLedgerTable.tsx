@@ -195,7 +195,7 @@ export function WalletLedgerTable({
         searchText={(row) =>
           row.kind === 'child'
             ? `${row.tx.reason} ${row.line.product} ${row.line.contract}`
-            : `${row.tx.reason} ${row.tx.description}`
+            : `${row.tx.reason} ${row.tx.description} ${metadataText(row.tx)}`
         }
         columns={[
           {
@@ -244,7 +244,7 @@ export function WalletLedgerTable({
                     {/* What it was raised for, and any metadata, on one quiet line. */}
                     {row.tx.reference || Object.keys(row.tx.metadata ?? {}).length > 0 ? (
                       <p
-                        className="text-muted-foreground truncate font-mono text-[11px]"
+                        className="text-muted-foreground truncate font-mono text-xs"
                         title={metadataText(row.tx)}
                       >
                         {metadataText(row.tx)}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CreateWalletRequest$outboundSchema,
+  ListWalletTransactionsResponse$inboundSchema,
   TopUpWalletRequest$outboundSchema,
   UpdateWalletRequest$outboundSchema,
 } from '@flexprice/sdk/sdk/models'
@@ -13,6 +14,7 @@ import {
   toWallet,
   toWalletTransaction,
   withConsumption,
+  type WalletTransactionWire,
 } from './wallets'
 
 describe('wallet requests', () => {
@@ -256,5 +258,27 @@ describe('wallet transaction breakdown', () => {
     // Only string metadata is kept; no money is derived for the credits.
     expect(transactions[1]?.metadata).toEqual({ source: 'usage' })
     expect(transactions[1]?.reference).toEqual({ type: 'INVOICE', id: 'inv_9' })
+  })
+
+  it('keeps consumption_breakdown through the SDK response parse', () => {
+    // The raw wire, as the API sends it: the SDK must not strip the breakdown.
+    const parsed = ListWalletTransactionsResponse$inboundSchema.parse({
+      items: [
+        { id: 'top_1', type: 'credit', credit_amount: '100' },
+        {
+          id: 'deb_1',
+          type: 'debit',
+          description: 'API calls',
+          consumption_breakdown: [{ credit_transaction_id: 'top_1', credits: '40' }],
+        },
+      ],
+    })
+    const transactions = withConsumption(
+      ((parsed.items ?? []) as WalletTransactionWire[]).map(toWalletTransaction),
+    )
+    expect(transactions[1]?.drawnFrom).toEqual([{ topUpId: 'top_1', credits: '40' }])
+    expect(transactions[0]?.consumption).toEqual([
+      { id: 'deb_1', product: 'API calls', contract: '', credits: '40' },
+    ])
   })
 })
