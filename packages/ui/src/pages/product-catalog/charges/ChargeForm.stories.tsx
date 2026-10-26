@@ -111,6 +111,10 @@ export const Usage: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('radio', { name: /Usage/ }))
     await expect(await canvas.findByText('Metered feature')).toBeInTheDocument()
+    // A usage flat fee is a per-unit rate: no contract value calculator.
+    await expect(
+      canvas.queryByRole('button', { name: 'Work out the price from a contract value' }),
+    ).toBeNull()
   },
 }
 
@@ -149,6 +153,26 @@ export const SubmitsAValidatedCharge: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ billingModel: BillingModel.FlatFee, amount: '29' }),
+    )
+  },
+}
+
+/** The flat-fee calculator, as V1: 12,000 a year, billed monthly, fills the Amount with 1000.00. */
+export const PriceFromContractAmount: Story = {
+  args: { defaultValue: fixedFlatFee },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Work out the price from a contract value' }),
+    )
+    const contract = await body.findByRole('textbox', { name: /Contract value/ })
+    await userEvent.clear(contract)
+    await userEvent.type(contract, '12000')
+    await userEvent.click(body.getByRole('button', { name: 'Use this price' }))
+    await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ billingModel: BillingModel.FlatFee, amount: '1000.00' }),
     )
   },
 }
