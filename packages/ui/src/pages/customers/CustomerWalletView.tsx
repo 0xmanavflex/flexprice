@@ -895,41 +895,64 @@ function AutoTopupDialog({
             </InputGroup>
           </Field>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field>
-            <LabelWithHint
-              htmlFor="auto-topup-cooldown"
-              hint="The least time between two automatic top-ups, so a burst of usage cannot trigger several in a row. Leave blank for none."
-            >
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <label htmlFor="auto-topup-cooldown-enabled" className="text-sm font-medium">
               Cool-off
-            </LabelWithHint>
-            <Input
-              id="auto-topup-cooldown"
-              inputMode="numeric"
-              placeholder="None"
-              value={draft.cooldownValue ?? ''}
-              disabled={!draft.enabled}
-              onChange={(event) => set({ cooldownValue: event.target.value })}
-            />
-          </Field>
-          <Field>
-            <LabelWithHint
-              htmlFor="auto-topup-cooldown-unit"
-              hint="What the cool-off is counted in."
-            >
-              Unit
-            </LabelWithHint>
-            <OptionSelect
-              id="auto-topup-cooldown-unit"
-              value={draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour}
-              disabled={!draft.enabled}
-              onValueChange={(cooldownUnit) =>
-                set({ cooldownUnit: cooldownUnit as AutoTopupCooldownUnit })
-              }
-              options={COOLDOWN_UNIT_OPTIONS}
-            />
-          </Field>
+            </label>
+            <p className="text-muted-foreground text-xs">
+              A least time between two automatic top-ups, so a burst of usage cannot trigger several
+              in a row.
+            </p>
+          </div>
+          <Switch
+            id="auto-topup-cooldown-enabled"
+            checked={draft.cooldownEnabled === true}
+            disabled={!draft.enabled}
+            onCheckedChange={(cooldownEnabled) =>
+              set({
+                cooldownEnabled,
+                ...(cooldownEnabled && !draft.cooldownUnit
+                  ? { cooldownUnit: AutoTopupCooldownUnit.Hour }
+                  : {}),
+              })
+            }
+          />
         </div>
+        {draft.enabled && draft.cooldownEnabled ? (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field>
+              <LabelWithHint
+                htmlFor="auto-topup-cooldown"
+                hint="How long to wait after a top-up before another may run."
+              >
+                Duration
+              </LabelWithHint>
+              <Input
+                id="auto-topup-cooldown"
+                inputMode="numeric"
+                value={draft.cooldownValue ?? ''}
+                onChange={(event) => set({ cooldownValue: event.target.value })}
+              />
+            </Field>
+            <Field>
+              <LabelWithHint
+                htmlFor="auto-topup-cooldown-unit"
+                hint="What the cool-off is counted in."
+              >
+                Unit
+              </LabelWithHint>
+              <OptionSelect
+                id="auto-topup-cooldown-unit"
+                value={draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour}
+                onValueChange={(cooldownUnit) =>
+                  set({ cooldownUnit: cooldownUnit as AutoTopupCooldownUnit })
+                }
+                options={COOLDOWN_UNIT_OPTIONS}
+              />
+            </Field>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5">
             <label htmlFor="auto-topup-invoicing" className="text-sm font-medium">
