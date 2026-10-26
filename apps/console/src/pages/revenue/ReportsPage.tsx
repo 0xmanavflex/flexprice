@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   reportBreakdown,
@@ -61,6 +61,9 @@ import {
 /** The widest range the events report answers (its `max_range_days`). */
 /** How many customers a breakdown lists. */
 const TOP = 50
+
+// Customers per page in the full list.
+const PAGE = 25
 
 const AGING: Record<
   string,
@@ -146,6 +149,16 @@ export function ReportsPage({
     currency: currency.toLowerCase(),
     shape: 'breakdown',
     dimensions: ['customer_id', 'credit_type'],
+  })
+  const [offset, setOffset] = useState(0)
+  useEffect(() => setOffset(0), [search.range, currency])
+  const customerPage = useCardReport('invoice_total', {
+    range,
+    currency: currency.toLowerCase(),
+    shape: 'breakdown',
+    dimensions: ['customer_id'],
+    limit: PAGE + 1,
+    offset,
   })
   const arpuReport = useCardReport('arpu', { ...inCurrency, shape: 'scalar' })
   const receivablesReport = useCardReport('total_receivables', {
@@ -277,7 +290,7 @@ export function ReportsPage({
     currency,
   )
   const credits = creditRows(creditBreakdown, nameOf, money)
-  const customerRows: CustomerRevenueRow[] = customerRevenue.map((row) => {
+  const toRow = (row: { keys: Record<string, string>; value: number }): CustomerRevenueRow => {
     const id = row.keys['customer_id'] ?? ''
     const known = split.get(id)
     return {
@@ -293,7 +306,15 @@ export function ReportsPage({
       },
       share: total > 0 ? row.value / total : 0,
     }
-  })
+  }
+  const customerRows = customerRevenue.map(toRow)
+  const pageBreakdown = reportBreakdown(
+    customerPage.data,
+    'invoice_total',
+    ['customer_id'],
+    currency,
+  )
+  const pageRows = pageBreakdown.slice(0, PAGE).map(toRow)
 
   // Aging by customer: overdue is every bucket past due; the oldest bucket is the worst.
   const overdueByCustomer = new Map<
@@ -411,6 +432,16 @@ export function ReportsPage({
           total,
         ),
         onOpenCustomer: openCustomer,
+        all: {
+          status: statusOf(customerPage, pageRows.length === 0 && offset === 0),
+          reason: 'The customer list did not respond.',
+          onRetry: retry(customerPage),
+          rows: pageRows,
+          offset,
+          size: PAGE,
+          hasMore: pageBreakdown.length > PAGE,
+          onPage: setOffset,
+        },
         credits: {
           status: statusOf(
             {

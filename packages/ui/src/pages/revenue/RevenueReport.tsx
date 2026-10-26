@@ -181,6 +181,16 @@ export interface RevenueReportProps {
     arpu: ReportFigure
     topTenShare: string
     onOpenCustomer?: ((id: string) => void) | undefined
+    /** One server page of customers by revenue. */
+    all?:
+      | (ReportState & {
+          rows: CustomerRevenueRow[]
+          offset: number
+          size: number
+          hasMore: boolean
+          onPage: (offset: number) => void
+        })
+      | undefined
     credits?:
       | (ReportState & {
           rows: CreditRow[]
@@ -1032,7 +1042,7 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
         </>
       ) : null}
 
-      {customers.status === 'ready' && customers.rows.length > 0 ? (
+      {customers.all && customers.all.status !== 'error' ? (
         <Panel
           title="All customers"
           description="Revenue per customer in the period, highest first"
@@ -1042,7 +1052,13 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
               compact
               label="Customers by revenue"
               noun="customers"
-              rows={customers.rows.map((row, index) => ({ ...row, rank: index + 1 }))}
+              rows={customers.all.rows.map((row, index) => ({
+                ...row,
+                rank: (customers.all?.offset ?? 0) + index + 1,
+              }))}
+              footer={false}
+              pageSize={customers.all.size}
+              isLoading={customers.all.status === 'loading'}
               {...(customers.onOpenCustomer
                 ? { onRowClick: (row: CustomerRevenueRow) => customers.onOpenCustomer?.(row.id) }
                 : {})}
@@ -1092,6 +1108,33 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
                 },
               ]}
             />
+            <div className="flex items-center justify-between border-t px-5 py-3 text-sm">
+              <span className="text-muted-foreground tabular-nums">
+                {customers.all.rows.length === 0
+                  ? 'No customers on this page'
+                  : `${customers.all.offset + 1} - ${customers.all.offset + customers.all.rows.length}`}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={customers.all.offset === 0}
+                  onClick={() =>
+                    customers.all?.onPage(Math.max(0, customers.all.offset - customers.all.size))
+                  }
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!customers.all.hasMore}
+                  onClick={() => customers.all?.onPage(customers.all.offset + customers.all.size)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           </Surface>
         </Panel>
       ) : null}
