@@ -238,6 +238,45 @@ describe('toCreateSubscriptionRequest: V1 contract fields', () => {
     expect(wire).not.toHaveProperty('phases')
   })
 
+  it('keeps the bucket a price override chose over its commitment’s', () => {
+    const commitment = {
+      type: 'quantity' as const,
+      value: '100',
+      duration: '' as const,
+      overageFactor: '',
+      trueUp: false,
+      bucketSize: 'HOUR' as const,
+      windowed: false,
+      windows: [],
+    }
+    const request = toCreateSubscriptionRequest({
+      ...base,
+      phases: [
+        {
+          ...emptyPhase(),
+          priceOverrides: [
+            {
+              priceId: 'price_api',
+              billingModel: BillingModel.FlatFee,
+              amount: '0.01',
+              bucketSize: 'DAY',
+            },
+            { priceId: 'price_gpu', billingModel: BillingModel.FlatFee, amount: '2' },
+          ],
+        },
+      ],
+      chargeCommitments: [
+        { ...commitment, priceId: 'price_api' },
+        { ...commitment, priceId: 'price_gpu' },
+      ],
+    })
+    expect(request.overrideLineItems).toEqual([
+      expect.objectContaining({ priceId: 'price_api', bucketSize: 'DAY' }),
+      // No bucket chosen on the override: the commitment's is sent.
+      expect.objectContaining({ priceId: 'price_gpu', bucketSize: 'HOUR' }),
+    ])
+  })
+
   it('sends a charge commitment per bucket, with its period, bucket size and time windows', () => {
     const wire = CreateSubscriptionRequest$outboundSchema.parse(
       toCreateSubscriptionRequest({

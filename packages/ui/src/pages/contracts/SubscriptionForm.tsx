@@ -1430,7 +1430,8 @@ export function commitmentChargeOf(charge: Charge, override?: PriceOverride) {
     priceId: charge.id,
     name: chargeName(charge),
     description: `${BILLING_MODEL_LABEL[override?.billingModel ?? charge.billingModel]} · ${priceText(charge, override)}`,
-    bucketSize: charge.bucketSize ?? '',
+    // The price override's bucket, when it chose one, else the plan charge's.
+    bucketSize: override?.bucketSize || charge.bucketSize || '',
     unitAmount: charge.amount,
     priceBase: charge.meterId
       ? {
@@ -1527,6 +1528,7 @@ function ChargesTable({
   couponOf,
   onCoupon,
   onReset,
+  meters,
 }: {
   charges: Charge[]
   extraCharges: AddContractCharge[]
@@ -1549,6 +1551,8 @@ function ChargesTable({
   onCoupon?: ((priceId: string) => void) | undefined
   /** Puts a charge back as the plan has it: price, quantity, commitment and coupon. */
   onReset: (priceId: string) => void
+  /** The metered features, so a usage charge's override offers a bucket only where the API takes one. */
+  meters: MeterOption[]
 }) {
   // " in Phase 2" on a contract of phases; nothing on a contract of one.
   const inPhase = phaseLabel ? ` in ${phaseLabel}` : ''
@@ -1813,11 +1817,26 @@ function ChargesTable({
             <PriceOverrideForm
               key={repricingCharge.id}
               priceId={repricingCharge.id}
+              meter={
+                repricingCharge.type === PriceType.Usage
+                  ? meters.find((meter) => meter.id === repricingCharge.meterId)
+                  : undefined
+              }
               {...(byId.get(repricingCharge.id)
                 ? { defaultValue: byId.get(repricingCharge.id)! }
                 : {})}
               onSubmit={(value) => {
                 onChange([...overrides.filter((o) => o.priceId !== repricingCharge.id), value])
+                // One bucket per charge reaches the API: a bucket chosen here
+                // becomes the commitment's too, so neither silently loses.
+                const commitment = commitmentOf.get(repricingCharge.id)
+                if (
+                  onCommitment &&
+                  commitment &&
+                  value.bucketSize &&
+                  value.bucketSize !== commitment.bucketSize
+                )
+                  onCommitment(repricingCharge.id, { ...commitment, bucketSize: value.bucketSize })
                 setRepricing(null)
               }}
             />
@@ -1835,7 +1854,17 @@ function ChargesTable({
           currency={currency}
           onClose={() => setCommitting(null)}
           onSave={(next) => {
-            if (committing) onCommitment(committing, next)
+            if (committing) {
+              onCommitment(committing, next)
+              // And the other way: a commitment's new bucket replaces one the price override chose.
+              const override = byId.get(committing)
+              if (next && override?.bucketSize && override.bucketSize !== next.bucketSize)
+                onChange(
+                  overrides.map((o) =>
+                    o.priceId === committing ? { ...o, bucketSize: next.bucketSize } : o,
+                  ),
+                )
+            }
             setCommitting(null)
           }}
         />
@@ -2205,6 +2234,7 @@ function PhasesStep({
             update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
           }
           onEditExtra={(at) => setEditingExtra({ phase: index, index: at })}
+          meters={meters}
           couponOf={(priceId) => couponOn(index, priceId)}
           onCoupon={(priceId) => setCouponing({ phase: index, priceId })}
           onReset={(priceId) => {

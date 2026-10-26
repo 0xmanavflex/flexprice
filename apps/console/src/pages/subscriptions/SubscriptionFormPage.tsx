@@ -8,6 +8,7 @@ import {
   useCreditGrants,
   useCustomerTaxAssociations,
   useCustomers,
+  useFeaturesByMeters,
   useInheritanceBlocks,
   usePlanEntitlements,
   usePlans,
@@ -30,7 +31,7 @@ import {
   TaxRateStatus,
 } from '@fp/domain'
 import { SubscriptionForm } from '@fp/ui/pages'
-import { usePlanFormOptions } from '../plans/planFormOptions'
+import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
 
 export interface SubscriptionFormPageProps {
   /** Set when opened from a customer's own page: the Customer step is dropped. */
@@ -69,6 +70,12 @@ export function SubscriptionFormPage({
   const planGrants = useCreditGrants(CreditGrantScope.Plan, planId)
   // The metered features and price units a charge added to this contract alone can use.
   const formOptions = usePlanFormOptions()
+  // The plan's own usage charges' meters, by id: the picker reads only the first
+  // page of features, and a price override needs its charge's meter to offer a bucket.
+  const planMeters = useFeaturesByMeters(
+    (charges.data ?? []).flatMap((charge) => (charge.meterId ? [charge.meterId] : [])),
+  )
+  const meters = withMeters(formOptions.meters, planMeters.data ?? [])
   const coupons = useCoupons({
     ...DEFAULT_COUPON_QUERY,
     ...PICKER_PAGE,
@@ -152,7 +159,7 @@ export function SubscriptionFormPage({
       }
       onPlanChange={setPlanId}
       onCustomerChange={setChosenCustomer}
-      meters={formOptions.meters}
+      meters={meters}
       priceUnits={formOptions.units}
       couponsStatus={coupons.isPending ? 'loading' : coupons.isError ? 'failed' : 'ready'}
       coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
