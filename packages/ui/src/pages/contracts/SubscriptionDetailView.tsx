@@ -1311,7 +1311,8 @@ export function SubscriptionDetailView({
             {fxOverrides}
             <MetadataCard
               metadata={s.metadata}
-              {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
+              // A cancelled contract is read-only, its metadata too.
+              {...(onSaveMetadata && canModify ? { onSave: onSaveMetadata } : {})}
             />
           </div>
         ) : null}

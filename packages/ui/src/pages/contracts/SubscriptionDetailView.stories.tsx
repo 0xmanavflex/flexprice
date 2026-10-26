@@ -702,6 +702,23 @@ export const Cancelled: Story = {
   },
 }
 
+/** A cancelled contract's metadata is read-only: no edit pencil on the card. */
+export const CancelledMetadataReadOnly: Story = {
+  args: {
+    ...withSubscription({
+      status: SubscriptionStatus.Cancelled,
+      cancelledAt: date('2026-09-15'),
+      endDate: date('2026-09-15'),
+    }),
+    onSaveMetadata: fn(async () => undefined),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: 'Information' }))
+    await expect(canvas.queryByRole('button', { name: /^Edit metadata/ })).toBeNull()
+  },
+}
+
 /** A paused contract says so, and its menu offers Resume instead of Pause. */
 export const Paused: Story = {
   args: {
