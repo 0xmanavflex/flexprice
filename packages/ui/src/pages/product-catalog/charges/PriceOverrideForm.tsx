@@ -4,9 +4,12 @@ import { useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   BILLING_MODEL_LABEL,
+  BUCKET_SIZE_LABEL,
   BillingModel,
+  BucketSize,
   TIER_MODE_LABEL,
   TierMode,
+  WINDOWABLE_AGGREGATIONS,
   emptyOverride,
   type PriceOverride,
   priceOverrideSchema,
@@ -17,7 +20,9 @@ import { Label } from '@ui/components/primitives/label'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards, SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Field } from '@ui/compositions/forms/Field'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
+import type { MeterOption } from './ChargeForm'
 
 /**
  * A price override, as one form rather than twelve pieces of state.
@@ -66,7 +71,17 @@ export interface PriceOverrideFormProps {
    * saves a started override and still skips the step when it was left blank.
    */
   onStartedChange?: (started: boolean) => void
+  /**
+   * A usage charge's meter: offers an optional bucket size, the window usage is
+   * summed in. By the API's rules, as `ChargeForm` applies them, it is offered
+   * only on a MAX or SUM meter and shown locked when the meter has its own
+   * bucket. Absent on a fixed charge.
+   */
+  meter?: Pick<MeterOption, 'name' | 'aggregationType' | 'bucketSize'> | undefined
 }
+
+/** The bucket picker's "keep the charge's own" choice: `OptionSelect` reads `''` as no value. */
+const CHARGES_OWN = 'CHARGES_OWN'
 
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
 
@@ -94,7 +109,13 @@ export function PriceOverrideForm({
   formId,
   hideActions = false,
   onStartedChange,
+  meter,
 }: PriceOverrideFormProps) {
+  // The bucket is offered where the API takes one: a MAX or SUM meter without its own.
+  const meterBuckets = Boolean(meter?.bucketSize)
+  const windowable =
+    meter?.aggregationType != null &&
+    (WINDOWABLE_AGGREGATIONS as readonly string[]).includes(meter.aggregationType)
   const form = useCalmForm<PriceOverride>({
     resolver: standardSchemaResolver(priceOverrideSchema) as Resolver<PriceOverride>,
     defaultValues: defaultValue ?? emptyOverride(priceId, BillingModel.FlatFee),
@@ -117,7 +138,9 @@ export function PriceOverrideForm({
   // array cannot survive into a flat fee and be submitted invisibly.
   const changeModel = (next: BillingModel) => {
     if (next === billingModel) return
-    form.reset(emptyOverride(priceId, next))
+    // The bucket size is not part of the price: it survives a change of model.
+    const bucketSize = form.getValues('bucketSize')
+    form.reset({ ...emptyOverride(priceId, next), ...(bucketSize ? { bucketSize } : {}) })
   }
 
   useEffect(() => {
@@ -356,6 +379,51 @@ export function PriceOverrideForm({
             ) : null}
           </div>
         </>
+      ) : null}
+
+      {meter && (meterBuckets || windowable) ? (
+        <Field
+          label="Bucket size"
+          hint={
+            meterBuckets
+              ? `Set on the ${meter.name} feature itself, so it cannot be changed here.`
+              : "Optional. The window usage is summed in before it is priced; leave as the charge's own to keep it."
+          }
+        >
+          {({ id, ...field }) =>
+            meterBuckets ? (
+              <Input
+                id={id}
+                value={
+                  BUCKET_SIZE_LABEL[meter.bucketSize as BucketSize] ?? String(meter.bucketSize)
+                }
+                readOnly
+                disabled
+              />
+            ) : (
+              <OptionSelect
+                id={id}
+                {...field}
+                value={form.watch('bucketSize') || CHARGES_OWN}
+                onValueChange={(next) =>
+                  form.setValue(
+                    'bucketSize',
+                    next === CHARGES_OWN ? '' : (next as PriceOverride['bucketSize']),
+                    { shouldDirty: true },
+                  )
+                }
+                options={[
+                  { value: CHARGES_OWN, label: "The charge's own" },
+                  ...Object.values(BucketSize).map((value) => ({
+                    value,
+                    label: BUCKET_SIZE_LABEL[value],
+                  })),
+                ]}
+                disabled={isSubmitting}
+              />
+            )
+          }
+        </Field>
       ) : null}
 
       {submitError ? (

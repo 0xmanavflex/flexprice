@@ -297,10 +297,7 @@ export const HostedLink: Story = {
       await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
     ).not.toHaveAttribute('aria-disabled', 'true')
     await expect(screen.queryByRole('menuitem', { name: /Open hosted invoice/ })).toBeNull()
-    await expect(canvas.getByRole('link', { name: HOSTED_URL })).toHaveAttribute(
-      'href',
-      HOSTED_URL,
-    )
+    await expect(canvas.getByRole('link', { name: HOSTED_URL })).toHaveAttribute('href', HOSTED_URL)
   },
 }
 

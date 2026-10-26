@@ -80,6 +80,15 @@ type LedgerRow =
   | { kind: 'debit'; id: string; tx: WalletTransaction }
   | { kind: 'child'; id: string; tx: WalletTransaction; line: WalletConsumption }
 
+/** "Invoice inv_1 · key: value": a transaction's reference and metadata, as one line. */
+const metadataText = (tx: WalletTransaction) =>
+  [
+    tx.reference ? `${tx.reference.type.toLowerCase()} ${tx.reference.id}` : '',
+    ...Object.entries(tx.metadata ?? {}).map(([key, value]) => `${key}: ${value}`),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
 const hasBreakdown = (tx: WalletTransaction) => (tx.consumption?.length ?? 0) > 0
 
 function ConsumedBar({ share, label }: { share: number | null; label: string }) {
@@ -186,7 +195,7 @@ export function WalletLedgerTable({
         searchText={(row) =>
           row.kind === 'child'
             ? `${row.tx.reason} ${row.line.product} ${row.line.contract}`
-            : `${row.tx.reason} ${row.tx.description}`
+            : `${row.tx.reason} ${row.tx.description} ${metadataText(row.tx)}`
         }
         columns={[
           {
@@ -232,6 +241,15 @@ export function WalletLedgerTable({
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
+                    {/* What it was raised for, and any metadata, on one quiet line. */}
+                    {row.tx.reference || Object.keys(row.tx.metadata ?? {}).length > 0 ? (
+                      <p
+                        className="text-muted-foreground truncate font-mono text-xs"
+                        title={metadataText(row.tx)}
+                      >
+                        {metadataText(row.tx)}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               ),
@@ -248,10 +266,12 @@ export function WalletLedgerTable({
                     {'−'}
                     {formatCredits(row.line.credits)}
                   </p>
-                  <p className="text-muted-foreground text-xs tabular-nums">
-                    {'−'}
-                    {formatMoney(row.line.amount)}
-                  </p>
+                  {row.line.amount ? (
+                    <p className="text-muted-foreground text-xs tabular-nums">
+                      {'−'}
+                      {formatMoney(row.line.amount)}
+                    </p>
+                  ) : null}
                 </div>
               ) : row.kind === 'debit' ? (
                 <div>
@@ -336,8 +356,7 @@ export function WalletLedgerTable({
       />
       {anyBreakdown || topUps.length === 0 ? null : (
         <p className="text-muted-foreground border-t px-6 py-3 text-xs">
-          Flexprice does not report which products drew down each top-up, so rows cannot be
-          expanded.
+          No debit in this wallet names the top-up it drew from, so rows cannot be expanded.
         </p>
       )}
     </>

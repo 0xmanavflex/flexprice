@@ -3,7 +3,9 @@ import {
   type PortalTopUp,
   type PortalTransactionDirection,
   type PortalWallet,
+  absoluteMoney,
   creditsCost,
+  isNegativeMoney,
   walletFlows,
 } from '@fp/domain'
 import { PlusIcon, WalletIcon } from '@ui/icons'
@@ -212,12 +214,24 @@ function WalletPanel({
         ) : null}
       </div>
       <div className="grid sm:grid-cols-3 sm:divide-x">
-        <Figure
-          label="Balance"
-          big
-          value={money(wallet.balance)}
-          credits={formatNumber(wallet.credits, locale)}
-        />
+        {isNegativeMoney(wallet.balance) ? (
+          // Below zero is money owed: said in the warning tone, as a positive figure.
+          <Figure
+            label="Owed"
+            big
+            tone="text-warning-foreground dark:text-warning"
+            value={money(absoluteMoney(wallet.balance))}
+            credits={formatNumber(wallet.credits.replace(/^-/, ''), locale)}
+            unit="credits owed"
+          />
+        ) : (
+          <Figure
+            label="Balance"
+            big
+            value={money(wallet.balance)}
+            credits={formatNumber(wallet.credits, locale)}
+          />
+        )}
         <Figure
           label={`Added${since}`}
           tone="text-success-foreground dark:text-success"
@@ -238,12 +252,15 @@ function Figure({
   label,
   value,
   credits,
+  unit = 'credits',
   tone,
   big = false,
 }: {
   label: string
   value: ReactNode | null
   credits: string | null
+  /** Words after the credit count: "credits", or "credits owed" below zero. */
+  unit?: string
   tone?: string
   big?: boolean
 }) {
@@ -260,7 +277,7 @@ function Figure({
         {value ?? '—'}
       </p>
       <p className="text-muted-foreground text-xs tabular-nums">
-        {credits === null ? ' ' : `${credits} credits`}
+        {credits === null ? ' ' : `${credits} ${unit}`}
       </p>
     </div>
   )
