@@ -26,7 +26,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 - **Depends on.** A backend PR in `flexprice`.
 - **Acceptance.** A plan grant with a future end date stays listed with that date. A past end date
   shows it as ended. Add-on and contract grant tables show the end date.
-- **Status.** Blocked: backend change needed; console part follows it.
+- **Status.** Partly open: #221 (the plan grant form no longer offers an end date, so it cannot archive a grant by accident; add-on and contract grant tables show Ends). Blocked: a future end date on a plan grant needs the backend change, and a product call on what an ended plan grant means for existing contracts.
 
 ### R-02 One status-to-colour registry with the agreed semantics
 - **Problem.** `PillTone` has no blue. `--info` is violet, so every `info` chip is purple: finalized,
@@ -148,7 +148,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - Inherited (child) contracts show no parent, no invoicing customer and no read-only state.
 - **Acceptance.** Metadata is read-only when cancelled. An inherited contract shows its parent and is
   read-only, as V1.
-- **Status.** Partly open: #211 (cancelled contract metadata is read-only). The inherited-contracts display is still Pending.
+- **Status.** Partly open: #211 (cancelled contract metadata is read-only). #220 (an inherited contract shows its parent, is read-only, and the parent lists its inherited contracts).
 
 ### R-16 Activity: date range, actor filter, readable payloads
 - **Problem.**
@@ -156,7 +156,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - Raw JSON does not wrap.
   - Metadata uses two narrow columns inside a narrow sheet.
 - **Acceptance.** A date range and actor filter. Wrapped JSON. One metadata column in the sheet.
-- **Status.** Partly open: #212 (the sheet stacks its metadata and wraps the raw payload). A custom date range and an actor filter are still Pending.
+- **Status.** Partly open: #212 (the sheet stacks its metadata and wraps the raw payload). #219 (custom date range). The actor filter is still Pending.
 
 ### R-17 API keys: Revoke only where it will work
 - **Problem.** A non-super-admin sees Revoke on keys owned by others and gets a 403. Revoke also shows
@@ -324,6 +324,9 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 | R-20 Integration copy | #216 | Open |
 | R-21 Onboarding steps | #217 | Open |
 | R-22 IDs once | #218 | Open |
+| R-16 Custom activity range | #219 | Open |
+| R-15 Inherited contracts | #220 | Open |
+| R-01 Plan grant end date (console half) | #221 | Open |
 | Add-on commitments (prior work) | #197 | Open |
 
 **Merging.** None of these is merged. The session's permission check refuses `gh pr merge` ("Merge Without Review"), so each PR is left for a person to merge.
