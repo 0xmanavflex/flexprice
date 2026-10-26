@@ -933,3 +933,4 @@ export type {
   PortalWallet,
   PortalWalletTransaction,
 } from './customerPortal'
+export { CONTRACT_TERMS, contractAmountPerPeriod } from './contractAmount'

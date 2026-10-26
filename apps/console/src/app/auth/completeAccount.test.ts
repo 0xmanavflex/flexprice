@@ -23,7 +23,13 @@ describe('completeAccount, for an account that already exists', () => {
     const refresh = vi.fn(async () => 'token.minted.now')
     const result = await completeAccount('us', confirmed('ten_1'), neverCreates, refresh)
 
-    expect(result).toEqual({ token: 'token.minted.now', userId: 'user_1', tenantId: 'ten_1' })
+    // The region names the Supabase session client that keeps refreshing it.
+    expect(result).toEqual({
+      token: 'token.minted.now',
+      userId: 'user_1',
+      tenantId: 'ten_1',
+      region: 'us',
+    })
     expect(neverCreates).not.toHaveBeenCalled()
   })
 
@@ -49,6 +55,11 @@ describe('completeAccount, for a new account', () => {
       expect.objectContaining({ email: 'someone@example.com', token: 'token.minted.earlier' }),
     )
     // The tenant exists only after the create, so only a later token names it.
-    expect(result).toEqual({ token: 'token.with.tenant', userId: 'user_new', tenantId: 'ten_new' })
+    expect(result).toEqual({
+      token: 'token.with.tenant',
+      userId: 'user_new',
+      tenantId: 'ten_new',
+      region: 'us',
+    })
   })
 })
