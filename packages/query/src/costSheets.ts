@@ -8,6 +8,7 @@ import {
   CostSheetSortField,
   CostSheetStatus,
   COST_SHEET_FILTERS,
+  DEFAULT_COST_SHEET_QUERY,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { statusFilterField, toFilterConditions } from './search'
@@ -121,6 +122,28 @@ export function useCostSheets(query: CostSheetQuery) {
     queryKey: queryKeys.costSheets.list({ ...key, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchCostSheets(client, query),
     placeholderData: (previous) => previous,
+  })
+}
+
+/**
+ * Whether the environment has a published cost sheet, which cost and margin
+ * come from. `POST /costs/analytics` answers a zero cost and margin when there
+ * is none, so a zero alone cannot say "no cost sheet". The server's own test
+ * (`GetActiveCostsheetForTenant`) is the same: any published sheet.
+ */
+export function useHasCostSheet(options: { enabled?: boolean } = {}) {
+  const client = useFlexprice()
+  const query: CostSheetQuery = {
+    ...DEFAULT_COST_SHEET_QUERY,
+    pageSize: 1,
+    statuses: [CostSheetStatus.Published],
+  }
+
+  return useQuery({
+    queryKey: queryKeys.costSheets.list({ purpose: 'any-published' }),
+    queryFn: async () => (await fetchCostSheets(client, query)).costSheets.length > 0,
+    enabled: options.enabled ?? true,
+    staleTime: 60_000,
   })
 }
 

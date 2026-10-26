@@ -11,7 +11,7 @@ import { type EntityColumn, idColumn, pillColumn, textColumn } from '../../share
  * The Exports list, on the shared `EntityList`.
  *
  * A read-only view of the scheduled exports: what is sent, how often, and to
- * which bucket. The status dropdown (enabled / disabled) is a server-side
+ * which bucket. The status dropdown (active / paused) is a server-side
  * filter; the search box narrows the page by bucket, prefix or entity.
  */
 export const DataExportGridProvenance = provenance({
@@ -22,8 +22,9 @@ export const DataExportGridProvenance = provenance({
 
 const STATE_LABEL: Record<ExportState, string> = {
   [EXPORT_STATE.All]: 'All',
-  [EXPORT_STATE.Enabled]: 'Enabled',
-  [EXPORT_STATE.Disabled]: 'Disabled',
+  // The rows' words, so the filter and the list name a state the same way.
+  [EXPORT_STATE.Enabled]: 'Active',
+  [EXPORT_STATE.Disabled]: 'Paused',
 }
 
 const GUIDES: EntityGuide[] = [
@@ -82,7 +83,8 @@ export function DataExportGrid({
       }),
       textColumn<DataExport>('interval', 'Runs', (row) => row.intervalLabel, { width: 110 }),
       pillColumn<DataExport>('state', 'Status', (row) => ({
-        label: row.enabled ? 'Enabled' : 'Disabled',
+        // The detail page's words, so one export reads the same everywhere.
+        label: row.enabled ? 'Active' : 'Paused',
         tone: row.enabled ? 'success' : 'neutral',
       })),
       textColumn<DataExport>('bucket', 'Bucket', (row) => row.bucket, { width: 220 }),

@@ -492,7 +492,14 @@ export const createSubscriptionSchema = z
         autoApply: z.boolean(),
       }),
     ),
-    addons: z.array(z.object({ addonId: z.string().min(1), name: z.string() })),
+    // Each add-on may commit on its own usage charges, as V1's add-on card.
+    addons: z.array(
+      z.object({
+        addonId: z.string().min(1),
+        name: z.string(),
+        commitments: z.array(chargeCommitmentSchema).optional(),
+      }),
+    ),
     // Billing configuration.
     billingCycle: z.enum([BillingCycle.Anniversary, BillingCycle.Calendar]),
     /** `YYYY-MM-DD`: the day cycles are anchored to; blank follows the start date. */
@@ -718,6 +725,21 @@ export interface SubscriptionDetail extends Subscription {
   commitment: ContractCommitment | null
   /** The most recent invoice, as a link target. */
   latestInvoice: { id: string; number: string } | null
+  /**
+   * Where the contract sits in a customer hierarchy, lower case: standalone,
+   * parent, inherited (a mirror of its parent's, with no lines of its own),
+   * delegated_invoicing or grouped_invoicing. Empty when the API did not say.
+   */
+  subscriptionType: string
+  /** The contract this one hangs from; null for a top-level contract. */
+  parentSubscriptionId: string | null
+  /** The customer invoiced for this contract when it is not its own customer. */
+  invoicingCustomerId: string | null
+}
+
+/** An inherited contract mirrors its parent's: it has no lines of its own and is read-only. */
+export function isInheritedContract(contract: Pick<SubscriptionDetail, 'subscriptionType'>): boolean {
+  return contract.subscriptionType === 'inherited'
 }
 
 /** One metered charge in the current period's usage. */
@@ -982,6 +1004,8 @@ export function canResumeSubscription(status: SubscriptionStatus): boolean {
 /** One line of the invoice a contract will raise next. */
 export interface InvoicePreviewLine {
   id: string
+  /** The price that produced this line: joins it to the contract's line for its real price. */
+  priceId: string
   name: string
   /** The period note under the name, when the API sent one. */
   detail: string
@@ -1041,9 +1065,10 @@ export interface SubscriptionTax {
   priority: number
 }
 
-/** Attach an add-on to one contract. */
+/** Attach an add-on to one contract, with commitments on its usage charges. */
 export interface AddContractAddon {
   addonId: string
+  commitments?: ChargeCommitment[]
 }
 
 /** Apply a coupon to one contract, or replace the coupons on one of its charges. */

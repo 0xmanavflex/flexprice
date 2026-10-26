@@ -98,6 +98,18 @@ export interface InvoiceStatusInput {
   now?: Date
 }
 
+/**
+ * Whether a due date has passed, by calendar day in UTC: due on the 26th is
+ * payable through the 26th and overdue from the 27th, the day the invoice PDF
+ * prints. The one rule the console and the hosted invoice page both use.
+ */
+export function isPastDue(dueDate: Date | null | undefined, now: Date = new Date()): boolean {
+  if (!dueDate) return false
+  const day = (value: Date) =>
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate())
+  return day(now) > day(dueDate)
+}
+
 export function deriveInvoiceStatus({
   invoiceStatus,
   paymentStatus,
@@ -113,7 +125,7 @@ export function deriveInvoiceStatus({
   if (paymentStatus === 'SUCCEEDED' || !hasOutstandingBalance) return InvoiceStatus.Paid
 
   // Overdue is the whole reason this function exists: it is not a field.
-  if (dueDate && dueDate.getTime() < now.getTime()) return InvoiceStatus.Overdue
+  if (isPastDue(dueDate, now)) return InvoiceStatus.Overdue
 
   return InvoiceStatus.Open
 }
@@ -240,6 +252,8 @@ export const INVOICE_FILTERS: readonly ListFilterSpec[] = [
 /** One line of an invoice, as the detail page shows it. Amounts stay exact strings. */
 export interface InvoiceDetailLine {
   id: string
+  /** The price that produced this line; empty when the API did not say. */
+  priceId?: string
   description: string
   /** The period or unit note under the description, when the API sent one. */
   detail: string

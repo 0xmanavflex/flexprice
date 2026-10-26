@@ -5,6 +5,7 @@ import {
   type CreateSubscriptionAction,
   type CreateWalletAction,
   CreditGrantExpiryDurationUnit,
+  DEFAULT_PLAN_QUERY,
   type CustomerOnboarding,
   FEATURE_TYPE_LABEL,
   FeatureType,
@@ -24,8 +25,9 @@ import {
   useCustomerOnboarding,
   useResetCustomerOnboarding,
   useUpdateCustomerOnboarding,
+  usePlans,
 } from '@fp/query'
-import { EmptyState, Field } from '@fp/ui/compositions'
+import { EmptyState, Field, OptionCombobox } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
 import {
@@ -122,12 +124,15 @@ export function OnboardingPanel() {
   )
 }
 
+/**
+ * What a new customer can be set up with: a wallet and a contract, as V1's
+ * onboarding offered. Creating the customer, adding a feature and price, and
+ * rolling out to existing contracts are not onboarding steps for one customer;
+ * a saved step of those kinds still shows and can be removed, but none is added.
+ */
 const ADDABLE: OnboardingAction[] = [
-  OnboardingAction.CreateCustomer,
   OnboardingAction.CreateWallet,
   OnboardingAction.CreateSubscription,
-  OnboardingAction.CreateFeatureAndPrice,
-  OnboardingAction.RolloutToSubscriptions,
 ]
 
 function OnboardingForm({
@@ -196,9 +201,6 @@ function OnboardingForm({
           }
         >
           <dl className="grid gap-4 sm:grid-cols-2">
-            <Fact label="Workflow">
-              <span className="font-mono text-xs">{draft.value.workflowType}</span>
-            </Fact>
             <Fact label="Steps">{actions.length === 0 ? 'None' : String(actions.length)}</Fact>
           </dl>
         </SettingsBlock>
@@ -525,10 +527,7 @@ function SubscriptionFields({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextRow
-          label="Plan"
-          required
-          hint="The plan id the customer is put on."
+        <PlanRow
           value={action.planId}
           busy={busy}
           error={error('planId')}
@@ -638,6 +637,48 @@ function RolloutFields({
 /** An empty box means "not set", which this model spells `null`. */
 function blankToNull(value: string): string | null {
   return value.trim() === '' ? null : value
+}
+
+/** The plan a new customer's contract starts on, picked by name rather than typed as an id. */
+function PlanRow({
+  value,
+  busy,
+  error,
+  onChange,
+}: {
+  value: string
+  busy: boolean
+  error: string | undefined
+  onChange: (next: string) => void
+}) {
+  const plans = usePlans({ ...DEFAULT_PLAN_QUERY, page: 1, pageSize: 100 })
+  const options = (plans.data?.plans ?? []).map((plan) => ({ value: plan.id, label: plan.name }))
+  // A saved plan not in the first page still shows, by id.
+  const withSaved =
+    value && !options.some((option) => option.value === value)
+      ? [{ value, label: value }, ...options]
+      : options
+  return (
+    <Field
+      label="Plan"
+      required
+      hint="The plan the customer's contract starts on."
+      {...(error ? { error } : {})}
+    >
+      {({ id, ...field }) => (
+        <OptionCombobox
+          id={id}
+          {...field}
+          value={value}
+          onValueChange={onChange}
+          options={withSaved}
+          searchable
+          placeholder={plans.isPending ? 'Loading plans…' : 'Choose a plan'}
+          disabled={busy}
+        />
+      )}
+    </Field>
+  )
 }
 
 function TextRow({

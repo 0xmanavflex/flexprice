@@ -19,6 +19,8 @@ export interface ListActivityParams {
   endTime?: string
   /** `user`, `api_key`, `customer`, `system`. */
   actorTypes?: string[]
+  /** One actor: a user's id, an API key's id. */
+  actorId?: string
   /** Exact action names, `<entity>.<verb>`. */
   actions?: string[]
   requestId?: string
@@ -44,6 +46,7 @@ export async function listActivity(
       ...(params.startTime ? { start_time: params.startTime } : {}),
       ...(params.endTime ? { end_time: params.endTime } : {}),
       ...(params.actorTypes?.length ? { actor_types: params.actorTypes } : {}),
+      ...(params.actorId ? { actor_id: params.actorId } : {}),
       ...(params.actions?.length ? { actions: params.actions } : {}),
       ...(params.requestId ? { request_id: params.requestId } : {}),
       ...(params.cursor ? { cursor: params.cursor } : {}),

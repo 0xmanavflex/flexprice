@@ -664,6 +664,9 @@ function CreditGrantsSection({ planId }: { planId: string }) {
       >
         {form === null ? null : editing ? (
           <CreditGrantEditForm
+            // Any end date archives a plan's grant at once (the API's
+            // DeleteCreditGrant), so it is not offered.
+            allowEndDate={false}
             key={editing.id}
             defaultValue={creditGrantToEdit(editing)}
             onSubmit={(draft: EditCreditGrant) =>

@@ -19,7 +19,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The landing page: what exports do, the S3 destination, and the list below. */
+/** The landing page once a bucket is connected: the S3 destination and the list, no explainer. */
 export const Overview: Story = {
   render: () => (
     <ExportsOverview s3Connections={2} onOpenS3={fn()}>
@@ -28,9 +28,21 @@ export const Overview: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Automated exports')).toBeVisible()
+    await expect(canvas.queryByText('Automated exports')).toBeNull()
     await expect(canvas.getByRole('button', { name: /Amazon S3/ })).toBeVisible()
     await expect(canvas.getByText('2 connections')).toBeVisible()
+  },
+}
+
+/** The first visit, before any bucket: what exports do leads the page. */
+export const OverviewFirstRun: Story = {
+  render: () => (
+    <ExportsOverview s3Connections={0} onOpenS3={fn()}>
+      <p className="text-muted-foreground text-sm">No exports yet.</p>
+    </ExportsOverview>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('Automated exports')).toBeVisible()
   },
 }
 
