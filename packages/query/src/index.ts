@@ -209,6 +209,7 @@ export {
   toCostSheet,
   toCostSheetFilter,
   useCostSheet,
+  useHasCostSheet,
   useCostSheets,
   toCreateCostSheetRequest,
   toUpdateCostSheetRequest,
