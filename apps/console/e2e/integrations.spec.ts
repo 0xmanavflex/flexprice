@@ -69,7 +69,7 @@ test.describe('integrations', () => {
 
     await sheet.getByRole('button', { name: 'Disconnect Stripe' }).click()
     const confirm = page.getByRole('dialog', { name: 'Disconnect Stripe?' })
-    await expect(confirm).toContainText('archives this connection')
+    await expect(confirm).toContainText('this connection is archived')
     await confirm.getByRole('button', { name: 'Disconnect' }).click()
 
     await expect(page.getByTestId('integration-stripe')).toContainText('Not connected')

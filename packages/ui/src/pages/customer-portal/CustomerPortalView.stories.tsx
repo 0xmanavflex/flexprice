@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
-import type { PortalRange, PortalView } from '@fp/domain'
+import { type PortalRange, type PortalView, money } from '@fp/domain'
 import { CustomerPortalView } from './CustomerPortalView'
 import { PortalNotice } from './PortalNotice'
 import {
@@ -19,6 +19,7 @@ const payInvoice = fn(() => Promise.resolve<string | null>(CHECKOUT))
 const addCredits = fn(() => Promise.resolve<string | null>(null))
 const addCard = fn(() => Promise.resolve<string | null>(CHECKOUT))
 const saveAutoTopup = fn(() => Promise.resolve())
+const retryTotals = fn()
 
 /** The portal with its navigation state held here, as the surface holds it in the URL. */
 function Portal({
@@ -166,6 +167,99 @@ export const Credits: Story = {
     await expect(canvas.getByText('Invoice payment')).toBeVisible()
     await userEvent.click(canvas.getByRole('tab', { name: 'Added' }))
     await expect(canvas.queryByText('Invoice payment')).toBeNull()
+  },
+}
+
+const periodTotals = (counted: number, total: number): CustomerPortalData['flows'] => ({
+  status: 'ready',
+  data: {
+    flows: {
+      in: { amount: money('1234.5', 'USD'), credits: '12345' },
+      out: { amount: money('498', 'USD'), credits: '4980' },
+    },
+    counted,
+    total,
+  },
+})
+
+/** Added and Used are the period's totals, not a sum of the history's loaded page. */
+export const CreditTotals: Story = {
+  args: { initialView: 'credits', data: { ...portalData, flows: periodTotals(16, 16) } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('$1,234.50')).toBeVisible()
+    await expect(canvas.getByText('12,345 credits')).toBeVisible()
+    await expect(canvas.getByText('$498.00')).toBeVisible()
+    await expect(canvas.queryByText(/From the latest/)).toBeNull()
+  },
+}
+
+/** A window too long to read whole: the totals say how much of it they cover. */
+export const CreditTotalsPartial: Story = {
+  args: {
+    initialView: 'credits',
+    data: { ...portalData, flows: periodTotals(50000, 61234) },
+  },
+  play: async ({ canvasElement }) => {
+    const notes = within(canvasElement).getAllByText(
+      'From the latest 50,000 of 61,234 transactions',
+    )
+    await expect(notes).toHaveLength(2)
+  },
+}
+
+/** The totals failed while the rest loaded: an inline retry, not blank figures. */
+export const CreditTotalsFailed: Story = {
+  args: {
+    initialView: 'credits',
+    data: { ...portalData, flows: { status: 'error', retry: retryTotals } },
+  },
+  play: async ({ canvasElement }) => {
+    retryTotals.mockClear()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('We couldn’t load your credits added and used')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: /retry|try again/i }))
+    await expect(retryTotals).toHaveBeenCalled()
+  },
+}
+
+/** A wallet below zero reads as credits owed, in the warning tone, as a positive figure. */
+export const NegativeBalance: Story = {
+  args: {
+    data: {
+      ...portalData,
+      wallets:
+        portalData.wallets.status === 'ready'
+          ? {
+              status: 'ready',
+              data: portalData.wallets.data.map((wallet, index) =>
+                index === 0
+                  ? {
+                      ...wallet,
+                      credits: '-42',
+                      balance: { ...wallet.balance, amount: '-4.20' },
+                    }
+                  : wallet,
+              ),
+            }
+          : portalData.wallets,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Credits owed')).toBeVisible()
+    await expect(canvas.getByText(/credits used beyond the balance/)).toBeVisible()
+  },
+}
+
+/** The Credits tab of a wallet below zero: "Owed", with the unit before "owed". */
+export const NegativeBalanceCredits: Story = {
+  args: { ...NegativeBalance.args, initialView: 'credits' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Owed')).toBeVisible()
+    await expect(canvas.getByText('42 credits owed')).toBeVisible()
+    await expect(canvas.queryByText(/owed credits/)).toBeNull()
   },
 }
 

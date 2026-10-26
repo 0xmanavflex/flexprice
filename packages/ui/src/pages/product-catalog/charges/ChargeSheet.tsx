@@ -28,7 +28,7 @@ import { ActivityLog, type ActivityLogEntry } from '@ui/compositions/detail/Acti
 import {
   BellIcon,
   ClockIcon,
-  PencilIcon,
+  CircleDollarSignIcon,
   PlusIcon,
   RotateCcwIcon,
   ScaleIcon,
@@ -443,7 +443,7 @@ export function ChargeSheet({
         <div ref={body} tabIndex={0} className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
           <Box
             section={ChargeSection.Price}
-            icon={<PencilIcon aria-hidden className="text-info-foreground" />}
+            icon={<CircleDollarSignIcon aria-hidden className="text-info-foreground" />}
             title="Price"
             badge={detail?.overridden || detail?.overriddenFrom ? 'Changed here' : undefined}
             onEdit={editAt(ChargeSection.Price)}

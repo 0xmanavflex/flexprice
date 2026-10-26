@@ -100,6 +100,11 @@ export interface CustomerAnalyticsViewProps {
   /** One muted line under the filters, for what the figures cover (a contract's scope). */
   note?: string | undefined
   /**
+   * Why cost and margin are blank, under the totals: no cost sheet, say. A
+   * blank figure otherwise reads as a zero or as a failed read.
+   */
+  costNote?: string | undefined
+  /**
    * When set, the filters and Include children sit on this heading's row,
    * at the right, and the note is not shown.
    */
@@ -164,6 +169,7 @@ export function CustomerAnalyticsView({
   error = null,
   onRetry,
   note,
+  costNote,
   title,
 }: CustomerAnalyticsViewProps) {
   const [activeTab, setActiveTab] = useState('')
@@ -181,52 +187,52 @@ export function CustomerAnalyticsView({
   const filters = (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-2 px-3"
-                aria-label="Features"
-                disabled={featureOptions.length === 0}
-              />
-            }
-          >
-            <LayersIcon aria-hidden="true" className="size-4" />
-            {all ? 'All features' : `${chosen.length} features`}
-            <ChevronDownIcon className="opacity-50" aria-hidden="true" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                Metered features
-              </DropdownMenuLabel>
-              {featureOptions.map((f) => (
-                <DropdownMenuCheckboxItem
-                  key={f.id}
-                  closeOnClick={false}
-                  checked={chosen.includes(f.id)}
-                  onCheckedChange={(on) => toggle(f.id, on)}
-                >
-                  {f.name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DateButton
-          icon
-          label="From"
-          value={query.from}
-          max={query.to}
-          onChange={(from) => onQueryChange({ ...query, from })}
-        />
-        <DateButton
-          label="To"
-          value={query.to}
-          min={query.from}
-          onChange={(to) => onQueryChange({ ...query, to })}
-        />
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 px-3"
+              aria-label="Features"
+              disabled={featureOptions.length === 0}
+            />
+          }
+        >
+          <LayersIcon aria-hidden="true" className="size-4" />
+          {all ? 'All features' : `${chosen.length} features`}
+          <ChevronDownIcon className="opacity-50" aria-hidden="true" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+              Metered features
+            </DropdownMenuLabel>
+            {featureOptions.map((f) => (
+              <DropdownMenuCheckboxItem
+                key={f.id}
+                closeOnClick={false}
+                checked={chosen.includes(f.id)}
+                onCheckedChange={(on) => toggle(f.id, on)}
+              >
+                {f.name}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DateButton
+        icon
+        label="From"
+        value={query.from}
+        max={query.to}
+        onChange={(from) => onQueryChange({ ...query, from })}
+      />
+      <DateButton
+        label="To"
+        value={query.to}
+        min={query.from}
+        onChange={(to) => onQueryChange({ ...query, to })}
+      />
       <label
         className={`text-muted-foreground flex items-center gap-2 text-[13px] ${title ? '' : 'ml-auto'}`}
       >
@@ -269,6 +275,7 @@ export function CustomerAnalyticsView({
           </div>
         ))}
       </dl>
+      {costNote ? <p className="text-muted-foreground -mt-2 text-xs">{costNote}</p> : null}
 
       {error ? (
         <ErrorState
