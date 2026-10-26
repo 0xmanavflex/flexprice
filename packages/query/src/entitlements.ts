@@ -121,7 +121,9 @@ export function toEntitlementRequest(
           grantMeasure: grant.measure,
           ...(unlimited ? { grantUnlimited: true } : { grantQuota: grant.quota }),
           grantDurationUnit: unit,
-          ...(windowed ? { grantDurationValue: 1, grantAllocationBehavior: grant.allocation } : {}),
+          ...(windowed
+            ? { grantDurationValue: grant.every ?? 1, grantAllocationBehavior: grant.allocation }
+            : {}),
           aggregationMode: grant.aggregation,
         }
       }
@@ -357,7 +359,9 @@ export function toUpdateEntitlementRequest(draft: EditEntitlement): Record<strin
       grantUnlimited: unlimited,
       ...(unlimited ? {} : { grantQuota: grant.quota }),
       grantDurationUnit: unit,
-      ...(windowed ? { grantDurationValue: 1, grantAllocationBehavior: grant.allocation } : {}),
+      ...(windowed
+        ? { grantDurationValue: grant.every ?? 1, grantAllocationBehavior: grant.allocation }
+        : {}),
       aggregationMode: grant.aggregation,
     })
   }

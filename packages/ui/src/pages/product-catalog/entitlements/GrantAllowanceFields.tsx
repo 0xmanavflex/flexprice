@@ -17,8 +17,14 @@ import { provenance } from '@ui/provenance'
 
 export const GrantAllowanceFieldsProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/field', 'compositions/option-select', 'ui/button', 'ui/input', 'ui/switch'],
-  note: "A metered allowance as V1 grants it: value type, value with Unlimited, the window it resets on, a summary, and Advanced (window start, stacking). Controlled; every field is saved.",
+  composes: [
+    'compositions/field',
+    'compositions/option-select',
+    'ui/button',
+    'ui/input',
+    'ui/switch',
+  ],
+  note: 'A metered allowance as V1 grants it: value type, value with Unlimited, the window it resets on, a summary, and Advanced (window start, stacking). Controlled; every field is saved.',
 })
 
 export interface GrantAllowanceFieldsProps {
@@ -87,15 +93,18 @@ export function GrantAllowanceFields({
   const unlimited = value.quota === null
   const windowed = value.unit !== EntitlementGrantDurationUnit.SubscriptionPeriod
   const set = (patch: Partial<MeteredGrant>) => onChange({ ...value, ...patch })
-  const noun = value.measure === EntitlementGrantMeasure.Amount ? 'of usage value' : (unit ?? 'units')
+  const noun =
+    value.measure === EntitlementGrantMeasure.Amount ? 'of usage value' : (unit ?? 'units')
 
   const summary = unlimited
     ? 'No ceiling: usage is tracked, with no allowance to run out.'
     : !value.quota
       ? 'Enter a value to see the allowance.'
-      : windowed
-        ? `${value.quota} ${noun} each ${WINDOW_NOUN[value.unit] ?? value.unit}.`
-        : `${value.quota} ${noun} for the whole billing period.`
+      : windowed && value.every
+        ? `${value.quota} ${noun} every ${value.every} ${WINDOW_NOUN[value.unit] ?? value.unit}s.`
+        : windowed
+          ? `${value.quota} ${noun} each ${WINDOW_NOUN[value.unit] ?? value.unit}.`
+          : `${value.quota} ${noun} for the whole billing period.`
 
   return (
     <div className="flex flex-col gap-5">
@@ -152,7 +161,11 @@ export function GrantAllowanceFields({
                 id={id}
                 {...field}
                 value={value.unit}
-                onValueChange={(next) => set({ unit: next as MeteredGrant['unit'] })}
+                // A new window is one unit long, as V1 grants it.
+                onValueChange={(next) => {
+                  const { every: _every, ...rest } = value
+                  onChange({ ...rest, unit: next as MeteredGrant['unit'] })
+                }}
                 disabled={disabled || unlimited}
                 options={WINDOW_OPTIONS}
               />

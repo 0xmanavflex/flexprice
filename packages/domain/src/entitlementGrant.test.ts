@@ -27,7 +27,11 @@ const row = (patch: Partial<Entitlement>): Entitlement => ({
 
 describe('a metered allowance', () => {
   it('reads a daily grant quota, not the empty usage limit', () => {
-    const entitlement = row({ grantQuota: '10000', grantDurationUnit: 'day', grantMeasure: 'quantity' })
+    const entitlement = row({
+      grantQuota: '10000',
+      grantDurationUnit: 'day',
+      grantMeasure: 'quantity',
+    })
     expect(meteredAllowanceLabel(entitlement)).toBe('10,000')
     expect(meteredResetLabel(entitlement)).toBe('Daily')
     expect(entitlementToEdit(entitlement)).toEqual({
@@ -39,6 +43,12 @@ describe('a metered allowance', () => {
         aggregation: 'additive',
       },
     })
+  })
+
+  it('keeps a window longer than one unit', () => {
+    const entitlement = row({ grantQuota: '500', grantDurationUnit: 'week', grantDurationValue: 2 })
+    expect(entitlementGrant(entitlement)?.every).toBe(2)
+    expect(meteredResetLabel(entitlement)).toBe('Every 2 weeks')
   })
 
   it('reads grant config with no quota as unlimited', () => {

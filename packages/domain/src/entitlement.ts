@@ -150,6 +150,11 @@ export const meteredGrantSchema = z
       EntitlementGrantAllocationBehavior.UnitStart,
     ]),
     aggregation: z.enum([EntitlementAggregationMode.Additive, EntitlementAggregationMode.Parallel]),
+    /**
+     * How many units a window spans. V1 grants one; an older entitlement may
+     * carry more (every 2 weeks), kept as is unless the window is changed.
+     */
+    every: z.number().int().positive().optional(),
   })
   .superRefine((grant, ctx) => {
     if (grant.quota === null) return
@@ -363,8 +368,12 @@ export function entitlementGrant(entitlement: Entitlement): MeteredGrant | null 
     measure: entitlement.grantMeasure ?? EntitlementGrantMeasure.Quantity,
     quota: entitlement.grantQuota ?? null,
     unit: entitlement.grantDurationUnit ?? EntitlementGrantDurationUnit.SubscriptionPeriod,
-    allocation: entitlement.grantAllocationBehavior ?? EntitlementGrantAllocationBehavior.FirstUsage,
+    allocation:
+      entitlement.grantAllocationBehavior ?? EntitlementGrantAllocationBehavior.FirstUsage,
     aggregation: entitlement.aggregationMode ?? EntitlementAggregationMode.Additive,
+    ...(entitlement.grantDurationValue && entitlement.grantDurationValue > 1
+      ? { every: entitlement.grantDurationValue }
+      : {}),
   }
 }
 
@@ -396,8 +405,12 @@ export function meteredAllowanceLabel(entitlement: Entitlement): string {
 /** How often a metered allowance renews, or null when it has no reset set. */
 export function meteredResetLabel(entitlement: Entitlement): string | null {
   const grant = entitlementGrant(entitlement)
+  if (grant?.every && grant.unit !== EntitlementGrantDurationUnit.SubscriptionPeriod)
+    return `Every ${grant.every} ${grant.unit}s`
   if (grant) return GRANT_WINDOW_LABEL[grant.unit]
-  return entitlement.usageResetPeriod ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod] : null
+  return entitlement.usageResetPeriod
+    ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod]
+    : null
 }
 
 /**

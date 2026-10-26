@@ -78,6 +78,14 @@ describe('toUpdateEntitlementRequest with a V1 grant', () => {
     })
   })
 
+  it('keeps a window longer than one unit', () => {
+    expect(
+      toUpdateEntitlementRequest({
+        grant: { ...emptyMeteredGrant(), quota: '500', unit: 'week', every: 2 },
+      }),
+    ).toMatchObject({ grantDurationUnit: 'week', grantDurationValue: 2 })
+  })
+
   it('clears the quota and resets per billing period when made unlimited', () => {
     expect(toUpdateEntitlementRequest({ grant: { ...emptyMeteredGrant(), quota: null } })).toEqual({
       grantMeasure: 'quantity',

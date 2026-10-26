@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { toast, Toaster } from 'sonner'
-import { FeatureType, PlanStatus, type Entitlement, type Plan as PlanRecord } from '@fp/domain'
+import {
+  FeatureType,
+  PlanStatus,
+  type Entitlement,
+  type Plan as PlanRecord,
+  meteredAllowanceLabel,
+} from '@fp/domain'
 import { CodeXmlIcon, CopyIcon, PlusIcon, ZapIcon } from '@ui/icons'
 import { PlanTile } from '@ui/components/blocks/solution-billing-2/components/plan-tile'
 import type { Plan } from '@ui/components/blocks/solution-billing-2/components/data'
@@ -34,7 +40,7 @@ const VISIBLE_FEATURES = 3
 function describe(e: Entitlement): string {
   switch (e.featureType) {
     case FeatureType.Metered:
-      return e.usageLimit === null ? 'Unlimited' : e.usageLimit.toLocaleString()
+      return meteredAllowanceLabel(e)
     case FeatureType.Static:
       return e.staticValue ?? '—'
     case FeatureType.Boolean:
