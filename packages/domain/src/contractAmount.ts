@@ -33,6 +33,8 @@ export const CONTRACT_TERMS = [
 ] as const
 
 const DECIMAL = /^(\d+)(?:\.(\d+))?$/
+/** Commas only as thousands separators: "1,200.50", never "1,00". */
+const GROUPED = /^\d{1,3}(?:,\d{3})+(?:\.\d+)?$/
 
 /**
  * The price per billing period for `amount` over `term`, to two decimals
@@ -44,7 +46,9 @@ export function contractAmountPerPeriod(
   term: BillingPeriod,
   period: BillingPeriod,
 ): string | null {
-  const match = DECIMAL.exec(amount.replace(/,/g, '').trim())
+  const text = amount.trim()
+  if (text.includes(',') && !GROUPED.test(text)) return null
+  const match = DECIMAL.exec(text.replace(/,/g, ''))
   if (!match) return null
   const decimals = match[2] ?? ''
   const value = BigInt(`${match[1]}${decimals}`)

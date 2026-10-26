@@ -30,5 +30,8 @@ describe('contractAmountPerPeriod', () => {
     expect(contractAmountPerPeriod('', BillingPeriod.Annual, BillingPeriod.Monthly)).toBeNull()
     expect(contractAmountPerPeriod('-5', BillingPeriod.Annual, BillingPeriod.Monthly)).toBeNull()
     expect(contractAmountPerPeriod('abc', BillingPeriod.Annual, BillingPeriod.Monthly)).toBeNull()
+    // A comma that is not a thousands separator is a typo, not grouping.
+    expect(contractAmountPerPeriod('1,00', BillingPeriod.Annual, BillingPeriod.Annual)).toBeNull()
+    expect(contractAmountPerPeriod('12,00.5', BillingPeriod.Annual, BillingPeriod.Annual)).toBeNull()
   })
 })

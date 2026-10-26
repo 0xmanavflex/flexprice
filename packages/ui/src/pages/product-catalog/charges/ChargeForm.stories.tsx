@@ -111,6 +111,10 @@ export const Usage: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('radio', { name: /Usage/ }))
     await expect(await canvas.findByText('Metered feature')).toBeInTheDocument()
+    // A usage flat fee is a per-unit rate: no contract value calculator.
+    await expect(
+      canvas.queryByRole('button', { name: 'Work out the price from a contract value' }),
+    ).toBeNull()
   },
 }
 

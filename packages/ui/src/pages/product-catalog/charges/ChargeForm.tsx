@@ -667,7 +667,12 @@ export function ChargeForm({
         />
       </fieldset>
 
-      {billingModel === BillingModel.FlatFee ? (
+      {billingModel === BillingModel.FlatFee && isUsage ? (
+        // A usage flat fee is a rate per unit: a contract value per period does not apply.
+        <div className="max-w-xs">{amountField(`Amount (${unitLabel})`)}</div>
+      ) : null}
+
+      {billingModel === BillingModel.FlatFee && !isUsage ? (
         // The calculator sits at the field's bottom edge, beside its input.
         <div className="flex max-w-sm items-end gap-2">
           <div className="min-w-0 flex-1">{amountField(`Amount (${unitLabel})`)}</div>
