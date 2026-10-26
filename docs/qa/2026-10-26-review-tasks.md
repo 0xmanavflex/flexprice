@@ -39,7 +39,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   Stories cover each status.
 - **Open question.** Overdue and failed are red today, and the agreed palette has no red. This PR
   keeps them red until told otherwise.
-- **Status.** Pending.
+- **Status.** Open: #199.
 
 ### R-03 One definition of "overdue", and an honest invoice status column
 - **Problem.**
@@ -51,7 +51,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 - **Layer.** Domain (`invoice.ts`, `hostedInvoice.ts`) and the list page.
 - **Acceptance.** One `isOverdue` used by both pages. The list column is labelled for what it shows.
   `?status=` either filters correctly or is removed.
-- **Status.** Pending.
+- **Status.** Open: #200.
 
 ### R-04 Hosted invoice actions on invoice detail and list
 - **Problem.**
@@ -61,7 +61,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 - **Acceptance.**
   - Detail has "Open hosted invoice", labelled by state.
   - The list hides it on void and skipped invoices.
-- **Status.** Pending.
+- **Status.** Open: #201.
 
 ### R-05 Auto top-up cool-off: a toggle, and clearable
 - **Problem.** Cool-off is a value and unit with "None" as the placeholder. A blank value is not sent,
@@ -72,7 +72,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - Turning it off clears the stored cool-off.
   - Existing values load.
 - **Depends on.** Check that branch first and build on it, rather than duplicate it.
-- **Status.** Pending.
+- **Status.** Open: #202.
 
 ### R-06 Wallet transactions: metadata and nested consumption
 - **Problem.** `toWalletTransaction` drops `metadata`, `parent_transaction_id`, `consumption_breakdown`,
@@ -80,7 +80,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   appear. Reads are capped at 200 with no paging.
 - **Acceptance.** Rows expand to their consumption breakdown. Metadata shows in the row's detail.
   Older transactions page in.
-- **Status.** Pending.
+- **Status.** Open: #203.
 
 ### R-07 Customer portal: no zero-amount lines, and real "Load more"
 - **Problem.**
@@ -91,13 +91,13 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - Zero-amount lines are hidden where they mean nothing.
   - Transactions page 10 at a time by offset, with no duplicates and a clear end of list.
   - Invoice line items: the API returns them all, and paging needs a new endpoint (see Blocked).
-- **Status.** Pending.
+- **Status.** Open: #204.
 
 ### R-08 Customer portal: negative credit balance
 - **Problem.** A negative balance prints as a plain signed number, with no state.
 - **Acceptance.** A negative balance reads as owed, in the warning tone, on the overview and the
   Credits tab.
-- **Status.** Pending.
+- **Status.** Open: #205.
 
 ### R-09 Upcoming invoice preview: real unit price, interval and timing
 - **Problem.** Unit price is derived as amount ÷ quantity, which is wrong for tiered, package and
@@ -106,7 +106,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   no unit price.
 - **Acceptance.** Unit price comes from the price (or reads "Tiered"). Interval and timing columns
   show.
-- **Status.** Pending.
+- **Status.** Open: #206.
 
 ## Priority 2: missing pieces of existing flows
 
@@ -116,31 +116,31 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - The contract wizard's charges table has neither.
   - The PlanForm staged list shows neither.
 - **Acceptance.** Plan detail shows both by default. The wizard's charges table shows both.
-- **Status.** Pending.
+- **Status.** Open: #207.
 
 ### R-11 Price actions use a price icon, not a pencil
 - **Problem.** "Override price", the "Price changed" flag, the ChargeFlags price section and the
   ChargeSheet price section use `PencilIcon` tinted violet.
 - **Acceptance.** `CircleDollarSignIcon`, untinted, for price actions. Pencil stays for real edits.
-- **Status.** Pending.
+- **Status.** Open: #208.
 
 ### R-12 Optional bucket size when overriding a usage charge's price
 - **Problem.** `PriceOverrideForm` has no bucket size. It can only be set inside the commitment dialog.
   `OverrideLineItemRequest.bucket_size` exists.
 - **Acceptance.** Overriding a usage charge offers an optional bucket size, sent as `bucket_size`.
-- **Status.** Pending.
+- **Status.** Open: #209.
 
 ### R-13 Contract-level true-up needs a commitment
 - **Problem.** The True-up switch is always enabled. With no amount, `enableTrueUp` is silently
   dropped.
 - **Acceptance.** True-up is disabled until a commitment amount is set, with a hint.
-- **Status.** Pending.
+- **Status.** Open: #210.
 
 ### R-14 Add-on price override on a new contract
 - **Problem.** The API takes `override_line_items` on an add-on. The console offers no price override
   for add-on charges.
 - **Acceptance.** An add-on's charges can be repriced in the wizard and in the Add add-on dialog.
-- **Status.** Pending.
+- **Status.** Blocked on #197 (add-on commitments), which touches the same add-on code.
 
 ### R-15 Contract detail: read-only metadata on cancelled contracts, and inherited contracts
 - **Problem.**
@@ -148,7 +148,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - Inherited (child) contracts show no parent, no invoicing customer and no read-only state.
 - **Acceptance.** Metadata is read-only when cancelled. An inherited contract shows its parent and is
   read-only, as V1.
-- **Status.** Pending.
+- **Status.** Partly open: #211 (cancelled contract metadata is read-only). The inherited-contracts display is still Pending.
 
 ### R-16 Activity: date range, actor filter, readable payloads
 - **Problem.**
@@ -156,21 +156,21 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - Raw JSON does not wrap.
   - Metadata uses two narrow columns inside a narrow sheet.
 - **Acceptance.** A date range and actor filter. Wrapped JSON. One metadata column in the sheet.
-- **Status.** Pending.
+- **Status.** Partly open: #212 (the sheet stacks its metadata and wraps the raw payload). A custom date range and an actor filter are still Pending.
 
 ### R-17 API keys: Revoke only where it will work
 - **Problem.** A non-super-admin sees Revoke on keys owned by others and gets a 403. Revoke also shows
   on keys that are not published.
 - **Acceptance.** Revoke is disabled with the reason for others' keys unless super admin, and hidden on
   revoked keys.
-- **Status.** Pending.
+- **Status.** Open: #213.
 
 ### R-18 Webhook message sheet: loading and error states
 - **Problem.** The sheet only opens once the message has loaded. A deep link shows nothing while it
   loads, and nothing at all on failure.
 - **Acceptance.** The sheet opens at once with a loading state, and shows an error with Retry on
   failure.
-- **Status.** Pending.
+- **Status.** Open: #214.
 
 ### R-19 Exports: S3 branding, less repetition, one status wording
 - **Problem.**
@@ -182,7 +182,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - The guide link is generic.
 - **Acceptance.** An S3 logo on the destination and connections. Overview collapses once there is data.
   One status wording, shown once. The docs link points at S3 exports.
-- **Status.** Pending.
+- **Status.** Partly open: #215 (overview, tags and status wording). The S3 logo needs an asset download approved. The docs link is unverified.
 
 ### R-20 Integration copy: shorter, even cards
 - **Problem.** Descriptions are 46 to 107 characters and mix styles. The disconnect copy is long.
@@ -228,7 +228,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 - **Status.** Pending (verify).
 
 ### R-27 API key created dialog: larger, readable copy button; no close until saved
-- **Status.** Pending (verify).
+- **Status.** Verified: the created-key dialog closes only via "I have saved it" and has a labelled copy button (`ApiKeysPanel.tsx`).
 
 ### R-28 Team: ⋯ menu for edit role and remove; invite states
 - **Status.** Pending (verify).
@@ -303,4 +303,24 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 
 | Task | PR | Status |
 |---|---|---|
-| Task list | this PR | Open |
+| Task list | #198 | Open |
+| R-02 Status colours | #199 | Open |
+| R-03 One overdue rule | #200 | Open |
+| R-04 Hosted invoice actions | #201 | Open |
+| R-05 Cool-off switch | #202 | Open |
+| R-06 Wallet breakdown | #203 | Open |
+| R-07 Portal Load more, zero lines | #204 | Open |
+| R-08 Portal negative balance | #205 | Open |
+| R-09 Preview unit price | #206 | Open |
+| R-10 Charge table columns | #207 | Open |
+| R-11 Price icon | #208 | Open |
+| R-12 Override bucket size | #209 | Open |
+| R-13 True-up needs commitment | #210 | Open |
+| R-15 Cancelled metadata read-only | #211 | Open |
+| R-16 Activity sheet readability | #212 | Open |
+| R-17 API key Revoke gating | #213 | Open |
+| R-18 Webhook sheet states | #214 | Open |
+| R-19 Exports tidy | #215 | Open |
+| Add-on commitments (prior work) | #197 | Open |
+
+**Merging.** None of these is merged. The session's permission check refuses `gh pr merge` ("Merge Without Review"), so each PR is left for a person to merge.
