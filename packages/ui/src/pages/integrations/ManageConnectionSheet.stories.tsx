@@ -42,7 +42,7 @@ type Story = StoryObj<typeof meta>
 
 const screenOf = (canvasElement: HTMLElement) => within(canvasElement.ownerDocument.body)
 
-/** Stripe: rename, sync switches and the webhook address; its keys are write-only. */
+/** Stripe: rename, sync switches (customers too, for Stripe Tax), replaceable keys and the webhook address. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const screen = screenOf(canvasElement)
@@ -62,6 +62,24 @@ export const SavesOnlyChanges: Story = {
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(args.onSave).toHaveBeenCalledOnce())
     await expect(args.onSave).toHaveBeenCalledWith('conn_stripe', { name: 'Stripe (prod)' })
+  },
+}
+
+/** A Stripe key can be replaced; left blank, the stored one is kept and not sent. */
+export const ReplacesAKey: Story = {
+  play: async ({ canvasElement, args }) => {
+    const screen = screenOf(canvasElement)
+    await userEvent.type(await screen.findByLabelText(/^Secret key/), 'sk_live_new')
+    await userEvent.click(screen.getByRole('switch', { name: 'Push customers' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(args.onSave).toHaveBeenCalledOnce())
+    await expect(args.onSave).toHaveBeenCalledWith(
+      'conn_stripe',
+      expect.objectContaining({
+        encrypted_secret_data: { secret_key: 'sk_live_new' },
+        sync_config: expect.objectContaining({ customer: { outbound: true } }),
+      }),
+    )
   },
 }
 
