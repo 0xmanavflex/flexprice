@@ -14,7 +14,7 @@ import {
   useUsageAnalytics,
   UsageWindowSize,
 } from '@fp/query'
-import type { ReportResult, UsageAnalytics } from '@fp/query'
+import type { ReportQuery, ReportResult, UsageAnalytics } from '@fp/query'
 import {
   DEFAULT_INVOICE_QUERY,
   DEFAULT_SUBSCRIPTION_QUERY,
@@ -71,6 +71,10 @@ import type {
  */
 
 const DAY_MS = 86_400_000
+
+// Failed cards show unavailable.
+const useCardReport = (key: string, query: ReportQuery) =>
+  useReport(key, query, { handleErrors: true })
 
 interface RangeSpec extends FilterOption {
   days: number
@@ -295,7 +299,7 @@ export function HomePage({
 
   // This report has no comparison. Sending `compare` is a 400, even for
   // `previous_period`.
-  const activeCustomers = useReport('active_customers', {
+  const activeCustomers = useCardReport('active_customers', {
     shape: 'scalar',
     range: reportRange(windows.current),
   })
@@ -308,12 +312,12 @@ export function HomePage({
   )
   const priorEventsEnd = eventsStart
   const priorEventsStart = new Date(priorEventsEnd.getTime() - 7 * DAY_MS)
-  const eventsReport = useReport('events_volume', {
+  const eventsReport = useCardReport('events_volume', {
     shape: 'timeseries',
     range: reportRange({ start: eventsStart, end: eventsEnd }),
     grain: 'day',
   })
-  const priorEventsReport = useReport('events_volume', {
+  const priorEventsReport = useCardReport('events_volume', {
     shape: 'timeseries',
     range: reportRange({ start: priorEventsStart, end: priorEventsEnd }),
     grain: 'day',
@@ -348,7 +352,7 @@ export function HomePage({
    * Every currency first, for the headline and so the chart can draw one line each.
    */
   const range = reportRange(windows.current)
-  const revenueAll = useReport('invoice_total', {
+  const revenueAll = useCardReport('invoice_total', {
     shape: 'scalar',
     range,
     compare: 'previous_period',
