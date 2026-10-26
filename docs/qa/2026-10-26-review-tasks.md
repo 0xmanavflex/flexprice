@@ -156,7 +156,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - Raw JSON does not wrap.
   - Metadata uses two narrow columns inside a narrow sheet.
 - **Acceptance.** A date range and actor filter. Wrapped JSON. One metadata column in the sheet.
-- **Status.** Partly open: #212 (the sheet stacks its metadata and wraps the raw payload). #219 (custom date range). The actor filter is still Pending.
+- **Status.** Partly open: #212 (the sheet stacks its metadata and wraps the raw payload). #219 (custom date range) and #222 (Person filter, stacked on #219). All parts are in open PRs.
 
 ### R-17 API keys: Revoke only where it will work
 - **Problem.** A non-super-admin sees Revoke on keys owned by others and gets a 403. Revoke also shows
@@ -327,6 +327,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 | R-16 Custom activity range | #219 | Open |
 | R-15 Inherited contracts | #220 | Open |
 | R-01 Plan grant end date (console half) | #221 | Open |
+| R-16 Person filter | #222 (on #219) | Open |
 | Add-on commitments (prior work) | #197 | Open |
 
 **Merging.** None of these is merged. The session's permission check refuses `gh pr merge` ("Merge Without Review"), so each PR is left for a person to merge.
