@@ -12,6 +12,7 @@ import {
   toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
+  withConsumption,
 } from './wallets'
 
 describe('wallet requests', () => {
@@ -232,5 +233,28 @@ describe('toWallet alert settings', () => {
       critical: { threshold: '10', condition: 'below' },
     })
     expect(toWallet({ id: 'wallet_2' }).alertSettings).toBeNull()
+  })
+})
+
+describe('wallet transaction breakdown', () => {
+  it("reads each top-up's draw-down from the debits that name it", () => {
+    const transactions = withConsumption([
+      toWalletTransaction({ id: 'top_1', type: 'credit', creditAmount: '100' }),
+      toWalletTransaction({
+        id: 'deb_1',
+        type: 'debit',
+        description: 'API calls',
+        referenceType: 'INVOICE',
+        referenceId: 'inv_9',
+        metadata: { source: 'usage', count: 3 },
+        consumptionBreakdown: [{ creditTransactionId: 'top_1', credits: '40' }],
+      }),
+    ])
+    expect(transactions[0]?.consumption).toEqual([
+      { id: 'deb_1', product: 'API calls', contract: 'Invoice inv_9', credits: '40' },
+    ])
+    // Only string metadata is kept; no money is derived for the credits.
+    expect(transactions[1]?.metadata).toEqual({ source: 'usage' })
+    expect(transactions[1]?.reference).toEqual({ type: 'INVOICE', id: 'inv_9' })
   })
 })
