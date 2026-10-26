@@ -99,10 +99,29 @@
       "usedBy": [],
       "story": null
     },
+    "ActivityEventSheet": {
+      "file": "src/pages/customers/CustomerActivityView.tsx",
+      "layer": "surface",
+      "composes": [
+        "CodeIcon",
+        "CopyValue",
+        "CreditCardIcon",
+        "EmptyState",
+        "ErrorState",
+        "Pill",
+        "Section",
+        "Sheet",
+        "UserIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerActivityView.stories.tsx"
+    },
     "ActivityLog": {
       "file": "src/compositions/detail/ActivityLog.tsx",
       "layer": "composition",
       "composes": [
+        "ArrowUpRightIcon",
         "Section"
       ],
       "usedBy": [
@@ -114,6 +133,7 @@
       "file": "src/compositions/detail/ActivityLog.tsx",
       "layer": "composition",
       "composes": [
+        "ArrowUpRightIcon",
         "Section"
       ],
       "usedBy": [
@@ -528,6 +548,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityLog",
+        "ActivitySection",
         "ApiCard",
         "CheckoutLinkPanel",
         "CheckoutReturnView",
@@ -1369,6 +1391,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "PageShell"
       ],
       "story": null
@@ -1776,6 +1800,8 @@
         "CopyIcon"
       ],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerGrid"
       ],
@@ -1921,6 +1947,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "PageShell",
         "PaymentGrid",
         "PortalOverview",
@@ -2044,6 +2072,24 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "CustomerActivityView": {
+      "file": "src/pages/customers/CustomerActivityView.tsx",
+      "layer": "surface",
+      "composes": [
+        "CodeIcon",
+        "CopyValue",
+        "CreditCardIcon",
+        "EmptyState",
+        "ErrorState",
+        "Pill",
+        "Section",
+        "Sheet",
+        "UserIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerActivityView.stories.tsx"
     },
     "CustomerAnalyticsView": {
       "file": "src/pages/customers/CustomerAnalyticsView.tsx",
@@ -2805,9 +2851,11 @@
         "SceneIllustration"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "AddonSubscriptionsView",
         "CostMarginCard",
         "CouponRedemptionsView",
+        "CustomerActivityView",
         "CustomerAnalyticsView",
         "CustomerDetail",
         "CustomerTaxSection",
@@ -3084,7 +3132,9 @@
       "usedBy": [
         "AccessProvider",
         "AccessScope",
+        "ActivityEventSheet",
         "CheckoutLinkPanel",
+        "CustomerActivityView",
         "CustomerAnalyticsView",
         "EntityAlertDialog",
         "EntityList",
@@ -5608,11 +5658,13 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "CatalogStatusBadge",
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
         "CreditNoteDetailView",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",
         "DataExportDetail",
@@ -6636,6 +6688,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
         "ActivityLog",
         "ActivitySection",
         "AddonSubscriptionsView",
@@ -6645,6 +6698,7 @@
         "CostMarginCard",
         "CouponRedemptionsView",
         "CreditGrantTable",
+        "CustomerActivityView",
         "CustomerAnalyticsView",
         "CustomerDetail",
         "CustomerEntitlementUsage",
@@ -6838,8 +6892,10 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
         "ChargeSheet",
         "ConnectIntegrationSheet",
+        "CustomerActivityView",
         "CustomerEventsGrid",
         "EventDetailSheet",
         "ManageConnectionSheet",
@@ -7935,6 +7991,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerGrid",
         "InvoiceDetailView",
         "ShellAccount",
@@ -7997,6 +8055,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",
         "InvoiceDetailView",
@@ -9104,6 +9164,13 @@
       "uses": [
         "CustomerPortalView",
         "PortalNotice"
+      ]
+    },
+    "./src/pages/customers/CustomerActivityView.stories.tsx": {
+      "title": "Customer created",
+      "component": "CustomerActivityView",
+      "uses": [
+        "CustomerActivityView"
       ]
     },
     "./src/pages/customers/CustomerAnalyticsView.stories.tsx": {
@@ -10227,6 +10294,7 @@
       "pattern": "Detail",
       "route": "/customers/$customerId",
       "uses": [
+        "ActivityEventSheet",
         "ConfirmDialog",
         "CustomerDetail",
         "CustomerEntitlementUsage",

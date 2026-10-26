@@ -440,15 +440,35 @@ export function CustomerActivityView({
         </div>
       </Section>
 
-      <Sheet
-        open={selected !== null}
-        onOpenChange={(open) => (open ? undefined : setSelectedId(null))}
-      >
-        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-          {selected ? <EventDetails row={selected} onNavigate={onNavigate} /> : null}
-        </SheetContent>
-      </Sheet>
+      <ActivityEventSheet
+        row={selected}
+        onClose={() => setSelectedId(null)}
+        onNavigate={onNavigate}
+      />
     </>
+  )
+}
+
+/**
+ * One event's details: subject, state after the change, request metadata and,
+ * on request, the raw payload. Shared by the Activity tab and the overview's
+ * Activity card, so a click on either shows the same thing.
+ */
+export function ActivityEventSheet({
+  row,
+  onClose,
+  onNavigate,
+}: {
+  row: ActivityRowView | null
+  onClose: () => void
+  onNavigate?: ((href: string) => void) | undefined
+}) {
+  return (
+    <Sheet open={row !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+        {row ? <EventDetails row={row} onNavigate={onNavigate} /> : null}
+      </SheetContent>
+    </Sheet>
   )
 }
 

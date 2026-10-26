@@ -522,6 +522,7 @@ export type {
 export {
   ACTIVITY_PAGE_SIZES,
   ACTIVITY_RANGES,
+  ActivityEventSheet,
   CustomerActivityView,
   CustomerActivityViewProvenance,
 } from './customers/CustomerActivityView'

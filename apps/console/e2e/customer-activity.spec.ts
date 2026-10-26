@@ -1,3 +1,4 @@
+import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
 /**
@@ -25,7 +26,7 @@ test.beforeEach(async ({ context, page }) => {
   )
 })
 
-const events = (page: import('@playwright/test').Page) =>
+const events = (page: Page) =>
   page.getByRole('list', { name: 'Activity events' }).getByRole('listitem')
 
 test('lists who did what to which record, with the zone named', async ({ page }) => {
@@ -88,4 +89,16 @@ test('the overview card links to the full trail', async ({ page }) => {
   await page.getByRole('button', { name: 'View all activity' }).click()
   await expect(page).toHaveURL(/tab=activity/)
   await expect(page.getByRole('list', { name: 'Activity events' })).toBeVisible()
+})
+
+test('the overview card shows events at a glance and opens one in the drawer', async ({ page }) => {
+  await page.goto(`/customers/${CUSTOMER}`)
+  const card = page.getByRole('region', { name: 'Activity history' })
+  await expect(card.getByText('By demo@flexprice.io · Dashboard')).toBeVisible()
+  // The card holds no label/value rows: the details are a click away.
+  await expect(card.getByText('Tax treatment')).toHaveCount(0)
+  await card.getByRole('button', { name: 'Customer created' }).click()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.getByText('Event metadata')).toBeVisible()
+  await expect(sheet.getByText('Tax treatment')).toBeVisible()
 })

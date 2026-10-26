@@ -19,6 +19,7 @@ import {
   SAMPLE_EVENT_DURATION_SECONDS,
 } from '@fp/query'
 import {
+  ActivityEventSheet,
   CUSTOMER_TABS,
   CustomerDetail,
   CustomerEntitlementUsage,
@@ -33,7 +34,7 @@ import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { ConfirmDialog, EmptyState, Section } from '@fp/ui/compositions'
 import { toActivityLogEntry } from '@/pages/shared/activityLog'
-import { CustomerActivityPanel } from './CustomerActivityPanel'
+import { CustomerActivityPanel, toActivityRow } from './CustomerActivityPanel'
 import { detailGate } from '@/pages/shared/detailGate'
 import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
 
@@ -82,6 +83,9 @@ export function CustomerDetailPage({
   // writes several rows (contract, invoice, payment), so 20 could push the
   // contract itself off the rail.
   const activity = useActivityLog({ customerId, limit: 50 })
+  // The overview card's event open in the details drawer.
+  const [openActivityId, setOpenActivityId] = useState<string | null>(null)
+  const openActivity = activity.data?.find((entry) => entry.id === openActivityId) ?? null
   const integrationLinks = useCustomerIntegrationLinks(customerId)
   const integrations = useIntegrations()
   const linkIntegration = useLinkCustomerIntegration(customerId)
@@ -203,9 +207,17 @@ export function CustomerDetailPage({
         activity={
           activity.data
             ? activity.data.map((entry) => {
-                const row = toActivityLogEntry(entry)
-                if (entry.entityType !== 'customer' || !customer.data.name) return row
-                return { ...row, record: customer.data.name }
+                const row = {
+                  ...toActivityLogEntry(entry),
+                  onSelect: () => setOpenActivityId(entry.id),
+                }
+                // On its own page the customer is the subject already: the
+                // line is its state ("Taxable · Published"), not its name.
+                if (entry.entityType === 'customer' && entry.entityId === customerId) {
+                  const { record: _record, ...rest } = row
+                  return rest
+                }
+                return row
               })
             : []
         }
@@ -360,6 +372,11 @@ export function CustomerDetailPage({
         error={remove.error ? 'Could not archive the customer. Try again.' : null}
       />
       {invoiceRows.dialogs}
+      <ActivityEventSheet
+        row={openActivity ? toActivityRow(openActivity, customer.data.name) : null}
+        onClose={() => setOpenActivityId(null)}
+        onNavigate={(href) => void navigate({ to: href })}
+      />
     </>
   )
 }

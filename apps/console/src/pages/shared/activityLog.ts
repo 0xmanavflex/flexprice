@@ -1,6 +1,5 @@
 import {
   activityActor,
-  activityByline,
   activitySourceLabel,
   describeActivity,
   type ActivityEntry,
@@ -31,8 +30,6 @@ function zoneName(date: Date): string {
   return part?.value ?? 'UTC'
 }
 
-const stamp = activityStamp
-
 const ENTITY_PATH: Record<string, string> = {
   customer: '/customers',
   subscription: '/contracts',
@@ -50,22 +47,65 @@ export function activityEntityHref(entry: ActivityEntry): string | undefined {
   return `${prefix}/${encodeURIComponent(entry.entityId)}`
 }
 
-/** One rail row: title, local time, the type-specific sentence, and the person. */
+/**
+ * The card's time: day and minute, at a glance ("24 Oct · 18:03"), with the
+ * year only when it is not this one. The zone-named time is the hover title,
+ * and the details drawer shows it in full.
+ */
+export function activityCompactStamp(date: Date, now: Date = new Date()): string {
+  const sameYear = date.getFullYear() === now.getFullYear()
+  // Three-letter months everywhere ("Sep", not en-GB's "Sept"), day first.
+  const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date)
+  const day = `${date.getDate()} ${month}${sameYear ? '' : ` ${date.getFullYear()}`}`
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date)
+  return `${day} · ${time}`
+}
+
+/** The values the card's one summary line keeps: states, never amounts or ids. */
+const SUMMARY_LABELS = new Set(['Tax treatment', 'Status'])
+
+/**
+ * "By …", subtle and short: a person with the channel ("Subrat · Dashboard"),
+ * an API key with its kind ("billing prod · API key"), and the system by the
+ * channel it came through ("Workflow").
+ */
+export function activityCardActor(entry: ActivityEntry): string {
+  const source = activitySourceLabel(entry.source)
+  switch (entry.actorType) {
+    case 'system':
+      return source || activityActor(entry)
+    case 'api_key':
+      return `${entry.actorLabel || 'Unnamed key'} · API key`
+    case 'customer':
+      return `${entry.actorLabel || 'Customer'} · Customer`
+    default:
+      return [activityActor(entry), source].filter(Boolean).join(' · ')
+  }
+}
+
+/**
+ * One card row: title, time, the affected record with a one-line state
+ * summary ("INV-202610-00210 · Finalized", "Taxable · Published"), and who
+ * did it. Everything else (fields, ids, request metadata) is in the drawer.
+ */
 export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
   const facts = describeActivity(entry)
-  // Who acted, then the channel: always both, so "By Workflow" is never
-  // read as the actor when the system did it through the workflow.
-  const who = activityByline(entry) ?? activityActor(entry)
-  const source = activitySourceLabel(entry.source)
-  const by = [who, source].filter(Boolean).join(' · ')
+  const states = (facts.fields ?? []).filter((field) => SUMMARY_LABELS.has(field.label))
+  const values = states.length > 0 ? states : (facts.fields ?? []).slice(0, 1)
+  const summary = values.map((field) => field.value).join(' · ')
   const href = activityEntityHref(entry)
   return {
     id: entry.id,
     title: entry.title,
-    at: entry.occurredAt ? stamp(entry.occurredAt) : '',
+    at: entry.occurredAt ? activityCompactStamp(entry.occurredAt) : '',
+    ...(entry.occurredAt ? { atTitle: activityStamp(entry.occurredAt) } : {}),
     ...(facts.record ? { record: facts.record } : {}),
-    ...(facts.fields ? { fields: facts.fields } : {}),
-    ...(by ? { by } : {}),
+    ...(summary ? { summary } : {}),
+    by: activityCardActor(entry),
     ...(href ? { href } : {}),
   }
 }

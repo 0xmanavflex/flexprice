@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { ActivityField } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { Button } from '@ui/components/primitives/button'
+import { ArrowUpRightIcon } from '@ui/icons'
 import { Section } from '../layout/Section'
 
 export const ActivityLogProvenance = provenance({
@@ -13,8 +14,10 @@ export const ActivityLogProvenance = provenance({
 export interface ActivityLogEntry {
   id: string | number
   title: string
-  /** Full date and time, already formatted ("Sep 28, 2026, 3:42 PM"). */
+  /** When, already formatted: compact on the card ("24 Oct · 18:03"). */
   at: string
+  /** The full, zone-named time, shown on hover. */
+  atTitle?: string | undefined
   /** The record that was acted on, highlighted before the summary. */
   record?: string | undefined
   /** What happened, muted. */
@@ -32,6 +35,8 @@ export interface ActivityLogEntry {
   href?: string | undefined
   /** One action on this entry, e.g. reverting to a price version. */
   action?: ReactNode
+  /** Opens the event's details (a drawer); the title becomes the control. */
+  onSelect?: (() => void) | undefined
 }
 
 /**
@@ -53,7 +58,15 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
           />
           <div className="min-w-0 space-y-0.5">
             <p className="text-sm leading-5 font-medium">
-              {entry.href ? (
+              {entry.onSelect ? (
+                <Button
+                  variant="link"
+                  onClick={entry.onSelect}
+                  className="text-foreground h-auto p-0 text-sm font-medium"
+                >
+                  {entry.title}
+                </Button>
+              ) : entry.href ? (
                 <a href={entry.href} className="hover:underline">
                   {entry.title}
                 </a>
@@ -61,7 +74,12 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
                 entry.title
               )}
             </p>
-            <p className="text-muted-foreground text-xs tabular-nums">{entry.at}</p>
+            <p
+              className="text-muted-foreground text-xs tabular-nums"
+              {...(entry.atTitle ? { title: entry.atTitle } : {})}
+            >
+              {entry.at}
+            </p>
             {entry.record || entry.summary ? (
               <p className="text-muted-foreground pt-0.5 text-[13px] leading-5">
                 {entry.record ? (
@@ -73,7 +91,7 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
                     <span className="text-foreground font-medium">{entry.record}</span>
                   )
                 ) : null}
-                {entry.record && entry.summary ? ' ' : null}
+                {entry.record && entry.summary ? ' · ' : null}
                 {entry.summary}
               </p>
             ) : null}
@@ -128,13 +146,9 @@ export function ActivitySection({
       {...(onViewAll
         ? {
             action: (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onViewAll}
-                aria-label="View all activity"
-              >
+              <Button variant="ghost" size="sm" onClick={onViewAll} aria-label="View all activity">
                 View all
+                <ArrowUpRightIcon aria-hidden />
               </Button>
             ),
           }
