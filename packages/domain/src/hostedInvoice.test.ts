@@ -359,6 +359,27 @@ describe('sumDecimals', () => {
   })
 })
 
+describe('zero-amount lines', () => {
+  it('leaves out a line that charged nothing', () => {
+    const invoice = toHostedInvoice({
+      invoice: {
+        currency: 'usd',
+        line_items: [
+          {
+            id: 'l1',
+            display_name: 'API calls',
+            amount: '0.00',
+            quantity: '0',
+            price_type: 'USAGE',
+          },
+          { id: 'l2', display_name: 'Seats', amount: 12, quantity: '1', price_type: 'FIXED' },
+        ],
+      },
+    })
+    expect(invoice.lines.map((line) => line.name)).toEqual(['Seats'])
+  })
+})
+
 describe('hostedInvoiceState with nothing left to pay', () => {
   it('reads as paid when nothing is owed, as the console does', () => {
     expect(hostedInvoiceState('FINALIZED', 'PENDING', false)).toBe('paid')

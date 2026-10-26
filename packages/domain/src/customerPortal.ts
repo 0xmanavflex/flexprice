@@ -246,16 +246,19 @@ export function toPortalInvoice(wire: unknown, now: Date = new Date()): PortalIn
     total: amount(inv['total']),
     amountPaid: amount(inv['amount_paid']),
     amountDue: amount(inv['amount_remaining'] ?? inv['amount_due']),
-    lines: list(inv['line_items']).map((line) => {
-      const priceType = text(line['price_type']).toUpperCase()
-      return {
-        id: text(line['id']),
-        name: text(line['display_name']) || text(line['plan_display_name']) || 'Charge',
-        kind: priceType === 'USAGE' ? 'Usage' : priceType === 'FIXED' ? 'Fixed' : null,
-        quantity: text(line['quantity']) || '1',
-        amount: amount(line['amount']),
-      }
-    }),
+    // A line that charged nothing tells the customer nothing: left out.
+    lines: list(inv['line_items'])
+      .filter((line) => chargedSomething(line['amount']))
+      .map((line) => {
+        const priceType = text(line['price_type']).toUpperCase()
+        return {
+          id: text(line['id']),
+          name: text(line['display_name']) || text(line['plan_display_name']) || 'Charge',
+          kind: priceType === 'USAGE' ? 'Usage' : priceType === 'FIXED' ? 'Fixed' : null,
+          quantity: text(line['quantity']) || '1',
+          amount: amount(line['amount']),
+        }
+      }),
   }
 }
 
@@ -401,11 +404,28 @@ export function toPortalWalletTransactions(
   return { items, total: total || items.length }
 }
 
+/** Credits added (`in`) and used (`out`), in money and credits. */
+export type PortalWalletFlows = Record<
+  PortalTransactionDirection,
+  { amount: Money; credits: string }
+>
+
+/**
+ * A wallet's credits added and used over a window, and how many of the
+ * window's transactions they cover: `counted < total` means only the latest
+ * `counted` were summed.
+ */
+export interface PortalWalletTotals {
+  flows: PortalWalletFlows
+  counted: number
+  total: number
+}
+
 /** Credits added and used across some transactions: exact, in money and credits. */
 export function walletFlows(
   transactions: readonly PortalWalletTransaction[],
   currency: string,
-): Record<PortalTransactionDirection, { amount: Money; credits: string }> {
+): PortalWalletFlows {
   const sum = (direction: PortalTransactionDirection) => {
     const rows = transactions.filter((t) => t.direction === direction && !t.pending)
     return {
@@ -930,6 +950,12 @@ function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {}
+}
+
+/** Whether an amount (string or number) is non-zero: `"0.00"` and `0` are not. */
+function chargedSomething(value: unknown): boolean {
+  const amount = typeof value === 'number' ? String(value) : typeof value === 'string' ? value : ''
+  return /[1-9]/.test(amount)
 }
 
 function text(value: unknown): string {

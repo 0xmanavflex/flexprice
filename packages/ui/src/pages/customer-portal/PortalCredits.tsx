@@ -3,10 +3,10 @@ import {
   type PortalTopUp,
   type PortalTransactionDirection,
   type PortalWallet,
+  type PortalWalletTotals,
   absoluteMoney,
   creditsCost,
   isNegativeMoney,
-  walletFlows,
 } from '@fp/domain'
 import { PlusIcon, WalletIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
@@ -149,8 +149,6 @@ function WalletPanel({
   const money = (value: PortalWallet['balance']) => (
     <Money value={value} {...(locale ? { locale } : {})} />
   )
-  const transactions = data.transactions.status === 'ready' ? data.transactions.data.items : null
-  const flows = transactions ? walletFlows(transactions, wallet.currency) : null
   const since = periodStart ? ` since ${formatDate(periodStart, locale)}` : ''
   const on = wallet.autoTopup?.enabled ?? false
 
@@ -232,19 +230,54 @@ function WalletPanel({
             credits={formatNumber(wallet.credits, locale)}
           />
         )}
-        <Figure
-          label={`Added${since}`}
-          tone="text-success-foreground dark:text-success"
-          value={flows ? money(flows.in.amount) : null}
-          credits={flows ? formatNumber(flows.in.credits, locale) : null}
-        />
-        <Figure
-          label={`Used${since}`}
-          value={flows ? money(flows.out.amount) : null}
-          credits={flows ? formatNumber(flows.out.credits, locale) : null}
-        />
+        {/* Every transaction in the period, not only the history's loaded pages. */}
+        {data.flows.status === 'ready' ? (
+          <Flows totals={data.flows.data} since={since} money={money} locale={locale} />
+        ) : (
+          <div className="sm:col-span-2">
+            <Loaded load={data.flows} label="credits added and used" rows={2}>
+              {() => null}
+            </Loaded>
+          </div>
+        )}
       </div>
     </section>
+  )
+}
+
+/** Added and Used; when the window was too long to read whole, says how much they cover. */
+function Flows({
+  totals,
+  since,
+  money,
+  locale,
+}: {
+  totals: PortalWalletTotals
+  since: string
+  money: (value: PortalWallet['balance']) => ReactNode
+  locale: string | undefined
+}) {
+  const { flows, counted, total } = totals
+  const note =
+    counted < total
+      ? `From the latest ${formatNumber(String(counted), locale)} of ${formatNumber(String(total), locale)} transactions`
+      : null
+  return (
+    <>
+      <Figure
+        label={`Added${since}`}
+        tone="text-success-foreground dark:text-success"
+        value={money(flows.in.amount)}
+        credits={formatNumber(flows.in.credits, locale)}
+        note={note}
+      />
+      <Figure
+        label={`Used${since}`}
+        value={money(flows.out.amount)}
+        credits={formatNumber(flows.out.credits, locale)}
+        note={note}
+      />
+    </>
   )
 }
 
@@ -254,6 +287,7 @@ function Figure({
   credits,
   unit = 'credits',
   tone,
+  note = null,
   big = false,
 }: {
   label: string
@@ -262,6 +296,7 @@ function Figure({
   /** Words after the credit count: "credits", or "credits owed" below zero. */
   unit?: string
   tone?: string
+  note?: string | null
   big?: boolean
 }) {
   return (
@@ -279,6 +314,7 @@ function Figure({
       <p className="text-muted-foreground text-xs tabular-nums">
         {credits === null ? ' ' : `${credits} ${unit}`}
       </p>
+      {note ? <p className="text-muted-foreground text-xs">{note}</p> : null}
     </div>
   )
 }
@@ -442,13 +478,35 @@ function Transactions({
     <Loaded load={data.transactions} label="transactions" rows={5}>
       {({ items, total }) => {
         const shown = kind === 'all' ? items : items.filter((t) => t.direction === kind)
+        // Filtering Added or Used works on the pages loaded so far; while more remain,
+        // "Load more" stays, even when none of those loaded match.
+        const more =
+          items.length < total ? (
+            <div className="border-t px-6 py-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground h-8 px-2"
+                onClick={onShowMore}
+              >
+                Load more
+              </Button>
+            </div>
+          ) : null
         if (shown.length === 0) {
           return (
-            <PortalEmpty
-              icon={<WalletIcon />}
-              title="Nothing here yet"
-              description="Credits you add or use will be listed here."
-            />
+            <>
+              <PortalEmpty
+                icon={<WalletIcon />}
+                title="Nothing here yet"
+                description={
+                  more
+                    ? 'None in the transactions loaded so far. Load more to look further back.'
+                    : 'Credits you add or use will be listed here.'
+                }
+              />
+              {more}
+            </>
           )
         }
         return (
@@ -472,18 +530,7 @@ function Transactions({
                 />
               ))}
             </ul>
-            {items.length < total ? (
-              <div className="border-t px-6 py-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground h-8 px-2"
-                  onClick={onShowMore}
-                >
-                  Show more
-                </Button>
-              </div>
-            ) : null}
+            {more}
           </>
         )
       }}

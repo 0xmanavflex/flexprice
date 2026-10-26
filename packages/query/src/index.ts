@@ -717,6 +717,8 @@ export {
   usePortalSpend,
   usePortalSubscriptions,
   usePortalTopUps,
+  usePortalWalletFlows,
+  usePortalWalletTransactionPages,
   usePortalWalletTransactions,
   usePortalWallets,
   useRemovePortalPaymentMethod,
