@@ -587,6 +587,7 @@ function EntitlementsSection({ planId }: { planId: string }) {
         ) : (
           <EntitlementCreateForm
             features={options}
+            grantModel
             onSubmit={(draft: CreateEntitlement) =>
               create.mutate(
                 {

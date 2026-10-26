@@ -127,6 +127,53 @@ export interface Entitlement {
  * `number | null` where null is a deliberate choice ("unlimited"), so the drawer
  * distinguishes an unset field from an infinite allowance.
  */
+/**
+ * A metered allowance as V1 grants it on a plan or add-on: a quota (or
+ * unlimited) per window, the window being the billing period or an hour, day
+ * or week. `quota` is a decimal string; null is a deliberate "unlimited".
+ * Hourly, daily and weekly windows open on first use or on the calendar
+ * boundary; stacking says whether allowances on the same feature share one
+ * pool (additive) or each keep their own (parallel).
+ */
+export const meteredGrantSchema = z
+  .object({
+    measure: z.enum([EntitlementGrantMeasure.Quantity, EntitlementGrantMeasure.Amount]),
+    quota: z.string().trim().nullable(),
+    unit: z.enum([
+      EntitlementGrantDurationUnit.SubscriptionPeriod,
+      EntitlementGrantDurationUnit.Hour,
+      EntitlementGrantDurationUnit.Day,
+      EntitlementGrantDurationUnit.Week,
+    ]),
+    allocation: z.enum([
+      EntitlementGrantAllocationBehavior.FirstUsage,
+      EntitlementGrantAllocationBehavior.UnitStart,
+    ]),
+    aggregation: z.enum([EntitlementAggregationMode.Additive, EntitlementAggregationMode.Parallel]),
+  })
+  .superRefine((grant, ctx) => {
+    if (grant.quota === null) return
+    if (!/^\d+(\.\d+)?$/.test(grant.quota) || !(Number(grant.quota) > 0)) {
+      ctx.addIssue({ code: 'custom', path: ['quota'], message: 'Enter a value above zero' })
+    }
+  })
+
+export type MeteredGrant = z.infer<typeof meteredGrantSchema>
+
+/**
+ * V1's starting point for a metered allowance: quantity, a daily window that
+ * opens on first use, additive. The quota is left for the person to type.
+ */
+export function emptyMeteredGrant(): MeteredGrant {
+  return {
+    measure: EntitlementGrantMeasure.Quantity,
+    quota: '',
+    unit: EntitlementGrantDurationUnit.Day,
+    allocation: EntitlementGrantAllocationBehavior.FirstUsage,
+    aggregation: EntitlementAggregationMode.Additive,
+  }
+}
+
 export const createEntitlementSchema = z.discriminatedUnion('featureType', [
   z.object({
     featureId: z.string().min(1, 'Choose a feature'),
@@ -149,6 +196,11 @@ export const createEntitlementSchema = z.discriminatedUnion('featureType', [
       ])
       .nullable(),
     isSoftLimit: z.boolean(),
+    /**
+     * When set, the grant is sent instead of `usageLimit` / `usageResetPeriod`,
+     * as V1 creates plan and add-on entitlements.
+     */
+    grant: meteredGrantSchema.optional(),
   }),
   z.object({
     featureId: z.string().min(1, 'Choose a feature'),
@@ -263,6 +315,8 @@ export const editEntitlementSchema = z
       )
       .optional(),
     clearGrantConfig: z.boolean().optional(),
+    /** The whole allowance, as the grant form edits it; sent instead of the fields above. */
+    grant: meteredGrantSchema.optional(),
   })
   .superRefine((edit, ctx) => {
     const hasGrantField =
@@ -293,8 +347,67 @@ export const editEntitlementSchema = z
 
 export type EditEntitlement = z.infer<typeof editEntitlementSchema>
 
-/** An edit draft seeded from an existing entitlement, so the form opens on its values. */
+/**
+ * A metered entitlement's allowance in the grant model, or null when it has no
+ * grant config (an older usage-limit entitlement). As the API reads it: grant
+ * config with no quota is an unlimited allowance.
+ */
+export function entitlementGrant(entitlement: Entitlement): MeteredGrant | null {
+  const hasGrant =
+    Boolean(entitlement.grantQuota) ||
+    entitlement.grantDurationValue != null ||
+    Boolean(entitlement.grantMeasure) ||
+    Boolean(entitlement.grantDurationUnit)
+  if (entitlement.featureType !== FeatureType.Metered || !hasGrant) return null
+  return {
+    measure: entitlement.grantMeasure ?? EntitlementGrantMeasure.Quantity,
+    quota: entitlement.grantQuota ?? null,
+    unit: entitlement.grantDurationUnit ?? EntitlementGrantDurationUnit.SubscriptionPeriod,
+    allocation: entitlement.grantAllocationBehavior ?? EntitlementGrantAllocationBehavior.FirstUsage,
+    aggregation: entitlement.aggregationMode ?? EntitlementAggregationMode.Additive,
+  }
+}
+
+/**
+ * A metered entitlement's allowance as a decimal string, or null when it is
+ * unlimited: the grant quota when it has grant config, else the usage limit.
+ */
+export function meteredAllowance(entitlement: Entitlement): string | null {
+  const grant = entitlementGrant(entitlement)
+  if (grant) return grant.quota
+  return entitlement.usageLimit === null ? null : String(entitlement.usageLimit)
+}
+
+const GRANT_WINDOW_LABEL: Record<EntitlementGrantDurationUnit, string> = {
+  [EntitlementGrantDurationUnit.SubscriptionPeriod]: 'Every billing period',
+  [EntitlementGrantDurationUnit.Hour]: 'Hourly',
+  [EntitlementGrantDurationUnit.Day]: 'Daily',
+  [EntitlementGrantDurationUnit.Week]: 'Weekly',
+}
+
+/** "Unlimited" or "10,000": a metered allowance for a table cell. */
+export function meteredAllowanceLabel(entitlement: Entitlement): string {
+  const allowance = meteredAllowance(entitlement)
+  if (allowance === null) return 'Unlimited'
+  const [whole = '0', fraction] = allowance.split('.')
+  return BigInt(whole).toLocaleString('en-US') + (fraction ? `.${fraction}` : '')
+}
+
+/** How often a metered allowance renews, or null when it has no reset set. */
+export function meteredResetLabel(entitlement: Entitlement): string | null {
+  const grant = entitlementGrant(entitlement)
+  if (grant) return GRANT_WINDOW_LABEL[grant.unit]
+  return entitlement.usageResetPeriod ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod] : null
+}
+
+/**
+ * An edit draft seeded from an existing entitlement, so the form opens on its
+ * values. A metered entitlement with grant config opens as a grant, edited the
+ * way it was created.
+ */
 export function entitlementToEdit(entitlement: Entitlement): EditEntitlement {
+  const grant = entitlementGrant(entitlement)
+  if (grant) return { grant }
   return {
     ...(entitlement.usageLimit !== null ? { usageLimit: entitlement.usageLimit } : {}),
     ...(entitlement.usageResetPeriod ? { usageResetPeriod: entitlement.usageResetPeriod } : {}),
@@ -302,15 +415,5 @@ export function entitlementToEdit(entitlement: Entitlement): EditEntitlement {
     ...(entitlement.staticValue !== null ? { staticValue: entitlement.staticValue } : {}),
     ...(entitlement.isEnabled !== null ? { isEnabled: entitlement.isEnabled } : {}),
     ...(entitlement.configValue ? { configValue: entitlement.configValue } : {}),
-    ...(entitlement.grantQuota ? { grantQuota: entitlement.grantQuota } : {}),
-    ...(entitlement.grantMeasure ? { grantMeasure: entitlement.grantMeasure } : {}),
-    ...(entitlement.grantDurationUnit ? { grantDurationUnit: entitlement.grantDurationUnit } : {}),
-    ...(entitlement.grantDurationValue != null
-      ? { grantDurationValue: entitlement.grantDurationValue }
-      : {}),
-    ...(entitlement.grantAllocationBehavior
-      ? { grantAllocationBehavior: entitlement.grantAllocationBehavior }
-      : {}),
-    ...(entitlement.aggregationMode ? { aggregationMode: entitlement.aggregationMode } : {}),
   }
 }

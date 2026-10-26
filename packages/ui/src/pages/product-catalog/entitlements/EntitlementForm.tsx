@@ -10,6 +10,8 @@ import {
   createEntitlementSchema,
   editEntitlementSchema,
   emptyEntitlement,
+  emptyMeteredGrant,
+  type MeteredGrant,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
@@ -19,6 +21,7 @@ import { FormActions } from '@ui/compositions/forms/FormActions'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { provenance } from '@ui/provenance'
 import { FeatureTypeGlyph } from '../../shared/cells'
+import { GrantAllowanceFields } from './GrantAllowanceFields'
 import { MeteredEntitlementFields } from './MeteredEntitlementFields'
 
 /**
@@ -89,6 +92,21 @@ export interface EntitlementCreateFormProps extends SharedProps {
   /** Opens on a draft not yet saved, e.g. a staged entitlement being edited. */
   defaultValue?: CreateEntitlement | undefined
   onSubmit: (entitlement: CreateEntitlement) => void
+  /**
+   * A metered allowance as a grant (value type, value, window, window start,
+   * stacking), as V1 grants it on plans and add-ons. Off, a metered feature
+   * asks for the older usage limit and reset period, which a contract's own
+   * entitlement still uses.
+   */
+  grantModel?: boolean
+}
+
+/** A fresh draft for the feature, with an empty grant when it is metered and granted. */
+const freshDraft = (id: string, type: FeatureType, grantModel: boolean): CreateEntitlement => {
+  const draft = emptyEntitlement(id, type)
+  return grantModel && draft.featureType === FeatureType.Metered
+    ? { ...draft, grant: emptyMeteredGrant() }
+    : draft
 }
 
 export function EntitlementCreateForm({
@@ -100,14 +118,16 @@ export function EntitlementCreateForm({
   submitError = null,
   submitLabel,
   usagePrice,
+  grantModel = false,
 }: EntitlementCreateFormProps) {
   const form = useCalmForm<CreateEntitlement>({
     resolver: standardSchemaResolver(createEntitlementSchema) as Resolver<CreateEntitlement>,
     defaultValues:
       defaultValue ??
-      emptyEntitlement(
+      freshDraft(
         defaultFeatureId ?? '',
         features.find((option) => option.id === defaultFeatureId)?.type ?? FeatureType.Metered,
+        grantModel,
       ),
   })
   const [configText, setConfigText] = useState(() =>
@@ -121,12 +141,14 @@ export function EntitlementCreateForm({
   const featureType = form.watch('featureType')
   const feature = features.find((option) => option.id === featureId)
   const errors = form.formState.errors
+  const grant = form.watch('grant' as never) as unknown as MeteredGrant | undefined
+  const grantErrors = (errors as { grant?: { quota?: { message?: string } } }).grant
 
   const choose = (id: string) => {
     const next = features.find((option) => option.id === id)
     setConfigText('{}')
     setConfigError(null)
-    form.reset(emptyEntitlement(id, next?.type ?? FeatureType.Metered))
+    form.reset(freshDraft(id, next?.type ?? FeatureType.Metered, grantModel))
   }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -172,7 +194,22 @@ export function EntitlementCreateForm({
         )}
       </Field>
 
-      {feature && featureType === FeatureType.Metered ? (
+      {feature && featureType === FeatureType.Metered && grant ? (
+        <GrantAllowanceFields
+          value={grant}
+          onChange={(next) =>
+            form.setValue('grant' as never, next as never, {
+              shouldValidate: form.formState.isSubmitted,
+            })
+          }
+          unit={feature.unit}
+          quotaError={grantErrors?.quota?.message}
+          disabled={isSubmitting}
+          usagePrice={usagePrice}
+        />
+      ) : null}
+
+      {feature && featureType === FeatureType.Metered && !grant ? (
         <MeteredEntitlementFields
           limit={form.watch('usageLimit' as never) as unknown as number | null | undefined}
           unlimited={form.watch('usageLimit' as never) === null}
@@ -286,6 +323,7 @@ export function EntitlementEditForm({
   )
   const [configError, setConfigError] = useState<string | null>(null)
   const errors = form.formState.errors
+  const grant = form.watch('grant')
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     if (feature.type === FeatureType.Config) {
@@ -307,7 +345,20 @@ export function EntitlementEditForm({
         {({ id }) => <Input id={id} value={feature.name} readOnly disabled />}
       </Field>
 
-      {feature.type === FeatureType.Metered ? (
+      {feature.type === FeatureType.Metered && grant ? (
+        <GrantAllowanceFields
+          value={grant}
+          onChange={(next) =>
+            form.setValue('grant', next, { shouldValidate: form.formState.isSubmitted })
+          }
+          unit={feature.unit}
+          quotaError={errors.grant?.quota?.message}
+          disabled={isSubmitting}
+          usagePrice={usagePrice}
+        />
+      ) : null}
+
+      {feature.type === FeatureType.Metered && !grant ? (
         <MeteredEntitlementFields
           limit={form.watch('usageLimit')}
           unlimited={form.watch('usageLimit') == null}

@@ -117,14 +117,20 @@ export {
   UsageResetPeriod,
   createEntitlementSchema,
   emptyEntitlement,
+  emptyMeteredGrant,
+  meteredGrantSchema,
   editEntitlementSchema,
+  entitlementGrant,
   entitlementToEdit,
+  meteredAllowance,
+  meteredAllowanceLabel,
+  meteredResetLabel,
   EntitlementGrantMeasure,
   EntitlementGrantDurationUnit,
   EntitlementGrantAllocationBehavior,
   EntitlementAggregationMode,
 } from './entitlement'
-export type { CreateEntitlement, Entitlement, EditEntitlement } from './entitlement'
+export type { CreateEntitlement, Entitlement, EditEntitlement, MeteredGrant } from './entitlement'
 
 export {
   CREDIT_GRANT_CADENCE_LABEL,

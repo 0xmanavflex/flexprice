@@ -155,6 +155,62 @@ export const EditMetered: Story = {
   },
 }
 
+/** On a plan or add-on, a metered feature is granted as V1 grants it: a quota per window. */
+export const GrantModel: Story = {
+  args: { grantModel: true },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await chooseFeature(canvas, 'API calls')
+    await expect(await screen.findByText('Usage resets')).toBeInTheDocument()
+    const value = canvas.getByRole('textbox', { name: /^Value/ })
+    await userEvent.type(value, '500')
+    await userEvent.click(canvas.getByRole('button', { name: /create entitlement/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        featureId: 'feat_api',
+        grant: expect.objectContaining({ quota: '500', unit: 'day' }),
+      }),
+    )
+  },
+}
+
+/** A grant with no value is rejected: a quota or Unlimited is required. */
+export const GrantRequiresAValue: Story = {
+  args: { grantModel: true },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await chooseFeature(canvas, 'API calls')
+    await userEvent.click(canvas.getByRole('button', { name: /create entitlement/i }))
+    await expect(await canvas.findByText('Enter a value above zero')).toBeInTheDocument()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
+/** An entitlement with grant config opens as a grant. */
+export const EditGrant: Story = {
+  render: () => (
+    <EntitlementEditForm
+      feature={features[0]!}
+      defaultValue={{
+        grant: {
+          measure: 'quantity',
+          quota: '2500',
+          unit: 'week',
+          allocation: 'first_usage',
+          aggregation: 'additive',
+        },
+      }}
+      onSubmit={fn()}
+      onCancel={fn()}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByDisplayValue('2500')).toBeInTheDocument()
+    await expect(canvas.getByText('2500 calls each week.')).toBeInTheDocument()
+  },
+}
+
 export const SubmitError: Story = {
   args: { submitError: 'That feature is already entitled on this plan.' },
   play: async ({ canvasElement }) => {

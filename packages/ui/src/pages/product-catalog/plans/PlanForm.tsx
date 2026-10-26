@@ -327,6 +327,7 @@ export function PlanForm({
       form={
         <EntitlementCreateForm
           key={editIndex ?? 'new'}
+          grantModel
           features={editedFeatures}
           {...(editIndex !== null && entitlements[editIndex]
             ? { defaultValue: entitlements[editIndex] }

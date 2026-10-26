@@ -4,7 +4,14 @@ import { PlusIcon } from '@ui/icons'
 import { FEATURE_TYPE_GLYPH } from '../../shared/cells'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { EmDash } from '../../shared/cells'
-import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
+import {
+  type Entitlement,
+  FeatureType,
+  entitlementGrant,
+  meteredAllowance,
+  meteredAllowanceLabel,
+  meteredResetLabel,
+} from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
 
@@ -31,7 +38,7 @@ const TYPE_LABEL: Record<FeatureType, string> = {
 function valueOf(e: Entitlement): string {
   switch (e.featureType) {
     case FeatureType.Metered:
-      return e.usageLimit == null ? 'Unlimited' : e.usageLimit.toLocaleString()
+      return meteredAllowanceLabel(e)
     case FeatureType.Boolean:
       return e.isEnabled ? 'Yes' : 'No'
     case FeatureType.Static:
@@ -48,7 +55,8 @@ const TYPE_ICON: Record<FeatureType, (typeof FEATURE_TYPE_GLYPH)[keyof typeof FE
   FEATURE_TYPE_GLYPH
 
 function includedOf(e: Entitlement): string {
-  if (e.featureType === FeatureType.Metered && e.usageLimit != null) {
+  const grant = entitlementGrant(e)
+  if (e.featureType === FeatureType.Metered && !grant && e.usageLimit != null) {
     return compact.format(e.usageLimit)
   }
   return valueOf(e)
@@ -143,9 +151,7 @@ function PlanEntitlementsViewInner({
               <span className="text-muted-foreground">
                 {e.featureType !== FeatureType.Metered
                   ? '—'
-                  : e.usageResetPeriod
-                    ? USAGE_RESET_PERIOD_LABEL[e.usageResetPeriod]
-                    : 'Every billing period'}
+                  : (meteredResetLabel(e) ?? 'Every billing period')}
               </span>
             ),
           },
@@ -153,7 +159,7 @@ function PlanEntitlementsViewInner({
             key: 'beyond',
             header: 'Overage',
             cell: (e) => {
-              if (e.featureType !== FeatureType.Metered || e.usageLimit == null) return <EmDash />
+              if (e.featureType !== FeatureType.Metered || meteredAllowance(e) === null) return <EmDash />
               const price = usagePrice(e)
               return price ? (
                 <span className="text-[13px]">

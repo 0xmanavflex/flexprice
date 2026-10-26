@@ -1,4 +1,10 @@
-import { type Charge, type CreditGrant, type Entitlement, chargeToDraft } from '@fp/domain'
+import {
+  type Charge,
+  type CreditGrant,
+  type Entitlement,
+  chargeToDraft,
+  meteredAllowance,
+} from '@fp/domain'
 import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
 
 export interface PlanCustomerPreviewProps {
@@ -55,6 +61,8 @@ export function PlanCustomerPreview({
       included={entitlements.map((e) =>
         includedLine({
           ...e,
+          // A grant's quota, when it has one; the usage limit is empty then.
+          usageLimit: meteredAllowance(e) === null ? null : Number(meteredAllowance(e)),
           key: e.id,
           name: e.featureName ?? e.featureId,
           unit: featureUnit?.(e.featureId),
