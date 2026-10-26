@@ -756,6 +756,10 @@ function overrideLines(phase: SubscriptionPhase): Record<string, unknown>[] {
 /**
  * A charge's bucket size, set with its commitment, folded into the override
  * lines: onto the charge's own override when it has one, else a line of its own.
+ *
+ * The API takes one `bucket_size` per charge. A bucket the price override chose
+ * itself wins: the form keeps the two in step when either dialog saves, and
+ * this keeps an explicit choice from being overwritten if they ever differ.
  */
 function withBuckets(
   lines: Record<string, unknown>[],
@@ -767,7 +771,7 @@ function withBuckets(
   if (buckets.size === 0) return lines
   const merged = lines.map((line) => {
     const bucket = buckets.get(line.priceId as string)
-    return bucket ? { ...line, bucketSize: bucket } : line
+    return bucket && !line.bucketSize ? { ...line, bucketSize: bucket } : line
   })
   const covered = new Set(lines.map((line) => line.priceId))
   for (const [priceId, bucketSize] of buckets)

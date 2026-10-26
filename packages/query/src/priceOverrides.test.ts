@@ -78,20 +78,35 @@ describe('toOverrideLineItem', () => {
 describe('toOverrideLineItem with a bucket size', () => {
   it('sends the bucket size a usage override chose, and none when it kept the charge’s own', () => {
     expect(
-      toOverrideLineItem({
-        priceId: 'price_api',
-        billingModel: BillingModel.FlatFee,
-        amount: '0.01',
-        bucketSize: 'HOUR',
-      }),
+      toOverrideLineItem(
+        valid({
+          priceId: 'price_api',
+          billingModel: BillingModel.FlatFee,
+          amount: '0.01',
+          bucketSize: 'HOUR',
+        }),
+      ),
     ).toMatchObject({ priceId: 'price_api', bucketSize: 'HOUR' })
     expect(
-      toOverrideLineItem({
+      toOverrideLineItem(
+        valid({
+          priceId: 'price_api',
+          billingModel: BillingModel.FlatFee,
+          amount: '0.01',
+          bucketSize: '',
+        }),
+      ),
+    ).not.toHaveProperty('bucketSize')
+  })
+
+  it('refuses a bucket size the API does not know', () => {
+    expect(() =>
+      valid({
         priceId: 'price_api',
         billingModel: BillingModel.FlatFee,
         amount: '0.01',
-        bucketSize: '',
+        bucketSize: 'FORTNIGHT',
       }),
-    ).not.toHaveProperty('bucketSize')
+    ).toThrow()
   })
 })

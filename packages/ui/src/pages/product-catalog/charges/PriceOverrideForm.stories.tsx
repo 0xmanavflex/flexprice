@@ -274,13 +274,16 @@ export const SubmitsAValidatedDomainValue: Story = {
   },
 }
 
-/** A usage charge offers an optional bucket size, sent with the override. */
+/** A usage charge on a SUM meter offers an optional bucket size, sent with the override. */
 export const UsageBucketSize: Story = {
-  args: { usage: true },
+  args: { meter: { name: 'API calls', aggregationType: 'SUM' } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.type(canvas.getByLabelText(/^Amount/), '0.01')
-    await userEvent.click(canvas.getByRole('combobox', { name: /Bucket size/ }))
+    const bucket = canvas.getByRole('combobox', { name: /Bucket size/ })
+    // Closed, the default reads as what it does, not as an empty picker.
+    await expect(bucket).toHaveTextContent("The charge's own")
+    await userEvent.click(bucket)
     await userEvent.click(await screen.findByRole('option', { name: 'Hour' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Save override' }))
     await waitFor(() =>
@@ -288,5 +291,26 @@ export const UsageBucketSize: Story = {
         expect.objectContaining({ amount: '0.01', bucketSize: 'HOUR' }),
       ),
     )
+  },
+}
+
+/** A COUNT meter cannot be windowed: the API refuses it, so no bucket is offered. */
+export const UsageCountMeterNoBucket: Story = {
+  args: { meter: { name: 'Seats', aggregationType: 'COUNT' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText('Bucket size')).toBeNull()
+  },
+}
+
+/** A meter with its own bucket: shown locked, since the price may not set a second one. */
+export const UsageMeterOwnsBucket: Story = {
+  args: { meter: { name: 'GPU time', aggregationType: 'SUM', bucketSize: 'HOUR' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const bucket = canvas.getByLabelText(/Bucket size/)
+    await expect(bucket).toBeDisabled()
+    await expect(bucket).toHaveValue('Hour')
+    await expect(canvas.queryByRole('combobox', { name: /Bucket size/ })).toBeNull()
   },
 }
