@@ -88,6 +88,9 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('region', { name: 'Charges table' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Add charge' })).toBeVisible()
+    // When each charge is billed and in effect, on screen as on the contract.
+    await expect(canvas.getByRole('columnheader', { name: /Billing timing/ })).toBeVisible()
+    await expect(canvas.getByRole('columnheader', { name: /In effect/ })).toBeVisible()
   },
 }
 

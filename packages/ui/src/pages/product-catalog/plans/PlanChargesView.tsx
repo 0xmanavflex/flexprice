@@ -50,6 +50,8 @@ function PlanChargesViewInner({
             }))
       }
       layout="narrow"
+      // When each charge is billed and in effect, on screen, as the contract's table.
+      showDates
       {...(details ? { details } : {})}
       {...(onRevert && !readOnly ? { onRevert } : {})}
       isLoading={loading ?? false}
