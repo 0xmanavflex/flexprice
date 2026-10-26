@@ -2740,6 +2740,8 @@ export const handlers = [
         aging_bucket: ['Current', '1-30', '31-60', '61-90', '90+'],
         invoice_type: ['SUBSCRIPTION', 'ONE_OFF'],
         meter_id: ['meter_api', 'meter_storage'],
+        credit_type: ['paid', 'free'],
+        transaction_reason: ['PURCHASED_CREDIT_DIRECT', 'FREE_CREDIT_GRANT'],
       }
       const combos = dims.reduce<string[][]>(
         (acc, dim) => acc.flatMap((prefix) => (labels[dim] ?? ['a']).map((v) => [...prefix, v])),

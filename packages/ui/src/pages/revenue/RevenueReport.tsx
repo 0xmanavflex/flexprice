@@ -960,13 +960,13 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
                 <NotReady
                   state={customers.credits}
                   height={200}
-                  empty="No credits consumed in this range"
+                  empty="No credit activity in this range"
                 />
               )}
             </Surface>
           </Panel>
 
-          {customers.credits.status === 'ready' ? (
+          {customers.credits.status === 'ready' && customers.credits.rows.length > 0 ? (
             <Panel
               title="Credit consumption by customer"
               description={`Credits applied to invoices per customer, ${rangeLabel}, split into paid and free`}

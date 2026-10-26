@@ -412,9 +412,17 @@ export function ReportsPage({
         ),
         onOpenCustomer: openCustomer,
         credits: {
-          status: statusOf(creditReport, credits.length === 0),
-          reason: 'The credit report did not respond.',
-          onRetry: retry(creditReport),
+          status: statusOf(
+            {
+              isPending: creditReport.isPending || topupReport.isPending,
+              isError:
+                (creditReport.isError && !creditReport.data) ||
+                (topupReport.isError && !topupReport.data),
+            },
+            credits.length === 0 && topupBreakdown.length === 0,
+          ),
+          reason: 'The credit reports did not respond.',
+          onRetry: retry(creditReport, topupReport),
           rows: credits,
           total: money(credits.reduce((sum, row) => sum + row.total, 0)),
           toppedUp: topupReport.data

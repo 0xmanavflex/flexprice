@@ -33,7 +33,7 @@ test('Reports reads the report library, and the old /revenue address lands there
   await expect(page.getByText('As of today').first()).toBeVisible()
   await expect(page.getByText(/% of outstanding/).first()).toBeVisible()
 
-  await page.getByRole('tab', { name: 'Usage' }).click()
+  await page.getByRole('tab', { name: 'Customers' }).click()
   await expect(page.getByText('Credits consumed', { exact: true })).toBeVisible()
 
   for (const key of [
