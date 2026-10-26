@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- Customer portal (R-08): a wallet below zero reads as money owed. The Overview shows "Credits owed" and the Credits tab "Owed", both in the warning tone as a positive figure, with how many credits went beyond the balance (the Credits tab caption reads "42 credits owed"). Before, it was a bare negative number. New `absoluteMoney` in `@fp/domain`.
 - Wallet transactions (R-06): a top-up row now expands to the debits that drew from it. This comes from each debit's `consumption_breakdown`, which the API returns and the console used to drop. Child rows show credits only, because the API doesn't report money for them. Each row gets one muted line with its reference (`invoice inv_…`) and metadata. All transactions are read, page by page, instead of the first 200. `WalletConsumption.amount` is optional.
 - Wallet ledger: with the whole ledger now read, `CustomerWalletView` no longer says older entries are missing at 200 rows (`TRANSACTIONS_LIMIT` is gone). Ledger search also matches the reference and metadata line, which uses `text-xs` instead of an arbitrary 11px size. Source: PR #203 review.
 - Wallet auto top-up (R-05): Cool-off is a switch. While it is on, Duration and Unit show. Turning it off clears the saved cool-off by sending an empty one, which the API reads as clear (`Duration.IsEmpty`). Before, a blank cool-off was simply not sent, so a saved one could never be removed.

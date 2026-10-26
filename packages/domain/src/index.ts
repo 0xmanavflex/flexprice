@@ -33,6 +33,7 @@ export {
   InvalidMoneyError,
   compareMoney,
   formatMoney,
+  absoluteMoney,
   isNegativeMoney,
   isZeroMoney,
   money,
