@@ -25,8 +25,8 @@ export interface CatalogDetailFrameProps {
   /** Accessible name of the More button. */
   menuLabel: string
   /**
-   * Every header action — Edit, state changes such as Activate, Archive or
-   * Delete — in display order. The header has no inline buttons.
+   * Every header action: Edit, state changes such as Activate, Archive or
+   * Delete: in display order. The header has no inline buttons.
    */
   menu?: CatalogMenuItem[]
   tabs: DetailTabSpec[]
@@ -44,7 +44,7 @@ function detailPageLabel(listLabel: string): string {
     Payments: 'Payment details',
     'Credit memos': 'Credit memo details',
     'Price Units': 'Price unit details',
-    Groups: 'Group details',
+    Tags: 'Tag details',
     'Cost sheets': 'Cost sheet details',
     Webhooks: 'Webhook details',
   }

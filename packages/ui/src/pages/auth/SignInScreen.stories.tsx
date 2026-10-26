@@ -3,7 +3,7 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { SignInScreen } from './SignInScreen'
 
 /**
- * The full sign-in page — `SignInForm` on the ReUI `auth-6` split layout.
+ * The full sign-in page: `SignInForm` on the ReUI `auth-6` split layout.
  *
  * `fullscreen`, not `centered`: the whole point of this component is the
  * two-column split and the panel beside it, and a centred canvas would show
@@ -178,7 +178,7 @@ export const ProviderNotConfigured: Story = {
     const canvas = within(canvasElement)
 
     await expect(canvas.queryByRole('button', { name: 'Continue with Google' })).toBeNull()
-    // Password sign-in is still fully there — that is the point of failing open.
+    // Password sign-in is still fully there: that is the point of failing open.
     await expect(canvas.getByRole('button', { name: /sign in/i })).toBeVisible()
   },
 }
@@ -191,7 +191,7 @@ export const ProviderNotConfigured: Story = {
 export const DemoMode: Story = {
   args: {
     defaultValues: { email: 'demo@flexprice.io', password: 'demo1234' },
-    hint: 'Demo mode — the sample data is loaded. Just click Sign in.',
+    hint: 'Demo mode: the sample data is loaded. Just click Sign in.',
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

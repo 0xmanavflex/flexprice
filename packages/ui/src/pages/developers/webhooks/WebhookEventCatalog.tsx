@@ -17,12 +17,12 @@ import { provenance } from '@ui/provenance'
 import { Pill } from '../../shared/cells'
 
 /**
- * The Event Catalog — every event type an endpoint can subscribe to.
+ * The Event Catalog: every event type an endpoint can subscribe to.
  *
  * Svix's layout: the groups down the left with their counts, the selected
  * group's event types on the right, each with its description and the example
  * payload registered with its schema. An event type with no example says so
- * rather than showing an empty block — that is also why "Send example" fails
+ * rather than showing an empty block: that is also why "Send example" fails
  * for it on the Testing tab.
  */
 export const WebhookEventCatalogProvenance = provenance({

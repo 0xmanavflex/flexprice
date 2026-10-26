@@ -4,7 +4,7 @@ import { queryKeys } from './keys'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
- * Resolves one invoice's customer-facing link on demand — what "Open hosted
+ * Resolves one invoice's customer-facing link on demand: what "Open hosted
  * invoice" and "Copy hosted invoice link" need. Null when the invoice has none.
  */
 export function useInvoiceHostedLink() {
@@ -22,8 +22,8 @@ export function useInvoiceHostedLink() {
 
 /**
  * The invoice page's hosted link, read beside `useInvoice`. Keyed under the
- * invoice's detail key, so finalizing — which issues the link and invalidates
- * the detail — refreshes it too. Null when the invoice has none.
+ * invoice's detail key, so finalizing: which issues the link and invalidates
+ * the detail: refreshes it too. Null when the invoice has none.
  */
 export function useInvoiceHostedUrl(invoiceId: string, options: { enabled?: boolean } = {}) {
   const serverURL = useFlexpriceServerURL()

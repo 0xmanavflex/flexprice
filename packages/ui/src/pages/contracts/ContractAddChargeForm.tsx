@@ -48,6 +48,16 @@ export interface ContractAddChargeFormProps {
   onSubmit: (draft: AddContractCharge) => void
   isSubmitting?: boolean
   submitError?: string | null
+  /** A charge already drafted (not yet saved) to reopen and change. */
+  initial?: AddContractCharge | undefined
+  /**
+   * The contract's start, as an ISO instant, when it is still in the future.
+   * The API refuses a charge that starts before its contract, so earlier
+   * (UTC) days cannot be picked, and an empty start, or the contract's own
+   * day, sends that exact instant rather than midnight, which could fall
+   * before a contract that starts later that day.
+   */
+  earliestStart?: string | undefined
 }
 
 /** A new charge on one contract, as one granular form. */
@@ -60,17 +70,20 @@ export function ContractAddChargeForm({
   onSubmit,
   isSubmitting = false,
   submitError = null,
+  initial,
+  earliestStart,
 }: ContractAddChargeFormProps) {
   const isUsage = type === PriceType.Usage
-  const [quantity, setQuantity] = useState('1')
-  const [startDate, setStartDate] = useState('')
-  const [proration, setProration] = useState<Proration>(PRORATION.Prorate)
-  const [terms, setTerms] = useState<UsageTerms>(NO_USAGE_TERMS)
+  const earliestDay = earliestStart?.slice(0, 10)
+  const [quantity, setQuantity] = useState(initial?.quantity ?? '1')
+  const [startDate, setStartDate] = useState(initial?.startDate ?? '')
+  const [proration, setProration] = useState<Proration>(initial?.proration ?? PRORATION.Prorate)
+  const [terms, setTerms] = useState<UsageTerms>(initial?.terms ?? NO_USAGE_TERMS)
   const [showErrors, setShowErrors] = useState(false)
 
   const errors = validateContractTerms(isUsage ? { terms } : { quantity })
 
-  const defaultValue = {
+  const defaultValue = initial?.charge ?? {
     ...emptyCharge(type, BillingModel.FlatFee),
     currency: currency.toUpperCase() || 'USD',
     billingPeriod,
@@ -89,13 +102,20 @@ export function ContractAddChargeForm({
       priceUnits={priceUnits}
       isSubmitting={isSubmitting}
       submitError={submitError}
-      submitLabel="Add charge"
+      submitLabel={initial ? 'Save charge' : 'Add charge'}
       onSubmit={(charge) => {
         if (hasTermsErrors(errors)) {
           setShowErrors(true)
           return
         }
-        onSubmit({ charge, quantity, startDate, proration, terms })
+        onSubmit({
+          charge,
+          quantity,
+          startDate:
+            earliestStart && (!startDate || startDate === earliestDay) ? earliestStart : startDate,
+          proration,
+          terms,
+        })
       }}
       extras={
         <div className="flex flex-col gap-5">
@@ -119,13 +139,21 @@ export function ContractAddChargeForm({
                 )}
               </Field>
             )}
-            <Field label="Starts on" hint="Leave empty to start the charge now.">
+            <Field
+              label="Starts on"
+              hint={
+                earliestStart
+                  ? 'Leave empty to start with the contract. A charge cannot start before it.'
+                  : 'Leave empty to start the charge now.'
+              }
+            >
               {({ id, 'aria-describedby': describedBy }) => (
                 <DateInput
                   id={id}
                   value={startDate}
                   onValueChange={setStartDate}
-                  placeholder="Now"
+                  {...(earliestDay ? { min: earliestDay } : {})}
+                  placeholder={earliestStart ? 'With the contract' : 'Now'}
                   disabled={isSubmitting}
                   aria-describedby={describedBy}
                 />

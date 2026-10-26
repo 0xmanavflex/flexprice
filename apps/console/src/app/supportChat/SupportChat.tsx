@@ -30,7 +30,7 @@ function SupportChatImpl({ provider }: { provider: SupportChatProvider }) {
 /**
  * Boots the support chat. The provider's own launcher stays in the bottom-left
  * corner and opens it; ⌘K and the idle auto-open still work. Nothing is
- * mounted when no provider is enabled or its app id is missing — as V1.
+ * mounted when no provider is enabled or its app id is missing: as V1.
  */
 export function SupportChat() {
   const provider = getActiveSupportChatProvider()

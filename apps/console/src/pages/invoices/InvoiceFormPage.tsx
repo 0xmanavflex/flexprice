@@ -7,8 +7,6 @@ import {
   emptyInvoice,
 } from '@fp/domain'
 import {
-  ApiError,
-  serverReason,
   useCreateInvoice,
   useCustomer,
   useCustomerTaxAssociations,
@@ -22,14 +20,14 @@ import { InvoiceForm } from '@fp/ui/pages'
 import { customerParty, tenantParty } from './invoiceParties'
 
 export interface InvoiceFormPageProps {
-  /** Start with this customer chosen — the customer page's "Create invoice", as in V1. */
+  /** Start with this customer chosen: the customer page's "Create invoice", as in V1. */
   customerId?: string
   onCancel: () => void
   onDone: (invoiceId: string) => void
 }
 
 /**
- * Raise a one-off invoice — `POST /invoices`, as V1's create page does.
+ * Raise a one-off invoice: `POST /invoices`, as V1's create page does.
  *
  * Feeds the shared invoice form what V1 shows around the fields: who it is
  * from (the tenant), who it bills (the chosen customer's address), and the
@@ -100,21 +98,11 @@ export function InvoiceFormPage({ customerId, onCancel, onDone }: InvoiceFormPag
       customerTaxes={chosen ? customerTaxes : null}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={toSubmitError(create.error)}
+      // The API's refusal is a toast (MutationToasts); validation stays in the form.
+      submitError={null}
       onSubmit={(draft) =>
         create.mutate(draft, { onSuccess: (created) => onDone(created.id ?? '') })
       }
     />
   )
-}
-
-function toSubmitError(error: unknown): string | null {
-  if (!error) return null
-  if (error instanceof ApiError) {
-    if (error.kind === 'invalid') return error.message || 'Check the details and try again.'
-    if (error.kind === 'forbidden')
-      return serverReason(error) ?? 'You do not have permission to create invoices here.'
-    if (error.kind === 'network') return 'Could not reach Flexprice. Check your connection.'
-  }
-  return serverReason(error) ?? 'Could not create the invoice. Try again.'
 }

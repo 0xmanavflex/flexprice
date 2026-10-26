@@ -7,7 +7,7 @@ import { readEnvironmentId } from './storage'
  * outside a render: the `X-Environment-ID` header, set per request, and the
  * query cache's key hash, computed whenever a query is looked up. Both must
  * agree *during* a switch, and state is only updated after the render that
- * follows the click — so a request or a cache lookup landing in between would
+ * follows the click: so a request or a cache lookup landing in between would
  * read the previous environment. A module-level value is written in the same
  * tick as the decision, before anything is invalidated, which is what makes
  * "I switched and the data didn't" impossible rather than unlikely.

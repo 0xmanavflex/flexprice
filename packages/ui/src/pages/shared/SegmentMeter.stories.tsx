@@ -132,7 +132,7 @@ export const ReadingsAreReachable: Story = {
 }
 
 /**
- * Given a real ceiling, rows are measured against it rather than each other —
+ * Given a real ceiling, rows are measured against it rather than each other:
  * so the busiest row is no longer automatically full.
  */
 export const AgainstAQuota: Story = {

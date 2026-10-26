@@ -1,14 +1,14 @@
-import { BracesIcon, GaugeIcon, HashIcon, ToggleRightIcon, type CircleIcon } from '@ui/icons'
-import { FEATURE_TYPE_LABEL, FeatureType, InvoiceStatus, needsAttention } from '@fp/domain'
+import type { CircleIcon } from '@ui/icons'
+import { FEATURE_TYPE_LABEL, InvoiceStatus, needsAttention, type FeatureType } from '@fp/domain'
 import { provenance } from '@ui/provenance'
-import { Pill, type PillTone } from './cells'
+import { FEATURE_TYPE_GLYPH, Pill, type PillTone } from './cells'
 
 /**
  * A billing status: a bordered pill with a coloured dot.
  *
  * Colour is carried by the 6px dot rather than a fill. With five statuses down
  * eighteen dense rows, tinted fills turn the status column into a traffic
- * light — every row shouting at once, which is the same as none of them
+ * light: every row shouting at once, which is the same as none of them
  * shouting. A ring of neutral pills with one red dot in it reads instantly.
  *
  * The label is always spelled out beside the dot, so tone is never the only
@@ -18,14 +18,16 @@ import { Pill, type PillTone } from './cells'
 export const StatusBadgeProvenance = provenance({
   source: 'composition',
   composes: [],
-  note: 'Dot-pill status, colour on the dot — so a dense column is not a traffic light.',
+  note: 'Dot-pill status, colour on the dot: so a dense column is not a traffic light.',
 })
 
 /** The dot colour each status carries. */
 const INVOICE_TONE: Record<InvoiceStatus, PillTone> = {
-  // In progress, not terminal: amber, so it never reads as Void's dead end.
-  [InvoiceStatus.Draft]: 'warning',
-  [InvoiceStatus.Open]: 'info',
+  // Open is awaiting payment: orange (warning), so it stands out from Paid's
+  // green and Void's grey, and no longer shares violet with Trialing
+  // contracts. Draft, still being written, takes the quiet info tone.
+  [InvoiceStatus.Draft]: 'info',
+  [InvoiceStatus.Open]: 'warning',
   [InvoiceStatus.Paid]: 'success',
   [InvoiceStatus.Overdue]: 'danger',
   [InvoiceStatus.Void]: 'neutral',
@@ -50,7 +52,7 @@ export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
     <Pill tone={INVOICE_TONE[status]}>
       {INVOICE_LABEL[status]}
       {/* Colour alone cannot carry "this one needs you". */}
-      {needsAttention(status) ? <span className="sr-only"> — needs attention</span> : null}
+      {needsAttention(status) ? <span className="sr-only">: needs attention</span> : null}
     </Pill>
   )
 }
@@ -80,8 +82,8 @@ const TEXT_TONE: Record<string, PillTone> = {
 /**
  * The one status chip shape: a bordered pill with a coloured dot.
  *
- * Exported so a table that needs a status the shared badges do not cover yet —
- * a subscription's lifecycle, a payment's state — composes the *same* chip from
+ * Exported so a table that needs a status the shared badges do not cover yet:
+ * a subscription's lifecycle, a payment's state: composes the *same* chip from
  * its own tone/label map, rather than inventing a differently-shaped badge.
  * Every status across the console reads as one system this way.
  */
@@ -89,13 +91,8 @@ export function GlyphBadge({ tone, label }: GlyphBadgeProps) {
   return <Pill tone={TEXT_TONE[tone] ?? 'neutral'}>{label}</Pill>
 }
 
-/** The glyph each feature type carries. */
-const FEATURE_TYPE_ICON: Record<FeatureType, typeof CircleIcon> = {
-  [FeatureType.Metered]: GaugeIcon,
-  [FeatureType.Boolean]: ToggleRightIcon,
-  [FeatureType.Static]: HashIcon,
-  [FeatureType.Config]: BracesIcon,
-}
+/** The glyph each feature type carries: the agreed set, shared with every table. */
+const FEATURE_TYPE_ICON: Record<FeatureType, typeof CircleIcon> = FEATURE_TYPE_GLYPH
 
 export interface FeatureTypeBadgeProps {
   type: FeatureType
@@ -108,7 +105,7 @@ export function FeatureTypeBadge({ type }: FeatureTypeBadgeProps) {
 
 /**
  * The shared catalogue status: published or archived, drawn like every status
- * here — a dot pill. Features, plans and add-ons all use it, so a Published
+ * here: a dot pill. Features, plans and add-ons all use it, so a Published
  * chip is the same object in every catalogue table.
  */
 export type CatalogStatus = 'published' | 'archived'

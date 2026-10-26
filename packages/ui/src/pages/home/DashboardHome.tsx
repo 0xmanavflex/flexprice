@@ -31,18 +31,18 @@ import { MeterTrack, SegmentMeter } from '../shared/SegmentMeter'
 import type { SegmentMeterRow } from '../shared/SegmentMeter'
 
 /**
- * Home — the console's overview.
+ * Home: the console's overview.
  *
  * What this replaces is the point of it. Home used to render a vendored sample
  * dashboard with its own numbers baked in, and a live-data audit called it a
  * blocker: the first screen of a billing console greeted people with metrics
  * from a different product entirely. The numbers were not merely placeholder,
- * they were *confident* — a card badged "Live", a cost figure identical to the
+ * they were *confident*: a card badged "Live", a cost figure identical to the
  * call count beside it, dates hardcoded to a week in August.
  *
  * So the rule this surface is built to is: **every number on it is either read
  * from the API or absent.** There is no third category. Where Flexprice has no
- * endpoint — request latency and error counts — the panel says so
+ * endpoint: request latency and error counts: the panel says so
  * in words rather than showing a plausible figure. That is the same choice
  * `SettingsUnavailable` and `ShellSearch` already made, and it is the only way
  * a dashboard stays trustworthy once one number on it is wrong.
@@ -58,11 +58,11 @@ import type { SegmentMeterRow } from '../shared/SegmentMeter'
  * `HalfDonut` for the invoice gauge, `SegmentMeter` for the per-feature usage
  * rows, `ArcGauge` for key health, and `BlurredEmpty` for the first run. The
  * blocks those components were composed from are declared there; what this file
- * keeps is the *wiring* — which panel is ready, empty or unavailable, and which
+ * keeps is the *wiring*: which panel is ready, empty or unavailable, and which
  * numbers are allowed on screen at all.
  *
  * One consequence worth naming: no panel here picks a colour. Each passes a
- * `ChartTone`, and the categorical/status split is honoured — `series-*` for
+ * `ChartTone`, and the categorical/status split is honoured: `series-*` for
  * plans, which are merely different from one another, and `good`/`warning`/
  * `critical` only for invoice payment state and key health, which are
  * judgements.
@@ -161,7 +161,7 @@ export interface RevenueCustomerRow {
 }
 
 /**
- * Invoiced revenue for the window — what was billed, from invoice line items —
+ * Invoiced revenue for the window: what was billed, from invoice line items:
  * in one currency. Amounts in other currencies are named, never added in.
  */
 export interface RevenuePanel extends PanelMeta {
@@ -175,7 +175,9 @@ export interface RevenuePanel extends PanelMeta {
    * Net revenue per bucket in `total`'s currency. Empty when the tenant has no
    * revenue analytics, in which case the headline stands alone.
    */
-  points: { label: string; value: number }[]
+  points: { label: string; value: number; extra?: Record<string, number> }[]
+  /** One line per currency on the revenue chart. */
+  series?: { id: string; label: string }[] | undefined
   /** The customers billed most in the window, highest first. */
   topCustomers: RevenueCustomerRow[]
   /** Other currencies billed in the window, which the figures above leave out. */
@@ -228,7 +230,7 @@ export interface CustomersPanel extends PanelMeta {
   newCount: number | null
   /**
    * `true` when the page could only see the newest customers and every one of
-   * them fell inside the window — so `newCount` is a floor, not a total, and is
+   * them fell inside the window: so `newCount` is a floor, not a total, and is
    * shown with a `+` rather than as an exact figure.
    */
   partial: boolean
@@ -241,13 +243,13 @@ export interface CustomersPanel extends PanelMeta {
 export interface UsageRow {
   featureId: string
   name: string
-  /** The feature's lookup key — shown under the name as `code.key`. */
+  /** The feature's lookup key: shown under the name as `code.key`. */
   lookupKey: string
   /**
    * The metered quantity as a number.
    *
    * The meter compares features to each other, so it needs the figure and not
-   * only its rendering — "428K calls" and "1.8M tokens" cannot be ranked as
+   * only its rendering: "428K calls" and "1.8M tokens" cannot be ranked as
    * strings.
    */
   quantity: number
@@ -291,6 +293,9 @@ export interface DashboardHomeProps {
   granularityOptions: FilterOption[]
   granularity: string
   onGranularityChange: (granularity: string) => void
+  /** Which metric tab is open. Omitted, the chart keeps it until the page unmounts. */
+  metric?: string | undefined
+  onMetricChange?: ((metric: string) => void) | undefined
 
   /** Words for the window, e.g. "last 7 days". Used in the panels' subtitles. */
   rangeLabel: string
@@ -306,8 +311,8 @@ export interface DashboardHomeProps {
   subscriptions: SubscriptionsPanel
   invoices: InvoicesPanel
   /**
-   * Usage by feature and API key health. Not rendered at the moment — both
-   * panels are parked until quota-based metrics land (see `DashboardHome`) —
+   * Usage by feature and API key health. Not rendered at the moment: both
+   * panels are parked until quota-based metrics land (see `DashboardHome`):
    * so the page need not fetch them. Kept on the contract so they return
    * without a props change.
    */
@@ -331,7 +336,7 @@ const NOTHING = '—'
 /**
  * What a panel says when Flexprice cannot answer the question.
  *
- * Not "coming soon" and not a zero — the metric is named, and the reason it is
+ * Not "coming soon" and not a zero: the metric is named, and the reason it is
  * missing is stated. `role="status"` so it is announced rather than only blank.
  */
 function Unavailable({ what, className }: { what: string; className?: string }) {
@@ -357,7 +362,7 @@ export function FilterSelect({ filter }: { filter: Filter }) {
     <Select
       value={filter.value}
       // Base UI's `Select.Value` renders the raw value unless the root can
-      // map it to a label — without this the filters read "7d", "daily",
+      // map it to a label: without this the filters read "7d", "daily",
       // "all". `chart-16` passes `items` for the same reason.
       items={filter.options.map((option) => ({ value: option.id, label: option.label }))}
       // Base UI's Select can clear to `null`; these filters always have a
@@ -385,8 +390,8 @@ export function FilterSelect({ filter }: { filter: Filter }) {
 /**
  * The filter row: Overview on the left, granularity and the range on the right.
  *
- * The range still cuts every panel on the page — the metrics, the contracts
- * and the invoices — to the same window. Granularity only changes how the
+ * The range still cuts every panel on the page: the metrics, the contracts
+ * and the invoices: to the same window. Granularity only changes how the
  * usage series is bucketed.
  *
  * The design also drew an "+ Add filter" control. It is left out rather than
@@ -478,7 +483,7 @@ function ChartFilters(props: {
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <h1 className="text-lg font-medium tracking-tight">Overview</h1>
+      <h1 className="text-xl font-medium tracking-tight">Overview</h1>
       <div className="ml-auto flex items-center gap-2">
         <FilterSelect
           filter={{
@@ -505,7 +510,7 @@ const METRIC_EVENTS = 'events'
  *
  * It is not data and never becomes data: `BlurredEmpty` renders its children
  * `aria-hidden`, `inert` and blurred, and `MetricChart` hides its y-axis, so
- * this is a line with no scale, no axis and no tooltip — a texture that says
+ * this is a line with no scale, no axis and no tooltip: a texture that says
  * "a chart goes here". The tab headlines above it stay dashes, because those
  * *are* legible. It is only ever drawn once the API has answered "nothing":
  * while a panel is loading or has failed, the chart says that instead.
@@ -557,6 +562,8 @@ function MetricsSection({
   filters,
   onQuickstart,
   widen,
+  metric: metricProp,
+  onMetricChange,
 }: {
   events: EventsPanel
   revenue?: RevenuePanel | undefined
@@ -566,11 +573,14 @@ function MetricsSection({
   onQuickstart: () => void
   /** Widens the range, or `null` when it is already the widest on offer. */
   widen: Exit | null
+  metric?: string | undefined
+  onMetricChange?: ((metric: string) => void) | undefined
 }) {
-  // Which metric you are looking at is view state, not data, so it lives here
-  // rather than in the props. `MetricChart` holds none of its own. Revenue is
-  // what the overview is opened for, so it is the tab you land on.
-  const [metric, setMetric] = useState(METRIC_REVENUE)
+  // Revenue is the tab the overview opens on. A page that keeps the choice in
+  // the URL passes `metric`; otherwise it lasts only while this view is mounted.
+  const [localMetric, setLocalMetric] = useState(METRIC_REVENUE)
+  const metric = metricProp ?? localMetric
+  const setMetric = (id: string) => (onMetricChange ? onMetricChange(id) : setLocalMetric(id))
 
   const eventsReady = events.status === 'ready'
   const customersReady = customers.status === 'ready'
@@ -607,6 +617,14 @@ function MetricsSection({
           ),
         ...changeOf(revenue.status === 'ready' ? revenue.changePercent : null),
         points: revenue.status === 'ready' ? revenue.points : [],
+        ...(revenue.series?.length
+          ? {
+              series: revenue.series.map((line) => ({
+                ...line,
+                format: currencyFormat(line.id),
+              })),
+            }
+          : {}),
         ...(revenue.total ? { format: currencyFormat(revenue.total.currency) } : {}),
         emptyMessage:
           revenue.status === 'empty'
@@ -643,7 +661,7 @@ function MetricsSection({
       points: customersReady
         ? customers.points.map((point) => ({ label: point.label, value: point.customers }))
         : [],
-      emptyMessage: 'No new customers in this period.',
+      emptyMessage: 'Active customers in this period. This figure has no daily series.',
     },
     {
       id: METRIC_EVENTS,
@@ -679,7 +697,7 @@ function MetricsSection({
       {nothingYet ? (
         /*
          * The invitation sits over a blurred chart rather than replacing it, so
-         * the shape of what will appear is visible while it is still empty —
+         * the shape of what will appear is visible while it is still empty:
          * the design's own choice, and it keeps the panel from collapsing and
          * shifting everything below it the moment data arrives.
          */
@@ -848,7 +866,7 @@ function SubscriptionsCard({
   const failed = status === 'unavailable'
 
   // Plans are categories, not states, so they take the categorical slots in
-  // order — `PillColumns` hands those out itself when no tone is given.
+  // order: `PillColumns` hands those out itself when no tone is given.
   const series: PillSeries[] = plans.map((plan) => ({ id: plan.name, label: plan.name }))
   const columns: PillColumn[] = days.map((day) => ({ label: day.label, values: day.byPlan }))
 
@@ -905,6 +923,7 @@ function SubscriptionsCard({
               <PillColumns
                 columns={columns}
                 series={series}
+                legend={false}
                 label={`New contracts by plan, ${rangeLabel}`}
               />
               {subscriptions.stale ? (
@@ -955,7 +974,7 @@ function SubscriptionsCard({
 /**
  * The half-donut over real invoice counts.
  *
- * The three slices are the three states the domain actually models — paid, open
+ * The three slices are the three states the domain actually models: paid, open
  * and overdue. The design labelled them paid/pending/failed, which are wire
  * `payment_status` values that `deriveInvoiceStatus` collapses; using the
  * domain's own vocabulary is what keeps this panel agreeing with the invoice
@@ -1106,7 +1125,7 @@ export function UsageCard({
  * Key health, as an arc.
  *
  * The design used this gauge for a request success rate; Flexprice exposes no
- * request metrics at all, so it shows a ratio that *is* real — how many of the
+ * request metrics at all, so it shows a ratio that *is* real: how many of the
  * tenant's API keys are active, against how many exist. The mark is reused, the
  * claim is not, and `max` is a real denominator rather than an invented one.
  *
@@ -1155,7 +1174,7 @@ export function ApiCard({ api, onApiKeys }: { api: ApiPanel; onApiKeys: () => vo
         {/*
          * Requests, p95 and errors are the three numbers the design asked for and
          * the three this console cannot get. There is no observability surface in
-         * the API or the SDK — only per-event debugging — so they are shown as
+         * the API or the SDK: only per-event debugging: so they are shown as
          * absent with the reason, in the same shape they would take if they
          * arrived.
          */}
@@ -1186,6 +1205,8 @@ export function DashboardHome({
   granularityOptions,
   granularity,
   onGranularityChange,
+  metric,
+  onMetricChange,
   rangeLabel,
   events,
   revenue,
@@ -1210,6 +1231,8 @@ export function DashboardHome({
         events={events}
         {...(revenue ? { revenue } : {})}
         customers={customers}
+        {...(metric ? { metric } : {})}
+        {...(onMetricChange ? { onMetricChange } : {})}
         filters={
           <ChartFilters
             granularityOptions={granularityOptions}

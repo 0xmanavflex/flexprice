@@ -64,6 +64,12 @@ assumed.
   state; no ordering assumptions between tests.
 - **erasableSyntaxOnly.** Page objects assign their locators in the constructor
   body — no parameter properties, no enums; `import type` for types.
+- **`test` and `expect` come from `./fixtures`**, not `@playwright/test`. It
+  adds the browser-console and failed-request logs a failing journey's report
+  needs (`e2e/reporters/journey-reporter.ts`, `docs/e2e-testing.md`). Types
+  still come from `@playwright/test`.
+- **Credentials only from the environment** — `E2E_USER` / `E2E_PASSWORD` for
+  the dedicated E2E account, never a person's, never in a file.
 
 ## What belongs here vs the component layer
 

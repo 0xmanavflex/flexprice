@@ -1,5 +1,10 @@
 import type { RevenueView } from '@fp/ui/pages'
-import { RANGE_OPTIONS, type RangeId } from '@/pages/revenue/revenueReport'
+import {
+  GRAIN_OPTIONS,
+  RANGE_OPTIONS,
+  type GrainChoice,
+  type RangeId,
+} from '@/pages/revenue/revenueReport'
 
 /**
  * The Revenue report's state, as URL search params: the tab, the range, the
@@ -9,13 +14,15 @@ import { RANGE_OPTIONS, type RangeId } from '@/pages/revenue/revenueReport'
 export interface RevenueSearch {
   view: RevenueView
   range: RangeId
+  grain: GrainChoice
   compare: string
   currency: string
 }
 
 export const DEFAULT_REVENUE_SEARCH: RevenueSearch = {
   view: 'overview',
-  range: '90d',
+  range: '12m',
+  grain: 'auto',
   compare: 'none',
   currency: '',
 }
@@ -35,8 +42,11 @@ export function parseRevenueSearch(search: Record<string, unknown>): RevenueSear
     : 'overview'
   const range = RANGE_OPTIONS.some((option) => option.id === search['range'])
     ? (search['range'] as RangeId)
-    : '90d'
+    : '12m'
+  const grain = GRAIN_OPTIONS.some((option) => option.id === search['grain'])
+    ? (search['grain'] as GrainChoice)
+    : 'auto'
   const compare = search['compare'] === 'previous' ? 'previous' : 'none'
   const currency = typeof search['currency'] === 'string' ? search['currency'].toUpperCase() : ''
-  return { view, range, compare, currency }
+  return { view, range, grain, compare, currency }
 }

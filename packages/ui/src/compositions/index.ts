@@ -1,7 +1,7 @@
 /**
  * Generic behaviour composed over ReUI parts.
  *
- * Nothing here knows what an invoice is — that is `../pages`. A composition
+ * Nothing here knows what an invoice is: that is `../pages`. A composition
  * is the preferred way to differ from the registry, because it leaves the
  * registry component untouched and upgradeable.
  */
@@ -189,6 +189,8 @@ export {
   SimpleTable,
   SplitMeter,
   SummaryRow,
+  TotalRow,
+  TotalsList,
 } from './detail/DetailKit'
 export type { Choice, DetailMenuItem, DetailTabSpec, SimpleColumn } from './detail/DetailKit'
 export { GuidedEmptyState } from './feedback/GuidedEmptyState'
@@ -207,6 +209,8 @@ export type { ChartBoxProps } from './charts/ChartBox'
 export { SortableList, SortableItem, SortableListProvenance } from './tables/SortableList'
 export type { SortableListProps, SortableItemProps } from './tables/SortableList'
 export { CheckboxRow, CheckboxRowProvenance } from './forms/CheckboxRow'
+export { MetadataFields, MetadataFieldsProvenance, metadataOfRows } from './forms/MetadataFields'
+export type { MetadataFieldsProps } from './forms/MetadataFields'
 export type { CheckboxRowProps } from './forms/CheckboxRow'
 
 export { ActivitySection } from './detail/ActivityLog'

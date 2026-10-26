@@ -5,7 +5,7 @@ import { featureFixtures } from './featureFixtures'
 import { FeatureForm } from './FeatureForm'
 
 /**
- * The replacement for `AddFeature.tsx` — 1,106 lines and four state slices —
+ * The replacement for `AddFeature.tsx`: 1,106 lines and four state slices:
  * proved the same way everything else in this package is: fixtures in, props
  * out, no provider, no network.
  */
@@ -13,9 +13,9 @@ import { FeatureForm } from './FeatureForm'
  * Drives the ReUI Select, which is a combobox rather than a native `<select>`.
  *
  * `userEvent.selectOptions` only works on a real `<select>`, and the options
- * render in a portal outside the story root — so they are found on `screen`.
+ * render in a portal outside the story root: so they are found on `screen`.
  */
-async function chooseOption(label: string, optionName: string) {
+async function chooseOption(label: string, optionName: string | RegExp) {
   await userEvent.click(screen.getByRole('combobox', { name: label }))
   await userEvent.click(await screen.findByRole('option', { name: optionName }))
 }
@@ -196,8 +196,11 @@ export const DetailsThenMetering: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.getByRole('heading', { name: 'Details' })).toBeInTheDocument()
-    await expect(canvas.getByRole('heading', { name: 'Metering' })).toBeInTheDocument()
+    await expect(canvas.getByRole('heading', { name: 'Feature' })).toBeInTheDocument()
+    // Metering is split into its three parts.
+    for (const name of ['Units', 'Event', 'Aggregation']) {
+      await expect(canvas.getByRole('heading', { name })).toBeInTheDocument()
+    }
     await expect(canvas.queryByRole('complementary')).not.toBeInTheDocument()
     // No feature-level alerts on the form.
     await expect(canvas.queryByText(/usage alerts/i)).not.toBeInTheDocument()
@@ -213,7 +216,10 @@ export const BooleanHasNoUnits: Story = {
     await expect(canvas.queryByLabelText(/^Unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Event name/)).not.toBeInTheDocument()
-    await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+    // No metering cards for a feature that is not metered.
+    for (const name of ['Units', 'Event', 'Aggregation']) {
+      await expect(canvas.queryByRole('heading', { name })).not.toBeInTheDocument()
+    }
   },
 }
 
@@ -226,7 +232,10 @@ export const StaticHasNoUsage: Story = {
     const canvas = within(canvasElement)
 
     await expect(canvas.queryByRole('heading', { name: 'Usage' })).not.toBeInTheDocument()
-    await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+    // No metering cards for a feature that is not metered.
+    for (const name of ['Units', 'Event', 'Aggregation']) {
+      await expect(canvas.queryByRole('heading', { name })).not.toBeInTheDocument()
+    }
     await expect(canvas.queryByLabelText(/^Unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
 
@@ -236,8 +245,8 @@ export const StaticHasNoUsage: Story = {
   },
 }
 
-/** Groups are offered under the name people know them by: Label. */
-export const LabelField: Story = {
+/** Tags are the name for the groups a feature is filed under. */
+export const TagField: Story = {
   args: {
     groups: [
       { value: 'grp_ai', label: 'AI' },
@@ -246,7 +255,9 @@ export const LabelField: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('combobox', { name: 'Label' })).toBeInTheDocument()
+    // The tag sits under Optional details, closed until asked for.
+    await userEvent.click(canvas.getByRole('button', { name: /Optional details/ }))
+    await expect(await canvas.findByRole('combobox', { name: 'Tag' })).toBeInTheDocument()
     await expect(canvas.queryByRole('combobox', { name: 'Group' })).not.toBeInTheDocument()
   },
 }
@@ -310,10 +321,10 @@ export const CountHidesTheAggregationTarget: Story = {
     await expect(await canvas.findByRole('combobox', { name: 'Aggregation' })).toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Event field/)).not.toBeInTheDocument()
 
-    await chooseOption('Aggregation', 'Sum of a field')
+    await chooseOption('Aggregation', /^Sum$/)
     await expect(await canvas.findByLabelText(/^Event field/)).toBeInTheDocument()
 
-    await chooseOption('Aggregation', 'Count of events')
+    await chooseOption('Aggregation', /^Count$/)
     await expect(canvas.queryByLabelText(/^Event field/)).not.toBeInTheDocument()
   },
 }
@@ -350,9 +361,11 @@ export const SubmitsAValidatedDomainValue: Story = {
     const canvas = within(canvasElement)
 
     await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
+    await userEvent.click(canvas.getByRole('button', { name: /Optional details/ }))
     await userEvent.clear(canvas.getByLabelText(/^Lookup key/))
     await userEvent.type(canvas.getByLabelText(/^Lookup key/), 'api_calls')
     await userEvent.type(await canvas.findByLabelText(/^Event name/), 'api_call')
+    await userEvent.type(canvas.getByLabelText(/^Event field/), 'calls')
     await submit(canvas)
 
     await expect(args.onSubmit).toHaveBeenCalledWith(
@@ -362,7 +375,8 @@ export const SubmitsAValidatedDomainValue: Story = {
         type: FeatureType.Metered,
         meter: expect.objectContaining({
           eventName: 'api_call',
-          aggregationType: AggregationType.Count,
+          aggregationType: AggregationType.Sum,
+          field: 'calls',
         }),
       }),
     )
@@ -373,6 +387,7 @@ export const SubmitsAValidatedDomainValue: Story = {
 export const LookupKeyFollowsName: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /Optional details/ }))
     await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
     await expect(canvas.getByLabelText(/^Lookup key/)).toHaveValue('feat-api-calls')
 
@@ -384,18 +399,19 @@ export const LookupKeyFollowsName: Story = {
 }
 
 /**
- * No labels yet: the field is still there, saying so.
+ * No tags yet: the field is still there, saying so.
  *
  * It used to be hidden when the environment had no groups, so the question
  * was never asked and the dropdown was reported as missing. An empty picker
  * is information; an absent one is not.
  */
-export const NoLabelsYet: Story = {
+export const NoTagsYet: Story = {
   args: { groups: [] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Label')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: /Optional details/ }))
+    await expect(canvas.getByText('Tag')).toBeVisible()
     await expect(canvas.getByText(/none exist yet/i)).toBeVisible()
-    await expect(canvas.getByRole('combobox', { name: /label/i })).toBeDisabled()
+    await expect(canvas.getByRole('combobox', { name: /tag/i })).toBeDisabled()
   },
 }

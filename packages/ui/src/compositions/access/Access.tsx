@@ -23,15 +23,15 @@ import { provenance } from '@ui/provenance'
 /**
  * Access control in the UI, in one place, as V1 does it:
  *
- * - **`AccessProvider`** — the app hands in what the signed-in principal may
+ * - **`AccessProvider`**: the app hands in what the signed-in principal may
  *   do (`@fp/query` `useAccessControl`). Without a provider, everything is
  *   allowed, so stories and tests render the full UI.
- * - **`RequireAccess`** — a page's gate: a loader while roles load (never a
+ * - **`RequireAccess`**: a page's gate: a loader while roles load (never a
  *   false "Access denied"), then the page or the denied screen.
- * - **`AccessScope`** — which entity a page (or a tab of it) writes. The
- *   kit's write controls — a list's create button and row actions, a detail
- *   page's menu, an editable card's Edit — read it and disable themselves.
- * - **`WriteGate`** — wraps any other control: disabled, with the reason in a
+ * - **`AccessScope`**: which entity a page (or a tab of it) writes. The
+ *   kit's write controls: a list's create button and row actions, a detail
+ *   page's menu, an editable card's Edit: read it and disable themselves.
+ * - **`WriteGate`**: wraps any other control: disabled, with the reason in a
  *   tooltip, when write is not allowed. Controls stay visible, as in V1.
  *
  * The API stays the authority: this decides what is offered, never what is
@@ -58,7 +58,7 @@ export interface AccessValue {
   can: (entity: RbacEntity, action: RbacAction) => boolean
   meets: (requirement: AccessRequirement) => boolean
   /**
-   * Every write is refused, whatever the roles, and this says why — the
+   * Every write is refused, whatever the roles, and this says why: the
    * account is locked (read-only) until it upgrades. Absent while writes
    * follow the roles.
    */
@@ -157,7 +157,7 @@ export function useWriteAccess(
 }
 
 /**
- * Why every write is refused right now — the account is locked (read-only) —
+ * Why every write is refused right now: the account is locked (read-only):
  * or null while writes follow the roles.
  */
 export function useWriteLock(): string | null {

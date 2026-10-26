@@ -30,6 +30,7 @@ import {
   useUpdateAddon,
   useUpdateCreditGrant,
   useUpdateEntitlement,
+  useSyncAddonPrices,
 } from '@fp/query'
 import {
   AddonSubscriptionsView,
@@ -43,9 +44,10 @@ import {
   EntitlementTable,
   type FeatureOption,
   Pill,
+  toast,
 } from '@fp/ui/pages'
 import { ConfirmDialog, EditableCard, FormDialog, MetadataCard } from '@fp/ui/compositions'
-import { ArchiveIcon, PencilIcon, PuzzleIcon } from '@fp/ui/icons'
+import { ArchiveIcon, PencilIcon, PuzzleIcon, RefreshCwIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 import { CatalogCharges } from '../shared/CatalogCharges'
@@ -58,14 +60,14 @@ export interface AddonDetailPageProps {
 }
 
 /** The tabs, in order. Overview leads with the add-on's prices. */
-type AddonTab = 'charges' | 'entitlements' | 'subscriptions' | 'information'
+type AddonTab = 'charges' | 'entitlements' | 'credit-grants' | 'subscriptions' | 'information'
 
 /**
  * One add-on, in full.
  *
- * The shared detail shell — a large title with its status badge and lookup key,
+ * The shared detail shell: a large title with its status badge and lookup key,
  * an Edit action, and a metric rail of the numbers that say what the add-on
- * bills — then a set of tabs that mirror the plan: the prices it carries, the
+ * bills: then a set of tabs that mirror the plan: the prices it carries, the
  * entitlements it grants, the credit grants it hands subscribers, and the record
  * itself. An add-on shares a plan's charges, entitlements, and credit grants, so
  * it reuses the exact same read tables and editors rather than restating them.
@@ -76,7 +78,7 @@ type AddonTab = 'charges' | 'entitlements' | 'subscriptions' | 'information'
  *
  * The page fetches and composes; every relational section is a presentational
  * component from `@fp/ui`, and every destructive action passes through a
- * `ConfirmDialog` — a charge is terminated, an entitlement or grant removed, only
+ * `ConfirmDialog`: a charge is terminated, an entitlement or grant removed, only
  * after a confirming beat.
  */
 export function AddonDetailPage({
@@ -86,10 +88,12 @@ export function AddonDetailPage({
 }: AddonDetailPageProps) {
   const addon = useAddon(addonId)
   const update = useUpdateAddon()
+  const sync = useSyncAddonPrices()
   const remove = useDeleteAddon()
   // Fetched here too (deduped by react-query) so the rail can carry real counts.
   const prices = usePrices(PriceEntityType.Addon, addonId)
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
+  const grants = useCreditGrants(CreditGrantScope.Addon, addonId)
 
   const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'charges')
   const [archiving, setArchiving] = useState(false)
@@ -132,6 +136,20 @@ export function AddonDetailPage({
           onSelect: () => setTab('information'),
         },
         {
+          // Pushes edited prices to every contract that carries this add-on.
+          id: 'sync',
+          label: sync.isPending ? 'Syncing…' : 'Sync to contracts',
+          icon: <RefreshCwIcon className="text-muted-foreground" aria-hidden />,
+          disabled: sync.isPending || data.status === 'archived',
+          onSelect: () =>
+            sync.mutate(addonId, {
+              onSuccess: () =>
+                toast('Sync started', {
+                  description: 'Contracts with this add-on are being brought up to date.',
+                }),
+            }),
+        },
+        {
           id: 'archive',
           label: 'Archive',
           icon: <ArchiveIcon aria-hidden />,
@@ -160,12 +178,13 @@ export function AddonDetailPage({
           value: 'entitlements',
           label: 'Entitlements',
           ...(entitlements.data ? { count: entitlementCount } : {}),
-          content: (
-            <div className="flex flex-col gap-5">
-              <EntitlementsTab addonId={addonId} />
-              <CreditGrantsTab addonId={addonId} />
-            </div>
-          ),
+          content: <EntitlementsTab addonId={addonId} />,
+        },
+        {
+          value: 'credit-grants',
+          label: 'Credit grants',
+          ...(grants.data ? { count: grants.data.length } : {}),
+          content: <CreditGrantsTab addonId={addonId} />,
         },
         { value: 'subscriptions', label: 'Contracts', content: <AddonSubscriptionsView /> },
         {
@@ -219,7 +238,7 @@ export function AddonDetailPage({
   )
 }
 
-/** Entitlements — what the add-on includes of each feature. Removal is confirmed. */
+/** Entitlements: what the add-on includes of each feature. Removal is confirmed. */
 function EntitlementsTab({ addonId }: { addonId: string }) {
   const navigate = useNavigate()
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
@@ -231,7 +250,7 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   const [editing, setEditing] = useState<Entitlement | null>(null)
   const [target, setTarget] = useState<Entitlement | null>(null)
 
-  // Only features not already entitled can be added — a feature is granted once.
+  // Only features not already entitled can be added: a feature is granted once.
   const granted = new Set((entitlements.data ?? []).map((e) => e.featureId))
   const toOption = (f: NonNullable<typeof features.data>['features'][number]): FeatureOption => ({
     id: f.id,
@@ -331,7 +350,7 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   )
 }
 
-/** Credit Grants — the balances the add-on hands its subscribers. Removal is confirmed. */
+/** Credit Grants: the balances the add-on hands its subscribers. Removal is confirmed. */
 function CreditGrantsTab({ addonId }: { addonId: string }) {
   const grants = useCreditGrants(CreditGrantScope.Addon, addonId)
   const create = useCreateCreditGrant()
@@ -417,7 +436,7 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
 }
 
 /**
- * Information — one pencil edits the name and description in place; the rest
+ * Information: one pencil edits the name and description in place; the rest
  * is read-only. The metadata card beside it edits, adds and removes fields.
  */
 function InformationTab({

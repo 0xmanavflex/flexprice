@@ -22,7 +22,7 @@ import { provenance } from '@ui/provenance'
  *
  * Presentational: it emits a validated `CreateCostSheet` and never imports
  * `@fp/query`. The backend treats a blank field on update as "unchanged", so an
- * edit cannot empty a key or description — the hint says so.
+ * edit cannot empty a key or description: the hint says so.
  */
 export const CostSheetFormProvenance = provenance({
   source: 'composition',

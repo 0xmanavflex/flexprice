@@ -8,9 +8,11 @@ import {
 import {
   ApiError,
   ErrorKind,
+  type CloneTarget,
   type CurrentUser,
   type EnvironmentRecord,
   type SessionCredentials,
+  cloneEnvironment,
   createEnvironment,
   fetchCurrentUser,
   existsInEnvironment,
@@ -29,7 +31,7 @@ import { useFlexpriceServerURL } from './provider'
  * Sign-in is a mutation and not a query because it is an exchange: an email
  * and a password go out, a token comes back, and nothing about it should be
  * cached, retried or refetched on focus. Who the token belongs to, and which
- * environments it can act in, are queries — they answer the same way every
+ * environments it can act in, are queries: they answer the same way every
  * time until the token changes.
  *
  * Both reads are keyed by the token rather than by nothing. A signed-out user
@@ -53,7 +55,7 @@ export function useSignIn() {
   })
 }
 
-/** Create an account — `POST /auth/signup`, which answers with a session like sign-in. */
+/** Create an account: `POST /auth/signup`, which answers with a session like sign-in. */
 export function useSignUp() {
   const serverURL = useFlexpriceServerURL()
 
@@ -63,7 +65,7 @@ export function useSignUp() {
 }
 
 /**
- * Creates the account behind a confirmed Supabase sign-up — `POST /auth/signup`
+ * Creates the account behind a confirmed Supabase sign-up: `POST /auth/signup`
  * with the confirmed session's access token, as the hosted regions require.
  * See `signUp` in `@fp/api`.
  */
@@ -160,7 +162,7 @@ export function useRecordEnvironment(
  * Creates an environment, then makes the list say so.
  *
  * `POST /environments` is as undocumented as the list it adds to, and lives in
- * `@fp/api`'s `session.ts` for the same reason — see the note there, and
+ * `@fp/api`'s `session.ts` for the same reason: see the note there, and
  * `docs/api-contract-gap.md`. It is a real route: the hosted API answers a
  * malformed-by-quota create with a `validation_error` naming the tenant's
  * per-type limit, which is a handler that ran.
@@ -190,8 +192,30 @@ export function useCreateEnvironment(
       }
       return toEnvironment(await createEnvironment(serverURL, token as string, draft))
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+    onSuccess: (created) => {
+      // The list refetch can land after the console has already switched, and
+      // a missing id makes the shell abandon the switch. Put the new row in
+      // every cached list first, then again after the refetch in case the
+      // server answer is briefly behind the create. The prefix also matches
+      // `useRecordEnvironment`'s entries, which hold an id rather than a list,
+      // so anything that is not a list is left alone.
+      const merge = (current: Environment[] | undefined) => {
+        if (!Array.isArray(current) || !created?.id) return current
+        if (current.some((environment) => environment.id === created.id)) return current
+        return [...current, created]
+      }
+      queryClient.setQueriesData<Environment[]>(
+        { queryKey: queryKeys.session.environments() },
+        merge,
+      )
+      void queryClient
+        .invalidateQueries({ queryKey: queryKeys.session.environments() })
+        .then(() => {
+          queryClient.setQueriesData<Environment[]>(
+            { queryKey: queryKeys.session.environments() },
+            merge,
+          )
+        })
     },
   })
 }
@@ -227,6 +251,39 @@ export function useRenameEnvironment(
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+    },
+  })
+}
+
+/** What a copy sends: the environment to copy from, and where to. */
+export interface CopyEnvironment {
+  sourceEnvironmentId: string
+  target: CloneTarget
+}
+
+/**
+ * Copy an environment's published plans and features into another: V1's
+ * "Copy environment", and how a sandbox setup is taken live. The API queues the
+ * copy and answers at once; when it made a new environment, the list is
+ * refreshed so the switcher shows it.
+ */
+export function useCopyEnvironment(
+  token: string | null,
+): UseMutationResult<void, Error, CopyEnvironment> {
+  const serverURL = useFlexpriceServerURL()
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, CopyEnvironment>({
+    mutationFn: async ({ sourceEnvironmentId, target }) => {
+      if (!enabledFor(token)) {
+        throw new ApiError(ErrorKind.Unauthorized, 'Sign in to copy an environment.')
+      }
+      await cloneEnvironment(serverURL, token as string, sourceEnvironmentId, target)
+    },
+    onSuccess: (_, { target }) => {
+      if (!('targetEnvironmentId' in target)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+      }
     },
   })
 }

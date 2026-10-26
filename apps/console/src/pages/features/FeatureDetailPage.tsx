@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { type CloneFeature, FeatureType, PriceEntityType } from '@fp/domain'
+import {
+  type CloneFeature,
+  FeatureStatus,
+  FeatureType,
+  PriceEntityType,
+  emptyAlertSettingConfig,
+} from '@fp/domain'
 import {
   useCloneFeature,
   useDeleteFeature,
@@ -11,10 +17,16 @@ import {
   useUpdateFeature,
   useFlexpriceServerURL,
 } from '@fp/query'
-import { FeatureCloneDialog, FeatureDetailView, type FeatureTab } from '@fp/ui/pages'
+import {
+  EntityAlertDialog,
+  FeatureCloneDialog,
+  FeatureDetailView,
+  type FeatureTab,
+} from '@fp/ui/pages'
 import { ConfirmDialog } from '@fp/ui/compositions'
 import { toSubmitError } from './featureMessages'
 import { detailGate } from '../shared/detailGate'
+import { AddFeatureChargeDialog } from './AddFeatureChargeDialog'
 import { subTab } from '../shared/subTab'
 
 export interface FeatureDetailPageProps {
@@ -47,7 +59,9 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
   const clone = useCloneFeature()
   const remove = useDeleteFeature()
   const [cloning, setCloning] = useState(false)
+  const [addingCharge, setAddingCharge] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [alerting, setAlerting] = useState(false)
 
   if (!feature.data) {
     return detailGate(feature, {
@@ -84,6 +98,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
         onBack={onNavigateToList}
         onEditConfiguration={() => onEdit(featureId)}
         onDuplicate={() => setCloning(true)}
+        onAlertSettings={() => setAlerting(true)}
         onDelete={() => setDeleting(true)}
         charges={charges.data ?? []}
         chargesLoading={charges.isLoading}
@@ -113,12 +128,21 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
             })
           }
         }}
-        // A charge is priced on a plan: start a new one.
-        onAddPlan={() => void navigate({ to: '/plans/new' })}
+        // Only usage is charged per feature: a metered feature can be billed on a plan.
+        // Not on an archived feature: new prices belong on live meters.
+        {...(data.type === FeatureType.Metered &&
+        data.meterId &&
+        data.status !== FeatureStatus.Archived
+          ? { onAddCharge: () => setAddingCharge(true) }
+          : {})}
         onSaveMetadata={(metadata) =>
           update.mutateAsync({ id: data.id, draft: { name: data.name, metadata } })
         }
       />
+      {/* Mounted only while open: its plan and catalogue reads wait for the click. */}
+      {addingCharge ? (
+        <AddFeatureChargeDialog feature={data} open onOpenChange={setAddingCharge} />
+      ) : null}
       <FeatureCloneDialog
         open={cloning}
         onOpenChange={(open) => {
@@ -147,6 +171,22 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
               onNavigateToList()
             },
           })
+        }
+      />
+      {/*
+        V1 keeps a feature's usage alerts on the feature itself (`alert_settings`),
+        so they are saved through the feature update, with its current name.
+      */}
+      <EntityAlertDialog
+        open={alerting}
+        onOpenChange={setAlerting}
+        noun="Feature"
+        isLoading={false}
+        loadFailed={false}
+        isNew={!data.alertSettings}
+        initial={data.alertSettings ?? emptyAlertSettingConfig()}
+        onSave={(alertSettings) =>
+          update.mutateAsync({ id: data.id, draft: { name: data.name, alertSettings } })
         }
       />
     </>

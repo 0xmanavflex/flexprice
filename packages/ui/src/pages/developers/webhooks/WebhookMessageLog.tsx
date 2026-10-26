@@ -10,7 +10,7 @@ import { type EntityColumn, idColumn } from '../../shared/cells'
 import { EventTypeName, timestampColumn } from './webhookCells'
 
 /**
- * Every message this environment sent — Svix's "Logs".
+ * Every message this environment sent: Svix's "Logs".
  *
  * Newest first, filtered server-side by event type. Clicking a row opens the
  * message with its payload and every attempt across endpoints.

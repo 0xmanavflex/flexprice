@@ -6,6 +6,38 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-26
+
+- New `ContractAmountCalculator` beside a flat fee's Amount on the charge form (plan, add-on and contract charges): a contract value over a contract term (daily to annual) is turned into the price per billing period and written into the Amount, as V1's calculator does; nothing else is stored. Exact rational maths in `@fp/domain` (`contractAmountPerPeriod`), V1's month ratios, half-up to cents. Source: walkthrough QA 3.3, decided in chat 2026-10-26.
+- Contract detail: a new Information tab (second) holds the Contract and Billing & collection panels and the metadata card; the Overview leads with the upcoming invoice, charges, add-ons and the rest, its rail keeping Activity and Related. Source: walkthrough QA 5.9, decided in chat 2026-10-26.
+- Invoice status colours: Open (and "Payment pending" on the detail page) is orange (`warning`), Paid green, Void grey; Draft moves to `info` so it does not share Open's colour. Open no longer shares violet with Trialing contracts. Existing tones only. Source: walkthrough QA 6.1, decided in chat 2026-10-26.
+- PillColumns: optional `legend` (default on). Home's "New contracts by plan" card turns it off, so the plan names are not listed under the chart; each column still reads out its full breakdown. From the uncommitted work on `fix/reports-full-window`.
+- MetricChart: with more than one series (Home's revenue in several currencies), each line gets its own scale, so a small currency no longer flattens against a large one, and the header gives each series' peak in its own unit with its colour, instead of one min and max across currencies. Ported from `2653b914` on `fix/reports-full-window`, which never reached develop.
+- FilterBar: a `keyvalue` filter kind (domain `FilterKind`), for metadata. Its value step is a key and a value applied together (`FilterKeyValueEditor`), read back on the chip as `key = value`; the only condition is "is". The customers list offers a Metadata filter, sent as the search's `metadata` map (every pair must match) rather than a filter condition. Source: walkthrough QA 1.2.
+
+## 2026-10-25
+
+- New `MetadataFields` (compositions/forms): key/value metadata as a form field, MetadataCard's edit rows (key, value, remove) with Add field, reporting the map and any problem (a value without a key, a repeated key) to the form. Plan create (3.1) and coupon create (7.2) gain an optional Metadata card using it; a problem blocks the create. Source: walkthrough QA 3.1, 7.2.
+- CheckboxRow: optional `description`, a muted line under the label that is also the checkbox's accessible description. Settings → invite and edit roles now lists each role as a checkbox row with what it grants (was toggle buttons with the permissions in a `title` tooltip). Source: walkthrough QA 7.6.
+- ActivityLog: an entry's values render as muted label / value pairs (`fields`, a `dl`) under the highlighted record, instead of one dot-joined sentence ("$35.00 · $35.00 due · Voided" is now Total / Due / Status). `summary` and `detail` stay for callers that write a sentence. Titles read "Contract …" and "Credit memo …", not "Subscription …" / "Credit note …". Source: walkthrough QA 1.7.
+- Entitlement usage: the "Over the included amount by N" line under the bar is gone (the red reading and bar say it). A row granted by several sources shows the first and a "+N" that opens, on hover or press, a popover listing every source as a link (was a `title` attribute). Source: walkthrough QA 5.13.
+- ChargeTable: new Billing timing column (In advance / In arrears) and an "In effect" column (start → end, "Ongoing", "Always") on every charges table, shown by default in the wide layout and in the column menu in the narrow one; a Status column (Active / Changed / Ended) off by default; the Status filter is always offered on the full table. `DetailTable` columns gain `hiddenByDefault`. Source: walkthrough QA 3.7–3.9.
+- Customer detail: an archived customer is read-only. An info strip above the tabs says so, and the page runs under a scoped `writeLock` (nested `AccessProvider` + `AccessScope`), so every write control on it (header menu, inline edits, section actions, wallet and tax panels) is disabled with that reason. Source: walkthrough QA 1.3.
+- ConnectorCard: the connected state is a green `success-light` "Connected" badge (tick inside) instead of plain tick + text, so connected integrations read at a glance. Source: walkthrough QA 9.2.
+- `textColumn` gains `placeholder(row)`: a muted stand-in for an empty value, in place of the dash. The invoice list uses it for a draft's number ("To be generated"), as do the invoice detail's payments table and the edit form's number field. Source: walkthrough QA 6.7.
+- Exports: a connection's exports page gets an `EntityHeader` (connection name, Flexprice-managed / Your bucket badge, copyable ID) instead of only a breadcrumb; its create action and dialog read "Add task" / "Add export task" (was "New export"). The S3 connections section's "Add connection" is outline, per the section-action rule. Source: walkthrough QA 8.4.
+
+## 2026-10-24
+
+- AppShell header: the breadcrumb/actions row now takes the page's measure (`max-w-[var(--shell-max)]`, `px-6`, centred) instead of `px-4 sm:px-10 2xl:px-14` across the full width, so its edges line up with the content below. The border still spans the inset. Source: walkthrough QA 10.1.
+- Informational alerts use the `info` variant instead of the default white card: price-version note (ChargeForm), contract-only edit note, pricing widget note, finalized-invoice note, environment create/copy notes, integration prerequisites. Error, status (cancelled/paused) and customer-portal alerts are unchanged. The `--info` hue (violet today) is untouched; changing it to blue is a token change that needs a design decision. Source: walkthrough QA 3.6.
+- FormDialog: new `dismissible` prop (default true). `false` hides the close control and ignores Escape/overlay, for bodies whose own button is the only exit. Used by the one-time API key secret, whose X rendered but did nothing. Source: walkthrough QA 8.1.
+
+## 2026-10-22
+
+- Hosted invoice page: rebuilt on the customer portal's frame and kit parts — header band with the merchant's mark, one `Section` with a state `Pill`, `IconTile` and amount, `DetailList` facts, Download/Pay `Button`s and a ReUI `Alert` for pay/download errors; not-found, not-valid and failed pages use `ErrorState` (page variant) inside the same frame. `HostedInvoiceDetailsSheet` follows `PortalInvoiceSheet`: sheet header with number and state, `DetailList` parties, `SimpleTable` for lines and payment history, totals. Drops the Stripe-style floating card (shadow, oversized type, uppercase block headings). New `parts.tsx` (state pill, merchant mark). Source: review on #37 — the page must read as the product.
+- Entitlement usage: new `EntitlementUsage` (usage cell: used of limit with unit, bar, soft-limit and reset captions, unlimited/over-limit/unreported states) and `EntitlementUsageTable` (Feature, Source when known, Value, Usage). Used on the customer Overview's new Entitlements section and on a contract's Entitlements section, which trades its Access and Limit columns for Value and Usage. `UsageMeter` gains `hideLabel` for use as a cell. Composition over `UsageMeter` and `DetailTable`. Source: V1 customer overview `CustomerUsageTable`.
+
 ## 2026-10-19
 
 - Hosted invoice page: `HostedInvoiceView` (centred card with amount, invoice number, due/payment date and method, Download and Pay; loading, not-found, not-valid and failed states) and `HostedInvoiceDetailsSheet` (summary, items, totals, payment history, contact). Installs ReUI `icon-tile`. Source: Stripe hosted invoice page; layout after ReUI receipt-5 and receipt-1.
@@ -23,7 +55,6 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 - Credit memo document is now connected to the console route: exact API totals, original invoice-line comparisons, lifecycle controls and Activity/Related sidebar. Removed calculated balances and assumed refund destinations. Added keyboard-accessible narrow line scrolling. Source: supplied HTML credit-memo-detail.tsx; metadata/tax/settlement details are omitted when unavailable.
 
 - Feature charges and price-group members now use the shared ChargeTable. Feature rows open their parent plan/add-on/cost sheet; group rows open ChargeSheet, retaining missing-member IDs and query errors. Shared table accepts contextual column labels and descriptions. Source: supplied HTML charges-table.tsx, Feature context.
-
 
 - Shared charges: PlanChargesView now composes ChargeTable/ChargeSheet, preserving add/edit/terminate and loading/error states. Tier rows move into the sheet. Wide tables show supplied quantities; all views keep controls above the frame. Table price labels carry into the sheet. History sorts newest first and shows last-updated dates.
 - Credit memo detail: adds a responsive Activity/Related rail from real lifecycle timestamps and invoice/customer links. Metadata remains unavailable in the current read model.

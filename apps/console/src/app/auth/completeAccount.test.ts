@@ -17,13 +17,19 @@ describe('completeAccount, for an account that already exists', () => {
    * The API reads the tenant from the token's `app_metadata.tenant_id` and
    * refuses with "Invalid token claims" when it is missing. The session object
    * can name a tenant the token does not, because the token was minted
-   * earlier — so the token is refreshed rather than passed on as it arrived.
+   * earlier: so the token is refreshed rather than passed on as it arrived.
    */
   it('signs in with a freshly minted token, not the one the link carried', async () => {
     const refresh = vi.fn(async () => 'token.minted.now')
     const result = await completeAccount('us', confirmed('ten_1'), neverCreates, refresh)
 
-    expect(result).toEqual({ token: 'token.minted.now', userId: 'user_1', tenantId: 'ten_1' })
+    // The region names the Supabase session client that keeps refreshing it.
+    expect(result).toEqual({
+      token: 'token.minted.now',
+      userId: 'user_1',
+      tenantId: 'ten_1',
+      region: 'us',
+    })
     expect(neverCreates).not.toHaveBeenCalled()
   })
 
@@ -49,6 +55,11 @@ describe('completeAccount, for a new account', () => {
       expect.objectContaining({ email: 'someone@example.com', token: 'token.minted.earlier' }),
     )
     // The tenant exists only after the create, so only a later token names it.
-    expect(result).toEqual({ token: 'token.with.tenant', userId: 'user_new', tenantId: 'ten_new' })
+    expect(result).toEqual({
+      token: 'token.with.tenant',
+      userId: 'user_new',
+      tenantId: 'ten_new',
+      region: 'us',
+    })
   })
 })

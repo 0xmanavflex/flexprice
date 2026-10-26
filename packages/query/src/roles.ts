@@ -11,13 +11,13 @@ import { useFlexprice } from './provider'
  * delete: roles are backend-defined and the console only assigns them.
  *
  * Two things about these two routes are unlike every other module here, and
- * both are the same cause — the SDK types them as `Promise<{[k: string]: any}>`
+ * both are the same cause: the SDK types them as `Promise<{[k: string]: any}>`
  * because the OpenAPI document gives them no response model:
  *
  *   - the responses are **not camelCased**. Everything else in this package
  *     reads `lookupKey`; these come back exactly as the server wrote them.
  *     The fields happen to be single words (`id`, `name`, `description`,
- *     `permissions`), so nothing is misspelled here today — but a field added
+ *     `permissions`), so nothing is misspelled here today: but a field added
  *     upstream with two words will arrive snake_case, and this mapper is where
  *     that has to be handled rather than in a component.
  *   - the payloads are **wrapped**: the list is `{roles: [...]}`, not the
@@ -30,8 +30,8 @@ import { useFlexprice } from './provider'
  */
 
 /**
- * The wire shape. Permissions arrive as an object keyed by resource —
- * `{"*": ["*"]}` for super admin, `{"event": ["read"]}` for a scoped role —
+ * The wire shape. Permissions arrive as an object keyed by resource:
+ * `{"*": ["*"]}` for super admin, `{"event": ["read"]}` for a scoped role:
  * which is convenient to store and awkward to render, so the mapper turns it
  * into a list.
  */
@@ -86,7 +86,7 @@ export function toRoleDetail(response: unknown): Role | null {
 /**
  * The roles assignable to a principal of this kind.
  *
- * `audience` is a real server-side filter here — unlike the user search's
+ * `audience` is a real server-side filter here: unlike the user search's
  * `roles`, this one is honoured: asking for `service_account` returned four
  * roles where the unfiltered list returned five. Passing it is what stops a
  * picker offering a machine a role it cannot hold.

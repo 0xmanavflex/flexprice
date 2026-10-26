@@ -19,7 +19,7 @@ import { useFlexprice } from './provider'
  * Entitlements: what a plan includes of a feature.
  *
  * Read with `POST /entitlements/search`, written with `POST /entitlements/bulk`
- * — the drawer queues several and commits them together. A metered entitlement
+ *: the drawer queues several and commits them together. A metered entitlement
  * carries a limit where `null` means *unlimited*, a difference this module
  * preserves in both directions rather than collapsing to zero.
  */
@@ -90,8 +90,8 @@ export function toEntitlement(wire: EntitlementWire): Entitlement {
 /**
  * A grant draft, as a `CreateEntitlementRequest`.
  *
- * Only the fields the feature type uses are sent — a boolean grant carries a
- * flag and nothing else — so the backend never has to reconcile a static value
+ * Only the fields the feature type uses are sent: a boolean grant carries a
+ * flag and nothing else: so the backend never has to reconcile a static value
  * on a metered entitlement. The entity it belongs to is tagged on every one.
  */
 export function toEntitlementRequest(
@@ -187,8 +187,8 @@ type GrantWire = EntitlementWire & {
  * `POST /entitlements/search` takes `featureIds` and no expand.
  *
  * It used to ask for `expand: 'plan,addon'`. Unlike `/prices/search`, this
- * route does not refuse that — checked against the live API, it answers `200`
- * — but it does not honour it either: the rows come back with no `plan` and no
+ * route does not refuse that: checked against the live API, it answers `200`
+ *: but it does not honour it either: the rows come back with no `plan` and no
  * `addon` key whether it is sent or not. So it was a field that travelled on
  * every request and bought nothing.
  *
@@ -289,7 +289,7 @@ export function useCreateBulkEntitlements() {
   })
 }
 
-/** Remove an entitlement. The delete carries no body — just the id. */
+/** Remove an entitlement. The delete carries no body: just the id. */
 export function useDeleteEntitlement() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

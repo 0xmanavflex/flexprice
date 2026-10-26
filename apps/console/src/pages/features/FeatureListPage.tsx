@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
+  DEFAULT_FEATURE_QUERY,
+  isFeatureQueryFiltered,
   DEFAULT_GROUP_QUERY,
   GroupEntityType,
   type CloneFeature,
@@ -85,7 +87,7 @@ export function FeatureListPage({
    * Plans, entitlements and subscriptions per feature, for the rows on screen.
    * A plan counts when it grants the feature (an entitlement) *or* prices it
    * (a charge on its meter), and its name is read for exactly the plans found
-   * — not looked up in the first page of plans, which left any plan past it
+   *: not looked up in the first page of plans, which left any plan past it
    * showing as a raw id.
    */
   const linked = useFeatureLinkage(rows)
@@ -100,13 +102,17 @@ export function FeatureListPage({
     }
     return out
   }, [linked.byFeature])
-  const isFiltered =
-    query.search.length > 0 ||
-    query.types.length > 0 ||
-    query.statuses.length > 0 ||
-    (query.filters?.length ?? 0) > 0
+  const isFiltered = isFeatureQueryFiltered(query)
+  // Back to the default view (published features), not to every status.
   const clearFilters = () =>
-    onQueryChange({ ...query, search: '', types: [], statuses: [], filters: [], page: 1 })
+    onQueryChange({
+      ...query,
+      search: '',
+      types: [],
+      statuses: [],
+      filters: DEFAULT_FEATURE_QUERY.filters ?? [],
+      page: 1,
+    })
 
   return (
     <>
@@ -119,7 +125,7 @@ export function FeatureListPage({
         {/*
           `isEmpty` is only true when the catalogue itself is empty. When a
           filter is responsible, the grid keeps its own toolbar and says "no
-          features match these filters" in the table body — replacing the whole
+          features match these filters" in the table body: replacing the whole
           grid would take the search box away with it, leaving no way to undo
           the search that caused the emptiness.
         */}
@@ -137,11 +143,17 @@ export function FeatureListPage({
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreate}>New feature</Button>}
           emptyTitle="Nothing is being measured yet"
-          emptyDescription="A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
+          emptyDescription="A feature is what you meter or gate: API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
         >
           <FeatureGrid
             features={rows}
             groupName={(groupId) => groupNames.get(groupId)}
+            filterOptions={{
+              group_id: (groups.data?.groups ?? []).map((group) => ({
+                value: group.id,
+                label: group.name,
+              })),
+            }}
             linkage={linkage}
             linkageLoading={linked.isPending}
             onCreateEntitlement={setEntitling}

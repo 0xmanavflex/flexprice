@@ -5,7 +5,7 @@ import { type HostedInvoice, toHostedInvoice, toPaymentActionUrl, toPresignedUrl
 import { queryKeys } from './keys'
 
 /**
- * The hosted invoice page's data, read with the token from the link — never
+ * The hosted invoice page's data, read with the token from the link: never
  * the console session, so none of these hooks needs `FlexpriceProvider`.
  */
 

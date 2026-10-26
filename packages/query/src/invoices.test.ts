@@ -10,7 +10,7 @@ import {
   type InvoiceWire,
 } from './invoices'
 
-describe('toInvoiceFilter — domain vocabulary out, transport in', () => {
+describe('toInvoiceFilter: domain vocabulary out, transport in', () => {
   it('turns a 1-based page into an offset', () => {
     expect(toInvoiceFilter({ ...DEFAULT_INVOICE_QUERY, page: 1, pageSize: 25 })).toMatchObject({
       limit: 25,
@@ -63,7 +63,7 @@ describe('toInvoiceFilter — domain vocabulary out, transport in', () => {
   })
 })
 
-describe('toInvoice — a narrow model out of a 45-field optional response', () => {
+describe('toInvoice: a narrow model out of a 45-field optional response', () => {
   const wire: InvoiceWire = {
     id: 'inv_1',
     invoiceNumber: 'INV-0001',
@@ -119,7 +119,7 @@ describe('toInvoice — a narrow model out of a 45-field optional response', () 
   })
 })
 
-describe('applyLineChanges — the order and the id-threading are the logic', () => {
+describe('applyLineChanges: the order and the id-threading are the logic', () => {
   /** Records each call, and lets a test say which invoice id the API answers with. */
   function recorder(answers: (string | undefined)[] = []) {
     const calls: { id: string; params: Record<string, unknown> }[] = []
@@ -173,8 +173,8 @@ describe('applyLineChanges — the order and the id-threading are the logic', ()
   it('threads the id the API answers with through the rest of the batch', async () => {
     /*
      * Modifying a finalized invoice voids it and returns a draft copy under a
-     * new id. Every later call has to address that copy — the API rejects one
-     * that still names the voided original — and the caller needs the id it
+     * new id. Every later call has to address that copy: the API rejects one
+     * that still names the voided original: and the caller needs the id it
      * ended on so it can navigate somewhere that exists.
      */
     const { calls, execute } = recorder(['inv_copy'])
@@ -257,7 +257,7 @@ describe('applyLineChanges — the order and the id-threading are the logic', ()
   })
 })
 
-describe('runInvoiceEdit — the whole edit page, in the order the API needs', () => {
+describe('runInvoiceEdit: the whole edit page, in the order the API needs', () => {
   function recorder(ids: Record<string, string> = {}) {
     const log: string[] = []
     return {
@@ -335,5 +335,13 @@ describe('runInvoiceEdit — the whole edit page, in the order the API needs', (
       calls as never,
     )
     expect(log).toEqual([])
+  })
+})
+
+describe('toInvoice subscription', () => {
+  // The row menu's "View contract" needs it; one-off invoices have none.
+  it('keeps the contract that raised the invoice, and null when there is none', () => {
+    expect(toInvoice({ id: 'inv_1', subscriptionId: 'subs_1' }).subscriptionId).toBe('subs_1')
+    expect(toInvoice({ id: 'inv_2' }).subscriptionId).toBeNull()
   })
 })

@@ -10,7 +10,7 @@ import type { TenantAddress } from './tenant'
  * The API's `InvoiceResponse` carries ~45 fields, every one of them optional,
  * and three separate notions of "status":
  *
- *   status         the entity lifecycle — published, deleted
+ *   status         the entity lifecycle: published, deleted
  *   invoiceStatus  DRAFT | FINALIZED | VOIDED | SKIPPED
  *   paymentStatus  PENDING | SUCCEEDED | FAILED | PARTIALLY_REFUNDED | ...
  *
@@ -28,6 +28,8 @@ export interface Invoice {
   customerId: string
   /** Display name, already resolved. The UI never joins data. */
   customerName: string
+  /** The contract that raised it; absent for one-off invoices and older reads. */
+  subscriptionId?: string | null
   status: InvoiceStatus
   /**
    * What the *money* did, as opposed to what the document did.
@@ -36,7 +38,7 @@ export interface Invoice {
    * one question a billing operator asks, and that fold is lossy on purpose:
    * a finalized invoice whose only payment attempt failed and one nobody has
    * tried to collect are both `open`. The first needs chasing today. So the
-   * payment side is also carried through unfolded, and the list shows both —
+   * payment side is also carried through unfolded, and the list shows both:
    * one column for the document, one for the collection.
    *
    * `null` when the API sends no payment status, or sends one this build does
@@ -61,7 +63,7 @@ export interface Invoice {
  * operator is asking: does this need my attention, and why?
  *
  * Note `overdue`, which the API does not have. It is `finalized` plus an unpaid
- * balance plus a due date in the past — a derivation every screen would
+ * balance plus a due date in the past: a derivation every screen would
  * otherwise reinvent slightly differently. Deriving it once, here, is the
  * difference between a product vocabulary and a transport dump.
  */
@@ -76,10 +78,13 @@ export const InvoiceStatus = {
 
 export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus]
 
+/** What stands in for a draft's invoice number, which is assigned when it is finalized. */
+export const DRAFT_INVOICE_NUMBER_LABEL = 'To be generated'
+
 /**
  * Inputs to {@link deriveInvoiceStatus}, structurally typed.
  *
- * Deliberately not the SDK's `InvoiceResponse` — domain may not import
+ * Deliberately not the SDK's `InvoiceResponse`: domain may not import
  * transport types, and ESLint enforces it. Describing only what the derivation
  * reads also makes it testable without constructing a 45-field object.
  */
@@ -119,14 +124,14 @@ export function deriveInvoiceStatus({
  * works out for itself.
  *
  * `deriveInvoiceStatus` above computes `Paid` from a payment status and
- * `Overdue` from a due date — neither is a field on an invoice, so neither can
+ * `Overdue` from a due date: neither is a field on an invoice, so neither can
  * be asked of the API. That distinction is not transport trivia: it is the
  * reason the function exists, and anything offering the reader a status to
  * *filter* by has to respect it.
  *
  * Offering a derived status as a filter is worse than omitting it. The request
  * carries no status at all, the API answers with every invoice, and the screen
- * shows an unfiltered list under a chip insisting it is filtered — a wrong
+ * shows an unfiltered list under a chip insisting it is filtered: a wrong
  * answer presented as a right one.
  */
 export const STORED_INVOICE_STATUSES: readonly InvoiceStatus[] = [
@@ -148,7 +153,7 @@ export function needsAttention(status: InvoiceStatus): boolean {
 /**
  * What the user is asking for: which invoices, in what order, on which page.
  *
- * Lives in the domain because it is product vocabulary, not transport — it says
+ * Lives in the domain because it is product vocabulary, not transport: it says
  * `sort: 'total'`, not `sort: [{ field: 'amount_due', direction: 'desc' }]`.
  * `@fp/query` translates it into an `InvoiceFilter`.
  *
@@ -187,7 +192,7 @@ export const DEFAULT_INVOICE_QUERY: InvoiceQuery = {
   filters: [],
 }
 /**
- * What the invoice list can filter on — V1's fields, by their wire names.
+ * What the invoice list can filter on: V1's fields, by their wire names.
  * Customer choices are the account's own records; the page fills them in.
  */
 export const INVOICE_FILTERS: readonly ListFilterSpec[] = [
@@ -283,6 +288,40 @@ export interface InvoiceDetail extends Invoice {
   createdAt: Date | null
 }
 
+/**
+ * How an invoice can be recalculated, or why it cannot. Two endpoints exist:
+ * a draft is recalculated in place (`recalculate-v2`); a voided contract
+ * invoice is replaced by a fresh one for the same period (`recalculate`, an
+ * async workflow). An unpaid finalized contract invoice gets there by being
+ * voided first, which the person confirms.
+ */
+export type InvoiceRecalculation =
+  | { kind: 'in-place' }
+  | { kind: 'replace' }
+  | { kind: 'void-and-replace' }
+  | { kind: 'unavailable'; reason: string }
+
+export function invoiceRecalculation(
+  invoice: Pick<InvoiceDetail, 'status' | 'subscriptionId' | 'amountPaid'>,
+): InvoiceRecalculation {
+  if (invoice.status === InvoiceStatus.Draft) return { kind: 'in-place' }
+  if (!invoice.subscriptionId)
+    return { kind: 'unavailable', reason: 'Only contract invoices can be recalculated' }
+  if (invoice.status === InvoiceStatus.Void) return { kind: 'replace' }
+  if (invoice.status === InvoiceStatus.Skipped)
+    return { kind: 'unavailable', reason: 'A skipped invoice has nothing to recalculate' }
+  const paidSomething = /[1-9]/.test(invoice.amountPaid)
+  if (
+    (invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue) &&
+    !paidSomething
+  )
+    return { kind: 'void-and-replace' }
+  return {
+    kind: 'unavailable',
+    reason: 'A paid invoice cannot be voided; issue a credit memo instead',
+  }
+}
+
 const LINE_AMOUNT = /^(\d+)(?:\.(\d{1,8}))?$/
 
 /**
@@ -314,7 +353,7 @@ const optionalDay = z
   .trim()
   .refine((value) => value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value), 'Pick a date')
 
-/** A tax rate applied to a new invoice — `tax_rate_overrides`, as V1 prefills them from the customer. */
+/** A tax rate applied to a new invoice: `tax_rate_overrides`, as V1 prefills them from the customer. */
 export interface InvoiceTax {
   taxRateCode: string
   /** For display: the rate's name and percentage. */
@@ -331,7 +370,7 @@ export interface InvoiceTax {
  * taxes, a memo and metadata.
  *
  * The API requires `subtotal`, `total` and `amount_due`, so the form sends the
- * exact sum of the lines ({@link sumLineAmounts}) — the total is derived from
+ * exact sum of the lines ({@link sumLineAmounts}): the total is derived from
  * the line items, never typed separately, so the two cannot disagree. Taxes are
  * applied by Flexprice on top of that from the rates sent.
  */

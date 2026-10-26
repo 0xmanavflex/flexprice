@@ -25,6 +25,7 @@ function FormDialogDemo({
   useComposer,
   onSubmit,
   isPending,
+  dismissible,
 }: PlaygroundArgs) {
   const [open, setOpen] = useState(initialOpen)
   useEffect(() => setOpen(initialOpen), [initialOpen])
@@ -46,6 +47,7 @@ function FormDialogDemo({
         title={title}
         {...(size ? { size } : {})}
         {...(isPending ? { isPending } : {})}
+        {...(dismissible === false ? { dismissible } : {})}
       >
         {useComposer ? (
           <Composer submitLabel="Create" onSubmit={onSubmit} onCancel={() => change(false)}>
@@ -86,6 +88,10 @@ const meta = {
       control: 'boolean',
       description: 'Submit in flight: the dialog cannot be dismissed.',
     },
+    dismissible: {
+      control: 'boolean',
+      description: 'False hides the close control and ignores Escape/overlay (a one-time secret).',
+    },
     fields: { control: { type: 'number', min: 1, max: 30, step: 1 } },
     useComposer: { control: 'boolean' },
     onOpenChange: { control: false },
@@ -125,6 +131,18 @@ export const OpensAndCloses: Story = {
     await expect(args.onOpenChange).toHaveBeenCalledWith(true)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(args.onOpenChange).toHaveBeenLastCalledWith(false))
+  },
+}
+
+/** `dismissible={false}`: no close control and Escape is ignored; only the body's own button exits. */
+export const NotDismissible: Story = {
+  args: { dismissible: false },
+  play: async ({ args }) => {
+    const dialog = await screen.findByRole('dialog', { name: 'New group' })
+    await expect(within(dialog).queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await expect(args.onOpenChange).not.toHaveBeenCalledWith(false)
+    await expect(dialog).toBeVisible()
   },
 }
 

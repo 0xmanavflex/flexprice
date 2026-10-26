@@ -8,15 +8,15 @@
  * `/prices/*`, tagged with an `entity_type`. So a "charge" is a price, and the
  * charge editor is built once and parameterised by the entity it prices.
  *
- * These are *product* rules, not form plumbing — a tiered charge with
- * overlapping bands is wrong no matter what draws it — so validation lives here,
+ * These are *product* rules, not form plumbing: a tiered charge with
+ * overlapping bands is wrong no matter what draws it: so validation lives here,
  * once, and the UI and any agent-driven action validate identically. The shape
  * is the same discriminated union `priceOverride` proved out: the billing model
  * decides which other fields exist at all, so switching models cannot leave dead
  * state behind.
  *
  * This is also the single home for the pricing enums the whole catalogue shares
- * — `priceOverride` imports them from here rather than keeping a second copy.
+ *: `priceOverride` imports them from here rather than keeping a second copy.
  */
 import { z } from 'zod'
 
@@ -27,7 +27,7 @@ const decimal = z
   .min(1, 'Enter an amount')
   .regex(/^-?\d+(\.\d+)?$/, 'Enter a number, for example 9.99')
 
-/** A money amount that may not be negative — the common case for a price. */
+/** A money amount that may not be negative: the common case for a price. */
 export const nonNegativeAmount = decimal.refine(
   (v) => !v.startsWith('-'),
   'Amount cannot be negative',
@@ -85,8 +85,8 @@ export const WINDOWABLE_AGGREGATIONS = ['MAX', 'SUM'] as const
  *
  * A fixed charge bills the same every period (a subscription base); a usage
  * charge meters an event and bills what was consumed. The distinction decides
- * the whole shape of the form — a usage charge needs a meter, a fixed one an
- * invoice cadence — so it is the first thing the editor asks.
+ * the whole shape of the form: a usage charge needs a meter, a fixed one an
+ * invoice cadence: so it is the first thing the editor asks.
  */
 export const PriceType = {
   Fixed: 'FIXED',
@@ -102,7 +102,7 @@ export const PRICE_TYPE_LABEL: Record<PriceType, string> = {
 /**
  * How the amount is applied.
  *
- * The canonical definition for the whole catalogue — `priceOverride` and the
+ * The canonical definition for the whole catalogue: `priceOverride` and the
  * charge editor both read it from here, so the two can never drift apart.
  */
 export const BillingModel = {
@@ -130,8 +130,8 @@ export const TierMode = {
 export type TierMode = (typeof TierMode)[keyof typeof TierMode]
 
 export const TIER_MODE_LABEL: Record<TierMode, string> = {
-  [TierMode.Volume]: 'Volume — one rate for the whole quantity',
-  [TierMode.Slab]: 'Slab — each band at its own rate',
+  [TierMode.Volume]: 'Volume: one rate for the whole quantity',
+  [TierMode.Slab]: 'Slab: each band at its own rate',
 }
 
 /**
@@ -159,7 +159,7 @@ export const BILLING_PERIOD_LABEL: Record<BillingPeriod, string> = {
   [BillingPeriod.OneTime]: 'One-time',
 }
 
-/** Billing period, shortened the way a pricing page writes it — "/mo", "/yr". */
+/** Billing period, shortened the way a pricing page writes it: "/mo", "/yr". */
 export const BILLING_PERIOD_SHORT: Record<BillingPeriod, string> = {
   [BillingPeriod.Daily]: 'day',
   [BillingPeriod.Weekly]: 'week',
@@ -175,7 +175,7 @@ export const BILLING_PERIOD_SHORT: Record<BillingPeriod, string> = {
  *
  * `ADVANCE` bills at the start (a subscription base, paid up front); `ARREAR`
  * bills at the end (usage, once it is known). A usage charge is almost always
- * arrear — you cannot bill for consumption before it happens.
+ * arrear: you cannot bill for consumption before it happens.
  */
 export const InvoiceCadence = {
   Advance: 'ADVANCE',
@@ -184,15 +184,15 @@ export const InvoiceCadence = {
 export type InvoiceCadence = (typeof InvoiceCadence)[keyof typeof InvoiceCadence]
 
 export const INVOICE_CADENCE_LABEL: Record<InvoiceCadence, string> = {
-  [InvoiceCadence.Advance]: 'Advance — bill at the start of the period',
-  [InvoiceCadence.Arrear]: 'Arrears — bill at the end of the period',
+  [InvoiceCadence.Advance]: 'Advance: bill at the start of the period',
+  [InvoiceCadence.Arrear]: 'Arrears: bill at the end of the period',
 }
 
 /**
  * What a set of charges prices.
  *
  * One editor serves all three; the entity type is what it carries in each
- * `Price`. The wire spells cost-sheet `COSTSHEET`, no underscore — kept exactly,
+ * `Price`. The wire spells cost-sheet `COSTSHEET`, no underscore: kept exactly,
  * because a mapper that "tidies" it produces prices the backend cannot place.
  */
 export const PriceEntityType = {
@@ -276,7 +276,7 @@ export const tiersSchema = z
 /**
  * A charge, as the detail page's charges table reads it.
  *
- * Amounts are the strings the API sends — `amount` the raw decimal, and, when
+ * Amounts are the strings the API sends: `amount` the raw decimal, and, when
  * present, `displayAmount` the value already formatted with a currency symbol.
  * A charge is never a float here; money that must not lose a cent stays a
  * string until the moment it is shown.
@@ -305,7 +305,7 @@ export interface Charge {
   bucketSize: PriceWindowSize | null
   /** The meter a USAGE charge bills against, else null. */
   meterId: string | null
-  /** The meter's name, when the response expanded it — for the table's benefit. */
+  /** The meter's name, when the response expanded it: for the table's benefit. */
   meterName: string | null
   entityType: PriceEntityType
   entityId: string
@@ -321,7 +321,7 @@ export interface Charge {
   /**
    * When it stops billing, or null while it still does.
    *
-   * A charge is ended, not deleted — `DELETE /prices/{id}` sets this date so the
+   * A charge is ended, not deleted: `DELETE /prices/{id}` sets this date so the
    * invoices that referenced the charge stay explicable. It is what tells the
    * Active, Changed and Ended views apart.
    */
@@ -348,7 +348,7 @@ export interface Charge {
  * A discriminated union on the billing model, exactly like `priceOverride`:
  * validation stops being conditional rendering and becomes a type. The common
  * fields every charge shares sit in `chargeBase`; the `superRefine` at the end
- * carries the one cross-field rule a union cannot — a usage charge must name the
+ * carries the one cross-field rule a union cannot: a usage charge must name the
  * meter it bills.
  */
 const chargeBase = {
@@ -364,7 +364,7 @@ const chargeBase = {
     BillingPeriod.OneTime,
   ]),
   invoiceCadence: z.enum([InvoiceCadence.Advance, InvoiceCadence.Arrear]),
-  /** Required only for USAGE — enforced in the refine below, not by the union. */
+  /** Required only for USAGE: enforced in the refine below, not by the union. */
   meterId: z.string().trim().optional(),
   /** A human label for the charge, optional. */
   displayName: z.string().trim().optional(),
@@ -381,7 +381,7 @@ const chargeBase = {
   /**
    * Usage charges only: the window the meter is aggregated over before pricing.
    *
-   * Absent means no windowing — the meter aggregates across the whole billing
+   * Absent means no windowing: the meter aggregates across the whole billing
    * period. The API rejects a window on a fixed charge, on a meter that is not
    * MAX or SUM, and on a meter that already carries one of its own; the form
    * only offers the field where all three hold.
@@ -438,7 +438,7 @@ export const createChargeSchema = z
         message: 'Choose the feature this charge meters',
       })
     }
-    // The API refuses this outright — a window has nothing to aggregate on a
+    // The API refuses this outright: a window has nothing to aggregate on a
     // charge that does not meter anything. Caught here so switching a charge
     // from usage to fixed cannot carry a stale window into the request.
     if (charge.type === PriceType.Fixed && charge.bucketSize) {
@@ -457,7 +457,7 @@ export type CreateCharge = z.infer<typeof createChargeSchema>
  *
  * A form that opens already showing errors teaches people to ignore them, so
  * amounts are blank (and do fail) but structure never is. A usage charge
- * defaults to arrears — you cannot bill consumption before it happens — and a
+ * defaults to arrears: you cannot bill consumption before it happens: and a
  * fixed one to advance, the base a customer pays up front.
  */
 export function emptyCharge(type: PriceType, billingModel: BillingModel): CreateCharge {
@@ -540,8 +540,8 @@ export interface ChargeLineage {
  *
  * Editing a charge's price never rewrites it: the API ends the price and
  * creates a new one whose `parent_price_id` names the first version. Grouping
- * on that keeps the ended prices as what they are — earlier, inactive
- * versions of one charge — instead of rows of their own or nothing at all.
+ * on that keeps the ended prices as what they are: earlier, inactive
+ * versions of one charge: instead of rows of their own or nothing at all.
  */
 export function chargeLineages(charges: readonly Charge[]): ChargeLineage[] {
   const groups = new Map<string, Charge[]>()

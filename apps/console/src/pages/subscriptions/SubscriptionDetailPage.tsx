@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  AlertEntityType,
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
   DEFAULT_TAX_RATE_QUERY,
@@ -10,6 +11,9 @@ import {
 import {
   ApiError,
   useActivateSubscription,
+  useRemoveSubscriptionCoupon,
+  usePauseSubscription,
+  useResumeSubscription,
   useCancelSubscriptionCreditGrant,
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,
@@ -36,6 +40,7 @@ import {
   useSubscriptionCoupons,
   useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
+  useContractUsageSummary,
   useSubscriptionInvoicePreview,
   useSubscriptionInvoices,
   useSubscriptionLines,
@@ -44,16 +49,19 @@ import {
   useSubscriptionTaxes,
   useSubscriptionUsage,
   useUpdateAlertSetting,
+  useAddLineItemAlert,
+  useLineItemAlertLookup,
   useUpdateSubscriptionLineItem,
   useActivityLog,
   serverReason,
 } from '@fp/query'
-import { SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
+import { EntityAlertDialog, SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions } from '../plans/planFormOptions'
 import { railActivity } from '@/pages/shared/activityLog'
 import { detailGate } from '../shared/detailGate'
+import { useEntityAlert } from '../shared/useEntityAlert'
 
 export interface SubscriptionDetailPageProps {
   subscriptionId: string
@@ -120,6 +128,9 @@ export function SubscriptionDetailPage({
   })
   const cancel = useCancelSubscription()
   const activate = useActivateSubscription()
+  const pause = usePauseSubscription()
+  const resume = useResumeSubscription()
+  const contractAlert = useEntityAlert(AlertEntityType.Subscription, subscriptionId, 'Contract')
   const removeAddon = useRemoveSubscriptionAddon()
   const removeTax = useRemoveSubscriptionTax()
   const endGrant = useCancelSubscriptionCreditGrant()
@@ -130,15 +141,24 @@ export function SubscriptionDetailPage({
   const executeChange = useExecuteLineChange()
   const formOptions = usePlanFormOptions()
   const customerId = subscription.data?.customerId ?? ''
+  // The usage against this contract's entitlements, from the endpoint the
+  // customer overview reads, narrowed to this contract.
+  const entitlementUsage = useContractUsageSummary(customerId, subscriptionId)
   const integrationLinks = useCustomerIntegrationLinks(customerId)
   const integrations = useIntegrations()
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const createEntitlement = useCreateSubscriptionEntitlement(subscriptionId)
-  const createCreditGrant = useCreateSubscriptionCreditGrant(subscriptionId)
+  const createCreditGrant = useCreateSubscriptionCreditGrant(
+    subscriptionId,
+    subscription.data?.currentPeriodEnd,
+  )
   const addAddon = useAddSubscriptionAddon(subscriptionId)
   const addCoupon = useAddSubscriptionCoupon(subscriptionId)
+  const removeCoupon = useRemoveSubscriptionCoupon(subscriptionId)
   const updateAlert = useUpdateAlertSetting()
+  const addLineAlert = useAddLineItemAlert(subscriptionId)
+  const loadLineAlert = useLineItemAlertLookup(subscriptionId)
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
@@ -194,6 +214,7 @@ export function SubscriptionDetailPage({
         }}
         chargeAlerts={part(chargeAlerts)}
         entitlements={part(entitlements)}
+        entitlementUsage={entitlementUsage.data?.features}
         creditGrants={part(creditGrants)}
         usage={part(usage)}
         invoices={part(invoices)}
@@ -210,9 +231,12 @@ export function SubscriptionDetailPage({
         onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
         onAddAddon={(draft) => addAddon.mutateAsync(draft)}
         onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
+        onRemoveCoupon={(coupon) => removeCoupon.mutateAsync(coupon.id)}
         onSaveChargeAlert={({ settingId, config }) =>
           updateAlert.mutateAsync({ id: settingId, config })
         }
+        onCreateChargeAlert={(draft) => addLineAlert.mutateAsync(draft)}
+        loadChargeAlert={loadLineAlert}
         onAddTax={(draft) => createTax.mutateAsync(draft)}
         onRemoveAddon={(addon) => removeAddon.mutateAsync(addon.id)}
         onRemoveTax={(tax) => removeTax.mutateAsync(tax.id)}
@@ -247,6 +271,9 @@ export function SubscriptionDetailPage({
           ? { onActivate: () => setDialog('activate') }
           : {})}
         onCancel={() => setDialog('cancel')}
+        onPause={(draft) => pause.mutateAsync({ id: data.id, draft })}
+        onResume={(draft) => resume.mutateAsync({ id: data.id, draft })}
+        onAlertSettings={contractAlert.openAlertSettings}
         meters={formOptions.meters}
         priceUnits={formOptions.units.filter((unit) => unit.baseCurrency === data.currency)}
         onAddCharge={async (draft) => {
@@ -371,6 +398,7 @@ export function SubscriptionDetailPage({
           )
         }
       />
+      <EntityAlertDialog {...contractAlert.dialog} />
     </>
   )
 }

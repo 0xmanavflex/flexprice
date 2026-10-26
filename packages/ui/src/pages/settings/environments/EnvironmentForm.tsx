@@ -43,13 +43,13 @@ import { provenance } from '@ui/provenance'
  * each with a two-line explainer of what it means, and the Create button below.
  *
  * Production is self-serve for almost nobody, so when it cannot be created here
- * the card stays selectable — choosing it is how someone asks for it — but
+ * the card stays selectable: choosing it is how someone asks for it: but
  * "Create environment" is disabled and V1's "requires an approval" note takes
  * its place, with V1's three ways to reach us: Slack, email, or a booked call.
  *
  * Where the workspace pays Flexprice itself (self-billing), production is the
  * upgrade: in the trial, choosing it shows what the upgrade costs and what it
- * brings, and the button becomes **Upgrade** — paying creates the production
+ * brings, and the button becomes **Upgrade**: paying creates the production
  * environment (the API names it "Production"), so there is no name to type.
  * Once live with a production environment, choosing it says so and offers to
  * switch to it.
@@ -112,10 +112,11 @@ export type ProductionOffer =
       onSwitch: () => void
     }
 
+/** Each option is shown only when it has a value; a deployment can hide any of them. */
 export interface EnvironmentContact {
-  slackUrl: string
-  email: string
-  bookCallUrl: string
+  slackUrl?: string | null | undefined
+  email?: string | null | undefined
+  bookCallUrl?: string | null | undefined
 }
 
 /** Two lines at most each: what the environment is for, and what it costs to get wrong. */
@@ -155,6 +156,7 @@ export function EnvironmentForm({
   const upgrade = isProduction && production?.kind === 'upgrade' ? production : null
   const existing = isProduction && production?.kind === 'exists' ? production : null
   const productionWithheld = isProduction && !upgrade && (Boolean(existing) || !canCreateProduction)
+  const hasContact = Boolean(contact?.slackUrl || contact?.email || contact?.bookCallUrl)
 
   const submit = form.handleSubmit((value) => {
     // The disabled button is the lock; this is the bolt behind it, for a
@@ -290,8 +292,8 @@ export function EnvironmentForm({
         ) : null}
 
         {existing ? (
-          <Alert>
-            <InfoIcon aria-hidden className="text-muted-foreground" />
+          <Alert variant="info">
+            <InfoIcon aria-hidden />
             <AlertTitle>You already have a production environment.</AlertTitle>
             <AlertDescription>{existing.name} is yours. Need another? Contact us.</AlertDescription>
             <div className="col-start-2 mt-2 flex flex-wrap gap-2">
@@ -323,43 +325,53 @@ export function EnvironmentForm({
         ) : null}
 
         {productionWithheld && !existing ? (
-          <Alert>
-            <InfoIcon aria-hidden className="text-muted-foreground" />
+          <Alert variant="info">
+            <InfoIcon aria-hidden />
             <AlertTitle>Production environments require an approval.</AlertTitle>
-            <AlertDescription>Contact us to get started:</AlertDescription>
-            {contact ? (
+            <AlertDescription>
+              {hasContact
+                ? 'Contact us to get started:'
+                : 'Contact your administrator to get started.'}
+            </AlertDescription>
+            {hasContact ? (
               <ButtonGroup aria-label="Contact us" className="col-start-2 mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  nativeButton={false}
-                  render={
-                    <a href={contact.slackUrl} target="_blank" rel="noreferrer" role="link" />
-                  }
-                >
-                  <Slack aria-hidden className="size-4" />
-                  Slack
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  nativeButton={false}
-                  render={<a href={`mailto:${contact.email}`} role="link" />}
-                >
-                  <MailIcon aria-hidden />
-                  Email
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  nativeButton={false}
-                  render={
-                    <a href={contact.bookCallUrl} target="_blank" rel="noreferrer" role="link" />
-                  }
-                >
-                  <CalendarIcon aria-hidden />
-                  Book a call
-                </Button>
+                {contact?.slackUrl ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={
+                      <a href={contact.slackUrl} target="_blank" rel="noreferrer" role="link" />
+                    }
+                  >
+                    <Slack aria-hidden className="size-4" />
+                    Slack
+                  </Button>
+                ) : null}
+                {contact?.email ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={<a href={`mailto:${contact.email}`} role="link" />}
+                  >
+                    <MailIcon aria-hidden />
+                    Email
+                  </Button>
+                ) : null}
+                {contact?.bookCallUrl ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={
+                      <a href={contact.bookCallUrl} target="_blank" rel="noreferrer" role="link" />
+                    }
+                  >
+                    <CalendarIcon aria-hidden />
+                    Book a call
+                  </Button>
+                ) : null}
               </ButtonGroup>
             ) : null}
           </Alert>

@@ -15,11 +15,10 @@ import { env } from '@/env'
 import { resolveSsoTenant, startSamlLogin } from './samlLogin'
 import {
   EmailNotConfirmed,
-  completeAccount,
-  forgetConfirmation,
+  SupabaseCredentialsRefused,
+  signInWithSupabase,
   startGoogleSignIn,
   supabaseSignUpFor,
-  unfinishedSignUp,
 } from '@/app/auth/supabaseSignUp'
 import { rememberReturnTo, takeReturnTo } from './returnTo'
 import { messageForSignInError } from './signInMessage'
@@ -37,7 +36,7 @@ import { messageForSignInError } from './signInMessage'
 const DEMO_CREDENTIALS = { email: 'demo@flexprice.io', password: 'demo1234' } as const
 
 /** Shown only under mocks, so it never appears in front of the live API. */
-const DEMO_HINT = 'Demo mode — the sample data is loaded. Just click Sign in.'
+const DEMO_HINT = 'Demo mode: the sample data is loaded. Just click Sign in.'
 
 export { messageForSignInError }
 
@@ -48,7 +47,7 @@ export interface SignInPageProps {
   redirect?: string | undefined
   /**
    * The tenant whose identity provider should handle this login, from
-   * `?sso=`. Its presence is what offers the SSO button — SSO is configured
+   * `?sso=`. Its presence is what offers the SSO button: SSO is configured
    * per tenant, and without one there is no provider to send the browser to.
    */
   ssoTenantId?: string | undefined
@@ -61,9 +60,14 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
   const session = useSession()
   const signIn = useSignIn()
   const createAccount = useSignUpWithToken()
-  // Picking up a sign-up that stopped half way; see `unfinishedSignUp`.
-  const [recovering, setRecovering] = useState(false)
-  const [recoveryError, setRecoveryError] = useState<string | null>(null)
+  /*
+   * Password sign-in on a hosted region, through Supabase as in V1, so the
+   * session comes with a refresh token and outlives its access token (see
+   * `signInWithSupabase`, which also finishes a sign-up that stopped half way).
+   * Self-hosted builds have no Supabase and sign in with `POST /auth/login`.
+   */
+  const [supabasePending, setSupabasePending] = useState(false)
+  const [supabaseError, setSupabaseError] = useState<string | null>(null)
   const { regions, region, setRegion } = useRegion()
   // Google is drawn only where it exists. Reads password-only until the
   // backend serves `/auth/capabilities`, which is how the console behaves today.
@@ -71,7 +75,7 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
   /*
    * Reset runs against Supabase from the browser, not against the Flexprice
    * API, so what decides the link is whether *this region* has a Supabase
-   * project configured — not what `/auth/capabilities` says. A self-hosted
+   * project configured: not what `/auth/capabilities` says. A self-hosted
    * build has none, and correctly shows no link: it has never had reset.
    *
    * The server's answer is honoured too, so that brokering reset later turns
@@ -81,7 +85,7 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
 
   // Under mocks the form is seeded and announces itself; against a real API it
   // stays empty and silent. Spread conditionally rather than passing `undefined`
-  // — the props are exact-optional, so an explicit `undefined` would not type.
+  //: the props are exact-optional, so an explicit `undefined` would not type.
   const demoProps = env.useMocks ? { defaultValues: DEMO_CREDENTIALS, hint: DEMO_HINT } : {}
 
   /*
@@ -90,7 +94,7 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
    * Deliberately not gated on `capabilities.saml.enabled`: that reads
    * password-only on every deployment until the backend grows
    * `/auth/capabilities`, which would hide SSO from every tenant that has it.
-   * It is safe to offer to a tenant without SSO — `startSamlLogin` asks the
+   * It is safe to offer to a tenant without SSO: `startSamlLogin` asks the
    * endpoint first and says so on a 404 rather than navigating the browser
    * onto a JSON error body.
    */
@@ -128,13 +132,13 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
    *
    * Not behind `capabilities.oauth.google`: that reads false on every
    * deployment until the backend serves `/auth/capabilities`, which returns
-   * 404 today — so gating on it hides a Google sign-in that works. The honest
+   * 404 today: so gating on it hides a Google sign-in that works. The honest
    * test is whether the thing it needs is actually present, which is exactly
    * what `supabaseSignUpFor` already answers for sign-up.
    *
    * There is no Flexprice route for this. Google goes through Supabase, as it
    * does in V1 and as sign-up already does here, and comes back to
-   * `/auth/signup/confirmation` — which creates the account or, when the session
+   * `/auth/signup/confirmation`: which creates the account or, when the session
    * already names a tenant, just signs the person in.
    */
   const googleAvailable = supabaseSignUpFor(region)
@@ -163,8 +167,9 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
                   onChange={(next) => {
                     setRegion(next)
                     signIn.reset()
+                    setSupabaseError(null)
                   }}
-                  disabled={signIn.isPending}
+                  disabled={signIn.isPending || supabasePending}
                 />
               ),
             }
@@ -180,66 +185,54 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
           : {})}
         {...(googleAvailable && !providerPending ? { onProvider: () => void beginGoogle() } : {})}
         {...(tenantForSso ? { onSso: () => void beginSso(tenantForSso), ssoPending } : {})}
-        isSubmitting={signIn.isPending || recovering}
+        isSubmitting={signIn.isPending || supabasePending}
         error={
           providerError ??
           ssoError ??
-          recoveryError ??
-          (signIn.error && !recovering ? messageForSignInError(signIn.error) : null)
+          supabaseError ??
+          (signIn.error ? messageForSignInError(signIn.error) : null)
         }
         onSubmit={(credentials) => {
-          setRecoveryError(null)
-          const enter = (result: { token: string; userId: string; tenantId: string }) => {
+          setSupabaseError(null)
+          const enter = (result: {
+            token: string
+            userId: string
+            tenantId: string
+            region?: string
+          }) => {
             session.signIn(result)
             // `href`, not `to`: the shared address keeps its query string.
             void navigate({ href: takeReturnTo(redirect) })
           }
-          signIn.mutate(credentials, {
-            onSuccess: enter,
-            onError: (error) => {
-              // Refused credentials on a hosted region may be a sign-up that
-              // never finished; anything else is reported as it is.
-              if (!supabaseSignUpFor(region) || !isRefusal(error)) return
-              setRecovering(true)
-              void (async () => {
-                try {
-                  const pending = await unfinishedSignUp(
-                    region,
-                    credentials.email,
-                    credentials.password,
-                  )
-                  if (!pending) return
-                  const result = await completeAccount(region, pending, (details) =>
-                    createAccount.mutateAsync(details),
-                  )
-                  await forgetConfirmation(region)
-                  signIn.reset()
-                  enter(result)
-                } catch (cause) {
-                  await forgetConfirmation(region)
-                  setRecoveryError(
-                    cause instanceof EmailNotConfirmed
-                      ? `Confirm your email first: open the link we sent to ${cause.email}. No email? Sign up again with the same address to get a new one.`
-                      : 'Your account could not be finished. Try again in a moment.',
-                  )
-                } finally {
-                  setRecovering(false)
-                }
-              })()
-            },
-          })
+          if (!supabaseSignUpFor(region)) {
+            signIn.mutate(credentials, { onSuccess: enter })
+            return
+          }
+          signIn.reset()
+          setSupabasePending(true)
+          signInWithSupabase(region, credentials.email, credentials.password, (details) =>
+            createAccount.mutateAsync(details),
+          )
+            .then(enter)
+            .catch((cause: unknown) => setSupabaseError(messageForSupabaseSignIn(cause)))
+            .finally(() => setSupabasePending(false))
         }}
       />
     </main>
   )
 }
 
-/** A wrong-credentials answer from `POST /auth/login`, as opposed to a fault. */
-function isRefusal(error: unknown): boolean {
-  return (
-    error instanceof ApiError &&
-    (error.kind === ErrorKind.Unauthorized ||
-      error.kind === ErrorKind.Forbidden ||
-      error.kind === ErrorKind.NotFound)
-  )
+/** A failed hosted sign-in, in the same words `POST /auth/login`'s failures get. */
+function messageForSupabaseSignIn(cause: unknown): string {
+  if (cause instanceof EmailNotConfirmed) {
+    return `Confirm your email first: open the link we sent to ${cause.email}. No email? Sign up again with the same address to get a new one.`
+  }
+  if (cause instanceof SupabaseCredentialsRefused) {
+    return messageForSignInError(new ApiError(ErrorKind.Unauthorized, cause.message))
+  }
+  if (cause instanceof ApiError) return messageForSignInError(cause)
+  if (cause instanceof TypeError) {
+    return messageForSignInError(new ApiError(ErrorKind.Network, cause.message))
+  }
+  return 'Something went wrong signing in. Try again.'
 }

@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { CheckIcon, InfoIcon, PlusIcon, ReceiptIcon, SaveIcon, Trash2Icon, XIcon } from '@ui/icons'
 import type { z } from 'zod'
 import {
+  DRAFT_INVOICE_NUMBER_LABEL,
   type CreateInvoice,
   InvoiceStatus,
   type InvoiceTax,
@@ -57,10 +65,10 @@ import {
   TableRow,
 } from '@ui/components/primitives/table'
 import { Textarea } from '@ui/components/primitives/textarea'
-import { InvoiceSection } from '@ui/components/blocks/form-3/components/invoice-section'
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
+import { TotalRow, TotalsList } from '@ui/compositions/detail/DetailKit'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
@@ -73,27 +81,27 @@ import type { EditableLine } from './InvoiceLinesEditor'
  * It follows V1's invoice page: invoice details (customer, number, dates,
  * currency), who it is from and who it bills, the line items with their notes
  * and service periods, the customer's taxes, a memo and metadata, and a summary.
- * Every field here reaches the API — nothing is drawn that is not sent.
+ * Every field here reaches the API: nothing is drawn that is not sent.
  *
  * Editing adds what only an existing invoice has: its status and payment
  * status, and re-applying discounts. Fields the API cannot change after
  * creation (customer, number, issue date, currency, memo) are shown, not
  * offered. A finalized invoice changes in place, except that changing its lines
  * or re-applying discounts makes the API void it and carry the edit onto a new
- * draft — the form says so and asks before saving.
+ * draft: the form says so and asks before saving.
  *
  * Preview of the layout it keeps: https://reui.io/blocks/application/form/form-3
  */
 export const InvoiceFormProvenance = provenance({
   source: 'composition',
   composes: [
-    'blocks/form-3',
     'ui/card',
     'ui/combobox',
     'ui/field',
     'ui/table',
     'compositions/DateInput',
     'compositions/LabelWithHint',
+    'compositions/detail-kit',
   ],
   note: 'One create/edit invoice form on the form-3 layout, V1 fields only; line total is quantity × unit price, summed exactly.',
 })
@@ -182,9 +190,9 @@ export interface InvoiceCreateProps extends CommonProps {
 export interface InvoiceEditProps extends CommonProps {
   mode: 'edit'
   invoice: EditableInvoice
-  /** Where the payment status may go — `manualPaymentStatusChoices`. */
+  /** Where the payment status may go: `manualPaymentStatusChoices`. */
   paymentChoices: readonly PaymentStatus[]
-  /** Why the payment status cannot be set by hand, or null — `manualPaymentStatusBlocked`. */
+  /** Why the payment status cannot be set by hand, or null: `manualPaymentStatusBlocked`. */
   paymentStatusBlocked: string | null
   onSave: (draft: InvoiceEditDraft) => void
 }
@@ -529,13 +537,8 @@ export function InvoiceForm(props: InvoiceFormProps) {
               <Separator orientation="vertical" className="my-auto mr-2 h-4 shrink-0" />
             </>
           ) : null}
+          {/* The status sits once, on the details card below, not here as well. */}
           <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
-          <Badge
-            variant={isDraft ? 'warning-light' : 'info-light'}
-            className="hidden translate-y-px self-center sm:inline-flex"
-          >
-            {statusLabel}
-          </Badge>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {edit ? (
@@ -598,7 +601,9 @@ export function InvoiceForm(props: InvoiceFormProps) {
               </CardDescription>
               <CardAction className="flex items-center gap-1.5 self-center">
                 <Badge variant={isDraft ? 'warning-light' : 'info-light'}>
-                  <ReceiptIcon aria-hidden />
+                  {/* Sized here: an animated icon's wrapper is 24px unless told otherwise,
+                      and the badge only sizes a bare svg, so it spilled out of the badge. */}
+                  <ReceiptIcon aria-hidden className="size-3" />
                   <span className="sr-only">Status</span>
                   {statusLabel}
                 </Badge>
@@ -612,7 +617,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
             <Separator />
             <CardContent className="flex flex-col gap-7 px-5 py-5 sm:px-6 sm:py-6">
               {edit && !isDraft ? (
-                <Alert>
+                <Alert variant="info">
                   <InfoIcon aria-hidden="true" />
                   <AlertTitle>This invoice is finalized</AlertTitle>
                   <AlertDescription>
@@ -628,7 +633,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                   Customer, dates, line items, taxes and notes.
                 </FieldDescription>
                 <FieldGroup className="gap-7">
-                  <InvoiceSection
+                  <InvoiceFormSection
                     title="Customer"
                     description="Who the invoice bills, and its number."
                     {...(edit ? {} : { badge: 'Required', badgeVariant: 'success-light' as const })}
@@ -705,7 +710,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         <Input
                           id="invoice-number"
                           value={edit ? edit.invoice.number : invoiceNumber}
-                          placeholder={edit ? 'Assigned when finalized' : 'Assigned automatically'}
+                          placeholder={edit ? DRAFT_INVOICE_NUMBER_LABEL : 'Assigned automatically'}
                           disabled={isSubmitting || Boolean(edit)}
                           onChange={(event) => setInvoiceNumber(event.target.value)}
                         />
@@ -720,11 +725,11 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         empty={create ? 'Choose a customer to see their billing details.' : '—'}
                       />
                     </div>
-                  </InvoiceSection>
+                  </InvoiceFormSection>
 
                   <Separator />
 
-                  <InvoiceSection
+                  <InvoiceFormSection
                     title="Dates and currency"
                     description="When it is issued and due, and what it is billed in."
                   >
@@ -784,11 +789,11 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         <FieldError message={issue(error, 'currency')} />
                       </Field>
                     </FieldGroup>
-                  </InvoiceSection>
+                  </InvoiceFormSection>
 
                   <Separator />
 
-                  <InvoiceSection
+                  <InvoiceFormSection
                     title="Line items"
                     description="What the invoice charges for: quantity × unit price, with a note and service period."
                     badge={`${lines.length} item${lines.length === 1 ? '' : 's'}`}
@@ -807,7 +812,9 @@ export function InvoiceForm(props: InvoiceFormProps) {
                   >
                     <Table aria-label="Invoice line items" className="min-w-[760px]">
                       <TableHeader>
-                        <TableRow>
+                        {/* The invoice document's column heads (muted, small, regular), so the
+                            lines read the same while drafting as on the finished invoice. */}
+                        <TableRow className="[&>th]:text-muted-foreground [&>th]:text-xs [&>th]:font-normal">
                           <TableHead className="w-[44%]">Item</TableHead>
                           <TableHead className="w-24">Qty</TableHead>
                           <TableHead className="w-40">Unit price</TableHead>
@@ -847,12 +854,12 @@ export function InvoiceForm(props: InvoiceFormProps) {
                       </p>
                     ) : null}
                     <FieldError message={issue(error, 'lines')} />
-                  </InvoiceSection>
+                  </InvoiceFormSection>
 
                   <Separator />
 
                   {create ? (
-                    <InvoiceSection
+                    <InvoiceFormSection
                       title="Taxes"
                       description="Applied by Flexprice on top of the lines. Starts from the customer's tax rates."
                       badge={`${taxes.length} rate${taxes.length === 1 ? '' : 's'}`}
@@ -926,9 +933,9 @@ export function InvoiceForm(props: InvoiceFormProps) {
                           </div>
                         ) : null}
                       </div>
-                    </InvoiceSection>
+                    </InvoiceFormSection>
                   ) : (
-                    <InvoiceSection
+                    <InvoiceFormSection
                       title="Status and payment"
                       description="Applied after the other changes are saved."
                     >
@@ -967,7 +974,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                               {edit.invoice.paymentStatus
                                 ? PAYMENT_STATUS_LABEL[edit.invoice.paymentStatus]
                                 : 'Not set'}{' '}
-                              — {edit.paymentStatusBlocked.toLowerCase()}.
+                             : {edit.paymentStatusBlocked.toLowerCase()}.
                             </p>
                           ) : (
                             <OptionSelect
@@ -997,7 +1004,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                                     value: choice,
                                     label:
                                       choice === edit?.invoice.paymentStatus
-                                        ? `${PAYMENT_STATUS_LABEL[choice]} — record an amount`
+                                        ? `${PAYMENT_STATUS_LABEL[choice]}: record an amount`
                                         : PAYMENT_STATUS_LABEL[choice],
                                   })),
                               ]}
@@ -1052,12 +1059,12 @@ export function InvoiceForm(props: InvoiceFormProps) {
                           </Field>
                         )}
                       </FieldGroup>
-                    </InvoiceSection>
+                    </InvoiceFormSection>
                   )}
 
                   <Separator />
 
-                  <InvoiceSection
+                  <InvoiceFormSection
                     title="Notes"
                     description="A memo printed on the invoice, and metadata for your own systems."
                     badge="Optional"
@@ -1149,7 +1156,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         </Button>
                       </div>
                     </FieldGroup>
-                  </InvoiceSection>
+                  </InvoiceFormSection>
                 </FieldGroup>
               </FieldSet>
             </CardContent>
@@ -1350,30 +1357,49 @@ function Summary({
   totalLabel: string
 }) {
   return (
-    <dl className="ml-auto flex w-full max-w-xs flex-col gap-2 text-sm">
-      <SummaryRow label="Subtotal">{subtotal}</SummaryRow>
-      <SummaryRow label="Tax">{tax}</SummaryRow>
-      <SummaryRow label={totalLabel} strong>
-        {total}
-      </SummaryRow>
-    </dl>
+    <TotalsList className="ml-auto">
+      <TotalRow label="Subtotal" value={subtotal} />
+      <TotalRow label="Tax" value={tax} />
+      <TotalRow label={totalLabel} value={total} emphasis="due" rule />
+    </TotalsList>
   )
 }
 
-function SummaryRow({
-  label,
-  strong = false,
+/**
+ * A titled group inside the invoice card. The form-3 block's own section heads
+ * its groups in semibold at a larger size, which no other form uses; this keeps
+ * its layout and gives the title the console's section-title type (the size and
+ * weight of `Section`, `FormCard` and `Panel` titles).
+ */
+function InvoiceFormSection({
+  title,
+  description,
+  badge,
+  badgeVariant = 'secondary',
+  action,
   children,
 }: {
-  label: string
-  strong?: boolean
+  title: string
+  description?: string
+  badge?: string
+  badgeVariant?: ComponentProps<typeof Badge>['variant']
+  action?: ReactNode
   children: ReactNode
 }) {
   return (
-    <div className={`flex justify-between gap-4 ${strong ? 'border-t pt-2 font-medium' : ''}`}>
-      <dt className={strong ? '' : 'text-muted-foreground'}>{label}</dt>
-      <dd className="tabular-nums">{children}</dd>
-    </div>
+    <section className="flex flex-col gap-4 sm:gap-5">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-foreground text-sm font-medium">{title}</h2>
+            {badge ? <Badge variant={badgeVariant}>{badge}</Badge> : null}
+          </div>
+          {description ? <p className="text-muted-foreground text-[13px]">{description}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      {children}
+    </section>
   )
 }
 

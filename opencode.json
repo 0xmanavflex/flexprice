@@ -8,6 +8,11 @@
       "headers": {
         "Authorization": "Bearer {env:REUI_LICENSE_KEY}"
       }
+    },
+    "nx-mcp": {
+      "type": "local",
+      "command": ["npx", "nx", "mcp"],
+      "enabled": true
     }
   }
 }

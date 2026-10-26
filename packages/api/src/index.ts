@@ -32,6 +32,7 @@ export {
  * deletes them.
  */
 export {
+  cloneEnvironment,
   createEnvironment,
   fetchCurrentUser,
   existsInEnvironment,
@@ -40,7 +41,7 @@ export {
   signUp,
   updateEnvironment,
 } from './session'
-export type { CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
+export type { CloneTarget, CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
 
 /**
  * Which sign-in methods the deployment offers, asked at runtime rather than
@@ -99,6 +100,9 @@ export type { ParsePricingParams } from './aiPricing'
 export { debitWallet } from './walletDebit'
 export { createCustomerPortalSession } from './customerPortalSession'
 export { fetchInvoiceHostedLink } from './invoiceHostedLink'
+export { runReport } from './reports'
+export type { ReportColumn, ReportGrain, ReportQuery, ReportResult, ReportShape } from './reports'
+export { pushToIntegrations } from './integrationSync'
 export { generateSampleEvents } from './sampleEvents'
 export { listActivity } from './activity'
 export type { ListActivityParams } from './activity'

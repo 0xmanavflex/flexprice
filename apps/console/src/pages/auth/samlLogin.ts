@@ -5,7 +5,7 @@ import { startLogin, type MaybeStorage } from '../../app/session/samlHandoff'
  *
  * SSO is configured **per tenant**, so the browser has to say which tenant it
  * means before anyone has authenticated. That comes from the link a tenant's
- * administrator hands out — `/sign-in?sso=tenant_abc` — rather than from
+ * administrator hands out: `/sign-in?sso=tenant_abc`: rather than from
  * anything typed here: an end user has no reason to know a tenant id, and
  * asking them to paste one would be worse than a bookmark.
  *
@@ -19,7 +19,7 @@ import { startLogin, type MaybeStorage } from '../../app/session/samlHandoff'
 /** The query parameter naming the tenant whose identity provider should handle this login. */
 export const SSO_TENANT_PARAM = 'sso'
 
-/** The tenant to offer SSO for, or nothing — which means no button. */
+/** The tenant to offer SSO for, or nothing: which means no button. */
 export function resolveSsoTenant(param: string | null | undefined): string | undefined {
   return param?.trim() || undefined
 }
@@ -30,9 +30,9 @@ export type SsoStart = { ok: true; url: string } | { ok: false; reason: 'unavail
  * Work out where to send the browser, and whether to send it at all.
  *
  * Returns a URL for the caller to navigate to rather than navigating itself:
- * a full page navigation is required — the browser must carry its own session
+ * a full page navigation is required: the browser must carry its own session
  * to the identity provider, and it is the browser the assertion is posted back
- * through, so an XHR would break both halves — but that is the page's job, and
+ * through, so an XHR would break both halves: but that is the page's job, and
  * keeping it out of here is what makes this testable.
  *
  * The endpoint answers 404 when SSO is not live for the tenant: not

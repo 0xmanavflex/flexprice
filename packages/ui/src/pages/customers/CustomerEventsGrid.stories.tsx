@@ -69,6 +69,26 @@ export const HandsRowToPage: Story = {
   },
 }
 
+/** Refresh sits in the section header, so it is there even before any event arrives. */
+export const Refresh: Story = {
+  args: { events: [], onRefresh: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/No events yet/)).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Refresh' }))
+    await expect(args.onRefresh).toHaveBeenCalledOnce()
+  },
+}
+
+/** While a refresh is in flight the button is disabled. */
+export const Refreshing: Story = {
+  args: { onRefresh: fn(), isRefreshing: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Refresh' })).toBeDisabled()
+  },
+}
+
 /** The read is in flight: a shaped skeleton, never "No events yet". */
 export const Loading: Story = {
   args: { events: [], isLoading: true },
@@ -103,5 +123,87 @@ export const Truncated: Story = {
     await expect(
       await within(canvasElement).findByText(/Showing the latest 50 of 1204 events/),
     ).toBeInTheDocument()
+  },
+}
+
+/** A longer log loads as it is scrolled; the button does the same by hand. */
+export const LoadsMore: Story = {
+  args: { events: makeEvents(50), total: 1204, hasMore: true, onLoadMore: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText(/Showing the latest/)).not.toBeInTheDocument()
+    await userEvent.click(await canvas.findByRole('button', { name: 'Load more events' }))
+    await expect(args.onLoadMore).toHaveBeenCalled()
+  },
+}
+
+/** The next page is on its way: the button waits. */
+export const LoadingMore: Story = {
+  args: { events: makeEvents(50), hasMore: true, isLoadingMore: true, onLoadMore: fn() },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByRole('button', { name: 'Loading…' }),
+    ).toBeDisabled()
+  },
+}
+
+/** All loaded events stay reachable: nothing hides behind a first page. */
+export const ShowsEveryLoadedEvent: Story = {
+  args: { events: makeEvents(120), hasMore: true, onLoadMore: fn() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findAllByRole('row')).toHaveLength(121)
+  },
+}
+
+/** A later page failed: the list says so and the retry is the reader's. */
+export const LoadMoreFailed: Story = {
+  args: {
+    events: makeEvents(50),
+    hasMore: true,
+    loadMoreError: { message: 'Flexprice had a problem loading more events.', canRetry: true },
+    onLoadMore: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/problem loading more events/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Try again' }))
+    await expect(args.onLoadMore).toHaveBeenCalledTimes(1)
+  },
+}
+
+/** A denial is not retried: the reason stays, the button goes. */
+export const LoadMoreDenied: Story = {
+  args: {
+    events: makeEvents(50),
+    hasMore: true,
+    loadMoreError: {
+      message: 'Your role does not include access to more events.',
+      canRetry: false,
+    },
+    onLoadMore: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/does not include access/)).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Try again' })).toBeNull()
+  },
+}
+
+/** A rate limit holds Try again back for its cooldown. */
+export const LoadMoreRateLimited: Story = {
+  args: {
+    events: makeEvents(50),
+    hasMore: true,
+    loadMoreError: {
+      message: 'Too many requests. Give it a moment.',
+      canRetry: true,
+      retryAfterMs: 60_000,
+    },
+    onLoadMore: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('button', { name: 'Try again' })).toBeDisabled()
   },
 }

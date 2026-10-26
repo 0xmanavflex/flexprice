@@ -3,7 +3,7 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { AddonForm } from './AddonForm'
 
 /**
- * The add-on details form — the full-page Create/Edit body, proved the same way as every
+ * The add-on details form: the full-page Create/Edit body, proved the same way as every
  * form here: fixtures in, a validated `CreateAddon` out, no provider, no network.
  */
 const trail: { label: string }[] = [{ label: 'Add-ons' }, { label: 'Create add-on' }]
@@ -108,7 +108,7 @@ export const SubmitError: Story = {
   },
 }
 
-/** The lookup key cannot be edited once set — the field is read-only in edit. */
+/** The lookup key cannot be edited once set: the field is read-only in edit. */
 export const LookupKeyLockedOnEdit: Story = {
   args: {
     mode: 'edit',

@@ -1,4 +1,9 @@
-import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test'
+import { type BrowserContext, type Locator, type Page } from '@playwright/test'
+import { rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { expect, test } from './fixtures'
 
 import { SignInPage } from './pages/auth'
 import { ShellPage } from './pages/shell'
@@ -9,7 +14,7 @@ import { ShellPage } from './pages/shell'
  * `live-auth.spec.ts` for the why and the dev-server recipe).
  *
  * ```sh
- * E2E_LIVE=1 E2E_EMAIL=… E2E_PASSWORD=… E2E_ENV_ID=<env id> \
+ * E2E_LIVE=1 E2E_USER=… E2E_PASSWORD=… E2E_ENV_ID=<env id> \
  * E2E_ENV_PREFIX=claude-e2e-forms- E2E_BASE_URL=http://127.0.0.1:3300 \
  *   pnpm exec playwright test e2e/live-flows.spec.ts --workers=1 --timeout=120000
  * ```
@@ -27,16 +32,16 @@ import { ShellPage } from './pages/shell'
  * leftover is attributable. The password is typed through `SignInPage` only.
  */
 
-const email = process.env['E2E_EMAIL']
+/** The dedicated E2E account. `E2E_EMAIL` is the older name, still read. */
+const user = process.env['E2E_USER'] ?? process.env['E2E_EMAIL']
 const password = process.env['E2E_PASSWORD']
 const envId = process.env['E2E_ENV_ID']
 const envPrefix = process.env['E2E_ENV_PREFIX'] ?? 'claude-e2e-forms-'
-const live = process.env['E2E_LIVE'] === '1' && !!email && !!password && !!envId
+const live = process.env['E2E_LIVE'] === '1' && !!user && !!password && !!envId
 
 const run = `e2e-${Date.now()}`
 const violations: string[] = []
 
-let context: BrowserContext
 let page: Page
 
 async function assertIsolated() {
@@ -133,58 +138,89 @@ const letters = (n: number) =>
     String.fromCharCode(65 + (Number(run.slice(-1 - i, run.length - i)) % 26)),
   ).join('')
 
+/** Nothing that writes may leave the browser for another environment (guard three). */
+async function guardWrites(context: BrowserContext) {
+  await context.route(/\/v1\//, async (route) => {
+    const request = route.request()
+    const isAuth = /\/v1\/auth\//.test(request.url())
+    if (request.method() !== 'GET' && !isAuth && request.headers()['x-environment-id'] !== envId) {
+      violations.push(`${request.method()} ${new URL(request.url()).pathname}`)
+      await route.abort()
+      return
+    }
+    await route.continue()
+  })
+}
+
+/**
+ * A rejected write is the finding this suite exists to surface, so say what
+ * the API answered instead of leaving only the UI's generic sentence. Auth
+ * calls are never logged, and the journey reporter redacts whatever else
+ * looks like a credential before it writes a log.
+ */
+function logApiAnswers(target: Page) {
+  target.on('response', async (response) => {
+    const request = response.request()
+    if (
+      !/\/v1\//.test(request.url()) ||
+      /\/v1\/auth\//.test(request.url()) ||
+      (response.status() < 400 &&
+        !process.env['E2E_DEBUG_STATUS'] &&
+        (request.method() === 'GET' || /\/search$/.test(request.url())))
+    )
+      return
+    const body = await response.text().catch(() => '')
+    console.log(
+      `API ${response.status()} ${request.method()} ${new URL(request.url()).pathname} ` +
+        `req=${(request.postData() ?? '').slice(0, 400)} res=${body.slice(0, 300)}${process.env['E2E_DEBUG_STATUS'] ? ` statuses=${(body.match(/"status":"\w+"/g) ?? []).join(',')}` : ''}`,
+    )
+  })
+}
+
+/**
+ * Signed in once per worker, in `beforeAll`, and handed to every journey as
+ * storage state. Each journey then runs in its own page — so it gets its own
+ * video, trace and screenshot when it fails — without typing the password
+ * again (and without the password ever appearing in a journey's trace). The
+ * file holds the session token, so it lives in the OS temp directory, never
+ * under `e2e-results/`, and is deleted in `afterAll`.
+ */
+const sessionFile = join(tmpdir(), `flexprice-e2e-session-${process.pid}.json`)
+
 test.describe('live flows', () => {
-  test.skip(!live, 'Live flows are opt-in: set E2E_LIVE=1, E2E_EMAIL, E2E_PASSWORD, E2E_ENV_ID.')
+  test.skip(!live, 'Live flows are opt-in: set E2E_LIVE=1, E2E_USER, E2E_PASSWORD, E2E_ENV_ID.')
+  test.use({ storageState: sessionFile })
 
   test.beforeAll(async ({ browser }) => {
-    context = await browser.newContext({ baseURL: process.env['E2E_BASE_URL'] })
-    // Guard three: nothing that writes may leave the browser for another env.
-    await context.route(/\/v1\//, async (route) => {
-      const request = route.request()
-      const isAuth = /\/v1\/auth\//.test(request.url())
-      if (
-        request.method() !== 'GET' &&
-        !isAuth &&
-        request.headers()['x-environment-id'] !== envId
-      ) {
-        violations.push(`${request.method()} ${request.url()}`)
-        await route.abort()
-        return
-      }
-      await route.continue()
-    })
-    page = await context.newPage()
-    // A rejected write is the finding this suite exists to surface, so say what
-    // the API answered instead of leaving only the UI's generic sentence.
-    page.on('response', async (response) => {
-      const request = response.request()
-      if (
-        !/\/v1\//.test(request.url()) ||
-        /\/v1\/auth\//.test(request.url()) ||
-        (response.status() < 400 &&
-          !process.env['E2E_DEBUG_STATUS'] &&
-          (request.method() === 'GET' || /\/search$/.test(request.url())))
-      )
-        return
-      const body = await response.text().catch(() => '')
-      console.log(
-        `API ${response.status()} ${request.method()} ${new URL(request.url()).pathname} ` +
-          `req=${(request.postData() ?? '').slice(0, 400)} res=${body.slice(0, 300)}${process.env['E2E_DEBUG_STATUS'] ? ` statuses=${(body.match(/"status":"\w+"/g) ?? []).join(',')}` : ''}`,
-      )
-    })
-    const signIn = new SignInPage(page)
-    await signIn.goto()
-    await signIn.signIn(email as string, password as string)
-    await expect(page).not.toHaveURL(/\/sign-in/, { timeout: 30_000 })
-    const shell = new ShellPage(page)
-    await expect(shell.environment).not.toContainText('Loading environments', { timeout: 30_000 })
-    await shell.switchEnvironment(envPrefix)
-    await assertIsolated()
+    const context = await browser.newContext({ baseURL: process.env['E2E_BASE_URL'] })
+    try {
+      await guardWrites(context)
+      page = await context.newPage()
+      const signIn = new SignInPage(page)
+      await signIn.goto()
+      await signIn.signIn(user as string, password as string)
+      await expect(page).not.toHaveURL(/\/sign-in/, { timeout: 30_000 })
+      const shell = new ShellPage(page)
+      await expect(shell.environment).not.toContainText('Loading environments', {
+        timeout: 30_000,
+      })
+      await shell.switchEnvironment(envPrefix)
+      await assertIsolated()
+      await context.storageState({ path: sessionFile })
+    } finally {
+      await context.close()
+    }
+  })
+
+  test.beforeEach(async ({ page: journeyPage, context }) => {
+    page = journeyPage
+    await guardWrites(context)
+    logApiAnswers(journeyPage)
   })
 
   test.afterAll(async () => {
+    rmSync(sessionFile, { force: true })
     expect(violations, 'writes attempted outside the e2e environment').toEqual([])
-    await context?.close()
   })
 
   const nextStep = () => page.getByRole('button', { name: 'Next' }).click()
@@ -256,7 +292,7 @@ test.describe('live flows', () => {
   test('group: create feature group, then delete', async () => {
     const name = `${run}-group`
     await open('/groups')
-    await page.getByRole('button', { name: 'New group' }).first().click()
+    await page.getByRole('button', { name: 'New tag' }).first().click()
     const main = page.getByRole('main')
     await fill(main, 'Name', name)
     await fill(main, 'Lookup key', `${run}-group`)
@@ -265,7 +301,7 @@ test.describe('live flows', () => {
     await open('/groups')
     await search(name)
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
-    await removeFrom('/groups', name, 'Delete group', 'Delete group')
+    await removeFrom('/groups', name, 'Delete tag', 'Delete tag')
   })
 
   test('add-on: create, edit', async () => {
@@ -365,7 +401,7 @@ test.describe('live flows', () => {
     await page.getByRole('button', { name: 'Add tax' }).first().click()
     const main = page.getByRole('main')
     await fill(main, 'Name', name)
-    await fill(main, 'Code', `E2E${tag}`)
+    await fill(main, 'Code', `tax-e2e-${tag}`)
     await fill(main, 'Rate (%)', '7.5')
     await submitPage()
     await search(name)

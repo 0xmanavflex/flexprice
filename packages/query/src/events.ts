@@ -5,7 +5,7 @@ import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
 /**
- * Usage analytics — the only time series this console can actually ask for.
+ * Usage analytics: the only time series this console can actually ask for.
  *
  * Everything else on the overview counts rows that already exist (invoices,
  * subscriptions, keys). This is the one endpoint that answers "how much came in
@@ -25,7 +25,7 @@ import { useFlexprice } from './provider'
  *     curve is exactly the failure the old sample-data dashboard was.
  *
  * Event counts and usage quantities *are* summed across features, because those
- * are plain counts of things — not currency — and the server returns them
+ * are plain counts of things: not currency: and the server returns them
  * per-feature with no combined series of its own.
  */
 
@@ -37,7 +37,7 @@ export const UsageWindowSize = {
 } as const
 export type UsageWindowSize = (typeof UsageWindowSize)[keyof typeof UsageWindowSize]
 
-/** The period being asked about. Both ends are required — an open range is a different question. */
+/** The period being asked about. Both ends are required: an open range is a different question. */
 export interface UsageWindow {
   start: Date
   end: Date
@@ -56,12 +56,16 @@ export interface UsagePoint {
 export interface FeatureUsageRow {
   featureId: string
   name: string
-  /** The feature's `lookup_key` — what the design shows as `code.key`. */
+  /** The feature's `lookup_key`: what the design shows as `code.key`. */
   lookupKey: string
   unitPlural: string
   eventCount: number
   usage: number
   points: UsagePoint[]
+  /** The meter behind the feature, to match its row in the cost analytics. */
+  meterId: string
+  /** What this feature's usage is billed at, after discounts. Null when the server did not price it. */
+  revenue: Money | null
 }
 
 export interface UsageAnalytics {
@@ -74,7 +78,7 @@ export interface UsageAnalytics {
   /**
    * What the server says this usage is worth.
    *
-   * `null` when the response carried no `subtotal` — the panel renders that as
+   * `null` when the response carried no `subtotal`: the panel renders that as
    * unavailable rather than as zero, because "the server did not price this"
    * and "this was worth nothing" are different claims.
    */
@@ -86,6 +90,10 @@ export interface UsageAnalyticsQuery {
   windowSize: UsageWindowSize
   /** Narrow to one customer. Omitted means the whole tenant. */
   externalCustomerId?: string | undefined
+  /** Narrow to these features. Omitted or empty means every feature. */
+  featureIds?: readonly string[] | undefined
+  /** Add the usage of child customers linked through a subscription hierarchy. */
+  includeChildren?: boolean | undefined
 }
 
 /**
@@ -102,6 +110,9 @@ interface AnalyticsPointWire {
 
 interface AnalyticsItemWire {
   featureId?: string | undefined
+  meterId?: string | undefined
+  totalCost?: string | undefined
+  currency?: string | undefined
   eventName?: string | undefined
   eventCount?: number | undefined
   totalUsage?: string | undefined
@@ -124,7 +135,7 @@ interface AnalyticsResponseWire {
   currency?: string | undefined
 }
 
-/** A decimal string the server sent, as a number. Counts and quantities only — never money. */
+/** A decimal string the server sent, as a number. Counts and quantities only: never money. */
 function quantity(value: string | undefined): number {
   if (value === undefined || value === '') return 0
   const parsed = Number(value)
@@ -142,7 +153,13 @@ function toPoint(wire: AnalyticsPointWire): UsagePoint | null {
   }
 }
 
-function toFeatureRow(wire: AnalyticsItemWire): FeatureUsageRow {
+/** A server price as money, or null when there is none to show. */
+function priced(amount: string | undefined, currency: string | undefined): Money | null {
+  const code = currency?.trim() ?? ''
+  return amount !== undefined && amount !== '' && code !== '' ? money(amount, code) : null
+}
+
+function toFeatureRow(wire: AnalyticsItemWire, currency?: string): FeatureUsageRow {
   const points = (wire.points ?? [])
     .map(toPoint)
     .filter((point): point is UsagePoint => point !== null)
@@ -152,13 +169,17 @@ function toFeatureRow(wire: AnalyticsItemWire): FeatureUsageRow {
   return {
     featureId: wire.featureId ?? feature?.id ?? lookupKey,
     // Falls back through the shapes the server may answer with, and only then
-    // to the lookup key — a row with no name at all is still a real row.
+    // to the lookup key: a row with no name at all is still a real row.
     name: feature?.name ?? wire.eventName ?? lookupKey,
     lookupKey,
     unitPlural: feature?.unitPlural ?? feature?.unit_plural ?? 'events',
     eventCount: wire.eventCount ?? 0,
     usage: quantity(wire.totalUsage),
     points,
+    meterId: wire.meterId ?? '',
+    // `total_cost` on an analytics item is what the usage bills at after
+    // discounts: revenue, not what it costs to serve.
+    revenue: priced(wire.totalCost, wire.currency || currency),
   }
 }
 
@@ -190,7 +211,7 @@ function combineSeries(features: FeatureUsageRow[]): UsagePoint[] {
 
 export function toUsageAnalytics(wire: AnalyticsResponseWire): UsageAnalytics {
   const features = (wire.items ?? [])
-    .map(toFeatureRow)
+    .map((item) => toFeatureRow(item, wire.currency))
     .sort((a, b) => b.usage - a.usage || b.eventCount - a.eventCount)
 
   const points = combineSeries(features)
@@ -224,6 +245,8 @@ async function fetchUsageAnalytics(
       ...(query.externalCustomerId !== undefined
         ? { externalCustomerId: query.externalCustomerId }
         : {}),
+      ...(query.featureIds?.length ? { featureIds: [...query.featureIds] } : {}),
+      ...(query.includeChildren ? { includeChildren: true } : {}),
     } as never),
   )) as AnalyticsResponseWire
 
@@ -237,13 +260,15 @@ function analyticsFilter(query: UsageAnalyticsQuery): Record<string, unknown> {
     end: query.window.end.toISOString(),
     windowSize: query.windowSize,
     customer: query.externalCustomerId ?? '',
+    features: [...(query.featureIds ?? [])].sort(),
+    children: query.includeChildren ?? false,
   }
 }
 
 /**
  * Usage analytics for one window.
  *
- * Call it twice — once for the period on screen, once for the period before it —
+ * Call it twice: once for the period on screen, once for the period before it:
  * to show a change. That is two real measurements compared, which is a different
  * thing from a percentage a component made up.
  */

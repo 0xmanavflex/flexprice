@@ -1,9 +1,15 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useContext, useMemo, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { ArrowUpDownIcon, FilterIcon } from '@ui/icons'
+import { Button } from '@ui/components/primitives/button'
 import {
+  FilterBar,
   readSelectFilter,
   selectFilterField,
   type FlatFilter,
 } from '@ui/compositions/tables/FilterBar'
+import { SortMenu } from '@ui/compositions/tables/SortMenu'
+import { SectionToolsContext } from '@ui/compositions/layout/Section'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -15,7 +21,7 @@ import type { EntityColumn } from './cells'
  *
  * A list page hands `EntityList` a server-paged slice and handlers for search,
  * sort and paging. A detail page has the whole set in memory, so this keeps
- * that state itself — search, a status facet, sort, page — and gives
+ * that state itself: search, a status facet, sort, page: and gives
  * `EntityList` exactly what a list page would. Same toolbar, same header band,
  * same rows, same footer; only the place the state lives is different.
  *
@@ -27,7 +33,7 @@ import type { EntityColumn } from './cells'
 export const DetailTableProvenance = provenance({
   source: 'composition',
   composes: ['pages/shared/EntityList'],
-  note: 'EntityList with client-side search, facet filter, sort and paging, in a bordered frame, for tables on detail pages.',
+  note: 'The detail-page table. Inside a Section, filter and sort sit in the section header beside the action. The rows stay the shared list table.',
 })
 
 export interface DetailColumn<T> {
@@ -44,6 +50,8 @@ export interface DetailColumn<T> {
   className?: string
   /** `end` right-aligns the header and the cell, for a document-shaped table. */
   align?: 'end'
+  /** Off until turned on from the table's column menu. */
+  hiddenByDefault?: boolean
 }
 
 export interface DetailTableProps<T> {
@@ -108,6 +116,11 @@ export function DetailTable<T extends object>({
   isLoading = false,
   className,
 }: DetailTableProps<T>) {
+  const toolsSlot = useContext(SectionToolsContext)
+  const toolsEl = toolsSlot?.el ?? null
+  // A titled section keeps filter and sort beside its title. A tab that is
+  // only a table has no title: the tab is the name: so the search bar stays.
+  const inHeader = Boolean(toolsEl) && Boolean(toolsSlot?.titled) && toolbar
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Record<string, string[]>>({})
   const [sortState, setSortState] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(
@@ -132,14 +145,23 @@ export function DetailTable<T extends object>({
         ...(column.sortBy ? { sortable: true } : {}),
         ...(column.className ? { cellClassName: column.className } : {}),
         ...(column.align ? { align: column.align } : {}),
+        ...(column.hiddenByDefault ? { hiddenByDefault: true } : {}),
       })),
     [columns],
   )
 
-  const specs = useMemo(
-    () => facets ?? (facet ? [{ id: 'status', label: facet.label, value: facet.value }] : []),
-    [facets, facet],
-  )
+  const specs = useMemo(() => {
+    if (facets) return facets
+    if (facet) return [{ id: 'status', label: facet.label, value: facet.value }]
+    // No facet was named: offer any short column (a status, a plan) so every
+    // detail table can filter from the header.
+    return columns.flatMap((column) => {
+      if (!column.text || !column.header) return []
+      const values = new Set(rows.map((row) => column.text?.(row) ?? '').filter(Boolean))
+      if (values.size < 2 || values.size > 8) return []
+      return [{ id: column.key, label: column.header, value: column.text }]
+    })
+  }, [facets, facet, columns, rows])
 
   const choicesById = useMemo(() => {
     const out: Record<string, { value: string; label: string }[]> = {}
@@ -166,7 +188,8 @@ export function DetailTable<T extends object>({
         return haystack.toLowerCase().includes(needle)
       })
     }
-    const by = sortState ? columns.find((column) => column.key === sortState.field)?.sortBy : null
+    const sorting = sortState ? columns.find((column) => column.key === sortState.field) : null
+    const by = sorting?.sortBy ?? sorting?.text
     if (sortState && by) {
       const sign = sortState.direction === 'asc' ? 1 : -1
       next = [...next].sort((a, b) => {
@@ -203,7 +226,11 @@ export function DetailTable<T extends object>({
     )
   }
 
-  const sortable = columns.filter((column) => column.sortBy)
+  const sortOptions = columns.flatMap((column) =>
+    column.header && (column.sortBy || column.text)
+      ? [{ value: column.key, label: column.header }]
+      : [],
+  )
   const start = (page - 1) * pageSize
   const slice = visible.slice(start, start + pageSize)
   const activeSpecs = specs.filter((spec) => (choicesById[spec.id]?.length ?? 0) > 0)
@@ -215,14 +242,97 @@ export function DetailTable<T extends object>({
     setPage(1)
   }
 
+  const headerTools =
+    inHeader && toolsEl
+      ? createPortal(
+          <>
+            {activeSpecs.length > 0 ? (
+              <FilterBar
+                variant="advanced"
+                advancedAlign="end"
+                fields={activeSpecs.map((spec) =>
+                  selectFilterField(spec.id, spec.label, choicesById[spec.id] ?? []),
+                )}
+                query={createFilterQuery(
+                  activeSpecs.flatMap((spec) => {
+                    const values = selected[spec.id] ?? []
+                    return values.length > 0
+                      ? [
+                          createFilterRule({
+                            id: spec.id,
+                            path: [spec.id],
+                            operator: 'is_any_of',
+                            value: values,
+                          }),
+                        ]
+                      : []
+                  }),
+                )}
+                onQueryChange={(_query, flat: FlatFilter[]) => {
+                  const next: Record<string, string[]> = {}
+                  for (const spec of activeSpecs) {
+                    const allowed = new Set(
+                      (choicesById[spec.id] ?? []).map((choice) => choice.value),
+                    )
+                    next[spec.id] = readSelectFilter(flat, spec.id, allowed)
+                  }
+                  setSelected(next)
+                  setPage(1)
+                }}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    aria-label="Filter"
+                  >
+                    <FilterIcon aria-hidden />
+                  </Button>
+                }
+              />
+            ) : null}
+            {sortOptions.length > 0 ? (
+              <SortMenu
+                align="end"
+                options={sortOptions}
+                field={sortState?.field || sortOptions[0]!.value}
+                direction={sortState?.direction ?? 'asc'}
+                onChange={(field, direction) => {
+                  setSortState({ field, direction })
+                  setPage(1)
+                }}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    aria-label="Sort"
+                  >
+                    <ArrowUpDownIcon aria-hidden />
+                  </Button>
+                }
+              />
+            ) : null}
+            {action}
+          </>,
+          toolsEl,
+        )
+      : null
+
   return (
     <div className={cn(!compact && 'p-4', className)}>
+      {headerTools}
       <EntityList<T>
         compact={compact}
         border={border}
         isLoading={isLoading}
-        hideToolbar={!toolbar}
-        hideFooter={!footer}
+        hideToolbar={!toolbar || inHeader}
+        // With its tools in the section header the table is usually short
+        // enough to need no footer, but a longer one keeps its pager: rows are
+        // sliced to one page, so without it the rest could not be reached.
+        hideFooter={!footer || (inHeader && visible.length <= pageSize)}
         label={`${label} table`}
         noun={noun}
         rows={slice}
@@ -267,7 +377,9 @@ export function DetailTable<T extends object>({
                 onQueryChange: (_query, flat: FlatFilter[]) => {
                   const next: Record<string, string[]> = {}
                   for (const spec of activeSpecs) {
-                    const allowed = new Set((choicesById[spec.id] ?? []).map((choice) => choice.value))
+                    const allowed = new Set(
+                      (choicesById[spec.id] ?? []).map((choice) => choice.value),
+                    )
                     next[spec.id] = readSelectFilter(flat, spec.id, allowed)
                   }
                   setSelected(next)
@@ -276,10 +388,10 @@ export function DetailTable<T extends object>({
               },
             }
           : {})}
-        {...(sortable.length > 0
+        {...(!inHeader && sortOptions.length > 0
           ? {
               sort: {
-                options: sortable.map((column) => ({ value: column.key, label: column.header })),
+                options: sortOptions,
                 field: sortState?.field ?? '',
                 direction: sortState?.direction ?? 'asc',
                 activeCount: sortState ? 1 : 0,
@@ -295,7 +407,7 @@ export function DetailTable<T extends object>({
         onClearFilters={reset}
         filteredEmptyTitle={`No ${noun} match these filters`}
         headingAs="h3"
-        {...(action ? { primaryAction: action } : {})}
+        {...(action && !inHeader ? { primaryAction: action } : {})}
       />
     </div>
   )

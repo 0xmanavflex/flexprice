@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { call } from '@fp/api'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
+import { LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 
 /**
  * How each product is wired into the catalogue: the plans that grant or price
@@ -12,10 +13,10 @@ import { useFlexprice } from './provider'
  * None of it lives on the feature itself, so it is read for the rows on screen
  * and no more:
  *
- *   - one `POST /entitlements/search` filtered to the visible `featureIds` —
+ *   - one `POST /entitlements/search` filtered to the visible `featureIds`:
  *     each result names its plan (`entityId`) and its feature;
  *   - one `POST /prices/search` filtered to the visible metered products'
- *     `meterIds` — a metered product is very often *priced* on a plan without
+ *     `meterIds`: a metered product is very often *priced* on a plan without
  *     being *granted* by one, and a Plans column that only read entitlements
  *     showed those products as linked to nothing;
  *   - one `POST /plans/search` for the plan ids found, so the column shows
@@ -31,7 +32,7 @@ import { useFlexprice } from './provider'
  *     failing count does not fail the rest, and a plan counted a minute ago is
  *     not counted again.
  *
- * A count that could not be read is `undefined`, not zero — "we could not find
+ * A count that could not be read is `undefined`, not zero: "we could not find
  * out" and "there are none" must not render the same.
  */
 export interface FeatureLinkage {
@@ -223,7 +224,10 @@ export function useFeatureLinkage(features: readonly LinkedFeature[]): {
               queryFn: async () => {
                 const response = (await call(
                   (options) =>
-                    client.subscriptions.querySubscription({ planId, limit: 1 } as never, options),
+                    client.subscriptions.querySubscription(
+                      { planId, subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES, limit: 1 } as never,
+                      options,
+                    ),
                   signal,
                 )) as { pagination?: { total?: number } }
                 return response.pagination?.total ?? 0

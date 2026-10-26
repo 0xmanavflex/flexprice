@@ -14,7 +14,7 @@ import { provenance } from '@ui/provenance'
  * and what the first invoice will bill.
  *
  * The first invoice is worked out here, from the plan's charges as this
- * contract changes them — Flexprice has no preview for a contract that does not
+ * contract changes them: Flexprice has no preview for a contract that does not
  * exist yet. Only charges billed up front are counted (a fixed charge in
  * advance, at its quantity, at the overridden flat price when there is one);
  * usage bills at the end of the period, so it is said, not guessed. Whatever

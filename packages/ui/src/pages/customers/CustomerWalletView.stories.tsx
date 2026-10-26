@@ -33,7 +33,9 @@ function makeWallets(
       customerId: 'cus_01M3H9ACME',
       currency,
       status: i === 0 ? status : WalletStatus.Active,
+      walletType: i === 2 ? 'POST_PAID' : 'PRE_PAID',
       description: i === 0 ? 'Prepaid credits' : `Wallet ${i + 1}`,
+      metadata: i === 0 ? { cost_center: 'ops' } : {},
       creditBalance: current,
       balance: money(current, currency),
       realTimeCreditBalance: live,
@@ -225,6 +227,35 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   ),
 }
 
+/** V1's wallet menu has Alert Settings; it is offered when the page passes the handler. */
+export const AlertSettingsFromMenu: Story = {
+  // Base UI's menu portal leaves `aria-hidden` focus guards with tabindex 0
+  // while it closes; axe flags them, and the vendored library is not ours to
+  // fix. See ConfirmDialog.stories.tsx.
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          // The file's own exception (see meta), kept: story rules replace it.
+          { id: 'aria-prohibited-attr', enabled: false },
+          { id: 'aria-hidden-focus', enabled: false },
+        ],
+      },
+    },
+  },
+  args: { onAlertSettings: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Wallet actions' }))
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole('menuitem', {
+        name: 'Alert settings',
+      }),
+    )
+    await expect(args.onAlertSettings).toHaveBeenCalledOnce()
+  },
+}
+
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -286,7 +317,7 @@ export const TransactionsFailed: Story = {
   },
 }
 
-/** An unreadable balance is shown as unknown — a dash, never 0 credits. */
+/** An unreadable balance is shown as unknown: a dash, never 0 credits. */
 export const UnreadableBalance: Story = {
   args: {
     wallets: makeWallets(1, WalletStatus.Active, 10000, 7500).map((wallet) => ({

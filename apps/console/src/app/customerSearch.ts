@@ -4,6 +4,7 @@ import {
   CustomerStatus,
   CUSTOMER_FILTERS,
   DEFAULT_CUSTOMER_QUERY,
+  FilterOp,
   decodeListFilters,
   runnableFilters,
 } from '@fp/domain'
@@ -13,7 +14,7 @@ import {
  *
  * The same total, both-spellings parser the catalogue lists use: a filtered
  * list is a shareable link, and a hand-edited URL shows the first page rather
- * than an error. No `view` — a billing list is a table, so there is no layout
+ * than an error. No `view`: a billing list is a table, so there is no layout
  * to read off the URL.
  */
 const STATUSES = new Set<string>(Object.values(CustomerStatus))
@@ -45,12 +46,23 @@ export function parseCustomerSearch(raw: Record<string, unknown>): CustomerQuery
       MAX_PAGE_SIZE,
     ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
-    statuses: [...new Set(statuses)],
+    // A status link becomes the visible status filter below; the facet is
+    // cleared so removing that chip really shows every status.
+    statuses: raw['filters'] === undefined ? [] : [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
       ? (String(param(raw, 'sort', 'sortBy')) as CustomerSortField)
       : DEFAULT_CUSTOMER_QUERY.sortBy,
     sortDirection:
       param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_CUSTOMER_QUERY.sortDirection,
-    filters: runnableFilters(decodeListFilters(raw['filters']), CUSTOMER_FILTERS),
+    // No `filters` param is the default view (active customers); an explicit
+    // empty list is "every status", so removing the chip sticks across reloads.
+    filters:
+      raw['filters'] === undefined
+        ? // A link that names a status asks for that status; the default
+          // status filter would contradict it, so it is left off.
+          statuses.length > 0
+          ? [{ field: 'status', op: FilterOp.In, value: [...new Set(statuses)] }]
+          : (DEFAULT_CUSTOMER_QUERY.filters ?? [])
+        : runnableFilters(decodeListFilters(raw['filters']), CUSTOMER_FILTERS),
   }
 }

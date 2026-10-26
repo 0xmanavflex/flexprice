@@ -7,7 +7,7 @@ import { provenance } from '@ui/provenance'
  *
  * Three states that a plain progress bar gets wrong:
  *
- * - **Unlimited.** Not 100%, and not 0% — there is no denominator, so a bar is
+ * - **Unlimited.** Not 100%, and not 0%: there is no denominator, so a bar is
  *   the wrong shape entirely and it says so in words instead.
  * - **Over the limit.** The bar caps at full but the number keeps counting, so
  *   "1,200 of 1,000" stays readable rather than silently clamping.
@@ -29,13 +29,18 @@ export const UsageMeterProvenance = provenance({
 export interface UsageMeterProps {
   label: string
   used: number
-  /** null means unlimited — not zero, and not infinity. */
+  /** null means unlimited: not zero, and not infinity. */
   limit: number | null
   unit?: string
   locale?: string
+  /**
+   * Keep the label for assistive tech only: for a table cell whose row
+   * already names the feature in its own column.
+   */
+  hideLabel?: boolean
 }
 
-export function UsageMeter({ label, used, limit, unit, locale }: UsageMeterProps) {
+export function UsageMeter({ label, used, limit, unit, locale, hideLabel }: UsageMeterProps) {
   const format = (value: number) => new Intl.NumberFormat(locale).format(value)
   const unlimited = limit === null
   const exhausted = !unlimited && limit === 0
@@ -51,7 +56,7 @@ export function UsageMeter({ label, used, limit, unit, locale }: UsageMeterProps
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="text-[13px] font-medium">{label}</span>
+        <span className={cn('text-[13px] font-medium', hideLabel && 'sr-only')}>{label}</span>
         <span
           className={cn(
             'text-xs tabular-nums',
@@ -75,11 +80,7 @@ export function UsageMeter({ label, used, limit, unit, locale }: UsageMeterProps
         />
       )}
 
-      {over ? (
-        <p className="text-destructive text-xs">
-          Over the included amount by {format(used - (limit ?? 0))}
-        </p>
-      ) : null}
+      {/* Over the limit reads from the red reading and bar above; no extra line. */}
     </div>
   )
 }

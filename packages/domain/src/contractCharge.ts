@@ -11,8 +11,8 @@ import { type PriceOverride } from './priceOverride'
  * Adding and editing a charge on one contract.
  *
  * A contract charge is a price (what it costs, shared with the charge editor on
- * the plan page) plus the terms only a contract has: how many, from when, and —
- * for a metered charge — the bucket usage is summed in and any commitment.
+ * the plan page) plus the terms only a contract has: how many, from when, and:
+ * for a metered charge: the bucket usage is summed in and any commitment.
  */
 
 export const BucketSize = {
@@ -125,7 +125,11 @@ export interface LinePricing {
   terms: UsageTerms
 }
 
-/** A new charge on one contract. Empty `startDate` means now. */
+/**
+ * A new charge on one contract. `startDate` is a day (`YYYY-MM-DD`, midnight
+ * UTC), or an exact ISO instant when the charge starts with a contract that
+ * starts later in the day; empty means now.
+ */
 export interface AddContractCharge {
   charge: CreateCharge
   /** Whole units, fixed charges only. */

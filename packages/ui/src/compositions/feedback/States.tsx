@@ -16,8 +16,8 @@ import { Bone, SkeletonRegion } from './Skeletons'
  * is why some show a spinner, some a blank table, and some nothing at all.
  *
  *   Loading           a skeleton shaped like the result, never a page spinner
- *   Empty (no data)   nothing exists yet — offer to create the first
- *   Empty (filtered)  nothing matched — offer to clear the filter
+ *   Empty (no data)   nothing exists yet: offer to create the first
+ *   Empty (filtered)  nothing matched: offer to clear the filter
  *   Error (retryable) something broke and trying again might work
  *   Error (denied)    permission; retrying cannot help, so do not offer it
  */
@@ -155,7 +155,7 @@ export function ErrorState({
       {/*
         `-foreground` on a tinted surface, and plain foreground for the body.
         Full-saturation destructive measures 4.36:1 on its own tint and
-        `text-muted-foreground` measures 4.33:1 — both under AA. ReUI's own
+        `text-muted-foreground` measures 4.33:1: both under AA. ReUI's own
         `-light` variants pair the tint with `-foreground` for this reason.
       */}
       <p className="text-destructive-foreground dark:text-destructive text-sm font-medium">
@@ -188,13 +188,13 @@ export interface ListStateProps {
   createAction?: ReactNode
   /**
    * Kept because pages pass the same handler to the grid, which owns the
-   * filtered miss now — its empty body renders "clear filters" without taking
+   * filtered miss now: its empty body renders "clear filters" without taking
    * the toolbar down with it, which is the whole point.
    */
   onClearFilters?: () => void
   emptyTitle: string
   emptyDescription?: string
-  /** Beside the primary action — an import, a link to the docs. */
+  /** Beside the primary action: an import, a link to the docs. */
   emptySecondaryAction?: ReactNode
   /** Rows are on screen (real or from the previous page/filter). An error then keeps them. */
   hasRows?: boolean
@@ -218,8 +218,8 @@ export interface ListStateProps {
  * Empty does not. An empty list is still a list: it keeps its toolbar, its
  * filters and its footer, and says "nothing here yet" in the table body where
  * the rows would be. The distinction between "no results" and "nothing here
- * yet" survives — the page states which one it is, and the grid's empty body
- * renders the right offer — so nobody is shown "create your first" because
+ * yet" survives: the page states which one it is, and the grid's empty body
+ * renders the right offer: so nobody is shown "create your first" because
  * they typed a search.
  */
 export function ListState({
@@ -265,7 +265,7 @@ export function ListState({
    * It used to: an empty list returned an `EmptyState` in place of `children`,
    * and since the toolbar, the search box, the filters and the pagination are
    * all children of the grid, an empty list was a page with no way to search
-   * it, no way to filter it, and — worst — no way to create the first record
+   * it, no way to filter it, and: worst: no way to create the first record
    * the empty state was inviting you to create. The invitation and the button
    * that answers it were in different components, and only one of them
    * survived.

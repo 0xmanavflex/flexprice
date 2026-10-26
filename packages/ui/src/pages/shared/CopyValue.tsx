@@ -28,7 +28,7 @@ export interface CopyValueProps {
   label: string
   /** `chip` draws a bordered pill, for provider ids; `text` is plain mono text. */
   variant?: 'text' | 'chip'
-  /** Leading mark inside a chip — a provider logo. */
+  /** Leading mark inside a chip: a provider logo. */
   leading?: ReactNode
   className?: string
 }

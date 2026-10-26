@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
+import { Section } from '@ui/compositions/layout/Section'
 import { DetailTable, type DetailColumn } from './DetailTable'
 
 interface Invoice {
@@ -236,5 +237,50 @@ export const TruncatedTextOnHover: Story = {
     const short = canvas.getByText('Paid')
     await userEvent.hover(short)
     await expect(short).not.toHaveAttribute('title')
+  },
+}
+
+/**
+ * In a titled Section the tools move into its header. A table longer than one
+ * page keeps its pager, so the rows past the first page can still be reached.
+ */
+export const InSectionPaged: Story = {
+  render: () => (
+    <Section title="Credit grants" table flush>
+      <DetailTable
+        label="Credit grants"
+        noun="invoices"
+        rows={makeInvoices(7)}
+        columns={COLUMNS}
+        pageSize={5}
+        compact
+      />
+    </Section>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('1 - 5 of 7 invoices')).toBeInTheDocument()
+    await expect(canvas.queryByText('INV-2026-1005')).not.toBeInTheDocument()
+  },
+}
+
+/** A titled table that fits on one page needs no footer. */
+export const InSectionOnePage: Story = {
+  render: () => (
+    <Section title="Credit grants" table flush>
+      <DetailTable
+        label="Credit grants"
+        noun="invoices"
+        rows={makeInvoices(3)}
+        columns={COLUMNS}
+        pageSize={5}
+        compact
+      />
+    </Section>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('INV-2026-1002')).toBeVisible()
+    await expect(canvas.queryByText(/of 3 invoices/)).not.toBeInTheDocument()
   },
 }

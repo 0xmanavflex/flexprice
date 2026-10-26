@@ -1,8 +1,11 @@
-import { type ReactNode } from 'react'
+import { useMemo, useState, type ReactElement, type ReactNode } from 'react'
 import {
   ArchiveIcon,
+  InfoIcon,
   ExternalLinkIcon,
+  ArrowUpDownIcon,
   EyeIcon,
+  FilterIcon,
   FileTextIcon,
   LinkIcon,
   PencilIcon,
@@ -14,6 +17,7 @@ import {
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_STATUS_LABEL,
+  CustomerStatus,
   CUSTOMER_TAX_TREATMENT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
   type Invoice,
@@ -26,13 +30,29 @@ import {
   isZeroMoney,
   SubscriptionStatus,
   type Subscription,
+  type TenantFeatureUsage,
   RBAC_ENTITY,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
+import { AccessProvider, AccessScope, WriteGate, useAccess } from '@ui/compositions/access/Access'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { ActivitySection, type ActivityLogEntry } from '@ui/compositions/detail/ActivityLog'
-import { DetailTabs, OverviewTiles, type DetailMenuItem } from '@ui/compositions/detail/DetailKit'
+import {
+  DetailTabs,
+  OverviewTiles,
+  SimpleTable,
+  type DetailMenuItem,
+  type SimpleColumn,
+} from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
+import {
+  FilterBar,
+  readSelectFilter,
+  selectFilterField,
+  type FlatFilter,
+} from '@ui/compositions/tables/FilterBar'
+import { SortMenu } from '@ui/compositions/tables/SortMenu'
+import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import { EditableCard } from '@ui/compositions/forms/EditableCard'
 import { RelatedCard } from '@ui/compositions/detail/RelatedCard'
 import { MetadataCard } from '@ui/compositions/detail/MetadataCard'
@@ -43,6 +63,11 @@ import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
 import { EmDash, EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
+import {
+  EntitlementUsageTable,
+  entitlementRowsFromUsage,
+  type EntitlementUsageRow,
+} from '../shared/EntitlementUsage'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 import {
   ContractIntegrations,
@@ -71,7 +96,7 @@ export const CustomerDetailProvenance = provenance({
     'pages/shared/Money',
     'compositions/SubTabState',
   ],
-  note: 'Customer detail: EntityHeader + DetailTabs; Overview from OverviewTiles, a Contracts table and the activity log, Information as single-pencil EditableCards. Lineage: ui/detail-kit, ui/section, ui/editable-card.',
+  note: 'Customer detail: EntityHeader + DetailTabs; Overview from OverviewTiles, a Contracts table, an Entitlements usage table and the activity log, Information as single-pencil EditableCards. Lineage: ui/detail-kit, ui/section, ui/editable-card.',
 })
 
 /** How many invoices the customer page asks for; at this count the list may be cut. */
@@ -110,11 +135,13 @@ export interface CustomerDetailProps {
   /** Adds "Copy portal link" to the header menu. */
   onCopyPortalLink?: () => void
   /**
-   * Adds "Stream sample events" to the header menu: the backend generates a
-   * minute of usage events for one of this customer's subscriptions. Omitted
-   * (production, or no live subscription), the item is not shown.
+   * "Stream sample events" in the header menu: the backend generates a minute
+   * of usage events for one live subscription. Omitted, the item stays in the
+   * menu, disabled, with `streamEventsReason` under the label.
    */
   onStreamEvents?: () => void
+  /** Why sample events cannot be streamed. Shown under the disabled menu item. */
+  streamEventsReason?: string
   /**
    * Save one of the simple fields in place (name, email, phone). Omitted, the
    * Information tab is read-only. Resolve to commit; reject with an Error to
@@ -126,7 +153,7 @@ export interface CustomerDetailProps {
   /** Open an invoice from a row action. */
   onOpenInvoice?: (invoiceId: string) => void
   /**
-   * The Invoices tab's row menu for one invoice — finalize, record payment,
+   * The Invoices tab's row menu for one invoice: finalize, record payment,
    * void… The page decides which apply; a destructive one sits last, apart.
    */
   invoiceActions?: (invoice: Invoice) => InvoiceRowAction[]
@@ -136,12 +163,12 @@ export interface CustomerDetailProps {
   /** Open one contract's own page, from a Contracts row or a running-contract card. Omitted, rows are not links. */
   onOpenContract?: (subscriptionId: string) => void
   subscriptionsLoading?: boolean
-  /** The contracts read failed — shown as such, never as "no contracts". */
+  /** The contracts read failed: shown as such, never as "no contracts". */
   subscriptionsError?: boolean
   /** Refetch the contracts; the Contracts error panel offers it as Try again. */
   onRetrySubscriptions?: () => void
   invoicesLoading?: boolean
-  /** The invoices read failed — shown as such, never as "no invoices" or a count of 0. */
+  /** The invoices read failed: shown as such, never as "no invoices" or a count of 0. */
   invoicesError?: boolean
   /** Refetch the invoices; the Invoices error panel offers it as Try again. */
   onRetryInvoices?: () => void
@@ -151,7 +178,7 @@ export interface CustomerDetailProps {
    */
   payments?: Payment[] | undefined
   paymentsLoading?: boolean | undefined
-  /** The payments read failed — shown as such, never as "no payments". */
+  /** The payments read failed: shown as such, never as "no payments". */
   paymentsError?: boolean | undefined
   onRetryPayments?: (() => void) | undefined
   /**
@@ -171,7 +198,7 @@ export interface CustomerDetailProps {
    */
   events?: ReactNode
   /**
-   * The Usage section's contents — the per-feature quota cards.
+   * The Usage section's contents: the per-feature quota cards.
    *
    * A slot rather than a data prop because the quota read is a separate
    * endpoint (`GET /customers/usage`) with its own loading and failure states,
@@ -180,6 +207,16 @@ export interface CustomerDetailProps {
    * no quota data to hand.
    */
   usage?: ReactNode
+  /**
+   * The Overview's Entitlements section: each feature the customer is
+   * entitled to, what grants it, and how much is used (`GET /customers/usage`).
+   * Omitted, the section is not drawn; loaded and empty, it is not drawn
+   * either: as in V1, a customer with no entitlements has nothing to show.
+   */
+  entitlements?: TenantFeatureUsage[] | undefined
+  entitlementsLoading?: boolean | undefined
+  entitlementsError?: boolean | undefined
+  onRetryEntitlements?: (() => void) | undefined
   /** The Wallet section's contents; omitted, the empty state shows. */
   wallet?: ReactNode
   /** The Taxes section on the Information tab; omitted, it is not shown. */
@@ -202,6 +239,9 @@ const Muted = ({ children }: { children: ReactNode }) => (
   <span className="text-muted-foreground">{children}</span>
 )
 
+/** Why nothing on an archived customer's page can be changed. */
+const ARCHIVED_CUSTOMER_LOCK = 'You can only view their details; nothing here can be changed.'
+
 export function CustomerDetail({
   customer,
   integrationControls,
@@ -217,6 +257,7 @@ export function CustomerDetail({
   onOpenPortal,
   onCopyPortalLink,
   onStreamEvents,
+  streamEventsReason,
   onUpdateField,
   onUpdateMetadata,
   onOpenInvoice,
@@ -240,6 +281,10 @@ export function CustomerDetail({
   activityAwaiting = false,
   events,
   usage,
+  entitlements,
+  entitlementsLoading = false,
+  entitlementsError = false,
+  onRetryEntitlements,
   wallet,
   taxes,
   locale,
@@ -286,17 +331,19 @@ export function CustomerDetail({
           },
         ]
       : []),
-    ...(onStreamEvents
-      ? [
-          {
-            id: 'stream-events',
-            label: 'Stream sample events',
-            icon: <RocketIcon className="text-muted-foreground" aria-hidden="true" />,
-            onSelect: onStreamEvents,
-            entity: RBAC_ENTITY.Event,
-          },
-        ]
-      : []),
+    {
+      id: 'stream-events',
+      label: 'Stream sample events',
+      icon: <RocketIcon className="text-muted-foreground" aria-hidden="true" />,
+      onSelect: onStreamEvents ?? (() => undefined),
+      disabled: !onStreamEvents,
+      entity: RBAC_ENTITY.Event,
+      ...(!onStreamEvents
+        ? {
+            description: streamEventsReason ?? 'Sample events are not available for this customer.',
+          }
+        : {}),
+    },
     ...(onOpenPortal && customer.externalId
       ? [
           {
@@ -337,7 +384,10 @@ export function CustomerDetail({
       : []),
   ]
 
-  return (
+  const access = useAccess()
+  const archived = customer.status === CustomerStatus.Archived
+
+  const page = (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <EntityHeader
         trail={[{ label: 'Customers', onClick: onBack }, { label: 'Customer details' }]}
@@ -359,6 +409,13 @@ export function CustomerDetail({
         menu={menu}
       />
       <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-w-0 flex-col gap-6 px-6 pb-10">
+        {archived ? (
+          <Alert variant="info">
+            <InfoIcon aria-hidden="true" />
+            <AlertTitle>This customer is archived</AlertTitle>
+            <AlertDescription>{ARCHIVED_CUSTOMER_LOCK}</AlertDescription>
+          </Alert>
+        ) : null}
         <DetailTabs
           value={tab}
           onValueChange={(next) => onTabChange(next as CustomerTab)}
@@ -386,6 +443,10 @@ export function CustomerDetail({
             onOpenPlan={onOpenPlan}
             onOpenContract={onOpenContract}
             onCreateContract={onCreateContract}
+            entitlements={entitlements}
+            entitlementsLoading={entitlementsLoading}
+            entitlementsError={entitlementsError}
+            onRetryEntitlements={onRetryEntitlements}
             invoices={invoices}
             invoicesLoading={invoicesLoading}
             invoicesError={invoicesError}
@@ -403,15 +464,33 @@ export function CustomerDetail({
             activityLoading={activityLoading}
             activityError={activityError}
             activityAwaiting={activityAwaiting}
-            integrationControls={integrationControls}
-            onUpdateMetadata={onUpdateMetadata}
           />
         ) : null}
 
         {tab === 'invoices' ? (
           // The invoices here write invoices, not the customer.
           <AccessScope entity={RBAC_ENTITY.Invoice}>
-            <Section table title="Invoices">
+            <Section
+              table
+              title="Invoices"
+              {...(onCreateInvoice
+                ? {
+                    action: (
+                      <WriteGate>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-3"
+                          onClick={onCreateInvoice}
+                        >
+                          <PlusIcon aria-hidden="true" />
+                          New invoice
+                        </Button>
+                      </WriteGate>
+                    ),
+                  }
+                : {})}
+            >
               <InvoiceTable
                 invoices={invoices}
                 isLoading={invoicesLoading}
@@ -420,18 +499,6 @@ export function CustomerDetail({
                 formatDate={formatDate}
                 onOpenInvoice={onOpenInvoice}
                 {...(invoiceActions ? { actions: invoiceActions } : {})}
-                {...(onCreateInvoice
-                  ? {
-                      action: (
-                        <WriteGate>
-                          <Button size="sm" className="h-8 px-3" onClick={onCreateInvoice}>
-                            <PlusIcon aria-hidden="true" />
-                            New invoice
-                          </Button>
-                        </WriteGate>
-                      ),
-                    }
-                  : {})}
               />
             </Section>
           </AccessScope>
@@ -477,10 +544,26 @@ export function CustomerDetail({
             onUpdateMetadata={onUpdateMetadata}
             onEdit={onEdit}
             taxes={taxes}
+            integrationControls={integrationControls}
           />
         ) : null}
       </div>
     </div>
+  )
+
+  /*
+   * An archived customer is read-only: the same lock a locked account uses,
+   * scoped to this page, so every write control here (menus, inline edits,
+   * section actions, the wallet and tax panels) is disabled with the reason,
+   * and the strip above the tabs says so once.
+   */
+  return archived ? (
+    <AccessProvider value={{ ...access, writeLock: ARCHIVED_CUSTOMER_LOCK }}>
+      {/* A scope, so items that name no entity of their own are checked too. */}
+      <AccessScope entity={RBAC_ENTITY.Customer}>{page}</AccessScope>
+    </AccessProvider>
+  ) : (
+    page
   )
 }
 
@@ -536,6 +619,163 @@ function activityEntries(
   return dated.sort((x, y) => time(y.when) - time(x.when)).map((d) => d.entry)
 }
 
+interface SortKey<T> {
+  key: string
+  label: string
+  value: (row: T) => string | number
+}
+
+/** Filter and sort for a section table, sitting in the header beside the action. */
+function TableTools<T>({
+  rows,
+  sorts,
+  facet,
+  action,
+  children,
+}: {
+  rows: T[]
+  sorts: SortKey<T>[]
+  facet?: { label: string; value: (row: T) => string }
+  action?: ReactNode
+  children: (rows: T[], controls: ReactNode) => ReactNode
+}) {
+  const [field, setField] = useState(sorts[0]?.key ?? '')
+  const [direction, setDirection] = useState<'asc' | 'desc'>('asc')
+  const [sorted, setSorted] = useState(false)
+  const [selected, setSelected] = useState<string[]>([])
+  const choices = useMemo(() => {
+    if (!facet) return []
+    return [...new Set(rows.map(facet.value).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  }, [rows, facet])
+  const visible = useMemo(() => {
+    const allowed = new Set(selected)
+    const filtered =
+      facet && selected.length > 0 ? rows.filter((row) => allowed.has(facet.value(row))) : rows
+    if (!sorted) return filtered
+    const sort = sorts.find((item) => item.key === field)
+    if (!sort) return filtered
+    return [...filtered].sort((a, b) => {
+      const left = sort.value(a)
+      const right = sort.value(b)
+      const order =
+        typeof left === 'number' && typeof right === 'number'
+          ? left - right
+          : String(left).localeCompare(String(right))
+      return direction === 'asc' ? order : -order
+    })
+  }, [rows, facet, selected, sorted, sorts, field, direction])
+  const query = useMemo(
+    () =>
+      facet && selected.length > 0
+        ? createFilterQuery([
+            createFilterRule({
+              id: 'facet',
+              path: ['facet'],
+              operator: 'is_any_of',
+              value: selected,
+            }),
+          ])
+        : createFilterQuery(),
+    [facet, selected],
+  )
+
+  const controls = (
+    <>
+      {facet && choices.length > 0 ? (
+        <FilterBar
+          variant="advanced"
+          advancedAlign="end"
+          fields={[
+            selectFilterField(
+              'facet',
+              facet.label,
+              choices.map((choice) => ({ value: choice, label: choice })),
+            ),
+          ]}
+          query={query}
+          onQueryChange={(_query, flat: FlatFilter[]) => {
+            setSelected(readSelectFilter(flat, 'facet', new Set(choices)))
+          }}
+          trigger={
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="relative size-8"
+              aria-label={selected.length > 0 ? `Filter. ${selected.length} active` : 'Filter'}
+            >
+              <FilterIcon aria-hidden />
+            </Button>
+          }
+        />
+      ) : null}
+      {sorts.length > 0 && rows.length > 0 ? (
+        <SortMenu
+          align="end"
+          options={sorts.map((item) => ({ value: item.key, label: item.label }))}
+          field={field}
+          direction={direction}
+          onChange={(next, nextDirection) => {
+            setField(next)
+            setDirection(nextDirection)
+            setSorted(true)
+          }}
+          trigger={
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-8"
+              aria-label="Sort"
+            >
+              <ArrowUpDownIcon aria-hidden />
+            </Button>
+          }
+        />
+      ) : null}
+      {action}
+    </>
+  )
+
+  return children(visible, controls)
+}
+
+function EntitlementsBlock({
+  rows,
+  locale,
+  isLoading,
+  isError,
+  onRetry,
+  hasData,
+}: {
+  rows: EntitlementUsageRow[]
+  locale: string | undefined
+  isLoading: boolean
+  isError: boolean
+  onRetry: (() => void) | undefined
+  hasData: boolean
+}) {
+  return (
+    <Section flush title="Entitlements">
+      <SubTabState
+        hasData={hasData}
+        isLoading={isLoading}
+        error={isError ? "Entitlements couldn't be loaded" : null}
+        onRetry={onRetry}
+        columns={4}
+        loadingLabel="Loading entitlements"
+        empty={{
+          scene: 'customers',
+          title: 'No entitlements yet',
+          description: 'Features appear here once this customer is on a plan that grants one.',
+        }}
+      >
+        <EntitlementUsageTable rows={rows} locale={locale} />
+      </SubTabState>
+    </Section>
+  )
+}
+
 function ViewAllButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <Button variant="outline" size="sm" className="h-8 px-3" onClick={onClick}>
@@ -555,6 +795,10 @@ function OverviewTab({
   onOpenPlan,
   onOpenContract,
   onCreateContract,
+  entitlements,
+  entitlementsLoading,
+  entitlementsError,
+  onRetryEntitlements,
   invoices,
   invoicesLoading,
   invoicesError,
@@ -572,8 +816,6 @@ function OverviewTab({
   activityLoading,
   activityError,
   activityAwaiting,
-  integrationControls,
-  onUpdateMetadata,
 }: {
   customer: CustomerDetailModel
   subscriptions: Subscription[]
@@ -583,6 +825,10 @@ function OverviewTab({
   onOpenPlan: ((planId: string) => void) | undefined
   onOpenContract: ((subscriptionId: string) => void) | undefined
   onCreateContract: (() => void) | undefined
+  entitlements: TenantFeatureUsage[] | undefined
+  entitlementsLoading: boolean
+  entitlementsError: boolean
+  onRetryEntitlements: (() => void) | undefined
   invoices: Invoice[]
   invoicesLoading: boolean
   invoicesError: boolean
@@ -600,8 +846,6 @@ function OverviewTab({
   activityLoading: boolean | undefined
   activityError: boolean | undefined
   activityAwaiting: boolean | undefined
-  onUpdateMetadata: CustomerDetailProps['onUpdateMetadata']
-  integrationControls: CustomerDetailProps['integrationControls']
 }) {
   // A loading or failed read is "not known", never "none": the tiles and the
   // activity note say so rather than count what has not arrived.
@@ -653,7 +897,7 @@ function OverviewTab({
                   ? 'Could not load contracts'
                   : 'Loading contracts…'
                 : nextBilling
-                  ? `Current period of ${nextBilling.id} ends`
+                  ? `Current period of ${nextBilling.planName} ends`
                   : 'No contract is billing',
             },
           ]}
@@ -669,41 +913,83 @@ function OverviewTab({
           onOpenContract={onOpenContract}
           onCreateContract={onCreateContract}
         />
-        <Section
-          table
-          showTitle
-          title="Recent invoices"
-          {...(invoices.length > 0
-            ? { action: <ViewAllButton label="invoices" onClick={onViewAllInvoices} /> }
-            : {})}
-        >
-          <InvoiceTable
-            compactList
-            invoices={invoices.slice(0, 5)}
-            isLoading={invoicesLoading}
-            isError={invoicesError}
-            onRetry={onRetryInvoices}
-            formatDate={formatDate}
-            onOpenInvoice={onOpenInvoice}
+        {entitlements && (entitlementsLoading || entitlementsError || entitlements.length > 0) ? (
+          <EntitlementsBlock
+            rows={entitlementRowsFromUsage(entitlements, (source) => {
+              if (source.entityType === 'plan' && source.entityId && onOpenPlan)
+                return () => onOpenPlan(source.entityId)
+              if (source.subscriptionId && onOpenContract)
+                return () => onOpenContract(source.subscriptionId)
+              return undefined
+            })}
+            locale={locale}
+            isLoading={entitlementsLoading}
+            isError={entitlementsError}
+            onRetry={onRetryEntitlements}
+            hasData={entitlements.length > 0}
           />
-        </Section>
+        ) : null}
+        <TableTools
+          rows={invoices.slice(0, 5)}
+          facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
+          sorts={invoiceSorts}
+          action={<ViewAllButton label="invoices" onClick={onViewAllInvoices} />}
+        >
+          {(rows, controls) => (
+            <Section flush title="Recent invoices" action={controls}>
+              <InvoiceTable
+                compactList
+                invoices={invoices.slice(0, 5)}
+                shown={rows}
+                isLoading={invoicesLoading}
+                isError={invoicesError}
+                onRetry={onRetryInvoices}
+                formatDate={formatDate}
+                onOpenInvoice={onOpenInvoice}
+              />
+            </Section>
+          )}
+        </TableTools>
         {payments ? (
-          <Section
-            table
-            showTitle
-            title="Recent payments"
-            {...(onViewAllPayments && payments.length > 0
+          <TableTools
+            rows={payments.slice(0, 5)}
+            facet={{ label: 'Status', value: (payment) => PAYMENT_STATUS_LABEL[payment.status] }}
+            sorts={[
+              {
+                key: 'invoice',
+                label: 'Invoice number',
+                value: (payment) => payment.invoiceNumber,
+              },
+              { key: 'amount', label: 'Amount', value: (payment) => Number(payment.amount.amount) },
+              { key: 'method', label: 'Payment method', value: (payment) => payment.methodType },
+              {
+                key: 'status',
+                label: 'Status',
+                value: (payment) => PAYMENT_STATUS_LABEL[payment.status],
+              },
+              {
+                key: 'date',
+                label: 'Date',
+                value: (payment) => Number(new Date(payment.createdAt ?? 0)),
+              },
+            ]}
+            {...(onViewAllPayments
               ? { action: <ViewAllButton label="payments" onClick={onViewAllPayments} /> }
               : {})}
           >
-            <PaymentTable
-              payments={payments.slice(0, 5)}
-              isLoading={paymentsLoading}
-              isError={paymentsError}
-              onRetry={onRetryPayments}
-              formatDate={formatDate}
-            />
-          </Section>
+            {(rows, controls) => (
+              <Section flush title="Recent payments" action={controls}>
+                <PaymentTable
+                  payments={payments.slice(0, 5)}
+                  shown={rows}
+                  isLoading={paymentsLoading}
+                  isError={paymentsError}
+                  onRetry={onRetryPayments}
+                  formatDate={formatDate}
+                />
+              </Section>
+            )}
+          </TableTools>
         ) : null}
       </div>
       <aside
@@ -724,17 +1010,30 @@ function OverviewTab({
               : {})}
           awaiting={activityAwaiting ?? false}
         />
-        <MetadataCard
-          metadata={customer.metadata}
-          {...(onUpdateMetadata ? { onSave: onUpdateMetadata } : {})}
+        <RelatedCard
+          items={[
+            ...(lastInvoice && onOpenInvoice
+              ? [
+                  {
+                    id: 'latest-invoice',
+                    label: 'Latest invoice',
+                    value: lastInvoice.number,
+                    onOpen: () => onOpenInvoice(lastInvoice.id),
+                  },
+                ]
+              : []),
+            ...(invoicesKnown && invoices.length > 0
+              ? [
+                  {
+                    id: 'invoices',
+                    label: 'Invoices',
+                    value: `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}`,
+                    onOpen: onViewAllInvoices,
+                  },
+                ]
+              : []),
+          ]}
         />
-        {integrationControls ? (
-          <RelatedCard items={[]}>
-            <ContractIntegrations {...integrationControls} layout="rows" />
-          </RelatedCard>
-        ) : (
-          <IntegrationsCard integrations={customer.integrations} />
-        )}
       </aside>
     </div>
   )
@@ -757,12 +1056,15 @@ function paymentMethod(value: string): string {
  */
 function PaymentTable({
   payments,
+  shown,
   isLoading,
   isError,
   onRetry,
   formatDate,
 }: {
   payments: Payment[]
+  /** Filtered or sorted slice. The empty state still follows `payments`. */
+  shown?: Payment[]
   isLoading: boolean
   isError: boolean
   onRetry: (() => void) | undefined
@@ -782,48 +1084,30 @@ function PaymentTable({
         description: 'Payments collected against this customer’s invoices appear here.',
       }}
     >
-      <DetailTable
-        compact
-        toolbar={false}
-        label="Recent payments"
-        noun="payments"
-        rows={payments}
+      <SimpleTable
+        rows={shown ?? payments}
         columns={[
-          {
-            key: 'receipt',
-            header: 'Receipt number',
-            width: 150,
-            cell: () => <Muted>—</Muted>,
-          },
+          { key: 'receipt', header: 'Receipt number', cell: () => <Muted>—</Muted> },
           {
             key: 'invoice',
             header: 'Invoice number',
-            width: 160,
             cell: (payment) => (payment.invoiceNumber ? payment.invoiceNumber : <Muted>—</Muted>),
           },
-          {
-            key: 'amount',
-            header: 'Amount',
-            width: 110,
-            cell: (payment) => <Money value={payment.amount} />,
-          },
+          { key: 'amount', header: 'Amount', cell: (payment) => <Money value={payment.amount} /> },
           {
             key: 'method',
             header: 'Payment method',
-            width: 150,
             cell: (payment) =>
               payment.methodType ? paymentMethod(payment.methodType) : <Muted>—</Muted>,
           },
           {
             key: 'status',
             header: 'Status',
-            width: 130,
             cell: (payment) => <Status value={PAYMENT_STATUS_LABEL[payment.status]} />,
           },
           {
             key: 'date',
             header: 'Date',
-            width: 130,
             cell: (payment) => <Muted>{formatDate(payment.createdAt)}</Muted>,
           },
         ]}
@@ -853,110 +1137,119 @@ function ContractsTable({
   onOpenContract: ((subscriptionId: string) => void) | undefined
   onCreateContract: (() => void) | undefined
 }) {
+  const create = onCreateContract ? (
+    <WriteGate entity={RBAC_ENTITY.Subscription}>
+      <Button variant="outline" size="sm" className="h-8 px-3" onClick={onCreateContract}>
+        <PlusIcon aria-hidden="true" />
+        Create contract
+      </Button>
+    </WriteGate>
+  ) : null
+
   return (
-    <Section
-      table
-      showTitle={showTitle}
-      title="Contracts"
-      {...(onCreateContract
-        ? {
-            action: (
-              <WriteGate entity={RBAC_ENTITY.Subscription}>
-                <Button size="sm" className="h-8 px-3" onClick={onCreateContract}>
-                  <PlusIcon aria-hidden="true" />
-                  Create contract
-                </Button>
-              </WriteGate>
-            ),
-          }
-        : {})}
+    <TableTools
+      rows={subscriptions}
+      facet={{ label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] }}
+      sorts={[
+        { key: 'contract', label: 'Contract', value: (s) => s.id },
+        { key: 'plan', label: 'Plan', value: (s) => s.planName },
+        { key: 'status', label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] },
+        { key: 'billing', label: 'Billing', value: (s) => s.billingPeriodLabel },
+        {
+          key: 'period',
+          label: 'Current period',
+          value: (s) => Number(new Date(s.currentPeriodStart ?? 0)),
+        },
+      ]}
+      {...(create ? { action: create } : {})}
     >
-      <SubTabState
-        hasData={subscriptions.length > 0}
-        isLoading={isLoading}
-        error={isError ? "Contracts couldn't be loaded" : null}
-        onRetry={onRetry}
-        columns={5}
-        loadingLabel="Loading contracts"
-        empty={{
-          scene: 'customers',
-          title: 'No contracts yet',
-          description: 'A contract puts this customer on a plan. Create one to start billing them.',
-        }}
-      >
-        <DetailTable
-          compact
-          label="Contracts"
-          facet={{ label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] }}
-          noun="contracts"
-          rows={subscriptions}
-          getRowId={(s) => s.id}
-          columns={[
-            {
-              key: 'contract',
-              header: 'Contract',
-              width: 140,
-              sortBy: (s) => s.id,
-              cell: (s) =>
-                onOpenContract ? (
-                  <span className="font-mono text-xs font-medium">
-                    <EntityLink label={s.id} onOpen={() => onOpenContract(s.id)} />
-                  </span>
-                ) : (
-                  <span className="font-mono text-xs font-medium">{s.id}</span>
-                ),
-            },
-            {
-              key: 'plan',
-              header: 'Plan',
-              width: 160,
-              sortBy: (s) => s.planName,
-              cell: (s) =>
-                onOpenPlan ? (
-                  <EntityLink label={s.planName} onOpen={() => onOpenPlan(s.planId)} />
-                ) : (
-                  <Muted>{s.planName}</Muted>
-                ),
-            },
-            {
-              key: 'status',
-              header: 'Status',
-              width: 120,
-              sortBy: (s) => SUBSCRIPTION_STATUS_LABEL[s.status],
-              cell: (s) => <Status value={SUBSCRIPTION_STATUS_LABEL[s.status]} />,
-            },
-            {
-              key: 'billing',
-              header: 'Billing',
-              width: 120,
-              sortBy: (s) => s.billingPeriodLabel,
-              cell: (s) => <Muted>{s.billingPeriodLabel}</Muted>,
-            },
-            {
-              key: 'period',
-              header: 'Current period',
-              width: 240,
-              sortBy: (s) => Number(new Date(s.currentPeriodStart ?? 0)),
-              cell: (s) => (
-                <Muted>
-                  {s.currentPeriodStart && s.currentPeriodEnd
-                    ? `${formatDate(s.currentPeriodStart)} – ${formatDate(s.currentPeriodEnd)}`
-                    : '—'}
-                </Muted>
-              ),
-            },
-          ]}
-          {...(onOpenContract ? { onRowClick: (s: Subscription) => onOpenContract(s.id) } : {})}
-        />
-      </SubTabState>
-    </Section>
+      {(rows, controls) => (
+        <Section flush title="Contracts" bare={!showTitle} action={controls}>
+          <SubTabState
+            hasData={subscriptions.length > 0}
+            isLoading={isLoading}
+            error={isError ? "Contracts couldn't be loaded" : null}
+            onRetry={onRetry}
+            columns={5}
+            loadingLabel="Loading contracts"
+            empty={{
+              scene: 'customers',
+              title: 'No contracts yet',
+              description:
+                'A contract puts this customer on a plan. Create one to start billing them.',
+            }}
+          >
+            <SimpleTable
+              rows={rows}
+              getRowId={(s) => s.id}
+              {...(onOpenContract ? { onRowClick: (s: Subscription) => onOpenContract(s.id) } : {})}
+              columns={contractColumns(formatDate, onOpenPlan, onOpenContract)}
+            />
+          </SubTabState>
+        </Section>
+      )}
+    </TableTools>
   )
+}
+
+function contractColumns(
+  formatDate: FormatDate,
+  onOpenPlan: ((planId: string) => void) | undefined,
+  onOpenContract: ((subscriptionId: string) => void) | undefined,
+): SimpleColumn<Subscription>[] {
+  return [
+    {
+      key: 'contract',
+      header: 'Contract',
+      cell: (s) =>
+        onOpenContract ? (
+          <span className="font-mono text-xs font-medium">
+            <EntityLink label={s.id} onOpen={() => onOpenContract(s.id)} />
+          </span>
+        ) : (
+          <span className="font-mono text-xs font-medium">{s.id}</span>
+        ),
+    },
+    {
+      key: 'plan',
+      header: 'Plan',
+      cell: (s) =>
+        onOpenPlan ? (
+          <EntityLink label={s.planName} onOpen={() => onOpenPlan(s.planId)} />
+        ) : (
+          <Muted>{s.planName}</Muted>
+        ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (s) => <Status value={SUBSCRIPTION_STATUS_LABEL[s.status]} />,
+    },
+    {
+      key: 'billing',
+      header: 'Billing',
+      cell: (s) => <Muted>{s.billingPeriodLabel}</Muted>,
+    },
+    {
+      key: 'period',
+      header: 'Current period',
+      cell: (s) => (
+        <Muted>
+          {s.currentPeriodStart && s.currentPeriodEnd
+            ? `${formatDate(s.currentPeriodStart)} – ${formatDate(s.currentPeriodEnd)}`
+            : '—'}
+        </Muted>
+      ),
+    },
+  ]
 }
 
 /** One item of an invoice row's menu. */
 export interface InvoiceRowAction {
   label: string
   onSelect: () => void
+  /** Leading glyph, required so every item lines up behind one. */
+  icon: ReactElement
   destructive?: boolean
 }
 
@@ -983,38 +1276,101 @@ function invoicePayment(invoice: Invoice): { label: string; tone: PillTone } {
   return { label: 'Pending', tone: 'warning' }
 }
 
+const invoiceSorts: SortKey<Invoice>[] = [
+  { key: 'number', label: 'Invoice number', value: (invoice) => invoice.number },
+  {
+    key: 'issued',
+    label: 'Issue date',
+    value: (invoice) => Number(new Date(invoice.issuedAt ?? 0)),
+  },
+  { key: 'due', label: 'Due date', value: (invoice) => Number(new Date(invoice.dueDate ?? 0)) },
+  { key: 'status', label: 'Status', value: (invoice) => invoiceDocument(invoice) },
+  { key: 'payment', label: 'Payment', value: (invoice) => invoicePayment(invoice).label },
+  { key: 'total', label: 'Amount', value: (invoice) => Number(invoice.total.amount) },
+]
+
+function invoiceColumns(
+  formatDate: FormatDate,
+  onOpenInvoice: ((invoiceId: string) => void) | undefined,
+): SimpleColumn<Invoice>[] {
+  return [
+    {
+      key: 'number',
+      header: 'Invoice number',
+      cell: (invoice) =>
+        invoice.number ? (
+          onOpenInvoice ? (
+            <span className="font-mono text-xs">
+              <EntityLink label={invoice.number} onOpen={() => onOpenInvoice(invoice.id)} />
+            </span>
+          ) : (
+            <span className="font-mono text-xs">{invoice.number}</span>
+          )
+        ) : (
+          <EmDash />
+        ),
+    },
+    {
+      key: 'issued',
+      header: 'Issue date',
+      cell: (invoice) => <Muted>{formatDate(invoice.issuedAt)}</Muted>,
+    },
+    {
+      key: 'due',
+      header: 'Due date',
+      cell: (invoice) => <Muted>{formatDate(invoice.dueDate)}</Muted>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (invoice) => <Status value={invoiceDocument(invoice)} />,
+    },
+    {
+      key: 'payment',
+      header: 'Payment',
+      cell: (invoice) => {
+        const payment = invoicePayment(invoice)
+        return <Pill tone={payment.tone}>{payment.label}</Pill>
+      },
+    },
+    {
+      key: 'total',
+      header: 'Amount',
+      cell: (invoice) => <Money value={invoice.total} />,
+    },
+  ]
+}
+
 /** The invoices table, edge to edge inside a flush section. */
 function InvoiceTable({
   compactList = false,
   invoices,
+  shown,
   isLoading,
   isError,
   onRetry,
   formatDate,
   onOpenInvoice,
-  action,
   actions,
 }: {
   /** The short list on the Overview: no toolbar. */
   compactList?: boolean
   invoices: Invoice[]
+  /** Filtered or sorted slice. The empty state still follows `invoices`. */
+  shown?: Invoice[]
   isLoading: boolean
   isError: boolean
   onRetry: (() => void) | undefined
   formatDate: FormatDate
   onOpenInvoice: ((invoiceId: string) => void) | undefined
-  /** Sits on the toolbar, to the right of the filter. Omitted on the short overview list. */
-  action?: ReactNode
   /** Each row's menu; omitted, rows have none. */
   actions?: (invoice: Invoice) => InvoiceRowAction[]
 }) {
   // Rows win; otherwise a failed read is an error with retry, a pending one a
   // skeleton, and only a finished empty read says "no invoices".
   if (invoices.length === 0) {
-    const failed = isLoading || isError
     return (
       <div>
-        {action && failed ? <div className="flex justify-end px-6 py-3">{action}</div> : null}
         <SubTabState
           hasData={false}
           isLoading={isLoading}
@@ -1026,7 +1382,6 @@ function InvoiceTable({
             scene: 'customers',
             title: 'No invoices yet',
             description: 'Invoices are created automatically from contracts, or raised by hand.',
-            ...(action ? { action } : {}),
           }}
         >
           {null}
@@ -1035,13 +1390,20 @@ function InvoiceTable({
     )
   }
   const capped = compactList ? null : truncationNote(invoices.length, CUSTOMER_INVOICES_LIMIT)
+  if (compactList) {
+    return (
+      <SimpleTable
+        rows={shown ?? invoices}
+        {...(onOpenInvoice ? { onRowClick: (invoice: Invoice) => onOpenInvoice(invoice.id) } : {})}
+        columns={invoiceColumns(formatDate, onOpenInvoice)}
+      />
+    )
+  }
   return (
     <>
       <DetailTable
         compact
-        toolbar={!compactList}
         label="Invoices"
-        {...(action ? { action } : {})}
         facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
         noun="invoices"
         rows={invoices}
@@ -1115,7 +1477,11 @@ function InvoiceTable({
                           label={invoice.number || 'invoice'}
                           extra={items.filter((item) => !item.destructive)}
                           {...(removal
-                            ? { onRemove: removal.onSelect, removeLabel: removal.label }
+                            ? {
+                                onRemove: removal.onSelect,
+                                removeLabel: removal.label,
+                                removeIcon: removal.icon,
+                              }
                             : {})}
                         />
                       </div>
@@ -1142,6 +1508,7 @@ function InformationTab({
   onUpdateMetadata,
   onEdit,
   taxes,
+  integrationControls,
 }: {
   customer: CustomerDetailModel
   formatDate: FormatDate
@@ -1149,6 +1516,7 @@ function InformationTab({
   onUpdateMetadata: CustomerDetailProps['onUpdateMetadata']
   onEdit: (() => void) | undefined
   taxes: ReactNode
+  integrationControls: CustomerDetailProps['integrationControls']
 }) {
   const street = [customer.addressLine1, customer.addressLine2].filter(Boolean).join(', ')
 
@@ -1256,10 +1624,17 @@ function InformationTab({
 
       <div className="flex flex-col gap-5">
         <MetadataCard
+          description="Your own key/value fields, returned with this record in the API"
           metadata={customer.metadata}
           {...(onUpdateMetadata ? { onSave: onUpdateMetadata } : {})}
         />
-        <IntegrationsCard integrations={customer.integrations} />
+        {integrationControls ? (
+          <RelatedCard items={[]}>
+            <ContractIntegrations {...integrationControls} layout="rows" />
+          </RelatedCard>
+        ) : (
+          <IntegrationsCard integrations={customer.integrations} />
+        )}
       </div>
     </div>
   )

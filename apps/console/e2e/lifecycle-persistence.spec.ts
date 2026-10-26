@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -163,7 +164,9 @@ test('cancelling a contract immediately marks it cancelled', async ({ page }) =>
   await expect(page.getByRole('menuitem', { name: 'Cancel contract' })).toBeDisabled()
 })
 
-test('a future-dated contract is incomplete until it is activated', async ({ page }) => {
+// As the API: a new contract's status comes from its payment behaviour, not its
+// start date, and the console sends none, so a future-dated one is created active.
+test('a future-dated contract is created active, as the API creates it', async ({ page }) => {
   await page.goto('/contracts/new')
   // Customer and plan share the first step; the plan appears once the customer
   // is chosen, so there is no Next between them.
@@ -192,11 +195,9 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
   await expect(page).toHaveURL(/\/contracts$/)
 
   await page.getByRole('row').nth(1).click()
-  await expect(page.getByText('Incomplete').first()).toBeVisible()
-  await page.getByRole('button', { name: 'Contract actions' }).click()
-  await page.getByRole('menuitem', { name: 'Activate' }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Activate' }).click()
   await expect(page.getByText('Active', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Incomplete')).toHaveCount(0)
+  // Nothing to activate.
   await page.getByRole('button', { name: 'Contract actions' }).click()
   await expect(page.getByRole('menuitem', { name: 'Activate' })).toBeHidden()
   await page.keyboard.press('Escape')

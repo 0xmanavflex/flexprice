@@ -15,8 +15,8 @@ import { provenance } from '@ui/provenance'
 /**
  * A confirm step for an action that is hard to shrug off.
  *
- * Archiving a coupon or a group is reversible but consequential — it stops the
- * thing being offered — so it gets a beat rather than firing on a single click.
+ * Archiving a coupon or a group is reversible but consequential: it stops the
+ * thing being offered: so it gets a beat rather than firing on a single click.
  * Presentational: the caller owns whether it is open and what confirming does,
  * and passes `isPending` so the button can show progress without the dialog
  * closing underneath a request that has not returned.

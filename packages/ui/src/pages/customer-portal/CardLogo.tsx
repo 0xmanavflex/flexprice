@@ -19,7 +19,7 @@ import { provenance } from '@ui/provenance'
  *
  * Artwork: react-svg-credit-card-payment-icons (MIT), "flat rounded". RuPay,
  * Cartes Bancaires, eftpos and Bajaj Finserv are not in that set, so they get
- * a plain word mark — to swap for the networks' official files before launch.
+ * a plain word mark: to swap for the networks' official files before launch.
  */
 export const CardLogoProvenance = provenance({
   source: 'custom',

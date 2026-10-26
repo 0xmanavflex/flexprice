@@ -17,7 +17,12 @@ import {
 describe('wallet requests', () => {
   it('sends a manual debit with the credits and a required reference', () => {
     expect(
-      toDebitRequest({ ...emptyDebit(), credits: '25', idempotencyKey: 'debit-1', description: 'Adjustment' }),
+      toDebitRequest({
+        ...emptyDebit(),
+        credits: '25',
+        idempotencyKey: 'debit-1',
+        description: 'Adjustment',
+      }),
     ).toEqual({
       credits: '25',
       idempotencyKey: 'debit-1',
@@ -109,6 +114,27 @@ describe('auto top-up', () => {
     })
   })
 
+  it('sends a cool-off only when one is set, and reads it back', () => {
+    const on = { enabled: true, threshold: '100', amount: '500', invoicing: true }
+    const body = UpdateWalletRequest$outboundSchema.parse(
+      toUpdateAutoTopupRequest({ ...on, cooldownValue: '6', cooldownUnit: 'hour' }),
+    )
+    expect(body.auto_topup?.cooldown).toEqual({ value: 6, unit: 'hour' })
+    expect(toUpdateAutoTopupRequest({ ...on, cooldownValue: '' })['autoTopup']).not.toHaveProperty(
+      'cooldown',
+    )
+    expect(
+      toWallet({ id: 'w', autoTopup: { enabled: true, cooldown: { value: 2, unit: 'day' } } })
+        .autoTopup,
+    ).toMatchObject({ cooldownValue: '2', cooldownUnit: 'day' })
+  })
+
+  it('rejects a cool-off that is not a whole number', () => {
+    const on = { enabled: true, threshold: '1', amount: '1', invoicing: true }
+    expect(autoTopupSchema.safeParse({ ...on, cooldownValue: '1.5' }).success).toBe(false)
+    expect(autoTopupSchema.safeParse({ ...on, cooldownValue: '30' }).success).toBe(true)
+  })
+
   it('sends only the switch when off, so saved values survive', () => {
     expect(
       toUpdateAutoTopupRequest({ ...emptyAutoTopup(), threshold: '10', amount: '20' }),
@@ -190,5 +216,21 @@ describe('toWallet on the real-time balance response', () => {
     expect(wallet.creditBalance).toBe('10')
     expect(wallet.realTimeCreditBalance).toBe('-122.5')
     expect(wallet.realTimeBalance).toEqual({ amount: '-122.5', currency: 'USD' })
+  })
+})
+
+describe('toWallet alert settings', () => {
+  it('reads the balance alerts the wallet carries, and null when it has none', () => {
+    expect(
+      toWallet({
+        id: 'wallet_1',
+        alertSettings: { alertEnabled: true, critical: { threshold: '10', condition: 'below' } },
+      }).alertSettings,
+    ).toEqual({
+      alertEnabled: true,
+      thresholdType: 'percentage',
+      critical: { threshold: '10', condition: 'below' },
+    })
+    expect(toWallet({ id: 'wallet_2' }).alertSettings).toBeNull()
   })
 })

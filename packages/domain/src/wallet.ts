@@ -1,3 +1,4 @@
+import type { AlertSettingConfig } from './alertSetting'
 import { z } from 'zod'
 import type { Money } from './money'
 
@@ -19,6 +20,24 @@ export interface AutoTopup {
   amount: string
   /** Raise an invoice for the refill instead of granting it. */
   invoicing: boolean
+  /** The least time between two refills; blank for none. A whole number of `cooldownUnit`s. */
+  cooldownValue?: string | undefined
+  cooldownUnit?: AutoTopupCooldownUnit | undefined
+}
+
+/** The units a refill cool-off is counted in (the wire's `DurationUnit`, less seconds). */
+export const AutoTopupCooldownUnit = {
+  Minute: 'minute',
+  Hour: 'hour',
+  Day: 'day',
+} as const
+export type AutoTopupCooldownUnit =
+  (typeof AutoTopupCooldownUnit)[keyof typeof AutoTopupCooldownUnit]
+
+export const AUTO_TOPUP_COOLDOWN_UNIT_LABEL: Record<AutoTopupCooldownUnit, string> = {
+  [AutoTopupCooldownUnit.Minute]: 'Minutes',
+  [AutoTopupCooldownUnit.Hour]: 'Hours',
+  [AutoTopupCooldownUnit.Day]: 'Days',
 }
 
 export const emptyAutoTopup = (): AutoTopup => ({
@@ -28,12 +47,24 @@ export const emptyAutoTopup = (): AutoTopup => ({
   invoicing: true,
 })
 
+export const WalletKind = { PrePaid: 'PRE_PAID', PostPaid: 'POST_PAID' } as const
+export type WalletKind = (typeof WalletKind)[keyof typeof WalletKind]
+
+export const WALLET_KIND_LABEL: Record<WalletKind, string> = {
+  PRE_PAID: 'Prepaid',
+  POST_PAID: 'Postpaid',
+}
+
 /** One prepaid wallet. Balances stay decimal strings; the API owns the arithmetic. */
 export interface Wallet {
+  /** Balance alert thresholds stored on the wallet (`alert_settings`); null when none. */
+  alertSettings?: AlertSettingConfig | null
   id: string
   customerId: string
   currency: string
   status: WalletStatus
+  /** Prepaid (drawn down in real time) or postpaid (settled on the invoice); null when the API does not say. */
+  walletType: WalletKind | null
   description: string
   /** Credits as of the last invoice. */
   creditBalance: string
@@ -45,6 +76,8 @@ export interface Wallet {
   conversionRate: string
   topupConversionRate: string
   autoTopup: AutoTopup
+  /** Free-form key/value fields; `{}` when none. */
+  metadata: Readonly<Record<string, string>>
   createdAt: Date | null
 }
 
@@ -184,6 +217,10 @@ export const autoTopupSchema = z
     threshold: z.string().trim(),
     amount: z.string().trim(),
     invoicing: z.boolean(),
+    cooldownValue: z.string().trim().optional(),
+    cooldownUnit: z
+      .enum([AutoTopupCooldownUnit.Minute, AutoTopupCooldownUnit.Hour, AutoTopupCooldownUnit.Day])
+      .optional(),
   })
   .superRefine((value, ctx) => {
     if (!value.enabled) return
@@ -198,5 +235,11 @@ export const autoTopupSchema = z
         code: 'custom',
         path: ['amount'],
         message: 'Enter how many credits to add',
+      })
+    if (value.cooldownValue && !/^[1-9]\d*$/.test(value.cooldownValue))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cooldownValue'],
+        message: 'Enter a whole number, or leave blank for no cool-off',
       })
   })

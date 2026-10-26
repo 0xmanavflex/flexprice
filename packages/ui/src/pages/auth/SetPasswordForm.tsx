@@ -13,7 +13,7 @@ import { provenance } from '@ui/provenance'
  * Three decisions worth stating.
  *
  * **The link is assumed spent once this submits.** A recovery link is
- * single-use, so the success state offers sign-in rather than the form again —
+ * single-use, so the success state offers sign-in rather than the form again:
  * re-submitting would fail with an expired-token error that reads as though the
  * new password did not take.
  *

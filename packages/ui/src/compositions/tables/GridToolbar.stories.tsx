@@ -8,7 +8,7 @@ import { GridToolbar } from './GridToolbar'
 /**
  * The bar above a grid: a compact table heading and a bordered search on the
  * left, filter/sort controls next, and the primary create CTA at the very end.
- * Controlled — the route owns the query, so the toolbar and grid cannot
+ * Controlled: the route owns the query, so the toolbar and grid cannot
  * disagree about what is shown.
  */
 const meta = {
@@ -176,7 +176,7 @@ export const FollowsExternalChanges: Story = {
  * The clear button exists only once there is something to clear.
  *
  * A permanent ✕ on an empty field is a control that does nothing most of the
- * time — and it is the one thing people misread as "close this".
+ * time: and it is the one thing people misread as "close this".
  */
 export const WithQueryClears: Story = {
   args: { search: 'acme' },
@@ -191,7 +191,7 @@ export const WithQueryClears: Story = {
  * Narrow: the search keeps a whole row, and its width.
  *
  * On one unwrapping row the search is the only item that can give up space,
- * so it absorbed every shortfall — 163px at a 768px viewport and 53px at
+ * so it absorbed every shortfall: 163px at a 768px viewport and 53px at
  * 390px, which renders the placeholder as "Sear". It now has a floor, and the
  * controls drop to a row of their own rather than squeezing it.
  */

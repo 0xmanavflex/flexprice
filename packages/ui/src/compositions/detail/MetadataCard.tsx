@@ -1,8 +1,10 @@
 import { useId, useState, type FormEvent } from 'react'
-import { PencilIcon, PlusIcon, Trash2Icon } from '@ui/icons'
+import { CopyIcon, PencilIcon, PlusIcon, Trash2Icon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { provenance } from '@ui/provenance'
+import { toast } from 'sonner'
 import { Section } from '../layout/Section'
 
 export const MetadataCardProvenance = provenance({
@@ -167,12 +169,36 @@ export function MetadataCard({
             {entries.map(([key, value]) => (
               <div
                 key={key}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-6 py-3"
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-baseline gap-4 px-6 py-3"
               >
-                <dt className="text-muted-foreground min-w-0 font-mono text-xs break-words">
+                {/* One line, like every other label in the rail: a long snake_case key
+                    truncates (full key on hover) instead of breaking letter by letter. */}
+                <dt className="text-muted-foreground min-w-0 truncate font-mono text-xs" title={key}>
                   {key}
                 </dt>
-                <dd className="min-w-0 break-words">{value}</dd>
+                <dd className="group flex min-w-0 items-center justify-end gap-1">
+                  <Tooltip>
+                    <TooltipTrigger className="min-w-0 truncate text-right">{value}</TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-72 break-all">
+                      {value}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Copy ${key}`}
+                    className="text-muted-foreground size-6 shrink-0 opacity-0 group-hover:opacity-100"
+                    onClick={() => {
+                      void navigator.clipboard
+                        ?.writeText(value)
+                        .then(() => toast.success('Copied'))
+                        .catch(() => toast.error('Copy failed'))
+                    }}
+                  >
+                    <CopyIcon aria-hidden className="size-3.5" />
+                  </Button>
+                </dd>
               </div>
             ))}
           </dl>

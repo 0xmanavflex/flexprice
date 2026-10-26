@@ -8,13 +8,13 @@ import { provenance } from '@ui/provenance'
 /**
  * The flags on a charge row.
  *
- * Neutral outline chips with one coloured icon each — the colour carries which
+ * Neutral outline chips with one coloured icon each: the colour carries which
  * flag it is at a glance, the label says it in words, and neither carries a
  * value. A chip that read "20% off" would be read *instead of* the sheet, and
  * five of those turn the row back into the nested table this replaced.
  *
  * Every chip is a button: clicking one opens the charge sheet already scrolled
- * to that part, which is the whole bargain — the row stays one line because
+ * to that part, which is the whole bargain: the row stays one line because
  * the detail is one click away, in a known place.
  */
 export const ChargeFlagsProvenance = provenance({

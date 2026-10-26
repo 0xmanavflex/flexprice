@@ -1,13 +1,13 @@
-import type { ListFilter, ListFilterSpec } from './listFilter'
+import { FilterOp, type ListFilter, type ListFilterSpec, sameListFilters } from './listFilter'
 import { z } from 'zod'
-import { alertSettingConfigSchema } from './alertSetting'
+import { type AlertSettingConfig, alertSettingConfigSchema } from './alertSetting'
 import { KEY_PREFIX, suggestKey } from './suggestKey'
 
 /**
  * A feature, and the rules for creating one.
  *
- * V1's `AddFeature.tsx` is 1,106 lines — the second-largest file in the
- * dashboard — and the rules below are spread across a bespoke `useFeatureForm`
+ * V1's `AddFeature.tsx` is 1,106 lines: the second-largest file in the
+ * dashboard: and the rules below are spread across a bespoke `useFeatureForm`
  * hook, two separate validator callbacks, and conditional rendering. The shape
  * is really two nested discriminated unions: the feature type decides whether
  * a meter exists at all, and the aggregation type decides which meter fields
@@ -63,6 +63,16 @@ export function needsAggregationTarget(type: AggregationType): boolean {
   return type !== AggregationType.Count
 }
 
+/** Sum, Average, Max, and Latest may use a CEL expression instead of a field. */
+export function allowsExpression(type: AggregationType): boolean {
+  return (
+    type === AggregationType.Sum ||
+    type === AggregationType.Avg ||
+    type === AggregationType.Max ||
+    type === AggregationType.Latest
+  )
+}
+
 const decimal = z
   .string()
   .trim()
@@ -80,7 +90,7 @@ export type MeterFilterDraft = z.infer<typeof meterFilterSchema>
 
 /**
  * A display unit for reporting: `reporting_value = unit_value × conversionRate`.
- * All three fields travel together — the backend rejects a partial one. The
+ * All three fields travel together: the backend rejects a partial one. The
  * rate is a decimal string, never a float.
  */
 export const reportingUnitSchema = z.object({
@@ -93,8 +103,8 @@ export type ReportingUnitDraft = z.infer<typeof reportingUnitSchema>
 /**
  * A meter, with the rules that depend on how it aggregates.
  *
- * `field` and `expression` are two ways of saying the same thing — which
- * property of the event to aggregate — and exactly one is needed. V1 decides
+ * `field` and `expression` are two ways of saying the same thing: which
+ * property of the event to aggregate: and exactly one is needed. V1 decides
  * which to validate by reading a `showCustomExpression` boolean out of form
  * state, which means the rule cannot be checked outside the form. Here either
  * satisfies it, so the rule holds wherever it is applied.
@@ -109,7 +119,7 @@ export const meterSchema = z
     field: z.string().trim().optional(),
     /** An expression over the event, as an alternative to a single field. */
     expression: z.string().trim().optional(),
-    /** Only for SUM_WITH_MULTIPLIER. A decimal string — never a float. */
+    /** Only for SUM_WITH_MULTIPLIER. A decimal string: never a float. */
     multiplier: z.string().trim().optional(),
     /**
      * An event property to group by before aggregating. The backend accepts it
@@ -129,11 +139,28 @@ export const meterSchema = z
       })
     }
 
+    const expressionAllowed = allowsExpression(meter.aggregationType)
+    if (meter.expression && !expressionAllowed) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['expression'],
+        message: 'This aggregation cannot use a custom expression',
+      })
+    }
+    if (meter.field && meter.expression) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['field'],
+        message: 'Use an event field or a custom expression, not both',
+      })
+    }
     if (needsAggregationTarget(meter.aggregationType) && !meter.field && !meter.expression) {
       ctx.addIssue({
         code: 'custom',
         path: ['field'],
-        message: 'This aggregation needs an event field or an expression',
+        message: expressionAllowed
+          ? 'This aggregation needs an event field or an expression'
+          : 'This aggregation needs an event field',
       })
     }
 
@@ -144,7 +171,7 @@ export const meterSchema = z
           code: 'custom',
           path: ['multiplier'],
           // V1 compares this string against 0 with `<=`, which is always false
-          // for a string — so a zero multiplier passes validation there.
+          // for a string: so a zero multiplier passes validation there.
           message: result.error.issues[0]?.message ?? 'Enter a multiplier greater than zero',
         })
       }
@@ -272,6 +299,8 @@ export function emptyCloneFeature(source: { name: string; description?: string }
 export interface Feature {
   id: string
   name: string
+  /** Usage alert thresholds stored on the feature (`alert_settings`); null when none. */
+  alertSettings?: AlertSettingConfig | null
   lookupKey: string
   description: string
   type: FeatureType
@@ -300,6 +329,8 @@ export interface Feature {
   meterBucketSize?: string | null
   /** The meter's aggregation target and options, for prefilling an edit. */
   aggregationField?: string | null
+  /** A CEL expression used instead of `aggregationField`, when the meter has one. */
+  aggregationExpression?: string | null
   aggregationGroupBy?: string | null
   /** Free-form key/value fields, as the API returns them. */
   metadata?: Readonly<Record<string, string>>
@@ -344,21 +375,36 @@ export function aggregationFormula(
 }
 
 export const AGGREGATION_LABEL: Record<AggregationType, string> = {
-  [AggregationType.Count]: 'Count of events',
-  [AggregationType.CountUnique]: 'Count of unique values',
-  [AggregationType.Sum]: 'Sum of a field',
-  [AggregationType.SumWithMultiplier]: 'Sum, multiplied',
-  [AggregationType.Avg]: 'Average of a field',
-  [AggregationType.Max]: 'Maximum value',
-  [AggregationType.Latest]: 'Most recent value',
-  [AggregationType.WeightedSum]: 'Weighted sum',
+  [AggregationType.Count]: 'Count',
+  [AggregationType.CountUnique]: 'Count Unique',
+  [AggregationType.Sum]: 'Sum',
+  [AggregationType.SumWithMultiplier]: 'Sum with Multiplier',
+  [AggregationType.Avg]: 'Average',
+  [AggregationType.Max]: 'Max',
+  [AggregationType.Latest]: 'Latest',
+  [AggregationType.WeightedSum]: 'Weighted Sum',
+}
+
+/** What each aggregation does, shown under its name in the feature form. */
+export const AGGREGATION_DESCRIPTION: Record<AggregationType, string> = {
+  [AggregationType.Sum]: 'Sum a defined property for incoming events.',
+  [AggregationType.Count]: 'Count the number of times an incoming event occurs.',
+  [AggregationType.CountUnique]:
+    'Count the number of unique value of a defined property for incoming events.',
+  [AggregationType.SumWithMultiplier]:
+    'Sum a defined property for incoming events with a multiplier.',
+  [AggregationType.Latest]: 'Get the latest value of a defined property for incoming events.',
+  [AggregationType.Max]: 'Get the maximum value of a defined property for incoming events.',
+  [AggregationType.WeightedSum]:
+    'Sum a defined property for incoming events with weight-based aggregation.',
+  [AggregationType.Avg]: 'Get the average value of a defined property for incoming events.',
 }
 
 /**
  * What the list can be sorted by.
  *
  * The three the API's `sort` accepts and a person would ask for. Named in
- * product terms, mapped to wire field names in `@fp/query` — a screen should
+ * product terms, mapped to wire field names in `@fp/query`: a screen should
  * never have to know that "Created" is `created_at`.
  */
 /**
@@ -366,7 +412,7 @@ export const AGGREGATION_LABEL: Record<AggregationType, string> = {
  *
  * These five, and no more, because `/features/search` validates the sort field
  * against the feature table's own columns and answers an unknown one with
- * `400 Unknown field name '<x>' in feature query` — it does not fall back.
+ * `400 Unknown field name '<x>' in feature query`: it does not fall back.
  *
  * Checked against the live API: `event_name` and `aggregation` are rejected
  * (they belong to the meter, not the feature) and so are `plans` and
@@ -392,7 +438,7 @@ export const FEATURE_SORT_LABEL: Record<FeatureSortField, string> = {
 
 /**
  * How the list is laid out. `table` for scanning many rows, `cards` for reading
- * each feature's detail at a glance. A layout, not a filter — it changes nothing
+ * each feature's detail at a glance. A layout, not a filter: it changes nothing
  * about which features are fetched, so `@fp/query` keeps it out of the cache key.
  */
 export const FeatureView = {
@@ -416,6 +462,17 @@ export interface FeatureQuery {
   filters?: ListFilter[]
 }
 
+/**
+ * The list opens on published (active) features only, as V1 did: a visible,
+ * removable "Status is Published" filter, sent to the search endpoint, so
+ * archived features stay out of the list and its totals until asked for.
+ */
+export const ACTIVE_FEATURES_FILTER: ListFilter = {
+  field: 'status',
+  op: FilterOp.In,
+  value: [FeatureStatus.Published],
+}
+
 export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   page: 1,
   pageSize: 25,
@@ -427,10 +484,27 @@ export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   sortBy: FeatureSortField.UpdatedAt,
   sortDirection: 'desc',
   view: FeatureView.Table,
-  filters: [],
+  filters: [ACTIVE_FEATURES_FILTER],
 }
 
-/** What the product list can filter on — V1's fields, by their wire names. */
+/**
+ * Whether the list is narrowed beyond its default view. The default status
+ * filter does not count, so an empty catalogue still gets the first-run empty
+ * state rather than "nothing matches these filters".
+ */
+export function isFeatureQueryFiltered(query: FeatureQuery): boolean {
+  return (
+    query.search.length > 0 ||
+    query.types.length > 0 ||
+    query.statuses.length > 0 ||
+    // An empty list (every status) is not a narrowing; the default view is
+    // not one either. Anything else the person chose is.
+    ((query.filters?.length ?? 0) > 0 &&
+      !sameListFilters(query.filters ?? [], DEFAULT_FEATURE_QUERY.filters ?? []))
+  )
+}
+
+/** What the product list can filter on: V1's fields, by their wire names. */
 export const FEATURE_FILTERS: readonly ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },
   { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
@@ -454,5 +528,7 @@ export const FEATURE_FILTERS: readonly ListFilterSpec[] = [
       { value: 'archived', label: 'Archived' },
     ],
   },
+  // The account's own feature groups; the page fills the choices in.
+  { field: 'group_id', label: 'Tag', kind: 'options', options: [] },
   { field: 'created_at', label: 'Created', kind: 'date' },
 ]

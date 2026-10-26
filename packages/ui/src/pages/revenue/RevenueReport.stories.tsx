@@ -48,6 +48,21 @@ const ROWS: CustomerRevenueRow[] = NAMES.map((name, i) => {
   }
 })
 
+const PAGE = 25
+const ALL_ROWS: CustomerRevenueRow[] = Array.from({ length: 60 }, (_, i) => {
+  const revenue = 60000 - i * 900
+  const usage = Math.round(revenue * (0.35 + (i % 3) * 0.1))
+  return {
+    id: `cust_${i}`,
+    name: `${NAMES[i % NAMES.length]} ${Math.floor(i / NAMES.length) + 1}`,
+    revenue,
+    usage,
+    contract: revenue - usage,
+    display: { revenue: usd(revenue), usage: usd(usage), contract: usd(revenue - usage) },
+    share: revenue / 1800000,
+  }
+})
+
 const BASE: RevenueReportProps = {
   filters: {
     range: '90d',
@@ -57,6 +72,14 @@ const BASE: RevenueReportProps = {
       { id: '12m', label: 'Last 12 months' },
     ],
     onRangeChange: fn(),
+    grain: 'auto',
+    grainOptions: [
+      { id: 'auto', label: 'Auto' },
+      { id: 'day', label: 'Daily' },
+      { id: 'week', label: 'Weekly' },
+      { id: 'month', label: 'Monthly' },
+    ],
+    onGrainChange: fn(),
     compare: 'none',
     compareOptions: [
       { id: 'none', label: 'No comparison' },
@@ -154,24 +177,41 @@ const BASE: RevenueReportProps = {
     total: '612K',
     weeklyAverage: '20.4K',
     peak: '29.1K',
-    creditsReason:
-      'Flexprice has no tenant-wide wallet report yet, so credits are shown per customer on their Wallet tab.',
   },
 }
 
 function Harness(props: RevenueReportProps) {
   const [view, setView] = useState<RevenueView>(props.view)
   const [compare, setCompare] = useState(props.filters.compare)
+  const [grain, setGrain] = useState(props.filters.grain)
+  const [offset, setOffset] = useState(0)
   return (
     <RevenueReport
       {...props}
+      customers={{
+        ...props.customers,
+        all: {
+          status: props.customers.status,
+          rows: ALL_ROWS.slice(offset, offset + PAGE),
+          offset,
+          size: PAGE,
+          hasMore: offset + PAGE < ALL_ROWS.length,
+          onPage: setOffset,
+        },
+      }}
       view={view}
       onViewChange={(next) => {
         setView(next)
         props.onViewChange(next)
       }}
       comparing={compare !== 'none'}
-      filters={{ ...props.filters, compare, onCompareChange: setCompare }}
+      filters={{
+        ...props.filters,
+        compare,
+        onCompareChange: setCompare,
+        grain,
+        onGrainChange: setGrain,
+      }}
     />
   )
 }
@@ -217,15 +257,7 @@ export const Customers: Story = { args: { view: 'customers' } }
 export const Receivables: Story = { args: { view: 'receivables' } }
 export const Payments: Story = { args: { view: 'payments' } }
 
-/** Wallet credits have no tenant-wide report: the panel says so instead of drawing zeros. */
-export const Usage: Story = {
-  args: { view: 'usage' },
-  play: async ({ canvasElement }) => {
-    await expect(
-      await within(canvasElement).findByText(/no tenant-wide wallet report/),
-    ).toBeVisible()
-  },
-}
+export const Usage: Story = { args: { view: 'usage' } }
 
 export const Comparing: Story = {
   args: { comparing: true, filters: { ...BASE.filters, compare: 'previous' } },

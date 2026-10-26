@@ -4,9 +4,9 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { CouponForm } from './CouponForm'
 
 /**
- * Edit a coupon — a rename. The discount, cadence and redemption window are
+ * Edit a coupon: a rename. The discount, cadence and redemption window are
  * fixed once created, so only the name is a control; the rest is shown as
- * read-only context. Fixtures in, a validated `EditCoupon` out — no network.
+ * read-only context. Fixtures in, a validated `EditCoupon` out: no network.
  */
 const trail: { label: string }[] = [{ label: 'Coupons' }, { label: 'Edit Launch 20% off' }]
 

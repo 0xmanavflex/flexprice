@@ -5,8 +5,8 @@ import type { CommitmentType } from './subscription'
  * What is special about a charge, as the charges table and sheet show it.
  *
  * The table carries the charge, its price and nothing else; everything that
- * makes one charge differ from another — the override, the coupon, the
- * commitment, the alert thresholds, the earlier versions — is a *flag*, and the
+ * makes one charge differ from another: the override, the coupon, the
+ * commitment, the alert thresholds, the earlier versions: is a *flag*, and the
  * detail lives in the side sheet the flag opens.
  *
  * A flag says only that something is there. Never "20% off", never "2,000,000
@@ -32,7 +32,7 @@ export type ChargeSection = (typeof ChargeSection)[keyof typeof ChargeSection]
 /**
  * A window of the day with its own commitment and price (`TimeOfDayBucket`).
  *
- * The hours are UTC on the wire and shown as such — a window that moved with
+ * The hours are UTC on the wire and shown as such: a window that moved with
  * the reader's timezone would not be the window the contract agreed.
  */
 export interface ChargeCommitmentWindow {
@@ -63,7 +63,7 @@ export interface ChargeCommitmentWindow {
  * the rest of the day keeps the charge's.
  */
 /**
- * Named `…Detail` because `ChargeCommitment` is already the *write* shape — the
+ * Named `…Detail` because `ChargeCommitment` is already the *write* shape: the
  * contract form's schema for setting one. This is what the API sends back,
  * which is a different thing: it carries the windows, and its figures arrive
  * formatted rather than as fields to validate.
@@ -130,7 +130,7 @@ export interface ChargeVersion {
  * Supplied per charge by the page, not read off `Charge`: a plan's charge is a
  * `Price` and carries none of this, while a contract's is a subscription line
  * item that carries most of it. The table takes the same shape either way, and
- * a page that cannot read a part leaves it out rather than sending `false` —
+ * a page that cannot read a part leaves it out rather than sending `false`:
  * absent and "known to be absent" are the same to a flag, and pretending
  * otherwise would invent a certainty the page does not have.
  */

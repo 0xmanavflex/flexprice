@@ -54,15 +54,15 @@ const SECTION_VIEW: Record<string, PortalView> = {
 }
 
 /**
- * `GET /config` — a setting whose `value` is the portal config. No setting
+ * `GET /config`: a setting whose `value` is the portal config. No setting
  * (404, or no sections) means the defaults: every tab, the kit's colours.
  */
 export function toPortalConfig(wire: unknown): PortalConfig {
   const value = record(record(wire)['value'])
   const primary = text(record(value['theme'])['primary_color'])
   const sections = list(value['sections'])
-  // The config switches tabs on and off; the order is the portal's own —
-  // Overview, Usage, Credits, Invoices — whatever order the sections are stored in.
+  // The config switches tabs on and off; the order is the portal's own:
+  // Overview, Usage, Credits, Invoices: whatever order the sections are stored in.
   const enabled = new Set<PortalView>()
   for (const section of sections) {
     const tab = SECTION_VIEW[text(section['id']).toLowerCase()]
@@ -259,7 +259,7 @@ export function toPortalInvoice(wire: unknown, now: Date = new Date()): PortalIn
   }
 }
 
-/** `POST /invoices` — newest first, drafts left out (the customer has nothing to act on). */
+/** `POST /invoices`: newest first, drafts left out (the customer has nothing to act on). */
 export function toPortalInvoices(wire: unknown, now: Date = new Date()): PortalInvoice[] {
   return list(record(wire)['items'])
     .map((item) => toPortalInvoice(item, now))
@@ -401,7 +401,7 @@ export function toPortalWalletTransactions(
   return { items, total: total || items.length }
 }
 
-/** Credits added and used across some transactions — exact, in money and credits. */
+/** Credits added and used across some transactions: exact, in money and credits. */
 export function walletFlows(
   transactions: readonly PortalWalletTransaction[],
   currency: string,
@@ -620,7 +620,7 @@ export interface PortalQuota {
   resetsAt: Date | null
 }
 
-/** `GET /usage` — metered allowances only; a boolean feature has nothing to count. */
+/** `GET /usage`: metered allowances only; a boolean feature has nothing to count. */
 export function toPortalQuotas(wire: unknown): PortalQuota[] {
   return list(record(wire)['features'])
     .filter((f) => {
@@ -676,7 +676,7 @@ export interface PortalSpend {
   items: PortalSpendItem[]
 }
 
-/** `POST /analytics/revenue` — what usage has cost, per feature, largest first. */
+/** `POST /analytics/revenue`: what usage has cost, per feature, largest first. */
 export function toPortalSpend(wire: unknown): PortalSpend {
   const body = record(wire)
   const items = list(body['items'])
@@ -840,7 +840,7 @@ export function unitPriceLabel(price: Money, unitPlural: string): { amount: Mone
 /* ---- Buying credits ------------------------------------------------------- */
 
 /**
- * What `credits` cost at `creditPrice` — the price shown before paying. The
+ * What `credits` cost at `creditPrice`: the price shown before paying. The
  * gateway charges what the top-up response says; this is the preview.
  */
 export function creditsCost(credits: string, creditPrice: string, currency: string): Money | null {

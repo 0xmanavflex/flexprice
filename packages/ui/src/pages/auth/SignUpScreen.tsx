@@ -38,7 +38,7 @@ export interface SignUpScreenProps {
   region?: ReactNode
   /** "Already have an account? Log in". */
   onSignIn?: () => void
-  /** Start Google sign-up. Omitted — and the button not drawn — when the
+  /** Start Google sign-up. Omitted: and the button not drawn: when the
    * deployment does not offer it. */
   onProvider?: (providerId: string) => void
   /**

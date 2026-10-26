@@ -8,7 +8,7 @@ import { env } from '@/env'
  *
  * It reads as an empty state, not as a construction notice. "No addons yet",
  * with a sentence saying what an addon is, is true and useful on the day the
- * page ships as well as today — whereas "this is being migrated" is a note to
+ * page ships as well as today: whereas "this is being migrated" is a note to
  * ourselves that a customer has to read and cannot act on, so it is not shown
  * at all.
  *
@@ -42,7 +42,7 @@ export function PlaceholderPage({
   /*
    * The action goes to the current dashboard, because that is where the thing
    * can actually be created today. With no legacy origin configured there is
-   * nowhere for it to go, so it is not rendered — a primary button that does
+   * nowhere for it to go, so it is not rendered: a primary button that does
    * nothing is worse than no button.
    */
   const href = legacyPath && env.legacyConsoleUrl ? `${env.legacyConsoleUrl}${legacyPath}` : null

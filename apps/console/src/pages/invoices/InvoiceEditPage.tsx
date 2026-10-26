@@ -37,7 +37,7 @@ const toDay = (date: Date | null | undefined): string =>
   date ? date.toISOString().slice(0, 10) : ''
 
 /**
- * Editing an invoice, completely, as V1 does — `InvoiceEditView` holds the
+ * Editing an invoice, completely, as V1 does: `InvoiceEditView` holds the
  * form; this reads the invoice, works out what changed, and saves it with
  * {@link useSaveInvoiceEdit} in the order the API needs.
  */
@@ -180,7 +180,7 @@ function toEdit(line: EditableLine): LineItemEdit {
 /**
  * What changed, in the shape the modify endpoint takes: a row the invoice has
  * and the editor dropped is a remove, a row without an id an add, and a row
- * whose fields moved an update. Untouched rows are left out — an update that
+ * whose fields moved an update. Untouched rows are left out: an update that
  * changes nothing still versions the line and changes its id.
  */
 export function diffLines(original: EditableLine[], current: EditableLine[]) {

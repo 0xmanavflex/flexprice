@@ -16,7 +16,7 @@ import { type EntityColumn, EmDash, Tag, idColumn } from '../../shared/cells'
  *
  * Read-only by nature: an event is a record of something that already
  * happened, so there is no create action and no status. The search box matches
- * the event name and the filter builder takes a customer and a source — all
+ * the event name and the filter builder takes a customer and a source: all
  * three are server-side filters on `POST /events/query`, so the list is the
  * page the server sent, not a page narrowed after the fact.
  */

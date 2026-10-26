@@ -19,6 +19,7 @@ import {
   CustomerSortField,
   CustomerStatus,
   DEFAULT_CUSTOMER_QUERY,
+  isCustomerQueryFiltered,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
@@ -40,8 +41,8 @@ import { IntegrationChips } from './IntegrationMark'
  * The customer list, on the shared `EntityList`.
  *
  * Migrated from a hand-assembled `DataGrid`. Everything that used to be here
- * and is not about customers — the `useTable` call, the `tableLayout`, the
- * toolbar, the footer, the fit-to-window state — now lives once in
+ * and is not about customers: the `useTable` call, the `tableLayout`, the
+ * toolbar, the footer, the fit-to-window state: now lives once in
  * `EntityList`. What is left is the part that is genuinely about a customer.
  *
  * ## The columns that are not here
@@ -50,13 +51,13 @@ import { IntegrationChips } from './IntegrationMark'
  * table. None of them are shipped, and the reason is worth stating because it
  * will come up again every time someone reads the spec beside the screen.
  *
- * `Customer` carries no money and no relations — deliberately, and its own
+ * `Customer` carries no money and no relations: deliberately, and its own
  * docstring says so: *"no `plan`, `currency` or `payment method`: a customer
  * has none of those, they belong to its subscriptions and wallets."* The
  * search endpoint behind this list (`POST /customers/search`) returns exactly
  * that record. A plan, a wallet balance or a subscription count would each be
  * a join the list endpoint does not perform, and MRR is not a field anywhere
- * in the API — it cannot even be assembled, because `money.ts` forbids summing
+ * in the API: it cannot even be assembled, because `money.ts` forbids summing
  * amounts in the browser and calls a sum the API did not send "an API gap".
  *
  * So they are **omitted rather than dashed**. The rule this follows, which the
@@ -65,7 +66,7 @@ import { IntegrationChips } from './IntegrationMark'
  *   an em dash means *this row has no value*;
  *   a column no row can ever fill is removed, not dashed.
  *
- * Four permanently-empty columns would not be honest restraint — they would be
+ * Four permanently-empty columns would not be honest restraint: they would be
  * four columns quietly asserting that these customers happen to have no plan
  * and no revenue, which is a different and much more damaging claim than "we
  * do not offer this yet". When the joined list view lands, they come back.
@@ -171,7 +172,7 @@ export function CustomerGrid({
       }),
       // Its own column rather than a subtitle under the name. Stacked, it was
       // unsortable, unexportable and clipped twice as often; beside the name
-      // it is a value like any other — and it is the field support actually
+      // it is a value like any other: and it is the field support actually
       // searches by.
       textColumn<Customer>('email', 'Email', (row) => row.email, { width: 220 }),
       {
@@ -199,7 +200,7 @@ export function CustomerGrid({
           ),
       },
       // The list endpoint returns no subscription count, so this reads from
-      // `contractCounts` when the page has one and is an em dash otherwise —
+      // `contractCounts` when the page has one and is an em dash otherwise:
       // never a zero that nobody counted.
       numberColumn<Customer>('contracts', 'Contracts', (row) => contractCounts?.[row.id], {
         width: 110,
@@ -339,17 +340,14 @@ export function CustomerGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={
-        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
-      }
+      isFiltered={isCustomerQueryFiltered(query)}
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No customers match these filters"
       empty={{
         scene: 'customers',
         title: 'Nobody to bill yet',
         description:
-          'A customer is who an invoice is addressed to. Create one — or send your first event with a new external id and Flexprice will create it for you.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New customer</Button> } : {}),
+          'A customer is who an invoice is addressed to. Create one: or send your first event with a new external id and Flexprice will create it for you.',
         guides: GUIDES,
       }}
     />

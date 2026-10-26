@@ -1,8 +1,8 @@
 /**
  * Money, without floats.
  *
- * The backend serializes monetary amounts as decimal *strings* — the SDK types
- * `amountDue`, `amountPaid`, `total` and the rest as `string | undefined` —
+ * The backend serializes monetary amounts as decimal *strings*: the SDK types
+ * `amountDue`, `amountPaid`, `total` and the rest as `string | undefined`:
  * precisely so that precision survives the wire. The V1 dashboard then calls
  * `parseFloat` on them in 101 places, which converts an exact decimal into the
  * nearest IEEE-754 double. It also declares `decimal.js` as a dependency that
@@ -20,7 +20,7 @@
  * Note what is deliberately absent: arithmetic. Totals, tax, proration and
  * discounts are the backend's answer, and a UI that recomputes them will
  * eventually disagree with the invoice the customer was actually charged. If
- * you need a sum the API did not send, that is an API gap — not a reason to add
+ * you need a sum the API did not send, that is an API gap: not a reason to add
  * `addMoney`.
  */
 export interface Money {
@@ -42,7 +42,7 @@ export class InvalidMoneyError extends Error {
 /**
  * Builds a `Money` from what the API sent.
  *
- * Rejects anything that is not a plain decimal — including `"1e3"`, `"NaN"` and
+ * Rejects anything that is not a plain decimal: including `"1e3"`, `"NaN"` and
  * `""`. An amount that reached the UI malformed is a bug worth surfacing at the
  * boundary rather than rendering as `$NaN` three components later.
  */
@@ -83,7 +83,7 @@ export function formatMoney(value: Money, locale?: string): string {
     currencyDisplay: 'narrowSymbol',
     currency: value.currency,
     // ES2023 (Intl.NumberFormat v3) accepts a string here and formats the exact
-    // decimal — which is the entire point of this module, and is covered by a
+    // decimal: which is the entire point of this module, and is covered by a
     // test asserting the large-value case a double gets wrong.
     //
     // TypeScript's lib types still narrow the parameter to
@@ -115,7 +115,7 @@ function compareDigits(a: string, b: string): number {
  *
  * Compares digit by digit rather than converting, so `"0.1"` plus `"0.2"`
  * cannot become `0.30000000000000004`, and a 20-digit amount still sorts
- * correctly. Throws on mismatched currencies — comparing USD to EUR is a
+ * correctly. Throws on mismatched currencies: comparing USD to EUR is a
  * question with no answer, and returning one would hide the bug.
  */
 export function compareMoney(a: Money, b: Money): number {
@@ -145,4 +145,59 @@ export function isZeroMoney(value: Money): boolean {
 
 export function isNegativeMoney(value: Money): boolean {
   return parts(value.amount).negative
+}
+
+const PLAIN_DECIMAL = /^(-)?(\d+)(?:\.(\d+))?$/
+
+/**
+ * An amount shared out over a quantity: a line's unit price, shown beside
+ * its quantity: computed exactly on scaled integers, never in floating
+ * point. Rounded half away from zero to `places` decimals. `null` when the
+ * quantity is not a positive number, since nothing is divided then.
+ */
+export function perUnit(value: Money, quantity: string, places = 6): Money | null {
+  const amount = PLAIN_DECIMAL.exec(value.amount)
+  const qty = PLAIN_DECIMAL.exec(quantity.replace(/,/g, '').trim())
+  if (!amount || !qty || qty[1]) return null
+  const amountDecimals = amount[3] ?? ''
+  const qtyDecimals = qty[3] ?? ''
+  const numerator = BigInt(`${amount[2]}${amountDecimals}`)
+  const denominator = BigInt(`${qty[2]}${qtyDecimals}`)
+  if (denominator === 0n) return null
+  // result * 10^places = amount / qty * 10^places
+  //   = numerator * 10^(places + qtyDecimals - amountDecimals) / denominator
+  const shift = places + qtyDecimals.length - amountDecimals.length
+  const scaledNumerator = shift >= 0 ? numerator * 10n ** BigInt(shift) : numerator
+  const scaledDenominator = shift >= 0 ? denominator : denominator * 10n ** BigInt(-shift)
+  const quotient = scaledNumerator / scaledDenominator
+  const rounded =
+    (scaledNumerator % scaledDenominator) * 2n >= scaledDenominator ? quotient + 1n : quotient
+  const digits = rounded.toString().padStart(places + 1, '0')
+  const whole = digits.slice(0, digits.length - places)
+  const fraction = digits.slice(digits.length - places).replace(/0+$/, '')
+  const sign = amount[1] && rounded !== 0n ? '-' : ''
+  return { amount: `${sign}${whole}${fraction ? `.${fraction}` : ''}`, currency: value.currency }
+}
+
+/**
+ * A currency code as its symbol, or the code itself when there is none. The
+ * full symbol, not the narrow one, so dollars stay apart: "$" is US dollars,
+ * "CA$" and "A$" the Canadian and Australian ones.
+ */
+export function currencySymbol(currency: string): string {
+  const code = currency.trim().toUpperCase()
+  if (!/^[A-Z]{3}$/.test(code)) return code
+  try {
+    return (
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: code,
+        currencyDisplay: 'symbol',
+      })
+        .formatToParts(0)
+        .find((part) => part.type === 'currency')?.value ?? code
+    )
+  } catch {
+    return code
+  }
 }

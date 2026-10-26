@@ -78,9 +78,51 @@ describe('subscription detail additions', () => {
       lookupKey: 'acme-pro',
       latestInvoice: { id: 'inv_1', invoiceNumber: 'INV-0001' },
     })
-    expect(detail.commitmentAmount).toEqual({ amount: '500.00', currency: 'USD' })
+    expect(detail.commitment).toEqual({
+      amount: { amount: '500.00', currency: 'USD' },
+      period: 'MONTHLY',
+      periodCount: 1,
+      overageFactor: 1,
+      trueUp: false,
+    })
     expect(detail.latestInvoice).toEqual({ id: 'inv_1', number: 'INV-0001' })
     expect(detail.lookupKey).toBe('acme-pro')
+  })
+
+  it('reads the overage factor, true-up and a commitment period of its own', () => {
+    const detail = toSubscriptionDetail({
+      currency: 'usd',
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 1,
+      commitmentAmount: '30000',
+      commitmentDuration: 'ANNUAL',
+      overageFactor: '1.2',
+      enableTrueUp: true,
+    })
+    expect(detail.commitment).toEqual({
+      amount: { amount: '30000', currency: 'USD' },
+      period: 'ANNUAL',
+      periodCount: 1,
+      overageFactor: 1.2,
+      trueUp: true,
+    })
+  })
+
+  it('measures a commitment with no period of its own over the billing period', () => {
+    const quarterly = toSubscriptionDetail({
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 3,
+      commitmentAmount: '900',
+    })
+    expect(quarterly.commitment).toMatchObject({ period: 'MONTHLY', periodCount: 3 })
+    // A duration equal to the billing period is the billing period, count and all.
+    const same = toSubscriptionDetail({
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 3,
+      commitmentAmount: '900',
+      commitmentDuration: 'MONTHLY',
+    })
+    expect(same.commitment).toMatchObject({ period: 'MONTHLY', periodCount: 3 })
   })
 
   it('keeps a latest invoice with no number', () => {
@@ -91,8 +133,9 @@ describe('subscription detail additions', () => {
   })
 
   it('treats a zero or absent commitment and invoice as none', () => {
-    const detail = toSubscriptionDetail({ commitmentAmount: '0' })
-    expect(detail.commitmentAmount).toBeNull()
+    const detail = toSubscriptionDetail({ commitmentAmount: '0', overageFactor: '1.5' })
+    expect(detail.commitment).toBeNull()
+    expect(toSubscriptionDetail({ overageFactor: '1', enableTrueUp: false }).commitment).toBeNull()
     expect(detail.latestInvoice).toBeNull()
   })
 })
@@ -179,7 +222,25 @@ describe('toPendingSchedules', () => {
     })
   })
 
-  it('sends a metered charge with its meter, bands, bucket and commitment — and no quantity', () => {
+  it('sends an exact start instant as it is, for a contract that starts later that day', () => {
+    const request = toCreateLineItemRequest({
+      charge: {
+        type: 'FIXED',
+        billingModel: 'FLAT_FEE',
+        currency: 'USD',
+        billingPeriod: 'MONTHLY',
+        invoiceCadence: 'ADVANCE',
+        amount: '10',
+      },
+      quantity: '1',
+      startDate: '2099-03-01T15:30:00.000Z',
+      proration: 'none',
+      terms: NO_USAGE_TERMS,
+    } as Parameters<typeof toCreateLineItemRequest>[0])
+    expect(request['startDate']).toEqual(new Date('2099-03-01T15:30:00.000Z'))
+  })
+
+  it('sends a metered charge with its meter, bands, bucket and commitment: and no quantity', () => {
     const request = toCreateLineItemRequest({
       charge: {
         type: 'USAGE',
@@ -233,6 +294,36 @@ describe('toPendingSchedules', () => {
     expect(request['price']).not.toHaveProperty('entityId')
   })
 
+  it("sends a commitment's own period, and per bucket only when there are buckets", () => {
+    const usage = {
+      type: 'USAGE',
+      billingModel: 'FLAT_FEE',
+      currency: 'USD',
+      billingPeriod: 'MONTHLY',
+      invoiceCadence: 'ARREAR',
+      amount: '0.01',
+      meterId: 'meter_1',
+    } as Parameters<typeof toCreateLineItemRequest>[0]['charge']
+    const request = toCreateLineItemRequest({
+      charge: usage,
+      quantity: '1',
+      startDate: '',
+      proration: 'create_prorations',
+      terms: {
+        bucketSize: '',
+        commitment: {
+          kind: 'amount',
+          value: '500',
+          windowed: true,
+          overageFactor: '1',
+          trueUp: false,
+          duration: 'QUARTERLY',
+        },
+      },
+    } as Parameters<typeof toCreateLineItemRequest>[0])
+    expect(request).toMatchObject({ commitmentDuration: 'QUARTERLY', commitmentWindowed: false })
+  })
+
   it('sends a quantity commitment as a quantity', () => {
     const request = toCreateLineItemRequest({
       charge: {
@@ -280,6 +371,31 @@ describe('toPendingSchedules', () => {
         amount: '120',
         effectiveFrom: '2026-12-01T00:00:00Z',
       })
+    })
+
+    it('clears a stored commitment period when the edit goes back to the billing period', () => {
+      const price = { priceId: 'p', billingModel: 'FLAT_FEE', amount: '120' } as const
+      const commitment = {
+        kind: 'amount',
+        value: '500',
+        windowed: false,
+        overageFactor: '1',
+        trueUp: false,
+      } as const
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms: { bucketSize: '', commitment: { ...commitment, duration: null } },
+        } as Parameters<typeof toUpdateLineItemRequest>[0]),
+      ).toMatchObject({ commitmentDuration: '' })
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms: { bucketSize: '', commitment: { ...commitment, duration: 'WEEKLY' } },
+        } as Parameters<typeof toUpdateLineItemRequest>[0]),
+      ).toMatchObject({ commitmentDuration: 'WEEKLY' })
     })
 
     it('sends a package size and a tier table in the price unit when the price has one', () => {

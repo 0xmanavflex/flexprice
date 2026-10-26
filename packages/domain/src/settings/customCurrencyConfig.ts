@@ -7,7 +7,7 @@
  * issues: credits, tokens, minutes, seats. It needs a name and a symbol to be
  * printed, and a conversion factor per fiat currency so an invoice in
  * `credits` can be settled in dollars. The factor reads "how much fiat one
- * unit of this currency is worth" — the backend multiplies by it to convert.
+ * unit of this currency is worth": the backend multiplies by it to convert.
  *
  * Rates are decimal **strings**, never floats. A conversion factor that
  * round-trips through a float is a rounding error applied to every line of
@@ -27,7 +27,7 @@ export interface CustomCurrencyConfig {
   /**
    * The fiat every custom currency must quote a rate against, lowercase.
    *
-   * Empty is valid **only** while there are no custom currencies at all — the
+   * Empty is valid **only** while there are no custom currencies at all: the
    * live default is `{custom_currencies: {}, default_fiat_currency: ""}`.
    */
   defaultFiatCurrency: string
@@ -68,7 +68,7 @@ export const customCurrencyConfigSchema = z
   })
   .superRefine((config, ctx) => {
     const codes = Object.keys(config.customCurrencies)
-    // An empty config is valid and unvalidated — the backend skips every rule
+    // An empty config is valid and unvalidated: the backend skips every rule
     // below when there is nothing to convert.
     if (codes.length === 0) return
 
@@ -90,7 +90,7 @@ export const customCurrencyConfigSchema = z
         ctx.addIssue({
           code: 'custom',
           path: ['customCurrencies', code],
-          message: `${code} is already defined — codes are not case-sensitive`,
+          message: `${code} is already defined: codes are not case-sensitive`,
         })
       }
       seen.add(lower)
@@ -154,7 +154,7 @@ export function emptyCustomCurrency(fiatCodes: readonly string[] = []): CustomCu
 /**
  * The fiat currencies this config quotes, lowercase and sorted.
  *
- * Read off the first currency because they are all required to agree — see
+ * Read off the first currency because they are all required to agree: see
  * the schema. Falls back to the default fiat alone, which is what a config
  * with one half-filled row looks like mid-edit.
  */

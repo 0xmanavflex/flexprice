@@ -6,6 +6,7 @@ export const KEY_PREFIX = {
   group: 'group',
   costSheet: 'cost-sheet',
   feature: 'feat',
+  taxRate: 'tax',
 } as const
 
 export type KeyPrefix = (typeof KEY_PREFIX)[keyof typeof KEY_PREFIX]
@@ -29,11 +30,7 @@ export function suggestKey(prefix: KeyPrefix, name: string): string {
   return body ? `${prefix}-${body}` : ''
 }
 
-/**
- * A tax code is letters and numbers only, so the suggestion drops the
- * separators V1 would keep: `tax` plus the name (`taxgst18`).
- */
+/** A tax code, as V1 suggests it: `tax-` plus the name (`tax-gst-18`). */
 export function suggestTaxCode(name: string): string {
-  const body = slug(name).replace(/[-_]/g, '')
-  return body ? `tax${body}` : ''
+  return suggestKey(KEY_PREFIX.taxRate, name)
 }

@@ -13,11 +13,13 @@ import {
   type AddContractCoupon,
   BILLING_PERIOD_LABEL,
   BillingModel,
-  type BillingPeriod,
+  BillingPeriod,
   BucketSize as BucketSizes,
   type BucketSize,
   CommitmentKind,
   type CancelSubscription,
+  type PauseSubscription,
+  type ResumeSubscription,
   type ChargeCommitment,
   CommitmentType,
   type CommitmentPriceBase,
@@ -32,6 +34,7 @@ import {
   type CreateEntitlement,
   type CreateTaxAssociation,
   type CreditGrant,
+  CreditGrantCadence,
   CreditGrantScope,
   type EditContractCharge,
   type EndContractCharge,
@@ -45,6 +48,7 @@ import {
   type Subscription,
   type SubscriptionAddon,
   type SubscriptionCoupon,
+  type ContractCommitment,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
@@ -63,8 +67,12 @@ import {
   TaxBehavior,
   formatMoney,
   money,
+  perUnit,
   moneyOr,
   SUBSCRIPTION_FILTERS,
+  INHERITANCE_WITH_BILLING_CUSTOMER,
+  INHERITANCE_WITH_THRESHOLD,
+  InheritanceBlock,
 } from '@fp/domain'
 import {
   type CreditGrantWire,
@@ -74,6 +82,7 @@ import {
 } from './creditGrants'
 import { toEntitlementRequest } from './entitlements'
 import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } from './invoices'
+import { ALL_SUBSCRIPTION_STATUSES, LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 import { queryKeys } from './keys'
 import { toFilterConditions } from './search'
 import { type ChargeWire, toCharge, toChargeRequest, toTier } from './prices'
@@ -124,6 +133,11 @@ export interface SubscriptionWire {
   timezone?: string | undefined
   lookupKey?: string | undefined
   commitmentAmount?: string | undefined
+  commitmentDuration?: string | undefined
+  overageFactor?: string | undefined
+  enableTrueUp?: boolean | undefined
+  /** Set on a contract inherited from, or grouped under, another contract. */
+  parentSubscriptionId?: string | undefined
   latestInvoice?: { id?: string | undefined; invoiceNumber?: string | undefined } | undefined
 }
 
@@ -135,8 +149,8 @@ function realDate(value: Date | undefined | null): Date | null {
 }
 
 export function toSubscription(wire: SubscriptionWire): Subscription {
-  // Known statuses pass through; everything else — the API's `draft`, and any
-  // value this build has not learned — collapses to Incomplete, the state a
+  // Known statuses pass through; everything else: the API's `draft`, and any
+  // value this build has not learned: collapses to Incomplete, the state a
   // subscription sits in before it is running.
   const status = SUBSCRIPTION_STATUSES.has(wire.subscriptionStatus ?? '')
     ? (wire.subscriptionStatus as SubscriptionStatus)
@@ -159,6 +173,29 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
   }
 }
 
+/**
+ * The contract-level commitment, or null when there is none. The API measures
+ * it over the billing period (every N of them) unless `commitmentDuration`
+ * names a different period, in which case it is one of that period.
+ */
+function toContractCommitment(wire: SubscriptionWire): ContractCommitment | null {
+  if (!wire.commitmentAmount || !(Number(wire.commitmentAmount) > 0)) return null
+  const billingPeriod = wire.billingPeriod as BillingPeriod | undefined
+  const duration =
+    wire.commitmentDuration && wire.commitmentDuration in BILLING_PERIOD_LABEL
+      ? (wire.commitmentDuration as BillingPeriod)
+      : null
+  const ownPeriod = duration !== null && duration !== billingPeriod
+  const overageFactor = Number(wire.overageFactor)
+  return {
+    amount: moneyOr(wire.commitmentAmount, wire.currency),
+    period: ownPeriod ? duration : (billingPeriod ?? BillingPeriod.Monthly),
+    periodCount: ownPeriod ? 1 : (wire.billingPeriodCount ?? 1),
+    overageFactor: Number.isFinite(overageFactor) && overageFactor >= 1 ? overageFactor : 1,
+    trueUp: wire.enableTrueUp ?? false,
+  }
+}
+
 export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail {
   return {
     ...toSubscription(wire),
@@ -175,10 +212,7 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
     trialStart: realDate(wire.trialStart),
     timezone: wire.timezone ?? '',
     lookupKey: wire.lookupKey ?? '',
-    commitmentAmount:
-      wire.commitmentAmount && Number(wire.commitmentAmount) > 0
-        ? moneyOr(wire.commitmentAmount, wire.currency)
-        : null,
+    commitment: toContractCommitment(wire),
     latestInvoice: wire.latestInvoice?.id
       ? {
           id: wire.latestInvoice.id,
@@ -298,7 +332,7 @@ const LINE_BUCKETS = new Set<string>(Object.values(BucketSizes))
  * The window a line's usage is summed in, as the form offers it.
  *
  * A bucket as long as the billing period is the whole period, so a monthly
- * charge whose price reports MONTH reads as "Whole billing period" — the form
+ * charge whose price reports MONTH reads as "Whole billing period": the form
  * must not open on Month as though someone had chosen it. Unknown values read
  * as unset rather than as a value the select cannot show.
  */
@@ -366,7 +400,7 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
      * The price itself, for the shared charges table.
      *
      * The line's own fields answer the edit form's questions; this answers the
-     * table's — model, tiers, cadence, the amount already formatted. Both come
+     * table's: model, tiers, cadence, the amount already formatted. Both come
      * from the same embedded record, so neither has to guess at the other's.
      * Null when the API sent no price, which is a line that bills nothing.
      */
@@ -377,7 +411,7 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
           /*
            * The line's name, not the price's.
            *
-           * A price on a plan is often unnamed — what a contract calls the
+           * A price on a plan is often unnamed: what a contract calls the
            * charge comes from `plan_display_name` or the meter, both of which
            * are on the line and neither of which is on the price. Reusing the
            * name the line already worked out keeps one answer to "what is this
@@ -389,7 +423,7 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
     /*
      * `parent_price_id` is set when a subscription overrides a plan price, so
      * its presence *is* the "Price changed" flag. What it was changed *from*
-     * needs the parent price fetched, which the page does not do yet — so the
+     * needs the parent price fetched, which the page does not do yet: so the
      * flag can say that it changed and the sheet cannot yet say from what.
      */
     overridesPriceId: wire.price?.parentPriceId ?? '',
@@ -433,7 +467,7 @@ const SORT_FIELD: Record<SubscriptionSortField, string> = {
  * `expand: 'customer,plan'` is load-bearing, not an optimisation. The live
  * search returns `plan` embedded by default but **not** `customer`, so without
  * the expand every row arrives with `customer` absent and `toSubscription`
- * falls all the way through to `customerId` — the Customer column renders a raw
+ * falls all the way through to `customerId`: the Customer column renders a raw
  * `cust_01M3H…` ULID for every subscription. Verified live: the same request
  * with `expand: 'customer'` resolves the name to "Test".
  *
@@ -441,12 +475,24 @@ const SORT_FIELD: Record<SubscriptionSortField, string> = {
  * nothing, which is the failure this comment exists to prevent. `plan` is named
  * explicitly rather than relied on as a default.
  */
+function toWireStatuses(statuses: readonly SubscriptionStatus[]): string[] {
+  return statuses.flatMap((status) =>
+    status === SubscriptionStatus.Incomplete ? [status, 'draft'] : [status],
+  )
+}
+
 export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'customer,plan',
+    // Status always goes to the server: it returns only active subscriptions
+    // when none is named, so a trialing contract never reached the list.
+    // Incomplete also asks for the API's `draft`, which the domain shows as
+    // Incomplete. No status chosen means every contract.
+    subscriptionStatus:
+      query.statuses.length > 0 ? toWireStatuses(query.statuses) : ALL_SUBSCRIPTION_STATUSES,
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
       : {}),
@@ -472,8 +518,9 @@ export async function fetchSubscriptions(
     toSubscription(item as SubscriptionWire),
   )
 
-  // Neither status nor search is a server-side filter here, so both are applied
-  // on the page — the same split coupons and add-ons use.
+  // Search is not a server-side filter, so it is applied on the page. Status is
+  // re-checked here too, which keeps the page's filter exact while the server
+  // narrows the fetch.
   const term = query.search.trim().toLowerCase()
   const filtered = subscriptions.filter((subscription) => {
     const matchesStatus =
@@ -494,7 +541,7 @@ export async function fetchSubscriptions(
 /**
  * The page's entire interface to subscriptions.
  *
- * Takes domain vocabulary, returns domain models — the same controlled shape as
+ * Takes domain vocabulary, returns domain models: the same controlled shape as
  * `useCoupons`, so the page can keep its query in the URL rather than in
  * component state.
  */
@@ -513,7 +560,7 @@ const COUNT_PAGE = 500
 const COUNT_PAGES = 10
 
 /**
- * How many contracts each of these customers has — for the Contracts column on
+ * How many contracts each of these customers has: for the Contracts column on
  * the customer list, whose search endpoint carries no subscription count.
  *
  * One `POST /subscriptions/search` narrowed by `customer_ids`, paged until the
@@ -533,7 +580,12 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
         const response = await call(
           (options) =>
             client.subscriptions.querySubscription(
-              { customerIds: ids, limit: COUNT_PAGE, offset: page * COUNT_PAGE } as never,
+              {
+                customerIds: ids,
+                subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES,
+                limit: COUNT_PAGE,
+                offset: page * COUNT_PAGE,
+              } as never,
               options,
             ),
           signal,
@@ -550,6 +602,125 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
     enabled: ids.length > 0,
     staleTime: 30_000,
   })
+}
+
+/** The contract states the API counts when it checks who may inherit. */
+const HIERARCHY_WIRE_STATUSES: FlexpriceModels.SubscriptionStatus[] = [
+  'active',
+  'trialing',
+  'draft',
+]
+const HIERARCHY_STATUSES = new Set<string>(HIERARCHY_WIRE_STATUSES)
+
+/**
+ * Which of these customers cannot inherit a contract from `parentCustomerId`,
+ * applying the rule the API checks on create: a child may hold no contract of
+ * its own, and may already inherit only from the paying customer's contracts.
+ *
+ * `contracts` are every contract of the paying customer and the candidates.
+ * Cancelled and paused contracts do not count, as the API does not count them.
+ */
+export function toInheritanceBlocks(
+  parentCustomerId: string,
+  contracts: readonly SubscriptionWire[],
+): Record<string, InheritanceBlock> {
+  const live = contracts.filter((c) => HIERARCHY_STATUSES.has(c.subscriptionStatus ?? ''))
+  const parentContracts = new Set(
+    live.filter((c) => c.customerId === parentCustomerId).map((c) => c.id),
+  )
+  const blocks: Record<string, InheritanceBlock> = {}
+  for (const contract of live) {
+    const customerId = contract.customerId
+    if (!customerId || customerId === parentCustomerId) continue
+    if (!contract.parentSubscriptionId) {
+      // Its own contract outranks any other reason: it is the one to end first.
+      blocks[customerId] = InheritanceBlock.OwnContract
+    } else if (
+      !parentContracts.has(contract.parentSubscriptionId) &&
+      blocks[customerId] !== InheritanceBlock.OwnContract
+    ) {
+      blocks[customerId] = InheritanceBlock.OtherParent
+    }
+  }
+  return blocks
+}
+
+/**
+ * Why each of these customers cannot inherit a contract from `parentCustomerId`
+ *: one `POST /subscriptions/search` narrowed by `customer_ids`, paged like the
+ * contract counts. A customer missing from the result can inherit.
+ */
+export function useInheritanceBlocks(parentCustomerId: string, customerIds: readonly string[]) {
+  const client = useFlexprice()
+  const ids = [...new Set(customerIds.filter((id) => id && id !== parentCustomerId))].sort()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.list({ inheritanceFor: parentCustomerId, ids }),
+    queryFn: async ({ signal }) => {
+      const contracts: SubscriptionWire[] = []
+      for (let page = 0; page < COUNT_PAGES; page += 1) {
+        const response = await call(
+          (options) =>
+            client.subscriptions.querySubscription(
+              {
+                customerIds: [parentCustomerId, ...ids],
+                // The states the API checks; left out, only active came back.
+                subscriptionStatus: HIERARCHY_WIRE_STATUSES,
+                limit: COUNT_PAGE,
+                offset: page * COUNT_PAGE,
+              },
+              options,
+            ),
+          signal,
+        )
+        const items = (response.items ?? []) as SubscriptionWire[]
+        contracts.push(...items)
+        const total = response.pagination?.total ?? 0
+        if (items.length < COUNT_PAGE || (page + 1) * COUNT_PAGE >= total) break
+      }
+      return toInheritanceBlocks(parentCustomerId, contracts)
+    },
+    enabled: Boolean(parentCustomerId) && ids.length > 0,
+    staleTime: 30_000,
+  })
+}
+
+/**
+ * A plain sentence for the customer-hierarchy refusals of `POST /subscriptions`.
+ *
+ * The API answers with its hint: "The child customer cannot have standalone
+ * or parent subscriptions": which names neither the customer nor the fix.
+ * `nameOf` turns the external id the API reports into the customer's name.
+ * Any other error is null, so the caller keeps its own message.
+ */
+export function explainContractHierarchyError(
+  error: unknown,
+  nameOf: (externalId: string) => string = (externalId) => externalId,
+): string | null {
+  if (!(error instanceof ApiError) || !error.fromServer) return null
+  const said = error.message.toLowerCase()
+  const externalId = error.details?.['external_id']
+  const who = externalId ? nameOf(externalId) : 'One of the inherited customers'
+
+  if (said.includes('cannot have standalone or parent subscriptions')) {
+    return `${who} has a contract of its own, so it cannot inherit this one. End that contract first, or remove ${externalId ? 'the customer' : 'it'} from Inherited customers.`
+  }
+  if (said.includes('can only be inherited under one parent')) {
+    return `${who} already inherits another customer's contract. A customer can inherit only one.`
+  }
+  if (said.includes('cannot appear in external_customer_ids_to_inherit_subscription')) {
+    return "The contract's own customer cannot also be one of its inherited customers."
+  }
+  if (said.includes('receives a subscription through hierarchy')) {
+    return "This customer inherits another customer's contract, so it cannot have a contract of its own."
+  }
+  if (said.includes('external_customer_ids_to_inherit_subscription, not both')) {
+    return INHERITANCE_WITH_BILLING_CUSTOMER
+  }
+  if (said.includes('remove auto_invoice_threshold')) {
+    return INHERITANCE_WITH_THRESHOLD
+  }
+  return null
 }
 
 /**
@@ -681,7 +852,7 @@ function couponFields(phase: SubscriptionPhase): Record<string, unknown> {
  * starting where the one before ends; the first phase's overrides and
  * discounts are repeated at the top level (the API attaches the plan's charges
  * from them), the contract ends where the last phase does, and per-charge
- * commitments are not sent — the API takes them on the contract, not a phase.
+ * commitments are not sent: the API takes them on the contract, not a phase.
  */
 export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<string, unknown> {
   const [first] = draft.phases
@@ -755,7 +926,7 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
         }
       : {}),
     // The API uses this list *instead of* the plan's grants, so it is sent only
-    // when the grants were changed — an empty list then removes them all.
+    // when the grants were changed: an empty list then removes them all.
     ...(draft.creditGrantsChanged
       ? {
           creditGrants: draft.creditGrants.map((grant) => ({
@@ -804,12 +975,13 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
   }
 }
 
-/** Start a subscription — `POST /subscriptions`. Call `mutateAsync(draft)`. */
+/** Start a subscription: `POST /subscriptions`. Call `mutateAsync(draft)`. */
 export function useCreateSubscription() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Contract created', error: 'Could not create the contract.' } },
     mutationFn: (draft: CreateSubscription) =>
       call(() =>
         client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
@@ -818,6 +990,9 @@ export function useCreateSubscription() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+      // A contract that starts now bills its in-advance charges at once, so the
+      // customer's invoice list has a new row the cached page does not.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
     },
   })
 }
@@ -826,7 +1001,7 @@ export function useCreateSubscription() {
  * One subscription, with its customer and plan resolved.
  *
  * Read through search by id rather than `GET /subscriptions/{id}`, because only
- * the search accepts `expand: 'customer,plan'` — the single read returns the
+ * the search accepts `expand: 'customer,plan'`: the single read returns the
  * customer as a bare id, which would put a ULID in the page header.
  */
 export function useSubscription(id: string) {
@@ -840,6 +1015,9 @@ export function useSubscription(id: string) {
           client.subscriptions.querySubscription(
             {
               subscriptionIds: [id],
+              // Without it the search answers active only, and a trialing
+              // contract's own page read "not found".
+              subscriptionStatus: ALL_SUBSCRIPTION_STATUSES,
               expand: 'customer,plan',
               limit: 1,
               offset: 0,
@@ -874,7 +1052,7 @@ function useSubscriptionFull<T>(
   })
 }
 
-/** The priced lines — `GET /subscriptions/{id}`, the only read that carries them. */
+/** The priced lines: `GET /subscriptions/{id}`, the only read that carries them. */
 export function useSubscriptionLines(id: string) {
   return useSubscriptionFull(id, (response) =>
     ((response.lineItems ?? []) as SubscriptionLineWire[]).map(toSubscriptionLine),
@@ -882,7 +1060,7 @@ export function useSubscriptionLines(id: string) {
 }
 
 /**
- * Every line the contract has had, ended ones included —
+ * Every line the contract has had, ended ones included:
  * `POST /subscriptions/lineitems/search` with `active_filter: false`.
  *
  * `GET /subscriptions/{id}` returns only the lines billing now, so a charge
@@ -924,7 +1102,7 @@ export function useSubscriptionCreditGrants(id: string) {
   )
 }
 
-/** What the subscription includes — `GET /subscriptions/{id}/entitlements`. */
+/** What the subscription includes: `GET /subscriptions/{id}/entitlements`. */
 export function useSubscriptionEntitlements(id: string) {
   const client = useFlexprice()
 
@@ -960,7 +1138,7 @@ const invalidateSubscription = (queryClient: ReturnType<typeof useQueryClient>) 
   void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
 }
 
-/** End a subscription now or at the end of the period — `POST /subscriptions/{id}/cancel`. */
+/** End a subscription now or at the end of the period: `POST /subscriptions/{id}/cancel`. */
 export function useCancelSubscription() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -974,7 +1152,40 @@ export function useCancelSubscription() {
   })
 }
 
-/** Start a draft subscription — `POST /subscriptions/{id}/activate`. */
+/** Stop billing a running contract until it is resumed: `POST /subscriptions/{id}/pause`. */
+export function usePauseSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: PauseSubscription }) =>
+      call(() =>
+        client.subscriptions.pauseSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+          ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
+        }),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Start billing a paused contract again: `POST /subscriptions/{id}/resume`. */
+export function useResumeSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: ResumeSubscription }) =>
+      call(() =>
+        client.subscriptions.resumeSubscription(id, {
+          prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+        }),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Start a draft subscription: `POST /subscriptions/{id}/activate`. */
 export function useActivateSubscription() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -987,7 +1198,7 @@ export function useActivateSubscription() {
 }
 
 /**
- * Replace a subscription's metadata — `PUT /subscriptions/{id}` with
+ * Replace a subscription's metadata: `PUT /subscriptions/{id}` with
  * `{metadata}`, sent around the SDK because its request model strips the field.
  * Rejects when the API answers without having stored it; see `@fp/api`.
  */
@@ -1013,7 +1224,10 @@ export function useUpdateSubscriptionMetadata(environmentId: string | null) {
 const effectiveFrom = (day: string) => (day ? `${day}T00:00:00Z` : undefined)
 
 /** Commitment fields shared by the add and edit requests; the API takes the numbers as numbers. */
-function commitmentFields(terms: UsageTerms): Record<string, unknown> {
+function commitmentFields(
+  terms: UsageTerms,
+  { update = false }: { update?: boolean } = {},
+): Record<string, unknown> {
   const commitment = terms.commitment
   if (!commitment) return {}
   return {
@@ -1021,14 +1235,23 @@ function commitmentFields(terms: UsageTerms): Record<string, unknown> {
     ...(commitment.kind === CommitmentKind.Quantity
       ? { commitmentQuantity: Number(commitment.value) }
       : { commitmentAmount: Number(commitment.value) }),
-    commitmentWindowed: commitment.windowed,
+    // Per bucket only when there are buckets: the API rejects a windowed
+    // commitment on a charge summed over the whole period.
+    commitmentWindowed: commitment.windowed && terms.bucketSize !== '',
+    // On an update an omitted period keeps the stored one; an empty string is
+    // how the API is told to go back to the billing period.
+    ...(commitment.duration
+      ? { commitmentDuration: commitment.duration }
+      : update
+        ? { commitmentDuration: '' }
+        : {}),
     commitmentOverageFactor: Number(commitment.overageFactor),
     commitmentTrueUpEnabled: commitment.trueUp,
   }
 }
 
 /**
- * A new charge on one contract, priced inline — `POST /subscriptions/{id}/lineitems`.
+ * A new charge on one contract, priced inline: `POST /subscriptions/{id}/lineitems`.
  *
  * The price is the same request the plan page sends, minus what the contract
  * decides (its currency and the entity it prices). A metered charge carries no
@@ -1046,7 +1269,15 @@ export function toCreateLineItemRequest(draft: AddContractCharge): Record<string
   return {
     ...(charge.displayName ? { displayName: charge.displayName } : {}),
     ...(usage ? {} : { quantity: Number(draft.quantity) || 1 }),
-    ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
+    // A day starts at midnight UTC; an exact instant (a contract that starts
+    // later that day) is sent as it is.
+    ...(draft.startDate
+      ? {
+          startDate: new Date(
+            draft.startDate.includes('T') ? draft.startDate : `${draft.startDate}T00:00:00Z`,
+          ),
+        }
+      : {}),
     ...(usage ? {} : { prorationBehavior: draft.proration }),
     price: {
       ...price,
@@ -1056,7 +1287,7 @@ export function toCreateLineItemRequest(draft: AddContractCharge): Record<string
   }
 }
 
-/** A metered charge's new price and terms — `PUT /subscriptions/lineitems/{lineItemId}`. */
+/** A metered charge's new price and terms: `PUT /subscriptions/lineitems/{lineItemId}`. */
 export function toUpdateLineItemRequest(draft: EditContractCharge): Record<string, unknown> {
   const { price } = draft
   const custom = draft.priceUnit !== ''
@@ -1088,7 +1319,7 @@ export function toUpdateLineItemRequest(draft: EditContractCharge): Record<strin
     billingModel: price.billingModel,
     ...priced,
     ...(draft.terms.bucketSize ? { bucketSize: draft.terms.bucketSize } : {}),
-    ...commitmentFields(draft.terms),
+    ...commitmentFields(draft.terms, { update: true }),
     ...(from ? { effectiveFrom: from } : {}),
   }
 }
@@ -1172,7 +1403,7 @@ export function toLineChangePreview(wire: ModifyResponseWire): LineChangePreview
   }
 }
 
-/** Preview a quantity or price change — `POST /subscriptions/{id}/modify/preview`. Saves nothing. */
+/** Preview a quantity or price change: `POST /subscriptions/{id}/modify/preview`. Saves nothing. */
 export function usePreviewLineChange() {
   const client = useFlexprice()
   return useMutation({
@@ -1194,7 +1425,7 @@ export function usePreviewLineChange() {
   })
 }
 
-/** Apply a quantity or price change — `POST /subscriptions/{id}/modify/execute`. */
+/** Apply a quantity or price change: `POST /subscriptions/{id}/modify/execute`. */
 export function useExecuteLineChange() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1218,7 +1449,7 @@ export function useExecuteLineChange() {
   })
 }
 
-/** Add a charge to one contract — only this contract changes. */
+/** Add a charge to one contract: only this contract changes. */
 export function useCreateSubscriptionLineItem() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1235,7 +1466,7 @@ export function useCreateSubscriptionLineItem() {
   })
 }
 
-/** Change a charge's price on one contract — `PUT /subscriptions/lineitems/{lineItemId}`. */
+/** Change a charge's price on one contract: `PUT /subscriptions/lineitems/{lineItemId}`. */
 export function useUpdateSubscriptionLineItem() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1252,7 +1483,7 @@ export function useUpdateSubscriptionLineItem() {
   })
 }
 
-/** End a charge on one contract — `DELETE /subscriptions/lineitems/{lineItemId}`. */
+/** End a charge on one contract: `DELETE /subscriptions/lineitems/{lineItemId}`. */
 export function useDeleteSubscriptionLineItem() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1321,7 +1552,7 @@ export function toSubscriptionUsage(wire: SubscriptionUsageWire): SubscriptionUs
   }
 }
 
-/** This period's consumption — `POST /subscriptions/usage`. */
+/** This period's consumption: `POST /subscriptions/usage`. */
 export function useSubscriptionUsage(id: string) {
   const client = useFlexprice()
 
@@ -1362,7 +1593,7 @@ export function toPendingSchedules(wires: SubscriptionScheduleWire[]): Subscript
     }))
 }
 
-/** Changes queued for a future date — `GET /subscriptions/{id}/schedules`. */
+/** Changes queued for a future date: `GET /subscriptions/{id}/schedules`. */
 export function useSubscriptionSchedules(id: string) {
   const client = useFlexprice()
 
@@ -1376,7 +1607,7 @@ export function useSubscriptionSchedules(id: string) {
   })
 }
 
-/** The invoices this contract produced, newest first — the invoice search filtered by `subscription_id`. */
+/** The invoices this contract produced, newest first: the invoice search filtered by `subscription_id`. */
 export function useSubscriptionInvoices(id: string) {
   const client = useFlexprice()
 
@@ -1417,6 +1648,7 @@ export function toInvoicePreview(wire: InvoicePreviewWire): InvoicePreview {
       name: line.description,
       detail: line.detail,
       quantity: line.quantity,
+      unitPrice: perUnit(money(line.amount, currency), line.quantity),
       amount: money(line.amount, currency),
       kind: line.priceType,
     })),
@@ -1429,7 +1661,7 @@ export function toInvoicePreview(wire: InvoicePreviewWire): InvoicePreview {
 }
 
 /**
- * The invoice this contract will raise at the end of the period —
+ * The invoice this contract will raise at the end of the period:
  * `POST /invoices/preview`. Nothing is created; the API computes the lines and
  * the totals. Callers disable it for contracts that are not billing (cancelled
  * or still on trial), where the call has nothing to preview.
@@ -1477,7 +1709,7 @@ export function toSubscriptionAddon(wire: AddonAssociationWire): SubscriptionAdd
   }
 }
 
-/** The add-ons attached to this contract — `GET /subscriptions/{id}/addons/associations`. */
+/** The add-ons attached to this contract: `GET /subscriptions/{id}/addons/associations`. */
 export function useSubscriptionAddons(id: string) {
   const client = useFlexprice()
 
@@ -1540,7 +1772,7 @@ export function toSubscriptionCoupon(
   }
 }
 
-/** The coupons applied to this contract — `GET /coupons/associations` filtered by subscription. */
+/** The coupons applied to this contract: `GET /coupons/associations` filtered by subscription. */
 export function useSubscriptionCoupons(id: string) {
   const client = useFlexprice()
 
@@ -1589,7 +1821,7 @@ export function toSubscriptionTax(wire: SubscriptionTaxWire): SubscriptionTax {
   }
 }
 
-/** The tax rates applied to this contract — `GET /taxes/associations` for the subscription. */
+/** The tax rates applied to this contract: `GET /taxes/associations` for the subscription. */
 export function useSubscriptionTaxes(id: string) {
   const client = useFlexprice()
 
@@ -1617,14 +1849,17 @@ export function useSubscriptionTaxes(id: string) {
  * What adding something to one contract can change on its page: the detail, its
  * entitlements, grants, add-ons, coupons, taxes and the invoice preview all sit
  * under the subscriptions family. Tax associations are shared with the customer
- * page, so they refresh too.
+ * page, so they refresh too, and so does entitlement usage, which is read
+ * through the customer (`GET /customers/usage`): a new entitlement would
+ * otherwise show no usage until something else refetched it.
  */
 const invalidateContract = (queryClient: ReturnType<typeof useQueryClient>) => {
   void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
   void queryClient.invalidateQueries({ queryKey: queryKeys.taxAssociations.all() })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.usageAll() })
 }
 
-/** Give this contract an entitlement its plan does not carry — `POST /entitlements`. */
+/** Give this contract an entitlement its plan does not carry: `POST /entitlements`. */
 export function useCreateSubscriptionEntitlement(subscriptionId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1644,21 +1879,36 @@ export function useCreateSubscriptionEntitlement(subscriptionId: string) {
   })
 }
 
-/** Grant this contract credits of its own — `POST /creditgrants`, scoped to the subscription. */
-export function useCreateSubscriptionCreditGrant(subscriptionId: string) {
+/**
+ * When a grant added to a running contract starts. The API requires a
+ * `start_date` for subscription-scoped grants and the dialog has no date, so
+ * it is set as V1 sets it: a recurring grant starts at the end of the current
+ * period, so it refreshes on the contract's own cycle; a one-time grant is
+ * issued now.
+ */
+export function subscriptionGrantStart(
+  draft: Pick<CreateCreditGrant, 'cadence'>,
+  currentPeriodEnd: Date | null | undefined,
+  now: Date = new Date(),
+): Date {
+  return draft.cadence === CreditGrantCadence.Recurring && currentPeriodEnd ? currentPeriodEnd : now
+}
+
+/** Grant this contract credits of its own: `POST /creditgrants`, scoped to the subscription. */
+export function useCreateSubscriptionCreditGrant(
+  subscriptionId: string,
+  currentPeriodEnd?: Date | null,
+) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (draft: CreateCreditGrant) =>
       call(() =>
-        client.creditGrants.createCreditGrant(
-          toCreditGrantRequest(
-            draft,
-            CreditGrantScope.Subscription,
-            subscriptionId,
-          ) as FlexpriceModels.CreateCreditGrantRequest,
-        ),
+        client.creditGrants.createCreditGrant({
+          ...toCreditGrantRequest(draft, CreditGrantScope.Subscription, subscriptionId),
+          startDate: subscriptionGrantStart(draft, currentPeriodEnd),
+        } as FlexpriceModels.CreateCreditGrantRequest),
       ),
     onSuccess: () => {
       invalidateContract(queryClient)
@@ -1688,7 +1938,7 @@ export function toAddCouponRequest(
   }
 }
 
-/** Take one coupon association off — `action: remove` on the same modify call. */
+/** Take one coupon association off: `action: remove` on the same modify call. */
 export function toRemoveCouponRequest(
   associationId: string,
 ): FlexpriceModels.ExecuteSubscriptionModifyRequest {
@@ -1698,7 +1948,7 @@ export function toRemoveCouponRequest(
   }
 }
 
-/** Attach an add-on to this contract — `POST /subscriptions/addon`. */
+/** Attach an add-on to this contract: `POST /subscriptions/addon`. */
 export function useAddSubscriptionAddon(subscriptionId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1713,7 +1963,7 @@ export function useAddSubscriptionAddon(subscriptionId: string) {
 }
 
 /**
- * Apply a coupon to this contract by its code —
+ * Apply a coupon to this contract by its code:
  * `POST /subscriptions/{id}/modify/execute` with a `coupon` modification.
  */
 export function useAddSubscriptionCoupon(subscriptionId: string) {
@@ -1742,7 +1992,24 @@ export function useAddSubscriptionCoupon(subscriptionId: string) {
   })
 }
 
-/** Apply a tax rate to this contract — `POST /taxes/associations`, entity type `subscription`. */
+/** Take one coupon off this contract or one of its charges, by its association id. */
+export function useRemoveSubscriptionCoupon(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (associationId: string) =>
+      call(() =>
+        client.subscriptions.executeSubscriptionModify(
+          subscriptionId,
+          toRemoveCouponRequest(associationId),
+        ),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Apply a tax rate to this contract: `POST /taxes/associations`, entity type `subscription`. */
 export function useCreateSubscriptionTax(subscriptionId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1762,7 +2029,7 @@ export function useCreateSubscriptionTax(subscriptionId: string) {
   })
 }
 
-/** Take an add-on off a contract — `DELETE /subscriptions/addon` by its association id, at period end. */
+/** Take an add-on off a contract: `DELETE /subscriptions/addon` by its association id, at period end. */
 export function useRemoveSubscriptionAddon() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1776,7 +2043,7 @@ export function useRemoveSubscriptionAddon() {
   })
 }
 
-/** Stop applying a tax rate to a contract — `DELETE /taxes/associations/{id}`. */
+/** Stop applying a tax rate to a contract: `DELETE /taxes/associations/{id}`. */
 export function useRemoveSubscriptionTax() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -1788,7 +2055,7 @@ export function useRemoveSubscriptionTax() {
   })
 }
 
-/** End a contract's credit grant now — `DELETE /creditgrants/{id}` with today as the end date. */
+/** End a contract's credit grant now: `DELETE /creditgrants/{id}` with today as the end date. */
 export function useCancelSubscriptionCreditGrant() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

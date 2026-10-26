@@ -26,7 +26,7 @@ export type Failure = ListFailure
 /**
  * An error, as a sentence somebody can act on.
  *
- * `noun` is the thing that failed, in the product's words — "your
+ * `noun` is the thing that failed, in the product's words: "your
  * organisation", "the members list". One mapping with every list and detail
  * page (`toListFailure`), so a 403 never offers a retry and a timeout never
  * reads as "offline".
@@ -79,8 +79,8 @@ export function PanelUnavailable({
  *
  * Mutations get their own path because the useful case is the opposite of a
  * query's: a failed save is almost always a 400 whose body explains the rule
- * that was broken — "You have reached the maximum limit of 2 development
- * environment(s)" — and collapsing that into "something went wrong" throws away
+ * that was broken: "You have reached the maximum limit of 2 development
+ * environment(s)": and collapsing that into "something went wrong" throws away
  * the only sentence that helps. A failed create being invisible is a bug this
  * console already has elsewhere; it is not repeated here.
  */
@@ -94,7 +94,7 @@ export function mutationMessage(error: unknown, fallback: string): string | null
 /**
  * A panel that could not load.
  *
- * The retry button is withheld when retrying cannot help — pressing "Try
+ * The retry button is withheld when retrying cannot help: pressing "Try
  * again" against a 403 forever is worse than being told plainly that the
  * answer will not change.
  */
@@ -164,14 +164,9 @@ export function SettingsTable<T extends object>({
   empty: ReactNode
   facet?: { label: string; value: (row: T) => string }
 }) {
-  // With no rows the empty state carries the create button itself, so the
-  // toolbar does not offer it a second time above it.
-  const firstRun = !isLoading && rows.length === 0
-  const toolbarAction = firstRun ? undefined : action && hint ? (
-    <DelayedHint text={hint}>{action}</DelayedHint>
-  ) : (
-    action
-  )
+  // The create action stays at the top right with or without rows; the empty
+  // state under it says what the table is for and does not repeat the button.
+  const toolbarAction = action && hint ? <DelayedHint text={hint}>{action}</DelayedHint> : action
   return (
     <DetailTable<T>
       // Flush with the content column: the settings rail is the frame.
@@ -200,7 +195,7 @@ export function Panel({ children }: { children: ReactNode }) {
 }
 
 /**
- * The same stack, at full width — for the panels that are mostly a table.
+ * The same stack, at full width: for the panels that are mostly a table.
  *
  * `fill` makes it take the rest of the page body, for a panel whose only
  * content is its first-run `EmptyState`: a `size="page"` block centres in the
@@ -213,24 +208,27 @@ export function WidePanel({ children, fill = false }: { children: ReactNode; fil
   )
 }
 
+/** A panel's create action: top right, whether the panel has rows or not. */
+export function PanelActions({ children }: { children: ReactNode }) {
+  return <div className="flex justify-end gap-2">{children}</div>
+}
+
 /**
  * A panel with nothing in it yet: the shared `EmptyState` at page size, centred
- * in the page body, with the create button and a link to the docs. Render it
- * *instead of* the panel's list and toolbar, so the create action is offered
- * once, and inside `<WidePanel fill>` so it has a height to centre in.
+ * in the page body, with a link to the docs. Render it *instead of* the
+ * panel's list, under the same top-right create action the list has (see
+ * `PanelActions`), and inside `<WidePanel fill>` so it has a height to centre in.
  */
 export function PanelFirstRun({
   scene = 'settings',
   title,
   description,
-  action,
   docsHref,
   docsLabel = 'Read the docs',
 }: {
   scene?: EmptyScene
   title: string
   description: string
-  action: ReactNode
   docsHref?: string
   docsLabel?: string
 }) {
@@ -240,7 +238,6 @@ export function PanelFirstRun({
       scene={scene}
       title={title}
       description={description}
-      action={action}
       {...(docsHref
         ? {
             secondaryAction: (
@@ -248,7 +245,7 @@ export function PanelFirstRun({
                 variant="outline"
                 nativeButton={false}
                 // `role="link"`: Base UI marks a non-native button `role="button"`,
-                // and this navigates — it should be announced as the link it is.
+                // and this navigates: it should be announced as the link it is.
                 render={<a href={docsHref} target="_blank" rel="noreferrer" role="link" />}
               >
                 {docsLabel}

@@ -35,7 +35,7 @@ function catalogueQuery() {
   return recorded.queries.filter((q) => q.queryKey.includes('accessRoles')).at(-1)
 }
 
-describe('useAccessControl — the role catalogue', () => {
+describe('useAccessControl: the role catalogue', () => {
   it('is not requested before an environment is chosen, so it cannot 403', () => {
     const access = useAccessControl('jwt', { environmentId: null })
     expect(catalogueQuery()?.enabled).toBe(false)

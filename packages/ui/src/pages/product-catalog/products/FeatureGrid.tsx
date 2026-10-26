@@ -13,6 +13,7 @@ import {
 import {
   aggregationFormula,
   DEFAULT_FEATURE_QUERY,
+  isFeatureQueryFiltered,
   FEATURE_SORT_LABEL,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
@@ -20,6 +21,7 @@ import {
   type FeatureQuery,
   FeatureSortField,
   FEATURE_FILTERS,
+  withFilterOptions,
 } from '@fp/domain'
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
@@ -42,11 +44,11 @@ import {
 } from '../../shared/cells'
 
 /**
- * The feature list — and the reference migration onto `EntityList`.
+ * The feature list: and the reference migration onto `EntityList`.
  *
  * There is almost nothing here now, which is the point. Everything this file
- * used to own — the `useTable` call, the `tableLayout`, the toolbar, the
- * footer, the empty body, the fit-to-window state — was the same code as the
+ * used to own: the `useTable` call, the `tableLayout`, the toolbar, the
+ * footer, the empty body, the fit-to-window state: was the same code as the
  * eleven other grids, differing only in the ways nobody chose. What is left is
  * the part that is genuinely about features: which columns, what they are
  * called, what a row's menu offers, and how a feature query maps onto the
@@ -54,11 +56,11 @@ import {
  *
  * Use it as the template for the remaining eleven. The pattern is:
  *
- *   1. `columns` from the helpers in `cells.tsx` — never a hand-written cell.
+ *   1. `columns` from the helpers in `cells.tsx`: never a hand-written cell.
  *   2. The domain query in, the shared table's flat callbacks out. The route
  *      still owns the query; this only translates.
- *   3. Anything the table cannot know — the status counts, what "filtered"
- *      means for this entity — comes in as a prop.
+ *   3. Anything the table cannot know: the status counts, what "filtered"
+ *      means for this entity: comes in as a prop.
  *
  * Status is deliberately in the toolbar's dropdown and *not* in the filter
  * builder. Offering it in both gives two controls writing `query.statuses`,
@@ -80,7 +82,7 @@ const SORT_OPTIONS = Object.values(FeatureSortField).map((value) => ({
  *
  * Every URL here was requested and returned 200. That check is worth keeping
  * when these change: the first draft guessed `docs.flexprice.io/features`,
- * which 404s — the real site namespaces everything under `/docs/` (or
+ * which 404s: the real site namespaces everything under `/docs/` (or
  * `/api-reference/`), and V1 has been linking the correct paths all along in
  * `flexprice-front/src/constants/guides.tsx`. A dead link in an empty state is
  * worse than no link, because the empty state is where someone has already
@@ -130,10 +132,12 @@ export interface FeatureGridProps {
    * A group id as its name, for the Group chip.
    *
    * Resolved by the page: `POST /features/search` refuses `expand=groups`
-   * (checked — it answers 400 "Field is not allowed to be expanded"), so the
+   * (checked: it answers 400 "Field is not allowed to be expanded"), so the
    * feature carries only `groupId` and the names are fetched alongside.
    */
   groupName?: ((groupId: string) => string | undefined) | undefined
+  /** Choices for filters whose options are the account's records, e.g. `group_id`. */
+  filterOptions?: Readonly<Record<string, readonly { value: string; label: string }[]>>
   /** Plans, entitlements and subscriptions per feature id. */
   linkage?: ReadonlyMap<string, FeatureLinkage>
   /** The linkage is still being read; its three columns show a placeholder. */
@@ -163,6 +167,7 @@ export interface FeatureGridProps {
 export function FeatureGrid({
   features,
   groupName,
+  filterOptions,
   linkage,
   linkageLoading = false,
   onCreateEntitlement,
@@ -229,15 +234,15 @@ export function FeatureGrid({
         skeleton: <Skeleton className="h-6 w-32 rounded-md" />,
       },
       {
-        // The label the feature is filed under, as a chip.
+        // The tag the feature is filed under, as a chip.
         id: 'group',
-        header: 'Group',
+        header: 'Tag',
         width: 140,
         text: (row) => (row.groupId ? (groupName?.(row.groupId) ?? row.groupId) : ''),
         cell: (row) => {
           if (!row.groupId) return <EmDash />
           const name = groupName?.(row.groupId)
-          // The id until the names arrive — never a blank cell for a feature
+          // The id until the names arrive: never a blank cell for a feature
           // that does have a group.
           return <Tag>{name ?? row.groupId}</Tag>
         },
@@ -359,7 +364,7 @@ export function FeatureGrid({
         cell: (row) => <Status value={FEATURE_STATUS_LABEL[row.status]} />,
         skeleton: <Skeleton className="h-6 w-20 rounded-full" />,
       },
-      // Real, and off by default exactly as the redesign has them — the layout
+      // Real, and off by default exactly as the redesign has them: the layout
       // does not spend a column on either, but both stay in the `⋯` menu.
       dateColumn<Feature>('createdAt', 'Created', (row) => row.createdAt, {
         width: 130,
@@ -447,7 +452,7 @@ export function FeatureGrid({
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search features…"
       filter={granularFilter({
-        specs: FEATURE_FILTERS,
+        specs: withFilterOptions(FEATURE_FILTERS, filterOptions ?? {}),
         filters: query.filters ?? [],
         onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
@@ -478,29 +483,14 @@ export function FeatureGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={
-        query.search.length > 0 ||
-        query.types.length > 0 ||
-        query.statuses.length > 0 ||
-        (query.filters?.length ?? 0) > 0
-      }
+      isFiltered={isFeatureQueryFiltered(query)}
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No features match these filters"
       empty={{
         scene: 'catalog',
         title: 'Nothing is being measured yet',
         description:
-          'A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
-        ...(onCreate
-          ? {
-              actions: (
-                <Button onClick={onCreate}>
-                  <PlusIcon aria-hidden />
-                  New feature
-                </Button>
-              ),
-            }
-          : {}),
+          'A feature is what you meter or gate: API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
         guides: GUIDES,
       }}
     />

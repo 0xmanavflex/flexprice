@@ -6,7 +6,7 @@
  *     UI  ->  @fp/query  ->  @fp/api  ->  @flexprice/sdk  ->  backend
  *
  * Importing `@fp/api`, `@flexprice/sdk` or a service from a component is an
- * ESLint error rather than a review comment. The reason is not tidiness — it is
+ * ESLint error rather than a review comment. The reason is not tidiness: it is
  * that a component which knows how its data arrives cannot be rendered in a
  * story, cannot be tested without a network, and cannot survive the API
  * changing shape. Watchtower V2 enforces the same rule; this is that rule with
@@ -47,8 +47,11 @@ export {
 } from './provider'
 export type { FlexpriceProviderProps } from './provider'
 
+export { toCostAnalytics, useCustomerCostAnalytics } from './costAnalytics'
+export type { CostAnalytics } from './costAnalytics'
 export {
   toEnvironment,
+  useCopyEnvironment,
   useCreateEnvironment,
   useCurrentUser,
   useEnvironmentList,
@@ -58,7 +61,7 @@ export {
   useSignUp,
   useSignUpWithToken,
 } from './session'
-export type { CurrentUser, RenameEnvironment, SessionCredentials } from './session'
+export type { CopyEnvironment, CurrentUser, RenameEnvironment, SessionCredentials } from './session'
 
 export { PASSWORD_ONLY, useAuthCapabilities, useAuthCapabilitiesValue } from './authCapabilities'
 export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
@@ -81,8 +84,10 @@ export {
   useUpdateInvoiceMetadata,
   useUpdateInvoicePaymentStatus,
   useInvoice,
+  useInvoicePdfLink,
   useInvoices,
   useRecalculateInvoice,
+  useReplaceVoidedInvoice,
   useSendInvoice,
   useVoidInvoice,
 } from './invoices'
@@ -134,6 +139,7 @@ export {
 export type { PlanPage, PlanSubscriptionRow, PlanWire } from './plans'
 
 export {
+  useSyncAddonPrices,
   fetchAddons,
   toAddon,
   toAddonFilter,
@@ -225,6 +231,7 @@ export {
   useCustomers,
   useCustomerSubscriptions,
   useCustomerUsageSummary,
+  useContractUsageSummary,
   toCreateCustomerRequest,
   toUpdateCustomerRequest,
   useCreateCustomer,
@@ -260,11 +267,16 @@ export {
   toLineItemChangeRequest,
   toUpdateLineItemRequest,
   useActivateSubscription,
+  usePauseSubscription,
+  useResumeSubscription,
   useUpdateSubscriptionMetadata,
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,
   useCancelSubscriptionCreditGrant,
   useCustomerContractCounts,
+  useInheritanceBlocks,
+  toInheritanceBlocks,
+  explainContractHierarchyError,
   useCancelSubscription,
   useCreateSubscription,
   useCreateSubscriptionLineItem,
@@ -273,6 +285,7 @@ export {
   toRemoveCouponRequest,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
+  useRemoveSubscriptionCoupon,
   useCreateSubscriptionCreditGrant,
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
@@ -343,7 +356,13 @@ export {
 } from './taxRates'
 export type { TaxRatePage, TaxRateWire } from './taxRates'
 
-export { fetchRawEvents, toRawEvent, toRawEventFilter, useRawEvents } from './rawEvents'
+export {
+  fetchRawEvents,
+  toRawEvent,
+  toRawEventFilter,
+  useRawEvents,
+  useRawEventsInfinite,
+} from './rawEvents'
 export type { RawEventPage, RawEventWire } from './rawEvents'
 
 export {
@@ -390,7 +409,7 @@ export type { CreditGrantWire } from './creditGrants'
  * `GET/PUT/DELETE /settings/:key` had no SDK module, and therefore no hook,
  * and that those screens should render an unavailable state. The first half
  * was true and the conclusion was wrong: the routes are live and answer 200
- * today — only SAML is genuinely absent, and only because the deployment does
+ * today: only SAML is genuinely absent, and only because the deployment does
  * not mount it. `settings.ts` is the correction, reaching them the way
  * `session.ts` reaches the other undocumented routes.
  */
@@ -447,7 +466,7 @@ export type { TenantBillingUsageWire, TenantWire } from './tenant'
 /**
  * The `/settings/{key}` family: one query hook and two mutations per key,
  * plus the SAML read and the Svix portal handoff. Every one of them takes the
- * active environment id — these records are per environment, and so are their
+ * active environment id: these records are per environment, and so are their
  * cache entries. See `settings.ts`.
  */
 export {
@@ -498,6 +517,8 @@ export {
   useCreateAlertSetting,
   useDeleteAlertSetting,
   useUpdateAlertSetting,
+  useAddLineItemAlert,
+  useLineItemAlertLookup,
   toAlertConfigRequest,
 } from './alertSettings'
 export type { AlertSettingPage, AlertSettingWire } from './alertSettings'
@@ -594,6 +615,8 @@ export {
   useTerminateWallet,
   useTopUpWallet,
   useUpdateAutoTopup,
+  useUpdateWalletMetadata,
+  useUpdateWalletAlerts,
   useWalletBalance,
   useWalletTransactions,
 } from './wallets'
@@ -695,3 +718,7 @@ export type { PortalAction, PortalQuery } from './customerPortal'
 export type { PortalAuth } from '@fp/api'
 export { useCreateCustomerPortalSession } from './customerPortalSession'
 export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'
+export { reportBreakdown, reportCurrencies, reportScalar, reportSeries, useReport } from './reports'
+export type { ReportBreakdownRow, ReportPoint, ReportScalar } from './reports'
+export type { ReportQuery, ReportResult } from '@fp/api'
+export { usePushCustomerToIntegrations } from './integrationSync'

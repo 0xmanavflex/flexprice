@@ -105,7 +105,7 @@ export const IsAnnounced: Story = {
 /**
  * The first-run offer takes the grid's empty body in place.
  *
- * A grid can only describe a filtered miss — from inside the table, "nothing
+ * A grid can only describe a filtered miss: from inside the table, "nothing
  * matched" and "nothing exists" are both zero rows. So the page publishes
  * which one it is, and the copy written for the filter gives way to the
  * invitation, in the same slot, under the same toolbar.
@@ -135,7 +135,8 @@ export const FirstRunTakesTheSlot: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('No features yet')).toBeInTheDocument()
     await expect(canvas.queryByText(/match these filters/)).not.toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'New feature' })).toBeVisible()
+    // The create action is the toolbar's; the empty body does not repeat it.
+    await expect(canvas.queryByRole('button', { name: 'New feature' })).not.toBeInTheDocument()
     // The filter had nothing to do with this, so it is not offered as the fix.
     await expect(canvas.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
   },
@@ -224,7 +225,7 @@ export const PageSizedIsCentred: Story = {
  *
  * The console's `PanelFirstRun` renders exactly this: a page-sized
  * `EmptyState` alone in the page body (`PageBody` > a `flex-1` panel), with the
- * create button and an outline link to the docs, and no toolbar above it — so
+ * create button and an outline link to the docs, and no toolbar above it: so
  * the create action appears once. The copy here mirrors the panels'.
  */
 function DeveloperFirstRunFrame({ children }: { children: ReactNode }) {

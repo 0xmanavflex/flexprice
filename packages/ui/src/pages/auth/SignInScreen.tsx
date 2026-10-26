@@ -24,7 +24,7 @@ export const SignInScreenProvenance = provenance({
 })
 
 export interface SignInScreenProps extends SignInFormProps {
-  /** Start Google sign-in. Omitted — and the button not drawn — when the
+  /** Start Google sign-in. Omitted: and the button not drawn: when the
    * deployment does not offer it. */
   onProvider?: (providerId: string) => void
   /**

@@ -24,8 +24,8 @@ import type { ShellNavGroup, ShellUser } from './types'
  *
  * One inset sidebar that collapses to icons, with the brand mark and the
  * tenant's name at the top, nested navigation below, and the account menu at
- * the bottom. The header carries the breadcrumb — which leads
- * with the environment switcher — and, top-right, search beside whatever one
+ * the bottom. The header carries the breadcrumb: which leads
+ * with the environment switcher: and, top-right, search beside whatever one
  * control belongs to the whole page rather than to its content.
  *
  * This replaces a two-level rail, and the reason is the product's own shape:
@@ -59,9 +59,11 @@ export interface AppShellProps {
   /** Global search: static items, async results and the select handler. */
   search?: ShellSearchProps
 
-  /** Pinned above the footer — an allowance, a usage meter, an alert count. */
+  /** Pinned above the footer: an allowance, a usage meter, an alert count. */
   pinned?: ReactNode
   breadcrumb?: ReactNode
+  /** Sits in the header, to the left of search. */
+  headerLeading?: ReactNode
   /** One control that belongs to the page as a whole, not to its content. */
   headerActions?: ReactNode
   children: ReactNode
@@ -99,6 +101,7 @@ export function AppShell({
   search,
   pinned,
   breadcrumb,
+  headerLeading,
   headerActions,
   children,
 }: AppShellProps) {
@@ -118,7 +121,7 @@ export function AppShell({
         <Sidebar collapsible="icon" variant="inset" aria-label="Main">
           <SidebarHeader className="px-3 pt-3">
             {/*
-              The Flexprice mark, then the tenant this console is signed in to —
+              The Flexprice mark, then the tenant this console is signed in to:
               its name from `/users/me`, falling back to the product name until
               that resolves. The name drops out in the icon rail.
             */}
@@ -170,19 +173,26 @@ export function AppShell({
         </Sidebar>
 
         <SidebarInset className="border-border/80 ml-0! min-h-0 overflow-hidden border shadow-none!">
-          <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b px-4 sm:px-10 2xl:px-14">
-            {/* The trigger is the only thing that opens the sheet below `lg`,
-              where the sidebar is a sheet rather than a push panel. */}
-            <div className="flex min-w-0 items-center gap-1.5 text-sm">
-              <SidebarTrigger className="-ml-2 lg:hidden" />
-              {breadcrumb}
-            </div>
-            {/* `shrink-0` so the cluster is never squeezed off by a long
-              breadcrumb; the crumbs truncate instead, keeping Create reachable
-              at 390. */}
-            <div className="flex shrink-0 items-center gap-1.5">
-              <ShellSearch {...(search ?? {})} />
-              {headerActions}
+          {/* The rule spans the inset; the row inside takes the same measure as
+            the page below it (`--shell-max`, `px-6`, centred), so the
+            breadcrumb and the header cluster line up with the content's edges
+            at every width instead of sitting 40–56px in over a 24px page. */}
+          <header className="flex h-12 shrink-0 border-b">
+            <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-w-0 items-center justify-between gap-3 px-6">
+              {/* The trigger is the only thing that opens the sheet below `lg`,
+                where the sidebar is a sheet rather than a push panel. */}
+              <div className="flex min-w-0 items-center gap-1.5 text-sm">
+                <SidebarTrigger className="-ml-2 lg:hidden" />
+                {breadcrumb}
+              </div>
+              {/* `shrink-0` so the cluster is never squeezed off by a long
+                breadcrumb; the crumbs truncate instead, keeping Create reachable
+                at 390. */}
+              <div className="flex shrink-0 items-center gap-1.5">
+                {headerLeading}
+                <ShellSearch {...(search ?? {})} />
+                {headerActions}
+              </div>
             </div>
           </header>
 

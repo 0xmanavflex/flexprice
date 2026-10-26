@@ -26,7 +26,7 @@ import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provide
  * Two routes that read as one screen but are unrelated records:
  * `GET /tenants/{id}` for the organisation, `getTenantBillingUsage` for the
  * plan-and-usage panel V1 never shipped. The write is `PUT /tenants/update`,
- * which takes no id — it always edits the caller's own tenant.
+ * which takes no id: it always edits the caller's own tenant.
  */
 
 interface AddressWire {
@@ -94,7 +94,7 @@ export function toTenant(wire: TenantWire): Tenant {
  * The update request, in the SDK's camelCase.
  *
  * Every field is sent, including the empty ones, so clearing a billing email
- * clears it — `PUT /tenants/update` merges what it is given, and an omitted
+ * clears it: `PUT /tenants/update` merges what it is given, and an omitted
  * field keeps its old value.
  *
  * The keys here are `billingDetails`, `helpEmail`, `addressLine1` and so on
@@ -130,7 +130,7 @@ export async function fetchTenant(client: Flexprice, id: string): Promise<Tenant
 /**
  * One tenant, by id.
  *
- * The id comes from the session — `useCurrentUser().data?.tenantId`. The route
+ * The id comes from the session: `useCurrentUser().data?.tenantId`. The route
  * refuses any other tenant with a 403 ("You can only access your own tenant's
  * details"), verified live, so there is no cross-tenant lookup to build.
  */
@@ -164,7 +164,7 @@ export function useUpdateTenant() {
 }
 
 /**
- * Replace a tenant's metadata, leaving everything else alone —
+ * Replace a tenant's metadata, leaving everything else alone:
  * `PUT /tenants/update` with only `name` and `metadata`, as V1 sends it.
  *
  * Separate from `useUpdateTenant` on purpose: that one always sends the
@@ -199,7 +199,13 @@ export function useUpdateTenantMetadata() {
  */
 export interface FeatureUsageWire {
   feature?:
-    { id?: string | undefined; name?: string | undefined; type?: string | undefined } | undefined
+    | {
+        id?: string | undefined
+        name?: string | undefined
+        type?: string | undefined
+        unitPlural?: string | undefined
+      }
+    | undefined
   totalLimit?: number | null | undefined
   isUnlimited?: boolean | undefined
   currentUsage?: string | undefined
@@ -207,6 +213,16 @@ export interface FeatureUsageWire {
   isEnabled?: boolean | undefined
   isSoftLimit?: boolean | undefined
   nextUsageResetAt?: Date | null | undefined
+  sources?:
+    | Array<{
+        subscriptionId?: string | undefined
+        entityId?: string | undefined
+        entityType?: string | undefined
+        entityName?: string | undefined
+        usageResetPeriod?: string | undefined
+        staticValue?: string | undefined
+      }>
+    | undefined
 }
 
 interface TenantSubscriptionWire {
@@ -270,6 +286,15 @@ export function toFeatureUsage(wire: FeatureUsageWire): TenantFeatureUsage {
     isEnabled: wire.isEnabled ?? false,
     isSoftLimit: wire.isSoftLimit ?? false,
     nextUsageResetAt: wire.nextUsageResetAt ?? null,
+    unit: wire.feature?.unitPlural ?? '',
+    sources: (wire.sources ?? []).map((source) => ({
+      subscriptionId: source.subscriptionId ?? '',
+      entityId: source.entityId ?? '',
+      entityType: source.entityType ?? '',
+      entityName: source.entityName ?? '',
+      usageResetPeriod: source.usageResetPeriod ?? '',
+      staticValue: source.staticValue ?? '',
+    })),
   }
 }
 
@@ -290,7 +315,7 @@ export function toTenantBillingUsage(wire: TenantBillingUsageWire): TenantBillin
  * `/tenants/billing` is reached with `fetch` rather than through the generated
  * client (see `fetchTenantBillingUsage`), so nothing camelCases its keys or
  * turns its timestamps into `Date`s. This does both, and then hands off to
- * `toTenantBillingUsage` — the mapper and its tests stay the ones that will
+ * `toTenantBillingUsage`: the mapper and its tests stay the ones that will
  * still be right when the SDK can make this call itself, and deleting this
  * function is the whole of the cleanup.
  */
@@ -325,6 +350,7 @@ export function toTenantBillingWire(raw: unknown): TenantBillingUsageWire {
             id: text(feature['id']),
             name: text(feature['name']),
             type: text(feature['type']),
+            unitPlural: text(feature['unit_plural']),
           },
           // Preserved as null when null: an unlimited entitlement sends
           // `total_limit: null`, and a `?? 0` here renders "0 of 0" for
@@ -337,6 +363,17 @@ export function toTenantBillingWire(raw: unknown): TenantBillingUsageWire {
           isEnabled: row['is_enabled'] === true,
           isSoftLimit: row['is_soft_limit'] === true,
           nextUsageResetAt: asDate(row['next_usage_reset_at']),
+          sources: asArray(row['sources']).map((entry) => {
+            const source = asRecord(entry)
+            return {
+              subscriptionId: text(source['subscription_id']),
+              entityId: text(source['entity_id']),
+              entityType: text(source['entity_type']),
+              entityName: text(source['entity_name']),
+              usageResetPeriod: text(source['usage_reset_period']),
+              staticValue: text(source['static_value']),
+            }
+          }),
         }
       }),
       period: { startTime: asDate(period['start_time']), endTime: asDate(period['end_time']) },
@@ -365,14 +402,14 @@ function asDate(value: unknown): Date | null {
 }
 
 /**
- * What Flexprice is billing this tenant — plan, and entitlement usage.
+ * What Flexprice is billing this tenant: plan, and entitlement usage.
  *
  * **The SDK cannot make this call, for the sake of one character.** Its
  * generated `tenants.getTenantBillingUsage()` requests `GET
  * /v1/tenant/billing`; the deployed route is `GET /v1/tenants/billing`,
  * plural. Verified live against `api.cloud.flexprice.io`: the singular path
- * answers `404 text/plain "404 page not found"` — a route that does not exist,
- * not a tenant without billing — while the plural path returns 200 with
+ * answers `404 text/plain "404 page not found"`: a route that does not exist,
+ * not a tenant without billing: while the plural path returns 200 with
  * exactly the `{usage, subscriptions}` body the SDK's own response model
  * describes.
  *
@@ -410,8 +447,8 @@ export async function fetchTenantBillingUsage(
  *
  * Takes no arguments, and the key carries no environment id, unlike the
  * `/settings/{key}` hooks next door. Both are deliberate: this record is the
- * tenant's — the same plan and the same entitlement usage whichever
- * environment is selected — and the environment header this route insists on
+ * tenant's: the same plan and the same entitlement usage whichever
+ * environment is selected: and the environment header this route insists on
  * is an access check rather than a scope. Keying it per environment would
  * multiply one answer into as many cache entries as the tenant has
  * environments, each refetched on every switch.

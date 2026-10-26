@@ -94,6 +94,7 @@ function Harness({
   onBack,
   onEdit,
   onStreamEvents,
+  streamEventsReason,
   onUpdateField,
   subscriptionsLoading = false,
   subscriptionsError = false,
@@ -114,6 +115,7 @@ function Harness({
   onBack?: () => void
   onEdit?: () => void
   onStreamEvents?: () => void
+  streamEventsReason?: string
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
   subscriptionsLoading?: boolean
   subscriptionsError?: boolean
@@ -147,6 +149,7 @@ function Harness({
         {...(onOpenPlan ? { onOpenPlan } : {})}
         {...(onEdit ? { onEdit } : {})}
         {...(onStreamEvents ? { onStreamEvents } : {})}
+        {...(streamEventsReason ? { streamEventsReason } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
       />
     </div>
@@ -165,7 +168,7 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
     a11y: {
-      // Base UI's portal focus guards — see AppShell.stories.tsx.
+      // Base UI's portal focus guards: see AppShell.stories.tsx.
       config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
     },
   },
@@ -287,8 +290,9 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
-    // Overview opens on the invoices table. Its title is for assistive tech; the table is what is on screen.
-    await expect(canvas.getByRole('region', { name: 'Invoices table' })).toBeVisible()
+    // Overview leads with the five most recent invoices, under their own heading.
+    const recent = canvas.getByRole('heading', { name: 'Recent invoices' }).closest('section')
+    await expect(within(recent as HTMLElement).getByRole('table')).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Contracts' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
@@ -351,6 +355,20 @@ export const CreatesInvoiceFromMenu: Story = {
   },
 }
 
+/** An archived customer is read-only: a strip says so, and the record's actions are disabled. */
+export const ArchivedIsReadOnly: Story = {
+  args: { customer: { ...CUSTOMER, status: 'archived' }, onEdit: fn(), onCreateInvoice: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('This customer is archived')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
+    const body = within(canvasElement.ownerDocument.body)
+    const edit = await body.findByRole('menuitem', { name: /Edit customer/ })
+    await expect(edit).toHaveAttribute('aria-disabled', 'true')
+    await expect(args.onEdit).not.toHaveBeenCalled()
+  },
+}
+
 /** "Stream sample events" is in the actions menu only when the page offers it. */
 export const StreamsSampleEventsFromMenu: Story = {
   args: { onStreamEvents: fn() },
@@ -363,20 +381,22 @@ export const StreamsSampleEventsFromMenu: Story = {
   },
 }
 
-/** Without `onStreamEvents` (production, or no live subscription) the item is absent. */
+/** Without `onStreamEvents` the item stays, disabled, with the reason under the label. */
 export const NoSampleEventsWithoutHandler: Story = {
+  args: { streamEventsReason: 'Needs an active or trialing contract.' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
     const body = within(canvasElement.ownerDocument.body)
-    await body.findByRole('menuitem', { name: 'Top up wallet' })
-    await expect(body.queryByRole('menuitem', { name: 'Stream sample events' })).toBeNull()
+    const item = await body.findByRole('menuitem', { name: /Stream sample events/ })
+    await expect(item).toHaveAttribute('aria-disabled', 'true')
+    await expect(item).toHaveTextContent('Needs an active or trialing contract.')
   },
 }
 
 /**
  * The header shows the ids and email as copy chips, never as text under the
- * name. The external id leads — it is what the customer's systems use — and
+ * name. The external id leads: it is what the customer's systems use: and
  * the internal id has its own chip beside it.
  */
 export const HeaderCopyChips: Story = {
@@ -421,7 +441,7 @@ export const HeaderEditInPlace: Story = {
   },
 }
 
-/** A customer with nothing on them yet — every section states what will appear. */
+/** A customer with nothing on them yet: every section states what will appear. */
 export const Empty: Story = {
   args: { subscriptions: [], invoices: [] },
   play: async ({ canvasElement }) => {

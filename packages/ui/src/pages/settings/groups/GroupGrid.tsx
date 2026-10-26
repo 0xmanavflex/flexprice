@@ -41,7 +41,7 @@ import {
  * and when it last changed.
  *
  * **The "entity" filter is not here.** `GroupQuery` has no `entityTypes`
- * field, and `toGroupFilter` sends none — so a filter would have to narrow the
+ * field, and `toGroupFilter` sends none: so a filter would have to narrow the
  * twenty-five rows already fetched while the footer kept reporting the
  * server's total, which is the failure `search.ts` was written to stop
  * repeating. The type is a column and a sort away from being useful; making
@@ -51,7 +51,7 @@ import {
  * Worth noting against the redesign's copy: `GroupEntityType` is only
  * `price | feature`. There is no plan group and no add-on group to offer.
  *
- * **No counts beside the status options** — `useCatalogStats` does not cover
+ * **No counts beside the status options**: `useCatalogStats` does not cover
  * groups, and counting the rows on screen answers a different question.
  */
 export const GroupGridProvenance = provenance({
@@ -68,13 +68,13 @@ const SORT_OPTIONS = Object.values(GroupSortField).map((value) => ({
 /** Every URL requested and returned 200; all three are in the docs sitemap. */
 const GUIDES: EntityGuide[] = [
   {
-    title: 'What a group is',
+    title: 'What a tag is',
     description: 'Bundling prices or features so they report and invoice together.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/groups/overview',
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
-    title: 'Creating a group',
+    title: 'Creating a tag',
     description: 'Pick what it holds, name it, and add its members.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/groups/create',
     icon: <LayersIcon aria-hidden className="size-4" />,
@@ -121,7 +121,7 @@ export function GroupGrid({
 }: GroupGridProps) {
   const columns = useMemo<EntityColumn<Group>[]>(
     () => [
-      textColumn<Group>('name', 'Group', (row) => row.name, {
+      textColumn<Group>('name', 'Tag', (row) => row.name, {
         width: 240,
         sortable: true,
         sortValue: GroupSortField.Name,
@@ -187,21 +187,21 @@ export function GroupGrid({
     const actions: EntityRowAction[] = []
     if (onGroupClick) {
       actions.push({
-        label: 'View group',
+        label: 'View tag',
         readOnly: true,
         icon: <LayersIcon aria-hidden className="size-4" />,
         onSelect: () => onGroupClick(group),
       })
     }
     actions.push({
-      label: 'Copy group ID',
+      label: 'Copy tag ID',
       readOnly: true,
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(group.id),
     })
     if (onDelete) {
       actions.push({
-        label: 'Delete group',
+        label: 'Delete tag',
         icon: <Trash2Icon aria-hidden className="size-4" />,
         destructive: true,
         onSelect: () => onDelete(group),
@@ -212,8 +212,8 @@ export function GroupGrid({
 
   return (
     <EntityList<Group>
-      label="Groups"
-      noun="groups"
+      label="Tags"
+      noun="tags"
       rows={groups}
       total={total}
       columns={columns}
@@ -223,10 +223,10 @@ export function GroupGrid({
       onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search groups…"
+      searchPlaceholder="Search tags…"
       /*
-       * No filter control. `useGroups` applies status on the page — "Status is
-       * not a server-side filter here" (query/src/groups.ts) — so a filter
+       * No filter control. `useGroups` applies status on the page: "Status is
+       * not a server-side filter here" (query/src/groups.ts): so a filter
        * would narrow the rows already fetched while the footer went on
        * reporting the server's total. That mismatch is the reason
        * `NoEntityFilter` exists, and it fails the moment one is added.
@@ -250,7 +250,7 @@ export function GroupGrid({
         onCreate ? (
           <Button onClick={onCreate}>
             <PlusIcon aria-hidden />
-            New group
+            New tag
           </Button>
         ) : undefined
       }
@@ -262,13 +262,12 @@ export function GroupGrid({
         query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
       }
       {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No groups match these filters"
+      filteredEmptyTitle="No tags match these filters"
       empty={{
         scene: 'settings',
-        title: 'No groups yet',
+        title: 'No tags yet',
         description:
-          'A group bundles prices or features so they can be filtered, reported and invoiced together — a product line, a region, a tier.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New group</Button> } : {}),
+          'A tag bundles prices or features so they can be filtered, reported and invoiced together: a product line, a region, a tier.',
         guides: GUIDES,
       }}
     />

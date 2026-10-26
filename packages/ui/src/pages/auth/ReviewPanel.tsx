@@ -10,7 +10,7 @@ import { CUSTOMER_LOGOS, TESTIMONIALS, type Testimonial } from './testimonials'
  * The right-hand panel of every sign-in screen, after the dashboard redesign.
  *
  * An inset island holding admin.flexprice.io's login photograph (one per
- * theme) under a light veil; a review carousel in the upper part — the current
+ * theme) under a light veil; a review carousel in the upper part: the current
  * review at full strength, the next one peeking in at 30%, the outgoing one
  * drifting left as it fades, every 6.5 s, paused on hover and still under
  * reduced motion; and the "Trusted by" logo grid along the foot.
@@ -174,7 +174,7 @@ function ReviewCarousel({ start }: { start: number }) {
       {/*
         The dots are the whole control. The chevrons that sat beside them were
         a second way to do what the dots already do, on a panel that also
-        advances on its own — and each dot names the review it goes to, which
+        advances on its own: and each dot names the review it goes to, which
         a chevron cannot.
       */}
       <div className="mt-4 flex items-center">

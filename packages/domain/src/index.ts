@@ -1,14 +1,14 @@
 /**
  * The product's vocabulary.
  *
- * Everything here is pure and dependency-free — no SDK, no HTTP, no React.
+ * Everything here is pure and dependency-free: no SDK, no HTTP, no React.
  * Transport types stop below this layer: `@fp/query` fetches a
  * `CustomerResponse` and hands the UI a domain model, so no component ever
  * receives a `WalletResponse`.
  *
  * That boundary is also where Flexprice's internal language becomes the
- * product's. Watchtower established the pattern — a recurring credit grant is
- * presented as a *monthly budget*, a one-time grant as a *top-up* — and the
+ * product's. Watchtower established the pattern: a recurring credit grant is
+ * presented as a *monthly budget*, a one-time grant as a *top-up*: and the
  * same translation belongs here, once, rather than in each screen that renders
  * it.
  *
@@ -17,7 +17,7 @@
  * SDK already has them, and they are only interesting once something renders.
  */
 export { activityByline, activitySourceLabel, activityTitle, describeActivity } from './activity'
-export type { ActivityEntry, ActivityFacts } from './activity'
+export type { ActivityEntry, ActivityFacts, ActivityField } from './activity'
 export {
   InvalidMoneyError,
   compareMoney,
@@ -25,7 +25,9 @@ export {
   isNegativeMoney,
   isZeroMoney,
   money,
+  perUnit,
   moneyOr,
+  currencySymbol,
 } from './money'
 export type { Money } from './money'
 export {
@@ -34,7 +36,9 @@ export {
   decodeListFilters,
   encodeListFilters,
   isRunnableFilter,
+  splitKeyValue,
   runnableFilters,
+  sameListFilters,
   withFilterOptions,
 } from './listFilter'
 export type { FilterKind, ListFilter, ListFilterSpec } from './listFilter'
@@ -44,6 +48,9 @@ export {
   INVOICE_FILTERS,
   InvoiceLinePriceType,
   InvoiceSortField,
+  invoiceRecalculation,
+  type InvoiceRecalculation,
+  DRAFT_INVOICE_NUMBER_LABEL,
   InvoiceStatus,
   createInvoiceSchema,
   sumLineAmounts,
@@ -138,10 +145,13 @@ export {
 export type { CreateCreditGrant, CreditGrant, EditCreditGrant } from './creditGrant'
 
 export {
+  AGGREGATION_DESCRIPTION,
   AGGREGATION_LABEL,
   aggregationFormula,
   AggregationType,
   DEFAULT_FEATURE_QUERY,
+  ACTIVE_FEATURES_FILTER,
+  isFeatureQueryFiltered,
   FEATURE_FILTERS,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
@@ -151,6 +161,7 @@ export {
   createFeatureSchema,
   emptyFeature,
   meterSchema,
+  allowsExpression,
   needsAggregationTarget,
   FEATURE_SORT_LABEL,
   FeatureSortField,
@@ -273,6 +284,8 @@ export {
   CustomerStatus,
   CustomerTaxTreatment,
   DEFAULT_CUSTOMER_QUERY,
+  ACTIVE_CUSTOMERS_FILTER,
+  isCustomerQueryFiltered,
   CUSTOMER_FILTERS,
   createCustomerSchema,
   editCustomerSchema,
@@ -301,6 +314,10 @@ export {
   SubscriptionSortField,
   SubscriptionStatus,
   createSubscriptionSchema,
+  INHERITANCE_BLOCK_LABEL,
+  INHERITANCE_WITH_BILLING_CUSTOMER,
+  INHERITANCE_WITH_THRESHOLD,
+  InheritanceBlock,
   emptySubscription,
   emptyPhase,
   phaseStarts,
@@ -322,6 +339,9 @@ export {
   lineLineages,
   lineRevertDraft,
   type LineLineage,
+  commitmentPeriodNoun,
+  canPauseSubscription,
+  canResumeSubscription,
 } from './subscription'
 export type {
   ChangeLineQuantity,
@@ -329,10 +349,13 @@ export type {
   LineChangePreview,
   EndContractCharge,
   CancelSubscription,
+  PauseSubscription,
+  ResumeSubscription,
   CreateSubscription,
   SubscriptionDiscount,
   SubscriptionPhase,
   ChargeCommitment,
+  ContractCommitment,
   InvoicePreview,
   InvoicePreviewLine,
   Subscription,
@@ -375,6 +398,7 @@ export type {
 
 export {
   DEFAULT_PAYMENT_QUERY,
+  RECORDABLE_PAYMENT_METHODS,
   PAYMENT_METHOD_LABEL,
   PAYMENT_SORT_LABEL,
   PAYMENT_STATUS_LABEL,
@@ -487,6 +511,7 @@ export type {
   TenantAddress,
   TenantBillingUsage,
   TenantFeatureUsage,
+  EntitlementUsageSource,
   TenantPlan,
   UpdateTenant,
 } from './tenant'
@@ -517,13 +542,13 @@ export type {
 } from './alertSetting'
 
 /**
- * The seven `/settings/{key}` records — invoice numbering, subscription
+ * The seven `/settings/{key}` records: invoice numbering, subscription
  * dunning, custom currencies, the customer portal, onboarding automation,
  * wallet alerts and SAML.
  *
  * Enumerated here rather than `export *`-ed, like everything else in this
  * file, so that what the package offers is readable in one place. The keys
- * themselves live in `settings/`, one file each — and mind that the
+ * themselves live in `settings/`, one file each: and mind that the
  * tenant-wide wallet alert config is not the per-entity `alertSetting.ts`
  * above.
  */
@@ -672,11 +697,15 @@ export { INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './integrationConnect'
 export {
+  WalletKind,
+  WALLET_KIND_LABEL,
   WALLET_STATUS_LABEL,
   WalletStatus,
   WalletTopUpKind,
   autoTopupSchema,
   createWalletSchema,
+  AutoTopupCooldownUnit,
+  AUTO_TOPUP_COOLDOWN_UNIT_LABEL,
   emptyAutoTopup,
   debitWalletSchema,
   emptyDebit,
@@ -904,3 +933,4 @@ export type {
   PortalWallet,
   PortalWalletTransaction,
 } from './customerPortal'
+export { CONTRACT_TERMS, contractAmountPerPeriod } from './contractAmount'

@@ -23,7 +23,7 @@ export function usePlanFormOptions() {
       ...(f.unitSingular ? { unit: f.unitSingular } : {}),
       // Both decide whether a usage window may be set on a charge, and the
       // charge form leaves the field out rather than guessing when they are
-      // absent — see `MeterOption`.
+      // absent: see `MeterOption`.
       ...(f.aggregationType ? { aggregationType: f.aggregationType } : {}),
       ...(f.meterBucketSize ? { bucketSize: f.meterBucketSize } : {}),
     }))

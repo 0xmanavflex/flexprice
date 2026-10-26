@@ -28,12 +28,24 @@ export function couponOptionLabel(coupon: ChargeCouponOption): string {
   return coupon.discount ? `${coupon.label} · ${coupon.discount} off` : coupon.label
 }
 
+/** Whether a coupon list has arrived. */
+export type CouponsStatus = 'loading' | 'failed' | 'ready'
+
+/** What a coupon picker says when it has nothing to offer. */
+export function noCouponsText(status: CouponsStatus): string {
+  if (status === 'loading') return 'Loading coupons…'
+  if (status === 'failed') return 'Coupons could not be loaded. Close this and try again.'
+  return 'No coupons yet. Create one under Product catalog → Coupons, then apply it here.'
+}
+
 export interface ChargeCouponDialogProps {
   /** The charge the coupon is for; the dialog is closed while this is null. */
   charge: { priceId: string; name: string } | null
   /** The coupon already on the charge, if any. */
   couponId: string | undefined
   coupons: readonly ChargeCouponOption[]
+  /** Whether the coupon list has arrived; while it has not, the dialog says so. */
+  status?: CouponsStatus
   onClose: () => void
   /** The chosen coupon's id, or null to take the coupon off. */
   onSave: (couponId: string | null) => void
@@ -43,6 +55,7 @@ export function ChargeCouponDialog({
   charge,
   couponId,
   coupons,
+  status = 'ready',
   onClose,
   onSave,
 }: ChargeCouponDialogProps) {
@@ -57,6 +70,7 @@ export function ChargeCouponDialog({
           key={charge.priceId}
           couponId={couponId}
           coupons={coupons}
+          status={status}
           onClose={onClose}
           onSave={onSave}
         />
@@ -68,10 +82,20 @@ export function ChargeCouponDialog({
 function CouponBody({
   couponId,
   coupons,
+  status = 'ready',
   onClose,
   onSave,
 }: Omit<ChargeCouponDialogProps, 'charge'>) {
   const [chosen, setChosen] = useState(couponId ?? '')
+  // Apply coupon is offered on every charge, so the catalogue can be empty:
+  // say where coupons come from instead of an empty list.
+  if (coupons.length === 0 && !couponId) {
+    return (
+      <Composer submitLabel="Apply coupon" onSubmit={() => undefined} onCancel={onClose} disabled>
+        <p className="text-muted-foreground -mt-2 text-sm">{noCouponsText(status)}</p>
+      </Composer>
+    )
+  }
   return (
     <Composer
       submitLabel={couponId ? 'Save coupon' : 'Apply coupon'}

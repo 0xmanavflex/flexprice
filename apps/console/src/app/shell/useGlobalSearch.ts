@@ -41,7 +41,7 @@ export function searchableDestinations(): { items: ShellSearchItem[]; paths: Map
     paths.set(id, action.path)
   }
 
-  // "Open Pylon" / "Open Intercom", only when a provider is configured — as V1's palette.
+  // "Open Pylon" / "Open Intercom", only when a provider is configured: as V1's palette.
   if (isSupportChatAvailable()) {
     items.push({
       id: SUPPORT_CHAT_ACTION_ID,
@@ -77,9 +77,9 @@ export function useGlobalSearch(rawTerm: string) {
   const enabled = term.length >= MIN_TERM
   const base = { page: 1, pageSize: PAGE_SIZE, search: term }
 
-  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, ...base }, { enabled })
+  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, ...base, filters: [] }, { enabled })
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, ...base }, { enabled })
-  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, ...base }, { enabled })
+  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, ...base, filters: [] }, { enabled })
   const invoices = useInvoices({ ...DEFAULT_INVOICE_QUERY, ...base }, { enabled })
 
   const { results, paths } = useMemo(() => {

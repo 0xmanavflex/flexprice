@@ -19,7 +19,7 @@ import { sortWithTieBreak } from './listSort'
  *
  * Reached through `client.costs.queryCostsheet`. The costsheet filter is the
  * one that nests paging under a `queryFilter` rather than taking `limit` and
- * `offset` at the top level — so this is the one converter that has to know
+ * `offset` at the top level: so this is the one converter that has to know
  * that shape. The wire sends the grouped prices as an array; the list only
  * shows how many there are, so the domain carries the count and drops the array.
  */
@@ -69,11 +69,11 @@ const SORT_FIELD: Record<CostSheetSortField, string> = {
 
 export function toCostSheetFilter(query: CostSheetQuery): Record<string, unknown> {
   return {
-    // Paging nests under `queryFilter` for this endpoint — see the note above.
+    // Paging nests under `queryFilter` for this endpoint: see the note above.
     queryFilter: { limit: query.pageSize, offset: (query.page - 1) * query.pageSize },
     sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     /*
-     * Status, server-side — it used to narrow the fetched page in the browser,
+     * Status, server-side: it used to narrow the fetched page in the browser,
      * which left the pager reporting the server's unfiltered total above a
      * handful of rows. Soft-deleted sheets are still dropped in the fetch and
      * taken off that total: a different exclusion the endpoint cannot express.
@@ -98,7 +98,7 @@ export async function fetchCostSheets(
   const response = await call(() => client.costs.queryCostsheet(toCostSheetFilter(query) as never))
   // The search endpoint returns soft-deleted sheets (`status: "deleted"`) with
   // no way to exclude them, and `toCostSheet` would collapse that status to
-  // "published" — so a deleted sheet would sit in the list looking live. A
+  // "published": so a deleted sheet would sit in the list looking live. A
   // deleted sheet is gone, so it is dropped here and taken off the total.
   const items = (response.items ?? []) as CostSheetWire[]
   const live = items.filter((item) => item.status !== 'deleted')
@@ -169,6 +169,7 @@ export function useCreateCostSheet() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Cost sheet created', error: 'Could not create the cost sheet.' } },
     mutationFn: (draft: CreateCostSheet) =>
       call(() => client.costs.createCostsheet(toCreateCostSheetRequest(draft) as never)),
     onSuccess: () => {

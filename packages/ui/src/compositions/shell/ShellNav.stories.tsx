@@ -8,7 +8,7 @@ import { ShellNav } from './ShellNav'
 import type { ShellNavGroup, ShellNavItem } from './types'
 
 /**
- * Nested navigation. A group is open because something inside it is active —
+ * Nested navigation. A group is open because something inside it is active:
  * expansion is derived from the active id, not stored, so a deep link opens
  * the right group with nothing to wire.
  */

@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
-import { FilterBar, type FlatFilter, emptyFilterQuery } from './FilterBar'
+import type { ListFilter } from '@fp/domain'
+import { FilterBar, type FlatFilter, emptyFilterQuery, granularFilter } from './FilterBar'
 
 /**
  * Filtering over `@reui/filters`, in the inline `advanced` chrome (the
@@ -87,7 +88,7 @@ export const Basic: Story = {
   args: { variant: 'basic' },
 }
 
-/** Seeded from a query, the way a filtered URL restores its state — the inline
+/** Seeded from a query, the way a filtered URL restores its state: the inline
  * "Status is any of …" chip renders in place. */
 export const WithActiveFilter: Story = {
   args: {
@@ -105,7 +106,7 @@ export const WithActiveFilter: Story = {
 /**
  * A controlled host that round-trips through the SAME shape a real list screen
  * uses: it keeps only the flattened `statuses`, and re-derives `query` from
- * them. That is what turns a half-built rule — operator chosen, value not — into
+ * them. That is what turns a half-built rule: operator chosen, value not: into
  * the empty query the bar hears back, the exact echo that used to wipe the chip
  * mid-flow. The story exists to hold the bar to completing a filter across that
  * echo. See `SelectsConditionAndValue`.
@@ -141,7 +142,7 @@ function ControlledStatusFilter() {
  *
  * Before the fix, picking the operator flattened the rule to a `values: []`
  * condition the host dropped, and the bar read its own echo of the resulting
- * empty query as an outside change and re-seeded the draft — destroying the chip
+ * empty query as an outside change and re-seeded the draft: destroying the chip
  * and the popover the very frame the operator was chosen, so no filter could be
  * completed. This walks the whole flow and asserts the opposite at each step:
  * the value editor opens after the condition (the popover STAYED open), and the
@@ -177,7 +178,7 @@ export const SelectsConditionAndValue: Story = {
     await userEvent.click(await screen.findByRole('option', { name: /is any of/i }))
 
     // The bug was here: the chip used to vanish as the operator committed. If it
-    // survived, the value editor hands off open — a status option is on screen.
+    // survived, the value editor hands off open: a status option is on screen.
     const activeOption = await screen.findByRole('option', { name: /^active$/i })
     await expect(activeOption).toBeInTheDocument()
 
@@ -192,5 +193,115 @@ export const SelectsConditionAndValue: Story = {
     await expect(canvasElement.querySelector('[data-slot="filter-chip"]')).toHaveTextContent(
       /active/i,
     )
+  },
+}
+
+function MetadataFilterBar({ onChange }: { onChange: (filters: ListFilter[]) => void }) {
+  const [filters, setFilters] = useState<ListFilter[]>([])
+  return (
+    <FilterBar
+      {...granularFilter({
+        specs: [{ field: 'metadata', label: 'Metadata', kind: 'keyvalue' }],
+        filters,
+        onChange: (next) => {
+          setFilters(next)
+          onChange(next)
+        },
+      })}
+    />
+  )
+}
+
+/** A key/value field (metadata): a key and a value, applied together, read back as `key = value`. */
+export const MetadataKeyValue: Story = {
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          { id: 'aria-input-field-name', enabled: false },
+          { id: 'aria-dialog-name', enabled: false },
+        ],
+      },
+    },
+  },
+  args: { onQueryChange: fn() },
+  render: (args) => <MetadataFilterBar onChange={args.onQueryChange as never} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /filter/i }))
+    await userEvent.click(await screen.findByRole('option', { name: /metadata/i }))
+    // One condition ("is"); the picker may offer it before the value step.
+    const condition = screen.queryByRole('option', { name: /^is$/i })
+    if (condition) await userEvent.click(condition)
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Metadata key' }), 'region')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Metadata value' }), 'eu')
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    await expect(args.onQueryChange).toHaveBeenLastCalledWith([
+      { field: 'metadata', op: 'eq', value: 'region=eu' },
+    ])
+    await expect(await canvas.findByText('region = eu')).toBeVisible()
+  },
+}
+
+/** The pair is stored as `key=value`, so a key with "=" is refused, said why. */
+export const MetadataKeyCannotHoldEquals: Story = {
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          { id: 'aria-input-field-name', enabled: false },
+          { id: 'aria-dialog-name', enabled: false },
+          // The story ends with the value step still open and nothing applied,
+          // so the vendored chip's value trigger has no text yet: a gap in the
+          // primitive, not what this story checks.
+          { id: 'button-name', enabled: false },
+        ],
+      },
+    },
+  },
+  args: { onQueryChange: fn() },
+  render: (args) => <MetadataFilterBar onChange={args.onQueryChange as never} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /filter/i }))
+    await userEvent.click(await screen.findByRole('option', { name: /metadata/i }))
+    const condition = screen.queryByRole('option', { name: /^is$/i })
+    if (condition) await userEvent.click(condition)
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Metadata key' }), 'a=b')
+    await expect(screen.getByRole('alert')).toHaveTextContent('A key cannot contain "=".')
+    await expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled()
+    // The bar may report the empty list as the chip opens; it never reports a pair.
+    const calls = (args.onQueryChange as ReturnType<typeof fn>).mock.calls
+    await expect(calls.every(([filters]) => (filters as unknown[]).length === 0)).toBe(true)
+  },
+}
+
+/** Metadata holds one value per key: a second pick on the same key replaces the first chip. */
+export const MetadataOneChipPerKey: Story = {
+  parameters: { ...MetadataKeyCannotHoldEquals.parameters },
+  args: { onQueryChange: fn() },
+  render: (args) => <MetadataFilterBar onChange={args.onQueryChange as never} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const pick = async (key: string, value: string) => {
+      await userEvent.click(canvas.getByRole('button', { name: 'Filter' }))
+      await userEvent.click(await screen.findByRole('option', { name: /metadata/i }))
+      const condition = screen.queryByRole('option', { name: /^is$/i })
+      if (condition) await userEvent.click(condition)
+      await userEvent.type(await screen.findByRole('textbox', { name: 'Metadata key' }), key)
+      await userEvent.type(screen.getByRole('textbox', { name: 'Metadata value' }), value)
+      await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    }
+    await pick('region', 'eu')
+    await expect(await canvas.findByText('region = eu')).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+    await pick('region', 'us')
+    await expect(await canvas.findByText('region = us')).toBeVisible()
+    await expect(canvas.queryByText('region = eu')).toBeNull()
+    await expect(args.onQueryChange).toHaveBeenLastCalledWith([
+      { field: 'metadata', op: 'eq', value: 'region=us' },
+    ])
   },
 }

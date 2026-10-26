@@ -6,11 +6,11 @@ import { OptionCombobox, type OptionComboboxProps } from './OptionCombobox'
 import type { Option } from './OptionSelect'
 
 const CURRENCIES: Option[] = [
-  { value: 'usd', label: 'USD — US dollar' },
-  { value: 'eur', label: 'EUR — Euro' },
-  { value: 'inr', label: 'INR — Indian rupee' },
-  { value: 'gbp', label: 'GBP — Pound sterling' },
-  { value: 'jpy', label: 'JPY — Japanese yen' },
+  { value: 'usd', label: 'USD: US dollar' },
+  { value: 'eur', label: 'EUR: Euro' },
+  { value: 'inr', label: 'INR: Indian rupee' },
+  { value: 'gbp', label: 'GBP: Pound sterling' },
+  { value: 'jpy', label: 'JPY: Japanese yen' },
 ]
 
 /** `count` deterministic options, optionally with a lookup-key hint and a trailing glyph. */
@@ -139,13 +139,13 @@ export const FiltersAndPicks: Story = {
     const input = within(canvasElement).getByRole('combobox', { name: 'Currency' })
     await userEvent.click(input)
     await userEvent.type(input, 'eur')
-    await expect(await screen.findByRole('option', { name: 'EUR — Euro' })).toBeVisible()
+    await expect(await screen.findByRole('option', { name: 'EUR: Euro' })).toBeVisible()
     await waitFor(() =>
-      expect(screen.queryByRole('option', { name: 'USD — US dollar' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('option', { name: 'USD: US dollar' })).not.toBeInTheDocument(),
     )
-    await userEvent.click(screen.getByRole('option', { name: 'EUR — Euro' }))
+    await userEvent.click(screen.getByRole('option', { name: 'EUR: Euro' }))
     await expect(args.onValueChange).toHaveBeenCalledWith('eur')
-    await waitFor(() => expect(input).toHaveValue('EUR — Euro'))
+    await waitFor(() => expect(input).toHaveValue('EUR: Euro'))
   },
 }
 
@@ -166,7 +166,7 @@ export const Preselected: Story = {
   args: { value: 'inr' },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('combobox', { name: 'Currency' })).toHaveValue(
-      'INR — Indian rupee',
+      'INR: Indian rupee',
     )
   },
 }

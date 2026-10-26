@@ -6,12 +6,10 @@ name: E2E
 # for it, so there is no separate "start the server" step — the journeys own
 # their server for as long as they run.
 #
-# This tests the application, not a deployment. Once `deploy.yml` has its
-# credentials and produces a preview URL, the stronger version of this layer is
-# to point `E2E_BASE_URL` at that URL instead: a suite that boots its own copy
-# of the bundle cannot catch a broken build output, a bad rewrite rule or a
-# missing environment variable, which is the whole reason the layer exists.
-# Watchtower's CI already works that way and is the model to follow.
+# This tests the application, not a deployment, and it posts nothing to Slack.
+# The deployed frontend is tested by `e2e-release.yml`, which runs only after a
+# successful production deploy from `main` and sends the one Slack report per
+# release (docs/e2e-journeys.md).
 on:
   # Called by `pipeline.yml` on a push to main, so main runs these in order
   # rather than all at once. The triggers below still fire on their own for
@@ -59,7 +57,20 @@ jobs:
         run: pnpm --filter console exec playwright install --with-deps chromium
 
       - name: Run the journeys against the mocked console
+        id: journeys
         run: pnpm --filter console test:e2e
+
+      # One report per journey (`e2e/reporters/journey-reporter.ts`), kept
+      # whatever happened — evidence inside it exists only for journeys that
+      # failed.
+      - name: Keep the journey reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: apps/console/e2e-results
+          if-no-files-found: warn
+          retention-days: 14
 
       # `always() && failure()` so the trace, video and screenshots survive the
       # failure they document. Without it the upload is skipped exactly when it

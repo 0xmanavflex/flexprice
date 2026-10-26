@@ -13,7 +13,7 @@ import { provenance } from '@ui/provenance'
 /**
  * Rename an environment, in a small dialog opened from the switcher's pencil.
  *
- * One field. The type is not editable — the API refuses to change it — so it is
+ * One field. The type is not editable: the API refuses to change it: so it is
  * not shown as though it were. The name follows the same rule as create.
  */
 export const EnvironmentRenameFormProvenance = provenance({

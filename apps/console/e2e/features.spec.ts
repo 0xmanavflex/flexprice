@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { CatalogListPage } from './pages/catalog'
 
@@ -61,6 +62,8 @@ test.describe('the features list', () => {
     await page.getByLabel('Name', { exact: false }).first().fill('Image renders')
     await expect(page.getByLabel('Lookup key')).toHaveValue('feat-image-renders')
     await page.getByLabel('Event name').fill('image_render')
+    // The default aggregation (sum) needs the event field it adds up.
+    await page.getByRole('textbox', { name: /^Event field/ }).fill('renders')
 
     const request = page.waitForRequest(
       (r) => r.method() === 'POST' && new URL(r.url()).pathname.endsWith('/v1/features'),
@@ -78,6 +81,8 @@ test.describe('the features list', () => {
     await expect(page).toHaveURL(/\/features\/[^/]+\/edit/)
     await expect(page.getByLabel('Lookup key')).toHaveAttribute('readonly', '')
 
+    // Description sits under Optional details, closed until asked for.
+    await page.getByRole('button', { name: /Optional details/ }).click()
     await page.getByLabel('Description').fill('Updated from the edit page')
     const request = page.waitForRequest(
       (r) => r.method() === 'PUT' && /\/v1\/features\/[^/]+$/.test(new URL(r.url()).pathname),
@@ -121,7 +126,7 @@ test.describe('the features list', () => {
 
   test('opens the create page at /features/new', async ({ page }) => {
     await page.goto('/features/new')
-    await expect(page.getByRole('heading', { name: 'Details' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Feature' })).toBeVisible()
   })
 
   test('edits from the detail page', async ({ page }) => {

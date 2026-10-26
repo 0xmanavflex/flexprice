@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { CatalogListPage } from './pages/catalog'
 
@@ -40,14 +41,12 @@ test.describe('the customers list', () => {
     await expect(portal).not.toHaveURL(/token=/)
   })
 
-  test('copies a portal link from the row menu', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  test('the row menu opens the portal but does not copy its link', async ({ page }) => {
     await page.goto('/customers')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
-    await openRowMenu(page, 'Copy portal link')
-    await expect(page.getByText('Customer portal link copied')).toBeVisible()
-    const copied = await page.evaluate(() => navigator.clipboard.readText())
-    expect(copied).toMatch(/\/p\?token=demo-/)
+    await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Open customer portal' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Copy portal link' })).toHaveCount(0)
   })
 
   test('creates a customer on its own page and lands on its detail', async ({ page }) => {
@@ -79,6 +78,19 @@ test.describe('the customers list', () => {
     await page.getByRole('button', { name: 'Create customer' }).click()
     await request
     await expect(page).toHaveURL(/\/customers\/(?!new)[^/]+$/)
+    // Confirmed bottom right, on the page it lands on.
+    await expect(page.getByText('Customer created')).toBeVisible()
+  })
+
+  test('a refused create says why, in a toast, and stays on the form', async ({ page }) => {
+    await page.goto('/customers/new')
+    await page.getByLabel('Name', { exact: false }).first().fill('Acme Robotics')
+    // An external ID another customer already has: the API's unique index refuses it.
+    await page.getByLabel('External ID').fill('cust_northwindlogistics')
+    await page.getByRole('button', { name: 'Create customer' }).click()
+    await expect(page.getByText('Could not create the customer.')).toBeVisible()
+    await expect(page.getByText('A customer with this identifier already exists')).toBeVisible()
+    await expect(page).toHaveURL(/\/customers\/new/)
   })
 
   test('edits a customer on its own prepopulated page', async ({ page }) => {
@@ -132,7 +144,10 @@ test.describe('a customer detail page', () => {
 
   test('unlinking from Related refreshes both the rail and header', async ({ page }) => {
     await openFirstCustomer(page)
-    const rail = page.getByRole('complementary', { name: 'Customer details' })
+    // Integration links are managed on the Information tab; the overview's
+    // Related card links to the customer's invoices instead.
+    await page.getByRole('tab', { name: 'Information' }).click()
+    const rail = page.getByRole('region', { name: 'Related', exact: true })
     const mapping = rail.getByRole('button', { name: /^Manage .+ integration$/ }).first()
     await expect(mapping).toBeVisible()
     const label = await mapping.getAttribute('aria-label')
@@ -173,14 +188,57 @@ test.describe('a customer detail page', () => {
     await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
   })
 
-  test('opens the customer portal from the header menu', async ({ page, context }) => {
+  test('copies the customer portal link from the header menu', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await openFirstCustomer(page)
     await page.getByRole('button', { name: 'Customer actions' }).click()
-    const [portal] = await Promise.all([
-      context.waitForEvent('page'),
-      page.getByRole('menuitem', { name: 'Open customer portal' }).click(),
-    ])
-    await expect(portal.getByText('Payment methods')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByRole('menuitem', { name: 'Copy portal link' })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: 'Open customer portal' })).toHaveCount(0)
+    await page.getByRole('menuitem', { name: 'Copy portal link' }).click()
+    await expect(page.getByText('Customer portal link copied')).toBeVisible()
+    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    expect(copied).toMatch(/\/p\?token=demo-/)
+  })
+
+  test('refreshes the Events tab on demand', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('tab', { name: 'Events' }).click()
+    const refresh = page.getByRole('button', { name: 'Refresh' })
+    await expect(refresh).toBeEnabled()
+    const reread = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/events/query'),
+    )
+    await refresh.click()
+    await reread
+  })
+
+  test('pushes the customer to its outbound integrations from Related', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('tab', { name: 'Information' }).click()
+    const sync = page.waitForRequest(
+      (request) => request.url().endsWith('/integrations/sync') && request.method() === 'POST',
+    )
+    // One push reaches every provider syncing customers outbound, so it is one
+    // action on the card rather than an item in a single provider's menu.
+    await page.getByRole('button', { name: /^Push to .*Stripe/ }).click()
+    const body = (await sync).postDataJSON() as Record<string, unknown>
+    expect(body).toMatchObject({ entity_type: 'customer', method: 'push' })
+    await expect(page.getByText('Pushing customer to Stripe')).toBeVisible()
+  })
+
+  test('the Analytics tab reads usage and cost analytics for this customer', async ({ page }) => {
+    await openFirstCustomer(page)
+    const usage = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/events/analytics'),
+    )
+    const costs = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/costs/analytics'),
+    )
+    await page.getByRole('tab', { name: 'Analytics' }).click()
+    await Promise.all([usage, costs])
+    await expect(page.getByText('Usage breakdown').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText('Margin %')).toBeVisible()
+    // Real figures, not the dash an absent one reads as.
+    await expect(page.getByText(/^\d+(\.\d)?%$/).first()).toBeVisible()
+    if (process.env['SHOT']) await page.screenshot({ path: process.env['SHOT'], fullPage: true })
   })
 })

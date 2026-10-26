@@ -20,7 +20,7 @@ const linkage = new Map<string, PlanLinkage>([
  * Wait for an open popup to finish unmounting.
  *
  * While a Base UI popup is open it mounts `data-base-ui-focus-guard` spans
- * that are `aria-hidden` *and* `tabindex="0"` — which is exactly what axe's
+ * that are `aria-hidden` *and* `tabindex="0"`: which is exactly what axe's
  * `aria-hidden-focus` rule forbids. The a11y scan runs when the play function
  * returns, so a story that returns while the popup is still closing is scanned
  * mid-animation and fails intermittently. This is not a suppression: it makes
@@ -70,9 +70,9 @@ export const Populated: Story = {
  * A count nobody could read is blank, not zero.
  *
  * `plan_05` has no linkage entry and the grid is not loading, so its three
- * count cells show an em dash — a fourth comes from its empty lookup key.
+ * count cells show an em dash: a fourth comes from its empty lookup key.
  * "We could not find out" and "there are none" must not render the same,
- * which is why `plan_04` — which *is* answered for, with zeroes — shows them.
+ * which is why `plan_04`: which *is* answered for, with zeroes: shows them.
  */
 export const ZeroReadsAsADash: Story = {
   play: async ({ canvasElement }) => {
@@ -85,7 +85,7 @@ export const ZeroReadsAsADash: Story = {
     await expect(within(legacy).getByText('3')).toBeInTheDocument()
 
     // Enterprise has no linkage entry at all. Unknown reads the same as none
-    // — the grid does not draw that distinction — plus one for its empty
+    //: the grid does not draw that distinction: plus one for its empty
     // lookup key.
     const enterprise = (canvas.getByText('Enterprise').closest('tr') as HTMLElement) ?? null
     await expect(within(enterprise).getAllByText('—').length).toBe(4)
@@ -95,7 +95,7 @@ export const ZeroReadsAsADash: Story = {
 /**
  * The default column set is the redesign's, in its order.
  *
- * Trial has no field on `PlanWire`, so there is no header for it — this is the
+ * Trial has no field on `PlanWire`, so there is no header for it: this is the
  * assertion that stops someone "helpfully" adding the column back with a
  * placeholder. Base price, Updated and Created are real but off by default;
  * `BasePriceStaysReachable` proves they did not simply disappear.
@@ -138,7 +138,7 @@ export const BasePriceStaysReachable: Story = {
     await popupClosed('menu')
 
     // The headline price carries its period the way a pricing page writes it,
-    // from BILLING_PERIOD_SHORT — never a string this side invents.
+    // from BILLING_PERIOD_SHORT: never a string this side invents.
     await expect(canvas.getByText('$29').textContent).toBe('$29 / mo')
     // An unrecognised period falls back to the bare amount rather than
     // printing the raw enum at someone.
@@ -172,7 +172,7 @@ export const RowActions: Story = {
 
     const menu = within(await within(document.body).findByRole('menu'))
     await expect(menu.getByText(/view plan/i)).toBeInTheDocument()
-    // Not passed, so not offered — a menu item that does nothing is worse
+    // Not passed, so not offered: a menu item that does nothing is worse
     // than one that is absent.
     await expect(menu.queryByText(/duplicate plan/i)).toBeNull()
 
@@ -184,7 +184,7 @@ export const RowActions: Story = {
 
 export const Loading: Story = { args: { plans: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     plans: [],
@@ -233,7 +233,7 @@ export const PaginationReportsDomainQuery: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: /next|go to next page/i }))
 
     // The grid can also fire onQueryChange as it settles, so the Next click is
-    // not necessarily call[0]. Wait for — then read — the call that reported
+    // not necessarily call[0]. Wait for: then read: the call that reported
     // page 2, rather than racing whichever call landed first.
     const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
     const reportedPage = () =>
@@ -316,7 +316,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 /**
  * The count columns are centred.
  *
- * `cells.tsx` says everything is left-aligned, and for amounts it is right —
+ * `cells.tsx` says everything is left-aligned, and for amounts it is right:
  * a figure an arm's length from its row helps nobody. A column that is
  * *only* a count is the exception the handoff calls out: there is no label
  * beside the number for the eye to start from, so a one-digit figure under a

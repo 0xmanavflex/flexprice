@@ -28,7 +28,7 @@ import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from 
  * The price unit list, over the shared `EntityList`.
  *
  * The only one of the six whose redesigned columns are all available *and*
- * complete — name, code, symbol, conversion and status, nothing dashed and
+ * complete: name, code, symbol, conversion and status, nothing dashed and
  * nothing added.
  *
  * Status is the advanced filter rather than a dropdown: a tenant has a
@@ -48,7 +48,7 @@ const SORT_OPTIONS = Object.values(PriceUnitSortField).map((value) => ({
 }))
 
 /**
- * The rate, spelled out as an equation — `1 CRD = 0.01 USD`.
+ * The rate, spelled out as an equation: `1 CRD = 0.01 USD`.
  *
  * `conversionRate` is printed exactly as the API sent it. It arrives as a
  * string precisely so no precision is lost crossing the boundary, and parsing
@@ -248,8 +248,7 @@ export function PriceUnitGrid({
         scene: 'settings',
         title: 'No price units yet',
         description:
-          'A price unit lets you charge in something other than a currency — credits, tokens, minutes — by pinning a code and a symbol to a base currency through a rate.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New price unit</Button> } : {}),
+          'A price unit lets you charge in something other than a currency: credits, tokens, minutes: by pinning a code and a symbol to a base currency through a rate.',
         guides: GUIDES,
       }}
     />

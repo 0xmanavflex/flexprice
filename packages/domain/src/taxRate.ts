@@ -4,7 +4,7 @@ import { z } from 'zod'
  * A tax rate, as the list reads it.
  *
  * A tax rate is a percentage the billing engine adds to an invoice, scoped to
- * where it applies — internal, external, or a one-time charge. The API keeps a
+ * where it applies: internal, external, or a one-time charge. The API keeps a
  * wider record (its `taxRateType`, `taxRateStatus`, the audit columns); this is
  * only the list's read model, the same way coupons split a list model from the
  * editor that will follow.
@@ -52,7 +52,7 @@ export interface TaxRate {
   /** A short code the rate is referenced by. Empty when it has none. */
   code: string
   description: string
-  /** The percentage as the API sends it — `"18"`, not `0.18`. Empty when absent. */
+  /** The percentage as the API sends it: `"18"`, not `0.18`. Empty when absent. */
   percentageValue: string
   scope: TaxRateScope
   metadata?: Record<string, string>
@@ -103,28 +103,31 @@ const taxCode = z
   .string()
   .trim()
   .min(1, 'Enter a code')
-  .regex(/^[A-Za-z0-9]+$/, 'Use letters and numbers only')
+  // The API only requires a code; hyphens and underscores are kept so the
+  // suggested `tax-gst-18` is valid.
+  .regex(/^[A-Za-z0-9_-]+$/, 'Use letters, numbers, hyphens and underscores')
 
 /**
- * A tax rate draft. Only percentage rates are offered — the backend has no
- * other type — so there is no type field; the request mapper sends
+ * A tax rate draft. Only percentage rates are offered: the backend has no
+ * other type: so there is no type field; the request mapper sends
  * `percentage`. The value is a decimal string in 0–100 (`"18"`, not `0.18`).
- * The code is case-sensitive alphanumeric.
+ * The code is case-sensitive: letters, numbers, hyphens and underscores. No scope: it is optional on the
+ * wire and not something a person setting up a rate chooses, so the backend's
+ * default applies.
  */
 export const createTaxRateSchema = z.object({
   name: z.string().trim().min(1, 'Enter a name'),
   code: taxCode,
   description: z.string().trim().optional(),
   percentageValue: percentage,
-  scope: z.enum([TaxRateScope.Internal, TaxRateScope.External, TaxRateScope.OneTime]),
   metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type CreateTaxRate = z.infer<typeof createTaxRateSchema>
 
 /**
- * What an edit can change. The value, scope and type are fixed once created —
- * invoices already carry them — so an edit renames, recodes, re-describes,
+ * What an edit can change. The value, scope and type are fixed once created:
+ * invoices already carry them: so an edit renames, recodes, re-describes,
  * changes metadata, or archives (`INACTIVE` on the wire) and restores.
  */
 export const editTaxRateSchema = z.object({
@@ -143,7 +146,6 @@ export function emptyTaxRate(): CreateTaxRate {
     code: '',
     description: '',
     percentageValue: '',
-    scope: TaxRateScope.Internal,
   }
 }
 

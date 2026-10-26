@@ -62,11 +62,11 @@ import { provenance } from '@ui/provenance'
  * field that sits there collecting focus.
  *
  * It rides in the top bar beside Create, top-right, so the two things a person
- * reaches for from any screen — find, and start — sit together rather than one
+ * reaches for from any screen: find, and start: sit together rather than one
  * in the chrome and one in the sidebar.
  *
  * The distinction matters. An always-present input is a tab stop on every
- * screen and a commitment to filtering *something* — but what it searches
+ * screen and a commitment to filtering *something*: but what it searches
  * changes by page, which is how the current dashboard ends up with a search box
  * that sometimes does nothing. A button opens a deliberate surface, and the
  * shortcut is the way most people will reach it anyway.
@@ -82,7 +82,7 @@ import { provenance } from '@ui/provenance'
  * the full control anyway: a `/` hint, two bound shortcuts, and an input that
  * took a query, closed the dialog and dropped it. An input that eats what you
  * typed is worse than no input, because it teaches that search is broken
- * rather than absent — so the unavailable state says so in words, points at
+ * rather than absent: so the unavailable state says so in words, points at
  * the per-list search boxes that do work, and the shortcuts and the hint are
  * not advertised: the honest empty state, until the endpoint exists.
  */
@@ -97,7 +97,7 @@ export interface ShellSearchItem {
   label: string
   /** The heading the row sits under: Pages, Actions, Customers… */
   group: string
-  /** A quiet second line under the label — an email, a parent, a status. */
+  /** A quiet second line under the label: an email, a parent, a status. */
   hint?: string
   icon?: ReactNode
   /** Extra words that should match without being shown. */

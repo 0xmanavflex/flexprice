@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createCustomerSchema, emptyCustomer } from './customer'
+import {
+  DEFAULT_CUSTOMER_QUERY,
+  createCustomerSchema,
+  emptyCustomer,
+  isCustomerQueryFiltered,
+} from './customer'
 
 /**
  * The customer form's rules, against the API's.
@@ -7,7 +12,7 @@ import { createCustomerSchema, emptyCustomer } from './customer'
  * Every limit here mirrors a `validate:` tag on the backend's
  * `CreateCustomerRequest`. That is the whole point of the file: a client rule
  * that is *looser* than the server's does not make the server accept more, it
- * makes the form accept a value the save then rejects — and the rejection
+ * makes the form accept a value the save then rejects: and the rejection
  * arrives as a server-worded message about a field the person has already
  * scrolled past. A client rule that is *tighter* is its own bug: it refuses
  * something the product allows.
@@ -76,5 +81,30 @@ describe('createCustomerSchema', () => {
     expect(parse({ ...valid(), name: `${'a'.repeat(255)}   ` }).success).toBe(true)
     // …and are not a way past the limit either.
     expect(failedFields({ ...valid(), name: `  ${'a'.repeat(256)}  ` })).toContain('name')
+  })
+})
+
+describe('isCustomerQueryFiltered', () => {
+  it('is not filtered on the default view or on every status', () => {
+    expect(isCustomerQueryFiltered(DEFAULT_CUSTOMER_QUERY)).toBe(false)
+    expect(isCustomerQueryFiltered({ ...DEFAULT_CUSTOMER_QUERY, filters: [] })).toBe(false)
+  })
+
+  it('reads the default filter the same whatever its property order', () => {
+    expect(
+      isCustomerQueryFiltered({
+        ...DEFAULT_CUSTOMER_QUERY,
+        filters: [{ value: ['published'], op: 'in', field: 'status' } as never],
+      }),
+    ).toBe(false)
+  })
+
+  it('is filtered when the person narrows it', () => {
+    expect(
+      isCustomerQueryFiltered({
+        ...DEFAULT_CUSTOMER_QUERY,
+        filters: [{ field: 'status', op: 'in', value: ['archived'] }],
+      }),
+    ).toBe(true)
   })
 })

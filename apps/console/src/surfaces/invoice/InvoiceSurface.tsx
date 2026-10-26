@@ -16,7 +16,7 @@ const GENERIC_ERROR = 'Something went wrong, please try again.'
 /**
  * The hosted invoice page: `/<region>/<token>`, no sign-in.
  *
- * `pathname` is the path as this surface sees it — the `/i` prefix that
+ * `pathname` is the path as this surface sees it: the `/i` prefix that
  * selected it, if any, already removed (see `surface.ts`). Only the path
  * counts: gateways may add a query string or hash when they send the customer
  * back.

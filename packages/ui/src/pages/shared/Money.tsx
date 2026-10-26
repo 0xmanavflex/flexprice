@@ -5,7 +5,7 @@ import { provenance } from '@ui/provenance'
 /**
  * An amount of money, rendered honestly.
  *
- * Takes a domain `Money` — never a number and never a string — so it is
+ * Takes a domain `Money`: never a number and never a string: so it is
  * impossible to hand this component a value that has already been through a
  * float. That is the entire point: the API sends decimal strings, and V1 calls
  * `parseFloat` on them in 101 places.
@@ -24,7 +24,7 @@ export interface MoneyProps {
   locale?: string
   /** Dims a zero amount, so a column of real charges stands out. */
   muteZero?: boolean
-  /** Colours negatives — for credits and refunds, where the sign is the meaning. */
+  /** Colours negatives: for credits and refunds, where the sign is the meaning. */
   signed?: boolean
   /**
    * Truncate rather than overflow, for table cells.

@@ -1,4 +1,5 @@
-import { expect, test, type BrowserContext } from '@playwright/test'
+import { type BrowserContext } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 /**
  * RBAC as V1: the console shows what the signed-in principal's roles allow.
@@ -63,15 +64,17 @@ test('a writer can create, but tenant settings stay super-admin only', async ({
 
   // Team: no role editing or removal without super admin.
   await page.goto('/settings?section=team&tab=members')
-  await expect(page.getByRole('button', { name: 'Edit roles' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Actions for / })).toHaveCount(0)
 })
 
 test('a super admin manages members, but never their own roles', async ({ page, context }) => {
   await signInAs(context)
   await page.goto('/settings?section=team&tab=members')
   const me = page.getByRole('row').filter({ hasText: 'demo@flexprice.io' })
-  await expect(me.getByRole('button', { name: 'Edit roles' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Edit roles' }).first()).toBeVisible()
+  await expect(me.getByRole('button', { name: /^Actions for / })).toHaveCount(0)
+  await page.getByRole('button', { name: /^Actions for / }).first().click()
+  await expect(page.getByRole('menuitem', { name: 'Edit roles' })).toBeVisible()
+  await page.keyboard.press('Escape')
   await page.goto('/plans/new')
   await expect(page.getByText('Access denied')).toHaveCount(0)
 })

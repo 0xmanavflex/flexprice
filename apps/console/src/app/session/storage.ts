@@ -22,6 +22,13 @@ export interface StoredSession {
   token: string
   userId: string
   tenantId: string
+  /**
+   * Set when a hosted region's Supabase session client holds this session (see
+   * `sessionClientFor`); it then supplies a refreshed token per request and
+   * `token` is only the last one seen. Absent for `POST /auth/login`, SAML and
+   * self-hosted sessions, which have no refresh token.
+   */
+  region?: string
 }
 
 function store(): Storage | null {
@@ -67,8 +74,8 @@ function isNonEmptyString(value: unknown): value is string {
  * The stored session, or null.
  *
  * Anything that is not a complete, token-bearing record reads as signed out.
- * A half-written entry — a token-less object from an older shape of this file,
- * a value someone edited in devtools — must not sign a user in to a console
+ * A half-written entry: a token-less object from an older shape of this file,
+ * a value someone edited in devtools: must not sign a user in to a console
  * whose every request will then 401.
  */
 export function readSession(): StoredSession | null {
@@ -90,11 +97,12 @@ export function readSession(): StoredSession | null {
 
   return {
     token: record['token'],
-    // The ids are informational — the token is what authenticates. A session
+    // The ids are informational: the token is what authenticates. A session
     // missing them is still usable, so they degrade to empty rather than
     // rejecting the whole record.
     userId: typeof record['userId'] === 'string' ? record['userId'] : '',
     tenantId: typeof record['tenantId'] === 'string' ? record['tenantId'] : '',
+    ...(isNonEmptyString(record['region']) ? { region: record['region'] } : {}),
   }
 }
 

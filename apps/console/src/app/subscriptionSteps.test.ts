@@ -38,7 +38,7 @@ describe('toStepSearch', () => {
 
   /*
    * `customer` was the first step until it was merged into `plan`. A link
-   * already shared, or a back button into history, still carries it — landing
+   * already shared, or a back button into history, still carries it: landing
    * those on the merged step is the whole point of keeping the id around.
    */
   it('sends the retired customer step to the step that absorbed it', () => {

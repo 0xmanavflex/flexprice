@@ -11,7 +11,7 @@
  *   2. With nothing to show, an error beats loading (a failed refetch must not
  *      hide behind a skeleton) and loading beats empty (never say "nothing here"
  *      before the server has answered).
- *   3. Empty is two different facts — nothing exists, or the filter excludes it —
+ *   3. Empty is two different facts: nothing exists, or the filter excludes it:
  *      and they get different screens.
  *
  * The input is structural, so it fits a TanStack query result without `@fp/ui`

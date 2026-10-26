@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { type Customer, type CustomerQuery } from '@fp/domain'
+import {
+  type Customer,
+  type CustomerQuery,
+  DEFAULT_CUSTOMER_QUERY,
+  isCustomerQueryFiltered,
+} from '@fp/domain'
 import {
   ApiError,
   useCustomerContractCounts,
@@ -7,7 +12,7 @@ import {
   useDeleteCustomer,
   serverReason,
 } from '@fp/query'
-import { CustomerGrid, Toaster } from '@fp/ui/pages'
+import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { useCustomerPortal } from '@/app/customerPortal/useCustomerPortal'
@@ -46,10 +51,16 @@ export function CustomerListPage({
   const failure = toListFailure(customers.error, 'customers')
   const rows = customers.data?.customers ?? []
   const contractCounts = useCustomerContractCounts(rows.map((customer) => customer.id))
-  const isFiltered =
-    query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+  const isFiltered = isCustomerQueryFiltered(query)
+  // Back to the default view (active customers), not to every status.
   const clearFilters = () =>
-    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
+    onQueryChange({
+      ...query,
+      search: '',
+      statuses: [],
+      filters: DEFAULT_CUSTOMER_QUERY.filters ?? [],
+      page: 1,
+    })
 
   const closeDelete = () => {
     setDeleting(null)
@@ -88,12 +99,10 @@ export function CustomerListPage({
             onEdit={(customer) => onEditCustomer(customer.id)}
             onDelete={setDeleting}
             onOpenPortal={(customer) => void portal.open(customer)}
-            onCopyPortalLink={(customer) => void portal.copy(customer)}
             onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
-      <Toaster />
 
       <ConfirmDialog
         open={deleting !== null}

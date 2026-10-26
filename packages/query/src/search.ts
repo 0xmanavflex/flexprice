@@ -1,10 +1,16 @@
-import { FilterOp, runnableFilters, type ListFilter, type ListFilterSpec } from '@fp/domain'
+import {
+  FilterOp,
+  runnableFilters,
+  splitKeyValue,
+  type ListFilter,
+  type ListFilterSpec,
+} from '@fp/domain'
 
 /**
  * Name search, for the endpoints that have no name-search field.
  *
  * `FeatureFilter` carries a first-class `nameContains`. `PlanFilter`,
- * `AddonFilter`, `CouponFilter` and `PriceUnitFilter` do not — and this is the
+ * `AddonFilter`, `CouponFilter` and `PriceUnitFilter` do not: and this is the
  * trap, because sending one anyway *looks* like it works:
  *
  *   - the SDK parses every request body through a generated zod schema, which
@@ -12,7 +18,7 @@ import { FilterOp, runnableFilters, type ListFilter, type ListFilterSpec } from 
  *     the network. Verified live: `POST /plans/search` received
  *     `{expand, limit, offset, sort}` and nothing else.
  *   - the backend ignores a hand-rolled `name_contains` on these four routes
- *     too, so even bypassing the SDK would not help — searching for
+ *     too, so even bypassing the SDK would not help: searching for
  *     `"zzzznomatch"` returned every row.
  *   - the MSW handler honoured *both* spellings, so every test passed while
  *     the search box did nothing against the real API.
@@ -43,7 +49,7 @@ export function nameContainsFilter(term: string): Record<string, unknown>[] {
  * The status facet, as the field the search endpoints filter on server-side.
  *
  * `status` is a real column on every catalogue and customer table, and the
- * search endpoints accept it as a top-level field — verified live, and it is
+ * search endpoints accept it as a top-level field: verified live, and it is
  * what `catalogStats` already counts the published/archived split with. So
  * there was never a reason to narrow by status in the browser.
  *
@@ -51,14 +57,14 @@ export function nameContainsFilter(term: string): Record<string, unknown>[] {
  * is a different and wrong thing: the request fetches one page, the browser
  * drops rows from *that page*, and the pager still reports the server's
  * unfiltered total. Asking for Archived then shows "287 customers" above three
- * rows, and most of the pages it offers render empty — the matches are spread
+ * rows, and most of the pages it offers render empty: the matches are spread
  * through pages the browser never fetched.
  *
  * The field takes one value, so this answers for one:
  *
- *   - **nothing selected** — no narrowing, which is the same request as before.
- *   - **one selected** — that status, server-side.
- *   - **every known status selected** — no narrowing, because asking for all of
+ *   - **nothing selected**: no narrowing, which is the same request as before.
+ *   - **one selected**: that status, server-side.
+ *   - **every known status selected**: no narrowing, because asking for all of
  *     them is asking for all of them.
  *
  * Any other combination cannot be expressed, and would need either several
@@ -96,8 +102,11 @@ export function toFilterConditions(
   filters: readonly ListFilter[],
   specs: readonly ListFilterSpec[],
 ): Record<string, unknown>[] {
-  return runnableFilters(filters, specs).map((filter) => {
+  return runnableFilters(filters, specs).flatMap((filter) => {
     const spec = specs.find((entry) => entry.field === filter.field)!
+    // A key/value pair is not a filter condition: it travels as the search's
+    // own `metadata` map (see `toMetadataFilter`).
+    if (spec.kind === 'keyvalue') return []
     const base = { field: filter.field, operator: filter.op }
     switch (spec.kind) {
       case 'options':
@@ -113,4 +122,22 @@ export function toFilterConditions(
         return { ...base, dataType: 'string', value: { string: (filter.value as string).trim() } }
     }
   })
+}
+
+/**
+ * The key/value filters as the search's `metadata` map (`{ region: 'eu' }`):
+ * every pair must match. Empty when there are none, so it is left out.
+ */
+export function toMetadataFilter(
+  filters: readonly ListFilter[],
+  specs: readonly ListFilterSpec[],
+): Record<string, string> {
+  const metadata: Record<string, string> = {}
+  for (const filter of runnableFilters(filters, specs)) {
+    const spec = specs.find((entry) => entry.field === filter.field)
+    if (spec?.kind !== 'keyvalue') continue
+    const pair = splitKeyValue(filter.value as string)
+    if (pair) metadata[pair.key] = pair.value
+  }
+  return metadata
 }

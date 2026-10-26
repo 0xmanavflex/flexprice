@@ -21,7 +21,7 @@ export type CustomerFormPageProps = {
  *
  * Same single-page form both ways (`CustomerForm`). Create ends
  * on the new customer's detail page; edit returns to the one it came from. The
- * data layer is the hooks the dialog used — nothing about saving changed.
+ * data layer is the hooks the dialog used: nothing about saving changed.
  */
 export function CustomerFormPage(props: CustomerFormPageProps) {
   const { onCancel } = props
@@ -36,7 +36,8 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
         trail={[{ label: 'Customers', onClick: onCancel }, { label: 'Create customer' }]}
         onCancel={onCancel}
         isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error)}
+        // The API's refusal is a toast (MutationToasts); validation stays in the form.
+        submitError={null}
         onSubmit={(draft: CreateCustomer) =>
           create.mutate(draft, {
             // A created customer with no id cannot be opened: land on the list instead of /customers/.

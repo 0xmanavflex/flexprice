@@ -16,8 +16,8 @@ import { useFlexprice } from './provider'
 /**
  * Credit grants: a balance a plan hands its subscribers.
  *
- * There is no search endpoint for grants — the only ways to list them are
- * scoped, `GET /plans/{id}/creditgrants` and `GET /addons/{id}/creditgrants` —
+ * There is no search endpoint for grants: the only ways to list them are
+ * scoped, `GET /plans/{id}/creditgrants` and `GET /addons/{id}/creditgrants`:
  * so `useCreditGrants` branches on scope to reach the right one. Grants are
  * created one at a time (`POST /creditgrants`); there is no bulk.
  */
@@ -94,7 +94,7 @@ function scopeTarget(scope: CreditGrantScope, id: string): Record<string, string
  *
  * The scope's target id is set on the field the scope names (`planId` /
  * `subscriptionId` / `addonId`); a period is sent only for a recurring grant, a duration only for a
- * duration expiry — so the request never carries a field the grant does not use.
+ * duration expiry: so the request never carries a field the grant does not use.
  */
 export function toCreditGrantRequest(
   draft: CreateCreditGrant,

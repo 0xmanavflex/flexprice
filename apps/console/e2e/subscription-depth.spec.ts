@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -18,9 +18,13 @@ test('contract detail overview shows the upcoming invoice and entitlements', asy
   await page.getByRole('row').nth(1).click()
   await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
 
+  // The contract's own facts are on the Information tab; the Overview leads
+  // with what the contract is doing.
+  await expect(page.getByRole('heading', { name: 'Contract', exact: true })).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Information' }).click()
   await expect(page.getByRole('heading', { name: 'Contract', exact: true })).toBeVisible()
-
   await expect(page.getByRole('heading', { name: 'Billing & collection' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Overview' }).click()
 
   const invoice = page.locator('section', {
     has: page.getByRole('heading', { name: 'Upcoming invoice' }),
@@ -33,9 +37,12 @@ test('contract detail overview shows the upcoming invoice and entitlements', asy
   await expect(invoice.getByText('Extra seats')).toHaveCount(0)
   await expect(page.getByRole('switch', { name: 'Hide zero charges' })).toHaveCount(0)
 
-  await expect(page.getByText('API calls', { exact: true })).toBeVisible()
-  await expect(page.getByText('Single sign-on')).toBeVisible()
-  await expect(page.getByText('Unlimited')).toBeVisible()
+  // Scoped to the table's cells: each usage meter also names its feature, for
+  // screen readers, so a page-wide text match finds the name twice.
+  const entitlements = page.getByRole('region', { name: 'Entitlements', exact: true })
+  await expect(entitlements.getByRole('cell', { name: 'API calls', exact: true })).toBeVisible()
+  await expect(entitlements.getByRole('cell', { name: 'Single sign-on' })).toBeVisible()
+  await expect(entitlements.getByRole('cell', { name: 'Unlimited' })).toBeVisible()
 })
 
 test('contract detail charges tab lists the contract charges', async ({ page }) => {
@@ -76,6 +83,24 @@ test('contract detail overview keeps every add section and adds a coupon', async
   await expect(dialog).toHaveCount(0)
 })
 
+test('adds a one-time credit grant to a contract, with the start date the API requires', async ({
+  page,
+}) => {
+  await page.goto('/contracts')
+  await page.getByRole('row').nth(1).click()
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
+
+  await page.getByRole('button', { name: 'Add credit grant' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('textbox', { name: /^Name/ }).fill('Goodwill credits')
+  await dialog.getByRole('textbox', { name: /^Credits/ }).fill('500')
+  // The mock refuses a contract grant without start_date, as the API does, so
+  // the dialog closing is the proof the date was sent.
+  await dialog.getByRole('button', { name: 'Add credit grant' }).click()
+  await expect(dialog.getByText(/start date/i)).toHaveCount(0)
+  await expect(dialog).toHaveCount(0)
+})
+
 test('a changed contract price stays as an inactive version, not gone', async ({ page }) => {
   await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()
@@ -99,7 +124,7 @@ test('a changed contract price stays as an inactive version, not gone', async ({
   await rows.getByRole('button', { name: /History/ }).click()
   const sheet = page.getByRole('dialog')
   // At least the old price and the new one; a reused mock may hold more.
-    await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
+  await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
   await expect(sheet.getByText('Current')).toBeVisible()
   await expect(sheet.getByText('Inactive').first()).toBeVisible()
 

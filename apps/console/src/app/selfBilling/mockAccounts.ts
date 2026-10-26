@@ -6,7 +6,7 @@ import { type MockAccountChoice, mockAccountChoice, setMockAccount } from '@/moc
 
 /**
  * The account states the mocks can answer with, as the prototype's
- * environment switcher lists them — so every self-billing state can be walked
+ * environment switcher lists them: so every self-billing state can be walked
  * in the running console without touching storage by hand.
  */
 export const MOCK_ACCOUNT_OPTIONS: readonly (MockAccountOption & { value: MockAccountChoice })[] = [

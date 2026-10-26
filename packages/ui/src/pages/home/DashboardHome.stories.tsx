@@ -13,7 +13,7 @@ import type {
 } from './DashboardHome'
 
 /**
- * Home — the console overview.
+ * Home: the console overview.
  *
  * The three states below are the reason this component takes data rather than
  * fetching it. `Populated` and `FirstRun` are the two the design specified, and
@@ -23,9 +23,9 @@ import type {
  * Usage by feature and the API panel are parked until quota-based metrics land,
  * so they have no fixtures here.
  *
- * The figures in `Populated` are story fixtures and are internally consistent —
+ * The figures in `Populated` are story fixtures and are internally consistent:
  * the plan counts sum to the total, the invoice buckets sum to the centre
- * number — because a story that contradicts itself teaches the wrong shape.
+ * number: because a story that contradicts itself teaches the wrong shape.
  */
 
 const RANGE_OPTIONS = [
@@ -120,8 +120,8 @@ const meta = {
     onGranularityChange: { control: false },
     onNavigate: { control: false },
   },
-  // The overview owns its scroll — the shell's content region does not scroll
-  // for it — so the story gives it a bounded, scrollable frame to render into.
+  // The overview owns its scroll: the shell's content region does not scroll
+  // for it: so the story gives it a bounded, scrollable frame to render into.
   decorators: [
     (Story) => (
       <div className="bg-background h-screen overflow-y-auto">
@@ -475,7 +475,7 @@ export const FirstRun: Story = {
     await expect(canvas.getByRole('button', { name: 'Send a test event' })).toBeInTheDocument()
 
     // The message sits *over* a chart rather than instead of one, and that
-    // chart is decoration three ways over — out of the accessibility tree, out
+    // chart is decoration three ways over: out of the accessibility tree, out
     // of the tab order, and carrying no readable figure.
     const blurred = canvasElement.querySelector('[aria-hidden="true"][inert]')
     await expect(blurred).not.toBeNull()

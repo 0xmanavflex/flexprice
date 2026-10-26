@@ -112,8 +112,8 @@ describe('toUpdateTenantRequest', () => {
 
 /**
  * `GET /tenants/billing` as it came back live. Trimmed to one metered feature
- * with a limit and one unlimited static feature — the two cases the panel has
- * to render differently — plus the single subscription the tenant is on.
+ * with a limit and one unlimited static feature: the two cases the panel has
+ * to render differently: plus the single subscription the tenant is on.
  */
 const billingUsageWire = {
   usage: {
@@ -242,7 +242,7 @@ describe('isOverLimit', () => {
 })
 
 /**
- * `GET /tenants/billing` — plural, the path the SDK does not have.
+ * `GET /tenants/billing`: plural, the path the SDK does not have.
  *
  * Reached with `fetch`, so this body is the raw JSON: snake_case keys and
  * timestamps as strings, neither of which a generated client is there to
@@ -300,7 +300,7 @@ describe('toTenantBillingWire', () => {
       subscriptionId: 'subs_01',
       planId: 'plan_01',
       planName: 'Free',
-      // `subscription_status`, not `status` — the latter is the row's archival
+      // `subscription_status`, not `status`: the latter is the row's archival
       // state, which is not what a plan card means by status.
       status: 'active',
       billingPeriod: 'MONTHLY',
@@ -323,6 +323,43 @@ describe('toTenantBillingWire', () => {
 
     expect(usage.features[1]).toMatchObject({ limit: null, isUnlimited: true })
     expect(usage.features[0]).toMatchObject({ limit: 1_000_000, currentUsage: '12345' })
+  })
+
+  it('reads the unit and what grants each entitlement', () => {
+    const usage = toTenantBillingUsage(
+      toTenantBillingWire({
+        usage: {
+          features: [
+            {
+              feature: { id: 'feat_01', name: 'Events', unit_plural: 'events' },
+              sources: [
+                {
+                  subscription_id: 'subs_01',
+                  entity_id: 'plan_01',
+                  entity_type: 'plan',
+                  entity_name: 'Growth',
+                  usage_reset_period: 'MONTHLY',
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(usage.features[0]?.unit).toBe('events')
+    expect(usage.features[0]?.sources).toEqual([
+      {
+        subscriptionId: 'subs_01',
+        entityId: 'plan_01',
+        entityType: 'plan',
+        entityName: 'Growth',
+        usageResetPeriod: 'MONTHLY',
+        staticValue: '',
+      },
+    ])
+    // The live tenant sends no sources; that is an empty list, not a missing one.
+    expect(toTenantBillingUsage(toTenantBillingWire(rawBilling)).features[0]?.sources).toEqual([])
   })
 
   it('survives a body with nothing in it', () => {

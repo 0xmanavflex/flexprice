@@ -109,20 +109,21 @@ export const Empty: Story = {
  * This used to assert a disabled "Add charge" alongside it. Since the plan's
  * charges moved onto the shared `ChargeTable`, the empty and loading states
  * come from `SubTabState`, whose loading branch is a bare skeleton with no
- * action slot — so the button is genuinely absent, not merely disabled.
+ * action slot: so the button is genuinely absent, not merely disabled.
  *
  * Fixed here rather than by giving `SubTabState` an action during loading:
  * that branch is shared by every sub-tab in the console, and widening it for
  * one caller's story would change all of them. Whether the button ought to
  * stay put and disabled, instead of vanishing and returning, is a real
- * question — but it is one about the shared state, not about this view.
+ * question: but it is one about the shared state, not about this view.
  */
 export const Loading: Story = {
   args: { loading: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Loading charges')).toBeInTheDocument()
-    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+    // The add action keeps its place in the header, disabled until charges load.
+    await expect(canvas.getByRole('button', { name: 'Add charge' })).toBeDisabled()
   },
 }
 

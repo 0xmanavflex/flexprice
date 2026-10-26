@@ -3,7 +3,7 @@
  *
  * `GET/PUT /settings/customer_onboarding`. The value is a workflow: a
  * `workflowType` and an ordered list of actions the backend runs, in order,
- * the first time it sees a new customer. An empty list — the default — means
+ * the first time it sees a new customer. An empty list: the default: means
  * nothing happens, which is a valid and common answer.
  *
  * ## The action list is a closed union, and the write enforces it
@@ -18,7 +18,7 @@
  * So all five are modelled here, exactly, and `parseOnboardingAction` is total:
  * an action that does not match one of the five is reported rather than
  * silently carried. A screen that cannot name every action it holds should
- * refuse to save, because the API will refuse for it — with a message about
+ * refuse to save, because the API will refuse for it: with a message about
  * JSON, at a moment when the user thinks they edited a wallet.
  *
  * Optional fields are `null`, not absent, throughout. Under
@@ -80,7 +80,7 @@ const decimalString = (message: string) =>
  * An ISO 8601 instant, as a string.
  *
  * Kept as the string the API sent rather than parsed to a `Date`, because it
- * is written back verbatim and a `Date` round-trip normalises the offset —
+ * is written back verbatim and a `Date` round-trip normalises the offset:
  * `2026-09-29T00:00:00+05:30` becomes a UTC instant, and a workflow scheduled
  * for local midnight quietly moves.
  */
@@ -129,7 +129,7 @@ export const createWalletActionSchema = z
   })
   .superRefine((action, ctx) => {
     // A duration without a unit is not a shorter expiry, it is no expiry at
-    // all — the backend needs both or neither.
+    // all: the backend needs both or neither.
     if (
       action.initialCreditsExpirationDuration !== null &&
       action.initialCreditsExpirationDurationUnit === null

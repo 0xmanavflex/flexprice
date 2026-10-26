@@ -3,6 +3,8 @@ import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   PAYMENT_METHOD_LABEL,
+  PaymentMethod,
+  RECORDABLE_PAYMENT_METHODS,
   type RecordPayment,
   emptyPayment,
   recordPaymentSchema,
@@ -23,7 +25,10 @@ export const PaymentFormProvenance = provenance({
 })
 
 const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
-const METHODS = Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => ({ value, label }))
+const METHODS = RECORDABLE_PAYMENT_METHODS.map((value) => ({
+  value,
+  label: PAYMENT_METHOD_LABEL[value],
+}))
 
 export interface PaymentFormProps {
   invoices: readonly Option[]
@@ -33,6 +38,15 @@ export interface PaymentFormProps {
   onCancel?: () => void
   isSubmitting?: boolean
   submitError?: string | null
+  /**
+   * The chosen invoice's customer's wallets that can pay it (active, in its
+   * currency), for "Credits". Undefined while they load.
+   */
+  wallets?: readonly Option[] | undefined
+  /** Each offered invoice's currency, so choosing one fills the payment's currency. */
+  invoiceCurrencies?: Readonly<Record<string, string>> | undefined
+  /** Reports the chosen invoice, so the page can load its customer's wallets. */
+  onInvoiceChange?: ((invoiceId: string) => void) | undefined
 }
 
 /** Record a payment against an invoice: collected elsewhere, or run through a gateway now. */
@@ -44,12 +58,16 @@ export function PaymentForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  wallets,
+  onInvoiceChange,
+  invoiceCurrencies,
 }: PaymentFormProps) {
   const form = useCalmForm<RecordPayment>({
     resolver: standardSchemaResolver(recordPaymentSchema) as Resolver<RecordPayment>,
     defaultValues: defaultValue ?? emptyPayment(),
   })
   const errors = form.formState.errors
+  const methodType = form.watch('methodType')
 
   return (
     <FormPage
@@ -86,7 +104,15 @@ export function PaymentForm({
                     id={id}
                     {...field}
                     value={control.value}
-                    onValueChange={control.onChange}
+                    onValueChange={(value) => {
+                      control.onChange(value)
+                      // Another invoice may belong to another customer: its wallet is not this one's.
+                      form.setValue('walletId', undefined)
+                      // A payment is in its invoice's currency (and Credits locks the field).
+                      const currency = invoiceCurrencies?.[value]
+                      if (currency) form.setValue('currency', currency.toUpperCase())
+                      onInvoiceChange?.(value)
+                    }}
                     options={invoices}
                     placeholder="Choose an invoice"
                     disabled={isSubmitting}
@@ -113,7 +139,8 @@ export function PaymentForm({
                     onValueChange={control.onChange}
                     options={CURRENCIES}
                     placeholder="Choose a currency"
-                    disabled={isSubmitting}
+                    // Credits are drawn in the wallet's currency, which is the invoice's.
+                    disabled={isSubmitting || methodType === PaymentMethod.Credits}
                   />
                 )}
               />
@@ -154,6 +181,38 @@ export function PaymentForm({
               />
             )}
           </FormRow>
+          {methodType === PaymentMethod.Credits ? (
+            <FormRow
+              label="Wallet"
+              hint="The customer's wallet the credits are drawn from."
+              required
+              error={errors.walletId?.message}
+            >
+              {({ id, ...field }) => (
+                <Controller
+                  control={form.control}
+                  name="walletId"
+                  render={({ field: control }) => (
+                    <OptionSelect
+                      id={id}
+                      {...field}
+                      value={control.value ?? ''}
+                      onValueChange={control.onChange}
+                      options={wallets ?? []}
+                      placeholder={
+                        wallets === undefined
+                          ? 'Choose an invoice first'
+                          : wallets.length === 0
+                            ? 'No active wallet in this currency'
+                            : 'Choose a wallet'
+                      }
+                      disabled={isSubmitting || !wallets?.length}
+                    />
+                  )}
+                />
+              )}
+            </FormRow>
+          ) : null}
           <FormRow label="Process now" hint="Off leaves the payment initiated.">
             {({ id }) => (
               <Controller

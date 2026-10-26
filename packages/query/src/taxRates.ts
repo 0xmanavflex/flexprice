@@ -24,7 +24,7 @@ import { useFlexprice } from './provider'
  * The wire shape this reads, after the SDK camelCases the response.
  *
  * `createdAt`/`updatedAt` arrive as `Date` (the SDK parses them). The wider
- * record — `taxRateType`, `taxRateStatus`, the audit columns — stays on the
+ * record: `taxRateType`, `taxRateStatus`, the audit columns: stays on the
  * wire; the list needs none of it.
  */
 export interface TaxRateWire {
@@ -71,7 +71,7 @@ export function toTaxRate(wire: TaxRateWire): TaxRate {
  *
  * The request exposes `limit`/`offset` for paging and an `order` *direction*,
  * but no sort *field* and no name search, so only paging is sent here. Search
- * and status are applied on the page — the same split coupons use.
+ * and status are applied on the page: the same split coupons use.
  */
 export function toTaxRateFilter(query: TaxRateQuery) {
   return {
@@ -107,7 +107,7 @@ export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Pro
    * The consequence is worth being precise about: with a search term, the
    * matches shown are the matches **on this page**, and `total` counts every
    * tax rate rather than every match. Closing that needs a server-side search
-   * on this route — it cannot be fixed from here.
+   * on this route: it cannot be fixed from here.
    */
   const search = query.search.trim().toLowerCase()
   const filtered = search
@@ -120,13 +120,20 @@ export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Pro
   }
 }
 
-export function useTaxRates(query: TaxRateQuery) {
+export function useTaxRates(
+  query: TaxRateQuery,
+  options: {
+    /** Refetch when the tab regains focus, e.g. after a rate is created in another tab. */
+    refetchOnWindowFocus?: boolean
+  } = {},
+) {
   const client = useFlexprice()
 
   return useQuery({
     queryKey: queryKeys.taxRates.list({ ...query, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchTaxRates(client, query),
     placeholderData: (previous) => previous,
+    ...(options.refetchOnWindowFocus ? { refetchOnWindowFocus: 'always' as const } : {}),
   })
 }
 
@@ -137,7 +144,6 @@ export function toCreateTaxRateRequest(draft: CreateTaxRate): Record<string, unk
     code: draft.code,
     taxRateType: 'percentage',
     percentageValue: draft.percentageValue,
-    scope: draft.scope,
     ...(draft.description ? { description: draft.description } : {}),
     ...(draft.metadata ? { metadata: draft.metadata } : {}),
   }
@@ -162,6 +168,7 @@ export function useCreateTaxRate() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Tax rate created', error: 'Could not create the tax rate.' } },
     mutationFn: (draft: CreateTaxRate) =>
       call(() => client.taxRates.createTaxRate(toCreateTaxRateRequest(draft) as never)),
     onSuccess: () => {

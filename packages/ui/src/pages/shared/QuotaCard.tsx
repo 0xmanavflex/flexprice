@@ -11,7 +11,7 @@ import { provenance } from '@ui/provenance'
  * exactly the six readings a customer's entitlement has: a `used` figure and a
  * cost on one row, a progress bar under them, what is left beside what is
  * included, and the renewal date in a divided footer. What is reused is that
- * arrangement — which reading sits where, and the fact that the denominator is
+ * arrangement: which reading sits where, and the fact that the denominator is
  * a quiet caption rather than a second headline.
  *
  * The block itself cannot be mounted: it exports a propless component bound to
@@ -23,7 +23,7 @@ import { provenance } from '@ui/provenance'
  * - **`included: null` is UNLIMITED, not zero.** The block always has a
  *   denominator. An entitlement need not, and `?? 0` would render "0 of 0" for
  *   something with no cap at all. With no denominator there is no percentage
- *   and no bar, so neither is drawn — a full bar and an empty bar are both
+ *   and no bar, so neither is drawn: a full bar and an empty bar are both
  *   lies about an uncapped feature.
  * - **The block's green "3000 free calls left" is coloured text.** It uses the
  *   `-foreground` token in light mode and the base token in dark, the pairing
@@ -52,7 +52,7 @@ export interface QuotaCardAction {
 }
 
 export interface QuotaCardProps {
-  /** The feature's name — the card's heading. */
+  /** The feature's name: the card's heading. */
   feature: string
   /**
    * Accessible name for the meter, read as a sentence fragment: the reading is
@@ -60,14 +60,14 @@ export interface QuotaCardProps {
    * 2,000 of 5,000 used (40%)".
    */
   label: string
-  /** The unit, plural — "API calls", "tokens". Folded into every reading. */
+  /** The unit, plural: "API calls", "tokens". Folded into every reading. */
   unit?: string | undefined
   /** Used in the current period. `undefined` when nothing measures it. */
   used?: number | undefined
   /**
    * What the entitlement includes.
    *
-   * `null` means **unlimited** — not zero, and not infinity. `undefined` means
+   * `null` means **unlimited**: not zero, and not infinity. `undefined` means
    * no source reported a cap at all, which is a different claim again.
    */
   included?: number | null | undefined
@@ -80,7 +80,7 @@ export interface QuotaCardProps {
    * been seen to disagree (291 of 10 drawn as a third of a bar).
    */
   percentUsed?: number | undefined
-  /** How often the allowance resets, as a word — "Monthly". Captions the denominator. */
+  /** How often the allowance resets, as a word: "Monthly". Captions the denominator. */
   resetPeriodLabel?: string | undefined
   /** When the allowance next resets. `undefined`/`null` renders the dash. */
   resetsOn?: Date | null | undefined
@@ -92,7 +92,7 @@ export interface QuotaCardProps {
    * this card does not have to change shape.
    */
   overage?: ReactNode | undefined
-  /** The footer action — "View usage". */
+  /** The footer action: "View usage". */
   action?: QuotaCardAction | undefined
   locale?: string | undefined
   className?: string | undefined
@@ -129,7 +129,7 @@ export function QuotaCard({
     return undefined
   })()
 
-  // Capped for the bar, uncapped for the reading — 120% must still say 120%.
+  // Capped for the bar, uncapped for the reading: 120% must still say 120%.
   const barValue = percent === undefined ? 0 : Math.min(100, percent)
   const over = measurable && (used as number) > (included as number)
 
@@ -144,7 +144,7 @@ export function QuotaCard({
       ? '**:data-[slot=progress-indicator]:bg-warning'
       : null
 
-  // The whole reading, as one sentence fragment — the meter's accessible name.
+  // The whole reading, as one sentence fragment: the meter's accessible name.
   const meterName = `${label}: ${
     typeof used === 'number' ? withUnit(used) : 'an unreported amount'
   } of ${typeof included === 'number' ? format(included) : 'an unreported allowance'} used${

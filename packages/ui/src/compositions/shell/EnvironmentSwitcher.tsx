@@ -1,4 +1,11 @@
-import { CheckIcon, ChevronsUpDownIcon, PencilIcon, PlusIcon, Trash2Icon } from '@ui/icons'
+import {
+  CheckIcon,
+  ChevronsUpDownIcon,
+  CopyIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from '@ui/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,10 +32,15 @@ export interface EnvironmentSwitcherProps {
   current: ShellEnvironment
   environments: ShellEnvironment[]
   onChange: (id: string) => void
-  /** Absent means creating one is not offered — no dead menu item. */
+  /** Absent means creating one is not offered: no dead menu item. */
   onCreate?: () => void
   /** Rename an environment. Absent means no pencil on the rows. */
   onRename?: (id: string) => void
+  /**
+   * Copy the current environment's plans and features into another (V1's
+   * "Copy environment"). Absent means no item.
+   */
+  onCopy?: () => void
   /**
    * Delete an environment. Absent means no delete action on the rows. Never
    * offered on the current environment: deleting the one you are standing in
@@ -61,7 +73,7 @@ const TONE: Record<MockAccountOption['tone'], string> = {
  * Editing a plan in production and editing one in a sandbox are different acts
  * with different consequences, so the kind is a coloured dot (green for
  * production, yellow for a sandbox) beside the name, and the name is the word
- * that carries it — colour alone excludes anyone who cannot distinguish it.
+ * that carries it: colour alone excludes anyone who cannot distinguish it.
  *
  * The menu lists the fetched environments, production first, with a tick on the
  * current one. Environments are managed here rather than on a Settings page:
@@ -83,6 +95,7 @@ export function EnvironmentSwitcher({
   onChange,
   onCreate,
   onRename,
+  onCopy,
   onDelete,
   mockAccounts,
 }: EnvironmentSwitcherProps) {
@@ -181,16 +194,24 @@ export function EnvironmentSwitcher({
           </>
         ) : null}
 
-        {onCreate ? (
+        {onCreate || onCopy ? (
           <>
             {/* Below the scroll area, so create stays visible however long the
                 environment list is. */}
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem disabled={!write.allowed} onClick={onCreate}>
-                <PlusIcon className="text-muted-foreground" aria-hidden />
-                New environment
-              </DropdownMenuItem>
+              {onCreate ? (
+                <DropdownMenuItem disabled={!write.allowed} onClick={onCreate}>
+                  <PlusIcon className="text-muted-foreground" aria-hidden />
+                  New environment
+                </DropdownMenuItem>
+              ) : null}
+              {onCopy ? (
+                <DropdownMenuItem disabled={!write.allowed} onClick={onCopy}>
+                  <CopyIcon className="text-muted-foreground" aria-hidden />
+                  Copy environment…
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuGroup>
             {write.reason ? (
               <p className="text-muted-foreground px-2 py-1.5 text-xs">{write.reason}</p>

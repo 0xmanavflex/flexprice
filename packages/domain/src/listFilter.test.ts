@@ -5,6 +5,7 @@ import {
   decodeListFilters,
   encodeListFilters,
   runnableFilters,
+  splitKeyValue,
 } from './listFilter'
 
 const SPECS: ListFilterSpec[] = [
@@ -43,5 +44,32 @@ describe('list filters', () => {
         SPECS,
       ),
     ).toEqual([{ field: 'created_at', op: FilterOp.Before, value: '2026-10-01' }])
+  })
+})
+
+describe('key/value filters', () => {
+  const specs: ListFilterSpec[] = [{ field: 'metadata', label: 'Metadata', kind: 'keyvalue' }]
+
+  it('splits on the first =, so a value may hold one', () => {
+    expect(splitKeyValue('region=eu')).toEqual({ key: 'region', value: 'eu' })
+    expect(splitKeyValue('query=a=b')).toEqual({ key: 'query', value: 'a=b' })
+    expect(splitKeyValue('tier=')).toEqual({ key: 'tier', value: '' })
+  })
+
+  it('needs a key', () => {
+    expect(splitKeyValue('=eu')).toBeNull()
+    expect(splitKeyValue('region')).toBeNull()
+    expect(runnableFilters([{ field: 'metadata', op: FilterOp.Eq, value: '=eu' }], specs)).toEqual(
+      [],
+    )
+  })
+
+  it('offers only "is"', () => {
+    expect(
+      runnableFilters([{ field: 'metadata', op: FilterOp.Contains, value: 'a=b' }], specs),
+    ).toEqual([])
+    expect(
+      runnableFilters([{ field: 'metadata', op: FilterOp.Eq, value: 'a=b' }], specs),
+    ).toHaveLength(1)
   })
 })

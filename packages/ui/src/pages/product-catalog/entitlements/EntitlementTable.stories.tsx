@@ -6,7 +6,7 @@ import { EntitlementTable } from './EntitlementTable'
 
 /**
  * An entitlements section. The "Included" column reads per feature
- * type — a metered allowance as a number or "Unlimited", a boolean as Yes/No, a
+ * type: a metered allowance as a number or "Unlimited", a boolean as Yes/No, a
  * static value as itself, a config one as "Configured". No network.
  */
 const meta = {

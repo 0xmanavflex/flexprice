@@ -3,8 +3,8 @@ import { z } from 'zod'
 /**
  * An environment, and the rules for creating one.
  *
- * The backend calls the non-production kind `development`; the product — and
- * every person using it — calls it a sandbox. The wire word is kept at the
+ * The backend calls the non-production kind `development`; the product: and
+ * every person using it: calls it a sandbox. The wire word is kept at the
  * boundary and the product word is used everywhere above it, because renaming
  * a concept in the interface is cheaper than teaching everyone the API's word
  * for it.

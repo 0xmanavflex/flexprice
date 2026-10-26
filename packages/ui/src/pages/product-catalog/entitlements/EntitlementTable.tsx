@@ -1,6 +1,7 @@
 import { RBAC_ENTITY } from '@fp/domain'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
-import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from '@ui/icons'
+import { PlusIcon } from '@ui/icons'
+import { FEATURE_TYPE_GLYPH } from '../../shared/cells'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -14,8 +15,8 @@ import { DetailTable } from '../../shared/DetailTable'
 /**
  * An entitlements section: a flush `Section` with a `SimpleTable`.
  *
- * The "Included" column reads per feature type — a metered allowance as a number
- * or "Unlimited", a boolean as Yes/No, a static value as itself — because "what
+ * The "Included" column reads per feature type: a metered allowance as a number
+ * or "Unlimited", a boolean as Yes/No, a static value as itself: because "what
  * does this include of this feature" is answered differently for each.
  */
 export const EntitlementTableProvenance = provenance({
@@ -41,12 +42,9 @@ export interface EntitlementTableProps extends Partial<SubTabQuery> {
   showTitle?: boolean
 }
 
-const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
-  [FeatureType.Metered]: GaugeIcon,
-  [FeatureType.Boolean]: ToggleRightIcon,
-  [FeatureType.Static]: TypeIcon,
-  [FeatureType.Config]: SlidersHorizontalIcon,
-}
+/** The agreed glyph per feature type, shared with every other catalogue table. */
+const TYPE_ICON: Record<FeatureType, (typeof FEATURE_TYPE_GLYPH)[keyof typeof FEATURE_TYPE_GLYPH]> =
+  FEATURE_TYPE_GLYPH
 
 const TYPE_LABEL: Record<FeatureType, string> = {
   [FeatureType.Metered]: 'Metered',
@@ -87,7 +85,7 @@ function EntitlementTableInner({
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
     <WriteGate>
-      <Button type="button" onClick={onAdd}>
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3" onClick={onAdd}>
         <PlusIcon aria-hidden />
         Add entitlement
       </Button>
@@ -96,7 +94,12 @@ function EntitlementTableInner({
 
   if (entitlements.length === 0) {
     return (
-      <Section title={title} flush>
+      <Section
+        table
+        title={title}
+        {...(showTitle ? { showTitle } : {})}
+        {...(addButton ? { action: addButton } : {})}
+      >
         <SubTabState
           hasData={false}
           isLoading={isLoading ?? false}
@@ -111,7 +114,6 @@ function EntitlementTableInner({
             scene: 'catalog',
             title: 'No entitlements yet',
             description: `Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`,
-            action: addButton,
           }}
         >
           {null}
@@ -121,10 +123,14 @@ function EntitlementTableInner({
   }
 
   return (
-    <Section table title={title} {...(showTitle ? { showTitle } : {})}>
+    <Section
+      table
+      title={title}
+      {...(showTitle ? { showTitle } : {})}
+      {...(addButton ? { action: addButton } : {})}
+    >
       <DetailTable
         compact
-        {...(addButton ? { action: addButton } : {})}
         label="Entitlements"
         facet={{ label: 'Type', value: (entitlement) => TYPE_LABEL[entitlement.featureType] }}
         noun="entitlements"
@@ -138,17 +144,17 @@ function EntitlementTableInner({
               const Icon = TYPE_ICON[entitlement.featureType]
               const label = entitlement.featureName ?? entitlement.featureId
               return (
-                <span className="flex items-center gap-2.5">
-                  <Icon aria-hidden className="text-muted-foreground size-4" />
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />
                   {onOpenFeature ? (
-                    <span className="min-w-0 font-medium">
+                    <span className="min-w-0 truncate font-medium">
                       <EntityLink
                         label={label}
                         onOpen={() => onOpenFeature(entitlement.featureId)}
                       />
                     </span>
                   ) : (
-                    <span className="font-medium">{label}</span>
+                    <span className="min-w-0 truncate font-medium">{label}</span>
                   )}
                 </span>
               )

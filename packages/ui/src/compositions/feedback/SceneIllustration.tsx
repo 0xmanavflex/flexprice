@@ -23,7 +23,7 @@ import { provenance } from '@ui/provenance'
  * the inline, error and per-record states; a first-run page is the one place a
  * larger, livelier drawing earns its room.
  *
- *   table       Riffle     a tray of cards — any list of records
+ *   table       Riffle     a tray of cards: any list of records
  *   contracts   Riffle     contracts and everything inside them
  *   customers   Phosphor   customers and every tab of a customer
  *   catalog     Slow       products, plans, add-ons and pricing widgets

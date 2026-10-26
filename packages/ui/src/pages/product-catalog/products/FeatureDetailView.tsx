@@ -10,7 +10,7 @@ import {
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import { ArchiveIcon, CopyIcon, PencilIcon } from '@ui/icons'
+import { ArchiveIcon, BellIcon, CopyIcon, PencilIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
 import { DetailBreadcrumb } from '../../../compositions/detail/DetailShell'
@@ -33,7 +33,7 @@ import { DetailTable } from '../../shared/DetailTable'
  *
  * Charges and Entitlements were tabs of their own, each holding one table, and
  * Overview held a truncated copy of the charges plus a Usage panel that was
- * always empty — Flexprice reports no usage, customers or billed amount per
+ * always empty: Flexprice reports no usage, customers or billed amount per
  * feature, so there was never anything to draw. The redesign puts both tables
  * on Overview beside the test-event and metadata rail, which is the whole of
  * what this page can actually say, and leaves Information for the fields.
@@ -63,6 +63,8 @@ export interface FeatureDetailViewProps {
   onEditConfiguration: () => void
   /** Header menu: Duplicate. Omitted, the item is not shown. */
   onDuplicate?: () => void
+  /** Header menu: the feature's usage alert thresholds. Omitted, the item is not shown. */
+  onAlertSettings?: () => void
   /** Header menu: delete the feature. Omitted, the item is not shown. */
   onDelete?: () => void
   /** Plans and add-ons that price this feature. */
@@ -78,7 +80,7 @@ export interface FeatureDetailViewProps {
   entitlementsErrorKind?: ErrorKind | undefined
   onRetryEntitlements?: (() => void) | undefined
   /** Charges tab CTA: price this feature on a plan. Omitted, no button is shown. */
-  onAddPlan?: () => void
+  onAddCharge?: () => void
   onOpenChargeParent?: (charge: Charge) => void
   /** Saves the whole metadata map. Omitted, the Metadata section is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
@@ -150,6 +152,7 @@ export function FeatureDetailView({
   onBack,
   onEditConfiguration,
   onDuplicate,
+  onAlertSettings,
   onDelete,
   charges = [],
   chargesLoading = false,
@@ -161,7 +164,7 @@ export function FeatureDetailView({
   entitlementsError = null,
   entitlementsErrorKind,
   onRetryEntitlements,
-  onAddPlan,
+  onAddCharge,
   onOpenChargeParent,
   onSaveMetadata,
   apiBaseUrl,
@@ -190,6 +193,16 @@ export function FeatureDetailView({
             label: 'Duplicate',
             icon: <CopyIcon className="text-muted-foreground" aria-hidden />,
             onSelect: onDuplicate,
+          },
+        ]
+      : []),
+    ...(onAlertSettings
+      ? [
+          {
+            id: 'alerts',
+            label: 'Alert settings',
+            icon: <BellIcon className="text-muted-foreground" aria-hidden />,
+            onSelect: onAlertSettings,
           },
         ]
       : []),
@@ -243,7 +256,7 @@ export function FeatureDetailView({
             chargesError={chargesError}
             chargesErrorKind={chargesErrorKind}
             onRetryCharges={onRetryCharges}
-            {...(onAddPlan ? { onAddPlan } : {})}
+            {...(onAddCharge ? { onAddCharge } : {})}
             {...(onOpenChargeParent ? { onOpenChargeParent } : {})}
             entitlements={entitlements}
             entitlementsLoading={entitlementsLoading}
@@ -373,7 +386,7 @@ function EntitlementsSection({
 /**
  * Everything the page can actually say about a feature, on one screen.
  *
- * Left: who bills for it (Charges) and who includes it (Entitlements) — the
+ * Left: who bills for it (Charges) and who includes it (Entitlements): the
  * full tables, not a four-row preview of one of them. Right: how to send it an
  * event, and the metadata carried with the record.
  *
@@ -387,7 +400,7 @@ function OverviewTab({
   chargesError,
   chargesErrorKind,
   onRetryCharges,
-  onAddPlan,
+  onAddCharge,
   onOpenChargeParent,
   entitlements,
   entitlementsLoading,
@@ -401,7 +414,7 @@ function OverviewTab({
   chargesError: string | null
   chargesErrorKind?: ErrorKind | undefined
   onRetryCharges?: (() => void) | undefined
-  onAddPlan?: (() => void) | undefined
+  onAddCharge?: (() => void) | undefined
   onOpenChargeParent?: ((charge: Charge) => void) | undefined
   entitlements: FeatureEntitlementLink[]
   entitlementsLoading: boolean
@@ -423,7 +436,7 @@ function OverviewTab({
           emptyDescription="No plan or add-on prices this feature yet."
           layout="narrow"
           hideRowActions
-          addLabel="Add plan"
+          addLabel="Add charge"
           facets={[
             {
               id: 'parent-status',
@@ -437,7 +450,7 @@ function OverviewTab({
           error={chargesError}
           errorKind={chargesErrorKind}
           onRetry={onRetryCharges}
-          {...(onAddPlan ? { onAdd: onAddPlan } : {})}
+          {...(onAddCharge ? { onAdd: onAddCharge } : {})}
         />
       ) : null}
       <EntitlementsSection
@@ -479,7 +492,7 @@ function TestEventPanel({ feature, apiBaseUrl }: { feature: Feature; apiBaseUrl?
  * The create form, shown read-only: **Details** then **Metering**, the same
  * cards with the same rows, labels and hints in the same order, so someone
  * who just filled the form finds each field where they left it. Editing stays
- * in one place — "Edit details" in the header's ⋯ menu opens the real form.
+ * in one place: "Edit details" in the header's ⋯ menu opens the real form.
  *
  * Ids and timestamps are not create-form fields: the header's ID chip carries
  * the id, and the right-hand rail (test event, metadata) is shared with
@@ -517,7 +530,7 @@ function InformationTab({
             value: feature.lookupKey,
             ...(feature.lookupKey ? { display: mono(feature.lookupKey) } : {}),
             placeholder: 'None',
-            hint: 'Fixed once set — integrations key off it.',
+            hint: 'Fixed once set: integrations key off it.',
             readOnly: true,
           },
           {
@@ -529,7 +542,7 @@ function InformationTab({
           },
           {
             key: 'label',
-            label: 'Label',
+            label: 'Tag',
             value: groupName ?? '',
             placeholder: 'None',
             hint: 'The label the feature is filed under.',
@@ -578,7 +591,7 @@ function InformationTab({
               hint: 'How events are combined into a usage number.',
               readOnly: true,
             },
-            // Only when the aggregation has one — the form hides it too.
+            // Only when the aggregation has one: the form hides it too.
             ...(feature.aggregationField
               ? [
                   {

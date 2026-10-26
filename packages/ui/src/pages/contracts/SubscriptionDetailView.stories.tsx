@@ -73,7 +73,13 @@ const SUBSCRIPTION: SubscriptionDetail = {
   metadata: { account_manager: 'Priya N', region: 'eu-west' },
   timezone: 'UTC',
   lookupKey: 'acme-scale-2026',
-  commitmentAmount: money('2500', 'USD'),
+  commitment: {
+    amount: money('2500', 'USD'),
+    period: 'MONTHLY',
+    periodCount: 1,
+    overageFactor: 1,
+    trueUp: false,
+  },
   latestInvoice: { id: 'inv_0922', number: 'INV-0922' },
 }
 
@@ -384,6 +390,7 @@ const PREVIEW: InvoicePreview = {
       name: 'Platform fee',
       detail: 'Oct 1 – Nov 1',
       quantity: '1',
+      unitPrice: money('1500', 'USD'),
       amount: money('1500', 'USD'),
       kind: 'fixed',
     },
@@ -392,6 +399,7 @@ const PREVIEW: InvoicePreview = {
       name: 'API requests',
       detail: '920,250 requests',
       quantity: '920250',
+      unitPrice: money('0.002', 'USD'),
       amount: money('1840.5', 'USD'),
       kind: 'usage',
     },
@@ -400,6 +408,7 @@ const PREVIEW: InvoicePreview = {
       name: 'Onboarding',
       detail: 'Oct 1 – Nov 1',
       quantity: '1',
+      unitPrice: money('250', 'USD'),
       amount: money('250', 'USD'),
       kind: 'fixed',
     },
@@ -408,6 +417,7 @@ const PREVIEW: InvoicePreview = {
       name: 'Seat overage',
       detail: 'No usage this period',
       quantity: '0',
+      unitPrice: null,
       amount: money('0', 'USD'),
       kind: 'usage',
     },
@@ -548,6 +558,13 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+/** The contract's own facts live on the Information tab. */
+async function openInformation(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement)
+  await userEvent.click(await canvas.findByRole('tab', { name: 'Information' }))
+  return canvas
+}
+
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -559,31 +576,81 @@ export const Default: Story = {
     await expect(header.getByText('USD')).toBeVisible()
     // The header holds only the badges, the ID and More.
     await expect(header.queryByRole('button', { name: 'Cancel contract' })).toBeNull()
-    await expect(canvas.getAllByRole('tab')).toHaveLength(4)
+    await expect(canvas.getAllByRole('tab')).toHaveLength(5)
     await expect(canvas.queryByRole('tab', { name: /Entitlements/ })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: 'Schedule' })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: 'Activity' })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Related' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Contract' })).toBeVisible()
-    await expect(canvas.getByText('Start date')).toBeVisible()
+    // The contract's own facts are on Information, not the Overview.
+    await expect(canvas.queryByRole('heading', { name: 'Metadata' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Contract' })).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Recent invoices' })).toBeNull()
     await expect(canvas.queryByRole('alert')).toBeNull()
+    await openInformation(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Contract' })).toBeVisible()
+    await expect(canvas.getByText('Start date')).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
   },
 }
 
-/** Every action is in More, destructive last. No Pause: the backend has none. */
+/**
+ * Every action is in More, destructive last, as in V1: Copy ID, Edit, Alert
+ * settings, Pause (a running contract), Cancel. Resume only shows when paused.
+ */
 export const MoreMenu: Story = {
   parameters: menuA11y,
+  args: {
+    onPause: fn(async () => undefined),
+    onResume: fn(async () => undefined),
+    onAlertSettings: fn(),
+  },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
-    await expect(await screen.findByRole('menuitem', { name: 'Cancel contract' })).toBeVisible()
-    await expect(screen.queryByRole('menuitem', { name: /Pause/ })).toBeNull()
-    await expect(screen.queryByRole('menuitem', { name: 'Activate' })).toBeNull()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Cancel contract' }))
+    const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent?.trim())
+    await expect(items).toEqual([
+      'Copy ID',
+      'Edit contract',
+      'Alert settings',
+      'Pause contract',
+      'Cancel contract',
+    ])
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Alert settings' }))
+    await expect(args.onAlertSettings).toHaveBeenCalledOnce()
+    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Cancel contract' }))
     await expect(args.onCancel).toHaveBeenCalledOnce()
+  },
+}
+
+/** Pause asks for proration and a reason, then sends both. */
+export const PausesContract: Story = {
+  args: { onPause: fn(async () => undefined) },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Pause contract' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('switch'))
+    await userEvent.type(dialog.getByLabelText('Reason (optional)'), 'Customer on holiday')
+    await userEvent.click(dialog.getByRole('button', { name: 'Pause contract' }))
+    await waitFor(() =>
+      expect(args.onPause).toHaveBeenCalledWith({ prorate: true, reason: 'Customer on holiday' }),
+    )
+  },
+}
+
+/** "Edit contract" opens the Charges tab, where V2 edits what V1's edit page did. */
+export const EditContractOpensCharges: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit contract' }))
+    await expect(canvas.getByRole('tab', { name: /Charges/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
   },
 }
 
@@ -635,13 +702,22 @@ export const Cancelled: Story = {
   },
 }
 
-/** A paused contract shows correctly; there is no Pause or Resume action. */
+/** A paused contract says so, and its menu offers Resume instead of Pause. */
 export const Paused: Story = {
-  args: withSubscription({ status: SubscriptionStatus.Paused }),
-  play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByText('Billing is paused for this contract.'),
-    ).toBeVisible()
+  args: {
+    ...withSubscription({ status: SubscriptionStatus.Paused }),
+    onPause: fn(async () => undefined),
+    onResume: fn(async () => undefined),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Billing is paused for this contract.')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
+    await expect(screen.queryByRole('menuitem', { name: 'Pause contract' })).toBeNull()
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Resume contract' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Resume contract' }))
+    await waitFor(() => expect(args.onResume).toHaveBeenCalledWith({ prorate: false }))
   },
 }
 
@@ -712,8 +788,6 @@ export const OverviewSummary: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const order = [
-      'Contract',
-      'Billing & collection',
       'Upcoming invoice',
       'Charges',
       'Entitlements',
@@ -731,7 +805,7 @@ export const OverviewSummary: Story = {
         ).toBeTruthy()
       }
     })
-    await expect(canvas.getByRole('heading', { name: 'Billing & collection' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Billing & collection' })).toBeNull()
     // The summary hands off to the Charges tab for the rest.
     await userEvent.click(canvas.getByRole('button', { name: 'Show all charges' }))
     await waitFor(() =>
@@ -787,7 +861,7 @@ export const ContractSpecificCharges: Story = {
 }
 
 /**
- * A contract that follows its plan still gets the section — it says so.
+ * A contract that follows its plan still gets the section: it says so.
  *
  * The old Overview dropped the section entirely, which read as "this contract
  * has no charges" rather than "none of them were changed". The summary states
@@ -903,7 +977,7 @@ export const NoUpcomingInvoiceWhenCancelled: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Contract' })).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
   },
 }
@@ -912,7 +986,7 @@ export const NoUpcomingInvoiceWhenIncomplete: Story = {
   args: withSubscription({ status: SubscriptionStatus.Incomplete, currentPeriodStart: null }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Contract' })).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
   },
 }
@@ -921,7 +995,9 @@ export const NoUpcomingInvoiceWhenIncomplete: Story = {
 export const ContractDetails: Story = {
   play: async ({ canvasElement }) => {
     const section = within(
-      (await within(canvasElement).findByRole('heading', { name: 'Contract' })).closest('section')!,
+      (
+        await (await openInformation(canvasElement)).findByRole('heading', { name: 'Contract' })
+      ).closest('section')!,
     )
     await expect(section.getByText('Start date')).toBeVisible()
     await expect(section.getByText('Mar 1, 2026')).toBeVisible()
@@ -934,13 +1010,46 @@ export const ContractDetails: Story = {
         .getByRole('heading', { name: 'Billing & collection' })
         .closest('section')!,
     )
-    for (const label of ['Payment terms', 'Currency', 'Billing cycle', 'Commitment']) {
+    for (const label of ['Payment terms', 'Collection', 'Commitment', 'True-up']) {
       await expect(billing.getByText(label)).toBeVisible()
     }
-    for (const label of ['Collection', 'Time zone', 'Usage this period']) {
+    for (const label of ['Currency', 'Billing cycle', 'Time zone', 'Usage this period']) {
       await expect(billing.queryByText(label)).toBeNull()
     }
-    await expect(billing.getByText(/\$2,500\.00/)).toBeVisible()
+    await expect(billing.getByText(/\$2,500\.00 per month/)).toBeVisible()
+    // An overage factor of 1 is the normal rate, so it has no row.
+    await expect(billing.queryByText('Overage factor')).toBeNull()
+    await expect(billing.getByText('True-up')).toBeVisible()
+  },
+}
+
+/**
+ * A contract-level commitment measured over its own period, with an overage
+ * premium and true-up. Set when the contract is created and read-only after,
+ * as the API has no way to change it.
+ */
+export const ContractCommitment: Story = {
+  args: withSubscription({
+    commitment: {
+      amount: money('30000', 'USD'),
+      period: 'ANNUAL',
+      periodCount: 1,
+      overageFactor: 1.2,
+      trueUp: true,
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const billing = within(
+      (
+        await (
+          await openInformation(canvasElement)
+        ).findByRole('heading', { name: 'Billing & collection' })
+      ).closest('section')!,
+    )
+    await expect(billing.getByText(/\$30,000\.00 per year/)).toBeVisible()
+    await expect(billing.getByText(/1\.2× overage/)).toBeVisible()
+    await expect(billing.getByText('On')).toBeVisible()
+    await expect(billing.queryByRole('button', { name: /edit/i })).toBeNull()
   },
 }
 
@@ -1118,6 +1227,7 @@ export const UpcomingInvoiceManyLines: Story = {
         name: `Line item ${index + 1}`,
         detail: 'Oct 1 – Nov 1',
         quantity: '1',
+        unitPrice: money('10', 'USD'),
         amount: money('10', 'USD'),
         kind: 'fixed' as const,
       })),
@@ -1172,7 +1282,7 @@ export const UnlinkIntegration: Story = {
     /*
      * Wait for the dialog to go before the a11y scan.
      *
-     * Its confirm button is the vendored base-nova `destructive` variant — a
+     * Its confirm button is the vendored base-nova `destructive` variant: a
      * soft fill whose text sits at 3.82:1 on its own tint, the design-token
      * gap `ConfirmDialog.stories.tsx` documents and mutes. Here the dialog is
      * already closing, so waiting keeps `color-contrast` enabled for the rest
@@ -1186,7 +1296,7 @@ export const LinkIntegration: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: 'Link an integration' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Link integration' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.type(dialog.getByLabelText(/Customer ID at the provider/), 'qb_42')
     await userEvent.click(dialog.getByRole('button', { name: 'Link' }))
@@ -1207,6 +1317,66 @@ export const EditPlanLink: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Go to plan' }))
     await expect(args.onOpenPlan).toHaveBeenCalledOnce()
+  },
+}
+
+/** V1's charge row: copy the line item id, and apply or remove a coupon on just this charge. */
+export const ChargeRowCouponActions: Story = {
+  // Ends on the Remove coupon confirm, whose destructive button is the vendored
+  // soft fill at 3.82:1 (see ConfirmDialog.stories.tsx): whether axe sees it
+  // depends on timing, which made this story flaky in CI.
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          { id: 'color-contrast', enabled: false },
+        ],
+      },
+    },
+  },
+  args: {
+    onRemoveCoupon: fn(async () => undefined),
+    coupons: ready([{ ...COUPONS[0]!, id: 'assoc_line', lineItemId: 'line_1', active: true }]),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Copy line item ID' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: 'Apply coupon' })).toBeNull()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove coupon' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove coupon' }))
+    await waitFor(() =>
+      expect(args.onRemoveCoupon).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'assoc_line' }),
+      ),
+    )
+  },
+}
+
+/**
+ * A contract that has not started yet: the API refuses a charge that starts
+ * before its contract, so an empty start means "with the contract", sent as
+ * its exact start (here mid-day UTC, not midnight).
+ */
+export const AddChargeBeforeContractStarts: Story = {
+  parameters: menuA11y,
+  args: withSubscription({ startDate: new Date('2099-03-01T15:30:00Z') }),
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(
+      await dialog.findByText(/Leave empty to start with the contract/),
+    ).toBeInTheDocument()
+    await userEvent.type(dialog.getByLabelText('Display name'), 'Premium support')
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '400')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(args.onAddCharge).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: '2099-03-01T15:30:00.000Z' }),
+    )
   },
 }
 
@@ -1268,7 +1438,14 @@ export const AddUsageCharge: Story = {
     // Usage terms exist only on a metered charge; quantity does not.
     await expect(dialog.queryByLabelText(/^Quantity/)).toBeNull()
     await userEvent.click(dialog.getByRole('checkbox', { name: 'Add a commitment' }))
-    await userEvent.type(dialog.getByLabelText(/^Commitment/), '500')
+    await userEvent.type(dialog.getByLabelText(/^Commitment \(/), '500')
+    // The commitment can run for its own period, as on an existing charge.
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Commitment period' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Quarterly' }))
+    // Per bucket needs a bucket size first.
+    await expect(
+      dialog.getByRole('checkbox', { name: /Apply to each bucket \(set a bucket size first\)/ }),
+    ).toHaveAttribute('aria-disabled', 'true')
     // A commitment needs a value above zero.
     await userEvent.clear(dialog.getByLabelText(/^Overage factor/))
     await userEvent.type(dialog.getByLabelText(/^Overage factor/), '0.5')
@@ -1298,6 +1475,7 @@ export const AddUsageCharge: Story = {
           windowed: false,
           overageFactor: '1.5',
           trueUp: false,
+          duration: 'QUARTERLY',
         },
       },
     })
@@ -1318,9 +1496,9 @@ export const EditUsageCharge: Story = {
     await expect(dialog.getByLabelText('Display name')).toBeDisabled()
     await expect(dialog.getByLabelText(/^Currency/)).toBeDisabled()
     // Starts on the line's own commitment.
-    await expect(dialog.getByLabelText(/^Commitment/)).toHaveValue('500')
+    await expect(dialog.getByLabelText(/^Commitment \(/)).toHaveValue('500')
     await expect(dialog.getByLabelText(/^Overage factor/)).toHaveValue('1.5')
-    const commitment = dialog.getByLabelText(/^Commitment/)
+    const commitment = dialog.getByLabelText(/^Commitment \(/)
     await userEvent.clear(commitment)
     await userEvent.type(commitment, '800')
     await userEvent.click(dialog.getByRole('button', { name: 'Save charge' }))
@@ -1436,7 +1614,7 @@ export const ChargeSaveFails: Story = {
 }
 
 /**
- * A cancelled contract cannot be edited — but it can still be read.
+ * A cancelled contract cannot be edited: but it can still be read.
  *
  * The row menu stays, because "View details" and "Copy price ID" are not
  * edits and someone reconciling a cancelled contract needs both. What goes is
@@ -1464,6 +1642,15 @@ export const CancelledPricingIsReadOnly: Story = {
 }
 
 /** A contract still in its trial takes no new charges, but existing ones stay editable. */
+/** The API adds charges only to an active contract, so a draft or paused one offers none. */
+export const OnlyActiveCanAddCharge: Story = {
+  args: withSubscription({ status: SubscriptionStatus.Paused }),
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+  },
+}
+
 export const TrialingCannotAddCharge: Story = {
   args: withSubscription({ status: SubscriptionStatus.Trialing }),
   play: async ({ canvasElement }) => {
@@ -1553,7 +1740,7 @@ export const NoActivityOrMetadata: Story = {
     ...withSubscription({
       metadata: {},
       latestInvoice: null,
-      commitmentAmount: null,
+      commitment: null,
       lookupKey: '',
     }),
     activity: [],
@@ -1561,7 +1748,8 @@ export const NoActivityOrMetadata: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('No activity yet.')).toBeVisible()
-    await expect(canvas.getAllByText('None').length).toBeGreaterThan(0)
+    await openInformation(canvasElement)
+    await expect((await canvas.findAllByText('None')).length).toBeGreaterThan(0)
   },
 }
 
@@ -1716,9 +1904,13 @@ export const EditsChargeAlerts: Story = {
       within(sheet.getByRole('region', { name: 'Alerts' })).getByRole('button', { name: 'Edit' }),
     )
     const dialog = within(await body.findByRole('dialog', { name: 'Alert settings' }))
-    await expect(dialog.getByRole('textbox', { name: 'Threshold' })).toHaveValue('80')
-    await userEvent.click(dialog.getByRole('combobox', { name: 'Warning' }))
-    await userEvent.click(await body.findByRole('option', { name: 'Rises above' }))
+    await expect(dialog.getByRole('textbox', { name: /^Warning threshold/ })).toHaveValue('80')
+    // The condition is a two-way switcher now, not a dropdown.
+    await userEvent.click(
+      within(dialog.getByRole('group', { name: 'Warning condition' })).getByRole('button', {
+        name: 'Rises above',
+      }),
+    )
     await userEvent.click(dialog.getByRole('button', { name: 'Save alerts' }))
     await waitFor(() =>
       expect(args.onSaveChargeAlert).toHaveBeenCalledWith({
@@ -1733,6 +1925,81 @@ export const EditsChargeAlerts: Story = {
   },
 }
 
+/** A usage charge with no alerts offers Add, which creates a setting on its line item. */
+export const AddsChargeAlerts: Story = {
+  args: {
+    ...BASE,
+    onCreateChargeAlert: fn(async () => undefined),
+    chargeAlerts: ready(new Map()),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(canvas.getByRole('button', { name: 'Commitment: open API requests' }))
+    const sheet = within(await body.findByRole('dialog'))
+    const alerts = within(sheet.getByRole('region', { name: 'Alerts' }))
+    // The sheet slides in: wait for it rather than checking mid-animation.
+    await waitFor(() => expect(alerts.getByText(/No alerts on this charge/)).toBeVisible())
+    await userEvent.click(alerts.getByRole('button', { name: 'Add alerts' }))
+    const dialog = within(await body.findByRole('dialog', { name: 'Add alerts' }))
+    await expect(dialog.getByRole('textbox', { name: /^Warning threshold/ })).toHaveValue('80')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add alerts' }))
+    await waitFor(() =>
+      expect(args.onCreateChargeAlert).toHaveBeenCalledWith({
+        lineId: 'line_2',
+        config: expect.objectContaining({
+          alertEnabled: true,
+          warning: { condition: 'above', threshold: '80' },
+        }),
+      }),
+    )
+  },
+}
+
+/** A switched-off setting on the line opens on what it stored, not on blank thresholds. */
+export const AddAlertsOpensOnStoredThresholds: Story = {
+  args: {
+    ...BASE,
+    onCreateChargeAlert: fn(async () => undefined),
+    loadChargeAlert: fn(async () => ({
+      alertEnabled: false,
+      thresholdType: 'percentage' as const,
+      critical: { condition: 'above' as const, threshold: '95' },
+    })),
+    chargeAlerts: ready(new Map()),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(canvas.getByRole('button', { name: 'Commitment: open API requests' }))
+    const sheet = within(await body.findByRole('dialog'))
+    const alerts = within(sheet.getByRole('region', { name: 'Alerts' }))
+    await userEvent.click(alerts.getByRole('button', { name: 'Add alerts' }))
+    const dialog = within(await body.findByRole('dialog', { name: 'Add alerts' }))
+    await expect(args.loadChargeAlert).toHaveBeenCalledWith('line_2')
+    await expect(dialog.getByRole('textbox', { name: /^Critical threshold/ })).toHaveValue('95')
+    // Saving as shown turns them on.
+    await userEvent.click(dialog.getByRole('button', { name: 'Add alerts' }))
+    await waitFor(() =>
+      expect(args.onCreateChargeAlert).toHaveBeenCalledWith({
+        lineId: 'line_2',
+        config: expect.objectContaining({ alertEnabled: true }),
+      }),
+    )
+  },
+}
+
+/** A fixed charge has no usage to watch, so its sheet offers no alerts. */
+export const NoAlertsOnFixedCharge: Story = {
+  args: { ...BASE, onCreateChargeAlert: fn(), chargeAlerts: ready(new Map()) },
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByText('Platform fee'))
+    const sheet = within(await screen.findByRole('dialog'))
+    await expect(sheet.queryByRole('region', { name: 'Alerts' })).toBeNull()
+  },
+}
+
 export const EditCommitmentFromFlag: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -1743,7 +2010,7 @@ export const EditCommitmentFromFlag: Story = {
     await userEvent.click(within(commitment).getByRole('button', { name: 'Edit' }))
     const dialog = within(await screen.findByRole('dialog'))
     await expect(await dialog.findByText('Only this contract changes')).toBeVisible()
-    await expect(dialog.getByLabelText(/^Commitment/)).toHaveValue('500')
+    await expect(dialog.getByLabelText(/^Commitment \(/)).toHaveValue('500')
   },
 }
 

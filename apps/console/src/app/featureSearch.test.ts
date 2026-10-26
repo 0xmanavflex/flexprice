@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_FEATURE_QUERY, FeatureType } from '@fp/domain'
+import { DEFAULT_FEATURE_QUERY, FeatureType, ACTIVE_FEATURES_FILTER } from '@fp/domain'
 import { parseFeatureSearch } from './featureSearch'
 
 describe('parseFeatureSearch', () => {
   it('returns defaults for an empty URL', () => {
     expect(parseFeatureSearch({})).toEqual(DEFAULT_FEATURE_QUERY)
+  })
+
+  it('opens on published features, and an explicit empty filter list means every status', () => {
+    expect(parseFeatureSearch({}).filters).toEqual([ACTIVE_FEATURES_FILTER])
+    expect(parseFeatureSearch({ filters: [] }).filters).toEqual([])
+  })
+
+  it('leaves the default filter off a link that names a status', () => {
+    const query = parseFeatureSearch({ status: 'archived' })
+    expect(query.filters).toEqual([{ field: 'status', op: 'in', value: ['archived'] }])
+    expect(query.statuses).toEqual([])
   })
 
   it('reads a full query', () => {
@@ -17,7 +28,7 @@ describe('parseFeatureSearch', () => {
       sortBy: DEFAULT_FEATURE_QUERY.sortBy,
       sortDirection: DEFAULT_FEATURE_QUERY.sortDirection,
       view: 'table',
-      filters: [],
+      filters: [ACTIVE_FEATURES_FILTER],
     })
   })
 
@@ -57,7 +68,7 @@ describe('parseFeatureSearch', () => {
  * TanStack serialises the query object as it stands, so navigation writes
  * `types`, `pageSize`, `search`, `sortBy`. The parser only read the short
  * hand-written spellings, so every filter and sort reverted the instant it was
- * applied — no error, just a control that did nothing.
+ * applied: no error, just a control that did nothing.
  */
 describe('round-trips what the router writes', () => {
   it('reads the long names TanStack emits', () => {
@@ -79,7 +90,7 @@ describe('round-trips what the router writes', () => {
       sortBy: 'updatedAt',
       sortDirection: 'desc',
       view: 'table',
-      filters: [],
+      filters: [ACTIVE_FEATURES_FILTER],
     })
   })
 

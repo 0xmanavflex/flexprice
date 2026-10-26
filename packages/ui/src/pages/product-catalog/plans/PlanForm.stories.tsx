@@ -5,7 +5,7 @@ import { FeatureType } from '@fp/domain'
 import { PlanForm } from './PlanForm'
 
 /**
- * The plan create/edit page — same proof as every form here: fixtures in, a
+ * The plan create/edit page: same proof as every form here: fixtures in, a
  * validated `PlanFormValue` out, no provider, no network. Create is stepped
  * (details, then staged charges, entitlements and credit grants); edit is the
  * details step prepopulated.
@@ -107,6 +107,71 @@ export const CreatesWithDetailsOnly: Story = {
         charges: [],
         entitlements: [],
         creditGrants: [],
+      }),
+    )
+  },
+}
+
+/** Metadata is set on create, as on the plan page afterwards. */
+export const CreatesWithMetadata: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add field' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Key 1' }), 'tier')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Value 1' }), 'gold')
+    for (let i = 0; i < 3; i++) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    }
+    await userEvent.click(await canvas.findByRole('button', { name: 'Create plan' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plan: expect.objectContaining({ name: 'Pro', metadata: { tier: 'gold' } }),
+      }),
+    )
+  },
+}
+
+/** A metadata row with a problem keeps the form on Details, where the row is. */
+export const MetadataProblemStaysOnDetails: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add field' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Value 1' }), 'orphan')
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Every value needs a key.')
+    await expect(canvas.getByRole('textbox', { name: 'Value 1' })).toBeVisible()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
+/** A staged item can be edited before the plan exists: the change replaces it, not adds a second. */
+export const EditsAStagedCreditGrant: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
+    for (let i = 0; i < 3; i++) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    }
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add credit grant' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Credits/ }), '100')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add credit grant' }))
+    await expect(await canvas.findByText('100 credits')).toBeInTheDocument()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit Free credits' }))
+    const credits = canvas.getByRole('textbox', { name: /^Credits/ })
+    await expect(credits).toHaveValue('100')
+    await userEvent.clear(credits)
+    await userEvent.type(credits, '250')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save credit grant' }))
+    await expect(await canvas.findByText('250 credits')).toBeInTheDocument()
+    await expect(canvas.queryByText('100 credits')).toBeNull()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Create plan' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        creditGrants: [expect.objectContaining({ credits: '250' })],
       }),
     )
   },

@@ -2,7 +2,7 @@ import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * A plan, as the list and detail pages read it. Narrow and total.
  *
- * V1 splits a plan across four containers — a drawer for name, a separate page
+ * V1 splits a plan across four containers: a drawer for name, a separate page
  * for charges, a drawer on a tab for entitlements, a modal for credit grants.
  * This is the *read* model the catalogue list needs plus the *details* an editor
  * writes; the charges, entitlements and credit grants that complete a plan are a
@@ -26,7 +26,7 @@ export const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
  * A representative price for the pricing-card view.
  *
  * A plan can carry many charges; the card shows one headline the way a pricing
- * page does — the recurring base where there is one, else the first charge. The
+ * page does: the recurring base where there is one, else the first charge. The
  * `amount` is the string the API already formatted (`$29`), never a float, and
  * `period` is the raw billing enum the card shortens for display.
  */
@@ -62,7 +62,7 @@ export interface Plan {
  * Nothing on the plan says "hybrid": the shape is the mix of fixed fees and
  * metered usage underneath it, which is exactly what someone scanning the list
  * wants to know before opening anything. A plan with no charges is called that
- * rather than being lumped in with flat-rate — it bills nothing at all.
+ * rather than being lumped in with flat-rate: it bills nothing at all.
  */
 export const PlanKind = {
   Empty: 'empty',
@@ -82,8 +82,8 @@ export const PLAN_KIND_LABEL: Record<PlanKind, string> = {
 /**
  * The same label for something that is not a plan.
  *
- * Add-ons carry the same pill — the mix of fixed and usage charges is the
- * same question — but "Hybrid plan" on an add-on row is simply wrong. The
+ * Add-ons carry the same pill: the mix of fixed and usage charges is the
+ * same question: but "Hybrid plan" on an add-on row is simply wrong. The
  * noun is a parameter, as it is in the prototype.
  */
 export function planKindLabel(kind: PlanKind, noun = 'plan'): string {
@@ -102,7 +102,7 @@ export function planKind(plan: Pick<Plan, 'fixedChargeCount' | 'usageChargeCount
 
 /**
  * What the list can be sorted by. The three the API's `sort` accepts and a
- * person would ask for — named in product terms, mapped to wire names in
+ * person would ask for: named in product terms, mapped to wire names in
  * `@fp/query`.
  */
 export const PlanSortField = {
@@ -118,7 +118,7 @@ export const PLAN_SORT_LABEL: Record<PlanSortField, string> = {
   [PlanSortField.UpdatedAt]: 'Updated',
 }
 
-/** Table or cards. A layout, not a filter — kept out of the fetch key. */
+/** Table or cards. A layout, not a filter: kept out of the fetch key. */
 export const PlanView = {
   Table: 'table',
   Cards: 'cards',
@@ -149,7 +149,7 @@ export const DEFAULT_PLAN_QUERY: PlanQuery = {
   view: PlanView.Table,
   filters: [],
 }
-/** What the plan list can filter on — V1's fields, by their wire names. */
+/** What the plan list can filter on: V1's fields, by their wire names. */
 export const PLAN_FILTERS: readonly ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },
   { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
@@ -168,13 +168,13 @@ export const PLAN_FILTERS: readonly ListFilterSpec[] = [
 /**
  * The rules for creating or editing a plan's details.
  *
- * The details step only — name, an optional lookup key, a description. What
- * turns a plan from a shell into something that bills — its charges,
- * entitlements and credit grants — is the larger surface added afterwards, the
+ * The details step only: name, an optional lookup key, a description. What
+ * turns a plan from a shell into something that bills: its charges,
+ * entitlements and credit grants: is the larger surface added afterwards, the
  * way V1 creates the plan in a drawer and prices it on a separate page.
  *
  * Unlike an add-on, a plan's lookup key is optional (the create endpoint does
- * not require one) and stays editable — so it is a plain field in both modes.
+ * not require one) and stays editable: so it is a plain field in both modes.
  */
 export const createPlanSchema = z.object({
   name: z.string().trim().min(1, 'Enter a name'),

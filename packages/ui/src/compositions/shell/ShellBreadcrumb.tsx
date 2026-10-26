@@ -20,7 +20,7 @@ import type { ReactNode } from 'react'
  * Three things distinguish it from the plain breadcrumb, and each earns its
  * place:
  *
- * A crumb may carry a mark — a coloured dot for the environment, an avatar for
+ * A crumb may carry a mark: a coloured dot for the environment, an avatar for
  * a person. The mark is what makes the trail scannable without reading it,
  * which matters most for the crumb people most need to not misread.
  *
@@ -28,13 +28,13 @@ import type { ReactNode } from 'react'
  * reads as descent, which is what a trail is.
  *
  * Labels drop out as the window narrows, oldest first, leaving their marks
- * behind. The alternative is a trail that truncates the *current page* — the
+ * behind. The alternative is a trail that truncates the *current page*: the
  * one crumb nobody can afford to lose.
  *
  * The shell's navigation is nested two deep, so this has real work to do:
  * "Features" alone does not say it sits under Product Catalog, and on a detail
- * screen it does not say which feature. A crumb with nowhere to go — the page
- * you are already on — is not a link. Any earlier crumb, and a last crumb that
+ * screen it does not say which feature. A crumb with nowhere to go: the page
+ * you are already on: is not a link. Any earlier crumb, and a last crumb that
  * still has somewhere to go, is.
  */
 export const ShellBreadcrumbProvenance = provenance({
@@ -47,10 +47,10 @@ export interface ShellCrumb {
   label: string
   /** A dot, an avatar, a glyph. Stays visible when the label is dropped. */
   mark?: ReactNode
-  /** Absent means it is not navigable — a grouping, or the current page. */
+  /** Absent means it is not navigable: a grouping, or the current page. */
   onClick?: () => void
   /**
-   * A control rendered in place of the label — a dropdown, a switcher.
+   * A control rendered in place of the label: a dropdown, a switcher.
    *
    * When present it owns the crumb entirely: `mark`, `onClick` and the
    * label/link treatment are skipped, and the control is responsible for its
@@ -69,7 +69,7 @@ export interface ShellBreadcrumbProps {
  *
  * `null` means the label is always shown. Otherwise the pair is the class that
  * hides the *label* and the class that hides the *separator that belongs to
- * it* — they must move together, or a dropped crumb leaves a chevron pointing
+ * it*: they must move together, or a dropped crumb leaves a chevron pointing
  * at nothing.
  */
 function labelVisibility(index: number, total: number): { label: string; separator: string } {
@@ -92,8 +92,8 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
            * `truncate` and never `wrap-break-word`.
            *
            * The primitive's `<ol>` sets `overflow-wrap: break-word`, and with
-           * `flex-nowrap` and `min-w-0` children that broke *inside* words —
-           * "Custome/rs", "Subscrip/tions" — which doubled the h-12 header to
+           * `flex-nowrap` and `min-w-0` children that broke *inside* words:
+           * "Custome/rs", "Subscrip/tions": which doubled the h-12 header to
            * two lines on a phone. An ellipsis is the honest way to run out of
            * room.
            */
@@ -121,7 +121,7 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
                   /*
                    * The environment crumb gets a floor the page crumb does
                    * not. Both shrink, and at 390 the environment lost the
-                   * race and rendered as "Sa…" — on a billing console the
+                   * race and rendered as "Sa…": on a billing console the
                    * difference between a sandbox and production is the one
                    * thing that must never be a guess.
                    */

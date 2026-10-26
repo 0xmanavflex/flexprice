@@ -24,7 +24,7 @@ import { ApiError, ErrorKind } from '@fp/query'
  *
  * So the *kind* is what is mapped, and the two credential outcomes deliberately
  * collapse to one sentence. A network failure stays distinct, because that one
- * genuinely changes what the person should do next — nothing they type will
+ * genuinely changes what the person should do next: nothing they type will
  * help until they are back online. A timeout, a rate limit and a server fault
  * are likewise told apart from a wrong password: the first two say the details
  * were not judged, and the rate limit says how long to wait.

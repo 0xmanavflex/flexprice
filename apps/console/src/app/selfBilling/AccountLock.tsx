@@ -21,7 +21,7 @@ import { AccountLockedDialog, AccountStatusPill } from '@fp/ui/pages'
  *
  * The status is read once per session. While the account is in its trial or
  * locked, the summary is read too: it is what the pill and its card say. A
- * locked account reads everything and writes nothing — every write control is
+ * locked account reads everything and writes nothing: every write control is
  * disabled through the access check, a create page shows "Creating is
  * paused", and a write the API still refuses opens the locked dialog.
  */

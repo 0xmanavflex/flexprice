@@ -1,6 +1,8 @@
 import { InvoiceStatus, PaymentStatus, type Invoice, type Money, type Payment } from '@fp/domain'
 import type {
   AgingBucket,
+  CreditRow,
+  CreditTypeRow,
   CustomerRevenueRow,
   OverdueCustomerRow,
   PayerRow,
@@ -20,6 +22,18 @@ export const DAY_MS = 86_400_000
 
 export type RangeId = '30d' | '90d' | 'month' | 'quarter' | '12m'
 export type Grain = 'day' | 'week' | 'month'
+export type GrainChoice = 'auto' | Grain
+
+export const GRAIN_OPTIONS: { id: GrainChoice; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'day', label: 'Daily' },
+  { id: 'week', label: 'Weekly' },
+  { id: 'month', label: 'Monthly' },
+]
+
+export function resolveGrain(choice: GrainChoice, auto: Grain): Grain {
+  return choice === 'auto' ? auto : choice
+}
 
 export const RANGE_OPTIONS: { id: RangeId; label: string }[] = [
   { id: '30d', label: 'Last 30 days' },
@@ -179,9 +193,69 @@ function bucketed(days: RevenueDayRow[], currency: string, window: Window, grain
   return [...buckets.values()]
 }
 
+export interface DatedAmount {
+  at: Date
+  value: number
+  previous?: number | null
+}
+
+/** Whether a bucket dated before the window start still reaches into it. */
+function reachesInto(at: Date, start: Date, grain: Grain): boolean {
+  if (grain === 'day') return false
+  const next =
+    grain === 'month'
+      ? new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1))
+      : new Date(at.getTime() + 7 * DAY_MS)
+  return next > start
+}
+
+/**
+ * One point per bucket in the window. A report timeseries omits months with
+ * nothing to add up, which draws a two-bar chart for a twelve-month filter.
+ * Missing buckets are zero, in order, including a comparison when one was asked for.
+ * A bucket that starts before the window lands in the first one: added when
+ * `additive`, otherwise it replaces it, as averages cannot be added together.
+ */
+export function alignToWindow(
+  points: DatedAmount[],
+  window: Window,
+  grain: Grain,
+  comparing = false,
+  emptyValue: number | null = 0,
+  additive = true,
+): { label: string; value: number | null; previous?: number | null }[] {
+  const buckets = emptyBuckets(window, grain)
+  const seen = new Set<string>()
+  const previous = new Map<string, number>()
+  const start = utcMidnight(window.start)
+  for (const point of points) {
+    if (Number.isNaN(point.at.getTime())) continue
+    const early = point.at < start && reachesInto(point.at, start, grain)
+    const at = early ? start : point.at
+    if (at < start || at >= window.end) continue
+    const { key } = bucketOf(at, grain, window.start)
+    const bucket = buckets.get(key)
+    if (!bucket || (early && !additive && seen.has(key))) continue
+    bucket.value = additive ? bucket.value + point.value : point.value
+    seen.add(key)
+    if (comparing && point.previous != null) {
+      previous.set(key, additive ? (previous.get(key) ?? 0) + point.previous : point.previous)
+    }
+  }
+  return [...buckets.entries()].map(([key, bucket]) => ({
+    label: bucket.label,
+    value: seen.has(key) ? Math.round(bucket.value * 100) / 100 : emptyValue,
+    ...(comparing
+      ? {
+          previous: seen.has(key) ? Math.round((previous.get(key) ?? 0) * 100) / 100 : emptyValue,
+        }
+      : {}),
+  }))
+}
+
 /**
  * Net revenue per bucket for one currency, with the previous window's buckets
- * laid over by position — the first week against the first week before it.
+ * laid over by position: the first week against the first week before it.
  */
 export function revenueSeries(
   days: RevenueDayRow[],
@@ -197,6 +271,66 @@ export function revenueSeries(
     revenue: Math.round(bucket.value * 100) / 100,
     ...(previous ? { previous: Math.round((before[index]?.value ?? 0) * 100) / 100 } : {}),
   }))
+}
+
+/* ---- Credit consumption ---------------------------------------------------- */
+
+/** Pivots the per-credit-type breakdown into one row per customer. */
+export function creditRows(
+  rows: { keys: Record<string, string>; value: number }[],
+  nameOf: (id: string) => string,
+  money: (value: number) => string,
+): CreditRow[] {
+  const byCustomer = new Map<string, { paid: number; free: number }>()
+  for (const row of rows) {
+    const id = row.keys['customer_id'] ?? ''
+    const parts = byCustomer.get(id) ?? { paid: 0, free: 0 }
+    if (row.keys['credit_type'] === 'paid') parts.paid += row.value
+    else parts.free += row.value
+    byCustomer.set(id, parts)
+  }
+  const grand = [...byCustomer.values()].reduce((sum, row) => sum + row.paid + row.free, 0)
+  return [...byCustomer.entries()]
+    .map(([id, { paid, free }]) => ({
+      id,
+      name: nameOf(id),
+      paid,
+      free,
+      total: paid + free,
+      display: {
+        paid: money(paid),
+        free: money(free),
+        total: money(paid + free),
+        share: percentOf(paid + free, grand),
+      },
+    }))
+    .sort((a, b) => b.total - a.total)
+}
+
+/** Customers and amount per value of one dimension (credit type, top-up source). */
+export function creditTypeRows(
+  rows: { keys: Record<string, string>; value: number }[],
+  dimension: string,
+  labels: Record<string, string>,
+  money: (value: number) => string,
+): CreditTypeRow[] {
+  const byType = new Map<string, { customers: Set<string>; amount: number }>()
+  for (const row of rows) {
+    const id = row.keys[dimension] ?? ''
+    const entry = byType.get(id) ?? { customers: new Set<string>(), amount: 0 }
+    entry.amount += row.value
+    if (row.value > 0) entry.customers.add(row.keys['customer_id'] ?? '')
+    byType.set(id, entry)
+  }
+  return [...byType.entries()]
+    .map(([id, { customers, amount }]) => ({
+      id,
+      label: labels[id] ?? id,
+      customers: customers.size,
+      amount,
+      display: { amount: money(amount) },
+    }))
+    .sort((a, b) => b.amount - a.amount)
 }
 
 /* ---- Customers ------------------------------------------------------------- */
@@ -297,7 +431,7 @@ export function receivables(
       else {
         const bucket = AGING.find((candidate) => days >= candidate.from && days <= candidate.to)
         if (bucket) amounts.set(bucket.id, (amounts.get(bucket.id) ?? 0) + remaining)
-        entry.invoices += 1
+        entry.invoices = (entry.invoices ?? 0) + 1
         entry.overdue += remaining
         entry.oldestDays = Math.max(entry.oldestDays, days)
       }

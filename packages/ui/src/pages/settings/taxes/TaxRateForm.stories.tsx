@@ -1,10 +1,10 @@
-import { TAX_RATE_SCOPE_LABEL, TaxRateScope, TaxRateStatus, emptyTaxRate } from '@fp/domain'
+import { TaxRateStatus, emptyTaxRate } from '@fp/domain'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { TaxRateCreateForm, TaxRateEditForm } from './TaxRateForm'
 
 /**
- * Tax rate create and edit, each a full page. Create takes the value and scope;
+ * Tax rate create and edit, each a full page. Create takes the value;
  * edit is limited to what the API lets change and is prepopulated.
  */
 const withHeight: Decorator = (Story) => (
@@ -80,9 +80,8 @@ interface PlaygroundArgs {
   name: string
   code: string
   description: string
-  /** Create only: the value and scope are fixed once the rate exists. */
+  /** Create only: the value is fixed once the rate exists. */
   percentageValue: string
-  scope: TaxRateScope
   /** Edit only: archive or restore. */
   status: TaxRateStatus
   isSubmitting: boolean
@@ -91,7 +90,7 @@ interface PlaygroundArgs {
   onCancel: () => void
 }
 
-/** Switch between create (value and scope) and edit (rename, recode, archive); flip submitting or a server error. */
+/** Switch between create (value) and edit (rename, recode, archive); flip submitting or a server error. */
 /** The code is filled from the name until the person types their own. */
 export const CodeFollowsName: Story = {
   play: async ({ canvasElement }) => {
@@ -99,7 +98,7 @@ export const CodeFollowsName: Story = {
     const field = canvas.getByRole('textbox', { name: /^code/i })
 
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Pro')
-    await expect(field).toHaveValue('taxacmepro')
+    await expect(field).toHaveValue('tax-acme-pro')
 
     await userEvent.clear(field)
     await userEvent.type(field, 'mine')
@@ -116,7 +115,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     code: 'VAT20',
     description: '',
     percentageValue: '20',
-    scope: TaxRateScope.External,
     status: TaxRateStatus.Published,
     isSubmitting: false,
     submitError: '',
@@ -129,10 +127,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     code: { control: 'text' },
     description: { control: 'text' },
     percentageValue: { control: 'text' },
-    scope: {
-      options: Object.values(TaxRateScope),
-      control: { type: 'select', labels: TAX_RATE_SCOPE_LABEL },
-    },
     status: { control: 'inline-radio', options: Object.values(TaxRateStatus) },
     isSubmitting: { control: 'boolean' },
     submitError: { control: 'text', description: 'Empty means no server error.' },
@@ -143,7 +137,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     code,
     description,
     percentageValue,
-    scope,
     status,
     submitError,
     ...rest
@@ -158,10 +151,10 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       />
     ) : (
       <TaxRateCreateForm
-        key={`create|${name}|${code}|${description}|${percentageValue}|${scope}`}
+        key={`create|${name}|${code}|${description}|${percentageValue}`}
         {...rest}
         trail={[{ label: 'Tax rates' }, { label: 'Create tax rate' }]}
-        defaultValue={{ name, code, description, percentageValue, scope }}
+        defaultValue={{ name, code, description, percentageValue }}
         submitError={submitError || null}
       />
     ),

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
+  BellIcon,
   ArrowUpRightIcon,
   InfoIcon,
   MinusIcon,
@@ -12,6 +13,9 @@ import {
   XCircleIcon,
 } from '@ui/icons'
 import {
+  AUTO_TOPUP_COOLDOWN_UNIT_LABEL,
+  WALLET_KIND_LABEL,
+  AutoTopupCooldownUnit,
   type AutoTopup,
   type CreateWallet,
   type DebitWallet,
@@ -60,11 +64,9 @@ import {
   Section,
 } from '../../compositions'
 import { ChoiceCards, Composer } from '../../compositions/detail/DetailKit'
+import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { Pill, type PillTone } from '../shared/cells'
-import {
-  WalletLedgerTable,
-  formatCredits,
-} from './WalletLedgerTable'
+import { WalletLedgerTable, formatCredits } from './WalletLedgerTable'
 import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
 
@@ -94,6 +96,15 @@ export interface CustomerWalletViewProps {
   terminateError?: string | null
   onSaveAutoTopup: (draft: AutoTopup) => Promise<unknown>
   autoTopupError?: string | null
+  /** More menu: the selected wallet's balance alerts. Omitted, the item is hidden. */
+  onAlertSettings?: () => void
+  /**
+   * View only (an archived customer): every write is disabled, while picking
+   * another wallet and reading its balance and ledger still work.
+   */
+  readOnly?: boolean
+  /** Saves the selected wallet's metadata (the whole map). Omitted, the card is read-only. */
+  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /** Called when a dialog opens, so a stale error from the last attempt is cleared. */
   onResetErrors?: () => void
 }
@@ -124,6 +135,9 @@ export function CustomerWalletView({
   onDebit,
   debitError = null,
   onTerminate,
+  onAlertSettings,
+  onSaveMetadata,
+  readOnly = false,
   terminateError = null,
   onSaveAutoTopup,
   autoTopupError = null,
@@ -178,21 +192,29 @@ export function CustomerWalletView({
 
   const wallet = wallets.find((candidate) => candidate.id === selectedId) ?? wallets[0]
   if (!wallet) {
+    // The create action sits where the wallet's own actions do once one
+    // exists, top right; the empty state only says what a wallet is.
     return (
-      <>
+      <div className="flex flex-col gap-5">
+        <div className="flex justify-end">
+          <Button className="h-8 px-3.5" onClick={() => open('create')} disabled={readOnly}>
+            <PlusIcon aria-hidden="true" />
+            Create wallet
+          </Button>
+        </div>
         <EmptyState
           scene="customers"
           size="inline"
           title="No wallet yet"
           description="A wallet holds prepaid credits this customer's usage draws down."
-          action={<Button onClick={() => open('create')}>Create wallet</Button>}
         />
         {createDialog}
-      </>
+      </div>
     )
   }
 
-  const closed = wallet.status === WalletStatus.Closed
+  // A terminated wallet, or a read-only page: no writes either way.
+  const closed = wallet.status === WalletStatus.Closed || readOnly
   const currency = wallet.currency.toUpperCase()
   const asOf = now ?? new Date()
   const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
@@ -251,7 +273,13 @@ export function CustomerWalletView({
                 <RepeatIcon className="text-muted-foreground" aria-hidden="true" />
                 Auto top-up settings
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => open('create')}>
+              {onAlertSettings ? (
+                <DropdownMenuItem disabled={closed} onClick={onAlertSettings}>
+                  <BellIcon className="text-muted-foreground" aria-hidden="true" />
+                  Alert settings
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem disabled={readOnly} onClick={() => open('create')}>
                 <WalletIcon className="text-muted-foreground" aria-hidden="true" />
                 Create wallet
               </DropdownMenuItem>
@@ -290,6 +318,7 @@ export function CustomerWalletView({
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t px-6 py-4">
           <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+          {wallet.walletType ? <Pill>{WALLET_KIND_LABEL[wallet.walletType]}</Pill> : null}
           {/* The chip is also the way in: off never dead-ends, it opens the settings. */}
           <button
             type="button"
@@ -324,6 +353,14 @@ export function CustomerWalletView({
           <WalletLedgerTable transactions={transactions} now={asOf} />
         </SubTabState>
       </Section>
+
+      <MetadataCard
+        // One card per wallet: switching wallets mid-edit must not carry a draft across.
+        key={wallet.id}
+        description="Your own key/value fields on this wallet, for reporting or your systems."
+        metadata={wallet.metadata}
+        {...(onSaveMetadata && !closed ? { onSave: onSaveMetadata } : {})}
+      />
 
       {createDialog}
       <TopUpDialog
@@ -574,7 +611,10 @@ function DebitDialog({
       >
         <div className="grid gap-5 sm:grid-cols-2">
           <Field>
-            <LabelWithHint htmlFor="debit-credits" hint="How many credits to remove from the wallet.">
+            <LabelWithHint
+              htmlFor="debit-credits"
+              hint="How many credits to remove from the wallet."
+            >
               Credits
             </LabelWithHint>
             <Input
@@ -756,6 +796,11 @@ function TopUpDialog({
   )
 }
 
+const COOLDOWN_UNIT_OPTIONS = Object.values(AutoTopupCooldownUnit).map((value) => ({
+  value,
+  label: AUTO_TOPUP_COOLDOWN_UNIT_LABEL[value],
+}))
+
 function AutoTopupDialog({
   open,
   onClose,
@@ -818,11 +863,13 @@ function AutoTopupDialog({
             >
               Below
             </LabelWithHint>
-            <InputGroup className="h-9">
+            <InputGroup className="h-9" aria-disabled={!draft.enabled || undefined}>
               <InputGroupInput
                 id="auto-topup-threshold"
                 inputMode="decimal"
                 value={draft.threshold}
+                // Nothing to set until auto top-up is on.
+                disabled={!draft.enabled}
                 onChange={(event) => set({ threshold: event.target.value })}
               />
               <InputGroupAddon align="inline-end">credits</InputGroupAddon>
@@ -835,15 +882,52 @@ function AutoTopupDialog({
             >
               Add
             </LabelWithHint>
-            <InputGroup className="h-9">
+            <InputGroup className="h-9" aria-disabled={!draft.enabled || undefined}>
               <InputGroupInput
                 id="auto-topup-amount"
                 inputMode="decimal"
                 value={draft.amount}
+                // Nothing to set until auto top-up is on.
+                disabled={!draft.enabled}
                 onChange={(event) => set({ amount: event.target.value })}
               />
               <InputGroupAddon align="inline-end">credits</InputGroupAddon>
             </InputGroup>
+          </Field>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field>
+            <LabelWithHint
+              htmlFor="auto-topup-cooldown"
+              hint="The least time between two automatic top-ups, so a burst of usage cannot trigger several in a row. Leave blank for none."
+            >
+              Cool-off
+            </LabelWithHint>
+            <Input
+              id="auto-topup-cooldown"
+              inputMode="numeric"
+              placeholder="None"
+              value={draft.cooldownValue ?? ''}
+              disabled={!draft.enabled}
+              onChange={(event) => set({ cooldownValue: event.target.value })}
+            />
+          </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="auto-topup-cooldown-unit"
+              hint="What the cool-off is counted in."
+            >
+              Unit
+            </LabelWithHint>
+            <OptionSelect
+              id="auto-topup-cooldown-unit"
+              value={draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour}
+              disabled={!draft.enabled}
+              onValueChange={(cooldownUnit) =>
+                set({ cooldownUnit: cooldownUnit as AutoTopupCooldownUnit })
+              }
+              options={COOLDOWN_UNIT_OPTIONS}
+            />
           </Field>
         </div>
         <div className="flex items-center justify-between gap-4">

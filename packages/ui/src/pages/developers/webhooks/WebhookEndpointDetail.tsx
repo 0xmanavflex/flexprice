@@ -3,11 +3,14 @@ import { toast } from 'sonner'
 import {
   CircleCheckIcon,
   CircleDashedIcon,
+  CirclePauseIcon,
   CopyIcon,
   EyeIcon,
   EyeOffIcon,
+  PlayIcon,
   PlusIcon,
   RefreshCwIcon,
+  RotateCcwIcon,
   SendIcon,
   Trash2Icon,
   WebhookIcon,
@@ -53,7 +56,7 @@ import { WebhookEventTypePicker } from './WebhookEventTypePicker'
 import { WebhookTime } from './webhookCells'
 
 /**
- * One endpoint — Svix's endpoint page.
+ * One endpoint: Svix's endpoint page.
  *
  * The header carries the URL, whether the endpoint is enabled, its id, and the
  * menu Svix puts there (disable, recover failed messages, delete). Under it
@@ -211,8 +214,13 @@ export function WebhookEndpointDetail({
 
   const withFacts = (main: ReactNode) => (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-w-0 flex-col gap-5">{main}</div>
-      {facts}
+      <div className="flex min-w-0 flex-col gap-5">
+        {main}
+        <Section title="Message attempts" flush>
+          {attempts}
+        </Section>
+      </div>
+      <div className="xl:sticky xl:top-6">{facts}</div>
     </div>
   )
 
@@ -235,12 +243,23 @@ export function WebhookEndpointDetail({
         {
           id: 'toggle',
           label: endpoint.disabled ? 'Enable endpoint' : 'Disable endpoint',
+          icon: endpoint.disabled ? (
+            <PlayIcon className="text-muted-foreground" aria-hidden />
+          ) : (
+            <CirclePauseIcon className="text-muted-foreground" aria-hidden />
+          ),
           onSelect: () => setDialog('toggle'),
         },
-        { id: 'recover', label: 'Recover failed messages', onSelect: () => setDialog('recover') },
+        {
+          id: 'recover',
+          label: 'Recover failed messages',
+          icon: <RotateCcwIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setDialog('recover'),
+        },
         {
           id: 'delete',
           label: 'Delete endpoint',
+          icon: <Trash2Icon aria-hidden />,
           destructive: true,
           onSelect: () => setDialog('delete'),
         },
@@ -359,10 +378,6 @@ export function WebhookEndpointDetail({
         },
       ]}
     >
-      <Section title="Message attempts" flush>
-        {attempts}
-      </Section>
-
       <ConfirmDialog
         open={dialog === 'delete'}
         onOpenChange={(open) => !open && close()}
@@ -486,7 +501,7 @@ function FirstDelivery({
     {
       id: 'enabled',
       label: endpoint.disabled
-        ? 'Endpoint is disabled — enable it to receive events'
+        ? 'Endpoint is disabled: enable it to receive events'
         : 'Endpoint is enabled',
       done: !endpoint.disabled,
     },
@@ -543,8 +558,9 @@ function SubscribedEvents({
       title="Subscribed events"
       actions={
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
+          className="h-8 px-3"
           onClick={() => {
             setDraft(endpoint.filterTypes)
             action.reset()
@@ -618,7 +634,7 @@ function SigningSecret({ secret }: { secret: WebhookSecretState }) {
       title="Signing secret"
       description="Verify that each request came from Flexprice."
       actions={
-        <Button variant="ghost" size="sm" onClick={() => setRotating(true)}>
+        <Button variant="outline" size="sm" className="h-8 px-3" onClick={() => setRotating(true)}>
           <RefreshCwIcon aria-hidden />
           Rotate
         </Button>

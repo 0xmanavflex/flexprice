@@ -5,7 +5,7 @@ import type { ShellCreateAction } from '@fp/ui/compositions'
  * What the Create button offers, and where each one goes.
  *
  * Four, in one flat list: a contract, a customer, an invoice and a payment.
- * The test is whether someone starts this flow *cold* — without already being
+ * The test is whether someone starts this flow *cold*: without already being
  * on the screen that owns it. Catalogue work (plans, products, groups, cost
  * sheets) happens while you are in the catalogue, so it is started from there
  * and not from here.

@@ -7,7 +7,7 @@ import {
   type SubscriptionQuery,
 } from '@fp/domain'
 import { useCancelSubscription, useCustomers, usePlans, useSubscriptions } from '@fp/query'
-import { SubscriptionGrid, Toaster, toast } from '@fp/ui/pages'
+import { SubscriptionGrid, toast } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, OptionSelect, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
@@ -22,7 +22,7 @@ export interface SubscriptionListPageProps {
 }
 
 /**
- * The wiring layer, and nothing else — the same shape as `CouponListPage`.
+ * The wiring layer, and nothing else: the same shape as `CouponListPage`.
  *
  * Fetches, turns an error into a sentence, and hands the grid plain props. No
  * `useState`: the query lives in the URL, so a filtered list is a link.
@@ -38,7 +38,7 @@ export function SubscriptionListPage({
   const subscriptions = useSubscriptions(query)
   // The choices behind the Customer and Plan filters: the first hundred of each,
   // the same picker page the create form uses.
-  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
+  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100, filters: [] })
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, page: 1, pageSize: 100 })
   const filterOptions = {
     customer_id: (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
@@ -143,7 +143,6 @@ export function SubscriptionListPage({
           )
         }}
       />
-      <Toaster />
     </>
   )
 }

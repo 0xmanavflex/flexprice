@@ -9,7 +9,7 @@ import { provenance } from '@ui/provenance'
  * The lines of a draft invoice, editable in place.
  *
  * Backed by `POST /invoices/{id}/modify/execute`, which is a different route
- * from the one that saves a due date — and the only one that can change what
+ * from the one that saves a due date: and the only one that can change what
  * an invoice actually charges for.
  *
  * ## Finalized invoices
@@ -20,7 +20,7 @@ import { provenance } from '@ui/provenance'
  * holds this editor says so up front and confirms before saving.
  *
  * A manual edit also marks the invoice as manually edited, which disables
- * recompute — the caller surfaces that before the first change, not after.
+ * recompute: the caller surfaces that before the first change, not after.
  */
 export const InvoiceLinesEditorProvenance = provenance({
   source: 'composition',

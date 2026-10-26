@@ -63,7 +63,7 @@ function CouponsListBody({
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New coupon</Button>}
         emptyTitle="No coupons yet"
-        emptyDescription="Coupons apply a discount to a contract or an invoice — once, for a set number of periods, or forever. Create the first to offer one."
+        emptyDescription="Coupons apply a discount to a contract or an invoice: once, for a set number of periods, or forever. Create the first to offer one."
       >
         <CouponGrid
           coupons={paginate(matches, query.page, query.pageSize)}

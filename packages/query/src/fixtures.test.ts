@@ -15,10 +15,10 @@ import { toFeature } from './features'
  * Unit tests use fixtures I wrote, which means they test my assumptions about
  * the response as much as the mapper. These are captured from a live
  * environment and scrubbed, so they carry optional-field combinations nobody
- * chose — which is exactly where a mapper breaks.
+ * chose: which is exactly where a mapper breaks.
  *
  * Note the parse step. The fixtures are **raw API JSON** (`amount_due`), while
- * a mapper receives **SDK output** (`amountDue`) — the SDK remaps keys and
+ * a mapper receives **SDK output** (`amountDue`): the SDK remaps keys and
  * turns date strings into `Date`s. Feeding a raw fixture straight to a mapper
  * would silently produce every default and prove nothing, so each one goes
  * through the SDK's own inbound schema first. That makes this a test of the
@@ -95,7 +95,7 @@ describe('features, from captured responses', () => {
    *
    * Asserted only for rows whose response actually embedded a meter. The API
    * returns `meter_id` and embeds the meter object only when asked with
-   * `expand: 'meters'` — which `toFeatureFilter` now sends, and the capture
+   * `expand: 'meters'`: which `toFeatureFilter` now sends, and the capture
    * script now sends. The committed fixture predates that fix, so nothing here
    * can assert it yet; the check below is what says so out loud.
    */
@@ -115,7 +115,7 @@ describe('features, from captured responses', () => {
 
     if (metered.length > 0 && embedded.length === 0) {
       console.warn(
-        `  features.json has ${metered.length} metered rows and none embed a meter — ` +
+        `  features.json has ${metered.length} metered rows and none embed a meter: ` +
           're-capture with expand=meters, or the "Measured by" column cannot be tested.',
       )
     }
@@ -137,7 +137,7 @@ describe('the fixture corpus itself', () => {
   })
 
   /**
-   * Not a failure — a record of which entities the capture environment had
+   * Not a failure: a record of which entities the capture environment had
    * nothing in. An empty fixture still proves the envelope, but it cannot test
    * a mapper, and it is what tells us a re-capture is needed.
    */

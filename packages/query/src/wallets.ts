@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, ErrorKind, call, debitWallet } from '@fp/api'
 import {
+  type AlertSettingConfig,
   type AutoTopup,
+  WalletKind,
+  AutoTopupCooldownUnit,
   type CreateWallet,
   type DebitWallet,
   type TopUpWallet,
@@ -10,6 +13,7 @@ import {
   WalletStatus,
   moneyOr,
 } from '@fp/domain'
+import { type AlertConfigWire, toAlertConfig, toAlertConfigRequest } from './alertSettings'
 import { queryKeys } from './keys'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
@@ -20,11 +24,14 @@ import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provide
  */
 
 export interface WalletWire {
+  alertSettings?: AlertConfigWire | undefined
   id?: string | undefined
   customerId?: string | undefined
   currency?: string | undefined
   walletStatus?: string | undefined
+  walletType?: string | undefined
   description?: string | undefined
+  metadata?: Record<string, string> | undefined
   creditBalance?: string | undefined
   balance?: string | undefined
   realTimeCreditBalance?: string | undefined
@@ -37,6 +44,7 @@ export interface WalletWire {
         threshold?: number | string | undefined
         amount?: number | string | undefined
         invoicing?: boolean | undefined
+        cooldown?: { unit?: string | undefined; value?: number | undefined } | undefined
       }
     | undefined
   createdAt?: Date | undefined
@@ -62,9 +70,14 @@ export function toWallet(wire: WalletWire): Wallet {
   const credits = wire.creditBalance ?? '0'
   const amount = wire.balance ?? '0'
   return {
+    alertSettings: toAlertConfig(wire.alertSettings),
     id: wire.id ?? '',
     customerId: wire.customerId ?? '',
     currency,
+    walletType:
+      wire.walletType === WalletKind.PrePaid || wire.walletType === WalletKind.PostPaid
+        ? wire.walletType
+        : null,
     status: STATUSES.has(wire.walletStatus ?? '')
       ? (wire.walletStatus as WalletStatus)
       : WalletStatus.Active,
@@ -80,7 +93,9 @@ export function toWallet(wire: WalletWire): Wallet {
       threshold: String(wire.autoTopup?.threshold ?? ''),
       amount: String(wire.autoTopup?.amount ?? ''),
       invoicing: wire.autoTopup?.invoicing ?? true,
+      ...toCooldown(wire.autoTopup?.cooldown),
     },
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -164,11 +179,30 @@ export function toUpdateAutoTopupRequest(draft: AutoTopup): Record<string, unkno
       threshold: Number(draft.threshold),
       amount: Number(draft.amount),
       invoicing: draft.invoicing,
+      // Sent only when set: a blank cool-off leaves whatever the wallet has.
+      ...(draft.cooldownValue
+        ? {
+            cooldown: {
+              value: Number(draft.cooldownValue),
+              unit: draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour,
+            },
+          }
+        : {}),
     },
   }
 }
 
-/** A customer's wallets — `GET /customers/{id}/wallets`. */
+const COOLDOWN_UNITS = new Set<string>(Object.values(AutoTopupCooldownUnit))
+
+/** The wire's cool-off, as the draft's two fields. Seconds and unknown units are read as none. */
+function toCooldown(
+  wire: { unit?: string | undefined; value?: number | undefined } | undefined,
+): Pick<AutoTopup, 'cooldownValue' | 'cooldownUnit'> {
+  if (!wire?.value || !COOLDOWN_UNITS.has(wire.unit ?? '')) return {}
+  return { cooldownValue: String(wire.value), cooldownUnit: wire.unit as AutoTopupCooldownUnit }
+}
+
+/** A customer's wallets: `GET /customers/{id}/wallets`. */
 export function useCustomerWallets(customerId: string) {
   const client = useFlexprice()
 
@@ -178,15 +212,17 @@ export function useCustomerWallets(customerId: string) {
       ((await call(() => client.wallets.getWalletsByCustomerId(customerId))) as WalletWire[]).map(
         toWallet,
       ),
+    // No customer yet (a form still choosing one): nothing to read.
+    enabled: customerId.length > 0,
   })
 }
 
-/** One wallet's ledger, newest first — `GET /wallets/{id}/transactions`. */
+/** One wallet's ledger, newest first: `GET /wallets/{id}/transactions`. */
 /**
  * One wallet's real-time balance: `GET /wallets/{id}/balance/real-time`.
  *
- * The wallet list carries only the stored balance — what was left at the last
- * invoice — so a wallet read from it looks untouched until the next invoice,
+ * The wallet list carries only the stored balance: what was left at the last
+ * invoice: so a wallet read from it looks untouched until the next invoice,
  * however much usage has run since. This read nets that pending usage off,
  * which is V1's "Ongoing balance" and the figure that can go negative.
  *
@@ -276,13 +312,47 @@ export function useTopUpWallet(walletId: string) {
   })
 }
 
+/**
+ * `PUT /wallets/{id}` with one part of the wallet. The one place the update
+ * request is cast: the auto top-up and alert bodies are built as plain maps.
+ */
+function updateWallet(client: ReturnType<typeof useFlexprice>, walletId: string, body: object) {
+  return call(() => client.wallets.updateWallet(walletId, body as never))
+}
+
 export function useUpdateAutoTopup(walletId: string) {
   const client = useFlexprice()
   const invalidate = useInvalidateWallets()
 
   return useMutation({
     mutationFn: (draft: AutoTopup) =>
-      call(() => client.wallets.updateWallet(walletId, toUpdateAutoTopupRequest(draft) as never)),
+      updateWallet(client, walletId, toUpdateAutoTopupRequest(draft)),
+    onSuccess: invalidate,
+  })
+}
+
+/**
+ * A wallet's balance alerts, stored on the wallet as V1 does
+ * (`alert_settings` on `PUT /wallets/{id}`), not as an `/alerts/setting` record.
+ */
+export function useUpdateWalletAlerts(walletId: string) {
+  const client = useFlexprice()
+  const invalidate = useInvalidateWallets()
+
+  return useMutation({
+    mutationFn: (config: AlertSettingConfig) =>
+      updateWallet(client, walletId, { alertSettings: toAlertConfigRequest(config) }),
+    onSuccess: invalidate,
+  })
+}
+
+/** A wallet's metadata: `PUT /wallets/{id}` with the whole map. */
+export function useUpdateWalletMetadata(walletId: string) {
+  const client = useFlexprice()
+  const invalidate = useInvalidateWallets()
+
+  return useMutation({
+    mutationFn: (metadata: Record<string, string>) => updateWallet(client, walletId, { metadata }),
     onSuccess: invalidate,
   })
 }

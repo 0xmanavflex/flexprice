@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { CatalogListPage } from './pages/catalog'
 
@@ -20,7 +21,7 @@ const isWrite = (method: string, path: RegExp) => (r: { method(): string; url():
 
 test.describe('the groups list', () => {
   const list = (page: Page) =>
-    new CatalogListPage(page, { heading: 'Groups', searchLabel: 'Search groups' })
+    new CatalogListPage(page, { heading: 'Tags', searchLabel: 'Search tags' })
 
   const openRowMenu = async (page: Page, item: string) => {
     await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
@@ -31,18 +32,18 @@ test.describe('the groups list', () => {
     await page.goto('/groups')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
 
-    await page.getByRole('button', { name: 'New group' }).first().click()
+    await page.getByRole('button', { name: 'New tag' }).first().click()
     await expect(page).toHaveURL(/\/groups\/new$/)
-    await expect(page.getByRole('heading', { name: 'Group details' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Tag details' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Create group' }).click()
+    await page.getByRole('button', { name: 'Create tag' }).click()
     await expect(page.getByText('Enter a name')).toBeVisible()
 
     await page.getByLabel('Name', { exact: false }).first().fill('EU region')
     await page.getByLabel('Lookup key').fill('eu-region')
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/groups$/))
-    await page.getByRole('button', { name: 'Create group' }).click()
+    await page.getByRole('button', { name: 'Create tag' }).click()
     await request
     await expect(page).not.toHaveURL(/\/groups\/new$/)
   })
@@ -57,12 +58,12 @@ test.describe('the groups list', () => {
     await page.goto('/groups')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
 
-    await openRowMenu(page, 'Delete group')
+    await openRowMenu(page, 'Delete tag')
     const dialog = page.getByRole('dialog', { name: /^Delete / })
     await expect(dialog).toBeVisible()
 
     const request = page.waitForRequest(isWrite('DELETE', /\/v1\/groups\/[^/]+$/))
-    await dialog.getByRole('button', { name: 'Delete group' }).click()
+    await dialog.getByRole('button', { name: 'Delete tag' }).click()
     await request
     await expect(dialog).toBeHidden()
   })

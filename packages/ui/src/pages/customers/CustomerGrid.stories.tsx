@@ -170,7 +170,7 @@ export const Default: Story = {}
  * Email is a column, not a subtitle.
  *
  * Stacked under the name it was unsortable, unexportable and clipped twice as
- * often — and it is the field support actually searches by.
+ * often: and it is the field support actually searches by.
  */
 export const Populated: Story = {
   play: async ({ canvasElement }) => {
@@ -187,7 +187,7 @@ export const Populated: Story = {
  * The four columns the redesign asked for and this table does not have.
  *
  * Plan, MRR, Wallet balance and Subscriptions are omitted rather than shipped
- * as permanently empty columns — a column of em dashes asserts that these
+ * as permanently empty columns: a column of em dashes asserts that these
  * customers have no plan and no revenue, which is a different and worse claim
  * than saying nothing. Asserted so the omission is a decision on the record
  * rather than something that quietly drifts back in.
@@ -223,7 +223,7 @@ export const Layout: Story = {
 
 export const Loading: Story = { args: { customers: [], total: 0, isLoading: true } }
 
-/** A filter emptied the list — the toolbar survives, so it can be undone. */
+/** A filter emptied the list: the toolbar survives, so it can be undone. */
 export const FilteredEmpty: Story = {
   args: {
     customers: [],

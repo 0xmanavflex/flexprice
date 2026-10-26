@@ -179,7 +179,7 @@ export const Default: Story = {
 /**
  * The five flags, and what a click on one is for.
  *
- * The chips carry no values — never "20% off" — because a value on a chip is a
+ * The chips carry no values: never "20% off": because a value on a chip is a
  * value read instead of the sheet, and five of them put the nested table back.
  * Each chip opens the sheet at its own part; the row opens it at the top.
  */
@@ -264,7 +264,7 @@ export const Flagged: Story = {
  *
  * The views only appear where there is something to switch to: a plan whose
  * charges are all active and all as set shows one button, which is not a
- * choice. An ended charge keeps its row — it explains invoices that cite it —
+ * choice. An ended charge keeps its row: it explains invoices that cite it:
  * and says when it ended on its grey line.
  */
 export const Views: Story = {
@@ -293,7 +293,7 @@ export const Views: Story = {
   },
 }
 
-/** The contract's Charges tab: a Dates column says when each charge started and ended. */
+/** The contract's Charges tab: "In effect" says when each charge starts and ends. */
 export const WithDates: Story = {
   args: {
     charges: [
@@ -311,9 +311,11 @@ export const WithDates: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('columnheader', { name: 'Dates' })).toBeInTheDocument()
-    await expect(canvas.getByText('From Jan 1, 2026')).toBeInTheDocument()
-    await expect(canvas.getByText('Ended Feb 1, 2026')).toBeInTheDocument()
+    await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeInTheDocument()
+    await expect(canvas.getByText('Jan 1, 2026 → Ongoing')).toBeInTheDocument()
+    await expect(canvas.getByText('Jun 1, 2025 → Feb 1, 2026')).toBeInTheDocument()
+    // Billing timing has its own column, beside the dates.
+    await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeInTheDocument()
   },
 }
 
@@ -383,7 +385,7 @@ export const Narrow: Story = {
     const canvas = within(canvasElement)
     const chips = canvas.getAllByRole('button', { name: /: open API calls/ })
     await expect(chips).toHaveLength(4)
-    // Labelled, labelled, then icon-only — same accessible name either way.
+    // Labelled, labelled, then icon-only: same accessible name either way.
     await expect(chips[0]).toHaveTextContent('Price changed')
     await expect(chips[1]).toHaveTextContent('Discount')
     await expect(chips[2]).toHaveTextContent('')
@@ -420,7 +422,7 @@ export const Empty: Story = {
 }
 
 /**
- * Empty on a surface with no add flow — the add-on page.
+ * Empty on a surface with no add flow: the add-on page.
  *
  * The instruction is dropped with the action: telling someone to add a charge
  * on a surface that offers no way to do it is worse than saying nothing.
@@ -439,7 +441,7 @@ export const EmptyWithoutAddAction: Story = {
  * The caller names its own entity.
  *
  * This table is shared by plans, add-ons and cost sheets, so it must not say
- * "A plan" — which is what the add-on page used to show, verbatim.
+ * "A plan": which is what the add-on page used to show, verbatim.
  */
 export const EmptyWithCallerCopy: Story = {
   args: { charges: [], emptyDescription: 'This add-on bills nothing until it has a charge.' },

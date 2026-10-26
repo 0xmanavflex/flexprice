@@ -1,8 +1,9 @@
-import { InvoiceStatus, PaymentStatus } from '@fp/domain'
+import { InvoiceStatus, PaymentStatus, type ActivityField } from '@fp/domain'
 
 export interface InvoiceLine {
   id: string
   description: string
+  /** The service period ("Oct 1 – Nov 1"), shown in the Interval column. */
   detail?: string
   quantity: string
   /** Per-unit price for display; `null` when it cannot be stated (no quantity). */
@@ -28,6 +29,10 @@ export interface InvoiceActivity {
   at: string
   status: 'completed' | 'active' | 'pending' | 'issue'
   summary: string
+  /** The record's values, one label per line. */
+  fields?: readonly ActivityField[]
+  /** A second line, such as the amount paid. */
+  detail?: string
   /** The record, drawn in front of the summary. */
   record?: string
   /** The person who acted. Omitted when the system did. */
@@ -93,22 +98,35 @@ export interface StatusChip {
 
 /**
  * The header's status chips: the document state (Draft, Finalized, Void,
- * Skipped), then — for a finalized invoice — what the money did (Paid, Overdue,
- * Payment failed, Partially paid). Overdue and failed carry the danger tone.
+ * Skipped), then: for a finalized invoice: what the money did (Paid, Overdue,
+ * Payment failed, Partially paid, or Payment pending when nothing has happened
+ * yet). Overdue and failed carry the danger tone.
  */
 export function statusChips(
   doc: Pick<InvoiceDocument, 'status' | 'paymentStatus' | 'paid'>,
 ): StatusChip[] {
-  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'warning' }]
+  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'info' }]
   if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', tone: 'neutral' }]
   if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', tone: 'neutral' }]
   const chips: StatusChip[] = [{ label: 'Finalized', tone: 'neutral' }]
-  if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', tone: 'success' })
+  // A refunded invoice reads as refunded, not paid, though nothing remains due.
+  if (doc.status === InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Refunded)
+    chips.push({ label: 'Refund issued', tone: 'neutral' })
+  else if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', tone: 'success' })
   else if (doc.status === InvoiceStatus.Overdue) chips.push({ label: 'Overdue', tone: 'danger' })
   if (doc.status !== InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Failed)
     chips.push({ label: 'Payment failed', tone: 'danger' })
   else if (doc.status !== InvoiceStatus.Paid && doc.paid > 0)
     chips.push({ label: 'Partially paid', tone: 'warning' })
+  // A finalized invoice says where its money stands when the API says so,
+  // including the ordinary case of a payment still pending. Unknown and
+  // reversed states are not dressed up as pending.
+  if (chips.length === 1) {
+    if (doc.paymentStatus === PaymentStatus.Pending)
+      chips.push({ label: 'Payment pending', tone: 'warning' })
+    else if (doc.paymentStatus === PaymentStatus.Refunded)
+      chips.push({ label: 'Refund issued', tone: 'neutral' })
+  }
   return chips
 }
 
@@ -130,7 +148,7 @@ export function displayStatus(
   if (doc.paymentStatus === PaymentStatus.Failed) return { label: 'Payment failed', tone: 'danger' }
   if (doc.status === InvoiceStatus.Overdue) return { label: 'Overdue', tone: 'danger' }
   if (doc.paid > 0) return { label: 'Partially paid', tone: 'warning' }
-  return { label: 'Open', tone: 'neutral' }
+  return { label: 'Open', tone: 'warning' }
 }
 
 export function invoiceTotals(doc: InvoiceDocument) {

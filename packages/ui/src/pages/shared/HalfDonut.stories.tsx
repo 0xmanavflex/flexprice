@@ -4,7 +4,7 @@ import { HalfDonut } from './HalfDonut'
 import type { DonutSlice } from './HalfDonut'
 
 /**
- * Invoice payment status — states, so status tones. `good`/`warning`/`critical`
+ * Invoice payment status: states, so status tones. `good`/`warning`/`critical`
  * are reserved for exactly this, which is why the categorical slots are absent
  * here even though there are three of them.
  */
@@ -127,7 +127,7 @@ export const FooterIsTheLegend: Story = {
   },
 }
 
-/** Categorical slices — different things, not better or worse things. */
+/** Categorical slices: different things, not better or worse things. */
 export const Categorical: Story = {
   args: {
     slices: [
@@ -201,12 +201,12 @@ export const EmptyStatus: Story = {
  *
  * This is a regression guard for a real bug. The legend's inner flex row had no
  * `min-w-0`, so it sized to its content and the `truncate` below it never
- * engaged — a long label simply ran over its neighbour. Every other story here
+ * engaged: a long label simply ran over its neighbour. Every other story here
  * feeds short words ("Paid", "Open"), which is exactly why it survived: it took
  * real feature names on the revenue mix to make it visible.
  *
  * The assertion is on geometry rather than on a class, because the class was
- * always present — it was the missing constraint above it that made it inert.
+ * always present: it was the missing constraint above it that made it inert.
  */
 export const LongLabelsTruncate: Story = {
   args: {
@@ -229,7 +229,7 @@ export const LongLabelsTruncate: Story = {
     // Clipped, not spilling: the element is narrower than the text inside it.
     await expect(label.scrollWidth).toBeGreaterThan(label.clientWidth)
 
-    // And it stays inside its own column — the bug let it cover its neighbour.
+    // And it stays inside its own column: the bug let it cover its neighbour.
     const column = label.closest('li')
     await expect(column).not.toBeNull()
     const labelBox = label.getBoundingClientRect()

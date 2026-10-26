@@ -18,9 +18,11 @@ import type {
   FilterQuery,
 } from '@ui/components/reui/filters/filters-types'
 import { Calendar } from '@ui/components/primitives/calendar'
+import { Input } from '@ui/components/primitives/input'
 import {
   FILTER_OPS,
   runnableFilters,
+  splitKeyValue,
   type FilterKind,
   type FilterOp,
   type ListFilter,
@@ -31,7 +33,7 @@ import { provenance } from '@ui/provenance'
 /**
  * Filtering, over `@reui/filters`.
  *
- * The registry component edits a *tree* — nested AND/OR groups — and that is
+ * The registry component edits a *tree*: nested AND/OR groups: and that is
  * more than our URLs can carry. Every list screen keeps its query in search
  * params so a filtered view is a link, and a nested boolean expression does
  * not survive that round trip without inventing an encoding for it.
@@ -42,7 +44,7 @@ import { provenance } from '@ui/provenance'
  * `POST /<entity>/search` already accepts.
  *
  * The tree is still the underlying state, so moving to nested filtering later
- * is a change of `variant` plus a URL codec — not a rewrite. Until then, a
+ * is a change of `variant` plus a URL codec: not a rewrite. Until then, a
  * shape we cannot serialise is a shape we do not offer.
  */
 export const FilterBarProvenance = provenance({
@@ -66,13 +68,13 @@ export interface FilterBarProps {
    * Which chrome draws the query.
    *
    * `basic` is the flat pill row the registry documents as "a toolbar over a
-   * table" — a chip reading `Status  is any of  Select…` with a kebab, the
+   * table": a chip reading `Status  is any of  Select…` with a kebab, the
    * trigger below, and Clear. That is the reference bar, and it is the default.
    *
    * `advanced` is the nested condition builder, which the registry documents as
    * being for "a sidebar or a settings page". Rendered `inline` in a toolbar it
-   * draws its whole empty-state panel — a glyph, "No filters yet", and Add
-   * filter / Add group — across the bar, and it honours neither `trigger` nor
+   * draws its whole empty-state panel: a glyph, "No filters yet", and Add
+   * filter / Add group: across the bar, and it honours neither `trigger` nor
    * `showClear`, both of which belong to the chip row. It is kept as an option
    * for a surface that genuinely wants a builder; it is not what a list screen
    * wants.
@@ -89,8 +91,8 @@ export interface FilterBarProps {
    * below, which is what every caller before `EntityList` renders.
    *
    * Additive and optional on purpose: `EntityList` needs an icon-only trigger
-   * carrying a count badge, and the alternative — each list drawing its own
-   * trigger beside a bar that also draws one — is two Filter buttons. Only the
+   * carrying a count badge, and the alternative: each list drawing its own
+   * trigger beside a bar that also draws one: is two Filter buttons. Only the
    * `basic` chip row draws a trigger at all; `advanced` ignores it, as before.
    */
   trigger?: ReactNode
@@ -100,6 +102,12 @@ export interface FilterBarProps {
    * search endpoints, which AND every condition and know no grouping.
    */
   flat?: boolean
+  /**
+   * Reshapes every change before the bar keeps it as its draft, so the chips
+   * on screen are always the rules the caller hears about (for example, one
+   * metadata filter per key). Omitted, the change is kept as made.
+   */
+  normalize?: ((query: FilterQuery) => FilterQuery) | undefined
 }
 
 /** Whether a query is one level of AND-ed rules. */
@@ -128,13 +136,13 @@ function isBlankFilterValue(value: unknown): boolean {
  * A condition is only counted when it actually FILTERS: its operator takes no
  * value (so an empty value list is complete), or it carries at least one
  * non-blank value. A value-taking operator with an empty value list matches
- * everything — a no-op indistinguishable from no condition at all — and a
+ * everything: a no-op indistinguishable from no condition at all: and a
  * caller drops it, echoing back the same committed query it started from.
  *
  * `flattenFilterConditions` alone is NOT that test: it only skips a rule with
  * no operator (`isFilterRuleComplete`), so a rule with an operator but no value
- * yet — the state every rule passes through between the condition step and the
- * value step — still reaches it and flattens to a `values: []` condition. Left
+ * yet: the state every rule passes through between the condition step and the
+ * value step: still reaches it and flattens to a `values: []` condition. Left
  * to `flattenFilterConditions`, that half-built rule made `seen` disagree with
  * the empty query the caller echoes back, tripping the re-seed below and wiping
  * the chip the user was midway through filling in the instant they chose its
@@ -168,11 +176,12 @@ export function FilterBar({
   showClear = true,
   trigger,
   flat = false,
+  normalize,
 }: FilterBarProps) {
   /*
    * The bar owns the tree; the caller owns what it *means*.
    *
-   * This is not a convenience — without it the bar cannot be used at all.
+   * This is not a convenience: without it the bar cannot be used at all.
    * Callers derive `query` from the committed filter (`statuses` in the URL),
    * and picking an attribute creates a rule whose value has not been chosen
    * yet. `flattenFilterConditions` deliberately skips such a rule, so the
@@ -186,7 +195,7 @@ export function FilterBar({
    */
   const [draft, setDraft] = useState<FilterQuery>(query)
   /*
-   * The last committed signature the CALLER's `query` prop has delivered — not
+   * The last committed signature the CALLER's `query` prop has delivered: not
    * what the bar last emitted. It advances only in the render guard below, when
    * the prop itself moves, so it is a faithful record of what the caller has
    * actually committed to and nothing the bar does optimistically can run ahead
@@ -196,18 +205,18 @@ export function FilterBar({
   const [seen, setSeen] = useState(incoming)
 
   /*
-   * Re-seed only when the committed meaning changes from outside — a URL, the
+   * Re-seed only when the committed meaning changes from outside: a URL, the
    * back button, a Clear elsewhere. Two guards, because a controlled caller
    * echoes every change back and the echo may be a render (or several) behind:
    *
-   *   1. `incoming !== seen` — the prop's committed meaning actually moved.
+   *   1. `incoming !== seen`: the prop's committed meaning actually moved.
    *      Until it does, the bar's own optimistic advance cannot be mistaken for
    *      an outside edit, which is what an echo that lands a commit LATE (a URL
    *      round trip, `navigate` resolving on a microtask) otherwise looks like:
    *      the bar has emitted and re-rendered, but the prop still holds the
    *      pre-emit value, so a guard keyed on "what we emitted" would wrongly
-   *      wipe the draft — and the chip and its open editor with it — in the gap.
-   *   2. `incoming !== committedSignature(draft)` — and the new meaning differs
+   *      wipe the draft: and the chip and its open editor with it: in the gap.
+   *   2. `incoming !== committedSignature(draft)`: and the new meaning differs
    *      from what the draft already commits to. When they agree, the prop is
    *      merely the bar's own change arriving; re-seeding would replace an
    *      identical draft and close a popover mid-edit for nothing.
@@ -236,9 +245,10 @@ export function FilterBar({
       {...(flat
         ? { className: FLAT_CLASS, onBeforeQueryChange: (next: FilterQuery) => isFlatAnd(next) }
         : {})}
-      onQueryChange={(next: FilterQuery) => {
+      onQueryChange={(change: FilterQuery) => {
+        const next = normalize ? normalize(change) : change
         // Optimistic: the draft owns the tree between commits, and `seen` is
-        // left to the render guard so the caller's echo — however late — is
+        // left to the render guard so the caller's echo: however late: is
         // recognised as an echo rather than an outside edit.
         setDraft(next)
         /*
@@ -251,7 +261,7 @@ export function FilterBar({
       }}
       trigger={
         // Replaces the row's own "Add filter" button, so the control reads the
-        // same as Sort beside it. Only the chip row draws a trigger — the
+        // same as Sort beside it. Only the chip row draws a trigger: the
         // inline builder ignores this, which is why it used to vanish.
         trigger ?? (
           <Button variant="outline" size="icon" className="size-9" aria-label="Filter">
@@ -358,7 +368,7 @@ export function statusFilter<S extends string>({
 /**
  * A single-value enum, such as a sync state that is either set or "all".
  *
- * `empty` is the unfiltered value and is not offered as a choice — clearing
+ * `empty` is the unfiltered value and is not offered as a choice: clearing
  * the rule is what returns to it.
  */
 export function singleChoiceFilter<S extends string>({
@@ -421,6 +431,91 @@ const KIND_TYPE: Record<FilterKind, 'text' | 'select' | 'number'> = {
   options: 'select',
   number: 'number',
   date: 'text',
+  keyvalue: 'text',
+}
+
+/**
+ * One key/value filter per key, the latest kept. Metadata holds one value per
+ * key, so two pairs on the same key can never both match; a second pick
+ * replaces the first instead of leaving two chips the request cannot honour.
+ */
+function latestPairPerKey(filters: ListFilter[], specs: readonly ListFilterSpec[]): ListFilter[] {
+  const keyOf = (filter: ListFilter): string | null => {
+    const spec = specs.find((entry) => entry.field === filter.field)
+    if (spec?.kind !== 'keyvalue' || typeof filter.value !== 'string') return null
+    const pair = splitKeyValue(filter.value)
+    return pair ? `${filter.field}\u0000${pair.key}` : null
+  }
+  return filters.filter((filter, index) => {
+    const key = keyOf(filter)
+    return key === null || !filters.slice(index + 1).some((later) => keyOf(later) === key)
+  })
+}
+
+/** `key=value` as the chip reads it: `region = eu`. */
+function formatKeyValue(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const pair = splitKeyValue(value)
+  return pair ? `${pair.key} = ${pair.value}` : ''
+}
+
+/**
+ * The key/value step: a key and a value, applied together as `key=value`. A
+ * pair without a key cannot be applied.
+ */
+function FilterKeyValueEditor({
+  value,
+  commit,
+  autoFocusProps,
+}: FilterEditorProps<string, unknown>) {
+  const initial = typeof value === 'string' ? splitKeyValue(value) : null
+  const [key, setKey] = useState(initial?.key ?? '')
+  const [text, setText] = useState(initial?.value ?? '')
+  // The pair is stored as `key=value`, split on the first `=`, so a key may
+  // not hold one (a value may).
+  const keyProblem = key.includes('=') ? 'A key cannot contain "=".' : null
+  const apply = () => {
+    if (key.trim() && !keyProblem) commit(`${key.trim()}=${text}`)
+  }
+  return (
+    <form
+      className="flex w-64 flex-col gap-2 p-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        apply()
+      }}
+    >
+      <Input
+        aria-label="Metadata key"
+        placeholder="key"
+        value={key}
+        className="h-8 font-mono text-xs"
+        onChange={(event) => setKey(event.target.value)}
+        {...autoFocusProps}
+      />
+      <Input
+        aria-label="Metadata value"
+        placeholder="value"
+        value={text}
+        className="h-8"
+        onChange={(event) => setText(event.target.value)}
+      />
+      {keyProblem ? (
+        <p role="alert" className="text-destructive text-xs">
+          {keyProblem}
+        </p>
+      ) : null}
+      <Button
+        type="submit"
+        variant="outline"
+        size="sm"
+        className="h-8"
+        disabled={!key.trim() || keyProblem !== null}
+      >
+        Apply
+      </Button>
+    </form>
+  )
 }
 
 const dayLabel = new Intl.DateTimeFormat(undefined, {
@@ -486,6 +581,13 @@ export function granularFilter({
           valueText: ({ value }: { value: unknown }) => formatDay(value),
         }
       : {}),
+    ...(spec.kind === 'keyvalue'
+      ? {
+          editor: FilterKeyValueEditor,
+          renderValue: ({ value }: { value: unknown }) => formatKeyValue(value),
+          valueText: ({ value }: { value: unknown }) => formatKeyValue(value),
+        }
+      : {}),
   }))
 
   const valid = runnableFilters(filters, specs)
@@ -503,6 +605,23 @@ export function granularFilter({
     ),
     activeCount: valid.length,
     flat: true,
+    // The chips themselves keep one metadata pair per key, so a duplicated or
+    // re-picked key never leaves a second chip the request does not send.
+    normalize: (query: FilterQuery): FilterQuery => {
+      const keyOf = (node: FilterQuery['rules'][number]): string | null => {
+        if (node.type !== 'rule') return null
+        const field = node.path[0] ?? ''
+        const spec = specs.find((entry) => entry.field === field)
+        if (spec?.kind !== 'keyvalue' || typeof node.value !== 'string') return null
+        const pair = splitKeyValue(node.value)
+        return pair ? `${field}\u0000${pair.key}` : null
+      }
+      const rules = query.rules.filter((node, index) => {
+        const key = keyOf(node)
+        return key === null || !query.rules.slice(index + 1).some((later) => keyOf(later) === key)
+      })
+      return rules.length === query.rules.length ? query : { ...query, rules }
+    },
     onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
       const next = flat.map((entry): ListFilter => {
         const spec = specs.find((candidate) => candidate.field === entry.field)
@@ -513,7 +632,7 @@ export function granularFilter({
             spec?.kind === 'options' ? entry.values.map(String) : String(entry.values[0] ?? ''),
         }
       })
-      onChange(runnableFilters(next, specs))
+      onChange(latestPairPerKey(runnableFilters(next, specs), specs))
     },
   }
 }

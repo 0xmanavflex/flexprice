@@ -25,6 +25,8 @@ import { FormDialogBodyContext } from './formDialogContext'
  *
  * Pass `isPending` while a submit is in flight: Escape, the overlay and the
  * close control are then ignored so the dialog cannot close under the request.
+ * Pass `dismissible={false}` when the body's own button is the only way out (a
+ * one-time secret): the close control is hidden and Escape/overlay are ignored.
  */
 export const FormDialogProvenance = provenance({
   source: 'composition',
@@ -47,6 +49,8 @@ export interface FormDialogProps {
   size?: keyof typeof SIZES
   /** A submit is in flight: the dialog cannot be dismissed until it settles. */
   isPending?: boolean | undefined
+  /** False hides the close control and ignores Escape/overlay; the body must offer its own exit. */
+  dismissible?: boolean | undefined
   children: ReactNode
 }
 
@@ -57,6 +61,7 @@ export function FormDialog({
   description,
   size = 'md',
   isPending = false,
+  dismissible = true,
   children,
 }: FormDialogProps) {
   // Bumped on each close-to-open transition so the body (and any uncontrolled or
@@ -72,16 +77,16 @@ export function FormDialog({
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
-      if (!next && isPending) return
+      if (!next && (isPending || !dismissible)) return
       onOpenChange(next)
     },
-    [isPending, onOpenChange],
+    [isPending, dismissible, onOpenChange],
   )
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        showCloseButton={!isPending}
+        showCloseButton={!isPending && dismissible}
         className={cn('flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0', SIZES[size])}
       >
         <DialogHeader className="border-b px-6 py-5">

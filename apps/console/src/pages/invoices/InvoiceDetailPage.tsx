@@ -10,6 +10,7 @@ import {
   useInvoiceCreditNotes,
   useInvoicePayments,
   useRecalculateInvoice,
+  useReplaceVoidedInvoice,
   useSendInvoice,
   useTenant,
   useUpdateInvoiceMetadata,
@@ -22,6 +23,7 @@ import {
 import {
   PAYMENT_STATUS_LABEL,
   PaymentStatus,
+  invoiceRecalculation,
   manualPaymentStatusBlocked,
   manualPaymentStatusChoices,
   moneyOr,
@@ -29,7 +31,6 @@ import {
 import {
   InvoiceDetailView,
   PaymentStatusDialog,
-  Toaster,
   toast,
   type InvoicePendingAction,
 } from '@fp/ui/pages'
@@ -45,12 +46,12 @@ export interface InvoiceDetailPageProps {
   onOpenCustomer: (customerId: string) => void
 }
 
-type Dialog = 'void' | 'payment-status' | null
+type Dialog = 'void' | 'payment-status' | 'recalculate' | null
 
 /**
  * One invoice, read through `useInvoice`, with its issuer (`useTenant`),
- * payments and credit memos (filtered to this invoice). Every action — finalize,
- * record payment, recalculate, void, send, retry — runs here, outside the view.
+ * payments and credit memos (filtered to this invoice). Every action: finalize,
+ * record payment, recalculate, void, send, retry: runs here, outside the view.
  */
 export function InvoiceDetailPage({
   invoiceId,
@@ -76,9 +77,13 @@ export function InvoiceDetailPage({
   const voidInvoice = useVoidInvoice()
   const attempt = useAttemptInvoicePayment()
   const recalculate = useRecalculateInvoice()
+  const replace = useReplaceVoidedInvoice()
   const send = useSendInvoice()
   const [dialog, setDialog] = useState<Dialog>(null)
   const inFlight = useRef(false)
+  // The invoice this page has already voided on the way to a replacement, so a
+  // retry after the replacement failed does not try to void it again.
+  const voidedFor = useRef<string | null>(null)
   const [pendingAction, setPendingAction] = useState<InvoicePendingAction | null>(null)
 
   if (!invoice.data) {
@@ -106,6 +111,21 @@ export function InvoiceDetailPage({
         inFlight.current = false
         setPendingAction(null)
       },
+    })
+  }
+
+  const recalculation = invoiceRecalculation(data)
+  // Replacing goes through a confirm: a finalized invoice is voided first, and
+  // either way the new invoice is created by a workflow, not here and now.
+  const confirmReplace = async () => {
+    if (recalculation.kind === 'void-and-replace' && voidedFor.current !== data.id) {
+      await voidInvoice.mutateAsync(data.id)
+      voidedFor.current = data.id
+    }
+    await replace.mutateAsync(data.id)
+    setDialog(null)
+    toast('Recalculation started', {
+      description: 'The replacement invoice appears in Invoices once it is ready.',
     })
   }
 
@@ -138,8 +158,11 @@ export function InvoiceDetailPage({
         {...(onEdit ? { onEdit } : {})}
         onFinalize={() => run('finalize', finalize, 'Invoice finalized', 'finalize the invoice')}
         onRecordPayment={() => void navigate({ to: '/payments/new', search: { invoice: data.id } })}
+        recalculateBlocked={recalculation.kind === 'unavailable' ? recalculation.reason : null}
         onRecalculate={() =>
-          run('recalculate', recalculate, 'Invoice recalculated', 'recalculate the invoice')
+          recalculation.kind === 'in-place'
+            ? run('recalculate', recalculate, 'Invoice recalculated', 'recalculate the invoice')
+            : setDialog('recalculate')
         }
         onVoid={() => setDialog('void')}
         onUpdatePaymentStatus={() => setDialog('payment-status')}
@@ -192,6 +215,35 @@ export function InvoiceDetailPage({
         error={voidInvoice.error ? failure(voidInvoice.error) : null}
         onConfirm={() => voidInvoice.mutate(data.id, { onSuccess: () => setDialog(null) })}
       />
+      <ConfirmDialog
+        open={dialog === 'recalculate'}
+        onOpenChange={(open) => {
+          if (!open) {
+            voidInvoice.reset()
+            replace.reset()
+          }
+          setDialog(open ? 'recalculate' : null)
+        }}
+        title="Recalculate this invoice?"
+        description={
+          recalculation.kind === 'void-and-replace'
+            ? 'This invoice will be voided and a fresh one for the same period queued for calculation. The voided invoice can no longer be collected.'
+            : 'A fresh invoice for the same period will be queued for calculation. This voided invoice stays as it is.'
+        }
+        confirmLabel={
+          recalculation.kind === 'void-and-replace' ? 'Void and recalculate' : 'Recalculate'
+        }
+        destructive={recalculation.kind === 'void-and-replace'}
+        isPending={voidInvoice.isPending || replace.isPending}
+        error={
+          voidInvoice.error
+            ? failure(voidInvoice.error)
+            : replace.error
+              ? failure(replace.error)
+              : null
+        }
+        onConfirm={() => void confirmReplace().catch(() => undefined)}
+      />
       <PaymentStatusDialog
         open={dialog === 'payment-status'}
         onOpenChange={(open) => {
@@ -217,7 +269,6 @@ export function InvoiceDetailPage({
           )
         }
       />
-      <Toaster />
     </>
   )
 }

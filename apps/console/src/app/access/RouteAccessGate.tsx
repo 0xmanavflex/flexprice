@@ -11,8 +11,8 @@ import { routeAccessFor } from './routeAccess'
  * route's requirement is not met, and otherwise the page inside the
  * `AccessScope` its controls write to.
  *
- * A locked (read-only) account opening a page that only writes — a create or
- * edit page — sees "Creating is paused" instead of a form that cannot save.
+ * A locked (read-only) account opening a page that only writes: a create or
+ * edit page: sees "Creating is paused" instead of a form that cannot save.
  */
 export function RouteAccessGate({ children }: { children: ReactNode }) {
   const matches = useMatches()

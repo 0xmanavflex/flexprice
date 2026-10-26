@@ -1,6 +1,6 @@
 import type { Role } from '@fp/domain'
 import { SUPER_ADMIN_ROLE_ID, isRoleSelected, summarizePermissions, toggleRole } from '@fp/domain'
-import { Button } from '@fp/ui/primitives'
+import { CheckboxRow } from '@fp/ui/compositions'
 
 /**
  * Choosing roles, with the one rule the domain enforces made visible.
@@ -8,21 +8,20 @@ import { Button } from '@fp/ui/primitives'
  * `toggleRole` is not a plain set toggle: picking **super admin** replaces the
  * whole selection, and picking anything else drops super admin. That is the
  * domain's rule, not this component's, and the reason is that "super admin
- * plus event reader" is a sentence with no meaning — the first already grants
+ * plus event reader" is a sentence with no meaning: the first already grants
  * the second. So the control does not offer the combination and does not have
  * to explain afterwards why it was rejected.
  *
- * Toggle buttons rather than checkboxes because `@fp/ui/primitives` exports
- * neither a checkbox nor a switch today (the files exist in the package; the
- * barrel does not re-export them). `aria-pressed` is the correct role for a
- * two-state button, so this loses nothing but the tick.
+ * One checkbox row per role with a line saying what it grants (its own
+ * description, else a summary of its permissions), so the choice can be made
+ * without hovering for a tooltip.
  */
 export interface RolePickerProps {
   roles: Role[]
   selected: string[]
   onChange: (roles: string[]) => void
   disabled?: boolean
-  /** Names the group for assistive tech — "Roles for Dana", not just "Roles". */
+  /** Names the group for assistive tech: "Roles for Dana", not just "Roles". */
   label: string
 }
 
@@ -36,31 +35,22 @@ export function RolePicker({ roles, selected, onChange, disabled, label }: RoleP
   }
 
   return (
-    <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
-      {roles.map((role) => {
-        const isSelected = isRoleSelected(selected, role.id)
-        // Super admin is outlined in the warning tone when it is *not* held,
-        // so the one button that grants everything does not look like the
-        // other four.
-        const emphasis =
-          role.id === SUPER_ADMIN_ROLE_ID && !isSelected ? 'border-warning/40' : undefined
-
-        return (
-          <Button
-            key={role.id}
-            type="button"
-            size="sm"
-            variant={isSelected ? 'default' : 'outline'}
-            aria-pressed={isSelected}
-            disabled={disabled ?? false}
-            title={summarizePermissions(role)}
-            {...(emphasis ? { className: emphasis } : {})}
-            onClick={() => onChange(toggleRole(selected, role.id))}
-          >
-            {role.name || role.id}
-          </Button>
-        )
-      })}
+    <div role="group" aria-label={label} className="flex flex-col gap-3">
+      {roles.map((role) => (
+        <CheckboxRow
+          key={role.id}
+          checked={isRoleSelected(selected, role.id)}
+          disabled={disabled ?? false}
+          onCheckedChange={() => onChange(toggleRole(selected, role.id))}
+          description={
+            role.id === SUPER_ADMIN_ROLE_ID
+              ? 'Full access to everything. Replaces any other role.'
+              : role.description || summarizePermissions(role)
+          }
+        >
+          {role.name || role.id}
+        </CheckboxRow>
+      ))}
     </div>
   )
 }

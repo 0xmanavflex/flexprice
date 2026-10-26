@@ -19,6 +19,7 @@ import {
   DEFAULT_USAGE_SYNC_QUERY,
   DEFAULT_WORKFLOW_QUERY,
 } from '@fp/domain'
+import { DEFAULT_HOME_SEARCH } from '../homeSearch'
 import { rememberQuery, rememberedQuery, restoreTarget } from '../listMemory'
 import { useSession } from '../session/SessionProvider'
 
@@ -31,10 +32,11 @@ import { useSession } from '../session/SessionProvider'
  * the same object the route strips from the URL, or a bare URL would not read
  * as bare.
  */
-// The query types are interfaces without index signatures, which is right —
+// The query types are interfaces without index signatures, which is right:
 // they are shapes, not bags. Read as plain records only here, where the
 // comparison is structural and the keys are not known ahead of time.
 const LISTS: Record<string, Readonly<object>> = {
+  '/': DEFAULT_HOME_SEARCH,
   '/customers': DEFAULT_CUSTOMER_QUERY,
   '/features': DEFAULT_FEATURE_QUERY,
   '/plans': DEFAULT_PLAN_QUERY,
@@ -88,7 +90,7 @@ export function useListMemory(): void {
     /*
      * No environment, nothing to remember against.
      *
-     * The id resolves a moment after the first paint — a fresh tab has none
+     * The id resolves a moment after the first paint: a fresh tab has none
      * until the picker defaults one. Writing during that window files the
      * query under `null` and the read a second later, with the real id, finds
      * nothing: filters that looked remembered would be dropped at random.
@@ -105,7 +107,7 @@ export function useListMemory(): void {
       )
       if (target) {
         // `replace`, so Back leaves the list rather than stepping through the
-        // restore — the restore is not a place the person navigated to.
+        // restore: the restore is not a place the person navigated to.
         void navigate({ to: pathname, search: target as never, replace: true })
         return
       }

@@ -141,7 +141,7 @@ export const SandboxWarning: Story = {
  * Production withheld: still selectable, but create is disabled.
  *
  * Choosing Production is how someone asks for it, so the card is not greyed
- * out. What changes is the way forward — "Create environment" is disabled and
+ * out. What changes is the way forward: "Create environment" is disabled and
  * V1's approval note takes its place, with Slack, email and a booked call.
  */
 export const ProductionUnavailable: Story = {
@@ -185,6 +185,21 @@ export const ProductionUnavailable: Story = {
     await waitFor(() =>
       expect(canvas.getByRole('button', { name: 'Create environment' })).toBeEnabled(),
     )
+  },
+}
+
+/** A deployment that hides Slack and the booking page (`"slack_url": ""` and `"book_call_url": ""` in `VITE_PLATFORM_CONFIG`) shows email alone. */
+export const ProductionEmailOnly: Story = {
+  args: {
+    canCreateProduction: false,
+    contact: { slackUrl: null, email: 'billing@example.com', bookCallUrl: null },
+  },
+  play: async () => {
+    const canvas = dialog()
+    await userEvent.click(canvas.getByRole('radio', { name: /production/i }))
+    await waitFor(() => expect(canvas.getByRole('link', { name: /email/i })).toBeVisible())
+    await expect(canvas.queryByRole('link', { name: /slack/i })).toBeNull()
+    await expect(canvas.queryByRole('link', { name: /book a call/i })).toBeNull()
   },
 }
 

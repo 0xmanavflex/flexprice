@@ -29,7 +29,7 @@ import { useFlexprice } from './provider'
  * once, so the grid receives a narrow, total `Invoice` and the page receives a
  * list plus a count.
  *
- * If the API model is ever genuinely unusable, this is where that shows up —
+ * If the API model is ever genuinely unusable, this is where that shows up:
  * as a hard mapping function, not as `?? '0'` scattered through columns.
  */
 
@@ -48,7 +48,7 @@ const SORT_FIELD_TO_API: Record<InvoiceSortField, string> = {
  * `overdue` and `paid` are absent on purpose: neither is an API value. They are
  * derived from a payment status and a due date, so they cannot be pushed down
  * as a server-side filter without the backend learning the concept. Filtering
- * by them is therefore a deliberate gap, not an oversight — see
+ * by them is therefore a deliberate gap, not an oversight: see
  * {@link isServerFilterable}.
  */
 const STATUS_TO_API: Partial<Record<InvoiceStatus, string>> = {
@@ -84,6 +84,7 @@ export function toInvoiceFilter(query: InvoiceQuery): Record<string, unknown> {
 
 /** The shape this mapper reads. Structural, so a fixture need not be complete. */
 export interface InvoiceWire {
+  subscriptionId?: string | undefined
   id?: string | undefined
   invoiceNumber?: string | undefined
   customerId?: string | undefined
@@ -106,6 +107,7 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
 
   return {
     id: wire.id ?? '',
+    subscriptionId: wire.subscriptionId || null,
     // Drafts often have no invoice number yet. Leave it blank so the UI shows
     // a dash instead of the internal id.
     number: wire.invoiceNumber?.trim() ?? '',
@@ -159,7 +161,7 @@ export async function fetchInvoices(
  *
  * Takes domain vocabulary, returns domain models. The caller never learns that
  * listing invoices is a `POST` to `/invoices/search`, or that paging is an
- * offset — which is what lets the page hand its state to a URL instead of to a
+ * offset: which is what lets the page hand its state to a URL instead of to a
  * component.
  */
 export function useInvoices(query: InvoiceQuery, options: { enabled?: boolean } = {}) {
@@ -274,7 +276,7 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
   }
 }
 
-/** One invoice with its lines — `GET /invoices/{id}`. */
+/** One invoice with its lines: `GET /invoices/{id}`. */
 export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
@@ -289,6 +291,32 @@ export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
         )) as InvoiceDetailWire,
       ),
   })
+}
+
+/**
+ * An invoice's PDF link, read on demand for a row's "Download invoice".
+ *
+ * Rows come from the list, which does not carry `invoice_pdf_url`; this reads
+ * the invoice through the same query the detail page uses (so a later visit is
+ * cached) and resolves to its link, or null when no PDF exists yet.
+ */
+export function useInvoicePdfLink() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return (id: string): Promise<string | null> =>
+    queryClient
+      .fetchQuery({
+        queryKey: queryKeys.invoices.detail(id),
+        queryFn: async ({ signal }) =>
+          toInvoiceDetail(
+            (await call(
+              (options) => client.invoices.getInvoice(id, undefined, undefined, undefined, options),
+              signal,
+            )) as InvoiceDetailWire,
+          ),
+      })
+      .then((invoice) => invoice.invoicePdfUrl)
 }
 
 /** Builds `POST /invoices`. Money stays a string; the form's total is sent as given. */
@@ -339,6 +367,7 @@ export function useCreateInvoice() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Invoice created', error: 'Could not create the invoice.' } },
     mutationFn: (draft: CreateInvoice) =>
       call(() => client.invoices.createInvoice(toCreateInvoiceRequest(draft) as never)),
     onSuccess: () => {
@@ -367,7 +396,7 @@ function useInvoiceAction(run: (client: Flexprice, id: string) => Promise<unknow
  * Worth stating, because the route's name promises far more than it does: the
  * request body is `invoice_pdf_url`, `due_date`, `metadata` and
  * `apply_discount`, and nothing else. A customer, a currency, an amount or a
- * line item cannot be edited after an invoice exists — correcting one of those
+ * line item cannot be edited after an invoice exists: correcting one of those
  * means voiding and reissuing, or a credit note.
  *
  * `applyDiscount` recalculates the discount from the invoice's existing coupon
@@ -431,7 +460,7 @@ export interface InvoiceLineChanges {
 }
 
 /**
- * Edits a draft invoice's lines — `POST /invoices/{id}/modify/execute`.
+ * Edits a draft invoice's lines: `POST /invoices/{id}/modify/execute`.
  *
  * This is the endpoint `PUT /invoices/{id}` is not: the update route takes a
  * due date and metadata and nothing structural, while this one adds, updates
@@ -470,7 +499,7 @@ export interface InvoiceLineChanges {
  * records what it was asked to do.
  *
  * Returns the invoice id the batch ended on, which is not always the one it
- * started with — see the note on {@link useModifyInvoiceLineItems}.
+ * started with: see the note on {@link useModifyInvoiceLineItems}.
  */
 export async function applyLineChanges(
   changes: InvoiceLineChanges,
@@ -568,18 +597,18 @@ export interface InvoiceEditCalls {
 }
 
 /**
- * Saves an invoice edit in the order the API's rules require — V1's order:
+ * Saves an invoice edit in the order the API's rules require: V1's order:
  *
  *   1. **The invoice's own fields** (due date, metadata, re-applying discounts).
  *      Re-applying discounts on a finalized invoice voids it and returns a
  *      draft copy, so every later step follows the id it hands back.
  *   2. **Payment status**, while the invoice is still the one it was.
- *   3. **Line edits**, removes then updates then adds — see {@link applyLineChanges}.
+ *   3. **Line edits**, removes then updates then adds: see {@link applyLineChanges}.
  *      On a finalized invoice the first one voids it into a draft copy too.
  *   4. **A lifecycle step** last: finalizing must see the finished draft, and
  *      voiding discards it.
  *
- * Resolves with the id the edit ended on — the page to show afterwards.
+ * Resolves with the id the edit ended on: the page to show afterwards.
  */
 export async function runInvoiceEdit(
   edit: InvoiceEditSave,
@@ -608,7 +637,7 @@ export async function runInvoiceEdit(
   return id
 }
 
-/** Saves the whole edit page — {@link runInvoiceEdit} over the SDK. */
+/** Saves the whole edit page: {@link runInvoiceEdit} over the SDK. */
 export function useSaveInvoiceEdit() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -659,7 +688,7 @@ export function useSaveInvoiceEdit() {
   })
 }
 
-/** Replace an invoice's metadata — `PUT /invoices/{id}` with `{metadata}` and nothing else. */
+/** Replace an invoice's metadata: `PUT /invoices/{id}` with `{metadata}` and nothing else. */
 export function useUpdateInvoiceMetadata() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -674,7 +703,7 @@ export function useUpdateInvoiceMetadata() {
 }
 
 /**
- * Set an invoice's payment status by hand — `PUT /invoices/{id}/payment` —
+ * Set an invoice's payment status by hand: `PUT /invoices/{id}/payment`:
  * for money that moved outside Flexprice. `status` is the wire value
  * (`SUCCEEDED`, `FAILED`, `PENDING`).
  */
@@ -698,20 +727,20 @@ export function useUpdateInvoicePaymentStatus() {
   })
 }
 
-/** Lock a draft and send it — `POST /invoices/{id}/finalize`. */
+/** Lock a draft and send it: `POST /invoices/{id}/finalize`. */
 export const useFinalizeInvoice = () =>
   useInvoiceAction((client, id) => client.invoices.finalizeInvoice(id))
 
-/** Void an open invoice — `POST /invoices/{id}/void`. */
+/** Void an open invoice: `POST /invoices/{id}/void`. */
 export const useVoidInvoice = () =>
   useInvoiceAction((client, id) => client.invoices.voidInvoice(id))
 
-/** Try to collect payment again — `POST /invoices/{id}/payment/attempt`. */
+/** Try to collect payment again: `POST /invoices/{id}/payment/attempt`. */
 export const useAttemptInvoicePayment = () =>
   useInvoiceAction((client, id) => client.invoices.attemptInvoicePayment(id))
 
 /**
- * Recalculate a draft invoice in place — `POST /invoices/{id}/recalculate-v2`.
+ * Recalculate a draft invoice in place: `POST /invoices/{id}/recalculate-v2`.
  * Replaces the line items and reapplies credits, coupons and taxes; the draft
  * stays a draft.
  */
@@ -719,7 +748,26 @@ export const useRecalculateInvoice = () =>
   useInvoiceAction((client, id) => client.invoices.recalculateInvoiceV2(id))
 
 /**
- * Send the invoice to the customer — `POST /invoices/{id}/comms/trigger`.
+ * Replace a voided contract invoice with a fresh one for the same period:
+ * `POST /invoices/{id}/recalculate`. Starts a workflow; the replacement shows
+ * up in the invoice list once it completes.
+ */
+export function useReplaceVoidedInvoice() {
+  const queryClient = useQueryClient()
+  const action = useInvoiceAction((client, id) => client.invoices.recalculateInvoice(id))
+  return {
+    ...action,
+    // A contract keeps its own invoice list; the replacement belongs there too.
+    mutateAsync: async (id: string) => {
+      const result = await action.mutateAsync(id)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
+      return result
+    },
+  }
+}
+
+/**
+ * Send the invoice to the customer: `POST /invoices/{id}/comms/trigger`.
  * Fires the invoice communication webhook (email, Slack) the tenant has set up.
  */
 export const useSendInvoice = () =>

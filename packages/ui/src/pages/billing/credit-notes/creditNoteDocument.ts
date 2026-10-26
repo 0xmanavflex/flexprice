@@ -2,13 +2,13 @@ import { CreditNoteStatus } from '@fp/domain'
 import type { InvoiceActivity, InvoiceParty, StatusChip } from '../invoices/invoiceDocument'
 
 /**
- * A credit memo as its page reads it — the invoice document's shape, for the
+ * A credit memo as its page reads it: the invoice document's shape, for the
  * document that undoes part of one.
  *
  * It borrows `InvoiceParty` and `InvoiceActivity` rather than restating them:
  * the party being credited is the party that was billed, and an activity entry
  * is an activity entry. Only the lines differ, and they differ in the way that
- * matters — a credit line is a *pair*, what was invoiced beside what is being
+ * matters: a credit line is a *pair*, what was invoiced beside what is being
  * taken back, which is the one comparison the old key/value list could not
  * make.
  */
@@ -19,7 +19,7 @@ export interface CreditNoteLine {
   /**
    * What the invoice charged for this line.
    *
-   * `null` when the invoice has not been read, or when no line on it matches —
+   * `null` when the invoice has not been read, or when no line on it matches:
    * a credit can be raised against a line that was since removed. Null prints
    * an em dash rather than a zero, because "we do not know" and "nothing was
    * charged" are different and only one of them is reassuring.

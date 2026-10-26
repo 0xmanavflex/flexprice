@@ -58,8 +58,8 @@ export interface CountryOption {
 /**
  * The countries, named for `locale`.
  *
- * A runtime without `Intl.DisplayNames` — or one that cannot name a given
- * code — falls back to the code itself, which still selects correctly.
+ * A runtime without `Intl.DisplayNames`: or one that cannot name a given
+ * code: falls back to the code itself, which still selects correctly.
  */
 export function countryOptions(locale?: string): CountryOption[] {
   let names: Intl.DisplayNames | null = null
@@ -92,7 +92,7 @@ export function countryOptions(locale?: string): CountryOption[] {
  * The name for one code, for read-only display.
  *
  * Only codes on the list are named. `Intl.DisplayNames.of` answers "Unknown
- * Region" for anything else rather than failing — checked, not assumed — and
+ * Region" for anything else rather than failing: checked, not assumed: and
  * showing that to someone whose address says "ZZ" is worse than showing
  * "ZZ", which is at least the thing that was stored.
  */

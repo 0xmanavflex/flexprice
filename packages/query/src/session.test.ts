@@ -8,12 +8,12 @@ import { queryKeys } from './keys'
  *
  * `features.test.ts` and `plans.test.ts` test pure mappers, which needs no
  * harness at all. These are hooks, and this package has no renderer to run them
- * in — its vitest environment is `node`, and neither `react-dom` nor a testing
+ * in: its vitest environment is `node`, and neither `react-dom` nor a testing
  * library is a dependency. Adding one to assert `enabled: false` would be a
  * browser, a DOM and a render loop bought to read a boolean.
  *
  * So only the thinnest possible seam is replaced: `useQuery`, `useMutation` and
- * `useQueryClient` — the three functions that need React — are recorders, and
+ * `useQueryClient`: the three functions that need React: are recorders, and
  * everything else is the real thing. What each hook *configures* is what is
  * under test here, and it is where these bugs live: a key that forgets the
  * token, a guard that lets a signed-out request fire, a mapper that calls a
@@ -22,10 +22,10 @@ import { queryKeys } from './keys'
  * Calling a hook outside a render is exactly what `react-hooks/rules-of-hooks`
  * exists to prevent, and it is safe here for the reason the rule is not:
  * React's call-ordering invariant needs a React, and there is none in this
- * process — only the plain functions the hooks compile down to.
+ * process: only the plain functions the hooks compile down to.
  *
- * The one claim a recorder cannot make on its own — that `enabled: false`
- * actually prevents a request — is made by handing the recorded options to the
+ * The one claim a recorder cannot make on its own: that `enabled: false`
+ * actually prevents a request: is made by handing the recorded options to the
  * *real* `QueryObserver`, the same machinery `useQuery` drives, and watching a
  * stubbed `fetch` stay untouched. That is the `client.test.ts` spirit: stub the
  * edge, drive the real thing.
@@ -42,7 +42,7 @@ interface RecordedQuery {
 
 interface RecordedMutation {
   mutationFn: (variables: never) => Promise<unknown>
-  onSuccess?: () => void
+  onSuccess?: (data?: unknown) => void
 }
 
 // Hoisted with the `vi.mock` factories that close over it: the factories run
@@ -51,6 +51,8 @@ const recorded = vi.hoisted(() => ({
   queries: [] as RecordedQuery[],
   mutations: [] as RecordedMutation[],
   invalidated: [] as unknown[],
+  updated: [] as unknown[],
+  updaters: [] as ((current: unknown) => unknown)[],
 }))
 
 vi.mock('./provider', () => ({
@@ -71,6 +73,12 @@ vi.mock('@tanstack/react-query', () => {
     invalidateQueries: (filters: { queryKey: unknown }) => {
       recorded.invalidated.push(filters.queryKey)
       return Promise.resolve()
+    },
+    // A create also writes the new environment into every cached list, so the
+    // switcher can select it before the refetch lands.
+    setQueriesData: (filters: { queryKey: unknown }, updater: (current: unknown) => unknown) => {
+      recorded.updated.push(filters.queryKey)
+      recorded.updaters.push(updater)
     },
   })
   return {
@@ -123,6 +131,8 @@ afterEach(() => {
   recorded.queries.length = 0
   recorded.mutations.length = 0
   recorded.invalidated.length = 0
+  recorded.updated.length = 0
+  recorded.updaters.length = 0
   vi.unstubAllGlobals()
 })
 
@@ -141,8 +151,8 @@ describe('toEnvironment', () => {
    * Mislabelling production as a sandbox costs a badge that looks wrong.
    * Mislabelling a sandbox as production costs someone editing live pricing
    * while believing they are not. The default belongs on the side of the
-   * cheaper mistake, so an unrecognised string — a new environment kind, a
-   * casing change, a typo, nothing at all — lands on sandbox.
+   * cheaper mistake, so an unrecognised string: a new environment kind, a
+   * casing change, a typo, nothing at all: lands on sandbox.
    */
   it.each([
     ['the API’s own second kind', 'development'],
@@ -175,7 +185,7 @@ describe('useCurrentUser', () => {
    * Two sessions must not read each other's entry.
    *
    * A key of `['session','current']` alone would hand the previous user's name
-   * and tenant to whoever signs in next on the same tab — the cache outlives
+   * and tenant to whoever signs in next on the same tab: the cache outlives
    * the sign-out unless someone remembers to clear it. Keying on the token
    * makes the isolation structural instead of a `clear()` in a `signOut`.
    */
@@ -272,8 +282,8 @@ describe('useEnvironmentList', () => {
  * The guard, proved against the real machinery.
  *
  * `enabled: false` is only a promise until something honours it. These hand
- * the recorded options to the actual `QueryObserver` — what `useQuery` is a
- * React binding over — and watch whether a request leaves.
+ * the recorded options to the actual `QueryObserver`: what `useQuery` is a
+ * React binding over: and watch whether a request leaves.
  */
 describe('a signed-out session', () => {
   async function observe(options: RecordedQuery) {
@@ -338,7 +348,7 @@ describe('useSignIn', () => {
     await expect(seen[0]?.json()).resolves.toEqual({ email: 'a@b.com', password: 'hunter2' })
   })
 
-  it('is a mutation, not a query — nothing about it is cached or refetched', () => {
+  it('is a mutation, not a query: nothing about it is cached or refetched', () => {
     useSignIn()
 
     expect(recorded.mutations).toHaveLength(1)
@@ -372,7 +382,7 @@ describe('useCreateEnvironment', () => {
 
   it('refuses while signed out rather than sending a header it does not have', async () => {
     // `Bearer null` comes back a 401, which reads to the user as "that name is
-    // wrong" — a misdiagnosis of their own dialog.
+    // wrong": a misdiagnosis of their own dialog.
     const seen = stubFetch(json({}))
     useCreateEnvironment(null)
 
@@ -396,6 +406,23 @@ describe('useCreateEnvironment', () => {
 
     expect(invalidated).toEqual([...queryKeys.session.environments()])
     expect(listKey.slice(0, invalidated.length)).toEqual([...invalidated])
+    // The cached lists are written at the same prefix, before the refetch.
+    expect(recorded.updated[0]).toEqual([...queryKeys.session.environments()])
+  })
+
+  it('adds the new environment to a cached list, and leaves a located record id alone', () => {
+    useCreateEnvironment('token-a')
+    const created = { id: 'env_new', name: 'Staging' }
+    lastMutation().onSuccess?.(created)
+    const merge = recorded.updaters[0]!
+
+    expect(merge([{ id: 'env_a', name: 'Production' }])).toEqual([
+      { id: 'env_a', name: 'Production' },
+      created,
+    ])
+    // `useRecordEnvironment` caches under the same prefix, holding an id.
+    expect(merge('env_a')).toBe('env_a')
+    expect(merge(null)).toBeNull()
   })
 })
 

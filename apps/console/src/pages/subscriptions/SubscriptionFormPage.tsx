@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react'
 import {
-  ApiError,
+  explainContractHierarchyError,
   useAddons,
   useCoupons,
   useCreateSubscription,
   useCreditGrants,
   useCustomerTaxAssociations,
   useCustomers,
+  useInheritanceBlocks,
   usePlanEntitlements,
   usePlans,
   usePrices,
   useTaxRates,
-  serverReason,
 } from '@fp/query'
 import {
   AddonStatus,
@@ -78,11 +78,16 @@ export function SubscriptionFormPage({
     ...PICKER_PAGE,
     statuses: [AddonStatus.Published],
   })
-  const taxRates = useTaxRates({
-    ...DEFAULT_TAX_RATE_QUERY,
-    ...PICKER_PAGE,
-    statuses: [TaxRateStatus.Published],
-  })
+  // Refetched on focus: "Create a tax rate" opens in a new tab, and the rate
+  // made there should be pickable on return without losing this draft.
+  const taxRates = useTaxRates(
+    {
+      ...DEFAULT_TAX_RATE_QUERY,
+      ...PICKER_PAGE,
+      statuses: [TaxRateStatus.Published],
+    },
+    { refetchOnWindowFocus: true },
+  )
   const associations = useCustomerTaxAssociations(chosenCustomer)
   const customerTaxes = useMemo<CreateSubscription['taxes'] | null>(
     () =>
@@ -110,6 +115,13 @@ export function SubscriptionFormPage({
       })),
     [customers.data],
   )
+  // Who can inherit from the chosen customer: anyone without a contract of their own.
+  const inheritanceBlocks = useInheritanceBlocks(
+    chosenCustomer,
+    customerOptions.filter((c) => c.externalId).map((c) => c.value),
+  )
+  const nameOf = (externalId: string) =>
+    customerOptions.find((c) => c.externalId === externalId)?.label ?? externalId
   const planOptions = useMemo(
     () => (plans.data?.plans ?? []).map((p) => ({ value: p.id, label: p.name })),
     [plans.data],
@@ -120,6 +132,7 @@ export function SubscriptionFormPage({
       customers={customerOptions}
       plans={planOptions}
       customerLocked={customerId !== undefined}
+      {...(inheritanceBlocks.data ? { inheritanceBlocks: inheritanceBlocks.data } : {})}
       {...(customerId ? { defaultValue: { customerId } } : {})}
       plan={
         planId
@@ -135,6 +148,7 @@ export function SubscriptionFormPage({
       onCustomerChange={setChosenCustomer}
       meters={formOptions.meters}
       priceUnits={formOptions.units}
+      couponsStatus={coupons.isPending ? 'loading' : coupons.isError ? 'failed' : 'ready'}
       coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
         value: coupon.id,
         label: coupon.name,
@@ -150,6 +164,7 @@ export function SubscriptionFormPage({
         label: addon.name,
         type: addonType(addon.fixedChargeCount, addon.usageChargeCount),
       }))}
+      createTaxRateHref="/taxes/new"
       taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
         code: rate.code,
         name: rate.name,
@@ -161,7 +176,9 @@ export function SubscriptionFormPage({
       onStepChange={onStepChange}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={toSubmitError(create.error)}
+      // The hierarchy explanation is guidance, so it stays at the top; every
+      // other refusal from the API is a toast (MutationToasts).
+      submitError={explainContractHierarchyError(create.error, nameOf)}
       onSubmit={(draft) =>
         create.mutate(draft, {
           onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),
@@ -177,22 +194,4 @@ function addonType(fixed: number, usage: number): string | undefined {
   if (fixed > 0) return 'Fixed'
   if (usage > 0) return 'Usage'
   return undefined
-}
-
-function toSubmitError(error: unknown): string | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'invalid':
-        return error.message || 'Check the details and try again.'
-      case 'forbidden':
-        return serverReason(error) ?? 'You do not have permission to create contracts here.'
-      case 'network':
-        return 'Could not reach Flexprice. Check your connection and try again.'
-      default:
-        return serverReason(error) ?? 'Could not create the contract. Try again.'
-    }
-  }
-  return 'Could not create the contract. Try again.'
 }

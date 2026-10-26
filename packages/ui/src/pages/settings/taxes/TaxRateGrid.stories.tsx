@@ -104,8 +104,8 @@ export const RatesAreExact: Story = {
 /**
  * "Applied to" is not a column.
  *
- * The capability exists — `GET /taxes/associations` takes a `tax_rate_id` and
- * its `pagination.total` is exactly this number — but nothing calls it yet,
+ * The capability exists: `GET /taxes/associations` takes a `tax_rate_id` and
+ * its `pagination.total` is exactly this number: but nothing calls it yet,
  * and a column of zeros would say "this rate applies to nothing" when the
  * truth is "we did not ask".
  */

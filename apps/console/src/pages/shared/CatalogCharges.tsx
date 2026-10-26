@@ -24,7 +24,7 @@ export interface CatalogChargesProps {
 }
 
 /**
- * The charges of a catalogue record that is not a plan — an add-on or a cost
+ * The charges of a catalogue record that is not a plan: an add-on or a cost
  * sheet. "Add charge" asks Fixed or Usage, then shows the plan's charge form;
  * an edit saves a new price version, and terminating one is confirmed first.
  */

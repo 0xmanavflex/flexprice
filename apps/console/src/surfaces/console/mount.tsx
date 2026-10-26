@@ -10,8 +10,10 @@ import {
   SessionProvider,
   bypassesSignIn,
   getActiveEnvironmentId,
+  hasSession,
   useAuthSource,
   useSession,
+  useSupabaseSessionSync,
 } from '@/app/session'
 import { env } from '@/env'
 import { RegionProvider, useRegion } from '@/app/region'
@@ -20,7 +22,7 @@ import { RegionProvider, useRegion } from '@/app/region'
  * Start the mock API before rendering, when asked.
  *
  * Dynamically imported so neither MSW nor the fixture corpus reaches a
- * production bundle, and awaited so the first query cannot race the worker —
+ * production bundle, and awaited so the first query cannot race the worker:
  * otherwise the opening request escapes to the network and the screen shows an
  * error that disappears on refresh.
  */
@@ -34,15 +36,15 @@ async function startMocksIfAsked() {
 /**
  * One query client, built here rather than left to the provider.
  *
- * `SessionProvider` has to sit *above* `FlexpriceProvider` — the provider takes
+ * `SessionProvider` has to sit *above* `FlexpriceProvider`: the provider takes
  * the auth getters as a prop, so the session must already exist to supply them
- * — and it also has to reach a query client, because signing out clears the
+ *: and it also has to reach a query client, because signing out clears the
  * cache. Those two requirements point in opposite directions as long as the
  * query client is created inside `FlexpriceProvider`.
  *
  * Creating it here resolves that: the same instance is handed to the outer
  * `QueryClientProvider` and to `FlexpriceProvider`. The nesting is real but
- * harmless — `useQueryClient()` finds the nearer provider, and both hold the
+ * harmless: `useQueryClient()` finds the nearer provider, and both hold the
  * identical client, so there is exactly one cache no matter which one answers.
  */
 const queryClient = createQueryClient({ getEnvironmentId: getActiveEnvironmentId })
@@ -72,6 +74,20 @@ function ConsoleApp() {
     signOut()
     void router.navigate({ to: '/sign-in', search: {} as never })
   }, [signOut])
+
+  /*
+   * A hosted session ends when Supabase can no longer refresh it: the refresh
+   * token expired or was revoked, or the person signed out in another tab. The
+   * console signs out with it rather than waiting for the next 401. Its own
+   * sign-out ends the Supabase session too, so this checks there is still a
+   * session to end.
+   */
+  useSupabaseSessionSync(
+    useCallback(() => {
+      if (!hasSession()) return
+      onUnauthorized()
+    }, [onUnauthorized]),
+  )
 
   return (
     <FlexpriceProvider

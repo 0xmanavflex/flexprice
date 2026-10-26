@@ -112,7 +112,7 @@ describe('toCreatedApiKey', () => {
     const created = toCreatedApiKey({ apiKey: 'sk_live_full_secret_value', secret: keyWire })
     expect(created.secret).toBe('sk_live_full_secret_value')
     expect(created.key.displayId).toBe('sk_live_a1b2')
-    // The record beside it still carries no secret — only the prefix.
+    // The record beside it still carries no secret: only the prefix.
     expect(JSON.stringify(created.key)).not.toContain('sk_live_full_secret_value')
   })
 

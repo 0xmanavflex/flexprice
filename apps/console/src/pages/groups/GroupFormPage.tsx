@@ -19,10 +19,11 @@ export function GroupFormPage({ onCancel, onDone }: GroupFormPageProps) {
 
   return (
     <GroupForm
-      trail={[{ label: 'Groups', onClick: onCancel }, { label: 'Create group' }]}
+      trail={[{ label: 'Tags', onClick: onCancel }, { label: 'Create tag' }]}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={toSubmitError(create.error)}
+      // The API's refusal is a toast (MutationToasts); validation stays in the form.
+      submitError={null}
       onSubmit={(draft: CreateGroup) =>
         create.mutate(draft, {
           onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),
@@ -41,12 +42,12 @@ export function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return serverReason(error) ?? 'You do not have permission to change groups here.'
+        return serverReason(error) ?? 'You do not have permission to change tags here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return serverReason(error) ?? 'Could not save the group. Try again.'
+        return serverReason(error) ?? 'Could not save the tag. Try again.'
     }
   }
-  return 'Could not save the group. Try again.'
+  return 'Could not save the tag. Try again.'
 }

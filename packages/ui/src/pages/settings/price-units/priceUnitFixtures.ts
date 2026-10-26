@@ -5,7 +5,7 @@ import {
   PriceUnitStatus,
 } from '@fp/domain'
 
-/** Price units as plain domain values — no client, no provider, no network. */
+/** Price units as plain domain values: no client, no provider, no network. */
 export const priceUnitFixtures: PriceUnit[] = [
   {
     id: 'pu_01',
@@ -19,7 +19,7 @@ export const priceUnitFixtures: PriceUnit[] = [
     updatedAt: new Date('2026-03-01T00:00:00Z'),
   },
   {
-    // A tiny rate — the row that proves the formatter keeps its decimals instead
+    // A tiny rate: the row that proves the formatter keeps its decimals instead
     // of rounding to zero.
     id: 'pu_02',
     name: 'Tokens',
@@ -54,7 +54,7 @@ export const priceUnitFixtures: PriceUnit[] = [
     updatedAt: new Date('2026-03-15T00:00:00Z'),
   },
   {
-    // Archived — the muted row.
+    // Archived: the muted row.
     id: 'pu_05',
     name: 'Legacy credits',
     code: 'LGC',
@@ -66,7 +66,7 @@ export const priceUnitFixtures: PriceUnit[] = [
     updatedAt: new Date('2025-12-01T00:00:00Z'),
   },
   {
-    // No timestamps — the row a hand-written demo omits.
+    // No timestamps: the row a hand-written demo omits.
     id: 'pu_06',
     name: 'Storage gigabytes',
     code: 'SGB',

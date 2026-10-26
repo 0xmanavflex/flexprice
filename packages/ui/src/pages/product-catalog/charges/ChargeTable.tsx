@@ -14,21 +14,22 @@ import {
   isChargeCustomised,
 } from '@fp/domain'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
-import { ArrowRightIcon, PlusIcon } from '@ui/icons'
+import type { ReactElement } from 'react'
+import { ArrowRightIcon, CircleSlashIcon, CopyIcon, EyeIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Section } from '@ui/compositions/layout/Section'
 
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
 import { DetailTable, type DetailColumn } from '../../shared/DetailTable'
+import { Pill, type PillTone } from '../../shared/cells'
 import { ChargeFlags } from './ChargeFlags'
 import { ChargeSheet } from './ChargeSheet'
 
 /**
  * A charges section: what a plan, add-on, contract or cost sheet bills.
  *
- * One table everywhere charges appear, and one row per charge — no expansion,
+ * One table everywhere charges appear, and one row per charge: no expansion,
  * no nested table. A row carries the charge, its price, a quantity where there
  * is one, and *flags*: Price changed, Discount, Commitment, Alerts, History.
  * Everything a flag stands for lives in the charge sheet the flag opens, at
@@ -60,7 +61,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /**
    * What is special about each charge, by charge id.
    *
-   * Absent for a page that cannot read it — a plan's charges are prices and
+   * Absent for a page that cannot read it: a plan's charges are prices and
    * carry no override, coupon or commitment, so the plan page sends nothing and
    * no row shows a flag. A contract's are line items and carry most of it.
    */
@@ -69,14 +70,14 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
    * The container's own billing frequency.
    *
    * A charge names its period only when it differs from this, so the common
-   * case — every charge billed as the plan is — does not repeat the same word
+   * case: every charge billed as the plan is: does not repeat the same word
    * down the column. Absent means every charge states its own.
    */
   period?: BillingPeriod | string
   /**
-   * `summary` shows only the changed charges and a link to the rest — the
+   * `summary` shows only the changed charges and a link to the rest: the
    * contract Overview. `full` shows every charge, narrowed by the Status filter
-   * (Active, Changed, Ended) beside the billing model — the Charges tab.
+   * (Active, Changed, Ended) beside the billing model: the Charges tab.
    */
   variant?: 'summary' | 'full'
   /** `narrow` is the table beside a side rail: no quantity column, flags compact. */
@@ -86,7 +87,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
    *
    * A contract's charges arrive from its plan, from an add-on, or from the
    * contract alone, and which is the most useful thing to know about a row
-   * there — more than the billing model, which is the default. It goes in the
+   * there: more than the billing model, which is the default. It goes in the
    * line rather than a column so the four columns the redesign specifies stay
    * four. Narrowing by it is the `facets` prop's job.
    */
@@ -99,13 +100,15 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** The add button's wording, e.g. "Add charge" on a contract. */
   addLabel?: string
   onEdit?: (charge: Charge) => void
-  /** `false` leaves a row's Edit out — a contract cannot reprice every line. */
+  /** `false` leaves a row's Edit out: a contract cannot reprice every line. */
   canEdit?: (charge: Charge) => boolean
   onTerminate?: (charge: Charge) => void
   /** The destructive item's wording; "Terminate" on a catalogue, "End charge" on a contract. */
   removeLabel?: string
   /** Extra row-menu items, e.g. a contract's "Go to plan". */
-  extraActions?: (charge: Charge) => Array<{ label: string; onSelect: () => void }>
+  extraActions?: (
+    charge: Charge,
+  ) => Array<{ label: string; icon: ReactElement; onSelect: () => void }>
   /**
    * Replaces opening the sheet.
    *
@@ -125,7 +128,10 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   title?: string
   /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
   showTitle?: boolean
-  /** Adds a Dates column: when each charge started and, once ended, when it ended. */
+  /**
+   * Forces the "In effect" column (when each charge starts and ends) on. It is
+   * on by default in the wide layout and in the column menu in the narrow one.
+   */
   showDates?: boolean
   description?: string
   chargeColumnLabel?: string
@@ -143,7 +149,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
 }
 
 /** The "value" a charge bills, summarised for the table. */
-/** A charge's price as one line, e.g. "$0.002 per call" — the table's Price cell. */
+/** A charge's price as one line, e.g. "$0.002 per call": the table's Price cell. */
 export function chargePriceLabel(charge: Charge): string {
   return valueOf(charge)
 }
@@ -179,14 +185,23 @@ function nameOf(charge: Charge): string {
   return charge.displayName || charge.meterName || 'Charge'
 }
 
-const DATE = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+// Charge dates are calendar days stored at midnight UTC; read them in UTC so a
+// viewer west of Greenwich does not see the day before.
+const DATE_OPTIONS = { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' } as const
+const DATE = new Intl.DateTimeFormat(undefined, DATE_OPTIONS)
+
+const STATUS_TONE: Record<string, PillTone> = {
+  Active: 'success',
+  Changed: 'warning',
+  Ended: 'neutral',
+}
 
 /**
  * The grey line under a charge's name: fixed or usage, then one more thing.
  *
  * Which "one more thing" is the most useful fact about *this* charge right
- * now — that it has ended, that it has not started, that it bills on a
- * different cycle from everything around it — falling back to the billing
+ * now: that it has ended, that it has not started, that it bills on a
+ * different cycle from everything around it: falling back to the billing
  * model, which is the answer when nothing else is unusual.
  */
 function kindLine(
@@ -196,9 +211,7 @@ function kindLine(
   source: string | undefined,
 ): string {
   const kind = charge.type === PriceType.Usage ? 'Usage' : 'Fixed'
-  const format = locale
-    ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
-    : DATE
+  const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
   // Two parts, never three: a third would be a column wearing a grey font.
   // Lifecycle first (it changes what the row means), then where the charge
   // came from where a page can say, then the billing model as the default.
@@ -284,6 +297,7 @@ export function ChargeTable({
     <WriteGate>
       <Button
         type="button"
+        variant="outline"
         size="sm"
         className="h-8 px-3"
         onClick={onAdd}
@@ -310,6 +324,7 @@ export function ChargeTable({
         showTitle={showTitle}
         title={title}
         {...(sectionDescription ? { description: sectionDescription } : {})}
+        {...(addButton ? { action: addButton } : {})}
       >
         <SubTabState
           hasData={false}
@@ -325,7 +340,6 @@ export function ChargeTable({
             scene: 'catalog',
             title: 'No charges yet',
             description: emptyText,
-            ...(addButton ? { action: addButton } : {}),
           }}
         >
           {null}
@@ -380,34 +394,22 @@ export function ChargeTable({
     },
   ]
 
-  if (showDates) {
-    const format = locale
-      ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
-      : DATE
-    columns.splice(2, 0, {
-      key: 'dates',
-      header: 'Dates',
-      width: 200,
-      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
-      text: (charge) =>
-        `${charge.startDate ? format.format(charge.startDate) : ''} ${charge.endDate ? format.format(charge.endDate) : ''}`,
-      cell: (charge) => (
-        <span className="block min-w-0">
-          <span className="block tabular-nums">
-            {charge.startDate ? `From ${format.format(charge.startDate)}` : '—'}
-          </span>
-          {charge.endDate ? (
-            <span className="text-muted-foreground block text-xs tabular-nums">
-              Ended {format.format(charge.endDate)}
-            </span>
-          ) : null}
-        </span>
-      ),
-    })
-  }
+  const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
+  const inEffect = (charge: Charge) =>
+    !charge.startDate && !charge.endDate
+      ? 'Always'
+      : `${charge.startDate ? format.format(charge.startDate) : '—'} → ${
+          charge.endDate ? format.format(charge.endDate) : 'Ongoing'
+        }`
+  const timing = (charge: Charge) =>
+    charge.invoiceCadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'
 
+  // After price: quantity (when a page knows it), billing timing and the dates
+  // the charge is in effect, then flags. Timing and dates sit in the column
+  // menu, not on screen, in the narrow layout beside a side rail.
+  const middle: DetailColumn<Charge>[] = []
   if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
-    columns.splice(2, 0, {
+    middle.push({
       key: 'quantity',
       header: 'Quantity',
       width: 100,
@@ -417,6 +419,38 @@ export function ChargeTable({
       ),
     })
   }
+  middle.push(
+    {
+      key: 'timing',
+      header: 'Billing timing',
+      width: 130,
+      text: timing,
+      cell: (charge) => <span>{timing(charge)}</span>,
+      ...(narrow ? { hiddenByDefault: true } : {}),
+    },
+    {
+      key: 'dates',
+      header: 'In effect',
+      width: 220,
+      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
+      text: inEffect,
+      cell: (charge) => <span className="tabular-nums">{inEffect(charge)}</span>,
+      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
+    },
+  )
+  columns.splice(2, 0, ...middle)
+  columns.push({
+    key: 'status',
+    header: 'Status',
+    width: 110,
+    text: statusOf,
+    cell: (charge) => (
+      <Pill tone={STATUS_TONE[statusOf(charge)] ?? 'neutral'} size="sm">
+        {statusOf(charge)}
+      </Pill>
+    ),
+    hiddenByDefault: true,
+  })
 
   if (hasActions) {
     columns.push({
@@ -424,7 +458,7 @@ export function ChargeTable({
       header: '',
       className: 'w-12',
       cell: (charge: Charge) => (
-        // The row opens the sheet, so the menu's own click must not reach it —
+        // The row opens the sheet, so the menu's own click must not reach it:
         // the sheet is a dialog, and opening one dismisses the menu that was
         // being opened.
         <span className="flex justify-end" onClick={(event) => event.stopPropagation()}>
@@ -433,13 +467,21 @@ export function ChargeTable({
             extra={[
               {
                 label: 'Copy price ID',
+                icon: <CopyIcon aria-hidden />,
                 readOnly: true,
                 onSelect: () => void navigator.clipboard?.writeText(charge.id),
               },
               ...(extraActions?.(charge) ?? []),
               ...(onRowClick
                 ? []
-                : [{ label: 'View details', readOnly: true, onSelect: () => openAt(charge) }]),
+                : [
+                    {
+                      label: 'View details',
+                      icon: <EyeIcon aria-hidden />,
+                      readOnly: true,
+                      onSelect: () => openAt(charge),
+                    },
+                  ]),
             ]}
             onEdit={
               onEdit && !charge.endDate && (canEdit?.(charge) ?? true)
@@ -448,6 +490,7 @@ export function ChargeTable({
             }
             onRemove={onTerminate && !charge.endDate ? () => onTerminate(charge) : undefined}
             removeLabel={removeLabel}
+            removeIcon={<CircleSlashIcon aria-hidden />}
           />
         </span>
       ),
@@ -460,12 +503,9 @@ export function ChargeTable({
       <ArrowRightIcon aria-hidden />
     </Button>
   ) : null
-  // While the summary has nothing to list, the way through sits in the empty
-  // body. Once a change appears, it moves up beside the title.
-  const summaryEmpty = variant === 'summary' && rows.length === 0
-  const titleAction = variant === 'summary' && !summaryEmpty ? showAllButton : undefined
-
-  // The add action sits inside the table frame, beside its filter, as on every other table.
+  // The section's action has one place, the top right of its header, with
+  // rows or without: "Add" on the full table, the way to it on the summary.
+  const headerAction = variant === 'summary' ? showAllButton : addButton
   const description = variant === 'summary' ? undefined : sectionDescription
 
   return (
@@ -475,25 +515,30 @@ export function ChargeTable({
         showTitle={showTitle}
         title={title}
         {...(description ? { description } : {})}
-        {...(titleAction ? { action: titleAction } : {})}
+        {...(headerAction && (showTitle || rows.length === 0) ? { action: headerAction } : {})}
       >
         {rows.length === 0 ? (
-          <SectionEmpty
-            scene="catalog"
-            title={variant === 'summary' ? 'No changes' : 'No charges yet'}
-            description={
-              variant === 'summary'
-                ? 'Every charge is billed as the plan sets it. Changed charges show here.'
-                : undefined
-            }
-            {...(summaryEmpty && showAllButton ? { action: showAllButton } : {})}
-          />
+          <SubTabState
+            hasData={false}
+            isLoading={false}
+            columns={4}
+            loadingLabel="Loading charges"
+            empty={{
+              scene: 'catalog',
+              title: variant === 'summary' ? 'No changes' : 'No charges yet',
+              description:
+                variant === 'summary'
+                  ? 'Every charge is billed as the plan sets it. Changed charges show here.'
+                  : undefined,
+            }}
+          >
+            {null}
+          </SubTabState>
         ) : (
           <DetailTable
             compact
             label="Charges"
-            toolbar={variant === 'full'}
-            {...(variant === 'full' && addButton ? { action: addButton } : {})}
+            toolbar
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
             // filter keeps it.
@@ -503,12 +548,12 @@ export function ChargeTable({
                 label: 'Billing model',
                 value: (charge: Charge) => modelLabel(charge),
               },
-              ...(variant === 'full' && (changed.length > 0 || ended.length > 0)
-                ? [{ id: 'status', label: 'Status', value: statusOf }]
-                : []),
+              // Always offered on the full table, so ended charges can be asked for.
+              ...(variant === 'full' ? [{ id: 'status', label: 'Status', value: statusOf }] : []),
               ...(facets ?? []),
             ]}
             noun="charges"
+            {...(!showTitle && headerAction ? { action: headerAction } : {})}
             rows={rows}
             columns={columns}
             onRowClick={onRowClick ?? ((charge: Charge) => openAt(charge))}

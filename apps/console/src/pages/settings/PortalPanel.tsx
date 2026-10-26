@@ -57,20 +57,20 @@ import { useDraft } from './useDraft'
  *
  * The stored value is not a handful of switches. It is an **ordered tree**:
  * sections, each with a label and a position, each holding ordered tabs, each
- * tab typed, and two tab types carrying a payload of their own — which metric
+ * tab typed, and two tab types carrying a payload of their own: which metric
  * cards to show, which date presets the usage graph offers. Above them sit a
  * format `version` and a typed `theme`.
  *
  * V1's portal screen renders five booleans, because five booleans is what its
  * form needed, and **rebuilds the config object out of those five booleans on
  * save**. Arrays are replaced wholesale by the write, so that is not a partial
- * edit — it is a deletion. Every section label, every ordering and every graph
+ * edit: it is a deletion. Every section label, every ordering and every graph
  * preset a portal was configured with disappears on the next save, with
  * nothing on screen to say so.
  *
  * So this panel never constructs a config. It loads one, edits it through the
- * `with…` helpers in `@fp/domain` — each of which returns the whole tree with
- * one thing changed and everything else carried through untouched — and passes
+ * `with…` helpers in `@fp/domain`: each of which returns the whole tree with
+ * one thing changed and everything else carried through untouched: and passes
  * the whole thing back to the write. Reading goes through `orderedSections` /
  * `orderedTabs` rather than array order, because the API does not promise the
  * arrays are sorted; `order` is what the portal renders by.
@@ -81,8 +81,8 @@ import { useDraft } from './useDraft'
  * ## What is deliberately not editable here
  *
  * Section labels, tab types and the usage graph's preset *vocabulary* are
- * shown but not edited. The tab type list is open — the backend types it as an
- * unconstrained string — and a portal configured by something newer than this
+ * shown but not edited. The tab type list is open: the backend types it as an
+ * unconstrained string: and a portal configured by something newer than this
  * console must survive being read, rendered as best we can, and written back
  * unchanged. Offering a picker over a closed list this build happens to know
  * would quietly narrow somebody else's portal.
@@ -140,7 +140,7 @@ function PortalForm({
       className="contents"
       noValidate
       onSubmit={draft.handleSubmit((value) => {
-        // The tree as it was loaded and mutated — never a rebuilt object.
+        // The tree as it was loaded and mutated: never a rebuilt object.
         update.mutate(value, { onSuccess: (saved) => draft.reset(saved) })
       })}
     >
@@ -168,7 +168,7 @@ function PortalForm({
             </Fact>
             <Fact label="Visible to customers">
               <span className="flex items-center gap-1.5">
-                {visible.length === 0 ? 'Nothing — the portal is empty' : visible.join(', ')}
+                {visible.length === 0 ? 'Nothing: the portal is empty' : visible.join(', ')}
                 <DelayedHint text="Drag to reorder. The eye shows or hides a part of the portal; hiding a section hides all its tabs, and a tab is only reachable if its section is on." />
               </span>
             </Fact>
@@ -238,7 +238,7 @@ function PortalForm({
               {!saveError && reset.isSuccess ? (
                 <ActionNote message="Back to the defaults." />
               ) : null}
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" variant="outline" disabled={busy}>
                 {update.isPending ? 'Saving…' : 'Save changes'}
               </Button>
             </div>
@@ -269,20 +269,40 @@ function ColorField({
   return (
     <Field
       label={`${label} colour`}
-      hint="A CSS colour, or blank."
+      hint="A hex code such as #0f172a, or blank."
       {...(draft.error(path) ? { error: draft.error(path) } : {})}
     >
       {({ id, ...field }) => (
-        <Input
-          id={id}
-          disabled={busy}
-          placeholder="#0f172a"
-          value={draft.text(path)}
-          onChange={(event) => draft.setText(path, event.target.value)}
-          {...field}
-        />
+        <div className="flex items-center gap-2">
+          <ColorSwatch value={draft.text(path)} />
+          <Input
+            id={id}
+            disabled={busy}
+            placeholder="#0f172a"
+            value={draft.text(path)}
+            onChange={(event) => draft.setText(path, event.target.value)}
+            {...field}
+          />
+        </div>
       )}
     </Field>
+  )
+}
+
+/**
+ * A preview of the colour typed beside it, so a hex code reads as the colour
+ * it is. The colour is the merchant's own data, not a theme value, hence the
+ * inline style; an empty or unreadable value shows an empty, dashed square.
+ */
+function ColorSwatch({ value }: { value: string }) {
+  const colour = value.trim()
+  const valid = colour !== '' && typeof CSS !== 'undefined' && CSS.supports('color', colour)
+  return (
+    <span
+      aria-hidden
+      className={`size-9 shrink-0 rounded-md border ${valid ? '' : 'border-dashed'}`}
+      style={valid ? { backgroundColor: colour } : undefined}
+    />
   )
 }
 

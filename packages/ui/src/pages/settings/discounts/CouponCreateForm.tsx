@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -9,10 +10,13 @@ import {
   type CreateCoupon,
   PRICE_UNIT_CURRENCIES,
   createCouponSchema,
+  currencySymbol,
   emptyCoupon,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
+import { MetadataFields } from '@ui/compositions/forms/MetadataFields'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { DateInput } from '@ui/compositions/forms/DateInput'
@@ -83,10 +87,20 @@ export function CouponCreateForm({
 
   const errors = form.formState.errors
   const type = form.watch('type')
+  const [metadataProblem, setMetadataProblem] = useState<string | null>(null)
+  const currency = form.watch('currency')
   const cadence = form.watch('cadence')
 
   const formEl = (
-    <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
+    <form
+      id={FORM_ID}
+      onSubmit={form.handleSubmit((values) => {
+        // The metadata rows say what is wrong with them; nothing is sent until fixed.
+        if (metadataProblem) return
+        onSubmit(values)
+      })}
+      noValidate
+    >
       <FormCard title="Coupon details">
         <FormRow
           label="Name"
@@ -132,44 +146,7 @@ export function CouponCreateForm({
           )}
         </FormRow>
 
-        {type === CouponType.Percentage ? (
-          <FormRow
-            label="Percentage off"
-            hint="The share of the price taken off, from 0 to 100."
-            required
-            error={errors.percentageOff?.message}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="decimal"
-                placeholder="10"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('percentageOff')}
-              />
-            )}
-          </FormRow>
-        ) : (
-          <FormRow
-            label="Amount off"
-            hint="The fixed amount taken off the price."
-            required
-            error={errors.amountOff?.message}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="decimal"
-                placeholder="25.00"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('amountOff')}
-              />
-            )}
-          </FormRow>
-        )}
-
+        {/* Currency first, so the amount below can show its sign. */}
         {type === CouponType.Fixed ? (
           <FormRow
             label="Currency"
@@ -196,6 +173,50 @@ export function CouponCreateForm({
             )}
           </FormRow>
         ) : null}
+
+        {type === CouponType.Percentage ? (
+          <FormRow
+            label="Percentage off"
+            hint="The share of the price taken off, from 0 to 100."
+            required
+            error={errors.percentageOff?.message}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                inputMode="decimal"
+                placeholder="10"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('percentageOff')}
+              />
+            )}
+          </FormRow>
+        ) : (
+          <FormRow
+            label="Amount off"
+            hint="The fixed amount taken off the price."
+            required
+            error={errors.amountOff?.message}
+          >
+            {({ id, ...field }) => (
+              // The amount is in the currency chosen above, so it carries its sign.
+              <InputGroup className="h-9">
+                {currency ? (
+                  <InputGroupAddon align="inline-start">{currencySymbol(currency)}</InputGroupAddon>
+                ) : null}
+                <InputGroupInput
+                  id={id}
+                  inputMode="decimal"
+                  placeholder="25.00"
+                  disabled={isSubmitting}
+                  {...field}
+                  {...form.register('amountOff')}
+                />
+              </InputGroup>
+            )}
+          </FormRow>
+        )}
 
         <FormRow
           label="Duration"
@@ -295,6 +316,27 @@ export function CouponCreateForm({
                   disabled={isSubmitting}
                 />
               )}
+            />
+          )}
+        </FormRow>
+      </FormCard>
+      <FormCard title="Metadata" status="optional">
+        <FormRow
+          label="Fields"
+          hint="Free-form key/value pairs kept with the coupon, for your own systems. Optional."
+          align="start"
+        >
+          {() => (
+            <MetadataFields
+              label="Coupon metadata"
+              defaultValue={form.getValues('metadata')}
+              disabled={isSubmitting}
+              onChange={(metadata, problem) => {
+                setMetadataProblem(problem)
+                form.setValue('metadata', Object.keys(metadata).length > 0 ? metadata : undefined, {
+                  shouldDirty: true,
+                })
+              }}
             />
           )}
         </FormRow>

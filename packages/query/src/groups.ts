@@ -22,7 +22,7 @@ import { sortWithTieBreak } from './listSort'
  * Reached through `client.groups.queryGroup`, the same search shape features,
  * plans and add-ons use. The wire sends the members as an `entityIds` array;
  * the list only ever shows how many there are, so the domain carries the count
- * and drops the array — no screen enumerates it.
+ * and drops the array: no screen enumerates it.
  */
 
 /**
@@ -146,6 +146,7 @@ export function useCreateGroup() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { notify: { success: 'Group created', error: 'Could not create the group.' } },
     mutationFn: (draft: CreateGroup) =>
       call(() => client.groups.createGroup(toCreateGroupRequest(draft) as never)),
     onSuccess: () => {
@@ -154,7 +155,7 @@ export function useCreateGroup() {
   })
 }
 
-/** Delete — `DELETE` by id. Takes the record id. */
+/** Delete: `DELETE` by id. Takes the record id. */
 export function useDeleteGroup() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -233,7 +234,7 @@ export function useGroupMembers(group: Group | undefined) {
   })
 }
 
-/** The account's price groups, as choices for a charge — the first 100, by name. */
+/** The account's price groups, as choices for a charge: the first 100, by name. */
 export function usePriceGroupOptions() {
   const groups = useGroups({
     page: 1,

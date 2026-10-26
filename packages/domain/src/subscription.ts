@@ -51,7 +51,7 @@ export interface Subscription {
   status: SubscriptionStatus
   /** Currency code, uppercased. Empty when the API sends none. */
   currency: string
-  /** The billing cadence as a word — "Monthly", "Half-yearly". */
+  /** The billing cadence as a word: "Monthly", "Half-yearly". */
   billingPeriodLabel: string
   /**
    * The cycle currently being billed.
@@ -117,7 +117,7 @@ export const SUBSCRIPTION_BILLING_PERIODS = [
 ] as const
 
 /**
- * What the contract list can filter on — V1's fields, by their wire names.
+ * What the contract list can filter on: V1's fields, by their wire names.
  * Customer and plan choices are the account's own records; the page fills them
  * in with `withFilterOptions`.
  */
@@ -195,7 +195,7 @@ const optionalAmount = (message: string) =>
     .refine((value) => value === '' || PHASE_DECIMAL.test(value), message)
 
 /**
- * A discount on a phase: a coupon on the whole phase, or — with `priceId` — on
+ * A discount on a phase: a coupon on the whole phase, or: with `priceId`: on
  * one of its charges. Sent by coupon id, as V1 does, since a coupon need not
  * carry a redemption code.
  */
@@ -232,7 +232,7 @@ export const subscriptionPhaseSchema = z.object({
   ),
   discounts: z.array(subscriptionDiscountSchema),
   /**
-   * Charges for this contract (or this phase) alone, beyond the plan's — each
+   * Charges for this contract (or this phase) alone, beyond the plan's: each
    * already checked by the add-charge form it came from.
    */
   extraCharges: z.array(z.custom<AddContractCharge>()),
@@ -399,8 +399,31 @@ export const PAYMENT_TERMS_LABEL: Record<PaymentTerms, string> = {
 export const BillingCycle = { Anniversary: 'anniversary', Calendar: 'calendar' } as const
 export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle]
 
+export const INHERITANCE_WITH_BILLING_CUSTOMER =
+  "Inherited customers are billed to this contract's customer. Set the billing customer to Same customer, or remove the inherited customers."
+export const INHERITANCE_WITH_THRESHOLD =
+  'An auto-invoice threshold cannot be used on a contract with inherited customers. Clear it, or remove the inherited customers.'
+
 /**
- * The rules for starting a contract, in the order the form asks them — V1's:
+ * Why a customer cannot inherit a contract, as the API decides it:
+ * - `OwnContract`: it has a contract of its own (active, trialing or draft)
+ *   that is not under the paying customer.
+ * - `OtherParent`: it already inherits, or is grouped under, another
+ *   customer's contract.
+ */
+export const InheritanceBlock = {
+  OwnContract: 'own-contract',
+  OtherParent: 'other-parent',
+} as const
+export type InheritanceBlock = (typeof InheritanceBlock)[keyof typeof InheritanceBlock]
+
+export const INHERITANCE_BLOCK_LABEL: Record<InheritanceBlock, string> = {
+  [InheritanceBlock.OwnContract]: 'Has its own contract',
+  [InheritanceBlock.OtherParent]: "Inherits another customer's contract",
+}
+
+/**
+ * The rules for starting a contract, in the order the form asks them: V1's:
  * customer and plan with the contract's dates; phases, each with its own
  * charges then discounts; commitments (on the contract and on usage charges);
  * entitlement overrides and credit grants; taxes; add-ons; and the billing
@@ -458,7 +481,7 @@ export const createSubscriptionSchema = z
     creditGrants: z.array(createCreditGrantSchema),
     /** Whether the grants differ from the plan's, and so must be sent. */
     creditGrantsChanged: z.boolean(),
-    /** Tax rates applied to the contract's invoices — prefilled from the customer, as V1 does. */
+    /** Tax rates applied to the contract's invoices: prefilled from the customer, as V1 does. */
     taxes: z.array(
       z.object({
         taxRateCode: z.string().min(1),
@@ -526,6 +549,25 @@ export const createSubscriptionSchema = z
       }
       start = phase.endDate || start
     })
+    // A contract in phases is a schedule, and a schedule needs a fixed first
+    // day: "today" would move every phase boundary with the day it is saved.
+    if (value.phases.length > 1 && !value.startDate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['startDate'],
+        message: 'Choose when the contract starts: a contract in phases needs a start date',
+      })
+    }
+    // The API refuses entitlement overrides on a prorated contract (V1 checks
+    // it before sending, with the same words).
+    if (value.prorate && value.entitlementOverrides.length > 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['prorate'],
+        message:
+          'Entitlement overrides cannot be combined with proration. Turn off proration or remove the entitlement overrides.',
+      })
+    }
     // A chosen billing date counts periods from that day, so it cannot come
     // before the contract has started.
     const contractStart = value.startDate || localToday()
@@ -538,6 +580,25 @@ export const createSubscriptionSchema = z
           ? 'Choose a date on or after the contract start date'
           : 'The contract starts today, so choose today or a later date',
       })
+    }
+    // Customers that inherit a contract are billed through its own customer, so
+    // the API takes either inherited customers or another billing customer,
+    // never both, and an early invoice threshold only on a contract without them.
+    if (value.inheritedCustomerExternalIds.length > 0) {
+      if (value.invoicingCustomerExternalId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['inheritedCustomerExternalIds'],
+          message: INHERITANCE_WITH_BILLING_CUSTOMER,
+        })
+      }
+      if (value.autoInvoiceThreshold) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['autoInvoiceThreshold'],
+          message: INHERITANCE_WITH_THRESHOLD,
+        })
+      }
     }
   })
 
@@ -589,12 +650,51 @@ export function emptySubscription(): CreateSubscription {
     billingCycle: BillingCycle.Anniversary,
     billingAnchor: '',
     paymentTerms: '',
-    prorate: true,
+    // Off until someone turns it on in Dates and billing.
+    prorate: false,
     autoInvoiceThreshold: '',
     draft: false,
     invoicingCustomerExternalId: '',
     inheritedCustomerExternalIds: [],
   }
+}
+
+/**
+ * The contract-level commitment: a minimum spend per commitment period, set
+ * when the contract is created. It is separate from the commitments a usage
+ * charge carries, and the API has no way to change it afterwards.
+ */
+export interface ContractCommitment {
+  /** The minimum spend per commitment period. */
+  amount: Money
+  /** The period the minimum is measured over. */
+  period: BillingPeriod
+  /** How many of that period, when the contract bills every few months. */
+  periodCount: number
+  /** Multiplier on spend beyond the minimum; 1 is the normal rate. */
+  overageFactor: number
+  /** Bill the shortfall when spend stays under the minimum. */
+  trueUp: boolean
+}
+
+const COMMITMENT_PERIOD_NOUN: Record<BillingPeriod, [one: string, many: string]> = {
+  [BillingPeriod.Daily]: ['day', 'days'],
+  [BillingPeriod.Weekly]: ['week', 'weeks'],
+  [BillingPeriod.Monthly]: ['month', 'months'],
+  [BillingPeriod.Quarterly]: ['quarter', 'quarters'],
+  [BillingPeriod.HalfYearly]: ['half-year', 'half-years'],
+  [BillingPeriod.Annual]: ['year', 'years'],
+  [BillingPeriod.OneTime]: ['contract', 'contracts'],
+}
+
+/**
+ * The commitment period as "month", "year", "2 weeks": what follows "per".
+ * Twelve months reads as a year, as the old console wrote it.
+ */
+export function commitmentPeriodNoun(period: BillingPeriod, count = 1): string {
+  if (period === BillingPeriod.Monthly && count === 12) return 'year'
+  const [one, many] = COMMITMENT_PERIOD_NOUN[period]
+  return count > 1 ? `${count} ${many}` : one
 }
 
 /** The detail read model: the list row plus what the detail page adds. */
@@ -614,8 +714,8 @@ export interface SubscriptionDetail extends Subscription {
   timezone: string
   /** The caller's own key for this contract, when it set one. */
   lookupKey: string
-  /** The minimum spend the contract commits to per period; null when it has none. */
-  commitmentAmount: Money | null
+  /** The minimum spend the contract commits to; null when it has none. */
+  commitment: ContractCommitment | null
   /** The most recent invoice, as a link target. */
   latestInvoice: { id: string; number: string } | null
 }
@@ -663,7 +763,7 @@ export interface SubscriptionSchedule {
   canBeCancelled: boolean
 }
 
-/** One billed line on a subscription — a fixed charge or a metered one. */
+/** One billed line on a subscription: a fixed charge or a metered one. */
 export interface SubscriptionLine {
   id: string
   name: string
@@ -709,8 +809,8 @@ export interface LineLineage {
  * Changing a charge's price on a contract never edits it in place: the API ends
  * the line (its `end_date`) and starts a new one whose price points back to the
  * one it replaced (`parent_price_id`). Linking those ids end to end turns the
- * ended lines back into what they are — earlier versions of one charge, kept
- * inactive, not deleted — so the table shows each charge once and its history
+ * ended lines back into what they are: earlier versions of one charge, kept
+ * inactive, not deleted: so the table shows each charge once and its history
  * lists every price it has had.
  */
 export function lineLineages(lines: readonly SubscriptionLine[]): LineLineage[] {
@@ -854,6 +954,31 @@ export interface CancelSubscription {
   generateInvoice?: boolean
 }
 
+/**
+ * Pausing a contract: `POST /subscriptions/{id}/pause`, as V1 sends it: a
+ * proration choice and an optional reason. Billing stops until it is resumed.
+ */
+export interface PauseSubscription {
+  /** Credit the unused part of the current period. Off means no proration. */
+  prorate: boolean
+  reason: string
+}
+
+/** Resuming a paused contract: `POST /subscriptions/{id}/resume`. */
+export interface ResumeSubscription {
+  /** Charge for the remainder of the current period. Off means no proration. */
+  prorate: boolean
+}
+
+/** Pause is offered on a running contract; resume only on a paused one. */
+export function canPauseSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Active || status === SubscriptionStatus.Trialing
+}
+
+export function canResumeSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Paused
+}
+
 /** One line of the invoice a contract will raise next. */
 export interface InvoicePreviewLine {
   id: string
@@ -861,6 +986,8 @@ export interface InvoicePreviewLine {
   /** The period note under the name, when the API sent one. */
   detail: string
   quantity: string
+  /** The amount over the quantity (exact; `perUnit`), or null without a quantity. */
+  unitPrice: Money | null
   amount: Money
   kind: 'fixed' | 'usage' | null
 }

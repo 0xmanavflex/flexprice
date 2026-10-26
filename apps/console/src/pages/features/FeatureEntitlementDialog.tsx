@@ -19,7 +19,7 @@ export interface FeatureEntitlementDialogProps {
 
 /**
  * "Add entitlement" from a feature row: the entitlement form with that feature
- * already chosen, and a plan picker above it — an entitlement always belongs
+ * already chosen, and a plan picker above it: an entitlement always belongs
  * to a plan, so the plan is the one thing left to choose.
  */
 export function FeatureEntitlementDialog({ feature, onClose }: FeatureEntitlementDialogProps) {

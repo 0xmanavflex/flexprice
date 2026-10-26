@@ -44,7 +44,7 @@ export interface CouponDetailPageProps {
  * Built on the shared `DetailShell`, so it opens like every other detail page:
  * a breadcrumb, a large title with its status and type chips, the redemption
  * code as identifier, and a **metric rail** that leads with the numbers a coupon
- * is actually about — its discount and how many times it has been redeemed,
+ * is actually about: its discount and how many times it has been redeemed,
  * rather than burying them in a spec sheet.
  *
  * "Where used" (the subscriptions this coupon is applied to, from

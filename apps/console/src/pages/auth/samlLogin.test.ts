@@ -71,7 +71,7 @@ describe('startSamlLogin', () => {
     expect((result as { url: string }).url).toContain('https://api.test/v1/auth/saml/ten_1/login')
   })
 
-  it('does not follow the redirect — the probe must not consume the login', async () => {
+  it('does not follow the redirect: the probe must not consume the login', async () => {
     const fetchImpl = reply(302)
     await startSamlLogin('ten_1', 'https://api.test/v1', fakeStorage(), fetchImpl)
     expect(fetchImpl).toHaveBeenCalledWith(expect.any(String), {

@@ -4,6 +4,7 @@ import {
   type CustomCurrencyConfig,
   customCurrencyConfigSchema,
   emptyCustomCurrency,
+  currencyCodes,
   quotedFiatCurrencies,
 } from '@fp/domain'
 import {
@@ -11,7 +12,13 @@ import {
   useResetCustomCurrencyConfig,
   useUpdateCustomCurrencyConfig,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
+import {
+  ConfirmDialog,
+  EmptyState,
+  OptionCombobox,
+  SettingRow,
+  SettingsFieldGroup,
+} from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
 import {
@@ -33,7 +40,7 @@ import { useDraft } from './useDraft'
  * A tenant's own currencies, and what they are worth.
  *
  * `GET/PUT/DELETE /settings/custom_currency_config`. A custom currency is a
- * unit you invoice in that no central bank issues — credits, tokens, minutes,
+ * unit you invoice in that no central bank issues: credits, tokens, minutes,
  * seats. It needs a name and a symbol to be printed, and a conversion factor
  * so an invoice denominated in credits can be settled in money.
  *
@@ -64,11 +71,15 @@ import { useDraft } from './useDraft'
  * ## A code is fixed once it is added
  *
  * The code is the record key. Editing it live would rename the key on every
- * keystroke — `u`, `us`, `usd` — which changes the React key under the cursor
+ * keystroke: `u`, `us`, `usd`: which changes the React key under the cursor
  * and steals focus mid-word, and briefly writes keys the schema rejects. A
  * currency is three letters, a name and a symbol; removing and re-adding one
  * is cheaper than a rename that fights the person doing it.
  */
+
+/** Every ISO currency, as the fiat picker offers it (stored lower-case, shown upper). */
+const FIAT_OPTIONS = currencyCodes().map((code) => ({ value: code.toLowerCase(), label: code }))
+
 export function CurrenciesPanel() {
   const { environmentId } = useSession()
   const config = useCustomCurrencyConfig(environmentId)
@@ -125,13 +136,12 @@ function CurrencyForm({
    * The fiat codes every custom currency quotes.
    *
    * Held here rather than derived on every render because it has to survive
-   * having no custom currencies at all — `quotedFiatCurrencies` reads the set
+   * having no custom currencies at all: `quotedFiatCurrencies` reads the set
    * off the first currency, so with none there would be nowhere for a
    * just-added fiat to live until a currency existed to hold it.
    */
   const [fiats, setFiats] = useState<string[]>(() => quotedFiatCurrencies(config))
 
-  const [newFiat, setNewFiat] = useState('')
   const [fiatIssue, setFiatIssue] = useState<string | null>(null)
   const [newCode, setNewCode] = useState('')
   const [codeIssue, setCodeIssue] = useState<string | null>(null)
@@ -149,7 +159,6 @@ function CurrencyForm({
   function reseed(saved: CustomCurrencyConfig) {
     draft.reset(saved)
     setFiats(quotedFiatCurrencies(saved))
-    setNewFiat('')
     setFiatIssue(null)
     setNewCode('')
     setCodeIssue(null)
@@ -157,8 +166,8 @@ function CurrencyForm({
     setAdding(false)
   }
 
-  function addFiat() {
-    const code = normalise(newFiat)
+  function addFiat(picked: string) {
+    const code = normalise(picked)
     if (!CODE.test(code)) {
       setFiatIssue('A currency code is three letters, for example usd.')
       return
@@ -169,7 +178,6 @@ function CurrencyForm({
     }
 
     setFiatIssue(null)
-    setNewFiat('')
     setFiats([...fiats, code].sort())
     // Every currency gains the same empty rate box, which is the rule.
     draft.update((current) => ({
@@ -264,7 +272,7 @@ function CurrencyForm({
           <SettingsBlock label="Fiat currencies">
             {fiats.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                No fiat currencies yet. Add the ones you invoice in — usd, eur — before defining a
+                No fiat currencies yet. Add the ones you invoice in: usd, eur: before defining a
                 custom currency.
               </p>
             ) : (
@@ -307,28 +315,23 @@ function CurrencyForm({
             )}
             <ActionError message={draft.error('defaultFiatCurrency') ?? null} />
             <div className="flex max-w-md items-center gap-2">
-              <Input
-                id="currency-add-fiat"
-                aria-label="Add a fiat currency"
-                disabled={busy}
-                placeholder="Add a fiat currency, e.g. gbp"
-                autoComplete="off"
-                spellCheck={false}
-                aria-invalid={fiatIssue ? true : undefined}
-                value={newFiat}
-                onChange={(event) => setNewFiat(event.target.value)}
-                onKeyDown={(event) => {
-                  // A three-letter code plus Enter should not submit
-                  // the whole form — it should add the code.
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    addFiat()
-                  }
-                }}
-              />
-              <Button type="button" variant="outline" disabled={busy} onClick={addFiat}>
-                Add
-              </Button>
+              {/* A dropdown of real ISO codes rather than free text: a fiat currency
+                  is one the world already has, so it is picked, not typed. */}
+              <div className="min-w-0 flex-1">
+                <label htmlFor="currency-add-fiat" className="sr-only">
+                  Add a fiat currency
+                </label>
+                <OptionCombobox
+                  id="currency-add-fiat"
+                  value={undefined}
+                  onValueChange={(code) => addFiat(code)}
+                  options={FIAT_OPTIONS.filter((option) => !fiats.includes(option.value))}
+                  placeholder="Add a fiat currency…"
+                  emptyText="No currency matches"
+                  searchable
+                  disabled={busy}
+                />
+              </div>
               <DelayedHint text="The currencies you invoice in. The settlement currency is what an invoice priced in a custom currency is collected in." />
             </div>
             <ActionError message={fiatIssue} />
@@ -363,7 +366,7 @@ function CurrencyForm({
                   >
                     Reset to defaults
                   </Button>
-                  <Button type="submit" disabled={busy}>
+                  <Button type="submit" variant="outline" disabled={busy}>
                     {update.isPending ? 'Saving…' : 'Save changes'}
                   </Button>
                 </div>
@@ -375,7 +378,7 @@ function CurrencyForm({
                 <EmptyState
                   size="inline"
                   title="No custom currencies"
-                  description="A custom currency is a unit no central bank issues — credits, tokens, minutes. Add one to price in it; until then invoices use ordinary fiat currency."
+                  description="A custom currency is a unit no central bank issues: credits, tokens, minutes. Add one to price in it; until then invoices use ordinary fiat currency."
                 />
               </div>
             ) : (
@@ -522,7 +525,7 @@ function CurrencyForm({
                     id="currency-add-code"
                     aria-label="Currency code"
                     disabled={busy}
-                    placeholder="Three letters, e.g. cre — fixed once added"
+                    placeholder="Three letters, e.g. cre: fixed once added"
                     autoComplete="off"
                     spellCheck={false}
                     aria-invalid={codeIssue ? true : undefined}

@@ -49,7 +49,7 @@ import { useDraft } from './useDraft'
  *
  * `GET/PUT/DELETE /settings/customer_onboarding`. The value is a workflow: a
  * `workflowType` and an ordered list of steps the backend runs in order. An
- * empty list — the default — means nothing happens, which is a valid and very
+ * empty list: the default: means nothing happens, which is a valid and very
  * common answer, so the empty state here is not an error.
  *
  * ## One unknown step fails the whole save
@@ -59,7 +59,7 @@ import { useDraft } from './useDraft'
  * ignored: it rejects the entire `PUT`, with a message about JSON, at the
  * moment the user thinks they edited a wallet.
  *
- * So the mapper in `@fp/query` refuses to guess — reading a workflow that
+ * So the mapper in `@fp/query` refuses to guess: reading a workflow that
  * contains a step this console cannot name throws a named `ApiError` rather
  * than dropping the step (a silent deletion of somebody's workflow on the next
  * save) or carrying it blindly (a save that fails on a field nobody touched).
@@ -73,7 +73,7 @@ import { useDraft } from './useDraft'
  *
  * The whole workflow goes back on every save. `PUT` merges the top level and
  * replaces arrays wholesale, so a partially-sent `actions` list is a deletion
- * of the steps it leaves out — the value written is the value that was loaded,
+ * of the steps it leaves out: the value written is the value that was loaded,
  * mutated in place.
  *
  * Nothing is validated as you type; the schema runs on submit. Its messages
@@ -88,7 +88,7 @@ export function OnboardingPanel() {
 
   if (failure) {
     // `ErrorKind.Unknown` from this read is the mapper refusing to name a step
-    // — worth spelling out, because it is the one failure here that is about
+    //: worth spelling out, because it is the one failure here that is about
     // this console's age rather than about the request.
     const unrecognised =
       onboarding.error instanceof ApiError && onboarding.error.kind === ErrorKind.Unknown
@@ -273,7 +273,7 @@ function OnboardingForm({
               {!saveError && reset.isSuccess ? (
                 <ActionNote message="Back to the defaults." />
               ) : null}
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" variant="outline" disabled={busy}>
                 {update.isPending ? 'Saving…' : 'Save changes'}
               </Button>
             </div>
@@ -430,7 +430,7 @@ function WalletFields({
               onChange({
                 ...action,
                 initialCreditsExpirationDuration: null,
-                // Both or neither — a duration without a unit is not a shorter
+                // Both or neither: a duration without a unit is not a shorter
                 // expiry, it is a validation error.
                 initialCreditsExpirationDurationUnit: null,
               })

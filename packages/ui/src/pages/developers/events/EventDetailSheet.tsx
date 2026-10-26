@@ -21,7 +21,7 @@ import { EventTrace } from './EventTrace'
 /**
  * One event, and what billing did with it.
  *
- * The payload renders verbatim in the ReUI `CodeBlock` — a debugger's whole
+ * The payload renders verbatim in the ReUI `CodeBlock`: a debugger's whole
  * point is seeing what the sender actually sent. Above it sits the part that
  * makes this a debugger rather than a viewer: the five stages the event went
  * through and the one that stopped it, from `GET /events/lookup`.
@@ -187,8 +187,8 @@ export function EventDetailSheet({
 
               {/*
                 Every row stored under this id, newest first. More than one
-                means the same event was sent again — a replay, or a retry that
-                lost its idempotency key — which is usually the explanation for
+                means the same event was sent again: a replay, or a retry that
+                lost its idempotency key: which is usually the explanation for
                 a doubled quantity, so the heading says so.
               */}
               {versions.length > 0 ? (

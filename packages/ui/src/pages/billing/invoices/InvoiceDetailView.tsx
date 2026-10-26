@@ -7,34 +7,36 @@ import { useState, type ReactNode } from 'react'
 import {
   CalculatorIcon,
   CheckCircle2Icon,
+  CopyIcon,
   DownloadIcon,
-  ExternalLinkIcon,
   FileMinusIcon,
+  FileTextIcon,
   LinkIcon,
   MoreHorizontalIcon,
   PencilIcon,
   ReceiptIcon,
   RefreshCwIcon,
   SendIcon,
+  UserIcon,
   WalletIcon,
   XCircleIcon,
 } from '@ui/icons'
 import { toast } from 'sonner'
-import { InvoiceStatus, PaymentStatus } from '@fp/domain'
+import { DRAFT_INVOICE_NUMBER_LABEL, InvoiceStatus, PaymentStatus } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
 import { DetailShell } from '../../../compositions/detail/DetailShell'
 import { ActivitySection } from '../../../compositions/detail/ActivityLog'
-import { DetailTabs } from '../../../compositions/detail/DetailKit'
+import { DetailTabs, TotalRow, TotalsList } from '../../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../../compositions/detail/RelatedCard'
 import { Section } from '../../../compositions/layout/Section'
@@ -65,8 +67,8 @@ export const InvoiceDetailViewProvenance = provenance({
     'compositions/RelatedCard',
     'compositions/ActivityLog',
     'compositions/SubTabState',
+    'compositions/detail-kit',
     'ui/spinner',
-    '@reui/badge',
   ],
   note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit memos tabs. Entity-specific integration controls share header and Related mappings, following the supplied HTML reference.',
 })
@@ -86,14 +88,19 @@ export interface InvoiceDetailViewProps {
   /** More menu: Download PDF. Omitted, the item is disabled. */
   onDownload?: () => void
   onRecordPayment?: () => void
-  /** Drafts only: recompute lines, credits and taxes in place. */
+  /** Recompute a draft in place, or replace a (voided) contract invoice with a fresh one. */
   onRecalculate?: () => void
+  /**
+   * Why Recalculate is unavailable for this invoice, shown beside it; null when
+   * it is available. Omitted, Recalculate is offered for drafts only.
+   */
+  recalculateBlocked?: string | null
   onVoid?: () => void
   /** Set the payment status by hand, for money that moved outside Flexprice. */
   onUpdatePaymentStatus?: () => void
   /**
    * Why the payment status cannot be set by hand right now (void, payments
-   * recorded…) — `manualPaymentStatusBlocked`. Shown as the disabled item's hint.
+   * recorded…): `manualPaymentStatusBlocked`. Shown as the disabled item's hint.
    */
   paymentStatusBlocked?: string | null
   /** Saves the invoice's metadata map. Omitted, the metadata card is read-only. */
@@ -147,6 +154,7 @@ export function InvoiceDetailView({
   onDownload,
   onRecordPayment,
   onRecalculate,
+  recalculateBlocked,
   onVoid,
   onUpdatePaymentStatus,
   paymentStatusBlocked = null,
@@ -178,6 +186,17 @@ export function InvoiceDetailView({
       maximumFractionDigits: 6,
     }).format(value)
   const isDraft = invoice.status === InvoiceStatus.Draft
+  // The API voids only unpaid invoices.
+  const voidReason =
+    invoice.status === InvoiceStatus.Void
+      ? 'Already void'
+      : invoice.status === InvoiceStatus.Skipped
+        ? 'A skipped invoice has nothing to void'
+        : invoice.status === InvoiceStatus.Paid || invoice.paid > 0
+          ? 'A paid invoice cannot be voided; issue a credit memo instead'
+          : null
+  const recalcReason =
+    recalculateBlocked === undefined ? (isDraft ? null : 'Drafts only') : recalculateBlocked
   const isOpen = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
   const paymentFailed = isOpen && invoice.paymentStatus === PaymentStatus.Failed
   const lines = invoice.lines.filter((line) => line.amount !== 0)
@@ -188,16 +207,18 @@ export function InvoiceDetailView({
   ).length
   const hostedUrl = invoice.hostedUrl ?? null
 
-  const copyLink = () => {
+  const copyLink = async () => {
     if (!hostedUrl) return
-    void navigator.clipboard?.writeText(hostedUrl)
-    toast.success('Hosted invoice link copied', {
-      description: 'Anyone with the link can view and pay this invoice until it expires.',
-    })
-  }
-  const openLink = () => {
-    if (!hostedUrl) return
-    window.open(hostedUrl, '_blank', 'noopener,noreferrer')
+    try {
+      await navigator.clipboard.writeText(hostedUrl)
+      toast.success('Hosted invoice link copied', {
+        description: 'Anyone with the link can view and pay this invoice until it expires.',
+      })
+    } catch {
+      toast.error('Couldn’t copy the link', {
+        description: 'Your browser blocked clipboard access.',
+      })
+    }
   }
 
   const related: RelatedItem[] = [
@@ -209,12 +230,12 @@ export function InvoiceDetailView({
     },
     {
       id: 'subscription',
-      label: 'Subscription',
+      label: 'Contract',
       value: invoice.subscriptionLabel,
       ...(onOpenSubscription && invoice.subscriptionId ? { onOpen: onOpenSubscription } : {}),
     },
     ...(hostedUrl
-      ? [{ id: 'payment-link', label: 'Payment link', value: 'Hosted invoice', href: hostedUrl }]
+      ? [{ id: 'payment-link', label: 'Payment link', value: hostedUrl, href: hostedUrl }]
       : []),
   ]
 
@@ -270,23 +291,19 @@ export function InvoiceDetailView({
           <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuGroup>
               <MenuAction
-                icon={<DownloadIcon />}
-                label="Download PDF"
-                onSelect={onDownload}
-                hint="Available once the invoice has a PDF"
+                icon={<CopyIcon />}
+                label="Copy ID"
+                onSelect={() => {
+                  void navigator.clipboard
+                    .writeText(invoice.id)
+                    .then(() => toast.success('Invoice ID copied'))
+                    .catch(() => toast.error('Couldn’t copy the invoice ID'))
+                }}
               />
-              <MenuAction
-                icon={<ExternalLinkIcon />}
-                label="Open hosted invoice"
-                onSelect={hostedUrl ? openLink : undefined}
-                hint="Available once the invoice is finalized"
-              />
-              <MenuAction
-                icon={<LinkIcon />}
-                label="Copy hosted invoice link"
-                onSelect={hostedUrl ? copyLink : undefined}
-                hint="Available once the invoice is finalized"
-              />
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
               {isDraft && onFinalize ? (
                 <MenuAction
                   icon={<CheckCircle2Icon />}
@@ -302,6 +319,18 @@ export function InvoiceDetailView({
               invoice.status !== InvoiceStatus.Skipped ? (
                 <MenuAction icon={<PencilIcon />} label="Edit invoice" onSelect={onEdit} />
               ) : null}
+              <MenuAction
+                icon={<DownloadIcon />}
+                label="Download invoice"
+                onSelect={onDownload}
+                hint="Available once the invoice has a PDF"
+              />
+              <MenuAction
+                icon={<LinkIcon />}
+                label="Copy hosted invoice link"
+                onSelect={hostedUrl ? () => void copyLink() : undefined}
+                hint="Available once the invoice is finalized"
+              />
               <MenuAction
                 icon={<WalletIcon />}
                 label="Record payment"
@@ -321,16 +350,16 @@ export function InvoiceDetailView({
               ) : null}
               <MenuAction
                 icon={<CalculatorIcon />}
-                label="Recalculate"
+                label="Recalculate invoice"
                 onSelect={onRecalculate}
-                disabled={!isDraft || pendingAction === 'recalculate'}
+                disabled={Boolean(recalcReason) || pendingAction === 'recalculate'}
                 pending={pendingAction === 'recalculate'}
                 pendingLabel="Recalculating…"
-                hint={isDraft ? undefined : 'Drafts only'}
+                hint={recalcReason ?? undefined}
               />
               <MenuAction
                 icon={<FileMinusIcon />}
-                label="Issue credit memo"
+                label="Issue a credit note"
                 onSelect={onIssueCreditNote}
                 disabled={!canIssueCreditNote}
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
@@ -346,7 +375,7 @@ export function InvoiceDetailView({
               ) : null}
               <MenuAction
                 icon={<SendIcon />}
-                label="Send invoice"
+                label="Send communication"
                 onSelect={onSend}
                 disabled={
                   isDraft || invoice.status === InvoiceStatus.Void || pendingAction === 'send'
@@ -356,13 +385,32 @@ export function InvoiceDetailView({
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
             </DropdownMenuGroup>
-            {isOpen && onVoid ? (
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Connections</DropdownMenuLabel>
+              <DropdownMenuItem disabled={!onOpenCustomer} onClick={onOpenCustomer}>
+                <UserIcon aria-hidden="true" /> View customer
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!onOpenSubscription || !invoice.subscriptionId}
+                onClick={onOpenSubscription}
+              >
+                <FileTextIcon aria-hidden="true" /> View subscription
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            {onVoid ? (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={onVoid}>
-                  <XCircleIcon aria-hidden="true" />
-                  Void invoice
-                </DropdownMenuItem>
+                {/* Always listed, so the status change is findable; disabled with
+                    the reason when this invoice cannot be voided. */}
+                <MenuAction
+                  icon={<XCircleIcon />}
+                  label="Void invoice"
+                  onSelect={onVoid}
+                  disabled={voidReason !== null}
+                  hint={voidReason ?? undefined}
+                  destructive
+                />
               </>
             ) : null}
           </DropdownMenuContent>
@@ -408,6 +456,8 @@ export function InvoiceDetailView({
                   title: event.title,
                   at: event.at,
                   summary: event.summary,
+                  ...(event.fields ? { fields: event.fields } : {}),
+                  ...(event.detail ? { detail: event.detail } : {}),
                   ...(event.record ? { record: event.record } : {}),
                   ...(event.by ? { by: event.by } : {}),
                   ...(event.href ? { href: event.href } : {}),
@@ -448,7 +498,19 @@ export function InvoiceDetailView({
         ) : null}
 
         {tab === 'payments' ? (
-          <Section table title="Payments">
+          <Section
+            table
+            title="Payments"
+            {...(onRecordPayment && canRecordPayment
+              ? {
+                  action: (
+                    <Button size="sm" className="h-8 px-3" onClick={onRecordPayment}>
+                      Record payment
+                    </Button>
+                  ),
+                }
+              : {})}
+          >
             <SubTabState
               hasData={invoice.payments.length > 0}
               isLoading={paymentsQuery.isLoading}
@@ -464,12 +526,6 @@ export function InvoiceDetailView({
                 scene: 'billing',
                 title: 'No payments yet',
                 description: 'No payments recorded for this invoice yet.',
-                action:
-                  onRecordPayment && canRecordPayment ? (
-                    <Button size="sm" onClick={onRecordPayment}>
-                      Record payment
-                    </Button>
-                  ) : undefined,
               }}
             >
               <DetailTable<InvoicePaymentRow>
@@ -491,6 +547,8 @@ export function InvoiceDetailView({
                     cell: () =>
                       invoice.number ? (
                         <span className="font-mono text-xs">{invoice.number}</span>
+                      ) : invoice.status === InvoiceStatus.Draft ? (
+                        <span className="text-muted-foreground">{DRAFT_INVOICE_NUMBER_LABEL}</span>
                       ) : (
                         '—'
                       ),
@@ -513,7 +571,19 @@ export function InvoiceDetailView({
         ) : null}
 
         {tab === 'credit-notes' ? (
-          <Section table title="Credit memos">
+          <Section
+            table
+            title="Credit memos"
+            {...(onIssueCreditNote && canIssueCreditNote
+              ? {
+                  action: (
+                    <Button size="sm" className="h-8 px-3" onClick={onIssueCreditNote}>
+                      Issue credit memo
+                    </Button>
+                  ),
+                }
+              : {})}
+          >
             <SubTabState
               hasData={invoice.creditNotes.length > 0}
               isLoading={creditNotesQuery.isLoading}
@@ -529,12 +599,6 @@ export function InvoiceDetailView({
                 scene: 'billing',
                 title: 'No credit memos yet',
                 description: 'No credit memos issued against this invoice.',
-                action:
-                  onIssueCreditNote && canIssueCreditNote ? (
-                    <Button size="sm" onClick={onIssueCreditNote}>
-                      Issue credit memo
-                    </Button>
-                  ) : undefined,
               }}
             >
               <DetailTable<InvoiceCreditNoteRow>
@@ -583,6 +647,7 @@ function MenuAction({
   hint,
   pending = false,
   pendingLabel,
+  destructive = false,
 }: {
   icon: ReactNode
   label: string
@@ -592,9 +657,11 @@ function MenuAction({
   /** The action is running: spinner, `pendingLabel`, not selectable. */
   pending?: boolean
   pendingLabel?: string | undefined
+  destructive?: boolean
 }) {
   return (
     <DropdownMenuItem
+      {...(destructive ? { variant: 'destructive' as const } : {})}
       disabled={disabled || pending || !onSelect}
       onClick={onSelect}
       {...(pending ? { 'aria-busy': true } : {})}
@@ -641,11 +708,14 @@ function InvoiceDocumentArticle({
   const settled = totals.due <= 0 && invoice.paid > 0
   const note = paymentFailed
     ? 'The last payment attempt failed. Retry, or send the customer a payment link.'
-    : settled || invoice.status === InvoiceStatus.Paid
-      ? 'Paid in full.'
-      : invoice.dueAt
-        ? `Payment is due on ${invoice.dueAt}.`
-        : 'Payment is due on receipt.'
+    : invoice.paymentStatus === PaymentStatus.Refunded
+      ? // The read model merges full and partial refunds, so this says only that one happened.
+        'A refund was issued against this invoice.'
+      : settled || invoice.status === InvoiceStatus.Paid
+        ? 'Paid in full.'
+        : invoice.dueAt
+          ? `Payment is due on ${invoice.dueAt}.`
+          : 'Payment is due on receipt.'
 
   return (
     <article className="bg-background w-full overflow-hidden rounded-xl border shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
@@ -662,9 +732,10 @@ function InvoiceDocumentArticle({
         </dl>
       </div>
 
-      <div className="grid gap-6 px-8 py-8 sm:grid-cols-2">
+      {/* Side by side from the left, not spread to the edges of a wide invoice. */}
+      <div className="flex flex-wrap gap-x-16 gap-y-6 px-8 py-8">
         {invoice.from ? <Party heading="Bill from" party={invoice.from} withLogo /> : null}
-        <Party heading="Bill to" party={invoice.billTo} tagged />
+        <Party heading="Bill to" party={invoice.billTo} />
         {invoice.payment ? (
           <div className="space-y-1.5 text-[13px]">
             <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Payment</p>
@@ -676,13 +747,16 @@ function InvoiceDocumentArticle({
         ) : null}
       </div>
 
-      <div className="mx-8 border-t pt-3">
-        <div role="table" aria-label="Line items" className="text-sm">
+      {/* Five columns need room: on a narrow screen the lines scroll sideways
+          rather than the amounts being clipped. */}
+      <div className="mx-8 overflow-x-auto border-t pt-3">
+        <div role="table" aria-label="Line items" className="min-w-[40rem] text-sm">
           <div
             role="row"
-            className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"
+            className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_10rem_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"
           >
             <span role="columnheader">Description</span>
+            <span role="columnheader">Interval</span>
             <span role="columnheader" className="text-right">
               Qty
             </span>
@@ -697,11 +771,20 @@ function InvoiceDocumentArticle({
             <div
               key={line.id}
               role="row"
-              className="border-border/50 grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] items-start gap-4 border-b py-4 last:border-b-0"
+              className="border-border/50 grid grid-cols-[minmax(0,1fr)_10rem_5rem_7rem_7rem] items-start gap-4 border-b py-4 last:border-b-0"
             >
-              <p role="cell" className="min-w-0 font-medium">
-                {line.description}
-              </p>
+              <span role="cell" className="flex min-w-0 flex-col">
+                <span className="font-medium">{line.description}</span>
+                {/* Which kind of charge it is, so a fixed fee reads apart from usage. */}
+                {line.kind ? (
+                  <span className="text-muted-foreground text-xs">
+                    {line.kind === 'usage' ? 'Usage charge' : 'Fixed charge'}
+                  </span>
+                ) : null}
+              </span>
+              <span role="cell" className="text-muted-foreground tabular-nums">
+                {line.detail || '—'}
+              </span>
               <span role="cell" className="text-muted-foreground text-right tabular-nums">
                 {line.quantity || '—'}
               </span>
@@ -719,22 +802,16 @@ function InvoiceDocumentArticle({
       </div>
 
       <div className="mx-8 flex justify-end border-t py-6">
-        <dl className="w-full max-w-xs space-y-2.5 text-[13px]">
-          <Total label="Subtotal" value={money(totals.subtotal)} />
+        <TotalsList>
+          <TotalRow label="Subtotal" value={money(totals.subtotal)} />
           {invoice.prepaidCredits ? (
-            <Total label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
+            <TotalRow label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
           ) : null}
-          <Total label="Tax" value={money(invoice.tax)} />
-          <div className="flex justify-between border-t pt-3 text-sm font-medium">
-            <dt>Total</dt>
-            <dd className="tabular-nums">{money(totals.total)}</dd>
-          </div>
-          {invoice.paid > 0 ? <Total label="Paid" value={`− ${money(invoice.paid)}`} /> : null}
-          <div className="flex justify-between text-base font-medium">
-            <dt>Amount due</dt>
-            <dd className="tabular-nums">{money(totals.due)}</dd>
-          </div>
-        </dl>
+          <TotalRow label="Tax" value={money(invoice.tax)} />
+          <TotalRow label="Total" value={money(totals.total)} emphasis="total" rule />
+          {invoice.paid > 0 ? <TotalRow label="Paid" value={`− ${money(invoice.paid)}`} /> : null}
+          <TotalRow label="Amount due" value={money(totals.due)} emphasis="due" />
+        </TotalsList>
       </div>
 
       {isDraft ? null : (
@@ -763,13 +840,10 @@ function Party({
   heading,
   party,
   withLogo = false,
-  tagged = false,
 }: {
   heading: string
   party: InvoiceParty
   withLogo?: boolean
-  /** Marks the address and email rows with a small "Billing ..." tag. */
-  tagged?: boolean
 }) {
   return (
     <div className="space-y-1.5 text-[13px]">
@@ -785,42 +859,17 @@ function Party({
         <div className="min-w-0 space-y-1">
           <p className="font-medium">{party.name}</p>
           {party.address.length > 0 ? (
-            <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
-              <div className="space-y-0.5">
-                {party.address.map((line, index) => (
-                  <p key={`${index}-${line}`} className="text-muted-foreground">
-                    {line}
-                  </p>
-                ))}
-              </div>
-              {tagged ? <PartyTag>Billing address</PartyTag> : null}
+            <div className="space-y-0.5">
+              {party.address.map((line, index) => (
+                <p key={`${index}-${line}`} className="text-muted-foreground">
+                  {line}
+                </p>
+              ))}
             </div>
           ) : null}
-          {party.email ? (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <p className="text-muted-foreground">{party.email}</p>
-              {tagged ? <PartyTag>Billing email</PartyTag> : null}
-            </div>
-          ) : null}
+          {party.email ? <p className="text-muted-foreground">{party.email}</p> : null}
         </div>
       </div>
-    </div>
-  )
-}
-
-function PartyTag({ children }: { children: ReactNode }) {
-  return (
-    <Badge variant="outline" size="sm" radius="full" className="text-muted-foreground font-normal">
-      {children}
-    </Badge>
-  )
-}
-
-function Total({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
     </div>
   )
 }

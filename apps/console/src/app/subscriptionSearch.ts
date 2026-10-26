@@ -13,7 +13,7 @@ import {
  *
  * The same total, both-spellings parser as coupons and add-ons: a filtered list
  * is a shareable link, and a hand-edited URL shows the first page rather than an
- * error. There is no `view` — the list is one table — and the default sort is
+ * error. There is no `view`: the list is one table: and the default sort is
  * newest-started first.
  */
 const STATUSES = new Set<string>(Object.values(SubscriptionStatus))

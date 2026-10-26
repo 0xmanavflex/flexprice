@@ -53,7 +53,7 @@ import { queryKeys } from './keys'
 
 /**
  * The customer portal's data, read with the session token from the portal
- * link — never the console session, so none of these needs `FlexpriceProvider`.
+ * link: never the console session, so none of these needs `FlexpriceProvider`.
  *
  * Every hook takes the same `PortalAuth`; every key starts with it, so a
  * payment or top-up refreshes the whole portal with one invalidation.

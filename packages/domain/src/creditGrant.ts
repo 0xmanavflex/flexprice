@@ -6,11 +6,11 @@
  * usage. Watchtower's translation holds here: a *recurring* grant is a budget
  * that refreshes each period, a *one-time* grant is a top-up given once. Like
  * charges and entitlements, a grant is its own `/creditgrants` record tagged
- * with the plan it belongs to — but unlike them it is created one at a time,
+ * with the plan it belongs to: but unlike them it is created one at a time,
  * there being no bulk endpoint.
  *
- * Two axes bend the shape independently — the cadence decides whether a period
- * is needed, the expiration type whether a duration is — so this is a base
+ * Two axes bend the shape independently: the cadence decides whether a period
+ * is needed, the expiration type whether a duration is: so this is a base
  * object with a `superRefine`, not a discriminated union.
  */
 import { z } from 'zod'
@@ -70,8 +70,8 @@ export type CreditGrantScope = (typeof CreditGrantScope)[keyof typeof CreditGran
 /**
  * When the granted credits expire.
  *
- * `NEVER` — they persist; `BILLING_CYCLE` — they lapse at the end of the period;
- * `DURATION` — they last a fixed span, set by a duration and its unit.
+ * `NEVER`: they persist; `BILLING_CYCLE`: they lapse at the end of the period;
+ * `DURATION`: they last a fixed span, set by a duration and its unit.
  */
 export const CreditGrantExpiryType = {
   Never: 'NEVER',
@@ -133,8 +133,8 @@ export interface CreditGrant {
  * The rules for creating a credit grant.
  *
  * The base object holds everything a grant always has; the `superRefine` carries
- * the two conditional rules — a recurring grant needs a period, a duration
- * expiry needs a length — so a form cannot save a grant that refreshes on
+ * the two conditional rules: a recurring grant needs a period, a duration
+ * expiry needs a length: so a form cannot save a grant that refreshes on
  * nothing or expires after no time.
  */
 export const createCreditGrantSchema = z
@@ -170,7 +170,7 @@ export const createCreditGrantSchema = z
       .optional(),
     /**
      * Optional; when present it must be a positive number. An empty string is
-     * "no rate", not an error — otherwise an untouched field would block a save.
+     * "no rate", not an error: otherwise an untouched field would block a save.
      */
     conversionRate: z
       .union([z.literal(''), decimal.refine((v) => Number(v) > 0, 'Must be greater than zero')])
@@ -214,7 +214,7 @@ export function emptyCreditGrant(): CreateCreditGrant {
 }
 
 /**
- * A saved grant as a draft — how a contract starts from its plan's grants and
+ * A saved grant as a draft: how a contract starts from its plan's grants and
  * lets them be changed for that contract alone.
  */
 export function creditGrantToDraft(grant: CreditGrant): CreateCreditGrant {
@@ -236,8 +236,8 @@ export function creditGrantToDraft(grant: CreditGrant): CreateCreditGrant {
 
 /**
  * What editing a credit grant can change: its name, its metadata and an end
- * date. The credits, cadence and expiry are fixed once issued — a grant already
- * applied to subscriptions cannot be re-priced — so they are not in this shape.
+ * date. The credits, cadence and expiry are fixed once issued: a grant already
+ * applied to subscriptions cannot be re-priced: so they are not in this shape.
  * The backend rejects an end date in the past, and so does this.
  */
 export const editCreditGrantSchema = z.object({

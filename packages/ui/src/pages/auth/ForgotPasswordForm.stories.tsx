@@ -89,7 +89,7 @@ export const Sent: Story = {
     await expect(canvas.getByRole('heading', { name: 'Check your email' })).toBeInTheDocument()
     await expect(canvas.getByText('finance@acme.com')).toBeInTheDocument()
     await expect(canvas.getByText(/has an account/i)).toBeInTheDocument()
-    // The form is gone — no email field remains to retype.
+    // The form is gone: no email field remains to retype.
     await expect(canvas.queryByRole('textbox')).not.toBeInTheDocument()
   },
 }

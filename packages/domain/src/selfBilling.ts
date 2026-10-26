@@ -1,5 +1,5 @@
 /**
- * Self-billing: the tenant's own Flexprice account — trial, upgrade, live, and
+ * Self-billing: the tenant's own Flexprice account: trial, upgrade, live, and
  * the locked (read-only) state.
  *
  * Read from `GET /portal/billing/status` (is it on, and the tenant's state) and
@@ -96,7 +96,7 @@ export function trialProgress(summary: SelfBillingSummary, today: string): Trial
  * ended, or the trial ended unpaid. The API does not say which, so it is read
  * from the summary: a full event cap while the trial still has days left means
  * the event limit. Once the trial's end has passed it is the trial end, cap or
- * not — the API suspends an expired trial whatever its usage.
+ * not: the API suspends an expired trial whatever its usage.
  */
 export function lockReason(
   summary: SelfBillingSummary,

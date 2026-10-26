@@ -43,12 +43,12 @@ one) with the full report.
 node scripts/check-sdk.mjs --remote
 ```
 
-- **operations the console never calls** — SDK coverage the console has not
+- **operations the console never calls**: SDK coverage the console has not
   used yet. Not a problem; it is the menu for the next feature.
-- **backend fields missing from SDK models, `*`** — a field the console reads
+- **backend fields missing from SDK models, `*`**: a field the console reads
   through a type the SDK does not have yet. Wait for the SDK or read it
   through the raw response, but write the gap down.
-- **SDK operations the backend spec no longer has** — likely removed or
+- **SDK operations the backend spec no longer has**: likely removed or
   renamed upstream. Check before the next upgrade; the webhook payload entries
   are added by the SDK itself and are not counted.
 

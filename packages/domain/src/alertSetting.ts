@@ -4,8 +4,8 @@
  * **Not V1's wallet-balance alerts.** V1 has a tenant-wide
  * `wallet_balance_alert_config` stored behind `GET/PUT /settings/:key`; this is
  * `/alerts/setting`, a different feature with its own records. One alert
- * setting watches one entity — a subscription, a line item, a group, a wallet,
- * an entitlement grant — and fires at thresholds. Conflating the two produces a
+ * setting watches one entity: a subscription, a line item, a group, a wallet,
+ * an entitlement grant: and fires at thresholds. Conflating the two produces a
  * screen that silently edits the wrong thing, so they stay separate models.
  *
  * A setting carries up to three thresholds, info / warning / critical, each a
@@ -31,7 +31,7 @@ export const ALERT_ENTITY_TYPE_LABEL: Record<AlertEntityType, string> = {
   [AlertEntityType.Feature]: 'Feature',
   [AlertEntityType.Subscription]: 'Subscription',
   [AlertEntityType.SubscriptionLineItem]: 'Line item',
-  [AlertEntityType.Group]: 'Group',
+  [AlertEntityType.Group]: 'Tag',
   [AlertEntityType.EntitlementGrant]: 'Entitlement grant',
 }
 
@@ -121,7 +121,7 @@ const threshold = z.object({
  * Configuring an alert.
  *
  * Every severity is optional, but at least one must be set while the alert is
- * enabled — an enabled alert with no thresholds never fires, which reads as a
+ * enabled: an enabled alert with no thresholds never fires, which reads as a
  * bug to whoever configured it. A percentage threshold above 100 is rejected
  * for the same reason: it can never trigger.
  */
@@ -161,7 +161,7 @@ export const alertSettingConfigSchema = z
 export type AlertSettingConfig = z.infer<typeof alertSettingConfigSchema>
 
 /**
- * Creating an alert. The entity it watches is fixed at creation — an update
+ * Creating an alert. The entity it watches is fixed at creation: an update
  * takes only the config, so an alert cannot be pointed at something else.
  */
 export const createAlertSettingSchema = z.object({

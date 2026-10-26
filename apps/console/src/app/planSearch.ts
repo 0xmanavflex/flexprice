@@ -13,14 +13,14 @@ import {
  * The plan query, as URL search params.
  *
  * Same rule as features and invoices: the route owns the query, so a filtered
- * list is a shareable link and the grid stays stateless. Parsing is total — a
+ * list is a shareable link and the grid stays stateless. Parsing is total: a
  * hand-edited URL shows the first page rather than an error.
  */
 const STATUSES = new Set<string>(Object.values(PlanStatus))
 const SORT_FIELDS = new Set<string>(Object.values(PlanSortField))
 const MAX_PAGE_SIZE = 100
 
-/** A param under either spelling — the short hand-typed one, or the long one TanStack writes. */
+/** A param under either spelling: the short hand-typed one, or the long one TanStack writes. */
 function param(raw: Record<string, unknown>, short: string, long: string): unknown {
   const value = raw[short]
   return value === undefined || value === null ? raw[long] : value

@@ -12,8 +12,8 @@ import { provenance } from '@ui/provenance'
  * Edit a coupon, on a full page.
  *
  * A coupon's editor is a rename. The API's `UpdateCouponRequest` accepts only
- * the name (and metadata) — a coupon already redeemed against live
- * subscriptions cannot change what it discounts underneath them — so the type,
+ * the name (and metadata): a coupon already redeemed against live
+ * subscriptions cannot change what it discounts underneath them: so the type,
  * code and discount are shown read-only as context and only the name is a
  * control. Presentational, like every form here: it emits a validated
  * `EditCoupon` and never imports `@fp/query`.
@@ -21,7 +21,7 @@ import { provenance } from '@ui/provenance'
 export const CouponFormProvenance = provenance({
   source: 'composition',
   composes: ['ui/input', 'compositions/form-card', 'compositions/form-page'],
-  note: 'RHF + the domain schema. A rename — the discount is immutable, shown as read-only context.',
+  note: 'RHF + the domain schema. A rename: the discount is immutable, shown as read-only context.',
 })
 
 export interface CouponFormProps {

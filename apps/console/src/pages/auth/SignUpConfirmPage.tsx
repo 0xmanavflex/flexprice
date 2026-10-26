@@ -19,11 +19,12 @@ export { messageForConfirmError }
  *
  * The link carries a confirmed Supabase session in its fragment. That session's
  * token creates the account (`POST /auth/signup`); a refreshed token, which now
- * carries the new tenant, becomes the console's session; and the link's own
- * session is dropped, along with the tokens in the address bar.
+ * carries the new tenant, becomes the console's session; and the tokens leave
+ * the address bar. The session itself stays with the session client, which
+ * keeps refreshing it.
  *
- * A link followed a second time finds the account already made — its token
- * already names a tenant — and simply signs the person in.
+ * A link followed a second time finds the account already made: its token
+ * already names a tenant: and simply signs the person in.
  */
 export function SignUpConfirmPage() {
   const navigate = useNavigate()
@@ -44,11 +45,12 @@ export function SignUpConfirmPage() {
           createAccount.mutateAsync(details),
         )
         session.signIn(credentials)
-        await forgetConfirmation(region)
+        // The link's session is now the console's: the session client keeps refreshing it.
+        await forgetConfirmation(region, { endSession: false })
         // Google sign-in returns here: back to the page that asked for it, if any.
         void navigate({ href: takeReturnTo() })
       } catch (cause) {
-        await forgetConfirmation(region)
+        await forgetConfirmation(region, { endSession: true })
         setError(messageForConfirmError(cause))
       }
     })()

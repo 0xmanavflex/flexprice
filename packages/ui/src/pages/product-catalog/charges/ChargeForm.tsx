@@ -32,18 +32,19 @@ import { FormActions } from '@ui/compositions/forms/FormActions'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
+import { ContractAmountCalculator } from './ContractAmountCalculator'
 import { FeatureTypeGlyph } from '../../shared/cells'
 import { TierTable, type TierRowError } from './TierTable'
 
 /**
- * One charge (a price), as a form — create or edit.
+ * One charge (a price), as a form: create or edit.
  *
- * Fixed and usage are one form: the type choice decides which fields exist — a
+ * Fixed and usage are one form: the type choice decides which fields exist: a
  * usage charge names the meter it bills and always bills in arrears; a fixed
  * charge chooses its invoice cadence and may carry a free trial. The billing
  * model (flat fee, package, tiered) shows only its own fields.
  *
- * On an edit the API lets only the price itself change — amount or bands, model,
+ * On an edit the API lets only the price itself change: amount or bands, model,
  * display name. Currency, period, meter, cadence and price unit are shown but
  * locked, and the change is saved as a **new version** from an `Effective from`
  * date, which the form says plainly.
@@ -77,7 +78,7 @@ export interface MeterOption {
    * The meter's aggregation, which decides whether a usage window is offered.
    *
    * Windowing re-aggregates inside each window, so it changes the answer only
-   * for MAX and SUM — the API rejects it on anything else. Absent means the
+   * for MAX and SUM: the API rejects it on anything else. Absent means the
    * caller did not supply it, and the field is then left out rather than
    * guessed at.
    */
@@ -119,16 +120,16 @@ export interface ChargeFormProps {
   submitLabel?: string
   /** Hides the Fixed/Usage tabs when the type was already chosen (e.g. by a dialog's first step). */
   lockType?: boolean
-  /** Fields that belong to the container, not the price — drawn after the price fields. */
+  /** Fields that belong to the container, not the price: drawn after the price fields. */
   extras?: ReactNode
   /** Replaces the edit-mode notice, for a container whose edits are not new price versions. */
   notice?: ReactNode
-  /** Shows the currency locked — a contract bills in one currency. */
+  /** Shows the currency locked: a contract bills in one currency. */
   lockCurrency?: boolean
   /** Shows the display name locked, for a container that cannot rename a charge. */
   lockDisplayName?: boolean
   /**
-   * Shows the catalogue's price options on create — price group, start date and,
+   * Shows the catalogue's price options on create: price group, start date and,
    * for a fixed charge, minimum quantity. Left out where the container decides
    * these itself, as a contract does.
    */
@@ -147,7 +148,7 @@ const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
 const DEFAULT_CURRENCIES = currencyCodes()
 const FIAT = 'FIAT'
 
-/** Fixed charges can be one-time; usage cannot — you cannot meter a one-off. */
+/** Fixed charges can be one-time; usage cannot: you cannot meter a one-off. */
 const FIXED_PERIODS = [
   BillingPeriod.Daily,
   BillingPeriod.Weekly,
@@ -294,7 +295,7 @@ export function ChargeForm({
       {isEdit && notice ? (
         notice
       ) : isEdit ? (
-        <Alert>
+        <Alert variant="info">
           <InfoIcon aria-hidden="true" />
           <AlertTitle>Changing the price creates a new version</AlertTitle>
           <AlertDescription>
@@ -322,7 +323,7 @@ export function ChargeForm({
         />
       )}
 
-      {/* The date a change starts is the first thing an edit decides, so it leads. */}
+      {/* The date a price starts is the first thing a create or an edit decides, so it leads. */}
       {isEdit ? (
         <div className="max-w-xs">
           <Field
@@ -338,6 +339,31 @@ export function ChargeForm({
                     id={id}
                     value={(field.value as string | undefined) ?? ''}
                     onValueChange={field.onChange}
+                    placeholder="Now"
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : priceOptions ? (
+        // A new price's start date leads too: it belongs to the price, not to its model.
+        <div className="max-w-xs">
+          <Field
+            label="Start date"
+            hint="Optional. The price applies from this day; empty means now."
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <Controller
+                control={form.control}
+                name={'startDate' as never}
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={(field.value as string | undefined) ?? ''}
+                    onValueChange={(value) => field.onChange(value || undefined)}
                     placeholder="Now"
                     disabled={isSubmitting}
                     aria-describedby={describedBy}
@@ -566,7 +592,7 @@ export function ChargeForm({
 
       {isUsage ? (
         <p className="text-muted-foreground text-xs">
-          Usage charges bill in arrears — once the period’s usage is known.
+          Usage charges bill in arrears: once the period’s usage is known.
         </p>
       ) : null}
 
@@ -598,13 +624,13 @@ export function ChargeForm({
                       value={(field.value as string) || ''}
                       onValueChange={(next) => field.onChange(next === '' ? undefined : next)}
                       options={[
-                        { value: '', label: 'No window — the whole period' },
+                        { value: '', label: 'No window: the whole period' },
                         ...Object.entries(PRICE_WINDOW_SIZE_LABEL).map(([value, label]) => ({
                           value,
                           label,
                         })),
                       ]}
-                      placeholder="No window — the whole period"
+                      placeholder="No window: the whole period"
                       disabled={isSubmitting}
                     />
                   )}
@@ -641,8 +667,28 @@ export function ChargeForm({
         />
       </fieldset>
 
-      {billingModel === BillingModel.FlatFee ? (
+      {billingModel === BillingModel.FlatFee && isUsage ? (
+        // A usage flat fee is a rate per unit: a contract value per period does not apply.
         <div className="max-w-xs">{amountField(`Amount (${unitLabel})`)}</div>
+      ) : null}
+
+      {billingModel === BillingModel.FlatFee && !isUsage ? (
+        // The calculator sits at the field's bottom edge, beside its input.
+        <div className="flex max-w-sm items-end gap-2">
+          <div className="min-w-0 flex-1">{amountField(`Amount (${unitLabel})`)}</div>
+          <ContractAmountCalculator
+            billingPeriod={billingPeriod}
+            amount={String(form.watch('amount' as never) ?? '')}
+            unitLabel={unitLabel}
+            disabled={isSubmitting}
+            onApply={(amount) =>
+              form.setValue('amount' as never, amount as never, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          />
+        </div>
       ) : null}
 
       {billingModel === BillingModel.Package ? (
@@ -715,13 +761,10 @@ export function ChargeForm({
         </div>
       ) : null}
 
-      {priceOptions && !isEdit ? (
+      {priceOptions && !isEdit && (priceOptions.groups.length > 0 || !isUsage) ? (
         <div className="grid gap-5 sm:grid-cols-2">
           {priceOptions.groups.length > 0 ? (
-            <Field
-              label="Price group"
-              hint="Optional. Groups related prices for reporting and bulk changes."
-            >
+            <Field label="Tag" hint="Optional. Tags related prices for reporting and bulk changes.">
               {({ id }) => (
                 <Controller
                   control={form.control}
@@ -732,7 +775,7 @@ export function ChargeForm({
                       value={(field.value as string | undefined) ?? ''}
                       onValueChange={(value) => field.onChange(value || undefined)}
                       options={[...priceOptions.groups]}
-                      placeholder="No group"
+                      placeholder="No tag"
                       disabled={isSubmitting}
                     />
                   )}
@@ -740,27 +783,6 @@ export function ChargeForm({
               )}
             </Field>
           ) : null}
-          <Field
-            label="Start date"
-            hint="Optional. The price applies from this day; empty means now."
-          >
-            {({ id, 'aria-describedby': describedBy }) => (
-              <Controller
-                control={form.control}
-                name={'startDate' as never}
-                render={({ field }) => (
-                  <DateInput
-                    id={id}
-                    value={(field.value as string | undefined) ?? ''}
-                    onValueChange={(value) => field.onChange(value || undefined)}
-                    placeholder="Now"
-                    disabled={isSubmitting}
-                    aria-describedby={describedBy}
-                  />
-                )}
-              />
-            )}
-          </Field>
           {!isUsage ? (
             <Field
               label="Minimum quantity"

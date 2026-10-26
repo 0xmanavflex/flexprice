@@ -5,7 +5,7 @@
  * surface's domain points at the same project, and `main.tsx` asks this module
  * which surface the hostname belongs to *before* any router mounts, then loads
  * only that surface. A hosted invoice or the customer portal never downloads
- * the console, and the console never downloads them — each is its own chunk.
+ * the console, and the console never downloads them: each is its own chunk.
  *
  * Hosts are the primary signal. A path prefix (`/i/…`, `/p/…`) is the fallback, for
  * any host that names no surface: localhost, a `*.vercel.app` preview, or a

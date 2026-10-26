@@ -26,7 +26,7 @@ describe('walletAlertConfigSchema', () => {
 
   /**
    * An enabled alert with no thresholds never fires, so it is indistinguishable
-   * from an alert that is off — except that its owner believes it is watching.
+   * from an alert that is off: except that its owner believes it is watching.
    */
   it('refuses an enabled alert with nothing to trigger it', () => {
     const result = walletAlertConfigSchema.safeParse({

@@ -36,7 +36,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Loading the features in this group')).toBeInTheDocument()
+    await expect(canvas.getByText('Loading the features in this tag')).toBeInTheDocument()
     await expect(canvas.queryByText('API requests')).toBeNull()
   },
 }
@@ -64,7 +64,7 @@ export const Empty: Story = {
   args: { members: [] },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText('This group holds no features yet.'),
+      within(canvasElement).getByText('This tag holds no features yet.'),
     ).toBeInTheDocument()
   },
 }
@@ -97,10 +97,10 @@ export const PriceGroup: Story = {
 }
 
 export const FailedPriceGroup: Story = {
-  args: { kind: 'charges', priceGroup: true, error: 'Could not load group charges.' },
+  args: { kind: 'charges', priceGroup: true, error: 'Could not load tag charges.' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Could not load group charges.')).toBeVisible()
+    await expect(canvas.getByText('Could not load tag charges.')).toBeVisible()
     await expect(canvas.queryByText('No charges yet')).toBeNull()
   },
 }

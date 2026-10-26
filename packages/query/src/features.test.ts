@@ -18,6 +18,12 @@ describe('toFeatureFilter', () => {
     })
   })
 
+  it('sends the default view as a server-side "status in published" condition', () => {
+    expect(toFeatureFilter(DEFAULT_FEATURE_QUERY)['filters']).toEqual([
+      { field: 'status', operator: 'in', dataType: 'array', value: { array: ['published'] } },
+    ])
+  })
+
   it('sends a name search only when there is one', () => {
     expect(toFeatureFilter(DEFAULT_FEATURE_QUERY)).not.toHaveProperty('nameContains')
     expect(toFeatureFilter({ ...DEFAULT_FEATURE_QUERY, search: 'api' })).toMatchObject({
@@ -145,5 +151,25 @@ describe('toFeature', () => {
   // is better than dropping it, which would hide data with no explanation.
   it('keeps a row whose type it does not recognise', () => {
     expect(toFeature({ id: 'f', name: 'New kind', type: 'quantum' }).type).toBe(FeatureType.Boolean)
+  })
+})
+
+describe('toFeature alert settings', () => {
+  // V1 stores a feature's usage alerts on the feature; the menu's dialog edits them.
+  it('reads the thresholds the feature carries, and null when it has none', () => {
+    const feature = toFeature({
+      id: 'feat_1',
+      alertSettings: {
+        alertEnabled: true,
+        alertThresholdType: 'absolute',
+        warning: { threshold: '500', condition: 'above' },
+      },
+    })
+    expect(feature.alertSettings).toEqual({
+      alertEnabled: true,
+      thresholdType: 'absolute',
+      warning: { threshold: '500', condition: 'above' },
+    })
+    expect(toFeature({ id: 'feat_2' }).alertSettings).toBeNull()
   })
 })

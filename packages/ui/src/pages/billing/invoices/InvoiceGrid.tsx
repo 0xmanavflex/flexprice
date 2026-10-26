@@ -2,6 +2,7 @@ import { integrationColumn, type IntegrationMappings } from '../../shared/integr
 import { useMemo } from 'react'
 import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from '@ui/icons'
 import {
+  DRAFT_INVOICE_NUMBER_LABEL,
   DEFAULT_INVOICE_QUERY,
   type Invoice,
   type InvoiceQuery,
@@ -36,7 +37,7 @@ import {
  * ## Which of those the server can answer
  *
  * `draft`, `open`, `void` and `skipped` are stored, so they go down the wire.
- * `paid` and `overdue` are **derived** — `deriveInvoiceStatus` computes the
+ * `paid` and `overdue` are **derived**: `deriveInvoiceStatus` computes the
  * first from a payment status and the second from a balance plus a due date
  * in the past. Neither is a field, so neither can be asked of the API, and
  * `isStoredInvoiceStatus` is the check that keeps anyone from trying.
@@ -72,8 +73,9 @@ const STATUS_LABEL: Record<InvoiceStatus, string> = {
 /** Only `overdue` is a problem; only `paid` is finished. Everything else is
  *  simply where the invoice has got to. */
 const STATUS_TONE: Record<InvoiceStatus, PillTone> = {
-  [InvoiceStatus.Draft]: 'warning',
-  [InvoiceStatus.Open]: 'info',
+  // Open awaits payment (orange); Draft is still being written (info).
+  [InvoiceStatus.Draft]: 'info',
+  [InvoiceStatus.Open]: 'warning',
   [InvoiceStatus.Paid]: 'success',
   [InvoiceStatus.Overdue]: 'danger',
   [InvoiceStatus.Void]: 'neutral',
@@ -194,6 +196,9 @@ export function InvoiceGrid({
         width: 180,
         // The document's own identity. A row without it is unciteable.
         hideable: false,
+        // A draft is numbered when it is finalized.
+        placeholder: (row) =>
+          row.status === InvoiceStatus.Draft ? DRAFT_INVOICE_NUMBER_LABEL : null,
       }),
       textColumn<Invoice>('customer', 'Customer', (row) => row.customerName, {
         width: 180,
@@ -217,7 +222,7 @@ export function InvoiceGrid({
         sortValue: InvoiceSortField.Total,
         ...(locale ? { locale } : {}),
       }),
-      // What is still owed, not what was originally billed — the figure a
+      // What is still owed, not what was originally billed: the figure a
       // collections view is actually reading. Zero is muted so a column of
       // settled invoices does not shout.
       moneyColumn<Invoice>('amountDue', 'Amount due', (row) => row.amountRemaining, {
@@ -290,7 +295,7 @@ export function InvoiceGrid({
     <div className="flex min-w-0 flex-col gap-3">
       {/*
         Sits above the toolbar, where the control that caused it is, rather
-        than in the table body — the body may be full of perfectly good rows,
+        than in the table body: the body may be full of perfectly good rows,
         and the caveat is about what is *missing* from them.
       */}
       {derived ? (
@@ -326,7 +331,7 @@ export function InvoiceGrid({
         searchPlaceholder="Search invoices…"
         /*
          * No counts. The four stored statuses could each be counted with a
-         * `limit: 1` search read for its `pagination.total` — but `paid` and
+         * `limit: 1` search read for its `pagination.total`: but `paid` and
          * `overdue` could not, and a dropdown where four options carry a
          * number and two do not reads as "there are no paid invoices". Either
          * every option can be counted honestly or none of them shows a
@@ -385,7 +390,6 @@ export function InvoiceGrid({
           title: 'No invoices yet',
           description:
             'Invoices are produced when a contract’s billing period closes. Put a customer on a plan and the first one will appear here on its own.',
-          ...(onCreate ? { actions: <Button onClick={onCreate}>New invoice</Button> } : {}),
           guides: GUIDES,
         }}
       />

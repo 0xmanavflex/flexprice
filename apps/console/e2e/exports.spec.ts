@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { CatalogListPage } from './pages/catalog'
 
@@ -64,7 +65,8 @@ test.describe('exports flow (as V1)', () => {
       .getByRole('button', { name: 'View exports' })
       .click()
     await expect(page).toHaveURL(/\/exports\/s3\/conn_s3_01$/)
-    await page.getByRole('button', { name: 'New export' }).first().click()
+    await expect(page.getByRole('heading', { name: 'Acme data lake' })).toBeVisible()
+    await page.getByRole('button', { name: 'Add task' }).first().click()
     const create = page.getByRole('dialog')
     await create.getByLabel(/^Bucket/).fill('e2e-bucket')
     await create.getByRole('button', { name: 'Create export' }).click()

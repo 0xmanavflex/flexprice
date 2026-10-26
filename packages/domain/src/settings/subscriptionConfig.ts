@@ -2,7 +2,7 @@
  * What happens to a subscription that is not paid for.
  *
  * `GET/PUT /settings/subscription_config`. Two fields that read as one
- * sentence: after `gracePeriodDays` of non-payment, cancel the subscription —
+ * sentence: after `gracePeriodDays` of non-payment, cancel the subscription:
  * or do not, if `autoCancellationEnabled` is off.
  *
  * The grace period is kept even while auto-cancellation is off, deliberately:

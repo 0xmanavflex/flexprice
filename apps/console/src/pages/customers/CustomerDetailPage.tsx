@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { SubscriptionStatus, type TenantFeatureUsage } from '@fp/domain'
+import { CustomerStatus, SubscriptionStatus, type TenantFeatureUsage } from '@fp/domain'
 import {
   useCustomer,
   useCustomerIntegrationLinks,
   useIntegrations,
   useLinkCustomerIntegration,
   useUnlinkCustomerIntegration,
+  usePushCustomerToIntegrations,
   useCustomerInvoices,
   useCustomerPayments,
   useCustomerSubscriptions,
@@ -20,8 +21,7 @@ import {
 import {
   CUSTOMER_TABS,
   CustomerDetail,
-  QuotaCard,
-  Toaster,
+  CustomerEntitlementUsage,
   toast,
   type CustomerTab,
 } from '@fp/ui/pages'
@@ -31,7 +31,7 @@ import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel
 import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
-import { AppFailure, ConfirmDialog, EmptyState, LoadingRows, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Section } from '@fp/ui/compositions'
 import { toActivityLogEntry } from '@/pages/shared/activityLog'
 import { detailGate } from '@/pages/shared/detailGate'
 import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
@@ -40,7 +40,7 @@ import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
  * Turns whatever is in `?tab=` into a real section, defaulting to Overview.
  *
  * Exported so the route can validate its search param against the same list the
- * page renders — one source of truth for which sections exist. The retired
+ * page renders: one source of truth for which sections exist. The retired
  * `?tab=subscriptions` is not in that list, so it lands on Overview, where the
  * contracts now live.
  */
@@ -62,8 +62,8 @@ export interface CustomerDetailPageProps {
 /**
  * The wiring layer for a customer's detail page.
  *
- * Reads the customer, then — because the subscription and invoice endpoints are
- * keyed by the *external* id — scopes those to what the customer record reports.
+ * Reads the customer, then: because the subscription and invoice endpoints are
+ * keyed by the *external* id: scopes those to what the customer record reports.
  * The two scoped hooks are gated on that id, so they sit idle until it is known
  * rather than fetching the whole book. All presentation is `CustomerDetail`'s;
  * this only fetches, maps an error to a sentence, and hands over the data.
@@ -77,11 +77,19 @@ export function CustomerDetailPage({
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
   const portal = useCustomerPortal()
-  const activity = useActivityLog({ customerId })
+  // The most the API returns with state expanded: one contract create alone
+  // writes several rows (contract, invoice, payment), so 20 could push the
+  // contract itself off the rail.
+  const activity = useActivityLog({ customerId, limit: 50 })
   const integrationLinks = useCustomerIntegrationLinks(customerId)
   const integrations = useIntegrations()
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
+  const pushCustomer = usePushCustomerToIntegrations(customerId)
+  // The providers a push reaches: connected, with customer sync on outbound.
+  const pushTargets = (integrations.data ?? [])
+    .filter((integration) => integration.connection?.syncConfig.customer?.outbound)
+    .map((integration) => integration.name)
   const externalId = customer.data?.externalId ?? ''
   const subscriptions = useCustomerSubscriptions(externalId)
   const invoices = useCustomerInvoices(externalId)
@@ -128,6 +136,10 @@ export function CustomerDetailPage({
       void navigate({ to: '/payments/new', search: { invoice: invoiceId } }),
     onIssueCreditNote: (invoiceId) =>
       void navigate({ to: '/credit-memos/new', search: { invoice: invoiceId } }),
+    onEditInvoice: (invoiceId) =>
+      void navigate({ to: '/invoices/$invoiceId/edit', params: { invoiceId } }),
+    onOpenContract: (subscriptionId) =>
+      void navigate({ to: '/contracts/$subscriptionId', params: { subscriptionId } }),
   })
 
   if (!customer.data) {
@@ -139,10 +151,16 @@ export function CustomerDetailPage({
     })
   }
 
+  // An archived customer is read-only (CustomerDetail shows why). The page's
+  // own write handlers are withheld too, so controls that do not consult the
+  // access scope: inline edits, metadata, integration links, the wallet and
+  // tax panels: cannot write either.
+  const archived = customer.data.status === CustomerStatus.Archived
+
   return (
     <>
       <CustomerDetail
-        {...(integrationLinks.isSuccess && integrations.isSuccess
+        {...(!archived && integrationLinks.isSuccess && integrations.isSuccess
           ? {
               integrationControls: {
                 links: integrationLinks.data,
@@ -158,11 +176,38 @@ export function CustomerDetailPage({
                 onLink: (input: { providerType: string; providerEntityId: string }) =>
                   linkIntegration.mutateAsync(input),
                 onUnlink: (input: { providerType: string }) => unlinkIntegration.mutateAsync(input),
+                ...(pushTargets.length > 0
+                  ? {
+                      pushProviders: pushTargets,
+                      onPush: () =>
+                        pushCustomer.mutate(undefined, {
+                          onSuccess: () =>
+                            toast.success(`Pushing customer to ${pushTargets.join(', ')}`, {
+                              description:
+                                'The provider record is created or updated in the background.',
+                            }),
+                          onError: (cause) =>
+                            toast.error(
+                              cause instanceof Error
+                                ? cause.message
+                                : 'Could not push this customer.',
+                            ),
+                        }),
+                    }
+                  : {}),
               },
             }
           : {})}
         customer={customer.data}
-        activity={activity.data ? activity.data.map(toActivityLogEntry) : []}
+        activity={
+          activity.data
+            ? activity.data.map((entry) => {
+                const row = toActivityLogEntry(entry)
+                if (entry.entityType !== 'customer' || !customer.data.name) return row
+                return { ...row, record: customer.data.name }
+              })
+            : []
+        }
         activityLoading={activity.isPending}
         activityError={activity.isError}
         activityAwaiting={activity.isAwaiting}
@@ -182,11 +227,19 @@ export function CustomerDetailPage({
         }
         onEdit={() => onEdit(customer.data.id)}
         onArchive={() => setArchiving(true)}
-        onOpenPortal={() => void portal.open({ externalId: customer.data?.externalId })}
         onCopyPortalLink={() => void portal.copy({ externalId: customer.data?.externalId })}
         {...(streamTarget && !sampleEvents.isPending
           ? { onStreamEvents: () => streamEvents(streamTarget.id, streamTarget.planName) }
-          : {})}
+          : {
+              streamEventsReason:
+                environments.current.kind !== 'sandbox' || !environments.current.id
+                  ? 'Sample events are only available in a sandbox.'
+                  : subscriptions.isPending
+                    ? "Checking this customer's contracts."
+                    : sampleEvents.isPending
+                      ? 'A sample stream is already starting.'
+                      : 'Needs an active or trialing contract.',
+            })}
         onOpenInvoice={(invoiceId) =>
           void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
         }
@@ -202,18 +255,32 @@ export function CustomerDetailPage({
             search: {} as never,
           })
         }
-        onUpdateField={(patch) =>
-          update.mutateAsync({
-            id: customer.data.id,
-            draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
-          })
-        }
-        onUpdateMetadata={(metadata) =>
-          update.mutateAsync({
-            id: customer.data.id,
-            draft: { externalId: customer.data.externalId, name: customer.data.name, metadata },
-          })
-        }
+        {...(archived
+          ? {}
+          : {
+              onUpdateField: (patch: { name?: string; email?: string; phone?: string }) =>
+                update.mutateAsync({
+                  id: customer.data.id,
+                  draft: {
+                    externalId: customer.data.externalId,
+                    name: customer.data.name,
+                    ...patch,
+                  },
+                }),
+              onUpdateMetadata: (metadata: Record<string, string>) =>
+                update.mutateAsync({
+                  id: customer.data.id,
+                  draft: {
+                    externalId: customer.data.externalId,
+                    name: customer.data.name,
+                    metadata,
+                  },
+                }),
+            })}
+        entitlements={usage.data?.features ?? []}
+        entitlementsLoading={usage.isLoading}
+        entitlementsError={usage.isError && !usage.data}
+        onRetryEntitlements={() => void usage.refetch()}
         subscriptionsLoading={subscriptions.isLoading}
         subscriptionsError={subscriptions.isError && !subscriptions.data}
         onRetrySubscriptions={() => void subscriptions.refetch()}
@@ -235,8 +302,13 @@ export function CustomerDetailPage({
             />
           )
         }
-        wallet={<CustomerWalletPanel customerId={customer.data.id} />}
-        taxes={<CustomerTaxPanel customerId={customer.data.id} />}
+        // Read-only, not disabled wholesale: switching between wallets still works.
+        wallet={<CustomerWalletPanel customerId={customer.data.id} readOnly={archived} />}
+        taxes={
+          <fieldset disabled={archived} className="contents">
+            <CustomerTaxPanel customerId={customer.data.id} />
+          </fieldset>
+        }
         usage={
           <div className="flex flex-col gap-8">
             {customer.data.externalId ? (
@@ -284,32 +356,18 @@ export function CustomerDetailPage({
         error={remove.error ? 'Could not archive the customer. Try again.' : null}
       />
       {invoiceRows.dialogs}
-      <Toaster />
     </>
   )
 }
 
 /**
- * A customer's entitlement quotas, one `QuotaCard` per entitled feature.
+ * A customer's entitlement quotas, one table row per entitled feature: the
+ * table V1 shows, in place of the cards this used to draw.
  *
  * Reads `GET /customers/usage`, the only endpoint that answers "how much of
- * this allowance has been used" per feature. Four of the six readings the
- * design asks for come straight off it — used quantity, included quantity,
- * percent used and the reset date — and `remaining` is the difference of two
- * counts the same response carried.
- *
- * The sixth, **overage, has no source**, and this is deliberate rather than
- * unfinished. `FeatureUsageSummary` carries `is_soft_limit` (whether going over
- * is billed or blocked) but no overage figure; the only overage in the API is
- * the monetary commitment overage on `GET /subscriptions/usage`, which is keyed
- * by meter and line item, not by entitlement, and is a different concept. A
- * priced one cannot be computed here either — `money.ts` forbids client-side
- * money arithmetic. So the card draws no cost slot at all; its "Over by"
- * line already says how far past the quota usage is.
- *
- * Units are absent for the same kind of reason: the wire sends `unit_plural`
- * but `TenantFeatureUsage` does not keep it, so the readings are bare counts
- * rather than invented nouns.
+ * this allowance has been used" per feature. Source, mode and measure (V1's
+ * other columns) are not on `TenantFeatureUsage`, and units are not kept
+ * either, so the readings are bare counts rather than invented nouns.
  */
 function UsageSection({
   features,
@@ -322,62 +380,28 @@ function UsageSection({
   failed: boolean
   onRetry: () => void
 }) {
-  if (features.length === 0 && isLoading) {
-    return (
-      <Section title="Usage">
-        <LoadingRows />
-      </Section>
-    )
-  }
-
-  if (features.length === 0 && failed) {
-    return (
-      <Section title="Usage">
-        <AppFailure
-          title="Usage could not be loaded"
-          detail="The rest of this customer's record still works."
-          onRetry={onRetry}
-        />
-      </Section>
-    )
-  }
-
-  if (features.length === 0) {
-    return (
-      <Section title="Usage">
-        <EmptyState
-          scene="customers"
-          size="inline"
-          title="No entitlements yet"
-          description="Quotas appear here once this customer is on a plan that grants a feature."
-        />
-      </Section>
-    )
-  }
-
   return (
-    <Section title="Usage">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {features.map((feature) => (
-          <QuotaCard
-            key={feature.featureId}
-            feature={feature.featureName || feature.featureId}
-            label={`${feature.featureName || 'Feature'} used this period`}
-            used={toCount(feature.currentUsage)}
-            included={feature.isUnlimited ? null : feature.limit}
-            {...(feature.isUnlimited ? {} : { percentUsed: toCount(feature.usagePercent) })}
-            resetsOn={feature.nextUsageResetAt}
-          />
-        ))}
-      </div>
-    </Section>
+    <CustomerEntitlementUsage
+      rows={features.map((feature) => ({
+        id: feature.featureId,
+        name: feature.featureName || feature.featureId,
+        type: feature.featureType,
+        used: toCount(feature.currentUsage),
+        limit: feature.isUnlimited ? null : feature.limit,
+        isEnabled: feature.isEnabled,
+        resetsOn: feature.nextUsageResetAt,
+      }))}
+      isLoading={isLoading}
+      error={failed ? 'Usage could not be loaded.' : null}
+      onRetry={onRetry}
+    />
   )
 }
 
 /**
  * A decimal string the API sent, as a number for display.
  *
- * These are counts — events, seats, calls — not money, so reading them as
+ * These are counts: events, seats, calls: not money, so reading them as
  * numbers is display formatting rather than the arithmetic `money.ts` forbids.
  * `undefined` for anything unparseable, which renders as a dash rather than a
  * zero: "the API sent something we could not read" is not "nothing was used".

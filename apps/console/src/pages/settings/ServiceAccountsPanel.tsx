@@ -18,12 +18,15 @@ import {
   useRoles,
   useServiceAccounts,
 } from '@fp/query'
-import { ConfirmDialog, Field, FormDialog, WriteGate } from '@fp/ui/compositions'
+import { AccessScope, ConfirmDialog, Field, FormDialog, WriteGate } from '@fp/ui/compositions'
+import { CopyIcon } from '@fp/ui/icons'
+import { RowActionsMenu } from '@fp/ui/pages'
 import { Button, Input } from '@fp/ui/primitives'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
   PanelError,
+  PanelActions,
   PanelFirstRun,
   SettingsTable,
   WidePanel,
@@ -35,14 +38,14 @@ import { useDraft } from './useDraft'
 const SERVICE_ACCOUNT_DOCS_URL = 'https://docs.flexprice.io/docs/rbac/service-accounts/create'
 
 /**
- * Service accounts — the identities that are not people. Lives under
+ * Service accounts: the identities that are not people. Lives under
  * Developers (`/service-accounts`).
  *
  * The same `/users` endpoints as Team, discriminated by `type`, which is why
  * the two tables look alike. They differ in three ways that matter and are
  * reflected here: a service account has no email (the field is always empty on
  * the wire, so there is no column for it), it is *renamed* rather than having
- * its profile edited, and at least one role is required at creation — a
+ * its profile edited, and at least one role is required at creation: a
  * machine identity with no permissions can authenticate and then do nothing,
  * which is a confusing way to fail.
  *
@@ -69,25 +72,27 @@ export function ServiceAccountsPanel() {
     )
   }
 
-  // Laid out exactly as API keys' first run: the empty state alone, centred in
-  // the page body, carrying the only create button.
+  // Laid out exactly as API keys' first run: the empty state centred in the
+  // page body, under the same top-right create button the table has.
   const firstRun = !accounts.isPending && rows.length === 0
 
   return (
     <WidePanel fill={firstRun}>
       <h1 className="sr-only">Service accounts</h1>
       {firstRun ? (
-        <PanelFirstRun
-          scene="developers"
-          title="No service accounts yet"
-          description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
-          action={
+        <>
+          <PanelActions>
             <WriteGate entity={RBAC_ENTITY.User}>
               <Button onClick={() => setIsCreating(true)}>New service account</Button>
             </WriteGate>
-          }
-          docsHref={SERVICE_ACCOUNT_DOCS_URL}
-        />
+          </PanelActions>
+          <PanelFirstRun
+            scene="developers"
+            title="No service accounts yet"
+            description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
+            docsHref={SERVICE_ACCOUNT_DOCS_URL}
+          />
+        </>
       ) : (
         <SettingsTable<Member>
           label="Service accounts"
@@ -129,19 +134,25 @@ export function ServiceAccountsPanel() {
             {
               key: 'actions',
               header: '',
-              width: 160,
+              width: 56,
               cell: (account) => (
-                // Managing service accounts needs user write (V1).
-                <WriteGate entity={RBAC_ENTITY.User}>
-                  <span className="flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
-                      Rename
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
-                      Delete
-                    </Button>
-                  </span>
-                </WriteGate>
+                // Edit and Delete need user write (V1); Copy ID stays available.
+                <AccessScope entity={RBAC_ENTITY.User}>
+                  <RowActionsMenu
+                    label={memberDisplayName(account)}
+                    extra={[
+                      {
+                        label: 'Copy ID',
+                        icon: <CopyIcon aria-hidden className="size-4" />,
+                        readOnly: true,
+                        onSelect: () => void navigator.clipboard?.writeText(account.id),
+                      },
+                    ]}
+                    onEdit={() => setRenaming(account)}
+                    onRemove={() => setDeleting(account)}
+                    removeLabel="Delete"
+                  />
+                </AccessScope>
               ),
             },
           ]}

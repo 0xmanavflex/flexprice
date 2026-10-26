@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactElement, type ReactNode } from 'react'
 import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
@@ -118,8 +118,10 @@ export function CopyEmail({ value }: { value: string }) {
 export interface DetailMenuItem {
   id: string
   label: string
-  /** Leading glyph; decorative, the label names the item. */
-  icon?: ReactNode
+  /** A line under the label, such as why a disabled item cannot run. */
+  description?: string
+  /** Leading glyph; decorative, the label names the item. Required so every item lines up. */
+  icon: ReactElement
   onSelect: () => void
   /** Destructive items are set apart below a divider, last in the menu. */
   destructive?: boolean
@@ -161,9 +163,17 @@ export function DetailMoreMenu({
       disabled={(item.disabled ?? false) || denied(item)}
       {...(item.destructive ? { variant: 'destructive' as const } : {})}
       onClick={item.onSelect}
+      {...(item.description ? { className: 'items-start' } : {})}
     >
-      {item.icon ?? null}
-      {item.label}
+      {item.icon}
+      {item.description ? (
+        <span className="flex min-w-0 flex-col">
+          <span>{item.label}</span>
+          <span className="text-muted-foreground text-xs">{item.description}</span>
+        </span>
+      ) : (
+        item.label
+      )}
       {locked && denied(item) ? <LockedMark /> : null}
     </DropdownMenuItem>
   )
@@ -174,7 +184,10 @@ export function DetailMoreMenu({
       >
         <MoreHorizontalIcon aria-hidden="true" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent
+        align="end"
+        className={items.some((item) => item.description) ? 'w-72' : 'w-52'}
+      >
         {regular.map(renderItem)}
         {regular.length > 0 && destructive.length > 0 ? <DropdownMenuSeparator /> : null}
         {destructive.map(renderItem)}
@@ -336,6 +349,53 @@ export function SummaryRow({
   )
 }
 
+/**
+ * The money column under a document's lines (an invoice, a credit memo, an
+ * upcoming-invoice preview, the invoice composer): label left, figure right,
+ * one type size for every row so the same block reads the same on every page.
+ * The caller places it (`ml-auto`, a flex end).
+ */
+export function TotalsList({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <dl className={cn('flex w-full max-w-xs flex-col gap-2.5 text-sm', className)}>{children}</dl>
+  )
+}
+
+/**
+ * One row of a `TotalsList`.
+ * - plain: muted label, figure in the body colour.
+ * - `emphasis="total"`: label and figure in medium, e.g. "Total" before payments.
+ * - `emphasis="due"`: the figure the document is about ("Amount due", "Total
+ *   credited"): medium, and the figure one step larger.
+ * - `rule`: a hairline above the row, closing the sum above it.
+ */
+export function TotalRow({
+  label,
+  value,
+  emphasis,
+  rule = false,
+}: {
+  label: ReactNode
+  value: ReactNode
+  emphasis?: 'total' | 'due'
+  rule?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-baseline justify-between gap-4',
+        rule && 'mt-0.5 border-t pt-3',
+        emphasis && 'font-medium',
+      )}
+    >
+      <dt className={emphasis ? 'text-foreground' : 'text-muted-foreground'}>{label}</dt>
+      <dd className={cn('text-foreground tabular-nums', emphasis === 'due' && 'text-base')}>
+        {value}
+      </dd>
+    </div>
+  )
+}
+
 export interface OverviewTile {
   label: string
   value: ReactNode
@@ -350,7 +410,7 @@ export interface OverviewTile {
  * muted detail line per tile.
  *
  * - `grid` (default): a 2 x 2 box, the first thing in an Overview or Usage tab.
- * - `row`: every tile on one line — a report's headline figures.
+ * - `row`: every tile on one line: a report's headline figures.
  * - `flush`: the same row with no frame of its own, along the top of a panel's
  *   surface, ruled off from the chart under it.
  */
@@ -463,7 +523,7 @@ export function SimpleTable<T>({
                   key={id}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
-                    'border-border/40 h-14 border-b transition-colors last:border-b-0',
+                    'border-border/40 border-b transition-colors last:border-b-0',
                     onRowClick && 'hover:bg-muted/30 cursor-pointer',
                     highlighted === id && 'bg-success/6',
                   )}
@@ -472,7 +532,7 @@ export function SimpleTable<T>({
                     <td
                       key={column.key}
                       className={cn(
-                        'px-4 whitespace-nowrap',
+                        'px-4 py-4 whitespace-nowrap',
                         index === 0 && 'pl-6',
                         index === columns.length - 1 && 'pr-6',
                         column.className,

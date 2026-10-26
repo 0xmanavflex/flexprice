@@ -91,6 +91,23 @@ export interface CustomerRevenueRow {
   share: number
 }
 
+export interface CreditRow {
+  id: string
+  name: string
+  paid: number
+  free: number
+  total: number
+  display: { paid: string; free: string; total: string; share: string }
+}
+
+export interface CreditTypeRow {
+  id: string
+  label: string
+  customers: number
+  amount: number
+  display: { amount: string }
+}
+
 export interface AgingBucket {
   id: string
   label: string
@@ -102,7 +119,8 @@ export interface AgingBucket {
 export interface OverdueCustomerRow {
   id: string
   name: string
-  invoices: number
+  /** How many invoices are overdue; omitted when the source does not count them. */
+  invoices?: number | undefined
   overdue: number
   display: { overdue: string; outstanding: string }
   oldestDays: number
@@ -111,8 +129,9 @@ export interface OverdueCustomerRow {
 export interface PayerRow {
   id: string
   name: string
-  paid: number
-  collected: string
+  /** Paid invoices and amount collected; omitted when the source does not report them. */
+  paid?: number | undefined
+  collected?: string | undefined
   averageDays: number
 }
 
@@ -122,6 +141,9 @@ export interface RevenueReportProps {
     range: string
     rangeOptions: FilterOption[]
     onRangeChange: (range: string) => void
+    grain: string
+    grainOptions: FilterOption[]
+    onGrainChange: (grain: string) => void
     compare: string
     compareOptions: FilterOption[]
     onCompareChange: (compare: string) => void
@@ -148,7 +170,7 @@ export interface RevenueReportProps {
     usage: ReportFigure
     contract: ReportFigure
     usageShare: string
-    /** `month`, `week` or `day` — what one bar is. */
+    /** `month`, `week` or `day`: what one bar is. */
     grain: string
     series: RevenuePoint[]
   }
@@ -159,6 +181,26 @@ export interface RevenueReportProps {
     arpu: ReportFigure
     topTenShare: string
     onOpenCustomer?: ((id: string) => void) | undefined
+    /** One server page of customers by revenue. */
+    all?:
+      | (ReportState & {
+          rows: CustomerRevenueRow[]
+          offset: number
+          size: number
+          hasMore: boolean
+          onPage: (offset: number) => void
+        })
+      | undefined
+    credits?:
+      | (ReportState & {
+          rows: CreditRow[]
+          total: string
+          toppedUp: string
+          paidShare: string
+          consumedTypes: CreditTypeRow[]
+          topupTypes: CreditTypeRow[]
+        })
+      | undefined
   }
 
   receivables: ReportState & {
@@ -175,9 +217,10 @@ export interface RevenueReportProps {
   payments: ReportState & {
     average: ReportFigure
     median: string
-    paidCount: number
+    /** Invoices paid in the range; omitted when the source does not count them. */
+    paidCount?: number | undefined
     withinWeek: string
-    series: { label: string; days: number }[]
+    series: { label: string; days: number | null }[]
     payers: PayerRow[]
     onOpenCustomer?: ((id: string) => void) | undefined
   }
@@ -187,8 +230,6 @@ export interface RevenueReportProps {
     total: string
     weeklyAverage: string
     peak: string
-    /** Why wallet credits are not reported here. */
-    creditsReason: string
   }
 }
 
@@ -427,7 +468,7 @@ function DaysChart({
   series,
   height = 240,
 }: {
-  series: { label: string; days: number }[]
+  series: { label: string; days: number | null }[]
   height?: number
 }) {
   const config: ChartConfig = { days: { label: 'Average days to pay', color: REVENUE } }
@@ -564,7 +605,7 @@ export function RevenueReport(props: RevenueReportProps) {
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-lg font-medium tracking-tight">{props.title ?? 'Revenue'}</h1>
+        <h1 className="text-xl font-medium tracking-tight">{props.title ?? 'Revenue'}</h1>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <FilterSelect
             filter={{
@@ -573,6 +614,14 @@ export function RevenueReport(props: RevenueReportProps) {
               options: filters.rangeOptions,
               onChange: filters.onRangeChange,
               icon: <CalendarIcon aria-hidden className="size-3.5" />,
+            }}
+          />
+          <FilterSelect
+            filter={{
+              label: 'Granularity',
+              value: filters.grain,
+              options: filters.grainOptions,
+              onChange: filters.onGrainChange,
             }}
           />
           <FilterSelect
@@ -610,7 +659,9 @@ export function RevenueReport(props: RevenueReportProps) {
       <DetailTabs tabs={TABS} value={view} onChange={(next) => onViewChange(next as RevenueView)} />
 
       {/* Names the report for assistive tech, so the panels' headings sit under it. */}
-      <h2 className="sr-only">{TABS.find((tab) => tab.value === view)?.label ?? 'Overview'} report</h2>
+      <h2 className="sr-only">
+        {TABS.find((tab) => tab.value === view)?.label ?? 'Overview'} report
+      </h2>
       {view === 'overview' ? <OverviewTab {...props} /> : null}
       {view === 'revenue' ? <RevenueTab {...props} /> : null}
       {view === 'customers' ? <CustomersTab {...props} /> : null}
@@ -766,6 +817,7 @@ function OverviewTab({
                   ]}
                 />
                 <EventsChart series={usage.series} height={220} />
+                <BasedOn text={usage.basedOn} />
               </>
             ) : (
               <NotReady state={usage} height={220} empty="No events in this range" />
@@ -812,6 +864,37 @@ function RevenueTab({ revenue, comparing, rangeLabel }: RevenueReportProps) {
   )
 }
 
+function CreditTypeTable({ label, rows }: { label: string; rows: CreditTypeRow[] }) {
+  return (
+    <DetailTable<CreditTypeRow>
+      compact
+      label={label}
+      noun="types"
+      rows={rows}
+      columns={[
+        {
+          key: 'label',
+          header: label,
+          sortBy: (row) => row.label,
+          cell: (row) => <span className="font-medium">{row.label}</span>,
+        },
+        {
+          key: 'customers',
+          header: 'Customers',
+          sortBy: (row) => row.customers,
+          cell: (row) => <span className="tabular-nums">{row.customers}</span>,
+        },
+        {
+          key: 'amount',
+          header: 'Amount',
+          sortBy: (row) => row.amount,
+          cell: (row) => <span className="tabular-nums">{row.display.amount}</span>,
+        },
+      ]}
+    />
+  )
+}
+
 function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) {
   const top = customers.rows.slice(0, 10)
   const largest = customers.rows[0]
@@ -851,66 +934,210 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
         </Surface>
       </Panel>
 
-      {customers.status === 'ready' && customers.rows.length > 0 ? (
-        <Panel
-          title="All customers"
-          description="Revenue per customer in the period, highest first"
-        >
+      {customers.credits ? (
+        <>
+          <Panel
+            title="Credits consumed and topped up"
+            description={`Wallet credits added and applied to invoices, ${rangeLabel}`}
+          >
+            <Surface>
+              {customers.credits.status === 'ready' ? (
+                <>
+                  <OverviewTiles
+                    variant="flush"
+                    tiles={[
+                      {
+                        label: 'Customers using credits',
+                        value: String(customers.credits.rows.length),
+                      },
+                      { label: 'Credits consumed', value: customers.credits.total },
+                      { label: 'Credits topped up', value: customers.credits.toppedUp },
+                      { label: 'Paid share', value: customers.credits.paidShare },
+                    ]}
+                  />
+                  <div className="grid gap-5 p-5 lg:grid-cols-2">
+                    <CreditTypeTable
+                      label="Consumed by credit type"
+                      rows={customers.credits.consumedTypes}
+                    />
+                    <CreditTypeTable
+                      label="Topped up by source"
+                      rows={customers.credits.topupTypes}
+                    />
+                  </div>
+                </>
+              ) : (
+                <NotReady
+                  state={customers.credits}
+                  height={200}
+                  empty="No credit activity in this range"
+                />
+              )}
+            </Surface>
+          </Panel>
+
+          {customers.credits.status === 'ready' && customers.credits.rows.length > 0 ? (
+            <Panel
+              title="Credit consumption by customer"
+              description={`Credits applied to invoices per customer, ${rangeLabel}, split into paid and free`}
+            >
+              <Surface>
+                <DetailTable<CreditRow>
+                  compact
+                  label="Credit consumption by customer"
+                  noun="customers"
+                  rows={customers.credits.rows}
+                  {...(customers.onOpenCustomer
+                    ? { onRowClick: (row: CreditRow) => customers.onOpenCustomer?.(row.id) }
+                    : {})}
+                  columns={[
+                    {
+                      key: 'name',
+                      header: 'Customer',
+                      width: 220,
+                      sortBy: (row) => row.name,
+                      cell: (row) => <span className="font-medium">{row.name}</span>,
+                    },
+                    {
+                      key: 'total',
+                      header: 'Consumed',
+                      sortBy: (row) => row.total,
+                      cell: (row) => <span className="tabular-nums">{row.display.total}</span>,
+                    },
+                    {
+                      key: 'share',
+                      header: 'Share',
+                      sortBy: (row) => row.total,
+                      cell: (row) => (
+                        <span className="text-muted-foreground tabular-nums">
+                          {row.display.share}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'paid',
+                      header: 'Paid credits',
+                      sortBy: (row) => row.paid,
+                      cell: (row) => (
+                        <span className="text-muted-foreground tabular-nums">
+                          {row.display.paid}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'free',
+                      header: 'Free credits',
+                      sortBy: (row) => row.free,
+                      cell: (row) => (
+                        <span className="text-muted-foreground tabular-nums">
+                          {row.display.free}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+              </Surface>
+            </Panel>
+          ) : null}
+        </>
+      ) : null}
+
+      {customers.all ? (
+        <Panel title="All customers" description="Ordered by revenue, highest first">
           <Surface>
-            <DetailTable<CustomerRevenueRow & { rank: number }>
-              compact
-              label="Customers by revenue"
-              noun="customers"
-              rows={customers.rows.map((row, index) => ({ ...row, rank: index + 1 }))}
-              {...(customers.onOpenCustomer
-                ? { onRowClick: (row: CustomerRevenueRow) => customers.onOpenCustomer?.(row.id) }
-                : {})}
-              columns={[
-                {
-                  key: 'rank',
-                  header: '#',
-                  width: 56,
-                  cell: (row) => <span className="text-muted-foreground">{row.rank}</span>,
-                },
-                {
-                  key: 'name',
-                  header: 'Customer',
-                  width: 220,
-                  sortBy: (row) => row.name,
-                  cell: (row) => <span className="font-medium">{row.name}</span>,
-                },
-                {
-                  key: 'revenue',
-                  header: 'Revenue',
-                  sortBy: (row) => row.revenue,
-                  cell: (row) => <span className="tabular-nums">{row.display.revenue}</span>,
-                },
-                {
-                  key: 'contract',
-                  header: 'Contract',
-                  sortBy: (row) => row.contract,
-                  cell: (row) => (
-                    <span className="text-muted-foreground tabular-nums">
-                      {row.display.contract}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'usage',
-                  header: 'Usage',
-                  sortBy: (row) => row.usage,
-                  cell: (row) => (
-                    <span className="text-muted-foreground tabular-nums">{row.display.usage}</span>
-                  ),
-                },
-                {
-                  key: 'share',
-                  header: 'Share of total',
-                  sortBy: (row) => row.share,
-                  cell: (row) => <ShareBar value={row.share} color={REVENUE} />,
-                },
-              ]}
-            />
+            {customers.all.status === 'error' ? (
+              <NotReady state={customers.all} empty="No customers in this range" />
+            ) : (
+              <DetailTable<CustomerRevenueRow & { rank: number }>
+                compact
+                label="Customers by revenue"
+                noun="customers"
+                rows={customers.all.rows.map((row, index) => ({
+                  ...row,
+                  rank: (customers.all?.offset ?? 0) + index + 1,
+                }))}
+                footer={false}
+                toolbar={false}
+                pageSize={customers.all.size}
+                isLoading={customers.all.status === 'loading'}
+                {...(customers.onOpenCustomer
+                  ? { onRowClick: (row: CustomerRevenueRow) => customers.onOpenCustomer?.(row.id) }
+                  : {})}
+                columns={[
+                  {
+                    key: 'rank',
+                    header: '#',
+                    width: 56,
+                    cell: (row) => <span className="text-muted-foreground">{row.rank}</span>,
+                  },
+                  {
+                    key: 'name',
+                    header: 'Customer',
+                    width: 220,
+                    cell: (row) => <span className="font-medium">{row.name}</span>,
+                  },
+                  {
+                    key: 'revenue',
+                    header: 'Revenue',
+                    cell: (row) => <span className="tabular-nums">{row.display.revenue}</span>,
+                  },
+                  {
+                    key: 'contract',
+                    header: 'Contract',
+                    cell: (row) => (
+                      <span className="text-muted-foreground tabular-nums">
+                        {row.display.contract}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'usage',
+                    header: 'Usage',
+                    cell: (row) => (
+                      <span className="text-muted-foreground tabular-nums">
+                        {row.display.usage}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'share',
+                    header: 'Share of total',
+                    cell: (row) => <ShareBar value={row.share} color={REVENUE} />,
+                  },
+                ]}
+              />
+            )}
+            {customers.all.status === 'error' ? null : (
+              <div className="flex items-center justify-between border-t px-5 py-3 text-sm">
+                <span className="text-muted-foreground tabular-nums">
+                  {customers.all.status === 'loading'
+                    ? ''
+                    : customers.all.rows.length === 0
+                      ? 'No customers on this page'
+                      : `${customers.all.offset + 1} - ${customers.all.offset + customers.all.rows.length}`}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={customers.all.offset === 0 || customers.all.status === 'loading'}
+                    onClick={() =>
+                      customers.all?.onPage(Math.max(0, customers.all.offset - customers.all.size))
+                    }
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!customers.all.hasMore || customers.all.status === 'loading'}
+                    onClick={() => customers.all?.onPage(customers.all.offset + customers.all.size)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </Surface>
         </Panel>
       ) : null}
@@ -986,9 +1213,11 @@ function ReceivablesTab({ receivables }: RevenueReportProps) {
                 {
                   key: 'invoices',
                   header: 'Overdue invoices',
-                  sortBy: (row) => row.invoices,
+                  sortBy: (row) => row.invoices ?? -1,
                   cell: (row) => (
-                    <span className="text-muted-foreground tabular-nums">{row.invoices}</span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {row.invoices ?? '—'}
+                    </span>
                   ),
                 },
                 {
@@ -1038,7 +1267,10 @@ function PaymentsTab({ payments, comparing }: RevenueReportProps) {
                 tiles={[
                   tile('Average', payments.average, comparing),
                   { label: 'Median', value: payments.median },
-                  { label: 'Paid invoices', value: String(payments.paidCount) },
+                  {
+                    label: 'Paid invoices',
+                    value: payments.paidCount === undefined ? '—' : String(payments.paidCount),
+                  },
                   { label: 'Paid within a week', value: payments.withinWeek },
                 ]}
               />
@@ -1076,15 +1308,15 @@ function PaymentsTab({ payments, comparing }: RevenueReportProps) {
                 {
                   key: 'paid',
                   header: 'Paid invoices',
-                  sortBy: (row) => row.paid,
+                  sortBy: (row) => row.paid ?? -1,
                   cell: (row) => (
-                    <span className="text-muted-foreground tabular-nums">{row.paid}</span>
+                    <span className="text-muted-foreground tabular-nums">{row.paid ?? '—'}</span>
                   ),
                 },
                 {
                   key: 'collected',
                   header: 'Collected',
-                  cell: (row) => <span className="tabular-nums">{row.collected}</span>,
+                  cell: (row) => <span className="tabular-nums">{row.collected ?? '—'}</span>,
                 },
                 {
                   key: 'days',
@@ -1124,22 +1356,11 @@ function UsageTab({ usage }: RevenueReportProps) {
                 ]}
               />
               <EventsChart series={usage.series} height={260} />
+              <BasedOn text={usage.basedOn} />
             </>
           ) : (
             <NotReady state={usage} empty="No events in this range" />
           )}
-        </Surface>
-      </Panel>
-      <Panel
-        title="Credits consumed and topped up"
-        description="Wallet credits added, and credits applied to invoices"
-      >
-        <Surface>
-          <SectionEmpty
-            scene="billing"
-            title="Not available yet"
-            description={usage.creditsReason}
-          />
         </Surface>
       </Panel>
     </div>

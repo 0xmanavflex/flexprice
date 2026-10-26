@@ -226,6 +226,7 @@ import { VersionCheck } from '@/app/versionCheck/VersionCheck'
 import { AccountLockProvider, AccountPill, useLockedAccess } from '@/app/selfBilling/AccountLock'
 import { EnvironmentToaster } from '@/pages/shared/RecordElsewhere'
 import { RouteAccessGate } from '@/app/access/RouteAccessGate'
+import { DEFAULT_HOME_SEARCH, parseHomeSearch, type HomeSearch } from '@/app/homeSearch'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
@@ -288,8 +289,8 @@ const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
 const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
-const RevenuePage = lazy(() =>
-  import('@/pages/revenue/RevenuePage').then((m) => ({ default: m.RevenuePage })),
+const ReportsPage = lazy(() =>
+  import('@/pages/revenue/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 )
 /*
  * Not lazy, unlike every other page.
@@ -315,7 +316,7 @@ import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
  * someone else's data if the previous user's chunks are still cached.
  *
  * The environment list lives in `useEnvironments`, which is also the one place
- * that records why it is not yet a request — see the note there.
+ * that records why it is not yet a request: see the note there.
  */
 function ShellLayout() {
   const navigate = useNavigate()
@@ -327,7 +328,7 @@ function ShellLayout() {
    * Who is signed in, when anyone is.
    *
    * The hook is a no-op without a token, so under mocks and behind an API key
-   * this costs nothing and simply never resolves — which is why the fallbacks
+   * this costs nothing and simply never resolves: which is why the fallbacks
    * below are the normal case there rather than an error state.
    */
   const currentUser = useCurrentUser(session?.token ?? null)
@@ -385,9 +386,10 @@ function ShellLayout() {
             void navigate({ to: '/sign-in', search: {} as never })
           }}
           // Help: the support chat, when a provider is configured (as in V1).
+          // The trial chip leads, left of search: trial chip, search, Create.
+          headerLeading={<AccountPill />}
           headerActions={
             <>
-              <AccountPill />
               <SupportChat />
               <VersionCheck />
               <EnvironmentToaster />
@@ -397,7 +399,7 @@ function ShellLayout() {
           {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
           {/*
         Keyed by environment, so switching remounts the page. Cached rows are
-        already kept apart by environment; what the key protects is page state —
+        already kept apart by environment; what the key protects is page state:
         a half-filled form or an open dialog that belongs to an entity of the
         environment just left must not survive into one where that entity does
         not exist, and be saved there.
@@ -418,7 +420,7 @@ function ShellLayout() {
  * What a route that threw renders, in place of the page.
  *
  * Two things reach here: a query that failed with a server fault and had no
- * data to fall back on (`throwOnError`, see `@fp/query`), and everything else —
+ * data to fall back on (`throwOnError`, see `@fp/query`), and everything else:
  * a render bug, a chunk that no longer exists. Both get the same screen,
  * because from the chair it is the same event: this page did not load.
  *
@@ -472,12 +474,12 @@ function RouteError({ error, reset }: ErrorComponentProps) {
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
   /**
-   * Without this a thrown route — including a rejected lazy import — renders
+   * Without this a thrown route: including a rejected lazy import: renders
    * nothing at all, and a crash is indistinguishable from an empty list.
    */
   /**
    * A mistyped or retired URL. Distinct from `errorComponent`, which is for a
-   * page that exists and broke — the two need different words and different
+   * page that exists and broke: the two need different words and different
    * ways out.
    */
   notFoundComponent: () => (
@@ -492,7 +494,7 @@ const rootRoute = createRootRoute({
 /**
  * The console proper: every route that requires a session.
  *
- * A pathless layout route — it contributes no path segment, only the shell and
+ * A pathless layout route: it contributes no path segment, only the shell and
  * the guard. Adding a route to the console means parenting it here; a route
  * parented to `rootRoute` is deliberately opting out of both.
  */
@@ -505,7 +507,7 @@ const shellRoute = createRoute({
    * A guard that runs during render has already mounted the shell, so a
    * signed-out visitor sees the sidebar and a flash of empty lists before being
    * moved on. `beforeLoad` runs before any of that, and it can do so
-   * synchronously because the session lives in `localStorage` — see
+   * synchronously because the session lives in `localStorage`: see
    * `session/guard.ts` for why mocks and an API key are exempt.
    *
    * The address being turned away is carried along, so a bookmarked
@@ -522,12 +524,12 @@ const shellRoute = createRoute({
 })
 
 /**
- * Sign in — the one route outside the shell.
+ * Sign in: the one route outside the shell.
  *
  * Already signed in, it steps aside rather than offering a second sign-in: a
  * form that re-authenticates a user who is already authenticated is a way to
  * lose a working session to a typo. It steps aside only for a *real* session,
- * not for the bypasses — under mocks there is nobody signed in, and the page
+ * not for the bypasses: under mocks there is nobody signed in, and the page
  * still has to be reachable for the fixture-backed end-to-end suite.
  */
 const signInRoute = createRoute({
@@ -562,7 +564,7 @@ const signUpRoute = createRoute({
  *
  * The backend's `auth.saml.dashboard_url` points here and arrives with the
  * token in the URL fragment. No `validateSearch`: a fragment is not a search
- * string and never reaches the router — the page reads `location.hash`
+ * string and never reaches the router: the page reads `location.hash`
  * itself and clears it.
  *
  * It does not step aside for an existing session. Someone already signed in
@@ -580,7 +582,7 @@ const authCallbackRoute = createRoute({
  * step aside for an existing session: the link must be consumed wherever it
  * lands, or the account it confirms is never created.
  *
- * The path is V1's, because it is the one the Supabase Redirect URLs allow —
+ * The path is V1's, because it is the one the Supabase Redirect URLs allow:
  * see `SIGN_UP_CONFIRM_PATH`.
  */
 const signUpConfirmRoute = createRoute({
@@ -605,7 +607,7 @@ const legacySignUpConfirmRoute = createRoute({
  * Both sit outside the shell, like sign-in. Neither steps aside for an existing
  * session: someone already signed in may still be following a reset link from
  * their inbox, and bouncing them to the dashboard would make the link look
- * broken. `/reset-password` in particular must stay reachable — it is the
+ * broken. `/reset-password` in particular must stay reachable: it is the
  * address Supabase emails, and it is the only place the recovery fragment can
  * be consumed.
  */
@@ -629,7 +631,7 @@ function SignInRouteComponent() {
 /**
  * Every destination in the sidebar resolves to something.
  *
- * Before this, twenty of twenty-four navigated to a bare "Not Found" — which
+ * Before this, twenty of twenty-four navigated to a bare "Not Found": which
  * is what a broken link looks like, so the shell appeared broken rather than
  * unfinished. A placeholder says which screen this is, what it will do, and
  * where the working version is today.
@@ -658,7 +660,7 @@ const placeholderRoutes = PLACEHOLDER_ROUTES.map((entry) =>
  *
  * `validateSearch` is what makes the URL the source of truth: it turns whatever
  * is in the address bar into a valid `InvoiceQuery`, so the page receives a
- * domain object and never parses a string. It is total by construction — a
+ * domain object and never parses a string. It is total by construction: a
  * hand-edited URL degrades to defaults rather than throwing.
  */
 const invoicesRoute = createRoute({
@@ -668,8 +670,8 @@ const invoicesRoute = createRoute({
   /**
    * Keep defaults out of the address bar.
    *
-   * `validateSearch` returns a *complete* query — which is what makes the page
-   * type-safe — but TanStack then writes all of it into the URL, so `/invoices`
+   * `validateSearch` returns a *complete* query: which is what makes the page
+   * type-safe: but TanStack then writes all of it into the URL, so `/invoices`
    * became `?page=1&pageSize=25&sortBy=issuedAt&…&statuses=%5B%5D`. Unreadable,
    * un-shareable, and it made `/invoices` one of many spellings of itself.
    *
@@ -715,7 +717,7 @@ function InvoicesRouteComponent() {
 /**
  * Subscription creation.
  *
- * The step lives in the URL — `/contracts/new?step=prices` — so a
+ * The step lives in the URL: `/contracts/new?step=prices`: so a
  * half-finished subscription is linkable, resumable, and navigable with the
  * back button. See `docs/architecture.md`: the stepper owns presentation, the
  * route owns workflow state.
@@ -778,7 +780,7 @@ function SubscriptionCreateRouteComponent() {
  * Features: list and create.
  *
  * The first migrated V1 surface. The query lives in search params, so a
- * filtered list is a link — which V1's version cannot produce.
+ * filtered list is a link: which V1's version cannot produce.
  */
 const featuresRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -851,7 +853,7 @@ function FeatureEditRouteComponent() {
   )
 }
 
-/** The feature detail page. `/features/$featureId` — the id is a path param. */
+/** The feature detail page. `/features/$featureId`: the id is a path param. */
 const featureDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/features/$featureId',
@@ -874,7 +876,7 @@ function FeatureDetailRouteComponent() {
 /**
  * Plans: the list, plus a create/edit drawer the page owns.
  *
- * Same URL-as-query contract as features and invoices — a filtered, sorted,
+ * Same URL-as-query contract as features and invoices: a filtered, sorted,
  * paged view is a link. Creating or editing a plan's details happens in a drawer
  * over the list (see `PlanListPage`); the charges editor is a later surface.
  */
@@ -907,7 +909,7 @@ function PlansRouteComponent() {
 }
 
 /**
- * `/plans/ai` — describe a pricing page, review what it would create, create
+ * `/plans/ai`: describe a pricing page, review what it would create, create
  * it. A page of its own rather than a dialog: what comes back is long enough
  * to scroll, and leaving half way should cost nothing.
  */
@@ -1186,7 +1188,7 @@ function CostSheetEditRouteComponent() {
  *
  * The list keeps the URL-as-query contract; the editor is local state, so the
  * route only has to hand the page its query. Creating or editing an add-on
- * happens in a drawer over the list — see `AddonListPage`.
+ * happens in a drawer over the list: see `AddonListPage`.
  */
 const addonsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -1219,7 +1221,7 @@ function AddonsRouteComponent() {
   )
 }
 
-/** The add-on detail page. `/addons/$addonId` — view, and edit its details in place. */
+/** The add-on detail page. `/addons/$addonId`: view, and edit its details in place. */
 const addonDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/addons/$addonId',
@@ -1245,8 +1247,8 @@ function AddonDetailRouteComponent() {
  * Coupons: the list, plus a read-only detail page with a rename drawer.
  *
  * The list keeps the URL-as-query contract; opening a coupon navigates to
- * `/coupons/$couponId`, which is where the discount, redemptions, window, and —
- * the V2 addition — where the coupon is applied all live. Editing is limited to
+ * `/coupons/$couponId`, which is where the discount, redemptions, window, and:
+ * the V2 addition: where the coupon is applied all live. Editing is limited to
  * a rename (the discount is immutable), done in place on the detail page.
  */
 const couponsRoute = createRoute({
@@ -1313,7 +1315,7 @@ function CouponDetailRouteComponent() {
 /**
  * Price units: the list, plus a create/edit drawer the page owns.
  *
- * The same shape as add-ons — URL-as-query list, editor in local state — because
+ * The same shape as add-ons: URL-as-query list, editor in local state: because
  * V1 keeps price units to a list and a drawer with no detail page. The route
  * only has to hand the page its query; opening the editor happens over the list
  * (see `PriceUnitListPage`).
@@ -1372,7 +1374,7 @@ function PriceUnitCreateRouteComponent() {
   )
 }
 
-/** The price-unit detail page. `/price-units/$priceUnitId` — view, and edit in place. */
+/** The price-unit detail page. `/price-units/$priceUnitId`: view, and edit in place. */
 const priceUnitDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/price-units/$priceUnitId',
@@ -1396,8 +1398,8 @@ function PriceUnitDetailRouteComponent() {
 
 /**
  * Groups and cost sheets: the same URL-as-query contract as the other
- * catalogue lists. Each is read-only for now — the editor is a later surface,
- * the way coupons shipped a list before its editor — so the route only has to
+ * catalogue lists. Each is read-only for now: the editor is a later surface,
+ * the way coupons shipped a list before its editor: so the route only has to
  * hand the page its query.
  */
 const groupsRoute = createRoute({
@@ -1413,7 +1415,7 @@ function GroupsRouteComponent() {
   const navigate = useNavigate()
 
   return (
-    <SettingsListFrame sectionId="groups">
+    <SettingsListFrame sectionId="tags">
       <GroupListPage
         query={query}
         onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
@@ -1495,7 +1497,7 @@ function CostSheetsRouteComponent() {
   )
 }
 
-/** The cost-sheet detail page. `/cost-sheets/$costSheetId` — a read-only view for now. */
+/** The cost-sheet detail page. `/cost-sheets/$costSheetId`: a read-only view for now. */
 const costSheetDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/cost-sheets/$costSheetId',
@@ -1518,43 +1520,67 @@ function CostSheetDetailRouteComponent() {
 }
 
 /**
- * Home — the ReUI `dashboard-4` block, mounted as installed.
+ * Home: the ReUI `dashboard-4` block, mounted as installed.
  *
  * The first destination in the sidebar, and the only one that is a dashboard
- * rather than a list. It carries no query state yet; the block renders its own
- * sample data until it is wired to real revenue and usage.
+ * rather than a list. The range, granularity and open metric tab live in the
+ * URL, so they are still selected when you come back.
  */
 const homeRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/',
-  component: HomePage,
+  validateSearch: (search: Record<string, unknown>): HomeSearch => parseHomeSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_HOME_SEARCH)] },
+  component: HomeRouteComponent,
 })
 
-/**
- * Revenue — a report page, not a list. The tab, range, comparison and
- * currency live in the URL, so a report can be shared as it is on screen.
- */
-const revenueRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/revenue',
-  validateSearch: (search: Record<string, unknown>): RevenueSearch => parseRevenueSearch(search),
-  search: { middlewares: [stripSearchParams(DEFAULT_REVENUE_SEARCH)] },
-  component: RevenueRouteComponent,
-})
-
-function RevenueRouteComponent() {
-  const search = useSearch({ from: revenueRoute.id })
+function HomeRouteComponent() {
+  const search = useSearch({ from: homeRoute.id })
   const navigate = useNavigate()
   return (
-    <RevenuePage
+    <HomePage
       search={search}
-      onSearchChange={(next) => void navigate({ to: '/revenue', search: next, replace: true })}
+      onSearchChange={(next) => void navigate({ to: '/', search: next, replace: true })}
     />
   )
 }
 
 /**
- * Billing lists — customers, subscriptions, payments and taxes. The same
+ * Reports: the analytics report library (once "Revenue"). The tab, range,
+ * comparison and currency live in the URL, so a report can be shared as it is
+ * on screen.
+ */
+const reportsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/reports',
+  validateSearch: (search: Record<string, unknown>): RevenueSearch => parseRevenueSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_REVENUE_SEARCH)] },
+  component: ReportsRouteComponent,
+})
+
+function ReportsRouteComponent() {
+  const search = useSearch({ from: reportsRoute.id })
+  const navigate = useNavigate()
+  return (
+    <ReportsPage
+      search={search}
+      onSearchChange={(next) => void navigate({ to: '/reports', search: next, replace: true })}
+    />
+  )
+}
+
+/** The page's old address: links and bookmarks to /revenue land on Reports, filters kept. */
+const revenueRedirectRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/revenue',
+  validateSearch: (search: Record<string, unknown>): RevenueSearch => parseRevenueSearch(search),
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: '/reports', search, replace: true })
+  },
+})
+
+/**
+ * Billing lists: customers, subscriptions, payments and taxes. The same
  * URL-as-query contract as invoices and the catalogue lists: a filtered, sorted,
  * paged view is a link. Read-only lists for now, except subscriptions, whose
  * header opens the existing create wizard.
@@ -1639,7 +1665,7 @@ function CustomerEditRouteComponent() {
 /**
  * Create a subscription for a customer who is already open.
  *
- * `/customers/$customerId/contracts/new` — the id is the path, so the form
+ * `/customers/$customerId/contracts/new`: the id is the path, so the form
  * does not ask which customer this is. Cancel returns to that customer's
  * Overview tab.
  */
@@ -1663,7 +1689,7 @@ function CustomerSubscriptionCreateRouteComponent() {
 }
 
 /**
- * A customer's detail page. `/customers/$customerId?tab=` — the id is a path
+ * A customer's detail page. `/customers/$customerId?tab=`: the id is a path
  * param, the open section a search param, so a customer's invoices or wallet is
  * a link. Overview is the default and stays out of the address bar.
  */
@@ -2235,7 +2261,7 @@ function EventsRouteComponent() {
  * The section rail and the tab strip inside it are each a search param, so a
  * link lands on the exact panel rather than one level short of it. `parseSettingsSearch`
  * is total and resolves the tab *against* the section, so a stale or
- * hand-edited pair (`?section=developers&tab=members` — two real ids that do
+ * hand-edited pair (`?section=developers&tab=members`: two real ids that do
  * not go together) degrades to something coherent instead of rendering blank.
  *
  * `stripSearchParams` keeps the default pair out of the URL, so the address is
@@ -2287,9 +2313,9 @@ function SettingsRouteComponent() {
       sectionId={section}
       tabId={tab}
       /*
-       * One navigation for both ids. Changing section also changes tab — the
+       * One navigation for both ids. Changing section also changes tab: the
        * shell reports only the section, and the page picks that section's
-       * first tab — and writing them separately would put an impossible pair
+       * first tab: and writing them separately would put an impossible pair
        * in the URL for one render and cost two entries of history.
        *
        * `replace` because flipping through tabs should not fill the Back
@@ -2420,7 +2446,7 @@ const developerRedirects = (
 
 /**
  * Webhooks: the Svix consumer app portal (V1's `WebhookDashboard`), on three
- * routes — the hub (`?tab=` endpoints / catalog / logs / activity), add
+ * routes: the hub (`?tab=` endpoints / catalog / logs / activity), add
  * endpoint, and one endpoint (`?tab=` overview / testing / advanced). `?msg=`
  * opens a message's sheet over either. The old Settings tab redirects here
  * (`MOVED_SECTIONS`).
@@ -2565,7 +2591,8 @@ export const routeTree = rootRoute.addChildren([
     ...legacyRoutes,
     customerContractRedirect,
     homeRoute,
-    revenueRoute,
+    reportsRoute,
+    revenueRedirectRoute,
     featuresRoute,
     featureCreateRoute,
     featureEditRoute,

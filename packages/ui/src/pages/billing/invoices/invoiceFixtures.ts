@@ -11,8 +11,8 @@ import {
  * Invoices as plain domain values.
  *
  * Note what building these requires: no API client, no query client, no
- * network, no provider. That is the claim `@fp/ui` makes — that it is
- * genuinely presentational rather than merely linted to be — and a fixture
+ * network, no provider. That is the claim `@fp/ui` makes: that it is
+ * genuinely presentational rather than merely linted to be: and a fixture
  * file is where the claim is either true or obviously false.
  *
  * Dates are fixed rather than relative so a story renders identically today and

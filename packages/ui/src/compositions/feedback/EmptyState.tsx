@@ -13,7 +13,7 @@ import { Figure, type FigureMotion, type FigureName } from './Figures'
 import { SceneIllustration, type EmptyScene } from './SceneIllustration'
 
 /**
- * Nothing here — and what to do about it.
+ * Nothing here: and what to do about it.
  *
  * Two situations get confused constantly, so they are separate props rather
  * than one message: a surface with no data *yet* wants an invitation to create
@@ -37,7 +37,7 @@ import { SceneIllustration, type EmptyScene } from './SceneIllustration'
  * centres in it, so a page with nothing on it reads as deliberate rather than
  * as a table that failed to load.
  *
- * `role="status"` so the change is announced when a filter empties a list — a
+ * `role="status"` so the change is announced when a filter empties a list: a
  * sighted user watches the rows vanish, and nobody else is told.
  */
 export const EmptyStateProvenance = provenance({
@@ -49,10 +49,10 @@ export const EmptyStateProvenance = provenance({
 /**
  * What a list offers: the create action, and the copy for its first run.
  *
- * Published by `ListState` and read in two places — `GridToolbar` pins the
- * action at the end of the toolbar, and this component swaps a grid's
- * filtered-miss copy for the first-run copy when the list is empty because
- * nothing has been created yet.
+ * Published by `ListState` and read in two places: `GridToolbar` pins the
+ * action at the end of the toolbar (its only place), and this component swaps
+ * a grid's filtered-miss copy for the first-run copy when the list is empty
+ * because nothing has been created yet.
  *
  * It is a context rather than a prop because the empty body belongs to the
  * *grid*, several components below the page that knows what creating one
@@ -72,7 +72,7 @@ export interface ListOffer {
   isFirstRun: boolean
   title: string
   description?: string | undefined
-  /** Usually "New thing" — the same node the toolbar pins at its end. */
+  /** Usually "New thing". Only the toolbar draws it, at its end; the empty body never does. */
   action?: ReactNode
   secondaryAction?: ReactNode
 }
@@ -91,7 +91,7 @@ export function useListOffer(): ListOffer | null {
 export interface EmptyStateProps {
   title: string
   description?: string
-  /** Primary action — usually "create the first one". */
+  /** Primary action: usually "create the first one". */
   action?: ReactNode
   /** Beside the primary. An import, a link to the docs. */
   secondaryAction?: ReactNode
@@ -101,7 +101,7 @@ export interface EmptyStateProps {
   /** Which area of the product this is in; picks the hairline drawing. Defaults to `table`. */
   scene?: EmptyScene
   /**
-   * `page` fills a blank screen — illustration, room to breathe.
+   * `page` fills a blank screen: illustration, room to breathe.
    * `inline` sits inside a table body that already has a heading above it.
    */
   size?: 'page' | 'inline'
@@ -134,9 +134,8 @@ export function EmptyState({
   /*
    * A grid's empty body is written for a filtered miss, because that is the
    * only emptiness a grid can describe. When the page says the list is empty
-   * for the first time instead, its own copy and its create button take that
-   * slot — in place, so the toolbar above and the pagination below stay where
-   * they are. Replacing the whole grid with a page-sized empty state is what
+   * for the first time instead, its own copy takes that slot: in place, so
+   * the toolbar above and the pagination below stay where they are. Replacing the whole grid with a page-sized empty state is what
    * used to happen, and it took the search box and the create button with it.
    */
   const offer = useListOffer()
@@ -145,7 +144,12 @@ export function EmptyState({
   const shown = firstRun ?? { title, description, action, secondaryAction }
   /* A first-run offer is not a filtered miss, whatever slot it renders in. */
   const showsFilterMiss = isFiltered && firstRun === null
-  const actions = showsFilterMiss ? onClearFilters : shown.action
+  /*
+   * A first run says what is missing, not how to fix it: the create action
+   * is the toolbar's, top right, and a second copy in the middle of the table
+   * is the duplicate the console no longer draws.
+   */
+  const actions = showsFilterMiss ? onClearFilters : firstRun ? null : shown.action
 
   return (
     <Empty
@@ -158,13 +162,13 @@ export function EmptyState({
         isPage
           ? 'flex-1 justify-center gap-6 px-6 py-14'
           : // A table body is as wide as the *table*, which on a narrow screen
-            // is wider than the screen — centring in it puts half the sentence
+            // is wider than the screen: centring in it puts half the sentence
             // past the right edge, reachable only by scrolling the columns.
             // Sticky at the left of the scroll port, never wider than the
             // viewport: the message stays where the reader is.
             'sticky left-0 w-full max-w-[calc(100vw-3.5rem)] flex-none gap-3 px-6 py-10',
-        // Inside a table body there is no flex parent to stretch into — a `td`
-        // is a `td`, and a table is only as tall as its rows — so the room to
+        // Inside a table body there is no flex parent to stretch into: a `td`
+        // is a `td`, and a table is only as tall as its rows: so the room to
         // be centred in is asked for directly. The subtraction is the chrome
         // above and below a list: header, toolbar, column headings, footer.
         // Measured at 272px on the tightest of them (390px wide, where the

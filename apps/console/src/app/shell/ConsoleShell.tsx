@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import {
   BarChart3Icon,
+  ChartColumnIcon,
   BookOpenIcon,
   CreditCardIcon,
   ReceiptIcon,
@@ -29,7 +30,9 @@ import {
   type ShellSearchItem,
   type ShellUser,
 } from '@fp/ui/compositions'
+import { EnvironmentCopyFormPage } from '@/pages/environments/EnvironmentCopyFormPage'
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
+import { MutationToasts } from '@/app/notifications/MutationToasts'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { useMockAccounts } from '@/app/selfBilling/mockAccounts'
@@ -62,6 +65,7 @@ const ICONS: Record<string, ReactNode> = {
   catalog: <Layers2Icon className="size-4" />,
   billing: <LandmarkIcon className="size-4" />,
   revenue: <BarChart3Icon className="size-4" />,
+  reports: <ChartColumnIcon className="size-4" />,
   developers: <CodeXmlIcon className="size-4" />,
   integrations: <IntegrationsIcon className="size-4" />,
   'pricing-widget': <GalleryHorizontalEndIcon className="size-4" />,
@@ -113,6 +117,8 @@ export interface ConsoleShellProps {
   onEnvironmentChange: (id: string) => void
   user: ShellUser
   onSignOut?: () => void
+  /** Sits in the header, to the left of search. */
+  headerLeading?: ReactNode
   /** One control belonging to the page as a whole, rendered in the header. */
   headerActions?: ReactNode
   children: ReactNode
@@ -138,12 +144,14 @@ export function ConsoleShell({
   onEnvironmentChange,
   user,
   onSignOut,
+  headerLeading,
   headerActions,
   children,
 }: ConsoleShellProps) {
   const activeItemId = navEntryForPath(pathname, search)
   const [detailTrail, setDetailTrail] = useState<ShellDetailCrumb[] | null>(null)
   const [creatingEnvironment, setCreatingEnvironment] = useState(false)
+  const [copyingEnvironment, setCopyingEnvironment] = useState(false)
   const mockAccounts = useMockAccounts()
   const [renamingEnvironment, setRenamingEnvironment] = useState<ShellEnvironment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -171,7 +179,7 @@ export function ConsoleShell({
 
   // A detail page hands up "list, page": the list crumb becomes a link back
   // and the page type ("Customer details") is appended, never the record id.
-  // The group crumb goes where the sidebar's group goes — its first page.
+  // The group crumb goes where the sidebar's group goes: its first page.
   // The page crumb is a link whenever you are somewhere under it.
   const pagePath = activeItemId ? pathForNavId(activeItemId) : undefined
   const pageHref = activeItemId ? hrefForNavId(activeItemId) : undefined
@@ -207,12 +215,13 @@ export function ConsoleShell({
         user={user}
         onSettings={() => goTo('settings')}
         {...(onSignOut ? { onSignOut } : {})}
+        {...(headerLeading ? { headerLeading } : {})}
         /*
-         * The environment leads the trail, and it is where you change it too — the
+         * The environment leads the trail, and it is where you change it too: the
          * switcher moved out of the sidebar and became this first crumb. The one
          * place people look while working is the top of the page they are working
          * on, so the most consequential control in the product lives there and
-         * nowhere else — including managing environments: create and rename are
+         * nowhere else: including managing environments: create and rename are
          * in the switcher itself, not on a Settings page. Production is marked
          * green and sandbox yellow, because a two-state signal beats
          * colour-versus-nothing.
@@ -229,6 +238,7 @@ export function ConsoleShell({
                     onChange={onEnvironmentChange}
                     {...(mockAccounts ? { mockAccounts } : {})}
                     onCreate={() => setCreatingEnvironment(true)}
+                    onCopy={() => setCopyingEnvironment(true)}
                     onRename={(id) =>
                       setRenamingEnvironment(environments.find((e) => e.id === id) ?? null)
                     }
@@ -246,7 +256,7 @@ export function ConsoleShell({
         }
         /*
          * Create sits in the header rather than on each page, because the things
-         * people start cold — a subscription, a customer — do not live on the
+         * people start cold: a subscription, a customer: do not live on the
          * screen they happen to be looking at.
          */
         headerActions={
@@ -286,9 +296,16 @@ export function ConsoleShell({
         environments={environments}
         onSelectEnvironment={onEnvironmentChange}
       />
+      <MutationToasts />
       <EnvironmentRenameFormPage
         environment={renamingEnvironment}
         onClose={() => setRenamingEnvironment(null)}
+      />
+      <EnvironmentCopyFormPage
+        open={copyingEnvironment}
+        onOpenChange={setCopyingEnvironment}
+        current={environment}
+        environments={environments}
       />
     </ShellDetailTrailProvider>
   )

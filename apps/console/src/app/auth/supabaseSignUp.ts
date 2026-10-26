@@ -1,5 +1,5 @@
 import { env } from '@/env'
-import { clientFor } from './supabaseClient'
+import { clientFor, sessionClientFor } from './supabaseClient'
 import { ConfirmationLinkInvalid, EmailNotConfirmed } from './signUpErrors'
 
 export { ConfirmationLinkInvalid, EmailNotConfirmed }
@@ -16,10 +16,15 @@ export { ConfirmationLinkInvalid, EmailNotConfirmed }
  *      the browser. Supabase emails a confirmation link; nothing exists in
  *      Flexprice yet.
  *   2. The link lands on `/auth/signup/confirmation` with a session in the URL fragment.
- *      {@link readConfirmedSession} reads it, the page calls `POST /auth/signup`
- *      with its token, and {@link refreshedToken} swaps that token for one
- *      carrying the new tenant — the backend puts `tenant_id` into the user's
- *      `app_metadata`, and only a refreshed token has it.
+ *      {@link readConfirmedSession} hands it to the console's session client,
+ *      the page calls `POST /auth/signup` with its token, and
+ *      {@link refreshedToken} swaps that token for one carrying the new tenant:
+ *      the backend puts `tenant_id` into the user's `app_metadata`, and only a
+ *      refreshed token has it. The session then stays in that client, which
+ *      keeps refreshing it.
+ *
+ * Password sign-in on a hosted region goes through Supabase as well
+ * ({@link signInWithSupabase}), as V1's does, so it gets a refresh token too.
  *
  * A self-hosted build has no Supabase; {@link supabaseSignUpFor} says so and the
  * page signs up through the API directly, which there takes a password.
@@ -34,7 +39,7 @@ export function supabaseSignUpFor(region: string): boolean {
  * V1's confirmation path, kept on purpose. The Supabase projects' Redirect URLs
  * already allow it on every origin V1 runs on, localhost included. Anything not
  * on that list is not refused: GoTrue silently sends the browser to the
- * project's Site URL — prod — instead. That is how Google sign-in from a local
+ * project's Site URL: prod: instead. That is how Google sign-in from a local
  * V2 ended up on the production dashboard while it returned to `/sign-up/confirm`.
  */
 export const SIGN_UP_CONFIRM_PATH = '/auth/signup/confirmation'
@@ -61,7 +66,7 @@ function configFor(region: string) {
 
 /**
  * Registers the email and password with Supabase, which emails a confirmation
- * link. Resolves the same way whether or not the address is already taken —
+ * link. Resolves the same way whether or not the address is already taken:
  * Supabase does not say, and neither does the screen that follows.
  */
 export async function startSignUp(region: string, email: string, password: string): Promise<void> {
@@ -79,8 +84,8 @@ export async function startSignUp(region: string, email: string, password: strin
  * The same two-halves shape as email sign-up, with Google standing in for the
  * inbox: Supabase authenticates, then the browser comes back to
  * `/auth/signup/confirmation` with a session in the fragment, and that page either
- * creates the Flexprice account or — when the user already has one, so the
- * session's `app_metadata` already names a tenant — simply signs them in.
+ * creates the Flexprice account or: when the user already has one, so the
+ * session's `app_metadata` already names a tenant: simply signs them in.
  * Nothing new is needed there; it already distinguishes the two.
  *
  * Returns the URL rather than navigating, so the caller owns the page
@@ -113,12 +118,31 @@ export interface ConfirmedSession {
   email: string
   userId: string
   accessToken: string
-  /** Set when the account already exists — the link was followed a second time. */
+  /** Set when the account already exists: the link was followed a second time. */
   tenantId: string | null
 }
 
+type SupabaseSession = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof sessionClientFor>['auth']['getSession']>>['data']['session']
+>
+
+function confirmedFrom(session: SupabaseSession): ConfirmedSession {
+  const tenant = (session.user.app_metadata as { tenant_id?: unknown } | undefined)?.tenant_id
+  return {
+    email: session.user.email ?? '',
+    userId: session.user.id,
+    accessToken: session.access_token,
+    tenantId: typeof tenant === 'string' && tenant ? tenant : null,
+  }
+}
+
 /**
- * The session the confirmation link established.
+ * The session the confirmation link established, now held by the console's
+ * session client.
+ *
+ * The fragment's two tokens are handed to that client directly, rather than
+ * letting a second client consume the link: Supabase rotates refresh tokens, so
+ * two clients refreshing one session would spend each other's token and end it.
  *
  * A link Supabase rejected comes back with `error_description` in the fragment
  * instead of tokens; that sentence is shown as it is, since it says why.
@@ -131,33 +155,36 @@ export async function readConfirmedSession(
   const rejected = fragment.get('error_description')
   if (rejected) throw new ConfirmationLinkInvalid(rejected.replace(/\+/g, ' '))
 
-  // `getSession` waits for supabase-js to finish consuming the fragment.
-  const { data, error } = await clientFor(configFor(region)).auth.getSession()
+  const accessToken = fragment.get('access_token')
+  const refreshToken = fragment.get('refresh_token')
+  if (!accessToken || !refreshToken) throw new ConfirmationLinkInvalid()
+
+  const { data, error } = await sessionClientFor(configFor(region)).auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  })
   const session = data.session
   if (error || !session || !session.user.email) throw new ConfirmationLinkInvalid()
-
-  const tenant = (session.user.app_metadata as { tenant_id?: unknown } | undefined)?.tenant_id
-  return {
-    email: session.user.email,
-    userId: session.user.id,
-    accessToken: session.access_token,
-    tenantId: typeof tenant === 'string' && tenant ? tenant : null,
-  }
+  return confirmedFrom(session)
 }
 
 /** A fresh access token, now carrying the tenant the backend just assigned. */
 export async function refreshedToken(region: string): Promise<string> {
-  const { data, error } = await clientFor(configFor(region)).auth.refreshSession()
+  const { data, error } = await sessionClientFor(configFor(region)).auth.refreshSession()
   if (error || !data.session) throw new Error(error?.message ?? 'Could not refresh the session.')
   return data.session.access_token
 }
 
 /**
- * Drops the link's session from supabase-js and the tokens from the address
- * bar. The console's own session is what stays; the access token handed to it
- * remains valid on its own, as the one `POST /auth/login` returns does.
+ * Takes the link's tokens out of the address bar. After a failure it also ends
+ * the session the link started, which would otherwise sit in storage with no
+ * account behind it; after a success that session *is* the console's, and
+ * stays.
  */
-export async function forgetConfirmation(region: string): Promise<void> {
+export async function forgetConfirmation(
+  region: string,
+  { endSession }: { endSession: boolean },
+): Promise<void> {
   if (globalThis.location.hash) {
     globalThis.history.replaceState(
       null,
@@ -165,48 +192,57 @@ export async function forgetConfirmation(region: string): Promise<void> {
       `${globalThis.location.pathname}${globalThis.location.search}`,
     )
   }
-  await clientFor(configFor(region))
+  if (!endSession) return
+  await sessionClientFor(configFor(region))
     .auth.signOut({ scope: 'local' })
     .catch(() => undefined)
 }
 
+/** Supabase refused the email and password: wrong, or no such account. */
+export class SupabaseCredentialsRefused extends Error {
+  constructor() {
+    super('That email and password do not match.')
+    this.name = 'SupabaseCredentialsRefused'
+  }
+}
+
 /**
- * A sign-up that stopped half way, picked up at sign-in.
+ * Password sign-in on a hosted region, through Supabase as V1 does it.
  *
- * If the confirmation page never finished — the tab was closed, the request
- * failed, the link was opened twice — Supabase has a confirmed user and
- * Flexprice has none, so `POST /auth/login` refuses and the one-use link is
- * spent. V1 recovered by signing in through Supabase; so does this.
+ * Supabase returns a refresh token along with the access token, and the
+ * session client keeps both, so the session outlives the access token. The
+ * account behind it is then one of three:
  *
- * Called only after `POST /auth/login` refused. Resolves with the confirmed
- * session when there is an account to finish (no tenant yet), and with null
- * when there is not — wrong password, or a user who already has an organisation
- * and was refused for another reason, which must stand. Rejects with
- * {@link EmailNotConfirmed} when the password is right but the email was never
- * confirmed, which is worth saying.
+ *   - It names a tenant: signed in.
+ *   - It has none: a sign-up that stopped half way (the confirmation page never
+ *     finished, or its one-use link was spent). The account is created now, as
+ *     the confirmation page would have, and the token refreshed to carry it.
+ *   - Supabase refuses: {@link EmailNotConfirmed} when only the confirmation is
+ *     missing, which is worth saying, and {@link SupabaseCredentialsRefused}
+ *     otherwise.
  */
-export async function unfinishedSignUp(
+export async function signInWithSupabase(
   region: string,
   email: string,
   password: string,
-): Promise<ConfirmedSession | null> {
-  const client = clientFor(configFor(region))
+  create: Parameters<typeof completeAccount>[2],
+): Promise<NewSession> {
+  const client = sessionClientFor(configFor(region))
   const { data, error } = await client.auth.signInWithPassword({ email: email.trim(), password })
   if (error) {
     if (/not confirmed/i.test(error.message)) throw new EmailNotConfirmed(email.trim())
-    return null
+    if (/invalid login credentials/i.test(error.message) || error.status === 400) {
+      throw new SupabaseCredentialsRefused()
+    }
+    throw new Error(error.message)
   }
-  const session = data.session
-  const tenant = (session?.user.app_metadata as { tenant_id?: unknown } | undefined)?.tenant_id
-  if (!session || !session.user.email || (typeof tenant === 'string' && tenant)) {
+  if (!data.session) throw new SupabaseCredentialsRefused()
+  try {
+    return await completeAccount(region, confirmedFrom(data.session), create)
+  } catch (cause) {
+    // No console session follows, so none is left behind in storage either.
     await client.auth.signOut({ scope: 'local' }).catch(() => undefined)
-    return null
-  }
-  return {
-    email: session.user.email,
-    userId: session.user.id,
-    accessToken: session.access_token,
-    tenantId: null,
+    throw cause
   }
 }
 
@@ -215,6 +251,8 @@ export interface NewSession {
   token: string
   userId: string
   tenantId: string
+  /** The hosted region whose Supabase session client keeps this session fresh. */
+  region: string
 }
 
 /**
@@ -240,7 +278,7 @@ export async function completeAccount(
      *
      * The API reads the tenant from the token's `app_metadata.tenant_id`, and
      * `ValidateToken` returns an empty tenant rather than an error when it is
-     * missing — the middleware then refuses with "Invalid token claims". The
+     * missing: the middleware then refuses with "Invalid token claims". The
      * session *object* can carry a tenant the *token* does not, because the
      * token was minted earlier; `confirmed.tenantId` is read from the former.
      * Refreshing mints one from the current metadata, which is what V1 does
@@ -251,7 +289,7 @@ export async function completeAccount(
      * button. Try, and fall back to what we have.
      */
     const token = await refresh(region).catch(() => confirmed.accessToken)
-    return { token, userId: confirmed.userId, tenantId: confirmed.tenantId }
+    return { token, userId: confirmed.userId, tenantId: confirmed.tenantId, region }
   }
   const created = await create({
     email: confirmed.email,
@@ -262,5 +300,6 @@ export async function completeAccount(
     token: await refresh(region),
     userId: created.userId || confirmed.userId,
     tenantId: created.tenantId,
+    region,
   }
 }

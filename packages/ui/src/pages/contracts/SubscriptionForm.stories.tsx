@@ -7,6 +7,7 @@ import {
   type CreateSubscription,
   CreditGrantCadence,
   CreditGrantExpiryType,
+  InheritanceBlock,
   PriceType,
   type SubscriptionPhase,
   emptyPhase,
@@ -94,8 +95,14 @@ interface PlaygroundProps {
   endDate?: string
   /** Gives the plan's first charge a free trial of this many days. */
   planTrial?: number
+  /** Opens without the prefilled 14-day trial (a trialing contract takes no added charges). */
+  noTrial?: boolean
+  /** Opens with this contract start date (`YYYY-MM-DD`). */
+  startDate?: string
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** Customers (by id) that cannot inherit, as the page loads them. */
+  inheritanceBlocks?: Record<string, InheritanceBlock>
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   onStepChange: (step: string) => void
@@ -105,6 +112,8 @@ interface PlaygroundProps {
 function SubscriptionFormPlayground({
   step: stepArg,
   prefilled,
+  noTrial = false,
+  startDate,
   customerLocked,
   isSubmitting,
   submitError,
@@ -118,6 +127,7 @@ function SubscriptionFormPlayground({
   endDate,
   planTrial,
   phase,
+  inheritanceBlocks,
   onSubmit,
   onCancel,
   onStepChange,
@@ -192,10 +202,14 @@ function SubscriptionFormPlayground({
       key={`${prefilled}-${customerLocked}`}
       {...(prefilled
         ? {
-            defaultValue:
-              endDate || phase
-                ? { ...PREFILLED, phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
-                : PREFILLED,
+            defaultValue: {
+              ...PREFILLED,
+              ...(noTrial ? { trialPeriodDays: 0 } : {}),
+              ...(startDate ? { startDate } : {}),
+              ...(endDate || phase
+                ? { phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
+                : {}),
+            },
           }
         : {})}
       customers={customers}
@@ -216,6 +230,7 @@ function SubscriptionFormPlayground({
         },
       ]}
       customerLocked={customerLocked}
+      {...(inheritanceBlocks ? { inheritanceBlocks } : {})}
       isSubmitting={isSubmitting}
       submitError={submitError || null}
       trail={[{ label: 'Contracts' }, { label: 'Create contract' }]}
@@ -289,7 +304,7 @@ export const Create: Story = {
  * The first step opens as one question.
  *
  * Customer and plan are one step, but the plan half is withheld until there is
- * a customer — the step grows into itself rather than opening as a wall of
+ * a customer: the step grows into itself rather than opening as a wall of
  * fields for a decision that has not been made yet.
  */
 export const PlanAppearsAfterTheCustomer: Story = {
@@ -384,6 +399,18 @@ export const Prefilled: Story = {
   },
 }
 
+/** Proration sits in Dates and billing, off until someone turns it on. */
+export const ProrationIsOffUntilTurnedOn: Story = {
+  args: { prefilled: true, step: 'plan' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const proration = canvas.getByRole('switch', { name: /^Proration/ })
+    await expect(proration).not.toBeChecked()
+    await userEvent.click(proration)
+    await expect(proration).toBeChecked()
+  },
+}
+
 /**
  * Bill on a date you choose: the third card opens a date picker, Next asks for
  * a date until there is one, and the draft carries it as the billing anchor.
@@ -438,8 +465,8 @@ async function openCommitment(canvas: ReturnType<typeof within>) {
 
 /**
  * A contract of one phase lists the plan's charges in one Charges card, with
- * no phase chrome; proration sits under them. A usage charge's commitment
- * opens in a dialog.
+ * no phase chrome; proration is not here (it is a billing term, in Dates and
+ * billing). A usage charge's commitment opens in a dialog.
  */
 export const PhaseCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 6 },
@@ -447,7 +474,7 @@ export const PhaseCharges: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.queryByRole('heading', { name: 'Phase 1' })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).toBeVisible()
-    await expect(canvas.getByRole('switch', { name: /^Proration/ })).toBeChecked()
+    await expect(canvas.queryByRole('switch', { name: /^Proration/ })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
     const dialog = await openCommitment(canvas)
@@ -503,10 +530,8 @@ export const ConfiguresAChargeCommitment: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
-    // The review lists the charge among those this contract changes.
-    await expect(
-      await canvas.findByText(/· commits 10,000 units monthly · per minute, 1 window$/),
-    ).toBeVisible()
+    // The review counts the charge among those this contract changes.
+    await expect(await canvas.findByText(/· 1 changed from the plan$/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -537,7 +562,7 @@ export const ConfiguresAChargeCommitment: Story = {
 
 /**
  * A monthly contract bills monthly and one-time charges. A quarterly charge
- * fits and can be opted in; a weekly one never bills here — and the phase's
+ * fits and can be opted in; a weekly one never bills here: and the phase's
  * charge list says only what will bill.
  */
 export const ChargesAtOtherCadences: Story = {
@@ -568,7 +593,7 @@ export const ChargesAtOtherCadences: Story = {
   },
 }
 
-/** A fixed charge can be billed at another quantity — 25 seats — and the review says so. */
+/** A fixed charge can be billed at another quantity: 25 seats: and the review says so. */
 export const SetsAFixedChargeQuantity: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 2 },
   play: async ({ args, canvasElement }) => {
@@ -582,7 +607,7 @@ export const SetsAFixedChargeQuantity: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
       await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
     }
-    await expect(await canvas.findByText('· quantity 25')).toBeVisible()
+    await expect(await canvas.findByText(/· 1 changed from the plan$/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -626,7 +651,7 @@ export const PlanCreditGrants: Story = {
 
 /** A charge for this contract alone is added to the phase with the running contract's own dialog. */
 export const AddsAChargeForThisContract: Story = {
-  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  args: { prefilled: true, noTrial: true, step: 'phases', chargeCount: 2 },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
@@ -659,6 +684,51 @@ export const AddsAChargeForThisContract: Story = {
               extraCharges: [
                 expect.objectContaining({
                   charge: expect.objectContaining({ displayName: 'Onboarding', amount: '250' }),
+                }),
+              ],
+            }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
+/** A charge added on this contract can be reopened and changed; the change replaces it. */
+export const EditsAChargeAddedToThisContract: Story = {
+  args: { prefilled: true, noTrial: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add a charge' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Continue' }))
+    await userEvent.type(await dialog.findByLabelText('Display name'), 'Onboarding')
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '250')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(await canvas.findByText('Onboarding')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'More for Onboarding' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit charge' }))
+    const edit = within(await screen.findByRole('dialog', { name: 'Edit charge' }))
+    const amount = edit.getByLabelText(/^Amount/)
+    await expect(amount).toHaveValue('250')
+    await userEvent.clear(amount)
+    await userEvent.type(amount, '300')
+    await userEvent.click(edit.getByRole('button', { name: 'Save charge' }))
+
+    for (const step of ['commitments', 'billing', 'review']) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+      await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
+    }
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [
+            expect.objectContaining({
+              extraCharges: [
+                expect.objectContaining({
+                  charge: expect.objectContaining({ displayName: 'Onboarding', amount: '300' }),
                 }),
               ],
             }),
@@ -889,7 +959,7 @@ export const BillingStep: Story = {
       'placeholder',
       'Not available: the plan has fixed charges',
     )
-    // Proration moved to the charges; draft is the header's Save as draft.
+    // Proration is in Dates and billing; draft is the header's Save as draft.
     await expect(canvas.queryByText('Prorate changes')).toBeNull()
     await expect(canvas.queryByText('Create as draft')).toBeNull()
   },
@@ -911,6 +981,69 @@ export const ChoosesWhoPays: Story = {
     await expect(
       canvas.queryByText('Choose who pays, or switch back to the same customer.'),
     ).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
+  },
+}
+
+/**
+ * Customers inherit the contract: picked by name, shown as chips, and sent by
+ * external id. A customer with a contract of its own is listed but cannot be
+ * picked, and says why: the API would refuse it.
+ */
+export const InheritsCustomers: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    inheritanceBlocks: { cus_3: InheritanceBlock.OwnContract },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const picker = canvas.getByRole('combobox', { name: /^Inherited customers/ })
+    await expect(picker).toHaveAttribute('placeholder', 'Add customers to inherit…')
+    await userEvent.click(picker)
+    await expect(await screen.findByRole('option', { name: /Umbrella/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    await expect(screen.getByRole('option', { name: /Umbrella/ })).toHaveTextContent(
+      'Has its own contract',
+    )
+    await userEvent.click(screen.getByRole('option', { name: /Globex/ }))
+    await expect(canvas.getByRole('button', { name: 'Remove Globex' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inheritedCustomerExternalIds: ['ext_1'],
+          invoicingCustomerExternalId: '',
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * Inherited customers are billed to the contract's own customer, so another
+ * billing customer beside them is stopped here, not by the API.
+ */
+export const InheritedCustomersKeepTheSamePayer: Story = {
+  args: { prefilled: true, step: 'billing' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Inherited customers/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Globex/ }))
+    await userEvent.click(canvas.getByRole('radio', { name: /Another customer/ }))
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Invoiced to/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Initech/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(
+      await canvas.findByText(/Inherited customers are billed to this contract's customer/),
+    ).toBeVisible()
+    await expect(args.onStepChange).not.toHaveBeenCalledWith('review')
+    await userEvent.click(canvas.getByRole('radio', { name: /Same customer/ }))
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
   },
@@ -955,10 +1088,10 @@ export const ReviewAndSubmit: Story = {
 }
 
 /**
- * The review names each charge this deal changes — new price over the plan's,
- * quantity, coupon — the first eight, then how many more, and counts them.
+ * The review counts the charges this deal changes rather than listing them:
+ * a contract can change dozens; the charges step shows each one.
  */
-export const ReviewListsChangedCharges: Story = {
+export const ReviewCountsChangedCharges: Story = {
   args: {
     prefilled: true,
     step: 'review',
@@ -977,8 +1110,7 @@ export const ReviewListsChangedCharges: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('20 charges · 10 changed from the plan')).toBeVisible()
-    await expect(canvas.getByText('· $7.00 (was $9.00) · 20% off (LAUNCH20)')).toBeVisible()
-    await expect(canvas.getByText('and 2 more')).toBeVisible()
+    await expect(canvas.queryByText('and 2 more')).not.toBeInTheDocument()
     await expect(canvas.getByText('Loyalty ($50 off) · 1 on single charges')).toBeVisible()
   },
 }
@@ -1003,7 +1135,7 @@ export const SubmitError: Story = {
 }
 
 /**
- * The review is one card per step, each with its Edit — the reference's
+ * The review is one card per step, each with its Edit: the reference's
  * summary, not a second copy of each step. There is no first-invoice estimate:
  * nothing in the API can make one.
  */
@@ -1018,7 +1150,7 @@ export const ReviewByStep: Story = {
     await expect(canvas.getByText(/^Acme Robotics · /)).toBeVisible()
     await expect(canvas.getByText('Oct 20, 2026, 12:00 AM → until cancelled')).toBeVisible()
     await expect(canvas.getByText("4 charges · all at the plan's prices")).toBeVisible()
-    await expect(canvas.getByText('Prorates changes')).toBeVisible()
+    await expect(canvas.getByText('No proration')).toBeVisible()
     await expect(canvas.getByText('VAT 20%')).toBeVisible()
     await expect(canvas.getByText('Each period')).toBeVisible()
     await expect(canvas.getByText('14 days')).toBeVisible()
@@ -1027,5 +1159,30 @@ export const ReviewByStep: Story = {
     await expect(canvas.queryByRole('complementary', { name: 'Summary' })).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Edit billing' }))
     await expect(args.onStepChange).toHaveBeenLastCalledWith('billing')
+  },
+}
+
+/**
+ * A free trial makes the contract start trialing, and the API takes added
+ * charges only on an active one: the form says so instead of sending a request
+ * that would fail.
+ */
+export const TrialWithAddedChargeIsStopped: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add a charge' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Continue' }))
+    await userEvent.type(await dialog.findByLabelText('Display name'), 'Onboarding')
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '250')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(await canvas.findByText('Onboarding')).toBeVisible()
+    for (let i = 0; i < 3; i++) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    }
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await expect(await canvas.findByText(/free trial starts as trialing/)).toBeVisible()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }

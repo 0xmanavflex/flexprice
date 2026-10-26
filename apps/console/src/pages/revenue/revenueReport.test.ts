@@ -5,9 +5,13 @@ import {
   change,
   customerRows,
   daysToPay,
+  creditRows,
+  creditTypeRows,
   previousWindow,
   rangeWindow,
+  resolveGrain,
   receivables,
+  alignToWindow,
   revenueSeries,
 } from './revenueReport'
 
@@ -41,6 +45,24 @@ describe('windows', () => {
   it('puts the comparison window immediately before, the same length', () => {
     const window = { start: day('2026-10-01'), end: day('2026-10-11') }
     expect(previousWindow(window)).toEqual({ start: day('2026-09-21'), end: day('2026-10-01') })
+  })
+})
+
+describe('alignToWindow', () => {
+  it('keeps every month in the window, with quiet months as zero', () => {
+    const window = rangeWindow('12m', NOW)
+    const points = alignToWindow(
+      [
+        { at: day('2026-09-01'), value: 800 },
+        { at: day('2026-10-01'), value: 6900 },
+      ],
+      window,
+      'month',
+    )
+    expect(points).toHaveLength(12)
+    expect(points.map((point) => point.label).slice(-2)).toEqual(['Sep', 'Oct'])
+    expect(points.map((point) => point.value).slice(0, 10)).toEqual(Array(10).fill(0))
+    expect(points.map((point) => point.value).slice(-2)).toEqual([800, 6900])
   })
 })
 
@@ -181,7 +203,8 @@ describe('parseRevenueSearch', () => {
   it('falls back to the defaults for anything it does not know', () => {
     expect(parseRevenueSearch({ view: 'nope', range: 'forever', compare: 'x' })).toEqual({
       view: 'overview',
-      range: '90d',
+      range: '12m',
+      grain: 'auto',
       compare: 'none',
       currency: '',
     })
@@ -190,8 +213,119 @@ describe('parseRevenueSearch', () => {
     ).toEqual({
       view: 'customers',
       range: '12m',
+      grain: 'auto',
       compare: 'previous',
       currency: 'EUR',
     })
+    expect(parseRevenueSearch({ grain: 'week' }).grain).toBe('week')
+    expect(parseRevenueSearch({ grain: 'hourly' }).grain).toBe('auto')
+  })
+})
+
+describe('resolveGrain', () => {
+  it('keeps the range default on auto and honours a chosen grain', () => {
+    expect(resolveGrain('auto', 'week')).toBe('week')
+    expect(resolveGrain('day', 'month')).toBe('day')
+    expect(resolveGrain('month', 'day')).toBe('month')
+  })
+})
+
+describe('alignToWindow at a partial first bucket', () => {
+  const window = {
+    start: new Date('2026-09-25T00:00:00Z'),
+    end: new Date('2026-10-25T12:00:00Z'),
+  }
+
+  it('keeps a monthly row dated before the window start', () => {
+    const out = alignToWindow(
+      [
+        { at: new Date('2026-09-01T00:00:00Z'), value: 10 },
+        { at: new Date('2026-10-01T00:00:00Z'), value: 5 },
+      ],
+      window,
+      'month',
+    )
+    expect(out.map((point) => point.value)).toEqual([10, 5])
+  })
+
+  it('keeps the weekly row that contains the window start', () => {
+    const out = alignToWindow(
+      [
+        { at: new Date('2026-09-21T00:00:00Z'), value: 7 },
+        { at: new Date('2026-09-14T00:00:00Z'), value: 99 },
+      ],
+      window,
+      'week',
+    )
+    expect(out[0]?.value).toBe(7)
+    expect(out.reduce((sum, point) => sum + (point.value ?? 0), 0)).toBe(7)
+  })
+
+  it('still drops a daily row before the window', () => {
+    const out = alignToWindow([{ at: new Date('2026-09-24T00:00:00Z'), value: 3 }], window, 'day')
+    expect(out.reduce((sum, point) => sum + (point.value ?? 0), 0)).toBe(0)
+  })
+
+  it('does not add two weekly averages when the series is not additive', () => {
+    const out = alignToWindow(
+      [
+        { at: new Date('2026-09-21T00:00:00Z'), value: 7 },
+        { at: new Date('2026-09-28T00:00:00Z'), value: 5 },
+      ],
+      window,
+      'week',
+      false,
+      null,
+      false,
+    )
+    expect(out[0]?.value).toBe(5)
+  })
+
+  it('keeps a partial first average when the series is not additive', () => {
+    const out = alignToWindow(
+      [{ at: new Date('2026-09-01T00:00:00Z'), value: 12 }],
+      window,
+      'month',
+      false,
+      null,
+      false,
+    )
+    expect(out[0]?.value).toBe(12)
+  })
+})
+
+describe('creditRows', () => {
+  it('pivots paid and free per customer, largest first', () => {
+    const rows = creditRows(
+      [
+        { keys: { customer_id: 'a', credit_type: 'paid' }, value: 30 },
+        { keys: { customer_id: 'a', credit_type: 'free' }, value: 10 },
+        { keys: { customer_id: 'b', credit_type: 'free' }, value: 90 },
+      ],
+      (id) => id.toUpperCase(),
+      String,
+    )
+    expect(rows.map((row) => row.id)).toEqual(['b', 'a'])
+    expect(rows[1]).toMatchObject({ name: 'A', paid: 30, free: 10, total: 40 })
+    expect(rows[0]).toMatchObject({ paid: 0, free: 90, total: 90 })
+    expect(rows.map((row) => row.display.share)).toEqual(['69%', '31%'])
+  })
+})
+
+describe('creditTypeRows', () => {
+  it('counts customers with a positive amount per type', () => {
+    const rows = creditTypeRows(
+      [
+        { keys: { customer_id: 'a', credit_type: 'paid' }, value: 30 },
+        { keys: { customer_id: 'b', credit_type: 'paid' }, value: 20 },
+        { keys: { customer_id: 'b', credit_type: 'free' }, value: 5 },
+        { keys: { customer_id: 'c', credit_type: 'free' }, value: 0 },
+      ],
+      'credit_type',
+      { paid: 'Paid credits', free: 'Free credits' },
+      String,
+    )
+    expect(rows[0]).toMatchObject({ id: 'paid', label: 'Paid credits', customers: 2, amount: 50 })
+    expect(rows[1]).toMatchObject({ id: 'free', customers: 1, amount: 5 })
   })
 })

@@ -45,14 +45,14 @@ export function GroupMembersView({
           errorKind={errorKind}
           onRetry={onRetry}
           hideRowActions
-          emptyDescription="This group holds no available charges."
+          emptyDescription="This tag holds no available charges."
         />
         {missing.length > 0 ? (
           <Section title="Unavailable members" showTitle>
             <ul className="space-y-2 text-sm">
               {missing.map((member) => (
                 <li key={member.id}>
-                  <span className="font-mono">{member.id}</span> — Not found
+                  <span className="font-mono">{member.id}</span>: Not found
                 </li>
               ))}
             </ul>
@@ -66,7 +66,7 @@ export function GroupMembersView({
       <Section title="Members">
         <SubTabState
           isLoading={false}
-          empty={{ title: `This group holds no ${kind} yet.` }}
+          empty={{ title: `This tag holds no ${kind} yet.` }}
           hasData={false}
           error={error}
           errorKind={errorKind}
@@ -83,7 +83,7 @@ export function GroupMembersView({
         <EmptyState
           scene="settings"
           size="inline"
-          title={`Loading the ${kind} in this group`}
+          title={`Loading the ${kind} in this tag`}
           description="Their names appear here once they load."
         />
       </Section>
@@ -97,7 +97,7 @@ export function GroupMembersView({
         noun="members"
         rows={members}
         getRowId={(m) => m.id}
-        empty={`This group holds no ${kind} yet.`}
+        empty={`This tag holds no ${kind} yet.`}
         columns={[
           {
             key: 'n',

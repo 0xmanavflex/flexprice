@@ -20,7 +20,7 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
   args: {
-    trail: [{ label: 'Groups' }, { label: 'Create group' }],
+    trail: [{ label: 'Tags' }, { label: 'Create tag' }],
     onSubmit: fn(),
     onCancel: fn(),
   },
@@ -38,7 +38,7 @@ export const Submits: Story = {
     const lookupKey = canvas.getByRole('textbox', { name: /^Lookup key/ })
     await userEvent.clear(lookupKey)
     await userEvent.type(lookupKey, 'eu-region')
-    await userEvent.click(canvas.getByRole('button', { name: 'Create group' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create tag' }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'EU region', lookupKey: 'eu-region' }),
     )
@@ -48,7 +48,7 @@ export const Submits: Story = {
 export const ValidationFromDomain: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Create group' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create tag' }))
     await expect(await canvas.findByText('Enter a name')).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
@@ -62,7 +62,7 @@ export const Submitting: Story = {
 }
 
 export const SubmitError: Story = {
-  args: { submitError: 'A group with that lookup key already exists.' },
+  args: { submitError: 'A tag with that lookup key already exists.' },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('alert')).toBeInTheDocument()
   },

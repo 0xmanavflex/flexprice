@@ -7,7 +7,7 @@ const charge = (id: string, billingPeriod: BillingPeriod, extra: Partial<Charge>
 
 const monthly = { currency: 'USD', billingPeriod: BillingPeriod.Monthly, billingPeriodCount: 1 }
 
-describe('cadenceAllowed — the API rule', () => {
+describe('cadenceAllowed: the API rule', () => {
   it.each([
     [BillingPeriod.Quarterly, 1, BillingPeriod.Monthly, 1, true],
     [BillingPeriod.Quarterly, 1, BillingPeriod.Annual, 1, true],

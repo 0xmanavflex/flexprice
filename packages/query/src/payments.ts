@@ -46,7 +46,7 @@ export interface PaymentWire {
 /**
  * Unknown states are read as still in flight.
  *
- * The wire-to-domain table itself lives in `@fp/domain` — an invoice carries
+ * The wire-to-domain table itself lives in `@fp/domain`: an invoice carries
  * the same `payment_status` and has to fold it the same way. What is local to
  * *this* list is the fallback: the domain reports an unrecognised value as
  * absent, and a payment row with no status at all is less useful than one that
@@ -57,7 +57,7 @@ export interface PaymentWire {
 export function toPayment(wire: PaymentWire): Payment {
   return {
     id: wire.id ?? '',
-    // The amount and its currency, joined — never the two strings apart.
+    // The amount and its currency, joined: never the two strings apart.
     amount: moneyOr(wire.amount, wire.currency),
     status: toPaymentStatus(wire.paymentStatus) ?? PaymentStatus.Pending,
     methodType: wire.paymentMethodType ?? '',
@@ -74,7 +74,7 @@ export function toPayment(wire: PaymentWire): Payment {
  *
  * `listPayments` is a GET whose query params (`ListPaymentsRequest`) take
  * `limit` and `offset`; status and search are not among the filters this list
- * pushes down, so they are applied on the page instead — see {@link
+ * pushes down, so they are applied on the page instead: see {@link
  * fetchPayments}.
  */
 export function toPaymentFilter(query: PaymentQuery): Record<string, unknown> {
@@ -102,7 +102,7 @@ export async function fetchPayments(
   const payments = (response.items ?? []).map((item) => toPayment(item as PaymentWire))
 
   // Neither status nor search is a server-side filter on this endpoint, so both
-  // are applied here, on the page the request returned — the same split coupons
+  // are applied here, on the page the request returned: the same split coupons
   // use for status. Search matches the invoice number a payment collected
   // against.
   const term = query.search.trim().toLowerCase()
@@ -122,7 +122,7 @@ export async function fetchPayments(
  * The page's entire interface to payments.
  *
  * Takes domain vocabulary, returns domain models. The caller never learns that
- * listing payments is a GET with an offset — which is what lets the page hand
+ * listing payments is a GET with an offset: which is what lets the page hand
  * its state to a URL instead of to a component.
  */
 export function usePayments(query: PaymentQuery) {
@@ -235,6 +235,10 @@ export function toRecordPaymentRequest(draft: RecordPayment): Record<string, unk
     destinationId: draft.invoiceId,
     destinationType: 'INVOICE',
     paymentMethodType: draft.methodType,
+    // Credits are drawn from a wallet, which the request names as the method.
+    ...(draft.methodType === 'CREDITS' && draft.walletId
+      ? { paymentMethodId: draft.walletId }
+      : {}),
     processPayment: draft.processNow,
   }
 }
@@ -260,6 +264,8 @@ function useInvalidatePayments() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.payments.all() })
     void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
     void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    // A payment from credits draws a wallet down.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.wallets.all() })
   }
 }
 
@@ -268,13 +274,14 @@ export function useRecordPayment() {
   const invalidate = useInvalidatePayments()
 
   return useMutation({
+    meta: { notify: { success: 'Payment recorded', error: 'Could not record the payment.' } },
     mutationFn: (draft: RecordPayment) =>
       call(() => client.payments.createPayment(toRecordPaymentRequest(draft) as never)),
     onSuccess: invalidate,
   })
 }
 
-/** Run an initiated payment — `POST /payments/{id}/process`. */
+/** Run an initiated payment: `POST /payments/{id}/process`. */
 export function useProcessPayment() {
   const client = useFlexprice()
   const invalidate = useInvalidatePayments()

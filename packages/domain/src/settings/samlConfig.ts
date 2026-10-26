@@ -5,7 +5,7 @@
  * API does not: it answers `404 {"code":"not_found","message":"SAML single
  * sign-on is not available on this deployment"}`, because the routes are only
  * mounted when `auth.saml.enabled` is set. That 404 is a statement about the
- * deployment, not about this tenant's configuration — a tenant with nothing
+ * deployment, not about this tenant's configuration: a tenant with nothing
  * saved on a SAML-capable deployment gets a 200 and the defaults, like every
  * other settings key.
  *
@@ -56,7 +56,7 @@ export interface SamlConfig {
 /**
  * SSO, and whether this deployment has any.
  *
- * `available: false` means the console could not read the config — for **any**
+ * `available: false` means the console could not read the config: for **any**
  * reason, not only a 404. See `useSamlConfig` in `@fp/query` for why that
  * breadth is deliberate and load-bearing.
  */

@@ -1,108 +1,139 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import {
   type AnalyticsQuery,
   CustomerAnalyticsView,
-  DEMO_FEATURE_ANALYTICS,
   type FeatureAnalytics,
 } from './CustomerAnalyticsView'
 
-const NAMES = [
-  ['API Calls', 'calls'],
-  ['AI Tokens', 'tokens'],
-  ['Video Minutes', 'minutes'],
-  ['Compute Minutes', 'minutes'],
-  ['Storage Writes', 'GB'],
-  ['Image Generations', 'images'],
-  ['Email Sends', 'emails'],
-  ['Seats', 'seats'],
-] as const
+const days = (values: number[]) => values.map((value, i) => ({ label: `Oct ${i + 1}`, value }))
 
-/** Deterministic features: the same count always gives the same breakdown. */
-function makeFeatures(count: number): FeatureAnalytics[] {
-  return Array.from({ length: count }, (_, i) => {
-    const [name, unit] = NAMES[i % NAMES.length] ?? NAMES[0]
-    const thousands = 80 + i * 83
-    const revenue = 240 + ((i * 397) % 1600)
-    return {
-      id: `f${i + 1}`,
-      name: i >= NAMES.length ? `${name} ${Math.floor(i / NAMES.length) + 1}` : name,
-      usage: `${thousands},000`,
-      short: `${thousands}K`,
-      unit,
-      revenue,
-      cost: Math.round(revenue * (0.35 + ((i * 7) % 40) / 100) * 100) / 100,
-    }
-  })
-}
+/** What the page hands the view: already formatted, from the usage and cost analytics. */
+const FEATURES: FeatureAnalytics[] = [
+  {
+    id: 'feat_api',
+    name: 'API Calls',
+    usage: '120,000',
+    short: '120K',
+    unit: 'calls',
+    revenue: '$240.00',
+    share: 0.48,
+    cost: '$100.80',
+    points: days([3200, 4100, 3900, 4500, 5200, 4800, 3600]),
+  },
+  {
+    id: 'feat_tokens',
+    name: 'AI Tokens',
+    usage: '203,000',
+    short: '203K',
+    unit: 'tokens',
+    revenue: '$180.00',
+    share: 0.36,
+    cost: '$90.20',
+    points: days([6100, 7400, 6800, 7900, 8800, 8100, 7000]),
+  },
+  {
+    id: 'feat_minutes',
+    name: 'Voice Minutes',
+    usage: '8,400',
+    short: '8.4K',
+    unit: 'minutes',
+    revenue: '$80.00',
+    share: 0.16,
+    cost: null,
+    points: days([210, 260, 240, 300, 330, 310, 280]),
+  },
+]
+
+const QUERY: AnalyticsQuery = { from: '2026-10-01', to: '2026-10-22', includeChildren: false }
 
 const meta = {
   title: 'App/Customers/Customer analytics',
   component: CustomerAnalyticsView,
   parameters: { layout: 'padded' },
-  args: { features: DEMO_FEATURE_ANALYTICS },
+  args: {
+    features: FEATURES,
+    totals: { revenue: '$500.00', cost: '$191.00', margin: '$309.00', marginPercent: '61.8%' },
+    query: QUERY,
+    onQueryChange: fn(),
+    featureOptions: FEATURES.map(({ id, name }) => ({ id, name })),
+    selectedFeatureIds: [],
+    onSelectedFeatureIdsChange: fn(),
+  },
 } satisfies Meta<typeof CustomerAnalyticsView>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Holds the date range and children switch so the toolbar works while `query` is driven from outside. */
-function Controlled({
-  features,
-  initial,
-}: {
-  features: FeatureAnalytics[]
-  initial: AnalyticsQuery
-}) {
-  const [query, setQuery] = useState(initial)
-  return <CustomerAnalyticsView features={features} query={query} onQueryChange={setQuery} />
-}
-
-interface PlaygroundArgs {
-  features: number
-  from: string
-  to: string
-  includeChildren: boolean
-}
-
-/** Drag features from 0 to 12; the chart tabs and breakdown table follow. Edit the range from the dates. */
-export const Playground: StoryObj<PlaygroundArgs> = {
-  args: { features: 4, from: '2026-09-01', to: '2026-09-30', includeChildren: false },
-  argTypes: {
-    features: { control: { type: 'range', min: 0, max: 12, step: 1 } },
-    from: { control: 'text', description: 'ISO date, YYYY-MM-DD.' },
-    to: { control: 'text', description: 'ISO date, YYYY-MM-DD.' },
-    includeChildren: { control: 'boolean' },
-  },
-  render: ({ features, from, to, includeChildren }) => (
-    <Controlled
-      key={`${from}|${to}|${includeChildren}`}
-      features={makeFeatures(features)}
-      initial={{ from, to, includeChildren }}
-    />
-  ),
-}
-
+/** Revenue, cost and margin up top, a tab per feature, and the breakdown below. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('button', { name: 'Features' })).toBeInTheDocument()
-    await expect(canvas.getByText('Margin %')).toBeInTheDocument()
+    await expect(canvas.getByText('$309.00')).toBeInTheDocument()
+    await expect(canvas.getByText('61.8%')).toBeInTheDocument()
+    await expect(canvas.getByText('Usage breakdown')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Features' })).toHaveTextContent('All features')
   },
 }
 
-/** No metered features: the totals are zero and there is no chart. */
-export const NoFeatures: Story = { args: { features: [] } }
-
-export const SingleFeature: Story = { args: { features: makeFeatures(1) } }
-
-export const ManyFeatures: Story = { args: { features: makeFeatures(10) } }
-
-/** A caller-owned query, including the children switch turned on. */
-export const IncludingChildren: Story = {
+/** No cost sheet: cost and margin read "—", never a made-up zero. */
+export const WithoutCostSheet: Story = {
   args: {
-    query: { from: '2026-08-01', to: '2026-08-31', includeChildren: true },
-    onQueryChange: fn(),
+    totals: { revenue: '$500.00', cost: null, margin: null, marginPercent: null },
+    features: FEATURES.map((f) => ({ ...f, cost: null })),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText('—').length).toBeGreaterThanOrEqual(3)
+  },
+}
+
+/** Narrowing the features hands the page the ids to ask the API for. */
+export const NarrowsTheFeatures: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Features' }))
+    await userEvent.click(
+      await within(document.body).findByRole('menuitemcheckbox', { name: 'AI Tokens' }),
+    )
+    await expect(args.onSelectedFeatureIdsChange).toHaveBeenCalledWith(['feat_api', 'feat_minutes'])
+  },
+}
+
+/** The children switch is part of the query the page sends. */
+export const IncludesChildren: Story = {
+  render: function Render(args) {
+    const [query, setQuery] = useState(args.query)
+    return <CustomerAnalyticsView {...args} query={query} onQueryChange={setQuery} />
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getAllByLabelText('Include children')[0]!)
+    await expect(canvas.getAllByText(/including child customers/).length).toBeGreaterThan(0)
+  },
+}
+
+export const Loading: Story = {
+  args: {
+    features: [],
+    totals: { revenue: null, cost: null, margin: null, marginPercent: null },
+    isLoading: true,
+  },
+}
+
+export const Empty: Story = {
+  args: { features: [], totals: { revenue: null, cost: null, margin: null, marginPercent: null } },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('No usage in this period')).toBeInTheDocument()
+  },
+}
+
+export const Failed: Story = {
+  args: { features: [], error: 'The analytics service did not answer.', onRetry: fn() },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText('Analytics could not be loaded'),
+    ).toBeInTheDocument()
   },
 }

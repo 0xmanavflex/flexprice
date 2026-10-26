@@ -21,6 +21,7 @@ import {
   ActionError,
   DelayedHint,
   PanelError,
+  PanelActions,
   PanelFirstRun,
   WidePanel,
   formatDate,
@@ -33,13 +34,13 @@ import { useDraft } from './useDraft'
 const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
 
 /**
- * API keys — list, issue, revoke. Lives in Settings; `/api-keys` redirects to its section.
+ * API keys: list, issue, revoke. Lives in Settings; `/api-keys` redirects to its section.
  *
  * ## A snippet list, not a data table
  *
  * A key is something you look at, copy and occasionally revoke; nobody sorts,
- * filters or pages through them. So each key is one compact row — name and
- * dates on the left, the masked key in monospace with a copy button, Revoke —
+ * filters or pages through them. So each key is one compact row: name and
+ * dates on the left, the masked key in monospace, Revoke:
  * inside one outline, with no toolbar beyond the create button. Deliberate
  * deviation from the shared table, by product request.
  *
@@ -50,7 +51,7 @@ const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
  * deliberately **not** put in the query cache, so a refetch, a remount or a
  * reload loses it for good. The create dialog turns into the secret's one
  * render: copy button, a plain sentence saying this is the only time, and an
- * explicit "I have saved it" to close — not a timer, not a click elsewhere.
+ * explicit "I have saved it" to close: not a timer, not a click elsewhere.
  */
 export function ApiKeysPanel() {
   const keys = useApiKeys(DEFAULT_API_KEY_QUERY)
@@ -64,7 +65,9 @@ export function ApiKeysPanel() {
   const failure = toFailure(keys.error, 'your API keys')
   const rows = keys.data?.keys ?? []
 
-  if (failure) {
+  // Never while a fresh secret is on screen: the list refetches after a key is
+  // issued, and swapping the panel for the error would lose the only copy.
+  if (failure && !issued) {
     return (
       <WidePanel>
         <PanelError failure={failure} onRetry={() => void keys.refetch()} />
@@ -72,44 +75,40 @@ export function ApiKeysPanel() {
     )
   }
 
-  // With no keys the page is the empty state alone, centred in the page body,
-  // and it carries the only create button — no toolbar above it offering a
-  // second one.
+  // With no keys the empty state fills the page body, centred, under the same
+  // top-right create button the list has.
   const firstRun = !keys.isPending && rows.length === 0
 
   return (
     <WidePanel fill={firstRun}>
-      <section className={firstRun ? 'flex flex-1 flex-col' : 'flex flex-col gap-3'}>
+      <section className={firstRun ? 'flex flex-1 flex-col gap-3' : 'flex flex-col gap-3'}>
         <h1 className="sr-only">API keys</h1>
         {keys.isPending ? (
           <LoadingRows rows={3} columns={3} />
-        ) : firstRun ? (
-          <PanelFirstRun
-            scene="developers"
-            title="No API keys yet"
-            description="An API key lets your servers send usage events and call the Flexprice API without a person signing in."
-            action={
-              <WriteGate entity={RBAC_ENTITY.Secret}>
+        ) : (
+          <>
+            <PanelActions>
+              <DelayedHint text="What your systems authenticate with when they send usage or read billing data.">
                 <WriteGate entity={RBAC_ENTITY.Secret}>
                   <Button onClick={() => setIsCreating(true)}>Create API key</Button>
                 </WriteGate>
-              </WriteGate>
-            }
-            docsHref={API_DOCS_URL}
-            docsLabel="API docs"
-          />
-        ) : (
-          <>
-            <div className="flex justify-end">
-              <DelayedHint text="What your systems authenticate with when they send usage or read billing data.">
-                <Button onClick={() => setIsCreating(true)}>Create API key</Button>
               </DelayedHint>
-            </div>
-            <ul aria-label="API keys" className="bg-background divide-y rounded-xl border">
-              {rows.map((key) => (
-                <KeyRow key={key.id} apiKey={key} onRevoke={() => setRevoking(key)} />
-              ))}
-            </ul>
+            </PanelActions>
+            {firstRun ? (
+              <PanelFirstRun
+                scene="developers"
+                title="No API keys yet"
+                description="An API key lets your servers send usage events and call the Flexprice API without a person signing in."
+                docsHref={API_DOCS_URL}
+                docsLabel="API docs"
+              />
+            ) : (
+              <ul aria-label="API keys" className="bg-background divide-y rounded-xl border">
+                {rows.map((key) => (
+                  <KeyRow key={key.id} apiKey={key} onRevoke={() => setRevoking(key)} />
+                ))}
+              </ul>
+            )}
           </>
         )}
       </section>
@@ -129,7 +128,7 @@ export function ApiKeysPanel() {
           void create
             .mutateAsync(draft)
             .then((result) => {
-              // The secret is held in component state and nowhere else —
+              // The secret is held in component state and nowhere else:
               // putting it in the cache is what would let it outlive the
               // one moment it is meant to be visible.
               setIssued(result)
@@ -169,7 +168,7 @@ function maskedKey(key: ApiKey): string {
   return `${key.displayId || key.id}${'•'.repeat(12)}`
 }
 
-/** One key: name and dates, the masked key with copy, Revoke. */
+/** One key: name and dates, the masked key, Revoke. The secret is not stored, so there is nothing to copy. */
 function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) {
   const name = apiKey.name || apiKey.displayId || apiKey.id
   return (
@@ -199,7 +198,9 @@ function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) 
           {apiKey.expiresAt ? ` · Expires ${formatDate(apiKey.expiresAt)}` : ''}
         </span>
       </div>
-      <CopySnippet value={apiKey.displayId || apiKey.id} display={maskedKey(apiKey)} label={name} />
+      <code className="bg-muted max-w-full min-w-0 truncate rounded-md px-2.5 py-1 font-mono text-xs">
+        {maskedKey(apiKey)}
+      </code>
       {/* Revoking needs secret write (V1). */}
       <WriteGate entity={RBAC_ENTITY.Secret}>
         <Button size="sm" variant="ghost" onClick={onRevoke}>
@@ -211,41 +212,35 @@ function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) 
 }
 
 /**
- * A monospace value with a copy button beside it.
- *
- * `value` is what is copied, `display` what is shown — for a stored key they
- * differ (the visible prefix, padded with dots), for a fresh secret they are
- * the same string.
+ * A freshly issued secret, shown whole (wrapped, never truncated) with a
+ * labelled copy button, so a long key is legible and copyable at a glance.
  */
-function CopySnippet({
-  value,
-  display,
-  label,
-}: {
-  value: string
-  display?: string
-  label: string
-}) {
+function SecretReveal({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
   return (
-    <span className="bg-muted flex max-w-full min-w-0 items-center gap-1 rounded-md py-0.5 pr-0.5 pl-2.5">
-      <code className="truncate font-mono text-xs">{display ?? value}</code>
-      <Button
-        type="button"
-        size="icon-xs"
-        variant="ghost"
-        aria-label={copied ? `Copied ${label}` : `Copy ${label}`}
-        onClick={() => {
-          void navigator.clipboard
-            .writeText(value)
-            .then(() => setCopied(true))
-            // Clipboard access can be refused; say nothing rather than claim success.
-            .catch(() => setCopied(false))
-        }}
-      >
-        {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
-      </Button>
-    </span>
+    <div className="flex flex-col gap-2">
+      <code className="bg-muted rounded-md px-3 py-2.5 font-mono text-sm break-all select-all">
+        {value}
+      </code>
+      <div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label={copied ? `Copied ${label}` : `Copy ${label}`}
+          onClick={() => {
+            void navigator.clipboard
+              .writeText(value)
+              .then(() => setCopied(true))
+              // Clipboard access can be refused; say nothing rather than claim success.
+              .catch(() => setCopied(false))
+          }}
+        >
+          {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
+          {copied ? 'Copied' : 'Copy key'}
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -273,7 +268,7 @@ function CreateKeyDialog({
   const type = draft.value.type
 
   /*
-   * `ISSUABLE_API_KEY_TYPES` is declared `ApiKeyType[]` — wider than the two
+   * `ISSUABLE_API_KEY_TYPES` is declared `ApiKeyType[]`: wider than the two
    * literals `createApiKeySchema` accepts, because `integration` is a real key
    * type that simply cannot be issued from here. Narrowed rather than cast, so
    * a type added to that list which the schema rejects loses its button
@@ -287,11 +282,12 @@ function CreateKeyDialog({
   return (
     <FormDialog
       open={open}
-      size="sm"
+      size={issued ? 'md' : 'sm'}
       title={issued ? 'Copy this key now' : 'New API key'}
+      // The secret is dismissed by "I have saved it", never by a stray click or a close control.
+      dismissible={!issued}
       onOpenChange={(next) => {
-        // The secret is dismissed by "I have saved it", never by a stray click.
-        if (!next && !issued) onClose()
+        if (!next) onClose()
       }}
     >
       {issued ? (
@@ -299,7 +295,7 @@ function CreateKeyDialog({
           <p className="text-muted-foreground text-sm">
             This is the only time Flexprice will show it. A lost key has to be revoked and replaced.
           </p>
-          <CopySnippet value={issued.secret} label={issued.key.name || 'the new API key'} />
+          <SecretReveal value={issued.secret} label={issued.key.name || 'the new API key'} />
           <div className="flex justify-end">
             <Button onClick={onClose}>I have saved it</Button>
           </div>

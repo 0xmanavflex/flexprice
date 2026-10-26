@@ -13,7 +13,7 @@ import { svixHandlers } from './svixHandlers'
  * cannot show an empty state, and will hide an off-by-one in an offset
  * calculation until production.
  *
- * Everything served here descends from a real API response — same keys, same
+ * Everything served here descends from a real API response: same keys, same
  * nesting, same optional-field absences. A mock that gets the *shape* wrong is
  * worse than no mock, because it produces confident, incorrect screens.
  */
@@ -27,13 +27,15 @@ interface SearchBody {
   sort?: { field: string; direction: 'asc' | 'desc' }[]
   invoice_status?: string[]
   invoiceStatus?: string[]
-  /** A single catalogue status (published/archived) — how the count queries filter. */
+  /** Subscription lifecycle statuses: `/subscriptions/search` narrows to these when sent. */
+  subscription_status?: string[]
+  /** A single catalogue status (published/archived): how the count queries filter. */
   status?: string
   name_contains?: string
   nameContains?: string
   /**
    * The generic filter DSL. Plans, add-ons, coupons and price units have no
-   * name-search field, so their search goes through this instead — see
+   * name-search field, so their search goes through this instead: see
    * `packages/query/src/search.ts`.
    */
   filters?: {
@@ -162,7 +164,7 @@ function page(source: Corpus, body: SearchBody) {
 
   // Charges and entitlements are searched by the entity they price. Scoping to
   // it here is what makes a plan's detail page show *its* charges, not the whole
-  // catalogue's — the bug an unfiltered mock would hide until production.
+  // catalogue's: the bug an unfiltered mock would hide until production.
   const entityType = body.entity_type ?? body.entityType
   if (entityType) rows = rows.filter((row) => readString(row, 'entity_type') === entityType)
 
@@ -172,13 +174,13 @@ function page(source: Corpus, body: SearchBody) {
 
   // A plan's subscriptions, for the detail page's "active subscriptions" metric.
   // Scoping here is what makes the rail count *this* plan's subscribers rather
-  // than the whole book — the bug an unfiltered mock would hide until production.
+  // than the whole book: the bug an unfiltered mock would hide until production.
   const planId = body.plan_id ?? body.planId
   if (planId) rows = rows.filter((row) => readString(row, 'plan_id') === planId)
 
   // A customer's invoices. The real invoice search narrows by the customer's
   // external id; the corpus links invoices by internal `customer_id`, so the
-  // external id is resolved to the customer first, then rows are scoped to it —
+  // external id is resolved to the customer first, then rows are scoped to it:
   // an unknown external id scopes to nothing rather than the whole book.
   const externalCustomerId = body.external_customer_id ?? body.externalCustomerId
   if (externalCustomerId) {
@@ -191,7 +193,7 @@ function page(source: Corpus, body: SearchBody) {
 
   // A contract's invoices. The captured invoices point at the captured
   // subscriptions, not the synthetic ones the console lists, so a row also
-  // counts when it belongs to the contract's customer — the mock stays scoped
+  // counts when it belongs to the contract's customer: the mock stays scoped
   // (an unknown contract scopes to nothing) and the tab has rows to show.
   const subscriptionId = body.subscription_id ?? body.subscriptionId
   if (subscriptionId) {
@@ -212,7 +214,7 @@ function page(source: Corpus, body: SearchBody) {
    * The console sends a tie-break after the primary key (`sortWithTieBreak`),
    * because sorting on a timestamp alone is not a total order and the real API
    * is free to return tied rows in any order. A mock that read `sort[0]` and
-   * stopped would sort tied rows by corpus position instead — stable, so the
+   * stopped would sort tied rows by corpus position instead: stable, so the
    * tests would pass, and the one thing the tie-break exists to prevent would
    * be the one thing they could never catch.
    */
@@ -241,7 +243,7 @@ function page(source: Corpus, body: SearchBody) {
  *
  * Reproducing this deliberately: the real API omits the embedded meter unless
  * `expand=meters` is sent, and a mock that always includes it would have hidden
- * the bug that omission caused — which is exactly the bug the captured
+ * the bug that omission caused: which is exactly the bug the captured
  * fixtures found.
  */
 function applyFeatureExpand(result: ReturnType<typeof page>, expand: string | undefined) {
@@ -268,7 +270,11 @@ const connectionRows: Record<string, unknown>[] = [
     provider_type: 'stripe',
     connection_status: 'published',
     metadata: {},
-    sync_config: { invoice: { outbound: true }, payment: { inbound: true } },
+    sync_config: {
+      customer: { outbound: true },
+      invoice: { outbound: true },
+      payment: { inbound: true },
+    },
     created_at: '2026-08-12T09:30:00Z',
   },
   { id: 'conn_qb', name: 'QuickBooks', provider_type: 'quickbooks', connection_status: 'draft' },
@@ -383,6 +389,8 @@ function seedDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
 function invoicePayments(invoiceId: string): Record<string, unknown>[] {
   const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === invoiceId)
   if (!invoice) return []
+  // Payments recorded in this session already stand for what has been paid.
+  if (paymentStore.some((row) => readString(row, 'destination_id') === invoiceId)) return []
   const paid = Number(readString(invoice, 'amount_paid') || 0)
   if (!(paid > 0)) return []
   const at = readString(invoice, 'issue_date') || readString(invoice, 'created_at')
@@ -403,12 +411,33 @@ function invoicePayments(invoiceId: string): Record<string, unknown>[] {
   ]
 }
 
+/**
+ * A succeeded payment against an invoice pays it down, as the API does: the
+ * invoice's paid and remaining amounts move, and it reads Succeeded once the
+ * balance is cleared.
+ */
+function applyPaymentToInvoice(payment: Record<string, unknown>) {
+  if (readString(payment, 'destination_type') !== 'INVOICE') return
+  const id = readString(payment, 'destination_id')
+  const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+  if (!invoice) return
+  const due = Number(readString(invoice, 'amount_due') || readString(invoice, 'total') || 0)
+  const paid =
+    Number(readString(invoice, 'amount_paid') || 0) + Number(readString(payment, 'amount') || 0)
+  const remaining = Math.max(0, due - paid)
+  patchRow(sourceFor('invoices').items, id, {
+    amount_paid: String(paid),
+    amount_remaining: String(remaining),
+    payment_status: remaining === 0 ? 'SUCCEEDED' : 'PENDING',
+  })
+}
+
 /*
  * The expands a route will refuse, as the live API refuses them.
  *
  * Only `/prices/search` is listed, and only because it was checked against
  * production: it answers `400 validation_error` naming the field. That is how
- * `plan,addon,meter` shipped — the values are plural, `addons` and `meters`,
+ * `plan,addon,meter` shipped: the values are plural, `addons` and `meters`,
  * and a mock that accepted anything could not say so.
  *
  * Other routes are deliberately absent rather than guessed at. `/entitlements/search`
@@ -416,7 +445,7 @@ function invoicePayments(invoiceId: string): Record<string, unknown>[] {
  * returns 200 and changes nothing), and the live-API audit found the same of
  * `/subscriptions/search`. Enforcing a stricter rule here than the API has
  * would fail CI for a request production would accept, which is the same
- * class of lie as the laxness it replaced — just pointing the other way.
+ * class of lie as the laxness it replaced: just pointing the other way.
  */
 const ALLOWED_EXPANDS: Record<string, string[]> = {
   prices: ['meters', 'priceunit', 'plan', 'addons', 'groups', 'features'],
@@ -448,7 +477,27 @@ const search = (path: string, key: string) =>
     const refused = rejectUnknownExpand(key, body.expand)
     if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
-    const result = page(sourceFor(key), body)
+    const source = sourceFor(key)
+    // The API's rule: a subscription search that names no status answers active only.
+    const wanted =
+      key === 'subscriptions'
+        ? body.subscription_status?.length
+          ? body.subscription_status
+          : ['active']
+        : undefined
+    // As the API: a `metadata` map keeps the rows whose metadata holds every pair.
+    const metadata = (body as { metadata?: Record<string, string> }).metadata
+    const pairs = metadata ? Object.entries(metadata) : []
+    const matching = source.items.filter((row) => {
+      if (wanted?.length && !wanted.includes(readString(row, 'subscription_status'))) return false
+      if (pairs.length === 0) return true
+      const held = (row['metadata'] ?? {}) as Record<string, unknown>
+      return pairs.every(([k, v]) => held[k] === v)
+    })
+    const result = page(
+      wanted?.length || pairs.length > 0 ? { ...source, items: matching } : source,
+      body,
+    )
     const payload =
       key === 'features'
         ? applyFeatureExpand(result, body.expand)
@@ -458,7 +507,7 @@ const search = (path: string, key: string) =>
     return HttpResponse.json(payload)
   })
 
-/** Finds one row in a corpus by id — the by-id GET endpoints read it. */
+/** Finds one row in a corpus by id: the by-id GET endpoints read it. */
 function byId(key: string, id: string): Record<string, unknown> | null {
   return sourceFor(key).items.find((row) => readString(row, 'id') === id) ?? null
 }
@@ -467,9 +516,9 @@ function byId(key: string, id: string): Record<string, unknown> | null {
  * Authored coupon associations, to shape.
  *
  * The corpus has no subscriptions wired to coupons, so "Where used" would be
- * permanently empty. These rows are authored — matching `CouponAssociationResponse`
+ * permanently empty. These rows are authored: matching `CouponAssociationResponse`
  * (snake_case, `start_date`/`end_date` as ISO, an open-ended one omitting the
- * end) — and returned only for the one coupon below, so the surface is
+ * end): and returned only for the one coupon below, so the surface is
  * demonstrable without pretending every coupon is in use.
  */
 const DEMO_ASSOCIATION_COUPON = 'coupon_01M38QAAA0000000000000001'
@@ -507,7 +556,7 @@ function couponAssociations(): Record<string, unknown>[] {
  *
  * `GET /environments` and `POST /environments` are absent from the OpenAPI
  * document (`docs/api-contract-gap.md`), so `@fp/api` reaches them with
- * `fetch` — but from the console's side they are ordinary endpoints, and
+ * `fetch`: but from the console's side they are ordinary endpoints, and
  * mocking them here is what lets `useEnvironments` have exactly one code path
  * instead of a `env.useMocks` branch that only the real build ever exercises.
  *
@@ -517,7 +566,7 @@ function couponAssociations(): Record<string, unknown>[] {
  * API actually sends.
  *
  * Two of them, one of each kind, because the thing worth demonstrating is the
- * switch — and the default-selection rule (prefer the sandbox) has nothing to
+ * switch: and the default-selection rule (prefer the sandbox) has nothing to
  * choose between with a single row.
  */
 const PRODUCTION_ENVIRONMENT_ID = 'env_01M020PHF0GF9KP1E9CEVNKJA1'
@@ -552,14 +601,14 @@ const environments: Record<string, unknown>[] = [
  * and `AlertSettingsResponse` are snake_case and the SDK remaps them to
  * camelCase after parsing, so a camelCase mock here would arrive as a record of
  * undefineds and render a table of dashes that nothing in the type system would
- * catch. `UserResponse` is the exception — it is flat single-word keys with no
+ * catch. `UserResponse` is the exception: it is flat single-word keys with no
  * remapping at all, and it genuinely has **no `created_at` and no `status`**,
  * which is why the members table has no "Joined" column.
  *
  * They are also mutable: invite, rename, role change and delete all write back
  * into these arrays, so a settings screen can be used end to end under mocks
  * rather than merely looked at. Same choice as the environments handler above,
- * for the same reason — a create that only echoes leaves the list disagreeing
+ * for the same reason: a create that only echoes leaves the list disagreeing
  * with what the screen just said happened.
  * ---------------------------------------------------------------------------
  */
@@ -620,7 +669,7 @@ const users: Record<string, unknown>[] = [
 ]
 
 /**
- * `GET /rbac/roles` answers `{ roles: [...] }` — not the `{items, pagination}`
+ * `GET /rbac/roles` answers `{ roles: [...] }`: not the `{items, pagination}`
  * envelope every other list uses, and with no total. The route has no response
  * model in the OpenAPI document, so the SDK validates nothing and this shape is
  * the only contract there is. `permissions` is an object keyed by resource, not
@@ -662,7 +711,7 @@ const roles: Record<string, unknown>[] = [
 ]
 
 /**
- * A service account cannot hold every role a person can — `all_writer` is
+ * A service account cannot hold every role a person can: `all_writer` is
  * filtered out of the live service-account list. Reproduced, because the Roles
  * tab renders the difference.
  */
@@ -805,8 +854,8 @@ const alertSettings: Record<string, unknown>[] = [
  * `GET|PUT|DELETE /settings/:key`.
  *
  * One route, one envelope, several keys. The envelope is the same record every
- * time — `{id, key, value, environment_id, tenant_id, status, created_at,
- * updated_at, created_by, updated_by}` — and the *payload* is `value`. A mock
+ * time: `{id, key, value, environment_id, tenant_id, status, created_at,
+ * updated_at, created_by, updated_by}`: and the *payload* is `value`. A mock
  * that returned the payload bare would be laxer than the API and would hide
  * the unwrapping every caller has to do.
  *
@@ -818,7 +867,7 @@ const alertSettings: Record<string, unknown>[] = [
  *     own configuration, because a demo of `{custom_currencies: {}}` or
  *     `{actions: []}` demonstrates nothing.
  *
- * `DELETE` clears the override, so the next `GET` returns the default — which
+ * `DELETE` clears the override, so the next `GET` returns the default: which
  * is the behaviour worth being able to try, and it only exists because the two
  * tiers are distinct.
  *
@@ -868,7 +917,7 @@ const SETTINGS_DEFAULTS: Record<string, SettingsValue> = {
 }
 
 /**
- * Northwind's saved settings — what the demo actually shows.
+ * Northwind's saved settings: what the demo actually shows.
  *
  * Self-consistent with the rest of this file on purpose: the invoice timezone
  * is the tenant's own (the Profile tab puts it in Portland), and the onboarding
@@ -876,7 +925,7 @@ const SETTINGS_DEFAULTS: Record<string, SettingsValue> = {
  * something the console can actually open.
  */
 const settingsStore: Record<string, SettingsValue> = {
-  // Numbers an invoice "NWS-202609-01001", on net-14 terms — which is what the
+  // Numbers an invoice "NWS-202609-01001", on net-14 terms: which is what the
   // billing contact on the Profile tab collects against.
   invoice_config: {
     prefix: 'NWS',
@@ -895,7 +944,7 @@ const settingsStore: Record<string, SettingsValue> = {
   /*
    * A settlement currency and two custom units. `custom_currencies` is a map
    * keyed by the currency code, and each entry carries the descriptive fields a
-   * price unit does — `conversion_rate` as a decimal *string*, never a float,
+   * price unit does: `conversion_rate` as a decimal *string*, never a float,
    * so 0.0025 does not arrive as 0.0024999999999998.
    */
   custom_currency_config: {
@@ -1035,7 +1084,7 @@ const settingsStore: Record<string, SettingsValue> = {
     workflow_type: 'customer_onboarding',
   },
   /*
-   * Tenant-wide wallet thresholds, in currency rather than percent — the
+   * Tenant-wide wallet thresholds, in currency rather than percent: the
    * alert-rules fixture above already demonstrates the percentage form on one
    * wallet, and two fixtures carrying the same numbers teach nothing twice.
    * `info` is null: not every severity is configured, and a panel that assumes
@@ -1201,7 +1250,7 @@ const manualRuns = new Map<string, Record<string, unknown>[]>()
  * `GET /taxes/rates`, the one settings panel with no handler at all.
  *
  * Without it the request escaped MSW to `mock.flexprice.test` and failed at
- * DNS, so the Taxes tab sat on "Counting your tax rates…" indefinitely — the
+ * DNS, so the Taxes tab sat on "Counting your tax rates…" indefinitely: the
  * most misleading of the failure modes, because an unhandled route looks
  * identical to a slow one.
  *
@@ -1213,7 +1262,7 @@ const manualRuns = new Map<string, Record<string, unknown>[]>()
  * `tax_rate_status` are **open** enums in the SDK, upper-case
  * (`EXTERNAL`/`ONETIME`, `ACTIVE`/`INACTIVE`) and tolerant of a value they do
  * not know. `tax_rate_type` is a **closed** one whose sole member is the
- * lower-case `"percentage"` — send `"PERCENTAGE"` and zod rejects the whole
+ * lower-case `"percentage"`: send `"PERCENTAGE"` and zod rejects the whole
  * page, the SDK raises a `ResponseValidationError`, and the screen shows a
  * permission-shaped error titled "OK" (the status text of the 200 it just
  * refused). That is the exact wrong turn this fixture took first.
@@ -1248,7 +1297,7 @@ function additionsFor(
 const taxRates: Record<string, unknown>[] = [
   {
     id: 'tax_01M38QTAX00000000000001',
-    name: 'US sales tax — Oregon',
+    name: 'US sales tax: Oregon',
     code: 'US-OR',
     description: 'Oregon levies no state sales tax; the zero rate is recorded so invoices say so.',
     percentage_value: '0',
@@ -1261,7 +1310,7 @@ const taxRates: Record<string, unknown>[] = [
   },
   {
     id: 'tax_01M38QTAX00000000000002',
-    name: 'UK VAT — standard',
+    name: 'UK VAT: standard',
     code: 'GB-VAT-STD',
     description: 'Charged on invoices to UK customers without a validated VAT number.',
     percentage_value: '20',
@@ -1274,7 +1323,7 @@ const taxRates: Record<string, unknown>[] = [
   },
   {
     id: 'tax_01M38QTAX00000000000003',
-    name: 'EU VAT — reverse charge',
+    name: 'EU VAT: reverse charge',
     code: 'EU-RC',
     description: 'Zero-rated; the customer accounts for the VAT in their own member state.',
     percentage_value: '0',
@@ -1385,7 +1434,7 @@ function settingsEnvelope(key: string, value: SettingsValue): Record<string, unk
  *
  * This deployment has no SAML, and the UI is supposed to notice the 404 and
  * hide the Single sign-on tab. Mocking a working SAML config would make the
- * mocked build the only place that tab ever appears — and would delete the one
+ * mocked build the only place that tab ever appears: and would delete the one
  * behaviour in this area worth testing. So the 404 is the fixture.
  */
 const SAML_UNAVAILABLE = {
@@ -1403,13 +1452,13 @@ const SETTING_NOT_FOUND = {
 
 /*
  * ---------------------------------------------------------------------------
- * `GET /webhooks/dashboard` — the Svix consumer-portal handoff.
+ * `GET /webhooks/dashboard`: the Svix consumer-portal handoff.
  *
  * The real response carries a **live Svix credential**, which is why the token
  * here is visibly fake. A secret-shaped string in a repository is a secret
  * somebody eventually pastes somewhere, and one that looks real is one nobody
- * checks. `svix_enabled: false` is the other reachable state — a deployment
- * with no Svix configured — but the demo wants the panel populated.
+ * checks. `svix_enabled: false` is the other reachable state: a deployment
+ * with no Svix configured: but the demo wants the panel populated.
  * ---------------------------------------------------------------------------
  */
 const WEBHOOK_DEMO_TOKEN = 'sk_app_DEMO_not_a_real_token.us'
@@ -1423,17 +1472,17 @@ const webhookDashboard = {
 
 /*
  * ---------------------------------------------------------------------------
- * `GET /tenants/billing` — Flexprice's own bill to Northwind.
+ * `GET /tenants/billing`: Flexprice's own bill to Northwind.
  *
  * Note which of these numbers disagree with each other, because that is the
- * point. One entitlement is unlimited (`total_limit: null` — a `?? 0` on it
+ * point. One entitlement is unlimited (`total_limit: null`: a `?? 0` on it
  * prints "0" as the cap for the most generous plan there is), one sits at 97.4%
  * of its cap so the near-the-limit rendering has something to bite on, and no
  * two rows carry the same figure. Every `usage_percent` is the quotient of the
  * two columns beside it: a fixture whose percentage disagrees with its own
  * usage is how a broken percentage calculation survives review.
  *
- * `sources` is `[]` on every row deliberately — the live response returned it
+ * `sources` is `[]` on every row deliberately: the live response returned it
  * empty, so the element shape was never observed, and this file does not invent
  * records it has not seen.
  * ---------------------------------------------------------------------------
@@ -1570,7 +1619,7 @@ const tenantBilling = {
 
 /*
  * ---------------------------------------------------------------------------
- * `GET /customers/usage` — one customer's entitlement usage.
+ * `GET /customers/usage`: one customer's entitlement usage.
  *
  * The same `CustomerUsageSummaryResponse` shape as the `usage` half of
  * `/tenants/billing`, because the API returns literally that model for both.
@@ -1578,19 +1627,19 @@ const tenantBilling = {
  * quota card and the feature catalogue name the same things.
  *
  * The rows disagree with each other on purpose, one edge case each:
- *   - API calls      — the ordinary case, comfortably inside its cap.
- *   - Tokens processed — PAST its cap on a soft limit, so the over-quota
+ *   - API calls     : the ordinary case, comfortably inside its cap.
+ *   - Tokens processed: PAST its cap on a soft limit, so the over-quota
  *                        rendering has something to bite on.
- *   - Active users   — unlimited: `total_limit: null`, which a `?? 0` would
+ *   - Active users  : unlimited: `total_limit: null`, which a `?? 0` would
  *                      print as "0 of 0" for the most generous grant there is.
- *   - Peak sessions  — nothing used yet: a true zero, not a missing figure.
- *   - Seats          — a `static` entitlement, so `next_usage_reset_at` is
+ *   - Peak sessions : nothing used yet: a true zero, not a missing figure.
+ *   - Seats         : a `static` entitlement, so `next_usage_reset_at` is
  *                      null and the renewal line has nothing to print.
  *
- * Every `usage_percent` is the real quotient of the two columns beside it — a
+ * Every `usage_percent` is the real quotient of the two columns beside it: a
  * fixture whose percentage disagrees with its own usage is how a broken
- * percentage survives review. `sources` is `[]` on every row for the reason
- * given on the tenant fixture: the live element shape was never observed.
+ * percentage survives review. `sources` is filled in by the handler from the
+ * customer's own contracts, so each row names a real plan and contract.
  * ---------------------------------------------------------------------------
  */
 const CUSTOMER_USAGE_PERIOD_START = '2026-09-01T00:00:00Z'
@@ -1917,7 +1966,7 @@ function patchRow(rows: Record<string, unknown>[], id: string, patch: Record<str
 
 /**
  * An invoice as the edit routes see it: its lines materialised (generated rows
- * carry none, and the detail read invents one), and — like the backend — a
+ * carry none, and the detail read invents one), and: like the backend: a
  * finalized invoice voided and replaced by a draft copy before it is changed.
  */
 function invoiceForEdit(id: string): Record<string, unknown> | null {
@@ -2004,7 +2053,7 @@ function removeRow(rows: Record<string, unknown>[], id: string) {
  *     the populated design impossible to see under mocks.
  *
  * Both are solved here, in the mock world, rather than by editing the generated
- * fixtures — those descend from real API responses and six other surfaces read
+ * fixtures: those descend from real API responses and six other surfaces read
  * them. Everything below is derived from the Northwind corpus (same customers,
  * same plans, same features) and is **self-consistent by construction**: a
  * series sums to its own total, a total is the sum of its parts, and the
@@ -2036,7 +2085,7 @@ function emptyPage(body: SearchBody): Corpus {
   }
 }
 
-/** Midnight UTC, `daysAgo` days back — the grid every recent-activity mock sits on. */
+/** Midnight UTC, `daysAgo` days back: the grid every recent-activity mock sits on. */
 function dayStart(daysAgo: number): Date {
   const date = new Date(Date.now() - daysAgo * DAY_MS)
   date.setUTCHours(0, 0, 0, 0)
@@ -2116,7 +2165,12 @@ const cents = (value: number) => (Math.round(value * 100) / 100).toFixed(2)
  * each item's usage priced at that feature's rate. Nothing is asserted that is
  * not computed from something else here.
  */
-function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
+function usageAnalytics(
+  startTime: Date,
+  endTime: Date,
+  windowSize: string,
+  featureIds: readonly string[] = [],
+) {
   const step = WINDOW_MS[windowSize] ?? DAY_MS
   const buckets: number[] = []
   for (
@@ -2127,7 +2181,10 @@ function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
     buckets.push(cursor)
   }
 
-  const items = ANALYTICS_FEATURES.map((feature) => {
+  const chosen = ANALYTICS_FEATURES.filter(
+    (feature) => featureIds.length === 0 || featureIds.includes(feature.id),
+  )
+  const items = chosen.map((feature) => {
     const scale = step / DAY_MS
     const points = buckets.map((bucket) => {
       const wobble = 0.72 + 0.56 * noise(`${feature.lookupKey}:${bucket}`)
@@ -2139,20 +2196,24 @@ function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
       }
     })
 
+    const totalUsage = points.reduce((sum, point) => sum + Number(point.usage), 0)
+    // The item's own price: what this usage bills at, as the API reports it.
+    const billed = (totalUsage * feature.rate).toFixed(2)
     return {
       feature_id: feature.id,
+      meter_id: `meter_${feature.id}`,
       event_name: feature.eventName,
       feature: feature.row,
       event_count: points.reduce((sum, point) => sum + point.event_count, 0),
-      total_usage: String(points.reduce((sum, point) => sum + Number(point.usage), 0)),
+      total_usage: String(totalUsage),
+      subtotal: billed,
+      total_cost: billed,
+      currency: 'USD',
       points,
     }
   })
 
-  const subtotal = items.reduce(
-    (sum, item, index) => sum + Number(item.total_usage) * (ANALYTICS_FEATURES[index]?.rate ?? 0),
-    0,
-  )
+  const subtotal = items.reduce((sum, item) => sum + Number(item.total_cost), 0)
 
   return { items, subtotal: subtotal.toFixed(2), total_cost: subtotal.toFixed(2), currency: 'USD' }
 }
@@ -2173,7 +2234,7 @@ function recentSubscriptionRows(): Record<string, unknown>[] {
   for (let daysAgo = 13; daysAgo >= 0; daysAgo -= 1) {
     // Both weeks are drawn from the same distribution, with one extra on the
     // busier recent days. The "vs prior week" change is then a real property of
-    // the rows — a modest number nobody chose — rather than a headline figure
+    // the rows: a modest number nobody chose: rather than a headline figure
     // written into the component and dressed up as a measurement.
     // Seeded on the day of the week, so the two weeks are structurally
     // comparable and the change between them is the lift below rather than the
@@ -2207,8 +2268,8 @@ function recentSubscriptionRows(): Record<string, unknown>[] {
 /**
  * How long each customer has to pay.
  *
- * Northwind's own default is net-14 — `settingsStore.invoice_config` sets
- * `due_date_days: 14`, and the Invoice settings tab shows it — but terms are
+ * Northwind's own default is net-14: `settingsStore.invoice_config` sets
+ * `due_date_days: 14`, and the Invoice settings tab shows it: but terms are
  * negotiated per account, so this spread is what a real book looks like. It is
  * also what makes an *overdue* invoice reachable inside a seven-day window: on
  * net-14 terms nothing issued this week can be late yet, and a fixture that
@@ -2222,7 +2283,7 @@ const INVOICE_TERM_DAYS = [14, 21, 7, 1, 3, 30]
  *
  * Nine rather than one, and that is the fixture bug this replaces. The old
  * version issued every invoice inside the last seven days and *asserted* the
- * split — 34 paid, 15 open, 7 overdue — which made every window over it the
+ * split: 34 paid, 15 open, 7 overdue: which made every window over it the
  * same window: the overview's "last 7 days" and Revenue's "last 30 days" would
  * have quoted an identical 56/34/15/7 at each other as though they were two
  * findings, and Revenue's prior-period change would have had nothing to compare
@@ -2263,13 +2324,13 @@ function recentInvoiceRows(): Record<string, unknown>[] {
        * The curve and the term spread above were chosen together, against the
        * two windows that actually read this book: they leave the overview's
        * seven days and Revenue's thirty with six different figures rather than
-       * one repeated, and with no two of paid/open/overdue equal in either —
+       * one repeated, and with no two of paid/open/overdue equal in either:
        * the coincidence that looks exactly like a copy-paste bug.
        */
       const settledOdds = 0.42 + (Math.min(daysAgo, 35) / 35) * 0.5
       const settled = noise(`settled:${daysAgo}:${index}`) < settledOdds
 
-      // Clean, plausible amounts — the captured corpus carries some synthesized
+      // Clean, plausible amounts: the captured corpus carries some synthesized
       // values in the 1e16 range that would flatten any axis they landed on.
       const total = (185 + ((issued * 53) % 87) * 35).toFixed(2)
       const period = new Date(at.getTime() - 30 * DAY_MS)
@@ -2324,13 +2385,76 @@ function recentInvoiceRows(): Record<string, unknown>[] {
  * were, so every other list still shows the world it always showed and only
  * gains some recent activity at the top.
  */
+/**
+ * The contract-level commitment the first captured contract carries, so the
+ * detail page has one to show: $250 a month, a 1.2× overage premium, true-up on.
+ * The captured corpus has none, and the usage mock reads it from here.
+ */
+const COMMITTED_SUBSCRIPTION_ID = 'subs_synth_0000'
+const CONTRACT_COMMITMENT = {
+  commitment_amount: '250',
+  commitment_duration: 'MONTHLY',
+  overage_factor: '1.2',
+  enable_true_up: true,
+}
+
+/** The mock's trialing contract; see the subscriptions corpus below. */
+const TRIALING_SUBSCRIPTION_ID = 'subs_01MOCKTRIALING0000000001'
+
+/** Each report's seeded figure for the mock report library. */
+const REPORT_BASE: Record<string, number> = {
+  invoice_total: 412_000,
+  invoice_total_issued: 409_000,
+  net_billing: 399_000,
+  net_billing_issued: 397_000,
+  total_receivables: 121_460,
+  receivables_aging: 60_000,
+  days_to_pay: 16.4,
+  active_customers: 172,
+  arpu: 2_630,
+  arpu_paid: 2_410,
+  credit_consumption: 52_000,
+  credit_topups: 61_000,
+  events_volume: 18_400_000,
+}
+/** Reports the API compares with the previous period. */
+const REPORT_COMPARES = new Set([
+  'invoice_total',
+  'invoice_total_issued',
+  'days_to_pay',
+  'arpu',
+  'arpu_paid',
+  'credit_topups',
+])
+
 const DASHBOARD_CORPUS: Record<string, Corpus> = {
   subscriptions: (() => {
     const extra = recentSubscriptionRows()
     const base = corpus.subscriptions as Corpus
+    const items = base.items.map((item) =>
+      readString(item, 'id') === COMMITTED_SUBSCRIPTION_ID
+        ? { ...item, ...CONTRACT_COMMITMENT }
+        : item,
+    )
+    // One trialing contract, so a search that forgets subscription_status (the
+    // API then answers active only) loses it here as it does live.
+    const first = items[0]
+    const trialing = first
+      ? [
+          {
+            ...first,
+            id: TRIALING_SUBSCRIPTION_ID,
+            subscription_status: 'trialing',
+            updated_at: '2026-01-02T00:00:00Z',
+          },
+        ]
+      : []
     return {
-      items: [...extra, ...base.items],
-      pagination: { ...base.pagination, total: base.pagination.total + extra.length },
+      items: [...extra, ...items, ...trialing],
+      pagination: {
+        ...base.pagination,
+        total: base.pagination.total + extra.length + trialing.length,
+      },
     }
   })(),
   invoices: (() => {
@@ -2362,13 +2486,24 @@ function sourceFor(key: string): Corpus {
 }
 
 export const handlers = [
-  // The Svix API behind the webhook portal — see `svixHandlers.ts`.
+  // Price sync: starts a workflow and answers its handle, as the API does.
+  http.post(`${BASE}/plans/:id/sync/subscriptions`, ({ params }) =>
+    HttpResponse.json({ workflow_id: `sync-plan-${String(params['id'])}`, run_id: 'run_mock' }),
+  ),
+  http.post(`${BASE}/addons/:id/sync/subscriptions`, ({ params }) =>
+    HttpResponse.json({ workflow_id: `sync-addon-${String(params['id'])}`, run_id: 'run_mock' }),
+  ),
+  // The Svix API behind the webhook portal: see `svixHandlers.ts`.
   ...svixHandlers,
-  // Self-billing, off unless a mock account state is picked — see `selfBillingHandlers.ts`.
+  // Self-billing, off unless a mock account state is picked: see `selfBillingHandlers.ts`.
   ...selfBillingHandlers,
 
-  // Environments. Unlike the create handlers further down — which echo the
-  // record back and leave the corpus alone — this one appends, because the
+  // Sample events: the backend accepts the request and streams later. The
+  // console only waits for this 200.
+  http.post(`${BASE}/portal/onboarding/events`, () => HttpResponse.json({})),
+
+  // Environments. Unlike the create handlers further down: which echo the
+  // record back and leave the corpus alone: this one appends, because the
   // console switches to what you just created and then refetches the list. An
   // echo-only mock would switch to an id the next list does not contain, and
   // the hook would correctly treat it as stale and bounce you back out.
@@ -2400,6 +2535,41 @@ export const handlers = [
     environments.push(created)
     return HttpResponse.json(created, { status: 201 })
   }),
+  // Copy environment: the API queues a workflow and answers 202. Into a new
+  // environment it creates that first, so the mock does too.
+  http.post(`${BASE}/environments/:id/clone`, async ({ params, request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const source = environments.find((environment) => environment['id'] === params['id'])
+    if (!source) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    const target = readString(body, 'target_environment_id')
+    if (target) {
+      if (target === params['id']) {
+        return HttpResponse.json(
+          { code: 'validation_error', message: 'target environment cannot be the source' },
+          { status: 400 },
+        )
+      }
+    } else {
+      const name = readString(body, 'name')
+      if (!name) {
+        return HttpResponse.json(
+          { code: 'validation_error', message: 'name is required' },
+          { status: 400 },
+        )
+      }
+      environments.push({
+        id: `env_mock_${Date.now()}`,
+        name,
+        type: readString(body, 'type') || 'development',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    }
+    return HttpResponse.json(
+      { workflow_id: `env-clone-${Date.now()}`, run_id: 'run_mock' },
+      { status: 202 },
+    )
+  }),
   // Rename, from the switcher. Mutates in place for the same reason create
   // appends: the console refetches the list straight after.
   http.put(`${BASE}/environments/:id`, async ({ params, request }) => {
@@ -2413,15 +2583,15 @@ export const handlers = [
   }),
 
   // The mock demo login. `POST /auth/login` takes `{ email, password }` and, on
-  // the live API, returns `{ token, user_id, tenant_id }` — the snake_case keys
+  // the live API, returns `{ token, user_id, tenant_id }`: the snake_case keys
   // `toCredentials` in `@fp/api` reads and maps to `{ token, userId, tenantId }`.
   // The demo account is the only one that succeeds; every other credential gets
   // the API's wrong-password answer, a 403 whose `code`/`message`/`http_status_code`
   // shape `messageForSignInError` collapses to "That email and password do not
   // match." Under mocks the fixtures are served regardless of the bearer token,
-  // so any valid session is all the route guard needs — this just mints one.
+  // so any valid session is all the route guard needs: this just mints one.
   /*
-   * `GET /auth/capabilities` — what this deployment offers at sign-in.
+   * `GET /auth/capabilities`: what this deployment offers at sign-in.
    *
    * The fixture answers password-only, which is also what `fetchAuthCapabilities`
    * falls back to when the call fails. The two agreeing is deliberate: the mock
@@ -2477,6 +2647,146 @@ export const handlers = [
    * and customer) and `POST /analytics/revenue` (net revenue per day, grouped
    * by currency), both read from `revenueDays`.
    */
+  /*
+   * The analytics report library: `POST /analytics/reports/{key}/query`.
+   * Answers in the API's table form: a `bucket` (timeseries) or dimension
+   * column, `currency`, the metric named after the report, and `{key}_prev` /
+   * `{key}_change_pct` when compared. Figures are seeded per report and
+   * bucket, and customers are real ones from the corpus so names resolve.
+   */
+  http.post(`${BASE}/analytics/reports/:key/query`, async ({ params, request }) => {
+    const key = String(params['key'])
+    const body = (await request.json().catch(() => ({}))) as {
+      shape?: string
+      range?: string
+      dimensions?: string[]
+      grain?: string
+      currency?: string
+      compare?: string
+      limit?: number
+      offset?: number
+    }
+    const base = REPORT_BASE[key]
+    if (base === undefined) {
+      return HttpResponse.json({ message: `report "${key}" not found` }, { status: 404 })
+    }
+    const compare = Boolean(body.compare) && REPORT_COMPARES.has(key)
+    const metric = [
+      { name: key, type: 'decimal', role: 'metric' },
+      ...(compare
+        ? [
+            { name: `${key}_prev`, type: 'decimal', role: 'metric' },
+            { name: `${key}_change_pct`, type: 'decimal', role: 'metric' },
+          ]
+        : []),
+    ]
+    const values = (now: number, before: number) =>
+      compare
+        ? [
+            now.toFixed(2),
+            before.toFixed(2),
+            before === 0 ? '' : (((now - before) / before) * 100).toFixed(1),
+          ]
+        : [now.toFixed(2)]
+    const currencyCol =
+      key === 'events_volume' ? [] : [{ name: 'currency', type: 'string', role: 'dimension' }]
+    const currency = key === 'events_volume' ? [] : [body.currency || 'usd']
+    const [from, to] = (body.range ?? '').split('..')
+    const start = from ? new Date(`${from}T00:00:00Z`) : new Date(Date.now() - 90 * DAY_MS)
+    const end = to ? new Date(`${to}T00:00:00Z`) : new Date()
+    const meta = { query_source: 'mock', from: start.toISOString(), to: end.toISOString() }
+    // The API's `max_range_days`: the events report answers a week at most.
+    if (key === 'events_volume' && (end.getTime() - start.getTime()) / DAY_MS > 7) {
+      return HttpResponse.json(
+        {
+          code: 'validation_error',
+          message: 'range exceeds 7 days for this report',
+          http_status_code: 400,
+        },
+        { status: 400 },
+      )
+    }
+
+    if (body.shape === 'timeseries') {
+      const step =
+        body.grain === 'month' ? 30 * DAY_MS : body.grain === 'week' ? 7 * DAY_MS : DAY_MS
+      const rows: string[][] = []
+      for (let t = start.getTime(); t < end.getTime() && rows.length < 400; t += step) {
+        // A ratio (days to pay, ARPU) is the same size per bucket; a flow scales with its width.
+        const ratio = key === 'days_to_pay' || key === 'arpu' || key === 'arpu_paid'
+        const now =
+          (ratio ? base : (base / 30) * (step / DAY_MS)) * (0.75 + 0.5 * noise(`${key}:${t}`))
+        const before = now * (0.85 + 0.2 * noise(`${key}:prev:${t}`))
+        rows.push([new Date(t).toISOString(), ...currency, ...values(now, before)])
+      }
+      return HttpResponse.json({
+        columns: [
+          { name: 'bucket', type: 'datetime', role: 'dimension' },
+          ...currencyCol,
+          ...metric,
+        ],
+        rows,
+        meta,
+      })
+    }
+
+    if (body.shape === 'breakdown') {
+      const dims = body.dimensions?.length ? body.dimensions : ['customer_id']
+      // The customers the customer search answers with, so their names resolve.
+      const pagedCustomers = key === 'invoice_total' && dims.join() === 'customer_id'
+      const customers = sourceFor('customers')
+        .items.slice(0, pagedCustomers ? 60 : 8)
+        .map((row) => readString(row, 'id'))
+      const labels: Record<string, string[]> = {
+        customer_id: customers,
+        aging_bucket: ['Current', '1-30', '31-60', '61-90', '90+'],
+        invoice_type: ['SUBSCRIPTION', 'ONE_OFF'],
+        meter_id: ['meter_api', 'meter_storage'],
+        credit_type: ['paid', 'free'],
+        transaction_reason: ['PURCHASED_CREDIT_DIRECT', 'FREE_CREDIT_GRANT'],
+      }
+      const combos = dims.reduce<string[][]>(
+        (acc, dim) => acc.flatMap((prefix) => (labels[dim] ?? ['a']).map((v) => [...prefix, v])),
+        [[]],
+      )
+      // Shares of the report's total, so the parts add up to the whole.
+      const weights = combos.map(
+        (combo, i) => (1 / (i + 1)) * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`)),
+      )
+      const sum = weights.reduce((total, weight) => total + weight, 0) || 1
+      const rows = combos
+        .map((combo, i) => {
+          // A ratio (days to pay) is per row, not a share of a total.
+          const now =
+            key === 'days_to_pay'
+              ? base * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`))
+              : (base * (weights[i] ?? 0)) / sum
+          return { now, row: [...combo, ...currency, ...values(now, now * 0.9)] }
+        })
+        .sort((a, b) => b.now - a.now)
+        .slice(body.offset ?? 0, (body.offset ?? 0) + (body.limit ?? 500))
+        .map((entry) => entry.row)
+      return HttpResponse.json({
+        columns: [
+          ...dims.map((name) => ({ name, type: 'string', role: 'dimension' })),
+          ...currencyCol,
+          ...metric,
+        ],
+        rows,
+        meta,
+      })
+    }
+
+    // Scalar: one row per currency when none was asked for, the one asked for otherwise.
+    const rows = body.currency
+      ? [[body.currency, ...values(base, base * 0.91)]]
+      : [
+          ['usd', ...values(base, base * 0.91)],
+          ['eur', ...values(base * 0.18, base * 0.2)],
+        ]
+    return HttpResponse.json({ columns: [...currencyCol, ...metric], rows, meta })
+  }),
+
   http.post(`${BASE}/dashboard/revenue-dashboard`, async ({ request }) => {
     if (demoEmpty()) return HttpResponse.json({ summaries: {}, items: [] })
     const body = (await request.json().catch(() => ({}))) as {
@@ -2545,12 +2855,12 @@ export const handlers = [
   }),
 
   /*
-   * Usage analytics — the overview's event series, revenue and per-feature
+   * Usage analytics: the overview's event series, revenue and per-feature
    * usage. `POST /events/analytics`, the path `client.events.getUsageAnalytics`
    * posts to. Answers snake_case, as the live API does; the SDK's inbound
    * schema is what turns it camelCase again.
    *
-   * An empty tenant answers `items: []` and **no subtotal** — not a zero.
+   * An empty tenant answers `items: []` and **no subtotal**: not a zero.
    * "Nothing has been ingested" and "this usage was worth nothing" are
    * different sentences, and the panel renders them differently.
    */
@@ -2561,13 +2871,54 @@ export const handlers = [
       start_time?: string
       end_time?: string
       window_size?: string
+      feature_ids?: string[]
     }
     const endTime = body.end_time ? new Date(body.end_time) : new Date()
     const startTime = body.start_time
       ? new Date(body.start_time)
       : new Date(endTime.getTime() - 7 * DAY_MS)
 
-    return HttpResponse.json(usageAnalytics(startTime, endTime, body.window_size ?? 'DAY'))
+    return HttpResponse.json(
+      usageAnalytics(startTime, endTime, body.window_size ?? 'DAY', body.feature_ids ?? []),
+    )
+  }),
+
+  /*
+   * Cost analytics: revenue against what the usage cost to serve, from the
+   * cost sheet. `POST /costs/analytics`. Built from the same usage the usage
+   * analytics answers, with each meter costing a fixed share of what it bills,
+   * so the two reads agree.
+   */
+  http.post(`${BASE}/costs/analytics`, async ({ request }) => {
+    if (demoEmpty()) return HttpResponse.json({ cost_analytics: [] })
+    const body = (await request.json().catch(() => ({}))) as {
+      start_time?: string
+      end_time?: string
+      feature_ids?: string[]
+    }
+    const endTime = body.end_time ? new Date(body.end_time) : new Date()
+    const startTime = body.start_time
+      ? new Date(body.start_time)
+      : new Date(endTime.getTime() - 7 * DAY_MS)
+    const usage = usageAnalytics(startTime, endTime, 'DAY', body.feature_ids ?? [])
+    const costAnalytics = usage.items.map((item, index) => ({
+      meter_id: item.meter_id,
+      total_cost: (Number(item.total_cost) * [0.42, 0.35, 0.5, 0.28][index % 4]!).toFixed(2),
+      total_quantity: item.total_usage,
+      total_events: item.event_count,
+      currency: 'USD',
+    }))
+    const totalCost = costAnalytics.reduce((sum, item) => sum + Number(item.total_cost), 0)
+    const revenue = Number(usage.subtotal)
+    const margin = revenue - totalCost
+    return HttpResponse.json({
+      currency: 'USD',
+      total_revenue: revenue.toFixed(2),
+      total_cost: totalCost.toFixed(2),
+      margin: margin.toFixed(2),
+      margin_percent: revenue > 0 ? ((margin / revenue) * 100).toFixed(2) : '0',
+      cost_analytics: costAnalytics,
+    })
   }),
 
   search('/customers/search', 'customers'),
@@ -2575,21 +2926,51 @@ export const handlers = [
   /*
    * Entitlement usage for one customer.
    *
-   * **Must stay above `/customers/:id`** — the customer is a query parameter
+   * **Must stay above `/customers/:id`**: the customer is a query parameter
    * here, not a path segment, so `:id` would otherwise match the literal
    * "usage" and answer a 404 for it.
    */
   http.get(`${BASE}/customers/usage`, ({ request }) => {
-    const customerId = new URL(request.url).searchParams.get('customer_id') ?? ''
+    const params = new URL(request.url).searchParams
+    const customerId = params.get('customer_id') ?? ''
+    // `subscription_ids` narrows to those contracts' grants, however the
+    // client spells an array: repeated keys or one comma-separated value.
+    const subscriptionIds = params
+      .getAll('subscription_ids')
+      .flatMap((value) => value.split(','))
+      .filter(Boolean)
     // Unknown customers get an empty summary, not the demo rows: a customer
     // with no entitlements and a customer that does not exist both have no
     // quotas to show, and neither should borrow somebody else's.
-    const known = byId('customers', customerId) !== undefined
-    return HttpResponse.json({
-      ...customerUsage,
-      customer_id: customerId,
-      ...(known ? {} : { features: [] }),
-    })
+    const known = byId('customers', customerId) !== null
+    // Each row is granted by the plan of one of the customer's contracts, so
+    // the Source column names a real plan and links to a real contract.
+    const contracts = sourceFor('subscriptions').items.filter(
+      (row) =>
+        readString(row, 'customer_id') === customerId &&
+        (subscriptionIds.length === 0 || subscriptionIds.includes(readString(row, 'id'))),
+    )
+    const features =
+      known && contracts.length > 0
+        ? customerUsage.features.map((feature, index) => {
+            const contract = contracts[index % contracts.length]!
+            const plan = (contract['plan'] ?? {}) as Record<string, unknown>
+            return {
+              ...feature,
+              sources: [
+                {
+                  subscription_id: readString(contract, 'id'),
+                  entity_id: readString(contract, 'plan_id'),
+                  entity_type: 'plan',
+                  entity_name: readString(plan, 'name') || readString(contract, 'plan_id'),
+                  usage_reset_period: feature.next_usage_reset_at ? 'MONTHLY' : 'NEVER',
+                  is_enabled: true,
+                },
+              ],
+            }
+          })
+        : []
+    return HttpResponse.json({ ...customerUsage, customer_id: customerId, features })
   }),
 
   // A single customer, for the detail page. The corpus rows already carry the
@@ -2598,7 +2979,7 @@ export const handlers = [
   // The audit trail (`POST /activity`). The corpus keeps no log, so each record
   // in scope contributes its creation, newest first. Without a handler the
   // request fell through to the network and the rail sat on "Loading
-  // activity…" until the retries gave up — and the failure re-rendered the page.
+  // activity…" until the retries gave up: and the failure re-rendered the page.
   http.post(`${BASE}/activity`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as {
       customer_id?: string
@@ -2661,7 +3042,7 @@ export const handlers = [
   }),
 
   /*
-   * `GET /customers/portal/{external_id}` — a portal session. The token is
+   * `GET /customers/portal/{external_id}`: a portal session. The token is
    * what the portal mocks accept (anything but "expired"), so "Open customer
    * portal" lands on a working portal.
    */
@@ -2681,7 +3062,7 @@ export const handlers = [
 
   // A customer's subscriptions, keyed by the *external* id (the endpoint the SDK
   // calls). The external id resolves to the internal customer, then the
-  // subscriptions are scoped to it — each row keeps its embedded plan and
+  // subscriptions are scoped to it: each row keeps its embedded plan and
   // customer, so the table shows plan names rather than ids.
   http.get(`${BASE}/customers/external/:externalId/subscriptions`, ({ params, request }) => {
     // The real endpoint refuses any expand (400 "Field is not allowed to be
@@ -2772,6 +3153,7 @@ export const handlers = [
       attempts: processed ? [{ id: 'att_1', attempt_number: 1 }] : [],
     }
     paymentStore.unshift(row)
+    if (processed) applyPaymentToInvoice(row)
     return HttpResponse.json(row, { status: 201 })
   }),
   http.get(`${BASE}/payments/:id`, ({ params }) => {
@@ -2788,18 +3170,21 @@ export const handlers = [
     if (!paymentStore.some((row) => readString(row, 'id') === id)) {
       return HttpResponse.json({ message: 'Payment not found' }, { status: 404 })
     }
-    return patchRow(paymentStore, id, {
+    const response = patchRow(paymentStore, id, {
       payment_status: 'SUCCEEDED',
       succeeded_at: new Date().toISOString(),
       attempts: [{ id: 'att_1', attempt_number: 1 }],
     })
+    const processed = paymentStore.find((row) => readString(row, 'id') === id)
+    if (processed) applyPaymentToInvoice(processed)
+    return response
   }),
   http.delete(`${BASE}/payments/:id`, ({ params }) => {
     removeRow(paymentStore, String(params['id']))
     return HttpResponse.json({ message: 'Payment deleted' })
   }),
 
-  // Charges and entitlements, scoped by entity — the plan detail page's tabs.
+  // Charges and entitlements, scoped by entity: the plan detail page's tabs.
   search('/entitlements/search', 'entitlements'),
 
   /*
@@ -2812,7 +3197,7 @@ export const handlers = [
 
   /*
    * Who is signed in. The demo user (super admin) unless
-   * `localStorage['flexprice.mock.userId']` names another mock user — how a
+   * `localStorage['flexprice.mock.userId']` names another mock user: how a
    * reader's or writer's console is checked by hand and in e2e.
    */
   http.get(`${BASE}/users/me`, () => {
@@ -2827,7 +3212,7 @@ export const handlers = [
 
   /*
    * `POST /users/search` honours `type` and the paging window, and **ignores
-   * `filters` and `roles`** — because the real endpoint does. Verified live: a
+   * `filters` and `roles`**: because the real endpoint does. Verified live: a
    * `contains` filter came back with a row that cannot match it. Honouring them
    * here would be the laxer-than-reality mock that hides the bug until
    * production, and the Members tab is built around the truth (it narrows the
@@ -2991,14 +3376,14 @@ export const handlers = [
   /*
    * The tenant billing-usage route, reproduced as it actually behaves.
    *
-   * `@flexprice/sdk@2.1.30` requests `GET /v1/tenant/billing` — singular — and
+   * `@flexprice/sdk@2.1.30` requests `GET /v1/tenant/billing`: singular: and
    * the deployed route is `GET /v1/tenants/billing`. So the singular path
    * answers 404 here too, exactly as it does live (same `text/plain` body).
    *
    * Serving the data from the singular path instead would make the mocked build
    * the only place this screen has ever worked, and would quietly delete the
    * one bug this panel exists to report. The plural handler below is where the
-   * data lives, ready for the day the OpenAPI path gains its `s` — nothing
+   * data lives, ready for the day the OpenAPI path gains its `s`: nothing
    * requests it today.
    */
   http.get(`${BASE}/tenant/billing`, () =>
@@ -3027,17 +3412,22 @@ export const handlers = [
     return HttpResponse.json(tenant)
   }),
 
-  // `/alerts/setting` — plural noun, singular setting. That is the real path.
+  // `/alerts/setting`: plural noun, singular setting. That is the real path.
   http.post(`${BASE}/alerts/setting/search`, async ({ request }) => {
     const body = ((await request.json().catch(() => ({}))) ?? {}) as {
       entity_type?: string
       parent_entity_id?: string
       entity_id?: string
       enabled?: boolean
+      status?: string
       limit?: number
       offset?: number
     }
     let rows = [...alertSettings]
+    // As the API: a status filter leaves out settings in another state.
+    if (body.status) {
+      rows = rows.filter((row) => (readString(row, 'status') || 'published') === body.status)
+    }
     if (body.entity_type) {
       rows = rows.filter((row) => readString(row, 'entity_type') === body.entity_type)
     }
@@ -3082,7 +3472,7 @@ export const handlers = [
   }),
 
   /*
-   * The update takes `{ config }` and nothing else — no `entity_id`, no
+   * The update takes `{ config }` and nothing else: no `entity_id`, no
    * `entity_type`. An alert cannot be repointed at a different entity after it
    * is created, which is why the editor shows what it watches as read-only.
    */
@@ -3108,7 +3498,7 @@ export const handlers = [
    * `GET|PUT|DELETE /settings/:key`.
    *
    * `saml_config` is checked first and on every method, because its 404 is the
-   * contract — see `SAML_UNAVAILABLE`. An unrecognised key 404s too: the store
+   * contract: see `SAML_UNAVAILABLE`. An unrecognised key 404s too: the store
    * holds a fixed set of keys, not anything you name.
    *
    * These three are registered inside the Settings block rather than beside the
@@ -3124,7 +3514,7 @@ export const handlers = [
   }),
 
   /*
-   * The write echoes the `value` it was given back inside the envelope — and
+   * The write echoes the `value` it was given back inside the envelope: and
    * keeps it, so the next GET agrees with what the screen just said happened.
    * An echo-only mock leaves a saved form reverting on the next refetch, which
    * looks exactly like a backend that silently dropped the write.
@@ -3156,11 +3546,11 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
-  // The Svix handoff. The token is visibly fake on purpose — see the fixture.
+  // The Svix handoff. The token is visibly fake on purpose: see the fixture.
   http.get(`${BASE}/webhooks/dashboard`, () => HttpResponse.json(webhookDashboard)),
 
   /*
-   * `GET /taxes/rates` — note the path. `@fp/query`'s docstring calls it
+   * `GET /taxes/rates`: note the path. `@fp/query`'s docstring calls it
    * `/taxrates`, but the generated client puts the request on `/taxes/rates`,
    * and the request is what MSW has to match. Mocking the path the prose
    * describes rather than the one the client sends is how a handler ends up
@@ -3186,7 +3576,7 @@ export const handlers = [
   }),
 
   /*
-   * `POST /events/query` — the Events Debugger's list (`client.events.listRawEvents`).
+   * `POST /events/query`: the Events Debugger's list (`client.events.listRawEvents`).
    *
    * Name, customer and source are server-side filters on the real endpoint, so
    * they are applied here too; a mock that ignored them would make the grid's
@@ -3220,7 +3610,7 @@ export const handlers = [
   }),
 
   /*
-   * `GET /creditnotes` — a live route the SDK has no method for, so the app
+   * `GET /creditnotes`: a live route the SDK has no method for, so the app
    * reads it with plain fetch. Status is a server-side filter (repeatable
    * `credit_note_status`), paging is limit/offset, and `pagination.total` is the
    * filtered total.
@@ -3307,7 +3697,7 @@ export const handlers = [
   }),
 
   /*
-   * `/connections` and the OAuth pair — connect, edit and disconnect a
+   * `/connections` and the OAuth pair: connect, edit and disconnect a
    * provider. Like the real API: one published connection per provider, a
    * duplicate is refused, secrets are accepted and never echoed, and DELETE
    * archives.
@@ -3399,7 +3789,7 @@ export const handlers = [
   }),
 
   /*
-   * `GET /tasks/scheduled` — the Exports list. `enabled` is the server-side
+   * `GET /tasks/scheduled`: the Exports list. `enabled` is the server-side
    * filter this console sends.
    */
   http.get(`${BASE}/tasks/scheduled`, ({ request }) => {
@@ -3458,7 +3848,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
-  /** `POST /tasks/scheduled/{id}/run` — a manual run, listed first among the runs. */
+  /** `POST /tasks/scheduled/{id}/run`: a manual run, listed first among the runs. */
   http.post(`${BASE}/tasks/scheduled/:id/run`, async ({ params, request }) => {
     const row = scheduledTasks.find((task) => task['id'] === params['id'])
     if (!row) return HttpResponse.json({ message: 'Scheduled task not found' }, { status: 404 })
@@ -3483,7 +3873,7 @@ export const handlers = [
     return HttpResponse.json({ workflow_id: `wf_${run.id}`, message: 'started' })
   }),
 
-  /** `GET /tasks` — an export's runs, by `scheduled_task_id` and `task_status`. */
+  /** `GET /tasks`: an export's runs, by `scheduled_task_id` and `task_status`. */
   http.get(`${BASE}/tasks`, ({ request }) => {
     const url = new URL(request.url)
     const limit = Number(url.searchParams.get('limit') ?? 10)
@@ -3504,7 +3894,7 @@ export const handlers = [
   ),
 
   /*
-   * `POST /workflows/search` — the Workflows list. The body is snake_case;
+   * `POST /workflows/search`: the Workflows list. The body is snake_case;
    * `workflow_id` and `workflow_status` are the server-side filters this
    * console sends, and `order` sorts by start time.
    */
@@ -3530,7 +3920,7 @@ export const handlers = [
   }),
 
   /*
-   * `POST /usage-records/search` — the Usage Syncs list. `synced` is the
+   * `POST /usage-records/search`: the Usage Syncs list. `synced` is the
    * server-side filter this console sends; the record is authored to the wire
    * with a `syncs` map keyed by marketplace.
    */
@@ -3598,6 +3988,9 @@ export const handlers = [
       const current = (wallet['auto_topup'] ?? {}) as Record<string, unknown>
       wallet['auto_topup'] = { ...current, ...next }
     }
+    // The real update replaces the metadata map, so the mock does too.
+    if (body['metadata'] && typeof body['metadata'] === 'object')
+      wallet['metadata'] = body['metadata']
     return HttpResponse.json(wallet)
   }),
   http.post(`${BASE}/wallets/:id/terminate`, ({ params }) => {
@@ -3623,7 +4016,7 @@ export const handlers = [
   ),
 
   // Groups and cost sheets: the capture environment had none, so they start
-  // empty and hold whatever this session creates — a state worth seeing, and
+  // empty and hold whatever this session creates: a state worth seeing, and
   // enough to run create, rename and delete end to end.
   http.post(`${BASE}/groups/search`, () =>
     HttpResponse.json({
@@ -3743,14 +4136,14 @@ export const handlers = [
    *
    * `plan_ids` is repeatable and is the filter the real route honours;
    * `plan_id` singular is accepted there and silently ignored, so it is
-   * ignored here too rather than being made to work — a mock that is kinder
+   * ignored here too rather than being made to work: a mock that is kinder
    * than the API hides the bug it would cause. Checked live, not assumed.
    */
   /*
    * The pricing parser, answering a fixed schema.
    *
    * The real route proxies a model, so the mock cannot reproduce what it
-   * would say — what it can do is answer the *shape* the screen has to
+   * would say: what it can do is answer the *shape* the screen has to
    * render, with a metered feature, a hybrid plan and a grant, so the review
    * and the apply path are exercised without a model in the loop.
    */
@@ -3760,7 +4153,7 @@ export const handlers = [
    * The id is a query parameter, not a path segment, because event ids may
    * contain `/`. The fixture walks all five stages for most events and fails
    * at the meter for one of them, so the failure path is reachable under
-   * mocks — it is the branch people actually open the debugger to see.
+   * mocks: it is the branch people actually open the debugger to see.
    */
   http.get(`${BASE}/events/lookup`, ({ request }) => {
     const url = new URL(request.url)
@@ -3892,7 +4285,7 @@ export const handlers = [
     })
   }),
 
-  // Credit grants have no search — only the scoped list endpoints — so the plan
+  // Credit grants have no search: only the scoped list endpoints: so the plan
   // and add-on tabs read from these, filtered by the id in the path.
   http.get(`${BASE}/plans/:id/creditgrants`, ({ params }) => {
     const rows = (corpus['creditgrants'] as Corpus).items.filter(
@@ -3914,6 +4307,18 @@ export const handlers = [
   }),
   http.post(`${BASE}/creditgrants`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
+    // The API's own rule: a subscription-scoped grant must say when it starts.
+    if (body['scope'] === 'SUBSCRIPTION' && !body['start_date']) {
+      return HttpResponse.json(
+        {
+          code: 'validation_error',
+          message: 'start_date is required for SUBSCRIPTION-scoped grants',
+          hint: 'Please provide a start date for the credit grant',
+          http_status_code: 400,
+        },
+        { status: 400 },
+      )
+    }
     const row = { ...body, id: `cg_new_${Date.now()}`, status: 'published' }
     if (body['scope'] === 'SUBSCRIPTION') {
       additionsFor('grants', String(body['subscription_id'] ?? '')).push({
@@ -3941,7 +4346,7 @@ export const handlers = [
   }),
 
   // Editing, cloning and deleting a feature echo back, so the dialogs' success
-  // paths — close, invalidate, refetch — complete end to end.
+  // paths: close, invalidate, refetch: complete end to end.
   http.put(`${BASE}/features/:id`, async ({ request, params }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
@@ -3958,7 +4363,7 @@ export const handlers = [
   ),
 
   // Creating and editing an add-on echo the record back, so the drawer's
-  // success path — close, invalidate, refetch — completes end to end.
+  // success path: close, invalidate, refetch: completes end to end.
   http.post(`${BASE}/addons`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json(
@@ -3969,7 +4374,7 @@ export const handlers = [
   http.put(`${BASE}/addons/:id`, async ({ request, params }) =>
     patchRow((corpus['addons'] as Corpus).items, String(params['id']), await readBody(request)),
   ),
-  // One add-on, by id — the detail page on a direct navigation, from the same
+  // One add-on, by id: the detail page on a direct navigation, from the same
   // corpus the list reads.
   http.get(`${BASE}/addons/:id`, ({ params }) => {
     const addon = byId('addons', String(params['id']))
@@ -3980,10 +4385,16 @@ export const handlers = [
   // success path runs end to end.
   http.post(`${BASE}/plans`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json(
-      { ...body, id: `plan_new_${Date.now()}`, status: 'published' },
-      { status: 201 },
-    )
+    const row = {
+      ...body,
+      id: `plan_new_${Date.now()}`,
+      status: 'published',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    // Kept, so the detail page the form lands on reads the plan just created.
+    ;(corpus['plans'] as Corpus).items.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/plans/:id`, async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>
@@ -4058,6 +4469,21 @@ export const handlers = [
 
   http.post(`${BASE}/customers`, async ({ request }) => {
     const body = await readBody(request)
+    // The API's unique index on (environment, external_id): a taken id is a 409.
+    const externalId = readString(body, 'external_id')
+    const taken = (corpus['customers'] as Corpus).items.some(
+      (row) => externalId !== '' && readString(row, 'external_id') === externalId,
+    )
+    if (taken) {
+      return HttpResponse.json(
+        {
+          code: 'already_exists',
+          message: 'A customer with this identifier already exists',
+          http_status_code: 409,
+        },
+        { status: 409 },
+      )
+    }
     const row = { ...body, id: `cust_new_${Date.now()}`, status: 'published' }
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
@@ -4101,7 +4527,7 @@ export const handlers = [
     })
   }),
   /*
-   * `PUT /invoices/{id}` — the narrow edit the API actually allows.
+   * `PUT /invoices/{id}`: the narrow edit the API actually allows.
    *
    * Its whole body is `invoice_pdf_url`, `due_date`, `metadata` and
    * `apply_discount`; the customer, the amounts and the lines are fixed once
@@ -4134,12 +4560,12 @@ export const handlers = [
     return HttpResponse.json(invoice)
   }),
   /*
-   * `POST /invoices/{id}/modify/execute` — the only route that changes what an
+   * `POST /invoices/{id}/modify/execute`: the only route that changes what an
    * invoice charges for.
    *
    * One action per call, like the API: add (bulk), update (one line, and the
    * edit versions it so the id changes) and remove (bulk). The id change on
-   * update is mirrored here deliberately — it is the behaviour the client has
+   * update is mirrored here deliberately: it is the behaviour the client has
    * to thread through a batch, so a mock that kept the id stable would hide
    * the bug it is most likely to have.
    */
@@ -4244,15 +4670,22 @@ export const handlers = [
     sourceFor('invoices').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
-  // This period's consumption. Authored: an in-progress period with a commitment.
-  http.post(`${BASE}/subscriptions/usage`, () =>
-    HttpResponse.json({
+  // This period's consumption. Authored: an in-progress period, measured against
+  // the contract's own commitment as the API does: none when it has none.
+  http.post(`${BASE}/subscriptions/usage`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = sourceFor('subscriptions').items.find(
+      (item) => readString(item, 'id') === body['subscription_id'],
+    )
+    const commitment = Number(row?.['commitment_amount'] ?? 0)
+    return HttpResponse.json({
       amount: 184.5,
       currency: 'usd',
       start_time: '2026-10-01T00:00:00Z',
       end_time: '2026-11-01T00:00:00Z',
-      commitment_amount: 250,
-      commitment_utilized: 184.5,
+      commitment_amount: commitment,
+      commitment_utilized: commitment > 0 ? Math.min(184.5, commitment) : 0,
+      overage_factor: Number(row?.['overage_factor'] ?? 1),
       overage_amount: 0,
       has_overage: false,
       charges: [
@@ -4265,8 +4698,8 @@ export const handlers = [
           is_overage: false,
         },
       ],
-    }),
-  ),
+    })
+  }),
   // The next invoice, computed by the API. Authored: a fixed fee, metered usage, and a zero line
   // that "Hide zero charges" removes.
   http.post(`${BASE}/invoices/preview`, async ({ request }) => {
@@ -4361,6 +4794,21 @@ export const handlers = [
       : []
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
   }),
+  // V1's "Push to Integration": the API queues the sync and answers at once.
+  http.post(`${BASE}/integrations/sync`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      entity_type?: string
+      entity_id?: string
+    }
+    if (!body.entity_type || !body.entity_id) {
+      return HttpResponse.json(
+        { code: 'validation_error', message: 'entity_type and entity_id are required' },
+        { status: 400 },
+      )
+    }
+    return HttpResponse.json({ message: 'sync triggered' })
+  }),
+
   http.post(`${BASE}/integrations/link`, async ({ request }) => {
     const body = await readBody(request)
     const customerId = String(body['entity_id'] ?? '')
@@ -4406,12 +4854,23 @@ export const handlers = [
           feature: { id: row['feature_id'], name: String(row['feature_id']) },
           entitlement: row,
         })),
+        // The same features `GET /customers/usage` reports, so the contract's
+        // Usage column has a reading to match by feature id.
         {
-          feature: { id: 'feat_api_calls', name: 'API calls' },
+          feature: { id: 'feat_synth_0000', name: 'API calls' },
           entitlement: {
             is_enabled: true,
-            is_soft_limit: false,
-            usage_limit: 100000,
+            is_soft_limit: true,
+            usage_limit: 250000,
+            usage_reset_period: 'MONTHLY',
+          },
+        },
+        {
+          feature: { id: 'feat_synth_0001', name: 'Tokens processed' },
+          entitlement: {
+            is_enabled: true,
+            is_soft_limit: true,
+            usage_limit: 1000000,
             usage_reset_period: 'MONTHLY',
           },
         },
@@ -4634,6 +5093,16 @@ export const handlers = [
     patchRow(sourceFor('subscriptions').items, String(params['id']), patch)
     return HttpResponse.json({ subscription_id: params['id'], ...patch })
   }),
+  http.post(`${BASE}/subscriptions/:id/pause`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'paused',
+    }),
+  ),
+  http.post(`${BASE}/subscriptions/:id/resume`, ({ params }) =>
+    patchRow(sourceFor('subscriptions').items, String(params['id']), {
+      subscription_status: 'active',
+    }),
+  ),
   http.post(`${BASE}/subscriptions/:id/activate`, async ({ request, params }) => {
     const body = await readBody(request)
     return patchRow(sourceFor('subscriptions').items, String(params['id']), {
@@ -4644,15 +5113,18 @@ export const handlers = [
   http.post(`${BASE}/subscriptions`, async ({ request }) => {
     const body = await readBody(request)
     const start = typeof body['start_date'] === 'string' ? Date.parse(body['start_date']) : NaN
-    // A future start leaves the subscription incomplete until it is activated.
+    // As the API (CreateSubscriptionRequest.ToSubscription): the first status
+    // comes from the payment behaviour, not the start date. The default,
+    // default_active, starts it active even when it starts in the future; the
+    // incomplete behaviours start it incomplete. A draft stays a draft.
+    const behaviour = readString(body, 'payment_behavior')
     const row = {
       ...body,
       id: `sub_new_${Date.now()}`,
-      // A draft stays a draft; a future start waits to be activated.
       subscription_status:
         body['subscription_status'] === 'draft'
           ? 'draft'
-          : start > Date.now()
+          : ['default_incomplete', 'allow_incomplete', 'error_if_incomplete'].includes(behaviour)
             ? 'incomplete'
             : 'active',
       status: 'published',
@@ -4661,6 +5133,40 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     sourceFor('subscriptions').items.unshift(row)
+    // An active contract bills its in-advance fixed charges at once, as the API
+    // does, so the customer's first invoice is there to find on their Invoices
+    // tab. Drafts and future starts have not begun, so they bill nothing yet.
+    if (row.subscription_status === 'active' && !(start > Date.now())) {
+      const planId = readString(body, 'plan_id')
+      const total = sourceFor('prices')
+        .items.filter(
+          (price) =>
+            readString(price, 'entity_id') === planId &&
+            readString(price, 'type') === 'FIXED' &&
+            readString(price, 'invoice_cadence') === 'ADVANCE',
+        )
+        .reduce((sum, price) => sum + Number(readString(price, 'amount') || 0), 0)
+      sourceFor('invoices').items.unshift({
+        id: `inv_new_${Date.now()}`,
+        customer_id: readString(body, 'customer_id'),
+        subscription_id: row.id,
+        currency: readString(body, 'currency') || 'usd',
+        invoice_type: 'SUBSCRIPTION',
+        billing_reason: 'SUBSCRIPTION_CREATE',
+        invoice_status: 'FINALIZED',
+        payment_status: 'PENDING',
+        subtotal: String(total),
+        total: String(total),
+        amount_due: String(total),
+        amount_paid: '0',
+        amount_remaining: String(total),
+        issue_date: row.created_at,
+        finalized_at: row.created_at,
+        status: 'published',
+        created_at: row.created_at,
+        updated_at: row.created_at,
+      })
+    }
     return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/customers`, async ({ request }) =>
@@ -4734,8 +5240,8 @@ export const handlers = [
   ),
   http.delete(`${BASE}/taxes/rates/:id`, ({ params }) => removeRow(taxRates, String(params['id']))),
 
-  // Price units, the same way: create echoes the record back, and update — which
-  // sends only the name — echoes it beside a fixed identity, so the drawer's
+  // Price units, the same way: create echoes the record back, and update: which
+  // sends only the name: echoes it beside a fixed identity, so the drawer's
   // success path (close, invalidate, refetch) runs end to end. The base path is
   // registered after `/prices/units/search` above so the search POST is not
   // shadowed.
@@ -4749,13 +5255,13 @@ export const handlers = [
   http.put(`${BASE}/prices/units/:id`, async ({ request, params }) =>
     patchRow((corpus['priceUnits'] as Corpus).items, String(params['id']), await readBody(request)),
   ),
-  // One price unit, by id — the detail page on a direct navigation.
+  // One price unit, by id: the detail page on a direct navigation.
   http.get(`${BASE}/prices/units/:id`, ({ params }) => {
     const unit = byId('priceUnits', String(params['id']))
     return unit ? HttpResponse.json(unit) : new HttpResponse(null, { status: 404 })
   }),
 
-  // One plan, by id — what the detail page loads on a direct navigation. Served
+  // One plan, by id: what the detail page loads on a direct navigation. Served
   // from the same corpus the list reads, so the two never disagree; a plan a
   // create just echoed (no corpus row yet) degrades to a minimal record rather
   // than a 404, so the just-created detail page still renders.

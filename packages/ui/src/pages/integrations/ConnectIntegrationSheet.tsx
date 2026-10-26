@@ -235,12 +235,15 @@ function ConnectForm({
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
         {multi ? (
-          <WorkflowStepper
-            steps={flow.workflow}
-            currentStep={flow.step}
-            onStepChange={flow.goTo}
-            aria-label={`Connect ${integration.name}`}
-          />
+          // Centred at the width its labels need, not stretched across the sheet.
+          <div className="mx-auto w-full max-w-sm">
+            <WorkflowStepper
+              steps={flow.workflow}
+              currentStep={flow.step}
+              onStepChange={flow.goTo}
+              aria-label={`Connect ${integration.name}`}
+            />
+          </div>
         ) : null}
 
         {error ? (
@@ -254,7 +257,7 @@ function ConnectForm({
         {step === 'credentials' ? (
           <div className="flex flex-col gap-5">
             {spec.prerequisites?.map((line) => (
-              <Alert key={line}>
+              <Alert key={line} variant="info">
                 <InfoIcon aria-hidden="true" />
                 <AlertDescription>{line}</AlertDescription>
               </Alert>

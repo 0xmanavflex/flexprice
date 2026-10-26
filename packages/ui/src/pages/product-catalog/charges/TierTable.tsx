@@ -10,7 +10,7 @@ import { provenance } from '@ui/provenance'
  *
  * A controlled table over a `Tier[]`: the parent owns the array, this draws it
  * and reports edits. The rules a person keeps getting wrong are built into the
- * shape rather than left to a validator to scold them about after the fact —
+ * shape rather than left to a validator to scold them about after the fact:
  * `from` is *derived* from the band below it and read-only, so bands cannot
  * overlap or leave a gap; the last band is always unbounded (an `upTo` of null,
  * shown as ∞), so usage above the top tier is never dropped on the floor.

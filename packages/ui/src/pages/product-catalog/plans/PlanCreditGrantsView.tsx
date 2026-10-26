@@ -44,7 +44,7 @@ function PlanCreditGrantsViewInner({
 }: PlanCreditGrantsViewProps) {
   const add = (
     <WriteGate>
-      <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+      <Button type="button" variant="outline" size="sm" className="h-8 px-3" onClick={onAdd}>
         <PlusIcon aria-hidden />
         Add grant
       </Button>
@@ -80,7 +80,10 @@ function PlanCreditGrantsViewInner({
       <DetailTable
         compact
         label="Credit grants"
-
+        facet={{
+          label: 'Expires',
+          value: (g) => CREDIT_GRANT_EXPIRY_TYPE_LABEL[g.expirationType],
+        }}
         noun="credit grants"
         rows={grants}
         columns={[

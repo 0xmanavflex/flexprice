@@ -68,7 +68,7 @@ const SECTIONS: SettingsSection[] = [
     id: 'integrations',
     label: 'Integrations',
     icon: <Plug aria-hidden />,
-    // Nothing in this section is available — and it is still in the rail, still
+    // Nothing in this section is available: and it is still in the rail, still
     // selectable, and says why. Hiding it would look like the feature moved.
     tabs: [
       { id: 'connected', label: 'Connected apps', unavailable: true },
@@ -108,7 +108,7 @@ function Body({ label }: { label: string }) {
  * What a page does with this component.
  *
  * The shell reports a section change and nothing else, so the page is what
- * picks the tab the new section opens on — here, its first. On a real screen
+ * picks the tab the new section opens on: here, its first. On a real screen
  * that is one `navigate()` writing both ids into a single history entry.
  */
 function Controlled({
@@ -328,7 +328,7 @@ export const Keyboard: Story = {
 /**
  * A section where every tab is unavailable.
  *
- * It stays in the strip and stays selectable — the alternative is a section
+ * It stays in the strip and stays selectable: the alternative is a section
  * that silently disappears, which reads as "the feature was removed" rather
  * than "not on this account". The panel says which it is, through `EmptyState`.
  */
@@ -380,7 +380,7 @@ const LONG_SECTIONS: SettingsSection[] = [
 ]
 
 /**
- * Labels nobody sized for. Labels truncate inside the rail — the failure being
+ * Labels nobody sized for. Labels truncate inside the rail: the failure being
  * avoided is the page itself growing a horizontal scrollbar.
  */
 export const LongLabels: Story = {

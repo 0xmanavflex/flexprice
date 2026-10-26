@@ -71,12 +71,12 @@ export function GroupForm({
 
   return (
     <FormPage
-      title="Create group"
+      title="Create tag"
       trail={trail}
       width="narrow"
       toolbar={{
         mode: 'create',
-        noun: 'group',
+        noun: 'tag',
         formId: FORM_ID,
         onCancel,
         isSubmitting,
@@ -85,10 +85,10 @@ export function GroupForm({
     >
       <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
         <div className="flex flex-col gap-6">
-          <FormCard title="Group details" status="required">
+          <FormCard title="Tag details" status="required">
             <FormRow
               label="Name"
-              hint="What the group is called when you pick it elsewhere."
+              hint="What the tag is called when you pick it elsewhere."
               required
               error={errors.name?.message}
             >
@@ -111,7 +111,7 @@ export function GroupForm({
             <FormRow
               label="Holds"
               required
-              hint="A group holds prices or features, never both. Fixed once created."
+              hint="A tag holds prices or features, never both. Fixed once created."
               error={errors.entityType?.message}
             >
               {({ id, ...field }) => (

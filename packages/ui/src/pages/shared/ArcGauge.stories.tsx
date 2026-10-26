@@ -54,7 +54,7 @@ export const Playground: Story = {
 }
 
 /**
- * The reading is text, not only a shape — and it is announced once, not twice:
+ * The reading is text, not only a shape: and it is announced once, not twice:
  * the figure under the arc is `aria-hidden` because the gauge's own accessible
  * name already carries it.
  */
@@ -114,7 +114,7 @@ export const Zero: Story = {
   },
 }
 
-/** No denominator at all — clamps to empty rather than dividing by zero. */
+/** No denominator at all: clamps to empty rather than dividing by zero. */
 export const NoCeiling: Story = {
   args: { value: 0, max: 0, caption: 'Nothing measured' },
   play: async ({ canvasElement }) => {

@@ -29,6 +29,7 @@ import {
   BellIcon,
   ClockIcon,
   PencilIcon,
+  PlusIcon,
   RotateCcwIcon,
   ScaleIcon,
   TicketPercentIcon,
@@ -42,7 +43,7 @@ import { provenance } from '@ui/provenance'
  *
  * The bargain the charges table makes is that a row stays one line because
  * everything else is one click away *in a known place*. This is that place: a
- * box per part that exists — Price, Commitment, Discount, Alerts — and the
+ * box per part that exists: Price, Commitment, Discount, Alerts: and the
  * version history under them. Opened from a flag, it scrolls to that box and
  * rings it, so the click lands where the eye already was.
  *
@@ -50,8 +51,8 @@ import { provenance } from '@ui/provenance'
  * else is one box, not five empty ones, and no box explains in a paragraph
  * what its own figures already say.
  *
- * The boxes run in the same order as the flags — Price, Discount, Commitment,
- * Alerts, History — because a flag is a promise about where its click lands.
+ * The boxes run in the same order as the flags: Price, Discount, Commitment,
+ * Alerts, History: because a flag is a promise about where its click lands.
  * The prototype put Commitment second and the handoff calls that out as a
  * quirk to fix rather than copy: two orders for the same five things is one
  * order too many.
@@ -67,7 +68,7 @@ export interface ChargeSheetProps {
   charge: Charge | null
   /** What else is known about it; without this the sheet is the price alone. */
   detail?: ChargeDetail | undefined
-  /** Which box to scroll to and ring — the flag that was clicked. */
+  /** Which box to scroll to and ring: the flag that was clicked. */
   section?: ChargeSection | undefined
   onClose: () => void
   /** Wires each box's "Edit". A box with no handler shows no button. */
@@ -127,6 +128,7 @@ function Box({
   title,
   badge,
   onEdit,
+  addLabel,
   focused,
   children,
 }: {
@@ -135,12 +137,17 @@ function Box({
   title: string
   badge?: string | undefined
   onEdit?: (() => void) | undefined
+  /**
+   * Set when the part is empty and editing it creates it: the header action
+   * is then the section Add button ("Add alerts") rather than Edit.
+   */
+  addLabel?: string | undefined
   focused: boolean
   children: ReactNode
 }) {
   // A `section` around the frame, not a bare `div`: `FrameHeader` renders a
   // `<header>`, and a `<header>` outside sectioning content is a *banner*
-  // landmark — four boxes would mean four banners on one page, which axe
+  // landmark: four boxes would mean four banners on one page, which axe
   // rightly refuses. Inside a named section it is the section's header.
   return (
     <section
@@ -153,7 +160,7 @@ function Box({
         <FrameHeader className="flex-row items-center justify-between gap-3">
           <FrameTitle
             id={`charge-${section}-title`}
-            className="flex items-center gap-2 [&_svg]:size-4"
+            className="flex items-center gap-2 font-medium [&_svg]:size-4"
           >
             {icon}
             {title}
@@ -163,7 +170,12 @@ function Box({
               </Badge>
             ) : null}
           </FrameTitle>
-          {onEdit ? (
+          {onEdit && addLabel ? (
+            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onEdit}>
+              <PlusIcon aria-hidden />
+              {addLabel}
+            </Button>
+          ) : onEdit ? (
             <Button
               variant="ghost"
               size="sm"
@@ -219,7 +231,7 @@ function TierList({ tiers }: { tiers: Charge['tiers'] }) {
  * Per period: one figure, per the billing period or its own duration.
  * Per bucket, all day: the same figure applies to every bucket.
  * Per bucket with windows: those windows carry their own figure, and a dashed
- * row says what the rest of the day does — which is the question a reader asks
+ * row says what the rest of the day does: which is the question a reader asks
  * the moment they see a window, and the prototype answers in the same place.
  */
 /** "every hour" when the charge has a bucket; otherwise the billing period ("every month"). */
@@ -488,20 +500,28 @@ export function ChargeSheet({
             </Box>
           ) : null}
 
-          {detail?.alerts && detail.alerts.length > 0 ? (
+          {/* Shown empty only where alerts can be added from here. */}
+          {(detail?.alerts && detail.alerts.length > 0) || editAt(ChargeSection.Alerts) ? (
             <Box
               section={ChargeSection.Alerts}
               icon={<BellIcon aria-hidden className="text-warning-foreground" />}
               title="Alerts"
               onEdit={editAt(ChargeSection.Alerts)}
+              {...(detail?.alerts?.length ? {} : { addLabel: 'Add alerts' })}
               focused={section === ChargeSection.Alerts}
             >
-              <Facts
-                items={detail.alerts.map((alert) => [
-                  `${alert.level}, ${alert.condition ?? 'above'}`,
-                  alert.value,
-                ])}
-              />
+              {detail?.alerts?.length ? (
+                <Facts
+                  items={detail.alerts.map((alert) => [
+                    `${alert.level}, ${alert.condition ?? 'above'}`,
+                    alert.value,
+                  ])}
+                />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No alerts on this charge. Add thresholds to be told when its usage crosses them.
+                </p>
+              )}
             </Box>
           ) : null}
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DEFAULT_INVOICE_QUERY } from '@fp/domain'
-import { ApiError, useCreateCreditNote, useInvoice, useInvoices, serverReason } from '@fp/query'
+import { useCreateCreditNote, useInvoice, useInvoices } from '@fp/query'
 import { CreditNoteForm } from '@fp/ui/pages'
 
 export interface CreditNoteFormPageProps {
@@ -51,19 +51,9 @@ export function CreditNoteFormPage({
       trail={[{ label: 'Credit memos', onClick: onCancel }, { label: 'New credit memo' }]}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={toSubmitError(create.error)}
+      // The API's refusal is a toast (MutationToasts); validation stays in the form.
+      submitError={null}
       onSubmit={(draft) => create.mutate(draft, { onSuccess: (note) => onDone(note.id ?? '') })}
     />
   )
-}
-
-function toSubmitError(error: unknown): string | null {
-  if (!error) return null
-  if (error instanceof ApiError) {
-    if (error.kind === 'invalid') return error.message || 'Check the details and try again.'
-    if (error.kind === 'forbidden')
-      return serverReason(error) ?? 'You do not have permission to create credit memos here.'
-    if (error.kind === 'network') return 'Could not reach Flexprice. Check your connection.'
-  }
-  return 'Could not create the credit memo. Try again.'
 }

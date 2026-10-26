@@ -1,7 +1,7 @@
 import { AUTH_LOGOS, AUTH_PEOPLE } from '@ui/assets/auth'
 
 /**
- * The customer reviews and logos beside the sign-in forms — the same people,
+ * The customer reviews and logos beside the sign-in forms: the same people,
  * photos and logos as admin.flexprice.io, via the dashboard redesign.
  */
 export interface Testimonial {

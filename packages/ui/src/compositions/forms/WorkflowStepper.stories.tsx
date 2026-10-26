@@ -6,7 +6,7 @@ import { WorkflowStepper, type WorkflowStep } from './WorkflowStepper'
 /**
  * The stepper is presentational, and these stories are how that is checked.
  *
- * No router, no provider, no workflow state — every arrangement below is
+ * No router, no provider, no workflow state: every arrangement below is
  * reached by passing `steps` and `currentStep`. If proving "the user is on the
  * Prices step with Customer complete" ever required mounting a router, the
  * component would have absorbed workflow state and the rule would be broken.
@@ -202,7 +202,7 @@ export const OnlyRealCompletionReadsAsDone: Story = {
     const fill = (i: number) => getComputedStyle(circles[i] as Element).backgroundColor
     const done = fill(2)
 
-    // Walked past, nothing entered — not drawn as finished.
+    // Walked past, nothing entered: not drawn as finished.
     await expect(fill(0)).not.toBe(done)
     await expect(fill(1)).not.toBe(done)
     await expect(fill(3)).not.toBe(done)

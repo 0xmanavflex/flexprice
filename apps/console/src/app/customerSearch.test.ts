@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CUSTOMER_QUERY, CustomerStatus } from '@fp/domain'
+import { ACTIVE_CUSTOMERS_FILTER, DEFAULT_CUSTOMER_QUERY, CustomerStatus } from '@fp/domain'
 import { parseCustomerSearch } from './customerSearch'
 
 describe('parseCustomerSearch', () => {
@@ -29,6 +29,18 @@ describe('parseCustomerSearch', () => {
     })
   })
 
+  it('opens on active customers, and an explicit empty filter list means every status', () => {
+    expect(parseCustomerSearch({}).filters).toEqual([ACTIVE_CUSTOMERS_FILTER])
+    expect(parseCustomerSearch({ filters: [] }).filters).toEqual([])
+    expect(parseCustomerSearch({ filters: '[]' }).filters).toEqual([])
+  })
+
+  it('leaves the default filter off a link that names a status', () => {
+    const query = parseCustomerSearch({ status: 'archived' })
+    expect(query.filters).toEqual([{ field: 'status', op: 'in', value: ['archived'] }])
+    expect(query.statuses).toEqual([])
+  })
+
   it('drops filters it cannot run', () => {
     expect(
       parseCustomerSearch({ filters: [{ field: 'plan', op: 'eq', value: 'x' }] }).filters,
@@ -36,13 +48,13 @@ describe('parseCustomerSearch', () => {
   })
 
   it('accepts statuses as a repeated param or a comma list', () => {
-    expect(parseCustomerSearch({ status: ['published', 'archived'] }).statuses).toEqual([
-      'published',
-      'archived',
-    ])
-    expect(parseCustomerSearch({ status: 'published,archived' }).statuses).toEqual([
-      'published',
-      'archived',
+    // Alongside explicit filters the facet is kept as written…
+    expect(
+      parseCustomerSearch({ status: ['published', 'archived'], filters: [] }).statuses,
+    ).toEqual(['published', 'archived'])
+    // …and on its own it becomes the visible status filter.
+    expect(parseCustomerSearch({ status: 'published,archived' }).filters).toEqual([
+      { field: 'status', op: 'in', value: ['published', 'archived'] },
     ])
   })
 

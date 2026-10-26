@@ -4,7 +4,7 @@
  * `billing/`, `collections/`, `revenue/`, `developers/`, `integrations/`,
  * `settings/`, `auth/`), one folder per entity inside an area. `shared/` holds
  * the list table, cells, charts and meters every page is built from. See
- * `../README.md` for the full map. Domain types belong here — a `Money` cell takes a
+ * `../README.md` for the full map. Domain types belong here: a `Money` cell takes a
  * `Money`, an `InvoiceStatusBadge` takes a domain status. Transport types do
  * not: a component receiving a `WalletResponse` is the bug the layering prevents.
  *
@@ -33,6 +33,8 @@ export type {
 export { RevenueReport, RevenueReportProvenance } from './revenue/RevenueReport'
 export type {
   AgingBucket,
+  CreditRow,
+  CreditTypeRow,
   CustomerRevenueRow,
   OverdueCustomerRow,
   PayerRow,
@@ -60,11 +62,6 @@ export {
   HostedInvoiceViewProvenance,
 } from './billing/hosted-invoice/HostedInvoiceView'
 export type { HostedInvoiceViewProps } from './billing/hosted-invoice/HostedInvoiceView'
-export {
-  HostedInvoiceDetailsSheet,
-  HostedInvoiceDetailsSheetProvenance,
-} from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
-export type { HostedInvoiceDetailsSheetProps } from './billing/hosted-invoice/HostedInvoiceDetailsSheet'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance, linesChanged } from './billing/invoices/InvoiceForm'
 export type {
@@ -315,6 +312,20 @@ export type {
 } from './shared/StatusBadge'
 export { UsageMeter, UsageMeterProvenance } from './shared/UsageMeter'
 export type { UsageMeterProps } from './shared/UsageMeter'
+export {
+  EntitlementUsage,
+  EntitlementUsageProvenance,
+  EntitlementUsageTable,
+  entitlementRowsForContract,
+  entitlementRowsFromUsage,
+  entitlementValue,
+} from './shared/EntitlementUsage'
+export type {
+  EntitlementUsageProps,
+  EntitlementUsageRow,
+  EntitlementSourceLink,
+  EntitlementUsageTableProps,
+} from './shared/EntitlementUsage'
 export { SignInForm, SignInFormProvenance } from './auth/SignInForm'
 export type { SignInFormProps } from './auth/SignInForm'
 export { SignInScreen, SignInScreenProvenance } from './auth/SignInScreen'
@@ -334,6 +345,15 @@ export type { SetPasswordFormProps } from './auth/SetPasswordForm'
 export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/AcceptInvitationForm'
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './settings/environments/EnvironmentForm'
+export {
+  EnvironmentCopyForm,
+  EnvironmentCopyFormProvenance,
+} from './settings/environments/EnvironmentCopyForm'
+export type {
+  CopyableEnvironment,
+  EnvironmentCopyFormProps,
+  EnvironmentCopyTarget,
+} from './settings/environments/EnvironmentCopyForm'
 export type {
   EnvironmentContact,
   EnvironmentFormProps,
@@ -394,9 +414,11 @@ export type { SplitMeterPart, SplitMeterProps } from './shared/SplitMeter'
 export { ArcGauge, ArcGaugeProvenance } from './shared/ArcGauge'
 export type { ArcGaugeProps } from './shared/ArcGauge'
 export { QuotaCard, QuotaCardProvenance } from './shared/QuotaCard'
+export { EntityAlertDialog, EntityAlertDialogProvenance } from './shared/EntityAlertDialog'
+export type { EntityAlertDialogProps } from './shared/EntityAlertDialog'
 export type { QuotaCardAction, QuotaCardProps } from './shared/QuotaCard'
 
-/* The billing grids' migration onto EntityList. Appended — the grids and their
+/* The billing grids' migration onto EntityList. Appended: the grids and their
    props were already exported above; this is the one new type the move added. */
 export { WorkflowGrid, WorkflowGridProvenance } from './developers/workflows/WorkflowGrid'
 export type { WorkflowGridProps } from './developers/workflows/WorkflowGrid'
@@ -473,16 +495,29 @@ export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
 export { CustomerTaxSection } from './customers/CustomerTaxSection'
 export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
+export {
+  CustomerEntitlementUsage,
+  CustomerEntitlementUsageProvenance,
+} from './customers/CustomerEntitlementUsage'
+export type {
+  CustomerEntitlementUsageProps,
+  CustomerEntitlementUsageRow,
+} from './customers/CustomerEntitlementUsage'
 export { CustomerUsageSummary } from './customers/CustomerUsageSummary'
 export type {
   CustomerUsageSummaryProps,
   CustomerUsageSummaryRow,
 } from './customers/CustomerUsageSummary'
-export { CustomerAnalyticsView, DEMO_FEATURE_ANALYTICS } from './customers/CustomerAnalyticsView'
+export {
+  CustomerAnalyticsView,
+  CustomerAnalyticsViewProvenance,
+} from './customers/CustomerAnalyticsView'
 export type {
   CustomerAnalyticsViewProps,
   FeatureAnalytics,
   AnalyticsQuery,
+  AnalyticsTotals,
+  AnalyticsFeatureOption,
 } from './customers/CustomerAnalyticsView'
 
 export { CatalogDetailFrame } from './product-catalog/catalog-detail/CatalogDetailFrame'
@@ -498,7 +533,7 @@ export { CostMarginCard } from './settings/cost-sheets/CostMarginCard'
 export { GroupMembersView } from './settings/groups/GroupMembersView'
 
 /*
- * Webhooks — the Svix consumer app portal, in the console's grammar: endpoint
+ * Webhooks: the Svix consumer app portal, in the console's grammar: endpoint
  * list, endpoint detail (overview / testing / advanced), message attempts,
  * message sheet, event catalog, message log and activity.
  */

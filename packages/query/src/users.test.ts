@@ -57,7 +57,7 @@ describe('toMember', () => {
   })
 
   it('splits the two on the type discriminator alone', () => {
-    // Same endpoint, same record shape — only `type` separates the Team screen
+    // Same endpoint, same record shape: only `type` separates the Team screen
     // from the Service Accounts screen.
     expect(toMember(userWire).type).toBe(MemberType.User)
     expect(toMember(serviceAccountWire).type).toBe(MemberType.ServiceAccount)
@@ -105,7 +105,7 @@ describe('toMemberFilter', () => {
     expect(toMemberFilter({ ...query, page: 1 })).toMatchObject({ offset: 0 })
   })
 
-  it('sends neither search nor roles — the endpoint ignores both', () => {
+  it('sends neither search nor roles: the endpoint ignores both', () => {
     // Verified live: a `contains` filter for "zzzznomatch" returned the row it
     // cannot match, and roles:['event_reader'] returned a super_admin-only
     // user. Sending them would make the search box appear to work.
@@ -194,7 +194,7 @@ describe('toCreateServiceAccountRequest', () => {
 })
 
 describe('the member domain model', () => {
-  it('is what a hook returns — no transport type reaches a component', () => {
+  it('is what a hook returns: no transport type reaches a component', () => {
     const member: Member = toMember(userWire)
     expect(Object.keys(member).sort()).toEqual([
       'email',

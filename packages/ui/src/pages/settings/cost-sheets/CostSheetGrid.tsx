@@ -37,8 +37,8 @@ import {
  *
  * **Two of the redesign's columns are not here, and the redesign's own gap
  * list says why:** `Provider` and `Margin target` have no field on the API's
- * cost sheet. Margin target is the tempting one — it could be computed from a
- * sheet's prices against a plan's — but `money.ts` forbids money arithmetic in
+ * cost sheet. Margin target is the tempting one: it could be computed from a
+ * sheet's prices against a plan's: but `money.ts` forbids money arithmetic in
  * the browser, and `priceCount` has already collapsed the prices to a count,
  * so there is nothing here to compute from even if it were allowed. Both are
  * omitted rather than dashed on every row.
@@ -48,7 +48,7 @@ import {
  * count. A third option that always shows nothing is worse than two that work.
  *
  * **No counts beside the status options.** `useCatalogStats` covers plans,
- * features, add-ons, coupons and price units — not cost sheets — and the only
+ * features, add-ons, coupons and price units: not cost sheets: and the only
  * other number available is how many of the twenty-five rows on screen match,
  * which is not the same question. So the options carry no number, which the
  * shared table supports by design.
@@ -70,7 +70,7 @@ const SORT_OPTIONS = Object.values(CostSheetSortField).map((value) => ({
  * There is no narrative docs page for cost sheets: the concept lives in the
  * AI cost-tracking guides (which is where margin is explained) and in the
  * `/costs` API reference. Each card is titled by what its page actually
- * covers rather than by the entity — a card promising "what a cost sheet is"
+ * covers rather than by the entity: a card promising "what a cost sheet is"
  * that lands on a page never using the phrase is a dead link that happens to
  * return 200.
  */
@@ -263,7 +263,6 @@ export function CostSheetGrid({
         title: 'No cost sheets yet',
         description:
           'A cost sheet records what each unit of usage costs you, so margin can be measured against what you charge for it.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New cost sheet</Button> } : {}),
         guides: GUIDES,
       }}
     />

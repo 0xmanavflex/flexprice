@@ -2,9 +2,11 @@ import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 import {
   CalendarClockIcon,
+  CirclePauseIcon,
   DatabaseIcon,
   DownloadIcon,
   EyeIcon,
+  PlayIcon,
   PlusIcon,
   ShieldCheckIcon,
   Trash2Icon,
@@ -41,6 +43,7 @@ import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { PageBody } from '@ui/compositions/layout/Page'
+import { EntityHeader } from '../../shared/EntityHeader'
 import { Section } from '@ui/compositions/layout/Section'
 import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
 import { DetailList } from '@ui/compositions/tables/DetailList'
@@ -59,12 +62,12 @@ import { DataExportDialog, RunExportDialog, S3ConnectionDialog } from './ExportF
 /**
  * The Exports flow, as V1 has it, on the console's kit:
  *
- * 1. **Exports** — what exports do, the destinations (Amazon S3), and every
+ * 1. **Exports**: what exports do, the destinations (Amazon S3), and every
  *    export below.
- * 2. **Amazon S3** — the S3 connections, each with its export count; connect
+ * 2. **Amazon S3**: the S3 connections, each with its export count; connect
  *    one, open one, or delete one.
- * 3. **A connection** — its exports; create one, open one, or delete one.
- * 4. **An export** — pause or resume it, run it now, delete it; Overview and
+ * 3. **A connection**: its exports; create one, open one, or delete one.
+ * 4. **An export**: pause or resume it, run it now, delete it; Overview and
  *    Runs tabs, the runs with their status, window and file.
  *
  * Every write is a promise from the page: success is a toast, a failure stays
@@ -278,8 +281,10 @@ export function S3ConnectionList({
   const [adding, setAdding] = useState(false)
   const remove = useConfirm<S3Connection>()
 
+  // A section's action is outline (design rules §2); the page's one filled
+  // button is a list's primary create, and this is a section.
   const addButton = (
-    <Button onClick={() => setAdding(true)}>
+    <Button variant="outline" size="sm" className="h-8 px-3" onClick={() => setAdding(true)}>
       <PlusIcon data-icon="inline-start" aria-hidden />
       Add connection
     </Button>
@@ -288,11 +293,7 @@ export function S3ConnectionList({
   return (
     <PageBody>
       <div className="flex flex-col gap-6">
-        <Section
-          title="S3 connections"
-          actions={connections.length > 0 ? addButton : undefined}
-          flush
-        >
+        <Section title="S3 connections" actions={addButton} flush>
           {isLoading ? (
             <p className="text-muted-foreground p-6 text-sm">Loading connections…</p>
           ) : error ? (
@@ -314,7 +315,6 @@ export function S3ConnectionList({
               scene="developers"
               title="No S3 connections yet"
               description="Connect a bucket to start exporting billing data to it."
-              action={addButton}
             />
           ) : (
             <ItemGroup className="divide-y">
@@ -394,7 +394,7 @@ export function S3ConnectionList({
 
 export interface ConnectionExportsProps {
   connection: S3Connection
-  /** The exports grid (`DataExportGrid`), given the New export action. */
+  /** The exports grid (`DataExportGrid`), given the Add task action. */
   renderGrid: (actions: { newExport: ReactNode; onDelete: (row: DataExport) => void }) => ReactNode
   onBack: () => void
   onBackToExports: () => void
@@ -402,7 +402,10 @@ export interface ConnectionExportsProps {
   onDelete: (row: DataExport) => Promise<unknown>
 }
 
-/** One connection's exports: create, open or delete them. */
+/**
+ * One connection's exports (its tasks): a header naming the connection, then
+ * the grid, whose create action reads "Add task".
+ */
 export function ConnectionExports({
   connection,
   renderGrid,
@@ -411,49 +414,61 @@ export function ConnectionExports({
   onCreate,
   onDelete,
 }: ConnectionExportsProps) {
-  usePublishDetailTrail([
-    { label: 'Exports', onClick: onBackToExports },
-    { label: 'Amazon S3', onClick: onBack },
-    { label: connection.name || 'Connection' },
-  ])
   const [adding, setAdding] = useState(false)
   const remove = useConfirm<DataExport>()
 
   return (
-    <PageBody>
-      {renderGrid({
-        newExport: (
-          <Button onClick={() => setAdding(true)}>
-            <PlusIcon data-icon="inline-start" aria-hidden />
-            New export
-          </Button>
-        ),
-        onDelete: remove.open,
-      })}
-      <DataExportDialog
-        open={adding}
-        onOpenChange={setAdding}
-        connectionId={connection.id}
-        flexpriceManaged={connection.flexpriceManaged}
-        onSubmit={async (draft) => {
-          await onCreate(draft)
-          toast.success('Export created')
-        }}
-      />
-      <ConfirmDialog
-        open={remove.target !== null}
-        onOpenChange={(open) => !open && remove.close()}
-        title="Delete this export?"
-        description={`${remove.target?.entityLabel ?? 'This'} export stops running. Files already written stay in the bucket.`}
-        confirmLabel="Delete export"
-        destructive
-        isPending={remove.pending}
-        error={remove.error}
-        onConfirm={() =>
-          void remove.confirm(onDelete, 'Export deleted', 'The export could not be deleted.')
+    <>
+      <EntityHeader
+        trail={[
+          { label: 'Exports', onClick: onBackToExports },
+          { label: 'Amazon S3', onClick: onBack },
+          { label: connection.name || 'Connection' },
+        ]}
+        icon={<UploadIcon aria-hidden />}
+        title={connection.name || 'Amazon S3 connection'}
+        badges={
+          <Badge variant="secondary">
+            {connection.flexpriceManaged ? 'Flexprice-managed' : 'Your bucket'}
+          </Badge>
         }
+        id={connection.id}
       />
-    </PageBody>
+      <PageBody>
+        {renderGrid({
+          newExport: (
+            <Button onClick={() => setAdding(true)}>
+              <PlusIcon data-icon="inline-start" aria-hidden />
+              Add task
+            </Button>
+          ),
+          onDelete: remove.open,
+        })}
+        <DataExportDialog
+          open={adding}
+          onOpenChange={setAdding}
+          connectionId={connection.id}
+          flexpriceManaged={connection.flexpriceManaged}
+          onSubmit={async (draft) => {
+            await onCreate(draft)
+            toast.success('Export created')
+          }}
+        />
+        <ConfirmDialog
+          open={remove.target !== null}
+          onOpenChange={(open) => !open && remove.close()}
+          title="Delete this export?"
+          description={`${remove.target?.entityLabel ?? 'This'} export stops running. Files already written stay in the bucket.`}
+          confirmLabel="Delete export"
+          destructive
+          isPending={remove.pending}
+          error={remove.error}
+          onConfirm={() =>
+            void remove.confirm(onDelete, 'Export deleted', 'The export could not be deleted.')
+          }
+        />
+      </PageBody>
+    </>
   )
 }
 
@@ -590,11 +605,17 @@ export function DataExportDetail({
               {
                 id: 'toggle',
                 label: enabled ? 'Pause export' : 'Resume export',
+                icon: enabled ? (
+                  <CirclePauseIcon className="text-muted-foreground" aria-hidden />
+                ) : (
+                  <PlayIcon className="text-muted-foreground" aria-hidden />
+                ),
                 onSelect: () => setDialog('toggle'),
               },
               {
                 id: 'delete',
                 label: 'Delete export',
+                icon: <Trash2Icon aria-hidden />,
                 destructive: true,
                 onSelect: () => setDialog('delete'),
               },

@@ -111,6 +111,10 @@ export const Usage: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('radio', { name: /Usage/ }))
     await expect(await canvas.findByText('Metered feature')).toBeInTheDocument()
+    // A usage flat fee is a per-unit rate: no contract value calculator.
+    await expect(
+      canvas.queryByRole('button', { name: 'Work out the price from a contract value' }),
+    ).toBeNull()
   },
 }
 
@@ -153,6 +157,26 @@ export const SubmitsAValidatedCharge: Story = {
   },
 }
 
+/** The flat-fee calculator, as V1: 12,000 a year, billed monthly, fills the Amount with 1000.00. */
+export const PriceFromContractAmount: Story = {
+  args: { defaultValue: fixedFlatFee },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Work out the price from a contract value' }),
+    )
+    const contract = await body.findByRole('textbox', { name: /Contract value/ })
+    await userEvent.clear(contract)
+    await userEvent.type(contract, '12000')
+    await userEvent.click(body.getByRole('button', { name: 'Use this price' }))
+    await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ billingModel: BillingModel.FlatFee, amount: '1000.00' }),
+    )
+  },
+}
+
 /** In the catalogue, a fixed charge can join a price group and set a minimum quantity. */
 export const SetsPriceOptions: Story = {
   args: {
@@ -161,7 +185,7 @@ export const SetsPriceOptions: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByLabelText(/^price group/i)).toBeInTheDocument()
+    await expect(canvas.getByLabelText(/^tag/i)).toBeInTheDocument()
     await expect(canvas.getByLabelText(/^start date/i)).toBeInTheDocument()
     await userEvent.type(canvas.getByLabelText(/^minimum quantity/i), '3')
     await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
@@ -169,7 +193,7 @@ export const SetsPriceOptions: Story = {
   },
 }
 
-/** Without the catalogue's options — on a contract — those fields stay out. */
+/** Without the catalogue's options: on a contract: those fields stay out. */
 export const HidesPriceOptionsOutsideTheCatalogue: Story = {
   args: { defaultValue: fixedFlatFee },
   play: async ({ canvasElement }) => {
@@ -204,7 +228,7 @@ export const UsageWindowOffered: Story = {
  * A meter bucketed at the meter level will not take a second window.
  *
  * The API refuses it rather than deciding which wins, so the field shows the
- * meter's own value, locked, and says where it comes from — hiding it would
+ * meter's own value, locked, and says where it comes from: hiding it would
  * leave someone hunting for a setting that is already made.
  */
 export const UsageWindowOwnedByTheMeter: Story = {
@@ -217,8 +241,8 @@ export const UsageWindowOwnedByTheMeter: Story = {
 }
 
 /**
- * COUNT cannot be windowed — re-counting the same events in smaller pieces
- * sums to the same number — so the field is not offered at all.
+ * COUNT cannot be windowed: re-counting the same events in smaller pieces
+ * sums to the same number: so the field is not offered at all.
  */
 export const UsageWindowNotWindowable: Story = {
   args: { defaultValue: { ...usageTiered, meterId: 'meter_events' }, meters },

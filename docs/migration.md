@@ -41,12 +41,12 @@ No   -> isolate, and write down why
 
 **The Price Override slice is the template**: 807 lines and 12 `useState` hooks
 in a dialog became a presentational form with zero `useState`, a domain
-discriminated union, and 12 browser-tested interactions — which also surfaced
+discriminated union, and 12 browser-tested interactions: which also surfaced
 two silent revenue bugs (overlapping tier bands, and a closed final band).
 
 ## Phase 0 is a dependency, not frontend work
 
-> **Backend dependency — OpenAPI annotation completeness**
+> **Backend dependency: OpenAPI annotation completeness**
 > **Owner:** Backend.
 > **Impact:** real data for the subscription workflow and the Customer Portal.
 > **UI impact:** none for architectural development; blocks production
@@ -60,13 +60,13 @@ that evidence.
 ### The gap is narrower than 109 handlers suggests
 
 Per-handler analysis shows the undocumented handler is almost always the plain
-`GET` list — and every one of those entities has a **documented
+`GET` list: and every one of those entities has a **documented
 `POST /<entity>/search`** that is strictly more capable (filters, sort,
 pagination):
 
 | Handler file | Documented | Missing |
 |---|---|---|
-| `payment` | 6/6 | — |
+| `payment` | 6/6 |: |
 | `customer` | 10/11 | `ListCustomers` |
 | `addon`, `coupon` | 8/9 | `ListAddons`, `ListCoupons` |
 | `price` | 7/8 | `ListPrices` |
@@ -75,7 +75,7 @@ pagination):
 | `plan` | 9/11 | `ListPlans`, `SyncPlanPricesV2` |
 | `feature` | 5/7 | `ListFeatures`, `GetFeature` |
 
-So the catalog and customer surfaces are migratable **today, with no shims** —
+So the catalog and customer surfaces are migratable **today, with no shims**:
 the invoice grid already uses `POST /invoices/search` for exactly this reason.
 
 The genuinely blocked surfaces are unchanged and are what Phase 0 should
@@ -84,7 +84,7 @@ prioritise: `customer_portal` 0/25, `webhook` 0/12, `meter` 0/6,
 
 ## Open product decision: derived invoice filters
 
-`overdue` is derived — finalized, unpaid, past due — and is not an API value.
+`overdue` is derived: finalized, unpaid, past due: and is not an API value.
 The current behaviour is deliberate and should not be changed without a
 decision:
 
@@ -109,31 +109,31 @@ Chosen on measurements, not preference.
 | | |
 |---|---|
 | Size | 2,017 LOC across **three files** |
-| `AddFeature.tsx` | **1,106 lines** — the second-largest file in the V1 repo |
+| `AddFeature.tsx` | **1,106 lines**: the second-largest file in the V1 repo |
 | `useState` | 13 |
 | Table | `FlexpriceTable`, hand-rolled |
 | Tests/stories | **1**, for the whole surface |
-| APIs touched | 3 — `FeatureApi`, `EntitlementApi`, `PriceApi` |
+| APIs touched | 3: `FeatureApi`, `EntitlementApi`, `PriceApi` |
 | SDK coverage | `entitlement` 6/7, `price` 7/8, `feature` 5/7 |
-| Shims required | **0** — `FeatureFilter` carries `featureIds`, `lookupKey`, `nameContains`, `limit`/`offset`, `sort`, so search covers both the list and by-id lookup |
+| Shims required | **0**: `FeatureFilter` carries `featureIds`, `lookupKey`, `nameContains`, `limit`/`offset`, `sort`, so search covers both the list and by-id lookup |
 
 Why this one:
 
-1. **It is exactly the three proven patterns**, and nothing else — a list
+1. **It is exactly the three proven patterns**, and nothing else: a list
    (`Features.tsx`), a large creation form (`AddFeature.tsx`), and a detail page
    (`FeatureDetails.tsx`). It re-runs all three proofs against code somebody
    actually uses.
 2. **The form is a page already**, so the before/after is a like-for-like
    comparison of form architecture rather than a page-versus-modal argument.
 3. **It touches three APIs, all well covered**, and notably *not* `MeterApi`
-   (0/6 documented) — verified, not assumed.
+   (0/6 documented): verified, not assumed.
 4. **Features are foundational.** Every plan and entitlement references one, so
    the domain model built here is reused by the next several migrations.
 5. **It is finishable in one cycle**, which matters more than breadth for the
    first migration under a new rule.
 
 Runner-up: **Addons** (834 LOC, 8/9 documented, self-contained) if a smaller
-first step is wanted. **Plans** is deliberately *not* first — it depends on
+first step is wanted. **Plans** is deliberately *not* first: it depends on
 `WorkflowApi`, which is 1/5 documented.
 
 Explicitly not first: anything under `customer_portal`, and
@@ -142,7 +142,7 @@ addons and would turn the first migration into a second architecture project.
 
 ---
 
-# Migration 1 — Product Catalogue → Features
+# Migration 1: Product Catalogue → Features
 
 Status: **done**. Routes `/features` and `/features/new`.
 
@@ -154,12 +154,12 @@ Status: **done**. Routes `/features` and `/features/new`.
 | `useState` | 13 | **0** |
 | Largest file | `AddFeature.tsx` **1,106** | `FeatureForm.tsx` **275** |
 | Tests / stories | **0** | **5 files, 60 tests** |
-| API classes | 3 hand-written | 0 — generated SDK |
+| API classes | 3 hand-written | 0: generated SDK |
 | Hand-rolled table | `FlexpriceTable` | ReUI `data-grid` |
 | Validation | 2 callbacks + 4 state slices | 1 domain schema |
-| Component fetching | yes | no — page + query |
-| Deep-linkable list | no | yes — URL search params |
-| `sdk-adapter` shims | — | **0** |
+| Component fetching | yes | no: page + query |
+| Deep-linkable list | no | yes: URL search params |
+| `sdk-adapter` shims |: | **0** |
 
 983 LOC includes 81 lines of fixtures that V1 has no equivalent of. The form
 alone went from 1,106 lines to 275.
@@ -174,7 +174,7 @@ alone went from 1,106 lines to 275.
 
 2. **The aggregation rule could not be checked outside the form.** V1 decides
    whether to require `field` or `expression` by reading a `showCustomExpression`
-   boolean out of component state — so the rule only exists while the form is
+   boolean out of component state: so the rule only exists while the form is
    mounted. In the domain it is one rule satisfied by either, and it holds
    wherever it is applied.
 
@@ -196,7 +196,7 @@ annotated), which would otherwise have blocked this surface entirely.
 ## Known gap, stated rather than hidden
 
 `FeatureFilter` has no type filter, so filtering by feature type is applied
-client-side in `fetchFeatures` — which narrows *the current page*, not the whole
+client-side in `fetchFeatures`: which narrows *the current page*, not the whole
 set. This is the same class of problem as `overdue` on invoices, and gets the
 same treatment: named, not approximated. If type filtering matters, the
 backend adds it to `FeatureFilter`.

@@ -13,14 +13,14 @@ export interface PriceUnitDetailPageProps {
   onNavigateToList: () => void
 }
 
-/** A round quantity for the worked example — enough to make the total read clearly. */
+/** A round quantity for the worked example: enough to make the total read clearly. */
 const SAMPLE_QUANTITY = 1000
 
 /**
  * One price unit, in full.
  *
- * A price unit is a rate anchor — a code and symbol pinned to a base currency
- * through a conversion rate — so it is a small entity, and this page is
+ * A price unit is a rate anchor: a code and symbol pinned to a base currency
+ * through a conversion rate: so it is a small entity, and this page is
  * deliberately small to match. One `DetailShell` header, one **Conversion**
  * section with a live worked example ("1 CRD = $0.01 → 1,000 CRD = $10.00"), and
  * one **Information** list of every attribute. No tabs and no rail: the earlier
@@ -254,7 +254,7 @@ export function PriceUnitDetailPage({
  * rate itself and the sample quantity is that rate times the quantity. The
  * multiplication is done on the decimal string with `BigInt` rather than a
  * float, so the example never drifts the way `parseFloat` would. Returns null
- * when there is no rate or base currency to compute against — `formatMoney`
+ * when there is no rate or base currency to compute against: `formatMoney`
  * needs a real ISO currency, and an empty one would throw.
  */
 function workedExample(

@@ -73,7 +73,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
   },
   {
     name: 'revenue',
-    route: '/revenue',
+    route: '/reports',
     reference: 'pages/revenue.tsx',
     pattern: 'dashboard',
     ready: { text: 'Receivables aging' },
@@ -101,7 +101,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/features/new',
     reference: 'pages/catalog.tsx',
     pattern: 'create',
-    ready: { heading: 'Details' },
+    ready: { heading: 'Feature' },
   },
   {
     name: 'plans-list',
@@ -220,14 +220,14 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/groups',
     reference: 'pages/catalog.tsx',
     pattern: 'list',
-    ready: { heading: 'Groups', rows: true },
+    ready: { heading: 'Tags', rows: true },
   },
   {
     name: 'group-new',
     route: '/groups/new',
     reference: 'pages/catalog.tsx',
     pattern: 'create',
-    ready: { text: 'Create group' },
+    ready: { text: 'Create tag' },
   },
 
   // Billing

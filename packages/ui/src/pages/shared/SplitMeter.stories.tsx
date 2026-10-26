@@ -137,7 +137,7 @@ export const LegendNamesEveryPart: Story = {
 }
 
 /**
- * With a ceiling the shortfall stays visible as unfilled track — the gap is the
+ * With a ceiling the shortfall stays visible as unfilled track: the gap is the
  * whole message, and it is a different claim from "these are shares of each
  * other".
  */

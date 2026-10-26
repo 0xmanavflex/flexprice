@@ -34,19 +34,19 @@ import { provenance } from '@ui/provenance'
 import { Pill } from '../../shared/cells'
 
 /**
- * Create with AI — describe a pricing model, review the draft, create it.
+ * Create with AI: describe a pricing model, review the draft, create it.
  *
  * The reference's four states, on the ReUI `ai-chat-5` parts:
  *
- * 1. **Prompt** — "Set up your pricing" over the block's composer (a Frame
+ * 1. **Prompt**: "Set up your pricing" over the block's composer (a Frame
  *    whose panel is the box, whose footer says how to write in it), on a
  *    dotted ground, with five templates under it. A template fills the box
  *    and sits in it as a chip.
- * 2. **Drafting** — the review header, a skeleton of the canvas, and a
+ * 2. **Drafting**: the review header, a skeleton of the canvas, and a
  *    progress card stepping through the draft.
- * 3. **Review** — the draft as plan cards (price, usage, what is included,
+ * 3. **Review**: the draft as plan cards (price, usage, what is included,
  *    credits), then the features and meters and the credit grants it creates.
- * 4. **Creating** — the canvas blurs under a progress card that follows the
+ * 4. **Creating**: the canvas blurs under a progress card that follows the
  *    real write, then says what was created.
  *
  * Nothing is written until "Create all of this": a model reading a pricing
@@ -179,7 +179,7 @@ Credits are consumed per action:
 
 Single plan: Vapi Pay As You Go ($0/month platform fee).
 
-- $10 in starter credits (one-time) — 1 credit = $0.01
+- $10 in starter credits (one-time): 1 credit = $0.01
 - Hosting: 5 credits per call minute ($0.05), 0.5 credits per SMS/chat message ($0.005)
 - Provider STT, LLM, TTS metered at cost in credits
 - 10 concurrency lines included; Custom SIP and Custom Channels off by default`,

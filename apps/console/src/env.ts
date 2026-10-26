@@ -19,8 +19,8 @@
  * Flexprice API key is a tenant-wide credential with none of a JWT's
  * expiry. Shipping one that way is handing out write access to billing data.
  *
- * What changed is that the console now has a real session — `POST /auth/login`
- * for a JWT, `GET /environments` for the header every other call needs — so the
+ * What changed is that the console now has a real session: `POST /auth/login`
+ * for a JWT, `GET /environments` for the header every other call needs: so the
  * key is no longer the only way in. That makes it affordable to keep one
  * strictly for the case it is actually good at: poking at a local or staging
  * backend without a user account, where signing in is friction and there is no
@@ -34,7 +34,7 @@
  * working is a debugging session nobody enjoys.
  *
  * That guarantee depends on details two lines below can destroy, so it is
- * checked rather than assumed — build with a canary value and grep `dist`:
+ * checked rather than assumed: build with a canary value and grep `dist`:
  *
  *     VITE_FLEXPRICE_API_KEY=sk_canary pnpm --filter console build
  *     grep -r sk_canary apps/console/dist    # must find nothing
@@ -46,7 +46,7 @@ const MOCK_API_URL = 'https://mock.flexprice.test/v1'
 /**
  * An empty variable is an unset variable.
  *
- * Takes the value, not the name. That is not a style preference — it is what
+ * Takes the value, not the name. That is not a style preference: it is what
  * makes the API key strippable. The previous version took a name and did
  * `import.meta.env[name]`, and a *dynamic* index is something Vite cannot
  * resolve at build time, so it substituted the entire env object instead: every
@@ -67,7 +67,7 @@ const apiUrl = clean(import.meta.env.VITE_FLEXPRICE_API_URL)
  *
  * The earlier rule was "opt-in, never inferred", so that someone debugging a
  * real integration could not silently get mocks. That reasoning holds when an
- * API URL is configured — and does not apply when none is, because then there
+ * API URL is configured: and does not apply when none is, because then there
  * is no integration to debug and the only alternative is a broken app. The
  * fallback announces itself in the console rather than happening quietly.
  */
@@ -76,8 +76,8 @@ const useMocks = explicitMocks === 'true' || (explicitMocks !== 'false' && apiUr
 /**
  * The development-only API-key override. See the note at the top of this file.
  *
- * `import.meta.env.DEV` is a literal at build time, so this whole branch — and
- * the key with it — is dropped from a production bundle by dead-code
+ * `import.meta.env.DEV` is a literal at build time, so this whole branch: and
+ * the key with it: is dropped from a production bundle by dead-code
  * elimination. The key is not merely ignored in production; it is not present.
  */
 const apiKey: string | null = import.meta.env.DEV
@@ -94,13 +94,13 @@ const apiKey: string | null = import.meta.env.DEV
  *   - It must be a **bare** expression on the substituted literal. Vite
  *     replaces `import.meta.env.VITE_FLEXPRICE_API_KEY` with the string, and
  *     the minifier then folds `!!"sk_live_…"` to `true` and discards it.
- *     Wrapping it in a helper — `clean(…) !== undefined` — defeats that: a
+ *     Wrapping it in a helper: `clean(…) !== undefined`: defeats that: a
  *     function call is not foldable, so the key survives as an argument. That
  *     is not hypothetical; it is what the first version of this line did, and
  *     a canary build found the key sitting in `dist`.
  *   - It must be a truthiness test, not `!== undefined`. `.env.local` ships
  *     `VITE_FLEXPRICE_API_KEY=` as a placeholder, and an empty string is
- *     defined — so the stricter-looking comparison warned on every build that
+ *     defined: so the stricter-looking comparison warned on every build that
  *     had no key at all.
  *
  * Both are silent failures in opposite directions, which is why the check is
@@ -112,7 +112,7 @@ if (!import.meta.env.DEV && apiKeyConfigured) {
   console.warn(
     '[flexprice] VITE_FLEXPRICE_API_KEY was set when this bundle was built, and is ignored: ' +
       'API keys are honoured in development only. Sign in instead. Do not set it for a ' +
-      'production build — a VITE_ variable is compiled in and served to every visitor.',
+      'production build: a VITE_ variable is compiled in and served to every visitor.',
   )
 }
 
@@ -132,7 +132,7 @@ if (!import.meta.env.DEV && apiKeyConfigured) {
  *
  * The console can switch between the India and US APIs at runtime (see
  * `app/region.tsx`), and those are separate deployments with separate accounts
- * — so they are very likely separate Supabase projects. One project's anon key
+ *: so they are very likely separate Supabase projects. One project's anon key
  * cannot reset a password held by the other: the request would succeed against
  * the wrong project and simply never send an email to a user who exists only in
  * the other one. A per-region value prevents that, and `VITE_SUPABASE_URL` /
@@ -140,7 +140,7 @@ if (!import.meta.env.DEV && apiKeyConfigured) {
  * self-hosted deployment.
  *
  * Absent config is not an error. A self-hosted install has no Supabase at all,
- * and must still sign in normally — it simply gets no reset link.
+ * and must still sign in normally: it simply gets no reset link.
  */
 export interface SupabaseConfig {
   url: string
@@ -173,7 +173,7 @@ const supabaseByRegion: Readonly<Record<string, SupabaseConfig | null>> = {
  * Which hosted region this deployment *is*.
  *
  * Each region is its own deployment with its own API, its own accounts and
- * its own identity provider — so switching region is a navigation to another
+ * its own identity provider: so switching region is a navigation to another
  * dashboard, not a setting inside this one. `VITE_FLEXPRICE_REGION` is what
  * that deployment calls itself; unset (self-hosted, preview, mocks) means the
  * console is not part of the hosted set and offers no switch.
@@ -203,7 +203,7 @@ if (declaredRegion && region === null) {
  */
 const DEFAULT_REGION_URLS: Record<RegionId, string> = {
   in: 'https://in.app.flexprice.io',
-  // The unprefixed host is the canonical one — it is what the OAuth redirect
+  // The unprefixed host is the canonical one: it is what the OAuth redirect
   // URIs are registered against. `us.app.flexprice.io` is accepted as an alias
   // when detecting which region a browser is already on.
   us: 'https://app.flexprice.io',
@@ -259,7 +259,7 @@ const problem: ConfigProblem | null =
 
 if (useMocks && apiUrl === undefined && explicitMocks !== 'true') {
   console.warn(
-    '[flexprice] No VITE_FLEXPRICE_API_URL set — serving the bundled fixture corpus. ' +
+    '[flexprice] No VITE_FLEXPRICE_API_URL set: serving the bundled fixture corpus. ' +
       'Set VITE_USE_MOCKS=false and a real URL to talk to a backend.',
   )
 }
@@ -267,7 +267,7 @@ if (useMocks && apiUrl === undefined && explicitMocks !== 'true') {
 if (apiKey !== null) {
   console.warn(
     '[flexprice] Using VITE_FLEXPRICE_API_KEY. Sign-in is bypassed and every request ' +
-      'carries this key. Development only — it is ignored in a production build.',
+      'carries this key. Development only: it is ignored in a production build.',
   )
 }
 
@@ -277,7 +277,7 @@ const flag = (value: unknown) => value === 'true'
 /**
  * Support chat, exactly as V1 configures it: at most one provider is meant to
  * be on, and when both are, Intercom wins (see `app/supportChat/config.ts`).
- * None of these is a secret — the app ids are public widget ids.
+ * None of these is a secret: the app ids are public widget ids.
  */
 const intercom = {
   enabled: flag(import.meta.env.VITE_INTERCOM_ENABLED),
@@ -295,6 +295,106 @@ const pylon = {
   identityVerificationEnabled: flag(import.meta.env.VITE_PYLON_IDENTITY_VERIFICATION_ENABLED),
 }
 
+/**
+ * The platform config: one JSON variable, `VITE_PLATFORM_CONFIG`, as V1's.
+ *
+ * Every key is optional and anything left out keeps its default, so a
+ * deployment writes only what it changes. Keys this console does not use yet
+ * (V1's `revenue`, `signup`, …) are accepted and ignored, so one value can be
+ * shared by both dashboards.
+ *
+ *     VITE_PLATFORM_CONFIG={
+ *       "production": { "enabled": false },
+ *       "contact_us": {
+ *         "enabled": true,
+ *         "slack_url": "https://join.slack.com/t/…",
+ *         "email": "support@example.com",
+ *         "book_call_url": "https://calendly.com/…"
+ *       }
+ *     }
+ *
+ * - `production.enabled`: production environments can be created here.
+ *   Off by default (V1's default): asking for one shows the contact options.
+ * - `contact_us`: the Slack, Email and Book a call options. Each value
+ *   defaults to Flexprice's own (V1's `config/contact.ts`); set one to `""` to
+ *   hide it, or `"enabled": false` to hide them all (a white-label deployment).
+ */
+export const DEFAULT_CONTACT = {
+  slackUrl:
+    'https://join.slack.com/t/flexpricecommunity/shared_invite/zt-39uat51l0-n8JmSikHZP~bHJNXladeaQ',
+  email: 'support@flexprice.io',
+  bookCallUrl: 'https://calendly.com/nikhil-flexprice/30min',
+} as const
+
+export interface ContactConfig {
+  /** `null` when hidden. */
+  slackUrl: string | null
+  email: string | null
+  bookCallUrl: string | null
+}
+
+export interface PlatformConfig {
+  production: { enabled: boolean }
+  contact: ContactConfig
+}
+
+export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
+  production: { enabled: false },
+  contact: { ...DEFAULT_CONTACT },
+}
+
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
+}
+
+/** A configured string, trimmed; `""` hides the option; anything else keeps the default. */
+function contactValue(value: unknown, fallback: string): string | null {
+  if (typeof value !== 'string') return fallback
+  return value.trim() || null
+}
+
+/**
+ * Reads `VITE_PLATFORM_CONFIG`. Invalid JSON is reported and ignored rather
+ * than thrown (see the note at the top of this file): the defaults apply.
+ */
+export function parsePlatformConfig(raw: string | undefined): PlatformConfig {
+  if (!raw?.trim()) return DEFAULT_PLATFORM_CONFIG
+  let parsed: Record<string, unknown> | undefined
+  try {
+    parsed = record(JSON.parse(raw))
+  } catch {
+    parsed = undefined
+  }
+  if (!parsed) {
+    console.warn('[flexprice] VITE_PLATFORM_CONFIG is not a JSON object and is ignored.')
+    return DEFAULT_PLATFORM_CONFIG
+  }
+
+  const production = record(parsed['production'])
+  const contactUs = record(parsed['contact_us'])
+  const contactOff = parsed['contact_us'] === false || contactUs?.['enabled'] === false
+
+  return {
+    production: {
+      enabled:
+        typeof production?.['enabled'] === 'boolean'
+          ? production['enabled']
+          : DEFAULT_PLATFORM_CONFIG.production.enabled,
+    },
+    contact: contactOff
+      ? { slackUrl: null, email: null, bookCallUrl: null }
+      : {
+          slackUrl: contactValue(contactUs?.['slack_url'], DEFAULT_CONTACT.slackUrl),
+          email: contactValue(contactUs?.['email'], DEFAULT_CONTACT.email),
+          bookCallUrl: contactValue(contactUs?.['book_call_url'], DEFAULT_CONTACT.bookCallUrl),
+        },
+  }
+}
+
+const platform = parsePlatformConfig(clean(import.meta.env.VITE_PLATFORM_CONFIG))
+
 export const env = {
   useMocks,
   problem,
@@ -303,7 +403,7 @@ export const env = {
    * Where the current dashboard lives, if anywhere.
    *
    * Used only by the migration placeholders, to hand someone off to the screen
-   * that works today. Unset means no hand-off link is offered — a link to a
+   * that works today. Unset means no hand-off link is offered: a link to a
    * guessed origin is worse than none.
    */
   legacyConsoleUrl: clean(import.meta.env.VITE_LEGACY_CONSOLE_URL) ?? null,
@@ -312,7 +412,7 @@ export const env = {
    * when it must not be the one the console is running on.
    *
    * Staging shares prod's Supabase project, which does not allow staging's
-   * origin. Supabase then falls back to its Site URL — the V1 dashboard — so
+   * origin. Supabase then falls back to its Site URL: the V1 dashboard: so
    * staging sets this to the V2 production origin instead. Unset everywhere
    * else: the console's own origin is used.
    */
@@ -340,7 +440,9 @@ export const env = {
   /** Support chat providers. */
   intercom,
   pylon,
-  /** A production build — config warnings stay quiet there, as in V1. */
+  /** `VITE_PLATFORM_CONFIG`: what this deployment allows, and how people reach us. */
+  platform,
+  /** A production build: config warnings stay quiet there, as in V1. */
   isProd: import.meta.env.PROD,
   /**
    * This build's version (its commit), stamped by `app-version.ts`; the same

@@ -14,7 +14,7 @@ import { toast } from '@fp/ui/pages'
 
 export const VERSION_TOASTER_ID = 'app-version'
 export const VERSION_TOAST_ID = 'version-check-notification'
-/** The version someone chose "Not now" for — V1's key, so the choice carries over. */
+/** The version someone chose "Not now" for: V1's key, so the choice carries over. */
 export const LAST_DISMISSED_VERSION = 'lastDismissedVersion'
 export const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000
 

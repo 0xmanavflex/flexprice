@@ -15,7 +15,7 @@ import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
 /**
- * A date picker — and, with `withTime`, a date and time picker — over the
+ * A date picker: and, with `withTime`, a date and time picker: over the
  * stock `Calendar` in a `Popover`, behind an outline button.
  *
  * Date only, the value is a day: `YYYY-MM-DD` (or empty), as the forms hold it.

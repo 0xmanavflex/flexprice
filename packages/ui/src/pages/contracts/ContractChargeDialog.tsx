@@ -37,7 +37,7 @@ export const ContractChargeDialogProvenance = provenance({
 
 /** Which edit is open, and on which charge. */
 export type ContractChargeDialogState =
-  | { mode: 'add' }
+  | { mode: 'add'; initial?: AddContractCharge | undefined }
   | { mode: 'edit'; line: SubscriptionLine }
   | { mode: 'end'; line: SubscriptionLine }
 
@@ -54,6 +54,8 @@ export interface ContractChargeDialogProps {
   onEnd: (line: SubscriptionLine, draft: EndContractCharge) => void
   isSubmitting?: boolean
   submitError?: string | null
+  /** The contract's start when still in the future (see `ContractAddChargeForm`). */
+  earliestStart?: string | undefined
   /** The add dialog's title and its opening line, where a caller words them its own way. */
   addTitle?: string
   addDescription?: string
@@ -76,11 +78,18 @@ export function ContractChargeDialog({
   onEnd,
   isSubmitting = false,
   submitError = null,
+  earliestStart,
   addTitle = 'Add charge',
   addDescription = 'Only this contract gets the charge; the plan does not change.',
 }: ContractChargeDialogProps) {
   const title =
-    state?.mode === 'add' ? addTitle : state?.mode === 'edit' ? 'Edit charge' : 'End charge'
+    state?.mode === 'add'
+      ? state.initial
+        ? 'Edit charge'
+        : addTitle
+      : state?.mode === 'edit'
+        ? 'Edit charge'
+        : 'End charge'
 
   return (
     <FormDialog
@@ -94,6 +103,7 @@ export function ContractChargeDialog({
       {state?.mode === 'add' ? (
         <AddStep
           key="add"
+          initial={state.initial}
           description={addDescription}
           currency={currency}
           billingPeriod={billingPeriod ?? Period.Monthly}
@@ -103,6 +113,7 @@ export function ContractChargeDialog({
           onAdd={onAdd}
           isSubmitting={isSubmitting}
           submitError={submitError}
+          earliestStart={earliestStart}
         />
       ) : state?.mode === 'edit' ? (
         <ContractUsageEditForm
@@ -132,6 +143,7 @@ export function ContractChargeDialog({
 
 /** First step: fixed or metered. The form that follows is the granular one for that type. */
 function AddStep({
+  initial,
   description,
   currency,
   billingPeriod,
@@ -141,7 +153,10 @@ function AddStep({
   onAdd,
   isSubmitting,
   submitError,
+  earliestStart,
 }: {
+  /** A drafted charge to change: skips the type choice. */
+  initial?: AddContractCharge | undefined
   description: string
   currency: string
   billingPeriod: BillingPeriod
@@ -151,15 +166,17 @@ function AddStep({
   onAdd: (draft: AddContractCharge) => void
   isSubmitting: boolean
   submitError: string | null
+  earliestStart?: string | undefined
 }) {
-  const [type, setType] = useState<PriceType>(PriceType.Fixed)
-  const [chosen, setChosen] = useState(false)
+  const [type, setType] = useState<PriceType>(initial?.charge.type ?? PriceType.Fixed)
+  const [chosen, setChosen] = useState(Boolean(initial))
 
   if (chosen) {
     return (
       <ContractAddChargeForm
         key={type}
         type={type}
+        initial={initial}
         currency={currency}
         billingPeriod={billingPeriod}
         meters={meters}
@@ -167,6 +184,7 @@ function AddStep({
         onSubmit={onAdd}
         isSubmitting={isSubmitting}
         submitError={submitError}
+        earliestStart={earliestStart}
       />
     )
   }

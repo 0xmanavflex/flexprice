@@ -42,6 +42,7 @@ import static_calendarDots from '../reui/icons/default/outline/calendar-dots'
 import static_chartArrowDown from '../reui/icons/default/outline/chart-arrow-down'
 import static_chartArrowUp from '../reui/icons/default/outline/chart-arrow-up'
 import static_chartBarsSquare from '../reui/icons/default/outline/chart-bars-square'
+import static_chartSimple from '../reui/icons/default/outline/chart-simple'
 import static_check from '../reui/icons/default/outline/check'
 import static_checkCircle from '../reui/icons/default/outline/check-circle'
 import static_chevronsUpDown from '../reui/icons/default/outline/chevrons-up-down'
@@ -58,6 +59,7 @@ import static_crossCircle from '../reui/icons/default/outline/cross-circle'
 import static_cube from '../reui/icons/default/outline/cube'
 import static_cubeSquare from '../reui/icons/default/outline/cube-square'
 import static_deleteFiles from '../reui/icons/default/outline/delete-files'
+import static_delivery from '../reui/icons/default/outline/delivery'
 import static_discount from '../reui/icons/default/outline/discount'
 import static_disk from '../reui/icons/default/outline/disk'
 import static_document from '../reui/icons/default/outline/document'
@@ -111,6 +113,7 @@ import static_plugCharging from '../reui/icons/default/outline/plug-charging'
 import static_plus from '../reui/icons/default/outline/plus'
 import static_plusCircle from '../reui/icons/default/outline/plus-circle'
 import static_priceTag from '../reui/icons/default/outline/price-tag'
+import static_printer from '../reui/icons/default/outline/printer'
 import static_profileCircle from '../reui/icons/default/outline/profile-circle'
 import static_pulse from '../reui/icons/default/outline/pulse'
 import static_questionCircle from '../reui/icons/default/outline/question-circle'
@@ -202,6 +205,8 @@ export const Calendar: IconComponent = staticIcon(static_calendar, 'Calendar')
 export { Calendar as CalendarIcon }
 export const CalendarClock: IconComponent = staticIcon(static_calendarDots, 'CalendarClock')
 export { CalendarClock as CalendarClockIcon }
+export const ChartColumn: IconComponent = staticIcon(static_chartSimple, 'ChartColumn')
+export { ChartColumn as ChartColumnIcon }
 export const Check: IconComponent = staticIcon(static_check, 'Check')
 export { Check as CheckIcon }
 export const CheckCircle2: IconComponent = staticIcon(static_checkCircle, 'CheckCircle2')
@@ -376,6 +381,8 @@ export const Plus: IconComponent = staticIcon(static_plus, 'Plus')
 export { Plus as PlusIcon }
 export const Power: IconComponent = staticIcon(static_switch, 'Power')
 export { Power as PowerIcon }
+export const Printer: IconComponent = staticIcon(static_printer, 'Printer')
+export { Printer as PrinterIcon }
 export const Puzzle: IconComponent = staticIcon(static_cubeSquare, 'Puzzle')
 export { Puzzle as PuzzleIcon }
 export const Receipt: IconComponent = animatedIcon(animated_receiptSquare, 'Receipt')
@@ -450,6 +457,8 @@ export const TrendingUp: IconComponent = staticIcon(static_chartArrowUp, 'Trendi
 export { TrendingUp as TrendingUpIcon }
 export const TriangleAlert: IconComponent = staticIcon(static_exclamationBadge, 'TriangleAlert')
 export { TriangleAlert as TriangleAlertIcon }
+export const Truck: IconComponent = staticIcon(static_delivery, 'Truck')
+export { Truck as TruckIcon }
 export const Type: IconComponent = staticIcon(static_text, 'Type')
 export { Type as TypeIcon }
 export const Ungroup: IconComponent = staticIcon(static_triangleSplit, 'Ungroup')

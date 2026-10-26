@@ -10,6 +10,9 @@ coverage/
 .DS_Store
 playwright-report/
 test-results/
+# Per-journey E2E reports and failure evidence (apps/console/e2e/reporters)
+e2e-results/
+playwright-results.json
 storybook-static/
 .claude/settings.local.json
 
@@ -18,3 +21,5 @@ storybook-static/
 
 # Mocked bundle the CI journeys build and serve (apps/console/playwright.config.ts)
 dist-e2e/
+
+.claude/worktrees
