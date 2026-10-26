@@ -23,9 +23,11 @@ export const StatusBadgeProvenance = provenance({
 
 /** The dot colour each status carries. */
 const INVOICE_TONE: Record<InvoiceStatus, PillTone> = {
-  // In progress, not terminal: amber, so it never reads as Void's dead end.
-  [InvoiceStatus.Draft]: 'warning',
-  [InvoiceStatus.Open]: 'info',
+  // Open is awaiting payment: orange (warning), so it stands out from Paid's
+  // green and Void's grey, and no longer shares violet with Trialing
+  // contracts. Draft, still being written, takes the quiet info tone.
+  [InvoiceStatus.Draft]: 'info',
+  [InvoiceStatus.Open]: 'warning',
   [InvoiceStatus.Paid]: 'success',
   [InvoiceStatus.Overdue]: 'danger',
   [InvoiceStatus.Void]: 'neutral',
