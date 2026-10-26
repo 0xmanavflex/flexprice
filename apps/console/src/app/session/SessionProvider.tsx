@@ -16,6 +16,7 @@ import {
   writeEnvironmentId,
   writeSession,
 } from './storage'
+import { resetAnalytics } from '../analytics/posthog'
 import { clearListMemory } from '../listMemory'
 import { setActiveEnvironmentId } from './activeEnvironment'
 import { endSupabaseSession } from './supabaseSession'
@@ -95,6 +96,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // the previous session rather than against some remembered tenant id, so
     // a first sign-in (no previous) has nothing to clear to begin with.
     const previous = latest.current
+    // Someone else signing in over a live session (a SAML or Google callback
+    // in the same tab): forget the previous person before anything is
+    // recorded, rather than when `/users/me` answers for the new one.
+    if (previous && previous.userId !== next.userId) resetAnalytics()
     if (previous && previous.tenantId !== next.tenantId) {
       clearEnvironmentId()
       setActiveEnvironmentId(null)
@@ -119,6 +124,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // from storage after signing out (as V1's `supabase.auth.signOut()`).
     const region = latest.current?.region
     if (region) void endSupabaseSession(region)
+    // The next person on this browser is not this one (V1's `posthog.reset()`).
+    resetAnalytics()
     latest.current = null
     setActiveEnvironmentId(null)
     setSession(null)

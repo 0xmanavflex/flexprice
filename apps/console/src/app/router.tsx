@@ -15,13 +15,14 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { Navigate, Outlet } from '@tanstack/react-router'
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { AccessProvider, AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { useAccessControl, useCurrentUser, useSelfBillingStatus } from '@fp/query'
 import { toListFailure } from '@/pages/shared/listFailure'
 import { ConsoleShell } from './shell/ConsoleShell'
 import { useListMemory } from './shell/useListMemory'
 import { hasSession, needsSignIn, useSession } from './session'
+import { AnalyticsIdentity, captureError } from './analytics'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
 import { DOCS_URL } from './shell/navigation'
@@ -392,6 +393,7 @@ function ShellLayout() {
           headerActions={
             <>
               <SupportChat />
+              <AnalyticsIdentity />
               <VersionCheck />
               <EnvironmentToaster />
             </>
@@ -439,6 +441,13 @@ function RouteError({ error, reset }: ErrorComponentProps) {
   const router = useRouter()
   const queryErrors = useQueryErrorResetBoundary()
   const failure = toListFailure(error, 'this page')
+
+  // A page that crashed is worth knowing about; one the API refused is not a bug.
+  useEffect(() => {
+    if (failure?.kind === 'generic' || failure?.kind === undefined) {
+      captureError(error, { source: 'route-error' })
+    }
+  }, [error, failure?.kind])
 
   const retry = () => {
     queryErrors.reset()

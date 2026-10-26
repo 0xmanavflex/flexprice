@@ -130,9 +130,9 @@ if (!import.meta.env.DEV && apiKeyConfigured) {
  *
  * ## Why this is per region
  *
- * The console can switch between the India and US APIs at runtime (see
- * `app/region.tsx`), and those are separate deployments with separate accounts
- *: so they are very likely separate Supabase projects. One project's anon key
+ * Each hosted region (India, US, Canada) is a separate deployment with separate
+ * accounts (see `app/region.tsx`), so they are very likely separate Supabase
+ * projects. One project's anon key
  * cannot reset a password held by the other: the request would succeed against
  * the wrong project and simply never send an email to a user who exists only in
  * the other one. A per-region value prevents that, and `VITE_SUPABASE_URL` /
@@ -166,6 +166,11 @@ const supabaseByRegion: Readonly<Record<string, SupabaseConfig | null>> = {
     supabaseFor(
       clean(import.meta.env.VITE_SUPABASE_URL_US),
       clean(import.meta.env.VITE_SUPABASE_ANON_KEY_US),
+    ) ?? supabaseDefault,
+  ca:
+    supabaseFor(
+      clean(import.meta.env.VITE_SUPABASE_URL_CA),
+      clean(import.meta.env.VITE_SUPABASE_ANON_KEY_CA),
     ) ?? supabaseDefault,
 }
 
@@ -293,6 +298,25 @@ const pylon = {
   appId: clean(import.meta.env.VITE_PYLON_APP_ID) ?? '',
   /** Fetch the HMAC email hash from `POST /users/chat/verify` and pass it as `email_hash`. */
   identityVerificationEnabled: flag(import.meta.env.VITE_PYLON_IDENTITY_VERIFICATION_ENABLED),
+}
+
+/**
+ * Product analytics, as V1 configures it: PostHog, on only when
+ * `VITE_POSTHOG_ENABLED=true` and a project key is set. One key per
+ * deployment: each region's Vercel project sets its own (see `.env.example`).
+ * The project key is a public, write-only ingestion key, not a secret.
+ */
+const posthog = {
+  enabled: flag(import.meta.env.VITE_POSTHOG_ENABLED),
+  // V1 still accepts its older names as fallbacks.
+  key:
+    clean(import.meta.env.VITE_POSTHOG_KEY) ??
+    clean(import.meta.env.VITE_APP_PUBLIC_POSTHOG_KEY) ??
+    '',
+  host:
+    clean(import.meta.env.VITE_POSTHOG_HOST) ??
+    clean(import.meta.env.VITE_APP_PUBLIC_POSTHOG_HOST) ??
+    'https://us.i.posthog.com',
 }
 
 /**
@@ -440,6 +464,8 @@ export const env = {
   /** Support chat providers. */
   intercom,
   pylon,
+  /** Product analytics (`app/analytics`). */
+  posthog,
   /** `VITE_PLATFORM_CONFIG`: what this deployment allows, and how people reach us. */
   platform,
   /** A production build: config warnings stay quiet there, as in V1. */
