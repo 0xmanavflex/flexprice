@@ -20,7 +20,9 @@ export interface AutoTopup {
   amount: string
   /** Raise an invoice for the refill instead of granting it. */
   invoicing: boolean
-  /** The least time between two refills; blank for none. A whole number of `cooldownUnit`s. */
+  /** Whether a cool-off applies between refills. Off clears any saved one. */
+  cooldownEnabled?: boolean | undefined
+  /** The least time between two refills, while `cooldownEnabled`. A whole number of `cooldownUnit`s. */
   cooldownValue?: string | undefined
   cooldownUnit?: AutoTopupCooldownUnit | undefined
 }
@@ -237,6 +239,7 @@ export const autoTopupSchema = z
     threshold: z.string().trim(),
     amount: z.string().trim(),
     invoicing: z.boolean(),
+    cooldownEnabled: z.boolean().optional(),
     cooldownValue: z.string().trim().optional(),
     cooldownUnit: z
       .enum([AutoTopupCooldownUnit.Minute, AutoTopupCooldownUnit.Hour, AutoTopupCooldownUnit.Day])
@@ -256,10 +259,10 @@ export const autoTopupSchema = z
         path: ['amount'],
         message: 'Enter how many credits to add',
       })
-    if (value.cooldownValue && !/^[1-9]\d*$/.test(value.cooldownValue))
+    if (value.cooldownEnabled && !/^[1-9]\d*$/.test(value.cooldownValue ?? ''))
       ctx.addIssue({
         code: 'custom',
         path: ['cooldownValue'],
-        message: 'Enter a whole number, or leave blank for no cool-off',
+        message: 'Enter the cool-off as a whole number, or turn it off',
       })
   })

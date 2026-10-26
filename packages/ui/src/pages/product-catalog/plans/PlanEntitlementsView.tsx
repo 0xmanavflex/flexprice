@@ -159,7 +159,8 @@ function PlanEntitlementsViewInner({
             key: 'beyond',
             header: 'Overage',
             cell: (e) => {
-              if (e.featureType !== FeatureType.Metered || meteredAllowance(e) === null) return <EmDash />
+              if (e.featureType !== FeatureType.Metered || meteredAllowance(e) === null)
+                return <EmDash />
               const price = usagePrice(e)
               return price ? (
                 <span className="text-[13px]">

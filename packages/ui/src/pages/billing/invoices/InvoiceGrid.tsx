@@ -9,7 +9,6 @@ import {
   InvoiceSortField,
   InvoiceStatus,
   PAYMENT_STATUS_LABEL,
-  PaymentStatus,
   isStoredInvoiceStatus,
   INVOICE_FILTERS,
   withFilterOptions,
@@ -20,12 +19,12 @@ import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import {
   type EntityColumn,
-  type PillTone,
   dateColumn,
   moneyColumn,
   pillColumn,
   textColumn,
 } from '../../shared/cells'
+import { INVOICE_STATUS_TONE, PAYMENT_STATUS_TONE } from '../../shared/statusTones'
 
 /**
  * The invoice list, on the shared `EntityList`.
@@ -72,24 +71,9 @@ const STATUS_LABEL: Record<InvoiceStatus, string> = {
 
 /** Only `overdue` is a problem; only `paid` is finished. Everything else is
  *  simply where the invoice has got to. */
-const STATUS_TONE: Record<InvoiceStatus, PillTone> = {
-  // Open awaits payment (orange); Draft is still being written (info).
-  [InvoiceStatus.Draft]: 'info',
-  [InvoiceStatus.Open]: 'warning',
-  [InvoiceStatus.Paid]: 'success',
-  [InvoiceStatus.Overdue]: 'danger',
-  [InvoiceStatus.Void]: 'neutral',
-  [InvoiceStatus.Skipped]: 'neutral',
-}
+const STATUS_TONE = INVOICE_STATUS_TONE
 
-const PAYMENT_TONE: Record<PaymentStatus, PillTone> = {
-  [PaymentStatus.Pending]: 'warning',
-  [PaymentStatus.Succeeded]: 'success',
-  [PaymentStatus.Overpaid]: 'info',
-  [PaymentStatus.Failed]: 'danger',
-  [PaymentStatus.Refunded]: 'neutral',
-  [PaymentStatus.Voided]: 'neutral',
-}
+const PAYMENT_TONE = PAYMENT_STATUS_TONE
 
 const SORT_LABEL: Record<InvoiceSortField, string> = {
   [InvoiceSortField.UpdatedAt]: 'Updated',

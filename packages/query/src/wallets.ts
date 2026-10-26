@@ -242,15 +242,18 @@ export function toUpdateAutoTopupRequest(draft: AutoTopup): Record<string, unkno
       threshold: Number(draft.threshold),
       amount: Number(draft.amount),
       invoicing: draft.invoicing,
-      // Sent only when set: a blank cool-off leaves whatever the wallet has.
-      ...(draft.cooldownValue
+      // On sends the cool-off; off sends an empty one, which the API reads as
+      // "clear it" (`Duration.IsEmpty`). Left undecided, the saved one is kept.
+      ...(draft.cooldownEnabled === true && draft.cooldownValue
         ? {
             cooldown: {
               value: Number(draft.cooldownValue),
               unit: draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour,
             },
           }
-        : {}),
+        : draft.cooldownEnabled === false
+          ? { cooldown: { value: 0, unit: draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour } }
+          : {}),
     },
   }
 }
@@ -260,9 +263,13 @@ const COOLDOWN_UNITS = new Set<string>(Object.values(AutoTopupCooldownUnit))
 /** The wire's cool-off, as the draft's two fields. Seconds and unknown units are read as none. */
 function toCooldown(
   wire: { unit?: string | undefined; value?: number | undefined } | undefined,
-): Pick<AutoTopup, 'cooldownValue' | 'cooldownUnit'> {
-  if (!wire?.value || !COOLDOWN_UNITS.has(wire.unit ?? '')) return {}
-  return { cooldownValue: String(wire.value), cooldownUnit: wire.unit as AutoTopupCooldownUnit }
+): Pick<AutoTopup, 'cooldownEnabled' | 'cooldownValue' | 'cooldownUnit'> {
+  if (!wire?.value || !COOLDOWN_UNITS.has(wire.unit ?? '')) return { cooldownEnabled: false }
+  return {
+    cooldownEnabled: true,
+    cooldownValue: String(wire.value),
+    cooldownUnit: wire.unit as AutoTopupCooldownUnit,
+  }
 }
 
 /** A customer's wallets: `GET /customers/{id}/wallets`. */

@@ -39,12 +39,12 @@ const STATUS_CHOICES = Object.values(WorkflowStatus).map((value) => ({
 }))
 
 const STATUS_TONE: Record<WorkflowStatus, PillTone> = {
-  [WorkflowStatus.Running]: 'info',
+  [WorkflowStatus.Running]: 'warning',
   [WorkflowStatus.Completed]: 'success',
   [WorkflowStatus.Failed]: 'danger',
   [WorkflowStatus.Canceled]: 'neutral',
   [WorkflowStatus.Terminated]: 'neutral',
-  [WorkflowStatus.ContinuedAsNew]: 'info',
+  [WorkflowStatus.ContinuedAsNew]: 'warning',
   [WorkflowStatus.TimedOut]: 'warning',
 }
 
