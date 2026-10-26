@@ -3,9 +3,10 @@ import { toUsageAnalytics } from './events'
 
 describe('toUsageAnalytics', () => {
   it('reads revenue only when the server sent both a subtotal and a currency', () => {
-    expect(
-      toUsageAnalytics({ subtotal: '12.50', currency: 'usd', items: [] }).revenue,
-    ).toEqual({ amount: '12.50', currency: 'USD' })
+    expect(toUsageAnalytics({ subtotal: '12.50', currency: 'usd', items: [] }).revenue).toEqual({
+      amount: '12.50',
+      currency: 'USD',
+    })
   })
 
   it('leaves revenue null when the currency is missing or blank', () => {

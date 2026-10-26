@@ -63,6 +63,7 @@ export function toCostAnalytics(wire: CostAnalyticsWire): CostAnalytics {
 /** One customer's revenue, cost and margin over a window, on the same filters as their usage. */
 export function useCustomerCostAnalytics(
   query: Omit<UsageAnalyticsQuery, 'windowSize'> & { externalCustomerId: string },
+  options: { enabled?: boolean } = {},
 ): UseQueryResult<CostAnalytics> {
   const client = useFlexprice()
 
@@ -89,7 +90,7 @@ export function useCustomerCostAnalytics(
           }),
         )) as CostAnalyticsWire,
       ),
-    enabled: query.externalCustomerId.length > 0,
+    enabled: (options.enabled ?? true) && query.externalCustomerId.length > 0,
     staleTime: 60_000,
     placeholderData: (previous) => previous,
     // No cost sheet is a normal setup, not something to retry.

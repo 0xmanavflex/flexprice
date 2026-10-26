@@ -3,6 +3,7 @@ import { DEFAULT_FEATURE_QUERY, FeatureType, formatMoney } from '@fp/domain'
 import {
   useCustomerCostAnalytics,
   useFeatures,
+  useFeaturesByMeters,
   useUsageAnalytics,
   UsageWindowSize,
 } from '@fp/query'
@@ -31,12 +32,29 @@ const dayLabel = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'nume
  * Rendered only for a customer with an external id: analytics are matched by
  * it, and without one the query would read the whole tenant.
  */
-export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
+export function CustomerAnalyticsPanel({
+  externalId,
+  scope,
+}: {
+  externalId: string
+  /**
+   * Narrows the panel to part of the customer: a contract's metered charges
+   * (by meter), opening on its period, with a note saying what is covered.
+   */
+  scope?:
+    | {
+        meterIds: readonly string[]
+        from?: string | undefined
+        to?: string | undefined
+        note: string
+      }
+    | undefined
+}) {
   const [query, setQuery] = useState<AnalyticsQuery>(() => {
     const today = new Date()
     return {
-      from: isoDay(new Date(today.getTime() - RANGE_DAYS * DAY)),
-      to: isoDay(today),
+      from: scope?.from ?? isoDay(new Date(today.getTime() - RANGE_DAYS * DAY)),
+      to: scope?.to ?? isoDay(today),
       includeChildren: false,
     }
   })
@@ -50,21 +68,44 @@ export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
     }),
     [query.from, query.to],
   )
+  const metered = useFeatures(
+    {
+      ...DEFAULT_FEATURE_QUERY,
+      pageSize: 100,
+      types: [FeatureType.Metered],
+      // Archived features can still carry usage in the window.
+      filters: [],
+    },
+    { enabled: !scope },
+  )
+  // A scope's features are searched by its meters, so none is missed for
+  // sitting past the first page of the catalogue.
+  const scoped = useFeaturesByMeters(scope?.meterIds ?? [])
+  const catalogue = scope ? scoped : metered
+  // The features on offer: every metered one, or only those a scope names.
+  const options = (scope ? (scoped.data ?? []) : (metered.data?.features ?? [])).filter(
+    (feature) =>
+      feature.type === FeatureType.Metered &&
+      (!scope || (feature.meterId !== null && scope.meterIds.includes(feature.meterId))),
+  )
+  // With a scope, "all" means all of its features, never the whole customer;
+  // a scope with none matches nothing rather than everything.
+  const scopedIds = options.map((feature) => feature.id)
+  const effectiveIds =
+    featureIds.length > 0 || !scope ? featureIds : scopedIds.length > 0 ? scopedIds : ['none']
   const filters = {
     window,
     externalCustomerId: externalId,
-    featureIds,
+    featureIds: effectiveIds,
     includeChildren: query.includeChildren,
   }
-  const usage = useUsageAnalytics({ ...filters, windowSize: UsageWindowSize.Day })
-  const costs = useCustomerCostAnalytics(filters)
-  const metered = useFeatures({
-    ...DEFAULT_FEATURE_QUERY,
-    pageSize: 100,
-    types: [FeatureType.Metered],
-    // Archived features can still carry usage in the window.
-    filters: [],
-  })
+  // A scope waits for its features: until then "none" would read as no usage.
+  const ready = !scope || scoped.isSuccess
+  const usage = useUsageAnalytics(
+    { ...filters, windowSize: UsageWindowSize.Day },
+    { enabled: ready },
+  )
+  const costs = useCustomerCostAnalytics(filters, { enabled: ready })
 
   const data = usage.data
   const cost = costs.data
@@ -79,9 +120,8 @@ export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
     <CustomerAnalyticsView
       query={query}
       onQueryChange={setQuery}
-      featureOptions={(metered.data?.features ?? [])
-        .filter((feature) => feature.type === FeatureType.Metered)
-        .map((feature) => ({ id: feature.id, name: feature.name }))}
+      featureOptions={options.map((feature) => ({ id: feature.id, name: feature.name }))}
+      {...(scope ? { note: scope.note } : {})}
       selectedFeatureIds={featureIds}
       onSelectedFeatureIdsChange={setFeatureIds}
       totals={{
@@ -108,9 +148,18 @@ export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
           })),
         }
       })}
-      isLoading={usage.isPending}
-      error={data ? null : usage.error ? 'Usage analytics could not be loaded.' : null}
+      isLoading={catalogue.isPending || usage.isPending}
+      error={
+        catalogue.isError
+          ? 'The features could not be loaded.'
+          : data
+            ? null
+            : usage.error
+              ? 'Usage analytics could not be loaded.'
+              : null
+      }
       onRetry={() => {
+        if (catalogue.isError) void catalogue.refetch()
         void usage.refetch()
         void costs.refetch()
       }}

@@ -44,6 +44,7 @@ import {
   useSubscriptionInvoicePreview,
   useSubscriptionInvoices,
   useSubscriptionLines,
+  useCustomer,
   useSubscriptionLineHistory,
   useSubscriptionSchedules,
   useSubscriptionTaxes,
@@ -60,6 +61,7 @@ import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions } from '../plans/planFormOptions'
 import { railActivity } from '@/pages/shared/activityLog'
+import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { detailGate } from '../shared/detailGate'
 import { useEntityAlert } from '../shared/useEntityAlert'
 
@@ -109,6 +111,8 @@ export function SubscriptionDetailPage({
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
   const lines = useSubscriptionLines(subscriptionId)
+  // The Usage tab's breakdown is matched by the customer's external id.
+  const contractCustomer = useCustomer(subscription.data?.customerId ?? '')
   // Ended lines too, so a changed price stays visible as an inactive version.
   // If it fails, the page falls back to the lines billing now.
   const lineHistory = useSubscriptionLineHistory(subscriptionId)
@@ -202,6 +206,44 @@ export function SubscriptionDetailPage({
       <SubscriptionDetailView
         subscription={data}
         lines={part(lines)}
+        {...(() => {
+          // The contract's metered charges, by meter: the usage breakdown is the
+          // customer's analytics narrowed to them, opening on the current period.
+          const externalId = contractCustomer.data?.externalId ?? ''
+          const meterIds = [
+            ...new Set(
+              (lines.data ?? []).flatMap((line) =>
+                line.charge?.meterId && !line.charge.endDate ? [line.charge.meterId] : [],
+              ),
+            ),
+          ]
+          const s = subscription.data
+          if (!externalId || meterIds.length === 0 || !s) return {}
+          // The panel's range is whole local days, so each instant becomes its
+          // local date: the day the period starts or ends on this screen.
+          const day = (date: Date) =>
+            `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+          const now = new Date()
+          const start = s.currentPeriodStart
+          // Up to today, never past the period's end; a period not yet started
+          // opens on its first day alone rather than on a backwards range.
+          const end = s.currentPeriodEnd && s.currentPeriodEnd < now ? s.currentPeriodEnd : now
+          const from = start ? day(start) : undefined
+          const to = from && day(end) < from ? from : day(end)
+          return {
+            usageBreakdown: (
+              <CustomerAnalyticsPanel
+                externalId={externalId}
+                scope={{
+                  meterIds,
+                  from,
+                  to,
+                  note: "Usage of this contract's metered features by its customer. Usage of the same features on the customer's other contracts is included.",
+                }}
+              />
+            ),
+          }
+        })()}
         {...(lineHistory.data ? { lineHistory: lineHistory.data } : {})}
         onRevertLine={(line, previous) => {
           // No revert endpoint: the old price goes out as a new version from now.

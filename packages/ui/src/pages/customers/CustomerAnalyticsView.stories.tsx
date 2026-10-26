@@ -137,3 +137,15 @@ export const Failed: Story = {
     ).toBeInTheDocument()
   },
 }
+
+/** Scoped to part of the customer (a contract's features): a line says what is covered. */
+export const WithScopeNote: Story = {
+  args: {
+    note: "Usage of this contract's metered features by its customer. Usage of the same features on the customer's other contracts is included.",
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(/Usage of this contract's metered features/),
+    ).toBeVisible()
+  },
+}
