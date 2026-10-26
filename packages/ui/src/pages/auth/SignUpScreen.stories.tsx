@@ -84,7 +84,7 @@ export const ValidatesOnlyWhatWasTyped: Story = {
     await expect(canvas.queryByText('Enter your work email')).toBeNull()
     await expect(canvas.queryByText('Use at least 6 characters')).toBeNull()
 
-    await userEvent.type(canvas.getByLabelText('Work email'), 'nope')
+    await userEvent.type(canvas.getByLabelText('Work email'), 'a@b.c')
     await userEvent.tab()
     await expect(await canvas.findByText('Enter a valid email address')).toBeInTheDocument()
     await expect(canvas.queryByText('Use at least 6 characters')).toBeNull()

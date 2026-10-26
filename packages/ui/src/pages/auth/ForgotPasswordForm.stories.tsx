@@ -106,7 +106,7 @@ export const ValidationFromDomain: Story = {
 export const RejectsAMalformedEmail: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.type(canvas.getByLabelText('Email'), 'not-an-email')
+    await userEvent.type(canvas.getByLabelText('Email'), 'a@b.c')
     await userEvent.tab()
     await expect(
       await canvas.findByText('That does not look like an email address'),

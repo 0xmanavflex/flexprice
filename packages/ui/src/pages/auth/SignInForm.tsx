@@ -150,7 +150,7 @@ export function SignInForm({
               autoComplete="email"
               // Not autofocused when an attempt has failed: the cursor belongs in
               // the password. Focusing here and then moving away blurs an empty
-              // email, and `onTouched` validation raises "Enter your email" on a
+              // email, and blur validation would raise "Enter your email" on a
               // field the user never touched.
               autoFocus={!error}
               disabled={isSubmitting}
