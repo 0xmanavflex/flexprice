@@ -1,3 +1,4 @@
+import { makeCharge } from '../product-catalog/plans/planDetailFixtures'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import {
@@ -485,6 +486,13 @@ const INTEGRATION_LINKS: IntegrationLink[] = [
   },
 ]
 
+const SECTION_OPTIONS = {
+  features: [{ id: 'feat_seats', name: 'Seats', type: FeatureType.Static }],
+  addons: [{ id: 'addon_support', name: 'Priority support' }],
+  coupons: [{ code: 'LAUNCH10', name: 'Launch 10% off' }],
+  taxRates: [{ code: 'VAT-DE', label: 'VAT (7.2%)' }],
+}
+
 const BASE: SubscriptionDetailViewProps = {
   subscription: SUBSCRIPTION,
   lines: ready(LINES),
@@ -506,12 +514,7 @@ const BASE: SubscriptionDetailViewProps = {
   onAddAddon: fn(async () => undefined),
   onAddCoupon: fn(async () => undefined),
   onAddTax: fn(async () => undefined),
-  sectionOptions: {
-    features: [{ id: 'feat_seats', name: 'Seats', type: FeatureType.Static }],
-    addons: [{ id: 'addon_support', name: 'Priority support' }],
-    coupons: [{ code: 'LAUNCH10', name: 'Launch 10% off' }],
-    taxRates: [{ code: 'VAT-DE', label: 'VAT (7.2%)' }],
-  },
+  sectionOptions: SECTION_OPTIONS,
   activity: ACTIVITY,
   onBack: fn(),
   onOpenCustomer: fn(),
@@ -1210,6 +1213,46 @@ export const AddAddon: Story = {
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
     await waitFor(() => expect(args.onAddAddon).toHaveBeenCalledWith({ addonId: 'addon_support' }))
+  },
+}
+
+/** As V1: attaching an add-on can commit on its usage charges, through the same dialog as a plan charge. */
+export const AddAddonWithCommitment: Story = {
+  parameters: menuA11y,
+  args: {
+    sectionOptions: {
+      ...SECTION_OPTIONS,
+      addonCharges: (addonId: string) =>
+        addonId === 'addon_support'
+          ? [
+              {
+                ...makeCharge(1, { type: PriceType.Usage, billingModel: BillingModel.FlatFee }),
+                entityId: 'addon_support',
+              },
+            ]
+          : undefined,
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
+    await userEvent.click(await dialog.findByRole('button', { name: /^Add commitment on / }))
+    const commitment = within(await screen.findByRole('dialog'))
+    await userEvent.type(await commitment.findByRole('textbox', { name: /^Commitment \(/ }), '500')
+    await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
+    const back = within(await screen.findByRole('dialog'))
+    await userEvent.click(back.getByRole('button', { name: 'Add add-on' }))
+    await waitFor(() =>
+      expect(args.onAddAddon).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addonId: 'addon_support',
+          commitments: [expect.objectContaining({ value: '500' })],
+        }),
+      ),
+    )
   },
 }
 

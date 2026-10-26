@@ -93,7 +93,7 @@ export interface InvoiceDocument {
 
 export interface StatusChip {
   label: string
-  tone: 'neutral' | 'success' | 'info' | 'warning' | 'danger'
+  tone: 'neutral' | 'success' | 'info' | 'trial' | 'warning' | 'danger'
 }
 
 /**
@@ -105,10 +105,10 @@ export interface StatusChip {
 export function statusChips(
   doc: Pick<InvoiceDocument, 'status' | 'paymentStatus' | 'paid'>,
 ): StatusChip[] {
-  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'info' }]
+  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'neutral' }]
   if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', tone: 'neutral' }]
   if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', tone: 'neutral' }]
-  const chips: StatusChip[] = [{ label: 'Finalized', tone: 'neutral' }]
+  const chips: StatusChip[] = [{ label: 'Finalized', tone: 'info' }]
   // A refunded invoice reads as refunded, not paid, though nothing remains due.
   if (doc.status === InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Refunded)
     chips.push({ label: 'Refund issued', tone: 'neutral' })

@@ -64,9 +64,15 @@ export function isServerFilterable(status: InvoiceStatus): boolean {
 
 /** Builds the request. Page numbers are 1-based for people, offsets are not. */
 export function toInvoiceFilter(query: InvoiceQuery): Record<string, unknown> {
-  const statuses = query.statuses
-    .map((s) => STATUS_TO_API[s])
-    .filter((s): s is string => s !== undefined)
+  // Paid and overdue are derived from finalized invoices, so asking for either
+  // asks the server for finalized ones too; the page then keeps the matches.
+  const derived = query.statuses.some((s) => !isServerFilterable(s))
+  const statuses = [
+    ...new Set([
+      ...query.statuses.map((s) => STATUS_TO_API[s]).filter((s): s is string => s !== undefined),
+      ...(derived ? ['FINALIZED'] : []),
+    ]),
+  ]
 
   return {
     limit: query.pageSize,
