@@ -955,6 +955,7 @@
         "PlusIcon"
       ],
       "usedBy": [
+        "ContractSectionDialogs",
         "SubscriptionForm"
       ],
       "story": null
@@ -1642,6 +1643,7 @@
       "file": "src/pages/contracts/ContractSectionDialogs.tsx",
       "layer": "surface",
       "composes": [
+        "ChargeCommitmentDialog",
         "Composer",
         "CreditGrantCreateForm",
         "EntitlementCreateForm",

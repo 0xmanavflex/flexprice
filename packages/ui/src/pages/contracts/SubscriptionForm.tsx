@@ -213,6 +213,8 @@ export interface SubscriptionFormProps {
   customerTaxes?: CreateSubscription['taxes'] | null
   /** Add-ons the contract can start with. */
   addons?: readonly SubscriptionAddonOption[]
+  /** An add-on's charges, so its usage charges can each carry a commitment (as V1's add-on card). */
+  addonCharges?: ((addonId: string) => readonly Charge[] | undefined) | undefined
   /** For charges added to this contract alone: the metered features and price units. */
   meters?: MeterOption[]
   priceUnits?: PriceUnitOption[]
@@ -336,6 +338,7 @@ export function SubscriptionForm({
   createTaxRateHref,
   customerTaxes = null,
   addons = [],
+  addonCharges,
   meters = [],
   priceUnits = [],
   customerLocked = false,
@@ -992,6 +995,8 @@ export function SubscriptionForm({
           selected={values.addons}
           options={addons}
           onChange={(next) => set('addons', next)}
+          chargesOf={addonCharges}
+          currency={values.currency}
         />
       </div>
     ) : (
@@ -1403,6 +1408,28 @@ function chargeKind(charge: Charge): string {
 }
 
 /** The price cell: the amount, or the tiers in brief. An override wins. */
+/** A usage charge as the commitment dialog takes it: its name, price and what a window's price builds on. */
+export function commitmentChargeOf(charge: Charge, override?: PriceOverride) {
+  return {
+    priceId: charge.id,
+    name: chargeName(charge),
+    description: `${BILLING_MODEL_LABEL[override?.billingModel ?? charge.billingModel]} · ${priceText(charge, override)}`,
+    bucketSize: charge.bucketSize ?? '',
+    unitAmount: charge.amount,
+    priceBase: charge.meterId
+      ? {
+          entityId: charge.entityId,
+          entityType: charge.entityType,
+          meterId: charge.meterId,
+          currency: charge.currency,
+          billingPeriod: charge.billingPeriod,
+          billingPeriodCount: charge.billingPeriodCount,
+          invoiceCadence: charge.invoiceCadence,
+        }
+      : undefined,
+  } as const
+}
+
 function priceText(charge: Charge, override: PriceOverride | undefined): string {
   const tiers =
     override?.billingModel === BillingModel.Tiered
@@ -1785,24 +1812,7 @@ function ChargesTable({
         <ChargeCommitmentDialog
           charge={
             committingCharge
-              ? {
-                  priceId: committingCharge.id,
-                  name: chargeName(committingCharge),
-                  description: `${BILLING_MODEL_LABEL[byId.get(committingCharge.id)?.billingModel ?? committingCharge.billingModel]} · ${priceText(committingCharge, byId.get(committingCharge.id))}`,
-                  bucketSize: committingCharge.bucketSize ?? '',
-                  unitAmount: committingCharge.amount,
-                  priceBase: committingCharge.meterId
-                    ? {
-                        entityId: committingCharge.entityId,
-                        entityType: committingCharge.entityType,
-                        meterId: committingCharge.meterId,
-                        currency: committingCharge.currency,
-                        billingPeriod: committingCharge.billingPeriod,
-                        billingPeriodCount: committingCharge.billingPeriodCount,
-                        invoiceCadence: committingCharge.invoiceCadence,
-                      }
-                    : undefined,
-                }
+              ? commitmentChargeOf(committingCharge, byId.get(committingCharge.id))
               : null
           }
           commitment={committing ? commitmentOf.get(committing) : undefined}
@@ -2527,11 +2537,32 @@ function AddonsSection({
   selected,
   options,
   onChange,
+  chargesOf,
+  currency,
 }: {
   selected: CreateSubscription['addons']
   options: readonly SubscriptionAddonOption[]
   onChange: (next: CreateSubscription['addons']) => void
+  chargesOf?: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  currency: string
 }) {
+  // The add-on charge whose commitment dialog is open.
+  const [committing, setCommitting] = useState<{ addonId: string; charge: Charge } | null>(null)
+  const usageOf = (addonId: string) =>
+    (chargesOf?.(addonId) ?? []).filter((charge) => charge.type === PriceType.Usage)
+  const commitmentsOf = (addonId: string) =>
+    selected.find((a) => a.addonId === addonId)?.commitments ?? []
+  const setCommitment = (addonId: string, priceId: string, next: ChargeCommitment | null) =>
+    onChange(
+      selected.map((addon) => {
+        if (addon.addonId !== addonId) return addon
+        const rest = (addon.commitments ?? []).filter((c) => c.priceId !== priceId)
+        const commitments = next ? [...rest, next] : rest
+        return commitments.length > 0
+          ? { ...addon, commitments }
+          : { addonId: addon.addonId, name: addon.name }
+      }),
+    )
   const available = options.filter((o) => !selected.some((a) => a.addonId === o.value))
   const optionOf = (addonId: string) => options.find((o) => o.value === addonId)
   // A price shows only when the page knows one; the add-on list carries none today.
@@ -2563,14 +2594,46 @@ function AddonsSection({
           },
         ]
       : []),
+    ...(chargesOf
+      ? [
+          {
+            key: 'commitments',
+            header: 'Commitments',
+            cell: (row: Row) => {
+              const commitments = commitmentsOf(row.id)
+              return commitments.length === 0 ? (
+                <span className="text-muted-foreground">—</span>
+              ) : (
+                <span className="flex flex-col gap-0.5 text-[13px]">
+                  {commitments.map((commitment) => {
+                    const charge = usageOf(row.id).find((c) => c.id === commitment.priceId)
+                    return (
+                      <span key={commitment.priceId}>
+                        {charge ? `${chargeName(charge)}: ` : ''}
+                        {commitmentText(commitment, currency)}
+                      </span>
+                    )
+                  })}
+                </span>
+              )
+            },
+          },
+        ]
+      : []),
     {
-      key: 'remove',
+      key: 'actions',
       header: '',
       className: 'w-10 text-right',
       cell: (row) => (
-        <RemoveButton
-          label={`Remove ${row.name}`}
-          onClick={() => onChange(selected.filter((a) => a.addonId !== row.id))}
+        <RowActionsMenu
+          label={row.name}
+          extra={usageOf(row.id).map((charge) => ({
+            label: `${commitmentsOf(row.id).some((c) => c.priceId === charge.id) ? 'Edit' : 'Add'} commitment: ${chargeName(charge)}`,
+            icon: <ScaleIcon aria-hidden />,
+            onSelect: () => setCommitting({ addonId: row.id, charge }),
+          }))}
+          onRemove={() => onChange(selected.filter((a) => a.addonId !== row.id))}
+          removeLabel="Remove add-on"
         />
       ),
     },
@@ -2612,6 +2675,20 @@ function AddonsSection({
           )
         }
       </FormRow>
+      <ChargeCommitmentDialog
+        charge={committing ? commitmentChargeOf(committing.charge) : null}
+        commitment={
+          committing
+            ? commitmentsOf(committing.addonId).find((c) => c.priceId === committing.charge.id)
+            : undefined
+        }
+        currency={currency}
+        onClose={() => setCommitting(null)}
+        onSave={(next) => {
+          if (committing) setCommitment(committing.addonId, committing.charge.id, next)
+          setCommitting(null)
+        }}
+      />
     </FormCard>
   )
 }

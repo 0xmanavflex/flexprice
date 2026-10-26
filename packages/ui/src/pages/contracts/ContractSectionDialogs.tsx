@@ -1,11 +1,18 @@
 import { useState } from 'react'
+import { Button } from '@ui/components/primitives/button'
+import { ScaleIcon } from '@ui/icons'
+import { ChargeCommitmentDialog, commitmentText } from './ChargeCommitmentDialog'
+import { commitmentChargeOf } from './SubscriptionForm'
 import {
   emptyTaxAssociation,
   type AddContractAddon,
   type AddContractCoupon,
+  type Charge,
+  type ChargeCommitment,
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreateTaxAssociation,
+  PriceType,
 } from '@fp/domain'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
@@ -35,6 +42,10 @@ export type ContractSectionKind = 'entitlement' | 'creditGrant' | 'addon' | 'cou
 export interface ContractSectionOptions {
   features: FeatureOption[]
   addons: { id: string; name: string }[]
+  /** An add-on's charges, so each usage charge can carry a commitment, as V1. */
+  addonCharges?: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  /** The contract's currency, for commitment amounts. */
+  currency?: string | undefined
   coupons: { code: string; name: string }[]
   taxRates: TaxRateOption[]
 }
@@ -99,18 +110,16 @@ export function ContractSectionDialogs({
         />
       </FormDialog>
 
-      <PickDialog
+      <AddonDialog
+        key={kind === 'addon' ? 'open' : 'closed'}
         open={kind === 'addon'}
-        title="Add add-on"
-        label="Add-on"
-        hint="The add-on to attach to this contract."
-        submitLabel="Add add-on"
-        emptyNote="No add-ons are available to attach."
-        options={options.addons.map((a) => ({ value: a.id, label: a.name }))}
+        addons={options.addons}
+        chargesOf={options.addonCharges}
+        currency={options.currency ?? ''}
         pending={pending}
         error={error}
         onClose={onClose}
-        onSubmit={(addonId) => onRun(actions.onAddAddon?.({ addonId }))}
+        onSubmit={(draft) => onRun(actions.onAddAddon?.(draft))}
       />
 
       <PickDialog
@@ -213,5 +222,137 @@ function PickDialog({
         ) : null}
       </Composer>
     </FormDialog>
+  )
+}
+
+/**
+ * Attach an add-on, and commit on its usage charges if you like, as V1's add-on
+ * card: each usage charge of the chosen add-on gets Add commitment, which opens
+ * the same commitment dialog as a plan charge.
+ */
+function AddonDialog({
+  open,
+  addons,
+  chargesOf,
+  currency,
+  pending,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean
+  addons: { id: string; name: string }[]
+  chargesOf: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  currency: string
+  pending: boolean
+  error: string | null
+  onClose: () => void
+  onSubmit: (draft: AddContractAddon) => void
+}) {
+  const [addonId, setAddonId] = useState('')
+  const [commitments, setCommitments] = useState<ChargeCommitment[]>([])
+  const [committing, setCommitting] = useState<Charge | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
+  const usage = addonId
+    ? (chargesOf?.(addonId) ?? []).filter((charge) => charge.type === PriceType.Usage)
+    : []
+  const commitmentOn = (priceId: string) => commitments.find((c) => c.priceId === priceId)
+
+  return (
+    <>
+      <FormDialog
+        open={open && committing === null}
+        onOpenChange={(next) => (next ? undefined : onClose())}
+        title="Add add-on"
+        size="sm"
+        isPending={pending}
+      >
+        <Composer
+          submitLabel="Add add-on"
+          onCancel={onClose}
+          submitting={pending}
+          disabled={addons.length === 0}
+          onSubmit={() => {
+            if (!addonId) return setProblem('Choose an add-on')
+            setProblem(null)
+            onSubmit({ addonId, ...(commitments.length > 0 ? { commitments } : {}) })
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <LabelWithHint htmlFor="pick-add-on" hint="The add-on to attach to this contract.">
+              Add-on
+            </LabelWithHint>
+            <OptionSelect
+              id="pick-add-on"
+              value={addonId || undefined}
+              onValueChange={(next) => {
+                setAddonId(next)
+                setCommitments([])
+              }}
+              options={addons.map((a) => ({ value: a.id, label: a.name }))}
+              placeholder="Select add-on"
+            />
+            {addons.length === 0 ? (
+              <p className="text-muted-foreground text-[13px]">
+                No add-ons are available to attach.
+              </p>
+            ) : null}
+          </div>
+          {usage.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <LabelWithHint hint="A minimum on a usage charge of this add-on: spend or units per period. Optional.">
+                Commitments
+              </LabelWithHint>
+              {usage.map((charge) => {
+                const commitment = commitmentOn(charge.id)
+                const name = commitmentChargeOf(charge).name
+                return (
+                  <div
+                    key={charge.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate text-[13px] font-medium">{name}</span>
+                      <span className="text-muted-foreground truncate text-xs">
+                        {commitment ? commitmentText(commitment, currency) : 'No commitment'}
+                      </span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0 px-3"
+                      aria-label={`${commitment ? 'Edit' : 'Add'} commitment on ${name}`}
+                      onClick={() => setCommitting(charge)}
+                    >
+                      <ScaleIcon aria-hidden /> {commitment ? 'Edit' : 'Add'}
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
+          {problem || error ? (
+            <p role="alert" className="text-destructive text-sm">
+              {problem ?? error}
+            </p>
+          ) : null}
+        </Composer>
+      </FormDialog>
+      <ChargeCommitmentDialog
+        charge={committing ? commitmentChargeOf(committing) : null}
+        commitment={committing ? commitmentOn(committing.id) : undefined}
+        currency={currency}
+        onClose={() => setCommitting(null)}
+        onSave={(next) => {
+          if (committing)
+            setCommitments((current) => [
+              ...current.filter((c) => c.priceId !== committing.id),
+              ...(next ? [next] : []),
+            ])
+          setCommitting(null)
+        }}
+      />
+    </>
   )
 }

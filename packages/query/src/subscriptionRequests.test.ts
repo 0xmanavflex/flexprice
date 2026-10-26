@@ -530,6 +530,36 @@ describe('contract-scoped creators', () => {
     })
   })
 
+  it("sends an add-on's commitments keyed by its price, as the SDK serialises them", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'amount',
+          value: '500',
+          overageFactor: '1.5',
+          trueUp: true,
+          windowed: false,
+          bucketSize: '',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      addon_id: 'addon_1',
+      line_item_commitments: {
+        price_addon_api: {
+          commitment_type: 'amount',
+          commitment_amount: 500,
+          overage_factor: 1.5,
+          enable_true_up: true,
+        },
+      },
+    })
+  })
+
   it('applies a coupon as an add modification', () => {
     const request = toAddCouponRequest('sub_1', { couponCode: ' WELCOME10 ' })
     expect(ExecuteSubscriptionModifyRequest$outboundSchema.parse(request)).toEqual({

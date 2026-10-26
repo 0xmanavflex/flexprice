@@ -830,6 +830,18 @@ function toLineItemCommitment(commitment: ChargeCommitment): Record<string, unkn
   }
 }
 
+/** An add-on's commitments as `line_item_commitments`, keyed by the add-on's price. */
+function addonCommitments(commitments: ChargeCommitment[] | undefined): {
+  lineItemCommitments?: Record<string, Record<string, unknown>>
+} {
+  if (!commitments || commitments.length === 0) return {}
+  return {
+    lineItemCommitments: Object.fromEntries(
+      commitments.map((commitment) => [commitment.priceId, toLineItemCommitment(commitment)]),
+    ),
+  }
+}
+
 /** A phase's discounts as the API's two coupon fields: whole-phase ids, and ids per charge. */
 function couponFields(phase: SubscriptionPhase): Record<string, unknown> {
   const whole = phase.discounts.filter((d) => !d.priceId).map((d) => d.couponId)
@@ -950,7 +962,12 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
         }
       : {}),
     ...(draft.addons.length > 0
-      ? { addons: draft.addons.map((addon) => ({ addonId: addon.addonId })) }
+      ? {
+          addons: draft.addons.map((addon) => ({
+            addonId: addon.addonId,
+            ...addonCommitments(addon.commitments),
+          })),
+        }
       : {}),
     billingCycle: draft.billingCycle,
     ...(draft.billingAnchor ? { billingAnchor: utcDay(draft.billingAnchor) } : {}),
@@ -1921,7 +1938,7 @@ export function toAddAddonRequest(
   subscriptionId: string,
   draft: AddContractAddon,
 ): FlexpriceModels.AddAddonRequest {
-  return { subscriptionId, addonId: draft.addonId }
+  return { subscriptionId, addonId: draft.addonId, ...addonCommitments(draft.commitments) }
 }
 
 /** A coupon applied to one contract, or to one of its charges, as a `coupon` modification. */

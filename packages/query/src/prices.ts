@@ -338,6 +338,37 @@ export function usePrices(entityType: PriceEntityType, entityId: string) {
 }
 
 /**
+ * The charges of several entities in one search (`entity_ids`), grouped by
+ * entity: the contract form's add-ons, so each can commit on its usage charges.
+ */
+export function useEntitiesCharges(entityType: PriceEntityType, entityIds: readonly string[]) {
+  const client = useFlexprice()
+  const ids = [...new Set(entityIds)].sort()
+
+  return useQuery({
+    queryKey: queryKeys.prices.list({ entityType, entityIds: ids }),
+    queryFn: async () => {
+      const response = await call(() =>
+        client.prices.queryPrice({
+          entityType,
+          entityIds: ids,
+          expand: 'meters',
+          limit: 500,
+          offset: 0,
+        }),
+      )
+      const byEntity = new Map<string, Charge[]>()
+      for (const item of response.items ?? []) {
+        const charge = toCharge(item as ChargeWire)
+        byEntity.set(charge.entityId, [...(byEntity.get(charge.entityId) ?? []), charge])
+      }
+      return byEntity
+    },
+    enabled: ids.length > 0,
+  })
+}
+
+/**
  * Every price an entity has had, ended ones included: `allow_expired_prices`.
  *
  * The plain list leaves out a price once it ends, so editing a charge made its

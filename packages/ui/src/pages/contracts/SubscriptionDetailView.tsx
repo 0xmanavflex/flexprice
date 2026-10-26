@@ -1644,6 +1644,8 @@ export function SubscriptionDetailView({
         options={{
           features: sectionOptions?.features ?? [],
           addons: sectionOptions?.addons ?? [],
+          addonCharges: sectionOptions?.addonCharges,
+          currency: s.currency,
           coupons: sectionOptions?.coupons ?? [],
           taxRates: sectionOptions?.taxRates ?? [],
         }}

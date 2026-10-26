@@ -37,6 +37,14 @@ const ADDONS: SubscriptionAddonOption[] = [
   { value: 'addon_storage', label: 'Extra storage', type: 'Usage' },
 ]
 const TAX_RATES = [{ code: 'GST18', name: 'GST', percentage: '18' }]
+/** Extra storage's usage charge, so it can carry a commitment. */
+const STORAGE_CHARGES = [
+  {
+    ...makeCharge(2, { type: PriceType.Usage, billingModel: BillingModel.FlatFee }),
+    entityId: 'addon_storage',
+    displayName: 'Storage (GB)',
+  },
+]
 const PLAN_NAMES = ['Starter', 'Pro', 'Business', 'Scale', 'Enterprise']
 const CUSTOMER_NAMES = [
   'Acme Robotics',
@@ -218,6 +226,7 @@ function SubscriptionFormPlayground({
       onPlanChange={handlePlanChange}
       coupons={COUPONS}
       addons={ADDONS}
+      addonCharges={(addonId) => (addonId === 'addon_storage' ? STORAGE_CHARGES : undefined)}
       taxRates={TAX_RATES}
       customerTaxes={[
         {
@@ -880,12 +889,46 @@ export const AddsAnAddon: Story = {
     await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toBeVisible()
     await userEvent.click(canvas.getByRole('combobox', { name: /^Add another/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
-    await userEvent.click(await canvas.findByRole('button', { name: 'Remove Extra storage' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Extra storage' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove add-on' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           addons: [{ addonId: 'addon_support', name: 'Premium support' }],
+        }),
+      ),
+    )
+  },
+}
+
+/** As V1's add-on card: an add-on's usage charge can carry a commitment, sent with the add-on. */
+export const AddonCommitment: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Extra storage' }))
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Add commitment: Storage (GB)' }),
+    )
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(await dialog.findByRole('textbox', { name: /^Commitment \(/ }), '250')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
+    await expect(await canvas.findByText(/^Storage \(GB\): /)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addons: [
+            expect.objectContaining({
+              addonId: 'addon_storage',
+              commitments: [
+                expect.objectContaining({ priceId: STORAGE_CHARGES[0]!.id, value: '250' }),
+              ],
+            }),
+          ],
         }),
       ),
     )
