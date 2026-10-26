@@ -8,6 +8,11 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- Exports (R-19), all on the Exports pages:
+  - The landing page's "Overview" highlights show only before the first S3 connection. Once data exists they repeat what the page already shows.
+  - The S3 destination card drops its three tags.
+  - Export status reads Active / Paused in the list and on the detail page. The list and its Status filter used to say Enabled / Disabled.
+  - On the detail page, status shows once, in the header, no longer repeated in Basic information.
 - Webhook message sheet (R-18): it takes `open`, `messageLoading`, `messageError` and `onRetry`. Opened from a link, it shows straight away with a loading state, or the error and Try again. Before, it opened only once the message had arrived, and never if fetching it failed. While Try again is in flight (`retrying`), it shows loading and the button is disabled.
 - Customer activity (R-16): the event sheet's metadata stacks in one column, and its raw payload wraps, so long IDs and values read in the narrow sheet instead of being cut in half or scrolling sideways. `Properties` accepts `columns={1}` (offered in its playground story), and `CopyValue` gains `full`, which the sheet uses so request, actor and event IDs show whole, wrapping, instead of shortened.
 - Cancelled contracts (R-15): the metadata card on the Information tab is read-only, like every other action on a cancelled contract. Before, it still offered Edit.
