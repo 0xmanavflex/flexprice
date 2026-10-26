@@ -305,6 +305,7 @@ export {
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
+  useInheritedContracts,
   useSubscriptions,
   useUpdateSubscriptionLineItem,
 } from './subscriptions'
@@ -372,6 +373,7 @@ export {
   toUpdatePriceRequest,
   useCreateBulkPrices,
   useFeatureCharges,
+  useEntitiesCharges,
   usePrices,
   usePriceHistory,
   useTerminatePrice,
@@ -615,6 +617,7 @@ export {
   toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
+  withConsumption,
   useCreateWallet,
   useCustomerWallets,
   useDebitWallet,

@@ -99,16 +99,16 @@ export function settlementNote(document: CreditNoteDocument, amount: string): st
 export function creditNoteChips(document: CreditNoteDocument): StatusChip[] {
   const status: Record<CreditNoteStatus, StatusChip> = {
     [CreditNoteStatus.Draft]: { label: 'Draft', tone: 'neutral' },
-    [CreditNoteStatus.Finalized]: { label: 'Finalized', tone: 'success' },
-    [CreditNoteStatus.Voided]: { label: 'Voided', tone: 'danger' },
+    [CreditNoteStatus.Finalized]: { label: 'Finalized', tone: 'info' },
+    [CreditNoteStatus.Voided]: { label: 'Voided', tone: 'neutral' },
   }
   const chips: StatusChip[] = [status[document.status]]
   // Void already says it; draft has nothing to add. The other two are the news.
   if (document.settlement === CreditSettlement.Refunded) {
-    chips.push({ label: 'Refunded', tone: 'info' })
+    chips.push({ label: 'Refunded', tone: 'neutral' })
   }
   if (document.settlement === CreditSettlement.Adjusted) {
-    chips.push({ label: 'Invoice adjusted', tone: 'info' })
+    chips.push({ label: 'Invoice adjusted', tone: 'neutral' })
   }
   return chips
 }

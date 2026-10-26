@@ -91,7 +91,7 @@ export const ConfirmsDisconnect: Story = {
     const screen = screenOf(canvasElement)
     await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Stripe' }))
     const dialog = await screen.findByRole('dialog', { name: 'Disconnect Stripe?' })
-    await expect(dialog).toHaveTextContent(/archives this connection/)
+    await expect(dialog).toHaveTextContent(/this connection is archived/)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Disconnect' }))
     await expect(args.onDisconnect).toHaveBeenCalledWith('conn_stripe')
   },

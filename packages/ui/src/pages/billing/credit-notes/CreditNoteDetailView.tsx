@@ -266,12 +266,7 @@ export function CreditNoteDetailView({
               {document.invoiceTotal !== undefined ? (
                 <TotalRow label="Invoice total" value={money(document.invoiceTotal)} />
               ) : null}
-              <TotalRow
-                label="Total credited"
-                value={money(document.amount)}
-                emphasis="due"
-                rule
-              />
+              <TotalRow label="Total credited" value={money(document.amount)} emphasis="due" rule />
               {document.invoiceAmountDue !== undefined ? (
                 <TotalRow
                   label="Current invoice amount due"
