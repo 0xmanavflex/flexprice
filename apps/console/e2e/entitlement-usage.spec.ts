@@ -30,7 +30,8 @@ test('shows entitlement usage on a contract and on its customer’s overview', a
   await expect(contractEntitlements.getByRole('progressbar', { name: /API calls/ })).toBeVisible()
   await expect(contractEntitlements.getByText(/of 250,000 calls/)).toBeVisible()
 
-  // Over to the customer the contract belongs to.
+  // Over to the customer the contract belongs to, from the Information tab.
+  await page.getByRole('tab', { name: 'Information' }).click()
   await page
     .getByRole('region', { name: 'Contract', exact: true })
     .getByRole('button')

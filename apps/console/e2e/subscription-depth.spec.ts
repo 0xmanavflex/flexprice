@@ -18,9 +18,13 @@ test('contract detail overview shows the upcoming invoice and entitlements', asy
   await page.getByRole('row').nth(1).click()
   await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
 
+  // The contract's own facts are on the Information tab; the Overview leads
+  // with what the contract is doing.
+  await expect(page.getByRole('heading', { name: 'Contract', exact: true })).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Information' }).click()
   await expect(page.getByRole('heading', { name: 'Contract', exact: true })).toBeVisible()
-
   await expect(page.getByRole('heading', { name: 'Billing & collection' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Overview' }).click()
 
   const invoice = page.locator('section', {
     has: page.getByRole('heading', { name: 'Upcoming invoice' }),

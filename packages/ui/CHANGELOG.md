@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- Contract detail: a new Information tab (second) holds the Contract and Billing & collection panels and the metadata card; the Overview leads with the upcoming invoice, charges, add-ons and the rest, its rail keeping Activity and Related. Source: walkthrough QA 5.9, decided in chat 2026-10-26.
 - Invoice status colours: Open (and "Payment pending" on the detail page) is orange (`warning`), Paid green, Void grey; Draft moves to `info` so it does not share Open's colour. Open no longer shares violet with Trialing contracts. Existing tones only. Source: walkthrough QA 6.1, decided in chat 2026-10-26.
 - PillColumns: optional `legend` (default on). Home's "New contracts by plan" card turns it off, so the plan names are not listed under the chart; each column still reads out its full breakdown. From the uncommitted work on `fix/reports-full-window`.
 - MetricChart: with more than one series (Home's revenue in several currencies), each line gets its own scale, so a small currency no longer flattens against a large one, and the header gives each series' peak in its own unit with its colour, instead of one min and max across currencies. Ported from `2653b914` on `fix/reports-full-window`, which never reached develop.
