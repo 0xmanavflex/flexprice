@@ -558,6 +558,13 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+/** The contract's own facts live on the Information tab. */
+async function openInformation(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement)
+  await userEvent.click(await canvas.findByRole('tab', { name: 'Information' }))
+  return canvas
+}
+
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -569,17 +576,21 @@ export const Default: Story = {
     await expect(header.getByText('USD')).toBeVisible()
     // The header holds only the badges, the ID and More.
     await expect(header.queryByRole('button', { name: 'Cancel contract' })).toBeNull()
-    await expect(canvas.getAllByRole('tab')).toHaveLength(4)
+    await expect(canvas.getAllByRole('tab')).toHaveLength(5)
     await expect(canvas.queryByRole('tab', { name: /Entitlements/ })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: 'Schedule' })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: 'Activity' })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Related' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Contract' })).toBeVisible()
-    await expect(canvas.getByText('Start date')).toBeVisible()
+    // The contract's own facts are on Information, not the Overview.
+    await expect(canvas.queryByRole('heading', { name: 'Metadata' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Contract' })).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Recent invoices' })).toBeNull()
     await expect(canvas.queryByRole('alert')).toBeNull()
+    await openInformation(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Contract' })).toBeVisible()
+    await expect(canvas.getByText('Start date')).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
   },
 }
 
@@ -777,8 +788,6 @@ export const OverviewSummary: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const order = [
-      'Contract',
-      'Billing & collection',
       'Upcoming invoice',
       'Charges',
       'Entitlements',
@@ -796,7 +805,7 @@ export const OverviewSummary: Story = {
         ).toBeTruthy()
       }
     })
-    await expect(canvas.getByRole('heading', { name: 'Billing & collection' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Billing & collection' })).toBeNull()
     // The summary hands off to the Charges tab for the rest.
     await userEvent.click(canvas.getByRole('button', { name: 'Show all charges' }))
     await waitFor(() =>
@@ -968,7 +977,7 @@ export const NoUpcomingInvoiceWhenCancelled: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Contract' })).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
   },
 }
@@ -977,7 +986,7 @@ export const NoUpcomingInvoiceWhenIncomplete: Story = {
   args: withSubscription({ status: SubscriptionStatus.Incomplete, currentPeriodStart: null }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Contract' })).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
   },
 }
@@ -986,7 +995,9 @@ export const NoUpcomingInvoiceWhenIncomplete: Story = {
 export const ContractDetails: Story = {
   play: async ({ canvasElement }) => {
     const section = within(
-      (await within(canvasElement).findByRole('heading', { name: 'Contract' })).closest('section')!,
+      (
+        await (await openInformation(canvasElement)).findByRole('heading', { name: 'Contract' })
+      ).closest('section')!,
     )
     await expect(section.getByText('Start date')).toBeVisible()
     await expect(section.getByText('Mar 1, 2026')).toBeVisible()
@@ -1029,9 +1040,11 @@ export const ContractCommitment: Story = {
   }),
   play: async ({ canvasElement }) => {
     const billing = within(
-      (await within(canvasElement).findByRole('heading', { name: 'Billing & collection' })).closest(
-        'section',
-      )!,
+      (
+        await (
+          await openInformation(canvasElement)
+        ).findByRole('heading', { name: 'Billing & collection' })
+      ).closest('section')!,
     )
     await expect(billing.getByText(/\$30,000\.00 per year/)).toBeVisible()
     await expect(billing.getByText(/1\.2× overage/)).toBeVisible()
@@ -1735,7 +1748,8 @@ export const NoActivityOrMetadata: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('No activity yet.')).toBeVisible()
-    await expect(canvas.getAllByText('None').length).toBeGreaterThan(0)
+    await openInformation(canvasElement)
+    await expect((await canvas.findAllByText('None')).length).toBeGreaterThan(0)
   },
 }
 
