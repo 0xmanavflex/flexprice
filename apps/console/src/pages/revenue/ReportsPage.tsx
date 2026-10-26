@@ -339,6 +339,7 @@ export function ReportsPage({
       id,
       name: nameOf(id),
       overdue: entry.overdue,
+      outstanding: entry.outstanding,
       display: { overdue: money(entry.overdue), outstanding: money(entry.outstanding) },
       oldestDays: entry.oldest,
     }))

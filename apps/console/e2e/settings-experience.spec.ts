@@ -42,8 +42,16 @@ test('onboarding: adding a step saves it into the workflow', async ({ page }) =>
   await expect(steps).toHaveCount(2)
   const before = 2
 
-  await page.getByRole('group', { name: 'Add a step' }).getByRole('button').first().click()
+  // Only a wallet and a contract can be added now; a wallet needs its currency.
+  await page
+    .getByRole('group', { name: 'Add a step' })
+    .getByRole('button', { name: 'Open a wallet' })
+    .click()
   await expect(steps).toHaveCount(before + 1)
+  await page
+    .getByRole('textbox', { name: /^Currency/ })
+    .last()
+    .fill('USD')
 
   await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByText('Saved.')).toBeVisible()

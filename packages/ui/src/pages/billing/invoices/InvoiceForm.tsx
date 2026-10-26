@@ -974,7 +974,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
                               {edit.invoice.paymentStatus
                                 ? PAYMENT_STATUS_LABEL[edit.invoice.paymentStatus]
                                 : 'Not set'}{' '}
-                             : {edit.paymentStatusBlocked.toLowerCase()}.
+                              : {edit.paymentStatusBlocked.toLowerCase()}.
                             </p>
                           ) : (
                             <OptionSelect
