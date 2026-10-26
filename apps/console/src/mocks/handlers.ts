@@ -1276,6 +1276,35 @@ const manualRuns = new Map<string, Record<string, unknown>[]>()
  * Northwind sells into four jurisdictions and has one rate it has retired.
  */
 /** Tax rates attached to entities, mutated by the association handlers. */
+/** Forex rates: a global USD → INR and EUR → USD, and one customer override. */
+const fxRates: Record<string, unknown>[] = [
+  {
+    id: 'fxrate_usd_inr',
+    scope: 'tenant',
+    from_currency: 'usd',
+    to_currency: 'inr',
+    rate: '83.25',
+    source: 'fixed',
+    status: 'published',
+    updated_at: '2026-10-01T09:00:00Z',
+  },
+  {
+    id: 'fxrate_eur_usd',
+    scope: 'tenant',
+    from_currency: 'eur',
+    to_currency: 'usd',
+    rate: '1.08',
+    source: 'fixed',
+    status: 'published',
+    updated_at: '2026-09-12T09:00:00Z',
+  },
+]
+
+/** A refusal in the API's envelope, its hint as the message. */
+function fxRefusal(message: string) {
+  return HttpResponse.json({ success: false, error: { message } }, { status: 400 })
+}
+
 const taxAssociations: Record<string, unknown>[] = []
 
 /**
@@ -5188,6 +5217,93 @@ export const handlers = [
   http.delete(`${BASE}/customers/:id`, ({ params }) =>
     removeRow((corpus['customers'] as Corpus).items, String(params['id'])),
   ),
+
+  // Forex rates, with the API's rules: one global rate per pair, no window and
+  // no delete on a global rate, an override needs the global rate for its pair,
+  // and one pair's override windows do not overlap.
+  http.post(`${BASE}/forex/query`, async ({ request }) => {
+    const body = await readBody(request)
+    const items = fxRates.filter(
+      (row) =>
+        row['status'] === 'published' &&
+        (!body['scope'] || row['scope'] === body['scope']) &&
+        (!body['scope_id'] || row['scope_id'] === body['scope_id']),
+    )
+    const limit = Number(body['limit'] ?? 50)
+    const offset = Number(body['offset'] ?? 0)
+    return HttpResponse.json({
+      items: items.slice(offset, offset + limit),
+      pagination: { total: items.length, limit, offset },
+    })
+  }),
+  http.post(`${BASE}/forex`, async ({ request }) => {
+    const body = await readBody(request)
+    const from = String(body['from_currency'] ?? '').toLowerCase()
+    const to = String(body['to_currency'] ?? '').toLowerCase()
+    const live = fxRates.filter((row) => row['status'] === 'published')
+    const pair = (row: Record<string, unknown>) =>
+      row['from_currency'] === from && row['to_currency'] === to
+    const label = `${from.toUpperCase()} → ${to.toUpperCase()}`
+    if (body['scope'] === 'tenant') {
+      if (body['start_date'] || body['end_date'])
+        return fxRefusal('Validity windows are only for customer or subscription overrides.')
+      if (live.some((row) => row['scope'] === 'tenant' && pair(row)))
+        return fxRefusal(`A ${label} rate already exists. Edit it instead of adding another.`)
+    } else {
+      if (!live.some((row) => row['scope'] === 'tenant' && pair(row)))
+        return fxRefusal(`Add a global ${label} rate before adding an override.`)
+      const window = { start: body['start_date'], end: body['end_date'] }
+      const time = (value: unknown) => (value ? new Date(String(value)).getTime() : undefined)
+      const overlaps = live.some((row) => {
+        if (row['scope'] !== body['scope'] || row['scope_id'] !== body['scope_id'] || !pair(row))
+          return false
+        const [aStart, aEnd, bStart, bEnd] = [
+          time(window.start),
+          time(window.end),
+          time(row['start_date']),
+          time(row['end_date']),
+        ]
+        if (aStart !== undefined && bEnd !== undefined && aStart >= bEnd) return false
+        if (bStart !== undefined && aEnd !== undefined && bStart >= aEnd) return false
+        return true
+      })
+      if (overlaps) return fxRefusal(`Another ${label} override overlaps this period.`)
+    }
+    const now = new Date().toISOString()
+    const row = {
+      id: `fxrate_new_${fxRates.length + 1}`,
+      ...body,
+      from_currency: from,
+      to_currency: to,
+      source: 'fixed',
+      status: 'published',
+      created_at: now,
+      updated_at: now,
+    }
+    fxRates.push(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.put(`${BASE}/forex/:id`, async ({ request, params }) => {
+    const row = fxRates.find((item) => item['id'] === String(params['id']))
+    if (!row) return HttpResponse.json({ message: 'FX rate not found' }, { status: 404 })
+    const body = await readBody(request)
+    if (row['scope'] === 'tenant' && (body['start_date'] || body['end_date']))
+      return fxRefusal(
+        'A tenant FX rate applies at all times; validity windows are only for customer or subscription overrides.',
+      )
+    Object.assign(row, body, { updated_at: new Date().toISOString() })
+    return HttpResponse.json(row)
+  }),
+  http.delete(`${BASE}/forex/:id`, ({ params }) => {
+    const row = fxRates.find((item) => item['id'] === String(params['id']))
+    if (!row) return HttpResponse.json({ message: 'FX rate not found' }, { status: 404 })
+    if (row['scope'] === 'tenant')
+      return fxRefusal(
+        'A tenant FX rate cannot be deleted because every override falls back to it. Update its value instead.',
+      )
+    row['status'] = 'archived'
+    return HttpResponse.json({ message: 'FX rate deleted' })
+  }),
 
   http.get(`${BASE}/taxes/associations`, ({ request }) => {
     const url = new URL(request.url)

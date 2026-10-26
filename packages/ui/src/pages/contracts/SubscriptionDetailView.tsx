@@ -236,6 +236,8 @@ export interface SubscriptionDetailViewProps {
    * usage charges for the period.
    */
   usageBreakdown?: ReactNode
+  /** The FX overrides section on the Information tab; omitted, it is not shown. */
+  fxOverrides?: ReactNode
   /**
    * The thresholds a line already stores (a switched-off setting), read when
    * Add alerts is chosen so the form opens on them instead of overwriting
@@ -415,6 +417,7 @@ export function SubscriptionDetailView({
   onCreateChargeAlert,
   loadChargeAlert,
   usageBreakdown,
+  fxOverrides,
   onAddTax,
   onRemoveAddon,
   onRemoveTax,
@@ -1305,6 +1308,7 @@ export function SubscriptionDetailView({
               {...(onOpenCustomer ? { onOpenCustomer } : {})}
               {...(onOpenPlan ? { onOpenPlan } : {})}
             />
+            {fxOverrides}
             <MetadataCard
               metadata={s.metadata}
               {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}

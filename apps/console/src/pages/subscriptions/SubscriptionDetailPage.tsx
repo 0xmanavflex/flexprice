@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
 import {
   AlertEntityType,
   DEFAULT_ADDON_QUERY,
@@ -255,6 +256,15 @@ export function SubscriptionDetailPage({
               )
         }}
         chargeAlerts={part(chargeAlerts)}
+        fxOverrides={
+          // A contract converts from its own currency; an ended one keeps its rows read-only.
+          <FxRatesPanel
+            owner={{ scope: 'subscription', scopeId: data.id }}
+            lockedFrom={data.currency.toLowerCase()}
+            emptyDescription="Invoices use the customer's override or the global forex rate."
+            readOnly={data.status === 'cancelled'}
+          />
+        }
         entitlements={part(entitlements)}
         entitlementUsage={entitlementUsage.data?.features}
         creditGrants={part(creditGrants)}

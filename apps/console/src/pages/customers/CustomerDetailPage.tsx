@@ -30,6 +30,7 @@ import { useCustomerPortal } from '@/app/customerPortal/useCustomerPortal'
 import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
+import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { ConfirmDialog, EmptyState, Section } from '@fp/ui/compositions'
 import { toActivityLogEntry } from '@/pages/shared/activityLog'
@@ -308,6 +309,13 @@ export function CustomerDetailPage({
           <fieldset disabled={archived} className="contents">
             <CustomerTaxPanel customerId={customer.data.id} />
           </fieldset>
+        }
+        fxOverrides={
+          <FxRatesPanel
+            owner={{ scope: 'customer', scopeId: customer.data.id }}
+            emptyDescription="This customer uses the global forex rates."
+            readOnly={archived}
+          />
         }
         usage={
           <div className="flex flex-col gap-8">

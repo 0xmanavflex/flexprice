@@ -95,6 +95,10 @@ export const queryKeys = {
     detail: (id: string) => ['coupons', 'detail', id] as const,
     associations: (couponId: string) => ['coupons', 'associations', couponId] as const,
   },
+  fxRates: {
+    all: () => ['fxRates'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['fxRates', 'list', filter] as const,
+  },
   taxAssociations: {
     all: () => ['taxAssociations'] as const,
     forEntity: (entityType: string, entityId: string) =>

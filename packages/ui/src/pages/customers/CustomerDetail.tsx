@@ -221,6 +221,8 @@ export interface CustomerDetailProps {
   wallet?: ReactNode
   /** The Taxes section on the Information tab; omitted, it is not shown. */
   taxes?: ReactNode
+  /** The FX overrides section on the Information tab, after Taxes; omitted, it is not shown. */
+  fxOverrides?: ReactNode
   locale?: string
 }
 
@@ -287,6 +289,7 @@ export function CustomerDetail({
   onRetryEntitlements,
   wallet,
   taxes,
+  fxOverrides,
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
@@ -544,6 +547,7 @@ export function CustomerDetail({
             onUpdateMetadata={onUpdateMetadata}
             onEdit={onEdit}
             taxes={taxes}
+            fxOverrides={fxOverrides}
             integrationControls={integrationControls}
           />
         ) : null}
@@ -1508,6 +1512,7 @@ function InformationTab({
   onUpdateMetadata,
   onEdit,
   taxes,
+  fxOverrides,
   integrationControls,
 }: {
   customer: CustomerDetailModel
@@ -1516,6 +1521,7 @@ function InformationTab({
   onUpdateMetadata: CustomerDetailProps['onUpdateMetadata']
   onEdit: (() => void) | undefined
   taxes: ReactNode
+  fxOverrides: ReactNode
   integrationControls: CustomerDetailProps['integrationControls']
 }) {
   const street = [customer.addressLine1, customer.addressLine2].filter(Boolean).join(', ')
@@ -1620,6 +1626,7 @@ function InformationTab({
         </EditableCard>
 
         {taxes}
+        {fxOverrides}
       </div>
 
       <div className="flex flex-col gap-5">
