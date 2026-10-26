@@ -145,7 +145,12 @@ export const WithHeading: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'Usage by feature' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Features' })).toBeVisible()
-    await expect(canvas.getAllByLabelText('Include children')[0]!).toBeVisible()
+    // Labelled twice (the wrapping label and its own aria-label): of the matches,
+    // the one that is a switch is the control.
+    const includeChildren = canvas
+      .getAllByLabelText('Include children')
+      .find((element) => element.getAttribute('role') === 'switch')
+    await expect(includeChildren).toBeVisible()
     await expect(canvas.queryByText(/Usage of this contract's metered features/)).toBeNull()
   },
 }
