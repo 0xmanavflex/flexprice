@@ -20,6 +20,18 @@ export const DAY_MS = 86_400_000
 
 export type RangeId = '30d' | '90d' | 'month' | 'quarter' | '12m'
 export type Grain = 'day' | 'week' | 'month'
+export type GrainChoice = 'auto' | Grain
+
+export const GRAIN_OPTIONS: { id: GrainChoice; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'day', label: 'Daily' },
+  { id: 'week', label: 'Weekly' },
+  { id: 'month', label: 'Monthly' },
+]
+
+export function resolveGrain(choice: GrainChoice, auto: Grain): Grain {
+  return choice === 'auto' ? auto : choice
+}
 
 export const RANGE_OPTIONS: { id: RangeId; label: string }[] = [
   { id: '30d', label: 'Last 30 days' },
@@ -185,10 +197,22 @@ export interface DatedAmount {
   previous?: number | null
 }
 
+/** Whether a bucket dated before the window start still reaches into it. */
+function reachesInto(at: Date, start: Date, grain: Grain): boolean {
+  if (grain === 'day') return false
+  const next =
+    grain === 'month'
+      ? new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1))
+      : new Date(at.getTime() + 7 * DAY_MS)
+  return next > start
+}
+
 /**
  * One point per bucket in the window. A report timeseries omits months with
  * nothing to add up, which draws a two-bar chart for a twelve-month filter.
  * Missing buckets are zero, in order, including a comparison when one was asked for.
+ * A bucket that starts before the window lands in the first one: added when
+ * `additive`, otherwise it replaces it, as averages cannot be added together.
  */
 export function alignToWindow(
   points: DatedAmount[],
@@ -196,6 +220,7 @@ export function alignToWindow(
   grain: Grain,
   comparing = false,
   emptyValue: number | null = 0,
+  additive = true,
 ): { label: string; value: number | null; previous?: number | null }[] {
   const buckets = emptyBuckets(window, grain)
   const seen = new Set<string>()
@@ -203,14 +228,16 @@ export function alignToWindow(
   const start = utcMidnight(window.start)
   for (const point of points) {
     if (Number.isNaN(point.at.getTime())) continue
-    if (point.at < start || point.at >= window.end) continue
-    const { key } = bucketOf(point.at, grain, window.start)
+    const early = point.at < start && reachesInto(point.at, start, grain)
+    const at = early ? start : point.at
+    if (at < start || at >= window.end) continue
+    const { key } = bucketOf(at, grain, window.start)
     const bucket = buckets.get(key)
-    if (!bucket) continue
-    bucket.value += point.value
+    if (!bucket || (early && !additive && seen.has(key))) continue
+    bucket.value = additive ? bucket.value + point.value : point.value
     seen.add(key)
     if (comparing && point.previous != null) {
-      previous.set(key, (previous.get(key) ?? 0) + point.previous)
+      previous.set(key, additive ? (previous.get(key) ?? 0) + point.previous : point.previous)
     }
   }
   return [...buckets.entries()].map(([key, bucket]) => ({

@@ -57,6 +57,14 @@ const BASE: RevenueReportProps = {
       { id: '12m', label: 'Last 12 months' },
     ],
     onRangeChange: fn(),
+    grain: 'auto',
+    grainOptions: [
+      { id: 'auto', label: 'Auto' },
+      { id: 'day', label: 'Daily' },
+      { id: 'week', label: 'Weekly' },
+      { id: 'month', label: 'Monthly' },
+    ],
+    onGrainChange: fn(),
     compare: 'none',
     compareOptions: [
       { id: 'none', label: 'No comparison' },
@@ -162,6 +170,7 @@ const BASE: RevenueReportProps = {
 function Harness(props: RevenueReportProps) {
   const [view, setView] = useState<RevenueView>(props.view)
   const [compare, setCompare] = useState(props.filters.compare)
+  const [grain, setGrain] = useState(props.filters.grain)
   return (
     <RevenueReport
       {...props}
@@ -171,7 +180,13 @@ function Harness(props: RevenueReportProps) {
         props.onViewChange(next)
       }}
       comparing={compare !== 'none'}
-      filters={{ ...props.filters, compare, onCompareChange: setCompare }}
+      filters={{
+        ...props.filters,
+        compare,
+        onCompareChange: setCompare,
+        grain,
+        onGrainChange: setGrain,
+      }}
     />
   )
 }
