@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CreateWalletRequest$outboundSchema,
+  ListWalletTransactionsResponse$inboundSchema,
   TopUpWalletRequest$outboundSchema,
   UpdateWalletRequest$outboundSchema,
 } from '@flexprice/sdk/sdk/models'
@@ -12,6 +13,8 @@ import {
   toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
+  withConsumption,
+  type WalletTransactionWire,
 } from './wallets'
 
 describe('wallet requests', () => {
@@ -261,5 +264,50 @@ describe('toWallet alert settings', () => {
       critical: { threshold: '10', condition: 'below' },
     })
     expect(toWallet({ id: 'wallet_2' }).alertSettings).toBeNull()
+  })
+})
+
+describe('wallet transaction breakdown', () => {
+  it("reads each top-up's draw-down from the debits that name it", () => {
+    const transactions = withConsumption([
+      toWalletTransaction({ id: 'top_1', type: 'credit', creditAmount: '100' }),
+      toWalletTransaction({
+        id: 'deb_1',
+        type: 'debit',
+        description: 'API calls',
+        referenceType: 'INVOICE',
+        referenceId: 'inv_9',
+        metadata: { source: 'usage', count: 3 },
+        consumptionBreakdown: [{ creditTransactionId: 'top_1', credits: '40' }],
+      }),
+    ])
+    expect(transactions[0]?.consumption).toEqual([
+      { id: 'deb_1', product: 'API calls', contract: 'Invoice inv_9', credits: '40' },
+    ])
+    // Only string metadata is kept; no money is derived for the credits.
+    expect(transactions[1]?.metadata).toEqual({ source: 'usage' })
+    expect(transactions[1]?.reference).toEqual({ type: 'INVOICE', id: 'inv_9' })
+  })
+
+  it('keeps consumption_breakdown through the SDK response parse', () => {
+    // The raw wire, as the API sends it: the SDK must not strip the breakdown.
+    const parsed = ListWalletTransactionsResponse$inboundSchema.parse({
+      items: [
+        { id: 'top_1', type: 'credit', credit_amount: '100' },
+        {
+          id: 'deb_1',
+          type: 'debit',
+          description: 'API calls',
+          consumption_breakdown: [{ credit_transaction_id: 'top_1', credits: '40' }],
+        },
+      ],
+    })
+    const transactions = withConsumption(
+      ((parsed.items ?? []) as WalletTransactionWire[]).map(toWalletTransaction),
+    )
+    expect(transactions[1]?.drawnFrom).toEqual([{ topUpId: 'top_1', credits: '40' }])
+    expect(transactions[0]?.consumption).toEqual([
+      { id: 'deb_1', product: 'API calls', contract: '', credits: '40' },
+    ])
   })
 })

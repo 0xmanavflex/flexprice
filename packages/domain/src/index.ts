@@ -745,6 +745,7 @@ export type {
   TopUpWallet,
   Wallet,
   WalletConsumption,
+  WalletTransactionReference,
   WalletTransaction,
   WalletTransactionDirection,
 } from './wallet'

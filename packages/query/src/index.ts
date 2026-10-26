@@ -616,6 +616,7 @@ export {
   toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
+  withConsumption,
   useCreateWallet,
   useCustomerWallets,
   useDebitWallet,

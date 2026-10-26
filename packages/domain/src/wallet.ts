@@ -85,14 +85,27 @@ export interface Wallet {
 
 export type WalletTransactionDirection = 'in' | 'out'
 
-/** Credits one product drew from a top-up. The wallet API does not send these today. */
+/**
+ * Credits one debit drew from a top-up: the API reports, on each debit, which
+ * top-ups it drew from (`consumption_breakdown`), and this is that, inverted.
+ */
 export interface WalletConsumption {
+  /** The debit's id. */
   id: string
+  /** What drew the credits: the debit's reason. */
   product: string
+  /** What it was for: the debit's description or reference. */
   contract: string
   /** Credits drawn, as a positive decimal string. */
   credits: string
-  amount: Money
+  /** Money for those credits; absent, as the API reports credits only. */
+  amount?: Money | undefined
+}
+
+/** A transaction's reference: what it was raised for (an invoice, a payment). */
+export interface WalletTransactionReference {
+  type: string
+  id: string
 }
 
 export interface WalletTransaction {
@@ -108,8 +121,15 @@ export interface WalletTransaction {
   creditsAvailable: string | null
   /** When the credits lapse; null for credits that never expire. */
   expiresAt: Date | null
-  /** Per-product draw-down of this top-up. Absent unless the API reports it. */
+  /** Per-debit draw-down of this top-up, from the debits' `consumption_breakdown`. */
   consumption?: WalletConsumption[]
+  /** Debits only: the top-ups this drew from, and how many credits from each. */
+  drawnFrom?: { topUpId: string; credits: string }[]
+  /** Free-form key/value fields; `{}` when none. */
+  metadata?: Readonly<Record<string, string>>
+  reference?: WalletTransactionReference | null
+  /** The API's transaction status (completed, pending, failed), lower case. */
+  status?: string
 }
 
 const decimal = /^\d+(\.\d+)?$/

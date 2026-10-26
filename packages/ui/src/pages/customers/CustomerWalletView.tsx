@@ -67,7 +67,7 @@ import { ChoiceCards, Composer } from '../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { Pill, type PillTone } from '../shared/cells'
 import { WalletLedgerTable, formatCredits } from './WalletLedgerTable'
-import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
+import { SubTabState } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
 
 export interface CustomerWalletViewProps {
@@ -217,7 +217,6 @@ export function CustomerWalletView({
   const closed = wallet.status === WalletStatus.Closed || readOnly
   const currency = wallet.currency.toUpperCase()
   const asOf = now ?? new Date()
-  const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
 
   return (
     <div className="flex flex-col gap-5">
@@ -343,7 +342,6 @@ export function CustomerWalletView({
           onRetry={onRetryTransactions}
           columns={5}
           loadingLabel="Loading transactions"
-          truncation={ledgerCapped}
           empty={{
             scene: 'customers',
             title: 'No transactions yet',
@@ -409,9 +407,6 @@ const STATUS_TONE: Record<WalletStatus, PillTone> = {
   [WalletStatus.Frozen]: 'warning',
   [WalletStatus.Closed]: 'neutral',
 }
-
-/** How many ledger rows the wallet panel asks for; at this count older entries are cut off. */
-export const TRANSACTIONS_LIMIT = 200
 
 function CreateWalletDialog({
   open,

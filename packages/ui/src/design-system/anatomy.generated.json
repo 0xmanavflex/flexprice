@@ -9339,7 +9339,8 @@
       "title": "App/Customers/Customer wallet",
       "component": "CustomerWalletView",
       "uses": [
-        "CustomerWalletView"
+        "CustomerWalletView",
+        "WalletLedgerTable"
       ]
     },
     "./src/pages/customers/SubscriptionCard.stories.tsx": {
