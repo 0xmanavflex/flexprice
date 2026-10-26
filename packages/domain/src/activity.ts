@@ -22,6 +22,13 @@ export interface ActivityEntry {
   actorLabel: string
   /** Channel the change came from (`dashboard`, `api`, …). */
   source: string
+  /** The customer the change belongs to, when the API scoped it to one. */
+  customerId?: string
+  /** The API request that made the change, for tracing it in logs. */
+  requestId?: string
+  /** Where the request came from. Present for changes made over HTTP. */
+  ip?: string
+  userAgent?: string
   /**
    * The entity as it stood just after this change. Present when the list was
    * asked for `expand: ["state"]`. Keys stay as the API sent them.
@@ -49,11 +56,69 @@ const SOURCE_LABEL: Record<string, string> = {
   webhook: 'Webhook',
   workflow: 'Workflow',
   consumer: 'Consumer',
+  hosted_invoice: 'Hosted invoice',
 }
+
+/** Every source the API writes (`types.Source`), in the order a filter lists them. */
+export const ACTIVITY_SOURCES: readonly string[] = Object.keys(SOURCE_LABEL)
 
 const ACTOR_KIND: Record<string, string> = {
   api_key: 'API key',
   customer: 'Customer',
+}
+
+/** Who can make a change (`types.ActorType`), for the actor filter. */
+export const ACTIVITY_ACTOR_TYPES: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'user', label: 'People' },
+  { value: 'api_key', label: 'API keys' },
+  { value: 'customer', label: 'Customers' },
+  { value: 'system', label: 'System' },
+]
+
+/**
+ * Who acted, always named, for places that must not leave the actor implicit
+ * (the full Activity tab). The system is "System"; a nameless actor falls back
+ * to its kind.
+ */
+export function activityActor(entry: ActivityEntry): string {
+  if (entry.actorType === 'system') return entry.actorLabel || 'System'
+  if (entry.actorLabel) return entry.actorLabel
+  return (
+    ACTOR_KIND[entry.actorType] ??
+    (entry.actorType ? (human(entry.actorType) ?? 'Unknown') : 'Unknown')
+  )
+}
+
+/**
+ * The record's status after the change, from an allowlist of status keys.
+ * Only these are read: the rest of the snapshot stays behind "raw payload".
+ */
+export function activityStatus(entry: ActivityEntry): string | undefined {
+  return human(
+    text(
+      read(
+        entry.state,
+        'invoice_status',
+        'invoiceStatus',
+        'subscription_status',
+        'payment_status',
+        'paymentStatus',
+        'status',
+      ),
+    ),
+  )
+}
+
+/** A second status where the record has one, e.g. an invoice's payment status. */
+export function activityPaymentStatus(entry: ActivityEntry): string | undefined {
+  if (entry.entityType !== 'invoice') return undefined
+  return human(text(read(entry.state, 'payment_status', 'paymentStatus')))
+}
+
+/** The entity's kind in words, as the console names it: "Contract", "Credit memo". */
+export function activityEntityNoun(entityType: string): string {
+  const name = ENTITY_NOUN[entityType] ?? entityType.replace(/_/g, ' ')
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : 'Record'
 }
 
 /**
@@ -204,7 +269,7 @@ function customerFacts(entry: ActivityEntry): ActivityFacts {
   const record = name || labelName || undefined
   const zone = text(read(entry.state, 'timezone'))
   return facts(record, [
-    ['Tax', human(text(read(entry.state, 'tax_treatment', 'taxTreatment')))],
+    ['Tax treatment', human(text(read(entry.state, 'tax_treatment', 'taxTreatment')))],
     ['Timezone', zone === 'UTC' || (zone && zone.includes('/')) ? zone : human(zone)],
     ['Status', human(text(read(entry.state, 'status')))],
   ])

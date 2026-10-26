@@ -17,6 +17,10 @@ interface ActivityWire {
   action?: string
   occurred_at?: string
   source?: string
+  customer_id?: string
+  request_id?: string
+  ip?: string
+  user_agent?: string
   entity?: { id?: string; label?: string; type?: string }
   actor?: { id?: string; label?: string; type?: string }
   state?: Record<string, unknown>
@@ -38,6 +42,10 @@ export function toActivityEntry(item: ActivityWire): ActivityEntry {
     actorId: item.actor?.id ?? '',
     actorLabel: item.actor?.label ?? '',
     source: item.source ?? '',
+    ...(item.customer_id ? { customerId: item.customer_id } : {}),
+    ...(item.request_id ? { requestId: item.request_id } : {}),
+    ...(item.ip ? { ip: item.ip } : {}),
+    ...(item.user_agent ? { userAgent: item.user_agent } : {}),
     ...(item.state && Object.keys(item.state).length > 0 ? { state: item.state } : {}),
   }
 }
@@ -115,4 +123,58 @@ export function useActivityLog(filter: ActivityFilter) {
   }, [isAwaiting, latestId, refetch])
 
   return { ...query, isAwaiting }
+}
+
+/** One page of the audit trail, filtered on the server. */
+export interface ActivityPageFilter {
+  customerId: string
+  /** ISO instants; `[start, end)`, at most 30 days apart. */
+  startTime?: string
+  endTime?: string
+  actorTypes?: string[]
+  actions?: string[]
+  requestId?: string
+  /** The page to read; omitted for the first. */
+  cursor?: string
+  /** At most 50: entries carry their state. */
+  limit?: number
+}
+
+export interface ActivityPage {
+  entries: ActivityEntry[]
+  nextCursor: string | null
+  hasMore: boolean
+}
+
+interface ActivityListWire {
+  items?: ActivityWire[]
+  pagination?: { next_cursor?: string | null; has_more?: boolean }
+}
+
+/**
+ * A page of a customer's audit trail for the Activity tab: server-side
+ * filters (time range, actor types, actions, request id) and cursor paging.
+ * The previous page stays on screen while the next one loads.
+ */
+export function useActivityPage(filter: ActivityPageFilter) {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  return useQuery({
+    queryKey: queryKeys.activity.list({ ...filter, expand: 'state', paged: true }),
+    queryFn: async ({ signal }): Promise<ActivityPage> => {
+      const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+      if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to read activity.')
+      if (signal?.aborted) throw new ApiError(ErrorKind.Cancelled, 'Cancelled.')
+      const body = (await listActivity(serverURL, token, environmentId ?? '', {
+        ...filter,
+        limit: filter.limit ?? 25,
+      })) as ActivityListWire | null
+      const entries = (body?.items ?? []).filter((item) => item.id).map(toActivityEntry)
+      const nextCursor = body?.pagination?.next_cursor ?? null
+      return { entries, nextCursor, hasMore: Boolean(body?.pagination?.has_more && nextCursor) }
+    },
+    enabled: filter.customerId !== '',
+    staleTime: 10_000,
+    placeholderData: (previous) => previous,
+  })
 }

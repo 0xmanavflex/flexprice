@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { ActivityField } from '@fp/domain'
 import { provenance } from '@ui/provenance'
+import { Button } from '@ui/components/primitives/button'
 import { Section } from '../layout/Section'
 
 export const ActivityLogProvenance = provenance({
@@ -107,6 +108,7 @@ export function ActivitySection({
   note,
   awaiting = false,
   emptyText = 'No activity yet.',
+  onViewAll,
 }: {
   entries: ActivityLogEntry[]
   className?: string
@@ -115,9 +117,29 @@ export function ActivitySection({
   /** A change just succeeded and the new row has not been written yet. */
   awaiting?: boolean
   emptyText?: string
+  /** Opens the full audit trail (the Activity tab). */
+  onViewAll?: () => void
 }) {
   return (
-    <Section title="Activity" flush {...(className ? { className } : {})}>
+    <Section
+      title="Activity"
+      flush
+      {...(className ? { className } : {})}
+      {...(onViewAll
+        ? {
+            action: (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onViewAll}
+                aria-label="View all activity"
+              >
+                View all
+              </Button>
+            ),
+          }
+        : {})}
+    >
       {entries.length === 0 && !awaiting ? (
         <p className="text-muted-foreground px-6 py-5 text-[13px]">{emptyText}</p>
       ) : (

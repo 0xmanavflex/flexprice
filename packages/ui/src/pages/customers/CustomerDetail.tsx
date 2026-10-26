@@ -102,13 +102,15 @@ export const CustomerDetailProvenance = provenance({
 /** How many invoices the customer page asks for; at this count the list may be cut. */
 export const CUSTOMER_INVOICES_LIMIT = 200
 
-export type CustomerTab = 'overview' | 'invoices' | 'wallet' | 'usage' | 'events' | 'information'
+export type CustomerTab =
+  'overview' | 'invoices' | 'wallet' | 'usage' | 'activity' | 'events' | 'information'
 
 export const CUSTOMER_TABS = [
   'overview',
   'invoices',
   'wallet',
   'usage',
+  'activity',
   'events',
   'information',
 ] as const satisfies readonly CustomerTab[]
@@ -197,6 +199,8 @@ export interface CustomerDetailProps {
    * the tab says events are not available here yet.
    */
   events?: ReactNode
+  /** The full audit trail (`CustomerActivityView`). Without it there is no Activity tab. */
+  activityTab?: ReactNode
   /**
    * The Usage section's contents: the per-feature quota cards.
    *
@@ -280,6 +284,7 @@ export function CustomerDetail({
   activityError = false,
   activityAwaiting = false,
   events,
+  activityTab,
   usage,
   entitlements,
   entitlementsLoading = false,
@@ -428,6 +433,7 @@ export function CustomerDetail({
             },
             { value: 'wallet', label: 'Wallet' },
             { value: 'usage', label: 'Analytics' },
+            ...(activityTab ? [{ value: 'activity', label: 'Activity' }] : []),
             { value: 'events', label: 'Events' },
             { value: 'information', label: 'Information' },
           ]}
@@ -464,6 +470,7 @@ export function CustomerDetail({
             activityLoading={activityLoading}
             activityError={activityError}
             activityAwaiting={activityAwaiting}
+            {...(activityTab ? { onViewAllActivity: () => onTabChange('activity') } : {})}
           />
         ) : null}
 
@@ -522,6 +529,16 @@ export function CustomerDetail({
                 scene="customers"
                 title="Usage not available here"
                 description="This view has no usage data to show. Per-feature allowances and consumption appear here when it is provided."
+              />
+            ))
+          : null}
+
+        {tab === 'activity'
+          ? (activityTab ?? (
+              <EmptyState
+                scene="customers"
+                title="Activity not available here"
+                description="This view has no audit trail to show."
               />
             ))
           : null}
@@ -816,6 +833,7 @@ function OverviewTab({
   activityLoading,
   activityError,
   activityAwaiting,
+  onViewAllActivity,
 }: {
   customer: CustomerDetailModel
   subscriptions: Subscription[]
@@ -846,6 +864,8 @@ function OverviewTab({
   activityLoading: boolean | undefined
   activityError: boolean | undefined
   activityAwaiting: boolean | undefined
+  /** Opens the Activity tab; omitted when there is none. */
+  onViewAllActivity?: (() => void) | undefined
 }) {
   // A loading or failed read is "not known", never "none": the tiles and the
   // activity note say so rather than count what has not arrived.
@@ -1009,6 +1029,7 @@ function OverviewTab({
               ? { emptyText: 'Could not load activity.' }
               : {})}
           awaiting={activityAwaiting ?? false}
+          {...(onViewAllActivity ? { onViewAll: onViewAllActivity } : {})}
         />
         <RelatedCard
           items={[

@@ -519,6 +519,20 @@ export type {
   AnalyticsTotals,
   AnalyticsFeatureOption,
 } from './customers/CustomerAnalyticsView'
+export {
+  ACTIVITY_PAGE_SIZES,
+  ACTIVITY_RANGES,
+  CustomerActivityView,
+  CustomerActivityViewProvenance,
+} from './customers/CustomerActivityView'
+export type {
+  ActivityDetailRow,
+  ActivityFilters,
+  ActivityRange,
+  ActivityRowView,
+  ActivityStatus,
+  CustomerActivityViewProps,
+} from './customers/CustomerActivityView'
 
 export { CatalogDetailFrame } from './product-catalog/catalog-detail/CatalogDetailFrame'
 export type {

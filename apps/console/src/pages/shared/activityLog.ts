@@ -1,4 +1,5 @@
 import {
+  activityActor,
   activityByline,
   activitySourceLabel,
   describeActivity,
@@ -7,8 +8,30 @@ import {
 } from '@fp/domain'
 import type { ActivityLogEntry } from '@fp/ui/compositions'
 
-const stamp = (date: Date) =>
-  new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+/**
+ * When an activity happened, in the viewer's zone with the zone named
+ * ("Oct 23, 2026, 9:51 PM GMT+5:30"), so it is never mistaken for the
+ * customer's own configured timezone. One format for the rail and the tab.
+ */
+export const activityStamp = (date: Date) =>
+  `${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)} ${zoneName(date)}`
+
+/** The same instant in UTC, for the event details. */
+export const activityStampUtc = (date: Date) =>
+  `${new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'medium',
+    timeZone: 'UTC',
+  }).format(date)} UTC`
+
+function zoneName(date: Date): string {
+  const part = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+    .formatToParts(date)
+    .find((p) => p.type === 'timeZoneName')
+  return part?.value ?? 'UTC'
+}
+
+const stamp = activityStamp
 
 const ENTITY_PATH: Record<string, string> = {
   customer: '/customers',
@@ -20,7 +43,8 @@ const ENTITY_PATH: Record<string, string> = {
   feature: '/features',
 }
 
-function entityHref(entry: ActivityEntry): string | undefined {
+/** The page for the record an activity is about, when it has one. */
+export function activityEntityHref(entry: ActivityEntry): string | undefined {
   const prefix = ENTITY_PATH[entry.entityType]
   if (!prefix || !entry.entityId) return undefined
   return `${prefix}/${encodeURIComponent(entry.entityId)}`
@@ -29,10 +53,12 @@ function entityHref(entry: ActivityEntry): string | undefined {
 /** One rail row: title, local time, the type-specific sentence, and the person. */
 export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
   const facts = describeActivity(entry)
-  const who = activityByline(entry)
+  // Who acted, then the channel: always both, so "By Workflow" is never
+  // read as the actor when the system did it through the workflow.
+  const who = activityByline(entry) ?? activityActor(entry)
   const source = activitySourceLabel(entry.source)
-  const by = entry.actorType === 'user' || !who ? [who, source].filter(Boolean).join(' · ') : who
-  const href = entityHref(entry)
+  const by = [who, source].filter(Boolean).join(' · ')
+  const href = activityEntityHref(entry)
   return {
     id: entry.id,
     title: entry.title,

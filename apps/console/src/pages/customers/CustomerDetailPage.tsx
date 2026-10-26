@@ -33,6 +33,7 @@ import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { ConfirmDialog, EmptyState, Section } from '@fp/ui/compositions'
 import { toActivityLogEntry } from '@/pages/shared/activityLog'
+import { CustomerActivityPanel } from './CustomerActivityPanel'
 import { detailGate } from '@/pages/shared/detailGate'
 import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
 
@@ -291,6 +292,9 @@ export function CustomerDetailPage({
         paymentsLoading={invoices.isLoading || payments.isLoading}
         paymentsError={payments.isError}
         onRetryPayments={payments.refetch}
+        activityTab={
+          <CustomerActivityPanel customerId={customerId} customerName={customer.data.name} />
+        }
         events={
           customer.data.externalId ? (
             <CustomerEventsPanel externalId={customer.data.externalId} />
