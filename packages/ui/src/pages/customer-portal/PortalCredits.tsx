@@ -221,7 +221,8 @@ function WalletPanel({
             big
             tone="text-warning-foreground dark:text-warning"
             value={money(absoluteMoney(wallet.balance))}
-            credits={`${formatNumber(wallet.credits.replace(/^-/, ''), locale)} owed`}
+            credits={formatNumber(wallet.credits.replace(/^-/, ''), locale)}
+            unit="credits owed"
           />
         ) : (
           <Figure
@@ -251,12 +252,15 @@ function Figure({
   label,
   value,
   credits,
+  unit = 'credits',
   tone,
   big = false,
 }: {
   label: string
   value: ReactNode | null
   credits: string | null
+  /** Words after the credit count: "credits", or "credits owed" below zero. */
+  unit?: string
   tone?: string
   big?: boolean
 }) {
@@ -273,7 +277,7 @@ function Figure({
         {value ?? '—'}
       </p>
       <p className="text-muted-foreground text-xs tabular-nums">
-        {credits === null ? ' ' : `${credits} credits`}
+        {credits === null ? ' ' : `${credits} ${unit}`}
       </p>
     </div>
   )

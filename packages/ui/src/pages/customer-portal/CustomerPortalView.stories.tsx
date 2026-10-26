@@ -198,6 +198,17 @@ export const NegativeBalance: Story = {
   },
 }
 
+/** The Credits tab of a wallet below zero: "Owed", with the unit before "owed". */
+export const NegativeBalanceCredits: Story = {
+  args: { ...NegativeBalance.args, initialView: 'credits' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Owed')).toBeVisible()
+    await expect(canvas.getByText('42 credits owed')).toBeVisible()
+    await expect(canvas.queryByText(/owed credits/)).toBeNull()
+  },
+}
+
 /** Auto top-up: threshold, amount and a wait between top-ups, saved in one go. */
 export const AutoTopup: Story = {
   args: { initialView: 'credits' },
