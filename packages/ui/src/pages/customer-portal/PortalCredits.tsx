@@ -4,7 +4,9 @@ import {
   type PortalTransactionDirection,
   type PortalWallet,
   type PortalWalletTotals,
+  absoluteMoney,
   creditsCost,
+  isNegativeMoney,
 } from '@fp/domain'
 import { PlusIcon, WalletIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
@@ -210,12 +212,24 @@ function WalletPanel({
         ) : null}
       </div>
       <div className="grid sm:grid-cols-3 sm:divide-x">
-        <Figure
-          label="Balance"
-          big
-          value={money(wallet.balance)}
-          credits={formatNumber(wallet.credits, locale)}
-        />
+        {isNegativeMoney(wallet.balance) ? (
+          // Below zero is money owed: said in the warning tone, as a positive figure.
+          <Figure
+            label="Owed"
+            big
+            tone="text-warning-foreground dark:text-warning"
+            value={money(absoluteMoney(wallet.balance))}
+            credits={formatNumber(wallet.credits.replace(/^-/, ''), locale)}
+            unit="credits owed"
+          />
+        ) : (
+          <Figure
+            label="Balance"
+            big
+            value={money(wallet.balance)}
+            credits={formatNumber(wallet.credits, locale)}
+          />
+        )}
         {/* Every transaction in the period, not only the history's loaded pages. */}
         {data.flows.status === 'ready' ? (
           <Flows totals={data.flows.data} since={since} money={money} locale={locale} />
@@ -271,6 +285,7 @@ function Figure({
   label,
   value,
   credits,
+  unit = 'credits',
   tone,
   note = null,
   big = false,
@@ -278,6 +293,8 @@ function Figure({
   label: string
   value: ReactNode | null
   credits: string | null
+  /** Words after the credit count: "credits", or "credits owed" below zero. */
+  unit?: string
   tone?: string
   note?: string | null
   big?: boolean
@@ -295,7 +312,7 @@ function Figure({
         {value ?? '—'}
       </p>
       <p className="text-muted-foreground text-xs tabular-nums">
-        {credits === null ? ' ' : `${credits} credits`}
+        {credits === null ? ' ' : `${credits} ${unit}`}
       </p>
       {note ? <p className="text-muted-foreground text-xs">{note}</p> : null}
     </div>

@@ -49,15 +49,15 @@ describe('toInvoiceFilter: domain vocabulary out, transport in', () => {
     ).toMatchObject({ invoiceStatus: ['DRAFT', 'VOIDED'] })
   })
 
-  // `overdue` and `paid` are derived, not stored. Silently dropping them from
-  // the request is correct; silently returning the wrong rows would not be.
-  it('drops derived statuses rather than inventing an API value', () => {
+  // `overdue` and `paid` are derived from finalized invoices, not stored. They
+  // ask the server for finalized ones too, so [draft, overdue] can find both.
+  it('asks for finalized invoices when a derived status is chosen', () => {
     const filter = toInvoiceFilter({
       ...DEFAULT_INVOICE_QUERY,
       statuses: [InvoiceStatus.Overdue, InvoiceStatus.Draft],
     })
 
-    expect(filter).toMatchObject({ invoiceStatus: ['DRAFT'] })
+    expect(filter).toMatchObject({ invoiceStatus: ['DRAFT', 'FINALIZED'] })
     expect(isServerFilterable(InvoiceStatus.Overdue)).toBe(false)
     expect(isServerFilterable(InvoiceStatus.Draft)).toBe(true)
   })

@@ -75,6 +75,8 @@
   --color-warning: var(--warning);
   --color-info-foreground: var(--info-foreground);
   --color-info: var(--info);
+  --color-trial: var(--trial);
+  --color-trial-foreground: var(--trial-foreground);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
   --color-feature-metered: var(--feature-metered);
@@ -119,8 +121,11 @@
   --destructive-foreground: var(--color-red-800);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-900);
-  --info: var(--color-violet-500);
-  --info-foreground: var(--color-violet-900);
+  --info: var(--color-blue-500);
+  --info-foreground: var(--color-blue-900);
+  /* Violet is trialing's alone. */
+  --trial: var(--color-violet-500);
+  --trial-foreground: var(--color-violet-900);
   --warning: var(--color-yellow-500);
   --warning-foreground: var(--color-yellow-900);
   --feature-metered: var(--color-orange-500);
@@ -164,8 +169,10 @@
   --destructive-foreground: var(--color-red-600);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-600);
-  --info: var(--color-violet-500);
-  --info-foreground: var(--color-violet-600);
+  --info: var(--color-blue-500);
+  --info-foreground: var(--color-blue-400);
+  --trial: var(--color-violet-500);
+  --trial-foreground: var(--color-violet-400);
   --warning: var(--color-yellow-500);
   --warning-foreground: var(--color-yellow-600);
   --feature-metered: var(--color-orange-400);

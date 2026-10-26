@@ -11,6 +11,7 @@ import {
   DownloadIcon,
   FileMinusIcon,
   FileTextIcon,
+  ExternalLinkIcon,
   LinkIcon,
   MoreHorizontalIcon,
   PencilIcon,
@@ -234,8 +235,16 @@ export function InvoiceDetailView({
       value: invoice.subscriptionLabel,
       ...(onOpenSubscription && invoice.subscriptionId ? { onOpen: onOpenSubscription } : {}),
     },
+    // The page the customer sees: a payment page while money is owed, a receipt once paid.
     ...(hostedUrl
-      ? [{ id: 'payment-link', label: 'Payment link', value: hostedUrl, href: hostedUrl }]
+      ? [
+          {
+            id: 'hosted-invoice',
+            label: isOpen ? 'Payment page' : 'Hosted invoice',
+            value: 'Open hosted invoice',
+            href: hostedUrl,
+          },
+        ]
       : []),
   ]
 
@@ -272,7 +281,7 @@ export function InvoiceDetailView({
                 aria-label={`${liveCreditNotes} credit memo${liveCreditNotes === 1 ? '' : 's'} issued. Show credit memos`}
                 className="focus-visible:ring-ring/50 rounded-full outline-none focus-visible:ring-3"
               >
-                <Pill tone="info">
+                <Pill>
                   {liveCreditNotes === 1 ? 'Credit memo' : `${liveCreditNotes} credit memos`}
                 </Pill>
               </button>,
@@ -324,6 +333,14 @@ export function InvoiceDetailView({
                 label="Download invoice"
                 onSelect={onDownload}
                 hint="Available once the invoice has a PDF"
+              />
+              <MenuAction
+                icon={<ExternalLinkIcon />}
+                label="Open hosted invoice"
+                onSelect={
+                  hostedUrl ? () => void window.open(hostedUrl, '_blank', 'noopener') : undefined
+                }
+                hint="Available once the invoice is finalized"
               />
               <MenuAction
                 icon={<LinkIcon />}

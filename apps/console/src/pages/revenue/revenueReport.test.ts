@@ -309,6 +309,7 @@ describe('creditRows', () => {
     expect(rows[1]).toMatchObject({ name: 'A', paid: 30, free: 10, total: 40 })
     expect(rows[0]).toMatchObject({ paid: 0, free: 90, total: 90 })
     expect(rows.map((row) => row.display.share)).toEqual(['69%', '31%'])
+    expect(rows.map((row) => row.share)).toEqual([90 / 130, 40 / 130])
   })
 })
 

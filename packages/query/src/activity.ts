@@ -132,6 +132,8 @@ export interface ActivityPageFilter {
   startTime?: string
   endTime?: string
   actorTypes?: string[]
+  /** One actor, such as a team member's user id. */
+  actorId?: string
   actions?: string[]
   requestId?: string
   /** The page to read; omitted for the first. */

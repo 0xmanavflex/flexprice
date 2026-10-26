@@ -79,7 +79,16 @@ export function CreditGrantEditForm({
   submitError = null,
   onSubmit,
   submitLabel,
-}: CreditGrantFormProps<EditCreditGrant> & { defaultValue: EditCreditGrant }) {
+  allowEndDate = true,
+}: CreditGrantFormProps<EditCreditGrant> & {
+  defaultValue: EditCreditGrant
+  /**
+   * False for a plan's grant: the API cannot hold a future end date on one; any
+   * end date archives it at once, so it would vanish from the plan. Removing the
+   * grant is the honest way to end it.
+   */
+  allowEndDate?: boolean
+}) {
   const form = useCalmForm<EditCreditGrant>({
     resolver: standardSchemaResolver(editCreditGrantSchema) as Resolver<EditCreditGrant>,
     defaultValues: defaultValue,
@@ -102,30 +111,37 @@ export function CreditGrantEditForm({
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
         )}
       </Field>
-      <div className="max-w-xs">
-        <Field
-          label="End date"
-          hint="Optional. The grant stops issuing credits after this day."
-          error={errors.endDate?.message}
-        >
-          {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
-            <Controller
-              control={form.control}
-              name="endDate"
-              render={({ field }) => (
-                <DateInput
-                  id={id}
-                  value={toIso(field.value)}
-                  onValueChange={(iso) => field.onChange(iso ? endOfDay(iso) : undefined)}
-                  disabled={isSubmitting}
-                  aria-describedby={describedBy}
-                  aria-invalid={invalid}
-                />
-              )}
-            />
-          )}
-        </Field>
-      </div>
+      {allowEndDate ? (
+        <div className="max-w-xs">
+          <Field
+            label="End date"
+            hint="Optional. The grant stops issuing credits after this day."
+            error={errors.endDate?.message}
+          >
+            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
+              <Controller
+                control={form.control}
+                name="endDate"
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={toIso(field.value)}
+                    onValueChange={(iso) => field.onChange(iso ? endOfDay(iso) : undefined)}
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                    aria-invalid={invalid}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          A plan's grant has no end date. To stop issuing it, remove it from the plan; contracts
+          already given its credits keep them.
+        </p>
+      )}
       <FormActions
         mode="edit"
         isSubmitting={isSubmitting}

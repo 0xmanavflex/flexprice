@@ -10,9 +10,10 @@ import {
   activityStatus,
   activityTitle,
   describeActivity,
+  MemberType,
   type ActivityEntry,
 } from '@fp/domain'
-import { useActivityPage } from '@fp/query'
+import { useActivityPage, useMembers } from '@fp/query'
 import {
   CustomerActivityView,
   type ActivityRange,
@@ -22,7 +23,7 @@ import {
 import { activityEntityHref, activityStamp, activityStampUtc } from '@/pages/shared/activityLog'
 import { activityFiltersFrom, activitySearchFrom, type ActivitySearch } from './activitySearch'
 
-const RANGE_MS: Record<ActivityRange, number> = {
+const RANGE_MS: Record<Exclude<ActivityRange, 'custom'>, number> = {
   '24h': 24 * 3_600_000,
   '7d': 7 * 86_400_000,
   '30d': 30 * 86_400_000,
@@ -64,16 +65,17 @@ const TONE: Record<string, ActivityStatus['tone']> = {
   active: 'success',
   paid: 'success',
   succeeded: 'success',
+  // As the shared status registry: blue finalized, violet trialing only, grey ends.
   finalized: 'info',
-  trialing: 'info',
+  trialing: 'trial',
   draft: 'neutral',
   pending: 'warning',
   processing: 'warning',
-  overdue: 'warning',
+  overdue: 'danger',
   failed: 'danger',
-  voided: 'danger',
-  cancelled: 'danger',
-  canceled: 'danger',
+  voided: 'neutral',
+  cancelled: 'neutral',
+  canceled: 'neutral',
   archived: 'neutral',
   deleted: 'neutral',
 }
@@ -194,11 +196,14 @@ export function CustomerActivityPanel({
   const filters = activityFiltersFrom(search)
   const [pageSize, setPageSize] = useState(25)
   // Fixed when the range is chosen, so paging does not shift the window.
-  const window = useMemo(() => windowFor(filters.range), [filters.range])
+  const window = useMemo(
+    () => windowFor(filters.range, filters.from, filters.to),
+    [filters.range, filters.from, filters.to],
+  )
   // Cursors of the pages visited, so Previous can go back: `[undefined]` is
   // page 1. They belong to one set of server-side filters: change any of
   // those and the trail starts again from its first page.
-  const serverKey = `${filters.action}|${filters.actorType}|${filters.range}|${pageSize}`
+  const serverKey = `${filters.action}|${filters.actorType}|${filters.actorId ?? ''}|${filters.range}|${filters.from ?? ''}|${filters.to ?? ''}|${pageSize}`
   const [paging, setPaging] = useState<{ key: string; cursors: Array<string | undefined> }>({
     key: serverKey,
     cursors: [undefined],
@@ -213,10 +218,30 @@ export function CustomerActivityPanel({
     startTime: window.start,
     endTime: window.end,
     ...(filters.actorType ? { actorTypes: [filters.actorType] } : {}),
+    ...(filters.actorId ? { actorId: filters.actorId } : {}),
     ...(filters.action ? { actions: [filters.action] } : {}),
     ...(cursor ? { cursor } : {}),
     limit: pageSize,
   })
+
+  // The Person filter: the tenant's people, read once the actor is User.
+  const people = useMembers({
+    page: 1,
+    pageSize: 100,
+    type: MemberType.User,
+    search: '',
+    roles: [],
+  })
+  const personOptions = useMemo(
+    () =>
+      filters.actorType === 'user'
+        ? (people.data?.members ?? []).map((member) => ({
+            value: member.id,
+            label: member.name || member.email || member.id,
+          }))
+        : [],
+    [filters.actorType, people.data],
+  )
 
   const entries = useMemo(() => page.data?.entries ?? [], [page.data])
   const rows = useMemo(
@@ -249,6 +274,7 @@ export function CustomerActivityPanel({
       onFiltersChange={(next) => onSearchChange(activitySearchFrom(next))}
       actionOptions={ACTIONS.map((action) => ({ value: action, label: activityTitle(action) }))}
       actorOptions={ACTIVITY_ACTOR_TYPES}
+      personOptions={personOptions}
       sourceOptions={ACTIVITY_SOURCES.map((source) => ({
         value: source,
         label: activitySourceLabel(source),
@@ -273,7 +299,21 @@ export function CustomerActivityPanel({
   )
 }
 
-function windowFor(range: ActivityRange): { start: string; end: string } {
+/**
+ * The trail's window. A custom range runs from the start of its first day to
+ * the end of its last, in local time; a missing end is now, a missing start
+ * thirty days before the end.
+ */
+function windowFor(
+  range: ActivityRange,
+  from?: string,
+  to?: string,
+): { start: string; end: string } {
+  if (range === 'custom') {
+    const end = to ? new Date(`${to}T23:59:59.999`) : new Date()
+    const start = from ? new Date(`${from}T00:00:00`) : new Date(end.getTime() - RANGE_MS['30d'])
+    return { start: start.toISOString(), end: end.toISOString() }
+  }
   const end = new Date()
   return {
     start: new Date(end.getTime() - RANGE_MS[range]).toISOString(),
