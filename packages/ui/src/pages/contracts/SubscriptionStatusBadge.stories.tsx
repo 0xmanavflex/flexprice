@@ -3,7 +3,7 @@ import { expect, within } from 'storybook/test'
 import { SUBSCRIPTION_STATUS_LABEL, SubscriptionStatus } from '@fp/domain'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
-/** A subscription's lifecycle as the shared status pill; only Incomplete is destructive. */
+/** A subscription's lifecycle as the shared status pill, coloured from the shared registry. */
 const meta = {
   title: 'App/Contracts/Contract status badge',
   component: SubscriptionStatusBadge,
@@ -45,5 +45,15 @@ export const Incomplete: Story = {
   args: { status: SubscriptionStatus.Incomplete },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('Incomplete')).toBeVisible()
+  },
+}
+
+/** Trialing carries the violet trial tone, the same dot as the contracts grid. */
+export const Trialing: Story = {
+  args: { status: SubscriptionStatus.Trialing },
+  play: async ({ canvasElement }) => {
+    const pill = within(canvasElement).getByTitle('Trialing')
+    await expect(pill.querySelector('.bg-trial')).not.toBeNull()
+    await expect(pill.querySelector('.bg-muted-foreground')).toBeNull()
   },
 }

@@ -686,7 +686,7 @@ export function DataExportDetail({
 const RUN_TONE: Record<string, PillTone> = {
   COMPLETED: 'success',
   FAILED: 'danger',
-  PROCESSING: 'info',
+  PROCESSING: 'warning',
   PENDING: 'warning',
 }
 
