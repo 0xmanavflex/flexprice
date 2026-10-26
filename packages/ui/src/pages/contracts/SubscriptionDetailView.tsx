@@ -1646,6 +1646,7 @@ export function SubscriptionDetailView({
           addons: sectionOptions?.addons ?? [],
           addonCharges: sectionOptions?.addonCharges,
           currency: s.currency,
+          billingPeriod: s.billingPeriod ?? undefined,
           coupons: sectionOptions?.coupons ?? [],
           taxRates: sectionOptions?.taxRates ?? [],
         }}

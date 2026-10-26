@@ -132,3 +132,21 @@ export function selectContractCharges(
     includePriceIds: anyOptedIn ? attached.map((charge) => charge.id) : null,
   }
 }
+
+/**
+ * The add-on prices the API attaches to a contract: its currency, and its
+ * billing period or one-time (`ValidateAndFilterPricesForSubscription`, strict
+ * period match for add-ons). Commitments are only offered on these.
+ */
+export function attachableAddonCharges(
+  charges: readonly Charge[],
+  contract: { currency: string; billingPeriod: BillingPeriod | string },
+): Charge[] {
+  const currency = contract.currency.trim().toUpperCase()
+  return charges.filter(
+    (charge) =>
+      charge.currency.trim().toUpperCase() === currency &&
+      (charge.billingPeriod === contract.billingPeriod ||
+        charge.billingPeriod === BillingPeriod.OneTime),
+  )
+}

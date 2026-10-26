@@ -1650,6 +1650,7 @@
         "FormDialog",
         "LabelWithHint",
         "OptionSelect",
+        "SimpleTable",
         "TaxDialog"
       ],
       "usedBy": [
@@ -7152,6 +7153,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "ConnectionExports",
+        "ContractSectionDialogs",
         "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",

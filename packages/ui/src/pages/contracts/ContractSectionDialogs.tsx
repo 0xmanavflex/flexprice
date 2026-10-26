@@ -13,8 +13,9 @@ import {
   type CreateEntitlement,
   type CreateTaxAssociation,
   PriceType,
+  attachableAddonCharges,
 } from '@fp/domain'
-import { Composer } from '@ui/compositions/detail/DetailKit'
+import { Composer, SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
@@ -46,6 +47,8 @@ export interface ContractSectionOptions {
   addonCharges?: ((addonId: string) => readonly Charge[] | undefined) | undefined
   /** The contract's currency, for commitment amounts. */
   currency?: string | undefined
+  /** The contract's billing period: only prices that attach get a commitment. */
+  billingPeriod?: string | undefined
   coupons: { code: string; name: string }[]
   taxRates: TaxRateOption[]
 }
@@ -116,6 +119,7 @@ export function ContractSectionDialogs({
         addons={options.addons}
         chargesOf={options.addonCharges}
         currency={options.currency ?? ''}
+        billingPeriod={options.billingPeriod ?? ''}
         pending={pending}
         error={error}
         onClose={onClose}
@@ -235,6 +239,7 @@ function AddonDialog({
   addons,
   chargesOf,
   currency,
+  billingPeriod,
   pending,
   error,
   onClose,
@@ -244,6 +249,7 @@ function AddonDialog({
   addons: { id: string; name: string }[]
   chargesOf: ((addonId: string) => readonly Charge[] | undefined) | undefined
   currency: string
+  billingPeriod: string
   pending: boolean
   error: string | null
   onClose: () => void
@@ -253,8 +259,11 @@ function AddonDialog({
   const [commitments, setCommitments] = useState<ChargeCommitment[]>([])
   const [committing, setCommitting] = useState<Charge | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
+  // Only the prices the API will attach (this currency, this period or one-time).
   const usage = addonId
-    ? (chargesOf?.(addonId) ?? []).filter((charge) => charge.type === PriceType.Usage)
+    ? attachableAddonCharges(chargesOf?.(addonId) ?? [], { currency, billingPeriod }).filter(
+        (charge) => charge.type === PriceType.Usage,
+      )
     : []
   const commitmentOn = (priceId: string) => commitments.find((c) => c.priceId === priceId)
 
@@ -303,33 +312,49 @@ function AddonDialog({
               <LabelWithHint hint="A minimum on a usage charge of this add-on: spend or units per period. Optional.">
                 Commitments
               </LabelWithHint>
-              {usage.map((charge) => {
-                const commitment = commitmentOn(charge.id)
-                const name = commitmentChargeOf(charge).name
-                return (
-                  <div
-                    key={charge.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
-                  >
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate text-[13px] font-medium">{name}</span>
-                      <span className="text-muted-foreground truncate text-xs">
-                        {commitment ? commitmentText(commitment, currency) : 'No commitment'}
-                      </span>
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 shrink-0 px-3"
-                      aria-label={`${commitment ? 'Edit' : 'Add'} commitment on ${name}`}
-                      onClick={() => setCommitting(charge)}
-                    >
-                      <ScaleIcon aria-hidden /> {commitment ? 'Edit' : 'Add'}
-                    </Button>
-                  </div>
-                )
-              })}
+              <SimpleTable
+                rows={usage}
+                getRowId={(charge) => charge.id}
+                columns={[
+                  {
+                    key: 'charge',
+                    header: 'Usage charge',
+                    cell: (charge) => {
+                      const commitment = commitmentOn(charge.id)
+                      return (
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate font-medium">
+                            {commitmentChargeOf(charge).name}
+                          </span>
+                          <span className="text-muted-foreground truncate text-xs">
+                            {commitment ? commitmentText(commitment, currency) : 'No commitment'}
+                          </span>
+                        </span>
+                      )
+                    },
+                  },
+                  {
+                    key: 'action',
+                    header: '',
+                    className: 'w-24 text-right',
+                    cell: (charge) => {
+                      const has = commitmentOn(charge.id) !== undefined
+                      return (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-3"
+                          aria-label={`${has ? 'Edit' : 'Add'} commitment on ${commitmentChargeOf(charge).name}`}
+                          onClick={() => setCommitting(charge)}
+                        >
+                          <ScaleIcon aria-hidden /> {has ? 'Edit' : 'Add'}
+                        </Button>
+                      )
+                    },
+                  },
+                ]}
+              />
             </div>
           ) : null}
           {problem || error ? (

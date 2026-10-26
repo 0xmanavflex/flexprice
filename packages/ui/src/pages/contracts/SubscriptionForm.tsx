@@ -31,6 +31,7 @@ import {
   type AddContractCharge,
   BillingCycle,
   type Charge,
+  attachableAddonCharges,
   type ChargeCommitment,
   type CreateCreditGrant,
   type CreateSubscription,
@@ -997,6 +998,7 @@ export function SubscriptionForm({
           onChange={(next) => set('addons', next)}
           chargesOf={addonCharges}
           currency={values.currency}
+          billingPeriod={values.billingPeriod}
         />
       </div>
     ) : (
@@ -2539,17 +2541,22 @@ function AddonsSection({
   onChange,
   chargesOf,
   currency,
+  billingPeriod,
 }: {
   selected: CreateSubscription['addons']
   options: readonly SubscriptionAddonOption[]
   onChange: (next: CreateSubscription['addons']) => void
   chargesOf?: ((addonId: string) => readonly Charge[] | undefined) | undefined
   currency: string
+  billingPeriod: BillingPeriod
 }) {
   // The add-on charge whose commitment dialog is open.
   const [committing, setCommitting] = useState<{ addonId: string; charge: Charge } | null>(null)
+  // Only the prices the API will attach (this currency, this period or one-time).
   const usageOf = (addonId: string) =>
-    (chargesOf?.(addonId) ?? []).filter((charge) => charge.type === PriceType.Usage)
+    attachableAddonCharges(chargesOf?.(addonId) ?? [], { currency, billingPeriod }).filter(
+      (charge) => charge.type === PriceType.Usage,
+    )
   const commitmentsOf = (addonId: string) =>
     selected.find((a) => a.addonId === addonId)?.commitments ?? []
   const setCommitment = (addonId: string, priceId: string, next: ChargeCommitment | null) =>

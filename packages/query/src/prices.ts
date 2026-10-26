@@ -341,6 +341,8 @@ export function usePrices(entityType: PriceEntityType, entityId: string) {
  * The charges of several entities in one search (`entity_ids`), grouped by
  * entity: the contract form's add-ons, so each can commit on its usage charges.
  */
+const ENTITIES_PAGE = 200
+
 export function useEntitiesCharges(entityType: PriceEntityType, entityIds: readonly string[]) {
   const client = useFlexprice()
   const ids = [...new Set(entityIds)].sort()
@@ -348,19 +350,28 @@ export function useEntitiesCharges(entityType: PriceEntityType, entityIds: reado
   return useQuery({
     queryKey: queryKeys.prices.list({ entityType, entityIds: ids }),
     queryFn: async () => {
-      const response = await call(() =>
-        client.prices.queryPrice({
-          entityType,
-          entityIds: ids,
-          expand: 'meters',
-          limit: 500,
-          offset: 0,
-        }),
-      )
       const byEntity = new Map<string, Charge[]>()
-      for (const item of response.items ?? []) {
-        const charge = toCharge(item as ChargeWire)
-        byEntity.set(charge.entityId, [...(byEntity.get(charge.entityId) ?? []), charge])
+      // Page by page to the reported total, in a total order, so no price is missed.
+      for (let offset = 0, seen = 0; ; offset += ENTITIES_PAGE) {
+        const response = await call(() =>
+          client.prices.queryPrice({
+            entityType,
+            entityIds: ids,
+            expand: 'meters',
+            // Ids are unique, so the order is total and pages never overlap.
+            sort: 'id',
+            order: 'asc',
+            limit: ENTITIES_PAGE,
+            offset,
+          }),
+        )
+        const items = response.items ?? []
+        seen += items.length
+        for (const item of items) {
+          const charge = toCharge(item as ChargeWire)
+          byEntity.set(charge.entityId, [...(byEntity.get(charge.entityId) ?? []), charge])
+        }
+        if (items.length < ENTITIES_PAGE || seen >= (response.pagination?.total ?? 0)) break
       }
       return byEntity
     },

@@ -560,6 +560,28 @@ describe('contract-scoped creators', () => {
     })
   })
 
+  it("sends an add-on commitment's bucket size as that price's override", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'quantity',
+          value: '100',
+          overageFactor: '',
+          trueUp: false,
+          windowed: true,
+          bucketSize: 'HOUR',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      override_line_items: [{ price_id: 'price_addon_api', bucket_size: 'HOUR' }],
+    })
+  })
+
   it('applies a coupon as an add modification', () => {
     const request = toAddCouponRequest('sub_1', { couponCode: ' WELCOME10 ' })
     expect(ExecuteSubscriptionModifyRequest$outboundSchema.parse(request)).toEqual({

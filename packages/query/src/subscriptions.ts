@@ -833,12 +833,18 @@ function toLineItemCommitment(commitment: ChargeCommitment): Record<string, unkn
 /** An add-on's commitments as `line_item_commitments`, keyed by the add-on's price. */
 function addonCommitments(commitments: ChargeCommitment[] | undefined): {
   lineItemCommitments?: Record<string, Record<string, unknown>>
+  overrideLineItems?: FlexpriceModels.OverrideLineItemRequest[]
 } {
   if (!commitments || commitments.length === 0) return {}
+  // A bucket size chosen with the commitment goes as the price's override, as for a plan charge.
+  const buckets = withBuckets([], commitments)
   return {
     lineItemCommitments: Object.fromEntries(
       commitments.map((commitment) => [commitment.priceId, toLineItemCommitment(commitment)]),
     ),
+    ...(buckets.length > 0
+      ? { overrideLineItems: buckets as FlexpriceModels.OverrideLineItemRequest[] }
+      : {}),
   }
 }
 
