@@ -1428,7 +1428,7 @@ function priceText(charge: Charge, override: PriceOverride | undefined): string 
 /* ------------------------------------------------------------------------- */
 
 /** A charge as the charges table lists it: plain strings for search and the filters, the charge behind them. */
-type ChargeRow = {
+export type ChargeRow = {
   id: string
   name: string
   type: 'Fixed' | 'Usage'
@@ -1436,16 +1436,22 @@ type ChargeRow = {
   price: string
 } & ({ kind: 'plan'; charge: Charge } | { kind: 'extra'; extra: AddContractCharge; index: number })
 
-/** When a charge in the wizard is in effect: its own dates, or with the phase. */
-function chargeInEffect(row: ChargeRow): string {
-  const fmt = (date: Date) => date.toLocaleDateString('en-US', { dateStyle: 'medium' })
+/**
+ * When a charge in the wizard is in effect: its own dates, or with the phase.
+ * A plan charge's dates are calendar days stored at midnight UTC, so they are
+ * read in UTC as `ChargeTable` reads them; an added charge's `YYYY-MM-DD` day
+ * is parsed as local midnight, so it stays in local time.
+ */
+export function chargeInEffect(row: ChargeRow): string {
+  const fmt = (date: Date, timeZone?: 'UTC') =>
+    date.toLocaleDateString('en-US', { dateStyle: 'medium', timeZone })
   if (row.kind === 'extra') {
     const start = parseDateValue(row.extra.startDate)
     return start ? `From ${fmt(start)}` : 'With the phase'
   }
   const { startDate, endDate } = row.charge
   if (!startDate && !endDate) return 'With the phase'
-  return `${startDate ? fmt(startDate) : '—'} → ${endDate ? fmt(endDate) : 'Ongoing'}`
+  return `${startDate ? fmt(startDate, 'UTC') : '—'} → ${endDate ? fmt(endDate, 'UTC') : 'Ongoing'}`
 }
 
 /** A change a charge row carries, drawn as a chip under its name that opens the matching dialog. */
