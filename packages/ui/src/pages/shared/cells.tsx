@@ -126,13 +126,14 @@ export interface EntityColumn<T> {
  * reviewed. The mapping to tokens lives here so the whole console's greens are
  * one green.
  */
-export type PillTone = 'neutral' | 'success' | 'info' | 'warning' | 'danger'
+export type PillTone = 'neutral' | 'success' | 'info' | 'trial' | 'warning' | 'danger'
 
 /** The dot: tone is carried by a 6px dot, in semantic tokens. */
 const DOT_TONE: Record<PillTone, string> = {
   neutral: 'bg-muted-foreground',
   success: 'bg-success',
   info: 'bg-info',
+  trial: 'bg-trial',
   warning: 'bg-warning',
   danger: 'bg-destructive',
 }
@@ -194,9 +195,9 @@ const STATUS_TONE: Record<string, PillTone> = {
   finalized: 'info',
   // Open awaits payment: orange, as the invoice chips (walkthrough 6.1).
   open: 'warning',
-  trialing: 'info',
-  scheduled: 'info',
-  running: 'info',
+  trialing: 'trial',
+  scheduled: 'warning',
+  running: 'warning',
   draft: 'neutral',
   archived: 'neutral',
   inactive: 'neutral',
@@ -215,8 +216,10 @@ const STATUS_TONE: Record<string, PillTone> = {
   'partially paid': 'warning',
   overdue: 'danger',
   failed: 'danger',
-  cancelled: 'danger',
-  canceled: 'danger',
+  cancelled: 'neutral',
+  canceled: 'neutral',
+  incomplete: 'warning',
+  overpaid: 'success',
 }
 
 /** A status word as a dot pill; the tone is looked up from the word. */

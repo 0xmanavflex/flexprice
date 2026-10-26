@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { setPasswordSchema, signInSchema } from './auth'
 
-const errors = (schema: { safeParse: (v: unknown) => { success: boolean; error?: { issues: { message: string; path: PropertyKey[] }[] } } }, value: unknown) => {
+const errors = (
+  schema: {
+    safeParse: (v: unknown) => {
+      success: boolean
+      error?: { issues: { message: string; path: PropertyKey[] }[] }
+    }
+  },
+  value: unknown,
+) => {
   const r = schema.safeParse(value)
   return r.success ? [] : (r.error?.issues ?? []).map((i) => i.message)
 }
@@ -34,8 +42,9 @@ describe('setPasswordSchema', () => {
     expect(errors(setPasswordSchema, { password: 'short', confirm: 'short' })).toContain(
       'Use at least 12 characters',
     )
-    expect(setPasswordSchema.safeParse({ password: 'aaaaaaaaaaaa', confirm: 'aaaaaaaaaaaa' }).success)
-      .toBe(true)
+    expect(
+      setPasswordSchema.safeParse({ password: 'aaaaaaaaaaaa', confirm: 'aaaaaaaaaaaa' }).success,
+    ).toBe(true)
   })
 
   // A typo in a password field is invisible by definition.

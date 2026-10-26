@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { type Wallet, type WalletTransaction, WalletStatus, money } from '@fp/domain'
 import { CustomerWalletView, type CustomerWalletViewProps } from './CustomerWalletView'
+import { WalletLedgerTable } from './WalletLedgerTable'
 
 const REASONS = [
   'Purchased credits',
@@ -367,6 +368,45 @@ export const ExpandsConsumption: Story = {
 }
 
 export const LongLedger: Story = { args: { transactions: makeTransactions(40) } }
+
+/** A debit raised for an invoice: its reference and metadata show, and search finds them. */
+const INVOICE_DEBIT: WalletTransaction = {
+  id: 'wtx_invoice_debit',
+  direction: 'out',
+  reason: 'Invoice payment',
+  description: '',
+  credits: '300',
+  amount: money('3.00', 'USD'),
+  createdAt: new Date('2026-09-18T00:00:00Z'),
+  creditsAvailable: null,
+  expiresAt: null,
+  reference: { type: 'INVOICE', id: 'inv_9' },
+  metadata: { source: 'usage' },
+}
+
+/** The ledger on its own (no titled section), so its search bar shows. */
+export const SearchesReferenceAndMetadata: Story = {
+  render: () => (
+    <WalletLedgerTable transactions={[INVOICE_DEBIT, ...makeTransactions(3)]} now={NOW} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('invoice inv_9 · source: usage')).toBeInTheDocument()
+    await userEvent.type(canvas.getByPlaceholderText(/^Search/), 'inv_9')
+    await waitFor(() => expect(canvas.queryByText('Usage draw-down')).toBeNull())
+    await expect(canvas.getByText('invoice inv_9 · source: usage')).toBeInTheDocument()
+  },
+}
+
+/** The whole ledger is read page by page, so a long one is not called incomplete. */
+export const FullLedgerNotTruncated: Story = {
+  args: { transactions: makeTransactions(250) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Remaining')).toBeInTheDocument()
+    await expect(canvas.queryByText(/older entries/i)).toBeNull()
+  },
+}
 
 /** A terminated wallet cannot be topped up. */
 export const Terminated: Story = {

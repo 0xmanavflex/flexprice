@@ -26,7 +26,7 @@ test.describe('exports', () => {
 
     await expect(exports.rows().first()).toBeVisible()
     await expect(page.getByText('acme-billing').first()).toBeVisible()
-    await expect(exports.rows().first()).toContainText(/Enabled|Disabled/)
+    await expect(exports.rows().first()).toContainText(/Active|Paused/)
   })
 
   test('puts the search in the URL and survives a reload', async ({ page }) => {
