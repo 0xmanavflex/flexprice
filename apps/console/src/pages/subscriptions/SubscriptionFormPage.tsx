@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   explainContractHierarchyError,
   useAddons,
+  useEntitiesCharges,
   useCoupons,
   useCreateSubscription,
   useCreditGrants,
@@ -78,6 +79,11 @@ export function SubscriptionFormPage({
     ...PICKER_PAGE,
     statuses: [AddonStatus.Published],
   })
+  // Usage charges of the add-ons that have any, read in one search, so each can carry a commitment.
+  const addonCharges = useEntitiesCharges(
+    PriceEntityType.Addon,
+    (addons.data?.addons ?? []).filter((a) => a.usageChargeCount > 0).map((a) => a.id),
+  )
   // Refetched on focus: "Create a tax rate" opens in a new tab, and the rate
   // made there should be pickable on return without losing this draft.
   const taxRates = useTaxRates(
@@ -164,6 +170,7 @@ export function SubscriptionFormPage({
         label: addon.name,
         type: addonType(addon.fixedChargeCount, addon.usageChargeCount),
       }))}
+      addonCharges={(addonId) => addonCharges.data?.get(addonId)}
       createTaxRateHref="/taxes/new"
       taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
         code: rate.code,
