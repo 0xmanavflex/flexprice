@@ -48,6 +48,21 @@ const ROWS: CustomerRevenueRow[] = NAMES.map((name, i) => {
   }
 })
 
+const PAGE = 25
+const ALL_ROWS: CustomerRevenueRow[] = Array.from({ length: 60 }, (_, i) => {
+  const revenue = 60000 - i * 900
+  const usage = Math.round(revenue * (0.35 + (i % 3) * 0.1))
+  return {
+    id: `cust_${i}`,
+    name: `${NAMES[i % NAMES.length]} ${Math.floor(i / NAMES.length) + 1}`,
+    revenue,
+    usage,
+    contract: revenue - usage,
+    display: { revenue: usd(revenue), usage: usd(usage), contract: usd(revenue - usage) },
+    share: revenue / 1800000,
+  }
+})
+
 const BASE: RevenueReportProps = {
   filters: {
     range: '90d',
@@ -169,9 +184,21 @@ function Harness(props: RevenueReportProps) {
   const [view, setView] = useState<RevenueView>(props.view)
   const [compare, setCompare] = useState(props.filters.compare)
   const [grain, setGrain] = useState(props.filters.grain)
+  const [offset, setOffset] = useState(0)
   return (
     <RevenueReport
       {...props}
+      customers={{
+        ...props.customers,
+        all: {
+          status: props.customers.status,
+          rows: ALL_ROWS.slice(offset, offset + PAGE),
+          offset,
+          size: PAGE,
+          hasMore: offset + PAGE < ALL_ROWS.length,
+          onPage: setOffset,
+        },
+      }}
       view={view}
       onViewChange={(next) => {
         setView(next)

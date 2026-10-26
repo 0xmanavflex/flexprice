@@ -181,6 +181,16 @@ export interface RevenueReportProps {
     arpu: ReportFigure
     topTenShare: string
     onOpenCustomer?: ((id: string) => void) | undefined
+    /** One server page of customers by revenue. */
+    all?:
+      | (ReportState & {
+          rows: CustomerRevenueRow[]
+          offset: number
+          size: number
+          hasMore: boolean
+          onPage: (offset: number) => void
+        })
+      | undefined
     credits?:
       | (ReportState & {
           rows: CreditRow[]
@@ -1032,66 +1042,102 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
         </>
       ) : null}
 
-      {customers.status === 'ready' && customers.rows.length > 0 ? (
-        <Panel
-          title="All customers"
-          description="Revenue per customer in the period, highest first"
-        >
+      {customers.all ? (
+        <Panel title="All customers" description="Ordered by revenue, highest first">
           <Surface>
-            <DetailTable<CustomerRevenueRow & { rank: number }>
-              compact
-              label="Customers by revenue"
-              noun="customers"
-              rows={customers.rows.map((row, index) => ({ ...row, rank: index + 1 }))}
-              {...(customers.onOpenCustomer
-                ? { onRowClick: (row: CustomerRevenueRow) => customers.onOpenCustomer?.(row.id) }
-                : {})}
-              columns={[
-                {
-                  key: 'rank',
-                  header: '#',
-                  width: 56,
-                  cell: (row) => <span className="text-muted-foreground">{row.rank}</span>,
-                },
-                {
-                  key: 'name',
-                  header: 'Customer',
-                  width: 220,
-                  sortBy: (row) => row.name,
-                  cell: (row) => <span className="font-medium">{row.name}</span>,
-                },
-                {
-                  key: 'revenue',
-                  header: 'Revenue',
-                  sortBy: (row) => row.revenue,
-                  cell: (row) => <span className="tabular-nums">{row.display.revenue}</span>,
-                },
-                {
-                  key: 'contract',
-                  header: 'Contract',
-                  sortBy: (row) => row.contract,
-                  cell: (row) => (
-                    <span className="text-muted-foreground tabular-nums">
-                      {row.display.contract}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'usage',
-                  header: 'Usage',
-                  sortBy: (row) => row.usage,
-                  cell: (row) => (
-                    <span className="text-muted-foreground tabular-nums">{row.display.usage}</span>
-                  ),
-                },
-                {
-                  key: 'share',
-                  header: 'Share of total',
-                  sortBy: (row) => row.share,
-                  cell: (row) => <ShareBar value={row.share} color={REVENUE} />,
-                },
-              ]}
-            />
+            {customers.all.status === 'error' ? (
+              <NotReady state={customers.all} empty="No customers in this range" />
+            ) : (
+              <DetailTable<CustomerRevenueRow & { rank: number }>
+                compact
+                label="Customers by revenue"
+                noun="customers"
+                rows={customers.all.rows.map((row, index) => ({
+                  ...row,
+                  rank: (customers.all?.offset ?? 0) + index + 1,
+                }))}
+                footer={false}
+                toolbar={false}
+                pageSize={customers.all.size}
+                isLoading={customers.all.status === 'loading'}
+                {...(customers.onOpenCustomer
+                  ? { onRowClick: (row: CustomerRevenueRow) => customers.onOpenCustomer?.(row.id) }
+                  : {})}
+                columns={[
+                  {
+                    key: 'rank',
+                    header: '#',
+                    width: 56,
+                    cell: (row) => <span className="text-muted-foreground">{row.rank}</span>,
+                  },
+                  {
+                    key: 'name',
+                    header: 'Customer',
+                    width: 220,
+                    cell: (row) => <span className="font-medium">{row.name}</span>,
+                  },
+                  {
+                    key: 'revenue',
+                    header: 'Revenue',
+                    cell: (row) => <span className="tabular-nums">{row.display.revenue}</span>,
+                  },
+                  {
+                    key: 'contract',
+                    header: 'Contract',
+                    cell: (row) => (
+                      <span className="text-muted-foreground tabular-nums">
+                        {row.display.contract}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'usage',
+                    header: 'Usage',
+                    cell: (row) => (
+                      <span className="text-muted-foreground tabular-nums">
+                        {row.display.usage}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'share',
+                    header: 'Share of total',
+                    cell: (row) => <ShareBar value={row.share} color={REVENUE} />,
+                  },
+                ]}
+              />
+            )}
+            {customers.all.status === 'error' ? null : (
+              <div className="flex items-center justify-between border-t px-5 py-3 text-sm">
+                <span className="text-muted-foreground tabular-nums">
+                  {customers.all.status === 'loading'
+                    ? ''
+                    : customers.all.rows.length === 0
+                      ? 'No customers on this page'
+                      : `${customers.all.offset + 1} - ${customers.all.offset + customers.all.rows.length}`}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={customers.all.offset === 0 || customers.all.status === 'loading'}
+                    onClick={() =>
+                      customers.all?.onPage(Math.max(0, customers.all.offset - customers.all.size))
+                    }
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!customers.all.hasMore || customers.all.status === 'loading'}
+                    onClick={() => customers.all?.onPage(customers.all.offset + customers.all.size)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </Surface>
         </Panel>
       ) : null}

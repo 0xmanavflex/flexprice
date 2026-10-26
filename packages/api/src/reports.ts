@@ -22,6 +22,8 @@ export interface ReportQuery {
   filters?: { field: string; op: 'eq' | 'in'; value: string[] }[] | undefined
   compare?: 'previous_period' | 'previous_year' | undefined
   limit?: number | undefined
+  /** Rows to skip; needs a breakdown with a limit. */
+  offset?: number | undefined
   sort?: { field: string; dir: 'asc' | 'desc' }[] | undefined
 }
 
