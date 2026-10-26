@@ -230,6 +230,12 @@ export interface SubscriptionDetailViewProps {
    */
   onCreateChargeAlert?:
     ((draft: { lineId: string; config: AlertSettingConfig }) => Promise<unknown> | void) | undefined
+  /**
+   * The thresholds a line already stores (a switched-off setting), read when
+   * Add alerts is chosen so the form opens on them instead of overwriting
+   * them unseen. Null when there are none.
+   */
+  loadChargeAlert?: ((lineId: string) => Promise<AlertSettingConfig | null>) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
   /** A charge's row menu: take its coupon off. Resolves when done. */
   onRemoveCoupon?: ((coupon: SubscriptionCoupon) => Promise<unknown>) | undefined
@@ -401,6 +407,7 @@ export function SubscriptionDetailView({
   onAddCoupon,
   onSaveChargeAlert,
   onCreateChargeAlert,
+  loadChargeAlert,
   onAddTax,
   onRemoveAddon,
   onRemoveTax,
@@ -640,7 +647,12 @@ export function SubscriptionDetailView({
       }
       if (!draft && onCreateChargeAlert) {
         setSaveError(null)
-        setAlertEdit({ lineId: line.id, config: emptyAlertSettingConfig() })
+        const lineId = line.id
+        // A failed read opens the empty form: adding alerts still works, and
+        // the save updates whatever the line holds.
+        void Promise.resolve(loadChargeAlert?.(lineId) ?? null)
+          .catch(() => null)
+          .then((stored) => setAlertEdit({ lineId, config: stored ?? emptyAlertSettingConfig() }))
         return
       }
     }
