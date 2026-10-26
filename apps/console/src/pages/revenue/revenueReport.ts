@@ -1,6 +1,8 @@
 import { InvoiceStatus, PaymentStatus, type Invoice, type Money, type Payment } from '@fp/domain'
 import type {
   AgingBucket,
+  CreditRow,
+  CreditTypeRow,
   CustomerRevenueRow,
   OverdueCustomerRow,
   PayerRow,
@@ -245,9 +247,7 @@ export function alignToWindow(
     value: seen.has(key) ? Math.round(bucket.value * 100) / 100 : emptyValue,
     ...(comparing
       ? {
-          previous: seen.has(key)
-            ? Math.round((previous.get(key) ?? 0) * 100) / 100
-            : emptyValue,
+          previous: seen.has(key) ? Math.round((previous.get(key) ?? 0) * 100) / 100 : emptyValue,
         }
       : {}),
   }))
@@ -271,6 +271,66 @@ export function revenueSeries(
     revenue: Math.round(bucket.value * 100) / 100,
     ...(previous ? { previous: Math.round((before[index]?.value ?? 0) * 100) / 100 } : {}),
   }))
+}
+
+/* ---- Credit consumption ---------------------------------------------------- */
+
+/** Pivots the per-credit-type breakdown into one row per customer. */
+export function creditRows(
+  rows: { keys: Record<string, string>; value: number }[],
+  nameOf: (id: string) => string,
+  money: (value: number) => string,
+): CreditRow[] {
+  const byCustomer = new Map<string, { paid: number; free: number }>()
+  for (const row of rows) {
+    const id = row.keys['customer_id'] ?? ''
+    const parts = byCustomer.get(id) ?? { paid: 0, free: 0 }
+    if (row.keys['credit_type'] === 'paid') parts.paid += row.value
+    else parts.free += row.value
+    byCustomer.set(id, parts)
+  }
+  const grand = [...byCustomer.values()].reduce((sum, row) => sum + row.paid + row.free, 0)
+  return [...byCustomer.entries()]
+    .map(([id, { paid, free }]) => ({
+      id,
+      name: nameOf(id),
+      paid,
+      free,
+      total: paid + free,
+      display: {
+        paid: money(paid),
+        free: money(free),
+        total: money(paid + free),
+        share: percentOf(paid + free, grand),
+      },
+    }))
+    .sort((a, b) => b.total - a.total)
+}
+
+/** Customers and amount per value of one dimension (credit type, top-up source). */
+export function creditTypeRows(
+  rows: { keys: Record<string, string>; value: number }[],
+  dimension: string,
+  labels: Record<string, string>,
+  money: (value: number) => string,
+): CreditTypeRow[] {
+  const byType = new Map<string, { customers: Set<string>; amount: number }>()
+  for (const row of rows) {
+    const id = row.keys[dimension] ?? ''
+    const entry = byType.get(id) ?? { customers: new Set<string>(), amount: 0 }
+    entry.amount += row.value
+    if (row.value > 0) entry.customers.add(row.keys['customer_id'] ?? '')
+    byType.set(id, entry)
+  }
+  return [...byType.entries()]
+    .map(([id, { customers, amount }]) => ({
+      id,
+      label: labels[id] ?? id,
+      customers: customers.size,
+      amount,
+      display: { amount: money(amount) },
+    }))
+    .sort((a, b) => b.amount - a.amount)
 }
 
 /* ---- Customers ------------------------------------------------------------- */

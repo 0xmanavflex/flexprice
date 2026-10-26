@@ -2664,6 +2664,7 @@ export const handlers = [
       currency?: string
       compare?: string
       limit?: number
+      offset?: number
     }
     const base = REPORT_BASE[key]
     if (base === undefined) {
@@ -2732,14 +2733,17 @@ export const handlers = [
     if (body.shape === 'breakdown') {
       const dims = body.dimensions?.length ? body.dimensions : ['customer_id']
       // The customers the customer search answers with, so their names resolve.
+      const pagedCustomers = key === 'invoice_total' && dims.join() === 'customer_id'
       const customers = sourceFor('customers')
-        .items.slice(0, 8)
+        .items.slice(0, pagedCustomers ? 60 : 8)
         .map((row) => readString(row, 'id'))
       const labels: Record<string, string[]> = {
         customer_id: customers,
         aging_bucket: ['Current', '1-30', '31-60', '61-90', '90+'],
         invoice_type: ['SUBSCRIPTION', 'ONE_OFF'],
         meter_id: ['meter_api', 'meter_storage'],
+        credit_type: ['paid', 'free'],
+        transaction_reason: ['PURCHASED_CREDIT_DIRECT', 'FREE_CREDIT_GRANT'],
       }
       const combos = dims.reduce<string[][]>(
         (acc, dim) => acc.flatMap((prefix) => (labels[dim] ?? ['a']).map((v) => [...prefix, v])),
@@ -2757,9 +2761,11 @@ export const handlers = [
             key === 'days_to_pay'
               ? base * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`))
               : (base * (weights[i] ?? 0)) / sum
-          return [...combo, ...currency, ...values(now, now * 0.9)]
+          return { now, row: [...combo, ...currency, ...values(now, now * 0.9)] }
         })
-        .slice(0, body.limit ?? 500)
+        .sort((a, b) => b.now - a.now)
+        .slice(body.offset ?? 0, (body.offset ?? 0) + (body.limit ?? 500))
+        .map((entry) => entry.row)
       return HttpResponse.json({
         columns: [
           ...dims.map((name) => ({ name, type: 'string', role: 'dimension' })),

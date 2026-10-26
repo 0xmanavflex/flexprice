@@ -5,6 +5,8 @@ import {
   change,
   customerRows,
   daysToPay,
+  creditRows,
+  creditTypeRows,
   previousWindow,
   rangeWindow,
   resolveGrain,
@@ -289,5 +291,41 @@ describe('alignToWindow at a partial first bucket', () => {
       false,
     )
     expect(out[0]?.value).toBe(12)
+  })
+})
+
+describe('creditRows', () => {
+  it('pivots paid and free per customer, largest first', () => {
+    const rows = creditRows(
+      [
+        { keys: { customer_id: 'a', credit_type: 'paid' }, value: 30 },
+        { keys: { customer_id: 'a', credit_type: 'free' }, value: 10 },
+        { keys: { customer_id: 'b', credit_type: 'free' }, value: 90 },
+      ],
+      (id) => id.toUpperCase(),
+      String,
+    )
+    expect(rows.map((row) => row.id)).toEqual(['b', 'a'])
+    expect(rows[1]).toMatchObject({ name: 'A', paid: 30, free: 10, total: 40 })
+    expect(rows[0]).toMatchObject({ paid: 0, free: 90, total: 90 })
+    expect(rows.map((row) => row.display.share)).toEqual(['69%', '31%'])
+  })
+})
+
+describe('creditTypeRows', () => {
+  it('counts customers with a positive amount per type', () => {
+    const rows = creditTypeRows(
+      [
+        { keys: { customer_id: 'a', credit_type: 'paid' }, value: 30 },
+        { keys: { customer_id: 'b', credit_type: 'paid' }, value: 20 },
+        { keys: { customer_id: 'b', credit_type: 'free' }, value: 5 },
+        { keys: { customer_id: 'c', credit_type: 'free' }, value: 0 },
+      ],
+      'credit_type',
+      { paid: 'Paid credits', free: 'Free credits' },
+      String,
+    )
+    expect(rows[0]).toMatchObject({ id: 'paid', label: 'Paid credits', customers: 2, amount: 50 })
+    expect(rows[1]).toMatchObject({ id: 'free', customers: 1, amount: 5 })
   })
 })
