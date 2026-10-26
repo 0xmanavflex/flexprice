@@ -127,3 +127,30 @@ export const CustomRange: Story = {
     await expect(canvas.getByRole('button', { name: 'To' })).toBeVisible()
   },
 }
+
+/** With the actor set to people, a Person filter narrows to one team member. */
+export const OnePerson: Story = {
+  args: {
+    filters: { ...FILTERS, actorType: 'user', actorId: 'user_1' },
+    personOptions: [
+      { value: 'user_1', label: 'Subrat' },
+      { value: 'user_2', label: 'Asha' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('combobox', { name: 'Person' })).toHaveTextContent('Subrat')
+  },
+}
+
+/** Another actor type has no people to choose. */
+export const NoPersonForSystem: Story = {
+  args: {
+    filters: { ...FILTERS, actorType: 'system' },
+    personOptions: [{ value: 'user_1', label: 'Subrat' }],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('combobox', { name: 'Person' })).toBeNull()
+  },
+}

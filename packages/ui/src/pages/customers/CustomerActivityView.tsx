@@ -105,6 +105,8 @@ export interface ActivityFilters {
   search: string
   action: string
   actorType: string
+  /** With `actorType` `user`: one person's user id. */
+  actorId?: string
   source: string
   range: ActivityRange
   /** `custom` only: the first and last day shown, `YYYY-MM-DD`, local time. */
@@ -129,6 +131,8 @@ export interface CustomerActivityViewProps {
   onFiltersChange: (filters: ActivityFilters) => void
   actionOptions: ReadonlyArray<{ value: string; label: string }>
   actorOptions: ReadonlyArray<{ value: string; label: string }>
+  /** Team members, by user id, offered once the actor is User. */
+  personOptions?: ReadonlyArray<{ value: string; label: string }>
   sourceOptions: ReadonlyArray<{ value: string; label: string }>
   /** "Showing 1–25", "3 of 25 on this page match". */
   summary: string
@@ -228,6 +232,7 @@ export function CustomerActivityView({
   onFiltersChange,
   actionOptions,
   actorOptions,
+  personOptions = [],
   sourceOptions,
   summary,
   page,
@@ -247,7 +252,9 @@ export function CustomerActivityView({
   const selected = rows.find((row) => row.id === selectedId) ?? null
   const set = (patch: Partial<ActivityFilters>) => onFiltersChange({ ...filters, ...patch })
 
-  const activeFilters = [filters.action, filters.actorType, filters.source].filter(Boolean).length
+  const activeFilters = [filters.action, filters.actorType, filters.actorId, filters.source].filter(
+    Boolean,
+  ).length
 
   return (
     <>
@@ -263,7 +270,7 @@ export function CustomerActivityView({
             searchLabel="Search activity"
             searchPlaceholder="Search events, IDs or people…"
             activeFilterCount={activeFilters}
-            onClear={() => set({ action: '', actorType: '', source: '' })}
+            onClear={() => set({ action: '', actorType: '', actorId: '', source: '' })}
             filters={
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 <FilterSelect
@@ -278,8 +285,18 @@ export function CustomerActivityView({
                   value={filters.actorType}
                   allLabel="All actors"
                   options={actorOptions}
-                  onChange={(actorType) => set({ actorType })}
+                  // A person only narrows people: another actor type drops them.
+                  onChange={(actorType) => set({ actorType, actorId: '' })}
                 />
+                {filters.actorType === 'user' && personOptions.length > 0 ? (
+                  <FilterSelect
+                    label="Person"
+                    value={filters.actorId ?? ''}
+                    allLabel="All people"
+                    options={personOptions}
+                    onChange={(actorId) => set({ actorId })}
+                  />
+                ) : null}
                 <FilterSelect
                   label="Source"
                   value={filters.source}
