@@ -365,6 +365,7 @@ function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
         ? price.transformQuantity.divideBy
         : null,
     priceUnit: custom ? (price.priceUnit ?? '') : '',
+    ...(custom && price.priceUnitAmount ? { priceUnitAmount: price.priceUnitAmount } : {}),
     meterId: wire.meterId || price.meterId || '',
     billingPeriod:
       wire.billingPeriod && wire.billingPeriod in BILLING_PERIOD_LABEL
@@ -756,6 +757,10 @@ function overrideLines(phase: SubscriptionPhase): Record<string, unknown>[] {
 /**
  * A charge's bucket size, set with its commitment, folded into the override
  * lines: onto the charge's own override when it has one, else a line of its own.
+ *
+ * The API takes one `bucket_size` per charge. A bucket the price override chose
+ * itself wins: the form keeps the two in step when either dialog saves, and
+ * this keeps an explicit choice from being overwritten if they ever differ.
  */
 function withBuckets(
   lines: Record<string, unknown>[],
@@ -767,7 +772,7 @@ function withBuckets(
   if (buckets.size === 0) return lines
   const merged = lines.map((line) => {
     const bucket = buckets.get(line.priceId as string)
-    return bucket ? { ...line, bucketSize: bucket } : line
+    return bucket && !line.bucketSize ? { ...line, bucketSize: bucket } : line
   })
   const covered = new Set(lines.map((line) => line.priceId))
   for (const [priceId, bucketSize] of buckets)
@@ -826,6 +831,24 @@ function toLineItemCommitment(commitment: ChargeCommitment): Record<string, unkn
             price: windowPrice(window, base),
           })),
         }
+      : {}),
+  }
+}
+
+/** An add-on's commitments as `line_item_commitments`, keyed by the add-on's price. */
+function addonCommitments(commitments: ChargeCommitment[] | undefined): {
+  lineItemCommitments?: Record<string, Record<string, unknown>>
+  overrideLineItems?: FlexpriceModels.OverrideLineItemRequest[]
+} {
+  if (!commitments || commitments.length === 0) return {}
+  // A bucket size chosen with the commitment goes as the price's override, as for a plan charge.
+  const buckets = withBuckets([], commitments)
+  return {
+    lineItemCommitments: Object.fromEntries(
+      commitments.map((commitment) => [commitment.priceId, toLineItemCommitment(commitment)]),
+    ),
+    ...(buckets.length > 0
+      ? { overrideLineItems: buckets as FlexpriceModels.OverrideLineItemRequest[] }
       : {}),
   }
 }
@@ -950,7 +973,12 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
         }
       : {}),
     ...(draft.addons.length > 0
-      ? { addons: draft.addons.map((addon) => ({ addonId: addon.addonId })) }
+      ? {
+          addons: draft.addons.map((addon) => ({
+            addonId: addon.addonId,
+            ...addonCommitments(addon.commitments),
+          })),
+        }
       : {}),
     billingCycle: draft.billingCycle,
     ...(draft.billingAnchor ? { billingAnchor: utcDay(draft.billingAnchor) } : {}),
@@ -1645,6 +1673,7 @@ export function toInvoicePreview(wire: InvoicePreviewWire): InvoicePreview {
     periodEnd: wire.periodEnd ?? null,
     lines: detail.lines.map((line) => ({
       id: line.id,
+      priceId: line.priceId ?? '',
       name: line.description,
       detail: line.detail,
       quantity: line.quantity,
@@ -1921,7 +1950,7 @@ export function toAddAddonRequest(
   subscriptionId: string,
   draft: AddContractAddon,
 ): FlexpriceModels.AddAddonRequest {
-  return { subscriptionId, addonId: draft.addonId }
+  return { subscriptionId, addonId: draft.addonId, ...addonCommitments(draft.commitments) }
 }
 
 /** A coupon applied to one contract, or to one of its charges, as a `coupon` modification. */

@@ -9,6 +9,7 @@ import {
 import { SUBSCRIPTION_STATUS_LABEL, SubscriptionStatus } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { GlyphBadge } from '../shared/StatusBadge'
+import { SUBSCRIPTION_STATUS_TONE, TONE_TEXT } from '../shared/statusTones'
 
 /**
  * A subscription's lifecycle, drawn like every status here: colour on the glyph,
@@ -17,8 +18,8 @@ import { GlyphBadge } from '../shared/StatusBadge'
  * catalogue's: one system across the console.
  *
  * The shape carries meaning colour cannot: a tick for active, dashes for a
- * trial, a slash for cancelled. Only Incomplete gets the destructive colour,
- * because it is the one state a subscription should not be left sitting in.
+ * trial, a slash for cancelled. The colour comes from the shared registry,
+ * `SUBSCRIPTION_STATUS_TONE`, so the badge and the contracts grid agree.
  */
 export const SubscriptionStatusBadgeProvenance = provenance({
   source: 'composition',
@@ -26,12 +27,13 @@ export const SubscriptionStatusBadgeProvenance = provenance({
   note: 'The shared glyph badge, mapped to a contract lifecycle. Colour on the glyph only.',
 })
 
-const SUBSCRIPTION_STATUS: Record<SubscriptionStatus, { icon: typeof CircleIcon; tone: string }> = {
-  [SubscriptionStatus.Active]: { icon: CircleCheckIcon, tone: 'text-success' },
-  [SubscriptionStatus.Trialing]: { icon: CircleDashedIcon, tone: 'text-info' },
-  [SubscriptionStatus.Paused]: { icon: CirclePauseIcon, tone: 'text-muted-foreground' },
-  [SubscriptionStatus.Cancelled]: { icon: CircleSlashIcon, tone: 'text-muted-foreground' },
-  [SubscriptionStatus.Incomplete]: { icon: CircleAlertIcon, tone: 'text-destructive' },
+/** The shape each status carries; its colour comes from the shared registry. */
+const SUBSCRIPTION_STATUS_ICON: Record<SubscriptionStatus, typeof CircleIcon> = {
+  [SubscriptionStatus.Active]: CircleCheckIcon,
+  [SubscriptionStatus.Trialing]: CircleDashedIcon,
+  [SubscriptionStatus.Paused]: CirclePauseIcon,
+  [SubscriptionStatus.Cancelled]: CircleSlashIcon,
+  [SubscriptionStatus.Incomplete]: CircleAlertIcon,
 }
 
 export interface SubscriptionStatusBadgeProps {
@@ -39,6 +41,11 @@ export interface SubscriptionStatusBadgeProps {
 }
 
 export function SubscriptionStatusBadge({ status }: SubscriptionStatusBadgeProps) {
-  const { icon, tone } = SUBSCRIPTION_STATUS[status]
-  return <GlyphBadge icon={icon} tone={tone} label={SUBSCRIPTION_STATUS_LABEL[status]} />
+  return (
+    <GlyphBadge
+      icon={SUBSCRIPTION_STATUS_ICON[status]}
+      tone={TONE_TEXT[SUBSCRIPTION_STATUS_TONE[status]]}
+      label={SUBSCRIPTION_STATUS_LABEL[status]}
+    />
+  )
 }

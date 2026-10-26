@@ -131,16 +131,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     isSubmitting: { control: 'boolean' },
     submitError: { control: 'text', description: 'Empty means no server error.' },
   },
-  render: ({
-    mode,
-    name,
-    code,
-    description,
-    percentageValue,
-    status,
-    submitError,
-    ...rest
-  }) =>
+  render: ({ mode, name, code, description, percentageValue, status, submitError, ...rest }) =>
     mode === 'edit' ? (
       <TaxRateEditForm
         key={`edit|${name}|${code}|${description}|${status}`}

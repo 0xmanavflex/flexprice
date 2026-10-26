@@ -1,3 +1,4 @@
+import { isPastDue } from './invoice'
 import { type Money, money, perUnit } from './money'
 
 /**
@@ -101,9 +102,12 @@ const PAID = new Set(['SUCCEEDED', 'OVERPAID', 'REFUNDED', 'PARTIALLY_REFUNDED']
 export function hostedInvoiceState(
   invoiceStatus: string,
   paymentStatus: string,
+  /** False once nothing is left to pay, as the console reads it (paid by credits, say). */
+  hasOutstandingBalance = true,
 ): HostedInvoiceState {
   if (invoiceStatus === 'VOIDED') return 'voided'
   if (PAID.has(paymentStatus)) return 'paid'
+  if (!hasOutstandingBalance && paymentStatus !== 'PROCESSING') return 'paid'
   if (paymentStatus === 'PROCESSING') return 'processing'
   return 'open'
 }
@@ -155,7 +159,11 @@ export function toHostedInvoice(wire: unknown): HostedInvoice {
         }
       : null,
     number: text(invoice['invoice_number']) || text(invoice['id']),
-    state: hostedInvoiceState(text(invoice['invoice_status']), text(invoice['payment_status'])),
+    state: hostedInvoiceState(
+      text(invoice['invoice_status']),
+      text(invoice['payment_status']),
+      outstanding(invoice['amount_remaining'], invoice['total']),
+    ),
     issuedAt:
       date(invoice['issue_date']) ?? date(invoice['finalized_at']) ?? date(invoice['created_at']),
     periodStart: date(invoice['period_start']),
@@ -187,10 +195,20 @@ export function toHostedInvoice(wire: unknown): HostedInvoice {
  * 26th is overdue from the 27th, in UTC, the day the invoice PDF prints.
  */
 export function isOverdue(invoice: Pick<HostedInvoice, 'state' | 'dueAt'>, now: Date): boolean {
-  if (invoice.state !== 'open' || !invoice.dueAt) return false
-  const day = (value: Date) =>
-    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate())
-  return day(now) > day(invoice.dueAt)
+  return invoice.state === 'open' && isPastDue(invoice.dueAt, now)
+}
+
+/**
+ * Whether money is still owed. A missing remaining amount falls back to the
+ * total; with neither reported the balance is unknown, and an unknown balance
+ * is owed, so an invoice the API did not report on is never called paid.
+ */
+function outstanding(remaining: unknown, total: unknown): boolean {
+  const known = (v: unknown): v is string | number => typeof v === 'string' || typeof v === 'number'
+  const source = known(remaining) ? remaining : known(total) ? total : null
+  if (source === null) return true
+  const value = String(source)
+  return /[1-9]/.test(value.replace(/^-/, '')) && !value.startsWith('-')
 }
 
 type Amount = (value: unknown) => Money
