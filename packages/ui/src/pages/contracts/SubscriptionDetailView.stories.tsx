@@ -387,6 +387,7 @@ const PREVIEW: InvoicePreview = {
   lines: [
     {
       id: 'pl_1',
+      priceId: 'price_platform',
       name: 'Platform fee',
       detail: 'Oct 1 – Nov 1',
       quantity: '1',
@@ -396,6 +397,7 @@ const PREVIEW: InvoicePreview = {
     },
     {
       id: 'pl_2',
+      priceId: 'price_api',
       name: 'API requests',
       detail: '920,250 requests',
       quantity: '920250',
@@ -405,6 +407,7 @@ const PREVIEW: InvoicePreview = {
     },
     {
       id: 'pl_3',
+      priceId: 'price_onboarding',
       name: 'Onboarding',
       detail: 'Oct 1 – Nov 1',
       quantity: '1',
@@ -414,6 +417,7 @@ const PREVIEW: InvoicePreview = {
     },
     {
       id: 'pl_4',
+      priceId: 'price_seat_overage',
       name: 'Seat overage',
       detail: 'No usage this period',
       quantity: '0',
@@ -894,6 +898,10 @@ export const UpcomingInvoice: Story = {
     await expect(section.getByText('API requests')).toBeVisible()
     await expect(section.getByText('920,250 requests')).toBeVisible()
     await expect(section.getByText('$1,840.50')).toBeVisible()
+    // Joined to the contract's lines by price: interval and billing timing show.
+    await expect(section.getByRole('columnheader', { name: 'Interval' })).toBeVisible()
+    await expect(section.getByRole('columnheader', { name: 'Billing timing' })).toBeVisible()
+    await expect(section.getAllByText('Monthly').length).toBeGreaterThan(0)
     await expect(section.getByText('Subtotal')).toBeVisible()
     await expect(section.getByText('Discount')).toBeVisible()
     await expect(section.getByText('−$359.05')).toBeVisible()
@@ -1224,6 +1232,7 @@ export const UpcomingInvoiceManyLines: Story = {
       ...PREVIEW,
       lines: Array.from({ length: 8 }, (_, index) => ({
         id: `pl_${index}`,
+        priceId: `price_${index}`,
         name: `Line item ${index + 1}`,
         detail: 'Oct 1 – Nov 1',
         quantity: '1',

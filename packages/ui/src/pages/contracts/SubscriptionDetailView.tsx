@@ -59,6 +59,9 @@ import {
   type EndContractCharge,
   type Invoice,
   type InvoicePreview,
+  BillingModel,
+  InvoiceCadence,
+  money,
   type InvoicePreviewLine,
   type LineChangePreview,
   type Money,
@@ -905,7 +908,13 @@ export function SubscriptionDetailView({
                 {...(canActivate && onActivate ? { onActivate } : {})}
               />
 
-              {preview ? <InvoicePreviewSection status={s.status} preview={preview} /> : null}
+              {preview ? (
+                <InvoicePreviewSection
+                  status={s.status}
+                  preview={preview}
+                  contractLines={lines.data ?? []}
+                />
+              ) : null}
 
               {/*
                 The Overview's charges: only the ones this contract changed,
@@ -1857,14 +1866,40 @@ function ContractDetails({
  * and not-yet-started contracts have no next invoice, and a trial's first one
  * only appears when the trial ends, so each says so or stays out of the way.
  */
+/**
+ * A preview line's unit price, from the contract line's own price when it can be
+ * joined: a flat or per-unit price is its amount, a tiered or volume price says
+ * so, and a package price is per package. Without a join it is the amount over
+ * the quantity, which is only right for a flat price.
+ */
+function previewUnitPrice(
+  line: InvoicePreviewLine,
+  contract: SubscriptionLine | undefined,
+): string {
+  const charge = contract?.charge
+  if (charge) {
+    if (charge.billingModel === BillingModel.Tiered) return 'Tiered'
+    if (charge.billingModel === BillingModel.Package && charge.transformQuantity?.divideBy)
+      return `${unitMoney(money(charge.amount, charge.currency))} per ${charge.transformQuantity.divideBy.toLocaleString('en-US')}`
+    if (charge.amount) return unitMoney(money(charge.amount, charge.currency))
+  }
+  return line.unitPrice ? unitMoney(line.unitPrice) : '—'
+}
+
 function InvoicePreviewSection({
   status,
   preview,
+  contractLines,
 }: {
   status: SubscriptionStatus
   preview: SubscriptionPart<InvoicePreview>
+  /** The contract's own lines: each preview line is joined to one by price for its real price. */
+  contractLines: readonly SubscriptionLine[]
 }) {
   const [expanded, setExpanded] = useState(false)
+  const byPrice = new Map(contractLines.map((line) => [line.priceId, line]))
+  const contractLineOf = (line: InvoicePreviewLine) =>
+    line.priceId ? byPrice.get(line.priceId) : undefined
   if (status === SubscriptionStatus.Cancelled || status === SubscriptionStatus.Incomplete) {
     return null
   }
@@ -1942,9 +1977,30 @@ function InvoicePreviewSection({
                 align: 'end',
                 cell: (line) => (
                   <Muted className="tabular-nums">
-                    {line.unitPrice ? unitMoney(line.unitPrice) : '—'}
+                    {previewUnitPrice(line, contractLineOf(line))}
                   </Muted>
                 ),
+              },
+              {
+                key: 'interval',
+                header: 'Interval',
+                cell: (line) => <Muted>{contractLineOf(line)?.billingPeriodLabel || '—'}</Muted>,
+              },
+              {
+                key: 'timing',
+                header: 'Billing timing',
+                cell: (line) => {
+                  const cadence = contractLineOf(line)?.charge?.invoiceCadence
+                  return (
+                    <Muted>
+                      {cadence
+                        ? cadence === InvoiceCadence.Advance
+                          ? 'In advance'
+                          : 'In arrears'
+                        : '—'}
+                    </Muted>
+                  )
+                },
               },
               {
                 key: 'amount',

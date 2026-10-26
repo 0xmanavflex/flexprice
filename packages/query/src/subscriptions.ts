@@ -1645,6 +1645,7 @@ export function toInvoicePreview(wire: InvoicePreviewWire): InvoicePreview {
     periodEnd: wire.periodEnd ?? null,
     lines: detail.lines.map((line) => ({
       id: line.id,
+      priceId: line.priceId ?? '',
       name: line.description,
       detail: line.detail,
       quantity: line.quantity,

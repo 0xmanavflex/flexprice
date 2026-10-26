@@ -207,6 +207,7 @@ export interface InvoiceDetailWire extends InvoiceWire {
   lineItems?:
     | {
         id?: string | undefined
+        priceId?: string | undefined
         displayName?: string | undefined
         planDisplayName?: string | undefined
         meterDisplayName?: string | undefined
@@ -257,6 +258,7 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
     amountPaid: wire.amountPaid ?? '0',
     lines: (wire.lineItems ?? []).map((line, index) => ({
       id: line.id ?? `line_${index}`,
+      priceId: line.priceId ?? '',
       description: line.displayName || line.planDisplayName || line.meterDisplayName || 'Line item',
       detail:
         line.periodStart && line.periodEnd
