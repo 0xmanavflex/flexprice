@@ -348,7 +348,8 @@ const METER_FEATURE_PAGE = 100
 
 /**
  * The features on a set of meters, whatever page of the catalogue they sit on:
- * searched by `meter_ids`, all in one read. Empty meters read nothing.
+ * searched by `meter_ids`, 100 at a time until the reported total. Empty
+ * meters read nothing.
  */
 export function useFeaturesByMeters(meterIds: readonly string[]) {
   const client = useFlexprice()
@@ -363,7 +364,14 @@ export function useFeaturesByMeters(meterIds: readonly string[]) {
         const response = await call(
           (options) =>
             client.features.queryFeature(
-              { meterIds: ids, limit: METER_FEATURE_PAGE, offset, expand: 'meters' },
+              {
+                meterIds: ids,
+                limit: METER_FEATURE_PAGE,
+                offset,
+                // A total order, so no feature moves across a page boundary.
+                sort: sortWithTieBreak('name', 'asc'),
+                expand: 'meters',
+              },
               options,
             ),
           signal,
