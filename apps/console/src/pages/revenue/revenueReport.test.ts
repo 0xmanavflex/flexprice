@@ -278,4 +278,16 @@ describe('alignToWindow at a partial first bucket', () => {
     )
     expect(out[0]?.value).toBe(5)
   })
+
+  it('keeps a partial first average when the series is not additive', () => {
+    const out = alignToWindow(
+      [{ at: new Date('2026-09-01T00:00:00Z'), value: 12 }],
+      window,
+      'month',
+      false,
+      null,
+      false,
+    )
+    expect(out[0]?.value).toBe(12)
+  })
 })

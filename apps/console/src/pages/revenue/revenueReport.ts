@@ -211,8 +211,8 @@ function reachesInto(at: Date, start: Date, grain: Grain): boolean {
  * One point per bucket in the window. A report timeseries omits months with
  * nothing to add up, which draws a two-bar chart for a twelve-month filter.
  * Missing buckets are zero, in order, including a comparison when one was asked for.
- * A bucket that starts before the window is folded into the first one only when
- * `additive`: averages cannot be added together.
+ * A bucket that starts before the window lands in the first one: added when
+ * `additive`, otherwise it replaces it, as averages cannot be added together.
  */
 export function alignToWindow(
   points: DatedAmount[],
@@ -228,16 +228,16 @@ export function alignToWindow(
   const start = utcMidnight(window.start)
   for (const point of points) {
     if (Number.isNaN(point.at.getTime())) continue
-    const at =
-      additive && point.at < start && reachesInto(point.at, start, grain) ? start : point.at
+    const early = point.at < start && reachesInto(point.at, start, grain)
+    const at = early ? start : point.at
     if (at < start || at >= window.end) continue
     const { key } = bucketOf(at, grain, window.start)
     const bucket = buckets.get(key)
-    if (!bucket) continue
-    bucket.value += point.value
+    if (!bucket || (early && !additive && seen.has(key))) continue
+    bucket.value = additive ? bucket.value + point.value : point.value
     seen.add(key)
     if (comparing && point.previous != null) {
-      previous.set(key, (previous.get(key) ?? 0) + point.previous)
+      previous.set(key, additive ? (previous.get(key) ?? 0) + point.previous : point.previous)
     }
   }
   return [...buckets.entries()].map(([key, bucket]) => ({
