@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- `CustomerAnalyticsView` takes `costNote`: a muted line under the totals saying why cost and margin are blank. The console sets it when the environment has no cost sheet, instead of showing the API's zero cost and margin (R-33).
 - Credit grant end dates (R-01, console half):
   - Editing a plan's credit grant no longer offers an End date. The API archives a plan grant as soon as any end date is sent, which is why grants "disappeared". A note says how to end one instead: remove it from the plan.
   - Add-on grant tables (`CreditGrantTable`) and the contract's grants table show an Ends column once a grant has an end date.

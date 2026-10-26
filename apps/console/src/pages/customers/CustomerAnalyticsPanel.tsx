@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { DEFAULT_FEATURE_QUERY, FeatureType, formatMoney } from '@fp/domain'
 import {
   useCustomerCostAnalytics,
+  useHasCostSheet,
   useFeatures,
   useFeaturesByMeters,
   useUsageAnalytics,
@@ -105,9 +106,13 @@ export function CustomerAnalyticsPanel({
     { enabled: ready },
   )
   const costs = useCustomerCostAnalytics(filters, { enabled: ready })
+  // Without a cost sheet the server still answers a zero cost and margin:
+  // those zeros are dropped, and the totals say why they are blank.
+  const hasCostSheet = useHasCostSheet()
+  const noCostSheet = hasCostSheet.data === false
 
   const data = usage.data
-  const cost = costs.data
+  const cost = noCostSheet ? undefined : costs.data
   const rows = data?.features ?? []
   // Share is a ratio of the server's own amounts; nothing here is summed as money.
   const revenueOf = (amount: string | undefined) => (amount ? Number(amount) : 0)
@@ -123,6 +128,9 @@ export function CustomerAnalyticsPanel({
       {...(scope ? { title: 'Usage by feature' } : {})}
       selectedFeatureIds={featureIds}
       onSelectedFeatureIdsChange={setFeatureIds}
+      {...(noCostSheet
+        ? { costNote: 'No cost sheet, so no cost or margin. Add one under Cost sheets.' }
+        : {})}
       totals={{
         revenue: revenue ? formatMoney(revenue) : null,
         cost: cost?.cost ? formatMoney(cost.cost) : null,
