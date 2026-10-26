@@ -18,12 +18,18 @@ import {
 } from './storage'
 import { clearListMemory } from '../listMemory'
 import { setActiveEnvironmentId } from './activeEnvironment'
+import { endSupabaseSession } from './supabaseSession'
 
 /** The credentials a signed-in console holds. */
 export interface Session {
   token: string
   userId: string
   tenantId: string
+  /**
+   * The hosted region whose Supabase session client keeps this session fresh.
+   * Absent for a session with no refresh token (`POST /auth/login`, SAML).
+   */
+  region?: string
 }
 
 export type SessionStatus = 'signed-out' | 'signed-in'
@@ -33,6 +39,8 @@ export interface SessionValue {
   status: SessionStatus
   signIn: (session: Session) => void
   signOut: () => void
+  /** The same session with a refreshed access token. */
+  replaceToken: (token: string) => void
   /** The active environment id, or null until one is chosen. */
   environmentId: string | null
   setEnvironmentId: (id: string) => void
@@ -97,7 +105,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     writeSession(next)
   }, [])
 
+  const replaceToken = useCallback((token: string) => {
+    const current = latest.current
+    if (!current || current.token === token) return
+    const next = { ...current, token }
+    latest.current = next
+    setSession(next)
+    writeSession(next)
+  }, [])
+
   const signOut = useCallback(() => {
+    // Revokes the refresh token too, so a hosted session cannot be revived
+    // from storage after signing out (as V1's `supabase.auth.signOut()`).
+    const region = latest.current?.region
+    if (region) void endSupabaseSession(region)
     latest.current = null
     setActiveEnvironmentId(null)
     setSession(null)
@@ -173,10 +194,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       status: session ? 'signed-in' : 'signed-out',
       signIn,
       signOut,
+      replaceToken,
       environmentId,
       setEnvironmentId,
     }),
-    [session, environmentId, signIn, signOut, setEnvironmentId],
+    [session, environmentId, signIn, signOut, replaceToken, setEnvironmentId],
   )
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

@@ -3,6 +3,7 @@ import type { FlexpriceProviderProps } from '@fp/query'
 import { env } from '@/env'
 import { getActiveEnvironmentId } from './activeEnvironment'
 import { useSessionRef } from './SessionProvider'
+import { supabaseAccessToken } from './supabaseSession'
 
 /** The `AuthSource` shape, reached through `@fp/query` rather than `@fp/api`. */
 type AuthSource = FlexpriceProviderProps['auth']
@@ -21,6 +22,9 @@ type AuthSource = FlexpriceProviderProps['auth']
  * whatever it was when the provider first mounted. Signing in would then need a
  * remount to take effect: the exact coupling the async getters exist to avoid.
  *
+ * On a hosted region the token comes from the Supabase session client, fresh
+ * per request (see `supabaseSession`); elsewhere it is the stored one.
+ *
  * The API key, when one is configured, wins over the session token. It is a
  * development-only override that is `null` in any production build, and it is
  * the whole reason it can be honoured here without a session existing at all:
@@ -31,7 +35,13 @@ export function useAuthSource(): AuthSource {
 
   return useMemo<AuthSource>(
     () => ({
-      getToken: async () => env.apiKey ?? session.current.session?.token ?? null,
+      getToken: async () => {
+        if (env.apiKey) return env.apiKey
+        const current = session.current.session
+        // A hosted session asks Supabase, which refreshes a lapsed token first.
+        const fresh = current?.region ? await supabaseAccessToken(current.region) : null
+        return fresh ?? current?.token ?? null
+      },
       // Not `session.current.environmentId`: that ref is only refreshed by a
       // render, and a request fired between a switch and its re-render would go
       // out naming the environment the user just left.

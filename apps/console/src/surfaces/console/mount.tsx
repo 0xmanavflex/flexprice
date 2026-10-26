@@ -10,8 +10,10 @@ import {
   SessionProvider,
   bypassesSignIn,
   getActiveEnvironmentId,
+  hasSession,
   useAuthSource,
   useSession,
+  useSupabaseSessionSync,
 } from '@/app/session'
 import { env } from '@/env'
 import { RegionProvider, useRegion } from '@/app/region'
@@ -72,6 +74,20 @@ function ConsoleApp() {
     signOut()
     void router.navigate({ to: '/sign-in', search: {} as never })
   }, [signOut])
+
+  /*
+   * A hosted session ends when Supabase can no longer refresh it: the refresh
+   * token expired or was revoked, or the person signed out in another tab. The
+   * console signs out with it rather than waiting for the next 401. Its own
+   * sign-out ends the Supabase session too, so this checks there is still a
+   * session to end.
+   */
+  useSupabaseSessionSync(
+    useCallback(() => {
+      if (!hasSession()) return
+      onUnauthorized()
+    }, [onUnauthorized]),
+  )
 
   return (
     <FlexpriceProvider
