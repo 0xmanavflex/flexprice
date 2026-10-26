@@ -17,9 +17,13 @@ export interface ActivitySearch {
   actor?: string
   source?: string
   range?: ActivityRange
+  /** `range=custom`: the first and last day, `YYYY-MM-DD`. */
+  from?: string
+  to?: string
 }
 
-const RANGES: readonly ActivityRange[] = ['24h', '7d', '30d']
+const RANGES: readonly ActivityRange[] = ['24h', '7d', '30d', 'custom']
+const DAY = /^\d{4}-\d{2}-\d{2}$/
 const DEFAULT_RANGE: ActivityRange = '30d'
 const ACTION = /^[a-z_]+\.[a-z_]+$/
 const ACTORS = new Set(ACTIVITY_ACTOR_TYPES.map((actor) => actor.value))
@@ -32,12 +36,16 @@ export function parseActivitySearch(search: Record<string, unknown>): ActivitySe
   const actor = text(search['actor'])
   const source = text(search['source'])
   const range = text(search['range']) as ActivityRange
+  const from = text(search['from'])
+  const to = text(search['to'])
   return {
     ...(q ? { q } : {}),
     ...(ACTION.test(action) ? { action } : {}),
     ...(ACTORS.has(actor) ? { actor } : {}),
     ...(ACTIVITY_SOURCES.includes(source) ? { source } : {}),
     ...(RANGES.includes(range) && range !== DEFAULT_RANGE ? { range } : {}),
+    ...(range === 'custom' && DAY.test(from) ? { from } : {}),
+    ...(range === 'custom' && DAY.test(to) ? { to } : {}),
   }
 }
 
@@ -48,6 +56,8 @@ export function activityFiltersFrom(search: ActivitySearch): ActivityFilters {
     actorType: search.actor ?? '',
     source: search.source ?? '',
     range: search.range ?? DEFAULT_RANGE,
+    ...(search.from ? { from: search.from } : {}),
+    ...(search.to ? { to: search.to } : {}),
   }
 }
 
@@ -58,5 +68,7 @@ export function activitySearchFrom(filters: ActivityFilters): ActivitySearch {
     actor: filters.actorType,
     source: filters.source,
     range: filters.range,
+    from: filters.from,
+    to: filters.to,
   })
 }

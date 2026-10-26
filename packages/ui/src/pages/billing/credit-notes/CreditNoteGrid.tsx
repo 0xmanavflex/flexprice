@@ -10,7 +10,6 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import {
   type EntityColumn,
-  type PillTone,
   dateColumn,
   moneyColumn,
   pillColumn,
@@ -18,6 +17,7 @@ import {
 } from '../../shared/cells'
 import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
+import { CREDIT_NOTE_STATUS_TONE } from '../../shared/statusTones'
 
 /**
  * The credit memo list, on the shared `EntityList`.
@@ -38,11 +38,7 @@ const STATUS_CHOICES = Object.values(CreditNoteStatus).map((value) => ({
   label: CREDIT_NOTE_STATUS_LABEL[value],
 }))
 
-const STATUS_TONE: Record<CreditNoteStatus, PillTone> = {
-  [CreditNoteStatus.Draft]: 'neutral',
-  [CreditNoteStatus.Finalized]: 'success',
-  [CreditNoteStatus.Voided]: 'neutral',
-}
+const STATUS_TONE = CREDIT_NOTE_STATUS_TONE
 
 const GUIDES: EntityGuide[] = [
   {

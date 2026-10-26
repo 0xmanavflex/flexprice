@@ -38,8 +38,15 @@ export const WebhookMessageSheetProvenance = provenance({
 })
 
 export interface WebhookMessageSheetProps {
-  /** `null` closes the sheet. */
+  /** `null` closes the sheet, unless `open` says it is open while the message loads. */
   message: WebhookMessage | null
+  /** Opens the sheet before the message has arrived (a deep link): it shows loading or the error. */
+  open?: boolean
+  messageLoading?: boolean
+  messageError?: string | null
+  onRetry?: () => void
+  /** A retry after a failed load is in flight: the sheet shows loading and Try again waits. */
+  retrying?: boolean
   attempts: WebhookAttempt[]
   attemptsLoading?: boolean
   attemptsError?: string | null
@@ -51,6 +58,11 @@ export interface WebhookMessageSheetProps {
 
 export function WebhookMessageSheet({
   message,
+  open,
+  messageLoading = false,
+  messageError = null,
+  onRetry,
+  retrying = false,
   attempts,
   attemptsLoading = false,
   attemptsError = null,
@@ -66,9 +78,53 @@ export function WebhookMessageSheet({
     : ''
 
   return (
-    <Sheet open={message !== null} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={open ?? message !== null} onOpenChange={(next) => !next && onClose()}>
       <SheetContent>
-        {message ? (
+        {!message ? (
+          <>
+            <SheetHeader>
+              <SheetTitle>Message</SheetTitle>
+              <SheetDescription>
+                {messageError && !retrying
+                  ? 'The message could not be loaded.'
+                  : 'Loading the message…'}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex flex-col gap-3 px-4 pb-4">
+              {messageError ? (
+                <>
+                  {retrying ? (
+                    <>
+                      <Skeleton className="h-6 w-2/3" />
+                      <Skeleton className="h-40 w-full" />
+                    </>
+                  ) : (
+                    <p role="alert" className="text-destructive text-sm">
+                      {messageError}
+                    </p>
+                  )}
+                  {onRetry ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-fit px-3"
+                      disabled={retrying}
+                      onClick={onRetry}
+                    >
+                      {retrying ? 'Trying again…' : 'Try again'}
+                    </Button>
+                  ) : null}
+                </>
+              ) : messageLoading ? (
+                <>
+                  <Skeleton className="h-6 w-2/3" />
+                  <Skeleton className="h-40 w-full" />
+                </>
+              ) : null}
+            </div>
+          </>
+        ) : (
           <>
             <SheetHeader>
               <SheetTitle className="font-mono">{message.eventType || 'Message'}</SheetTitle>
@@ -148,7 +204,7 @@ export function WebhookMessageSheet({
               </section>
             </div>
           </>
-        ) : null}
+        )}
       </SheetContent>
     </Sheet>
   )

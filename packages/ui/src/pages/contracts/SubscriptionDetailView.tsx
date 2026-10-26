@@ -59,6 +59,9 @@ import {
   type EndContractCharge,
   type Invoice,
   type InvoicePreview,
+  BillingModel,
+  InvoiceCadence,
+  money,
   type InvoicePreviewLine,
   type LineChangePreview,
   type Money,
@@ -66,7 +69,9 @@ import {
   type SubscriptionCoupon,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
+  type Subscription,
   type SubscriptionLine,
+  isInheritedContract,
   lineLineages,
   type SubscriptionSchedule,
   type SubscriptionTax,
@@ -117,6 +122,7 @@ import { ChargeAlertForm } from './ChargeAlertForm'
 import { PauseContractDialog } from './PauseContractDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
+import { everyPeriod } from './ContractSummary'
 
 /**
  * A unit price, with the precision a usage rate needs ($0.002 a request):
@@ -256,6 +262,10 @@ export interface SubscriptionDetailViewProps {
   onBack?: () => void
   onOpenCustomer?: () => void
   onOpenPlan?: () => void
+  /** Opens another contract: an inherited one's parent, or a parent's inherited ones. */
+  onOpenContract?: ((id: string) => void) | undefined
+  /** A parent's inherited contracts (its children's mirrors), as V1 lists them. */
+  inheritedContracts?: SubscriptionPart<Subscription[]> | undefined
   onOpenInvoice?: (invoiceId: string) => void
   /** Incomplete contracts only: the More item and the banner button. */
   onActivate?: () => void
@@ -426,6 +436,8 @@ export function SubscriptionDetailView({
   onBack,
   onOpenCustomer,
   onOpenPlan,
+  onOpenContract,
+  inheritedContracts,
   onOpenInvoice,
   onActivate,
   onSaveMetadata,
@@ -503,7 +515,9 @@ export function SubscriptionDetailView({
   const canResume = Boolean(onResume) && canResumeSubscription(s.status)
   const title = `${s.customerName} on ${s.planName}`
 
-  const canEditCharges = !isCancelled && !isCancelling
+  // An inherited contract mirrors its parent's: nothing on it is changed here.
+  const inherited = isInheritedContract(s)
+  const canEditCharges = !isCancelled && !isCancelling && !inherited
   // The API adds a charge only to an active contract (not a draft, trial,
   // pause or one not yet started), so it is offered only there.
   const canAddCharge =
@@ -556,7 +570,7 @@ export function SubscriptionDetailView({
     if (kind === 'coupon') setCouponLineId(null)
     setSection(kind)
   }
-  const canModify = !isCancelled
+  const canModify = !isCancelled && !inherited
   const createFor = (
     kind: ContractSectionKind,
     label: string,
@@ -904,8 +918,63 @@ export function SubscriptionDetailView({
                 schedules={schedules.data ?? []}
                 {...(canActivate && onActivate ? { onActivate } : {})}
               />
+              {inherited ? (
+                <Alert variant="info">
+                  <InfoIcon aria-hidden="true" />
+                  <AlertTitle>Inherited from a parent contract</AlertTitle>
+                  <AlertDescription>
+                    Its charges and billing follow the parent contract, so it can't be changed here.
+                  </AlertDescription>
+                  {s.parentSubscriptionId && onOpenContract ? (
+                    <AlertAction>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => onOpenContract(s.parentSubscriptionId!)}
+                      >
+                        Open parent contract
+                      </Button>
+                    </AlertAction>
+                  ) : null}
+                </Alert>
+              ) : null}
+              {inheritedContracts && (inheritedContracts.data?.length ?? 0) > 0 ? (
+                <Section table showTitle title="Inherited contracts">
+                  <DetailTable<Subscription>
+                    compact
+                    label="Inherited contracts"
+                    noun="contracts"
+                    rows={inheritedContracts.data ?? []}
+                    getRowId={(row) => row.id}
+                    toolbar={false}
+                    {...(onOpenContract
+                      ? { onRowClick: (row: Subscription) => onOpenContract(row.id) }
+                      : {})}
+                    columns={[
+                      {
+                        key: 'customer',
+                        header: 'Customer',
+                        cell: (row) => <Strong>{row.customerName}</Strong>,
+                      },
+                      { key: 'plan', header: 'Plan', cell: (row) => <Muted>{row.planName}</Muted> },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        cell: (row) => <SubscriptionStatusBadge status={row.status} />,
+                      },
+                    ]}
+                  />
+                </Section>
+              ) : null}
 
-              {preview ? <InvoicePreviewSection status={s.status} preview={preview} /> : null}
+              {preview ? (
+                <InvoicePreviewSection
+                  status={s.status}
+                  preview={preview}
+                  contractLines={lines.data ?? []}
+                />
+              ) : null}
 
               {/*
                 The Overview's charges: only the ones this contract changed,
@@ -1055,6 +1124,13 @@ export function SubscriptionDetailView({
                         cell: (row) => (
                           <Muted>{CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}</Muted>
                         ),
+                      },
+                      // When the grant stops issuing credits: kept by the API for a
+                      // contract's grant, so it no longer reads as still running.
+                      {
+                        key: 'ends',
+                        header: 'Ends',
+                        cell: (row) => <Muted>{row.endDate ? day(row.endDate) : 'No end'}</Muted>,
                       },
                       ...removeColumn<CreditGrant>(
                         (row) => row.name,
@@ -1311,7 +1387,8 @@ export function SubscriptionDetailView({
             {fxOverrides}
             <MetadataCard
               metadata={s.metadata}
-              {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
+              // A cancelled contract is read-only, its metadata too.
+              {...(onSaveMetadata && canModify ? { onSave: onSaveMetadata } : {})}
             />
           </div>
         ) : null}
@@ -1644,6 +1721,9 @@ export function SubscriptionDetailView({
         options={{
           features: sectionOptions?.features ?? [],
           addons: sectionOptions?.addons ?? [],
+          addonCharges: sectionOptions?.addonCharges,
+          currency: s.currency,
+          billingPeriod: s.billingPeriod ?? undefined,
           coupons: sectionOptions?.coupons ?? [],
           taxRates: sectionOptions?.taxRates ?? [],
         }}
@@ -1857,14 +1937,70 @@ function ContractDetails({
  * and not-yet-started contracts have no next invoice, and a trial's first one
  * only appears when the trial ends, so each says so or stays out of the way.
  */
+/**
+ * A preview line's unit price, from the contract line's own price when it can be
+ * joined: a flat or per-unit price is its amount, a tiered or volume price says
+ * so, and a package price is per package. Without a join it is the amount over
+ * the quantity, which is only right for a flat price.
+ */
+function previewUnitPrice(
+  line: InvoicePreviewLine,
+  contract: SubscriptionLine | undefined,
+): string {
+  const charge = contract?.charge
+  if (charge) {
+    if (charge.billingModel === BillingModel.Tiered) return 'Tiered'
+    // A custom-unit price is written in its unit ("10 TOK"); `charge.amount` is
+    // not that rate, so without the unit's own amount it falls back below.
+    const unit = contract?.pricing?.priceUnit ?? ''
+    const rate = unit
+      ? contract?.pricing?.priceUnitAmount
+        ? `${unitAmount(contract.pricing.priceUnitAmount)} ${unit}`
+        : null
+      : charge.amount
+        ? unitMoney(money(charge.amount, charge.currency))
+        : null
+    if (rate) {
+      return charge.billingModel === BillingModel.Package && charge.transformQuantity?.divideBy
+        ? `${rate} per ${charge.transformQuantity.divideBy.toLocaleString('en-US')}`
+        : rate
+    }
+  }
+  return line.unitPrice ? unitMoney(line.unitPrice) : '—'
+}
+
+/** A custom-unit rate as written, grouped, up to six decimals: "10", "0.0025". */
+function unitAmount(amount: string): string {
+  // The exact decimal string, as unitMoney passes it: a double would round a large rate.
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(
+    amount as unknown as number,
+  )
+}
+
+/** "Monthly", or "Every 3 months" when the charge bills every few periods. */
+function previewInterval(contract: SubscriptionLine | undefined): string {
+  const charge = contract?.charge
+  if (charge && charge.billingPeriodCount > 1) {
+    const every = everyPeriod(charge.billingPeriod, charge.billingPeriodCount)
+    return every.charAt(0).toUpperCase() + every.slice(1)
+  }
+  return contract?.billingPeriodLabel || '—'
+}
+
 function InvoicePreviewSection({
   status,
   preview,
+  contractLines,
 }: {
   status: SubscriptionStatus
   preview: SubscriptionPart<InvoicePreview>
+  /** The contract's own lines: each preview line is joined to one by price for its real price. */
+  contractLines: readonly SubscriptionLine[]
 }) {
   const [expanded, setExpanded] = useState(false)
+  const byPrice = new Map(contractLines.map((line) => [line.priceId, line]))
+  const contractLineOf = (line: InvoicePreviewLine) =>
+    line.priceId ? byPrice.get(line.priceId) : undefined
   if (status === SubscriptionStatus.Cancelled || status === SubscriptionStatus.Incomplete) {
     return null
   }
@@ -1942,9 +2078,30 @@ function InvoicePreviewSection({
                 align: 'end',
                 cell: (line) => (
                   <Muted className="tabular-nums">
-                    {line.unitPrice ? unitMoney(line.unitPrice) : '—'}
+                    {previewUnitPrice(line, contractLineOf(line))}
                   </Muted>
                 ),
+              },
+              {
+                key: 'interval',
+                header: 'Interval',
+                cell: (line) => <Muted>{previewInterval(contractLineOf(line))}</Muted>,
+              },
+              {
+                key: 'timing',
+                header: 'Billing timing',
+                cell: (line) => {
+                  const cadence = contractLineOf(line)?.charge?.invoiceCadence
+                  return (
+                    <Muted>
+                      {cadence
+                        ? cadence === InvoiceCadence.Advance
+                          ? 'In advance'
+                          : 'In arrears'
+                        : '—'}
+                    </Muted>
+                  )
+                },
               },
               {
                 key: 'amount',

@@ -3,12 +3,7 @@ import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { PlusIcon } from '@ui/icons'
 import { FEATURE_TYPE_GLYPH } from '../../shared/cells'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
-import {
-  type Entitlement,
-  FeatureType,
-  meteredAllowanceLabel,
-  meteredResetLabel,
-} from '@fp/domain'
+import { type Entitlement, FeatureType, meteredAllowanceLabel, meteredResetLabel } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
 

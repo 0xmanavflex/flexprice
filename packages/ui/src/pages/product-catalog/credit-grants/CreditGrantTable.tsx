@@ -138,6 +138,22 @@ function CreditGrantTableInner({
               </span>
             ),
           },
+          // When an add-on's grant stops issuing credits, once an end date is set.
+          ...(grants.some((grant) => grant.endDate)
+            ? [
+                {
+                  key: 'ends',
+                  header: 'Ends',
+                  cell: (grant: CreditGrant) => (
+                    <span className="text-muted-foreground tabular-nums">
+                      {grant.endDate
+                        ? grant.endDate.toLocaleDateString('en-US', { dateStyle: 'medium' })
+                        : 'No end'}
+                    </span>
+                  ),
+                },
+              ]
+            : []),
           {
             key: 'priority',
             header: 'Priority',
