@@ -888,6 +888,8 @@ type SettingsValue = Record<string, unknown>
 
 /** What a tenant that has never written the key gets back. Observed live. */
 const SETTINGS_DEFAULTS: Record<string, SettingsValue> = {
+  // `{}`: Flexprice's native engine, off.
+  tax_config: {},
   invoice_config: {
     prefix: 'INV',
     separator: '-',

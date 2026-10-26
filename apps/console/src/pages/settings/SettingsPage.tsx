@@ -27,6 +27,7 @@ import { PortalPanel } from './PortalPanel'
 import { MembersPanel } from './MembersPanel'
 import { ProfilePanel } from './ProfilePanel'
 import { SubscriptionsPanel } from './SubscriptionsPanel'
+import { TaxEnginePanel } from './TaxEnginePanel'
 import { TagsPanel } from './TagsPanel'
 import { WalletAlertsPanel } from './WalletAlertsPanel'
 import { SettingsUnavailable, UNAVAILABLE_COPY } from './SettingsUnavailable'
@@ -246,6 +247,8 @@ function SettingsPanel({
       return <MembersPanel />
     case 'invoicing/invoices':
       return gated(RBAC_ENTITY.Setting, <InvoicesPanel />)
+    case 'invoicing/tax':
+      return gated(RBAC_ENTITY.Setting, <TaxEnginePanel />)
     case 'subscription/subscriptions':
       return gated(RBAC_ENTITY.Setting, <SubscriptionsPanel />)
     case 'currency/currencies':

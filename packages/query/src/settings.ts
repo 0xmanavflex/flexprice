@@ -34,6 +34,8 @@ import {
   type SamlDefaultRole,
   type SamlSettings,
   type SubscriptionConfig,
+  type TaxConfig,
+  TaxProvider,
   type WalletAlertConfig,
   type WalletAlertThreshold,
   defaultInvoiceConfig,
@@ -186,6 +188,29 @@ export function toSubscriptionConfigRequest(config: SubscriptionConfig): Record<
     auto_cancellation_enabled: config.autoCancellationEnabled,
     grace_period_days: config.gracePeriodDays,
   }
+}
+
+/* ---------------------------------- tax ---------------------------------- */
+
+const TAX_PROVIDERS: readonly string[] = Object.values(TaxProvider)
+
+/**
+ * `tax_config`. An unknown provider reads as the native engine rather than
+ * throwing, as V1: the section must still render, and that is what the API does
+ * with an engine it cannot resolve to an external one.
+ */
+export function toTaxConfig(value: unknown): TaxConfig {
+  const wire = record(value)
+  const provider = str(wire, 'provider')
+  return {
+    enabled: bool(wire, 'enabled'),
+    provider: (TAX_PROVIDERS.includes(provider) ? provider : TaxProvider.Native) as TaxProvider,
+  }
+}
+
+/** Both fields, always: a disabled config is stored as `enabled: false`, not dropped. */
+export function toTaxConfigRequest(config: TaxConfig): Record<string, unknown> {
+  return { enabled: config.enabled, provider: config.provider }
 }
 
 /* ------------------------------ currencies ------------------------------- */
@@ -600,6 +625,12 @@ const onboardingCodec: SettingCodec<CustomerOnboarding> = {
   write: toCustomerOnboardingRequest,
 }
 
+const taxCodec: SettingCodec<TaxConfig> = {
+  key: SettingKey.TaxConfig,
+  read: toTaxConfig,
+  write: toTaxConfigRequest,
+}
+
 const walletAlertCodec: SettingCodec<WalletAlertConfig> = {
   key: SettingKey.WalletBalanceAlertConfig,
   read: toWalletAlertConfig,
@@ -770,6 +801,23 @@ export function useResetSubscriptionConfig(
   environmentId: string | null,
 ): UseMutationResult<SubscriptionConfig, Error, void> {
   return useSettingReset(subscriptionCodec, environmentId)
+}
+
+/** Which engine calculates tax: Flexprice's own rates, or Stripe Tax. */
+export function useTaxConfig(environmentId: string | null): UseQueryResult<TaxConfig> {
+  return useSettingQuery(taxCodec, environmentId)
+}
+
+export function useUpdateTaxConfig(
+  environmentId: string | null,
+): UseMutationResult<TaxConfig, Error, TaxConfig> {
+  return useSettingUpdate(taxCodec, environmentId)
+}
+
+export function useResetTaxConfig(
+  environmentId: string | null,
+): UseMutationResult<TaxConfig, Error, void> {
+  return useSettingReset(taxCodec, environmentId)
 }
 
 /** The tenant's own currencies, and what they convert to. */

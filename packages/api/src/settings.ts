@@ -63,6 +63,7 @@ export const SettingKey = {
   CustomerPortalConfig: 'customer_portal_config',
   CustomerOnboarding: 'customer_onboarding',
   WalletBalanceAlertConfig: 'wallet_balance_alert_config',
+  TaxConfig: 'tax_config',
   /** 404s on deployments without SSO. See `useSamlConfig` in `@fp/query`. */
   SamlConfig: 'saml_config',
 } as const

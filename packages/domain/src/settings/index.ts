@@ -102,3 +102,13 @@ export {
   samlConfigSchema,
 } from './samlConfig'
 export type { SamlConfig, SamlConfigDraft, SamlDefaultRole, SamlSettings } from './samlConfig'
+
+export {
+  EXTERNAL_TAX_PROVIDERS,
+  TAX_PROVIDER_LABEL,
+  TaxProvider,
+  defaultTaxConfig,
+  taxConfigSchema,
+  usesExternalTaxEngine,
+} from './taxConfig'
+export type { TaxConfig } from './taxConfig'
