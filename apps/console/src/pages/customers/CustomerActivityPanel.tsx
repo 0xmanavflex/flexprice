@@ -22,7 +22,7 @@ import {
 import { activityEntityHref, activityStamp, activityStampUtc } from '@/pages/shared/activityLog'
 import { activityFiltersFrom, activitySearchFrom, type ActivitySearch } from './activitySearch'
 
-const RANGE_MS: Record<ActivityRange, number> = {
+const RANGE_MS: Record<Exclude<ActivityRange, 'custom'>, number> = {
   '24h': 24 * 3_600_000,
   '7d': 7 * 86_400_000,
   '30d': 30 * 86_400_000,
@@ -194,11 +194,14 @@ export function CustomerActivityPanel({
   const filters = activityFiltersFrom(search)
   const [pageSize, setPageSize] = useState(25)
   // Fixed when the range is chosen, so paging does not shift the window.
-  const window = useMemo(() => windowFor(filters.range), [filters.range])
+  const window = useMemo(
+    () => windowFor(filters.range, filters.from, filters.to),
+    [filters.range, filters.from, filters.to],
+  )
   // Cursors of the pages visited, so Previous can go back: `[undefined]` is
   // page 1. They belong to one set of server-side filters: change any of
   // those and the trail starts again from its first page.
-  const serverKey = `${filters.action}|${filters.actorType}|${filters.range}|${pageSize}`
+  const serverKey = `${filters.action}|${filters.actorType}|${filters.range}|${filters.from ?? ''}|${filters.to ?? ''}|${pageSize}`
   const [paging, setPaging] = useState<{ key: string; cursors: Array<string | undefined> }>({
     key: serverKey,
     cursors: [undefined],
@@ -273,7 +276,21 @@ export function CustomerActivityPanel({
   )
 }
 
-function windowFor(range: ActivityRange): { start: string; end: string } {
+/**
+ * The trail's window. A custom range runs from the start of its first day to
+ * the end of its last, in local time; a missing end is now, a missing start
+ * thirty days before the end.
+ */
+function windowFor(
+  range: ActivityRange,
+  from?: string,
+  to?: string,
+): { start: string; end: string } {
+  if (range === 'custom') {
+    const end = to ? new Date(`${to}T23:59:59.999`) : new Date()
+    const start = from ? new Date(`${from}T00:00:00`) : new Date(end.getTime() - RANGE_MS['30d'])
+    return { start: start.toISOString(), end: end.toISOString() }
+  }
   const end = new Date()
   return {
     start: new Date(end.getTime() - RANGE_MS[range]).toISOString(),

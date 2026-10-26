@@ -36,3 +36,26 @@ describe('the Activity tab in the URL', () => {
     expect(activityFiltersFrom({}).range).toBe('30d')
   })
 })
+
+describe('a custom activity range in the URL', () => {
+  it('keeps valid days only with range=custom', () => {
+    expect(parseActivitySearch({ range: 'custom', from: '2026-10-01', to: '2026-10-15' })).toEqual({
+      range: 'custom',
+      from: '2026-10-01',
+      to: '2026-10-15',
+    })
+    expect(parseActivitySearch({ range: 'custom', from: 'yesterday' })).toEqual({ range: 'custom' })
+    // Days without a custom range are dropped: they mean nothing to 7d.
+    expect(parseActivitySearch({ range: '7d', from: '2026-10-01' })).toEqual({ range: '7d' })
+  })
+
+  it('round-trips through the filters', () => {
+    const filters = activityFiltersFrom({ range: 'custom', from: '2026-10-01', to: '2026-10-15' })
+    expect(filters).toMatchObject({ range: 'custom', from: '2026-10-01', to: '2026-10-15' })
+    expect(activitySearchFrom(filters)).toEqual({
+      range: 'custom',
+      from: '2026-10-01',
+      to: '2026-10-15',
+    })
+  })
+})
