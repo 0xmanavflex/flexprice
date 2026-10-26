@@ -18,14 +18,9 @@ import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { PlusIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
-import {
-  AppFailure,
-  ConfirmDialog,
-  EmptyState,
-  FormDialog,
-  LoadingRows,
-  Section,
-} from '../../compositions'
+import { AppFailure, ConfirmDialog, EmptyState, LoadingRows } from '../../compositions'
+import { FormDialog } from '../../compositions/forms/FormDialog'
+import { Section } from '../../compositions/layout/Section'
 import { Composer } from '../../compositions/detail/DetailKit'
 import { DateInput } from '../../compositions/forms/DateInput'
 import { Field } from '../../compositions/forms/Field'

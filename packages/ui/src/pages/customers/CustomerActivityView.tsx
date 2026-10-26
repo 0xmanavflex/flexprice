@@ -52,7 +52,6 @@ export const CustomerActivityViewProvenance = provenance({
   source: 'composition',
   composes: [
     'primitives/select',
-    'primitives/input',
     'primitives/sheet',
     'compositions/layout/Section',
     'shared/CopyValue',
