@@ -926,13 +926,7 @@ export const CommitmentsStep: Story = {
     await expect(canvas.getByText('Commitment period')).toBeVisible()
     await expect(canvas.getByText('True-up')).toBeVisible()
     // True-up needs a commitment: off and disabled until an amount is entered.
-    const trueUp = canvas.getByRole('switch', { name: /True-up/ })
-    await expect(trueUp).toHaveAttribute('data-disabled')
-    await userEvent.type(
-      canvas.getByRole('textbox', { name: /Commitment amount|Commitment/ }),
-      '1000',
-    )
-    await expect(trueUp).not.toHaveAttribute('data-disabled')
+    await expect(canvas.getByRole('switch', { name: /True-up/ })).toHaveAttribute('data-disabled')
     // The customer's tax rate is applied for them, in a table with its code.
     await expect(canvas.getByRole('columnheader', { name: 'Code' })).toBeVisible()
     await expect(canvas.getByText('VAT20')).toBeVisible()
@@ -942,6 +936,50 @@ export const CommitmentsStep: Story = {
     )
     await expect(canvas.getByRole('columnheader', { name: 'Allowance' })).toBeVisible()
     await userEvent.type(canvas.getByLabelText(/^Commitment amount/), '1000')
+  },
+}
+
+/**
+ * True-up bills a shortfall against the commitment, so it needs a positive amount:
+ * clearing the amount turns it off for good (a new amount starts with it off),
+ * and zero, which the API reads as no commitment, keeps it disabled.
+ */
+export const TrueUpNeedsCommitment: Story = {
+  args: { prefilled: true, step: 'commitments' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const amount = canvas.getByLabelText(/^Commitment amount/)
+    const trueUp = canvas.getByRole('switch', { name: /True-up/ })
+    await userEvent.type(amount, '1000')
+    await expect(trueUp).not.toHaveAttribute('data-disabled')
+    await userEvent.click(trueUp)
+    await expect(trueUp).toBeChecked()
+    // Clearing the amount turns true-up off; a new amount does not bring it back.
+    await userEvent.clear(amount)
+    await expect(trueUp).toHaveAttribute('data-disabled')
+    await expect(trueUp).not.toBeChecked()
+    await userEvent.type(amount, '500')
+    await expect(trueUp).not.toHaveAttribute('data-disabled')
+    await expect(trueUp).not.toBeChecked()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ commitmentAmount: '500', enableTrueUp: false }),
+      ),
+    )
+    // Zero is no commitment: true-up stays disabled and is not submitted on.
+    await userEvent.click(trueUp)
+    await expect(trueUp).toBeChecked()
+    await userEvent.clear(amount)
+    await userEvent.type(amount, '0')
+    await expect(trueUp).toHaveAttribute('data-disabled')
+    await expect(trueUp).not.toBeChecked()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ commitmentAmount: '0', enableTrueUp: false }),
+      ),
+    )
   },
 }
 

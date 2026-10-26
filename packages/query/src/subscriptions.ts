@@ -913,7 +913,8 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
           commitmentAmount: draft.commitmentAmount,
           ...(draft.commitmentDuration ? { commitmentDuration: draft.commitmentDuration } : {}),
           ...(draft.overageFactor ? { overageFactor: draft.overageFactor } : {}),
-          enableTrueUp: draft.enableTrueUp,
+          // True-up needs a commitment to bill against; a zero amount is none.
+          enableTrueUp: draft.enableTrueUp && Number(draft.commitmentAmount) > 0,
         }
       : {}),
     ...(draft.entitlementOverrides.length > 0

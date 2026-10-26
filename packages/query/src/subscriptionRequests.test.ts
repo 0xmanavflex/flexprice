@@ -121,6 +121,15 @@ describe('toCreateSubscriptionRequest', () => {
     expect(parsed).not.toHaveProperty('auto_invoice_threshold')
   })
 
+  it('sends true-up only beside a positive commitment', () => {
+    const on = (commitmentAmount: string) =>
+      toCreateSubscriptionRequest({ ...base, commitmentAmount, enableTrueUp: true })
+    expect(on('1000')['enableTrueUp']).toBe(true)
+    // Zero is no commitment, so there is no shortfall to bill.
+    expect(on('0')['enableTrueUp']).toBe(false)
+    expect(on('')).not.toHaveProperty('enableTrueUp')
+  })
+
   it("leaves the plan's grants alone until they are changed, then sends the whole list", () => {
     const grant = {
       name: 'Plan credits',

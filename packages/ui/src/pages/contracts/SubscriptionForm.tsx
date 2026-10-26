@@ -520,6 +520,13 @@ export function SubscriptionForm({
     }
   }, [currencyOptions, customerCurrency, values.currency, form])
 
+  // True-up bills a shortfall against the commitment, so it goes off when the
+  // commitment does: a new amount later starts with it off, not the old choice.
+  const committed = hasCommitment(values.commitmentAmount)
+  useEffect(() => {
+    if (!committed && values.enableTrueUp) form.setValue('enableTrueUp', false)
+  }, [committed, values.enableTrueUp, form])
+
   // A plan that bills on one cadence has nothing to choose.
   useEffect(() => {
     if (periodOptions.length > 0 && !periodOptions.some((o) => o.value === values.billingPeriod)) {
@@ -2621,6 +2628,11 @@ function AddonsSection({
  * charge is set from that charge's menu, on the phases step. Period, overage,
  * and true-up stay visible so they can be found before an amount is entered.
  */
+/** A contract commitment is set only when its amount is above zero, as the API reads it. */
+function hasCommitment(amount: string | undefined): boolean {
+  return Number(amount?.trim() || 0) > 0
+}
+
 function CommitmentsSection({
   values,
   errors,
@@ -2708,7 +2720,7 @@ function CommitmentsSection({
       <FormRow
         label="True-up"
         hint={
-          values.commitmentAmount?.trim()
+          hasCommitment(values.commitmentAmount)
             ? 'Bill the shortfall when spend stays under the commitment.'
             : 'Set a commitment amount above to bill a shortfall.'
         }
@@ -2716,8 +2728,8 @@ function CommitmentsSection({
         {({ id }) => (
           <Switch
             id={id}
-            checked={values.enableTrueUp && Boolean(values.commitmentAmount?.trim())}
-            disabled={!values.commitmentAmount?.trim()}
+            checked={values.enableTrueUp && hasCommitment(values.commitmentAmount)}
+            disabled={!hasCommitment(values.commitmentAmount)}
             onCheckedChange={onTrueUp}
           />
         )}
