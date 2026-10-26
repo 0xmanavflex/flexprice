@@ -99,13 +99,14 @@ export async function fetchIntegrations(
   return toIntegrations(record.connections ?? [])
 }
 
-export function useIntegrations() {
+export function useIntegrations(options: { enabled?: boolean } = {}) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
 
   return useQuery({
     queryKey: queryKeys.integrations.all(),
     queryFn: () => fetchIntegrations(serverURL, auth),
+    enabled: options.enabled ?? true,
   })
 }
 

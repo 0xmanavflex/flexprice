@@ -82,15 +82,22 @@ const PROVIDER_OPTIONS = EXTERNAL_TAX_PROVIDERS.map((value) => ({
   label: TAX_PROVIDER_LABEL[value],
 }))
 
+/** The config as it behaves: on only when an external engine calculates tax. */
+function inForce(config: TaxConfig): TaxConfig {
+  return usesExternalTaxEngine(config) ? config : { ...config, enabled: false }
+}
+
 function TaxEngineForm({ environmentId, config }: { environmentId: string; config: TaxConfig }) {
   const update = useUpdateTaxConfig(environmentId)
   const reset = useResetTaxConfig(environmentId)
-  const draft = useDraft<TaxConfig>(taxConfigSchema, config)
+  // Stored as on with the native engine named, the switch would read "on" while
+  // Flexprice's rates still apply. It opens as what is in force: off.
+  const draft = useDraft<TaxConfig>(taxConfigSchema, inForce(config))
   const [resetting, setResetting] = useState(false)
 
   const external = usesExternalTaxEngine(draft.value)
   // Asked only once Stripe Tax is chosen: it is the one thing worth checking first.
-  const integrations = useIntegrations()
+  const integrations = useIntegrations({ enabled: external })
   const stripe = integrations.data?.find((item) => item.providerType === TaxProvider.Stripe)
   const missingConnection =
     external &&
@@ -138,7 +145,7 @@ function TaxEngineForm({ environmentId, config }: { environmentId: string; confi
         className="contents"
         noValidate
         onSubmit={draft.handleSubmit((value) =>
-          update.mutate(value, { onSuccess: (saved) => draft.reset(saved) }),
+          update.mutate(value, { onSuccess: (saved) => draft.reset(inForce(saved)) }),
         )}
       >
         <Panel>
@@ -150,7 +157,7 @@ function TaxEngineForm({ environmentId, config }: { environmentId: string; confi
               <div className="flex w-full flex-wrap items-center justify-between gap-3">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   disabled={busy}
                   onClick={() => setResetting(true)}
                 >
@@ -227,7 +234,7 @@ function TaxEngineForm({ environmentId, config }: { environmentId: string; confi
         onConfirm={() =>
           reset.mutate(undefined, {
             onSuccess: (defaults) => {
-              draft.reset(defaults)
+              draft.reset(inForce(defaults))
               setResetting(false)
             },
           })
