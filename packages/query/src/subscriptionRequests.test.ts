@@ -238,6 +238,45 @@ describe('toCreateSubscriptionRequest: V1 contract fields', () => {
     expect(wire).not.toHaveProperty('phases')
   })
 
+  it('keeps the bucket a price override chose over its commitment’s', () => {
+    const commitment = {
+      type: 'quantity' as const,
+      value: '100',
+      duration: '' as const,
+      overageFactor: '',
+      trueUp: false,
+      bucketSize: 'HOUR' as const,
+      windowed: false,
+      windows: [],
+    }
+    const request = toCreateSubscriptionRequest({
+      ...base,
+      phases: [
+        {
+          ...emptyPhase(),
+          priceOverrides: [
+            {
+              priceId: 'price_api',
+              billingModel: BillingModel.FlatFee,
+              amount: '0.01',
+              bucketSize: 'DAY',
+            },
+            { priceId: 'price_gpu', billingModel: BillingModel.FlatFee, amount: '2' },
+          ],
+        },
+      ],
+      chargeCommitments: [
+        { ...commitment, priceId: 'price_api' },
+        { ...commitment, priceId: 'price_gpu' },
+      ],
+    })
+    expect(request.overrideLineItems).toEqual([
+      expect.objectContaining({ priceId: 'price_api', bucketSize: 'DAY' }),
+      // No bucket chosen on the override: the commitment's is sent.
+      expect.objectContaining({ priceId: 'price_gpu', bucketSize: 'HOUR' }),
+    ])
+  })
+
   it('sends a charge commitment per bucket, with its period, bucket size and time windows', () => {
     const wire = CreateSubscriptionRequest$outboundSchema.parse(
       toCreateSubscriptionRequest({
@@ -527,6 +566,58 @@ describe('contract-scoped creators', () => {
     expect(AddAddonRequest$outboundSchema.parse(request)).toEqual({
       subscription_id: 'sub_1',
       addon_id: 'addon_1',
+    })
+  })
+
+  it("sends an add-on's commitments keyed by its price, as the SDK serialises them", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'amount',
+          value: '500',
+          overageFactor: '1.5',
+          trueUp: true,
+          windowed: false,
+          bucketSize: '',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      addon_id: 'addon_1',
+      line_item_commitments: {
+        price_addon_api: {
+          commitment_type: 'amount',
+          commitment_amount: 500,
+          overage_factor: 1.5,
+          enable_true_up: true,
+        },
+      },
+    })
+  })
+
+  it("sends an add-on commitment's bucket size as that price's override", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'quantity',
+          value: '100',
+          overageFactor: '',
+          trueUp: false,
+          windowed: true,
+          bucketSize: 'HOUR',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      override_line_items: [{ price_id: 'price_addon_api', bucket_size: 'HOUR' }],
     })
   })
 
