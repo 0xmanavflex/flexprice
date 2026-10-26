@@ -2664,6 +2664,7 @@ export const handlers = [
       currency?: string
       compare?: string
       limit?: number
+      offset?: number
     }
     const base = REPORT_BASE[key]
     if (base === undefined) {
@@ -2732,8 +2733,9 @@ export const handlers = [
     if (body.shape === 'breakdown') {
       const dims = body.dimensions?.length ? body.dimensions : ['customer_id']
       // The customers the customer search answers with, so their names resolve.
+      const pagedCustomers = key === 'invoice_total' && dims.join() === 'customer_id'
       const customers = sourceFor('customers')
-        .items.slice(0, 8)
+        .items.slice(0, pagedCustomers ? 60 : 8)
         .map((row) => readString(row, 'id'))
       const labels: Record<string, string[]> = {
         customer_id: customers,
@@ -2761,7 +2763,7 @@ export const handlers = [
               : (base * (weights[i] ?? 0)) / sum
           return [...combo, ...currency, ...values(now, now * 0.9)]
         })
-        .slice(0, body.limit ?? 500)
+        .slice(body.offset ?? 0, (body.offset ?? 0) + (body.limit ?? 500))
       return HttpResponse.json({
         columns: [
           ...dims.map((name) => ({ name, type: 'string', role: 'dimension' })),

@@ -433,7 +433,9 @@ export function ReportsPage({
         ),
         onOpenCustomer: openCustomer,
         all: {
-          status: statusOf(customerPage, pageRows.length === 0 && offset === 0),
+          status: customerPage.isPlaceholderData
+            ? 'loading'
+            : statusOf(customerPage, pageRows.length === 0 && offset === 0),
           reason: 'The customer list did not respond.',
           onRetry: retry(customerPage),
           rows: pageRows,
