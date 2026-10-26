@@ -977,9 +977,7 @@
     "ChargeFlags": {
       "file": "src/pages/product-catalog/charges/ChargeFlags.tsx",
       "layer": "surface",
-      "composes": [
-        "PencilIcon"
-      ],
+      "composes": [],
       "usedBy": [
         "ChargeTable"
       ],
@@ -1013,7 +1011,6 @@
       "composes": [
         "ActivityLog",
         "ConfirmDialog",
-        "PencilIcon",
         "PlusIcon",
         "Sheet"
       ],
@@ -5652,8 +5649,6 @@
       "composes": [],
       "usedBy": [
         "AddonGrid",
-        "ChargeFlags",
-        "ChargeSheet",
         "CostSheetGrid",
         "CouponGrid",
         "CustomerDetail",

@@ -9,6 +9,7 @@ import {
   LayersIcon,
   ExternalLinkIcon,
   MoreHorizontalIcon,
+  CircleDollarSignIcon,
   PencilIcon,
   PlusIcon,
   PuzzleIcon,
@@ -1639,7 +1640,7 @@ function ChargesTable({
           flags.push(
             <ChargeFlag
               key="price"
-              icon={<PencilIcon aria-hidden className="text-info size-3.5" />}
+              icon={<CircleDollarSignIcon aria-hidden className="text-info size-3.5" />}
               label="Price changed"
               name={row.name}
               onClick={() => setRepricing(charge.id)}
@@ -1754,7 +1755,7 @@ function ChargesTable({
               <>
                 <DropdownMenuGroup>
                   <DropdownMenuItem onClick={() => setRepricing(row.charge.id)}>
-                    <PencilIcon aria-hidden />
+                    <CircleDollarSignIcon aria-hidden />
                     Override price
                   </DropdownMenuItem>
                   {onCommitment && row.type === 'Usage' ? (
@@ -2402,7 +2403,9 @@ function PhasesStep({
       <div className="flex flex-col gap-5">
         <FormCard
           title="Charges"
-          icon={<PencilIcon aria-hidden className="text-info size-4 shrink-0" />}
+          icon={
+            <CircleDollarSignIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />
+          }
           adornment={addCharge(0)}
         >
           <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
