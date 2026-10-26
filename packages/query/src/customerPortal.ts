@@ -245,6 +245,8 @@ export const usePortalWalletFlows = (
   auth: PortalAuth,
   wallet: PortalWallet | null,
   since: Date | null = null,
+  /** Off until the totals are on screen: a long ledger takes many requests. */
+  enabled = true,
 ): PortalQuery<PortalWalletTotals> =>
   usePortalQuery(
     auth,
@@ -275,7 +277,7 @@ export const usePortalWalletFlows = (
         total: Math.max(total, rows.size),
       }
     },
-    wallet !== null,
+    wallet !== null && enabled,
   )
 
 /** Every credit added to a wallet, with what is left of it. */

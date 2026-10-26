@@ -183,7 +183,8 @@ function Portal({
   // The history from the billing period's start (everything, with no period), a page at a time.
   const transactions = usePortalWalletTransactionPages(auth, wallet, PAGE, periodStart)
   // "Added since" and "Used since": over the whole window, not just the loaded pages.
-  const flows = usePortalWalletFlows(auth, wallet, periodStart)
+  // Only the Credits view shows them, and a long ledger takes many requests.
+  const flows = usePortalWalletFlows(auth, wallet, periodStart, location.view === 'credits')
   const topUps = usePortalTopUps(auth, wallet, TOP_UPS)
   const invoiceDetail = usePortalInvoice(auth, location.invoiceId)
 
