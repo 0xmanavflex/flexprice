@@ -1279,6 +1279,9 @@ const manualRuns = new Map<string, Record<string, unknown>[]>()
  */
 /** Tax rates attached to entities, mutated by the association handlers. */
 /** Forex rates: a global USD → INR and EUR → USD, and one customer override. */
+/** Connection keys the API holds but never returns, by connection id. */
+const connectionSecrets = new Map<string, Record<string, string>>()
+
 const fxRates: Record<string, unknown>[] = [
   {
     id: 'fxrate_usd_inr',
@@ -3855,6 +3858,14 @@ export const handlers = [
     if (typeof body['name'] === 'string') row['name'] = body['name']
     if (body['metadata']) row['metadata'] = body['metadata']
     if (body['sync_config']) row['sync_config'] = body['sync_config']
+    // As the API: replaced keys are merged and kept, never sent back.
+    const replaced = body['encrypted_secret_data'] as Record<string, string> | undefined
+    if (replaced) {
+      const kept = connectionSecrets.get(String(row['id'])) ?? {}
+      for (const [key, value] of Object.entries(replaced)) if (value) kept[key] = value
+      connectionSecrets.set(String(row['id']), kept)
+      row['updated_at'] = new Date().toISOString()
+    }
     return HttpResponse.json(row)
   }),
 
