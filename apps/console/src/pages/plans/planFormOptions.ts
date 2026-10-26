@@ -29,8 +29,14 @@ export function toMeterOptions(features: readonly Feature[]): MeterOption[] {
  * reference, read by id, which can sit past the picker's first page.
  */
 export function withMeters(meters: readonly MeterOption[], more: readonly Feature[]): MeterOption[] {
+  // Several features can share one meter: each meter is offered once.
   const known = new Set(meters.map((meter) => meter.id))
-  return [...meters, ...toMeterOptions(more).filter((meter) => !known.has(meter.id))]
+  const added = toMeterOptions(more).filter((meter) => {
+    if (known.has(meter.id)) return false
+    known.add(meter.id)
+    return true
+  })
+  return [...meters, ...added]
 }
 
 /** The pickers the charge and entitlement forms need, read once from the catalogue. */

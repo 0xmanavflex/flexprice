@@ -41,6 +41,18 @@ describe('withMeters', () => {
     })
   })
 
+  it('offers a meter shared by several features once', () => {
+    const meters = withMeters(
+      [],
+      [
+        feature({ id: 'feat_101', name: 'GPU time', meterId: 'meter_101' }),
+        feature({ id: 'feat_102', name: 'GPU credits', meterId: 'meter_101' }),
+      ],
+    )
+    expect(meters.map((meter) => meter.id)).toEqual(['meter_101'])
+    expect(meters[0]?.name).toBe('GPU time')
+  })
+
   it('skips features with no meter', () => {
     expect(withMeters([], [feature({ type: FeatureType.Boolean, meterId: null })])).toEqual([])
   })
