@@ -31,12 +31,29 @@ const dayLabel = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'nume
  * Rendered only for a customer with an external id: analytics are matched by
  * it, and without one the query would read the whole tenant.
  */
-export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
+export function CustomerAnalyticsPanel({
+  externalId,
+  scope,
+}: {
+  externalId: string
+  /**
+   * Narrows the panel to part of the customer: a contract's metered charges
+   * (by meter), opening on its period, with a note saying what is covered.
+   */
+  scope?:
+    | {
+        meterIds: readonly string[]
+        from?: string | undefined
+        to?: string | undefined
+        note: string
+      }
+    | undefined
+}) {
   const [query, setQuery] = useState<AnalyticsQuery>(() => {
     const today = new Date()
     return {
-      from: isoDay(new Date(today.getTime() - RANGE_DAYS * DAY)),
-      to: isoDay(today),
+      from: scope?.from ?? isoDay(new Date(today.getTime() - RANGE_DAYS * DAY)),
+      to: scope?.to ?? isoDay(today),
       includeChildren: false,
     }
   })
@@ -50,14 +67,6 @@ export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
     }),
     [query.from, query.to],
   )
-  const filters = {
-    window,
-    externalCustomerId: externalId,
-    featureIds,
-    includeChildren: query.includeChildren,
-  }
-  const usage = useUsageAnalytics({ ...filters, windowSize: UsageWindowSize.Day })
-  const costs = useCustomerCostAnalytics(filters)
   const metered = useFeatures({
     ...DEFAULT_FEATURE_QUERY,
     pageSize: 100,
@@ -65,6 +74,25 @@ export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
     // Archived features can still carry usage in the window.
     filters: [],
   })
+  // The features on offer: every metered one, or only those a scope names.
+  const options = (metered.data?.features ?? []).filter(
+    (feature) =>
+      feature.type === FeatureType.Metered &&
+      (!scope || (feature.meterId !== null && scope.meterIds.includes(feature.meterId))),
+  )
+  // With a scope, "all" means all of its features, never the whole customer;
+  // a scope with none matches nothing rather than everything.
+  const scopedIds = options.map((feature) => feature.id)
+  const effectiveIds =
+    featureIds.length > 0 || !scope ? featureIds : scopedIds.length > 0 ? scopedIds : ['none']
+  const filters = {
+    window,
+    externalCustomerId: externalId,
+    featureIds: effectiveIds,
+    includeChildren: query.includeChildren,
+  }
+  const usage = useUsageAnalytics({ ...filters, windowSize: UsageWindowSize.Day })
+  const costs = useCustomerCostAnalytics(filters)
 
   const data = usage.data
   const cost = costs.data
@@ -79,9 +107,8 @@ export function CustomerAnalyticsPanel({ externalId }: { externalId: string }) {
     <CustomerAnalyticsView
       query={query}
       onQueryChange={setQuery}
-      featureOptions={(metered.data?.features ?? [])
-        .filter((feature) => feature.type === FeatureType.Metered)
-        .map((feature) => ({ id: feature.id, name: feature.name }))}
+      featureOptions={options.map((feature) => ({ id: feature.id, name: feature.name }))}
+      {...(scope ? { note: scope.note } : {})}
       selectedFeatureIds={featureIds}
       onSelectedFeatureIdsChange={setFeatureIds}
       totals={{

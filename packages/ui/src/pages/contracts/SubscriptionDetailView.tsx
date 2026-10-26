@@ -231,6 +231,12 @@ export interface SubscriptionDetailViewProps {
   onCreateChargeAlert?:
     ((draft: { lineId: string; config: AlertSettingConfig }) => Promise<unknown> | void) | undefined
   /**
+   * The Usage tab's breakdown: the customer's usage analytics scoped to this
+   * contract's metered charges. Omitted, the tab lists the contract's own
+   * usage charges for the period.
+   */
+  usageBreakdown?: ReactNode
+  /**
    * The thresholds a line already stores (a switched-off setting), read when
    * Add alerts is chosen so the form opens on them instead of overwriting
    * them unseen. Null when there are none.
@@ -408,6 +414,7 @@ export function SubscriptionDetailView({
   onSaveChargeAlert,
   onCreateChargeAlert,
   loadChargeAlert,
+  usageBreakdown,
   onAddTax,
   onRemoveAddon,
   onRemoveTax,
@@ -1414,59 +1421,68 @@ export function SubscriptionDetailView({
                 ]}
               />
             ) : null}
-            <PartSection
-              title="Usage charges"
-              part={usage}
-              failure="Usage could not be loaded"
-              emptyTitle="No metered charges"
-              scene="revenue"
-              emptyDescription="This contract has no usage-based charges this period."
-              isEmpty={(data) => data.charges.length === 0}
-            >
-              {(data) => (
-                <DetailTable<SubscriptionUsageCharge>
-                  compact
-                  label="Usage charges"
-                  noun="charges"
-                  rows={data.charges}
-                  columns={[
-                    {
-                      key: 'name',
-                      header: 'Charge',
-                      sortBy: (charge) => charge.name,
-                      text: (charge) => charge.name,
-                      cell: (charge) => (
-                        <span className="text-foreground flex items-center gap-2 font-medium">
-                          {charge.name}
-                          {charge.isOverage ? (
-                            <Badge variant="outline" size="sm" radius="full">
-                              Overage
-                            </Badge>
-                          ) : null}
-                        </span>
-                      ),
-                    },
-                    {
-                      key: 'quantity',
-                      header: 'Quantity',
-                      cell: (charge) => (
-                        <Muted className="tabular-nums">
-                          {charge.quantity.toLocaleString('en-US')}
-                        </Muted>
-                      ),
-                    },
-                    {
-                      key: 'amount',
-                      header: 'Amount',
-                      sortBy: (charge) => Number(charge.amount.amount),
-                      cell: (charge) => (
-                        <Strong className="tabular-nums">{formatMoney(charge.amount)}</Strong>
-                      ),
-                    },
-                  ]}
-                />
-              )}
-            </PartSection>
+            {/*
+              The customer's usage breakdown, scoped to this contract's metered
+              charges, when the page supplies it; else this contract's own
+              usage charges for the period.
+            */}
+            {usageBreakdown ? (
+              <Section title="Usage by feature">{usageBreakdown}</Section>
+            ) : (
+              <PartSection
+                title="Usage charges"
+                part={usage}
+                failure="Usage could not be loaded"
+                emptyTitle="No metered charges"
+                scene="revenue"
+                emptyDescription="This contract has no usage-based charges this period."
+                isEmpty={(data) => data.charges.length === 0}
+              >
+                {(data) => (
+                  <DetailTable<SubscriptionUsageCharge>
+                    compact
+                    label="Usage charges"
+                    noun="charges"
+                    rows={data.charges}
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Charge',
+                        sortBy: (charge) => charge.name,
+                        text: (charge) => charge.name,
+                        cell: (charge) => (
+                          <span className="text-foreground flex items-center gap-2 font-medium">
+                            {charge.name}
+                            {charge.isOverage ? (
+                              <Badge variant="outline" size="sm" radius="full">
+                                Overage
+                              </Badge>
+                            ) : null}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: 'quantity',
+                        header: 'Quantity',
+                        cell: (charge) => (
+                          <Muted className="tabular-nums">
+                            {charge.quantity.toLocaleString('en-US')}
+                          </Muted>
+                        ),
+                      },
+                      {
+                        key: 'amount',
+                        header: 'Amount',
+                        sortBy: (charge) => Number(charge.amount.amount),
+                        cell: (charge) => (
+                          <Strong className="tabular-nums">{formatMoney(charge.amount)}</Strong>
+                        ),
+                      },
+                    ]}
+                  />
+                )}
+              </PartSection>
+            )}
           </>
         ) : null}
 
