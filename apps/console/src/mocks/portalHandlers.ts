@@ -391,6 +391,13 @@ export const portalHandlers = [
     const query = new URL(request.url).searchParams
     const limit = Number(query.get('limit') ?? 20)
     const offset = Number(query.get('offset') ?? 0)
+    // As the API (`QueryFilter`: limit 1 to 1000); more is a 400, not a shorter page.
+    if (limit < 1 || limit > 1000) {
+      return HttpResponse.json(
+        { error: { message: 'limit must be between 1 and 1000' } },
+        { status: 400 },
+      )
+    }
     const type = query.get('type')
     // As the API: `credit` or `debit`, lowercase; anything else is a 400.
     if (type !== null && type !== 'credit' && type !== 'debit') {

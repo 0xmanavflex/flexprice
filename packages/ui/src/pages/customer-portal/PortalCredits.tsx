@@ -3,6 +3,7 @@ import {
   type PortalTopUp,
   type PortalTransactionDirection,
   type PortalWallet,
+  type PortalWalletTotals,
   creditsCost,
 } from '@fp/domain'
 import { PlusIcon, WalletIcon } from '@ui/icons'
@@ -146,8 +147,6 @@ function WalletPanel({
   const money = (value: PortalWallet['balance']) => (
     <Money value={value} {...(locale ? { locale } : {})} />
   )
-  // Every transaction in the period, not only the history's loaded pages.
-  const flows = data.flows.status === 'ready' ? data.flows.data : null
   const since = periodStart ? ` since ${formatDate(periodStart, locale)}` : ''
   const on = wallet.autoTopup?.enabled ?? false
 
@@ -217,19 +216,54 @@ function WalletPanel({
           value={money(wallet.balance)}
           credits={formatNumber(wallet.credits, locale)}
         />
-        <Figure
-          label={`Added${since}`}
-          tone="text-success-foreground dark:text-success"
-          value={flows ? money(flows.in.amount) : null}
-          credits={flows ? formatNumber(flows.in.credits, locale) : null}
-        />
-        <Figure
-          label={`Used${since}`}
-          value={flows ? money(flows.out.amount) : null}
-          credits={flows ? formatNumber(flows.out.credits, locale) : null}
-        />
+        {/* Every transaction in the period, not only the history's loaded pages. */}
+        {data.flows.status === 'ready' ? (
+          <Flows totals={data.flows.data} since={since} money={money} locale={locale} />
+        ) : (
+          <div className="sm:col-span-2">
+            <Loaded load={data.flows} label="credits added and used" rows={2}>
+              {() => null}
+            </Loaded>
+          </div>
+        )}
       </div>
     </section>
+  )
+}
+
+/** Added and Used; when the window was too long to read whole, says how much they cover. */
+function Flows({
+  totals,
+  since,
+  money,
+  locale,
+}: {
+  totals: PortalWalletTotals
+  since: string
+  money: (value: PortalWallet['balance']) => ReactNode
+  locale: string | undefined
+}) {
+  const { flows, counted, total } = totals
+  const note =
+    counted < total
+      ? `From the latest ${formatNumber(String(counted), locale)} of ${formatNumber(String(total), locale)} transactions`
+      : null
+  return (
+    <>
+      <Figure
+        label={`Added${since}`}
+        tone="text-success-foreground dark:text-success"
+        value={money(flows.in.amount)}
+        credits={formatNumber(flows.in.credits, locale)}
+        note={note}
+      />
+      <Figure
+        label={`Used${since}`}
+        value={money(flows.out.amount)}
+        credits={formatNumber(flows.out.credits, locale)}
+        note={note}
+      />
+    </>
   )
 }
 
@@ -238,12 +272,14 @@ function Figure({
   value,
   credits,
   tone,
+  note = null,
   big = false,
 }: {
   label: string
   value: ReactNode | null
   credits: string | null
   tone?: string
+  note?: string | null
   big?: boolean
 }) {
   return (
@@ -261,6 +297,7 @@ function Figure({
       <p className="text-muted-foreground text-xs tabular-nums">
         {credits === null ? ' ' : `${credits} credits`}
       </p>
+      {note ? <p className="text-muted-foreground text-xs">{note}</p> : null}
     </div>
   )
 }

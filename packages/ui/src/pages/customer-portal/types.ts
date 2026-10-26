@@ -11,7 +11,7 @@ import type {
   PortalTopUp,
   PortalView,
   PortalWallet,
-  PortalWalletFlows,
+  PortalWalletTotals,
   PortalWalletTransaction,
 } from '@fp/domain'
 
@@ -38,7 +38,7 @@ export interface CustomerPortalData {
   /** The selected wallet's transactions this billing period (or all, with no period), as loaded so far. */
   transactions: Load<{ items: PortalWalletTransaction[]; total: number }>
   /** Credits added and used across every transaction in that window, not only the loaded ones. */
-  flows: Load<PortalWalletFlows>
+  flows: Load<PortalWalletTotals>
   /** The selected wallet's credits in, with what is left of each. */
   topUps: Load<{ items: PortalTopUp[]; total: number }>
   /** The invoice open in the sheet, with its lines; null when none is open. */

@@ -410,6 +410,17 @@ export type PortalWalletFlows = Record<
   { amount: Money; credits: string }
 >
 
+/**
+ * A wallet's credits added and used over a window, and how many of the
+ * window's transactions they cover: `counted < total` means only the latest
+ * `counted` were summed.
+ */
+export interface PortalWalletTotals {
+  flows: PortalWalletFlows
+  counted: number
+  total: number
+}
+
 /** Credits added and used across some transactions: exact, in money and credits. */
 export function walletFlows(
   transactions: readonly PortalWalletTransaction[],

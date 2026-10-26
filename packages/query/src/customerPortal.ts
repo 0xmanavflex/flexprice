@@ -34,7 +34,7 @@ import {
   type PortalSubscription,
   type PortalTopUp,
   type PortalWallet,
-  type PortalWalletFlows,
+  type PortalWalletTotals,
   type PortalWalletTransaction,
   toPortalActionUrl,
   toPortalConfig,
@@ -230,39 +230,50 @@ export function usePortalWalletTransactionPages(
 
 /** The most transactions the API returns at once. */
 const MAX_PAGE = 1000
-/** Pages read for the period's totals before giving up on the rest. */
-const MAX_FLOW_PAGES = 20
+/** A safety bound on the rows read for the totals (50 pages of `MAX_PAGE`). */
+const MAX_FLOW_ROWS = 50_000
 
 /**
  * Credits added and used on a wallet since `since` (or ever, with none),
  * across every transaction in that window, not only the history's loaded
- * pages. The API has no aggregate, so this reads the window in pages of
- * `MAX_PAGE` until its total is reached.
+ * pages. The API has no aggregate, so this reads the window a page at a time
+ * (`limit` up to 1000, the API's maximum) until its total is reached. Past
+ * `MAX_FLOW_ROWS` it stops and says so: `counted < total` marks the sums as
+ * covering only the latest `counted` transactions.
  */
 export const usePortalWalletFlows = (
   auth: PortalAuth,
   wallet: PortalWallet | null,
   since: Date | null = null,
-): PortalQuery<PortalWalletFlows> =>
+): PortalQuery<PortalWalletTotals> =>
   usePortalQuery(
     auth,
     ['walletFlows', wallet?.id, since?.toISOString() ?? null],
     async () => {
       const currency = wallet?.currency ?? 'USD'
       const rows = new Map<string, PortalWalletTransaction>()
-      for (let page = 0; page < MAX_FLOW_PAGES; page++) {
-        const { items, total } = toPortalWalletTransactions(
+      let offset = 0
+      let total = 0
+      while (offset < MAX_FLOW_ROWS) {
+        const page = toPortalWalletTransactions(
           await getPortalWalletTransactions(auth, wallet?.id ?? '', {
             limit: MAX_PAGE,
-            offset: page * MAX_PAGE,
+            offset,
             ...(since ? { since } : {}),
           }),
           currency,
         )
-        for (const item of items) rows.set(item.id, item)
-        if (items.length < MAX_PAGE || (page + 1) * MAX_PAGE >= total) break
+        total = page.total
+        for (const item of page.items) rows.set(item.id, item)
+        // Advance by what came back, so a lower server cap still pages correctly.
+        offset += page.items.length
+        if (page.items.length === 0 || offset >= total) break
       }
-      return walletFlows([...rows.values()], currency)
+      return {
+        flows: walletFlows([...rows.values()], currency),
+        counted: rows.size,
+        total: Math.max(total, rows.size),
+      }
     },
     wallet !== null,
   )

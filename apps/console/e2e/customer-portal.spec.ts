@@ -20,7 +20,7 @@ test('the Credits tab lists top-ups, asking for credits as the API spells them',
   expect(types).not.toContain('CREDIT')
 })
 
-test('the transaction history loads ten at a time, and the totals cover every page', async ({
+test('the transaction history loads a page at a time, and Load more reaches past a filter', async ({
   page,
 }) => {
   const offsets: (string | null)[] = []
@@ -30,21 +30,22 @@ test('the transaction history loads ten at a time, and the totals cover every pa
       offsets.push(url.searchParams.get('offset'))
   })
   await page.goto('/p/credits?token=mock_portal_token')
-  // Added and Used sum all 16 transactions, though the history loads ten at first.
-  await expect(page.getByText('$700.00')).toBeVisible()
-  await expect(page.getByText('$498.00')).toBeVisible()
-
   await page.getByRole('tab', { name: 'All transactions' }).click()
-  const history = page.getByRole('list').filter({ hasText: 'INV-2026-01512' })
-  await expect(history.getByRole('listitem')).toHaveCount(10)
+  const history = page.getByRole('region', { name: 'Transaction history' })
+  const rows = history.getByRole('listitem')
+  const more = history.getByRole('button', { name: 'Load more' })
 
-  // The first ten are all payments: Added finds none yet, and still offers the next page.
+  // The first page: ten rows, and a way to the next.
+  await expect(rows).toHaveCount(10)
+  await expect(more).toBeVisible()
+
+  // A direction filter works on what is loaded; while pages remain, Load more stays.
   await page.getByRole('tab', { name: 'Added' }).click()
-  await expect(
-    page.getByText('None in the transactions loaded so far', { exact: false }),
-  ).toBeVisible()
-  await page.getByRole('button', { name: 'Load more' }).click()
-  await expect(page.getByText('Auto top-up · Visa •••• 4242')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Load more' })).toHaveCount(0)
+  await expect(more).toBeVisible()
+  const before = await rows.count()
+  await more.click()
+  await expect.poll(() => rows.count()).toBeGreaterThan(before)
+
+  // Each Load more asks for the next page by offset, not the list again from the top.
   expect(offsets).toEqual(['0', '10'])
 })

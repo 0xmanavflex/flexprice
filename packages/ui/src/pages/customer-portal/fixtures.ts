@@ -383,7 +383,14 @@ export const portalData: CustomerPortalData = {
   previousSpend: { status: 'ready', data: { ...portalSpend, total: usd('351.27') } },
   periodSpend: { status: 'ready', data: { ...portalSpend, total: usd('315.12') } },
   transactions: { status: 'ready', data: { items: portalTransactions, total: 9 } },
-  flows: { status: 'ready', data: walletFlows(portalTransactions, 'USD') },
+  flows: {
+    status: 'ready',
+    data: {
+      flows: walletFlows(portalTransactions, 'USD'),
+      counted: portalTransactions.length,
+      total: portalTransactions.length,
+    },
+  },
   topUps: { status: 'ready', data: { items: portalTopUps, total: portalTopUps.length } },
   invoiceDetail: null,
 }
@@ -399,7 +406,7 @@ export const emptyPortalData: CustomerPortalData = {
   previousSpend: { status: 'ready', data: { currency: 'USD', total: usd('0'), items: [] } },
   periodSpend: { status: 'ready', data: { currency: 'USD', total: usd('0'), items: [] } },
   transactions: { status: 'ready', data: { items: [], total: 0 } },
-  flows: { status: 'ready', data: walletFlows([], 'USD') },
+  flows: { status: 'ready', data: { flows: walletFlows([], 'USD'), counted: 0, total: 0 } },
   topUps: { status: 'ready', data: { items: [], total: 0 } },
 }
 

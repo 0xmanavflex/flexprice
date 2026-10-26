@@ -960,6 +960,7 @@ export type {
   PortalView,
   PortalTransactionDirection,
   PortalWalletFlows,
+  PortalWalletTotals,
   PortalWallet,
   PortalWalletTransaction,
 } from './customerPortal'
