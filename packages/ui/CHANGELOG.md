@@ -8,6 +8,11 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- Credit grant end dates (R-01, console half):
+  - Editing a plan's credit grant no longer offers an End date. The API archives a plan grant as soon as any end date is sent, which is why grants "disappeared". A note says how to end one instead: remove it from the plan.
+  - Add-on grant tables (`CreditGrantTable`) and the contract's grants table show an Ends column once a grant has an end date.
+  - `CreditGrantEditForm` takes `allowEndDate`.
+  - A plan grant with a future end date needs a backend change.
 - Contract hierarchy (R-15), as V1:
   - An inherited contract (`subscription_type = inherited`, a mirror of its parent's) shows an info banner with "Open parent contract" and is read-only: no charge, section or metadata edits.
   - A parent contract lists its inherited contracts (customer, plan, status) on the Overview, each opening that contract.
