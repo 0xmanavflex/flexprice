@@ -200,13 +200,14 @@ export function isOverdue(invoice: Pick<HostedInvoice, 'state' | 'dueAt'>, now: 
 
 /**
  * Whether money is still owed. A missing remaining amount falls back to the
- * total, so an invoice the API did not report on is never called paid.
+ * total; with neither reported the balance is unknown, and an unknown balance
+ * is owed, so an invoice the API did not report on is never called paid.
  */
 function outstanding(remaining: unknown, total: unknown): boolean {
-  const value =
-    typeof remaining === 'string' || typeof remaining === 'number'
-      ? String(remaining)
-      : String(total ?? '0')
+  const known = (v: unknown): v is string | number => typeof v === 'string' || typeof v === 'number'
+  const source = known(remaining) ? remaining : known(total) ? total : null
+  if (source === null) return true
+  const value = String(source)
   return /[1-9]/.test(value.replace(/^-/, '')) && !value.startsWith('-')
 }
 

@@ -179,6 +179,17 @@ describe('toHostedInvoice', () => {
     expect(sparse.payEnabled).toBe(false)
     expect(sparse.total).toEqual({ amount: '0', currency: 'USD' })
   })
+
+  it('never calls an invoice paid when no amount was reported', () => {
+    const sparse = toHostedInvoice({
+      tenant: {},
+      invoice: { invoice_status: 'FINALIZED', payment_status: 'PENDING', currency: 'usd' },
+      payments: null,
+      pay: {},
+    })
+
+    expect(sparse.state).toBe('open')
+  })
 })
 
 describe('paymentMethodLabel', () => {
