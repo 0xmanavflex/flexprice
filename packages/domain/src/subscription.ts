@@ -492,7 +492,14 @@ export const createSubscriptionSchema = z
         autoApply: z.boolean(),
       }),
     ),
-    addons: z.array(z.object({ addonId: z.string().min(1), name: z.string() })),
+    // Each add-on may commit on its own usage charges, as V1's add-on card.
+    addons: z.array(
+      z.object({
+        addonId: z.string().min(1),
+        name: z.string(),
+        commitments: z.array(chargeCommitmentSchema).optional(),
+      }),
+    ),
     // Billing configuration.
     billingCycle: z.enum([BillingCycle.Anniversary, BillingCycle.Calendar]),
     /** `YYYY-MM-DD`: the day cycles are anchored to; blank follows the start date. */
@@ -997,6 +1004,8 @@ export function canResumeSubscription(status: SubscriptionStatus): boolean {
 /** One line of the invoice a contract will raise next. */
 export interface InvoicePreviewLine {
   id: string
+  /** The price that produced this line: joins it to the contract's line for its real price. */
+  priceId: string
   name: string
   /** The period note under the name, when the API sent one. */
   detail: string
@@ -1056,9 +1065,10 @@ export interface SubscriptionTax {
   priority: number
 }
 
-/** Attach an add-on to one contract. */
+/** Attach an add-on to one contract, with commitments on its usage charges. */
 export interface AddContractAddon {
   addonId: string
+  commitments?: ChargeCommitment[]
 }
 
 /** Apply a coupon to one contract, or replace the coupons on one of its charges. */

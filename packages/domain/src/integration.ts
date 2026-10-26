@@ -21,8 +21,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'Stripe',
     providerType: 'stripe',
     categories: ['Payments', 'Invoices'],
-    description:
-      'Send invoices, calculate tax, and collect payments using our native connector to Stripe.',
+    description: 'Collect payments, sync invoices and calculate tax with Stripe.',
     docsUrl: 'https://docs.flexprice.io/integrations/stripe/',
   },
   {
@@ -30,7 +29,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'Razorpay',
     providerType: 'razorpay',
     categories: ['Payments', 'Invoices'],
-    description: 'Accept, process and disburse payments using our native connector to Razorpay.',
+    description: 'Send invoices to Razorpay and collect payment on them.',
     docsUrl: 'https://docs.flexprice.io/integrations/razorpay/',
   },
   {
@@ -38,8 +37,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'Chargebee',
     providerType: 'chargebee',
     categories: ['Payments', 'Invoices'],
-    description:
-      'Sync invoices and charges/prices between Flexprice and Chargebee for seamless billing operations.',
+    description: 'Send invoices to Chargebee.',
     docsUrl: 'https://docs.flexprice.io/integrations/chargebee/',
   },
   {
@@ -47,23 +45,21 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'HubSpot',
     providerType: 'hubspot',
     categories: ['CRM', 'Sales', 'Marketing'],
-    description: 'HubSpot is a CRM, sales, marketing and customer service platform.',
+    description: 'Push deals, quotes and invoices to HubSpot.',
   },
   {
     id: 'zoho',
     name: 'Zoho',
     providerType: 'zoho_books',
     categories: ['Accounting', 'Invoices'],
-    description:
-      'The Zoho Books integration lets you manage critical accounting tasks directly from Flexprice.',
+    description: 'Send invoices to Zoho Books and pull customers from it.',
   },
   {
     id: 'quickbooks',
     name: 'QuickBooks',
     providerType: 'quickbooks',
     categories: ['Accounting', 'Invoices'],
-    description:
-      'Sync plans, customers, and invoices from Flexprice to QuickBooks Online for seamless accounting operations.',
+    description: 'Send invoices to QuickBooks Online and pull payments back.',
     docsUrl: 'https://docs.flexprice.io/integrations/quickbooks/',
   },
   {
@@ -71,8 +67,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'Nomod',
     providerType: 'nomod',
     categories: ['Payments', 'Invoices'],
-    description:
-      'Send invoices and collect payments using payment links through Nomod integration.',
+    description: 'Collect payments with Nomod payment links.',
     docsUrl: 'https://docs.flexprice.io/integrations/nomod',
   },
   {
@@ -80,7 +75,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'Moyasar',
     providerType: 'moyasar',
     categories: ['Payments', 'Invoices'],
-    description: 'Send invoices and collect payments using Moyasar payment gateway integration.',
+    description: 'Collect payments through Moyasar.',
     docsUrl: 'https://docs.flexprice.io/integrations/moyasar/',
   },
   {
@@ -88,29 +83,28 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'Paddle',
     providerType: 'paddle',
     categories: ['Payments', 'Invoices'],
-    description: 'Send invoices and collect payments using Paddle payment gateway integration.',
+    description: 'Collect payments through Paddle.',
   },
   {
     id: 'whop',
     name: 'Whop',
     providerType: 'whop',
     categories: ['Invoices', 'Payments'],
-    description: 'Sync invoices to Whop with automatic payment status updates.',
+    description: 'Sync invoices to Whop and keep payment status current.',
   },
   {
     id: 'tabs',
     name: 'Tabs',
     providerType: 'tabs',
     categories: ['Payments', 'Invoices'],
-    description: 'Sync invoices to Tabs using your Tabs API key.',
+    description: 'Sync invoices to Tabs.',
   },
   {
     id: 'aws_marketplace',
     name: 'AWS Marketplace',
     providerType: 'aws_marketplace',
     categories: ['Marketplace', 'Usage metering'],
-    description:
-      'Report metered usage to AWS Marketplace so your AWS buyers are billed for what they consume.',
+    description: 'Bill AWS Marketplace buyers for their metered usage.',
     docsUrl: 'https://docs.flexprice.io/integrations/marketplace-integration/aws/connection-setup',
   },
   {
@@ -118,8 +112,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'GCP Marketplace',
     providerType: 'gcp_marketplace',
     categories: ['Marketplace', 'Usage metering'],
-    description:
-      'Report metered usage to GCP Marketplace so your GCP buyers are billed for what they consume.',
+    description: 'Bill GCP Marketplace buyers for their metered usage.',
     docsUrl: 'https://docs.flexprice.io/integrations/marketplace-integration/gcp/connection-setup',
   },
   {
@@ -127,8 +120,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'Azure Marketplace',
     providerType: 'azure_marketplace',
     categories: ['Marketplace', 'Usage metering'],
-    description:
-      'Report metered usage to Azure Marketplace so your Azure buyers are billed for what they consume.',
+    description: 'Bill Azure Marketplace buyers for their metered usage.',
     docsUrl:
       'https://docs.flexprice.io/integrations/marketplace-integration/azure/connection-setup',
   },
@@ -137,7 +129,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'Salesforce',
     providerType: 'salesforce',
     categories: ['CRM', 'Accounting'],
-    description: 'Salesforce is a customer relationship management (CRM) platform.',
+    description: 'Connect Salesforce to your billing data.',
     premium: true,
   },
   {
@@ -145,7 +137,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     name: 'PayPal',
     providerType: 'paypal',
     categories: ['Payment', 'Invoice customer'],
-    description: 'PayPal is an online payment system that supports online money transfers.',
+    description: 'Collect payments through PayPal.',
     premium: true,
   },
 ]

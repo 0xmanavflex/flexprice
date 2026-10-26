@@ -5,6 +5,7 @@ import {
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
   DEFAULT_TAX_RATE_QUERY,
+  PriceEntityType,
   SubscriptionStatus,
   type SubscriptionCancellationType,
   lineRevertDraft,
@@ -19,6 +20,7 @@ import {
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,
   useAddons,
+  useEntitiesCharges,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
   useCancelSubscription,
@@ -175,6 +177,13 @@ export function SubscriptionDetailPage({
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
+  // The usage charges of add-ons that have any, so attaching one can commit on them.
+  const addonCharges = useEntitiesCharges(
+    PriceEntityType.Addon,
+    (addonCatalogue.data?.addons ?? [])
+      .filter((addon) => addon.status === 'published' && addon.usageChargeCount > 0)
+      .map((addon) => addon.id),
+  )
   const taxRateCatalogue = useTaxRates({
     ...DEFAULT_TAX_RATE_QUERY,
     pageSize: 100,
@@ -305,6 +314,7 @@ export function SubscriptionDetailPage({
           addons: (addonCatalogue.data?.addons ?? [])
             .filter((addon) => addon.status === 'published')
             .map((addon) => ({ id: addon.id, name: addon.name })),
+          addonCharges: (addonId) => addonCharges.data?.get(addonId),
           coupons: (couponCatalogue.data?.coupons ?? [])
             .filter((coupon) => coupon.code !== '')
             .map((coupon) => ({ code: coupon.code, name: coupon.name })),
