@@ -11,6 +11,7 @@ import {
 import { Progress } from '@ui/components/primitives/progress'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { SUBSCRIPTION_STATUS_TONE, TONE_DOT } from '../shared/statusTones'
 
 export const SubscriptionCardProvenance = provenance({
   source: 'composition',
@@ -20,13 +21,10 @@ export const SubscriptionCardProvenance = provenance({
 
 const DAY = 86_400_000
 
-const STATUS_DOT: Record<SubscriptionStatus, string> = {
-  [SubscriptionStatus.Active]: 'bg-success',
-  [SubscriptionStatus.Trialing]: 'bg-info',
-  [SubscriptionStatus.Paused]: 'bg-warning',
-  [SubscriptionStatus.Cancelled]: 'bg-destructive',
-  [SubscriptionStatus.Incomplete]: 'bg-muted-foreground',
-}
+/** The shared tone per status, as a dot. */
+const STATUS_DOT = Object.fromEntries(
+  Object.entries(SUBSCRIPTION_STATUS_TONE).map(([status, tone]) => [status, TONE_DOT[tone]]),
+) as Record<SubscriptionStatus, string>
 
 export interface SubscriptionCardProps {
   subscription: Subscription

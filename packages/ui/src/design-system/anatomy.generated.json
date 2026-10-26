@@ -5497,7 +5497,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [],
-      "story": null
+      "story": "./src/pages/shared/statusTones.stories.tsx"
     },
     "Panel": {
       "file": "src/compositions/layout/Section.tsx",
@@ -10147,6 +10147,13 @@
         "FeatureTypeBadge",
         "GlyphBadge",
         "InvoiceStatusBadge"
+      ]
+    },
+    "./src/pages/shared/statusTones.stories.tsx": {
+      "title": "Building blocks/Charts & metrics/Status tones",
+      "component": "Palette",
+      "uses": [
+        "Pill"
       ]
     },
     "./src/pages/shared/TrendBadge.stories.tsx": {
