@@ -4,6 +4,8 @@ import {
   type PortalPaymentMethod,
   type PortalSubscription,
   type PortalView,
+  absoluteMoney,
+  isNegativeMoney,
   isPayable,
   periodProgress,
   totalDue,
@@ -247,17 +249,26 @@ function AccountSummary({ data, now, locale, onGoTo, onPay, onAddCredits }: Port
         ) : (
           <SummaryCell
             icon={<WalletIcon />}
-            label="Credit balance"
+            label={wallet && isNegativeMoney(wallet.balance) ? 'Credits owed' : 'Credit balance'}
             value={
               wallet ? (
-                money(wallet.balance)
+                isNegativeMoney(wallet.balance) ? (
+                  // Below zero is money owed: said in the warning tone, as a positive figure.
+                  <span className="text-warning-foreground dark:text-warning">
+                    {money(absoluteMoney(wallet.balance))}
+                  </span>
+                ) : (
+                  money(wallet.balance)
+                )
               ) : (
                 <span className="text-muted-foreground">No credits</span>
               )
             }
             hint={
               wallet
-                ? `${formatNumber(wallet.credits, locale)} credits`
+                ? isNegativeMoney(wallet.balance)
+                  ? `${formatNumber(wallet.credits.replace(/^-/, ''), locale)} credits used beyond the balance. Add credits to cover them.`
+                  : `${formatNumber(wallet.credits, locale)} credits`
                 : 'Credits aren’t set up on your account'
             }
             action={wallet ? { label: 'Add credits', run: onAddCredits } : undefined}

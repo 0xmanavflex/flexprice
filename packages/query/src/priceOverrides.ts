@@ -19,9 +19,15 @@ export interface OverrideLineItem {
   tierMode?: string
   tiers?: { upTo: number | null; unitAmount: string; flatAmount?: string }[]
   transformQuantity?: { divideBy: number }
+  bucketSize?: string
 }
 
 export function toOverrideLineItem(override: PriceOverride): OverrideLineItem {
+  const line = toPricedLine(override)
+  return override.bucketSize ? { ...line, bucketSize: override.bucketSize } : line
+}
+
+function toPricedLine(override: PriceOverride): OverrideLineItem {
   switch (override.billingModel) {
     case BillingModel.FlatFee:
       return {

@@ -119,7 +119,7 @@ export const TabsBare: StoryObj<TabsArgs> = {
 interface PropertiesArgs {
   /** How many label/value pairs (1-12). */
   count: number
-  columns: 2 | 3 | 4
+  columns: 1 | 2 | 3 | 4
 }
 
 const PROPERTY_DEFS = [
@@ -142,7 +142,7 @@ export const PropertiesPlayground: StoryObj<PropertiesArgs> = {
   name: 'Properties: Playground',
   argTypes: {
     count: { control: { type: 'number', min: 1, max: 12, step: 1 } },
-    columns: { control: 'inline-radio', options: [2, 3, 4] },
+    columns: { control: 'inline-radio', options: [1, 2, 3, 4] },
   },
   args: { count: 6, columns: 3 },
   render: ({ count, columns }) => (
