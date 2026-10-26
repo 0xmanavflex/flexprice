@@ -192,7 +192,14 @@ test.describe('live flows', () => {
   test.use({ storageState: sessionFile })
 
   test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ baseURL: process.env['E2E_BASE_URL'] })
+    // `browser.newContext` inherits this file's `use` options, including the
+    // `storageState` above, which does not exist until this hook writes it.
+    // Sign-in starts from an empty state instead, and keeps the config's
+    // baseURL unless one is set.
+    const context = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+      ...(process.env['E2E_BASE_URL'] ? { baseURL: process.env['E2E_BASE_URL'] } : {}),
+    })
     try {
       await guardWrites(context)
       page = await context.newPage()
