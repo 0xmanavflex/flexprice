@@ -120,3 +120,13 @@ export const Empty: Story = {
 export const Failed: Story = {
   args: { rows: [], error: 'The time range can be at most 30 days.', onRetry: fn() },
 }
+
+/** A custom range shows its two days beside the range picker. */
+export const CustomRange: Story = {
+  args: { filters: { ...FILTERS, range: 'custom', from: '2026-10-01', to: '2026-10-15' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'From' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'To' })).toBeVisible()
+  },
+}

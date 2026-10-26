@@ -17,6 +17,7 @@ import {
 } from '@ui/components/primitives/sheet'
 import { Section } from '@ui/compositions/layout/Section'
 import { Properties, SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { DateInput } from '@ui/compositions/forms/DateInput'
 import { SubTabState } from '@ui/compositions/detail/SubTabState'
 import { Toolbar } from '@ui/compositions/tables/Toolbar'
 import {
@@ -106,14 +107,18 @@ export interface ActivityFilters {
   actorType: string
   source: string
   range: ActivityRange
+  /** `custom` only: the first and last day shown, `YYYY-MM-DD`, local time. */
+  from?: string
+  to?: string
 }
 
-export type ActivityRange = '24h' | '7d' | '30d'
+export type ActivityRange = '24h' | '7d' | '30d' | 'custom'
 
 export const ACTIVITY_RANGES: ReadonlyArray<{ value: ActivityRange; label: string }> = [
   { value: '24h', label: 'Last 24 hours' },
   { value: '7d', label: 'Last 7 days' },
   { value: '30d', label: 'Last 30 days' },
+  { value: 'custom', label: 'Custom range' },
 ]
 
 export const ACTIVITY_PAGE_SIZES = [25, 50] as const
@@ -301,6 +306,26 @@ export function CustomerActivityView({
                     ))}
                   </SelectContent>
                 </Select>
+                {filters.range === 'custom' ? (
+                  <>
+                    <DateInput
+                      aria-label="From"
+                      value={filters.from ?? ''}
+                      onValueChange={(from) => set({ from })}
+                      {...(filters.to ? { max: filters.to } : {})}
+                      placeholder="From"
+                      className="h-9 w-full sm:w-40"
+                    />
+                    <DateInput
+                      aria-label="To"
+                      value={filters.to ?? ''}
+                      onValueChange={(to) => set({ to })}
+                      {...(filters.from ? { min: filters.from } : {})}
+                      placeholder="To"
+                      className="h-9 w-full sm:w-40"
+                    />
+                  </>
+                ) : null}
               </div>
             }
           />
