@@ -365,6 +365,7 @@ function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
         ? price.transformQuantity.divideBy
         : null,
     priceUnit: custom ? (price.priceUnit ?? '') : '',
+    ...(custom && price.priceUnitAmount ? { priceUnitAmount: price.priceUnitAmount } : {}),
     meterId: wire.meterId || price.meterId || '',
     billingPeriod:
       wire.billingPeriod && wire.billingPeriod in BILLING_PERIOD_LABEL

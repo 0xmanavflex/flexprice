@@ -120,6 +120,7 @@ import { ChargeAlertForm } from './ChargeAlertForm'
 import { PauseContractDialog } from './PauseContractDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
+import { everyPeriod } from './ContractSummary'
 
 /**
  * A unit price, with the precision a usage rate needs ($0.002 a request):
@@ -1879,11 +1880,41 @@ function previewUnitPrice(
   const charge = contract?.charge
   if (charge) {
     if (charge.billingModel === BillingModel.Tiered) return 'Tiered'
-    if (charge.billingModel === BillingModel.Package && charge.transformQuantity?.divideBy)
-      return `${unitMoney(money(charge.amount, charge.currency))} per ${charge.transformQuantity.divideBy.toLocaleString('en-US')}`
-    if (charge.amount) return unitMoney(money(charge.amount, charge.currency))
+    // A custom-unit price is written in its unit ("10 TOK"); `charge.amount` is
+    // not that rate, so without the unit's own amount it falls back below.
+    const unit = contract?.pricing?.priceUnit ?? ''
+    const rate = unit
+      ? contract?.pricing?.priceUnitAmount
+        ? `${unitAmount(contract.pricing.priceUnitAmount)} ${unit}`
+        : null
+      : charge.amount
+        ? unitMoney(money(charge.amount, charge.currency))
+        : null
+    if (rate) {
+      return charge.billingModel === BillingModel.Package && charge.transformQuantity?.divideBy
+        ? `${rate} per ${charge.transformQuantity.divideBy.toLocaleString('en-US')}`
+        : rate
+    }
   }
   return line.unitPrice ? unitMoney(line.unitPrice) : '—'
+}
+
+/** A custom-unit rate as written, grouped, up to six decimals: "10", "0.0025". */
+function unitAmount(amount: string): string {
+  // The exact decimal string, as unitMoney passes it: a double would round a large rate.
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(
+    amount as unknown as number,
+  )
+}
+
+/** "Monthly", or "Every 3 months" when the charge bills every few periods. */
+function previewInterval(contract: SubscriptionLine | undefined): string {
+  const charge = contract?.charge
+  if (charge && charge.billingPeriodCount > 1) {
+    const every = everyPeriod(charge.billingPeriod, charge.billingPeriodCount)
+    return every.charAt(0).toUpperCase() + every.slice(1)
+  }
+  return contract?.billingPeriodLabel || '—'
 }
 
 function InvoicePreviewSection({
@@ -1984,7 +2015,7 @@ function InvoicePreviewSection({
               {
                 key: 'interval',
                 header: 'Interval',
-                cell: (line) => <Muted>{contractLineOf(line)?.billingPeriodLabel || '—'}</Muted>,
+                cell: (line) => <Muted>{previewInterval(contractLineOf(line))}</Muted>,
               },
               {
                 key: 'timing',

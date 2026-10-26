@@ -901,7 +901,19 @@ export const UpcomingInvoice: Story = {
     // Joined to the contract's lines by price: interval and billing timing show.
     await expect(section.getByRole('columnheader', { name: 'Interval' })).toBeVisible()
     await expect(section.getByRole('columnheader', { name: 'Billing timing' })).toBeVisible()
-    await expect(section.getAllByText('Monthly').length).toBeGreaterThan(0)
+    // Each row: unit price from the contract line's price, its interval and timing.
+    const row = (name: string) => within(section.getByText(name).closest('tr')!)
+    const platform = row('Platform fee')
+    await expect(platform.getAllByText('$1,500.00')).toHaveLength(2)
+    await expect(platform.getByText('Monthly')).toBeVisible()
+    await expect(platform.getByText('In advance')).toBeVisible()
+    const api = row('API requests')
+    await expect(api.getByText('Tiered')).toBeVisible()
+    await expect(api.queryByText('$0.002')).toBeNull()
+    await expect(api.getByText('Monthly')).toBeVisible()
+    await expect(api.getByText('In arrears')).toBeVisible()
+    // No contract line has this price: no interval or timing, and no unit price to show.
+    await expect(row('Seat overage').getAllByText('—')).toHaveLength(3)
     await expect(section.getByText('Subtotal')).toBeVisible()
     await expect(section.getByText('Discount')).toBeVisible()
     await expect(section.getByText('−$359.05')).toBeVisible()
@@ -909,6 +921,40 @@ export const UpcomingInvoice: Story = {
     await expect(section.getByText('Prepaid credits')).toBeVisible()
     await expect(section.getByText('Amount due')).toBeVisible()
     await expect(section.getByText('$3,389.96')).toBeVisible()
+  },
+}
+
+/**
+ * A preview line priced in a custom unit shows the unit's rate, not a currency
+ * amount; a charge billed every few periods says so.
+ */
+export const UpcomingInvoiceCustomUnitAndPeriodCount: Story = {
+  args: {
+    ...BASE,
+    lines: ready(
+      LINES.map((line) =>
+        line.id === 'line_1' && line.charge
+          ? { ...line, charge: { ...line.charge, billingPeriodCount: 3 } }
+          : line.id === 'line_3' && line.charge && line.pricing
+            ? {
+                ...line,
+                pricing: { ...line.pricing, priceUnit: 'TOK', priceUnitAmount: '10' },
+                charge: { ...line.charge, amount: '2', displayAmount: '$2.00', priceUnit: 'TOK' },
+              }
+            : line,
+      ),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const section = within(
+      (await canvas.findByRole('heading', { name: 'Upcoming invoice' })).closest('section')!,
+    )
+    const row = (name: string) => within(section.getByText(name).closest('tr')!)
+    await expect(row('Platform fee').getByText('Every 3 months')).toBeVisible()
+    await expect(row('Platform fee').queryByText('Monthly')).toBeNull()
+    await expect(row('Onboarding').getByText('10 TOK')).toBeVisible()
+    await expect(row('Onboarding').queryByText('$2.00')).toBeNull()
   },
 }
 
