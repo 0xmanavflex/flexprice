@@ -82,6 +82,9 @@ const SUBSCRIPTION: SubscriptionDetail = {
     trueUp: false,
   },
   latestInvoice: { id: 'inv_0922', number: 'INV-0922' },
+  subscriptionType: 'standalone',
+  parentSubscriptionId: null,
+  invoicingCustomerId: null,
 }
 
 const flat = (): LinePricing => ({
@@ -2136,5 +2139,44 @@ export const ChargeAlertsFailed: Story = {
     await expect(canvas.getByText('Charge alerts could not be loaded.')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Retry charge alerts' }))
     await expect(args.chargeAlerts?.onRetry).toHaveBeenCalled()
+  },
+}
+
+/** An inherited contract mirrors its parent's: a banner says so, links the parent, and nothing is editable. */
+export const InheritedContract: Story = {
+  args: {
+    ...withSubscription({ subscriptionType: 'inherited', parentSubscriptionId: 'sub_parent' }),
+    onOpenContract: fn(),
+  },
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Inherited from a parent contract')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Open parent contract' }))
+    await expect(args.onOpenContract).toHaveBeenCalledWith('sub_parent')
+    await expect(
+      canvas.queryByRole('button', { name: /^Add (charge|entitlement|coupon)/ }),
+    ).toBeNull()
+  },
+}
+
+/** A parent lists the contracts inherited from it, each opening that contract. */
+export const ParentWithInherited: Story = {
+  args: {
+    ...withSubscription({ subscriptionType: 'parent' }),
+    onOpenContract: fn(),
+    inheritedContracts: ready([
+      {
+        ...SUBSCRIPTION,
+        id: 'sub_child_1',
+        customerName: 'Initech Labs',
+        subscriptionType: 'inherited',
+      },
+    ]),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Inherited contracts' })).toBeVisible()
+    await expect(canvas.getByText('Initech Labs')).toBeVisible()
   },
 }

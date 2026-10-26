@@ -8,6 +8,11 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- Contract hierarchy (R-15), as V1:
+  - An inherited contract (`subscription_type = inherited`, a mirror of its parent's) shows an info banner with "Open parent contract" and is read-only: no charge, section or metadata edits.
+  - A parent contract lists its inherited contracts (customer, plan, status) on the Overview, each opening that contract.
+  - `SubscriptionDetail` gains `subscriptionType`, `parentSubscriptionId` and `invoicingCustomerId`. `SubscriptionDetailView` gains `onOpenContract` and `inheritedContracts`.
+  - New `useInheritedContracts` hook, which searches by `parent_subscription_id`.
 - Customer activity (R-16): a "Custom range" option in the date filter shows From and To day pickers. The trail then runs from the first day's start to the last day's end, in local time, and the range is kept in the URL (`range=custom&from=&to=`). The API's own limit (30 days at most) still applies, and its error shows in the tab.
 - Customer detail (R-22): the Information tab's Customer details card no longer repeats the External ID and Customer ID. They stay in the header, copyable, on every tab.
 - Customer onboarding settings (R-21): the steps you can add are "Open a wallet" and "Start a subscription", as V1. Create the customer, Add a feature and its price, and Roll out to existing subscriptions are no longer offered; a saved step of those kinds still shows and can be removed. The plan is picked by name instead of typed as an id. The raw workflow type is no longer shown.

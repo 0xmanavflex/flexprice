@@ -138,6 +138,8 @@ export interface SubscriptionWire {
   enableTrueUp?: boolean | undefined
   /** Set on a contract inherited from, or grouped under, another contract. */
   parentSubscriptionId?: string | undefined
+  subscriptionType?: string | undefined
+  invoicingCustomerId?: string | undefined
   latestInvoice?: { id?: string | undefined; invoiceNumber?: string | undefined } | undefined
 }
 
@@ -219,6 +221,12 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
           number: wire.latestInvoice.invoiceNumber?.trim() || '',
         }
       : null,
+    subscriptionType: (wire.subscriptionType ?? '').toLowerCase(),
+    parentSubscriptionId: wire.parentSubscriptionId || null,
+    invoicingCustomerId:
+      wire.invoicingCustomerId && wire.invoicingCustomerId !== wire.customerId
+        ? wire.invoicingCustomerId
+        : null,
   }
 }
 
@@ -546,6 +554,43 @@ export async function fetchSubscriptions(
  * `useCoupons`, so the page can keep its query in the URL rather than in
  * component state.
  */
+/**
+ * The contracts that hang from this one (`parent_subscription_id`), as V1
+ * lists them on a parent: their customer, plan and status. A contract with no
+ * children reads an empty list.
+ */
+export function useInheritedContracts(parentId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.list({ parentId }),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.subscriptions.querySubscription(
+            {
+              filters: [
+                {
+                  field: 'parent_subscription_id',
+                  operator: 'eq',
+                  dataType: 'string',
+                  value: { string: parentId },
+                },
+              ],
+              expand: 'plan,customer',
+              limit: 100,
+              offset: 0,
+            },
+            options,
+          ),
+        signal,
+      )
+      return (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
+    },
+    enabled: parentId.length > 0,
+  })
+}
+
 export function useSubscriptions(query: SubscriptionQuery) {
   const client = useFlexprice()
 

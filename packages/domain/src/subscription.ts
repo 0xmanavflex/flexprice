@@ -725,6 +725,21 @@ export interface SubscriptionDetail extends Subscription {
   commitment: ContractCommitment | null
   /** The most recent invoice, as a link target. */
   latestInvoice: { id: string; number: string } | null
+  /**
+   * Where the contract sits in a customer hierarchy, lower case: standalone,
+   * parent, inherited (a mirror of its parent's, with no lines of its own),
+   * delegated_invoicing or grouped_invoicing. Empty when the API did not say.
+   */
+  subscriptionType: string
+  /** The contract this one hangs from; null for a top-level contract. */
+  parentSubscriptionId: string | null
+  /** The customer invoiced for this contract when it is not its own customer. */
+  invoicingCustomerId: string | null
+}
+
+/** An inherited contract mirrors its parent's: it has no lines of its own and is read-only. */
+export function isInheritedContract(contract: Pick<SubscriptionDetail, 'subscriptionType'>): boolean {
+  return contract.subscriptionType === 'inherited'
 }
 
 /** One metered charge in the current period's usage. */

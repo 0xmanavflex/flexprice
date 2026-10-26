@@ -37,6 +37,7 @@ import {
   useDeleteSubscriptionLineItem,
   useExecuteLineChange,
   usePreviewLineChange,
+  useInheritedContracts,
   useSubscription,
   useContractChargeAlerts,
   useSubscriptionAddons,
@@ -74,6 +75,8 @@ export interface SubscriptionDetailPageProps {
   onOpenCustomer: (customerId: string) => void
   onOpenPlan: (planId: string) => void
   onOpenInvoice: (invoiceId: string) => void
+  /** Another contract: an inherited one's parent, or a parent's inherited contracts. */
+  onOpenContract?: (subscriptionId: string) => void
 }
 
 const CANCEL_OPTIONS = [
@@ -111,8 +114,13 @@ export function SubscriptionDetailPage({
   onOpenCustomer,
   onOpenPlan,
   onOpenInvoice,
+  onOpenContract,
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
+  // A parent's inherited contracts, as V1 lists them; only a parent has any.
+  const inheritedContracts = useInheritedContracts(
+    subscription.data?.subscriptionType === 'parent' ? subscriptionId : '',
+  )
   const lines = useSubscriptionLines(subscriptionId)
   // The Usage tab's breakdown is matched by the customer's external id.
   const contractCustomer = useCustomer(subscription.data?.customerId ?? '')
@@ -327,6 +335,10 @@ export function SubscriptionDetailPage({
         onBack={onNavigateToList}
         onOpenCustomer={() => onOpenCustomer(data.customerId)}
         onOpenPlan={() => onOpenPlan(data.planId)}
+        {...(onOpenContract ? { onOpenContract } : {})}
+        {...(data.subscriptionType === 'parent'
+          ? { inheritedContracts: part(inheritedContracts) }
+          : {})}
         onOpenInvoice={onOpenInvoice}
         {...(data.status === SubscriptionStatus.Incomplete
           ? { onActivate: () => setDialog('activate') }

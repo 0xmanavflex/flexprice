@@ -359,6 +359,7 @@ export {
   lineRevertDraft,
   type LineLineage,
   commitmentPeriodNoun,
+  isInheritedContract,
   canPauseSubscription,
   canResumeSubscription,
 } from './subscription'
