@@ -160,9 +160,9 @@ export const PriceFromContractAmount: Story = {
     const canvas = within(canvasElement)
     const body = within(canvasElement.ownerDocument.body)
     await userEvent.click(
-      canvas.getByRole('button', { name: 'Work out the price from a contract amount' }),
+      canvas.getByRole('button', { name: 'Work out the price from a contract value' }),
     )
-    const contract = await body.findByRole('textbox', { name: /Contract amount/ })
+    const contract = await body.findByRole('textbox', { name: /Contract value/ })
     await userEvent.clear(contract)
     await userEvent.type(contract, '12000')
     await userEvent.click(body.getByRole('button', { name: 'Use this price' }))

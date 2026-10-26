@@ -76,7 +76,7 @@ export function ContractAmountCalculator({
             variant="outline"
             size="icon"
             className="size-9 shrink-0"
-            aria-label="Work out the price from a contract amount"
+            aria-label="Work out the price from a contract value"
             disabled={disabled}
           />
         }
@@ -85,10 +85,10 @@ export function ContractAmountCalculator({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        aria-label="Contract amount calculator"
+        aria-label="Contract value calculator"
         className="flex w-80 flex-col gap-4"
       >
-        <Field label={`Contract amount (${unitLabel})`}>
+        <Field label={`Contract value (${unitLabel})`}>
           {({ id, ...field }) => (
             <Input
               id={id}
@@ -100,7 +100,7 @@ export function ContractAmountCalculator({
             />
           )}
         </Field>
-        <Field label="Contract term" hint="The period the contract amount covers.">
+        <Field label="Contract term" hint="The period the contract value covers.">
           {({ id, ...field }) => (
             <OptionSelect
               id={id}
@@ -121,7 +121,7 @@ export function ContractAmountCalculator({
               ({per})
             </>
           ) : (
-            'Enter a contract amount to work out the price.'
+            'Enter a contract value to work out the price.'
           )}
         </p>
         <Button
