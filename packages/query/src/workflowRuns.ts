@@ -99,7 +99,9 @@ export async function fetchWorkflowRuns(
   client: Flexprice,
   query: WorkflowQuery,
 ): Promise<WorkflowRunPage> {
-  const response = await call(() => client.workflows.queryWorkflow(toWorkflowFilter(query) as never))
+  const response = await call(() =>
+    client.workflows.queryWorkflow(toWorkflowFilter(query) as never),
+  )
   const runs = (response.items ?? []).map((item) => toWorkflowRun(item as WorkflowRunWire))
   return { runs, total: response.pagination?.total ?? runs.length }
 }

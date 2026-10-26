@@ -162,6 +162,12 @@ function page(source: Corpus, body: SearchBody) {
   const ids = body.feature_ids ?? body.featureIds
   if (ids?.length) rows = rows.filter((row) => ids.includes(readString(row, 'id')))
 
+  // Features by their meter, as the API's `meter_ids`.
+  const meterIds =
+    (body as { meter_ids?: string[]; meterIds?: string[] }).meter_ids ??
+    (body as { meterIds?: string[] }).meterIds
+  if (meterIds?.length) rows = rows.filter((row) => meterIds.includes(readString(row, 'meter_id')))
+
   // Charges and entitlements are searched by the entity they price. Scoping to
   // it here is what makes a plan's detail page show *its* charges, not the whole
   // catalogue's: the bug an unfiltered mock would hide until production.

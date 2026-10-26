@@ -39,19 +39,22 @@ describe('invoices, from captured responses', () => {
     expect(() => items.map((item) => toInvoice(item as never))).not.toThrow()
   })
 
-  it.each(items.map((item, i) => [i, item] as const))('row %i is a usable domain invoice', (_i, item) => {
-    const invoice = toInvoice(item as never)
+  it.each(items.map((item, i) => [i, item] as const))(
+    'row %i is a usable domain invoice',
+    (_i, item) => {
+      const invoice = toInvoice(item as never)
 
-    expect(invoice.id).not.toBe('')
-    // A missing invoice number stays blank. The internal id is never shown as the number.
-    expect(invoice.number).toBe(item.invoiceNumber?.trim() ?? '')
-    expect(invoice.number).not.toBe(invoice.id)
-    expect(invoice.customerName).not.toBe('Unknown')
-    expect(Object.values(InvoiceStatus)).toContain(invoice.status)
-    expect(invoice.total.currency).toMatch(/^[A-Z]{3}$/)
-    // Amounts stay exact decimal strings the whole way through.
-    expect(invoice.total.amount).toMatch(/^-?\d+(\.\d+)?$/)
-  })
+      expect(invoice.id).not.toBe('')
+      // A missing invoice number stays blank. The internal id is never shown as the number.
+      expect(invoice.number).toBe(item.invoiceNumber?.trim() ?? '')
+      expect(invoice.number).not.toBe(invoice.id)
+      expect(invoice.customerName).not.toBe('Unknown')
+      expect(Object.values(InvoiceStatus)).toContain(invoice.status)
+      expect(invoice.total.currency).toMatch(/^[A-Z]{3}$/)
+      // Amounts stay exact decimal strings the whole way through.
+      expect(invoice.total.amount).toMatch(/^-?\d+(\.\d+)?$/)
+    },
+  )
 
   it('never produces NaN or "undefined" in a money amount', () => {
     for (const invoice of items.map((i) => toInvoice(i as never))) {
@@ -82,12 +85,15 @@ describe('features, from captured responses', () => {
     expect(items.length).toBeGreaterThan(0)
   })
 
-  it.each(items.map((item, i) => [i, item] as const))('row %i is a usable domain feature', (_i, item) => {
-    const feature = toFeature(item as never)
+  it.each(items.map((item, i) => [i, item] as const))(
+    'row %i is a usable domain feature',
+    (_i, item) => {
+      const feature = toFeature(item as never)
 
-    expect(feature.id).not.toBe('')
-    expect(feature.name).not.toBe('Untitled feature')
-  })
+      expect(feature.id).not.toBe('')
+      expect(feature.name).not.toBe('Untitled feature')
+    },
+  )
 
   /**
    * A metered feature must carry what it measures, or the grid shows an em dash
@@ -126,8 +132,18 @@ describe('features, from captured responses', () => {
 
 describe('the fixture corpus itself', () => {
   const EXPECTED = [
-    'customers', 'plans', 'features', 'prices', 'invoices', 'subscriptions',
-    'entitlements', 'wallets', 'coupons', 'addons', 'payments', 'taxrates',
+    'customers',
+    'plans',
+    'features',
+    'prices',
+    'invoices',
+    'subscriptions',
+    'entitlements',
+    'wallets',
+    'coupons',
+    'addons',
+    'payments',
+    'taxrates',
   ]
 
   it.each(EXPECTED)('%s.json is present and correctly shaped', (name) => {
@@ -146,6 +162,7 @@ describe('the fixture corpus itself', () => {
       (name) => ((fixture(name) as { items: unknown[] }).items ?? []).length === 0,
     )
     expect(empty.length).toBeLessThan(EXPECTED.length)
-    if (empty.length > 0) console.warn(`  empty fixtures (need a richer environment): ${empty.join(', ')}`)
+    if (empty.length > 0)
+      console.warn(`  empty fixtures (need a richer environment): ${empty.join(', ')}`)
   })
 })

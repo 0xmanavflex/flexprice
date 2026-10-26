@@ -344,6 +344,31 @@ export function useFeature(id: string) {
   })
 }
 
+/**
+ * The features on a set of meters, whatever page of the catalogue they sit on:
+ * searched by `meter_ids`, all in one read. Empty meters read nothing.
+ */
+export function useFeaturesByMeters(meterIds: readonly string[]) {
+  const client = useFlexprice()
+  const ids = [...new Set(meterIds)].sort()
+
+  return useQuery({
+    queryKey: queryKeys.features.list({ meterIds: ids }),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.features.queryFeature(
+            { meterIds: ids, limit: Math.max(ids.length * 2, 50), expand: 'meters' },
+            options,
+          ),
+        signal,
+      )
+      return (response.items ?? []).map((item) => toFeature(item as FeatureWire))
+    },
+    enabled: ids.length > 0,
+  })
+}
+
 export function useCreateFeature() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

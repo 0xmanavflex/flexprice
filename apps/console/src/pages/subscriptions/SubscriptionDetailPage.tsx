@@ -219,19 +219,25 @@ export function SubscriptionDetailPage({
           ]
           const s = subscription.data
           if (!externalId || meterIds.length === 0 || !s) return {}
-          const day = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : undefined)
+          // The panel's range is whole local days, so each instant becomes its
+          // local date: the day the period starts or ends on this screen.
+          const day = (date: Date) =>
+            `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+          const now = new Date()
+          const start = s.currentPeriodStart
+          // Up to today, never past the period's end; a period not yet started
+          // opens on its first day alone rather than on a backwards range.
+          const end = s.currentPeriodEnd && s.currentPeriodEnd < now ? s.currentPeriodEnd : now
+          const from = start ? day(start) : undefined
+          const to = from && day(end) < from ? from : day(end)
           return {
             usageBreakdown: (
               <CustomerAnalyticsPanel
                 externalId={externalId}
                 scope={{
                   meterIds,
-                  from: day(s.currentPeriodStart),
-                  to: day(
-                    s.currentPeriodEnd && s.currentPeriodEnd < new Date()
-                      ? s.currentPeriodEnd
-                      : new Date(),
-                  ),
+                  from,
+                  to,
                   note: "Usage of this contract's metered features by its customer. Usage of the same features on the customer's other contracts is included.",
                 }}
               />

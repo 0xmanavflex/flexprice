@@ -272,12 +272,16 @@ function analyticsFilter(query: UsageAnalyticsQuery): Record<string, unknown> {
  * to show a change. That is two real measurements compared, which is a different
  * thing from a percentage a component made up.
  */
-export function useUsageAnalytics(query: UsageAnalyticsQuery): UseQueryResult<UsageAnalytics> {
+export function useUsageAnalytics(
+  query: UsageAnalyticsQuery,
+  options: { enabled?: boolean } = {},
+): UseQueryResult<UsageAnalytics> {
   const client = useFlexprice()
 
   return useQuery({
     queryKey: queryKeys.events.analytics(analyticsFilter(query)),
     queryFn: () => fetchUsageAnalytics(client, query),
+    enabled: options.enabled ?? true,
     // A dashboard that refetches a 90-day aggregation on every focus change is
     // a bill, not a feature.
     staleTime: 60_000,

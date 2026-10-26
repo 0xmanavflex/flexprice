@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, ErrorKind, listActivity } from '@fp/api'
-import {
-  activityTitle,
-  type ActivityEntry,
-} from '@fp/domain'
+import { activityTitle, type ActivityEntry } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 

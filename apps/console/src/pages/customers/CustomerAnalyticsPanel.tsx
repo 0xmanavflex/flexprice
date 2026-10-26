@@ -3,6 +3,7 @@ import { DEFAULT_FEATURE_QUERY, FeatureType, formatMoney } from '@fp/domain'
 import {
   useCustomerCostAnalytics,
   useFeatures,
+  useFeaturesByMeters,
   useUsageAnalytics,
   UsageWindowSize,
 } from '@fp/query'
@@ -67,15 +68,22 @@ export function CustomerAnalyticsPanel({
     }),
     [query.from, query.to],
   )
-  const metered = useFeatures({
-    ...DEFAULT_FEATURE_QUERY,
-    pageSize: 100,
-    types: [FeatureType.Metered],
-    // Archived features can still carry usage in the window.
-    filters: [],
-  })
+  const metered = useFeatures(
+    {
+      ...DEFAULT_FEATURE_QUERY,
+      pageSize: 100,
+      types: [FeatureType.Metered],
+      // Archived features can still carry usage in the window.
+      filters: [],
+    },
+    { enabled: !scope },
+  )
+  // A scope's features are searched by its meters, so none is missed for
+  // sitting past the first page of the catalogue.
+  const scoped = useFeaturesByMeters(scope?.meterIds ?? [])
+  const catalogue = scope ? scoped : metered
   // The features on offer: every metered one, or only those a scope names.
-  const options = (metered.data?.features ?? []).filter(
+  const options = (scope ? (scoped.data ?? []) : (metered.data?.features ?? [])).filter(
     (feature) =>
       feature.type === FeatureType.Metered &&
       (!scope || (feature.meterId !== null && scope.meterIds.includes(feature.meterId))),
@@ -91,8 +99,13 @@ export function CustomerAnalyticsPanel({
     featureIds: effectiveIds,
     includeChildren: query.includeChildren,
   }
-  const usage = useUsageAnalytics({ ...filters, windowSize: UsageWindowSize.Day })
-  const costs = useCustomerCostAnalytics(filters)
+  // A scope waits for its features: until then "none" would read as no usage.
+  const ready = !scope || scoped.isSuccess
+  const usage = useUsageAnalytics(
+    { ...filters, windowSize: UsageWindowSize.Day },
+    { enabled: ready },
+  )
+  const costs = useCustomerCostAnalytics(filters, { enabled: ready })
 
   const data = usage.data
   const cost = costs.data
@@ -135,9 +148,18 @@ export function CustomerAnalyticsPanel({
           })),
         }
       })}
-      isLoading={usage.isPending}
-      error={data ? null : usage.error ? 'Usage analytics could not be loaded.' : null}
+      isLoading={catalogue.isPending || usage.isPending}
+      error={
+        catalogue.isError
+          ? 'The features could not be loaded.'
+          : data
+            ? null
+            : usage.error
+              ? 'Usage analytics could not be loaded.'
+              : null
+      }
       onRetry={() => {
+        if (catalogue.isError) void catalogue.refetch()
         void usage.refetch()
         void costs.refetch()
       }}
