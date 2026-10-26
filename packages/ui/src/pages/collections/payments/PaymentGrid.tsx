@@ -14,7 +14,6 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import {
   type EntityColumn,
-  type PillTone,
   dateColumn,
   idColumn,
   moneyColumn,
@@ -23,6 +22,7 @@ import {
 } from '../../shared/cells'
 import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
+import { PAYMENT_STATUS_TONE } from '../../shared/statusTones'
 
 /**
  * The payment list, on the shared `EntityList`.
@@ -55,14 +55,7 @@ const STATUS_CHOICES = Object.values(PaymentStatus).map((value) => ({
   label: PAYMENT_STATUS_LABEL[value],
 }))
 
-const STATUS_TONE: Record<PaymentStatus, PillTone> = {
-  [PaymentStatus.Pending]: 'warning',
-  [PaymentStatus.Succeeded]: 'success',
-  [PaymentStatus.Overpaid]: 'info',
-  [PaymentStatus.Failed]: 'danger',
-  [PaymentStatus.Refunded]: 'neutral',
-  [PaymentStatus.Voided]: 'neutral',
-}
+const STATUS_TONE = PAYMENT_STATUS_TONE
 
 /**
  * The wire's `CARD`, `ACH_DEBIT` and friends, as words.

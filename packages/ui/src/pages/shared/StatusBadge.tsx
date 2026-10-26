@@ -2,6 +2,7 @@ import type { CircleIcon } from '@ui/icons'
 import { FEATURE_TYPE_LABEL, InvoiceStatus, needsAttention, type FeatureType } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { FEATURE_TYPE_GLYPH, Pill, type PillTone } from './cells'
+import { INVOICE_STATUS_TONE } from './statusTones'
 
 /**
  * A billing status: a bordered pill with a coloured dot.
@@ -21,18 +22,8 @@ export const StatusBadgeProvenance = provenance({
   note: 'Dot-pill status, colour on the dot: so a dense column is not a traffic light.',
 })
 
-/** The dot colour each status carries. */
-const INVOICE_TONE: Record<InvoiceStatus, PillTone> = {
-  // Open is awaiting payment: orange (warning), so it stands out from Paid's
-  // green and Void's grey, and no longer shares violet with Trialing
-  // contracts. Draft, still being written, takes the quiet info tone.
-  [InvoiceStatus.Draft]: 'info',
-  [InvoiceStatus.Open]: 'warning',
-  [InvoiceStatus.Paid]: 'success',
-  [InvoiceStatus.Overdue]: 'danger',
-  [InvoiceStatus.Void]: 'neutral',
-  [InvoiceStatus.Skipped]: 'neutral',
-}
+/** The dot colour each status carries: the shared registry. */
+const INVOICE_TONE = INVOICE_STATUS_TONE
 
 const INVOICE_LABEL: Record<InvoiceStatus, string> = {
   [InvoiceStatus.Draft]: 'Draft',

@@ -9,6 +9,7 @@ import {
 import { SUBSCRIPTION_STATUS_LABEL, SubscriptionStatus } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { GlyphBadge } from '../shared/StatusBadge'
+import { TONE_TEXT } from '../shared/statusTones'
 
 /**
  * A subscription's lifecycle, drawn like every status here: colour on the glyph,
@@ -27,11 +28,11 @@ export const SubscriptionStatusBadgeProvenance = provenance({
 })
 
 const SUBSCRIPTION_STATUS: Record<SubscriptionStatus, { icon: typeof CircleIcon; tone: string }> = {
-  [SubscriptionStatus.Active]: { icon: CircleCheckIcon, tone: 'text-success' },
-  [SubscriptionStatus.Trialing]: { icon: CircleDashedIcon, tone: 'text-info' },
-  [SubscriptionStatus.Paused]: { icon: CirclePauseIcon, tone: 'text-muted-foreground' },
-  [SubscriptionStatus.Cancelled]: { icon: CircleSlashIcon, tone: 'text-muted-foreground' },
-  [SubscriptionStatus.Incomplete]: { icon: CircleAlertIcon, tone: 'text-destructive' },
+  [SubscriptionStatus.Active]: { icon: CircleCheckIcon, tone: TONE_TEXT.success },
+  [SubscriptionStatus.Trialing]: { icon: CircleDashedIcon, tone: TONE_TEXT.trial },
+  [SubscriptionStatus.Paused]: { icon: CirclePauseIcon, tone: TONE_TEXT.warning },
+  [SubscriptionStatus.Cancelled]: { icon: CircleSlashIcon, tone: TONE_TEXT.neutral },
+  [SubscriptionStatus.Incomplete]: { icon: CircleAlertIcon, tone: TONE_TEXT.warning },
 }
 
 export interface SubscriptionStatusBadgeProps {
