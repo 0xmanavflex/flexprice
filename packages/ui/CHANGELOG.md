@@ -8,11 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
-<<<<<<< HEAD
 - Contract Usage tab: an optional `usageBreakdown` slot shows the customer's usage analytics scoped to the contract's metered features, opening on its current period, in place of the usage-charges table. `CustomerAnalyticsView` gains a `note` saying what the figures cover. Source: walkthrough QA 1.4, decided in chat 2026-10-26.
-=======
 - New `ContractAmountCalculator` beside a flat fee's Amount on the charge form (plan, add-on and contract charges): a contract value over a contract term (daily to annual) is turned into the price per billing period and written into the Amount, as V1's calculator does; nothing else is stored. Exact rational maths in `@fp/domain` (`contractAmountPerPeriod`), V1's month ratios, half-up to cents. Source: walkthrough QA 3.3, decided in chat 2026-10-26.
->>>>>>> 50d7a9ca3302f9cf40c2c331c5ea8db915c53a27
 - Contract detail: a new Information tab (second) holds the Contract and Billing & collection panels and the metadata card; the Overview leads with the upcoming invoice, charges, add-ons and the rest, its rail keeping Activity and Related. Source: walkthrough QA 5.9, decided in chat 2026-10-26.
 - Invoice status colours: Open (and "Payment pending" on the detail page) is orange (`warning`), Paid green, Void grey; Draft moves to `info` so it does not share Open's colour. Open no longer shares violet with Trialing contracts. Existing tones only. Source: walkthrough QA 6.1, decided in chat 2026-10-26.
 - PillColumns: optional `legend` (default on). Home's "New contracts by plan" card turns it off, so the plan names are not listed under the chart; each column still reads out its full breakdown. From the uncommitted work on `fix/reports-full-window`.
