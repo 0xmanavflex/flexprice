@@ -494,6 +494,8 @@ export type { CustomerEvent, CustomerEventsGridProps } from './customers/Custome
 export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
 export { CustomerTaxSection } from './customers/CustomerTaxSection'
+export { FxRatesSection } from './shared/FxRatesSection'
+export type { FxRatesSectionProps } from './shared/FxRatesSection'
 export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
 export {
   CustomerEntitlementUsage,

@@ -723,3 +723,13 @@ export { reportBreakdown, reportCurrencies, reportScalar, reportSeries, useRepor
 export type { ReportBreakdownRow, ReportPoint, ReportScalar } from './reports'
 export type { ReportQuery, ReportResult } from '@fp/api'
 export { usePushCustomerToIntegrations } from './integrationSync'
+export {
+  toCreateFxRateRequest,
+  toFxRate,
+  toUpdateFxRateRequest,
+  useCreateFxRate,
+  useDeleteFxRate,
+  useFxRates,
+  useUpdateFxRate,
+} from './fxRates'
+export type { FxRateOwner, FxRateWire } from './fxRates'

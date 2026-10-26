@@ -36,6 +36,7 @@
         "CustomerDetail",
         "CustomerTaxSection",
         "EntitlementTable",
+        "FxRatesSection",
         "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
@@ -277,6 +278,7 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
+        "FxRatesSection",
         "PlanAiSetupView",
         "TaxDialog"
       ],
@@ -1431,6 +1433,7 @@
         "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
+        "FxRatesSection",
         "PauseContractDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
@@ -1456,6 +1459,7 @@
         "DownloadDialog",
         "ExportRunList",
         "ExportsOverview",
+        "FxRatesSection",
         "InvoiceForm",
         "ManageConnectionSheet",
         "PayInvoiceDialog",
@@ -2392,6 +2396,7 @@
         "CreditGrantEditForm",
         "CustomerWalletView",
         "DataExportDialog",
+        "FxRatesSection",
         "InvoiceForm",
         "InvoiceLinesEditor",
         "RunExportDialog",
@@ -2580,6 +2585,7 @@
         "EntitlementUsage",
         "EntitlementUsageTable",
         "FeatureDetailView",
+        "FxRatesSection",
         "GroupMembersView",
         "InvoiceDetailView",
         "PlanCreditGrantsView",
@@ -2813,6 +2819,7 @@
         "CustomerTaxSection",
         "CustomerWalletView",
         "EntityList",
+        "FxRatesSection",
         "GroupMembersView",
         "IntegrationLogo",
         "IntegrationsBlock",
@@ -3426,6 +3433,7 @@
         "ForgotPasswordForm",
         "FormCard",
         "FormRow",
+        "FxRatesSection",
         "GrantAllowanceFields",
         "InvoiceForm",
         "ManageConnectionSheet",
@@ -3815,6 +3823,7 @@
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
+        "FxRatesSection",
         "PauseContractDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
@@ -3960,6 +3969,30 @@
         "FeatureGrid"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
+    },
+    "FxRatesSection": {
+      "file": "src/pages/shared/FxRatesSection.tsx",
+      "layer": "surface",
+      "composes": [
+        "AccessScope",
+        "AppFailure",
+        "Composer",
+        "ConfirmDialog",
+        "DateInput",
+        "DetailTable",
+        "EmptyState",
+        "Field",
+        "FormDialog",
+        "LoadingRows",
+        "OptionCombobox",
+        "PlusIcon",
+        "RowActionsMenu",
+        "Section",
+        "Status",
+        "WriteGate"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/shared/FxRatesSection.stories.tsx"
     },
     "GalleryHorizontalEnd": {
       "file": "src/icons/index.ts",
@@ -4784,6 +4817,7 @@
         "CustomerTaxSection",
         "CustomerWalletView",
         "EntityAlertDialog",
+        "FxRatesSection",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
@@ -5224,6 +5258,7 @@
         "CustomerForm",
         "EntitlementCreateForm",
         "EntitlementEditForm",
+        "FxRatesSection",
         "SubscriptionForm",
         "TimezoneCombobox",
         "UpgradeView",
@@ -5895,6 +5930,7 @@
         "ExportsOverview",
         "FeatureForm",
         "FeatureGrid",
+        "FxRatesSection",
         "GroupGrid",
         "InvoiceForm",
         "InvoiceGrid",
@@ -6480,6 +6516,7 @@
         "CreditGrantTable",
         "CustomerDetail",
         "EntitlementTable",
+        "FxRatesSection",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
@@ -6658,6 +6695,7 @@
         "ExportsOverview",
         "FeatureDetailView",
         "FormPage",
+        "FxRatesSection",
         "GroupMembersView",
         "InvoiceDetailView",
         "MetadataCard",
@@ -7240,6 +7278,7 @@
         "CustomerDetail",
         "FeatureDetailView",
         "FeatureGrid",
+        "FxRatesSection",
         "InvoiceDetailView",
         "PlanGrid",
         "UsageBillingView"
@@ -8265,6 +8304,7 @@
         "EntitlementTable",
         "EntityList",
         "FeatureGrid",
+        "FxRatesSection",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
@@ -9906,6 +9946,13 @@
         "EyeIcon",
         "RocketIcon",
         "WrenchIcon"
+      ]
+    },
+    "./src/pages/shared/FxRatesSection.stories.tsx": {
+      "title": "App/Shared/FX rates section",
+      "component": "FxRatesSection",
+      "uses": [
+        "FxRatesSection"
       ]
     },
     "./src/pages/shared/HalfDonut.stories.tsx": {

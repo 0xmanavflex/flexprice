@@ -940,3 +940,18 @@ export type {
   PortalWalletTransaction,
 } from './customerPortal'
 export { CONTRACT_TERMS, contractAmountPerPeriod } from './contractAmount'
+export {
+  FX_OVERRIDE_STATUS_LABEL,
+  FxOverrideStatus,
+  FxRateScope,
+  emptyFxRateDraft,
+  formatFxPair,
+  formatFxRate,
+  formatFxRateValue,
+  fxOverrideStatus,
+  fxRateDraftSchema,
+  fxRateToDraft,
+  fxWindowsOverlap,
+  type FxRate,
+  type FxRateDraft,
+} from './fxRate'

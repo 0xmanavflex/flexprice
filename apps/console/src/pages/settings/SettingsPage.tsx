@@ -20,6 +20,7 @@ import {
 } from '@fp/ui/icons'
 import { AppearancePanel } from './AppearancePanel'
 import { CurrenciesPanel } from './CurrenciesPanel'
+import { FxRatesPanel } from '../forex/FxRatesPanel'
 import { InvoicesPanel } from './InvoicesPanel'
 import { OnboardingPanel } from './OnboardingPanel'
 import { PortalPanel } from './PortalPanel'
@@ -249,6 +250,9 @@ function SettingsPanel({
       return gated(RBAC_ENTITY.Setting, <SubscriptionsPanel />)
     case 'currency/currencies':
       return gated(RBAC_ENTITY.Setting, <CurrenciesPanel />)
+    case 'currency/forex':
+      // Gated by its own entity (FX rates), as V1, not by tenant settings.
+      return <FxRatesPanel owner={{ scope: 'tenant' }} />
     case 'customer-experience/portal':
       return gated(RBAC_ENTITY.Portal, <PortalPanel />)
     case 'customer-experience/onboarding':

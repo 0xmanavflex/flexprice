@@ -106,7 +106,10 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'currency',
     label: 'Currency',
-    tabs: [{ id: 'currencies', label: 'Currencies' }],
+    tabs: [
+      { id: 'currencies', label: 'Currencies' },
+      { id: 'forex', label: 'Forex rates' },
+    ],
   },
   {
     id: 'alerts',
