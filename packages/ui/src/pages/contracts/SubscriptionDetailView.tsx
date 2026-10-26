@@ -1056,6 +1056,13 @@ export function SubscriptionDetailView({
                           <Muted>{CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}</Muted>
                         ),
                       },
+                      // When the grant stops issuing credits: kept by the API for a
+                      // contract's grant, so it no longer reads as still running.
+                      {
+                        key: 'ends',
+                        header: 'Ends',
+                        cell: (row) => <Muted>{row.endDate ? day(row.endDate) : 'No end'}</Muted>,
+                      },
                       ...removeColumn<CreditGrant>(
                         (row) => row.name,
                         'End grant',
