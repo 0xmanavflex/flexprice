@@ -54,6 +54,8 @@ export interface ContractChargeDialogProps {
   onEnd: (line: SubscriptionLine, draft: EndContractCharge) => void
   isSubmitting?: boolean
   submitError?: string | null
+  /** The contract's start when still in the future (see `ContractAddChargeForm`). */
+  earliestStart?: string | undefined
   /** The add dialog's title and its opening line, where a caller words them its own way. */
   addTitle?: string
   addDescription?: string
@@ -76,6 +78,7 @@ export function ContractChargeDialog({
   onEnd,
   isSubmitting = false,
   submitError = null,
+  earliestStart,
   addTitle = 'Add charge',
   addDescription = 'Only this contract gets the charge; the plan does not change.',
 }: ContractChargeDialogProps) {
@@ -110,6 +113,7 @@ export function ContractChargeDialog({
           onAdd={onAdd}
           isSubmitting={isSubmitting}
           submitError={submitError}
+          earliestStart={earliestStart}
         />
       ) : state?.mode === 'edit' ? (
         <ContractUsageEditForm
@@ -149,6 +153,7 @@ function AddStep({
   onAdd,
   isSubmitting,
   submitError,
+  earliestStart,
 }: {
   /** A drafted charge to change: skips the type choice. */
   initial?: AddContractCharge | undefined
@@ -161,6 +166,7 @@ function AddStep({
   onAdd: (draft: AddContractCharge) => void
   isSubmitting: boolean
   submitError: string | null
+  earliestStart?: string | undefined
 }) {
   const [type, setType] = useState<PriceType>(initial?.charge.type ?? PriceType.Fixed)
   const [chosen, setChosen] = useState(Boolean(initial))
@@ -178,6 +184,7 @@ function AddStep({
         onSubmit={onAdd}
         isSubmitting={isSubmitting}
         submitError={submitError}
+        earliestStart={earliestStart}
       />
     )
   }

@@ -1573,6 +1573,10 @@ export function SubscriptionDetailView({
         priceUnits={priceUnits}
         isSubmitting={saving}
         submitError={saveError}
+        // A contract that has not started yet: a new charge starts with it, never before.
+        {...(s.startDate && s.startDate.getTime() > Date.now()
+          ? { earliestStart: s.startDate.toISOString() }
+          : {})}
         onAdd={(draft) => void run(onAddCharge?.(draft))}
         onEdit={(line, draft) => void run(onEditCharge?.(line, draft))}
         onEnd={(line, draft) => void run(onEndCharge?.(line, draft))}

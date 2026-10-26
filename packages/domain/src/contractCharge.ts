@@ -125,7 +125,11 @@ export interface LinePricing {
   terms: UsageTerms
 }
 
-/** A new charge on one contract. Empty `startDate` means now. */
+/**
+ * A new charge on one contract. `startDate` is a day (`YYYY-MM-DD`, midnight
+ * UTC), or an exact ISO instant when the charge starts with a contract that
+ * starts later in the day; empty means now.
+ */
 export interface AddContractCharge {
   charge: CreateCharge
   /** Whole units, fixed charges only. */

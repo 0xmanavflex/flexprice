@@ -222,6 +222,24 @@ describe('toPendingSchedules', () => {
     })
   })
 
+  it('sends an exact start instant as it is, for a contract that starts later that day', () => {
+    const request = toCreateLineItemRequest({
+      charge: {
+        type: 'FIXED',
+        billingModel: 'FLAT_FEE',
+        currency: 'USD',
+        billingPeriod: 'MONTHLY',
+        invoiceCadence: 'ADVANCE',
+        amount: '10',
+      },
+      quantity: '1',
+      startDate: '2099-03-01T15:30:00.000Z',
+      proration: 'none',
+      terms: NO_USAGE_TERMS,
+    } as Parameters<typeof toCreateLineItemRequest>[0])
+    expect(request['startDate']).toEqual(new Date('2099-03-01T15:30:00.000Z'))
+  })
+
   it('sends a metered charge with its meter, bands, bucket and commitment: and no quantity', () => {
     const request = toCreateLineItemRequest({
       charge: {
