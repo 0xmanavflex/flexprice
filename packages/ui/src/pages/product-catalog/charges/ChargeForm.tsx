@@ -32,6 +32,7 @@ import { FormActions } from '@ui/compositions/forms/FormActions'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
+import { ContractAmountCalculator } from './ContractAmountCalculator'
 import { FeatureTypeGlyph } from '../../shared/cells'
 import { TierTable, type TierRowError } from './TierTable'
 
@@ -667,7 +668,22 @@ export function ChargeForm({
       </fieldset>
 
       {billingModel === BillingModel.FlatFee ? (
-        <div className="max-w-xs">{amountField(`Amount (${unitLabel})`)}</div>
+        // The calculator sits at the field's bottom edge, beside its input.
+        <div className="flex max-w-sm items-end gap-2">
+          <div className="min-w-0 flex-1">{amountField(`Amount (${unitLabel})`)}</div>
+          <ContractAmountCalculator
+            billingPeriod={billingPeriod}
+            amount={String(form.watch('amount' as never) ?? '')}
+            unitLabel={unitLabel}
+            disabled={isSubmitting}
+            onApply={(amount) =>
+              form.setValue('amount' as never, amount as never, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          />
+        </div>
       ) : null}
 
       {billingModel === BillingModel.Package ? (
@@ -743,10 +759,7 @@ export function ChargeForm({
       {priceOptions && !isEdit && (priceOptions.groups.length > 0 || !isUsage) ? (
         <div className="grid gap-5 sm:grid-cols-2">
           {priceOptions.groups.length > 0 ? (
-            <Field
-              label="Tag"
-              hint="Optional. Tags related prices for reporting and bulk changes."
-            >
+            <Field label="Tag" hint="Optional. Tags related prices for reporting and bulk changes.">
               {({ id }) => (
                 <Controller
                   control={form.control}

@@ -153,6 +153,26 @@ export const SubmitsAValidatedCharge: Story = {
   },
 }
 
+/** The flat-fee calculator, as V1: 12,000 a year, billed monthly, fills the Amount with 1000.00. */
+export const PriceFromContractAmount: Story = {
+  args: { defaultValue: fixedFlatFee },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Work out the price from a contract amount' }),
+    )
+    const contract = await body.findByRole('textbox', { name: /Contract amount/ })
+    await userEvent.clear(contract)
+    await userEvent.type(contract, '12000')
+    await userEvent.click(body.getByRole('button', { name: 'Use this price' }))
+    await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ billingModel: BillingModel.FlatFee, amount: '1000.00' }),
+    )
+  },
+}
+
 /** In the catalogue, a fixed charge can join a price group and set a minimum quantity. */
 export const SetsPriceOptions: Story = {
   args: {
