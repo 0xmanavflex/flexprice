@@ -5107,15 +5107,18 @@ export const handlers = [
   http.post(`${BASE}/subscriptions`, async ({ request }) => {
     const body = await readBody(request)
     const start = typeof body['start_date'] === 'string' ? Date.parse(body['start_date']) : NaN
-    // A future start leaves the subscription incomplete until it is activated.
+    // As the API (CreateSubscriptionRequest.ToSubscription): the first status
+    // comes from the payment behaviour, not the start date. The default,
+    // default_active, starts it active even when it starts in the future; the
+    // incomplete behaviours start it incomplete. A draft stays a draft.
+    const behaviour = readString(body, 'payment_behavior')
     const row = {
       ...body,
       id: `sub_new_${Date.now()}`,
-      // A draft stays a draft; a future start waits to be activated.
       subscription_status:
         body['subscription_status'] === 'draft'
           ? 'draft'
-          : start > Date.now()
+          : ['default_incomplete', 'allow_incomplete', 'error_if_incomplete'].includes(behaviour)
             ? 'incomplete'
             : 'active',
       status: 'published',
@@ -5127,7 +5130,7 @@ export const handlers = [
     // An active contract bills its in-advance fixed charges at once, as the API
     // does, so the customer's first invoice is there to find on their Invoices
     // tab. Drafts and future starts have not begun, so they bill nothing yet.
-    if (row.subscription_status === 'active') {
+    if (row.subscription_status === 'active' && !(start > Date.now())) {
       const planId = readString(body, 'plan_id')
       const total = sourceFor('prices')
         .items.filter(
