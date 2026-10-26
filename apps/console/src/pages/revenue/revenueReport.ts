@@ -288,6 +288,7 @@ export function creditRows(
     else parts.free += row.value
     byCustomer.set(id, parts)
   }
+  const grand = [...byCustomer.values()].reduce((sum, row) => sum + row.paid + row.free, 0)
   return [...byCustomer.entries()]
     .map(([id, { paid, free }]) => ({
       id,
@@ -295,7 +296,12 @@ export function creditRows(
       paid,
       free,
       total: paid + free,
-      display: { paid: money(paid), free: money(free), total: money(paid + free) },
+      display: {
+        paid: money(paid),
+        free: money(free),
+        total: money(paid + free),
+        share: percentOf(paid + free, grand),
+      },
     }))
     .sort((a, b) => b.total - a.total)
 }

@@ -97,7 +97,7 @@ export interface CreditRow {
   paid: number
   free: number
   total: number
-  display: { paid: string; free: string; total: string }
+  display: { paid: string; free: string; total: string; share: string }
 }
 
 export interface AgingBucket {
@@ -173,7 +173,13 @@ export interface RevenueReportProps {
     arpu: ReportFigure
     topTenShare: string
     onOpenCustomer?: ((id: string) => void) | undefined
-    credits?: (ReportState & { rows: CreditRow[] }) | undefined
+    credits?:
+      | (ReportState & {
+          rows: CreditRow[]
+          total: string
+          paidShare: string
+        })
+      | undefined
   }
 
   receivables: ReportState & {
@@ -887,46 +893,73 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
         >
           <Surface>
             {customers.credits.status === 'ready' ? (
-              <DetailTable<CreditRow>
-                compact
-                label="Credit consumption by customer"
-                noun="customers"
-                rows={customers.credits.rows}
-                {...(customers.onOpenCustomer
-                  ? { onRowClick: (row: CreditRow) => customers.onOpenCustomer?.(row.id) }
-                  : {})}
-                columns={[
-                  {
-                    key: 'name',
-                    header: 'Customer',
-                    width: 220,
-                    sortBy: (row) => row.name,
-                    cell: (row) => <span className="font-medium">{row.name}</span>,
-                  },
-                  {
-                    key: 'total',
-                    header: 'Consumed',
-                    sortBy: (row) => row.total,
-                    cell: (row) => <span className="tabular-nums">{row.display.total}</span>,
-                  },
-                  {
-                    key: 'paid',
-                    header: 'Paid credits',
-                    sortBy: (row) => row.paid,
-                    cell: (row) => (
-                      <span className="text-muted-foreground tabular-nums">{row.display.paid}</span>
-                    ),
-                  },
-                  {
-                    key: 'free',
-                    header: 'Free credits',
-                    sortBy: (row) => row.free,
-                    cell: (row) => (
-                      <span className="text-muted-foreground tabular-nums">{row.display.free}</span>
-                    ),
-                  },
-                ]}
-              />
+              <>
+                <OverviewTiles
+                  variant="flush"
+                  tiles={[
+                    {
+                      label: 'Customers using credits',
+                      value: String(customers.credits.rows.length),
+                    },
+                    { label: 'Credits consumed', value: customers.credits.total },
+                    { label: 'Paid share', value: customers.credits.paidShare },
+                  ]}
+                />
+                <DetailTable<CreditRow>
+                  compact
+                  label="Credit consumption by customer"
+                  noun="customers"
+                  rows={customers.credits.rows}
+                  {...(customers.onOpenCustomer
+                    ? { onRowClick: (row: CreditRow) => customers.onOpenCustomer?.(row.id) }
+                    : {})}
+                  columns={[
+                    {
+                      key: 'name',
+                      header: 'Customer',
+                      width: 220,
+                      sortBy: (row) => row.name,
+                      cell: (row) => <span className="font-medium">{row.name}</span>,
+                    },
+                    {
+                      key: 'total',
+                      header: 'Consumed',
+                      sortBy: (row) => row.total,
+                      cell: (row) => <span className="tabular-nums">{row.display.total}</span>,
+                    },
+                    {
+                      key: 'share',
+                      header: 'Share',
+                      sortBy: (row) => row.total,
+                      cell: (row) => (
+                        <span className="text-muted-foreground tabular-nums">
+                          {row.display.share}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'paid',
+                      header: 'Paid credits',
+                      sortBy: (row) => row.paid,
+                      cell: (row) => (
+                        <span className="text-muted-foreground tabular-nums">
+                          {row.display.paid}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'free',
+                      header: 'Free credits',
+                      sortBy: (row) => row.free,
+                      cell: (row) => (
+                        <span className="text-muted-foreground tabular-nums">
+                          {row.display.free}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+              </>
             ) : (
               <NotReady
                 state={customers.credits}

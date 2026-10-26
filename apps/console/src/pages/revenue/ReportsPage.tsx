@@ -408,6 +408,11 @@ export function ReportsPage({
           reason: 'The credit report did not respond.',
           onRetry: retry(creditReport),
           rows: credits,
+          total: money(credits.reduce((sum, row) => sum + row.total, 0)),
+          paidShare: percentOf(
+            credits.reduce((sum, row) => sum + row.paid, 0),
+            credits.reduce((sum, row) => sum + row.total, 0),
+          ),
           basedOn: 'Credits applied to invoices, at the debit conversion rate.',
         },
       }}
