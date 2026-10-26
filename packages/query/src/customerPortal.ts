@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ApiError,
   type PortalAuth,
@@ -162,6 +162,63 @@ export const usePortalWalletTransactions = (
       ),
     wallet !== null,
   )
+
+/**
+ * A wallet's transactions, newest first, a page at a time: each "Load more"
+ * asks the API for the next `pageSize` by offset, rather than refetching a
+ * longer list from the top. Rows already shown are not repeated.
+ */
+export function usePortalWalletTransactionPages(
+  auth: PortalAuth,
+  wallet: PortalWallet | null,
+  pageSize: number,
+  since: Date | null = null,
+): PortalQuery<{ items: PortalWalletTransaction[]; total: number }> & {
+  loadMore: () => void
+  loadingMore: boolean
+} {
+  const query = useInfiniteQuery({
+    queryKey: queryKeys.customerPortal.part(
+      auth.apiOrigin,
+      auth.token,
+      'walletTransactionPages',
+      wallet?.id,
+      pageSize,
+      since?.toISOString() ?? null,
+    ),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) =>
+      toPortalWalletTransactions(
+        await getPortalWalletTransactions(auth, wallet?.id ?? '', {
+          limit: pageSize,
+          offset: pageParam,
+          ...(since ? { since } : {}),
+        }),
+        wallet?.currency ?? 'USD',
+      ),
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((count, page) => count + page.items.length, 0)
+      return last.items.length < pageSize || loaded >= last.total ? undefined : loaded
+    },
+    enabled: wallet !== null,
+    ...PORTAL_QUERY,
+  })
+  const seen = new Set<string>()
+  const items = (query.data?.pages ?? [])
+    .flatMap((page) => page.items)
+    .filter((item) => !seen.has(item.id) && Boolean(seen.add(item.id)))
+  const total = query.data?.pages.at(-1)?.total ?? 0
+  return {
+    data: query.data ? { items, total } : undefined,
+    error: query.error,
+    isPending: query.isPending,
+    refetch: () => void query.refetch(),
+    loadMore: () => {
+      if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage()
+    },
+    loadingMore: query.isFetchingNextPage,
+  }
+}
 
 /** Every credit added to a wallet, with what is left of it. */
 export const usePortalTopUps = (

@@ -463,7 +463,7 @@ function Transactions({
                   className="text-muted-foreground h-8 px-2"
                   onClick={onShowMore}
                 >
-                  Show more
+                  Load more
                 </Button>
               </div>
             ) : null}

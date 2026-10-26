@@ -17,7 +17,7 @@ import {
   usePortalSpend,
   usePortalSubscriptions,
   usePortalTopUps,
-  usePortalWalletTransactions,
+  usePortalWalletTransactionPages,
   usePortalWallets,
   useRemovePortalPaymentMethod,
   useSetDefaultPortalPaymentMethod,
@@ -37,7 +37,8 @@ import type { ApiUrls } from '../publicApi'
 import { type PortalLocation, parsePortalLocation, portalHref, takePortalToken } from './link'
 
 const GENERIC_ERROR = 'Something went wrong. Please try again.'
-const PAGE = 20
+/** Transactions per page: "Load more" asks the API for the next ten. */
+const PAGE = 10
 /** Top-ups shown at once; a wallet rarely has more grants and purchases than this. */
 const TOP_UPS = 100
 
@@ -134,7 +135,6 @@ function Portal({
   navigate: (next: PortalLocation, mode?: 'push' | 'replace') => void
 }) {
   const [walletId, setWalletId] = useState<string | null>(null)
-  const [limit, setLimit] = useState(PAGE)
 
   const customer = usePortalCustomer(auth)
   const config = usePortalConfig(auth)
@@ -180,7 +180,7 @@ function Portal({
     wallets.data?.[0] ??
     null
   // "Added since" and "Used since" the billing period's start; the latest page with no period.
-  const transactions = usePortalWalletTransactions(auth, wallet, limit, periodStart)
+  const transactions = usePortalWalletTransactionPages(auth, wallet, PAGE, periodStart)
   const topUps = usePortalTopUps(auth, wallet, TOP_UPS)
   const invoiceDetail = usePortalInvoice(auth, location.invoiceId)
 
@@ -211,9 +211,8 @@ function Portal({
       navigate({ ...location, customRange: { start, end } }, 'replace'),
     onWalletChange: (id) => {
       setWalletId(id)
-      setLimit(PAGE)
     },
-    onShowMoreTransactions: () => setLimit((n) => n + PAGE),
+    onShowMoreTransactions: transactions.loadMore,
     onShowMoreTopUps: () => undefined,
     // "I've paid": the gateway may not have told the API yet; look again now, and on focus as always.
     onRefresh: () =>

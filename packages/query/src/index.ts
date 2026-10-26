@@ -713,6 +713,7 @@ export {
   usePortalSpend,
   usePortalSubscriptions,
   usePortalTopUps,
+  usePortalWalletTransactionPages,
   usePortalWalletTransactions,
   usePortalWallets,
   useRemovePortalPaymentMethod,

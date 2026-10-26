@@ -347,3 +347,24 @@ describe('sumDecimals', () => {
     expect(sumDecimals(['10', '-12.5'])).toBe('-2.5')
   })
 })
+
+describe('zero-amount lines', () => {
+  it('leaves out a line that charged nothing', () => {
+    const invoice = toHostedInvoice({
+      invoice: {
+        currency: 'usd',
+        line_items: [
+          {
+            id: 'l1',
+            display_name: 'API calls',
+            amount: '0.00',
+            quantity: '0',
+            price_type: 'USAGE',
+          },
+          { id: 'l2', display_name: 'Seats', amount: 12, quantity: '1', price_type: 'FIXED' },
+        ],
+      },
+    })
+    expect(invoice.lines.map((line) => line.name)).toEqual(['Seats'])
+  })
+})
