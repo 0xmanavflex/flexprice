@@ -5,7 +5,7 @@ import {
   change,
   customerRows,
   daysToPay,
-  macRows,
+  creditRows,
   previousWindow,
   rangeWindow,
   resolveGrain,
@@ -293,27 +293,19 @@ describe('alignToWindow at a partial first bucket', () => {
   })
 })
 
-describe('macRows', () => {
-  it('pivots components per customer and computes utilization', () => {
-    const rows = macRows(
+describe('creditRows', () => {
+  it('pivots paid and free per customer, largest first', () => {
+    const rows = creditRows(
       [
-        { keys: { customer_id: 'a', component: 'committed' }, value: 200 },
-        { keys: { customer_id: 'a', component: 'consumed' }, value: 50 },
-        { keys: { customer_id: 'a', component: 'true_up' }, value: 150 },
-        { keys: { customer_id: 'b', component: 'consumed' }, value: 10 },
-        { keys: { customer_id: 'b', component: 'committed' }, value: 0 },
+        { keys: { customer_id: 'a', credit_type: 'paid' }, value: 30 },
+        { keys: { customer_id: 'a', credit_type: 'free' }, value: 10 },
+        { keys: { customer_id: 'b', credit_type: 'free' }, value: 90 },
       ],
       (id) => id.toUpperCase(),
       String,
     )
-    expect(rows[0]).toMatchObject({
-      id: 'a',
-      name: 'A',
-      utilization: 0.25,
-      trueUp: 150,
-      overage: 0,
-    })
-    expect(rows[1]).toMatchObject({ id: 'b', utilization: null })
-    expect(rows[1]?.display.utilization).toBe('—')
+    expect(rows.map((row) => row.id)).toEqual(['b', 'a'])
+    expect(rows[1]).toMatchObject({ name: 'A', paid: 30, free: 10, total: 40 })
+    expect(rows[0]).toMatchObject({ paid: 0, free: 90, total: 90 })
   })
 })

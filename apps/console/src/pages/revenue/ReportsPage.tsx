@@ -28,7 +28,7 @@ import {
   RANGE_OPTIONS,
   amountOf,
   customerRows as dashboardCustomerRows,
-  macRows,
+  creditRows,
   alignToWindow,
   formatAmount,
   percentOf,
@@ -130,11 +130,11 @@ export function ReportsPage({
     dimensions: ['customer_id'],
     limit: TOP,
   })
-  const macReport = useCardReport('mac_consumption', {
+  const creditReport = useCardReport('credit_consumption', {
     range,
     currency: currency.toLowerCase(),
     shape: 'breakdown',
-    dimensions: ['customer_id', 'component'],
+    dimensions: ['customer_id', 'credit_type'],
   })
   const arpuReport = useCardReport('arpu', { ...inCurrency, shape: 'scalar' })
   const receivablesReport = useCardReport('total_receivables', {
@@ -257,8 +257,13 @@ export function ReportsPage({
     ...(point.previous != null ? { previous: point.previous } : {}),
   }))
 
-  const mac = macRows(
-    reportBreakdown(macReport.data, 'mac_consumption', ['customer_id', 'component'], currency),
+  const credits = creditRows(
+    reportBreakdown(
+      creditReport.data,
+      'credit_consumption',
+      ['customer_id', 'credit_type'],
+      currency,
+    ),
     nameOf,
     money,
   )
@@ -398,12 +403,12 @@ export function ReportsPage({
           total,
         ),
         onOpenCustomer: openCustomer,
-        mac: {
-          status: statusOf(macReport, mac.length === 0),
-          reason: 'The MAC report did not respond.',
-          onRetry: retry(macReport),
-          rows: mac,
-          basedOn: 'Finalized invoice lines with a commitment.',
+        credits: {
+          status: statusOf(creditReport, credits.length === 0),
+          reason: 'The credit report did not respond.',
+          onRetry: retry(creditReport),
+          rows: credits,
+          basedOn: 'Credits applied to invoices, at the debit conversion rate.',
         },
       }}
       receivables={{

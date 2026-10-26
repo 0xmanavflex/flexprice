@@ -1,8 +1,8 @@
 import { InvoiceStatus, PaymentStatus, type Invoice, type Money, type Payment } from '@fp/domain'
 import type {
   AgingBucket,
+  CreditRow,
   CustomerRevenueRow,
-  MacRow,
   OverdueCustomerRow,
   PayerRow,
   RevenuePoint,
@@ -272,46 +272,32 @@ export function revenueSeries(
   }))
 }
 
-/* ---- MAC consumption ------------------------------------------------------- */
+/* ---- Credit consumption ---------------------------------------------------- */
 
-/** Pivots the per-component breakdown into one row per customer. */
-export function macRows(
+/** Pivots the per-credit-type breakdown into one row per customer. */
+export function creditRows(
   rows: { keys: Record<string, string>; value: number }[],
   nameOf: (id: string) => string,
   money: (value: number) => string,
-): MacRow[] {
-  const byCustomer = new Map<string, Record<string, number>>()
+): CreditRow[] {
+  const byCustomer = new Map<string, { paid: number; free: number }>()
   for (const row of rows) {
     const id = row.keys['customer_id'] ?? ''
-    const parts = byCustomer.get(id) ?? {}
-    parts[row.keys['component'] ?? ''] = row.value
+    const parts = byCustomer.get(id) ?? { paid: 0, free: 0 }
+    if (row.keys['credit_type'] === 'paid') parts.paid += row.value
+    else parts.free += row.value
     byCustomer.set(id, parts)
   }
   return [...byCustomer.entries()]
-    .map(([id, parts]) => {
-      const committed = parts['committed'] ?? 0
-      const consumed = parts['consumed'] ?? 0
-      const overage = parts['overage'] ?? 0
-      const trueUp = parts['true_up'] ?? 0
-      const utilization = committed > 0 ? consumed / committed : null
-      return {
-        id,
-        name: nameOf(id),
-        committed,
-        consumed,
-        overage,
-        trueUp,
-        utilization,
-        display: {
-          committed: money(committed),
-          consumed: money(consumed),
-          overage: money(overage),
-          trueUp: money(trueUp),
-          utilization: utilization === null ? '—' : percentOf(consumed, committed),
-        },
-      }
-    })
-    .sort((a, b) => b.committed - a.committed)
+    .map(([id, { paid, free }]) => ({
+      id,
+      name: nameOf(id),
+      paid,
+      free,
+      total: paid + free,
+      display: { paid: money(paid), free: money(free), total: money(paid + free) },
+    }))
+    .sort((a, b) => b.total - a.total)
 }
 
 /* ---- Customers ------------------------------------------------------------- */

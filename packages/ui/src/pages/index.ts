@@ -33,8 +33,8 @@ export type {
 export { RevenueReport, RevenueReportProvenance } from './revenue/RevenueReport'
 export type {
   AgingBucket,
+  CreditRow,
   CustomerRevenueRow,
-  MacRow,
   OverdueCustomerRow,
   PayerRow,
   ReportFigure,

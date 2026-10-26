@@ -91,22 +91,13 @@ export interface CustomerRevenueRow {
   share: number
 }
 
-export interface MacRow {
+export interface CreditRow {
   id: string
   name: string
-  committed: number
-  consumed: number
-  overage: number
-  trueUp: number
-  /** Consumed over committed, 0-1; null without a commitment. */
-  utilization: number | null
-  display: {
-    committed: string
-    consumed: string
-    overage: string
-    trueUp: string
-    utilization: string
-  }
+  paid: number
+  free: number
+  total: number
+  display: { paid: string; free: string; total: string }
 }
 
 export interface AgingBucket {
@@ -182,7 +173,7 @@ export interface RevenueReportProps {
     arpu: ReportFigure
     topTenShare: string
     onOpenCustomer?: ((id: string) => void) | undefined
-    mac?: (ReportState & { rows: MacRow[] }) | undefined
+    credits?: (ReportState & { rows: CreditRow[] }) | undefined
   }
 
   receivables: ReportState & {
@@ -889,20 +880,20 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
         </Surface>
       </Panel>
 
-      {customers.mac ? (
+      {customers.credits ? (
         <Panel
-          title="MAC consumption"
-          description={`Minimum annual commitment used per customer, invoices in ${rangeLabel}`}
+          title="Credit consumption"
+          description={`Wallet credits applied to invoices per customer, ${rangeLabel}, split into paid and free`}
         >
           <Surface>
-            {customers.mac.status === 'ready' ? (
-              <DetailTable<MacRow>
+            {customers.credits.status === 'ready' ? (
+              <DetailTable<CreditRow>
                 compact
-                label="MAC consumption by customer"
+                label="Credit consumption by customer"
                 noun="customers"
-                rows={customers.mac.rows}
+                rows={customers.credits.rows}
                 {...(customers.onOpenCustomer
-                  ? { onRowClick: (row: MacRow) => customers.onOpenCustomer?.(row.id) }
+                  ? { onRowClick: (row: CreditRow) => customers.onOpenCustomer?.(row.id) }
                   : {})}
                 columns={[
                   {
@@ -913,47 +904,35 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
                     cell: (row) => <span className="font-medium">{row.name}</span>,
                   },
                   {
-                    key: 'committed',
-                    header: 'Committed',
-                    sortBy: (row) => row.committed,
-                    cell: (row) => <span className="tabular-nums">{row.display.committed}</span>,
-                  },
-                  {
-                    key: 'consumed',
+                    key: 'total',
                     header: 'Consumed',
-                    sortBy: (row) => row.consumed,
-                    cell: (row) => <span className="tabular-nums">{row.display.consumed}</span>,
+                    sortBy: (row) => row.total,
+                    cell: (row) => <span className="tabular-nums">{row.display.total}</span>,
                   },
                   {
-                    key: 'utilization',
-                    header: 'Utilization',
-                    sortBy: (row) => row.utilization ?? -1,
-                    cell: (row) => <span className="tabular-nums">{row.display.utilization}</span>,
-                  },
-                  {
-                    key: 'overage',
-                    header: 'Overage',
-                    sortBy: (row) => row.overage,
+                    key: 'paid',
+                    header: 'Paid credits',
+                    sortBy: (row) => row.paid,
                     cell: (row) => (
-                      <span className="text-muted-foreground tabular-nums">
-                        {row.display.overage}
-                      </span>
+                      <span className="text-muted-foreground tabular-nums">{row.display.paid}</span>
                     ),
                   },
                   {
-                    key: 'trueUp',
-                    header: 'True-up',
-                    sortBy: (row) => row.trueUp,
+                    key: 'free',
+                    header: 'Free credits',
+                    sortBy: (row) => row.free,
                     cell: (row) => (
-                      <span className="text-muted-foreground tabular-nums">
-                        {row.display.trueUp}
-                      </span>
+                      <span className="text-muted-foreground tabular-nums">{row.display.free}</span>
                     ),
                   },
                 ]}
               />
             ) : (
-              <NotReady state={customers.mac} height={200} empty="No commitments in this range" />
+              <NotReady
+                state={customers.credits}
+                height={200}
+                empty="No credits consumed in this range"
+              />
             )}
           </Surface>
         </Panel>
