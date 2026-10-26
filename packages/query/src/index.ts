@@ -372,6 +372,7 @@ export {
   toUpdatePriceRequest,
   useCreateBulkPrices,
   useFeatureCharges,
+  useEntitiesCharges,
   usePrices,
   usePriceHistory,
   useTerminatePrice,
