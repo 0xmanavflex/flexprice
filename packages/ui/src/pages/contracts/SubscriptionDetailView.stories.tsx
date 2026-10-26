@@ -1,3 +1,4 @@
+import { makeCharge } from '../product-catalog/plans/planDetailFixtures'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import {
@@ -387,6 +388,7 @@ const PREVIEW: InvoicePreview = {
   lines: [
     {
       id: 'pl_1',
+      priceId: 'price_platform',
       name: 'Platform fee',
       detail: 'Oct 1 – Nov 1',
       quantity: '1',
@@ -396,6 +398,7 @@ const PREVIEW: InvoicePreview = {
     },
     {
       id: 'pl_2',
+      priceId: 'price_api',
       name: 'API requests',
       detail: '920,250 requests',
       quantity: '920250',
@@ -405,6 +408,7 @@ const PREVIEW: InvoicePreview = {
     },
     {
       id: 'pl_3',
+      priceId: 'price_onboarding',
       name: 'Onboarding',
       detail: 'Oct 1 – Nov 1',
       quantity: '1',
@@ -414,6 +418,7 @@ const PREVIEW: InvoicePreview = {
     },
     {
       id: 'pl_4',
+      priceId: 'price_seat_overage',
       name: 'Seat overage',
       detail: 'No usage this period',
       quantity: '0',
@@ -481,6 +486,13 @@ const INTEGRATION_LINKS: IntegrationLink[] = [
   },
 ]
 
+const SECTION_OPTIONS = {
+  features: [{ id: 'feat_seats', name: 'Seats', type: FeatureType.Static }],
+  addons: [{ id: 'addon_support', name: 'Priority support' }],
+  coupons: [{ code: 'LAUNCH10', name: 'Launch 10% off' }],
+  taxRates: [{ code: 'VAT-DE', label: 'VAT (7.2%)' }],
+}
+
 const BASE: SubscriptionDetailViewProps = {
   subscription: SUBSCRIPTION,
   lines: ready(LINES),
@@ -502,12 +514,7 @@ const BASE: SubscriptionDetailViewProps = {
   onAddAddon: fn(async () => undefined),
   onAddCoupon: fn(async () => undefined),
   onAddTax: fn(async () => undefined),
-  sectionOptions: {
-    features: [{ id: 'feat_seats', name: 'Seats', type: FeatureType.Static }],
-    addons: [{ id: 'addon_support', name: 'Priority support' }],
-    coupons: [{ code: 'LAUNCH10', name: 'Launch 10% off' }],
-    taxRates: [{ code: 'VAT-DE', label: 'VAT (7.2%)' }],
-  },
+  sectionOptions: SECTION_OPTIONS,
   activity: ACTIVITY,
   onBack: fn(),
   onOpenCustomer: fn(),
@@ -911,6 +918,22 @@ export const UpcomingInvoice: Story = {
     await expect(section.getByText('API requests')).toBeVisible()
     await expect(section.getByText('920,250 requests')).toBeVisible()
     await expect(section.getByText('$1,840.50')).toBeVisible()
+    // Joined to the contract's lines by price: interval and billing timing show.
+    await expect(section.getByRole('columnheader', { name: 'Interval' })).toBeVisible()
+    await expect(section.getByRole('columnheader', { name: 'Billing timing' })).toBeVisible()
+    // Each row: unit price from the contract line's price, its interval and timing.
+    const row = (name: string) => within(section.getByText(name).closest('tr')!)
+    const platform = row('Platform fee')
+    await expect(platform.getAllByText('$1,500.00')).toHaveLength(2)
+    await expect(platform.getByText('Monthly')).toBeVisible()
+    await expect(platform.getByText('In advance')).toBeVisible()
+    const api = row('API requests')
+    await expect(api.getByText('Tiered')).toBeVisible()
+    await expect(api.queryByText('$0.002')).toBeNull()
+    await expect(api.getByText('Monthly')).toBeVisible()
+    await expect(api.getByText('In arrears')).toBeVisible()
+    // No contract line has this price: no interval or timing, and no unit price to show.
+    await expect(row('Seat overage').getAllByText('—')).toHaveLength(3)
     await expect(section.getByText('Subtotal')).toBeVisible()
     await expect(section.getByText('Discount')).toBeVisible()
     await expect(section.getByText('−$359.05')).toBeVisible()
@@ -918,6 +941,40 @@ export const UpcomingInvoice: Story = {
     await expect(section.getByText('Prepaid credits')).toBeVisible()
     await expect(section.getByText('Amount due')).toBeVisible()
     await expect(section.getByText('$3,389.96')).toBeVisible()
+  },
+}
+
+/**
+ * A preview line priced in a custom unit shows the unit's rate, not a currency
+ * amount; a charge billed every few periods says so.
+ */
+export const UpcomingInvoiceCustomUnitAndPeriodCount: Story = {
+  args: {
+    ...BASE,
+    lines: ready(
+      LINES.map((line) =>
+        line.id === 'line_1' && line.charge
+          ? { ...line, charge: { ...line.charge, billingPeriodCount: 3 } }
+          : line.id === 'line_3' && line.charge && line.pricing
+            ? {
+                ...line,
+                pricing: { ...line.pricing, priceUnit: 'TOK', priceUnitAmount: '10' },
+                charge: { ...line.charge, amount: '2', displayAmount: '$2.00', priceUnit: 'TOK' },
+              }
+            : line,
+      ),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const section = within(
+      (await canvas.findByRole('heading', { name: 'Upcoming invoice' })).closest('section')!,
+    )
+    const row = (name: string) => within(section.getByText(name).closest('tr')!)
+    await expect(row('Platform fee').getByText('Every 3 months')).toBeVisible()
+    await expect(row('Platform fee').queryByText('Monthly')).toBeNull()
+    await expect(row('Onboarding').getByText('10 TOK')).toBeVisible()
+    await expect(row('Onboarding').queryByText('$2.00')).toBeNull()
   },
 }
 
@@ -1176,6 +1233,46 @@ export const AddAddon: Story = {
   },
 }
 
+/** As V1: attaching an add-on can commit on its usage charges, through the same dialog as a plan charge. */
+export const AddAddonWithCommitment: Story = {
+  parameters: menuA11y,
+  args: {
+    sectionOptions: {
+      ...SECTION_OPTIONS,
+      addonCharges: (addonId: string) =>
+        addonId === 'addon_support'
+          ? [
+              {
+                ...makeCharge(1, { type: PriceType.Usage, billingModel: BillingModel.FlatFee }),
+                entityId: 'addon_support',
+              },
+            ]
+          : undefined,
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
+    await userEvent.click(await dialog.findByRole('button', { name: /^Add commitment on / }))
+    const commitment = within(await screen.findByRole('dialog'))
+    await userEvent.type(await commitment.findByRole('textbox', { name: /^Commitment \(/ }), '500')
+    await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
+    const back = within(await screen.findByRole('dialog'))
+    await userEvent.click(back.getByRole('button', { name: 'Add add-on' }))
+    await waitFor(() =>
+      expect(args.onAddAddon).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addonId: 'addon_support',
+          commitments: [expect.objectContaining({ value: '500' })],
+        }),
+      ),
+    )
+  },
+}
+
 export const AddCoupon: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
@@ -1241,6 +1338,7 @@ export const UpcomingInvoiceManyLines: Story = {
       ...PREVIEW,
       lines: Array.from({ length: 8 }, (_, index) => ({
         id: `pl_${index}`,
+        priceId: `price_${index}`,
         name: `Line item ${index + 1}`,
         detail: 'Oct 1 – Nov 1',
         quantity: '1',

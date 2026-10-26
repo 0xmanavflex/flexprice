@@ -83,17 +83,15 @@ describe('aggregation decides which meter fields are required', () => {
     expect(needsAggregationTarget(AggregationType.Count)).toBe(false)
   })
 
-  it.each([
-    AggregationType.Sum,
-    AggregationType.Avg,
-    AggregationType.Max,
-    AggregationType.Latest,
-  ])('requires a field or expression for %s', (aggregationType) => {
-    expect(errors(metered({ aggregationType }))).toContain(
-      'This aggregation needs an event field or an expression',
-    )
-    expect(needsAggregationTarget(aggregationType)).toBe(true)
-  })
+  it.each([AggregationType.Sum, AggregationType.Avg, AggregationType.Max, AggregationType.Latest])(
+    'requires a field or expression for %s',
+    (aggregationType) => {
+      expect(errors(metered({ aggregationType }))).toContain(
+        'This aggregation needs an event field or an expression',
+      )
+      expect(needsAggregationTarget(aggregationType)).toBe(true)
+    },
+  )
 
   it.each([
     AggregationType.CountUnique,

@@ -169,6 +169,46 @@ export const Credits: Story = {
   },
 }
 
+/** A wallet below zero reads as credits owed, in the warning tone, as a positive figure. */
+export const NegativeBalance: Story = {
+  args: {
+    data: {
+      ...portalData,
+      wallets:
+        portalData.wallets.status === 'ready'
+          ? {
+              status: 'ready',
+              data: portalData.wallets.data.map((wallet, index) =>
+                index === 0
+                  ? {
+                      ...wallet,
+                      credits: '-42',
+                      balance: { ...wallet.balance, amount: '-4.20' },
+                    }
+                  : wallet,
+              ),
+            }
+          : portalData.wallets,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Credits owed')).toBeVisible()
+    await expect(canvas.getByText(/credits used beyond the balance/)).toBeVisible()
+  },
+}
+
+/** The Credits tab of a wallet below zero: "Owed", with the unit before "owed". */
+export const NegativeBalanceCredits: Story = {
+  args: { ...NegativeBalance.args, initialView: 'credits' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Owed')).toBeVisible()
+    await expect(canvas.getByText('42 credits owed')).toBeVisible()
+    await expect(canvas.queryByText(/owed credits/)).toBeNull()
+  },
+}
+
 /** Auto top-up: threshold, amount and a wait between top-ups, saved in one go. */
 export const AutoTopup: Story = {
   args: { initialView: 'credits' },

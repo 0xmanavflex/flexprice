@@ -121,9 +121,9 @@ export const AdvancedOpen: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Advanced' }))
-    await expect(canvas.getByRole('combobox', { name: 'Window starts' })).toHaveAccessibleDescription(
-      /On first use: .* Calendar boundary: /,
-    )
+    await expect(
+      canvas.getByRole('combobox', { name: 'Window starts' }),
+    ).toHaveAccessibleDescription(/On first use: .* Calendar boundary: /)
     await expect(canvas.getByRole('combobox', { name: 'Stacking' })).toHaveAccessibleDescription(
       /Additive: .* Parallel: /,
     )

@@ -37,6 +37,24 @@ const ADDONS: SubscriptionAddonOption[] = [
   { value: 'addon_storage', label: 'Extra storage', type: 'Usage' },
 ]
 const TAX_RATES = [{ code: 'GST18', name: 'GST', percentage: '18' }]
+/** Extra storage's usage charge, so it can carry a commitment. */
+const STORAGE_CHARGES = [
+  {
+    ...makeCharge(2, { type: PriceType.Usage, billingModel: BillingModel.FlatFee }),
+    entityId: 'addon_storage',
+    displayName: 'Storage (GB)',
+  },
+  // Quarterly: a monthly contract does not attach it, so it takes no commitment.
+  {
+    ...makeCharge(3, {
+      type: PriceType.Usage,
+      billingModel: BillingModel.FlatFee,
+      billingPeriod: BillingPeriod.Quarterly,
+    }),
+    entityId: 'addon_storage',
+    displayName: 'Storage archive (GB)',
+  },
+]
 const PLAN_NAMES = ['Starter', 'Pro', 'Business', 'Scale', 'Enterprise']
 const CUSTOMER_NAMES = [
   'Acme Robotics',
@@ -101,6 +119,8 @@ interface PlaygroundProps {
   startDate?: string
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** Opens with these add-ons (and their commitments) already chosen. */
+  seededAddons?: CreateSubscription['addons']
   /** Customers (by id) that cannot inherit, as the page loads them. */
   inheritanceBlocks?: Record<string, InheritanceBlock>
   onSubmit: (subscription: CreateSubscription) => void
@@ -127,6 +147,7 @@ function SubscriptionFormPlayground({
   endDate,
   planTrial,
   phase,
+  seededAddons,
   inheritanceBlocks,
   onSubmit,
   onCancel,
@@ -206,6 +227,7 @@ function SubscriptionFormPlayground({
               ...PREFILLED,
               ...(noTrial ? { trialPeriodDays: 0 } : {}),
               ...(startDate ? { startDate } : {}),
+              ...(seededAddons ? { addons: seededAddons } : {}),
               ...(endDate || phase
                 ? { phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
                 : {}),
@@ -218,6 +240,7 @@ function SubscriptionFormPlayground({
       onPlanChange={handlePlanChange}
       coupons={COUPONS}
       addons={ADDONS}
+      addonCharges={(addonId) => (addonId === 'addon_storage' ? STORAGE_CHARGES : undefined)}
       taxRates={TAX_RATES}
       customerTaxes={[
         {
@@ -880,12 +903,100 @@ export const AddsAnAddon: Story = {
     await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toBeVisible()
     await userEvent.click(canvas.getByRole('combobox', { name: /^Add another/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
-    await userEvent.click(await canvas.findByRole('button', { name: 'Remove Extra storage' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Extra storage' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove add-on' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           addons: [{ addonId: 'addon_support', name: 'Premium support' }],
+        }),
+      ),
+    )
+  },
+}
+
+/** As V1's add-on card: an add-on's usage charge can carry a commitment, sent with the add-on. */
+export const AddonCommitment: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Extra storage' }))
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Add commitment: Storage (GB)' }),
+    )
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(await dialog.findByRole('textbox', { name: /^Commitment \(/ }), '250')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
+    await expect(await canvas.findByText(/^Storage \(GB\): /)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addons: [
+            expect.objectContaining({
+              addonId: 'addon_storage',
+              commitments: [
+                expect.objectContaining({ priceId: STORAGE_CHARGES[0]!.id, value: '250' }),
+              ],
+            }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * Commitments saved on both of the add-on's charges, then the contract moved to
+ * monthly: the quarterly price no longer attaches, so its commitment is
+ * neither listed nor sent (the API would refuse it). The monthly one stays.
+ */
+export const AddonCommitmentAfterPeriodChange: Story = {
+  args: {
+    prefilled: true,
+    step: 'phases',
+    chargeCount: 2,
+    seededAddons: [
+      {
+        addonId: 'addon_storage',
+        name: 'Extra storage',
+        commitments: STORAGE_CHARGES.map((charge) => ({
+          priceId: charge.id,
+          type: 'amount' as const,
+          value: '250',
+          duration: '' as const,
+          overageFactor: '',
+          trueUp: false,
+          bucketSize: '' as const,
+          windowed: false,
+          windows: [],
+        })),
+      },
+    ],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/^Storage \(GB\): /)).toBeVisible()
+    expect(canvas.queryByText(/^Storage archive \(GB\): /)).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Extra storage' }))
+    await expect(
+      await screen.findByRole('menuitem', { name: 'Edit commitment: Storage (GB)' }),
+    ).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: /Storage archive/ })).toBeNull()
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addons: [
+            expect.objectContaining({
+              addonId: 'addon_storage',
+              commitments: [expect.objectContaining({ priceId: STORAGE_CHARGES[0]!.id })],
+            }),
+          ],
         }),
       ),
     )
@@ -925,6 +1036,8 @@ export const CommitmentsStep: Story = {
     // Period, overage, and true-up are visible before an amount is entered.
     await expect(canvas.getByText('Commitment period')).toBeVisible()
     await expect(canvas.getByText('True-up')).toBeVisible()
+    // True-up needs a commitment: off and disabled until an amount is entered.
+    await expect(canvas.getByRole('switch', { name: /True-up/ })).toHaveAttribute('data-disabled')
     // The customer's tax rate is applied for them, in a table with its code.
     await expect(canvas.getByRole('columnheader', { name: 'Code' })).toBeVisible()
     await expect(canvas.getByText('VAT20')).toBeVisible()
@@ -934,6 +1047,50 @@ export const CommitmentsStep: Story = {
     )
     await expect(canvas.getByRole('columnheader', { name: 'Allowance' })).toBeVisible()
     await userEvent.type(canvas.getByLabelText(/^Commitment amount/), '1000')
+  },
+}
+
+/**
+ * True-up bills a shortfall against the commitment, so it needs a positive amount:
+ * clearing the amount turns it off for good (a new amount starts with it off),
+ * and zero, which the API reads as no commitment, keeps it disabled.
+ */
+export const TrueUpNeedsCommitment: Story = {
+  args: { prefilled: true, step: 'commitments' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const amount = canvas.getByLabelText(/^Commitment amount/)
+    const trueUp = canvas.getByRole('switch', { name: /True-up/ })
+    await userEvent.type(amount, '1000')
+    await expect(trueUp).not.toHaveAttribute('data-disabled')
+    await userEvent.click(trueUp)
+    await expect(trueUp).toBeChecked()
+    // Clearing the amount turns true-up off; a new amount does not bring it back.
+    await userEvent.clear(amount)
+    await expect(trueUp).toHaveAttribute('data-disabled')
+    await expect(trueUp).not.toBeChecked()
+    await userEvent.type(amount, '500')
+    await expect(trueUp).not.toHaveAttribute('data-disabled')
+    await expect(trueUp).not.toBeChecked()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ commitmentAmount: '500', enableTrueUp: false }),
+      ),
+    )
+    // Zero is no commitment: true-up stays disabled and is not submitted on.
+    await userEvent.click(trueUp)
+    await expect(trueUp).toBeChecked()
+    await userEvent.clear(amount)
+    await userEvent.type(amount, '0')
+    await expect(trueUp).toHaveAttribute('data-disabled')
+    await expect(trueUp).not.toBeChecked()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ commitmentAmount: '0', enableTrueUp: false }),
+      ),
+    )
   },
 }
 

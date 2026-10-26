@@ -272,7 +272,7 @@ export function InvoiceDetailView({
                 aria-label={`${liveCreditNotes} credit memo${liveCreditNotes === 1 ? '' : 's'} issued. Show credit memos`}
                 className="focus-visible:ring-ring/50 rounded-full outline-none focus-visible:ring-3"
               >
-                <Pill tone="info">
+                <Pill>
                   {liveCreditNotes === 1 ? 'Credit memo' : `${liveCreditNotes} credit memos`}
                 </Pill>
               </button>,
