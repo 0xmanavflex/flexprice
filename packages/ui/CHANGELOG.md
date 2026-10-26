@@ -11,7 +11,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 - Exports (R-19), all on the Exports pages:
   - The landing page's "Overview" highlights show only before the first S3 connection. Once data exists they repeat what the page already shows.
   - The S3 destination card drops its three tags.
-  - Export status reads Active / Paused in the list and on the detail page. The list used to say Enabled / Disabled.
+  - Export status reads Active / Paused in the list and on the detail page. The list and its Status filter used to say Enabled / Disabled.
   - On the detail page, status shows once, in the header, no longer repeated in Basic information.
 - Stripe connection, as V1's Stripe drawer: Configure can replace the secret key, publishable key and webhook signing secret (blank keeps the stored one; the API merges whichever are sent), and a Push customers sync switch creates a Stripe customer per Flexprice customer, which Stripe Tax needs. Spec only (`CONNECTION_SPECS.stripe`); the sheets are unchanged. Provenance: `FxRatesSection` imports `Section` and `FormDialog` by path so its claims are backed, and `CustomerActivityView` drops an `primitives/input` claim it does not import. Source: walkthrough QA 9.1.
 - Settings › Invoicing gains a Tax engine tab (console `TaxEnginePanel`, `tax_config` setting), as V1's Tax configuration: a switch for an external engine and the engine (Stripe Tax, the only one the API supports; switching on picks it). The info strip says what changes: Flexprice tax rates stop applying, and without a Stripe connection tax calculation fails rather than falling back. Reset returns to Flexprice's own rates. Built from SettingsBlock, SettingRow, Switch and OptionSelect; no new parts. Source: walkthrough QA 7.5.

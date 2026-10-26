@@ -1,6 +1,6 @@
 import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { DEFAULT_DATA_EXPORT_QUERY, type DataExport } from '@fp/domain'
 import { DataExportGrid } from './DataExportGrid'
 
@@ -152,5 +152,29 @@ export const Refreshing: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('button', { name: 'Refresh' }))
     await expect(args.onRefresh).toHaveBeenCalled()
+  },
+}
+
+/** The Status filter names states as the rows do: Active and Paused, not Enabled and Disabled. */
+export const FilteringByStatus: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Filter' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Advanced filter' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add filter' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Status' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'is' }))
+    const values = await screen.findByRole('listbox', { name: 'Status' })
+    await expect(
+      within(values)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Active', 'Paused'])
+    await userEvent.click(within(values).getByRole('option', { name: 'Paused' }))
+    await waitFor(() =>
+      expect(args.onQueryChange).toHaveBeenCalledWith(
+        expect.objectContaining({ state: 'disabled' }),
+      ),
+    )
   },
 }
