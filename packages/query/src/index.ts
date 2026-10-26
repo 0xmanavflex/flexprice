@@ -113,6 +113,7 @@ export {
   useCreateFeature,
   useFeature,
   useFeatures,
+  useFeaturesByMeters,
   toUpdateFeatureRequest,
   toCloneFeatureRequest,
   useUpdateFeature,

@@ -97,6 +97,8 @@ export interface CustomerAnalyticsViewProps {
   isLoading?: boolean | undefined
   error?: string | null | undefined
   onRetry?: (() => void) | undefined
+  /** One muted line under the filters, for what the figures cover (a contract's scope). */
+  note?: string | undefined
 }
 
 const Muted = ({ children }: { children: React.ReactNode }) => (
@@ -156,6 +158,7 @@ export function CustomerAnalyticsView({
   isLoading = false,
   error = null,
   onRetry,
+  note,
 }: CustomerAnalyticsViewProps) {
   const [activeTab, setActiveTab] = useState('')
   const all = selectedFeatureIds.length === 0
@@ -228,6 +231,7 @@ export function CustomerAnalyticsView({
           />
         </label>
       </div>
+      {note ? <p className="text-muted-foreground -mt-2 text-xs">{note}</p> : null}
 
       <dl className="bg-background grid grid-cols-2 divide-x rounded-xl border sm:grid-cols-4">
         {(

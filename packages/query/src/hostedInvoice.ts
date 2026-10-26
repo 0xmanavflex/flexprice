@@ -37,7 +37,11 @@ export function useHostedInvoiceDownload(
   const mutation = useMutation({
     mutationFn: async () => toPresignedUrl(await getHostedInvoiceDownload(apiOrigin, token)),
   })
-  return { download: () => mutation.mutateAsync(), isPending: mutation.isPending, error: mutation.error }
+  return {
+    download: () => mutation.mutateAsync(),
+    isPending: mutation.isPending,
+    error: mutation.error,
+  }
 }
 
 /**
@@ -60,7 +64,9 @@ export function usePayHostedInvoice(
     onSuccess: (url) => {
       key.current = null
       if (url === null) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.hostedInvoice.detail(apiOrigin, token) })
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.hostedInvoice.detail(apiOrigin, token),
+        })
       }
     },
   })
