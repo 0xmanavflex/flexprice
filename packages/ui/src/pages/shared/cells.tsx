@@ -192,7 +192,8 @@ const STATUS_TONE: Record<string, PillTone> = {
   processed: 'success',
   issued: 'success',
   finalized: 'info',
-  open: 'info',
+  // Open awaits payment: orange, as the invoice chips (walkthrough 6.1).
+  open: 'warning',
   trialing: 'info',
   scheduled: 'info',
   running: 'info',
