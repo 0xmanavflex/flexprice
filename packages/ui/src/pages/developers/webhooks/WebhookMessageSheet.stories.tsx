@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { WebhookMessageSheet } from './WebhookMessageSheet'
 import { DEMO_WEBHOOK_ATTEMPTS, DEMO_WEBHOOK_MESSAGES } from './webhookFixtures'
 
@@ -36,3 +36,27 @@ export const LoadingAttempts: Story = { args: { attempts: [], attemptsLoading: t
 export const NoAttempts: Story = { args: { attempts: [] } }
 
 export const Closed: Story = { args: { message: null } }
+
+/** Opened from a link before the message arrives: the sheet shows at once, loading. */
+export const LoadingMessage: Story = {
+  args: { message: null, open: true, messageLoading: true, attempts: [] },
+  play: async () => {
+    await expect(await screen.findByText('Loading the message…')).toBeVisible()
+  },
+}
+
+/** The message could not be read: the reason, and Try again. */
+export const MessageFailed: Story = {
+  args: {
+    message: null,
+    open: true,
+    messageError: 'The message was not found.',
+    onRetry: fn(),
+    attempts: [],
+  },
+  play: async ({ args }) => {
+    await expect(await screen.findByText('The message was not found.')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await expect(args.onRetry).toHaveBeenCalled()
+  },
+}
