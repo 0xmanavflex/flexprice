@@ -181,52 +181,52 @@ export function CustomerAnalyticsView({
   const filters = (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-2 px-3"
-                aria-label="Features"
-                disabled={featureOptions.length === 0}
-              />
-            }
-          >
-            <LayersIcon aria-hidden="true" className="size-4" />
-            {all ? 'All features' : `${chosen.length} features`}
-            <ChevronDownIcon className="opacity-50" aria-hidden="true" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                Metered features
-              </DropdownMenuLabel>
-              {featureOptions.map((f) => (
-                <DropdownMenuCheckboxItem
-                  key={f.id}
-                  closeOnClick={false}
-                  checked={chosen.includes(f.id)}
-                  onCheckedChange={(on) => toggle(f.id, on)}
-                >
-                  {f.name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DateButton
-          icon
-          label="From"
-          value={query.from}
-          max={query.to}
-          onChange={(from) => onQueryChange({ ...query, from })}
-        />
-        <DateButton
-          label="To"
-          value={query.to}
-          min={query.from}
-          onChange={(to) => onQueryChange({ ...query, to })}
-        />
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 px-3"
+              aria-label="Features"
+              disabled={featureOptions.length === 0}
+            />
+          }
+        >
+          <LayersIcon aria-hidden="true" className="size-4" />
+          {all ? 'All features' : `${chosen.length} features`}
+          <ChevronDownIcon className="opacity-50" aria-hidden="true" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+              Metered features
+            </DropdownMenuLabel>
+            {featureOptions.map((f) => (
+              <DropdownMenuCheckboxItem
+                key={f.id}
+                closeOnClick={false}
+                checked={chosen.includes(f.id)}
+                onCheckedChange={(on) => toggle(f.id, on)}
+              >
+                {f.name}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DateButton
+        icon
+        label="From"
+        value={query.from}
+        max={query.to}
+        onChange={(from) => onQueryChange({ ...query, from })}
+      />
+      <DateButton
+        label="To"
+        value={query.to}
+        min={query.from}
+        onChange={(to) => onQueryChange({ ...query, to })}
+      />
       <label
         className={`text-muted-foreground flex items-center gap-2 text-[13px] ${title ? '' : 'ml-auto'}`}
       >

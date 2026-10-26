@@ -143,6 +143,11 @@ export function isZeroMoney(value: Money): boolean {
   return /^0*$/.test(whole) && /^0*$/.test(fraction)
 }
 
+/** The same amount without its sign: `-12.50 USD` is `12.50 USD`. */
+export function absoluteMoney(value: Money): Money {
+  return { ...value, amount: value.amount.replace(/^-/, '') }
+}
+
 export function isNegativeMoney(value: Money): boolean {
   return parts(value.amount).negative
 }

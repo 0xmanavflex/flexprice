@@ -18,7 +18,7 @@ const STATUS_TONE: Record<WebhookDeliveryStatus, PillTone> = {
   succeeded: 'success',
   failed: 'danger',
   pending: 'warning',
-  sending: 'info',
+  sending: 'warning',
 }
 
 export function WebhookStatusPill({ status }: { status: WebhookDeliveryStatus }) {
