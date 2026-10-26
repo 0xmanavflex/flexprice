@@ -96,7 +96,7 @@ export function toRevenueWaterfall(wire: RevenueWaterfallWire, currency: string)
   const rows = (wire.items ?? []).map((item) => {
     const months = (item.cells ?? []).map((cell) => toRevenueMonth(cell, currency))
     return {
-      pobId: item.pob_id ?? '',
+      id: item.pob_id ?? item.customer_id ?? item.contract_id ?? '',
       months,
       total: sum(
         months.map((m) => m.total),
@@ -120,6 +120,7 @@ export function toRevenueWaterfall(wire: RevenueWaterfallWire, currency: string)
       totals.map((m) => m.total),
       currency,
     ),
+    count: wire.pagination?.total ?? rows.length,
   }
 }
 
@@ -256,5 +257,45 @@ export function useContractJournal(
     },
     enabled: Boolean(environmentId && contractId),
     staleTime: 60_000,
+  })
+}
+
+export interface CustomerRevenueQuery {
+  /** `YYYY-MM`, inclusive. */
+  from: string
+  to: string
+  currency: string
+  /** 1-based. */
+  page: number
+  pageSize: number
+  /** Only these customers; absent for every customer. */
+  customerIds?: string[] | undefined
+}
+
+/** Revenue per customer × month for the environment, one page of customers; totals cover every customer. */
+export function useCustomerRevenue(
+  environmentId: string | null,
+  query: CustomerRevenueQuery,
+): UseQueryResult<RevenueWaterfall> {
+  const authFor = useAuth()
+  return useQuery({
+    queryKey: queryKeys.revenueRecognition.customers(environmentId, { ...query }),
+    queryFn: async () => {
+      const auth = await authFor(environmentId as string)
+      const wire = await fetchRevenueWaterfall(auth, {
+        period_start: query.from,
+        period_end: query.to,
+        currency: query.currency.toLowerCase(),
+        group_by: 'customer_id',
+        ...(query.customerIds ? { customer_ids: query.customerIds } : {}),
+        details: true,
+        limit: query.pageSize,
+        offset: (query.page - 1) * query.pageSize,
+      })
+      return toRevenueWaterfall(wire, query.currency.toUpperCase())
+    },
+    enabled: Boolean(environmentId),
+    staleTime: 60_000,
+    placeholderData: (previous) => previous,
   })
 }

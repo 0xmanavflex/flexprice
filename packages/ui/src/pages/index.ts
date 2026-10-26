@@ -31,6 +31,11 @@ export type {
   UsageRow,
 } from './home/DashboardHome'
 export { RevenueReport, RevenueReportProvenance } from './revenue/RevenueReport'
+export {
+  RevenueRecognitionReport,
+  RevenueRecognitionReportProvenance,
+} from './revenue/RevenueRecognitionReport'
+export type { RevenueRecognitionReportProps } from './revenue/RevenueRecognitionReport'
 export type {
   AgingBucket,
   CreditRow,

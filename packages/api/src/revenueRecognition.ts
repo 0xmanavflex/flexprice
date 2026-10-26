@@ -40,6 +40,7 @@ export interface RevenueWaterfallWire {
     pob_id?: string | null
     cells?: WaterfallCellWire[] | null
   }> | null
+  pagination?: { total?: number } | null
 }
 
 export interface RevenueWaterfallRequest {
@@ -48,8 +49,10 @@ export interface RevenueWaterfallRequest {
   currency: string
   group_by: 'customer_id' | 'contract_id' | 'pob_id'
   contract_ids?: string[]
+  customer_ids?: string[]
   details?: boolean
   limit?: number
+  offset?: number
 }
 
 interface Auth {

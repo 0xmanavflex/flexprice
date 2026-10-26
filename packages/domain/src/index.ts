@@ -1050,6 +1050,7 @@ export {
   LEDGER_ACCOUNT_LABEL,
   RECOGNITION_METHOD_LABEL,
   RecognitionMethod,
+  addMonths,
   revenuePeriods,
 } from './revenueRecognition'
 export type {

@@ -772,6 +772,8 @@ export {
   toRevenueContract,
   toRevenueWaterfall,
   useContractJournal,
+  useCustomerRevenue,
   useRevenueRecognitionEnabled,
   useSubscriptionRevenue,
 } from './revenueRecognition'
+export type { CustomerRevenueQuery } from './revenueRecognition'

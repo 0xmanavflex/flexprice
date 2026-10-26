@@ -230,6 +230,11 @@ import { EnvironmentToaster } from '@/pages/shared/RecordElsewhere'
 import { RouteAccessGate } from '@/app/access/RouteAccessGate'
 import { DEFAULT_HOME_SEARCH, parseHomeSearch, type HomeSearch } from '@/app/homeSearch'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
+import {
+  DEFAULT_REVENUE_RECOGNITION_SEARCH,
+  parseRevenueRecognitionSearch,
+  type RevenueRecognitionSearch,
+} from '@/app/revenueRecognitionSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
 )
@@ -291,6 +296,11 @@ const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
 const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
+const RevenueRecognitionPage = lazy(() =>
+  import('@/pages/revenue/RevenueRecognitionPage').then((m) => ({
+    default: m.RevenueRecognitionPage,
+  })),
+)
 const ReportsPage = lazy(() =>
   import('@/pages/revenue/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 )
@@ -1624,6 +1634,32 @@ function ReportsRouteComponent() {
   )
 }
 
+/** Revenue › Revenue recognition: customers × months; the range, page and Details are in the URL. */
+const revenueRecognitionRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/revenue-recognition',
+  validateSearch: (search: Record<string, unknown>): RevenueRecognitionSearch =>
+    parseRevenueRecognitionSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_REVENUE_RECOGNITION_SEARCH)] },
+  component: RevenueRecognitionRouteComponent,
+})
+
+function RevenueRecognitionRouteComponent() {
+  const search = useSearch({ from: revenueRecognitionRoute.id })
+  const navigate = useNavigate()
+  return (
+    <RevenueRecognitionPage
+      search={search}
+      onSearchChange={(next) =>
+        void navigate({ to: '/revenue-recognition', search: next, replace: true })
+      }
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+    />
+  )
+}
+
 /** The page's old address: links and bookmarks to /revenue land on Reports, filters kept. */
 const revenueRedirectRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -2661,6 +2697,7 @@ export const routeTree = rootRoute.addChildren([
     customerContractRedirect,
     homeRoute,
     reportsRoute,
+    revenueRecognitionRoute,
     revenueRedirectRoute,
     featuresRoute,
     featureCreateRoute,

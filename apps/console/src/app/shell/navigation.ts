@@ -65,6 +65,13 @@ export const NAV: NavEntry[] = [
     label: 'Collections',
     children: [{ id: 'payments', label: 'Payments', path: '/payments' }],
   },
+  {
+    id: 'revenue',
+    label: 'Revenue',
+    children: [
+      { id: 'revenue-recognition', label: 'Revenue recognition', path: '/revenue-recognition' },
+    ],
+  },
   { id: 'reports', label: 'Reports', path: '/reports' },
   {
     id: 'developers',
@@ -185,8 +192,7 @@ export function labelForNavId(id: string): string | undefined {
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
   // Discounts, Taxes, Cost Tracking and Tags are rows of Settings that keep their own routes.
-  if (id.startsWith('settings-'))
-    return SECONDARY.find((entry) => entry.id === 'settings')
+  if (id.startsWith('settings-')) return SECONDARY.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),
   )

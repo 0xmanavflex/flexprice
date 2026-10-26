@@ -74,6 +74,8 @@ export const queryKeys = {
       ['revenueRecognition', 'enabled', environmentId] as const,
     subscription: (environmentId: string | null, subscriptionId: string) =>
       ['revenueRecognition', 'subscription', environmentId, subscriptionId] as const,
+    customers: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'customers', environmentId, filter] as const,
     journal: (environmentId: string | null, contractId: string) =>
       ['revenueRecognition', 'journal', environmentId, contractId] as const,
   },

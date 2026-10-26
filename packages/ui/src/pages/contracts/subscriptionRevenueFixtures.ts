@@ -72,7 +72,7 @@ export const ACME_REVENUE: SubscriptionRevenue = {
     periods: ['2026-01', '2026-02', '2026-03', ...LATER],
     rows: [
       {
-        pobId: 'pob_annual',
+        id: 'pob_annual',
         months: [
           month('2026-01', { actual: '100', total: '100' }, { deferred: '1100', unbilled: '0' }),
           month('2026-02', { actual: '100', total: '100' }, { deferred: '1000', unbilled: '0' }),
@@ -84,7 +84,7 @@ export const ACME_REVENUE: SubscriptionRevenue = {
         scheduled: usd('954.84'),
       },
       {
-        pobId: 'pob_monthly',
+        id: 'pob_monthly',
         months: [
           month('2026-01', { actual: '100', total: '100' }, { deferred: '0', unbilled: '0' }),
           month('2026-02', { actual: '100', total: '100' }, { deferred: '0', unbilled: '0' }),
@@ -103,6 +103,7 @@ export const ACME_REVENUE: SubscriptionRevenue = {
       ...LATER.map((p) => month(p, { scheduled: '100', total: '100' })),
     ],
     total: usd('1500'),
+    count: 2,
   },
 }
 

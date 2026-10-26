@@ -954,6 +954,7 @@
         "EnvironmentForm",
         "FilterSelect",
         "PortalUsage",
+        "RevenueRecognitionReport",
         "RevenueReport",
         "SubscriptionForm",
         "UsageCard"
@@ -3136,6 +3137,7 @@
         "EntitlementTable",
         "EntitlementUsage",
         "EntitlementUsageTable",
+        "RevenueRecognitionReport",
         "SubscriptionDetailView",
         "SubscriptionJournal"
       ],
@@ -3859,6 +3861,7 @@
         "ValuePlaceholder"
       ],
       "usedBy": [
+        "RevenueRecognitionReport",
         "RevenueReport"
       ],
       "story": "./src/pages/home/DashboardHome.stories.tsx"
@@ -6679,6 +6682,31 @@
       ],
       "story": null
     },
+    "RevenueAmount": {
+      "file": "src/pages/revenue/RevenueAmount.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "RevenueRecognitionReport",
+        "SubscriptionRevenue"
+      ],
+      "story": null
+    },
+    "RevenueRecognitionReport": {
+      "file": "src/pages/revenue/RevenueRecognitionReport.tsx",
+      "layer": "surface",
+      "composes": [
+        "CalendarIcon",
+        "EntityLink",
+        "FilterSelect",
+        "RevenueAmount",
+        "Section",
+        "SimpleTable",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/revenue/RevenueRecognitionReport.stories.tsx"
+    },
     "RevenueReport": {
       "file": "src/pages/revenue/RevenueReport.tsx",
       "layer": "surface",
@@ -6954,6 +6982,7 @@
         "PortalOverview",
         "PortalUsage",
         "RelatedCard",
+        "RevenueRecognitionReport",
         "S3ConnectionList",
         "SubscriptionDetailView",
         "SubscriptionJournal",
@@ -7323,6 +7352,7 @@
         "PlanAiSetupView",
         "PortalOverview",
         "PriceOverrideForm",
+        "RevenueRecognitionReport",
         "S3ConnectionList",
         "SubscriptionForm",
         "SubscriptionRevenue",
@@ -7666,6 +7696,7 @@
       "file": "src/pages/contracts/SubscriptionRevenue.tsx",
       "layer": "surface",
       "composes": [
+        "RevenueAmount",
         "Section",
         "SimpleTable",
         "SubTabState"
@@ -7722,6 +7753,7 @@
         "InvoiceDetailView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
+        "RevenueRecognitionReport",
         "SubscriptionDetailView",
         "SubscriptionJournal",
         "SubscriptionRevenue"
@@ -10038,6 +10070,13 @@
         "PageShell"
       ]
     },
+    "./src/pages/revenue/RevenueRecognitionReport.stories.tsx": {
+      "title": "App/Revenue/Revenue recognition",
+      "component": "RevenueRecognitionReport",
+      "uses": [
+        "RevenueRecognitionReport"
+      ]
+    },
     "./src/pages/revenue/RevenueReport.stories.tsx": {
       "title": "App/Revenue/Revenue report",
       "component": null,
@@ -11042,6 +11081,14 @@
       "route": "/reports",
       "uses": [
         "RevenueReport"
+      ]
+    },
+    "RevenueRecognitionPage": {
+      "file": "apps/console/src/pages/revenue/RevenueRecognitionPage.tsx",
+      "pattern": "Dashboard",
+      "route": "/revenue-recognition",
+      "uses": [
+        "RevenueRecognitionReport"
       ]
     },
     "CheckoutReturnPage": {

@@ -65,7 +65,8 @@ export interface RevenueMonth {
 }
 
 export interface RevenueRow {
-  pobId: string
+  /** The group the row totals: a POB, customer or contract ID. */
+  id: string
   months: RevenueMonth[]
   total: Money
   /** Posted plus pending: earned up to today. */
@@ -78,6 +79,8 @@ export interface RevenueWaterfall {
   rows: RevenueRow[]
   totals: RevenueMonth[]
   total: Money
+  /** Groups across every page; `rows` holds one page of them. */
+  count: number
 }
 
 export interface SubscriptionRevenue {
@@ -91,7 +94,8 @@ const MAX_MONTHS = 36
 const monthOf = (date: Date) =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
 
-const addMonths = (period: string, count: number) => {
+/** The `YYYY-MM` that is `count` months after `period`, e.g. ('2026-11', 2) → '2027-01'. */
+export const addMonths = (period: string, count: number) => {
   const [year = 0, month = 1] = period.split('-').map(Number)
   return monthOf(new Date(Date.UTC(year, month - 1 + count, 1)))
 }
