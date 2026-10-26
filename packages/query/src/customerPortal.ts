@@ -34,6 +34,7 @@ import {
   type PortalSubscription,
   type PortalTopUp,
   type PortalWallet,
+  type PortalWalletFlows,
   type PortalWalletTransaction,
   toPortalActionUrl,
   toPortalConfig,
@@ -48,6 +49,7 @@ import {
   toPortalTopUps,
   toPortalWalletTransactions,
   toPortalWallets,
+  walletFlows,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 
@@ -207,7 +209,13 @@ export function usePortalWalletTransactionPages(
   const items = (query.data?.pages ?? [])
     .flatMap((page) => page.items)
     .filter((item) => !seen.has(item.id) && Boolean(seen.add(item.id)))
-  const total = query.data?.pages.at(-1)?.total ?? 0
+  // The page shows "Load more" while `items.length < total`; tie that to whether
+  // there is a next page to fetch, so the button never shows without one (rows
+  // repeated across pages, when a new transaction shifts the offsets, would
+  // otherwise leave the API's total out of reach).
+  const total = query.hasNextPage
+    ? Math.max(query.data?.pages.at(-1)?.total ?? 0, items.length + 1)
+    : items.length
   return {
     data: query.data ? { items, total } : undefined,
     error: query.error,
@@ -219,6 +227,45 @@ export function usePortalWalletTransactionPages(
     loadingMore: query.isFetchingNextPage,
   }
 }
+
+/** The most transactions the API returns at once. */
+const MAX_PAGE = 1000
+/** Pages read for the period's totals before giving up on the rest. */
+const MAX_FLOW_PAGES = 20
+
+/**
+ * Credits added and used on a wallet since `since` (or ever, with none),
+ * across every transaction in that window, not only the history's loaded
+ * pages. The API has no aggregate, so this reads the window in pages of
+ * `MAX_PAGE` until its total is reached.
+ */
+export const usePortalWalletFlows = (
+  auth: PortalAuth,
+  wallet: PortalWallet | null,
+  since: Date | null = null,
+): PortalQuery<PortalWalletFlows> =>
+  usePortalQuery(
+    auth,
+    ['walletFlows', wallet?.id, since?.toISOString() ?? null],
+    async () => {
+      const currency = wallet?.currency ?? 'USD'
+      const rows = new Map<string, PortalWalletTransaction>()
+      for (let page = 0; page < MAX_FLOW_PAGES; page++) {
+        const { items, total } = toPortalWalletTransactions(
+          await getPortalWalletTransactions(auth, wallet?.id ?? '', {
+            limit: MAX_PAGE,
+            offset: page * MAX_PAGE,
+            ...(since ? { since } : {}),
+          }),
+          currency,
+        )
+        for (const item of items) rows.set(item.id, item)
+        if (items.length < MAX_PAGE || (page + 1) * MAX_PAGE >= total) break
+      }
+      return walletFlows([...rows.values()], currency)
+    },
+    wallet !== null,
+  )
 
 /** Every credit added to a wallet, with what is left of it. */
 export const usePortalTopUps = (

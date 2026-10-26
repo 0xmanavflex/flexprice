@@ -404,11 +404,17 @@ export function toPortalWalletTransactions(
   return { items, total: total || items.length }
 }
 
+/** Credits added (`in`) and used (`out`), in money and credits. */
+export type PortalWalletFlows = Record<
+  PortalTransactionDirection,
+  { amount: Money; credits: string }
+>
+
 /** Credits added and used across some transactions: exact, in money and credits. */
 export function walletFlows(
   transactions: readonly PortalWalletTransaction[],
   currency: string,
-): Record<PortalTransactionDirection, { amount: Money; credits: string }> {
+): PortalWalletFlows {
   const sum = (direction: PortalTransactionDirection) => {
     const rows = transactions.filter((t) => t.direction === direction && !t.pending)
     return {

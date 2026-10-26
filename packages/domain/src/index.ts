@@ -959,6 +959,7 @@ export type {
   PortalTopUpState,
   PortalView,
   PortalTransactionDirection,
+  PortalWalletFlows,
   PortalWallet,
   PortalWalletTransaction,
 } from './customerPortal'

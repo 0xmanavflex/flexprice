@@ -17,6 +17,7 @@ import {
   usePortalSpend,
   usePortalSubscriptions,
   usePortalTopUps,
+  usePortalWalletFlows,
   usePortalWalletTransactionPages,
   usePortalWallets,
   useRemovePortalPaymentMethod,
@@ -179,8 +180,10 @@ function Portal({
     wallets.data?.find((w) => w.active) ??
     wallets.data?.[0] ??
     null
-  // "Added since" and "Used since" the billing period's start; the latest page with no period.
+  // The history from the billing period's start (everything, with no period), a page at a time.
   const transactions = usePortalWalletTransactionPages(auth, wallet, PAGE, periodStart)
+  // "Added since" and "Used since": over the whole window, not just the loaded pages.
+  const flows = usePortalWalletFlows(auth, wallet, periodStart)
   const topUps = usePortalTopUps(auth, wallet, TOP_UPS)
   const invoiceDetail = usePortalInvoice(auth, location.invoiceId)
 
@@ -287,6 +290,7 @@ function Portal({
         previousSpend: load(previousSpend),
         periodSpend: periodStart ? load(periodSpend) : null,
         transactions: load(transactions),
+        flows: load(flows),
         topUps: load(topUps),
         invoiceDetail: location.invoiceId ? load(invoiceDetail) : null,
       }}

@@ -4,7 +4,6 @@ import {
   type PortalTransactionDirection,
   type PortalWallet,
   creditsCost,
-  walletFlows,
 } from '@fp/domain'
 import { PlusIcon, WalletIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
@@ -147,8 +146,8 @@ function WalletPanel({
   const money = (value: PortalWallet['balance']) => (
     <Money value={value} {...(locale ? { locale } : {})} />
   )
-  const transactions = data.transactions.status === 'ready' ? data.transactions.data.items : null
-  const flows = transactions ? walletFlows(transactions, wallet.currency) : null
+  // Every transaction in the period, not only the history's loaded pages.
+  const flows = data.flows.status === 'ready' ? data.flows.data : null
   const since = periodStart ? ` since ${formatDate(periodStart, locale)}` : ''
   const on = wallet.autoTopup?.enabled ?? false
 
@@ -425,13 +424,35 @@ function Transactions({
     <Loaded load={data.transactions} label="transactions" rows={5}>
       {({ items, total }) => {
         const shown = kind === 'all' ? items : items.filter((t) => t.direction === kind)
+        // Filtering Added or Used works on the pages loaded so far; while more remain,
+        // "Load more" stays, even when none of those loaded match.
+        const more =
+          items.length < total ? (
+            <div className="border-t px-6 py-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground h-8 px-2"
+                onClick={onShowMore}
+              >
+                Load more
+              </Button>
+            </div>
+          ) : null
         if (shown.length === 0) {
           return (
-            <PortalEmpty
-              icon={<WalletIcon />}
-              title="Nothing here yet"
-              description="Credits you add or use will be listed here."
-            />
+            <>
+              <PortalEmpty
+                icon={<WalletIcon />}
+                title="Nothing here yet"
+                description={
+                  more
+                    ? 'None in the transactions loaded so far. Load more to look further back.'
+                    : 'Credits you add or use will be listed here.'
+                }
+              />
+              {more}
+            </>
           )
         }
         return (
@@ -455,18 +476,7 @@ function Transactions({
                 />
               ))}
             </ul>
-            {items.length < total ? (
-              <div className="border-t px-6 py-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground h-8 px-2"
-                  onClick={onShowMore}
-                >
-                  Load more
-                </Button>
-              </div>
-            ) : null}
+            {more}
           </>
         )
       }}

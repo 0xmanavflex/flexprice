@@ -10,6 +10,7 @@ import {
   type PortalWallet,
   type PortalWalletTransaction,
   money,
+  walletFlows,
 } from '@fp/domain'
 import type { CustomerPortalActions, CustomerPortalData } from './types'
 
@@ -382,6 +383,7 @@ export const portalData: CustomerPortalData = {
   previousSpend: { status: 'ready', data: { ...portalSpend, total: usd('351.27') } },
   periodSpend: { status: 'ready', data: { ...portalSpend, total: usd('315.12') } },
   transactions: { status: 'ready', data: { items: portalTransactions, total: 9 } },
+  flows: { status: 'ready', data: walletFlows(portalTransactions, 'USD') },
   topUps: { status: 'ready', data: { items: portalTopUps, total: portalTopUps.length } },
   invoiceDetail: null,
 }
@@ -397,6 +399,7 @@ export const emptyPortalData: CustomerPortalData = {
   previousSpend: { status: 'ready', data: { currency: 'USD', total: usd('0'), items: [] } },
   periodSpend: { status: 'ready', data: { currency: 'USD', total: usd('0'), items: [] } },
   transactions: { status: 'ready', data: { items: [], total: 0 } },
+  flows: { status: 'ready', data: walletFlows([], 'USD') },
   topUps: { status: 'ready', data: { items: [], total: 0 } },
 }
 
@@ -414,6 +417,7 @@ export const loadingPortalData: CustomerPortalData = {
   previousSpend: loading,
   periodSpend: loading,
   transactions: loading,
+  flows: loading,
   topUps: loading,
   invoiceDetail: null,
 }
