@@ -477,6 +477,8 @@ export const PhaseCharges: Story = {
     await expect(canvas.queryByRole('switch', { name: /^Proration/ })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
+    await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeVisible()
+    await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeVisible()
     const dialog = await openCommitment(canvas)
     await expect(dialog.getByRole('heading', { name: 'Configure commitment' })).toBeVisible()
     await expect(dialog.getByText('True-up')).toBeVisible()

@@ -31,6 +31,7 @@ import {
   type AddContractCharge,
   BillingCycle,
   type Charge,
+  InvoiceCadence,
   type ChargeCommitment,
   type CreateCreditGrant,
   type CreateSubscription,
@@ -72,6 +73,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/pri
 import { Switch } from '@ui/components/primitives/switch'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { ChoiceCards, SimpleTable, type SimpleColumn } from '@ui/compositions/detail/DetailKit'
+import { parseDateValue } from '@ui/compositions/forms/DateInput'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -1434,6 +1436,18 @@ type ChargeRow = {
   price: string
 } & ({ kind: 'plan'; charge: Charge } | { kind: 'extra'; extra: AddContractCharge; index: number })
 
+/** When a charge in the wizard is in effect: its own dates, or with the phase. */
+function chargeInEffect(row: ChargeRow): string {
+  const fmt = (date: Date) => date.toLocaleDateString('en-US', { dateStyle: 'medium' })
+  if (row.kind === 'extra') {
+    const start = parseDateValue(row.extra.startDate)
+    return start ? `From ${fmt(start)}` : 'With the phase'
+  }
+  const { startDate, endDate } = row.charge
+  if (!startDate && !endDate) return 'With the phase'
+  return `${startDate ? fmt(startDate) : '—'} → ${endDate ? fmt(endDate) : 'Ongoing'}`
+}
+
 /** A change a charge row carries, drawn as a chip under its name that opens the matching dialog. */
 function ChargeFlag({
   icon,
@@ -1671,6 +1685,29 @@ function ChargesTable({
         ) : (
           <span className="tabular-nums">{row.extra.quantity || '1'}</span>
         ),
+    },
+    // When each charge is billed and in effect, as on the contract's own charges table.
+    {
+      key: 'timing',
+      header: 'Billing timing',
+      width: 120,
+      cell: (row) => {
+        const cadence =
+          row.kind === 'plan' ? row.charge.invoiceCadence : row.extra.charge.invoiceCadence
+        return (
+          <span className="text-muted-foreground">
+            {cadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'inEffect',
+      header: 'In effect',
+      width: 160,
+      cell: (row) => (
+        <span className="text-muted-foreground tabular-nums">{chargeInEffect(row)}</span>
+      ),
     },
     {
       key: 'actions',
