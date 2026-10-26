@@ -162,8 +162,6 @@ const BASE: RevenueReportProps = {
     total: '612K',
     weeklyAverage: '20.4K',
     peak: '29.1K',
-    creditsReason:
-      'Flexprice has no tenant-wide wallet report yet, so credits are shown per customer on their Wallet tab.',
   },
 }
 
@@ -232,15 +230,7 @@ export const Customers: Story = { args: { view: 'customers' } }
 export const Receivables: Story = { args: { view: 'receivables' } }
 export const Payments: Story = { args: { view: 'payments' } }
 
-/** Wallet credits have no tenant-wide report: the panel says so instead of drawing zeros. */
-export const Usage: Story = {
-  args: { view: 'usage' },
-  play: async ({ canvasElement }) => {
-    await expect(
-      await within(canvasElement).findByText(/no tenant-wide wallet report/),
-    ).toBeVisible()
-  },
-}
+export const Usage: Story = { args: { view: 'usage' } }
 
 export const Comparing: Story = {
   args: { comparing: true, filters: { ...BASE.filters, compare: 'previous' } },

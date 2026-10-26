@@ -6,6 +6,7 @@ import {
   customerRows,
   daysToPay,
   creditRows,
+  creditTypeRows,
   previousWindow,
   rangeWindow,
   resolveGrain,
@@ -308,5 +309,23 @@ describe('creditRows', () => {
     expect(rows[1]).toMatchObject({ name: 'A', paid: 30, free: 10, total: 40 })
     expect(rows[0]).toMatchObject({ paid: 0, free: 90, total: 90 })
     expect(rows.map((row) => row.display.share)).toEqual(['69%', '31%'])
+  })
+})
+
+describe('creditTypeRows', () => {
+  it('counts customers with a positive amount per type', () => {
+    const rows = creditTypeRows(
+      [
+        { keys: { customer_id: 'a', credit_type: 'paid' }, value: 30 },
+        { keys: { customer_id: 'b', credit_type: 'paid' }, value: 20 },
+        { keys: { customer_id: 'b', credit_type: 'free' }, value: 5 },
+        { keys: { customer_id: 'c', credit_type: 'free' }, value: 0 },
+      ],
+      'credit_type',
+      { paid: 'Paid credits', free: 'Free credits' },
+      String,
+    )
+    expect(rows[0]).toMatchObject({ id: 'paid', label: 'Paid credits', customers: 2, amount: 50 })
+    expect(rows[1]).toMatchObject({ id: 'free', customers: 1, amount: 5 })
   })
 })

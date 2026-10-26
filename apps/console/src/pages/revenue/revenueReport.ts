@@ -2,6 +2,7 @@ import { InvoiceStatus, PaymentStatus, type Invoice, type Money, type Payment } 
 import type {
   AgingBucket,
   CreditRow,
+  CreditTypeRow,
   CustomerRevenueRow,
   OverdueCustomerRow,
   PayerRow,
@@ -304,6 +305,32 @@ export function creditRows(
       },
     }))
     .sort((a, b) => b.total - a.total)
+}
+
+/** Customers and amount per value of one dimension (credit type, top-up source). */
+export function creditTypeRows(
+  rows: { keys: Record<string, string>; value: number }[],
+  dimension: string,
+  labels: Record<string, string>,
+  money: (value: number) => string,
+): CreditTypeRow[] {
+  const byType = new Map<string, { customers: Set<string>; amount: number }>()
+  for (const row of rows) {
+    const id = row.keys[dimension] ?? ''
+    const entry = byType.get(id) ?? { customers: new Set<string>(), amount: 0 }
+    entry.amount += row.value
+    if (row.value > 0) entry.customers.add(row.keys['customer_id'] ?? '')
+    byType.set(id, entry)
+  }
+  return [...byType.entries()]
+    .map(([id, { customers, amount }]) => ({
+      id,
+      label: labels[id] ?? id,
+      customers: customers.size,
+      amount,
+      display: { amount: money(amount) },
+    }))
+    .sort((a, b) => b.amount - a.amount)
 }
 
 /* ---- Customers ------------------------------------------------------------- */

@@ -29,6 +29,7 @@ import {
   amountOf,
   customerRows as dashboardCustomerRows,
   creditRows,
+  creditTypeRows,
   alignToWindow,
   formatAmount,
   percentOf,
@@ -82,6 +83,16 @@ const dayLabel = new Intl.DateTimeFormat('en-US', {
 /** The status of one report read: loading, failed, nothing to show, or ready. */
 const useCardReport = (key: string, query: ReportQuery | null) =>
   useReport(key, query, { handleErrors: true })
+
+const CREDIT_TYPES = { paid: 'Paid credits', free: 'Free credits' }
+
+const TOPUP_SOURCES = {
+  PURCHASED_CREDIT_DIRECT: 'Purchased, paid directly',
+  PURCHASED_CREDIT_INVOICED: 'Purchased, invoiced',
+  PURCHASED_CREDIT_BONUS: 'Purchase bonus',
+  FREE_CREDIT_GRANT: 'Free grant',
+  SUBSCRIPTION_CREDIT_GRANT: 'Subscription grant',
+}
 
 function statusOf(query: { isPending: boolean; isError: boolean; data?: unknown }, empty: boolean) {
   if (query.isPending) return 'loading' as const
@@ -178,15 +189,11 @@ export function ReportsPage({
     shape: 'timeseries',
     grain: 'day',
   })
-  const consumed = useCardReport('credit_consumption', {
+  const topupReport = useCardReport('credit_topups', {
     range,
     currency: currency.toLowerCase(),
-    shape: 'scalar',
-  })
-  const toppedUp = useCardReport('credit_topups', {
-    range,
-    currency: currency.toLowerCase(),
-    shape: 'scalar',
+    shape: 'breakdown',
+    dimensions: ['transaction_reason', 'customer_id'],
   })
   // The usage and contract split: no report gives it.
   const overview = useRevenueOverview(environmentId, window)
@@ -257,16 +264,19 @@ export function ReportsPage({
     ...(point.previous != null ? { previous: point.previous } : {}),
   }))
 
-  const credits = creditRows(
-    reportBreakdown(
-      creditReport.data,
-      'credit_consumption',
-      ['customer_id', 'credit_type'],
-      currency,
-    ),
-    nameOf,
-    money,
+  const creditBreakdown = reportBreakdown(
+    creditReport.data,
+    'credit_consumption',
+    ['customer_id', 'credit_type'],
+    currency,
   )
+  const topupBreakdown = reportBreakdown(
+    topupReport.data,
+    'credit_topups',
+    ['transaction_reason', 'customer_id'],
+    currency,
+  )
+  const credits = creditRows(creditBreakdown, nameOf, money)
   const customerRows: CustomerRevenueRow[] = customerRevenue.map((row) => {
     const id = row.keys['customer_id'] ?? ''
     const known = split.get(id)
@@ -335,8 +345,6 @@ export function ReportsPage({
     () => {
       for (const query of queries) void query.refetch()
     }
-  const consumedValue = reportScalar(consumed.data, 'credit_consumption', currency).value
-  const toppedUpValue = reportScalar(toppedUp.data, 'credit_topups', currency).value
 
   return (
     <RevenueReport
@@ -409,6 +417,11 @@ export function ReportsPage({
           onRetry: retry(creditReport),
           rows: credits,
           total: money(credits.reduce((sum, row) => sum + row.total, 0)),
+          toppedUp: topupReport.data
+            ? money(topupBreakdown.reduce((sum, row) => sum + row.value, 0))
+            : '—',
+          consumedTypes: creditTypeRows(creditBreakdown, 'credit_type', CREDIT_TYPES, money),
+          topupTypes: creditTypeRows(topupBreakdown, 'transaction_reason', TOPUP_SOURCES, money),
           paidShare: percentOf(
             credits.reduce((sum, row) => sum + row.paid, 0),
             credits.reduce((sum, row) => sum + row.total, 0),
@@ -489,15 +502,6 @@ export function ReportsPage({
         total: count.format(eventsTotal),
         weeklyAverage: count.format(eventsTotal / eventDays),
         peak: peak ? `${count.format(peak.value)} on ${dayLabel.format(peak.bucket)}` : '—',
-        creditsReason: 'The credit reports did not respond.',
-        ...(consumedValue !== null || toppedUpValue !== null
-          ? {
-              credits: {
-                consumed: { value: moneyOrDash(consumedValue) },
-                toppedUp: { value: moneyOrDash(toppedUpValue) },
-              },
-            }
-          : {}),
       }}
     />
   )

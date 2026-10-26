@@ -100,6 +100,14 @@ export interface CreditRow {
   display: { paid: string; free: string; total: string; share: string }
 }
 
+export interface CreditTypeRow {
+  id: string
+  label: string
+  customers: number
+  amount: number
+  display: { amount: string }
+}
+
 export interface AgingBucket {
   id: string
   label: string
@@ -177,7 +185,10 @@ export interface RevenueReportProps {
       | (ReportState & {
           rows: CreditRow[]
           total: string
+          toppedUp: string
           paidShare: string
+          consumedTypes: CreditTypeRow[]
+          topupTypes: CreditTypeRow[]
         })
       | undefined
   }
@@ -209,10 +220,6 @@ export interface RevenueReportProps {
     total: string
     weeklyAverage: string
     peak: string
-    /** Why wallet credits are not reported here (shown when `credits` is absent). */
-    creditsReason: string
-    /** Credits applied to invoices and credits topped up over the range. */
-    credits?: { consumed: ReportFigure; toppedUp: ReportFigure } | undefined
   }
 }
 
@@ -847,6 +854,37 @@ function RevenueTab({ revenue, comparing, rangeLabel }: RevenueReportProps) {
   )
 }
 
+function CreditTypeTable({ label, rows }: { label: string; rows: CreditTypeRow[] }) {
+  return (
+    <DetailTable<CreditTypeRow>
+      compact
+      label={label}
+      noun="types"
+      rows={rows}
+      columns={[
+        {
+          key: 'label',
+          header: label,
+          sortBy: (row) => row.label,
+          cell: (row) => <span className="font-medium">{row.label}</span>,
+        },
+        {
+          key: 'customers',
+          header: 'Customers',
+          sortBy: (row) => row.customers,
+          cell: (row) => <span className="tabular-nums">{row.customers}</span>,
+        },
+        {
+          key: 'amount',
+          header: 'Amount',
+          sortBy: (row) => row.amount,
+          cell: (row) => <span className="tabular-nums">{row.display.amount}</span>,
+        },
+      ]}
+    />
+  )
+}
+
 function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) {
   const top = customers.rows.slice(0, 10)
   const largest = customers.rows[0]
@@ -887,24 +925,53 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
       </Panel>
 
       {customers.credits ? (
-        <Panel
-          title="Credit consumption"
-          description={`Wallet credits applied to invoices per customer, ${rangeLabel}, split into paid and free`}
-        >
-          <Surface>
-            {customers.credits.status === 'ready' ? (
-              <>
-                <OverviewTiles
-                  variant="flush"
-                  tiles={[
-                    {
-                      label: 'Customers using credits',
-                      value: String(customers.credits.rows.length),
-                    },
-                    { label: 'Credits consumed', value: customers.credits.total },
-                    { label: 'Paid share', value: customers.credits.paidShare },
-                  ]}
+        <>
+          <Panel
+            title="Credits consumed and topped up"
+            description={`Wallet credits added and applied to invoices, ${rangeLabel}`}
+          >
+            <Surface>
+              {customers.credits.status === 'ready' ? (
+                <>
+                  <OverviewTiles
+                    variant="flush"
+                    tiles={[
+                      {
+                        label: 'Customers using credits',
+                        value: String(customers.credits.rows.length),
+                      },
+                      { label: 'Credits consumed', value: customers.credits.total },
+                      { label: 'Credits topped up', value: customers.credits.toppedUp },
+                      { label: 'Paid share', value: customers.credits.paidShare },
+                    ]}
+                  />
+                  <div className="grid gap-5 p-5 lg:grid-cols-2">
+                    <CreditTypeTable
+                      label="Consumed by credit type"
+                      rows={customers.credits.consumedTypes}
+                    />
+                    <CreditTypeTable
+                      label="Topped up by source"
+                      rows={customers.credits.topupTypes}
+                    />
+                  </div>
+                </>
+              ) : (
+                <NotReady
+                  state={customers.credits}
+                  height={200}
+                  empty="No credits consumed in this range"
                 />
+              )}
+            </Surface>
+          </Panel>
+
+          {customers.credits.status === 'ready' ? (
+            <Panel
+              title="Credit consumption by customer"
+              description={`Credits applied to invoices per customer, ${rangeLabel}, split into paid and free`}
+            >
+              <Surface>
                 <DetailTable<CreditRow>
                   compact
                   label="Credit consumption by customer"
@@ -959,16 +1026,10 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
                     },
                   ]}
                 />
-              </>
-            ) : (
-              <NotReady
-                state={customers.credits}
-                height={200}
-                empty="No credits consumed in this range"
-              />
-            )}
-          </Surface>
-        </Panel>
+              </Surface>
+            </Panel>
+          ) : null}
+        </>
       ) : null}
 
       {customers.status === 'ready' && customers.rows.length > 0 ? (
@@ -1253,28 +1314,6 @@ function UsageTab({ usage }: RevenueReportProps) {
             </>
           ) : (
             <NotReady state={usage} empty="No events in this range" />
-          )}
-        </Surface>
-      </Panel>
-      <Panel
-        title="Credits consumed and topped up"
-        description="Wallet credits added, and credits applied to invoices"
-      >
-        <Surface>
-          {usage.credits ? (
-            <OverviewTiles
-              variant="flush"
-              tiles={[
-                tile('Credits consumed', usage.credits.consumed, false),
-                tile('Credits topped up', usage.credits.toppedUp, false),
-              ]}
-            />
-          ) : (
-            <SectionEmpty
-              scene="billing"
-              title="Not available yet"
-              description={usage.creditsReason}
-            />
           )}
         </Surface>
       </Panel>
