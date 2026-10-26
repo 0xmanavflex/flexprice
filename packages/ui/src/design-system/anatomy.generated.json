@@ -955,6 +955,7 @@
         "PlusIcon"
       ],
       "usedBy": [
+        "ContractSectionDialogs",
         "SubscriptionForm"
       ],
       "story": null
@@ -1642,12 +1643,14 @@
       "file": "src/pages/contracts/ContractSectionDialogs.tsx",
       "layer": "surface",
       "composes": [
+        "ChargeCommitmentDialog",
         "Composer",
         "CreditGrantCreateForm",
         "EntitlementCreateForm",
         "FormDialog",
         "LabelWithHint",
         "OptionSelect",
+        "SimpleTable",
         "TaxDialog"
       ],
       "usedBy": [
@@ -7152,6 +7155,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "ConnectionExports",
+        "ContractSectionDialogs",
         "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
