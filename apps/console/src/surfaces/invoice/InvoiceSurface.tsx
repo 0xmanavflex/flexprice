@@ -36,6 +36,7 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
   )
   const [payError, setPayError] = useState<string | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<{ url: string | null; error: string | null } | null>(null)
 
   useEffect(() => {
     if (data)
@@ -101,6 +102,23 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
     }
   }
 
+  // The preview shows the same PDF Download saves, fetched when it opens: each link lasts an hour.
+  const onPreview = async () => {
+    setPreview({ url: null, error: null })
+    try {
+      const url = await download()
+      setPreview((open) =>
+        open === null
+          ? null
+          : url !== null && isSafeNavigationUrl(url)
+            ? { url, error: null }
+            : { url: null, error: GENERIC_ERROR },
+      )
+    } catch (cause) {
+      setPreview((open) => (open === null ? null : { url: null, error: messageOf(cause) }))
+    }
+  }
+
   return (
     <HostedInvoiceView
       kind="invoice"
@@ -111,6 +129,9 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
       onDownload={() => void onDownload()}
       isDownloading={isDownloading}
       downloadError={downloadError}
+      onPreview={() => void onPreview()}
+      preview={preview}
+      onClosePreview={() => setPreview(null)}
     />
   )
 }

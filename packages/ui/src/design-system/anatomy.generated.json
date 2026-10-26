@@ -4270,14 +4270,45 @@
       "usedBy": [],
       "story": null
     },
+    "HostedInvoiceCharges": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceCharges.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
+    "HostedInvoiceDetailsSheet": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceDetailsSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "Sheet"
+      ],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
+    "HostedInvoicePreviewDialog": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoicePreviewDialog.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
     "HostedInvoiceView": {
       "file": "src/pages/billing/hosted-invoice/HostedInvoiceView.tsx",
       "layer": "surface",
       "composes": [
         "ErrorState",
+        "HostedInvoiceCharges",
+        "HostedInvoiceDetailsSheet",
+        "HostedInvoicePreviewDialog",
         "Money",
-        "Panel",
-        "PrinterIcon"
+        "Panel"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx"
@@ -6246,9 +6277,7 @@
       "file": "src/reui/icons/default/outline/printer.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [
-        "HostedInvoiceView"
-      ],
+      "usedBy": [],
       "story": null
     },
     "ProfileAvatarUpload": {
@@ -6938,6 +6967,7 @@
         "CustomerActivityView",
         "CustomerEventsGrid",
         "EventDetailSheet",
+        "HostedInvoiceDetailsSheet",
         "ManageConnectionSheet",
         "PortalInvoiceSheet",
         "UsageSyncDetailSheet",
