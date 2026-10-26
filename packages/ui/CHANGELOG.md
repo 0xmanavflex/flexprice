@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- Integrations (R-20): each connector's description is one short, action-led line that matches what its connection actually syncs (from `CONNECTION_SPECS`). Before, they ran 46 to 107 characters, half of them encyclopaedia lines. `ConnectorCard` clamps the description to two lines, with the full text as a tooltip, so cards in a row are the same height. The disconnect confirmation is one sentence.
 - Exports (R-19), all on the Exports pages:
   - The landing page's "Overview" highlights show only before the first S3 connection. Once data exists they repeat what the page already shows.
   - The S3 destination card drops its three tags.
