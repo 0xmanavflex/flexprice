@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { BillingPeriod, type Charge } from './price'
-import { cadenceAllowed, selectContractCharges } from './contractCharges'
+import { BillingPeriod, PriceType, type Charge } from './price'
+import {
+  attachableAddonCommitments,
+  cadenceAllowed,
+  selectContractCharges,
+} from './contractCharges'
 
 const charge = (id: string, billingPeriod: BillingPeriod, extra: Partial<Charge> = {}): Charge =>
   ({ id, billingPeriod, billingPeriodCount: 1, currency: 'usd', ...extra }) as Charge
@@ -66,5 +70,41 @@ describe('selectContractCharges', () => {
     const opted = selectContractCharges(plan2, { ...contract, optedInIds: ['a'] })
     expect(opted.attached.map((c) => c.id)).toEqual(['a'])
     expect(opted.excluded[0]).toMatchObject({ reason: 'cadence' })
+  })
+})
+
+describe('attachableAddonCommitments', () => {
+  const usage = { type: PriceType.Usage }
+  const addon = [
+    charge('usd-m', BillingPeriod.Monthly, usage),
+    charge('usd-once', BillingPeriod.OneTime, usage),
+    charge('usd-q', BillingPeriod.Quarterly, usage),
+    charge('eur-m', BillingPeriod.Monthly, { ...usage, currency: 'eur' }),
+    charge('usd-fixed', BillingPeriod.Monthly, { type: PriceType.Fixed }),
+  ]
+  const commitments = ['usd-m', 'usd-once', 'usd-q', 'eur-m', 'usd-fixed'].map((priceId) => ({
+    priceId,
+  }))
+  const ids = (list: readonly { priceId: string }[]) => list.map((c) => c.priceId)
+
+  it('keeps usage charges in the contract currency and period, or one-time', () => {
+    expect(ids(attachableAddonCommitments(commitments, addon, monthly))).toEqual([
+      'usd-m',
+      'usd-once',
+    ])
+  })
+
+  it('drops a commitment once the currency or period moves away from its price', () => {
+    const eur = { currency: 'EUR', billingPeriod: BillingPeriod.Monthly }
+    expect(ids(attachableAddonCommitments(commitments, addon, eur))).toEqual(['eur-m'])
+    const quarterly = { currency: 'USD', billingPeriod: BillingPeriod.Quarterly }
+    expect(ids(attachableAddonCommitments(commitments, addon, quarterly))).toEqual([
+      'usd-once',
+      'usd-q',
+    ])
+  })
+
+  it('keeps every commitment while the charges are unknown', () => {
+    expect(attachableAddonCommitments(commitments, undefined, monthly)).toEqual(commitments)
   })
 })

@@ -89,8 +89,15 @@ const GROUPS: Group[] = [
     tokens: [
       { name: '--success', light: 'emerald-500', dark: 'emerald-500' },
       { name: '--success-foreground', light: 'emerald-900', dark: 'emerald-600' },
-      { name: '--info', light: 'violet-500', dark: 'violet-500' },
-      { name: '--info-foreground', light: 'violet-900', dark: 'violet-600' },
+      { name: '--info', light: 'blue-500', dark: 'blue-500' },
+      { name: '--info-foreground', light: 'blue-900', dark: 'blue-400' },
+      {
+        name: '--trial',
+        light: 'violet-500',
+        dark: 'violet-500',
+        note: 'Trialing only.',
+      },
+      { name: '--trial-foreground', light: 'violet-900', dark: 'violet-400' },
       { name: '--warning', light: 'yellow-500', dark: 'yellow-500' },
       { name: '--warning-foreground', light: 'yellow-900', dark: 'yellow-600' },
       {
