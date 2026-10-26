@@ -254,7 +254,8 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 
 ### R-33 Analytics: show "cost unavailable" apart from "no cost sheet"
 - **Problem.** A failed cost read shows "—", the same as having no cost sheet.
-- **Status.** Pending: needs the backend's behaviour without a cost sheet (an error code, or an empty reply) confirmed before "unavailable" can be told apart from "none".
+- **Finding.** `GetDetailedCostAnalytics` drops every cost error, "no active costsheet" included, and answers 200 with a zero cost and margin. So the tab showed $0.00, not "—".
+- **Status.** Partly open: #223 (with no published cost sheet, cost and margin read "—" with a line saying why). Blocked: a failed read with a cost sheet still looks like zero until the API returns the error.
 
 ## Blocked on backend or environment
 
@@ -328,6 +329,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 | R-15 Inherited contracts | #220 | Open |
 | R-01 Plan grant end date (console half) | #221 | Open |
 | R-16 Person filter | #222 (on #219) | Open |
+| R-33 No cost sheet | #223 | Open |
 | Add-on commitments (prior work) | #197 | Open |
 
 **Merging.** None of these is merged. The session's permission check refuses `gh pr merge` ("Merge Without Review"), so each PR is left for a person to merge.
