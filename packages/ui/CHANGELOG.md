@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-26
 
+- Hosted invoice actions (R-04): invoice detail gets "Open hosted invoice" in More. The Related card's entry is named "Payment page" while money is owed and "Hosted invoice" otherwise, and reads "Open hosted invoice" instead of the raw URL. The list's row menu no longer offers it on void or skipped invoices.
 - `CustomerActivityView` takes `personOptions`. When the actor is User, a Person filter narrows the trail to one team member. `ActivityFilters.actorId` carries that member's id (R-16).
 - `CustomerAnalyticsView` takes `costNote`: a muted line under the totals saying why cost and margin are blank. The console sets it when the environment has no cost sheet, instead of showing the API's zero cost and margin (R-33).
 - Credit grant end dates (R-01, console half):

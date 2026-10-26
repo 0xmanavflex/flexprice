@@ -296,8 +296,14 @@ export const HostedLink: Story = {
     await expect(
       await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
     ).not.toHaveAttribute('aria-disabled', 'true')
-    await expect(screen.queryByRole('menuitem', { name: /Open hosted invoice/ })).toBeNull()
-    await expect(canvas.getByRole('link', { name: HOSTED_URL })).toHaveAttribute('href', HOSTED_URL)
+    await expect(
+      screen.getByRole('menuitem', { name: /Open hosted invoice/ }),
+    ).not.toHaveAttribute('aria-disabled', 'true')
+    // The Related card names the page, not the raw URL.
+    await expect(canvas.getByRole('link', { name: 'Open hosted invoice' })).toHaveAttribute(
+      'href',
+      HOSTED_URL,
+    )
   },
 }
 
