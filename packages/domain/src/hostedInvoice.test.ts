@@ -347,3 +347,15 @@ describe('sumDecimals', () => {
     expect(sumDecimals(['10', '-12.5'])).toBe('-2.5')
   })
 })
+
+describe('hostedInvoiceState with nothing left to pay', () => {
+  it('reads as paid when nothing is owed, as the console does', () => {
+    expect(hostedInvoiceState('FINALIZED', 'PENDING', false)).toBe('paid')
+  })
+  it('stays processing while a payment is in flight', () => {
+    expect(hostedInvoiceState('FINALIZED', 'PROCESSING', false)).toBe('processing')
+  })
+  it('stays open while money is owed', () => {
+    expect(hostedInvoiceState('FINALIZED', 'PENDING', true)).toBe('open')
+  })
+})
