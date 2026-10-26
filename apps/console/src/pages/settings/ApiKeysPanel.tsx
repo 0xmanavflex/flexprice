@@ -29,6 +29,7 @@ import {
   toFailure,
 } from './panelKit'
 import { useDraft } from './useDraft'
+import { useSession } from '@/app/session'
 
 /** Where a key is used: the API reference's introduction covers authenticating with one. */
 const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
@@ -54,6 +55,7 @@ const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
  * explicit "I have saved it" to close: not a timer, not a click elsewhere.
  */
 export function ApiKeysPanel() {
+  const { session } = useSession()
   const keys = useApiKeys(DEFAULT_API_KEY_QUERY)
   const create = useCreateApiKey()
   const remove = useDeleteApiKey()
@@ -105,7 +107,12 @@ export function ApiKeysPanel() {
             ) : (
               <ul aria-label="API keys" className="bg-background divide-y rounded-xl border">
                 {rows.map((key) => (
-                  <KeyRow key={key.id} apiKey={key} onRevoke={() => setRevoking(key)} />
+                  <KeyRow
+                    key={key.id}
+                    apiKey={key}
+                    ownKey={key.ownerId === session?.userId}
+                    onRevoke={() => setRevoking(key)}
+                  />
                 ))}
               </ul>
             )}
@@ -169,7 +176,16 @@ function maskedKey(key: ApiKey): string {
 }
 
 /** One key: name and dates, the masked key, Revoke. The secret is not stored, so there is nothing to copy. */
-function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) {
+function KeyRow({
+  apiKey,
+  ownKey,
+  onRevoke,
+}: {
+  apiKey: ApiKey
+  /** The signed-in person's own key: anyone with secret write may revoke it. */
+  ownKey: boolean
+  onRevoke: () => void
+}) {
   const name = apiKey.name || apiKey.displayId || apiKey.id
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
@@ -201,12 +217,18 @@ function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) 
       <code className="bg-muted max-w-full min-w-0 truncate rounded-md px-2.5 py-1 font-mono text-xs">
         {maskedKey(apiKey)}
       </code>
-      {/* Revoking needs secret write (V1). */}
-      <WriteGate entity={RBAC_ENTITY.Secret}>
-        <Button size="sm" variant="ghost" onClick={onRevoke}>
-          Revoke
-        </Button>
-      </WriteGate>
+      {/*
+        Revoking needs secret write (V1); a key someone else owns (a colleague's,
+        a service account's) needs super admin too, as the API enforces
+        (`secret.go`). A key that is no longer live has nothing to revoke.
+      */}
+      {apiKey.status === ApiKeyStatus.Published ? (
+        <WriteGate entity={RBAC_ENTITY.Secret} {...(ownKey ? {} : { superAdmin: true })}>
+          <Button size="sm" variant="ghost" onClick={onRevoke}>
+            Revoke
+          </Button>
+        </WriteGate>
+      ) : null}
     </li>
   )
 }
