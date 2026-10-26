@@ -925,6 +925,14 @@ export const CommitmentsStep: Story = {
     // Period, overage, and true-up are visible before an amount is entered.
     await expect(canvas.getByText('Commitment period')).toBeVisible()
     await expect(canvas.getByText('True-up')).toBeVisible()
+    // True-up needs a commitment: off and disabled until an amount is entered.
+    const trueUp = canvas.getByRole('switch', { name: /True-up/ })
+    await expect(trueUp).toHaveAttribute('data-disabled')
+    await userEvent.type(
+      canvas.getByRole('textbox', { name: /Commitment amount|Commitment/ }),
+      '1000',
+    )
+    await expect(trueUp).not.toHaveAttribute('data-disabled')
     // The customer's tax rate is applied for them, in a table with its code.
     await expect(canvas.getByRole('columnheader', { name: 'Code' })).toBeVisible()
     await expect(canvas.getByText('VAT20')).toBeVisible()

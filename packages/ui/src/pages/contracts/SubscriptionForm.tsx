@@ -2703,8 +2703,24 @@ function CommitmentsSection({
           />
         )}
       </FormRow>
-      <FormRow label="True-up" hint="Bill the shortfall when spend stays under the commitment.">
-        {({ id }) => <Switch id={id} checked={values.enableTrueUp} onCheckedChange={onTrueUp} />}
+      {/* True-up bills a shortfall against the commitment, so it needs one: without an
+          amount the API drops it, and the switch would say on while nothing happens. */}
+      <FormRow
+        label="True-up"
+        hint={
+          values.commitmentAmount?.trim()
+            ? 'Bill the shortfall when spend stays under the commitment.'
+            : 'Set a commitment amount above to bill a shortfall.'
+        }
+      >
+        {({ id }) => (
+          <Switch
+            id={id}
+            checked={values.enableTrueUp && Boolean(values.commitmentAmount?.trim())}
+            disabled={!values.commitmentAmount?.trim()}
+            onCheckedChange={onTrueUp}
+          />
+        )}
       </FormRow>
     </FormCard>
   )
