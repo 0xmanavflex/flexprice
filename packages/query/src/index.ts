@@ -766,3 +766,12 @@ export {
   useUpdateFxRate,
 } from './fxRates'
 export type { FxRateOwner, FxRateWire } from './fxRates'
+export {
+  toContractJournal,
+  toPerformanceObligation,
+  toRevenueContract,
+  toRevenueWaterfall,
+  useContractJournal,
+  useRevenueRecognitionEnabled,
+  useSubscriptionRevenue,
+} from './revenueRecognition'

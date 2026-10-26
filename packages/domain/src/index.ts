@@ -1042,3 +1042,24 @@ export {
   orgNameError,
   tenantOnboardingSchema,
 } from './onboarding'
+
+export {
+  AMORTIZATION_METHOD_LABEL,
+  AmortizationMethod,
+  JOURNAL_EVENT_LABEL,
+  LEDGER_ACCOUNT_LABEL,
+  RECOGNITION_METHOD_LABEL,
+  RecognitionMethod,
+  revenuePeriods,
+} from './revenueRecognition'
+export type {
+  ContractJournal,
+  JournalEntry,
+  JournalLine,
+  PerformanceObligation,
+  RevenueContract,
+  RevenueMonth,
+  RevenueRow,
+  RevenueWaterfall,
+  SubscriptionRevenue,
+} from './revenueRecognition'

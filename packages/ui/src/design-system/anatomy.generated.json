@@ -2755,6 +2755,7 @@
         "RevenueReport",
         "SubscriptionDetailView",
         "SubscriptionForm",
+        "SubscriptionJournal",
         "TaxDialog",
         "WalletLedgerTable",
         "WebhookEndpointDetail"
@@ -3135,7 +3136,8 @@
         "EntitlementTable",
         "EntitlementUsage",
         "EntitlementUsageTable",
-        "SubscriptionDetailView"
+        "SubscriptionDetailView",
+        "SubscriptionJournal"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -6954,6 +6956,8 @@
         "RelatedCard",
         "S3ConnectionList",
         "SubscriptionDetailView",
+        "SubscriptionJournal",
+        "SubscriptionRevenue",
         "TaxDialog",
         "UsageBillingView",
         "WebhookEndpointDetail",
@@ -7321,6 +7325,7 @@
         "PriceOverrideForm",
         "S3ConnectionList",
         "SubscriptionForm",
+        "SubscriptionRevenue",
         "TierTable",
         "UsageBillingView"
       ],
@@ -7645,6 +7650,29 @@
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionGrid.stories.tsx"
     },
+    "SubscriptionJournal": {
+      "file": "src/pages/contracts/SubscriptionJournal.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EntityLink",
+        "Section",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/contracts/SubscriptionJournal.stories.tsx"
+    },
+    "SubscriptionRevenue": {
+      "file": "src/pages/contracts/SubscriptionRevenue.tsx",
+      "layer": "surface",
+      "composes": [
+        "Section",
+        "SimpleTable",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/contracts/SubscriptionRevenue.stories.tsx"
+    },
     "SubscriptionStatusBadge": {
       "file": "src/pages/contracts/SubscriptionStatusBadge.tsx",
       "layer": "surface",
@@ -7694,7 +7722,9 @@
         "InvoiceDetailView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
-        "SubscriptionDetailView"
+        "SubscriptionDetailView",
+        "SubscriptionJournal",
+        "SubscriptionRevenue"
       ],
       "story": "./src/compositions/detail/SubTabState.stories.tsx"
     },
@@ -9432,6 +9462,20 @@
       "component": "SubscriptionGrid",
       "uses": [
         "SubscriptionGrid"
+      ]
+    },
+    "./src/pages/contracts/SubscriptionJournal.stories.tsx": {
+      "title": "App/Contracts/Contract journal",
+      "component": "SubscriptionJournal",
+      "uses": [
+        "SubscriptionJournal"
+      ]
+    },
+    "./src/pages/contracts/SubscriptionRevenue.stories.tsx": {
+      "title": "App/Contracts/Contract revenue",
+      "component": "SubscriptionRevenue",
+      "uses": [
+        "SubscriptionRevenue"
       ]
     },
     "./src/pages/contracts/SubscriptionsListPage.stories.tsx": {

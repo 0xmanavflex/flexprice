@@ -198,6 +198,8 @@ const preview: Preview = {
               'Contract table',
               'Contract form',
               'Contract status badge',
+              'Contract revenue',
+              'Contract journal',
             ],
             'Billing',
             [
