@@ -82,7 +82,8 @@ export function DataExportGrid({
       }),
       textColumn<DataExport>('interval', 'Runs', (row) => row.intervalLabel, { width: 110 }),
       pillColumn<DataExport>('state', 'Status', (row) => ({
-        label: row.enabled ? 'Enabled' : 'Disabled',
+        // The detail page's words, so one export reads the same everywhere.
+        label: row.enabled ? 'Active' : 'Paused',
         tone: row.enabled ? 'success' : 'neutral',
       })),
       textColumn<DataExport>('bucket', 'Bucket', (row) => row.bucket, { width: 220 }),

@@ -129,7 +129,7 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('acme-billing')).toBeInTheDocument()
     await expect(canvas.getByText('Invoices')).toBeInTheDocument()
-    await expect(canvas.getByText('Disabled')).toBeInTheDocument()
+    await expect(canvas.getByText('Paused')).toBeInTheDocument()
   },
 }
 
