@@ -50,6 +50,12 @@ export interface ContractAddChargeFormProps {
   submitError?: string | null
   /** A charge already drafted (not yet saved) to reopen and change. */
   initial?: AddContractCharge | undefined
+  /**
+   * The contract's start (`YYYY-MM-DD`) when it is still in the future. The
+   * API refuses a charge that starts before its contract, so earlier days
+   * cannot be picked and an empty start means "with the contract", not now.
+   */
+  earliestStart?: string | undefined
 }
 
 /** A new charge on one contract, as one granular form. */
@@ -63,6 +69,7 @@ export function ContractAddChargeForm({
   isSubmitting = false,
   submitError = null,
   initial,
+  earliestStart,
 }: ContractAddChargeFormProps) {
   const isUsage = type === PriceType.Usage
   const [quantity, setQuantity] = useState(initial?.quantity ?? '1')
@@ -98,7 +105,13 @@ export function ContractAddChargeForm({
           setShowErrors(true)
           return
         }
-        onSubmit({ charge, quantity, startDate, proration, terms })
+        onSubmit({
+          charge,
+          quantity,
+          startDate: startDate || earliestStart || '',
+          proration,
+          terms,
+        })
       }}
       extras={
         <div className="flex flex-col gap-5">
@@ -122,13 +135,21 @@ export function ContractAddChargeForm({
                 )}
               </Field>
             )}
-            <Field label="Starts on" hint="Leave empty to start the charge now.">
+            <Field
+              label="Starts on"
+              hint={
+                earliestStart
+                  ? 'Leave empty to start with the contract. A charge cannot start before it.'
+                  : 'Leave empty to start the charge now.'
+              }
+            >
               {({ id, 'aria-describedby': describedBy }) => (
                 <DateInput
                   id={id}
                   value={startDate}
                   onValueChange={setStartDate}
-                  placeholder="Now"
+                  {...(earliestStart ? { min: earliestStart } : {})}
+                  placeholder={earliestStart ? 'With the contract' : 'Now'}
                   disabled={isSubmitting}
                   aria-describedby={describedBy}
                 />

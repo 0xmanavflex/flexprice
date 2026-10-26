@@ -1343,6 +1343,30 @@ export const ChargeRowCouponActions: Story = {
 }
 
 /** Add a fixed charge: the full charge form plus quantity, start date and proration. */
+/**
+ * A contract that has not started yet: the API refuses a charge that starts
+ * before its contract, so an empty start means "with the contract".
+ */
+export const AddChargeBeforeContractStarts: Story = {
+  parameters: menuA11y,
+  args: withSubscription({ startDate: new Date('2099-03-01T00:00:00') }),
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(
+      await dialog.findByText(/Leave empty to start with the contract/),
+    ).toBeInTheDocument()
+    await userEvent.type(dialog.getByLabelText('Display name'), 'Premium support')
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '400')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(args.onAddCharge).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: '2099-03-01' }),
+    )
+  },
+}
+
 export const AddCharge: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
