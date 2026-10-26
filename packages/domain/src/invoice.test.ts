@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { InvoiceStatus, deriveInvoiceStatus, needsAttention, sumLineAmounts } from './invoice'
+import {
+  InvoiceStatus,
+  deriveInvoiceStatus,
+  isPastDue,
+  needsAttention,
+  sumLineAmounts,
+} from './invoice'
 
 const PAST = new Date('2026-01-01T00:00:00Z')
 const FUTURE = new Date('2027-01-01T00:00:00Z')
@@ -99,5 +105,18 @@ describe('sumLineAmounts', () => {
     expect(sumLineAmounts(['10', ''])).toBeNull()
     expect(sumLineAmounts(['abc'])).toBeNull()
     expect(sumLineAmounts(['-5'])).toBeNull()
+  })
+})
+
+describe('isPastDue', () => {
+  const due = new Date('2026-10-26T00:00:00Z')
+  it('is not past due on the due day itself, whatever the hour', () => {
+    expect(isPastDue(due, new Date('2026-10-26T23:59:00Z'))).toBe(false)
+  })
+  it('is past due from the next calendar day, in UTC', () => {
+    expect(isPastDue(due, new Date('2026-10-27T00:00:00Z'))).toBe(true)
+  })
+  it('is never past due without a due date', () => {
+    expect(isPastDue(null, new Date('2030-01-01T00:00:00Z'))).toBe(false)
   })
 })

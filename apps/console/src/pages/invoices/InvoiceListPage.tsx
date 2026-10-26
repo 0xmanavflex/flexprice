@@ -93,8 +93,9 @@ export function InvoiceListPage({
    */
   const derived = query.statuses.filter((status) => !isStoredInvoiceStatus(status))
   const isPageLocal = derived.length > 0
+  // Any chosen status counts, stored or derived: open and paid together keeps both.
   const rows: Invoice[] = isPageLocal
-    ? fetched.filter((invoice) => derived.includes(invoice.status))
+    ? fetched.filter((invoice) => query.statuses.includes(invoice.status))
     : fetched
   const total = invoices.data?.total ?? 0
 
