@@ -1,7 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { HostedInvoiceView } from './HostedInvoiceView'
-import { DEMO_HOSTED_INVOICE, DEMO_PAID_HOSTED_INVOICE, SPARSE_HOSTED_INVOICE } from './fixtures'
+import {
+  DEMO_HOSTED_INVOICE,
+  DEMO_PAID_HOSTED_INVOICE,
+  DEMO_VOIDED_HOSTED_INVOICE,
+  SPARSE_HOSTED_INVOICE,
+} from './fixtures'
+
+/** Before the due date (Oct 26), so the sample reads as Due. */
+const BEFORE_DUE = new Date('2026-10-20T12:00:00Z')
+const AFTER_DUE = new Date('2026-10-30T12:00:00Z')
 
 const meta = {
   title: 'App/Billing/Hosted invoice/Page',
@@ -10,13 +19,17 @@ const meta = {
   args: {
     kind: 'invoice',
     invoice: DEMO_HOSTED_INVOICE,
+    now: BEFORE_DUE,
     onPay: fn(),
     isPaying: false,
     payError: null,
     onDownload: fn(),
     isDownloading: false,
     downloadError: null,
-    locale: 'en-GB',
+    onPreview: fn(),
+    preview: null,
+    onClosePreview: fn(),
+    locale: 'en-US',
   },
 } satisfies Meta<typeof HostedInvoiceView>
 
@@ -24,53 +37,117 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const pay = /^Pay /
+type InvoiceArgs = { onPay: () => void; onDownload: () => void; onPreview: () => void }
 
-/** Open: the amount due leads the sidebar; the lines and totals sit beside it. */
-export const Open: Story = {
+/** Due: the amount due leads the card, Pay and Download under it, the charges beside it. */
+export const Due: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { level: 1, name: 'Amount Due' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { level: 1, name: 'Amount due' })).toBeVisible()
     await expect(canvas.getByText('Due', { selector: '[data-slot=badge]' })).toBeVisible()
-    await expect(canvas.getByText('DSADDWUO-0001')).toBeVisible()
-    await expect(canvas.getByText('due 14 Nov 2026')).toBeVisible()
-    await expect(canvas.getByText('FX G5 1791253409')).toBeVisible()
-    await expect(canvas.getByText('API calls')).toBeVisible()
-    await expect(canvas.getByText('× 4,000')).toBeVisible()
+    await expect(canvas.getByText('Due Oct 26, 2026')).toBeVisible()
+    const card = within(canvas.getByRole('region', { name: 'Amount due' }))
+    await expect(card.getByText('Sep 12, 2026 – Oct 11, 2026')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Preview invoice' }))
+    await waitFor(() => expect((args as InvoiceArgs).onPreview).toHaveBeenCalledTimes(1))
     await userEvent.click(canvas.getByRole('button', { name: pay }))
-    await waitFor(() => expect((args as { onPay: () => void }).onPay).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect((args as InvoiceArgs).onPay).toHaveBeenCalledTimes(1))
+    await userEvent.click(canvas.getByRole('button', { name: 'Download invoice INV-2026-01488' }))
+    await waitFor(() => expect((args as InvoiceArgs).onDownload).toHaveBeenCalledTimes(1))
   },
 }
 
-/** Download and Print sit under the receipt, as in receipt-5. */
-export const Download: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Download invoice DSADDWUO-0001' }))
-    await waitFor(() =>
-      expect((args as { onDownload: () => void }).onDownload).toHaveBeenCalledTimes(1),
-    )
-    await expect(canvas.getByRole('button', { name: 'Print invoice DSADDWUO-0001' })).toBeVisible()
-  },
-}
-
-/** Many lines: one row each, so 15 lines and the totals still read as one short receipt. */
-export const ManyLines: Story = {
-  args: {
-    invoice: {
-      ...DEMO_HOSTED_INVOICE,
-      lines: Array.from({ length: 15 }, (_, i) => ({
-        id: `li_${i}`,
-        name: `Usage line ${i + 1}`,
-        quantity: String((i + 1) * 120),
-        amount: { amount: String(400 + i * 37), currency: 'INR' },
-      })),
-    },
-  },
+/** Past the due date the card says so, in the destructive tone. */
+export const Overdue: Story = {
+  args: { now: AFTER_DUE },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('15 items')).toBeVisible()
-    await expect(canvas.getByText('Usage line 15')).toBeVisible()
-    await expect(canvas.getByText('× 1,800')).toBeVisible()
+    await expect(canvas.getByText('Overdue', { selector: '[data-slot=badge]' })).toBeVisible()
+    await expect(canvas.getByText('Overdue since Oct 26, 2026')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: pay })).toBeEnabled()
+  },
+}
+
+/** Charges grouped by plan and add-on, a struck-through price where something was taken off. */
+export const Charges: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'What you’re paying for' })).toBeVisible()
+    await expect(canvas.getByText('5 charges')).toBeVisible()
+    const growth = canvas.getByRole('region', { name: 'Growth plan' })
+    await expect(within(growth).getAllByRole('listitem')).toHaveLength(4)
+    await expect(canvas.getByRole('region', { name: 'Priority support' })).toBeVisible()
+    // The platform fee's coupon: $179.10 now, $199.00 before.
+    const fee = canvas.getByRole('button', { name: /Platform fee/ })
+    await expect(fee).toHaveTextContent('$179.10')
+    await expect(fee).toHaveTextContent('was $199.00')
+    await expect(canvas.getByText('Sales tax (8.25%)')).toBeVisible()
+    await expect(canvas.getByText('Prepaid credits')).toBeVisible()
+  },
+}
+
+/** A row opens into how its amount was reached: quantity, price, what was taken off, the period's total. */
+export const ChargeBreakdown: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const fee = canvas.getByRole('button', { name: /Platform fee/ })
+    await expect(fee).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(fee)
+    await expect(fee).toHaveAttribute('aria-expanded', 'true')
+    await expect(canvas.getByText('Coupon (10% off)')).toBeVisible()
+    await expect(canvas.getByText('Total (Oct 12, 2026 – Nov 11, 2026)')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: /AI tokens/ }))
+    await expect(canvas.getByText('Included in your plan')).toBeVisible()
+    await expect(canvas.getByText('1,000,000')).toBeVisible()
+  },
+}
+
+/** "All invoice details": both parties' addresses, the memo, and every payment attempt. */
+export const Details: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'All invoice details' }))
+    const sheet = within(await within(document.body).findByRole('dialog'))
+    await expect(sheet.getByText('Invoice details')).toBeVisible()
+    await expect(sheet.getByText('548 Market St, Suite 41200')).toBeVisible()
+    await expect(sheet.getByText('1200 Harbor Blvd, Floor 3')).toBeVisible()
+    await expect(sheet.getByText(/Thank you for building with Vapi/)).toBeVisible()
+    // The failed card attempt explains why the balance is still due.
+    await expect(sheet.getByText('Card')).toBeVisible()
+    await expect(sheet.getByText('Failed')).toBeVisible()
+  },
+}
+
+/** "Preview invoice" asks the app for the PDF (see Due); the dialog waits for its link. */
+export const PreviewLoading: Story = {
+  args: { preview: { url: null, error: null } },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole('dialog'))
+    await expect(dialog.getByText('INV-2026-01488.pdf')).toBeVisible()
+    await expect(dialog.getByRole('status')).toHaveTextContent('Preparing the PDF…')
+  },
+}
+
+/** The PDF, with a way to open it outright when a provider refuses to be framed. */
+export const PreviewReady: Story = {
+  args: { preview: { url: 'about:blank', error: null } },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole('dialog'))
+    await expect(dialog.getByTitle('Invoice INV-2026-01488')).toBeInTheDocument()
+    await expect(dialog.getByRole('link', { name: 'Download PDF' })).toHaveAttribute(
+      'href',
+      'about:blank',
+    )
+    await expect(dialog.getByRole('link', { name: 'Open in a new tab' })).toBeVisible()
+  },
+}
+
+export const PreviewFailed: Story = {
+  args: { preview: { url: null, error: 'Something went wrong, please try again.' } },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole('dialog'))
+    await expect(dialog.getByRole('alert')).toHaveTextContent('Something went wrong')
   },
 }
 
@@ -107,8 +184,8 @@ export const Processing: Story = {
   args: { invoice: { ...DEMO_HOSTED_INVOICE, state: 'processing' } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { name: 'Payment Processing' })).toBeVisible()
-    await expect(canvas.getByText('Processing', { exact: true })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Payment processing' })).toBeVisible()
+    await expect(canvas.getByText('Processing', { selector: '[data-slot=badge]' })).toBeVisible()
     await expect(canvas.queryByRole('button', { name: pay })).not.toBeInTheDocument()
   },
 }
@@ -117,22 +194,21 @@ export const Paid: Story = {
   args: { invoice: DEMO_PAID_HOSTED_INVOICE },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { name: 'Total Paid' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Amount paid' })).toBeVisible()
     await expect(canvas.getByText('Paid', { selector: '[data-slot=badge]' })).toBeVisible()
-    await expect(canvas.getByText('on 14 Oct 2026')).toBeVisible()
-    // "Paid With" in the sidebar, and the succeeded attempt in the payment history.
-    await expect(canvas.getByText('Paid With')).toBeVisible()
-    await expect(canvas.getAllByText('Stripe')).toHaveLength(2)
+    await expect(canvas.getByText('Paid Oct 14, 2026 with Stripe')).toBeVisible()
     await expect(canvas.queryByRole('button', { name: pay })).not.toBeInTheDocument()
+    await expect(canvas.queryByText('Amount due')).not.toBeInTheDocument()
   },
 }
 
 export const Voided: Story = {
-  args: { invoice: { ...DEMO_HOSTED_INVOICE, state: 'voided', payEnabled: false } },
+  args: { invoice: DEMO_VOIDED_HOSTED_INVOICE },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { name: 'Invoice Voided' })).toBeVisible()
-    await expect(canvas.getByText('Void', { exact: true })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Voided' })).toBeVisible()
+    await expect(canvas.getByText('Void', { selector: '[data-slot=badge]' })).toBeVisible()
+    await expect(canvas.getByText('Voided Oct 14, 2026')).toBeVisible()
     await expect(canvas.queryByRole('button', { name: pay })).not.toBeInTheDocument()
   },
 }
@@ -141,17 +217,17 @@ export const Sparse: Story = {
   args: { invoice: SPARSE_HOSTED_INVOICE },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.queryByText(/Questions\?/)).not.toBeInTheDocument()
-    await expect(canvas.queryByText('Billed To')).not.toBeInTheDocument()
-    await expect(canvas.getByText('0 items')).toBeVisible()
+    await expect(canvas.queryByText(/^Contact /)).not.toBeInTheDocument()
+    await expect(canvas.queryByText('Billed to')).not.toBeInTheDocument()
+    await expect(canvas.getByText('0 charges')).toBeVisible()
   },
 }
 
 export const Invalid: Story = {
-  args: { kind: 'invalid', message: 'This link is no longer valid, contact Paras.' },
+  args: { kind: 'invalid', message: 'This link is no longer valid, contact Vapi.' },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText('This link is no longer valid, contact Paras.'),
+      within(canvasElement).getByText('This link is no longer valid, contact Vapi.'),
     ).toBeVisible()
   },
 }
@@ -185,40 +261,20 @@ export const Loading: Story = {
   },
 }
 
-/**
- * A failed attempt is listed under the totals, so the customer can see why the
- * balance is still due.
- */
-export const FailedAttempt: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const history = canvas.getByRole('region', { name: 'Payment History' })
-    await expect(within(history).getByText('Card')).toBeVisible()
-    await expect(within(history).getByText('Failed')).toBeVisible()
-  },
-}
-
-/** Paid after a failed attempt: both attempts are listed. */
-export const PaidAfterRetry: Story = {
-  args: { invoice: DEMO_PAID_HOSTED_INVOICE },
-  play: async ({ canvasElement }) => {
-    const history = within(canvasElement).getByRole('region', { name: 'Payment History' })
-    await expect(within(history).getAllByRole('listitem')).toHaveLength(2)
-    await expect(within(history).getByText('Succeeded')).toBeVisible()
-  },
-}
-
 /** A long charge name wraps instead of being cut off, so it reads in full on a phone and on paper. */
 export const LongChargeName: Story = {
   args: {
     invoice: {
       ...DEMO_HOSTED_INVOICE,
-      lines: [
+      groups: [
         {
-          id: 'li_long',
-          name: 'Enterprise analytics workspace: premium support and dedicated region add-on',
-          quantity: '1',
-          amount: DEMO_HOSTED_INVOICE.lines[0]!.amount,
+          ...DEMO_HOSTED_INVOICE.groups[0]!,
+          lines: [
+            {
+              ...DEMO_HOSTED_INVOICE.lines[0]!,
+              name: 'Enterprise analytics workspace — premium support and dedicated region add-on',
+            },
+          ],
         },
       ],
     },

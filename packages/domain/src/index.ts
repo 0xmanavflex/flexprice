@@ -811,12 +811,17 @@ export {
   hostedInvoiceState,
   paymentMethodLabel,
   toHostedInvoice,
+  isOverdue,
   toPaymentActionUrl,
   toPresignedUrl,
 } from './hostedInvoice'
 export type {
   HostedInvoice,
+  HostedInvoiceAdjustment,
+  HostedInvoiceGroup,
   HostedInvoiceLine,
+  HostedInvoiceParty,
+  HostedInvoiceTax,
   HostedInvoicePayment,
   HostedInvoiceState,
 } from './hostedInvoice'
