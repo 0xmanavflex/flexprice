@@ -66,6 +66,7 @@ export {
   createInvoiceSchema,
   sumLineAmounts,
   deriveInvoiceStatus,
+  isPastDue,
   emptyInvoice,
   isStoredInvoiceStatus,
   needsAttention,
