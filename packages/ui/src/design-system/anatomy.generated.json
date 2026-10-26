@@ -818,6 +818,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ContractAmountCalculator",
         "InvoiceDetailView",
         "ShellSearch"
       ],
@@ -964,6 +965,7 @@
       "layer": "surface",
       "composes": [
         "ChoiceCards",
+        "ContractAmountCalculator",
         "DateInput",
         "FeatureTypeGlyph",
         "Field",
@@ -1543,6 +1545,19 @@
         "ContractChargeDialog"
       ],
       "story": null
+    },
+    "ContractAmountCalculator": {
+      "file": "src/pages/product-catalog/charges/ContractAmountCalculator.tsx",
+      "layer": "surface",
+      "composes": [
+        "CalculatorIcon",
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "ChargeForm"
+      ],
+      "story": "./src/pages/product-catalog/charges/ContractAmountCalculator.stories.tsx"
     },
     "ContractChargeDialog": {
       "file": "src/pages/contracts/ContractChargeDialog.tsx",
@@ -3393,6 +3408,7 @@
         "ChargeForm",
         "ConnectIntegrationSheet",
         "ContractAddChargeForm",
+        "ContractAmountCalculator",
         "ContractChargeDialog",
         "ContractQuantityDialog",
         "CreditGrantCreateForm",
@@ -5224,6 +5240,7 @@
         "ChargeCouponDialog",
         "ChargeForm",
         "ContractAddChargeForm",
+        "ContractAmountCalculator",
         "ContractIntegrations",
         "ContractSectionDialogs",
         "CouponCreateForm",
@@ -9391,6 +9408,13 @@
       "component": "ChargeTable",
       "uses": [
         "ChargeTable"
+      ]
+    },
+    "./src/pages/product-catalog/charges/ContractAmountCalculator.stories.tsx": {
+      "title": "Product catalog/Charges/ContractAmountCalculator",
+      "component": "ContractAmountCalculator",
+      "uses": [
+        "ContractAmountCalculator"
       ]
     },
     "./src/pages/product-catalog/charges/PriceOverrideForm.stories.tsx": {
