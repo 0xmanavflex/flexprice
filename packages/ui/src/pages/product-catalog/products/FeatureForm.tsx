@@ -658,12 +658,7 @@ export function FeatureForm(props: FeatureFormProps) {
         error={message('unitSingular')}
       >
         {({ id, ...field }) => (
-          <Input
-            id={id}
-            placeholder={isMetered ? 'call' : 'seat'}
-            {...field}
-            {...singularField}
-          />
+          <Input id={id} placeholder={isMetered ? 'call' : 'seat'} {...field} {...singularField} />
         )}
       </FormRow>
       <FormRow
@@ -685,9 +680,7 @@ export function FeatureForm(props: FeatureFormProps) {
         hint="How usage is displayed in reports: the feature unit times a conversion rate. Fill all three or none."
         error={message('reportingUnit.unitSingular')}
       >
-        {({ id, ...field }) => (
-          <Input id={id} {...field} {...reportingSingularField} />
-        )}
+        {({ id, ...field }) => <Input id={id} {...field} {...reportingSingularField} />}
       </FormRow>
       <FormRow
         label="Reporting unit (plural)"
