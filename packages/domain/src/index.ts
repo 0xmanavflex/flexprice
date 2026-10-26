@@ -854,7 +854,12 @@ export {
 } from './timezones'
 export type { TimezoneOption } from './timezones'
 
-export { attachableAddonCharges, cadenceAllowed, selectContractCharges } from './contractCharges'
+export {
+  attachableAddonCharges,
+  attachableAddonCommitments,
+  cadenceAllowed,
+  selectContractCharges,
+} from './contractCharges'
 export type { ContractChargeSelection } from './contractCharges'
 export {
   RBAC_ACTION,

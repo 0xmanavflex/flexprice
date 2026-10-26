@@ -44,6 +44,16 @@ const STORAGE_CHARGES = [
     entityId: 'addon_storage',
     displayName: 'Storage (GB)',
   },
+  // Quarterly: a monthly contract does not attach it, so it takes no commitment.
+  {
+    ...makeCharge(3, {
+      type: PriceType.Usage,
+      billingModel: BillingModel.FlatFee,
+      billingPeriod: BillingPeriod.Quarterly,
+    }),
+    entityId: 'addon_storage',
+    displayName: 'Storage archive (GB)',
+  },
 ]
 const PLAN_NAMES = ['Starter', 'Pro', 'Business', 'Scale', 'Enterprise']
 const CUSTOMER_NAMES = [
@@ -109,6 +119,8 @@ interface PlaygroundProps {
   startDate?: string
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** Opens with these add-ons (and their commitments) already chosen. */
+  seededAddons?: CreateSubscription['addons']
   /** Customers (by id) that cannot inherit, as the page loads them. */
   inheritanceBlocks?: Record<string, InheritanceBlock>
   onSubmit: (subscription: CreateSubscription) => void
@@ -135,6 +147,7 @@ function SubscriptionFormPlayground({
   endDate,
   planTrial,
   phase,
+  seededAddons,
   inheritanceBlocks,
   onSubmit,
   onCancel,
@@ -214,6 +227,7 @@ function SubscriptionFormPlayground({
               ...PREFILLED,
               ...(noTrial ? { trialPeriodDays: 0 } : {}),
               ...(startDate ? { startDate } : {}),
+              ...(seededAddons ? { addons: seededAddons } : {}),
               ...(endDate || phase
                 ? { phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
                 : {}),
@@ -927,6 +941,60 @@ export const AddonCommitment: Story = {
               commitments: [
                 expect.objectContaining({ priceId: STORAGE_CHARGES[0]!.id, value: '250' }),
               ],
+            }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * Commitments saved on both of the add-on's charges, then the contract moved to
+ * monthly: the quarterly price no longer attaches, so its commitment is
+ * neither listed nor sent (the API would refuse it). The monthly one stays.
+ */
+export const AddonCommitmentAfterPeriodChange: Story = {
+  args: {
+    prefilled: true,
+    step: 'phases',
+    chargeCount: 2,
+    seededAddons: [
+      {
+        addonId: 'addon_storage',
+        name: 'Extra storage',
+        commitments: STORAGE_CHARGES.map((charge) => ({
+          priceId: charge.id,
+          type: 'amount' as const,
+          value: '250',
+          duration: '' as const,
+          overageFactor: '',
+          trueUp: false,
+          bucketSize: '' as const,
+          windowed: false,
+          windows: [],
+        })),
+      },
+    ],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/^Storage \(GB\): /)).toBeVisible()
+    expect(canvas.queryByText(/^Storage archive \(GB\): /)).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Extra storage' }))
+    await expect(
+      await screen.findByRole('menuitem', { name: 'Edit commitment: Storage (GB)' }),
+    ).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: /Storage archive/ })).toBeNull()
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addons: [
+            expect.objectContaining({
+              addonId: 'addon_storage',
+              commitments: [expect.objectContaining({ priceId: STORAGE_CHARGES[0]!.id })],
             }),
           ],
         }),

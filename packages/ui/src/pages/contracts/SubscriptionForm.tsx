@@ -32,6 +32,7 @@ import {
   BillingCycle,
   type Charge,
   attachableAddonCharges,
+  attachableAddonCommitments,
   type ChargeCommitment,
   type CreateCreditGrant,
   type CreateSubscription,
@@ -577,6 +578,19 @@ export function SubscriptionForm({
         discounts: phase.discounts.filter((d) => !d.priceId || billed.has(d.priceId)),
       })),
       chargeCommitments: draft.chargeCommitments.filter((c) => billed.has(c.priceId)),
+      // An add-on commitment on a price this currency and period do not attach
+      // would be refused: it was set before either changed, and is hidden now.
+      addons: draft.addons.map((addon) => {
+        if (!addon.commitments) return addon
+        const commitments = attachableAddonCommitments(
+          addon.commitments,
+          addonCharges?.(addon.addonId),
+          draft,
+        )
+        return commitments.length > 0
+          ? { ...addon, commitments }
+          : { addonId: addon.addonId, name: addon.name }
+      }),
       optedInChargeIds: draft.optedInChargeIds.filter((id) => billed.has(id)),
       includePriceIds: selection.includePriceIds,
       // Not offered with fixed charges; a value typed before they were added is not sent.
@@ -2557,8 +2571,14 @@ function AddonsSection({
     attachableAddonCharges(chargesOf?.(addonId) ?? [], { currency, billingPeriod }).filter(
       (charge) => charge.type === PriceType.Usage,
     )
+  // Only the commitments that are sent: one on a price the contract no longer
+  // takes (its currency or period changed since) is dropped on submit.
   const commitmentsOf = (addonId: string) =>
-    selected.find((a) => a.addonId === addonId)?.commitments ?? []
+    attachableAddonCommitments(
+      selected.find((a) => a.addonId === addonId)?.commitments ?? [],
+      chargesOf?.(addonId),
+      { currency, billingPeriod },
+    )
   const setCommitment = (addonId: string, priceId: string, next: ChargeCommitment | null) =>
     onChange(
       selected.map((addon) => {

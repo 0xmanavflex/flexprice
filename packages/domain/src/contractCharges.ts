@@ -1,4 +1,4 @@
-import { BillingPeriod, type Charge } from './price'
+import { BillingPeriod, PriceType, type Charge } from './price'
 
 /**
  * Which of a plan's charges a new contract will actually bill: the backend's
@@ -149,4 +149,26 @@ export function attachableAddonCharges(
       (charge.billingPeriod === contract.billingPeriod ||
         charge.billingPeriod === BillingPeriod.OneTime),
   )
+}
+
+/**
+ * An add-on's commitments that still apply: those on a usage charge the API
+ * attaches to this contract (`attachableAddonCharges`). A commitment saved
+ * before the contract's currency or billing period changed points at a price
+ * the contract no longer takes, so it is neither shown nor sent. While the
+ * add-on's charges are not known, nothing can be checked and the commitments
+ * are kept as they are.
+ */
+export function attachableAddonCommitments<T extends { priceId: string }>(
+  commitments: readonly T[],
+  charges: readonly Charge[] | undefined,
+  contract: { currency: string; billingPeriod: BillingPeriod | string },
+): T[] {
+  if (!charges) return [...commitments]
+  const attachable = new Set(
+    attachableAddonCharges(charges, contract)
+      .filter((charge) => charge.type === PriceType.Usage)
+      .map((charge) => charge.id),
+  )
+  return commitments.filter((commitment) => attachable.has(commitment.priceId))
 }
