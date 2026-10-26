@@ -20,12 +20,14 @@ import {
 } from '@fp/ui/icons'
 import { AppearancePanel } from './AppearancePanel'
 import { CurrenciesPanel } from './CurrenciesPanel'
+import { FxRatesPanel } from '../forex/FxRatesPanel'
 import { InvoicesPanel } from './InvoicesPanel'
 import { OnboardingPanel } from './OnboardingPanel'
 import { PortalPanel } from './PortalPanel'
 import { MembersPanel } from './MembersPanel'
 import { ProfilePanel } from './ProfilePanel'
 import { SubscriptionsPanel } from './SubscriptionsPanel'
+import { TaxEnginePanel } from './TaxEnginePanel'
 import { TagsPanel } from './TagsPanel'
 import { WalletAlertsPanel } from './WalletAlertsPanel'
 import { SettingsUnavailable, UNAVAILABLE_COPY } from './SettingsUnavailable'
@@ -245,10 +247,15 @@ function SettingsPanel({
       return <MembersPanel />
     case 'invoicing/invoices':
       return gated(RBAC_ENTITY.Setting, <InvoicesPanel />)
+    case 'invoicing/tax':
+      return gated(RBAC_ENTITY.Setting, <TaxEnginePanel />)
     case 'subscription/subscriptions':
       return gated(RBAC_ENTITY.Setting, <SubscriptionsPanel />)
     case 'currency/currencies':
       return gated(RBAC_ENTITY.Setting, <CurrenciesPanel />)
+    case 'currency/forex':
+      // Gated by its own entity (FX rates), as V1, not by tenant settings.
+      return <FxRatesPanel owner={{ scope: 'tenant' }} />
     case 'customer-experience/portal':
       return gated(RBAC_ENTITY.Portal, <PortalPanel />)
     case 'customer-experience/onboarding':

@@ -142,7 +142,7 @@
   "packages/ui/src/components/primitives/avatar.tsx": "4271d105e2d7804f",
   "packages/ui/src/components/primitives/breadcrumb.tsx": "12ad3ad919b192d4",
   "packages/ui/src/components/primitives/button-group.tsx": "a12ebc4363cea2b8",
-  "packages/ui/src/components/primitives/button.tsx": "9f9fb1ecfef1d187",
+  "packages/ui/src/components/primitives/button.tsx": "f25356ee2b71e0d2",
   "packages/ui/src/components/primitives/calendar.tsx": "741f828cccf5d478",
   "packages/ui/src/components/primitives/card.tsx": "bd1f3f903d0bdaac",
   "packages/ui/src/components/primitives/chart.tsx": "4d6fc64bd14bc31b",

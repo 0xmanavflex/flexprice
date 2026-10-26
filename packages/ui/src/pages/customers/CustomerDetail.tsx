@@ -102,13 +102,15 @@ export const CustomerDetailProvenance = provenance({
 /** How many invoices the customer page asks for; at this count the list may be cut. */
 export const CUSTOMER_INVOICES_LIMIT = 200
 
-export type CustomerTab = 'overview' | 'invoices' | 'wallet' | 'usage' | 'events' | 'information'
+export type CustomerTab =
+  'overview' | 'invoices' | 'wallet' | 'usage' | 'activity' | 'events' | 'information'
 
 export const CUSTOMER_TABS = [
   'overview',
   'invoices',
   'wallet',
   'usage',
+  'activity',
   'events',
   'information',
 ] as const satisfies readonly CustomerTab[]
@@ -197,6 +199,8 @@ export interface CustomerDetailProps {
    * the tab says events are not available here yet.
    */
   events?: ReactNode
+  /** The full audit trail (`CustomerActivityView`). Without it there is no Activity tab. */
+  activityTab?: ReactNode
   /**
    * The Usage section's contents: the per-feature quota cards.
    *
@@ -221,6 +225,8 @@ export interface CustomerDetailProps {
   wallet?: ReactNode
   /** The Taxes section on the Information tab; omitted, it is not shown. */
   taxes?: ReactNode
+  /** The FX overrides section on the Information tab, after Taxes; omitted, it is not shown. */
+  fxOverrides?: ReactNode
   locale?: string
 }
 
@@ -280,6 +286,7 @@ export function CustomerDetail({
   activityError = false,
   activityAwaiting = false,
   events,
+  activityTab,
   usage,
   entitlements,
   entitlementsLoading = false,
@@ -287,6 +294,7 @@ export function CustomerDetail({
   onRetryEntitlements,
   wallet,
   taxes,
+  fxOverrides,
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
@@ -428,6 +436,7 @@ export function CustomerDetail({
             },
             { value: 'wallet', label: 'Wallet' },
             { value: 'usage', label: 'Analytics' },
+            ...(activityTab ? [{ value: 'activity', label: 'Activity' }] : []),
             { value: 'events', label: 'Events' },
             { value: 'information', label: 'Information' },
           ]}
@@ -464,6 +473,7 @@ export function CustomerDetail({
             activityLoading={activityLoading}
             activityError={activityError}
             activityAwaiting={activityAwaiting}
+            {...(activityTab ? { onViewAllActivity: () => onTabChange('activity') } : {})}
           />
         ) : null}
 
@@ -526,6 +536,16 @@ export function CustomerDetail({
             ))
           : null}
 
+        {tab === 'activity'
+          ? (activityTab ?? (
+              <EmptyState
+                scene="customers"
+                title="Activity not available here"
+                description="This view has no audit trail to show."
+              />
+            ))
+          : null}
+
         {tab === 'events'
           ? (events ?? (
               <EmptyState
@@ -544,6 +564,7 @@ export function CustomerDetail({
             onUpdateMetadata={onUpdateMetadata}
             onEdit={onEdit}
             taxes={taxes}
+            fxOverrides={fxOverrides}
             integrationControls={integrationControls}
           />
         ) : null}
@@ -816,6 +837,7 @@ function OverviewTab({
   activityLoading,
   activityError,
   activityAwaiting,
+  onViewAllActivity,
 }: {
   customer: CustomerDetailModel
   subscriptions: Subscription[]
@@ -846,6 +868,8 @@ function OverviewTab({
   activityLoading: boolean | undefined
   activityError: boolean | undefined
   activityAwaiting: boolean | undefined
+  /** Opens the Activity tab; omitted when there is none. */
+  onViewAllActivity?: (() => void) | undefined
 }) {
   // A loading or failed read is "not known", never "none": the tiles and the
   // activity note say so rather than count what has not arrived.
@@ -1009,6 +1033,7 @@ function OverviewTab({
               ? { emptyText: 'Could not load activity.' }
               : {})}
           awaiting={activityAwaiting ?? false}
+          {...(onViewAllActivity ? { onViewAll: onViewAllActivity } : {})}
         />
         <RelatedCard
           items={[
@@ -1508,6 +1533,7 @@ function InformationTab({
   onUpdateMetadata,
   onEdit,
   taxes,
+  fxOverrides,
   integrationControls,
 }: {
   customer: CustomerDetailModel
@@ -1516,6 +1542,7 @@ function InformationTab({
   onUpdateMetadata: CustomerDetailProps['onUpdateMetadata']
   onEdit: (() => void) | undefined
   taxes: ReactNode
+  fxOverrides: ReactNode
   integrationControls: CustomerDetailProps['integrationControls']
 }) {
   const street = [customer.addressLine1, customer.addressLine2].filter(Boolean).join(', ')
@@ -1620,6 +1647,7 @@ function InformationTab({
         </EditableCard>
 
         {taxes}
+        {fxOverrides}
       </div>
 
       <div className="flex flex-col gap-5">

@@ -98,6 +98,8 @@ import {
   useSamlConfig,
   useUpdateInvoiceConfig,
   useWebhookDashboard,
+  toTaxConfig,
+  toTaxConfigRequest,
 } from './settings'
 
 function lastQuery(): RecordedQuery {
@@ -728,5 +730,27 @@ describe('useWebhookDashboard', () => {
     useWebhookDashboard(null)
 
     expect(lastQuery().enabled).toBe(false)
+  })
+})
+
+describe('tax_config', () => {
+  it('reads a never-saved key as the native engine, off', () => {
+    expect(toTaxConfig({})).toEqual({ enabled: false, provider: '' })
+  })
+  it('reads Stripe Tax, and an unknown engine as native', () => {
+    expect(toTaxConfig({ enabled: true, provider: 'stripe' })).toEqual({
+      enabled: true,
+      provider: 'stripe',
+    })
+    expect(toTaxConfig({ enabled: true, provider: 'avalara' })).toEqual({
+      enabled: true,
+      provider: '',
+    })
+  })
+  it('always sends both fields', () => {
+    expect(toTaxConfigRequest({ enabled: false, provider: '' })).toEqual({
+      enabled: false,
+      provider: '',
+    })
   })
 })

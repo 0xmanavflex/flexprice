@@ -95,19 +95,9 @@ export const Destructive: Story = {
     description: 'It stops being offered at checkout. Existing redemptions are kept.',
   },
   parameters: {
-    // The base-nova `destructive` button variant is a soft fill
-    // (bg-destructive/10 + destructive-coloured text) at 3.82:1 against its own
-    // tint: a vendored design-token contrast gap, not this dialog's, tracked
-    // separately. The `aria-hidden-focus` rule is restated because a story-level
-    // `rules` array overwrites the meta's rather than merging.
-    a11y: {
-      config: {
-        rules: [
-          { id: 'aria-hidden-focus', enabled: false },
-          { id: 'color-contrast', enabled: false },
-        ],
-      },
-    },
+    // The `aria-hidden-focus` rule is restated because a story-level `rules`
+    // array overwrites the meta's rather than merging.
+    a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
   },
 }
 

@@ -73,8 +73,7 @@ import type {
 const DAY_MS = 86_400_000
 
 // Failed cards show unavailable.
-const useCardReport = (key: string, query: ReportQuery) =>
-  useReport(key, query, { handleErrors: true })
+const useCardReport = (key: string, query: ReportQuery | null) => useReport(key, query)
 
 interface RangeSpec extends FilterOption {
   days: number
@@ -358,12 +357,12 @@ export function HomePage({
     compare: 'previous_period',
   })
   const mainCurrency = largestCurrency(revenueAll.data)
-  const revenueByDay = useReport('invoice_total', {
+  const revenueByDay = useCardReport('invoice_total', {
     shape: 'timeseries',
     range,
     grain: 'day',
   })
-  const revenueByCustomer = useReport(
+  const revenueByCustomer = useCardReport(
     'invoice_total',
     mainCurrency
       ? {
@@ -390,7 +389,7 @@ export function HomePage({
   )
   const revenuePanel = toRevenuePanel(
     revenueAll,
-    revenueByDay.data,
+    revenueByDay,
     revenueByCustomer.data,
     leaderNames,
     windows,
@@ -596,13 +595,14 @@ function largestCurrency(result: ReportResult | undefined): string | null {
 
 function toRevenuePanel(
   view: QueryView<ReportResult>,
-  byDay: ReportResult | undefined,
+  byDay: QueryView<ReportResult>,
   byCustomer: ReportResult | undefined,
   names: Record<string, string>,
   windows: Windows,
   granularityId: string,
 ): RevenuePanel {
-  const meta = qualityOf(view)
+  const source = view.data === undefined ? view : byDay.data === undefined ? byDay : view
+  const meta = qualityOf(source)
   const blank = {
     total: null,
     fixed: null,
@@ -612,6 +612,9 @@ function toRevenuePanel(
     otherCurrencies: [],
   }
   if (view.data === undefined) return { ...meta, ...blank, status: withoutData(view) }
+  // The chart is its own request. A failure there is "revenue could not be
+  // loaded", not a flat zero line, and not a dead page.
+  if (byDay.data === undefined) return { ...meta, ...blank, status: withoutData(byDay) }
   const main = largestCurrency(view.data)
   if (!main) return { ...meta, ...blank, status: 'empty' }
 
@@ -626,7 +629,7 @@ function toRevenuePanel(
     fixed: null,
     usage: null,
     changePercent: headline.change === null ? null : headline.change * 100,
-    points: revenuePoints(byDay, reportCurrencies(view.data), main, windows, granularityId),
+    points: revenuePoints(byDay.data, reportCurrencies(view.data), main, windows, granularityId),
     series: reportCurrencies(view.data).map((currency) => ({ id: currency, label: currency })),
     topCustomers: reportBreakdown(byCustomer, 'invoice_total', ['customer_id'], main)
       .filter((row) => row.value > 0)

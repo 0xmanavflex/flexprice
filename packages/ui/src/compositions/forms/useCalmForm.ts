@@ -12,14 +12,15 @@ import {
 /**
  * `useForm`, with validation that waits for the person.
  *
- * `onTouched` alone flags a field the moment it loses focus, so clicking into
- * an input and out again: before typing a thing: paints "Enter a name" in
- * red. This keeps `onTouched` for what it is good at and drops only that case:
+ * A keystroke is not a finished answer. Checking on each change paints
+ * "That does not look like an email address" on the letter `d`.
  *
  *   - a field left **empty** is not judged until the form is submitted (or a
  *     wizard step is checked with `trigger`), so a click alone never errors;
- *   - a field with **something typed in it** is checked when you leave it, and
- *     re-checked as you edit, so a bad email shows as soon as you move on;
+ *   - a field with **something typed in it** is checked when you leave it, then
+ *     again as you edit, so a correction clears the message on the next key;
+ *   - an **email** is only format-checked once it looks finished (`name@host.tld`)
+ *     or the form is submitted. `d` and `not-an-email` stay quiet;
  *   - on submit, and on `trigger`, every rule applies, empty fields included.
  *
  * Every form in the console uses this instead of `useForm`.
@@ -43,17 +44,22 @@ export function useCalmForm<
       original
         ? async (values, context, options) => {
             const result = await original(values, context, options)
-            if (strict.current > 0 || submitted.current) return result
+            if (strict.current > 0) return result
             // Field-level checks read only `errors`; the shape is the resolver's own.
-            return { ...result, errors: withoutEmptyFields(result.errors, values) } as never
+            const errors = withoutOpenEmailEntries(
+              submitted.current ? result.errors : withoutEmptyFields(result.errors, values),
+              values,
+            )
+            return { ...result, errors } as never
           }
         : undefined,
     [original],
   )
 
   const form = useForm<TFieldValues, TContext, TTransformedValues>({
-    mode: 'onTouched',
     ...props,
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
     ...(resolver ? { resolver } : {}),
   })
 
@@ -135,6 +141,58 @@ export function withoutEmptyFields<T extends FieldValues>(
     }
     if (typeof node === 'object' && node !== null) {
       const nested = withoutEmptyFields(node as FieldErrors<T>, values, here)
+      if (Object.keys(nested).length > 0) out[key] = nested
+    }
+  }
+  return out as FieldErrors<T>
+}
+
+/**
+ * An address is finished enough to judge when it has a local part, a host, and
+ * a dot in that host. Anything shorter is still being typed.
+ */
+export function emailEntryIsComplete(value: string): boolean {
+  const trimmed = value.trim()
+  const at = trimmed.lastIndexOf('@')
+  if (at <= 0) return false
+  const domain = trimmed.slice(at + 1)
+  const dot = domain.lastIndexOf('.')
+  return dot > 0 && dot < domain.length - 1
+}
+
+function isEmailFormatMessage(message: unknown): boolean {
+  return typeof message === 'string' && /email/i.test(message)
+}
+
+/**
+ * Format errors on an email that is still being typed. A required-empty message
+ * is a different rule and is left for `withoutEmptyFields` and for submit.
+ */
+export function withoutOpenEmailEntries<T extends FieldValues>(
+  errors: FieldErrors<T>,
+  values: T,
+  path: string[] = [],
+): FieldErrors<T> {
+  const out: Record<string, unknown> = {}
+  for (const [key, node] of Object.entries(errors as Record<string, unknown>)) {
+    if (node === undefined) continue
+    const here = [...path, key]
+    if (isLeaf(node)) {
+      const value = here.length > 0 ? get(values, here.join('.')) : undefined
+      const message = (node as { message?: unknown }).message
+      if (
+        typeof value === 'string' &&
+        value.trim() !== '' &&
+        isEmailFormatMessage(message) &&
+        !emailEntryIsComplete(value)
+      ) {
+        continue
+      }
+      out[key] = node
+      continue
+    }
+    if (typeof node === 'object' && node !== null) {
+      const nested = withoutOpenEmailEntries(node as FieldErrors<T>, values, here)
       if (Object.keys(nested).length > 0) out[key] = nested
     }
   }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { activityByline, describeActivity } from '@fp/domain'
+import {
+  activityActor,
+  activityByline,
+  activityEntityNoun,
+  activityPaymentStatus,
+  activityStatus,
+  describeActivity,
+} from '@fp/domain'
 import { toActivityEntry } from './activity'
 
 describe('toActivityEntry', () => {
@@ -105,7 +112,7 @@ describe('toActivityEntry', () => {
     expect(describeActivity(entry)).toEqual({
       record: 'Acme Corp',
       fields: [
-        { label: 'Tax', value: 'Taxable' },
+        { label: 'Tax treatment', value: 'Taxable' },
         { label: 'Timezone', value: 'UTC' },
         { label: 'Status', value: 'Published' },
       ],
@@ -157,5 +164,49 @@ describe('activity titles', () => {
     expect(toActivityEntry({ id: 'd', action: 'credit_note.created' }).title).toBe(
       'Credit memo created',
     )
+  })
+})
+
+describe('the Activity tab fields', () => {
+  it('keeps the request metadata the API records', () => {
+    const entry = toActivityEntry({
+      id: 'act_9',
+      action: 'customer.updated',
+      entity: { type: 'customer', id: 'cust_1', label: 'acme' },
+      actor: { type: 'user', id: 'dde9a118', label: 'Subrat' },
+      source: 'dashboard',
+      customer_id: 'cust_1',
+      request_id: 'req_1',
+      ip: '182.76.138.114',
+      user_agent: 'Mozilla/5.0',
+    })
+    expect(entry).toMatchObject({
+      customerId: 'cust_1',
+      requestId: 'req_1',
+      ip: '182.76.138.114',
+      userAgent: 'Mozilla/5.0',
+    })
+  })
+
+  it('always names the actor, separately from the record', () => {
+    const base = { id: 'a', action: 'invoice.created', entity: { type: 'invoice', id: 'inv_1' } }
+    expect(
+      activityActor(toActivityEntry({ ...base, actor: { type: 'user', label: 'Subrat' } })),
+    ).toBe('Subrat')
+    expect(activityActor(toActivityEntry({ ...base, actor: { type: 'system' } }))).toBe('System')
+    expect(activityActor(toActivityEntry({ ...base, actor: { type: 'api_key' } }))).toBe('API key')
+  })
+
+  it('reads the status from an allowlist, with an invoice payment status beside it', () => {
+    const invoice = toActivityEntry({
+      id: 'b',
+      action: 'invoice.updated',
+      entity: { type: 'invoice', id: 'inv_1' },
+      state: { invoice_status: 'FINALIZED', payment_status: 'SUCCEEDED', internal_flag: 'x' },
+    })
+    expect(activityStatus(invoice)).toBe('Finalized')
+    expect(activityPaymentStatus(invoice)).toBe('Succeeded')
+    expect(activityEntityNoun('subscription')).toBe('Contract')
+    expect(activityEntityNoun('credit_note')).toBe('Credit memo')
   })
 })

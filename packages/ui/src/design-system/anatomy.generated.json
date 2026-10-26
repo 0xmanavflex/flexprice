@@ -36,6 +36,7 @@
         "CustomerDetail",
         "CustomerTaxSection",
         "EntitlementTable",
+        "FxRatesSection",
         "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
@@ -99,10 +100,31 @@
       "usedBy": [],
       "story": null
     },
+    "ActivityEventSheet": {
+      "file": "src/pages/customers/CustomerActivityView.tsx",
+      "layer": "surface",
+      "composes": [
+        "CodeIcon",
+        "CopyValue",
+        "CreditCardIcon",
+        "Pill",
+        "Properties",
+        "Section",
+        "Sheet",
+        "SimpleTable",
+        "SubTabState",
+        "Toolbar",
+        "UserIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerActivityView.stories.tsx"
+    },
     "ActivityLog": {
       "file": "src/compositions/detail/ActivityLog.tsx",
       "layer": "composition",
       "composes": [
+        "EyeIcon",
         "Section"
       ],
       "usedBy": [
@@ -114,6 +136,7 @@
       "file": "src/compositions/detail/ActivityLog.tsx",
       "layer": "composition",
       "composes": [
+        "EyeIcon",
         "Section"
       ],
       "usedBy": [
@@ -277,6 +300,7 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
+        "FxRatesSection",
         "PlanAiSetupView",
         "TaxDialog"
       ],
@@ -1369,6 +1393,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "PageShell"
       ],
       "story": null
@@ -1431,6 +1457,7 @@
         "EnvironmentCopyForm",
         "EnvironmentForm",
         "EnvironmentRenameForm",
+        "FxRatesSection",
         "PauseContractDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
@@ -1456,6 +1483,7 @@
         "DownloadDialog",
         "ExportRunList",
         "ExportsOverview",
+        "FxRatesSection",
         "InvoiceForm",
         "ManageConnectionSheet",
         "PayInvoiceDialog",
@@ -1776,6 +1804,8 @@
         "CopyIcon"
       ],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerGrid"
       ],
@@ -1921,6 +1951,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "PageShell",
         "PaymentGrid",
         "PortalOverview",
@@ -2044,6 +2076,26 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "CustomerActivityView": {
+      "file": "src/pages/customers/CustomerActivityView.tsx",
+      "layer": "surface",
+      "composes": [
+        "CodeIcon",
+        "CopyValue",
+        "CreditCardIcon",
+        "Pill",
+        "Properties",
+        "Section",
+        "Sheet",
+        "SimpleTable",
+        "SubTabState",
+        "Toolbar",
+        "UserIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerActivityView.stories.tsx"
     },
     "CustomerAnalyticsView": {
       "file": "src/pages/customers/CustomerAnalyticsView.tsx",
@@ -2392,6 +2444,7 @@
         "CreditGrantEditForm",
         "CustomerWalletView",
         "DataExportDialog",
+        "FxRatesSection",
         "InvoiceForm",
         "InvoiceLinesEditor",
         "RunExportDialog",
@@ -2580,6 +2633,7 @@
         "EntitlementUsage",
         "EntitlementUsageTable",
         "FeatureDetailView",
+        "FxRatesSection",
         "GroupMembersView",
         "InvoiceDetailView",
         "PlanCreditGrantsView",
@@ -2813,6 +2867,7 @@
         "CustomerTaxSection",
         "CustomerWalletView",
         "EntityList",
+        "FxRatesSection",
         "GroupMembersView",
         "IntegrationLogo",
         "IntegrationsBlock",
@@ -2838,6 +2893,7 @@
         "FeatureTypeGlyph",
         "Field",
         "FormActions",
+        "GrantAllowanceFields",
         "MeteredEntitlementFields",
         "OptionCombobox"
       ],
@@ -2854,6 +2910,7 @@
         "FeatureTypeGlyph",
         "Field",
         "FormActions",
+        "GrantAllowanceFields",
         "MeteredEntitlementFields",
         "OptionCombobox"
       ],
@@ -3247,6 +3304,8 @@
       "composes": [],
       "usedBy": [
         "AcceptInvitationForm",
+        "ActivityLog",
+        "ActivitySection",
         "ChargeTable",
         "ConnectionExports",
         "CustomerDetail",
@@ -3424,6 +3483,8 @@
         "ForgotPasswordForm",
         "FormCard",
         "FormRow",
+        "FxRatesSection",
+        "GrantAllowanceFields",
         "InvoiceForm",
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
@@ -3812,6 +3873,7 @@
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
+        "FxRatesSection",
         "PauseContractDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
@@ -3958,6 +4020,30 @@
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
+    "FxRatesSection": {
+      "file": "src/pages/shared/FxRatesSection.tsx",
+      "layer": "surface",
+      "composes": [
+        "AccessScope",
+        "AppFailure",
+        "Composer",
+        "ConfirmDialog",
+        "DateInput",
+        "DetailTable",
+        "EmptyState",
+        "Field",
+        "FormDialog",
+        "LoadingRows",
+        "OptionCombobox",
+        "PlusIcon",
+        "RowActionsMenu",
+        "Section",
+        "Status",
+        "WriteGate"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/shared/FxRatesSection.stories.tsx"
+    },
     "GalleryHorizontalEnd": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -4015,6 +4101,19 @@
         "SignUpScreen"
       ],
       "story": "./src/pages/auth/SignInScreen.stories.tsx"
+    },
+    "GrantAllowanceFields": {
+      "file": "src/pages/product-catalog/entitlements/GrantAllowanceFields.tsx",
+      "layer": "surface",
+      "composes": [
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "EntitlementCreateForm",
+        "EntitlementEditForm"
+      ],
+      "story": "./src/pages/product-catalog/entitlements/GrantAllowanceFields.stories.tsx"
     },
     "GridFooter": {
       "file": "src/compositions/tables/GridFooter.tsx",
@@ -4171,14 +4270,45 @@
       "usedBy": [],
       "story": null
     },
+    "HostedInvoiceCharges": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceCharges.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
+    "HostedInvoiceDetailsSheet": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoiceDetailsSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "Sheet"
+      ],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
+    "HostedInvoicePreviewDialog": {
+      "file": "src/pages/billing/hosted-invoice/HostedInvoicePreviewDialog.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "HostedInvoiceView"
+      ],
+      "story": null
+    },
     "HostedInvoiceView": {
       "file": "src/pages/billing/hosted-invoice/HostedInvoiceView.tsx",
       "layer": "surface",
       "composes": [
         "ErrorState",
+        "HostedInvoiceCharges",
+        "HostedInvoiceDetailsSheet",
+        "HostedInvoicePreviewDialog",
         "Money",
-        "Panel",
-        "PrinterIcon"
+        "Panel"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/hosted-invoice/HostedInvoiceView.stories.tsx"
@@ -4768,6 +4898,7 @@
         "CustomerTaxSection",
         "CustomerWalletView",
         "EntityAlertDialog",
+        "FxRatesSection",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
@@ -5208,6 +5339,7 @@
         "CustomerForm",
         "EntitlementCreateForm",
         "EntitlementEditForm",
+        "FxRatesSection",
         "SubscriptionForm",
         "TimezoneCombobox",
         "UpgradeView",
@@ -5237,6 +5369,7 @@
         "DataExportDialog",
         "EnvironmentCopyForm",
         "FeatureForm",
+        "GrantAllowanceFields",
         "GroupForm",
         "InvoiceForm",
         "MeteredEntitlementFields",
@@ -5591,11 +5724,13 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "CatalogStatusBadge",
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
         "CreditNoteDetailView",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",
         "DataExportDetail",
@@ -5878,6 +6013,7 @@
         "ExportsOverview",
         "FeatureForm",
         "FeatureGrid",
+        "FxRatesSection",
         "GroupGrid",
         "InvoiceForm",
         "InvoiceGrid",
@@ -6141,9 +6277,7 @@
       "file": "src/reui/icons/default/outline/printer.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [
-        "HostedInvoiceView"
-      ],
+      "usedBy": [],
       "story": null
     },
     "ProfileAvatarUpload": {
@@ -6183,6 +6317,8 @@
         "LockedMark"
       ],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -6463,6 +6599,7 @@
         "CreditGrantTable",
         "CustomerDetail",
         "EntitlementTable",
+        "FxRatesSection",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
@@ -6619,6 +6756,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
         "ActivityLog",
         "ActivitySection",
         "AddonSubscriptionsView",
@@ -6628,6 +6766,7 @@
         "CostMarginCard",
         "CouponRedemptionsView",
         "CreditGrantTable",
+        "CustomerActivityView",
         "CustomerAnalyticsView",
         "CustomerDetail",
         "CustomerEntitlementUsage",
@@ -6641,6 +6780,7 @@
         "ExportsOverview",
         "FeatureDetailView",
         "FormPage",
+        "FxRatesSection",
         "GroupMembersView",
         "InvoiceDetailView",
         "MetadataCard",
@@ -6821,10 +6961,13 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
         "ChargeSheet",
         "ConnectIntegrationSheet",
+        "CustomerActivityView",
         "CustomerEventsGrid",
         "EventDetailSheet",
+        "HostedInvoiceDetailsSheet",
         "ManageConnectionSheet",
         "PortalInvoiceSheet",
         "UsageSyncDetailSheet",
@@ -7005,7 +7148,9 @@
         "LockedMark"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "ConnectionExports",
+        "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -7223,6 +7368,7 @@
         "CustomerDetail",
         "FeatureDetailView",
         "FeatureGrid",
+        "FxRatesSection",
         "InvoiceDetailView",
         "PlanGrid",
         "UsageBillingView"
@@ -7370,8 +7516,10 @@
         "TableSkeleton"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "ChargeTable",
         "CreditGrantTable",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerEntitlementUsage",
         "CustomerEventsGrid",
@@ -7667,7 +7815,10 @@
       "file": "src/compositions/tables/Toolbar.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView"
+      ],
       "story": "./src/compositions/tables/Toolbar.stories.tsx"
     },
     "TotalRow": {
@@ -7918,6 +8069,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerGrid",
         "InvoiceDetailView",
         "ShellAccount",
@@ -7980,6 +8133,8 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",
         "InvoiceDetailView",
@@ -8248,6 +8403,7 @@
         "EntitlementTable",
         "EntityList",
         "FeatureGrid",
+        "FxRatesSection",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
@@ -9089,6 +9245,13 @@
         "PortalNotice"
       ]
     },
+    "./src/pages/customers/CustomerActivityView.stories.tsx": {
+      "title": "Customer created",
+      "component": "CustomerActivityView",
+      "uses": [
+        "CustomerActivityView"
+      ]
+    },
     "./src/pages/customers/CustomerAnalyticsView.stories.tsx": {
       "title": "App/Customers/Customer analytics",
       "component": "CustomerAnalyticsView",
@@ -9442,6 +9605,13 @@
       "component": "EntitlementTable",
       "uses": [
         "EntitlementTable"
+      ]
+    },
+    "./src/pages/product-catalog/entitlements/GrantAllowanceFields.stories.tsx": {
+      "title": "App/Product catalog/Entitlements/Grant allowance fields",
+      "component": null,
+      "uses": [
+        "GrantAllowanceFields"
       ]
     },
     "./src/pages/product-catalog/entitlements/MeteredEntitlementFields.stories.tsx": {
@@ -9884,6 +10054,13 @@
         "WrenchIcon"
       ]
     },
+    "./src/pages/shared/FxRatesSection.stories.tsx": {
+      "title": "App/Shared/FX rates section",
+      "component": "FxRatesSection",
+      "uses": [
+        "FxRatesSection"
+      ]
+    },
     "./src/pages/shared/HalfDonut.stories.tsx": {
       "title": "Building blocks/Charts & metrics/HalfDonut",
       "component": "HalfDonut",
@@ -10203,6 +10380,7 @@
       "pattern": "Detail",
       "route": "/customers/$customerId",
       "uses": [
+        "ActivityEventSheet",
         "ConfirmDialog",
         "CustomerDetail",
         "CustomerEntitlementUsage",

@@ -107,13 +107,33 @@ export function toEntitlementRequest(
   }
 
   switch (draft.featureType) {
-    case FeatureType.Metered:
+    case FeatureType.Metered: {
+      // V1's grant model: a quota (or unlimited) per window. Only what the
+      // window uses is sent; usage_limit and usage_reset_period are not.
+      const grant = draft.grant
+      if (grant) {
+        const unlimited = grant.quota === null
+        // Unlimited has no window to reset: it runs over the billing period.
+        const unit = unlimited ? 'subscription_period' : grant.unit
+        const windowed = unit !== 'subscription_period'
+        return {
+          ...common,
+          grantMeasure: grant.measure,
+          ...(unlimited ? { grantUnlimited: true } : { grantQuota: grant.quota }),
+          grantDurationUnit: unit,
+          ...(windowed
+            ? { grantDurationValue: grant.every ?? 1, grantAllocationBehavior: grant.allocation }
+            : {}),
+          aggregationMode: grant.aggregation,
+        }
+      }
       return {
         ...common,
         usageLimit: draft.usageLimit,
         ...(draft.usageResetPeriod ? { usageResetPeriod: draft.usageResetPeriod } : {}),
         isSoftLimit: draft.isSoftLimit,
       }
+    }
     case FeatureType.Static:
       return { ...common, staticValue: draft.staticValue }
     case FeatureType.Boolean:
@@ -326,6 +346,24 @@ export function toUpdateEntitlementRequest(draft: EditEntitlement): Record<strin
   ] as const
   for (const key of keys) {
     if (draft[key] !== undefined) request[key] = draft[key]
+  }
+  // The grant form's allowance, as V1 updates it: every grant field, with
+  // unlimited said outright so a quota can be cleared or set again.
+  const grant = draft.grant
+  if (grant) {
+    const unlimited = grant.quota === null
+    const unit = unlimited ? 'subscription_period' : grant.unit
+    const windowed = unit !== 'subscription_period'
+    Object.assign(request, {
+      grantMeasure: grant.measure,
+      grantUnlimited: unlimited,
+      ...(unlimited ? {} : { grantQuota: grant.quota }),
+      grantDurationUnit: unit,
+      ...(windowed
+        ? { grantDurationValue: grant.every ?? 1, grantAllocationBehavior: grant.allocation }
+        : {}),
+      aggregationMode: grant.aggregation,
+    })
   }
   return request
 }

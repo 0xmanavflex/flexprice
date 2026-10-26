@@ -162,6 +162,12 @@ function page(source: Corpus, body: SearchBody) {
   const ids = body.feature_ids ?? body.featureIds
   if (ids?.length) rows = rows.filter((row) => ids.includes(readString(row, 'id')))
 
+  // Features by their meter, as the API's `meter_ids`.
+  const meterIds =
+    (body as { meter_ids?: string[]; meterIds?: string[] }).meter_ids ??
+    (body as { meterIds?: string[] }).meterIds
+  if (meterIds?.length) rows = rows.filter((row) => meterIds.includes(readString(row, 'meter_id')))
+
   // Charges and entitlements are searched by the entity they price. Scoping to
   // it here is what makes a plan's detail page show *its* charges, not the whole
   // catalogue's: the bug an unfiltered mock would hide until production.
@@ -882,6 +888,8 @@ type SettingsValue = Record<string, unknown>
 
 /** What a tenant that has never written the key gets back. Observed live. */
 const SETTINGS_DEFAULTS: Record<string, SettingsValue> = {
+  // `{}`: Flexprice's native engine, off.
+  tax_config: {},
   invoice_config: {
     prefix: 'INV',
     separator: '-',
@@ -1270,6 +1278,54 @@ const manualRuns = new Map<string, Record<string, unknown>[]>()
  * Northwind sells into four jurisdictions and has one rate it has retired.
  */
 /** Tax rates attached to entities, mutated by the association handlers. */
+/** Forex rates: a global USD → INR and EUR → USD, and one customer override. */
+const fxRates: Record<string, unknown>[] = [
+  {
+    id: 'fxrate_usd_inr',
+    scope: 'tenant',
+    from_currency: 'usd',
+    to_currency: 'inr',
+    rate: '83.25',
+    source: 'fixed',
+    status: 'published',
+    updated_at: '2026-10-01T09:00:00Z',
+  },
+  {
+    id: 'fxrate_eur_usd',
+    scope: 'tenant',
+    from_currency: 'eur',
+    to_currency: 'usd',
+    rate: '1.08',
+    source: 'fixed',
+    status: 'published',
+    updated_at: '2026-09-12T09:00:00Z',
+  },
+]
+
+/** Whether an override's window meets another live override for its owner and pair ([start, end), open ends). */
+function fxOverlaps(rate: Record<string, unknown>, live: Record<string, unknown>[]) {
+  const time = (value: unknown) => (value ? new Date(String(value)).getTime() : undefined)
+  const [aStart, aEnd] = [time(rate['start_date']), time(rate['end_date'])]
+  return live.some((row) => {
+    if (
+      row['scope'] !== rate['scope'] ||
+      row['scope_id'] !== rate['scope_id'] ||
+      row['from_currency'] !== rate['from_currency'] ||
+      row['to_currency'] !== rate['to_currency']
+    )
+      return false
+    const [bStart, bEnd] = [time(row['start_date']), time(row['end_date'])]
+    if (aStart !== undefined && bEnd !== undefined && aStart >= bEnd) return false
+    if (bStart !== undefined && aEnd !== undefined && bStart >= aEnd) return false
+    return true
+  })
+}
+
+/** A refusal in the API's envelope, its hint as the message. */
+function fxRefusal(message: string) {
+  return HttpResponse.json({ success: false, error: { message } }, { status: 400 })
+}
+
 const taxAssociations: Record<string, unknown>[] = []
 
 /**
@@ -2985,7 +3041,21 @@ export const handlers = [
       customer_id?: string
       entity_type?: string
       entity_id?: string
+      start_time?: string
+      end_time?: string
+      actor_types?: string[]
+      actions?: string[]
+      request_id?: string
+      cursor?: string
       limit?: number
+    }
+    // As the API: at most 50 with state, and an unknown action is refused.
+    const limit = Math.min(body.limit ?? 20, 50)
+    if ((body.actions ?? []).some((action) => !/^[a-z_]+\.[a-z_]+$/.test(action))) {
+      return HttpResponse.json(
+        { code: 'validation_error', message: 'Unknown action.' },
+        { status: 400 },
+      )
     }
     const records: { type: string; row: Record<string, unknown>; label: string }[] = []
     const add = (type: string, row: Record<string, unknown> | undefined | null, label: string) => {
@@ -3022,22 +3092,69 @@ export const handlers = [
         row ? readString(row, body.entity_type === 'invoice' ? 'invoice_number' : 'name') : '',
       )
     }
-    const items = records
+    // Who made each change, as the real log records it: a person in the
+    // dashboard for a customer, the billing workflow for an invoice, the
+    // system for anything else.
+    const actorFor = (type: string) =>
+      type === 'customer'
+        ? {
+            actor: { type: 'user', id: 'user_demo', label: 'demo@flexprice.io' },
+            source: 'dashboard',
+          }
+        : type === 'invoice'
+          ? {
+              actor: { type: 'system', id: 'billing', label: 'Billing workflow' },
+              source: 'workflow',
+            }
+          : { actor: { type: 'system' }, source: 'dashboard' }
+    const from = body.start_time ? Date.parse(body.start_time) : Number.NEGATIVE_INFINITY
+    const to = body.end_time ? Date.parse(body.end_time) : Number.POSITIVE_INFINITY
+    const all = records
       .filter(({ row }) => readString(row, 'created_at') !== '')
-      .map(({ type, row, label }) => ({
-        id: `act_${type}_${readString(row, 'id')}`,
-        action: `${type}.created`,
-        occurred_at: readString(row, 'created_at'),
-        source: 'dashboard',
-        entity: { id: readString(row, 'id'), type, label },
-        actor: { type: 'system' },
-        state: row,
-      }))
+      .map(({ type, row, label }) => {
+        const id = readString(row, 'id')
+        const { actor, source } = actorFor(type)
+        return {
+          id: `act_${type}_${id}`,
+          action: `${type}.created`,
+          occurred_at: readString(row, 'created_at'),
+          source,
+          entity: { id, type, label },
+          ...(body.customer_id ? { customer_id: body.customer_id } : {}),
+          actor,
+          ...(source === 'dashboard' && actor.type === 'user'
+            ? {
+                request_id: `req_${id.slice(-12)}`,
+                ip: '203.0.113.24',
+                user_agent:
+                  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36',
+              }
+            : {}),
+          state: row,
+        }
+      })
+      .filter((item) => {
+        const at = Date.parse(item.occurred_at)
+        return (
+          at >= from &&
+          at < to &&
+          (!body.actions?.length || body.actions.includes(item.action)) &&
+          (!body.actor_types?.length || body.actor_types.includes(item.actor.type)) &&
+          (!body.request_id || ('request_id' in item && item.request_id === body.request_id))
+        )
+      })
       .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || a.id.localeCompare(b.id))
-      .slice(0, Math.min(body.limit ?? 20, 50))
+    // An opaque cursor, as the API's: here, the offset of the next page.
+    const offset = body.cursor ? Number(atob(body.cursor)) || 0 : 0
+    const items = all.slice(offset, offset + limit)
+    const hasMore = offset + limit < all.length
     return HttpResponse.json({
       items,
-      pagination: { total: items.length, limit: body.limit ?? 20, offset: 0 },
+      pagination: {
+        limit,
+        next_cursor: hasMore ? btoa(String(offset + limit)) : null,
+        has_more: hasMore,
+      },
     })
   }),
 
@@ -5182,6 +5299,94 @@ export const handlers = [
   http.delete(`${BASE}/customers/:id`, ({ params }) =>
     removeRow((corpus['customers'] as Corpus).items, String(params['id'])),
   ),
+
+  // Forex rates, with the API's rules: one global rate per pair, no window and
+  // no delete on a global rate, an override needs the global rate for its pair,
+  // and one pair's override windows do not overlap.
+  http.post(`${BASE}/forex/query`, async ({ request }) => {
+    const body = await readBody(request)
+    // The filter DSL too (the console asks for fixed rates only), as the API applies it.
+    const conditions = (body['filters'] ?? []) as Parameters<typeof matchesCondition>[1][]
+    const items = fxRates.filter(
+      (row) =>
+        row['status'] === 'published' &&
+        (!body['scope'] || row['scope'] === body['scope']) &&
+        (!body['scope_id'] || row['scope_id'] === body['scope_id']) &&
+        conditions.every((condition) => matchesCondition(row, condition)),
+    )
+    const limit = Number(body['limit'] ?? 50)
+    const offset = Number(body['offset'] ?? 0)
+    return HttpResponse.json({
+      items: items.slice(offset, offset + limit),
+      pagination: { total: items.length, limit, offset },
+    })
+  }),
+  http.post(`${BASE}/forex`, async ({ request }) => {
+    const body = await readBody(request)
+    const from = String(body['from_currency'] ?? '').toLowerCase()
+    const to = String(body['to_currency'] ?? '').toLowerCase()
+    const live = fxRates.filter((row) => row['status'] === 'published')
+    const pair = (row: Record<string, unknown>) =>
+      row['from_currency'] === from && row['to_currency'] === to
+    const label = `${from.toUpperCase()} → ${to.toUpperCase()}`
+    if (body['scope'] === 'tenant') {
+      if (body['start_date'] || body['end_date'])
+        return fxRefusal('Validity windows are only for customer or subscription overrides.')
+      if (live.some((row) => row['scope'] === 'tenant' && pair(row)))
+        return fxRefusal(`A ${label} rate already exists. Edit it instead of adding another.`)
+    } else {
+      if (!live.some((row) => row['scope'] === 'tenant' && pair(row)))
+        return fxRefusal(`Add a global ${label} rate before adding an override.`)
+      const overlaps = fxOverlaps({ ...body, from_currency: from, to_currency: to }, live)
+      if (overlaps) return fxRefusal(`Another ${label} override overlaps this period.`)
+    }
+    const now = new Date().toISOString()
+    const row = {
+      id: `fxrate_new_${fxRates.length + 1}`,
+      ...body,
+      from_currency: from,
+      to_currency: to,
+      source: 'fixed',
+      status: 'published',
+      created_at: now,
+      updated_at: now,
+    }
+    fxRates.push(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.put(`${BASE}/forex/:id`, async ({ request, params }) => {
+    const row = fxRates.find((item) => item['id'] === String(params['id']))
+    if (!row) return HttpResponse.json({ message: 'FX rate not found' }, { status: 404 })
+    const body = await readBody(request)
+    // An edited window is held to the same rule as a new one.
+    if (
+      row['scope'] !== 'tenant' &&
+      (body['start_date'] || body['end_date']) &&
+      fxOverlaps(
+        { ...row, ...body },
+        fxRates.filter((item) => item['status'] === 'published' && item['id'] !== row['id']),
+      )
+    )
+      return fxRefusal(
+        `Another ${String(row['from_currency']).toUpperCase()} → ${String(row['to_currency']).toUpperCase()} override overlaps this period.`,
+      )
+    if (row['scope'] === 'tenant' && (body['start_date'] || body['end_date']))
+      return fxRefusal(
+        'A tenant FX rate applies at all times; validity windows are only for customer or subscription overrides.',
+      )
+    Object.assign(row, body, { updated_at: new Date().toISOString() })
+    return HttpResponse.json(row)
+  }),
+  http.delete(`${BASE}/forex/:id`, ({ params }) => {
+    const row = fxRates.find((item) => item['id'] === String(params['id']))
+    if (!row) return HttpResponse.json({ message: 'FX rate not found' }, { status: 404 })
+    if (row['scope'] === 'tenant')
+      return fxRefusal(
+        'A tenant FX rate cannot be deleted because every override falls back to it. Update its value instead.',
+      )
+    row['status'] = 'archived'
+    return HttpResponse.json({ message: 'FX rate deleted' })
+  }),
 
   http.get(`${BASE}/taxes/associations`, ({ request }) => {
     const url = new URL(request.url)

@@ -16,7 +16,8 @@ export function useCreateCustomerPortalSession() {
       if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to open the customer portal.')
       if (!environmentId) throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
       const session = await createCustomerPortalSession(serverURL, token, environmentId, externalId)
-      if (!session.token) throw new ApiError(ErrorKind.Unknown, 'Flexprice did not return a portal session.')
+      if (!session.token)
+        throw new ApiError(ErrorKind.Unknown, 'Flexprice did not return a portal session.')
       return session
     },
   })

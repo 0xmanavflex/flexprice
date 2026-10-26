@@ -13,6 +13,7 @@ allowBuilds:
   esbuild: true
   nx: true
   msw: true
+  core-js: false
 
 # The activity client shipped in 2.1.39 (15 Oct 2026). The supply-chain
 # age check compares the package name, and a versioned id does not match.

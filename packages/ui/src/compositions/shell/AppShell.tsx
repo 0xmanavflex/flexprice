@@ -173,35 +173,36 @@ export function AppShell({
         </Sidebar>
 
         <SidebarInset className="border-border/80 ml-0! min-h-0 overflow-hidden border shadow-none!">
-          {/* The rule spans the inset; the row inside takes the same measure as
-            the page below it (`--shell-max`, `px-6`, centred), so the
-            breadcrumb and the header cluster line up with the content's edges
-            at every width instead of sitting 40–56px in over a 24px page. */}
-          <header className="flex h-12 shrink-0 border-b">
-            <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-w-0 items-center justify-between gap-3 px-6">
-              {/* The trigger is the only thing that opens the sheet below `lg`,
-                where the sidebar is a sheet rather than a push panel. */}
-              <div className="flex min-w-0 items-center gap-1.5 text-sm">
-                <SidebarTrigger className="-ml-2 lg:hidden" />
-                {breadcrumb}
-              </div>
-              {/* `shrink-0` so the cluster is never squeezed off by a long
-                breadcrumb; the crumbs truncate instead, keeping Create reachable
-                at 390. */}
-              <div className="flex shrink-0 items-center gap-1.5">
-                {headerLeading}
-                <ShellSearch {...(search ?? {})} />
-                {headerActions}
-              </div>
-            </div>
-          </header>
-
           {/*
             A div, not a `main`: `SidebarInset` is already the `main` landmark,
-            and a document may have one. Pages own their padding; a list page
-            fills this region and scrolls its own grid.
+            and a document may have one. The bar (breadcrumb, search, create)
+            scrolls with the page; it is not pinned above the scroller.
           */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            {/* The rule spans the inset; the row inside takes the same measure as
+              the page below it (`--shell-max`, `px-6`, centred), so the
+              breadcrumb and the header cluster line up with the content's edges
+              at every width instead of sitting 40–56px in over a 24px page. */}
+            <header className="flex h-12 shrink-0 border-b">
+              <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-w-0 items-center justify-between gap-3 px-6">
+                {/* The trigger is the only thing that opens the sheet below `lg`,
+                  where the sidebar is a sheet rather than a push panel. */}
+                <div className="flex min-w-0 items-center gap-1.5 text-sm">
+                  <SidebarTrigger className="-ml-2 lg:hidden" />
+                  {breadcrumb}
+                </div>
+                {/* `shrink-0` so the cluster is never squeezed off by a long
+                  breadcrumb; the crumbs truncate instead, keeping Create reachable
+                  at 390. */}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {headerLeading}
+                  <ShellSearch {...(search ?? {})} />
+                  {headerActions}
+                </div>
+              </div>
+            </header>
+            {children}
+          </div>
         </SidebarInset>
       </TooltipProvider>
     </SidebarProvider>

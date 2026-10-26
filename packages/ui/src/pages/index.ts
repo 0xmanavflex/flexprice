@@ -494,6 +494,8 @@ export type { CustomerEvent, CustomerEventsGridProps } from './customers/Custome
 export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
 export { CustomerTaxSection } from './customers/CustomerTaxSection'
+export { FxRatesSection } from './shared/FxRatesSection'
+export type { FxRatesSectionProps } from './shared/FxRatesSection'
 export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
 export {
   CustomerEntitlementUsage,
@@ -519,6 +521,21 @@ export type {
   AnalyticsTotals,
   AnalyticsFeatureOption,
 } from './customers/CustomerAnalyticsView'
+export {
+  ACTIVITY_PAGE_SIZES,
+  ACTIVITY_RANGES,
+  ActivityEventSheet,
+  CustomerActivityView,
+  CustomerActivityViewProvenance,
+} from './customers/CustomerActivityView'
+export type {
+  ActivityDetailRow,
+  ActivityFilters,
+  ActivityRange,
+  ActivityRowView,
+  ActivityStatus,
+  CustomerActivityViewProps,
+} from './customers/CustomerActivityView'
 
 export { CatalogDetailFrame } from './product-catalog/catalog-detail/CatalogDetailFrame'
 export type {

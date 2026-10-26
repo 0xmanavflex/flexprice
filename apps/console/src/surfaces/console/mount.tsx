@@ -17,6 +17,7 @@ import {
 } from '@/app/session'
 import { env } from '@/env'
 import { RegionProvider, useRegion } from '@/app/region'
+import { startAnalytics } from '@/app/analytics'
 
 /**
  * Start the mock API before rendering, when asked.
@@ -117,6 +118,9 @@ export async function mount(root: Root) {
     )
     throw new Error(env.problem.detail)
   }
+
+  // Not awaited: analytics loads alongside the first render, never before it.
+  void startAnalytics()
 
   root.render(
     <StrictMode>

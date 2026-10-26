@@ -19,6 +19,7 @@ import {
   SAMPLE_EVENT_DURATION_SECONDS,
 } from '@fp/query'
 import {
+  ActivityEventSheet,
   CUSTOMER_TABS,
   CustomerDetail,
   CustomerEntitlementUsage,
@@ -30,9 +31,12 @@ import { useCustomerPortal } from '@/app/customerPortal/useCustomerPortal'
 import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
+import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { ConfirmDialog, EmptyState, Section } from '@fp/ui/compositions'
 import { toActivityLogEntry } from '@/pages/shared/activityLog'
+import { CustomerActivityPanel, toActivityRow } from './CustomerActivityPanel'
+import type { ActivitySearch } from './activitySearch'
 import { detailGate } from '@/pages/shared/detailGate'
 import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
 
@@ -57,6 +61,9 @@ export interface CustomerDetailPageProps {
   onNavigateToList: () => void
   /** Open the full Edit page. */
   onEdit: (customerId: string) => void
+  /** The Activity tab's filters, from the URL. */
+  activitySearch?: ActivitySearch | undefined
+  onActivitySearchChange?: ((next: ActivitySearch) => void) | undefined
 }
 
 /**
@@ -74,6 +81,8 @@ export function CustomerDetailPage({
   onTabChange,
   onNavigateToList,
   onEdit,
+  activitySearch,
+  onActivitySearchChange,
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
   const portal = useCustomerPortal()
@@ -81,6 +90,9 @@ export function CustomerDetailPage({
   // writes several rows (contract, invoice, payment), so 20 could push the
   // contract itself off the rail.
   const activity = useActivityLog({ customerId, limit: 50 })
+  // The overview card's event open in the details drawer.
+  const [openActivityId, setOpenActivityId] = useState<string | null>(null)
+  const openActivity = activity.data?.find((entry) => entry.id === openActivityId) ?? null
   const integrationLinks = useCustomerIntegrationLinks(customerId)
   const integrations = useIntegrations()
   const linkIntegration = useLinkCustomerIntegration(customerId)
@@ -202,9 +214,17 @@ export function CustomerDetailPage({
         activity={
           activity.data
             ? activity.data.map((entry) => {
-                const row = toActivityLogEntry(entry)
-                if (entry.entityType !== 'customer' || !customer.data.name) return row
-                return { ...row, record: customer.data.name }
+                const row = {
+                  ...toActivityLogEntry(entry),
+                  onSelect: () => setOpenActivityId(entry.id),
+                }
+                // On its own page the customer is the subject already: the
+                // line is its state ("Taxable · Published"), not its name.
+                if (entry.entityType === 'customer' && entry.entityId === customerId) {
+                  const { record: _record, ...rest } = row
+                  return rest
+                }
+                return row
               })
             : []
         }
@@ -291,6 +311,14 @@ export function CustomerDetailPage({
         paymentsLoading={invoices.isLoading || payments.isLoading}
         paymentsError={payments.isError}
         onRetryPayments={payments.refetch}
+        activityTab={
+          <CustomerActivityPanel
+            customerId={customerId}
+            customerName={customer.data.name}
+            search={activitySearch ?? {}}
+            onSearchChange={onActivitySearchChange ?? (() => undefined)}
+          />
+        }
         events={
           customer.data.externalId ? (
             <CustomerEventsPanel externalId={customer.data.externalId} />
@@ -308,6 +336,13 @@ export function CustomerDetailPage({
           <fieldset disabled={archived} className="contents">
             <CustomerTaxPanel customerId={customer.data.id} />
           </fieldset>
+        }
+        fxOverrides={
+          <FxRatesPanel
+            owner={{ scope: 'customer', scopeId: customer.data.id }}
+            emptyDescription="This customer uses the global forex rates."
+            readOnly={archived}
+          />
         }
         usage={
           <div className="flex flex-col gap-8">
@@ -356,6 +391,11 @@ export function CustomerDetailPage({
         error={remove.error ? 'Could not archive the customer. Try again.' : null}
       />
       {invoiceRows.dialogs}
+      <ActivityEventSheet
+        row={openActivity ? toActivityRow(openActivity, customer.data.name) : null}
+        onClose={() => setOpenActivityId(null)}
+        onNavigate={(href) => void navigate({ to: href })}
+      />
     </>
   )
 }

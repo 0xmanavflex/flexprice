@@ -16,8 +16,8 @@
  * here fetches a `CustomerResponse` and returns a domain `Customer`. Nothing
  * above this layer sees a `WalletResponse`.
  */
-export { useActivityLog } from './activity'
-export type { ActivityFilter } from './activity'
+export { useActivityLog, useActivityPage } from './activity'
+export type { ActivityFilter, ActivityPage, ActivityPageFilter } from './activity'
 
 export { queryKeys } from './keys'
 export {
@@ -113,6 +113,7 @@ export {
   useCreateFeature,
   useFeature,
   useFeatures,
+  useFeaturesByMeters,
   toUpdateFeatureRequest,
   toCloneFeatureRequest,
   useUpdateFeature,
@@ -481,6 +482,8 @@ export {
   toSamlConfig,
   toSubscriptionConfig,
   toSubscriptionConfigRequest,
+  toTaxConfig,
+  toTaxConfigRequest,
   toWalletAlertConfig,
   toWalletAlertConfigRequest,
   useCustomCurrencyConfig,
@@ -492,7 +495,10 @@ export {
   useResetCustomerPortalConfig,
   useResetInvoiceConfig,
   useResetSubscriptionConfig,
+  useResetTaxConfig,
   useResetWalletAlertConfig,
+  useTaxConfig,
+  useUpdateTaxConfig,
   useSamlConfig,
   useSubscriptionConfig,
   useUpdateCustomCurrencyConfig,
@@ -722,3 +728,13 @@ export { reportBreakdown, reportCurrencies, reportScalar, reportSeries, useRepor
 export type { ReportBreakdownRow, ReportPoint, ReportScalar } from './reports'
 export type { ReportQuery, ReportResult } from '@fp/api'
 export { usePushCustomerToIntegrations } from './integrationSync'
+export {
+  toCreateFxRateRequest,
+  toFxRate,
+  toUpdateFxRateRequest,
+  useCreateFxRate,
+  useDeleteFxRate,
+  useFxRates,
+  useUpdateFxRate,
+} from './fxRates'
+export type { FxRateOwner, FxRateWire } from './fxRates'

@@ -344,6 +344,49 @@ export function useFeature(id: string) {
   })
 }
 
+const METER_FEATURE_PAGE = 100
+
+/**
+ * The features on a set of meters, whatever page of the catalogue they sit on:
+ * searched by `meter_ids`, 100 at a time until the reported total. Empty
+ * meters read nothing.
+ */
+export function useFeaturesByMeters(meterIds: readonly string[]) {
+  const client = useFlexprice()
+  const ids = [...new Set(meterIds)].sort()
+
+  return useQuery({
+    queryKey: queryKeys.features.list({ meterIds: ids }),
+    queryFn: async ({ signal }) => {
+      // Page by page to the reported total: several features can share a meter.
+      const features: Feature[] = []
+      for (let offset = 0; ; offset += METER_FEATURE_PAGE) {
+        const response = await call(
+          (options) =>
+            client.features.queryFeature(
+              {
+                meterIds: ids,
+                limit: METER_FEATURE_PAGE,
+                offset,
+                // A total order, so no feature moves across a page boundary.
+                sort: sortWithTieBreak('name', 'asc'),
+                expand: 'meters',
+              },
+              options,
+            ),
+          signal,
+        )
+        const items = response.items ?? []
+        features.push(...items.map((item) => toFeature(item as FeatureWire)))
+        const total = response.pagination?.total ?? 0
+        if (items.length < METER_FEATURE_PAGE || features.length >= total) break
+      }
+      return features
+    },
+    enabled: ids.length > 0,
+  })
+}
+
 export function useCreateFeature() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

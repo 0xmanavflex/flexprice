@@ -15,13 +15,14 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { Navigate, Outlet } from '@tanstack/react-router'
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { AccessProvider, AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { useAccessControl, useCurrentUser, useSelfBillingStatus } from '@fp/query'
 import { toListFailure } from '@/pages/shared/listFailure'
 import { ConsoleShell } from './shell/ConsoleShell'
 import { useListMemory } from './shell/useListMemory'
 import { hasSession, needsSignIn, useSession } from './session'
+import { AnalyticsIdentity, captureError } from './analytics'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
 import { DOCS_URL } from './shell/navigation'
@@ -125,6 +126,7 @@ const CustomerDetailPage = lazy(() =>
   import('@/pages/customers/CustomerDetailPage').then((m) => ({ default: m.CustomerDetailPage })),
 )
 import { parseCustomerTab } from '@/pages/customers/CustomerDetailPage'
+import { parseActivitySearch, type ActivitySearch } from '@/pages/customers/activitySearch'
 const CustomerFormPage = lazy(() =>
   import('@/pages/customers/CustomerFormPage').then((m) => ({ default: m.CustomerFormPage })),
 )
@@ -391,6 +393,7 @@ function ShellLayout() {
           headerActions={
             <>
               <SupportChat />
+              <AnalyticsIdentity />
               <VersionCheck />
               <EnvironmentToaster />
             </>
@@ -438,6 +441,13 @@ function RouteError({ error, reset }: ErrorComponentProps) {
   const router = useRouter()
   const queryErrors = useQueryErrorResetBoundary()
   const failure = toListFailure(error, 'this page')
+
+  // A page that crashed is worth knowing about; one the API refused is not a bug.
+  useEffect(() => {
+    if (failure?.kind === 'generic' || failure?.kind === undefined) {
+      captureError(error, { source: 'route-error' })
+    }
+  }, [error, failure?.kind])
 
   const retry = () => {
     queryErrors.reset()
@@ -1696,22 +1706,34 @@ function CustomerSubscriptionCreateRouteComponent() {
 const customerDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/customers/$customerId',
-  validateSearch: (search: Record<string, unknown>): { tab: CustomerTab } => ({
-    tab: parseCustomerTab(search['tab']),
-  }),
+  // The Activity tab's filters ride along (`activitySearch.ts`), so a reload
+  // or a shared link opens the same trail.
+  validateSearch: (search: Record<string, unknown>): { tab: CustomerTab } & ActivitySearch => {
+    const tab = parseCustomerTab(search['tab'])
+    return { tab, ...(tab === 'activity' ? parseActivitySearch(search) : {}) }
+  },
   search: { middlewares: [stripSearchParams({ tab: 'overview' })] },
   component: CustomerDetailRouteComponent,
 })
 
 function CustomerDetailRouteComponent() {
   const { customerId } = customerDetailRoute.useParams()
-  const { tab } = customerDetailRoute.useSearch()
+  const { tab, ...activitySearch } = customerDetailRoute.useSearch()
   const navigate = useNavigate()
 
   return (
     <CustomerDetailPage
       customerId={customerId}
       tab={tab}
+      activitySearch={activitySearch}
+      onActivitySearchChange={(next) =>
+        void navigate({
+          to: '/customers/$customerId',
+          params: { customerId },
+          search: { tab: 'activity', ...next },
+          replace: true,
+        })
+      }
       onTabChange={(next) =>
         void navigate({
           to: '/customers/$customerId',

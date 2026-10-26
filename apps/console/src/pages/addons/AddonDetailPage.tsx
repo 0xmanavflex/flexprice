@@ -282,6 +282,7 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   const form = adding ? (
     <EntitlementCreateForm
       features={options}
+      grantModel
       onSubmit={submit}
       onCancel={() => setAdding(false)}
       isSubmitting={create.isPending}

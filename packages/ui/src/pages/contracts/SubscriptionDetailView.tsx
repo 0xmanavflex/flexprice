@@ -148,7 +148,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     'compositions/ActivityLog',
     'compositions/detail-kit',
   ],
-  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Information, Charges, Usage, Invoices) directly under it, and an Activity and Related rail on Overview only. Lifecycle banners lead the Overview tab, then the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes. Information holds the side-by-side Contract and Billing & collection panels and the metadata card.',
+  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Charges, Usage, Invoices, Information) directly under it, and an Activity and Related rail on Overview only. Lifecycle banners lead the Overview tab, then the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes. Information holds the side-by-side Contract and Billing & collection panels and the metadata card.',
 })
 
 /** One section's data with its own loading and failure state, so a slow tab never blocks the page. */
@@ -230,6 +230,14 @@ export interface SubscriptionDetailViewProps {
    */
   onCreateChargeAlert?:
     ((draft: { lineId: string; config: AlertSettingConfig }) => Promise<unknown> | void) | undefined
+  /**
+   * The Usage tab's breakdown: the customer's usage analytics scoped to this
+   * contract's metered charges. Omitted, the tab lists the contract's own
+   * usage charges for the period.
+   */
+  usageBreakdown?: ReactNode
+  /** The FX overrides section on the Information tab; omitted, it is not shown. */
+  fxOverrides?: ReactNode
   /**
    * The thresholds a line already stores (a switched-off setting), read when
    * Add alerts is chosen so the form opens on them instead of overwriting
@@ -408,6 +416,8 @@ export function SubscriptionDetailView({
   onSaveChargeAlert,
   onCreateChargeAlert,
   loadChargeAlert,
+  usageBreakdown,
+  fxOverrides,
   onAddTax,
   onRemoveAddon,
   onRemoveTax,
@@ -869,7 +879,6 @@ export function SubscriptionDetailView({
           onChange={(next) => setTab(next as SubscriptionTab)}
           tabs={[
             { value: 'overview', label: 'Overview' },
-            { value: 'information', label: 'Information' },
             {
               value: 'charges',
               label: 'Charges',
@@ -883,6 +892,7 @@ export function SubscriptionDetailView({
               label: 'Invoices',
               ...(invoices.data ? { count: invoices.data.length } : {}),
             },
+            { value: 'information', label: 'Information' },
           ]}
         />
 
@@ -1298,6 +1308,7 @@ export function SubscriptionDetailView({
               {...(onOpenCustomer ? { onOpenCustomer } : {})}
               {...(onOpenPlan ? { onOpenPlan } : {})}
             />
+            {fxOverrides}
             <MetadataCard
               metadata={s.metadata}
               {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
@@ -1424,59 +1435,68 @@ export function SubscriptionDetailView({
                 ]}
               />
             ) : null}
-            <PartSection
-              title="Usage charges"
-              part={usage}
-              failure="Usage could not be loaded"
-              emptyTitle="No metered charges"
-              scene="revenue"
-              emptyDescription="This contract has no usage-based charges this period."
-              isEmpty={(data) => data.charges.length === 0}
-            >
-              {(data) => (
-                <DetailTable<SubscriptionUsageCharge>
-                  compact
-                  label="Usage charges"
-                  noun="charges"
-                  rows={data.charges}
-                  columns={[
-                    {
-                      key: 'name',
-                      header: 'Charge',
-                      sortBy: (charge) => charge.name,
-                      text: (charge) => charge.name,
-                      cell: (charge) => (
-                        <span className="text-foreground flex items-center gap-2 font-medium">
-                          {charge.name}
-                          {charge.isOverage ? (
-                            <Badge variant="outline" size="sm" radius="full">
-                              Overage
-                            </Badge>
-                          ) : null}
-                        </span>
-                      ),
-                    },
-                    {
-                      key: 'quantity',
-                      header: 'Quantity',
-                      cell: (charge) => (
-                        <Muted className="tabular-nums">
-                          {charge.quantity.toLocaleString('en-US')}
-                        </Muted>
-                      ),
-                    },
-                    {
-                      key: 'amount',
-                      header: 'Amount',
-                      sortBy: (charge) => Number(charge.amount.amount),
-                      cell: (charge) => (
-                        <Strong className="tabular-nums">{formatMoney(charge.amount)}</Strong>
-                      ),
-                    },
-                  ]}
-                />
-              )}
-            </PartSection>
+            {/*
+              The customer's usage breakdown, scoped to this contract's metered
+              charges, when the page supplies it; else this contract's own
+              usage charges for the period.
+            */}
+            {usageBreakdown ? (
+              usageBreakdown
+            ) : (
+              <PartSection
+                title="Usage charges"
+                part={usage}
+                failure="Usage could not be loaded"
+                emptyTitle="No metered charges"
+                scene="revenue"
+                emptyDescription="This contract has no usage-based charges this period."
+                isEmpty={(data) => data.charges.length === 0}
+              >
+                {(data) => (
+                  <DetailTable<SubscriptionUsageCharge>
+                    compact
+                    label="Usage charges"
+                    noun="charges"
+                    rows={data.charges}
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Charge',
+                        sortBy: (charge) => charge.name,
+                        text: (charge) => charge.name,
+                        cell: (charge) => (
+                          <span className="text-foreground flex items-center gap-2 font-medium">
+                            {charge.name}
+                            {charge.isOverage ? (
+                              <Badge variant="outline" size="sm" radius="full">
+                                Overage
+                              </Badge>
+                            ) : null}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: 'quantity',
+                        header: 'Quantity',
+                        cell: (charge) => (
+                          <Muted className="tabular-nums">
+                            {charge.quantity.toLocaleString('en-US')}
+                          </Muted>
+                        ),
+                      },
+                      {
+                        key: 'amount',
+                        header: 'Amount',
+                        sortBy: (charge) => Number(charge.amount.amount),
+                        cell: (charge) => (
+                          <Strong className="tabular-nums">{formatMoney(charge.amount)}</Strong>
+                        ),
+                      },
+                    ]}
+                  />
+                )}
+              </PartSection>
+            )}
           </>
         ) : null}
 

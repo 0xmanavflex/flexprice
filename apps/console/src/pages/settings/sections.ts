@@ -96,7 +96,10 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'invoicing',
     label: 'Invoicing',
-    tabs: [{ id: 'invoices', label: 'Invoices' }],
+    tabs: [
+      { id: 'invoices', label: 'Invoices' },
+      { id: 'tax', label: 'Tax engine' },
+    ],
   },
   {
     id: 'subscription',
@@ -106,7 +109,10 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'currency',
     label: 'Currency',
-    tabs: [{ id: 'currencies', label: 'Currencies' }],
+    tabs: [
+      { id: 'currencies', label: 'Currencies' },
+      { id: 'forex', label: 'Forex rates' },
+    ],
   },
   {
     id: 'alerts',

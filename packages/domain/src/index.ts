@@ -16,7 +16,18 @@
  * would recreate the 53 hand-written DTO files this architecture removes; the
  * SDK already has them, and they are only interesting once something renders.
  */
-export { activityByline, activitySourceLabel, activityTitle, describeActivity } from './activity'
+export {
+  ACTIVITY_ACTOR_TYPES,
+  ACTIVITY_SOURCES,
+  activityActor,
+  activityByline,
+  activityEntityNoun,
+  activityPaymentStatus,
+  activitySourceLabel,
+  activityStatus,
+  activityTitle,
+  describeActivity,
+} from './activity'
 export type { ActivityEntry, ActivityFacts, ActivityField } from './activity'
 export {
   InvalidMoneyError,
@@ -117,14 +128,20 @@ export {
   UsageResetPeriod,
   createEntitlementSchema,
   emptyEntitlement,
+  emptyMeteredGrant,
+  meteredGrantSchema,
   editEntitlementSchema,
+  entitlementGrant,
   entitlementToEdit,
+  meteredAllowance,
+  meteredAllowanceLabel,
+  meteredResetLabel,
   EntitlementGrantMeasure,
   EntitlementGrantDurationUnit,
   EntitlementGrantAllocationBehavior,
   EntitlementAggregationMode,
 } from './entitlement'
-export type { CreateEntitlement, Entitlement, EditEntitlement } from './entitlement'
+export type { CreateEntitlement, Entitlement, EditEntitlement, MeteredGrant } from './entitlement'
 
 export {
   CREDIT_GRANT_CADENCE_LABEL,
@@ -606,6 +623,12 @@ export {
   withTabEnabled,
   withTabOrder,
   withUsageGraph,
+  EXTERNAL_TAX_PROVIDERS,
+  TAX_PROVIDER_LABEL,
+  TaxProvider,
+  defaultTaxConfig,
+  taxConfigSchema,
+  usesExternalTaxEngine,
 } from './settings'
 export type {
   CreateCustomerAction,
@@ -632,6 +655,7 @@ export type {
   SubscriptionConfig,
   WalletAlertConfig,
   WalletAlertThreshold,
+  TaxConfig,
 } from './settings'
 
 export { resetRequestSchema, setPasswordSchema, signInSchema, signUpSchema } from './auth'
@@ -805,12 +829,17 @@ export {
   hostedInvoiceState,
   paymentMethodLabel,
   toHostedInvoice,
+  isOverdue,
   toPaymentActionUrl,
   toPresignedUrl,
 } from './hostedInvoice'
 export type {
   HostedInvoice,
+  HostedInvoiceAdjustment,
+  HostedInvoiceGroup,
   HostedInvoiceLine,
+  HostedInvoiceParty,
+  HostedInvoiceTax,
   HostedInvoicePayment,
   HostedInvoiceState,
 } from './hostedInvoice'
@@ -934,3 +963,18 @@ export type {
   PortalWalletTransaction,
 } from './customerPortal'
 export { CONTRACT_TERMS, contractAmountPerPeriod } from './contractAmount'
+export {
+  FX_OVERRIDE_STATUS_LABEL,
+  FxOverrideStatus,
+  FxRateScope,
+  emptyFxRateDraft,
+  formatFxPair,
+  formatFxRate,
+  formatFxRateValue,
+  fxOverrideStatus,
+  fxRateDraftSchema,
+  fxRateToDraft,
+  fxWindowsOverlap,
+  type FxRate,
+  type FxRateDraft,
+} from './fxRate'
