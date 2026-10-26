@@ -305,6 +305,7 @@ export {
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
+  useInheritedContracts,
   useSubscriptions,
   useUpdateSubscriptionLineItem,
 } from './subscriptions'

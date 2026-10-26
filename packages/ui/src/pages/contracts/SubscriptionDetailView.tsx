@@ -66,7 +66,9 @@ import {
   type SubscriptionCoupon,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
+  type Subscription,
   type SubscriptionLine,
+  isInheritedContract,
   lineLineages,
   type SubscriptionSchedule,
   type SubscriptionTax,
@@ -256,6 +258,10 @@ export interface SubscriptionDetailViewProps {
   onBack?: () => void
   onOpenCustomer?: () => void
   onOpenPlan?: () => void
+  /** Opens another contract: an inherited one's parent, or a parent's inherited ones. */
+  onOpenContract?: ((id: string) => void) | undefined
+  /** A parent's inherited contracts (its children's mirrors), as V1 lists them. */
+  inheritedContracts?: SubscriptionPart<Subscription[]> | undefined
   onOpenInvoice?: (invoiceId: string) => void
   /** Incomplete contracts only: the More item and the banner button. */
   onActivate?: () => void
@@ -426,6 +432,8 @@ export function SubscriptionDetailView({
   onBack,
   onOpenCustomer,
   onOpenPlan,
+  onOpenContract,
+  inheritedContracts,
   onOpenInvoice,
   onActivate,
   onSaveMetadata,
@@ -503,7 +511,9 @@ export function SubscriptionDetailView({
   const canResume = Boolean(onResume) && canResumeSubscription(s.status)
   const title = `${s.customerName} on ${s.planName}`
 
-  const canEditCharges = !isCancelled && !isCancelling
+  // An inherited contract mirrors its parent's: nothing on it is changed here.
+  const inherited = isInheritedContract(s)
+  const canEditCharges = !isCancelled && !isCancelling && !inherited
   // The API adds a charge only to an active contract (not a draft, trial,
   // pause or one not yet started), so it is offered only there.
   const canAddCharge =
@@ -556,7 +566,7 @@ export function SubscriptionDetailView({
     if (kind === 'coupon') setCouponLineId(null)
     setSection(kind)
   }
-  const canModify = !isCancelled
+  const canModify = !isCancelled && !inherited
   const createFor = (
     kind: ContractSectionKind,
     label: string,
@@ -904,6 +914,55 @@ export function SubscriptionDetailView({
                 schedules={schedules.data ?? []}
                 {...(canActivate && onActivate ? { onActivate } : {})}
               />
+              {inherited ? (
+                <Alert variant="info">
+                  <InfoIcon aria-hidden="true" />
+                  <AlertTitle>Inherited from a parent contract</AlertTitle>
+                  <AlertDescription>
+                    Its charges and billing follow the parent contract, so it can't be changed here.
+                  </AlertDescription>
+                  {s.parentSubscriptionId && onOpenContract ? (
+                    <AlertAction>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => onOpenContract(s.parentSubscriptionId!)}
+                      >
+                        Open parent contract
+                      </Button>
+                    </AlertAction>
+                  ) : null}
+                </Alert>
+              ) : null}
+              {inheritedContracts && (inheritedContracts.data?.length ?? 0) > 0 ? (
+                <Section table showTitle title="Inherited contracts">
+                  <DetailTable<Subscription>
+                    compact
+                    label="Inherited contracts"
+                    noun="contracts"
+                    rows={inheritedContracts.data ?? []}
+                    getRowId={(row) => row.id}
+                    toolbar={false}
+                    {...(onOpenContract
+                      ? { onRowClick: (row: Subscription) => onOpenContract(row.id) }
+                      : {})}
+                    columns={[
+                      {
+                        key: 'customer',
+                        header: 'Customer',
+                        cell: (row) => <Strong>{row.customerName}</Strong>,
+                      },
+                      { key: 'plan', header: 'Plan', cell: (row) => <Muted>{row.planName}</Muted> },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        cell: (row) => <SubscriptionStatusBadge status={row.status} />,
+                      },
+                    ]}
+                  />
+                </Section>
+              ) : null}
 
               {preview ? <InvoicePreviewSection status={s.status} preview={preview} /> : null}
 
