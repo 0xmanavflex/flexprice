@@ -65,6 +65,7 @@ export interface GlyphBadgeProps {
 const TEXT_TONE: Record<string, PillTone> = {
   'text-success': 'success',
   'text-info': 'info',
+  'text-trial': 'trial',
   'text-warning': 'warning',
   'text-destructive': 'danger',
   'text-muted-foreground': 'neutral',
