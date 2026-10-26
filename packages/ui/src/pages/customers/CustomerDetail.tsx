@@ -1554,16 +1554,9 @@ function InformationTab({
           title="Customer details"
           locked={!onUpdateField}
           fields={[
+            // The external ID and customer ID live in the header, copyable on every tab;
+            // they are not repeated here.
             { key: 'name', label: 'Name', value: customer.name, required: true },
-            {
-              key: 'externalId',
-              label: 'External ID',
-              value: customer.externalId,
-              display: customer.externalId ? (
-                <span className="font-mono text-[13px]">{customer.externalId}</span>
-              ) : undefined,
-              readOnly: true,
-            },
             {
               key: 'email',
               label: 'Email',
@@ -1589,13 +1582,6 @@ function InformationTab({
               key: 'created',
               label: 'Created',
               value: formatDate(customer.createdAt),
-              readOnly: true,
-            },
-            {
-              key: 'id',
-              label: 'Customer ID',
-              value: customer.id,
-              display: <span className="font-mono text-[13px]">{customer.id}</span>,
               readOnly: true,
             },
           ]}
