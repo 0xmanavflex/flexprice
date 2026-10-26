@@ -98,6 +98,8 @@ export interface CreditRow {
   paid: number
   free: number
   total: number
+  /** Share of all credits consumed, 0–1. */
+  share: number
   display: { paid: string; free: string; total: string; share: string }
 }
 
@@ -123,6 +125,7 @@ export interface OverdueCustomerRow {
   /** How many invoices are overdue; omitted when the source does not count them. */
   invoices?: number | undefined
   overdue: number
+  outstanding: number
   display: { overdue: string; outstanding: string }
   oldestDays: number
 }
@@ -378,6 +381,8 @@ function CsvButton<T>({
   )
 }
 
+const asOfToday = () => `as of ${new Date().toLocaleDateString('en-CA')}`
+
 const withCsv = (csv: ReactNode, extra?: ReactNode) => (
   <div className="flex items-center gap-2">
     {csv}
@@ -406,11 +411,11 @@ const EVENTS_COLUMNS: CsvColumn<{ label: string; events: number }>[] = [
   { header: 'events', value: (row) => row.events },
 ]
 
-const CUSTOMER_COLUMNS: CsvColumn<CustomerRevenueRow>[] = [
+export const CUSTOMER_COLUMNS: CsvColumn<CustomerRevenueRow>[] = [
   { header: 'customer', value: (row) => row.name },
   { header: 'revenue', value: (row) => row.revenue },
-  { header: 'contract', value: (row) => row.contract },
-  { header: 'usage', value: (row) => row.usage },
+  { header: 'contract', value: (row) => (row.display.contract === '—' ? '' : row.contract) },
+  { header: 'usage', value: (row) => (row.display.usage === '—' ? '' : row.usage) },
   { header: 'share', value: (row) => row.share },
 ]
 
@@ -424,6 +429,7 @@ const CREDIT_CUSTOMER_COLUMNS: CsvColumn<CreditRow>[] = [
   { header: 'consumed', value: (row) => row.total },
   { header: 'paid', value: (row) => row.paid },
   { header: 'free', value: (row) => row.free },
+  { header: 'share', value: (row) => row.share },
 ]
 
 const CREDIT_TYPE_COLUMNS: CsvColumn<CreditTypeRow & { section: string }>[] = [
@@ -437,6 +443,7 @@ const OVERDUE_COLUMNS: CsvColumn<OverdueCustomerRow>[] = [
   { header: 'customer', value: (row) => row.name },
   { header: 'overdue_invoices', value: (row) => row.invoices },
   { header: 'overdue', value: (row) => row.overdue },
+  { header: 'outstanding', value: (row) => row.outstanding },
   { header: 'oldest_days', value: (row) => row.oldestDays },
 ]
 
@@ -835,7 +842,7 @@ function OverviewTab({
           action={withCsv(
             <CsvButton
               name="Receivables aging"
-              rangeLabel={rangeLabel}
+              rangeLabel={asOfToday()}
               columns={AGING_COLUMNS}
               rows={receivables.status === 'ready' ? receivables.buckets : []}
             />,
@@ -1228,7 +1235,7 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
           title="All customers"
           action={
             <CsvButton
-              name="All customers"
+              name={`All customers rows ${(customers.all.offset ?? 0) + 1}-${(customers.all.offset ?? 0) + (customers.all.status === 'ready' ? customers.all.rows.length : 0)}`}
               rangeLabel={rangeLabel}
               columns={RANKED_CUSTOMER_COLUMNS}
               rows={
@@ -1348,7 +1355,7 @@ function agingOf(days: number) {
   return days > 90 ? '90+ days' : days > 60 ? '61–90 days' : days > 30 ? '31–60 days' : '1–30 days'
 }
 
-function ReceivablesTab({ receivables, rangeLabel }: RevenueReportProps) {
+function ReceivablesTab({ receivables }: RevenueReportProps) {
   return (
     <div className="flex flex-col gap-5">
       <Panel
@@ -1356,7 +1363,7 @@ function ReceivablesTab({ receivables, rangeLabel }: RevenueReportProps) {
         action={
           <CsvButton
             name="Receivables aging"
-            rangeLabel={rangeLabel}
+            rangeLabel={asOfToday()}
             columns={AGING_COLUMNS}
             rows={receivables.status === 'ready' ? receivables.buckets : []}
           />
@@ -1401,7 +1408,7 @@ function ReceivablesTab({ receivables, rangeLabel }: RevenueReportProps) {
           action={
             <CsvButton
               name="Overdue customers"
-              rangeLabel={rangeLabel}
+              rangeLabel={asOfToday()}
               columns={OVERDUE_COLUMNS}
               rows={receivables.customers}
             />

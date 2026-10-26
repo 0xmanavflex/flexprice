@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { CUSTOMER_COLUMNS } from './RevenueReport'
 import { csvFilename, toCsv } from './reportCsv'
 
 describe('toCsv', () => {
@@ -30,6 +31,22 @@ describe('toCsv', () => {
 
   it('writes only the header for no rows', () => {
     expect(toCsv(columns, [])).toBe('name,amount')
+  })
+})
+
+describe('CUSTOMER_COLUMNS', () => {
+  const row = {
+    id: 'c',
+    name: 'Acme',
+    revenue: 10,
+    usage: 0,
+    contract: 0,
+    share: 1,
+    display: { revenue: '$10', usage: '—', contract: '$0' },
+  }
+
+  it('leaves unknown amounts empty', () => {
+    expect(toCsv(CUSTOMER_COLUMNS, [row]).split('\r\n')[1]).toBe('Acme,10,0,,1')
   })
 })
 
