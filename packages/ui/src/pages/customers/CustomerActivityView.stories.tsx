@@ -104,6 +104,9 @@ export const Default: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /^Open details: Customer created/ }))
     await expect(await screen.findByText('Event metadata')).toBeVisible()
     await expect(screen.getByText('182.76.138.114')).toBeVisible()
+    // The stacked sheet shows long IDs whole rather than shortened.
+    await expect(screen.getByText('dde9a118-f186-45a6-969b-a9dab4590a75')).toBeVisible()
+    await expect(screen.getByText('01M5M665C22MX2ZDF5FNA0T9Y8')).toBeVisible()
   },
 }
 

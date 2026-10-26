@@ -509,7 +509,7 @@ function Rows({ rows }: { rows: ReadonlyArray<ActivityDetailRow | ActivityField>
           label: row.label,
           value:
             'copy' in row && row.copy ? (
-              <CopyValue value={row.value} label={row.label} className="max-w-full" />
+              <CopyValue value={row.value} label={row.label} full className="max-w-full" />
             ) : (
               row.value
             ),
