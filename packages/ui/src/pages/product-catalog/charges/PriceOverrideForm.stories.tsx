@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { BillingModel, type PriceOverride, TierMode } from '@fp/domain'
 import { PriceOverrideForm } from './PriceOverrideForm'
 
@@ -271,5 +271,22 @@ export const SubmitsAValidatedDomainValue: Story = {
       amount: '12.50',
       divideBy: 1000,
     })
+  },
+}
+
+/** A usage charge offers an optional bucket size, sent with the override. */
+export const UsageBucketSize: Story = {
+  args: { usage: true },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByLabelText(/^Amount/), '0.01')
+    await userEvent.click(canvas.getByRole('combobox', { name: /Bucket size/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Hour' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save override' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: '0.01', bucketSize: 'HOUR' }),
+      ),
+    )
   },
 }

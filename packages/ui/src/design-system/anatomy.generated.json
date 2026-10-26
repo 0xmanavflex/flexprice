@@ -5374,6 +5374,7 @@
         "InvoiceForm",
         "MeteredEntitlementFields",
         "PaymentForm",
+        "PriceOverrideForm",
         "RunExportDialog",
         "S3ConnectionDialog",
         "SpecField",
@@ -6215,6 +6216,7 @@
       "composes": [
         "ChoiceCards",
         "Field",
+        "OptionSelect",
         "SimpleTable"
       ],
       "usedBy": [

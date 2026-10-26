@@ -1770,6 +1770,7 @@ function ChargesTable({
             <PriceOverrideForm
               key={repricingCharge.id}
               priceId={repricingCharge.id}
+              usage={repricingCharge.type === PriceType.Usage}
               {...(byId.get(repricingCharge.id)
                 ? { defaultValue: byId.get(repricingCharge.id)! }
                 : {})}

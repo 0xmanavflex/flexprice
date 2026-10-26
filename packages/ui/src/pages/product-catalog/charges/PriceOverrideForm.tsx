@@ -4,7 +4,9 @@ import { useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   BILLING_MODEL_LABEL,
+  BUCKET_SIZE_LABEL,
   BillingModel,
+  BucketSize,
   TIER_MODE_LABEL,
   TierMode,
   emptyOverride,
@@ -17,6 +19,7 @@ import { Label } from '@ui/components/primitives/label'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards, SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Field } from '@ui/compositions/forms/Field'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -66,6 +69,8 @@ export interface PriceOverrideFormProps {
    * saves a started override and still skips the step when it was left blank.
    */
   onStartedChange?: (started: boolean) => void
+  /** A usage charge: offers an optional bucket size, the window usage is summed in. */
+  usage?: boolean
 }
 
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
@@ -94,6 +99,7 @@ export function PriceOverrideForm({
   formId,
   hideActions = false,
   onStartedChange,
+  usage = false,
 }: PriceOverrideFormProps) {
   const form = useCalmForm<PriceOverride>({
     resolver: standardSchemaResolver(priceOverrideSchema) as Resolver<PriceOverride>,
@@ -117,7 +123,9 @@ export function PriceOverrideForm({
   // array cannot survive into a flat fee and be submitted invisibly.
   const changeModel = (next: BillingModel) => {
     if (next === billingModel) return
-    form.reset(emptyOverride(priceId, next))
+    // The bucket size is not part of the price: it survives a change of model.
+    const bucketSize = form.getValues('bucketSize')
+    form.reset({ ...emptyOverride(priceId, next), ...(bucketSize ? { bucketSize } : {}) })
   }
 
   useEffect(() => {
@@ -356,6 +364,34 @@ export function PriceOverrideForm({
             ) : null}
           </div>
         </>
+      ) : null}
+
+      {usage ? (
+        <Field
+          label="Bucket size"
+          hint="Optional. The window usage is summed in before it is priced; leave as the charge's own to keep it."
+        >
+          {({ id, ...field }) => (
+            <OptionSelect
+              id={id}
+              {...field}
+              value={form.watch('bucketSize') ?? ''}
+              onValueChange={(next) =>
+                form.setValue('bucketSize', next as PriceOverride['bucketSize'], {
+                  shouldDirty: true,
+                })
+              }
+              options={[
+                { value: '', label: "The charge's own" },
+                ...Object.values(BucketSize).map((value) => ({
+                  value,
+                  label: BUCKET_SIZE_LABEL[value],
+                })),
+              ]}
+              disabled={isSubmitting}
+            />
+          )}
+        </Field>
       ) : null}
 
       {submitError ? (
