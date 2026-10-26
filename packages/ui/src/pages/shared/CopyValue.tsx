@@ -12,7 +12,7 @@ import { provenance } from '@ui/provenance'
 export const CopyValueProvenance = provenance({
   source: 'composition',
   composes: [],
-  note: 'Copyable mono id for list cells: first 11 + last 4 characters, full value in title and aria-label.',
+  note: 'Copyable mono id for list cells: first 11 + last 4 characters, full value in title and aria-label; `full` shows and wraps the whole value.',
 })
 
 /** Ids longer than this are shortened to their first 11 and last 4 characters. */
@@ -30,10 +30,19 @@ export interface CopyValueProps {
   variant?: 'text' | 'chip'
   /** Leading mark inside a chip: a provider logo. */
   leading?: ReactNode
+  /** Show the whole value, wrapping onto more lines, instead of shortening it. For roomy stacked layouts. */
+  full?: boolean
   className?: string
 }
 
-export function CopyValue({ value, label, variant = 'text', leading, className }: CopyValueProps) {
+export function CopyValue({
+  value,
+  label,
+  variant = 'text',
+  leading,
+  full = false,
+  className,
+}: CopyValueProps) {
   const [copied, setCopied] = useState(false)
   const copy = (event: MouseEvent) => {
     event.stopPropagation()
@@ -57,7 +66,11 @@ export function CopyValue({ value, label, variant = 'text', leading, className }
       )}
     >
       {leading}
-      <span className="min-w-0 truncate">{shortenId(value)}</span>
+      {full ? (
+        <span className="min-w-0 text-left break-all">{value}</span>
+      ) : (
+        <span className="min-w-0 truncate">{shortenId(value)}</span>
+      )}
       {copied ? (
         <CheckIcon aria-hidden className="size-3 shrink-0" />
       ) : (

@@ -57,7 +57,10 @@ export function ConnectorCard({
         </div>
         <div className="space-y-1.5">
           <h3 className="text-sm font-medium">{name}</h3>
-          <p className="text-muted-foreground text-[13px]/relaxed">{description}</p>
+          {/* Two lines at most, so every card in a row is the same height. */}
+          <p className="text-muted-foreground line-clamp-2 text-[13px]/relaxed" title={description}>
+            {description}
+          </p>
         </div>
       </div>
 

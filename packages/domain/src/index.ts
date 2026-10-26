@@ -33,6 +33,7 @@ export {
   InvalidMoneyError,
   compareMoney,
   formatMoney,
+  absoluteMoney,
   isNegativeMoney,
   isZeroMoney,
   money,
@@ -66,6 +67,7 @@ export {
   createInvoiceSchema,
   sumLineAmounts,
   deriveInvoiceStatus,
+  isPastDue,
   emptyInvoice,
   isStoredInvoiceStatus,
   needsAttention,
@@ -357,6 +359,7 @@ export {
   lineRevertDraft,
   type LineLineage,
   commitmentPeriodNoun,
+  isInheritedContract,
   canPauseSubscription,
   canResumeSubscription,
 } from './subscription'
@@ -744,6 +747,7 @@ export type {
   TopUpWallet,
   Wallet,
   WalletConsumption,
+  WalletTransactionReference,
   WalletTransaction,
   WalletTransactionDirection,
 } from './wallet'
@@ -854,7 +858,12 @@ export {
 } from './timezones'
 export type { TimezoneOption } from './timezones'
 
-export { cadenceAllowed, selectContractCharges } from './contractCharges'
+export {
+  attachableAddonCharges,
+  attachableAddonCommitments,
+  cadenceAllowed,
+  selectContractCharges,
+} from './contractCharges'
 export type { ContractChargeSelection } from './contractCharges'
 export {
   RBAC_ACTION,
@@ -959,6 +968,8 @@ export type {
   PortalTopUpState,
   PortalView,
   PortalTransactionDirection,
+  PortalWalletFlows,
+  PortalWalletTotals,
   PortalWallet,
   PortalWalletTransaction,
 } from './customerPortal'

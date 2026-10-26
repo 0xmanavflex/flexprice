@@ -1,3 +1,4 @@
+import { isPastDue } from './invoice'
 import { type Money, money, perUnit } from './money'
 
 /**
@@ -101,9 +102,12 @@ const PAID = new Set(['SUCCEEDED', 'OVERPAID', 'REFUNDED', 'PARTIALLY_REFUNDED']
 export function hostedInvoiceState(
   invoiceStatus: string,
   paymentStatus: string,
+  /** False once nothing is left to pay, as the console reads it (paid by credits, say). */
+  hasOutstandingBalance = true,
 ): HostedInvoiceState {
   if (invoiceStatus === 'VOIDED') return 'voided'
   if (PAID.has(paymentStatus)) return 'paid'
+  if (!hasOutstandingBalance && paymentStatus !== 'PROCESSING') return 'paid'
   if (paymentStatus === 'PROCESSING') return 'processing'
   return 'open'
 }
@@ -155,7 +159,11 @@ export function toHostedInvoice(wire: unknown): HostedInvoice {
         }
       : null,
     number: text(invoice['invoice_number']) || text(invoice['id']),
-    state: hostedInvoiceState(text(invoice['invoice_status']), text(invoice['payment_status'])),
+    state: hostedInvoiceState(
+      text(invoice['invoice_status']),
+      text(invoice['payment_status']),
+      outstanding(invoice['amount_remaining'], invoice['total']),
+    ),
     issuedAt:
       date(invoice['issue_date']) ?? date(invoice['finalized_at']) ?? date(invoice['created_at']),
     periodStart: date(invoice['period_start']),
@@ -187,59 +195,73 @@ export function toHostedInvoice(wire: unknown): HostedInvoice {
  * 26th is overdue from the 27th, in UTC, the day the invoice PDF prints.
  */
 export function isOverdue(invoice: Pick<HostedInvoice, 'state' | 'dueAt'>, now: Date): boolean {
-  if (invoice.state !== 'open' || !invoice.dueAt) return false
-  const day = (value: Date) =>
-    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate())
-  return day(now) > day(invoice.dueAt)
+  return invoice.state === 'open' && isPastDue(invoice.dueAt, now)
+}
+
+/**
+ * Whether money is still owed. A missing remaining amount falls back to the
+ * total; with neither reported the balance is unknown, and an unknown balance
+ * is owed, so an invoice the API did not report on is never called paid.
+ */
+function outstanding(remaining: unknown, total: unknown): boolean {
+  const known = (v: unknown): v is string | number => typeof v === 'string' || typeof v === 'number'
+  const source = known(remaining) ? remaining : known(total) ? total : null
+  if (source === null) return true
+  const value = String(source)
+  return /[1-9]/.test(value.replace(/^-/, '')) && !value.startsWith('-')
 }
 
 type Amount = (value: unknown) => Money
 
 function toLines(invoice: Record<string, unknown>, amount: Amount): HostedInvoiceLine[] {
   const coupons = list(invoice['coupon_applications'])
-  return list(invoice['line_items']).map((line) => {
-    const id = text(line['id'])
-    const gross = amount(line['amount'])
-    const quantity = text(line['quantity'])
-    const kind = text(line['price_type']).toUpperCase() === 'USAGE' ? 'usage' : 'fixed'
-    const adjustments: HostedInvoiceAdjustment[] = []
+  // A line that charged nothing tells the customer nothing: left out.
+  return list(invoice['line_items'])
+    .filter((line) => chargedSomething(line['amount']))
+    .map((line) => {
+      const id = text(line['id'])
+      const gross = amount(line['amount'])
+      const quantity = text(line['quantity'])
+      const kind = text(line['price_type']).toUpperCase() === 'USAGE' ? 'usage' : 'fixed'
+      const adjustments: HostedInvoiceAdjustment[] = []
 
-    // A coupon on this line names itself; a line discount with no coupon behind it is just a discount.
-    const lineCoupons = coupons.filter((c) => text(c['invoice_line_item_id']) === id)
-    for (const coupon of lineCoupons) {
-      const off = amount(coupon['discounted_amount'])
-      if (!isZero(off)) adjustments.push({ label: couponLabel(coupon), amount: off })
-    }
-    const lineDiscount = amount(line['line_item_discount'])
-    if (lineCoupons.length === 0 && !isZero(lineDiscount)) {
-      adjustments.push({ label: 'Discount', amount: lineDiscount })
-    }
-    const invoiceDiscount = amount(line['invoice_level_discount'])
-    if (!isZero(invoiceDiscount))
-      adjustments.push({ label: 'Invoice discount', amount: invoiceDiscount })
-    const credits = amount(line['prepaid_credits_applied'])
-    if (!isZero(credits)) adjustments.push({ label: 'Prepaid credits applied', amount: credits })
+      // A coupon on this line names itself; a line discount with no coupon behind it is just a discount.
+      const lineCoupons = coupons.filter((c) => text(c['invoice_line_item_id']) === id)
+      for (const coupon of lineCoupons) {
+        const off = amount(coupon['discounted_amount'])
+        if (!isZero(off)) adjustments.push({ label: couponLabel(coupon), amount: off })
+      }
+      const lineDiscount = amount(line['line_item_discount'])
+      if (lineCoupons.length === 0 && !isZero(lineDiscount)) {
+        adjustments.push({ label: 'Discount', amount: lineDiscount })
+      }
+      const invoiceDiscount = amount(line['invoice_level_discount'])
+      if (!isZero(invoiceDiscount))
+        adjustments.push({ label: 'Invoice discount', amount: invoiceDiscount })
+      const credits = amount(line['prepaid_credits_applied'])
+      if (!isZero(credits)) adjustments.push({ label: 'Prepaid credits applied', amount: credits })
 
-    const net = sumDecimals([gross.amount, ...adjustments.map((a) => `-${a.amount.amount}`)])
-    const included = text(line['adjusted_entitlement_quantity'])
-    const plan = text(line['plan_display_name'])
-    const name = text(line['display_name']) || text(line['meter_display_name']) || 'Charge'
-    return {
-      id,
-      name,
-      quantity,
-      amount: { amount: net, currency: gross.currency },
-      gross,
-      unitPrice: kind === 'fixed' ? perUnit(gross, quantity, 2) : null,
-      kind,
-      // An add-on's lines carry no plan name: the add-on is its own group.
-      group: plan || (text(line['entity_type']).toLowerCase() === 'addon' ? name : 'Other charges'),
-      periodStart: date(line['period_start']),
-      periodEnd: date(line['period_end']),
-      included: included && Number(included) > 0 ? included : null,
-      adjustments,
-    }
-  })
+      const net = sumDecimals([gross.amount, ...adjustments.map((a) => `-${a.amount.amount}`)])
+      const included = text(line['adjusted_entitlement_quantity'])
+      const plan = text(line['plan_display_name'])
+      const name = text(line['display_name']) || text(line['meter_display_name']) || 'Charge'
+      return {
+        id,
+        name,
+        quantity,
+        amount: { amount: net, currency: gross.currency },
+        gross,
+        unitPrice: kind === 'fixed' ? perUnit(gross, quantity, 2) : null,
+        kind,
+        // An add-on's lines carry no plan name: the add-on is its own group.
+        group:
+          plan || (text(line['entity_type']).toLowerCase() === 'addon' ? name : 'Other charges'),
+        periodStart: date(line['period_start']),
+        periodEnd: date(line['period_end']),
+        included: included && Number(included) > 0 ? included : null,
+        adjustments,
+      }
+    })
 }
 
 function toGroups(lines: HostedInvoiceLine[], currency: string): HostedInvoiceGroup[] {
@@ -345,6 +367,12 @@ function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {}
+}
+
+/** Whether an amount (string or number) is non-zero: `"0.00"` and `0` are not. */
+function chargedSomething(value: unknown): boolean {
+  const amount = typeof value === 'number' ? String(value) : typeof value === 'string' ? value : ''
+  return /[1-9]/.test(amount)
 }
 
 function text(value: unknown): string {

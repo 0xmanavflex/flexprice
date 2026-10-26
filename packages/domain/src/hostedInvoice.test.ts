@@ -179,6 +179,17 @@ describe('toHostedInvoice', () => {
     expect(sparse.payEnabled).toBe(false)
     expect(sparse.total).toEqual({ amount: '0', currency: 'USD' })
   })
+
+  it('never calls an invoice paid when no amount was reported', () => {
+    const sparse = toHostedInvoice({
+      tenant: {},
+      invoice: { invoice_status: 'FINALIZED', payment_status: 'PENDING', currency: 'usd' },
+      payments: null,
+      pay: {},
+    })
+
+    expect(sparse.state).toBe('open')
+  })
 })
 
 describe('paymentMethodLabel', () => {
@@ -345,5 +356,38 @@ describe('sumDecimals', () => {
     expect(sumDecimals(['199', '-19.90'])).toBe('179.10')
     expect(sumDecimals(['0.1', '0.2'])).toBe('0.3')
     expect(sumDecimals(['10', '-12.5'])).toBe('-2.5')
+  })
+})
+
+describe('zero-amount lines', () => {
+  it('leaves out a line that charged nothing', () => {
+    const invoice = toHostedInvoice({
+      invoice: {
+        currency: 'usd',
+        line_items: [
+          {
+            id: 'l1',
+            display_name: 'API calls',
+            amount: '0.00',
+            quantity: '0',
+            price_type: 'USAGE',
+          },
+          { id: 'l2', display_name: 'Seats', amount: 12, quantity: '1', price_type: 'FIXED' },
+        ],
+      },
+    })
+    expect(invoice.lines.map((line) => line.name)).toEqual(['Seats'])
+  })
+})
+
+describe('hostedInvoiceState with nothing left to pay', () => {
+  it('reads as paid when nothing is owed, as the console does', () => {
+    expect(hostedInvoiceState('FINALIZED', 'PENDING', false)).toBe('paid')
+  })
+  it('stays processing while a payment is in flight', () => {
+    expect(hostedInvoiceState('FINALIZED', 'PROCESSING', false)).toBe('processing')
+  })
+  it('stays open while money is owed', () => {
+    expect(hostedInvoiceState('FINALIZED', 'PENDING', true)).toBe('open')
   })
 })

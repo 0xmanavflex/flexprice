@@ -77,15 +77,17 @@ export const Default: Story = {
   },
 }
 
-/** No cost sheet: cost and margin read "—", never a made-up zero. */
+/** No cost sheet: cost and margin read "—", never a made-up zero, and a line says why. */
 export const WithoutCostSheet: Story = {
   args: {
     totals: { revenue: '$500.00', cost: null, margin: null, marginPercent: null },
     features: FEATURES.map((f) => ({ ...f, cost: null })),
+    costNote: 'No cost sheet, so no cost or margin. Add one under Cost sheets.',
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getAllByText('—').length).toBeGreaterThanOrEqual(3)
+    await expect(canvas.getByText(/^No cost sheet, so no cost or margin/)).toBeVisible()
   },
 }
 

@@ -129,8 +129,8 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
   showTitle?: boolean
   /**
-   * Forces the "In effect" column (when each charge starts and ends) on. It is
-   * on by default in the wide layout and in the column menu in the narrow one.
+   * Forces the "In effect" and "Billing timing" columns on. They are on by
+   * default in the wide layout and in the column menu in the narrow one.
    */
   showDates?: boolean
   description?: string
@@ -426,7 +426,9 @@ export function ChargeTable({
       width: 130,
       text: timing,
       cell: (charge) => <span>{timing(charge)}</span>,
-      ...(narrow ? { hiddenByDefault: true } : {}),
+      // `showDates` brings both on screen in the narrow layout: when a charge
+      // is billed belongs with when it is in effect.
+      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
     },
     {
       key: 'dates',
