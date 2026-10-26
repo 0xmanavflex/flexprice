@@ -73,8 +73,9 @@ const STATUS_LABEL: Record<InvoiceStatus, string> = {
 /** Only `overdue` is a problem; only `paid` is finished. Everything else is
  *  simply where the invoice has got to. */
 const STATUS_TONE: Record<InvoiceStatus, PillTone> = {
-  [InvoiceStatus.Draft]: 'warning',
-  [InvoiceStatus.Open]: 'info',
+  // Open awaits payment (orange); Draft is still being written (info).
+  [InvoiceStatus.Draft]: 'info',
+  [InvoiceStatus.Open]: 'warning',
   [InvoiceStatus.Paid]: 'success',
   [InvoiceStatus.Overdue]: 'danger',
   [InvoiceStatus.Void]: 'neutral',

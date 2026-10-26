@@ -10,6 +10,7 @@ import {
   AlertThresholdType,
   type AlertThreshold,
   type CreateAlertSetting,
+  toAlertSettingConfig,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
@@ -267,24 +268,44 @@ export function useCreateAlertSetting() {
  * switched-off or empty setting: that one is updated rather than a second
  * created beside it.
  */
+/**
+ * The line's live setting (switched off or not), or undefined. Archived ones
+ * are left out by the server, so the first page holds it however many were
+ * archived before it.
+ */
+async function findLineItemSetting(client: Flexprice, subscriptionId: string, lineId: string) {
+  const found = await call(() =>
+    client.alertSettings.queryAlertSettings({
+      entityType: AlertEntityType.SubscriptionLineItem,
+      entityId: lineId,
+      parentEntityId: subscriptionId,
+      status: 'published',
+      limit: 10,
+    }),
+  )
+  return (found.items ?? []).find((item) => item.id && item.entityId === lineId)
+}
+
+/**
+ * Reads a line's stored thresholds before alerts are added to it, so a
+ * switched-off setting opens on what it held rather than being overwritten
+ * unseen. Null when the line has none.
+ */
+export function useLineItemAlertLookup(subscriptionId: string) {
+  const client = useFlexprice()
+  return async (lineId: string): Promise<AlertSettingConfig | null> => {
+    const existing = await findLineItemSetting(client, subscriptionId, lineId)
+    return existing ? toAlertSettingConfig(toAlertSetting(existing as AlertSettingWire)) : null
+  }
+}
+
 export function useAddLineItemAlert(subscriptionId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ lineId, config }: { lineId: string; config: AlertSettingConfig }) => {
-      const found = await call(() =>
-        client.alertSettings.queryAlertSettings({
-          entityType: AlertEntityType.SubscriptionLineItem,
-          entityId: lineId,
-          parentEntityId: subscriptionId,
-          // Archived settings are left out by the server, so the first page
-          // holds the line's live setting however many were archived before it.
-          status: 'published',
-          limit: 10,
-        }),
-      )
-      const existing = (found.items ?? []).find((item) => item.id && item.entityId === lineId)
+      const existing = await findLineItemSetting(client, subscriptionId, lineId)
       return existing?.id
         ? updateSetting(client, existing.id, config)
         : createSetting(client, {

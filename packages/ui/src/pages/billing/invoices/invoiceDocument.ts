@@ -105,7 +105,7 @@ export interface StatusChip {
 export function statusChips(
   doc: Pick<InvoiceDocument, 'status' | 'paymentStatus' | 'paid'>,
 ): StatusChip[] {
-  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'warning' }]
+  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', tone: 'info' }]
   if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', tone: 'neutral' }]
   if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', tone: 'neutral' }]
   const chips: StatusChip[] = [{ label: 'Finalized', tone: 'neutral' }]
@@ -123,7 +123,7 @@ export function statusChips(
   // reversed states are not dressed up as pending.
   if (chips.length === 1) {
     if (doc.paymentStatus === PaymentStatus.Pending)
-      chips.push({ label: 'Payment pending', tone: 'neutral' })
+      chips.push({ label: 'Payment pending', tone: 'warning' })
     else if (doc.paymentStatus === PaymentStatus.Refunded)
       chips.push({ label: 'Refund issued', tone: 'neutral' })
   }
@@ -148,7 +148,7 @@ export function displayStatus(
   if (doc.paymentStatus === PaymentStatus.Failed) return { label: 'Payment failed', tone: 'danger' }
   if (doc.status === InvoiceStatus.Overdue) return { label: 'Overdue', tone: 'danger' }
   if (doc.paid > 0) return { label: 'Partially paid', tone: 'warning' }
-  return { label: 'Open', tone: 'neutral' }
+  return { label: 'Open', tone: 'warning' }
 }
 
 export function invoiceTotals(doc: InvoiceDocument) {

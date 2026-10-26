@@ -518,6 +518,7 @@ export {
   useDeleteAlertSetting,
   useUpdateAlertSetting,
   useAddLineItemAlert,
+  useLineItemAlertLookup,
   toAlertConfigRequest,
 } from './alertSettings'
 export type { AlertSettingPage, AlertSettingWire } from './alertSettings'

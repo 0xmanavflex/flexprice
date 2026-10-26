@@ -1931,6 +1931,39 @@ export const AddsChargeAlerts: Story = {
   },
 }
 
+/** A switched-off setting on the line opens on what it stored, not on blank thresholds. */
+export const AddAlertsOpensOnStoredThresholds: Story = {
+  args: {
+    ...BASE,
+    onCreateChargeAlert: fn(async () => undefined),
+    loadChargeAlert: fn(async () => ({
+      alertEnabled: false,
+      thresholdType: 'percentage' as const,
+      critical: { condition: 'above' as const, threshold: '95' },
+    })),
+    chargeAlerts: ready(new Map()),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(canvas.getByRole('button', { name: 'Commitment: open API requests' }))
+    const sheet = within(await body.findByRole('dialog'))
+    const alerts = within(sheet.getByRole('region', { name: 'Alerts' }))
+    await userEvent.click(alerts.getByRole('button', { name: 'Add alerts' }))
+    const dialog = within(await body.findByRole('dialog', { name: 'Add alerts' }))
+    await expect(args.loadChargeAlert).toHaveBeenCalledWith('line_2')
+    await expect(dialog.getByRole('textbox', { name: /^Critical threshold/ })).toHaveValue('95')
+    // Saving as shown turns them on.
+    await userEvent.click(dialog.getByRole('button', { name: 'Add alerts' }))
+    await waitFor(() =>
+      expect(args.onCreateChargeAlert).toHaveBeenCalledWith({
+        lineId: 'line_2',
+        config: expect.objectContaining({ alertEnabled: true }),
+      }),
+    )
+  },
+}
+
 /** A fixed charge has no usage to watch, so its sheet offers no alerts. */
 export const NoAlertsOnFixedCharge: Story = {
   args: { ...BASE, onCreateChargeAlert: fn(), chargeAlerts: ready(new Map()) },
