@@ -502,8 +502,9 @@ function DetailBlock({ title, children }: { title: string; children: ReactNode }
 function Rows({ rows }: { rows: ReadonlyArray<ActivityDetailRow | ActivityField> }) {
   return (
     <div className="px-3 py-3">
+      {/* One column: the sheet is narrow, and two columns cut IDs and values in half. */}
       <Properties
-        columns={2}
+        columns={1}
         items={rows.map((row) => ({
           label: row.label,
           value:
@@ -581,7 +582,8 @@ function EventDetails({
             {showRaw ? 'Hide raw payload' : 'View raw payload'}
           </Button>
           {showRaw ? (
-            <pre className="bg-muted mt-2 max-h-96 overflow-auto rounded-lg p-3 font-mono text-xs leading-5">
+            // Wrapped, so a long value reads in the sheet rather than scrolling sideways.
+            <pre className="bg-muted mt-2 max-h-96 overflow-auto rounded-lg p-3 font-mono text-xs leading-5 break-all whitespace-pre-wrap">
               {row.raw}
             </pre>
           ) : null}
