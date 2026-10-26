@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
+import { type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type SetPassword, setPasswordSchema } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -55,10 +56,9 @@ export function SetPasswordForm({
   onRequestAnother,
 }: SetPasswordFormProps) {
   const [revealed, setRevealed] = useState(false)
-  const form = useForm<SetPassword>({
+  const form = useCalmForm<SetPassword>({
     resolver: standardSchemaResolver(setPasswordSchema) as Resolver<SetPassword>,
     defaultValues: { password: '', confirm: '' },
-    mode: 'onTouched',
   })
 
   if (done) {

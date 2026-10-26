@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { withoutEmptyFields } from './useCalmForm'
+import { emailEntryIsComplete, withoutEmptyFields, withoutOpenEmailEntries } from './useCalmForm'
 
 const err = (message: string) => ({ type: 'custom', message })
 
@@ -32,6 +32,25 @@ describe('withoutEmptyFields', () => {
         { tiers: [{ upTo: '', price: -1 }], address: { city: '' } },
       ),
     ).toEqual({ tiers: { 0: { price: err('Must be positive') } } })
+  })
+
+  it('keeps a finished email that is still not an address', () => {
+    expect(emailEntryIsComplete('a@b.c')).toBe(true)
+    expect(emailEntryIsComplete('d')).toBe(false)
+    expect(emailEntryIsComplete('not-an-email')).toBe(false)
+    expect(
+      withoutOpenEmailEntries(
+        {
+          early: err('That does not look like an email address'),
+          done: err('Enter a valid email address'),
+          required: err('Enter your email'),
+        } as never,
+        { early: 'd', done: 'a@b.c', required: '' },
+      ),
+    ).toEqual({
+      done: err('Enter a valid email address'),
+      required: err('Enter your email'),
+    })
   })
 
   it('keeps a mismatch on a field that has a value', () => {

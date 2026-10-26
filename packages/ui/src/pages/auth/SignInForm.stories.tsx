@@ -136,10 +136,22 @@ export const ValidationFromDomain: Story = {
 export const RejectsAMalformedEmail: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    const email = canvas.getByLabelText('Email')
 
-    await userEvent.type(canvas.getByLabelText('Email'), 'not-an-email')
+    // A prefix is not an address yet: one letter, or a word with no @, stays quiet.
+    await userEvent.type(email, 'd')
     await userEvent.tab()
+    await expect(canvas.queryByText('That does not look like an email address')).toBeNull()
 
+    await userEvent.clear(email)
+    await userEvent.type(email, 'not-an-email')
+    await userEvent.tab()
+    await expect(canvas.queryByText('That does not look like an email address')).toBeNull()
+
+    // A finished address that still is not one is checked on leaving the field.
+    await userEvent.clear(email)
+    await userEvent.type(email, 'a@b.c')
+    await userEvent.tab()
     await expect(
       await canvas.findByText('That does not look like an email address'),
     ).toBeInTheDocument()

@@ -84,8 +84,7 @@ const dayLabel = new Intl.DateTimeFormat('en-US', {
 })
 
 /** The status of one report read: loading, failed, nothing to show, or ready. */
-const useCardReport = (key: string, query: ReportQuery | null) =>
-  useReport(key, query, { handleErrors: true })
+const useCardReport = (key: string, query: ReportQuery | null) => useReport(key, query)
 
 const CREDIT_TYPES = { paid: 'Paid credits', free: 'Free credits' }
 

@@ -3041,7 +3041,21 @@ export const handlers = [
       customer_id?: string
       entity_type?: string
       entity_id?: string
+      start_time?: string
+      end_time?: string
+      actor_types?: string[]
+      actions?: string[]
+      request_id?: string
+      cursor?: string
       limit?: number
+    }
+    // As the API: at most 50 with state, and an unknown action is refused.
+    const limit = Math.min(body.limit ?? 20, 50)
+    if ((body.actions ?? []).some((action) => !/^[a-z_]+\.[a-z_]+$/.test(action))) {
+      return HttpResponse.json(
+        { code: 'validation_error', message: 'Unknown action.' },
+        { status: 400 },
+      )
     }
     const records: { type: string; row: Record<string, unknown>; label: string }[] = []
     const add = (type: string, row: Record<string, unknown> | undefined | null, label: string) => {
@@ -3078,22 +3092,69 @@ export const handlers = [
         row ? readString(row, body.entity_type === 'invoice' ? 'invoice_number' : 'name') : '',
       )
     }
-    const items = records
+    // Who made each change, as the real log records it: a person in the
+    // dashboard for a customer, the billing workflow for an invoice, the
+    // system for anything else.
+    const actorFor = (type: string) =>
+      type === 'customer'
+        ? {
+            actor: { type: 'user', id: 'user_demo', label: 'demo@flexprice.io' },
+            source: 'dashboard',
+          }
+        : type === 'invoice'
+          ? {
+              actor: { type: 'system', id: 'billing', label: 'Billing workflow' },
+              source: 'workflow',
+            }
+          : { actor: { type: 'system' }, source: 'dashboard' }
+    const from = body.start_time ? Date.parse(body.start_time) : Number.NEGATIVE_INFINITY
+    const to = body.end_time ? Date.parse(body.end_time) : Number.POSITIVE_INFINITY
+    const all = records
       .filter(({ row }) => readString(row, 'created_at') !== '')
-      .map(({ type, row, label }) => ({
-        id: `act_${type}_${readString(row, 'id')}`,
-        action: `${type}.created`,
-        occurred_at: readString(row, 'created_at'),
-        source: 'dashboard',
-        entity: { id: readString(row, 'id'), type, label },
-        actor: { type: 'system' },
-        state: row,
-      }))
+      .map(({ type, row, label }) => {
+        const id = readString(row, 'id')
+        const { actor, source } = actorFor(type)
+        return {
+          id: `act_${type}_${id}`,
+          action: `${type}.created`,
+          occurred_at: readString(row, 'created_at'),
+          source,
+          entity: { id, type, label },
+          ...(body.customer_id ? { customer_id: body.customer_id } : {}),
+          actor,
+          ...(source === 'dashboard' && actor.type === 'user'
+            ? {
+                request_id: `req_${id.slice(-12)}`,
+                ip: '203.0.113.24',
+                user_agent:
+                  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36',
+              }
+            : {}),
+          state: row,
+        }
+      })
+      .filter((item) => {
+        const at = Date.parse(item.occurred_at)
+        return (
+          at >= from &&
+          at < to &&
+          (!body.actions?.length || body.actions.includes(item.action)) &&
+          (!body.actor_types?.length || body.actor_types.includes(item.actor.type)) &&
+          (!body.request_id || ('request_id' in item && item.request_id === body.request_id))
+        )
+      })
       .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || a.id.localeCompare(b.id))
-      .slice(0, Math.min(body.limit ?? 20, 50))
+    // An opaque cursor, as the API's: here, the offset of the next page.
+    const offset = body.cursor ? Number(atob(body.cursor)) || 0 : 0
+    const items = all.slice(offset, offset + limit)
+    const hasMore = offset + limit < all.length
     return HttpResponse.json({
       items,
-      pagination: { total: items.length, limit: body.limit ?? 20, offset: 0 },
+      pagination: {
+        limit,
+        next_cursor: hasMore ? btoa(String(offset + limit)) : null,
+        has_more: hasMore,
+      },
     })
   }),
 
