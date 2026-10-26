@@ -188,7 +188,7 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 - **Problem.** Descriptions are 46 to 107 characters and mix styles. The disconnect copy is long.
   Card heights vary.
 - **Acceptance.** One-line, action-led descriptions, clamped. A shorter disconnect confirm.
-- **Status.** Pending.
+- **Status.** Open: #216.
 
 ### R-21 Customer onboarding: only wallet and contract, as V1
 - **Problem.**
@@ -199,19 +199,19 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - The raw workflow type is shown.
 - **Acceptance.** Steps are wallet and contract only (others kept if already saved, not addable). A plan
   picker. One label per step.
-- **Status.** Pending.
+- **Status.** Open: #217.
 
 ### R-22 Duplicate identifiers
 - **Problem.** Customer detail shows External ID and ID in the header and again in the details card.
   The export detail shows its status twice (covered by R-19).
 - **Acceptance.** Each identifier shows once, copyable.
-- **Status.** Pending.
+- **Status.** Open: #218 (customer IDs). The export status shown twice is fixed in #215.
 
 ### R-23 Invoice list: one integration-mapping request, not one per row
 - **Problem.** `useEntityIntegrationColumns` makes one request per visible invoice. The API takes
   `entity_ids[]`.
 - **Acceptance.** One batched request per page.
-- **Status.** Pending.
+- **Status.** Blocked: `GET /integrations/mappings` takes a single `entity_id` (`internal/api/v1` `GetMappings`). Only the repository has a multi-id filter. Needs the handler to accept `entity_ids`.
 
 ## Priority 3: transcript items to verify, then fix if still open
 
@@ -219,25 +219,25 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 - **Transcript.** "Changing an invoice status, changing the payment status, editing the due date … is
   missing."
 - **Acceptance.** Verify. Add whatever the API supports (`PUT /invoices/{id}/payment`, void).
-- **Status.** Pending (verify).
+- **Status.** Verified: invoice edit sets the due date (`InvoiceForm`). "Update payment status" and "Void invoice" are in the detail page's More menu. Finalized to voided is the only status change the API allows.
 
 ### R-25 Record payment: pay from credits, and drop unsupported methods
-- **Status.** Pending (verify).
+- **Status.** Verified: Record payment offers Credits, drawn in the wallet's currency (`PaymentForm`, `RECORDABLE_PAYMENT_METHODS`).
 
 ### R-26 Recalculate invoice for drafts
-- **Status.** Pending (verify).
+- **Status.** Verified: "Recalculate invoice" is in More, for drafts (`InvoiceDetailView`).
 
 ### R-27 API key created dialog: larger, readable copy button; no close until saved
 - **Status.** Verified: the created-key dialog closes only via "I have saved it" and has a labelled copy button (`ApiKeysPanel.tsx`).
 
 ### R-28 Team: ⋯ menu for edit role and remove; invite states
-- **Status.** Pending (verify).
+- **Status.** Verified: Team rows use a row menu with "Edit roles" and Remove (`MembersPanel`).
 
 ### R-29 Portal appearance: hex code beside each colour
-- **Status.** Pending (verify).
+- **Status.** Verified: portal colours have a hex input with a live swatch (`PortalPanel`).
 
 ### R-30 Wallets: wallet type chip, wallet metadata
-- **Status.** Pending (verify).
+- **Status.** Verified: the wallet type chip is on the wallet card (`CustomerWalletView`), and wallet metadata shipped in #139.
 
 ## Product decisions (not built until decided)
 
@@ -247,14 +247,14 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
   - The widget tile shows "$0.002 / month", which is misleading.
 - **Open question.** The exact customer-facing wording is a product decision. The tile's
   "$0.002 / month" is wrong whatever the wording, so it can be fixed now.
-- **Status.** Pending (the tile fix). Wording: Blocked on product.
+- **Status.** Blocked: the pricing widget's tile is a vendored block (`solution-billing-2/plan-tile`). It takes only a monthly number, so a usage-only plan can't be shown honestly without a new kit tile and agreed wording.
 
 ### R-32 Chart area fills
 - **Status.** Blocked on product (suggestion only). Single-series charts already fill at 12% to 1%.
 
 ### R-33 Analytics: show "cost unavailable" apart from "no cost sheet"
 - **Problem.** A failed cost read shows "—", the same as having no cost sheet.
-- **Status.** Pending.
+- **Status.** Pending: needs the backend's behaviour without a cost sheet (an error code, or an empty reply) confirmed before "unavailable" can be told apart from "none".
 
 ## Blocked on backend or environment
 
@@ -321,6 +321,9 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 | R-17 API key Revoke gating | #213 | Open |
 | R-18 Webhook sheet states | #214 | Open |
 | R-19 Exports tidy | #215 | Open |
+| R-20 Integration copy | #216 | Open |
+| R-21 Onboarding steps | #217 | Open |
+| R-22 IDs once | #218 | Open |
 | Add-on commitments (prior work) | #197 | Open |
 
 **Merging.** None of these is merged. The session's permission check refuses `gh pr merge` ("Merge Without Review"), so each PR is left for a person to merge.
