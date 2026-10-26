@@ -99,6 +99,11 @@ export interface CustomerAnalyticsViewProps {
   onRetry?: (() => void) | undefined
   /** One muted line under the filters, for what the figures cover (a contract's scope). */
   note?: string | undefined
+  /**
+   * When set, the filters and Include children sit on this heading's row,
+   * at the right, and the note is not shown.
+   */
+  title?: string | undefined
 }
 
 const Muted = ({ children }: { children: React.ReactNode }) => (
@@ -125,8 +130,8 @@ function DateButton({
 }) {
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="outline" size="sm" className="h-8 px-3" />}>
-        {icon ? <CalendarIcon aria-hidden="true" /> : null}
+      <PopoverTrigger render={<Button variant="outline" size="sm" className="h-8 gap-2 px-3" />}>
+        {icon ? <CalendarIcon aria-hidden="true" className="size-4" /> : null}
         {label} {value}
         <ChevronDownIcon className="opacity-50" aria-hidden="true" />
       </PopoverTrigger>
@@ -159,6 +164,7 @@ export function CustomerAnalyticsView({
   error = null,
   onRetry,
   note,
+  title,
 }: CustomerAnalyticsViewProps) {
   const [activeTab, setActiveTab] = useState('')
   const all = selectedFeatureIds.length === 0
@@ -172,22 +178,21 @@ export function CustomerAnalyticsView({
     onSelectedFeatureIdsChange(next.length === featureOptions.length ? [] : next)
   }
 
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <DropdownMenu>
+  const filters = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-3"
+                className="h-8 gap-2 px-3"
                 aria-label="Features"
                 disabled={featureOptions.length === 0}
               />
             }
           >
-            <LayersIcon aria-hidden="true" />
+            <LayersIcon aria-hidden="true" className="size-4" />
             {all ? 'All features' : `${chosen.length} features`}
             <ChevronDownIcon className="opacity-50" aria-hidden="true" />
           </DropdownMenuTrigger>
@@ -222,16 +227,23 @@ export function CustomerAnalyticsView({
           min={query.from}
           onChange={(to) => onQueryChange({ ...query, to })}
         />
-        <label className="text-muted-foreground ml-auto flex items-center gap-2 text-[13px]">
-          Include children
-          <Switch
-            checked={query.includeChildren}
-            onCheckedChange={(includeChildren) => onQueryChange({ ...query, includeChildren })}
-            aria-label="Include children"
-          />
-        </label>
-      </div>
-      {note ? <p className="text-muted-foreground -mt-2 text-xs">{note}</p> : null}
+      <label
+        className={`text-muted-foreground flex items-center gap-2 text-[13px] ${title ? '' : 'ml-auto'}`}
+      >
+        Include children
+        <Switch
+          checked={query.includeChildren}
+          onCheckedChange={(includeChildren) => onQueryChange({ ...query, includeChildren })}
+          aria-label="Include children"
+        />
+      </label>
+    </div>
+  )
+
+  const body = (
+    <div className="flex flex-col gap-5">
+      {title ? null : filters}
+      {note && !title ? <p className="text-muted-foreground -mt-2 text-xs">{note}</p> : null}
 
       <dl className="bg-background grid grid-cols-2 divide-x rounded-xl border sm:grid-cols-4">
         {(
@@ -340,5 +352,12 @@ export function CustomerAnalyticsView({
         </>
       )}
     </div>
+  )
+
+  if (!title) return body
+  return (
+    <Section title={title} action={filters}>
+      {body}
+    </Section>
   )
 }

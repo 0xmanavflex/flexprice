@@ -39,14 +39,13 @@ export function CustomerAnalyticsPanel({
   externalId: string
   /**
    * Narrows the panel to part of the customer: a contract's metered charges
-   * (by meter), opening on its period, with a note saying what is covered.
+   * (by meter), opening on its period. The filters sit on the section heading.
    */
   scope?:
     | {
         meterIds: readonly string[]
         from?: string | undefined
         to?: string | undefined
-        note: string
       }
     | undefined
 }) {
@@ -121,7 +120,7 @@ export function CustomerAnalyticsPanel({
       query={query}
       onQueryChange={setQuery}
       featureOptions={options.map((feature) => ({ id: feature.id, name: feature.name }))}
-      {...(scope ? { note: scope.note } : {})}
+      {...(scope ? { title: 'Usage by feature' } : {})}
       selectedFeatureIds={featureIds}
       onSelectedFeatureIdsChange={setFeatureIds}
       totals={{

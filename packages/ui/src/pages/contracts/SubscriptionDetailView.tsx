@@ -148,7 +148,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     'compositions/ActivityLog',
     'compositions/detail-kit',
   ],
-  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Information, Charges, Usage, Invoices) directly under it, and an Activity and Related rail on Overview only. Lifecycle banners lead the Overview tab, then the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes. Information holds the side-by-side Contract and Billing & collection panels and the metadata card.',
+  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Charges, Usage, Invoices, Information) directly under it, and an Activity and Related rail on Overview only. Lifecycle banners lead the Overview tab, then the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes. Information holds the side-by-side Contract and Billing & collection panels and the metadata card.',
 })
 
 /** One section's data with its own loading and failure state, so a slow tab never blocks the page. */
@@ -876,7 +876,6 @@ export function SubscriptionDetailView({
           onChange={(next) => setTab(next as SubscriptionTab)}
           tabs={[
             { value: 'overview', label: 'Overview' },
-            { value: 'information', label: 'Information' },
             {
               value: 'charges',
               label: 'Charges',
@@ -890,6 +889,7 @@ export function SubscriptionDetailView({
               label: 'Invoices',
               ...(invoices.data ? { count: invoices.data.length } : {}),
             },
+            { value: 'information', label: 'Information' },
           ]}
         />
 
@@ -1437,7 +1437,7 @@ export function SubscriptionDetailView({
               usage charges for the period.
             */}
             {usageBreakdown ? (
-              <Section title="Usage by feature">{usageBreakdown}</Section>
+              usageBreakdown
             ) : (
               <PartSection
                 title="Usage charges"

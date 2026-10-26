@@ -238,7 +238,6 @@ export function SubscriptionDetailPage({
                   meterIds,
                   from,
                   to,
-                  note: "Usage of this contract's metered features by its customer. Usage of the same features on the customer's other contracts is included.",
                 }}
               />
             ),

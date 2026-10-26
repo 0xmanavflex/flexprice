@@ -138,14 +138,14 @@ export const Failed: Story = {
   },
 }
 
-/** Scoped to part of the customer (a contract's features): a line says what is covered. */
-export const WithScopeNote: Story = {
-  args: {
-    note: "Usage of this contract's metered features by its customer. Usage of the same features on the customer's other contracts is included.",
-  },
+/** A contract's usage: filters and Include children sit on the heading row. */
+export const WithHeading: Story = {
+  args: { title: 'Usage by feature' },
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByText(/Usage of this contract's metered features/),
-    ).toBeVisible()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'Usage by feature' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Features' })).toBeVisible()
+    await expect(canvas.getByLabelText('Include children')).toBeVisible()
+    await expect(canvas.queryByText(/Usage of this contract's metered features/)).toBeNull()
   },
 }
