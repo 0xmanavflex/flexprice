@@ -2761,9 +2761,11 @@ export const handlers = [
             key === 'days_to_pay'
               ? base * (0.6 + 0.8 * noise(`${key}:${combo.join('|')}`))
               : (base * (weights[i] ?? 0)) / sum
-          return [...combo, ...currency, ...values(now, now * 0.9)]
+          return { now, row: [...combo, ...currency, ...values(now, now * 0.9)] }
         })
+        .sort((a, b) => b.now - a.now)
         .slice(body.offset ?? 0, (body.offset ?? 0) + (body.limit ?? 500))
+        .map((entry) => entry.row)
       return HttpResponse.json({
         columns: [
           ...dims.map((name) => ({ name, type: 'string', role: 'dimension' })),
