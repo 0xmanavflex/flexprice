@@ -45,6 +45,8 @@ export interface WebhookMessageSheetProps {
   messageLoading?: boolean
   messageError?: string | null
   onRetry?: () => void
+  /** A retry after a failed load is in flight: the sheet shows loading and Try again waits. */
+  retrying?: boolean
   attempts: WebhookAttempt[]
   attemptsLoading?: boolean
   attemptsError?: string | null
@@ -60,6 +62,7 @@ export function WebhookMessageSheet({
   messageLoading = false,
   messageError = null,
   onRetry,
+  retrying = false,
   attempts,
   attemptsLoading = false,
   attemptsError = null,
@@ -82,24 +85,34 @@ export function WebhookMessageSheet({
             <SheetHeader>
               <SheetTitle>Message</SheetTitle>
               <SheetDescription>
-                {messageError ? 'The message could not be loaded.' : 'Loading the message…'}
+                {messageError && !retrying
+                  ? 'The message could not be loaded.'
+                  : 'Loading the message…'}
               </SheetDescription>
             </SheetHeader>
             <div className="flex flex-col gap-3 px-4 pb-4">
               {messageError ? (
                 <>
-                  <p role="alert" className="text-destructive text-sm">
-                    {messageError}
-                  </p>
+                  {retrying ? (
+                    <>
+                      <Skeleton className="h-6 w-2/3" />
+                      <Skeleton className="h-40 w-full" />
+                    </>
+                  ) : (
+                    <p role="alert" className="text-destructive text-sm">
+                      {messageError}
+                    </p>
+                  )}
                   {onRetry ? (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="h-8 w-fit px-3"
+                      disabled={retrying}
                       onClick={onRetry}
                     >
-                      Try again
+                      {retrying ? 'Trying again…' : 'Try again'}
                     </Button>
                   ) : null}
                 </>

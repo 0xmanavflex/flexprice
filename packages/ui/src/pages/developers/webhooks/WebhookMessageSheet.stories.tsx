@@ -60,3 +60,20 @@ export const MessageFailed: Story = {
     await expect(args.onRetry).toHaveBeenCalled()
   },
 }
+
+/** Try again is in flight: the sheet shows loading again and the button waits. */
+export const RetryingMessage: Story = {
+  args: {
+    message: null,
+    open: true,
+    messageError: 'The message was not found.',
+    onRetry: fn(),
+    retrying: true,
+    attempts: [],
+  },
+  play: async () => {
+    await expect(await screen.findByText('Loading the message…')).toBeVisible()
+    await expect(screen.queryByText('The message was not found.')).toBeNull()
+    await expect(screen.getByRole('button', { name: 'Trying again…' })).toBeDisabled()
+  },
+}
