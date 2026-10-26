@@ -252,6 +252,8 @@ export const INVOICE_FILTERS: readonly ListFilterSpec[] = [
 /** One line of an invoice, as the detail page shows it. Amounts stay exact strings. */
 export interface InvoiceDetailLine {
   id: string
+  /** The price that produced this line; empty when the API did not say. */
+  priceId?: string
   description: string
   /** The period or unit note under the description, when the API sent one. */
   detail: string

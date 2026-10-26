@@ -989,6 +989,8 @@ export function canResumeSubscription(status: SubscriptionStatus): boolean {
 /** One line of the invoice a contract will raise next. */
 export interface InvoicePreviewLine {
   id: string
+  /** The price that produced this line: joins it to the contract's line for its real price. */
+  priceId: string
   name: string
   /** The period note under the name, when the API sent one. */
   detail: string

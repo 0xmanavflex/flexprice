@@ -365,6 +365,7 @@ function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
         ? price.transformQuantity.divideBy
         : null,
     priceUnit: custom ? (price.priceUnit ?? '') : '',
+    ...(custom && price.priceUnitAmount ? { priceUnitAmount: price.priceUnitAmount } : {}),
     meterId: wire.meterId || price.meterId || '',
     billingPeriod:
       wire.billingPeriod && wire.billingPeriod in BILLING_PERIOD_LABEL
@@ -1672,6 +1673,7 @@ export function toInvoicePreview(wire: InvoicePreviewWire): InvoicePreview {
     periodEnd: wire.periodEnd ?? null,
     lines: detail.lines.map((line) => ({
       id: line.id,
+      priceId: line.priceId ?? '',
       name: line.description,
       detail: line.detail,
       quantity: line.quantity,

@@ -118,6 +118,8 @@ export interface LinePricing {
   divideBy: number | null
   /** The custom price unit (`TOK`, `CRD`) the price is written in; empty for plain currency. */
   priceUnit: string
+  /** The rate in `priceUnit` (e.g. `"10"` TOK), when the price has a custom unit and the API sent it. */
+  priceUnitAmount?: string
   meterId: string
   /** Shown locked on an edit: a price's period and currency cannot change. */
   billingPeriod: BillingPeriod | null
