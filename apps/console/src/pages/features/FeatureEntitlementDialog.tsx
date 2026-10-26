@@ -89,6 +89,7 @@ export function FeatureEntitlementDialog({ feature, onClose }: FeatureEntitlemen
           </Field>
           <EntitlementCreateForm
             key={feature.id}
+            grantModel
             features={[
               {
                 id: feature.id,

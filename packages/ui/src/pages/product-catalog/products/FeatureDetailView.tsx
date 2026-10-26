@@ -7,8 +7,9 @@ import {
   FEATURE_TYPE_LABEL,
   FeatureType,
   needsAggregationTarget,
-  USAGE_RESET_PERIOD_LABEL,
   type Feature,
+  meteredAllowanceLabel,
+  meteredResetLabel,
 } from '@fp/domain'
 import { ArchiveIcon, BellIcon, CopyIcon, PencilIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
@@ -134,7 +135,7 @@ function statusLabel(status: string): string {
 
 function allowanceOf(entitlement: Entitlement): string {
   if (entitlement.featureType === FeatureType.Metered) {
-    return entitlement.usageLimit == null ? 'Unlimited' : entitlement.usageLimit.toLocaleString()
+    return meteredAllowanceLabel(entitlement)
   }
   if (entitlement.featureType === FeatureType.Boolean) return entitlement.isEnabled ? 'Yes' : 'No'
   if (entitlement.featureType === FeatureType.Static) return entitlement.staticValue ?? '—'
@@ -142,7 +143,7 @@ function allowanceOf(entitlement: Entitlement): string {
 }
 
 function resetsOf(entitlement: Entitlement): string {
-  return entitlement.usageResetPeriod ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod] : '—'
+  return meteredResetLabel(entitlement) ?? '—'
 }
 
 export function FeatureDetailView({

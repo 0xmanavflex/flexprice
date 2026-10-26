@@ -2838,6 +2838,7 @@
         "FeatureTypeGlyph",
         "Field",
         "FormActions",
+        "GrantAllowanceFields",
         "MeteredEntitlementFields",
         "OptionCombobox"
       ],
@@ -2854,6 +2855,7 @@
         "FeatureTypeGlyph",
         "Field",
         "FormActions",
+        "GrantAllowanceFields",
         "MeteredEntitlementFields",
         "OptionCombobox"
       ],
@@ -3424,6 +3426,7 @@
         "ForgotPasswordForm",
         "FormCard",
         "FormRow",
+        "GrantAllowanceFields",
         "InvoiceForm",
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
@@ -4015,6 +4018,19 @@
         "SignUpScreen"
       ],
       "story": "./src/pages/auth/SignInScreen.stories.tsx"
+    },
+    "GrantAllowanceFields": {
+      "file": "src/pages/product-catalog/entitlements/GrantAllowanceFields.tsx",
+      "layer": "surface",
+      "composes": [
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "EntitlementCreateForm",
+        "EntitlementEditForm"
+      ],
+      "story": "./src/pages/product-catalog/entitlements/GrantAllowanceFields.stories.tsx"
     },
     "GridFooter": {
       "file": "src/compositions/tables/GridFooter.tsx",
@@ -5237,6 +5253,7 @@
         "DataExportDialog",
         "EnvironmentCopyForm",
         "FeatureForm",
+        "GrantAllowanceFields",
         "GroupForm",
         "InvoiceForm",
         "MeteredEntitlementFields",
@@ -9442,6 +9459,13 @@
       "component": "EntitlementTable",
       "uses": [
         "EntitlementTable"
+      ]
+    },
+    "./src/pages/product-catalog/entitlements/GrantAllowanceFields.stories.tsx": {
+      "title": "App/Product catalog/Entitlements/Grant allowance fields",
+      "component": null,
+      "uses": [
+        "GrantAllowanceFields"
       ]
     },
     "./src/pages/product-catalog/entitlements/MeteredEntitlementFields.stories.tsx": {

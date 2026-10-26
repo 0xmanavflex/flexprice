@@ -3,7 +3,12 @@ import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { PlusIcon } from '@ui/icons'
 import { FEATURE_TYPE_GLYPH } from '../../shared/cells'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
-import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
+import {
+  type Entitlement,
+  FeatureType,
+  meteredAllowanceLabel,
+  meteredResetLabel,
+} from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
 
@@ -57,7 +62,7 @@ const TYPE_LABEL: Record<FeatureType, string> = {
 function valueOf(entitlement: Entitlement): string {
   switch (entitlement.featureType) {
     case FeatureType.Metered:
-      return entitlement.usageLimit == null ? 'Unlimited' : entitlement.usageLimit.toLocaleString()
+      return meteredAllowanceLabel(entitlement)
     case FeatureType.Boolean:
       return entitlement.isEnabled ? 'Yes' : 'No'
     case FeatureType.Static:
@@ -177,10 +182,8 @@ function EntitlementTableInner({
             key: 'reset',
             header: 'Usage resets',
             cell: (entitlement) =>
-              entitlement.usageResetPeriod ? (
-                <span className="text-muted-foreground">
-                  {USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod]}
-                </span>
+              meteredResetLabel(entitlement) ? (
+                <span className="text-muted-foreground">{meteredResetLabel(entitlement)}</span>
               ) : (
                 <EmDash />
               ),
