@@ -1300,6 +1300,25 @@ const fxRates: Record<string, unknown>[] = [
   },
 ]
 
+/** Whether an override's window meets another live override for its owner and pair ([start, end), open ends). */
+function fxOverlaps(rate: Record<string, unknown>, live: Record<string, unknown>[]) {
+  const time = (value: unknown) => (value ? new Date(String(value)).getTime() : undefined)
+  const [aStart, aEnd] = [time(rate['start_date']), time(rate['end_date'])]
+  return live.some((row) => {
+    if (
+      row['scope'] !== rate['scope'] ||
+      row['scope_id'] !== rate['scope_id'] ||
+      row['from_currency'] !== rate['from_currency'] ||
+      row['to_currency'] !== rate['to_currency']
+    )
+      return false
+    const [bStart, bEnd] = [time(row['start_date']), time(row['end_date'])]
+    if (aStart !== undefined && bEnd !== undefined && aStart >= bEnd) return false
+    if (bStart !== undefined && aEnd !== undefined && bStart >= aEnd) return false
+    return true
+  })
+}
+
 /** A refusal in the API's envelope, its hint as the message. */
 function fxRefusal(message: string) {
   return HttpResponse.json({ success: false, error: { message } }, { status: 400 })
@@ -5223,11 +5242,14 @@ export const handlers = [
   // and one pair's override windows do not overlap.
   http.post(`${BASE}/forex/query`, async ({ request }) => {
     const body = await readBody(request)
+    // The filter DSL too (the console asks for fixed rates only), as the API applies it.
+    const conditions = (body['filters'] ?? []) as Parameters<typeof matchesCondition>[1][]
     const items = fxRates.filter(
       (row) =>
         row['status'] === 'published' &&
         (!body['scope'] || row['scope'] === body['scope']) &&
-        (!body['scope_id'] || row['scope_id'] === body['scope_id']),
+        (!body['scope_id'] || row['scope_id'] === body['scope_id']) &&
+        conditions.every((condition) => matchesCondition(row, condition)),
     )
     const limit = Number(body['limit'] ?? 50)
     const offset = Number(body['offset'] ?? 0)
@@ -5252,21 +5274,7 @@ export const handlers = [
     } else {
       if (!live.some((row) => row['scope'] === 'tenant' && pair(row)))
         return fxRefusal(`Add a global ${label} rate before adding an override.`)
-      const window = { start: body['start_date'], end: body['end_date'] }
-      const time = (value: unknown) => (value ? new Date(String(value)).getTime() : undefined)
-      const overlaps = live.some((row) => {
-        if (row['scope'] !== body['scope'] || row['scope_id'] !== body['scope_id'] || !pair(row))
-          return false
-        const [aStart, aEnd, bStart, bEnd] = [
-          time(window.start),
-          time(window.end),
-          time(row['start_date']),
-          time(row['end_date']),
-        ]
-        if (aStart !== undefined && bEnd !== undefined && aStart >= bEnd) return false
-        if (bStart !== undefined && aEnd !== undefined && bStart >= aEnd) return false
-        return true
-      })
+      const overlaps = fxOverlaps({ ...body, from_currency: from, to_currency: to }, live)
       if (overlaps) return fxRefusal(`Another ${label} override overlaps this period.`)
     }
     const now = new Date().toISOString()
@@ -5287,6 +5295,18 @@ export const handlers = [
     const row = fxRates.find((item) => item['id'] === String(params['id']))
     if (!row) return HttpResponse.json({ message: 'FX rate not found' }, { status: 404 })
     const body = await readBody(request)
+    // An edited window is held to the same rule as a new one.
+    if (
+      row['scope'] !== 'tenant' &&
+      (body['start_date'] || body['end_date']) &&
+      fxOverlaps(
+        { ...row, ...body },
+        fxRates.filter((item) => item['status'] === 'published' && item['id'] !== row['id']),
+      )
+    )
+      return fxRefusal(
+        `Another ${String(row['from_currency']).toUpperCase()} → ${String(row['to_currency']).toUpperCase()} override overlaps this period.`,
+      )
     if (row['scope'] === 'tenant' && (body['start_date'] || body['end_date']))
       return fxRefusal(
         'A tenant FX rate applies at all times; validity windows are only for customer or subscription overrides.',

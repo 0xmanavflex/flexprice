@@ -9,9 +9,6 @@ import {
 } from '@fp/query'
 import { FxRatesSection, toast } from '@fp/ui/pages'
 
-/** Rates are few: one per pair, a handful of overrides. One read holds them all. */
-const ALL = { page: 1, pageSize: 100 }
-
 export interface FxRatesPanelProps {
   owner: FxRateOwner
   /** A contract converts from its own currency. */
@@ -26,7 +23,7 @@ export interface FxRatesPanelProps {
  * rate for the pair, an overlapping window) is shown in the dialog.
  */
 export function FxRatesPanel({ owner, lockedFrom, emptyDescription, readOnly }: FxRatesPanelProps) {
-  const rates = useFxRates(owner, ALL)
+  const rates = useFxRates(owner)
   const create = useCreateFxRate(owner)
   const update = useUpdateFxRate()
   const remove = useDeleteFxRate()
@@ -41,7 +38,7 @@ export function FxRatesPanel({ owner, lockedFrom, emptyDescription, readOnly }: 
   return (
     <FxRatesSection
       kind={global ? 'global' : 'override'}
-      rates={rates.data?.rates ?? []}
+      rates={rates.data ?? []}
       isLoading={rates.isPending}
       failed={rates.error !== null}
       onRetry={() => void rates.refetch()}

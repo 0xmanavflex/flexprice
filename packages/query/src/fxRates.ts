@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { call, type FlexpriceModels } from '@fp/api'
 import { type FxRate, type FxRateDraft, FxRateScope } from '@fp/domain'
 import { queryKeys } from './keys'
+import { sortWithTieBreak } from './listSort'
 import { useFlexprice } from './provider'
 
 /**
@@ -90,31 +91,39 @@ export function toUpdateFxRateRequest(
   }
 }
 
-export function useFxRates(owner: FxRateOwner, page: { page: number; pageSize: number }) {
+const FX_PAGE = 100
+
+/** Every rate the owner has, page by page to the reported total: the section lists them whole. */
+export function useFxRates(owner: FxRateOwner) {
   const client = useFlexprice()
   const scopeId = owner.scope === FxRateScope.Tenant ? '' : owner.scopeId
 
   return useQuery({
-    queryKey: queryKeys.fxRates.list({ scope: owner.scope, scopeId, ...page }),
+    queryKey: queryKeys.fxRates.list({ scope: owner.scope, scopeId }),
     queryFn: async ({ signal }) => {
-      const response = await call(
-        (options) =>
-          client.fxRates.queryFXRates(
-            {
-              scope: owner.scope,
-              ...(scopeId ? { scopeId } : {}),
-              limit: page.pageSize,
-              offset: (page.page - 1) * page.pageSize,
-              filters: [FIXED_ONLY],
-            },
-            options,
-          ),
-        signal,
-      )
-      return {
-        rates: (response.items ?? []).map((item) => toFxRate(item)),
-        total: response.pagination?.total ?? 0,
+      const rates: FxRate[] = []
+      for (let offset = 0; ; offset += FX_PAGE) {
+        const response = await call(
+          (options) =>
+            client.fxRates.queryFXRates(
+              {
+                scope: owner.scope,
+                ...(scopeId ? { scopeId } : {}),
+                limit: FX_PAGE,
+                offset,
+                // A total order, so no rate moves across a page boundary.
+                sort: sortWithTieBreak('created_at', 'asc'),
+                filters: [FIXED_ONLY],
+              },
+              options,
+            ),
+          signal,
+        )
+        const items = response.items ?? []
+        rates.push(...items.map((item) => toFxRate(item)))
+        if (items.length < FX_PAGE || rates.length >= (response.pagination?.total ?? 0)) break
       }
+      return rates
     },
     enabled: owner.scope === FxRateScope.Tenant || scopeId.length > 0,
     placeholderData: keepPreviousData,
