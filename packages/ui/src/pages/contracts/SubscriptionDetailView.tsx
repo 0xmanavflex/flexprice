@@ -652,7 +652,15 @@ export function SubscriptionDetailView({
         // the save updates whatever the line holds.
         void Promise.resolve(loadChargeAlert?.(lineId) ?? null)
           .catch(() => null)
-          .then((stored) => setAlertEdit({ lineId, config: stored ?? emptyAlertSettingConfig() }))
+          .then((stored) =>
+            setAlertEdit({
+              lineId,
+              // Adding alerts means turning them on: a switched-off setting
+              // opens on its thresholds with the switch on, so saving as
+              // shown enables them.
+              config: stored ? { ...stored, alertEnabled: true } : emptyAlertSettingConfig(),
+            }),
+          )
         return
       }
     }

@@ -1939,6 +1939,14 @@ export const AddAlertsOpensOnStoredThresholds: Story = {
     const dialog = within(await body.findByRole('dialog', { name: 'Add alerts' }))
     await expect(args.loadChargeAlert).toHaveBeenCalledWith('line_2')
     await expect(dialog.getByRole('textbox', { name: /^Critical threshold/ })).toHaveValue('95')
+    // Saving as shown turns them on.
+    await userEvent.click(dialog.getByRole('button', { name: 'Add alerts' }))
+    await waitFor(() =>
+      expect(args.onCreateChargeAlert).toHaveBeenCalledWith({
+        lineId: 'line_2',
+        config: expect.objectContaining({ alertEnabled: true }),
+      }),
+    )
   },
 }
 
