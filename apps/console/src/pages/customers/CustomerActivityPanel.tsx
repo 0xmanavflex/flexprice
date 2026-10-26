@@ -10,9 +10,10 @@ import {
   activityStatus,
   activityTitle,
   describeActivity,
+  MemberType,
   type ActivityEntry,
 } from '@fp/domain'
-import { useActivityPage } from '@fp/query'
+import { useActivityPage, useMembers } from '@fp/query'
 import {
   CustomerActivityView,
   type ActivityRange,
@@ -202,7 +203,7 @@ export function CustomerActivityPanel({
   // Cursors of the pages visited, so Previous can go back: `[undefined]` is
   // page 1. They belong to one set of server-side filters: change any of
   // those and the trail starts again from its first page.
-  const serverKey = `${filters.action}|${filters.actorType}|${filters.range}|${filters.from ?? ''}|${filters.to ?? ''}|${pageSize}`
+  const serverKey = `${filters.action}|${filters.actorType}|${filters.actorId ?? ''}|${filters.range}|${filters.from ?? ''}|${filters.to ?? ''}|${pageSize}`
   const [paging, setPaging] = useState<{ key: string; cursors: Array<string | undefined> }>({
     key: serverKey,
     cursors: [undefined],
@@ -217,10 +218,30 @@ export function CustomerActivityPanel({
     startTime: window.start,
     endTime: window.end,
     ...(filters.actorType ? { actorTypes: [filters.actorType] } : {}),
+    ...(filters.actorId ? { actorId: filters.actorId } : {}),
     ...(filters.action ? { actions: [filters.action] } : {}),
     ...(cursor ? { cursor } : {}),
     limit: pageSize,
   })
+
+  // The Person filter: the tenant's people, read once the actor is User.
+  const people = useMembers({
+    page: 1,
+    pageSize: 100,
+    type: MemberType.User,
+    search: '',
+    roles: [],
+  })
+  const personOptions = useMemo(
+    () =>
+      filters.actorType === 'user'
+        ? (people.data?.members ?? []).map((member) => ({
+            value: member.id,
+            label: member.name || member.email || member.id,
+          }))
+        : [],
+    [filters.actorType, people.data],
+  )
 
   const entries = useMemo(() => page.data?.entries ?? [], [page.data])
   const rows = useMemo(
@@ -253,6 +274,7 @@ export function CustomerActivityPanel({
       onFiltersChange={(next) => onSearchChange(activitySearchFrom(next))}
       actionOptions={ACTIONS.map((action) => ({ value: action, label: activityTitle(action) }))}
       actorOptions={ACTIVITY_ACTOR_TYPES}
+      personOptions={personOptions}
       sourceOptions={ACTIVITY_SOURCES.map((source) => ({
         value: source,
         label: activitySourceLabel(source),

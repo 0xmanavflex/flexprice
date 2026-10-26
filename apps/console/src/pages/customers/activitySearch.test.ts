@@ -59,3 +59,22 @@ describe('a custom activity range in the URL', () => {
     })
   })
 })
+
+describe('one person in the URL', () => {
+  it('keeps a person only when the actor is a user', () => {
+    expect(parseActivitySearch({ actor: 'user', by: 'user_01ABC' })).toEqual({
+      actor: 'user',
+      by: 'user_01ABC',
+    })
+    expect(parseActivitySearch({ actor: 'api_key', by: 'user_01ABC' })).toEqual({
+      actor: 'api_key',
+    })
+    expect(parseActivitySearch({ actor: 'user', by: 'a b/c' })).toEqual({ actor: 'user' })
+  })
+
+  it('round-trips the person', () => {
+    const filters = activityFiltersFrom({ actor: 'user', by: 'user_01ABC' })
+    expect(filters.actorId).toBe('user_01ABC')
+    expect(activitySearchFrom(filters)).toEqual({ actor: 'user', by: 'user_01ABC' })
+  })
+})
