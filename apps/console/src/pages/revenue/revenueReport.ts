@@ -297,6 +297,7 @@ export function creditRows(
       paid,
       free,
       total: paid + free,
+      share: grand > 0 ? (paid + free) / grand : 0,
       display: {
         paid: money(paid),
         free: money(free),
@@ -409,7 +410,7 @@ export function receivables(
   const amounts = new Map<string, number>(AGING.map((bucket) => [bucket.id, 0]))
   let notYetDue = 0
   let noDueDate = 0
-  const byCustomer = new Map<string, OverdueCustomerRow & { outstandingValue: number }>()
+  const byCustomer = new Map<string, OverdueCustomerRow>()
 
   for (const invoice of unpaid) {
     const remaining = amountOf(invoice.amountRemaining)
@@ -418,11 +419,11 @@ export function receivables(
       name: invoice.customerName || invoice.customerId,
       invoices: 0,
       overdue: 0,
+      outstanding: 0,
       display: { overdue: '', outstanding: '' },
       oldestDays: 0,
-      outstandingValue: 0,
     }
-    entry.outstandingValue += remaining
+    entry.outstanding += remaining
     if (!invoice.dueDate) {
       noDueDate += remaining
     } else {
@@ -468,11 +469,11 @@ export function receivables(
     customers: [...byCustomer.values()]
       .filter((row) => row.overdue > 0)
       .sort((a, b) => b.overdue - a.overdue)
-      .map(({ outstandingValue, ...row }) => ({
+      .map((row) => ({
         ...row,
         display: {
           overdue: formatAmount(row.overdue, currency),
-          outstanding: formatAmount(outstandingValue, currency),
+          outstanding: formatAmount(row.outstanding, currency),
         },
       })),
   }
