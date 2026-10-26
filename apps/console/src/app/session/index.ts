@@ -8,6 +8,7 @@
 export { SessionProvider, useSession, useSessionRef } from './SessionProvider'
 export type { Session, SessionStatus, SessionValue } from './SessionProvider'
 export { useAuthSource } from './useAuthSource'
+export { useSupabaseSessionSync } from './useSupabaseSessionSync'
 export { getActiveEnvironmentId } from './activeEnvironment'
 export { bypassesSignIn, hasSession, needsSignIn } from './guard'
 export {

@@ -22,6 +22,13 @@ export interface StoredSession {
   token: string
   userId: string
   tenantId: string
+  /**
+   * Set when a hosted region's Supabase session client holds this session (see
+   * `sessionClientFor`); it then supplies a refreshed token per request and
+   * `token` is only the last one seen. Absent for `POST /auth/login`, SAML and
+   * self-hosted sessions, which have no refresh token.
+   */
+  region?: string
 }
 
 function store(): Storage | null {
@@ -95,6 +102,7 @@ export function readSession(): StoredSession | null {
     // rejecting the whole record.
     userId: typeof record['userId'] === 'string' ? record['userId'] : '',
     tenantId: typeof record['tenantId'] === 'string' ? record['tenantId'] : '',
+    ...(isNonEmptyString(record['region']) ? { region: record['region'] } : {}),
   }
 }
 
