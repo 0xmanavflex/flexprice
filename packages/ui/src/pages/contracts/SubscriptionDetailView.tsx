@@ -148,7 +148,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     'compositions/ActivityLog',
     'compositions/detail-kit',
   ],
-  note: 'Contract detail (read-only): DetailShell header with every action in More, four tabs (Overview, Charges, Usage, Invoices) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners lead the Overview tab, then side-by-side Contract and Billing & collection panels, the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes.',
+  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Information, Charges, Usage, Invoices) directly under it, and an Activity and Related rail on Overview only. Lifecycle banners lead the Overview tab, then the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes. Information holds the side-by-side Contract and Billing & collection panels and the metadata card.',
 })
 
 /** One section's data with its own loading and failure state, so a slow tab never blocks the page. */
@@ -277,7 +277,7 @@ export interface SubscriptionDetailViewProps {
   priceUnits?: PriceUnitOption[] | undefined
 }
 
-type SubscriptionTab = 'overview' | 'charges' | 'usage' | 'invoices'
+type SubscriptionTab = 'overview' | 'information' | 'charges' | 'usage' | 'invoices'
 
 const day = (date: Date | null | undefined) =>
   date
@@ -849,6 +849,7 @@ export function SubscriptionDetailView({
           onChange={(next) => setTab(next as SubscriptionTab)}
           tabs={[
             { value: 'overview', label: 'Overview' },
+            { value: 'information', label: 'Information' },
             {
               value: 'charges',
               label: 'Charges',
@@ -872,13 +873,6 @@ export function SubscriptionDetailView({
                 subscription={s}
                 schedules={schedules.data ?? []}
                 {...(canActivate && onActivate ? { onActivate } : {})}
-              />
-
-              <ContractDetails
-                subscription={s}
-                usage={usageData}
-                {...(onOpenCustomer ? { onOpenCustomer } : {})}
-                {...(onOpenPlan ? { onOpenPlan } : {})}
               />
 
               {preview ? <InvoicePreviewSection status={s.status} preview={preview} /> : null}
@@ -1256,10 +1250,6 @@ export function SubscriptionDetailView({
                 {...(activityEmptyText ? { emptyText: activityEmptyText } : {})}
                 awaiting={activityAwaiting}
               />
-              <MetadataCard
-                metadata={s.metadata}
-                {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
-              />
               <RelatedCard items={related}>
                 {integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
                   <ContractIntegrations
@@ -1272,6 +1262,26 @@ export function SubscriptionDetailView({
                 ) : null}
               </RelatedCard>
             </div>
+          </div>
+        ) : null}
+
+        {/*
+          The contract's own facts, kept off the Overview so it leads with
+          what the contract is doing (upcoming invoice, charges, add-ons):
+          its terms, billing and collection, and metadata.
+        */}
+        {tab === 'information' ? (
+          <div className="flex min-w-0 flex-col gap-6">
+            <ContractDetails
+              subscription={s}
+              usage={usageData}
+              {...(onOpenCustomer ? { onOpenCustomer } : {})}
+              {...(onOpenPlan ? { onOpenPlan } : {})}
+            />
+            <MetadataCard
+              metadata={s.metadata}
+              {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
+            />
           </div>
         ) : null}
 
