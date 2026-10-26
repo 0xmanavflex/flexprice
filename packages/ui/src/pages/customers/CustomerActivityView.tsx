@@ -1,7 +1,6 @@
 import { useState, type MouseEvent, type ReactNode } from 'react'
 import type { ActivityField } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { Input } from '@ui/components/primitives/input'
 import {
   Select,
   SelectContent,
@@ -17,8 +16,9 @@ import {
   SheetTitle,
 } from '@ui/components/primitives/sheet'
 import { Section } from '@ui/compositions/layout/Section'
-import { ErrorState } from '@ui/compositions/feedback/States'
-import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { Properties, SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { SubTabState } from '@ui/compositions/detail/SubTabState'
+import { Toolbar } from '@ui/compositions/tables/Toolbar'
 import {
   ActivityIcon,
   ChevronLeftIcon,
@@ -28,7 +28,6 @@ import {
   FileTextIcon,
   ReceiptIcon,
   RepeatIcon,
-  SearchIcon,
   UserIcon,
   WalletIcon,
 } from '@ui/icons'
@@ -244,6 +243,8 @@ export function CustomerActivityView({
   const selected = rows.find((row) => row.id === selectedId) ?? null
   const set = (patch: Partial<ActivityFilters>) => onFiltersChange({ ...filters, ...patch })
 
+  const activeFilters = [filters.action, filters.actorType, filters.source].filter(Boolean).length
+
   return (
     <>
       <Section
@@ -251,145 +252,163 @@ export function CustomerActivityView({
         description="Audit log of every change made to this customer and its records."
         flush
       >
-        <div className="flex flex-col gap-2 border-b px-6 py-4 lg:flex-row lg:items-center">
-          <div className="relative min-w-0 flex-1">
-            <SearchIcon
-              aria-hidden
-              className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            />
-            <Input
-              type="search"
-              aria-label="Search activity"
-              placeholder="Search events, IDs or people…"
-              value={filters.search}
-              onChange={(event) => set({ search: event.target.value })}
-              className="h-9 pl-9"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex">
-            <FilterSelect
-              label="Action"
-              value={filters.action}
-              allLabel="All actions"
-              options={actionOptions}
-              onChange={(action) => set({ action })}
-            />
-            <FilterSelect
-              label="Actor"
-              value={filters.actorType}
-              allLabel="All actors"
-              options={actorOptions}
-              onChange={(actorType) => set({ actorType })}
-            />
-            <FilterSelect
-              label="Source"
-              value={filters.source}
-              allLabel="All sources"
-              options={sourceOptions}
-              onChange={(source) => set({ source })}
-            />
-            <Select
-              value={filters.range}
-              items={ACTIVITY_RANGES.map((range) => ({ value: range.value, label: range.label }))}
-              onValueChange={(range) => range && set({ range: range as ActivityRange })}
-            >
-              <SelectTrigger aria-label="Date range" className="h-9 w-full sm:w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTIVITY_RANGES.map((range) => (
-                  <SelectItem key={range.value} value={range.value}>
-                    {range.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="border-b px-6 py-4">
+          <Toolbar
+            search={filters.search}
+            onSearchChange={(search) => set({ search })}
+            searchLabel="Search activity"
+            searchPlaceholder="Search events, IDs or people…"
+            activeFilterCount={activeFilters}
+            onClear={() => set({ action: '', actorType: '', source: '' })}
+            filters={
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                <FilterSelect
+                  label="Action"
+                  value={filters.action}
+                  allLabel="All actions"
+                  options={actionOptions}
+                  onChange={(action) => set({ action })}
+                />
+                <FilterSelect
+                  label="Actor"
+                  value={filters.actorType}
+                  allLabel="All actors"
+                  options={actorOptions}
+                  onChange={(actorType) => set({ actorType })}
+                />
+                <FilterSelect
+                  label="Source"
+                  value={filters.source}
+                  allLabel="All sources"
+                  options={sourceOptions}
+                  onChange={(source) => set({ source })}
+                />
+                <Select
+                  value={filters.range}
+                  items={ACTIVITY_RANGES.map((range) => ({
+                    value: range.value,
+                    label: range.label,
+                  }))}
+                  onValueChange={(range) => range && set({ range: range as ActivityRange })}
+                >
+                  <SelectTrigger aria-label="Date range" className="h-9 w-full sm:w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTIVITY_RANGES.map((range) => (
+                      <SelectItem key={range.value} value={range.value}>
+                        {range.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            }
+          />
         </div>
 
-        {error ? (
-          <div className="p-6">
-            <ErrorState
-              title="Activity could not be loaded"
-              description={error}
-              {...(onRetry ? { onRetry } : {})}
-            />
-          </div>
-        ) : isLoading ? (
-          <p role="status" className="text-muted-foreground px-6 py-10 text-center text-[13px]">
-            Loading activity…
-          </p>
-        ) : rows.length === 0 ? (
-          <div className="p-6">
-            <EmptyState
-              size="inline"
-              title="No activity matches"
-              description="Nothing was recorded for this customer with these filters. Widen the date range or clear a filter."
-            />
-          </div>
-        ) : (
-          <ol
+        <SubTabState
+          hasData={rows.length > 0}
+          isLoading={isLoading}
+          error={error}
+          onRetry={onRetry}
+          columns={4}
+          loadingLabel="Loading activity"
+          empty={{
+            scene: 'customers',
+            title: 'No activity matches',
+            description:
+              'Nothing was recorded for this customer with these filters. Widen the date range or clear a filter.',
+          }}
+        >
+          <div
             aria-label="Activity events"
-            className={cn('divide-y', isFetching && 'opacity-60 transition-opacity')}
+            role="region"
+            className={cn(isFetching && 'opacity-60 transition-opacity')}
           >
-            {rows.map((row) => {
-              const Icon = ENTITY_ICON[row.entityType] ?? ActivityIcon
-              return (
-                <li
-                  key={row.id}
-                  // The whole row opens the details for a pointer; the chevron
-                  // button is the same action for the keyboard and screen
-                  // readers, so the record link is never nested in a control.
-                  onClick={() => setSelectedId(row.id)}
-                  className="hover:bg-muted/40 grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-1 px-6 py-3.5 md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.2fr)_13rem_14rem_auto]"
-                >
-                  <span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-full">
-                    <Icon aria-hidden className="size-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{row.title}</span>
-                    <span className="text-muted-foreground block truncate text-[13px]">
-                      {row.entityNoun} ·{' '}
-                      <RecordLink row={row} onNavigate={onNavigate}>
-                        {row.entityLabel}
-                      </RecordLink>
+            <SimpleTable
+              rows={rows}
+              getRowId={(row) => row.id}
+              // A pointer can click the whole row; the chevron button is the
+              // same action for the keyboard, so the record link is never
+              // nested inside a control.
+              onRowClick={(row) => setSelectedId(row.id)}
+              columns={[
+                {
+                  key: 'event',
+                  header: 'Event',
+                  cell: (row) => {
+                    const Icon = ENTITY_ICON[row.entityType] ?? ActivityIcon
+                    return (
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
+                          <Icon aria-hidden className="size-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium">{row.title}</span>
+                          <span className="text-muted-foreground block max-w-80 truncate text-[13px]">
+                            {row.entityNoun} ·{' '}
+                            <RecordLink row={row} onNavigate={onNavigate}>
+                              {row.entityLabel}
+                            </RecordLink>
+                          </span>
+                        </span>
+                      </span>
+                    )
+                  },
+                },
+                {
+                  key: 'actor',
+                  header: 'Actor',
+                  cell: (row) => (
+                    <span className="block">
+                      <span className="block text-[13px]">{row.actor}</span>
+                      <span className="text-muted-foreground block text-xs">{row.actorDetail}</span>
                     </span>
-                  </span>
-                  <span className="hidden min-w-0 md:block">
-                    <span className="block truncate text-[13px]">{row.actor}</span>
-                    <span className="text-muted-foreground block truncate text-xs">
-                      {row.actorDetail}
+                  ),
+                },
+                {
+                  key: 'at',
+                  header: 'Time',
+                  cell: (row) => (
+                    <span className="text-muted-foreground text-[13px] tabular-nums">{row.at}</span>
+                  ),
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  cell: (row) => (
+                    <span className="flex gap-1.5">
+                      {row.statuses.map((status) => (
+                        <Pill key={status.label} tone={status.tone}>
+                          {status.label}
+                        </Pill>
+                      ))}
                     </span>
-                  </span>
-                  <span className="text-muted-foreground hidden text-[13px] tabular-nums md:block">
-                    {row.at}
-                  </span>
-                  <span className="hidden flex-nowrap gap-1.5 md:flex">
-                    {row.statuses.map((status) => (
-                      <Pill key={status.label} tone={status.tone}>
-                        {status.label}
-                      </Pill>
-                    ))}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Open details: ${row.title}, ${row.entityNoun} ${row.entityLabel}, by ${row.actor}, ${row.at}`}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setSelectedId(row.id)
-                    }}
-                  >
-                    <ChevronRightIcon aria-hidden />
-                  </Button>
-                  <span className="text-muted-foreground col-span-2 col-start-2 text-xs md:hidden">
-                    {row.actor} · {row.actorDetail} · {row.at}
-                  </span>
-                </li>
-              )
-            })}
-          </ol>
-        )}
+                  ),
+                },
+                {
+                  key: 'open',
+                  header: '',
+                  className: 'w-12',
+                  cell: (row) => (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Open details: ${row.title}, ${row.entityNoun} ${row.entityLabel}, by ${row.actor}, ${row.at}`}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setSelectedId(row.id)
+                      }}
+                    >
+                      <ChevronRightIcon aria-hidden />
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        </SubTabState>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-3">
           <p className="text-muted-foreground text-[13px]" aria-live="polite">
@@ -483,20 +502,20 @@ function DetailBlock({ title, children }: { title: string; children: ReactNode }
 
 function Rows({ rows }: { rows: ReadonlyArray<ActivityDetailRow | ActivityField> }) {
   return (
-    <dl className="divide-y text-[13px]">
-      {rows.map((row) => (
-        <div key={row.label} className="grid grid-cols-[8rem_1fr] items-start gap-3 px-3 py-2.5">
-          <dt className="text-muted-foreground">{row.label}</dt>
-          <dd className="min-w-0 break-words">
-            {'copy' in row && row.copy ? (
+    <div className="px-3 py-3">
+      <Properties
+        columns={2}
+        items={rows.map((row) => ({
+          label: row.label,
+          value:
+            'copy' in row && row.copy ? (
               <CopyValue value={row.value} label={row.label} className="max-w-full" />
             ) : (
               row.value
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
+            ),
+        }))}
+      />
+    </div>
   )
 }
 

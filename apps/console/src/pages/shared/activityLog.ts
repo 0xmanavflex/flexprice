@@ -94,9 +94,9 @@ export function activityCardActor(entry: ActivityEntry): string {
  */
 export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {
   const facts = describeActivity(entry)
+  // States only: an amount, balance or total belongs in the drawer, not here.
   const states = (facts.fields ?? []).filter((field) => SUMMARY_LABELS.has(field.label))
-  const values = states.length > 0 ? states : (facts.fields ?? []).slice(0, 1)
-  const summary = values.map((field) => field.value).join(' · ')
+  const summary = states.map((field) => field.value).join(' · ')
   const href = activityEntityHref(entry)
   return {
     id: entry.id,

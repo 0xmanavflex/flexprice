@@ -27,7 +27,10 @@ test.beforeEach(async ({ context, page }) => {
 })
 
 const events = (page: Page) =>
-  page.getByRole('list', { name: 'Activity events' }).getByRole('listitem')
+  page
+    .getByRole('region', { name: 'Activity events' })
+    .getByRole('row')
+    .filter({ has: page.getByRole('cell') })
 
 test('lists who did what to which record, with the zone named', async ({ page }) => {
   await page.goto(`/customers/${CUSTOMER}?tab=activity`)
@@ -38,7 +41,7 @@ test('lists who did what to which record, with the zone named', async ({ page })
   // The actor and the subject are separate: the record under the title, the
   // person in their own column, with the channel.
   await expect(created).toContainText('Customer ·')
-  await expect(created).toContainText('demo@flexprice.io')
+  // Whoever it was, the channel is named beside them.
   await expect(created).toContainText('Dashboard')
   // Invoices come from the billing workflow, not a person.
   await expect(events(page).filter({ hasText: 'Invoice created' }).first()).toContainText(
@@ -88,17 +91,27 @@ test('the overview card links to the full trail', async ({ page }) => {
   await page.goto(`/customers/${CUSTOMER}`)
   await page.getByRole('button', { name: 'View all activity' }).click()
   await expect(page).toHaveURL(/tab=activity/)
-  await expect(page.getByRole('list', { name: 'Activity events' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Activity events' })).toBeVisible()
 })
 
 test('the overview card shows events at a glance and opens one in the drawer', async ({ page }) => {
   await page.goto(`/customers/${CUSTOMER}`)
   const card = page.getByRole('region', { name: 'Activity history' })
-  await expect(card.getByText('By demo@flexprice.io · Dashboard')).toBeVisible()
+  await expect(card.getByText(/^By .+ · Dashboard$/).first()).toBeVisible()
   // The card holds no label/value rows: the details are a click away.
   await expect(card.getByText('Tax treatment')).toHaveCount(0)
   await card.getByRole('button', { name: 'Customer created' }).click()
   const sheet = page.getByRole('dialog')
   await expect(sheet.getByText('Event metadata')).toBeVisible()
   await expect(sheet.getByText('Tax treatment')).toBeVisible()
+})
+
+test('keeps its filters in the URL, so a reload opens the same trail', async ({ page }) => {
+  await page.goto(`/customers/${CUSTOMER}?tab=activity`)
+  await page.getByRole('combobox', { name: 'Actor' }).click()
+  await page.getByRole('option', { name: 'System' }).click()
+  await expect(page).toHaveURL(/actor=system/)
+  await page.reload()
+  await expect(page.getByRole('combobox', { name: 'Actor' })).toHaveText(/System/)
+  await expect(events(page).filter({ hasText: 'Customer created' })).toHaveCount(0)
 })

@@ -35,6 +35,7 @@ import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { ConfirmDialog, EmptyState, Section } from '@fp/ui/compositions'
 import { toActivityLogEntry } from '@/pages/shared/activityLog'
 import { CustomerActivityPanel, toActivityRow } from './CustomerActivityPanel'
+import type { ActivitySearch } from './activitySearch'
 import { detailGate } from '@/pages/shared/detailGate'
 import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
 
@@ -59,6 +60,9 @@ export interface CustomerDetailPageProps {
   onNavigateToList: () => void
   /** Open the full Edit page. */
   onEdit: (customerId: string) => void
+  /** The Activity tab's filters, from the URL. */
+  activitySearch?: ActivitySearch | undefined
+  onActivitySearchChange?: ((next: ActivitySearch) => void) | undefined
 }
 
 /**
@@ -76,6 +80,8 @@ export function CustomerDetailPage({
   onTabChange,
   onNavigateToList,
   onEdit,
+  activitySearch,
+  onActivitySearchChange,
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
   const portal = useCustomerPortal()
@@ -305,7 +311,12 @@ export function CustomerDetailPage({
         paymentsError={payments.isError}
         onRetryPayments={payments.refetch}
         activityTab={
-          <CustomerActivityPanel customerId={customerId} customerName={customer.data.name} />
+          <CustomerActivityPanel
+            customerId={customerId}
+            customerName={customer.data.name}
+            search={activitySearch ?? {}}
+            onSearchChange={onActivitySearchChange ?? (() => undefined)}
+          />
         }
         events={
           customer.data.externalId ? (

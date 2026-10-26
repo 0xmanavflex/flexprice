@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { ActivityField } from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import { Button } from '@ui/components/primitives/button'
-import { ArrowUpRightIcon } from '@ui/icons'
+import { EyeIcon } from '@ui/icons'
 import { Section } from '../layout/Section'
 
 export const ActivityLogProvenance = provenance({
@@ -146,9 +146,11 @@ export function ActivitySection({
       {...(onViewAll
         ? {
             action: (
-              <Button variant="ghost" size="sm" onClick={onViewAll} aria-label="View all activity">
+              // As the overview's other "View all" buttons (invoices, payments).
+              <Button variant="outline" size="sm" className="h-8 px-3" onClick={onViewAll}>
+                <EyeIcon aria-hidden="true" />
                 View all
-                <ArrowUpRightIcon aria-hidden />
+                <span className="sr-only"> activity</span>
               </Button>
             ),
           }

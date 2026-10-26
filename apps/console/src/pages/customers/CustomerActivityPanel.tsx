@@ -15,12 +15,12 @@ import {
 import { useActivityPage } from '@fp/query'
 import {
   CustomerActivityView,
-  type ActivityFilters,
   type ActivityRange,
   type ActivityRowView,
   type ActivityStatus,
 } from '@fp/ui/pages'
 import { activityEntityHref, activityStamp, activityStampUtc } from '@/pages/shared/activityLog'
+import { activityFiltersFrom, activitySearchFrom, type ActivitySearch } from './activitySearch'
 
 const RANGE_MS: Record<ActivityRange, number> = {
   '24h': 24 * 3_600_000,
@@ -96,7 +96,9 @@ export function toActivityRow(entry: ActivityEntry, customerName?: string): Acti
   const noun = activityEntityNoun(entry.entityType)
   const isThisCustomer = entry.entityType === 'customer'
   const entityLabel =
-    (isThisCustomer && customerName) || facts.record || entry.entityLabel || entry.entityId
+    // The name recorded with the event first: after a rename, an old event
+    // keeps the name it had. The current name only fills a gap.
+    facts.record || entry.entityLabel || (isThisCustomer && customerName) || entry.entityId
   const href = activityEntityHref(entry)
   const statuses = [
     ...status(activityStatus(entry)),
@@ -124,6 +126,7 @@ export function toActivityRow(entry: ActivityEntry, customerName?: string): Acti
       entity: { type: entry.entityType, id: entry.entityId, label: entry.entityLabel },
       actor: { type: entry.actorType, id: entry.actorId, label: entry.actorLabel },
       source: entry.source,
+      ...(entry.customerId ? { customer_id: entry.customerId } : {}),
       ...(entry.requestId ? { request_id: entry.requestId } : {}),
       ...(entry.ip ? { ip: entry.ip } : {}),
       ...(entry.userAgent ? { user_agent: entry.userAgent } : {}),
@@ -169,15 +172,6 @@ function matches(row: ActivityRowView, entry: ActivityEntry, search: string): bo
   ].some((value) => value.toLowerCase().includes(needle))
 }
 
-const INITIAL: ActivityFilters = {
-  search: '',
-  action: '',
-  actorType: '',
-  source: '',
-  // The widest window the API allows: a quiet customer's last week is often empty.
-  range: '30d',
-}
-
 /**
  * The customer's Activity tab, on live data: `POST /activity` scoped to the
  * customer, with the action, actor type and date range filtered on the
@@ -187,17 +181,31 @@ const INITIAL: ActivityFilters = {
 export function CustomerActivityPanel({
   customerId,
   customerName,
+  search,
+  onSearchChange,
 }: {
   customerId: string
   customerName?: string | undefined
+  /** The filters, as the route's search params (`activitySearch.ts`). */
+  search: ActivitySearch
+  onSearchChange: (next: ActivitySearch) => void
 }) {
   const navigate = useNavigate()
-  const [filters, setFilters] = useState<ActivityFilters>(INITIAL)
+  const filters = activityFiltersFrom(search)
   const [pageSize, setPageSize] = useState(25)
-  // Cursors of the pages visited, so Previous can go back: `[undefined]` is page 1.
-  const [cursors, setCursors] = useState<Array<string | undefined>>([undefined])
   // Fixed when the range is chosen, so paging does not shift the window.
-  const [window, setWindow] = useState(() => windowFor(INITIAL.range))
+  const window = useMemo(() => windowFor(filters.range), [filters.range])
+  // Cursors of the pages visited, so Previous can go back: `[undefined]` is
+  // page 1. They belong to one set of server-side filters: change any of
+  // those and the trail starts again from its first page.
+  const serverKey = `${filters.action}|${filters.actorType}|${filters.range}|${pageSize}`
+  const [paging, setPaging] = useState<{ key: string; cursors: Array<string | undefined> }>({
+    key: serverKey,
+    cursors: [undefined],
+  })
+  const cursors = paging.key === serverKey ? paging.cursors : [undefined]
+  const setCursors = (next: Array<string | undefined>) =>
+    setPaging({ key: serverKey, cursors: next })
   const cursor = cursors[cursors.length - 1]
 
   const page = useActivityPage({
@@ -234,24 +242,11 @@ export function CustomerActivityPanel({
         ? `${rows.length} of ${entries.length} events on this page match`
         : `Showing ${first}–${first + entries.length - 1}${page.data?.hasMore ? '' : ` of ${first + entries.length - 1}`} events`
 
-  const reset = () => setCursors([undefined])
-
   return (
     <CustomerActivityView
       rows={rows}
       filters={filters}
-      onFiltersChange={(next) => {
-        // Server-side filters start again from page 1; search and source only narrow.
-        if (
-          next.action !== filters.action ||
-          next.actorType !== filters.actorType ||
-          next.range !== filters.range
-        ) {
-          reset()
-        }
-        if (next.range !== filters.range) setWindow(windowFor(next.range))
-        setFilters(next)
-      }}
+      onFiltersChange={(next) => onSearchChange(activitySearchFrom(next))}
       actionOptions={ACTIONS.map((action) => ({ value: action, label: activityTitle(action) }))}
       actorOptions={ACTIVITY_ACTOR_TYPES}
       sourceOptions={ACTIVITY_SOURCES.map((source) => ({
@@ -262,16 +257,13 @@ export function CustomerActivityPanel({
       page={pageNumber}
       hasPrevious={cursors.length > 1}
       hasNext={Boolean(page.data?.hasMore)}
-      onPrevious={() => setCursors((visited) => visited.slice(0, -1))}
+      onPrevious={() => setCursors(cursors.slice(0, -1))}
       onNext={() => {
         const next = page.data?.nextCursor
-        if (next) setCursors((visited) => [...visited, next])
+        if (next) setCursors([...cursors, next])
       }}
       pageSize={pageSize}
-      onPageSizeChange={(size) => {
-        setPageSize(size)
-        reset()
-      }}
+      onPageSizeChange={setPageSize}
       isLoading={page.isPending}
       isFetching={page.isFetching && !page.isPending}
       error={page.isError ? (page.error?.message ?? 'Activity could not be loaded.') : null}

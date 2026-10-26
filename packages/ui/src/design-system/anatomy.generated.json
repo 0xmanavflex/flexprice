@@ -106,11 +106,13 @@
         "CodeIcon",
         "CopyValue",
         "CreditCardIcon",
-        "EmptyState",
-        "ErrorState",
         "Pill",
+        "Properties",
         "Section",
         "Sheet",
+        "SimpleTable",
+        "SubTabState",
+        "Toolbar",
         "UserIcon",
         "WalletIcon"
       ],
@@ -121,7 +123,7 @@
       "file": "src/compositions/detail/ActivityLog.tsx",
       "layer": "composition",
       "composes": [
-        "ArrowUpRightIcon",
+        "EyeIcon",
         "Section"
       ],
       "usedBy": [
@@ -133,7 +135,7 @@
       "file": "src/compositions/detail/ActivityLog.tsx",
       "layer": "composition",
       "composes": [
-        "ArrowUpRightIcon",
+        "EyeIcon",
         "Section"
       ],
       "usedBy": [
@@ -548,8 +550,6 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
-        "ActivityLog",
-        "ActivitySection",
         "ApiCard",
         "CheckoutLinkPanel",
         "CheckoutReturnView",
@@ -2080,11 +2080,13 @@
         "CodeIcon",
         "CopyValue",
         "CreditCardIcon",
-        "EmptyState",
-        "ErrorState",
         "Pill",
+        "Properties",
         "Section",
         "Sheet",
+        "SimpleTable",
+        "SubTabState",
+        "Toolbar",
         "UserIcon",
         "WalletIcon"
       ],
@@ -2851,11 +2853,9 @@
         "SceneIllustration"
       ],
       "usedBy": [
-        "ActivityEventSheet",
         "AddonSubscriptionsView",
         "CostMarginCard",
         "CouponRedemptionsView",
-        "CustomerActivityView",
         "CustomerAnalyticsView",
         "CustomerDetail",
         "CustomerTaxSection",
@@ -3132,9 +3132,7 @@
       "usedBy": [
         "AccessProvider",
         "AccessScope",
-        "ActivityEventSheet",
         "CheckoutLinkPanel",
-        "CustomerActivityView",
         "CustomerAnalyticsView",
         "EntityAlertDialog",
         "EntityList",
@@ -3299,6 +3297,8 @@
       "composes": [],
       "usedBy": [
         "AcceptInvitationForm",
+        "ActivityLog",
+        "ActivitySection",
         "ChargeTable",
         "ConnectionExports",
         "CustomerDetail",
@@ -6252,6 +6252,8 @@
         "LockedMark"
       ],
       "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -7078,7 +7080,9 @@
         "LockedMark"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "ConnectionExports",
+        "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -7443,8 +7447,10 @@
         "TableSkeleton"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "ChargeTable",
         "CreditGrantTable",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerEntitlementUsage",
         "CustomerEventsGrid",
@@ -7740,7 +7746,10 @@
       "file": "src/compositions/tables/Toolbar.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "ActivityEventSheet",
+        "CustomerActivityView"
+      ],
       "story": "./src/compositions/tables/Toolbar.stories.tsx"
     },
     "TotalRow": {
