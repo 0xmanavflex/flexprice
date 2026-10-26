@@ -612,6 +612,12 @@ export {
   withTabEnabled,
   withTabOrder,
   withUsageGraph,
+  EXTERNAL_TAX_PROVIDERS,
+  TAX_PROVIDER_LABEL,
+  TaxProvider,
+  defaultTaxConfig,
+  taxConfigSchema,
+  usesExternalTaxEngine,
 } from './settings'
 export type {
   CreateCustomerAction,
@@ -638,6 +644,7 @@ export type {
   SubscriptionConfig,
   WalletAlertConfig,
   WalletAlertThreshold,
+  TaxConfig,
 } from './settings'
 
 export { resetRequestSchema, setPasswordSchema, signInSchema, signUpSchema } from './auth'
