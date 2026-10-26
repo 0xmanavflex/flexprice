@@ -145,7 +145,7 @@ export const WithHeading: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'Usage by feature' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Features' })).toBeVisible()
-    await expect(canvas.getByLabelText('Include children')).toBeVisible()
+    await expect(canvas.getByRole('switch', { name: 'Include children' })).toBeVisible()
     await expect(canvas.queryByText(/Usage of this contract's metered features/)).toBeNull()
   },
 }
