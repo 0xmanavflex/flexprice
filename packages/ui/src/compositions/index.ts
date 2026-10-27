@@ -146,6 +146,9 @@ export {
   DayCalendar,
   formatDateValue,
   parseDateValue,
+  utcDayEnd,
+  utcDayOf,
+  utcDayStart,
 } from './forms/DateInput'
 export type { DateInputProps, DayCalendarProps } from './forms/DateInput'
 

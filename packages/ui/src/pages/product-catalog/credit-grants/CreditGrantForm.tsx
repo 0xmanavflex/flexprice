@@ -17,7 +17,7 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
-import { DateInput } from '@ui/compositions/forms/DateInput'
+import { DateInput, utcDayEnd, utcDayOf } from '@ui/compositions/forms/DateInput'
 import { Field } from '@ui/compositions/forms/Field'
 import { FormActions } from '@ui/compositions/forms/FormActions'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
@@ -64,14 +64,6 @@ const messageOf = (errors: unknown, key: string): string | undefined =>
 
 const optionsOf = <T extends string>(values: T[], labels: Record<T, string>) =>
   values.map((value) => ({ value, label: labels[value] }))
-
-const pad = (n: number) => String(n).padStart(2, '0')
-const toIso = (date: Date | undefined) =>
-  date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : ''
-const endOfDay = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return y && m && d ? new Date(y, m - 1, d, 23, 59, 59) : undefined
-}
 
 export function CreditGrantEditForm({
   defaultValue,
@@ -125,8 +117,9 @@ export function CreditGrantEditForm({
                 render={({ field }) => (
                   <DateInput
                     id={id}
-                    value={toIso(field.value)}
-                    onValueChange={(iso) => field.onChange(iso ? endOfDay(iso) : undefined)}
+                    value={utcDayOf(field.value)}
+                    // Issues through the day picked: the end of that UTC day, in every browser zone.
+                    onValueChange={(day) => field.onChange(utcDayEnd(day))}
                     disabled={isSubmitting}
                     aria-describedby={describedBy}
                     aria-invalid={invalid}

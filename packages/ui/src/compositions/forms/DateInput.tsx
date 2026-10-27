@@ -89,6 +89,29 @@ export function parseDateValue(value: string | undefined): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date
 }
 
+/**
+ * Day fields are stored as UTC days, whatever the browser's zone. A
+ * `YYYY-MM-DD` day as the instant it starts: midnight UTC.
+ */
+export function utcDayStart(day: string): Date | undefined {
+  if (!DAY.test(day)) return undefined
+  const date = new Date(`${day}T00:00:00.000Z`)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+/** The last millisecond of a `YYYY-MM-DD` UTC day, for an inclusive "last day" such as an expiry. */
+export function utcDayEnd(day: string): Date | undefined {
+  if (!DAY.test(day)) return undefined
+  const date = new Date(`${day}T23:59:59.999Z`)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+/** The UTC calendar day an instant falls on, as `YYYY-MM-DD`; empty for none. */
+export function utcDayOf(date: Date | null | undefined): string {
+  if (!date || Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 10)
+}
+
 const toDate = (value: string | Date | undefined): Date | undefined =>
   value instanceof Date ? value : parseDateValue(value)
 
