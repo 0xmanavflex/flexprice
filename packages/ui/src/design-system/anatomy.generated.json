@@ -108,13 +108,14 @@
         "CopyValue",
         "CreditCardIcon",
         "DateInput",
+        "EmDash",
+        "EntityList",
+        "EyeIcon",
         "Pill",
         "Properties",
         "Section",
         "Sheet",
-        "SimpleTable",
-        "SubTabState",
-        "Toolbar",
+        "Tag",
         "UserIcon",
         "WalletIcon"
       ],
@@ -939,7 +940,8 @@
       "file": "src/pages/contracts/ChargeAlertForm.tsx",
       "layer": "surface",
       "composes": [
-        "Composer"
+        "Composer",
+        "DashedRule"
       ],
       "usedBy": [
         "EntityAlertDialog",
@@ -2090,13 +2092,14 @@
         "CopyValue",
         "CreditCardIcon",
         "DateInput",
+        "EmDash",
+        "EntityList",
+        "EyeIcon",
         "Pill",
         "Properties",
         "Section",
         "Sheet",
-        "SimpleTable",
-        "SubTabState",
-        "Toolbar",
+        "Tag",
         "UserIcon",
         "WalletIcon"
       ],
@@ -2294,6 +2297,7 @@
         "EmptyState",
         "Field",
         "FormDialog",
+        "InfoHint",
         "LabelWithHint",
         "LoadingRows",
         "MetadataCard",
@@ -2340,6 +2344,18 @@
       ],
       "usedBy": [],
       "story": "./src/pages/home/DashboardHome.stories.tsx"
+    },
+    "DashedRule": {
+      "file": "src/compositions/forms/FormCard.tsx",
+      "layer": "composition",
+      "composes": [
+        "Field",
+        "InfoHint"
+      ],
+      "usedBy": [
+        "ChargeAlertForm"
+      ],
+      "story": "./src/compositions/forms/FormCard.stories.tsx"
     },
     "Database": {
       "file": "src/icons/index.ts",
@@ -2852,7 +2868,9 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "AddonGrid",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerGrid",
         "EntitlementTable",
@@ -3066,11 +3084,13 @@
         "WriteGate"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "AddonGrid",
         "ConnectionExports",
         "CostSheetGrid",
         "CouponGrid",
         "CreditNoteGrid",
+        "CustomerActivityView",
         "CustomerGrid",
         "DataExportDetail",
         "DataExportGrid",
@@ -3329,10 +3349,12 @@
       "composes": [],
       "usedBy": [
         "AcceptInvitationForm",
+        "ActivityEventSheet",
         "ActivityLog",
         "ActivitySection",
         "ChargeTable",
         "ConnectionExports",
+        "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
         "DataExportGrid",
@@ -3496,6 +3518,7 @@
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
+        "DashedRule",
         "DataExportDialog",
         "DownloadDialog",
         "EntitlementCreateForm",
@@ -4385,6 +4408,8 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "CustomerWalletView",
+        "DashedRule",
         "Field",
         "FormCard",
         "FormRow",
@@ -7173,10 +7198,8 @@
         "LockedMark"
       ],
       "usedBy": [
-        "ActivityEventSheet",
         "ConnectionExports",
         "ContractSectionDialogs",
-        "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -7542,10 +7565,8 @@
         "TableSkeleton"
       ],
       "usedBy": [
-        "ActivityEventSheet",
         "ChargeTable",
         "CreditGrantTable",
-        "CustomerActivityView",
         "CustomerDetail",
         "CustomerEntitlementUsage",
         "CustomerEventsGrid",
@@ -7654,7 +7675,9 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
         "AddonGrid",
+        "CustomerActivityView",
         "EventGrid",
         "FeatureGrid",
         "PlanGrid"
@@ -7841,10 +7864,7 @@
       "file": "src/compositions/tables/Toolbar.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [
-        "ActivityEventSheet",
-        "CustomerActivityView"
-      ],
+      "usedBy": [],
       "story": "./src/compositions/tables/Toolbar.stories.tsx"
     },
     "TotalRow": {
@@ -8686,6 +8706,7 @@
       "title": "Building blocks/Forms/FormCard",
       "component": "FormCard",
       "uses": [
+        "DashedRule",
         "DateInput",
         "FormCard",
         "FormRow",

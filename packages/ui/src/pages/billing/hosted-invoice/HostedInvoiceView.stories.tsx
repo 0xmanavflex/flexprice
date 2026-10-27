@@ -166,22 +166,46 @@ export const PayError: Story = {
   },
 }
 
-/** Online payment off: Pay is disabled, and hovering it says why. */
+/** Online payment off: Pay is disabled, and hovering it says to contact the business, its email a link. */
 export const PayDisabled: Story = {
   args: { invoice: { ...DEMO_HOSTED_INVOICE, payEnabled: false } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const reason = `Online payment isn’t available for this invoice. Contact ${DEMO_HOSTED_INVOICE.tenant.name} to pay.`
+    const { name, contactEmail } = DEMO_HOSTED_INVOICE.tenant
+    const reason = `Online payment isn’t available. Contact ${name} at ${contactEmail} to pay.`
     const button = canvas.getByRole('button', { name: pay })
     await expect(button).toBeDisabled()
     await expect(button).toHaveAccessibleDescription(reason)
-    // Not printed under the button any more: only in the tooltip.
-    await expect(canvas.queryByText(reason, { selector: 'p' })).toBeNull()
+    // Not printed on the page: only in the tooltip.
+    await expect(canvas.queryByText(/Online payment isn’t available/, { selector: 'p' })).toBeNull()
     await userEvent.hover(button.parentElement as HTMLElement)
-    await waitFor(() =>
-      expect(
-        canvasElement.ownerDocument.querySelector('[data-slot=tooltip-content]'),
-      ).toHaveTextContent(reason),
+    const tooltip = await waitFor(() => {
+      const found = canvasElement.ownerDocument.querySelector<HTMLElement>(
+        '[data-slot=tooltip-content]',
+      )
+      expect(found).toHaveTextContent(reason)
+      return found as HTMLElement
+    })
+    await expect(within(tooltip).getByRole('link', { name: contactEmail ?? '' })).toHaveAttribute(
+      'href',
+      `mailto:${contactEmail}`,
+    )
+  },
+}
+
+/** No email on file: the tooltip names the business without a link. */
+export const PayDisabledNoEmail: Story = {
+  args: {
+    invoice: {
+      ...DEMO_HOSTED_INVOICE,
+      payEnabled: false,
+      tenant: { ...DEMO_HOSTED_INVOICE.tenant, contactEmail: null },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole('button', { name: pay })
+    await expect(button).toHaveAccessibleDescription(
+      `Online payment isn’t available. Contact ${DEMO_HOSTED_INVOICE.tenant.name} to pay.`,
     )
   },
 }

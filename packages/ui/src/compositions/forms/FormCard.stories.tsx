@@ -5,7 +5,7 @@ import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { DateInput } from './DateInput'
-import { FormCard, FormRow, type FormCardProps } from './FormCard'
+import { DashedRule, FormCard, FormRow, type FormCardProps } from './FormCard'
 import { OptionSelect } from './OptionSelect'
 
 type PlaygroundArgs = FormCardProps & {
@@ -187,3 +187,18 @@ export const AllRowKinds: Story = {
 
 /** A single row; the card shrinks to it. */
 export const SingleRow: Story = { args: { rows: 1 } }
+
+/** The card's row rule on its own, for a form that splits into parts the same way (an alert's levels). */
+export const DashedRuleAlone: Story = {
+  render: () => (
+    <div className="flex max-w-md flex-col gap-4 text-sm">
+      <span>Info</span>
+      <DashedRule data-testid="rule" />
+      <span>Warning</span>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const rule = within(canvasElement).getByTestId('rule')
+    await expect(getComputedStyle(rule).borderTopStyle).toBe('dashed')
+  },
+}

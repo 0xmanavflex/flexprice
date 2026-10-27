@@ -23,6 +23,8 @@ import {
   creditGrantToEdit,
   entitlementToEdit,
   planKind,
+  PlanKind,
+  usageBasedLabel,
 } from '@fp/domain'
 import {
   useArchivePlan,
@@ -834,12 +836,16 @@ function InformationTab({
  * `planKind`, so the badge and the column cannot drift apart.
  */
 function planKindLabel(charges: Charge[]): string {
-  return PLAN_KIND_LABEL[
-    planKind({
-      fixedChargeCount: charges.filter((c) => c.type === PriceType.Fixed).length,
-      usageChargeCount: charges.filter((c) => c.type === PriceType.Usage).length,
-    })
-  ]
+  const usage = charges.filter((c) => c.type === PriceType.Usage)
+  const kind = planKind({
+    fixedChargeCount: charges.filter((c) => c.type === PriceType.Fixed).length,
+    usageChargeCount: usage.length,
+  })
+  // Usage only: no flat price to qualify, so name what it meters instead.
+  if (kind === PlanKind.Usage) {
+    return usageBasedLabel(usage.map((c) => c.displayName || c.meterName || ''))
+  }
+  return PLAN_KIND_LABEL[kind]
 }
 
 function billedLabel(charges: Charge[]): string | null {

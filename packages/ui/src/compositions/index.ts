@@ -13,7 +13,7 @@ export { InfoHint, InfoHintProvenance } from './forms/InfoHint'
 export type { InfoHintProps } from './forms/InfoHint'
 export type { FieldProps } from './forms/Field'
 
-export { FormCard, FormRow, FormCardProvenance } from './forms/FormCard'
+export { DashedRule, FormCard, FormRow, FormCardProvenance } from './forms/FormCard'
 export type { FormCardProps, FormRowProps } from './forms/FormCard'
 export { FormDisclosure, FormDisclosureProvenance } from './forms/FormDisclosure'
 export type { FormDisclosureProps } from './forms/FormDisclosure'
