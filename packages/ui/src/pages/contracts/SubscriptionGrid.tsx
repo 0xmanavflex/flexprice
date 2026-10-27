@@ -24,12 +24,7 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import {
-  type EntityColumn,
-  dateColumn,
-  pillColumn,
-  textColumn,
-} from '../shared/cells'
+import { type EntityColumn, dateColumn, pillColumn, textColumn } from '../shared/cells'
 import { SUBSCRIPTION_STATUS_TONE } from '../shared/statusTones'
 
 /**

@@ -178,12 +178,10 @@ export function SubscriptionDetailPage({
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
   // The charges of add-ons that have any, so attaching one can reprice them and commit on usage.
-  const addonCharges = useEntitiesCharges(
-    PriceEntityType.Addon,
-    (addonCatalogue.data?.addons ?? [])
-      .filter((addon) => addon.status === 'published' && addon.chargeCount > 0)
-      .map((addon) => addon.id),
-  )
+  const addonIds = (addonCatalogue.data?.addons ?? [])
+    .filter((addon) => addon.status === 'published' && addon.chargeCount > 0)
+    .map((addon) => addon.id)
+  const addonCharges = useEntitiesCharges(PriceEntityType.Addon, addonIds)
   const taxRateCatalogue = useTaxRates({
     ...DEFAULT_TAX_RATE_QUERY,
     pageSize: 100,
@@ -314,11 +312,14 @@ export function SubscriptionDetailPage({
           addons: (addonCatalogue.data?.addons ?? [])
             .filter((addon) => addon.status === 'published')
             .map((addon) => ({ id: addon.id, name: addon.name })),
+          // Undefined while unknown (loading or failed); a loaded add-on missing from the result has none.
           addonCharges: (addonId) =>
-            // Undefined only while loading: an add-on missing from the result has no charges.
-            addonCharges.isFetching && !addonCharges.data
-              ? undefined
-              : (addonCharges.data?.get(addonId) ?? []),
+            addonCatalogue.data && addonIds.length === 0
+              ? []
+              : addonCharges.data
+                ? (addonCharges.data.get(addonId) ?? [])
+                : undefined,
+          addonChargesFailed: addonCharges.isError && !addonCharges.data,
           coupons: (couponCatalogue.data?.coupons ?? [])
             .filter((coupon) => coupon.code !== '')
             .map((coupon) => ({ code: coupon.code, name: coupon.name })),

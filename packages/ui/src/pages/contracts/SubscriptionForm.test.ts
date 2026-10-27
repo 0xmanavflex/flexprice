@@ -1,9 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { type AddContractCharge, PriceType } from '@fp/domain'
+import { type AddContractCharge, BillingModel, PriceType } from '@fp/domain'
 import { makeCharge } from '../product-catalog/plans/planDetailFixtures'
-import { type ChargeRow, chargeInEffect } from './SubscriptionForm'
+import { type ChargeRow, chargeInEffect, commitmentChargeOf } from './SubscriptionForm'
 
-const base = { id: 'c1', name: 'Seat', type: 'Fixed', status: 'As on the plan', price: '$9' } as const
+const base = {
+  id: 'c1',
+  name: 'Seat',
+  type: 'Fixed',
+  status: 'As on the plan',
+  price: '$9',
+} as const
 
 const planRow = (startDate: Date | null = null, endDate: Date | null = null): ChargeRow => ({
   ...base,
@@ -41,5 +47,20 @@ describe('chargeInEffect', () => {
   it('keeps an added charge’s YYYY-MM-DD day as that day', () => {
     expect(chargeInEffect(extraRow('2026-11-01'))).toBe('From Nov 1, 2026')
     expect(chargeInEffect(extraRow(''))).toBe('With the phase')
+  })
+})
+
+describe('commitmentChargeOf', () => {
+  const usage = makeCharge(1, { type: PriceType.Usage, billingModel: BillingModel.FlatFee })
+
+  it("seeds a commitment window at the override's rate when the charge is repriced", () => {
+    expect(commitmentChargeOf(usage).unitAmount).toBe(usage.amount)
+    expect(
+      commitmentChargeOf(usage, {
+        priceId: usage.id,
+        billingModel: BillingModel.FlatFee,
+        amount: '2',
+      }).unitAmount,
+    ).toBe('2')
   })
 })

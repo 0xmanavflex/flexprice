@@ -40,6 +40,8 @@ export interface ContractSectionOptions {
   addons: { id: string; name: string }[]
   /** An add-on's charges, so each usage charge can carry a commitment, as V1. */
   addonCharges?: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  /** The add-ons' charges could not be loaded. */
+  addonChargesFailed?: boolean | undefined
   /** The contract's currency, for commitment amounts. */
   currency?: string | undefined
   /** The contract's billing period: only prices that attach get a commitment. */
@@ -113,6 +115,7 @@ export function ContractSectionDialogs({
         open={kind === 'addon'}
         addons={options.addons}
         chargesOf={options.addonCharges}
+        chargesFailed={options.addonChargesFailed ?? false}
         currency={options.currency ?? ''}
         billingPeriod={options.billingPeriod ?? ''}
         pending={pending}
@@ -234,6 +237,7 @@ function AddonDialog({
   open,
   addons,
   chargesOf,
+  chargesFailed,
   currency,
   billingPeriod,
   pending,
@@ -244,6 +248,7 @@ function AddonDialog({
   open: boolean
   addons: { id: string; name: string }[]
   chargesOf: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  chargesFailed: boolean
   currency: string
   billingPeriod: string
   pending: boolean
@@ -269,6 +274,7 @@ function AddonDialog({
       title="Add add-on"
       submitLabel="Add add-on"
       charges={charges}
+      chargesFailed={chargesFailed}
       currency={currency}
       value={pricing}
       onChange={setPricing}

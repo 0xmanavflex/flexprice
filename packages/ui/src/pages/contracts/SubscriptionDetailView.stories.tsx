@@ -1295,6 +1295,28 @@ export const AddAddonWithCommitment: Story = {
   },
 }
 
+/** The add-ons' charges failed to load: the dialog says so rather than "Loading" for ever. */
+export const AddAddonChargesFailed: Story = {
+  parameters: menuA11y,
+  args: {
+    sectionOptions: {
+      ...SECTION_OPTIONS,
+      addonCharges: () => undefined,
+      addonChargesFailed: true,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
+    await expect(await dialog.findByRole('alert')).toHaveTextContent(
+      "The add-on's charges could not be loaded",
+    )
+  },
+}
+
 export const AddCoupon: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
