@@ -1513,10 +1513,11 @@ export const FxCustomCurrencyConverts: Story = {
 }
 
 /**
- * The custom currency config failed to load, but USD → INR are both ISO
- * codes, so the pair is an ordinary one: with no global rate, it is still refused.
+ * The custom currency config failed to load, so the wizard cannot tell
+ * whether USD → INR is converted: with no global rate it warns, never blocks,
+ * and the API stays the final check.
  */
-export const FxConfigFailedOrdinaryPairBlocked: Story = {
+export const FxConfigFailedWarnsOnly: Story = {
   args: {
     prefilled: true,
     step: 'billing',
@@ -1527,12 +1528,15 @@ export const FxConfigFailedOrdinaryPairBlocked: Story = {
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('textbox', { name: /^Exchange rate/ })).toBeVisible()
-    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
     await expect(
-      await canvas.findByText(/^No exchange rate for USD → INR\. Add a global rate/),
+      await canvas.findByText(
+        'Could not load currency settings. If USD → INR has no global rate, the API will refuse this contract.',
+      ),
     ).toBeVisible()
-    expect(args.onSubmit).not.toHaveBeenCalled()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fxRates: [] })),
+    )
   },
 }
 

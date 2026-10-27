@@ -463,24 +463,24 @@ export function SubscriptionForm({
   )
   // As the API's `conversionAvailable`: a custom currency converts at its own
   // factor (and takes no contract rate: the API refuses fx_rates for it), any
-  // other at the global rate for the pair. Until the custom currency config is
-  // known, a pair of two ISO 4217 codes is taken as ordinary (no custom
-  // currency carries an ISO code); any other pair blocks nothing.
+  // other at the global rate for the pair. Only a loaded custom currency config
+  // says which a pair is, so only then does a missing conversion block. Until
+  // then (loading or failed), an ISO pair with no global rate is a warning,
+  // and the API stays the final check.
   const configKnown = fxCustomCurrencies !== undefined
   const customFactors = fxCustomCurrencies?.[contractCurrency]
   const customFactor = fxNeeded && customFactors ? customFactors[billingCurrency] : undefined
   const fxCustom = fxNeeded && customFactors !== undefined
-  const isoPair = isoCurrency(contractCurrency) && isoCurrency(billingCurrency)
-  const fxOrdinary = fxNeeded && (configKnown ? !fxCustom : isoPair)
   const fxOverridable = fxNeeded && !fxCustom
   const globalRate = fxOverridable
     ? fxGlobalRates?.find(
         (r) => r.fromCurrency === contractCurrency && r.toCurrency === billingCurrency,
       )
     : undefined
-  const fxMissing = fxCustom
-    ? !(Number(customFactor ?? 0) > 0)
-    : fxOrdinary && fxGlobalRates !== undefined && !globalRate
+  const noGlobalRate = fxOverridable && fxGlobalRates !== undefined && !globalRate
+  const fxMissing = configKnown && (fxCustom ? !(Number(customFactor ?? 0) > 0) : noGlobalRate)
+  const fxUnsure =
+    !configKnown && noGlobalRate && isoCurrency(contractCurrency) && isoCurrency(billingCurrency)
   const pair = `${contractCurrency.toUpperCase()} → ${billingCurrency.toUpperCase()}`
   const fxMissingMessage = fxCustom
     ? `No conversion factor for ${pair}. Set ${contractCurrency.toUpperCase()}'s factor for ${billingCurrency.toUpperCase()} in the custom currency settings first.`
@@ -1214,6 +1214,9 @@ export function SubscriptionForm({
                 globalRate: globalRate?.rate,
                 customFactor: fxCustom ? (customFactor ?? '') : undefined,
                 missing: fxMissing,
+                warning: fxUnsure
+                  ? `Could not load currency settings. If ${contractCurrency.toUpperCase()} → ${billingCurrency.toUpperCase()} has no global rate, the API will refuse this contract.`
+                  : undefined,
               }
             : undefined
         }
@@ -4031,6 +4034,8 @@ interface FxConversion {
   customFactor: string | undefined
   /** Known to have no conversion for the pair: the API would refuse the contract. */
   missing: boolean
+  /** Not known either way (the currency settings did not load): said, never blocking. */
+  warning: string | undefined
 }
 
 /**
@@ -4071,6 +4076,14 @@ function CurrencyConversionCard({
           <Alert variant="destructive">
             <InfoIcon aria-hidden />
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
+      {fx.warning && !error ? (
+        <div className="px-5 pt-4 sm:px-6">
+          <Alert variant="warning">
+            <InfoIcon aria-hidden />
+            <AlertDescription>{fx.warning}</AlertDescription>
           </Alert>
         </div>
       ) : null}
