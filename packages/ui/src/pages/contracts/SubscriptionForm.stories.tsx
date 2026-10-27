@@ -1310,6 +1310,36 @@ export const EntitlementNeverResetKeepsItsLimit: Story = {
   },
 }
 
+/**
+ * An unlimited usage limit opens blank; saving it unchanged is no change, and
+ * a limit past what the API can hold is refused.
+ */
+export const EntitlementUnlimitedLimitUnchanged: Story = {
+  args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Custom domain' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Edit entitlement · Custom domain' }),
+    )
+    await expect(dialog.getByRole('textbox', { name: /^Usage limit/ })).toHaveValue('')
+    await userEvent.type(dialog.getByRole('textbox', { name: /^Usage limit/ }), '99999999999999999')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await dialog.findByText('Enter a smaller number')).toBeVisible()
+    await userEvent.clear(dialog.getByRole('textbox', { name: /^Usage limit/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(canvas.queryByText('Changed')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ entitlementOverrides: [] }),
+      ),
+    )
+  },
+}
+
 /** Entitlement changes belong to the plan: choosing another plan drops them. */
 export const EntitlementChangesClearOnPlanSwitch: Story = {
   args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },

@@ -3545,13 +3545,18 @@ function EntitlementOverrideDialog({
       case FeatureType.Metered: {
         if (!planGrant) {
           const value = limit.trim()
+          // Unchanged (an unlimited plan limit left blank, too): back to the plan's.
+          if (value === planLimit) return onSave(null)
           if (!/^\d+$/.test(value)) {
             setError('Enter a whole number')
             return
           }
-          return onSave(
-            value === planLimit ? null : { entitlementId: id, usageLimit: Number(value) },
-          )
+          // The API keeps the limit as a 64-bit integer; past this it would not survive JSON.
+          if (!Number.isSafeInteger(Number(value))) {
+            setError('Enter a smaller number')
+            return
+          }
+          return onSave({ entitlementId: id, usageLimit: Number(value) })
         }
         const parsed = meteredGrantSchema.safeParse(grant)
         if (!parsed.success || !grant) {
