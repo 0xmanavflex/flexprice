@@ -269,6 +269,11 @@ export interface SubscriptionFormProps {
    * blocked on it then.
    */
   fxGlobalRates?: readonly SubscriptionFxRateOption[] | undefined
+  /**
+   * The tenant's custom currencies (lower-case code) and each one's factors to
+   * fiat currencies (lower-case code to decimal). Undefined while unknown.
+   */
+  fxCustomCurrencies?: Readonly<Record<string, Readonly<Record<string, string>>>> | undefined
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -389,6 +394,7 @@ export function SubscriptionForm({
   customerLocked = false,
   inheritanceBlocks = NO_BLOCKS,
   fxGlobalRates,
+  fxCustomCurrencies,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -455,21 +461,34 @@ export function SubscriptionForm({
   const fxNeeded = Boolean(
     billingCurrency && contractCurrency && billingCurrency !== contractCurrency,
   )
-  const globalRate = fxNeeded
+  // As the API's `conversionAvailable`: a custom currency converts at its own
+  // factor (and takes no contract rate: the API refuses fx_rates for it), any
+  // other at the global rate for the pair. Nothing blocks until both are known.
+  const customFactors = fxCustomCurrencies?.[contractCurrency]
+  const customFactor = fxNeeded && customFactors ? customFactors[billingCurrency] : undefined
+  const fxCustom = fxNeeded && customFactors !== undefined
+  const fxOverridable = fxNeeded && !fxCustom
+  const globalRate = fxOverridable
     ? fxGlobalRates?.find(
         (r) => r.fromCurrency === contractCurrency && r.toCurrency === billingCurrency,
       )
     : undefined
-  const fxMissing = fxNeeded && fxGlobalRates !== undefined && !globalRate
-  const fxMissingMessage = `No exchange rate for ${contractCurrency.toUpperCase()} → ${billingCurrency.toUpperCase()}. Add a global rate in Settings › Currency first: the API needs one even when the contract sets its own.`
+  const fxMissing =
+    fxNeeded &&
+    fxCustomCurrencies !== undefined &&
+    (fxCustom ? !(Number(customFactor ?? 0) > 0) : fxGlobalRates !== undefined && !globalRate)
+  const pair = `${contractCurrency.toUpperCase()} → ${billingCurrency.toUpperCase()}`
+  const fxMissingMessage = fxCustom
+    ? `No conversion factor for ${pair}. Set ${contractCurrency.toUpperCase()}'s factor for ${billingCurrency.toUpperCase()} in the custom currency settings first.`
+    : `No exchange rate for ${pair}. Add a global rate in Settings › Currency first: the API needs one even when the contract sets its own.`
   // A rate entered while the currencies differed means nothing once they match,
   // and a half-typed one would otherwise fail validation from a hidden card.
   useEffect(() => {
-    if (!fxNeeded && form.getValues('fxRates').length > 0) {
+    if (!fxOverridable && form.getValues('fxRates').length > 0) {
       form.setValue('fxRates', [])
       form.clearErrors('fxRates')
     }
-  }, [fxNeeded, form])
+  }, [fxOverridable, form])
   /** Flags a contract the API would refuse for want of a rate; true when it was flagged. */
   const fxBlocked = () => {
     if (fxMissing) form.setError('fxRates', { type: 'validate', message: fxMissingMessage })
@@ -690,7 +709,7 @@ export function SubscriptionForm({
       optedInChargeIds: draft.optedInChargeIds.filter((id) => billed.has(id)),
       // Only when invoices are converted, and only a rate that was set: the API
       // refuses fx_rates on a contract billed in the customer's own currency.
-      fxRates: fxNeeded ? draft.fxRates.filter((fx) => fx.rate) : [],
+      fxRates: fxOverridable ? draft.fxRates.filter((fx) => fx.rate) : [],
       includePriceIds: selection.includePriceIds,
       // Not offered with fixed charges; a value typed before they were added is not sent.
       ...(hasFixedCharges ? { autoInvoiceThreshold: '' } : {}),
@@ -1189,6 +1208,7 @@ export function SubscriptionForm({
                 from: contractCurrency,
                 to: billingCurrency,
                 globalRate: globalRate?.rate,
+                customFactor: fxCustom ? (customFactor ?? '') : undefined,
                 missing: fxMissing,
               }
             : undefined
@@ -3993,7 +4013,13 @@ interface FxConversion {
   to: string
   /** The global rate for the pair, when one is known. */
   globalRate: string | undefined
-  /** Known to have no global rate: the API would refuse the contract. */
+  /**
+   * Set when the contract's currency is a custom one: its factor to the
+   * billing currency (empty when it has none). It converts at that, and takes
+   * no rate of its own.
+   */
+  customFactor: string | undefined
+  /** Known to have no conversion for the pair: the API would refuse the contract. */
   missing: boolean
 }
 
@@ -4038,28 +4064,39 @@ function CurrencyConversionCard({
           </Alert>
         </div>
       ) : null}
-      <FormRow
-        label="Exchange rate"
-        hint={`One ${from} in ${to}. Leave empty to convert at the global rate.`}
-        error={rateError}
-      >
-        {({ id, ...field }) => (
-          <InputGroup className="h-9">
-            <InputGroupAddon align="inline-start">{`1 ${from} =`}</InputGroupAddon>
-            <InputGroupInput
-              id={id}
-              {...field}
-              inputMode="decimal"
-              placeholder={fx.globalRate ? `${fx.globalRate} (global rate)` : 'Global rate'}
-              value={value.rate}
-              onChange={(event) => set({ rate: event.target.value })}
-              disabled={isSubmitting}
-            />
-            <InputGroupAddon align="inline-end">{to}</InputGroupAddon>
-          </InputGroup>
-        )}
-      </FormRow>
-      {value.rate ? (
+      {fx.customFactor !== undefined ? (
+        <FormRow
+          label="Conversion"
+          hint="A custom currency converts at its own factor, set in the custom currency settings."
+        >
+          <p className="text-sm tabular-nums">
+            {fx.customFactor ? `1 ${from} = ${fx.customFactor} ${to}` : 'No factor set'}
+          </p>
+        </FormRow>
+      ) : (
+        <FormRow
+          label="Exchange rate"
+          hint={`One ${from} in ${to}. Leave empty to convert at the global rate.`}
+          error={rateError}
+        >
+          {({ id, ...field }) => (
+            <InputGroup className="h-9">
+              <InputGroupAddon align="inline-start">{`1 ${from} =`}</InputGroupAddon>
+              <InputGroupInput
+                id={id}
+                {...field}
+                inputMode="decimal"
+                placeholder={fx.globalRate ? `${fx.globalRate} (global rate)` : 'Global rate'}
+                value={value.rate}
+                onChange={(event) => set({ rate: event.target.value })}
+                disabled={isSubmitting}
+              />
+              <InputGroupAddon align="inline-end">{to}</InputGroupAddon>
+            </InputGroup>
+          )}
+        </FormRow>
+      )}
+      {fx.customFactor === undefined && value.rate ? (
         <FormRow
           label="Valid"
           hint="When this rate applies. Open-ended on either side when left empty."

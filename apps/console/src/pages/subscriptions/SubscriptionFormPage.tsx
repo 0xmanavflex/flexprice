@@ -7,6 +7,7 @@ import {
   useCreateSubscription,
   useCreditGrants,
   useCustomerTaxAssociations,
+  useCustomCurrencyConfig,
   useCustomer,
   useCustomers,
   useFeaturesByMeters,
@@ -34,6 +35,7 @@ import {
   TaxRateStatus,
 } from '@fp/domain'
 import { SubscriptionForm } from '@fp/ui/pages'
+import { useSession } from '@/app/session'
 import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
 
 export interface SubscriptionFormPageProps {
@@ -75,6 +77,26 @@ export function SubscriptionFormPage({
   const formOptions = usePlanFormOptions()
   // The global exchange rates: a contract invoiced in another currency needs one for its pair.
   const fxRates = useFxRates({ scope: FxRateScope.Tenant })
+  // And the custom currencies, which convert at their own factor instead.
+  const { environmentId } = useSession()
+  const currencyConfig = useCustomCurrencyConfig(environmentId)
+  const fxCustomCurrencies = useMemo(
+    () =>
+      currencyConfig.data
+        ? Object.fromEntries(
+            Object.entries(currencyConfig.data.customCurrencies).map(([code, currency]) => [
+              code.toLowerCase(),
+              Object.fromEntries(
+                Object.entries(currency.fiatConversionFactors).map(([fiat, factor]) => [
+                  fiat.toLowerCase(),
+                  factor,
+                ]),
+              ),
+            ]),
+          )
+        : undefined,
+    [currencyConfig.data],
+  )
   const coupons = useCoupons({
     ...DEFAULT_COUPON_QUERY,
     ...PICKER_PAGE,
@@ -170,6 +192,7 @@ export function SubscriptionFormPage({
       }
       onPlanChange={setPlanId}
       // Undefined while unknown (loading or failed): the form blocks on a missing rate only once it knows.
+      fxCustomCurrencies={fxCustomCurrencies}
       fxGlobalRates={fxRates.data?.map((rate) => ({
         fromCurrency: rate.fromCurrency,
         toCurrency: rate.toCurrency,

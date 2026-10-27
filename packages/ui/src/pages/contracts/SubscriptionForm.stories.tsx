@@ -132,6 +132,10 @@ interface PlaygroundProps {
   billingCurrency?: string
   /** The global exchange rates; undefined leaves them unknown. */
   fxGlobalRates?: { fromCurrency: string; toCurrency: string; rate: string }[]
+  /** The custom currencies and their factors; defaults to none. */
+  fxCustomCurrencies?: Record<string, Record<string, string>>
+  /** Opens with this contract currency instead of USD. */
+  currency?: string
   /** Changes to the plan's entitlements, by id (`ent_0`…). */
   entitlementPatch?: Record<string, Partial<Entitlement>>
   /** Gives the plan's first charge dates of its own (`YYYY-MM-DD`, from and to). */
@@ -168,6 +172,8 @@ function SubscriptionFormPlayground({
   entitlementPatch,
   billingCurrency,
   fxGlobalRates,
+  fxCustomCurrencies = {},
+  currency,
   seededAddons,
   inheritanceBlocks,
   onSubmit,
@@ -202,20 +208,22 @@ function SubscriptionFormPlayground({
       charges: planLoading
         ? []
         : [
-            ...makeCharges(Math.ceil(chargeCount / 2), Math.floor(chargeCount / 2)).map(
-              (charge, index) => ({
-                ...charge,
-                ...(index === 0 && planTrial ? { trialPeriodDays: planTrial } : {}),
-                ...(index === 0 && datedCharge
-                  ? {
-                      startDate: new Date(`${datedCharge.start}T00:00:00Z`),
-                      ...(datedCharge.end
-                        ? { endDate: new Date(`${datedCharge.end}T00:00:00Z`) }
-                        : {}),
-                    }
-                  : {}),
-              }),
-            ),
+            ...makeCharges(
+              Math.ceil(chargeCount / 2),
+              Math.floor(chargeCount / 2),
+              currency ? { currency: currency.toLowerCase() } : {},
+            ).map((charge, index) => ({
+              ...charge,
+              ...(index === 0 && planTrial ? { trialPeriodDays: planTrial } : {}),
+              ...(index === 0 && datedCharge
+                ? {
+                    startDate: new Date(`${datedCharge.start}T00:00:00Z`),
+                    ...(datedCharge.end
+                      ? { endDate: new Date(`${datedCharge.end}T00:00:00Z`) }
+                      : {}),
+                  }
+                : {}),
+            })),
             ...(otherCadences
               ? [
                   {
@@ -262,6 +270,7 @@ function SubscriptionFormPlayground({
     planTrial,
     datedCharge,
     entitlementPatch,
+    currency,
   ])
 
   return (
@@ -276,6 +285,7 @@ function SubscriptionFormPlayground({
               ...PREFILLED,
               ...(noTrial ? { trialPeriodDays: 0 } : {}),
               ...(startDate ? { startDate } : {}),
+              ...(currency ? { currency } : {}),
               ...(seededAddons ? { addons: seededAddons } : {}),
               ...(endDate || phase
                 ? { phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
@@ -285,6 +295,7 @@ function SubscriptionFormPlayground({
         : {})}
       customers={customers}
       {...(fxGlobalRates ? { fxGlobalRates } : {})}
+      fxCustomCurrencies={fxCustomCurrencies}
       plans={plans}
       plan={plan}
       onPlanChange={handlePlanChange}
@@ -1468,6 +1479,36 @@ export const FxRateDroppedWhenCurrenciesMatch: Story = {
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fxRates: [] })),
     )
+  },
+}
+
+/**
+ * A contract in a custom currency converts at that currency's own factor, as
+ * the API does: no global rate is needed, nothing blocks, and no contract rate
+ * is offered (the API refuses fx_rates for a custom currency).
+ */
+export const FxCustomCurrencyConverts: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    currency: 'CRD',
+    billingCurrency: 'usd',
+    fxGlobalRates: [],
+    fxCustomCurrencies: { crd: { usd: '0.01' } },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Currency conversion' })).toBeVisible()
+    await expect(canvas.getByText('1 CRD = 0.01 USD')).toBeVisible()
+    expect(canvas.queryByRole('textbox', { name: /^Exchange rate/ })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: 'CRD', fxRates: [] }),
+      ),
+    )
+    expect(canvas.queryByText(/No conversion factor|No exchange rate/)).toBeNull()
   },
 }
 
