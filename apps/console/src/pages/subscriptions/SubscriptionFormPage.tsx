@@ -70,12 +70,6 @@ export function SubscriptionFormPage({
   const planGrants = useCreditGrants(CreditGrantScope.Plan, planId)
   // The metered features and price units a charge added to this contract alone can use.
   const formOptions = usePlanFormOptions()
-  // The plan's own usage charges' meters, by id: the picker reads only the first
-  // page of features, and a price override needs its charge's meter to offer a bucket.
-  const planMeters = useFeaturesByMeters(
-    (charges.data ?? []).flatMap((charge) => (charge.meterId ? [charge.meterId] : [])),
-  )
-  const meters = withMeters(formOptions.meters, planMeters.data ?? [])
   const coupons = useCoupons({
     ...DEFAULT_COUPON_QUERY,
     ...PICKER_PAGE,
@@ -88,10 +82,16 @@ export function SubscriptionFormPage({
   })
   // The charges of the add-ons that have any, read in one search, so each can be
   // repriced before it is added and a usage charge can carry a commitment.
-  const addonCharges = useEntitiesCharges(
-    PriceEntityType.Addon,
-    (addons.data?.addons ?? []).filter((a) => a.chargeCount > 0).map((a) => a.id),
+  const addonIds = (addons.data?.addons ?? []).filter((a) => a.chargeCount > 0).map((a) => a.id)
+  const addonCharges = useEntitiesCharges(PriceEntityType.Addon, addonIds)
+  // The plan's and the add-ons' usage charges' meters, by id: the picker reads only
+  // the first page of features, and a price override needs its charge's meter to offer a bucket.
+  const planMeters = useFeaturesByMeters(
+    [...(charges.data ?? []), ...[...(addonCharges.data?.values() ?? [])].flat()].flatMap(
+      (charge) => (charge.meterId ? [charge.meterId] : []),
+    ),
   )
+  const meters = withMeters(formOptions.meters, planMeters.data ?? [])
   // Refetched on focus: "Create a tax rate" opens in a new tab, and the rate
   // made there should be pickable on return without losing this draft.
   const taxRates = useTaxRates(
@@ -178,12 +178,15 @@ export function SubscriptionFormPage({
         label: addon.name,
         type: addonType(addon.fixedChargeCount, addon.usageChargeCount),
       }))}
+      // Undefined while unknown (loading or failed); a loaded add-on missing from the result has none.
       addonCharges={(addonId) =>
-        // Undefined only while loading: an add-on missing from the result has no charges.
-        addonCharges.isFetching && !addonCharges.data
-          ? undefined
-          : (addonCharges.data?.get(addonId) ?? [])
+        addons.data && addonIds.length === 0
+          ? []
+          : addonCharges.data
+            ? (addonCharges.data.get(addonId) ?? [])
+            : undefined
       }
+      addonChargesFailed={addonCharges.isError && !addonCharges.data}
       createTaxRateHref="/taxes/new"
       taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
         code: rate.code,

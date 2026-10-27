@@ -225,8 +225,13 @@ export interface SubscriptionFormProps {
   customerTaxes?: CreateSubscription['taxes'] | null
   /** Add-ons the contract can start with. */
   addons?: readonly SubscriptionAddonOption[]
-  /** An add-on's charges, so its usage charges can each carry a commitment (as V1's add-on card). */
+  /**
+   * An add-on's charges, so each can be repriced and a usage charge can carry a
+   * commitment (as V1's add-on card). Undefined while unknown: loading or failed.
+   */
   addonCharges?: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  /** The add-ons' charges could not be loaded: the add-on dialog says so instead of "Loading". */
+  addonChargesFailed?: boolean | undefined
   /** For charges added to this contract alone: the metered features and price units. */
   meters?: MeterOption[]
   priceUnits?: PriceUnitOption[]
@@ -351,6 +356,7 @@ export function SubscriptionForm({
   customerTaxes = null,
   addons = [],
   addonCharges,
+  addonChargesFailed = false,
   meters = [],
   priceUnits = [],
   customerLocked = false,
@@ -1031,6 +1037,7 @@ export function SubscriptionForm({
           options={addons}
           onChange={(next) => set('addons', next)}
           chargesOf={addonCharges}
+          chargesFailed={addonChargesFailed}
           currency={values.currency}
           billingPeriod={values.billingPeriod}
           meters={meters}
@@ -1110,6 +1117,14 @@ export function SubscriptionForm({
         entitlements={plan?.entitlements ?? []}
         coupons={coupons}
         addons={addons}
+        // As submitted: an override on a price the contract no longer takes is not sent.
+        repricedOf={(addon) =>
+          attachableAddonOverrides(
+            addon.priceOverrides ?? [],
+            addonCharges?.(addon.addonId),
+            values,
+          ).length
+        }
         customers={customers}
         showCustomer={!customerLocked}
         today={today}
@@ -1453,7 +1468,8 @@ export function commitmentChargeOf(charge: Charge, override?: PriceOverride) {
     description: `${BILLING_MODEL_LABEL[override?.billingModel ?? charge.billingModel]} · ${priceText(charge, override)}`,
     // The price override's bucket, when it chose one, else the plan charge's.
     bucketSize: override?.bucketSize || charge.bucketSize || '',
-    unitAmount: charge.amount,
+    // A window's price starts from the price the charge bills at: the override's, when it sets one.
+    unitAmount: override && 'amount' in override ? override.amount : charge.amount,
     priceBase: charge.meterId
       ? {
           entityId: charge.entityId,
@@ -2669,6 +2685,7 @@ export function AddonChargesDialog({
   title,
   submitLabel,
   charges,
+  chargesFailed = false,
   currency,
   meters = [],
   value,
@@ -2684,6 +2701,8 @@ export function AddonChargesDialog({
   title: string
   submitLabel: string
   charges: readonly Charge[] | null | undefined
+  /** With `charges` undefined: they failed to load rather than still loading. */
+  chargesFailed?: boolean
   currency: string
   /** The metered features, so a usage charge's override offers a bucket where the API takes one. */
   meters?: readonly MeterOption[] | undefined
@@ -2808,9 +2827,16 @@ export function AddonChargesDialog({
                 Charges
               </LabelWithHint>
               {charges === undefined ? (
-                <p className="text-muted-foreground text-[13px]">
-                  Loading the add-on&apos;s charges…
-                </p>
+                chargesFailed ? (
+                  <p role="alert" className="text-destructive text-[13px]">
+                    The add-on&apos;s charges could not be loaded, so they cannot be repriced now.
+                    Close this and try again.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-[13px]">
+                    Loading the add-on&apos;s charges…
+                  </p>
+                )
               ) : (
                 <SimpleTable
                   rows={[...charges]}
@@ -2923,6 +2949,7 @@ function AddonsSection({
   options,
   onChange,
   chargesOf,
+  chargesFailed,
   currency,
   billingPeriod,
   meters,
@@ -2931,6 +2958,7 @@ function AddonsSection({
   options: readonly SubscriptionAddonOption[]
   onChange: (next: CreateSubscription['addons']) => void
   chargesOf?: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  chargesFailed: boolean
   currency: string
   billingPeriod: BillingPeriod
   meters: readonly MeterOption[]
@@ -3086,6 +3114,7 @@ function AddonsSection({
         title={open ? `${open.adding ? 'Add add-on' : 'Edit add-on'} · ${open.name}` : ''}
         submitLabel={open?.adding ? 'Add add-on' : 'Save add-on'}
         charges={open ? chargesFor(open.addonId) : null}
+        chargesFailed={chargesFailed}
         currency={currency}
         meters={meters}
         value={open?.pricing ?? { priceOverrides: [], commitments: [] }}
@@ -3769,6 +3798,7 @@ function ReviewStep({
   entitlements,
   coupons,
   addons,
+  repricedOf,
   customers,
   showCustomer,
   today,
@@ -3777,6 +3807,8 @@ function ReviewStep({
   hasFixedCharges,
 }: {
   values: CreateSubscription
+  /** How many of an add-on's charges are repriced, counting only what is sent. */
+  repricedOf: (addon: CreateSubscription['addons'][number]) => number
   customerLabel: string | undefined
   planLabel: string | undefined
   charges: Charge[]
@@ -3942,7 +3974,7 @@ function ReviewStep({
                         addon.name ||
                         addons.find((a) => a.value === addon.addonId)?.label ||
                         addon.addonId
-                      }${addon.priceOverrides?.length ? ` (${addon.priceOverrides.length} repriced)` : ''}`,
+                      }${repricedOf(addon) > 0 ? ` (${repricedOf(addon)} repriced)` : ''}`,
                   )
                   .join(', ')}`
           }
