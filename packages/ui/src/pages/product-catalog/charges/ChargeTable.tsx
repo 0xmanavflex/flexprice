@@ -75,8 +75,8 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
    */
   period?: BillingPeriod | string
   /**
-   * `summary` shows only the changed charges and a link to the rest: the
-   * contract Overview. `full` shows every charge, narrowed by the Status filter
+   * `summary` shows the first few live charges, changed ones first, and a
+   * link to the rest: the contract Overview. `full` shows every charge, narrowed by the Status filter
    * (Active, Changed, Ended) beside the billing model: the Charges tab.
    */
   variant?: 'summary' | 'full'
@@ -225,6 +225,9 @@ function kindLine(
   return `${kind} · ${rest}`
 }
 
+/** The live charges the summary variant lists before "Show all charges". */
+const SUMMARY_ROWS = 5
+
 /** Changed charges first (the more flags, the higher), then fixed before usage, then by name. */
 function ordering(details: ReadonlyMap<string, ChargeDetail> | undefined) {
   const weight = (charge: Charge) => (isChargeCustomised(details?.get(charge.id)) ? 1 : 0)
@@ -278,18 +281,19 @@ export function ChargeTable({
   const openAt = (charge: Charge, section?: ChargeSection) =>
     setOpen(section ? { charge, section } : { charge })
 
-  const { active, changed, ended } = useMemo(() => {
+  const { active, ended } = useMemo(() => {
     const order = ordering(details)
-    const live = charges.filter((charge) => !charge.endDate).sort(order)
     return {
-      active: live,
-      changed: live.filter((charge) => isChargeCustomised(details?.get(charge.id))),
+      active: charges.filter((charge) => !charge.endDate).sort(order),
       ended: charges.filter((charge) => charge.endDate).sort(order),
     }
   }, [charges, details])
 
-  // The full table lists every charge, live first; Status narrows it.
-  const rows = variant === 'summary' ? changed : [...active, ...ended]
+  // The full table lists every charge, live first; Status narrows it. The
+  // summary lists the live ones (changed first, so they lead) up to a few,
+  // and "Show all charges" goes to the rest. Unchanged charges are still
+  // charges: a contract on its plan's prices must not read as empty.
+  const rows = variant === 'summary' ? active.slice(0, SUMMARY_ROWS) : [...active, ...ended]
   const statusOf = (charge: Charge) =>
     charge.endDate ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
 
@@ -528,11 +532,7 @@ export function ChargeTable({
             loadingLabel="Loading charges"
             empty={{
               scene: 'catalog',
-              title: variant === 'summary' ? 'No changes' : 'No charges yet',
-              description:
-                variant === 'summary'
-                  ? 'Every charge is billed as the plan sets it. Changed charges show here.'
-                  : undefined,
+              title: 'No charges yet',
             }}
           >
             {null}
