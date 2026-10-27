@@ -240,6 +240,9 @@ export const BareDayCalendar: StoryObj<DayCalendarProps> = {
     )
     await expect(canvas.getByRole('button', { name: /March 5/ })).toBeDisabled()
     await expect(canvas.getByRole('button', { name: /March 25/ })).toBeDisabled()
+    // Month and year menus in the caption, for jumping years back.
+    await expect(canvas.getByRole('combobox', { name: /month/i })).toBeInTheDocument()
+    await expect(canvas.getByRole('combobox', { name: /year/i })).toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: /March 18/ }))
     await expect(args.onValueChange).toHaveBeenCalledWith('2026-03-18')
     await expect(canvas.getByRole('button', { name: /March 18/ })).toHaveAttribute(
