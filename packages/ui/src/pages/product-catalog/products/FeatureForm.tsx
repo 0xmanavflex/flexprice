@@ -102,6 +102,13 @@ interface FormValues {
 
 const FORM_ID = 'feature-form'
 
+/**
+ * A faint example in the empty expression field: a duration in seconds, to
+ * minutes, per hundred. It shows the shape of a CEL expression over event
+ * properties without an examples block above the field.
+ */
+const EXPRESSION_PLACEHOLDER = 'duration_seconds / 60 / 100'
+
 const TYPES = [
   FeatureType.Metered,
   FeatureType.Boolean,
@@ -587,6 +594,7 @@ export function FeatureForm(props: FeatureFormProps) {
                   rows={2}
                   readOnly={isEdit}
                   disabled={isEdit}
+                  placeholder={EXPRESSION_PLACEHOLDER}
                   {...field}
                   {...form.register('meter.expression')}
                 />

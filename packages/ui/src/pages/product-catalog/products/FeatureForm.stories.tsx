@@ -329,6 +329,24 @@ export const CountHidesTheAggregationTarget: Story = {
   },
 }
 
+/**
+ * Ticking "Use a custom expression" only turns the field into the expression
+ * box: no examples block, just a faint placeholder expression.
+ */
+export const CustomExpressionPlaceholder: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const before = canvasElement.querySelectorAll('textarea, input').length
+    await userEvent.click(await canvas.findByRole('checkbox', { name: 'Use a custom expression' }))
+    const expression = await canvas.findByLabelText(/^Custom expression/)
+    await expect(expression.tagName).toBe('TEXTAREA')
+    await expect(expression).toHaveValue('')
+    await expect(expression).toHaveAttribute('placeholder', 'duration_seconds / 60 / 100')
+    // The field replaced the event field in place; nothing else appeared.
+    await expect(canvasElement.querySelectorAll('textarea, input').length).toBe(before)
+  },
+}
+
 /** A zero multiplier is rejected inline. */
 export const ZeroMultiplierRejected: Story = {
   args: {
