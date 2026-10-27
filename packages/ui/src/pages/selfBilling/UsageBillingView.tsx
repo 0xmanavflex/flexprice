@@ -67,7 +67,7 @@ export interface UsageBillingViewProps {
   portalError?: string | null
 }
 
-const planPrice = `${usd(SELF_BILLING_PLAN.base)} a month + ${planRateText}`
+const planPrice = `${usd(SELF_BILLING_PLAN.base)} a month + ${planRateText} of what you bill through Flexprice`
 const unpaid = (summary: SelfBillingSummary) => summary.invoices.find((i) => i.status !== 'paid')
 
 /** Locked only: the page cannot open quietly on a read-only account. */

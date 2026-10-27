@@ -172,14 +172,16 @@ export function withConsumption(transactions: WalletTransaction[]): WalletTransa
   const drawn = new Map<string, WalletConsumption[]>()
   for (const tx of transactions) {
     for (const line of tx.drawnFrom ?? []) {
-      const reference = tx.reference
-        ? `${REFERENCE_LABEL[tx.reference.type] ?? tx.reference.type} ${tx.reference.id}`
-        : ''
+      const reference =
+        tx.reference && tx.reference.type !== 'REQUEST'
+          ? `${REFERENCE_LABEL[tx.reference.type] ?? tx.reference.type} ${tx.reference.id}`
+          : ''
+      const note = tx.description.trim()
       drawn.set(line.topUpId, [
         ...(drawn.get(line.topUpId) ?? []),
         {
           id: tx.id,
-          product: tx.description || tx.reason,
+          product: note && !/[_=]/.test(note) && !/[0-9a-f]{10,}/i.test(note) ? note : tx.reason,
           contract: reference,
           credits: line.credits,
         },

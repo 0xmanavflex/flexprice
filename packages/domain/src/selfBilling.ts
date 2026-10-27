@@ -153,7 +153,6 @@ export function usd(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
 }
 
-const wholeUsd = (amount: number) => `$${amount.toLocaleString('en-US')}`
 export const planRateText = `${SELF_BILLING_PLAN.rate * 100}%`
 
 /** The hover card's line: why it is locked, or what happens next. */
@@ -172,7 +171,7 @@ export function accountCopy(summary: SelfBillingSummary, today: string): string 
     return `${Math.round(trial.share * 100)}% of trial events used. At ${cap} your account becomes read-only.`
   if (trial.daysLeft <= URGENT_DAYS)
     return `Ends on ${ends}. After that your account becomes read-only.`
-  return `Ends on ${ends}${cap ? `, or at ${cap} events` : ''}. Then ${wholeUsd(SELF_BILLING_PLAN.base)} a month + ${planRateText}.`
+  return `Ends on ${ends}${cap ? `, or at ${cap} events` : ''}. Then ${usd(SELF_BILLING_PLAN.base)} a month + ${planRateText} of what you bill through Flexprice.`
 }
 
 /** The reason every disabled write control gives while the account is locked. */

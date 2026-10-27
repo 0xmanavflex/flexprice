@@ -81,20 +81,49 @@ type LedgerRow =
   | { kind: 'child'; id: string; tx: WalletTransaction; line: WalletConsumption }
 
 /** "Invoice inv_1 · key: value": a transaction's reference and metadata, as one line. */
-const metadataText = (tx: WalletTransaction) =>
-  [
-    tx.reference ? `${tx.reference.type.toLowerCase()} ${tx.reference.id}` : '',
-    ...Object.entries(tx.metadata ?? {}).map(([key, value]) => `${key}: ${value}`),
+/** Ids and request dumps. They stay searchable and stay off the row. */
+function looksTechnical(text: string): boolean {
+  const value = text.trim()
+  if (!value) return true
+  if (/[_=]/.test(value)) return true
+  if (/\b(request|credit_grant|external)\b/i.test(value)) return true
+  // A hex blob (credit_grant-d73a8d6d56298a5f). An invoice number is shorter.
+  return /[0-9a-f]{10,}/i.test(value)
+}
+
+/** "Auto top-up · INV-2026-01441 · added Sep 24, 2026". Never a request id. */
+function topUpLine(tx: WalletTransaction): string {
+  const description = tx.description.trim()
+  const reference = tx.reference?.id.trim() ?? ''
+  return [
+    description && !looksTechnical(description) ? description : '',
+    reference && !looksTechnical(reference) ? reference : '',
+    tx.createdAt ? `added ${formatDay(tx.createdAt)}` : '',
   ]
     .filter(Boolean)
     .join(' · ')
+}
 
 const hasBreakdown = (tx: WalletTransaction) => (tx.consumption?.length ?? 0) > 0
 
-function ConsumedBar({ share, label }: { share: number | null; label: string }) {
+function ConsumedBar({
+  share,
+  label,
+  expired = false,
+}: {
+  share: number | null
+  label: string
+  expired?: boolean
+}) {
   if (share === null) return <span className="text-muted-foreground text-sm">{'—'}</span>
   const percent = Math.min(100, Math.max(0, Math.round(share * 100)))
   const hot = percent >= 90
+  const tone = expired ? 'bg-destructive' : hot ? 'bg-warning' : 'bg-muted-foreground/40'
+  const text = expired
+    ? 'text-destructive-foreground dark:text-destructive'
+    : hot
+      ? 'text-warning-foreground dark:text-warning'
+      : 'text-muted-foreground'
   return (
     <div className="flex items-center gap-2">
       <div
@@ -102,19 +131,9 @@ function ConsumedBar({ share, label }: { share: number | null; label: string }) 
         aria-label={`${percent}% ${label}`}
         className="bg-muted h-1.5 w-16 shrink-0 overflow-hidden rounded-full"
       >
-        <div
-          className={cn('h-full rounded-full', hot ? 'bg-warning' : 'bg-muted-foreground/40')}
-          style={{ width: `${percent}%` }}
-        />
+        <div className={cn('h-full rounded-full', tone)} style={{ width: `${percent}%` }} />
       </div>
-      <span
-        className={cn(
-          'text-xs tabular-nums',
-          hot ? 'text-warning-foreground dark:text-warning' : 'text-muted-foreground',
-        )}
-      >
-        {percent}%
-      </span>
+      <span className={cn('text-xs tabular-nums', text)}>{percent}%</span>
     </div>
   )
 }
@@ -122,7 +141,15 @@ function ConsumedBar({ share, label }: { share: number | null; label: string }) 
 function Expires({ date, now }: { date: Date | null; now: Date }) {
   if (!date) return <p className="text-sm">Never</p>
   const days = daysUntil(date, now)
-  const soon = days >= 0 && days <= EXPIRING_SOON_DAYS
+  if (days < 0) {
+    return (
+      <div>
+        <p className="text-sm tabular-nums">{formatDay(date)}</p>
+        <p className="text-destructive-foreground dark:text-destructive text-xs">Expired</p>
+      </div>
+    )
+  }
+  const soon = days <= EXPIRING_SOON_DAYS
   const hint =
     days === 0
       ? 'today'
@@ -167,17 +194,21 @@ export function WalletLedgerTable({
       return next
     })
 
-  const rows: LedgerRow[] = ordered.flatMap((tx): LedgerRow[] => [
-    tx.direction === 'out' ? { kind: 'debit', id: tx.id, tx } : { kind: 'topup', id: tx.id, tx },
-    ...(open.has(tx.id)
-      ? (tx.consumption ?? []).map((line): LedgerRow => ({
-          kind: 'child',
-          id: `${tx.id}:${line.id}`,
-          tx,
-          line,
-        }))
-      : []),
-  ])
+  const rows: LedgerRow[] = ordered.flatMap((tx): LedgerRow[] =>
+    tx.direction === 'out'
+      ? []
+      : [
+          { kind: 'topup', id: tx.id, tx },
+          ...(open.has(tx.id)
+            ? (tx.consumption ?? []).map((line): LedgerRow => ({
+                kind: 'child',
+                id: `${tx.id}:${line.id}`,
+                tx,
+                line,
+              }))
+            : []),
+        ],
+  )
   const topUps = ordered.filter((tx) => tx.direction !== 'out')
   const anyBreakdown = topUps.some(hasBreakdown)
 
@@ -188,26 +219,28 @@ export function WalletLedgerTable({
     <>
       <DetailTable<LedgerRow>
         compact
-        label="Transactions"
+        label="Top-ups"
         noun={noun}
         rows={rows}
-        empty="No transactions yet."
+        empty="No top-ups yet."
         searchText={(row) =>
           row.kind === 'child'
             ? `${row.tx.reason} ${row.line.product} ${row.line.contract}`
-            : `${row.tx.reason} ${row.tx.description} ${metadataText(row.tx)}`
+            : `${row.tx.reason} ${topUpLine(row.tx)} ${row.tx.description} ${row.tx.reference?.id ?? ''}`
         }
         columns={[
           {
             key: 'topup',
-            header: 'Transaction',
+            header: 'Top-up',
             width: 280,
             cell: (row) =>
               row.kind === 'child' ? (
                 <div className="flex min-w-0 items-center gap-2 pl-8">
                   <div className="min-w-0">
                     <p className="truncate text-sm">{row.line.product}</p>
-                    <p className="text-muted-foreground truncate text-xs">{row.line.contract}</p>
+                    {row.line.contract && !looksTechnical(row.line.contract) ? (
+                      <p className="text-muted-foreground truncate text-xs">{row.line.contract}</p>
+                    ) : null}
                   </div>
                 </div>
               ) : (
@@ -230,26 +263,8 @@ export function WalletLedgerTable({
                     <span className="size-6 shrink-0" aria-hidden="true" />
                   ) : null}
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{row.tx.reason || '—'}</p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {[
-                        row.tx.description,
-                        row.tx.createdAt
-                          ? `${row.kind === 'debit' ? 'debited' : 'added'} ${formatDay(row.tx.createdAt)}`
-                          : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                    {/* What it was raised for, and any metadata, on one quiet line. */}
-                    {row.tx.reference || Object.keys(row.tx.metadata ?? {}).length > 0 ? (
-                      <p
-                        className="text-muted-foreground truncate font-mono text-xs"
-                        title={metadataText(row.tx)}
-                      >
-                        {metadataText(row.tx)}
-                      </p>
-                    ) : null}
+                    <p className="truncate text-sm">{row.tx.reason || '—'}</p>
+                    <p className="text-muted-foreground truncate text-xs">{topUpLine(row.tx)}</p>
                   </div>
                 </div>
               ),
@@ -336,10 +351,12 @@ export function WalletLedgerTable({
               if (row.kind === 'debit') return null
               const left = toNumber(row.tx.creditsAvailable)
               const total = Number(row.tx.credits)
+              const expired = row.tx.expiresAt !== null && daysUntil(row.tx.expiresAt, now) < 0
               return (
                 <ConsumedBar
                   share={left === null || !(total > 0) ? null : (total - left) / total}
                   label="consumed"
+                  expired={expired}
                 />
               )
             },
@@ -354,9 +371,10 @@ export function WalletLedgerTable({
           },
         ]}
       />
-      {anyBreakdown || topUps.length === 0 ? null : (
+      {topUps.length === 0 ? null : (
         <p className="text-muted-foreground border-t px-6 py-3 text-xs">
-          No debit in this wallet names the top-up it drew from, so rows cannot be expanded.
+          Usage draws on the top-up that expires soonest, among those it is allowed to use. Open a
+          row to see every debit against it.
         </p>
       )}
     </>

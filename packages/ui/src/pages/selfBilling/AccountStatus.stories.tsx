@@ -33,7 +33,7 @@ export const Trial: Story = {
     await userEvent.hover(pill)
     await expect(
       await screen.findByText(
-        'Ends on Nov 4, 2026, or at 50,000 events. Then $199 a month + 0.5%.',
+        'Ends on Nov 4, 2026, or at 50,000 events. Then $199.00 a month + 0.5% of what you bill through Flexprice.',
       ),
     ).toBeVisible()
     await expect(screen.getByRole('progressbar', { name: 'Trial' })).toBeVisible()
@@ -84,6 +84,9 @@ export const LockedAtTheEventCap: Story = {
     await expect(screen.queryByRole('progressbar')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'View details' }))
     await expect(args.onViewDetails).toHaveBeenCalled()
+    await expect(
+      screen.queryByText('Your account is locked and read-only. You used all 50,000 trial events.'),
+    ).toBeNull()
   },
 }
 

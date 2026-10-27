@@ -260,11 +260,11 @@ export const AlertSettingsFromMenu: Story = {
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Real-time balance')).toBeInTheDocument()
-    await expect(canvas.getByText('Last invoiced balance')).toBeInTheDocument()
+    await expect(canvas.getByText('Real-time balance')).not.toBeInTheDocument()
     await expect(canvas.getByText('Active')).toBeInTheDocument()
-    await expect(canvas.queryByText('Consumption rate')).toBeNull()
-    await expect(canvas.queryByText('Expiring soon')).toBeNull()
+    await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
+    await expect(canvas.getByText('Expiring soon')).toBeInTheDocument()
+    await expect(canvas.getByText(/used, not yet invoiced/)).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /auto top-up off/i })).toBeEnabled()
     await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /top up wallet/i })).toBeEnabled()
@@ -328,7 +328,7 @@ export const UnreadableBalance: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Real-time balance')).toBeVisible()
+    await expect(canvas.getByText('Available now')).toBeVisible()
     await expect(canvas.queryByText(/since the last invoice/i)).toBeNull()
   },
 }
@@ -336,7 +336,7 @@ export const UnreadableBalance: Story = {
 export const NoTransactions: Story = {
   args: { transactions: [] },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('No transactions yet')).toBeInTheDocument()
+    await expect(await within(canvasElement).findByText('No top-ups yet')).toBeInTheDocument()
   },
 }
 
@@ -391,10 +391,11 @@ export const SearchesReferenceAndMetadata: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('invoice inv_9 · source: usage')).toBeInTheDocument()
-    await userEvent.type(canvas.getByPlaceholderText(/^Search/), 'inv_9')
+    await expect(canvas.queryByText(/source: usage/)).toBeNull()
+    await expect(canvas.queryByText('Invoice payment')).toBeNull()
+    await userEvent.type(canvas.getByPlaceholderText(/^Search/), 'Purchased')
     await waitFor(() => expect(canvas.queryByText('Usage draw-down')).toBeNull())
-    await expect(canvas.getByText('invoice inv_9 · source: usage')).toBeInTheDocument()
+    await expect(canvas.getByText('Purchased credits')).toBeInTheDocument()
   },
 }
 
@@ -508,7 +509,7 @@ export const AutoTopupOn: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole('button', { name: /auto top-up on/i }),
-    ).toHaveTextContent('Auto top-up on')
+    ).toHaveTextContent(/Below/)
   },
 }
 

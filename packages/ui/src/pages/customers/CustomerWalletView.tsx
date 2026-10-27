@@ -4,7 +4,6 @@ import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
   BellIcon,
   ArrowUpRightIcon,
-  InfoIcon,
   MinusIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -14,7 +13,6 @@ import {
 } from '@ui/icons'
 import {
   AUTO_TOPUP_COOLDOWN_UNIT_LABEL,
-  WALLET_KIND_LABEL,
   AutoTopupCooldownUnit,
   type AutoTopup,
   type CreateWallet,
@@ -31,6 +29,7 @@ import {
   emptyTopUp,
   emptyWallet,
   formatMoney,
+  money,
   topUpWalletSchema,
   currencyCodes,
 } from '@fp/domain'
@@ -53,7 +52,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import {
   AppFailure,
   ConfirmDialog,
@@ -61,12 +59,11 @@ import {
   FormDialog,
   LoadingRows,
   OptionSelect,
-  Section,
 } from '../../compositions'
-import { ChoiceCards, Composer } from '../../compositions/detail/DetailKit'
+import { ChoiceCards, Composer, Properties } from '../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { Pill, type PillTone } from '../shared/cells'
-import { WalletLedgerTable, formatCredits } from './WalletLedgerTable'
+import { WalletLedgerTable, expiringSoon, formatCredits, formatDay } from './WalletLedgerTable'
 import { SubTabState } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
 
@@ -300,40 +297,61 @@ export function CustomerWalletView({
         <div className="grid grid-cols-2 divide-x">
           <div className="p-6">
             <Balance
-              label="Real-time balance"
-              hint="Last invoiced balance minus usage recorded since the last invoice. This is what the next charge draws from."
+              label="Available now"
               credits={wallet.realTimeCreditBalance}
               value={formatMoney(wallet.realTimeBalance)}
             />
           </div>
           <div className="p-6">
             <Balance
-              label="Last invoiced balance"
-              hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
+              label="Last invoiced"
               credits={wallet.creditBalance}
               value={formatMoney(wallet.balance)}
             />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 border-t px-6 py-4">
-          <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
-          {wallet.walletType ? <Pill>{WALLET_KIND_LABEL[wallet.walletType]}</Pill> : null}
-          {/* The chip is also the way in: off never dead-ends, it opens the settings. */}
-          <button
-            type="button"
-            disabled={closed}
-            onClick={() => open('auto-topup')}
-            aria-label={`Auto top-up ${wallet.autoTopup.enabled ? 'on' : 'off'}. Edit settings`}
-            className="focus-visible:ring-ring/50 rounded-full outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Pill tone={wallet.autoTopup.enabled ? 'success' : 'neutral'}>
-              {wallet.autoTopup.enabled ? 'Auto top-up on' : 'Auto top-up off'}
-            </Pill>
-          </button>
+        <UsageSinceInvoice wallet={wallet} />
+        <div className="border-t px-6 py-4">
+          <Properties
+            columns={5}
+            items={[
+              {
+                label: 'Status',
+                value: (
+                  <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+                ),
+              },
+              { label: 'Consumption rate', value: creditRate(wallet.conversionRate, currency) },
+              { label: 'Top-up rate', value: creditRate(wallet.topupConversionRate, currency) },
+              {
+                label: 'Auto top-up',
+                value: (
+                  <button
+                    type="button"
+                    disabled={closed}
+                    onClick={() => open('auto-topup')}
+                    aria-label={`Auto top-up ${wallet.autoTopup.enabled ? 'on' : 'off'}. Edit settings`}
+                    className="hover:text-foreground focus-visible:ring-ring/50 rounded-sm text-left outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {autoTopupSummary(wallet, currency)}
+                  </button>
+                ),
+              },
+              {
+                label: 'Expiring soon',
+                value: expiringSoonLabel(
+                  expiringSoon(
+                    transactions.filter((tx) => tx.direction !== 'out'),
+                    asOf,
+                  ),
+                ),
+              },
+            ]}
+          />
         </div>
       </section>
 
-      <Section table title="Transactions">
+      <section className="bg-background overflow-hidden rounded-xl border">
         <SubTabState
           hasData={transactions.length > 0}
           isLoading={transactionsLoading}
@@ -344,13 +362,13 @@ export function CustomerWalletView({
           loadingLabel="Loading transactions"
           empty={{
             scene: 'customers',
-            title: 'No transactions yet',
-            description: 'Credits added and usage drawn from this wallet appear here.',
+            title: 'No top-ups yet',
+            description: 'Credits added to this wallet appear here. Open a row to see what drew them down.',
           }}
         >
-          <WalletLedgerTable transactions={transactions} now={asOf} />
+          <WalletLedgerTable transactions={transactions} now={asOf} noun="top-ups" />
         </SubTabState>
-      </Section>
+      </section>
 
       <MetadataCard
         // One card per wallet: switching wallets mid-edit must not carry a draft across.
@@ -974,29 +992,81 @@ function AutoTopupDialog({
   )
 }
 
+function creditRate(rate: string, currency: string): string {
+  const trimmed = rate.trim()
+  const value = Number(trimmed)
+  if (!trimmed || !Number.isFinite(value)) return '—'
+  const fraction = trimmed.split('.')[1]?.length ?? 0
+  const formatted = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: Math.min(6, Math.max(2, fraction)),
+  }).format(value)
+  return `1 credit = ${formatted}`
+}
+
+function autoTopupSummary(wallet: Wallet, currency: string): string {
+  if (!wallet.autoTopup.enabled) return 'Off'
+  const whole = (amount: string) =>
+    formatMoney(money(amount, currency)).replace(/\.00$/, '')
+  return `Below ${whole(wallet.autoTopup.threshold)}, add ${whole(wallet.autoTopup.amount)}`
+}
+
+function expiringSoonLabel(soon: { credits: string; date: Date } | null): string {
+  if (!soon) return '—'
+  return `${formatCredits(soon.credits)} credits on ${formatDay(soon.date, false)}`
+}
+
+/** Usage recorded since the last invoice, against what is still available. */
+function UsageSinceInvoice({ wallet }: { wallet: Wallet }) {
+  const invoiced = Number(wallet.creditBalance)
+  const live = Number(wallet.realTimeCreditBalance)
+  const used = Number.isFinite(invoiced) && Number.isFinite(live) ? Math.max(0, invoiced - live) : 0
+  const available = Number.isFinite(live) ? Math.max(0, live) : 0
+  const share = invoiced > 0 ? Math.min(1, used / invoiced) : 0
+  const usedMoney = Math.max(0, Number(wallet.balance.amount) - Number(wallet.realTimeBalance.amount))
+  const usedLabel = formatCredits(String(used))
+  const availableLabel = formatCredits(String(available))
+  const usedValue = Number.isFinite(usedMoney)
+    ? formatMoney(money(usedMoney.toFixed(2), wallet.balance.currency))
+    : '—'
+  return (
+    <div className="flex flex-col gap-2 border-t px-6 py-4">
+      <div
+        className="bg-muted flex h-2 overflow-hidden rounded-full"
+        role="img"
+        aria-label={`${usedLabel} used, not yet invoiced. ${availableLabel} available.`}
+      >
+        <div className="bg-success h-full" style={{ width: `${share * 100}%` }} />
+      </div>
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="bg-success size-2 rounded-sm" aria-hidden />
+          {usedLabel} used, not yet invoiced ({usedValue})
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="bg-muted-foreground/30 size-2 rounded-sm" aria-hidden />
+          {availableLabel} available
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function Balance({
   label,
-  hint,
   credits: creditValue,
   value,
 }: {
   label: string
-  hint: string
   credits: string
   value: string
 }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-        {label}
-        <Tooltip>
-          <TooltipTrigger render={<span aria-label={hint} className="inline-flex" />}>
-            <InfoIcon className="size-3.5" aria-hidden="true" />
-          </TooltipTrigger>
-          <TooltipContent className="max-w-60">{hint}</TooltipContent>
-        </Tooltip>
-      </p>
+    <div className="space-y-1">
       <p className="text-3xl font-medium tabular-nums">
+        <span className="sr-only">{label}: </span>
         {credits(creditValue)}{' '}
         <span className="text-muted-foreground text-base font-normal">credits</span>
       </p>

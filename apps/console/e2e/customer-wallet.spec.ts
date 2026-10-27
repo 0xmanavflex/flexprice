@@ -28,7 +28,7 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await create.getByLabel('Initial credits', { exact: true }).fill('1000')
   await create.getByRole('button', { name: 'Create wallet' }).click()
 
-  await expect(page.getByText('Real-time balance')).toBeVisible()
+  await expect(page.getByText('Consumption rate')).toBeVisible()
   await expect(page.getByText('1,000 credits').first()).toBeVisible()
 
   await page.getByRole('button', { name: 'Top up wallet' }).click()
@@ -39,7 +39,7 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await topUp.getByRole('button', { name: 'Top up' }).click()
   await expect(page.getByText('1,250 credits').first()).toBeVisible()
   await expect(
-    page.getByRole('region', { name: 'Transactions table' }).getByText('Purchased credits'),
+    page.getByRole('region', { name: 'Top-ups table' }).getByText('Purchased credits'),
   ).toBeVisible()
 
   await page.getByRole('button', { name: /auto top-up off/i }).click()
