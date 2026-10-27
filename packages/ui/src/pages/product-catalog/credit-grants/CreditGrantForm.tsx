@@ -17,7 +17,7 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
-import { DateInput, utcDayEnd, utcDayOf } from '@ui/compositions/forms/DateInput'
+import { DateInput, storedDayOf, utcDayEnd } from '@ui/compositions/forms/DateInput'
 import { Field } from '@ui/compositions/forms/Field'
 import { FormActions } from '@ui/compositions/forms/FormActions'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
@@ -117,7 +117,7 @@ export function CreditGrantEditForm({
                 render={({ field }) => (
                   <DateInput
                     id={id}
-                    value={utcDayOf(field.value)}
+                    value={storedDayOf(field.value)}
                     // Issues through the day picked: the end of that UTC day, in every browser zone.
                     onValueChange={(day) => field.onChange(utcDayEnd(day))}
                     disabled={isSubmitting}

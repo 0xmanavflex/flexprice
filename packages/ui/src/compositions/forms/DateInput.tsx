@@ -112,6 +112,37 @@ export function utcDayOf(date: Date | null | undefined): string {
   return date.toISOString().slice(0, 10)
 }
 
+const DAY_MS = 86_400_000
+
+/** Midnight UTC, or the last millisecond of a UTC day: how day fields are saved. */
+function isUtcDayBoundary(date: Date) {
+  const into = ((date.getTime() % DAY_MS) + DAY_MS) % DAY_MS
+  return into === 0 || into === DAY_MS - 1
+}
+
+/**
+ * The calendar day a stored day field means, as `YYYY-MM-DD`. Day fields are
+ * saved as UTC days (midnight UTC, or the end of the UTC day for a last day)
+ * and read back on that UTC day. Any other instant, such as one saved earlier
+ * from the browser's local day (local midnight or 23:59:59), reads as the
+ * local day it was picked on, so older records keep the day they show today.
+ */
+export function storedDayOf(date: Date | null | undefined): string {
+  if (!date || Number.isNaN(date.getTime())) return ''
+  return isUtcDayBoundary(date) ? utcDayOf(date) : toDay(date)
+}
+
+/** A stored day field as the reader's locale writes it ("Oct 21, 2026"): the day `storedDayOf` reads. */
+export function formatStoredDay(
+  date: Date,
+  options?: { locale?: string | undefined; dateStyle?: 'short' | 'medium' },
+): string {
+  return new Intl.DateTimeFormat(options?.locale, {
+    dateStyle: options?.dateStyle ?? 'medium',
+    ...(isUtcDayBoundary(date) ? { timeZone: 'UTC' } : {}),
+  }).format(date)
+}
+
 const toDate = (value: string | Date | undefined): Date | undefined =>
   value instanceof Date ? value : parseDateValue(value)
 

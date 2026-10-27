@@ -19,7 +19,7 @@ import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
 import { MetadataFields } from '@ui/compositions/forms/MetadataFields'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
-import { DateInput, utcDayEnd, utcDayOf, utcDayStart } from '@ui/compositions/forms/DateInput'
+import { DateInput, storedDayOf, utcDayEnd, utcDayStart } from '@ui/compositions/forms/DateInput'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
 
@@ -283,7 +283,7 @@ export function CouponCreateForm({
                 <DateInput
                   id={id}
                   {...field}
-                  value={utcDayOf(control.value)}
+                  value={storedDayOf(control.value)}
                   // Starts at midnight UTC on the day picked, in every browser zone.
                   onValueChange={(value) => control.onChange(utcDayStart(value))}
                   disabled={isSubmitting}
@@ -305,7 +305,7 @@ export function CouponCreateForm({
                 <DateInput
                   id={id}
                   {...field}
-                  value={utcDayOf(control.value)}
+                  value={storedDayOf(control.value)}
                   // The last day counts: redeemable until the end of that UTC day.
                   onValueChange={(value) => control.onChange(utcDayEnd(value))}
                   disabled={isSubmitting}
