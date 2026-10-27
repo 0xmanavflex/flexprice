@@ -181,6 +181,33 @@ export const StandardFilterAndSort: Story = {
   },
 }
 
+/** With Actor = System, choosing a person switches the actor to people rather than dropping the person. */
+export const PersonOverridesActor: Story = {
+  parameters: OPEN_FILTER_A11Y,
+  args: {
+    filters: { ...FILTERS, actorType: 'system' },
+    personOptions: [
+      { value: 'user_1', label: 'Subrat' },
+      { value: 'user_2', label: 'Asha' },
+    ],
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Filter. 1 active' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Advanced filter' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add filter' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Person' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'is' }))
+    const people = await screen.findByRole('listbox', { name: 'Person' })
+    await userEvent.click(within(people).getByRole('option', { name: 'Asha' }))
+    await waitFor(() =>
+      expect(args.onFiltersChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ actorType: 'user', actorId: 'user_2' }),
+      ),
+    )
+  },
+}
+
 /** Sort reorders the page: oldest first reverses the newest-first order the API sends. */
 export const SortOldestFirst: Story = {
   play: async ({ canvasElement }) => {

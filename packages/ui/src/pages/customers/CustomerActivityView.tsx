@@ -20,7 +20,7 @@ import { Properties } from '@ui/compositions/detail/DetailKit'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
-import type { FilterField } from '@ui/components/reui/filters/filters-types'
+import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
 import {
   ActivityIcon,
   ChevronLeftIcon,
@@ -187,6 +187,45 @@ function selectField(
 }
 
 type ActivityFilterField = 'action' | 'actorType' | 'actorId' | 'source'
+
+/**
+ * One rule per field, the latest kept. The URL and the request hold one value
+ * per field, so a second Action replaces the first rather than leaving a chip
+ * the list ignores.
+ */
+export function oneRulePerField(query: FilterQuery): FilterQuery {
+  const key = (node: FilterQuery['rules'][number]) =>
+    node.type === 'rule' ? node.path.join('.') : null
+  const kept = query.rules.filter(
+    (node, index) =>
+      key(node) === null || !query.rules.slice(index + 1).some((later) => key(later) === key(node)),
+  )
+  return kept.length === query.rules.length ? query : { ...query, rules: kept }
+}
+
+/**
+ * The filters a change in the filter bar asks for, one value per field (the
+ * last rule wins). A person is a user, so the field that just changed decides
+ * between them: choosing a person sets the actor to people, and choosing
+ * another actor type drops the person.
+ */
+export function resolveActivityFilters(
+  flat: readonly FlatFilter[],
+  previous: Pick<ActivityFilters, 'actorType' | 'actorId'>,
+): Pick<ActivityFilters, 'action' | 'actorType' | 'actorId' | 'source'> {
+  const read = (field: ActivityFilterField) =>
+    String(flat.findLast((entry) => entry.field === field)?.values[0] ?? '')
+  const actorId = read('actorId')
+  let actorType = read('actorType')
+  const personChanged = actorId !== (previous.actorId ?? '')
+  if (actorId && (personChanged || !actorType)) actorType = 'user'
+  return {
+    action: read('action'),
+    actorType,
+    actorId: actorType === 'user' ? actorId : '',
+    source: read('source'),
+  }
+}
 
 export type ActivitySortField = 'at' | 'event' | 'actor' | 'source'
 
@@ -441,21 +480,9 @@ export function CustomerActivityView({
             query,
             flat: true,
             activeCount: active.length,
-            onQueryChange: (_next, flat: FlatFilter[]) => {
-              const read = (field: ActivityFilterField) =>
-                String(flat.find((entry) => entry.field === field)?.values[0] ?? '')
-              const actorId = read('actorId')
-              const picked = read('actorType')
-              // A person is a user, so a person sets the actor to people; any
-              // other actor type drops the person.
-              const actorType = actorId && (!picked || picked === 'user') ? 'user' : picked
-              set({
-                action: read('action'),
-                actorType,
-                actorId: actorType === 'user' ? actorId : '',
-                source: read('source'),
-              })
-            },
+            normalize: oneRulePerField,
+            onQueryChange: (_next, flat: FlatFilter[]) =>
+              set(resolveActivityFilters(flat, filters)),
           }}
           sort={{
             options: SORT_OPTIONS,
