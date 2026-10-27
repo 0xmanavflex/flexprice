@@ -184,7 +184,7 @@ export function PlanDetailPage({
   const update = useUpdatePlan()
   const archive = useArchivePlan()
   const sync = useSyncPlanPrices()
-  const syncing = useContractSync('plan')
+  const syncing = useContractSync('plan', planId)
 
   // The header's kind badge is read off the charges. The Overview sections
   // read the same key, so react-query serves them from this one fetch.

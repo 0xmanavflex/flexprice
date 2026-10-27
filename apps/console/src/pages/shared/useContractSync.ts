@@ -15,8 +15,16 @@ import { syncOutcome, type SyncStarted } from './contractSync'
  * workflow search until it finishes, and a second toast says done or failed.
  * Watching stops on unmount and after {@link WORKFLOW_WATCH_MAX_MS}.
  */
-export function useContractSync(subject: 'plan' | 'add-on') {
-  const [watched, setWatched] = useState<(WorkflowHandle & { since: number }) | null>(null)
+export function useContractSync(subject: 'plan' | 'add-on', recordId: string) {
+  const [state, setWatched] = useState<
+    (WorkflowHandle & { since: number; recordId: string }) | null
+  >(null)
+  // The watch belongs to the record it started on: a detail page reused for
+  // another record (a duplicate, say) neither shows it nor reports it.
+  const watched = state && state.recordId === recordId ? state : null
+  useEffect(() => {
+    if (state && state.recordId !== recordId) setWatched(null)
+  }, [state, recordId])
   const run = useWorkflowRun(watched)
 
   useEffect(() => {
@@ -65,7 +73,12 @@ export function useContractSync(subject: 'plan' | 'add-on') {
         description: `Contracts with this ${subject} are being brought up to date.`,
       })
       if (result?.workflowId) {
-        setWatched({ workflowId: result.workflowId, runId: result.runId ?? '', since: Date.now() })
+        setWatched({
+          workflowId: result.workflowId,
+          runId: result.runId ?? '',
+          since: Date.now(),
+          recordId,
+        })
       }
     },
     /** True while a started sync is being watched. */

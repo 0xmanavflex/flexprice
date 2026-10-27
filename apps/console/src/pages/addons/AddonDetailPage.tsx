@@ -89,7 +89,7 @@ export function AddonDetailPage({
   const addon = useAddon(addonId)
   const update = useUpdateAddon()
   const sync = useSyncAddonPrices()
-  const syncing = useContractSync('add-on')
+  const syncing = useContractSync('add-on', addonId)
   const remove = useDeleteAddon()
   // Fetched here too (deduped by react-query) so the rail can carry real counts.
   const prices = usePrices(PriceEntityType.Addon, addonId)
