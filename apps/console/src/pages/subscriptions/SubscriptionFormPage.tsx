@@ -193,6 +193,7 @@ export function SubscriptionFormPage({
       onPlanChange={setPlanId}
       // Undefined while unknown (loading or failed): the form blocks on a missing rate only once it knows.
       fxCustomCurrencies={fxCustomCurrencies}
+      fxSettingsFailed={currencyConfig.isError}
       fxGlobalRates={fxRates.data?.map((rate) => ({
         fromCurrency: rate.fromCurrency,
         toCurrency: rate.toCurrency,

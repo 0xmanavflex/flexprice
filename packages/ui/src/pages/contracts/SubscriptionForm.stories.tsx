@@ -132,8 +132,10 @@ interface PlaygroundProps {
   billingCurrency?: string
   /** The global exchange rates; undefined leaves them unknown. */
   fxGlobalRates?: { fromCurrency: string; toCurrency: string; rate: string }[]
-  /** The custom currencies and their factors; defaults to none. `null`: the config failed to load. */
+  /** The custom currencies and their factors; defaults to none. `null`: not loaded. */
   fxCustomCurrencies?: Record<string, Record<string, string>> | null
+  /** With `fxCustomCurrencies: null`: the settings failed, rather than still loading. */
+  fxSettingsFailed?: boolean
   /** Opens with this contract currency instead of USD. */
   currency?: string
   /** Changes to the plan's entitlements, by id (`ent_0`…). */
@@ -173,6 +175,7 @@ function SubscriptionFormPlayground({
   billingCurrency,
   fxGlobalRates,
   fxCustomCurrencies = {},
+  fxSettingsFailed = false,
   currency,
   seededAddons,
   inheritanceBlocks,
@@ -296,6 +299,7 @@ function SubscriptionFormPlayground({
       customers={customers}
       {...(fxGlobalRates ? { fxGlobalRates } : {})}
       {...(fxCustomCurrencies ? { fxCustomCurrencies } : {})}
+      fxSettingsFailed={fxSettingsFailed}
       plans={plans}
       plan={plan}
       onPlanChange={handlePlanChange}
@@ -1525,6 +1529,7 @@ export const FxConfigFailedWarnsOnly: Story = {
     billingCurrency: 'inr',
     fxGlobalRates: [],
     fxCustomCurrencies: null,
+    fxSettingsFailed: true,
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
@@ -1537,6 +1542,25 @@ export const FxConfigFailedWarnsOnly: Story = {
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fxRates: [] })),
     )
+  },
+}
+
+/** While the currency settings are still loading: no warning, and nothing blocks. */
+export const FxSettingsLoadingSaysNothing: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [],
+    fxCustomCurrencies: null,
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Currency conversion' })).toBeVisible()
+    expect(canvas.queryByText(/Could not load currency settings/)).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() => expect(args.onSubmit).toHaveBeenCalled())
   },
 }
 

@@ -274,6 +274,8 @@ export interface SubscriptionFormProps {
    * fiat currencies (lower-case code to decimal). Undefined while unknown.
    */
   fxCustomCurrencies?: Readonly<Record<string, Readonly<Record<string, string>>>> | undefined
+  /** The custom currency settings failed to load (not merely still loading). */
+  fxSettingsFailed?: boolean | undefined
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -395,6 +397,7 @@ export function SubscriptionForm({
   inheritanceBlocks = NO_BLOCKS,
   fxGlobalRates,
   fxCustomCurrencies,
+  fxSettingsFailed = false,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -465,8 +468,8 @@ export function SubscriptionForm({
   // factor (and takes no contract rate: the API refuses fx_rates for it), any
   // other at the global rate for the pair. Only a loaded custom currency config
   // says which a pair is, so only then does a missing conversion block. Until
-  // then (loading or failed), an ISO pair with no global rate is a warning,
-  // and the API stays the final check.
+  // then nothing blocks; if they failed to load, an ISO pair with no global
+  // rate is a warning (none while still loading), and the API stays the final check.
   const configKnown = fxCustomCurrencies !== undefined
   const customFactors = fxCustomCurrencies?.[contractCurrency]
   const customFactor = fxNeeded && customFactors ? customFactors[billingCurrency] : undefined
@@ -480,7 +483,11 @@ export function SubscriptionForm({
   const noGlobalRate = fxOverridable && fxGlobalRates !== undefined && !globalRate
   const fxMissing = configKnown && (fxCustom ? !(Number(customFactor ?? 0) > 0) : noGlobalRate)
   const fxUnsure =
-    !configKnown && noGlobalRate && isoCurrency(contractCurrency) && isoCurrency(billingCurrency)
+    !configKnown &&
+    fxSettingsFailed &&
+    noGlobalRate &&
+    isoCurrency(contractCurrency) &&
+    isoCurrency(billingCurrency)
   const pair = `${contractCurrency.toUpperCase()} → ${billingCurrency.toUpperCase()}`
   const fxMissingMessage = fxCustom
     ? `No conversion factor for ${pair}. Set ${contractCurrency.toUpperCase()}'s factor for ${billingCurrency.toUpperCase()} in the custom currency settings first.`
