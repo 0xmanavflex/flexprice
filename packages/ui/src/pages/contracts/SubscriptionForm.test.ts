@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { type AddContractCharge, BillingModel, PriceType } from '@fp/domain'
 import { makeCharge } from '../product-catalog/plans/planDetailFixtures'
-import { type ChargeRow, chargeInEffect, commitmentChargeOf } from './SubscriptionForm'
+import { type ChargeRow, chargeInEffect, commitmentChargeOf, windowSeed } from './SubscriptionForm'
 
 const base = {
   id: 'c1',
@@ -62,5 +62,41 @@ describe('commitmentChargeOf', () => {
         amount: '2',
       }).unitAmount,
     ).toBe('2')
+  })
+})
+
+describe('windowSeed', () => {
+  const usage = makeCharge(1, { type: PriceType.Usage, billingModel: BillingModel.FlatFee })
+
+  it('keeps a package override per package, with its size', () => {
+    expect(
+      windowSeed(usage, {
+        priceId: usage.id,
+        billingModel: BillingModel.Package,
+        amount: '10',
+        divideBy: 1000,
+      }),
+    ).toEqual({ unitAmount: '10', packageSize: '1000' })
+  })
+
+  it("keeps a package charge's own size when it is not repriced", () => {
+    const pack = {
+      ...usage,
+      billingModel: BillingModel.Package,
+      amount: '5',
+      transformQuantity: { divideBy: 100, round: null },
+    }
+    expect(windowSeed(pack)).toEqual({ unitAmount: '5', packageSize: '100' })
+  })
+
+  it('starts blank for a tiered override, which has no single rate', () => {
+    expect(
+      windowSeed(usage, {
+        priceId: usage.id,
+        billingModel: BillingModel.Tiered,
+        tierMode: 'VOLUME',
+        tiers: [{ upTo: null, unitAmount: '1' }],
+      } as never),
+    ).toEqual({ unitAmount: '' })
   })
 })

@@ -1460,6 +1460,31 @@ function chargeKind(charge: Charge): string {
 }
 
 /** The price cell: the amount, or the tiers in brief. An override wins. */
+/**
+ * What a new commitment window's price starts from: the rate the charge bills
+ * at, an override's when it has one. A package price keeps its package size, so
+ * "$10 per 1,000" never becomes $10 per unit. A tiered price has no one rate:
+ * the window starts blank and its price is entered.
+ */
+export function windowSeed(
+  charge: Charge,
+  override?: PriceOverride,
+): { unitAmount: string; packageSize?: string } {
+  if (override) {
+    switch (override.billingModel) {
+      case BillingModel.FlatFee:
+        return { unitAmount: override.amount }
+      case BillingModel.Package:
+        return { unitAmount: override.amount, packageSize: String(override.divideBy) }
+      case BillingModel.Tiered:
+        return { unitAmount: '' }
+    }
+  }
+  if (charge.billingModel === BillingModel.Package && charge.transformQuantity)
+    return { unitAmount: charge.amount, packageSize: String(charge.transformQuantity.divideBy) }
+  return { unitAmount: charge.amount }
+}
+
 /** A usage charge as the commitment dialog takes it: its name, price and what a window's price builds on. */
 export function commitmentChargeOf(charge: Charge, override?: PriceOverride) {
   return {
@@ -1468,8 +1493,8 @@ export function commitmentChargeOf(charge: Charge, override?: PriceOverride) {
     description: `${BILLING_MODEL_LABEL[override?.billingModel ?? charge.billingModel]} · ${priceText(charge, override)}`,
     // The price override's bucket, when it chose one, else the plan charge's.
     bucketSize: override?.bucketSize || charge.bucketSize || '',
-    // A window's price starts from the price the charge bills at: the override's, when it sets one.
-    unitAmount: override && 'amount' in override ? override.amount : charge.amount,
+    // A window's price starts from the price the charge bills at.
+    ...windowSeed(charge, override),
     priceBase: charge.meterId
       ? {
           entityId: charge.entityId,
@@ -2806,7 +2831,9 @@ export function AddonChargesDialog({
           submitLabel={submitLabel}
           onCancel={onClose}
           submitting={pending}
-          {...(disabled !== undefined ? { disabled } : {})}
+          // Not while the chosen add-on's charges are loading: it would attach before
+          // they could be priced. A failed load still attaches it, as the note says.
+          disabled={Boolean(disabled) || (charges === undefined && !chargesFailed)}
           onSubmit={onSubmit}
         >
           {children}
