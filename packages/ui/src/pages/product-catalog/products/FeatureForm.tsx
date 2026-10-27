@@ -109,6 +109,22 @@ const FORM_ID = 'feature-form'
  */
 const EXPRESSION_PLACEHOLDER = 'duration_seconds / 60 / 100'
 
+/**
+ * Faint examples for the aggregation inputs, where the label alone does not
+ * say what goes in: a property name that fits each aggregation.
+ */
+const FIELD_PLACEHOLDER: Partial<Record<AggregationType, string>> = {
+  [AggregationType.CountUnique]: 'user_id',
+  [AggregationType.Sum]: 'tokens',
+  [AggregationType.SumWithMultiplier]: 'tokens',
+  [AggregationType.Avg]: 'latency_ms',
+  [AggregationType.Max]: 'concurrent_sessions',
+  [AggregationType.Latest]: 'seats',
+  [AggregationType.WeightedSum]: 'storage_gb',
+}
+const MULTIPLIER_PLACEHOLDER = '0.001'
+const GROUP_BY_PLACEHOLDER = 'region'
+
 const TYPES = [
   FeatureType.Metered,
   FeatureType.Boolean,
@@ -603,6 +619,7 @@ export function FeatureForm(props: FeatureFormProps) {
                   id={id}
                   readOnly={isEdit}
                   disabled={isEdit}
+                  placeholder={FIELD_PLACEHOLDER[aggregationType]}
                   {...field}
                   {...form.register('meter.field')}
                 />
@@ -622,7 +639,11 @@ export function FeatureForm(props: FeatureFormProps) {
           {({ id, ...field }) => (
             <Input
               id={id}
+              type="number"
               inputMode="decimal"
+              min={0}
+              step="any"
+              placeholder={MULTIPLIER_PLACEHOLDER}
               disabled={isEdit}
               {...field}
               {...form.register('meter.multiplier')}
@@ -642,6 +663,7 @@ export function FeatureForm(props: FeatureFormProps) {
               id={id}
               readOnly={isEdit}
               disabled={isEdit}
+              placeholder={GROUP_BY_PLACEHOLDER}
               {...field}
               {...form.register('meter.groupBy')}
             />
