@@ -939,6 +939,18 @@ export const UpcomingInvoice: Story = {
     await expect(section.getByText('Prepaid credits')).toBeVisible()
     await expect(section.getByText('Amount due')).toBeVisible()
     await expect(section.getByText('$3,389.96')).toBeVisible()
+    // One right edge: every amount figure and every total ends on the same line.
+    const sectionEl = canvas.getByRole('heading', { name: 'Upcoming invoice' }).closest('section')!
+    const right = (el: Element) => Math.round(el.getBoundingClientRect().right)
+    const edge = right(section.getByRole('columnheader', { name: 'Amount' }).firstElementChild!)
+    const amounts = [...sectionEl.querySelectorAll('tbody tr')].map(
+      (tr) => [...tr.querySelectorAll('td')].at(-1)!.firstElementChild!,
+    )
+    const totals = [...sectionEl.querySelectorAll('dd')]
+    await expect(amounts.length).toBeGreaterThan(0)
+    for (const figure of [...amounts, ...totals]) {
+      await expect(Math.abs(right(figure) - edge)).toBeLessThanOrEqual(1)
+    }
   },
 }
 

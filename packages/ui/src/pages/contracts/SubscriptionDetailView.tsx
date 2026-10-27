@@ -2096,7 +2096,8 @@ function InvoicePreviewSection({
               </Button>
             </div>
           ) : null}
-          <div className="flex justify-end border-t px-6 py-4">
+          {/* pe-4 is the compact table's trailing cell inset: the totals end on the Amount column's edge. */}
+          <div className="flex justify-end border-t py-4 ps-6 pe-4">
             <TotalsList>
               <TotalRow label="Subtotal" value={formatMoney(value.subtotal)} />
               {!isZero(value.discount) ? (
