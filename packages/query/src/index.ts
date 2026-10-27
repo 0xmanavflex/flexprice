@@ -261,6 +261,7 @@ export {
   toPendingSchedules,
   toSubscription,
   toSubscriptionDetail,
+  subscriptionEntitlementsFromRejection,
   toSubscriptionEntitlement,
   toSubscriptionFilter,
   toSubscriptionLine,

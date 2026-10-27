@@ -452,15 +452,63 @@ export interface SubscriptionFeatureWire {
 }
 
 export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): SubscriptionEntitlement {
-  const period = wire.entitlement?.usageResetPeriod ?? ''
+  // The SDK camel-cases a body it accepts. A 200 the schema rejects is still
+  // the wire shape (`is_enabled`, `usage_limit`), and that body is what the
+  // section has to show.
+  const entitlement = wire.entitlement as
+    | (NonNullable<SubscriptionFeatureWire['entitlement']> & Record<string, unknown>)
+    | undefined
+  const period = stringValue(entitlement?.usageResetPeriod ?? entitlement?.usage_reset_period)
+  const limit = entitlement?.usageLimit ?? entitlement?.usage_limit
   return {
     featureId: wire.feature?.id ?? '',
     name: wire.feature?.name || wire.feature?.id || 'Feature',
-    enabled: wire.entitlement?.isEnabled ?? false,
-    usageLimit: wire.entitlement?.usageLimit ?? null,
-    softLimit: wire.entitlement?.isSoftLimit ?? false,
+    enabled: booleanValue(entitlement?.isEnabled ?? entitlement?.is_enabled),
+    usageLimit: typeof limit === 'number' ? limit : null,
+    softLimit: booleanValue(entitlement?.isSoftLimit ?? entitlement?.is_soft_limit),
     resetPeriodLabel:
       period && period !== 'NEVER' ? (BILLING_PERIOD_LABEL[period as BillingPeriod] ?? period) : '',
+  }
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function booleanValue(value: unknown): boolean {
+  return value === true
+}
+
+/**
+ * Entitlements from a request the server accepted and the SDK then rejected.
+ *
+ * HTTP 200 with a body the generated schema will not parse becomes an
+ * `ApiError`, and the contract section renders that as "could not be loaded"
+ * even though `features` is sitting in the response. Read that body instead.
+ * A real failure (4xx/5xx, or a body with no `features`) stays an error.
+ */
+export function subscriptionEntitlementsFromRejection(
+  error: unknown,
+): SubscriptionEntitlement[] | undefined {
+  if (!(error instanceof ApiError) || error.cause == null || typeof error.cause !== 'object') {
+    return undefined
+  }
+  const cause = error.cause as { rawValue?: unknown; body?: unknown; statusCode?: unknown }
+  const status = typeof cause.statusCode === 'number' ? cause.statusCode : error.status
+  if (status !== undefined && (status < 200 || status >= 300)) return undefined
+  const body = cause.rawValue ?? parsedBody(cause.body)
+  if (!body || typeof body !== 'object' || !('features' in body)) return undefined
+  const features = (body as { features: unknown }).features
+  if (!Array.isArray(features)) return undefined
+  return (features as SubscriptionFeatureWire[]).map(toSubscriptionEntitlement)
+}
+
+function parsedBody(body: unknown): unknown {
+  if (typeof body !== 'string' || body.trim() === '') return undefined
+  try {
+    return JSON.parse(body) as unknown
+  } catch {
+    return undefined
   }
 }
 
@@ -1183,8 +1231,14 @@ export function useSubscriptionEntitlements(id: string) {
   return useQuery({
     queryKey: queryKeys.subscriptions.entitlements(id),
     queryFn: async () => {
-      const response = await call(() => client.subscriptions.getSubscriptionEntitlements(id))
-      return ((response.features ?? []) as SubscriptionFeatureWire[]).map(toSubscriptionEntitlement)
+      try {
+        const response = await call(() => client.subscriptions.getSubscriptionEntitlements(id))
+        return ((response.features ?? []) as SubscriptionFeatureWire[]).map(toSubscriptionEntitlement)
+      } catch (error) {
+        const recovered = subscriptionEntitlementsFromRejection(error)
+        if (recovered) return recovered
+        throw error
+      }
     },
     enabled: id.length > 0,
   })
