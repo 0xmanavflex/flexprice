@@ -12,9 +12,9 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Composer, ChoiceCards } from '@ui/compositions/detail/DetailKit'
+import { DateInput } from '@ui/compositions/forms/DateInput'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@ui/components/primitives/field'
-import { Input } from '@ui/components/primitives/input'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { provenance } from '@ui/provenance'
 import type { MeterOption, PriceUnitOption } from '../product-catalog/charges/ChargeForm'
@@ -28,7 +28,7 @@ export const ContractChargeDialogProvenance = provenance({
     'compositions/detail-kit',
     'pages/ContractAddChargeForm',
     'pages/ContractUsageEditForm',
-    'ui/input',
+    'compositions/date-input',
     'ui/field',
     '@reui/alert',
   ],
@@ -255,12 +255,14 @@ function EndForm({
       <FieldGroup className="gap-4">
         <Field className="gap-2">
           <FieldLabel htmlFor="charge-date">Ends on</FieldLabel>
-          <Input
+          <DateInput
             id="charge-date"
-            type="date"
             value={date}
             disabled={isSubmitting}
-            onChange={(event) => setDate(event.target.value)}
+            clearable
+            clearLabel="Clear end date"
+            placeholder="Now"
+            onValueChange={setDate}
           />
           <FieldDescription>
             Leave empty to end now. The change is prorated if the period is under way.

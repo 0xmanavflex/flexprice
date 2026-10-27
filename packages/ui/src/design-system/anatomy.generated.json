@@ -857,6 +857,7 @@
         "ApiCard",
         "DashboardHome",
         "DateInput",
+        "DayCalendar",
         "FilterBar",
         "FilterSelect",
         "PortalUsage",
@@ -887,6 +888,7 @@
         "CustomerAnalyticsView",
         "DashboardHome",
         "DateInput",
+        "DayCalendar",
         "EnvironmentForm",
         "FilterSelect",
         "PortalUsage",
@@ -1594,6 +1596,7 @@
         "Composer",
         "ContractAddChargeForm",
         "ContractUsageEditForm",
+        "DateInput",
         "Field",
         "FormDialog"
       ],
@@ -1601,7 +1604,7 @@
         "SubscriptionDetailView",
         "SubscriptionForm"
       ],
-      "story": null
+      "story": "./src/pages/contracts/ContractChargeDialog.stories.tsx"
     },
     "ContractIntegrations": {
       "file": "src/pages/contracts/ContractIntegrations.tsx",
@@ -1629,13 +1632,14 @@
       "layer": "surface",
       "composes": [
         "Composer",
+        "DateInput",
         "Field",
         "FormDialog"
       ],
       "usedBy": [
         "SubscriptionDetailView"
       ],
-      "story": null
+      "story": "./src/pages/contracts/ContractQuantityDialog.stories.tsx"
     },
     "ContractSectionDialogs": {
       "file": "src/pages/contracts/ContractSectionDialogs.tsx",
@@ -2104,6 +2108,7 @@
       "layer": "surface",
       "composes": [
         "CalendarIcon",
+        "DayCalendar",
         "DetailTable",
         "EmptyState",
         "ErrorState",
@@ -2442,6 +2447,8 @@
         "ActivityEventSheet",
         "ChargeForm",
         "ContractAddChargeForm",
+        "ContractChargeDialog",
+        "ContractQuantityDialog",
         "CouponCreateForm",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
@@ -2463,6 +2470,18 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "DayCalendar": {
+      "file": "src/compositions/forms/DateInput.tsx",
+      "layer": "composition",
+      "composes": [
+        "Calendar",
+        "CalendarIcon"
+      ],
+      "usedBy": [
+        "CustomerAnalyticsView"
+      ],
+      "story": "./src/compositions/forms/DateInput.stories.tsx"
     },
     "Deferred": {
       "file": "src/compositions/feedback/DataBoundary.tsx",
@@ -8627,6 +8646,7 @@
       "component": "DateInput",
       "uses": [
         "DateInput",
+        "DayCalendar",
         "Field"
       ]
     },
@@ -9189,12 +9209,26 @@
         "ChargeCouponDialog"
       ]
     },
+    "./src/pages/contracts/ContractChargeDialog.stories.tsx": {
+      "title": "App/Contracts/Contract charge dialog",
+      "component": "ContractChargeDialog",
+      "uses": [
+        "ContractChargeDialog"
+      ]
+    },
     "./src/pages/contracts/ContractIntegrations.stories.tsx": {
       "title": "App/Contracts/Contract integrations",
       "component": "ContractIntegrations",
       "uses": [
         "ContractIntegrations",
         "RelatedCard"
+      ]
+    },
+    "./src/pages/contracts/ContractQuantityDialog.stories.tsx": {
+      "title": "App/Contracts/Contract quantity dialog",
+      "component": "ContractQuantityDialog",
+      "uses": [
+        "ContractQuantityDialog"
       ]
     },
     "./src/pages/contracts/ContractSummary.stories.tsx": {

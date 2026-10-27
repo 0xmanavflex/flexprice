@@ -168,6 +168,7 @@ export function CouponGrid({
       }),
       dateColumn<Coupon>('redeemBefore', 'Valid until', (row) => row.redeemBefore, {
         width: 140,
+        storedDay: true,
         ...(locale ? { locale } : {}),
       }),
       pillColumn<Coupon>(

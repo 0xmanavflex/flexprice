@@ -19,7 +19,7 @@ import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
 import { MetadataFields } from '@ui/compositions/forms/MetadataFields'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
-import { DateInput } from '@ui/compositions/forms/DateInput'
+import { DateInput, storedDayOf, utcDayEnd, utcDayStart } from '@ui/compositions/forms/DateInput'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
 
@@ -60,13 +60,6 @@ const CADENCE_OPTIONS = Object.values(CouponCadence).map((value) => ({
 
 const CURRENCY_OPTIONS = PRICE_UNIT_CURRENCIES.map((c) => ({ value: c.code, label: c.label }))
 
-const pad = (n: number) => String(n).padStart(2, '0')
-const toIso = (d: Date | undefined) =>
-  d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : ''
-const fromIso = (s: string): Date | undefined => {
-  const [y, m, d] = s.split('-').map(Number)
-  return y && m && d ? new Date(y, m - 1, d) : undefined
-}
 const toNumber = (raw: unknown): number | undefined =>
   raw === '' || raw === null || raw === undefined ? undefined : Number(raw)
 
@@ -290,8 +283,9 @@ export function CouponCreateForm({
                 <DateInput
                   id={id}
                   {...field}
-                  value={toIso(control.value)}
-                  onValueChange={(value) => control.onChange(fromIso(value))}
+                  value={storedDayOf(control.value)}
+                  // Starts at midnight UTC on the day picked, in every browser zone.
+                  onValueChange={(value) => control.onChange(utcDayStart(value))}
                   disabled={isSubmitting}
                 />
               )}
@@ -311,8 +305,9 @@ export function CouponCreateForm({
                 <DateInput
                   id={id}
                   {...field}
-                  value={toIso(control.value)}
-                  onValueChange={(value) => control.onChange(fromIso(value))}
+                  value={storedDayOf(control.value)}
+                  // The last day counts: redeemable until the end of that UTC day.
+                  onValueChange={(value) => control.onChange(utcDayEnd(value))}
                   disabled={isSubmitting}
                 />
               )}

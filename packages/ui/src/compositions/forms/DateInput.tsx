@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
+import { getDefaultClassNames } from 'react-day-picker'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -32,7 +33,7 @@ import { provenance } from '@ui/provenance'
 export const DateInputProvenance = provenance({
   source: 'composition',
   composes: ['ui/popover', 'ui/calendar', 'ui/button', 'ui/input', 'ui/select'],
-  note: 'Day or instant picker over the stock Calendar in a Popover; the time row is the reference DateTimeField (hours, minutes, Local/UTC).',
+  note: 'Day or instant picker over the stock Calendar in a Popover, with today as a primary tint (darker than hover, lighter than the selected day); the time row is the reference DateTimeField (hours, minutes, Local/UTC).',
 })
 
 export interface DateInputProps {
@@ -58,6 +59,21 @@ export interface DateInputProps {
   'aria-invalid'?: true | undefined
 }
 
+/**
+ * Today on the stock calendar is `bg-muted`, the same as a hovered day, so it
+ * reads as "the one under the pointer". Here today is a primary tint with
+ * primary text, darker than hover (and it stays tinted when hovered), and the
+ * selected day stays solid primary on top, so all three are distinct.
+ */
+const dayPickerClassNames = {
+  today: cn(
+    'bg-primary/15 text-primary rounded-(--cell-radius) font-medium data-[selected=true]:rounded-none',
+    // Hovering today darkens the tint; a selected today keeps its solid primary.
+    '[&_button:not([data-selected-single=true]):hover]:bg-primary/25 [&_button:not([data-selected-single=true]):hover]:text-primary',
+    getDefaultClassNames().today,
+  ),
+}
+
 const pad = (n: number) => String(n).padStart(2, '0')
 const toDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const DAY = /^\d{4}-\d{2}-\d{2}$/
@@ -71,6 +87,60 @@ export function parseDateValue(value: string | undefined): Date | undefined {
   }
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+/**
+ * Day fields are stored as UTC days, whatever the browser's zone. A
+ * `YYYY-MM-DD` day as the instant it starts: midnight UTC.
+ */
+export function utcDayStart(day: string): Date | undefined {
+  if (!DAY.test(day)) return undefined
+  const date = new Date(`${day}T00:00:00.000Z`)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+/** The last millisecond of a `YYYY-MM-DD` UTC day, for an inclusive "last day" such as an expiry. */
+export function utcDayEnd(day: string): Date | undefined {
+  if (!DAY.test(day)) return undefined
+  const date = new Date(`${day}T23:59:59.999Z`)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+/** The UTC calendar day an instant falls on, as `YYYY-MM-DD`; empty for none. */
+export function utcDayOf(date: Date | null | undefined): string {
+  if (!date || Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 10)
+}
+
+const DAY_MS = 86_400_000
+
+/** Midnight UTC, or the last millisecond of a UTC day: how day fields are saved. */
+function isUtcDayBoundary(date: Date) {
+  const into = ((date.getTime() % DAY_MS) + DAY_MS) % DAY_MS
+  return into === 0 || into === DAY_MS - 1
+}
+
+/**
+ * The calendar day a stored day field means, as `YYYY-MM-DD`. Day fields are
+ * saved as UTC days (midnight UTC, or the end of the UTC day for a last day)
+ * and read back on that UTC day. Any other instant, such as one saved earlier
+ * from the browser's local day (local midnight or 23:59:59), reads as the
+ * local day it was picked on, so older records keep the day they show today.
+ */
+export function storedDayOf(date: Date | null | undefined): string {
+  if (!date || Number.isNaN(date.getTime())) return ''
+  return isUtcDayBoundary(date) ? utcDayOf(date) : toDay(date)
+}
+
+/** A stored day field as the reader's locale writes it ("Oct 21, 2026"): the day `storedDayOf` reads. */
+export function formatStoredDay(
+  date: Date,
+  options?: { locale?: string | undefined; dateStyle?: 'short' | 'medium' },
+): string {
+  return new Intl.DateTimeFormat(options?.locale, {
+    dateStyle: options?.dateStyle ?? 'medium',
+    ...(isUtcDayBoundary(date) ? { timeZone: 'UTC' } : {}),
+  }).format(date)
 }
 
 const toDate = (value: string | Date | undefined): Date | undefined =>
@@ -91,6 +161,47 @@ export function formatDateValue(value: string | undefined, zone: 'local' | 'utc'
     ...(zone === 'utc' ? { timeZone: 'UTC' } : {}),
   })
   return zone === 'utc' ? `${text} UTC` : text
+}
+
+export interface DayCalendarProps {
+  /** `YYYY-MM-DD`, or empty for none. */
+  value: string | undefined
+  /** Called with the picked day as `YYYY-MM-DD`. Picking the selected day again keeps it. */
+  onValueChange: (value: string) => void
+  /** Earliest pickable day, `YYYY-MM-DD` or a `Date`. */
+  min?: string | Date | undefined
+  /** Latest pickable day, `YYYY-MM-DD` or a `Date`. */
+  max?: string | Date | undefined
+}
+
+/**
+ * The bare day calendar `DateInput` opens, for a popover that has its own
+ * trigger (a toolbar's "From" / "To" range buttons). Same calendar, same days,
+ * with month and year menus in the caption for jumping far back.
+ */
+export function DayCalendar({ value, onValueChange, min, max }: DayCalendarProps) {
+  const selected = parseDateValue(value)
+  const minDate = toDate(min)
+  const maxDate = toDate(max)
+  const disabledDays = [
+    ...(minDate ? [{ before: minDate }] : []),
+    ...(maxDate ? [{ after: maxDate }] : []),
+  ]
+  const month = selected ?? minDate ?? maxDate
+  return (
+    <Calendar
+      mode="single"
+      classNames={dayPickerClassNames}
+      // Month and year menus: a range can start years back without paging month by month.
+      captionLayout="dropdown"
+      {...(selected ? { selected } : {})}
+      {...(month ? { defaultMonth: month } : {})}
+      {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
+      onSelect={(date) => {
+        if (date) onValueChange(toDay(date))
+      }}
+    />
+  )
 }
 
 export function DateInput({
@@ -186,6 +297,7 @@ export function DateInput({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
+          classNames={dayPickerClassNames}
           {...(calendarDay ? { selected: calendarDay } : {})}
           {...(month ? { defaultMonth: month } : {})}
           {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
