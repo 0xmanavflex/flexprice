@@ -78,6 +78,8 @@ export interface RevenuePoint {
   revenue: number
   /** The same bucket in the comparison period. */
   previous?: number | undefined
+  /** The two figures formatted as money, for the table under the chart. */
+  display?: { revenue: string; previous?: string | undefined } | undefined
 }
 
 export interface CustomerRevenueRow {
@@ -343,6 +345,20 @@ function NotReady({
   )
 }
 
+/**
+ * A ready report with nothing to draw is empty: an all-zero chart says
+ * nothing, so it shows the empty state instead.
+ */
+function withData<T extends ReportState>(state: T, hasData: boolean): T {
+  return state.status === 'ready' && !hasData ? { ...state, status: 'empty' } : state
+}
+
+const revenueHasData = (series: RevenuePoint[]) =>
+  series.some((point) => point.revenue !== 0 || (point.previous ?? 0) !== 0)
+
+/** Customers that billed something; a zero bar is not a customer to rank. */
+const billedRows = (rows: CustomerRevenueRow[]) => rows.filter((row) => row.revenue > 0)
+
 function BasedOn({ text }: { text?: string | undefined }) {
   return text ? <p className="text-muted-foreground border-t px-5 py-3 text-xs">{text}</p> : null
 }
@@ -432,8 +448,7 @@ const CREDIT_CUSTOMER_COLUMNS: CsvColumn<CreditRow>[] = [
   { header: 'share', value: (row) => row.share },
 ]
 
-const CREDIT_TYPE_COLUMNS: CsvColumn<CreditTypeRow & { section: string }>[] = [
-  { header: 'section', value: (row) => row.section },
+const CREDIT_TYPE_COLUMNS: CsvColumn<CreditTypeRow>[] = [
   { header: 'type', value: (row) => row.label },
   { header: 'customers', value: (row) => row.customers },
   { header: 'amount', value: (row) => row.amount },
@@ -777,16 +792,19 @@ export function RevenueReport(props: RevenueReportProps) {
 
 const axisMoney = (value: number) => short(value)
 
-function OverviewTab({
-  revenue,
-  receivables,
-  payments,
-  customers,
-  usage,
-  comparing,
-  rangeLabel,
-  onViewChange,
-}: RevenueReportProps) {
+function OverviewTab(props: RevenueReportProps) {
+  const { receivables, comparing, rangeLabel, onViewChange } = props
+  const revenue = withData(props.revenue, revenueHasData(props.revenue.series))
+  const payments = withData(
+    props.payments,
+    props.payments.series.some((point) => point.days !== null),
+  )
+  const topFive = billedRows(props.customers.rows).slice(0, 5)
+  const customers = withData(props.customers, topFive.length > 0)
+  const usage = withData(
+    props.usage,
+    props.usage.series.some((point) => point.events > 0),
+  )
   return (
     <div className="flex flex-col gap-5">
       <Panel
@@ -914,7 +932,7 @@ function OverviewTab({
               name="Top 5 customers"
               rangeLabel={rangeLabel}
               columns={CUSTOMER_COLUMNS}
-              rows={customers.status === 'ready' ? customers.rows.slice(0, 5) : []}
+              rows={customers.status === 'ready' ? topFive : []}
             />,
             <ViewReport onClick={() => onViewChange('customers')} />,
           )}
@@ -922,7 +940,7 @@ function OverviewTab({
           <Surface>
             {customers.status === 'ready' ? (
               <>
-                <CustomerBars rows={customers.rows.slice(0, 5)} height={236} />
+                <CustomerBars rows={topFive} height={236} />
                 <Legend
                   items={[
                     { label: 'Usage', color: USAGE_TONE },
@@ -972,7 +990,75 @@ function OverviewTab({
   )
 }
 
-function RevenueTab({ revenue, comparing, rangeLabel }: RevenueReportProps) {
+const compactMoney = (value: number) => short(value)
+
+function RevenueTable({ series, comparing }: { series: RevenuePoint[]; comparing: boolean }) {
+  const rows = series.map((point, index) => ({ ...point, id: String(index), index }))
+  type Row = (typeof rows)[number]
+  const change = (row: Row) => (row.previous ? (row.revenue - row.previous) / row.previous : null)
+  return (
+    <div className="border-t">
+      <DetailTable<Row>
+        compact
+        label="Revenue by period"
+        noun="periods"
+        rows={rows}
+        toolbar={false}
+        columns={[
+          {
+            key: 'period',
+            header: 'Period',
+            sortBy: (row) => row.index,
+            cell: (row) => <span className="font-medium">{row.label}</span>,
+          },
+          {
+            key: 'revenue',
+            header: 'Revenue',
+            sortBy: (row) => row.revenue,
+            cell: (row) => (
+              <span className="tabular-nums">
+                {row.display?.revenue ?? compactMoney(row.revenue)}
+              </span>
+            ),
+          },
+          ...(comparing
+            ? [
+                {
+                  key: 'previous',
+                  header: 'Previous period',
+                  sortBy: (row: Row) => row.previous ?? 0,
+                  cell: (row: Row) => (
+                    <span className="text-muted-foreground tabular-nums">
+                      {row.previous == null
+                        ? '—'
+                        : (row.display?.previous ?? compactMoney(row.previous))}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'change',
+                  header: 'Change',
+                  sortBy: (row: Row) => change(row) ?? 0,
+                  cell: (row: Row) => {
+                    const value = change(row)
+                    return value === null ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <Change figure={{ value: '', change: value }} />
+                    )
+                  },
+                },
+              ]
+            : []),
+        ]}
+      />
+    </div>
+  )
+}
+
+function RevenueTab(props: RevenueReportProps) {
+  const { comparing, rangeLabel } = props
+  const revenue = withData(props.revenue, revenueHasData(props.revenue.series))
   return (
     <Panel
       title="Revenue over time"
@@ -1005,6 +1091,7 @@ function RevenueTab({ revenue, comparing, rangeLabel }: RevenueReportProps) {
                 ...(comparing ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }] : []),
               ]}
             />
+            <RevenueTable series={revenue.series} comparing={comparing} />
           </>
         ) : (
           <NotReady state={revenue} height={320} empty="No revenue in this range" />
@@ -1015,17 +1102,27 @@ function RevenueTab({ revenue, comparing, rangeLabel }: RevenueReportProps) {
   )
 }
 
-function CreditTypeTable({ label, rows }: { label: string; rows: CreditTypeRow[] }) {
+function CreditTypeTable({
+  label,
+  header,
+  rows,
+}: {
+  label: string
+  header: string
+  rows: CreditTypeRow[]
+}) {
   return (
     <DetailTable<CreditTypeRow>
       compact
       label={label}
       noun="types"
       rows={rows}
+      toolbar={false}
+      footer={false}
       columns={[
         {
           key: 'label',
-          header: label,
+          header,
           sortBy: (row) => row.label,
           cell: (row) => <span className="font-medium">{row.label}</span>,
         },
@@ -1046,9 +1143,11 @@ function CreditTypeTable({ label, rows }: { label: string; rows: CreditTypeRow[]
   )
 }
 
-function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) {
-  const top = customers.rows.slice(0, 10)
-  const largest = customers.rows[0]
+function CustomersTab(props: RevenueReportProps) {
+  const { comparing, rangeLabel } = props
+  const top = billedRows(props.customers.rows).slice(0, 10)
+  const customers = withData(props.customers, top.length > 0)
+  const largest = top[0]
   return (
     <div className="flex flex-col gap-5">
       <Panel
@@ -1095,66 +1194,95 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
 
       {customers.credits ? (
         <>
-          <Panel
-            title="Credits consumed and topped up"
-            action={
-              <CsvButton
-                name="Credits consumed and topped up"
-                rangeLabel={rangeLabel}
-                columns={CREDIT_TYPE_COLUMNS}
-                rows={
-                  customers.credits?.status === 'ready'
-                    ? [
-                        ...customers.credits.consumedTypes.map((row) => ({
-                          ...row,
-                          section: 'Consumed by credit type',
-                        })),
-                        ...customers.credits.topupTypes.map((row) => ({
-                          ...row,
-                          section: 'Topped up by source',
-                        })),
-                      ]
-                    : []
-                }
-              />
-            }
-            description={`Wallet credits added and applied to invoices, ${rangeLabel}`}
-          >
-            <Surface>
-              {customers.credits.status === 'ready' ? (
-                <>
-                  <OverviewTiles
-                    variant="flush"
-                    tiles={[
-                      {
-                        label: 'Customers using credits',
-                        value: String(customers.credits.rows.length),
-                      },
-                      { label: 'Credits consumed', value: customers.credits.total },
-                      { label: 'Credits topped up', value: customers.credits.toppedUp },
-                      { label: 'Paid share', value: customers.credits.paidShare },
-                    ]}
-                  />
-                  <div className="grid gap-5 p-5 lg:grid-cols-2">
-                    <CreditTypeTable
-                      label="Consumed by credit type"
-                      rows={customers.credits.consumedTypes}
-                    />
-                    <CreditTypeTable
-                      label="Topped up by source"
-                      rows={customers.credits.topupTypes}
-                    />
-                  </div>
-                </>
-              ) : (
-                <NotReady
-                  state={customers.credits}
-                  height={200}
-                  empty="No credit activity in this range"
+          {/* Consumed and topped up are two reports: each its own titled panel. */}
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Panel
+              title="Credits consumed"
+              action={
+                <CsvButton
+                  name="Credits consumed"
+                  rangeLabel={rangeLabel}
+                  columns={CREDIT_TYPE_COLUMNS}
+                  rows={customers.credits.status === 'ready' ? customers.credits.consumedTypes : []}
                 />
-              )}
-            </Surface>
-          </Panel>
+              }
+              description={`Wallet credits applied to invoices, ${rangeLabel}, by credit type`}
+            >
+              <Surface>
+                {customers.credits.status === 'ready' &&
+                customers.credits.consumedTypes.length > 0 ? (
+                  <>
+                    <OverviewTiles
+                      variant="flush"
+                      tiles={[
+                        { label: 'Total consumed', value: customers.credits.total },
+                        {
+                          label: 'Customers using credits',
+                          value: String(customers.credits.rows.length),
+                        },
+                        { label: 'Paid share', value: customers.credits.paidShare },
+                      ]}
+                    />
+                    <div className="p-5">
+                      <CreditTypeTable
+                        label="Credits consumed by type"
+                        header="Credit type"
+                        rows={customers.credits.consumedTypes}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <NotReady
+                    state={withData(customers.credits, false)}
+                    height={200}
+                    empty="No credits consumed in this range"
+                  />
+                )}
+                <BasedOn
+                  text={
+                    customers.credits.status === 'ready' ? customers.credits.basedOn : undefined
+                  }
+                />
+              </Surface>
+            </Panel>
+
+            <Panel
+              title="Credits topped up"
+              action={
+                <CsvButton
+                  name="Credits topped up"
+                  rangeLabel={rangeLabel}
+                  columns={CREDIT_TYPE_COLUMNS}
+                  rows={customers.credits.status === 'ready' ? customers.credits.topupTypes : []}
+                />
+              }
+              description={`Wallet credits added, ${rangeLabel}, by source`}
+            >
+              <Surface>
+                {customers.credits.status === 'ready' && customers.credits.topupTypes.length > 0 ? (
+                  <>
+                    <OverviewTiles
+                      variant="flush"
+                      tiles={[{ label: 'Total topped up', value: customers.credits.toppedUp }]}
+                    />
+                    <div className="p-5">
+                      <CreditTypeTable
+                        label="Credits topped up by source"
+                        header="Source"
+                        rows={customers.credits.topupTypes}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <NotReady
+                    state={withData(customers.credits, false)}
+                    height={200}
+                    empty="No credits topped up in this range"
+                  />
+                )}
+              </Surface>
+            </Panel>
+          </div>
 
           {customers.credits.status === 'ready' && customers.credits.rows.length > 0 ? (
             <Panel
@@ -1474,7 +1602,12 @@ function ReceivablesTab({ receivables }: RevenueReportProps) {
   )
 }
 
-function PaymentsTab({ payments, comparing, rangeLabel }: RevenueReportProps) {
+function PaymentsTab(props: RevenueReportProps) {
+  const { comparing, rangeLabel } = props
+  const payments = withData(
+    props.payments,
+    props.payments.series.some((point) => point.days !== null),
+  )
   return (
     <div className="flex flex-col gap-5">
       <Panel
@@ -1575,7 +1708,12 @@ function PaymentsTab({ payments, comparing, rangeLabel }: RevenueReportProps) {
   )
 }
 
-function UsageTab({ usage, rangeLabel }: RevenueReportProps) {
+function UsageTab(props: RevenueReportProps) {
+  const { rangeLabel } = props
+  const usage = withData(
+    props.usage,
+    props.usage.series.some((point) => point.events > 0),
+  )
   return (
     <div className="flex flex-col gap-5">
       <Panel
