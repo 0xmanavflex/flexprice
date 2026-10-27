@@ -1013,6 +1013,7 @@ export const UpcomingInvoicePlain: Story = {
   },
 }
 
+/** Nothing to bill: the section is left out, not shown empty. */
 export const UpcomingInvoiceAllZero: Story = {
   args: {
     ...BASE,
@@ -1028,7 +1029,40 @@ export const UpcomingInvoiceAllZero: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('Nothing to bill yet')).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
+    await expect(canvas.queryByText('Nothing to bill yet')).toBeNull()
+  },
+}
+
+/**
+ * Sections with rows come first: empty entry-point sections (here
+ * Entitlements, Credit grants and Add-ons) sit below the ones that have
+ * something to read, each group in its usual order.
+ */
+export const SectionsWithRowsFirst: Story = {
+  args: {
+    ...BASE,
+    entitlements: ready([]),
+    creditGrants: ready([]),
+    addons: ready([]),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByRole('heading', { name: 'Taxes' })
+    const order = [
+      'Upcoming invoice',
+      'Charges',
+      'Coupons',
+      'Taxes',
+      'Entitlements',
+      'Credit grants',
+      'Add-ons',
+    ]
+    const tops = order.map(
+      (name) => canvas.getByRole('heading', { name }).getBoundingClientRect().top,
+    )
+    await expect([...tops].sort((a, b) => a - b)).toEqual(tops)
   },
 }
 

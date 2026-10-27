@@ -8,7 +8,7 @@ import {
 } from '@fp/domain'
 import { toast } from 'sonner'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
@@ -152,7 +152,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     'compositions/ActivityLog',
     'compositions/detail-kit',
   ],
-  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Charges, Usage, Invoices, Information) directly under it, and an Activity and Related rail on Overview only. Lifecycle banners lead the Overview tab, then the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes. Information holds the side-by-side Contract and Billing & collection panels and the metadata card.',
+  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Charges, Usage, Invoices, Information) directly under it, and an Activity and Related rail on Overview only. Lifecycle banners lead the Overview tab, then the upcoming invoice preview (left out when there is nothing to bill), then charges, commitments, entitlements, credit grants, add-ons, coupons and taxes, those with rows before the empty ones. Information holds the side-by-side Contract and Billing & collection panels and the metadata card.',
 })
 
 /** One section's data with its own loading and failure state, so a slow tab never blocks the page. */
@@ -975,28 +975,48 @@ export function SubscriptionDetailView({
               ) : null}
 
               {/*
+                Sections that have rows come first; a section that is empty
+                and only an entry point for adding something (no add-ons,
+                no coupons…) sits lower. A section still loading or failed
+                keeps its place: it is not known to be empty. Within each
+                group the order is the redesign's.
+              */}
+              {rowsFirst([
+                {
+                  id: 'charges',
+                  empty: lines.data?.length === 0,
+                  node: (
+                    <>
+                      {/*
                 The Overview's charges: only the ones this contract changed,
                 and a way to the rest. The same table the Charges tab uses, in
                 its summary shape, so a charge reads identically in both.
               */}
-              <ChargeTable
-                title="Charges"
-                onEditSection={(charge, part) => editCharge(charge, part)}
-                editableSections={editableChargeSections}
-                variant="summary"
-                {...(revertCharge ? { onRevert: revertCharge } : {})}
-                layout="narrow"
-                charges={chargeRows.charges}
-                details={chargeRows.details}
-                source={sourceOf}
-                {...(s.billingPeriod ? { period: s.billingPeriod } : {})}
-                onShowAll={() => setTab('charges')}
-                isLoading={lines.isLoading ?? false}
-                error={lines.isError ? 'Charges could not be loaded' : null}
-                {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
-              />
-
-              {/*
+                      <ChargeTable
+                        title="Charges"
+                        onEditSection={(charge, part) => editCharge(charge, part)}
+                        editableSections={editableChargeSections}
+                        variant="summary"
+                        {...(revertCharge ? { onRevert: revertCharge } : {})}
+                        layout="narrow"
+                        charges={chargeRows.charges}
+                        details={chargeRows.details}
+                        source={sourceOf}
+                        {...(s.billingPeriod ? { period: s.billingPeriod } : {})}
+                        onShowAll={() => setTab('charges')}
+                        isLoading={lines.isLoading ?? false}
+                        error={lines.isError ? 'Charges could not be loaded' : null}
+                        {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
+                      />
+                    </>
+                  ),
+                },
+                {
+                  id: 'commitments',
+                  empty: false,
+                  node: (
+                    <>
+                      {/*
                 Commitments, between Charges and Entitlements as the redesign
                 orders them. Only the charges that carry one: a contract with
                 no commitments is not told it has none in a box of its own,
@@ -1006,346 +1026,401 @@ export function SubscriptionDetailView({
                 sheet at its commitment rather than offering an editor here:
                 one place to change it, reached from either direction.
               */}
-              {commitmentRows.length > 0 ? (
-                <Section table showTitle title="Commitments">
-                  <DetailTable<CommitmentRow>
-                    compact
-                    footer={false}
-                    label="Commitments"
-                    noun="commitments"
-                    rows={commitmentRows}
-                    onRowClick={(row) => setCommitmentCharge(row.charge)}
-                    columns={[
-                      {
-                        key: 'charge',
-                        header: 'Charge',
-                        sortBy: (row) => row.name,
-                        text: (row) => row.name,
-                        cell: (row) => <Strong>{row.name}</Strong>,
-                      },
-                      {
-                        key: 'commitment',
-                        header: 'Commitment',
-                        cell: (row) => (
-                          <span className="tabular-nums">
-                            {row.commitment.value}
-                            <span className="text-muted-foreground"> {row.per}</span>
-                          </span>
-                        ),
-                      },
-                      {
-                        key: 'overage',
-                        header: 'Overage',
-                        cell: (row) => (
-                          <Muted className="tabular-nums">×{row.commitment.overageFactor}</Muted>
-                        ),
-                      },
-                      {
-                        key: 'trueUp',
-                        header: 'True-up',
-                        cell: (row) => (
-                          <Muted>{row.commitment.trueUp ? 'Enabled' : 'Disabled'}</Muted>
-                        ),
-                      },
-                    ]}
-                  />
-                </Section>
-              ) : null}
-
-              <PartSection
-                entity={RBAC_ENTITY.Entitlement}
-                title="Entitlements"
-                showTitle
-                part={entitlements}
-                failure="Entitlements could not be loaded"
-                emptyTitle="No features"
-                scene="catalog"
-                emptyDescription="This contract includes no features."
-                create={createFor('entitlement', 'Add entitlement', onAddEntitlement)}
-                isEmpty={(rows) => rows.length === 0}
-              >
-                {(rows) => (
-                  <EntitlementUsageTable
-                    rows={entitlementRowsForContract(rows, entitlementUsage)}
-                  />
-                )}
-              </PartSection>
-
-              <PartSection
-                entity={RBAC_ENTITY.CreditGrant}
-                title="Credit grants"
-                showTitle
-                part={creditGrants}
-                failure="Credit grants could not be loaded"
-                emptyTitle="No credit grants"
-                scene="payments"
-                emptyDescription="This contract has no credit grants."
-                create={createFor('creditGrant', 'Add credit grant', onAddCreditGrant)}
-                isEmpty={(rows) => rows.length === 0}
-              >
-                {(rows) => (
-                  <DetailTable<CreditGrant>
-                    compact
-                    pageSize={5}
-                    label="Credit grants"
-                    noun="grants"
-                    rows={rows}
-                    columns={[
-                      {
-                        key: 'name',
-                        header: 'Grant',
-                        sortBy: (row) => row.name.toLowerCase(),
-                        cell: (row) => <Strong>{row.name}</Strong>,
-                      },
-                      {
-                        key: 'credits',
-                        header: 'Credits',
-                        sortBy: (row) => row.credits,
-                        cell: (row) => <Strong className="tabular-nums">{row.credits}</Strong>,
-                      },
-                      {
-                        key: 'cadence',
-                        header: 'Cadence',
-                        sortBy: (row) => row.cadence,
-                        text: (row) => CREDIT_GRANT_CADENCE_LABEL[row.cadence],
-                        cell: (row) => (
-                          <Muted>
-                            {row.cadence === CreditGrantCadence.Recurring && row.period
-                              ? `${CREDIT_GRANT_CADENCE_LABEL[row.cadence]} · ${CREDIT_GRANT_PERIOD_LABEL[row.period].toLowerCase()}`
-                              : CREDIT_GRANT_CADENCE_LABEL[row.cadence]}
-                          </Muted>
-                        ),
-                      },
-                      {
-                        key: 'expiry',
-                        header: 'Expiry',
-                        cell: (row) => (
-                          <Muted>{CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}</Muted>
-                        ),
-                      },
-                      // When the grant stops issuing credits: kept by the API for a
-                      // contract's grant, so it no longer reads as still running.
-                      {
-                        key: 'ends',
-                        header: 'Ends',
-                        cell: (row) => <Muted>{row.endDate ? day(row.endDate) : 'No end'}</Muted>,
-                      },
-                      ...removeColumn<CreditGrant>(
-                        (row) => row.name,
-                        'End grant',
-                        onCancelCreditGrant
-                          ? (grant) =>
-                              askRemoval({
-                                title: `End ${grant.name}?`,
-                                description:
-                                  'The grant stops today. Credits it already gave stay in the wallet; no further credits are granted.',
-                                confirmLabel: 'End grant',
-                                run: () => onCancelCreditGrant(grant),
-                              })
-                          : null,
-                      ),
-                    ]}
-                  />
-                )}
-              </PartSection>
-
-              <PartSection
-                entity={RBAC_ENTITY.Addon}
-                title="Add-ons"
-                showTitle
-                part={addons ?? NO_PART}
-                // Add-ons attach only to an active or draft (incomplete) contract.
-                create={
-                  s.status === SubscriptionStatus.Active ||
-                  s.status === SubscriptionStatus.Incomplete
-                    ? createFor('addon', 'Add add-on', onAddAddon)
-                    : undefined
-                }
-                failure="Add-ons could not be loaded"
-                emptyTitle="No add-ons"
-                scene="catalog"
-                emptyDescription="No add-ons are attached to this contract."
-                isEmpty={(rows) => rows.length === 0}
-              >
-                {(rows) => (
-                  <DetailTable<SubscriptionAddon>
-                    compact
-                    pageSize={5}
-                    label="Add-ons"
-                    noun="add-ons"
-                    rows={rows}
-                    columns={[
-                      {
-                        key: 'name',
-                        header: 'Add-on',
-                        sortBy: (row) => row.name.toLowerCase(),
-                        cell: (row) => <Strong>{row.name}</Strong>,
-                      },
-                      {
-                        key: 'status',
-                        header: 'Status',
-                        sortBy: (row) => (row.active ? 'Active' : 'Inactive'),
-                        text: (row) => (row.active ? 'Active' : 'Inactive'),
-                        cell: (row) => <ActiveBadge active={row.active} />,
-                      },
-                      {
-                        key: 'start',
-                        header: 'Starts',
-                        sortBy: (row) => row.startDate?.getTime() ?? 0,
-                        cell: (row) => <Muted>{day(row.startDate)}</Muted>,
-                      },
-                      {
-                        key: 'end',
-                        header: 'Ends',
-                        cell: (row) => <Muted>{day(row.endDate)}</Muted>,
-                      },
-                      ...removeColumn<SubscriptionAddon>(
-                        (row) => row.name,
-                        'Remove add-on',
-                        onRemoveAddon
-                          ? (addon) =>
-                              askRemoval({
-                                title: `Remove ${addon.name}?`,
-                                description:
-                                  'The add-on comes off this contract at the end of the current period. Charges already billed are unaffected.',
-                                confirmLabel: 'Remove add-on',
-                                run: () => onRemoveAddon(addon),
-                              })
-                          : null,
-                      ),
-                    ]}
-                  />
-                )}
-              </PartSection>
-
-              <PartSection
-                title="Coupons"
-                showTitle
-                part={coupons ?? NO_PART}
-                create={createFor('coupon', 'Add coupon', onAddCoupon)}
-                failure="Coupons could not be loaded"
-                emptyTitle="No coupons"
-                scene="billing"
-                emptyDescription="No coupons are applied to this contract."
-                isEmpty={(rows) => rows.length === 0}
-              >
-                {(rows) => (
-                  <DetailTable<SubscriptionCoupon>
-                    compact
-                    pageSize={5}
-                    label="Coupons"
-                    noun="coupons"
-                    rows={rows}
-                    columns={[
-                      {
-                        key: 'name',
-                        header: 'Coupon',
-                        sortBy: (row) => row.name.toLowerCase(),
-                        cell: (row) => <Strong>{row.name}</Strong>,
-                      },
-                      {
-                        key: 'code',
-                        header: 'Code',
-                        cell: (row) =>
-                          row.code ? (
-                            <Muted className="font-mono text-xs">{row.code}</Muted>
-                          ) : (
-                            <Muted>—</Muted>
-                          ),
-                      },
-                      {
-                        key: 'discount',
-                        header: 'Discount',
-                        cell: (row) => <Strong>{row.discount}</Strong>,
-                      },
-                      {
-                        key: 'status',
-                        header: 'Status',
-                        sortBy: (row) => (row.active ? 'Active' : 'Inactive'),
-                        text: (row) => (row.active ? 'Active' : 'Inactive'),
-                        cell: (row) => <ActiveBadge active={row.active} />,
-                      },
-                      {
-                        key: 'end',
-                        header: 'Ends',
-                        sortBy: (row) => row.endDate?.getTime() ?? 0,
-                        cell: (row) => <Muted>{day(row.endDate)}</Muted>,
-                      },
-                    ]}
-                  />
-                )}
-              </PartSection>
-
-              <PartSection
-                entity={RBAC_ENTITY.Tax}
-                title="Taxes"
-                showTitle
-                part={taxes ?? NO_PART}
-                create={createFor('tax', 'Add tax', onAddTax)}
-                failure="Taxes could not be loaded"
-                emptyTitle="No taxes"
-                scene="billing"
-                emptyDescription="No tax rates are applied to this contract."
-                isEmpty={(rows) => rows.length === 0}
-              >
-                {(rows) => (
-                  <DetailTable<SubscriptionTax>
-                    compact
-                    pageSize={5}
-                    label="Taxes"
-                    noun="taxes"
-                    rows={rows}
-                    columns={[
-                      {
-                        key: 'name',
-                        header: 'Tax',
-                        sortBy: (row) => row.name.toLowerCase(),
-                        cell: (row) => <Strong>{row.name}</Strong>,
-                      },
-                      {
-                        key: 'code',
-                        header: 'Code',
-                        cell: (row) => (
-                          <Muted className="font-mono text-xs">{row.code || '—'}</Muted>
-                        ),
-                      },
-                      {
-                        key: 'rate',
-                        header: 'Rate',
-                        cell: (row) => <Strong className="tabular-nums">{row.percentage}</Strong>,
-                      },
-                      {
-                        key: 'inclusive',
-                        header: 'Applied',
-                        sortBy: (row) => (row.inclusive ? 'Included in price' : 'Added on top'),
-                        text: (row) => (row.inclusive ? 'Included in price' : 'Added on top'),
-                        cell: (row) => (
-                          <Muted>{row.inclusive ? 'Included in price' : 'Added on top'}</Muted>
-                        ),
-                      },
-                      {
-                        key: 'priority',
-                        header: 'Priority',
-                        cell: (row) => <Muted className="tabular-nums">{row.priority}</Muted>,
-                      },
-                      ...removeColumn<SubscriptionTax>(
-                        (row) => row.name,
-                        'Remove tax',
-                        onRemoveTax
-                          ? (tax) =>
-                              askRemoval({
-                                title: `Stop applying ${tax.name}?`,
-                                description:
-                                  'Invoices created from now on leave this tax out. Invoices already issued keep it.',
-                                confirmLabel: 'Remove tax',
-                                run: () => onRemoveTax(tax),
-                              })
-                          : null,
-                      ),
-                    ]}
-                  />
-                )}
-              </PartSection>
+                      {commitmentRows.length > 0 ? (
+                        <Section table showTitle title="Commitments">
+                          <DetailTable<CommitmentRow>
+                            compact
+                            footer={false}
+                            label="Commitments"
+                            noun="commitments"
+                            rows={commitmentRows}
+                            onRowClick={(row) => setCommitmentCharge(row.charge)}
+                            columns={[
+                              {
+                                key: 'charge',
+                                header: 'Charge',
+                                sortBy: (row) => row.name,
+                                text: (row) => row.name,
+                                cell: (row) => <Strong>{row.name}</Strong>,
+                              },
+                              {
+                                key: 'commitment',
+                                header: 'Commitment',
+                                cell: (row) => (
+                                  <span className="tabular-nums">
+                                    {row.commitment.value}
+                                    <span className="text-muted-foreground"> {row.per}</span>
+                                  </span>
+                                ),
+                              },
+                              {
+                                key: 'overage',
+                                header: 'Overage',
+                                cell: (row) => (
+                                  <Muted className="tabular-nums">
+                                    ×{row.commitment.overageFactor}
+                                  </Muted>
+                                ),
+                              },
+                              {
+                                key: 'trueUp',
+                                header: 'True-up',
+                                cell: (row) => (
+                                  <Muted>{row.commitment.trueUp ? 'Enabled' : 'Disabled'}</Muted>
+                                ),
+                              },
+                            ]}
+                          />
+                        </Section>
+                      ) : null}
+                    </>
+                  ),
+                },
+                {
+                  id: 'entitlements',
+                  empty: entitlements.data?.length === 0,
+                  node: (
+                    <>
+                      <PartSection
+                        entity={RBAC_ENTITY.Entitlement}
+                        title="Entitlements"
+                        showTitle
+                        part={entitlements}
+                        failure="Entitlements could not be loaded"
+                        emptyTitle="No features"
+                        scene="catalog"
+                        emptyDescription="This contract includes no features."
+                        create={createFor('entitlement', 'Add entitlement', onAddEntitlement)}
+                        isEmpty={(rows) => rows.length === 0}
+                      >
+                        {(rows) => (
+                          <EntitlementUsageTable
+                            rows={entitlementRowsForContract(rows, entitlementUsage)}
+                          />
+                        )}
+                      </PartSection>
+                    </>
+                  ),
+                },
+                {
+                  id: 'creditGrants',
+                  empty: creditGrants.data?.length === 0,
+                  node: (
+                    <>
+                      <PartSection
+                        entity={RBAC_ENTITY.CreditGrant}
+                        title="Credit grants"
+                        showTitle
+                        part={creditGrants}
+                        failure="Credit grants could not be loaded"
+                        emptyTitle="No credit grants"
+                        scene="payments"
+                        emptyDescription="This contract has no credit grants."
+                        create={createFor('creditGrant', 'Add credit grant', onAddCreditGrant)}
+                        isEmpty={(rows) => rows.length === 0}
+                      >
+                        {(rows) => (
+                          <DetailTable<CreditGrant>
+                            compact
+                            pageSize={5}
+                            label="Credit grants"
+                            noun="grants"
+                            rows={rows}
+                            columns={[
+                              {
+                                key: 'name',
+                                header: 'Grant',
+                                sortBy: (row) => row.name.toLowerCase(),
+                                cell: (row) => <Strong>{row.name}</Strong>,
+                              },
+                              {
+                                key: 'credits',
+                                header: 'Credits',
+                                sortBy: (row) => row.credits,
+                                cell: (row) => (
+                                  <Strong className="tabular-nums">{row.credits}</Strong>
+                                ),
+                              },
+                              {
+                                key: 'cadence',
+                                header: 'Cadence',
+                                sortBy: (row) => row.cadence,
+                                text: (row) => CREDIT_GRANT_CADENCE_LABEL[row.cadence],
+                                cell: (row) => (
+                                  <Muted>
+                                    {row.cadence === CreditGrantCadence.Recurring && row.period
+                                      ? `${CREDIT_GRANT_CADENCE_LABEL[row.cadence]} · ${CREDIT_GRANT_PERIOD_LABEL[row.period].toLowerCase()}`
+                                      : CREDIT_GRANT_CADENCE_LABEL[row.cadence]}
+                                  </Muted>
+                                ),
+                              },
+                              {
+                                key: 'expiry',
+                                header: 'Expiry',
+                                cell: (row) => (
+                                  <Muted>
+                                    {CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}
+                                  </Muted>
+                                ),
+                              },
+                              // When the grant stops issuing credits: kept by the API for a
+                              // contract's grant, so it no longer reads as still running.
+                              {
+                                key: 'ends',
+                                header: 'Ends',
+                                cell: (row) => (
+                                  <Muted>{row.endDate ? day(row.endDate) : 'No end'}</Muted>
+                                ),
+                              },
+                              ...removeColumn<CreditGrant>(
+                                (row) => row.name,
+                                'End grant',
+                                onCancelCreditGrant
+                                  ? (grant) =>
+                                      askRemoval({
+                                        title: `End ${grant.name}?`,
+                                        description:
+                                          'The grant stops today. Credits it already gave stay in the wallet; no further credits are granted.',
+                                        confirmLabel: 'End grant',
+                                        run: () => onCancelCreditGrant(grant),
+                                      })
+                                  : null,
+                              ),
+                            ]}
+                          />
+                        )}
+                      </PartSection>
+                    </>
+                  ),
+                },
+                {
+                  id: 'addons',
+                  empty: (addons ?? NO_PART).data?.length === 0,
+                  node: (
+                    <>
+                      <PartSection
+                        entity={RBAC_ENTITY.Addon}
+                        title="Add-ons"
+                        showTitle
+                        part={addons ?? NO_PART}
+                        // Add-ons attach only to an active or draft (incomplete) contract.
+                        create={
+                          s.status === SubscriptionStatus.Active ||
+                          s.status === SubscriptionStatus.Incomplete
+                            ? createFor('addon', 'Add add-on', onAddAddon)
+                            : undefined
+                        }
+                        failure="Add-ons could not be loaded"
+                        emptyTitle="No add-ons"
+                        scene="catalog"
+                        emptyDescription="No add-ons are attached to this contract."
+                        isEmpty={(rows) => rows.length === 0}
+                      >
+                        {(rows) => (
+                          <DetailTable<SubscriptionAddon>
+                            compact
+                            pageSize={5}
+                            label="Add-ons"
+                            noun="add-ons"
+                            rows={rows}
+                            columns={[
+                              {
+                                key: 'name',
+                                header: 'Add-on',
+                                sortBy: (row) => row.name.toLowerCase(),
+                                cell: (row) => <Strong>{row.name}</Strong>,
+                              },
+                              {
+                                key: 'status',
+                                header: 'Status',
+                                sortBy: (row) => (row.active ? 'Active' : 'Inactive'),
+                                text: (row) => (row.active ? 'Active' : 'Inactive'),
+                                cell: (row) => <ActiveBadge active={row.active} />,
+                              },
+                              {
+                                key: 'start',
+                                header: 'Starts',
+                                sortBy: (row) => row.startDate?.getTime() ?? 0,
+                                cell: (row) => <Muted>{day(row.startDate)}</Muted>,
+                              },
+                              {
+                                key: 'end',
+                                header: 'Ends',
+                                cell: (row) => <Muted>{day(row.endDate)}</Muted>,
+                              },
+                              ...removeColumn<SubscriptionAddon>(
+                                (row) => row.name,
+                                'Remove add-on',
+                                onRemoveAddon
+                                  ? (addon) =>
+                                      askRemoval({
+                                        title: `Remove ${addon.name}?`,
+                                        description:
+                                          'The add-on comes off this contract at the end of the current period. Charges already billed are unaffected.',
+                                        confirmLabel: 'Remove add-on',
+                                        run: () => onRemoveAddon(addon),
+                                      })
+                                  : null,
+                              ),
+                            ]}
+                          />
+                        )}
+                      </PartSection>
+                    </>
+                  ),
+                },
+                {
+                  id: 'coupons',
+                  empty: (coupons ?? NO_PART).data?.length === 0,
+                  node: (
+                    <>
+                      <PartSection
+                        title="Coupons"
+                        showTitle
+                        part={coupons ?? NO_PART}
+                        create={createFor('coupon', 'Add coupon', onAddCoupon)}
+                        failure="Coupons could not be loaded"
+                        emptyTitle="No coupons"
+                        scene="billing"
+                        emptyDescription="No coupons are applied to this contract."
+                        isEmpty={(rows) => rows.length === 0}
+                      >
+                        {(rows) => (
+                          <DetailTable<SubscriptionCoupon>
+                            compact
+                            pageSize={5}
+                            label="Coupons"
+                            noun="coupons"
+                            rows={rows}
+                            columns={[
+                              {
+                                key: 'name',
+                                header: 'Coupon',
+                                sortBy: (row) => row.name.toLowerCase(),
+                                cell: (row) => <Strong>{row.name}</Strong>,
+                              },
+                              {
+                                key: 'code',
+                                header: 'Code',
+                                cell: (row) =>
+                                  row.code ? (
+                                    <Muted className="font-mono text-xs">{row.code}</Muted>
+                                  ) : (
+                                    <Muted>—</Muted>
+                                  ),
+                              },
+                              {
+                                key: 'discount',
+                                header: 'Discount',
+                                cell: (row) => <Strong>{row.discount}</Strong>,
+                              },
+                              {
+                                key: 'status',
+                                header: 'Status',
+                                sortBy: (row) => (row.active ? 'Active' : 'Inactive'),
+                                text: (row) => (row.active ? 'Active' : 'Inactive'),
+                                cell: (row) => <ActiveBadge active={row.active} />,
+                              },
+                              {
+                                key: 'end',
+                                header: 'Ends',
+                                sortBy: (row) => row.endDate?.getTime() ?? 0,
+                                cell: (row) => <Muted>{day(row.endDate)}</Muted>,
+                              },
+                            ]}
+                          />
+                        )}
+                      </PartSection>
+                    </>
+                  ),
+                },
+                {
+                  id: 'taxes',
+                  empty: (taxes ?? NO_PART).data?.length === 0,
+                  node: (
+                    <>
+                      <PartSection
+                        entity={RBAC_ENTITY.Tax}
+                        title="Taxes"
+                        showTitle
+                        part={taxes ?? NO_PART}
+                        create={createFor('tax', 'Add tax', onAddTax)}
+                        failure="Taxes could not be loaded"
+                        emptyTitle="No taxes"
+                        scene="billing"
+                        emptyDescription="No tax rates are applied to this contract."
+                        isEmpty={(rows) => rows.length === 0}
+                      >
+                        {(rows) => (
+                          <DetailTable<SubscriptionTax>
+                            compact
+                            pageSize={5}
+                            label="Taxes"
+                            noun="taxes"
+                            rows={rows}
+                            columns={[
+                              {
+                                key: 'name',
+                                header: 'Tax',
+                                sortBy: (row) => row.name.toLowerCase(),
+                                cell: (row) => <Strong>{row.name}</Strong>,
+                              },
+                              {
+                                key: 'code',
+                                header: 'Code',
+                                cell: (row) => (
+                                  <Muted className="font-mono text-xs">{row.code || '—'}</Muted>
+                                ),
+                              },
+                              {
+                                key: 'rate',
+                                header: 'Rate',
+                                cell: (row) => (
+                                  <Strong className="tabular-nums">{row.percentage}</Strong>
+                                ),
+                              },
+                              {
+                                key: 'inclusive',
+                                header: 'Applied',
+                                sortBy: (row) =>
+                                  row.inclusive ? 'Included in price' : 'Added on top',
+                                text: (row) =>
+                                  row.inclusive ? 'Included in price' : 'Added on top',
+                                cell: (row) => (
+                                  <Muted>
+                                    {row.inclusive ? 'Included in price' : 'Added on top'}
+                                  </Muted>
+                                ),
+                              },
+                              {
+                                key: 'priority',
+                                header: 'Priority',
+                                cell: (row) => (
+                                  <Muted className="tabular-nums">{row.priority}</Muted>
+                                ),
+                              },
+                              ...removeColumn<SubscriptionTax>(
+                                (row) => row.name,
+                                'Remove tax',
+                                onRemoveTax
+                                  ? (tax) =>
+                                      askRemoval({
+                                        title: `Stop applying ${tax.name}?`,
+                                        description:
+                                          'Invoices created from now on leave this tax out. Invoices already issued keep it.',
+                                        confirmLabel: 'Remove tax',
+                                        run: () => onRemoveTax(tax),
+                                      })
+                                  : null,
+                              ),
+                            ]}
+                          />
+                        )}
+                      </PartSection>
+                    </>
+                  ),
+                },
+              ])}
             </div>
 
             <div className="flex flex-col gap-5 xl:sticky xl:top-6">
@@ -1975,6 +2050,17 @@ function unitAmount(amount: string): string {
   )
 }
 
+/**
+ * The Overview's sections, those with rows first: an empty entry-point
+ * section sinks below every section that has something to read. The sort is
+ * stable, so each group keeps the order it was given.
+ */
+function rowsFirst(sections: { id: string; empty: boolean; node: ReactNode }[]): ReactNode {
+  return [...sections]
+    .sort((a, b) => Number(a.empty) - Number(b.empty))
+    .map((section) => <Fragment key={section.id}>{section.node}</Fragment>)
+}
+
 function InvoicePreviewSection({
   status,
   preview,
@@ -2011,6 +2097,10 @@ function InvoicePreviewSection({
       </Section>
     )
   }
+
+  // Nothing to bill: the section is left out rather than shown empty. The
+  // trial block above stays, because there the empty state is the news.
+  if (preview.data && preview.data.lines.length === 0) return null
 
   const data = preview.data
   const period =
