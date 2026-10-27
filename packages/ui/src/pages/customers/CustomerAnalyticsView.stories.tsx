@@ -157,6 +157,23 @@ export const WithHeading: Story = {
   },
 }
 
+/** The range ends are picked on the shared day calendar, inside the range, and sent as days. */
+export const PicksTheRange: Story = {
+  parameters: {
+    // Base UI focus guards around the portalled popover: see DateInput.stories.tsx.
+    a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /^From 2026-10-01/ }))
+    const body = within(document.body)
+    // Past the range's end cannot be the start.
+    await expect(await body.findByRole('button', { name: /October 25/ })).toBeDisabled()
+    await userEvent.click(body.getByRole('button', { name: /October 5/ }))
+    await expect(args.onQueryChange).toHaveBeenCalledWith({ ...QUERY, from: '2026-10-05' })
+  },
+}
+
 /**
  * A feature whose price changed mid-range is one row, not two: its revenue is
  * the total, and "2 prices" lists what each price brought in.

@@ -9,11 +9,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { Input } from '@ui/components/primitives/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { Switch } from '@ui/components/primitives/switch'
 import { SegmentMeter, TotalRow, TotalsList } from '@ui/compositions/detail/DetailKit'
+import { DayCalendar } from '@ui/compositions/forms/DateInput'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { ErrorState } from '@ui/compositions/feedback/States'
 import { Section } from '@ui/compositions/layout/Section'
@@ -37,6 +37,7 @@ export const CustomerAnalyticsViewProvenance = provenance({
   composes: [
     'primitives/dropdown-menu',
     'primitives/popover',
+    'compositions/date-input',
     'primitives/switch',
     'compositions/layout/Section',
     'compositions/detail/DetailKit',
@@ -210,18 +211,8 @@ function DateButton({
         {label} {value}
         <ChevronDownIcon className="opacity-50" aria-hidden="true" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-2">
-        <Input
-          type="date"
-          aria-label={label}
-          value={value}
-          {...(min ? { min } : {})}
-          {...(max ? { max } : {})}
-          onChange={(event) => {
-            if (event.target.value) onChange(event.target.value)
-          }}
-          className="h-8"
-        />
+      <PopoverContent align="start" className="w-auto p-0" aria-label={label}>
+        <DayCalendar value={value} onValueChange={onChange} min={min} max={max} />
       </PopoverContent>
     </Popover>
   )
