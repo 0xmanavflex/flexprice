@@ -116,6 +116,27 @@ export const Edit: Story = {
   },
 }
 
+/**
+ * Billing configuration is set while creating, not only after.
+ *
+ * Tax treatment and timezone sat in a collapsed "More details" fold, so on
+ * create they read as edit-only settings. They are now their own card, open on
+ * create and edit, and the chosen values go out with the create.
+ */
+export const CreateWithBillingConfiguration: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Billing configuration')).toBeVisible()
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Corp')
+    await userEvent.click(canvas.getByRole('combobox', { name: 'Tax treatment' }))
+    await userEvent.click(await within(document.body).findByRole('option', { name: 'Exempt' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create customer' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Acme Corp', taxTreatment: 'exempt' }),
+    )
+  },
+}
+
 export const SubmitError: Story = {
   args: { submitError: 'A customer with that external ID already exists.' },
   play: async ({ canvasElement }) => {
@@ -133,8 +154,8 @@ export const SubmitError: Story = {
 export const CountryIsSearchable: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // Both fields live in the collapsed "More details" disclosure.
-    await userEvent.click(canvas.getByRole('button', { name: /More details/ }))
+    // The address lives in the collapsed "Billing address" disclosure on create.
+    await userEvent.click(canvas.getByRole('button', { name: /Billing address/ }))
     const country = canvas.getByRole('combobox', { name: 'Country' })
     await userEvent.type(country, 'united king')
     const option = await within(document.body).findByRole('option', {
@@ -155,7 +176,6 @@ export const CountryIsSearchable: Story = {
 export const TimezoneFoundByAbbreviation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /More details/ }))
     const timezone = canvas.getByRole('combobox', { name: 'Timezone' })
     await userEvent.type(timezone, 'IST')
     /*

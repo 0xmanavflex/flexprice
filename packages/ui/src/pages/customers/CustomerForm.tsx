@@ -22,7 +22,7 @@ import { TimezoneCombobox } from '@ui/compositions/forms/TimezoneCombobox'
 import { provenance } from '@ui/provenance'
 
 /**
- * Create or edit a customer on its own page: name, ID and email, then the optional rest under More details.
+ * Create or edit a customer on its own page: name, ID and email, then billing configuration (tax treatment, timezone), then the billing address under a disclosure.
  *
  * Presentational: it emits a validated `CreateCustomer` (an edit carries the
  * same fields) and never imports `@fp/query`. The external ID is the key the
@@ -38,7 +38,7 @@ export const CustomerFormProvenance = provenance({
     'compositions/timezone-combobox',
     'compositions/form-disclosure',
   ],
-  note: 'RHF + the domain schema, one page: name, external ID and email up front, the rest folded under More details, no preview rail. Create and edit share it. Lineage: compositions/field.',
+  note: 'RHF + the domain schema, one page: name, external ID and email up front, a Billing configuration card (tax treatment, timezone) shown on create and edit, the address folded under Billing address, no preview rail. Create and edit share it. Lineage: compositions/field.',
 })
 
 export interface CustomerFormProps {
@@ -55,15 +55,13 @@ export interface CustomerFormProps {
 
 const FORM_ID = 'customer-form'
 
-const OPTIONAL_FIELDS = [
+const ADDRESS_FIELDS = [
   'addressLine1',
   'addressLine2',
   'addressCity',
   'addressState',
   'addressPostalCode',
   'addressCountry',
-  'timezone',
-  'taxTreatment',
 ] as const satisfies readonly (keyof CreateCustomer)[]
 
 /** Countries, named in the viewer's language and found by name or code. */
@@ -222,29 +220,8 @@ export function CustomerForm({
     </>
   )
 
-  const additionalRows = (
+  const billingRows = (
     <>
-      <FormRow
-        label="Timezone"
-        hint="The customer's local time zone, e.g. Europe/London."
-        error={errors.timezone?.message}
-      >
-        {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="timezone"
-            render={({ field: control }) => (
-              <TimezoneCombobox
-                id={id}
-                {...field}
-                value={control.value || undefined}
-                onValueChange={(value) => control.onChange(value)}
-                disabled={isSubmitting}
-              />
-            )}
-          />
-        )}
-      </FormRow>
       <FormRow
         label="Tax treatment"
         hint="How tax is handled on this customer's invoices."
@@ -267,6 +244,27 @@ export function CustomerForm({
           />
         )}
       </FormRow>
+      <FormRow
+        label="Timezone"
+        hint="The customer's local time zone, e.g. Europe/London."
+        error={errors.timezone?.message}
+      >
+        {({ id, ...field }) => (
+          <Controller
+            control={form.control}
+            name="timezone"
+            render={({ field: control }) => (
+              <TimezoneCombobox
+                id={id}
+                {...field}
+                value={control.value || undefined}
+                onValueChange={(value) => control.onChange(value)}
+                disabled={isSubmitting}
+              />
+            )}
+          />
+        )}
+      </FormRow>
     </>
   )
 
@@ -276,14 +274,20 @@ export function CustomerForm({
         <FormCard title="Customer details" status="required">
           {detailsRows}
         </FormCard>
+        <FormCard
+          title="Billing configuration"
+          status="optional"
+          description="How this customer is taxed and which time zone their billing runs in."
+        >
+          {billingRows}
+        </FormCard>
         <FormDisclosure
-          title="More details"
-          summary="Billing address, timezone and tax treatment. All optional."
+          title="Billing address"
+          summary="Printed on invoices. Optional."
           defaultOpen={isEdit}
-          forceOpen={OPTIONAL_FIELDS.some((name) => errors[name])}
+          forceOpen={ADDRESS_FIELDS.some((name) => errors[name])}
         >
           {addressRows}
-          {additionalRows}
         </FormDisclosure>
       </div>
     </form>
