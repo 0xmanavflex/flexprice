@@ -1033,6 +1033,18 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
     ...(contractStart ? { startDate: contractStart } : {}),
     ...(last?.endDate ? { endDate: utcDay(last.endDate) } : {}),
     ...(draft.trialPeriodDays ? { trialPeriodDays: draft.trialPeriodDays } : {}),
+    // This contract's own rate to the invoicing customer's billing currency; only rates set.
+    ...(draft.fxRates.some((fx) => fx.rate)
+      ? {
+          fxRates: draft.fxRates
+            .filter((fx) => fx.rate)
+            .map((fx) => ({
+              rate: fx.rate,
+              ...(fx.startDate ? { startDate: contractDateToInstant(fx.startDate) } : {}),
+              ...(fx.endDate ? { endDate: contractDateToInstant(fx.endDate) } : {}),
+            })),
+        }
+      : {}),
     ...(draft.includePriceIds ? { includePriceIds: draft.includePriceIds } : {}),
     ...(first && withBuckets(overrideLines(first), phased ? [] : draft.chargeCommitments).length > 0
       ? {

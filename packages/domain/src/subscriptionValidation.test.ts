@@ -46,3 +46,26 @@ describe('proration and entitlement overrides', () => {
     expect(issues({ ...base, entitlementOverrides: [override] }, 'prorate')).toEqual([])
   })
 })
+
+describe("the contract's own exchange rate", () => {
+  const fx = (rate: string, startDate = '', endDate = '') => ({
+    ...base,
+    fxRates: [{ rate, startDate, endDate }],
+  })
+
+  it('may be left blank, for the global rate', () => {
+    expect(issues(fx(''), 'fxRates')).toEqual([])
+  })
+
+  it('is a number above zero', () => {
+    expect(issues(fx('0'), 'fxRates')).toEqual(['Enter a rate above zero'])
+    expect(issues(fx('abc'), 'fxRates')).toEqual(['Enter a rate above zero'])
+    expect(issues(fx('83.5'), 'fxRates')).toEqual([])
+  })
+
+  it('ends after it starts', () => {
+    expect(
+      issues(fx('83', '2026-11-02T00:00:00.000Z', '2026-11-01T00:00:00.000Z'), 'fxRates'),
+    ).toEqual(['Must be after the start'])
+  })
+})

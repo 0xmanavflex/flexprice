@@ -9,6 +9,7 @@ import {
   useCustomerTaxAssociations,
   useCustomers,
   useFeaturesByMeters,
+  useFxRates,
   useInheritanceBlocks,
   usePlanEntitlements,
   usePlans,
@@ -27,6 +28,7 @@ import {
   DEFAULT_PLAN_QUERY,
   DEFAULT_TAX_RATE_QUERY,
   formatMoney,
+  FxRateScope,
   PriceEntityType,
   TaxRateStatus,
 } from '@fp/domain'
@@ -70,6 +72,8 @@ export function SubscriptionFormPage({
   const planGrants = useCreditGrants(CreditGrantScope.Plan, planId)
   // The metered features and price units a charge added to this contract alone can use.
   const formOptions = usePlanFormOptions()
+  // The global exchange rates: a contract invoiced in another currency needs one for its pair.
+  const fxRates = useFxRates({ scope: FxRateScope.Tenant })
   const coupons = useCoupons({
     ...DEFAULT_COUPON_QUERY,
     ...PICKER_PAGE,
@@ -126,6 +130,7 @@ export function SubscriptionFormPage({
         label: c.name,
         ...(c.email ? { hint: c.email } : {}),
         externalId: c.externalId || undefined,
+        billingCurrency: c.billingCurrency || undefined,
       })),
     [customers.data],
   )
@@ -159,6 +164,12 @@ export function SubscriptionFormPage({
           : undefined
       }
       onPlanChange={setPlanId}
+      // Undefined while unknown (loading or failed): the form blocks on a missing rate only once it knows.
+      fxGlobalRates={fxRates.data?.map((rate) => ({
+        fromCurrency: rate.fromCurrency,
+        toCurrency: rate.toCurrency,
+        rate: rate.rate,
+      }))}
       onCustomerChange={setChosenCustomer}
       meters={meters}
       priceUnits={formOptions.units}

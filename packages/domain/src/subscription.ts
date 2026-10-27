@@ -500,6 +500,19 @@ export const createSubscriptionSchema = z
         autoApply: z.boolean(),
       }),
     ),
+    /**
+     * This contract's own exchange rate, when invoices go out in the invoicing
+     * customer's billing currency rather than the contract's (`fx_rates`).
+     * Empty: the global rate for the pair applies. One window per entry; each
+     * date is an instant, blank for open-ended.
+     */
+    fxRates: z.array(
+      z.object({
+        rate: z.string().trim(),
+        startDate: z.string(),
+        endDate: z.string(),
+      }),
+    ),
     // Each add-on may reprice its charges and commit on its usage charges, as V1's add-on card.
     addons: z.array(
       z.object({
@@ -544,6 +557,21 @@ export const createSubscriptionSchema = z
     inheritedCustomerExternalIds: z.array(z.string().min(1)),
   })
   .superRefine((value, ctx) => {
+    // A rate is above zero, and a window ends after it starts.
+    value.fxRates.forEach((fx, index) => {
+      if (fx.rate && !(/^\d+(\.\d+)?$/.test(fx.rate) && Number(fx.rate) > 0))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['fxRates', index, 'rate'],
+          message: 'Enter a rate above zero',
+        })
+      if (fx.startDate && fx.endDate && Date.parse(fx.endDate) <= Date.parse(fx.startDate))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['fxRates', index, 'endDate'],
+          message: 'Must be after the start',
+        })
+    })
     // Each phase but the last needs an end, and every end follows its start.
     // A contract with no start date starts today, so the first end must follow today.
     let start = value.startDate || localToday()
@@ -660,6 +688,7 @@ export function emptySubscription(): CreateSubscription {
     enableTrueUp: false,
     chargeCommitments: [],
     entitlementOverrides: [],
+    fxRates: [],
     creditGrants: [],
     creditGrantsChanged: false,
     taxes: [],

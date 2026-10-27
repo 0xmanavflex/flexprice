@@ -189,6 +189,15 @@ export interface SubscriptionCustomerOption extends Option {
   currency?: string | undefined
   /** Needed to bill another customer or let one inherit the contract (the API takes external ids). */
   externalId?: string | undefined
+  /** The currency their invoices go out in, when it is set; else the contract's own. */
+  billingCurrency?: string | undefined
+}
+
+/** A global exchange rate, one unit of `fromCurrency` in `toCurrency` (lower-case codes). */
+export interface SubscriptionFxRateOption {
+  fromCurrency: string
+  toCurrency: string
+  rate: string
 }
 
 /** A coupon to choose from; `discount` ("20%", "$50") and `code` are shown beside its name. */
@@ -253,6 +262,13 @@ export interface SubscriptionFormProps {
    * Loaded for the chosen customer; they are listed but cannot be picked.
    */
   inheritanceBlocks?: Readonly<Record<string, InheritanceBlock>>
+  /**
+   * The global exchange rates. A contract billed in another currency than the
+   * invoicing customer's needs one for the pair (the API refuses it otherwise),
+   * and may set its own rate over it. Undefined while unknown: nothing is
+   * blocked on it then.
+   */
+  fxGlobalRates?: readonly SubscriptionFxRateOption[] | undefined
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -303,7 +319,7 @@ const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
   ],
   phases: ['phases', 'chargeCommitments'],
   commitments: ['commitmentAmount', 'overageFactor'],
-  billing: ['autoInvoiceThreshold', 'inheritedCustomerExternalIds'],
+  billing: ['autoInvoiceThreshold', 'inheritedCustomerExternalIds', 'fxRates'],
 }
 
 const unique = <T,>(values: T[]) => [...new Set(values)]
@@ -372,6 +388,7 @@ export function SubscriptionForm({
   priceUnits = [],
   customerLocked = false,
   inheritanceBlocks = NO_BLOCKS,
+  fxGlobalRates,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -427,6 +444,30 @@ export function SubscriptionForm({
   )
   const payerMissing = () =>
     whoPays === WhoPays.Another && !form.getValues('invoicingCustomerExternalId')
+  // Invoices go out in the invoicing customer's billing currency. When it is
+  // not the contract's, the API converts at the global rate for the pair
+  // (refusing the contract without one) or at a rate the contract sets itself.
+  const payer = values.invoicingCustomerExternalId
+    ? customers.find((c) => c.externalId === values.invoicingCustomerExternalId)
+    : customers.find((c) => c.value === values.customerId)
+  const billingCurrency = (payer?.billingCurrency ?? '').trim().toLowerCase()
+  const contractCurrency = values.currency.trim().toLowerCase()
+  const fxNeeded = Boolean(
+    billingCurrency && contractCurrency && billingCurrency !== contractCurrency,
+  )
+  const globalRate = fxNeeded
+    ? fxGlobalRates?.find(
+        (r) => r.fromCurrency === contractCurrency && r.toCurrency === billingCurrency,
+      )
+    : undefined
+  const fxMissing = fxNeeded && fxGlobalRates !== undefined && !globalRate
+  const fxMissingMessage = `No exchange rate for ${contractCurrency.toUpperCase()} → ${billingCurrency.toUpperCase()}. Add a global rate in Settings › Currency first: the API needs one even when the contract sets its own.`
+  /** Flags a contract the API would refuse for want of a rate; true when it was flagged. */
+  const fxBlocked = () => {
+    if (fxMissing) form.setError('fxRates', { type: 'validate', message: fxMissingMessage })
+    else if (form.getFieldState('fxRates').error?.type === 'validate') form.clearErrors('fxRates')
+    return fxMissing
+  }
   /** Flags a picked customer the API would refuse to let inherit; true when one was flagged. */
   const inheritanceBlocked = () => {
     const message = inheritanceBlockedMessage(
@@ -460,6 +501,7 @@ export function SubscriptionForm({
         return false
       }
       if (id === 'billing' && valid && inheritanceBlocked()) return false
+      if (id === 'billing' && valid && fxBlocked()) return false
       return valid
     },
   })
@@ -638,6 +680,9 @@ export function SubscriptionForm({
         }),
       ),
       optedInChargeIds: draft.optedInChargeIds.filter((id) => billed.has(id)),
+      // Only when invoices are converted, and only a rate that was set: the API
+      // refuses fx_rates on a contract billed in the customer's own currency.
+      fxRates: fxNeeded ? draft.fxRates.filter((fx) => fx.rate) : [],
       includePriceIds: selection.includePriceIds,
       // Not offered with fixed charges; a value typed before they were added is not sent.
       ...(hasFixedCharges ? { autoInvoiceThreshold: '' } : {}),
@@ -691,6 +736,10 @@ export function SubscriptionForm({
           return
         }
         if (inheritanceBlocked()) {
+          flow.goTo('billing')
+          return
+        }
+        if (fxBlocked()) {
           flow.goTo('billing')
           return
         }
@@ -1126,6 +1175,16 @@ export function SubscriptionForm({
           form.clearErrors(['invoicingCustomerExternalId', 'inheritedCustomerExternalIds'])
         }}
         hasFixedCharges={hasFixedCharges}
+        fx={
+          fxNeeded
+            ? {
+                from: contractCurrency,
+                to: billingCurrency,
+                globalRate: globalRate?.rate,
+                missing: fxMissing,
+              }
+            : undefined
+        }
       />,
     ),
     review: formEl(
@@ -3919,6 +3978,124 @@ function TaxesSection({
 /* ------------------------------------------------------------------------- */
 
 /** How and when the contract invoices, and who pays. */
+/** A contract billed in one currency and invoiced in another. */
+interface FxConversion {
+  /** Lower-case codes: the contract's currency, and the invoicing customer's. */
+  from: string
+  to: string
+  /** The global rate for the pair, when one is known. */
+  globalRate: string | undefined
+  /** Known to have no global rate: the API would refuse the contract. */
+  missing: boolean
+}
+
+/**
+ * The exchange rate this contract converts at, when its invoices go out in the
+ * invoicing customer's billing currency: the global rate unless the contract
+ * sets its own (`fx_rates`), for a window if it likes, as FxRatesSection's
+ * override dialog has it.
+ */
+function CurrencyConversionCard({
+  fx,
+  value,
+  onChange,
+  error,
+  rateError,
+  endError,
+  isSubmitting,
+}: {
+  fx: FxConversion
+  value: CreateSubscription['fxRates'][number]
+  onChange: (next: CreateSubscription['fxRates'][number]) => void
+  error: string | undefined
+  rateError: string | undefined
+  endError: string | undefined
+  isSubmitting: boolean
+}) {
+  const from = fx.from.toUpperCase()
+  const to = fx.to.toUpperCase()
+  const set = (patch: Partial<CreateSubscription['fxRates'][number]>) =>
+    onChange({ ...value, ...patch })
+  return (
+    <FormCard
+      title="Currency conversion"
+      icon={<CoinsIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+      description={`This contract bills in ${from}; its invoices go out in ${to}, the billing customer's currency.`}
+    >
+      {error ? (
+        <div className="px-5 pt-4 sm:px-6">
+          <Alert variant="destructive">
+            <InfoIcon aria-hidden />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
+      <FormRow
+        label="Exchange rate"
+        hint={`One ${from} in ${to}. Leave empty to convert at the global rate.`}
+        error={rateError}
+      >
+        {({ id, ...field }) => (
+          <InputGroup className="h-9">
+            <InputGroupAddon align="inline-start">{`1 ${from} =`}</InputGroupAddon>
+            <InputGroupInput
+              id={id}
+              {...field}
+              inputMode="decimal"
+              placeholder={fx.globalRate ? `${fx.globalRate} (global rate)` : 'Global rate'}
+              value={value.rate}
+              onChange={(event) => set({ rate: event.target.value })}
+              disabled={isSubmitting}
+            />
+            <InputGroupAddon align="inline-end">{to}</InputGroupAddon>
+          </InputGroup>
+        )}
+      </FormRow>
+      {value.rate ? (
+        <FormRow
+          label="Valid"
+          hint="When this rate applies. Open-ended on either side when left empty."
+          error={endError}
+          align="start"
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Valid from">
+              {({ id, ...field }) => (
+                <DateInput
+                  id={id}
+                  {...field}
+                  withTime
+                  value={value.startDate}
+                  onValueChange={(startDate) => set({ startDate })}
+                  placeholder="Always"
+                  clearable
+                  clearLabel="Clear start"
+                  disabled={isSubmitting}
+                />
+              )}
+            </Field>
+            <Field label="Valid until">
+              {({ id, ...field }) => (
+                <DateInput
+                  id={id}
+                  {...field}
+                  withTime
+                  value={value.endDate}
+                  onValueChange={(endDate) => set({ endDate })}
+                  placeholder="No end"
+                  clearable
+                  clearLabel="Clear end"
+                  disabled={isSubmitting}
+                />
+              )}
+            </Field>
+          </div>
+        </FormRow>
+      ) : null}
+    </FormCard>
+  )
+}
+
 function BillingStep({
   values,
   errors,
@@ -3930,6 +4107,7 @@ function BillingStep({
   whoPays,
   onWhoPays,
   hasFixedCharges,
+  fx,
 }: {
   values: CreateSubscription
   errors: FieldErrors<CreateSubscription>
@@ -3942,6 +4120,8 @@ function BillingStep({
   onWhoPays: (next: WhoPays) => void
   /** Fixed charges bill each period, so there is no early invoice to trigger. */
   hasFixedCharges: boolean
+  /** Set when invoices go out in another currency than the contract's. */
+  fx?: FxConversion | undefined
 }) {
   // Another customer is chosen by external id, which is what the API takes.
   const others = customers.filter((c) => c.externalId && c.value !== values.customerId)
@@ -4102,6 +4282,17 @@ function BillingStep({
           )}
         </FormRow>
       </FormCard>
+      {fx ? (
+        <CurrencyConversionCard
+          fx={fx}
+          value={values.fxRates[0] ?? { rate: '', startDate: '', endDate: '' }}
+          onChange={(next) => onChange('fxRates', [next])}
+          error={(errors.fxRates as { message?: string } | undefined)?.message}
+          rateError={errors.fxRates?.[0]?.rate?.message}
+          endError={errors.fxRates?.[0]?.endDate?.message}
+          isSubmitting={isSubmitting}
+        />
+      ) : null}
       <FormCard
         title="Other settings"
         icon={<Settings2Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />}

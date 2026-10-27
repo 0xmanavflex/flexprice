@@ -128,6 +128,10 @@ interface PlaygroundProps {
   startDate?: string
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** The first customer's billing currency (lower-case), when it invoices in another. */
+  billingCurrency?: string
+  /** The global exchange rates; undefined leaves them unknown. */
+  fxGlobalRates?: { fromCurrency: string; toCurrency: string; rate: string }[]
   /** Changes to the plan's entitlements, by id (`ent_0`…). */
   entitlementPatch?: Record<string, Partial<Entitlement>>
   /** Gives the plan's first charge dates of its own (`YYYY-MM-DD`, from and to). */
@@ -162,6 +166,8 @@ function SubscriptionFormPlayground({
   phase,
   datedCharge,
   entitlementPatch,
+  billingCurrency,
+  fxGlobalRates,
   seededAddons,
   inheritanceBlocks,
   onSubmit,
@@ -181,7 +187,13 @@ function SubscriptionFormPlayground({
     [onStepChange],
   )
 
-  const customers = useMemo(() => makeCustomers(customerCount), [customerCount])
+  const customers = useMemo(
+    () =>
+      makeCustomers(customerCount).map((c, i) =>
+        i === 0 && billingCurrency ? { ...c, billingCurrency } : c,
+      ),
+    [customerCount, billingCurrency],
+  )
   const plans = useMemo(() => makePlans(planCount), [planCount])
   const plan = useMemo<SubscriptionPlanContext | undefined>(() => {
     if (!planId) return undefined
@@ -272,6 +284,7 @@ function SubscriptionFormPlayground({
           }
         : {})}
       customers={customers}
+      {...(fxGlobalRates ? { fxGlobalRates } : {})}
       plans={plans}
       plan={plan}
       onPlanChange={handlePlanChange}
@@ -1383,6 +1396,88 @@ export const EntitlementResetToPlan: Story = {
       expect(args.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ entitlementOverrides: [] }),
       ),
+    )
+  },
+}
+
+/**
+ * The customer is invoiced in INR while the contract bills in USD: Billing
+ * offers the contract's own exchange rate over the global one, with a window,
+ * and sends it as `fx_rates`.
+ */
+export const FxOverrideWhenCurrenciesDiffer: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [{ fromCurrency: 'usd', toCurrency: 'inr', rate: '83.00' }],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Currency conversion' })).toBeVisible()
+    await expect(
+      canvas.getByText(
+        "This contract bills in USD; its invoices go out in INR, the billing customer's currency.",
+      ),
+    ).toBeVisible()
+    const rate = canvas.getByRole('textbox', { name: /^Exchange rate/ })
+    await expect(rate).toHaveAttribute('placeholder', '83.00 (global rate)')
+    // Blank is allowed: the global rate applies, and nothing is sent.
+    await userEvent.type(rate, '0')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await expect(await canvas.findByText('Enter a rate above zero')).toBeVisible()
+    await userEvent.clear(rate)
+    await userEvent.type(rate, '84.5')
+    await expect(canvas.getByText('Valid from')).toBeVisible()
+    await expect(canvas.getByText('Valid until')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fxRates: [{ rate: '84.5', startDate: '', endDate: '' }],
+        }),
+      ),
+    )
+  },
+}
+
+/** With no global rate for the pair, the API refuses the contract: the wizard says so first. */
+export const FxMissingGlobalRate: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(await canvas.findByRole('textbox', { name: /^Exchange rate/ }), '84.5')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await expect(
+      await canvas.findByText(/^No exchange rate for USD → INR\. Add a global rate/),
+    ).toBeVisible()
+    expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
+/** Invoiced in the contract's own currency: no conversion card, and no `fx_rates`. */
+export const NoFxWhenCurrenciesMatch: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'usd',
+    fxGlobalRates: [],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Payment' })).toBeVisible()
+    expect(canvas.queryByRole('heading', { name: 'Currency conversion' })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fxRates: [] })),
     )
   },
 }

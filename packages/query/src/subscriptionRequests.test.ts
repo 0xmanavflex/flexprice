@@ -135,6 +135,39 @@ describe('toCreateSubscriptionRequest', () => {
     ])
   })
 
+  it("sends the contract's own exchange rate as fx_rates, with instants for its window", () => {
+    expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('fxRates')
+    expect(
+      toCreateSubscriptionRequest({ ...base, fxRates: [{ rate: '', startDate: '', endDate: '' }] }),
+    ).not.toHaveProperty('fxRates')
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        fxRates: [
+          {
+            rate: '83.25',
+            startDate: '2026-11-01T09:30:00.000Z',
+            endDate: '2027-11-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(wire['fx_rates']).toEqual([
+      {
+        rate: '83.25',
+        start_date: '2026-11-01T09:30:00.000Z',
+        end_date: '2027-11-01T00:00:00.000Z',
+      },
+    ])
+    const open = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        fxRates: [{ rate: '83', startDate: '', endDate: '' }],
+      }),
+    ) as Record<string, unknown>
+    expect(open['fx_rates']).toEqual([{ rate: '83' }])
+  })
+
   it('routes invoices to another customer by external id', () => {
     expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('inheritance')
     const request = toCreateSubscriptionRequest({
