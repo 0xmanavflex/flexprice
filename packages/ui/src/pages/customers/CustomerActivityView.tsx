@@ -188,17 +188,30 @@ function selectField(
 
 type ActivityFilterField = 'action' | 'actorType' | 'actorId' | 'source'
 
+/** Whether a rule has a value chosen yet: a row just added has none. */
+function hasValue(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(hasValue)
+  return value !== undefined && value !== null && value !== ''
+}
+
 /**
  * One rule per field, the latest kept. The URL and the request hold one value
  * per field, so a second Action replaces the first rather than leaving a chip
- * the list ignores.
+ * the list ignores. An earlier rule only goes once the later one has a value:
+ * Add filter seeds a blank row on the first field, and that row (still being
+ * pointed at another field) must not erase a finished filter.
  */
 export function oneRulePerField(query: FilterQuery): FilterQuery {
   const key = (node: FilterQuery['rules'][number]) =>
     node.type === 'rule' ? node.path.join('.') : null
   const kept = query.rules.filter(
     (node, index) =>
-      key(node) === null || !query.rules.slice(index + 1).some((later) => key(later) === key(node)),
+      key(node) === null ||
+      !query.rules
+        .slice(index + 1)
+        .some(
+          (later) => later.type === 'rule' && key(later) === key(node) && hasValue(later.value),
+        ),
   )
   return kept.length === query.rules.length ? query : { ...query, rules: kept }
 }

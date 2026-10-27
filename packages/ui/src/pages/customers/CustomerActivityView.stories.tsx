@@ -208,6 +208,27 @@ export const PersonOverridesActor: Story = {
   },
 }
 
+/** Adding a second filter keeps the first: Action set, then Source added. */
+export const AddingAFilterKeepsTheOthers: Story = {
+  parameters: OPEN_FILTER_A11Y,
+  args: { filters: { ...FILTERS, action: 'customer.created' } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Filter. 1 active' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Advanced filter' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add filter' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Source' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'is' }))
+    const sources = await screen.findByRole('listbox', { name: 'Source' })
+    await userEvent.click(within(sources).getByRole('option', { name: 'Dashboard' }))
+    await waitFor(() =>
+      expect(args.onFiltersChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ action: 'customer.created', source: 'dashboard' }),
+      ),
+    )
+  },
+}
+
 /** Sort reorders the page: oldest first reverses the newest-first order the API sends. */
 export const SortOldestFirst: Story = {
   play: async ({ canvasElement }) => {

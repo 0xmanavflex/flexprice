@@ -74,4 +74,25 @@ describe('one rule per field', () => {
     ])
     expect(oneRulePerField(query).rules.map((node) => node.id)).toEqual(['b', 'c'])
   })
+
+  it('keeps a finished rule while a newer row on the same field has no value yet', () => {
+    // Action set, then Add filter: the new row starts on the first field (Action).
+    const action = createFilterRule({
+      id: 'a',
+      path: ['action'],
+      operator: 'is',
+      value: 'customer.created',
+    })
+    const blank = createFilterRule({ id: 'n', path: ['action'], operator: 'is', value: undefined })
+    expect(oneRulePerField(createFilterQuery([action, blank])).rules.map((n) => n.id)).toEqual([
+      'a',
+      'n',
+    ])
+    // ...and pointing that row at Source keeps the Action.
+    const source = createFilterRule({ id: 'n', path: ['source'], operator: 'is', value: 'api' })
+    expect(oneRulePerField(createFilterQuery([action, source])).rules.map((n) => n.id)).toEqual([
+      'a',
+      'n',
+    ])
+  })
 })
