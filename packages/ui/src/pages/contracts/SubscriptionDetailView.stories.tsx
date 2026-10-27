@@ -921,22 +921,17 @@ export const UpcomingInvoice: Story = {
     await expect(section.getByText('API requests')).toBeVisible()
     await expect(section.getByText('920,250 requests')).toBeVisible()
     await expect(section.getByText('$1,840.50')).toBeVisible()
-    // Joined to the contract's lines by price: interval and billing timing show.
-    await expect(section.getByRole('columnheader', { name: 'Interval' })).toBeVisible()
-    await expect(section.getByRole('columnheader', { name: 'Billing timing' })).toBeVisible()
-    // Each row: unit price from the contract line's price, its interval and timing.
+    await expect(section.queryByRole('columnheader', { name: 'Interval' })).toBeNull()
+    await expect(section.queryByRole('columnheader', { name: 'Billing timing' })).toBeNull()
+    // Each row: unit price from the contract line's price.
     const row = (name: string) => within(section.getByText(name).closest('tr')!)
     const platform = row('Platform fee')
     await expect(platform.getAllByText('$1,500.00')).toHaveLength(2)
-    await expect(platform.getByText('Monthly')).toBeVisible()
-    await expect(platform.getByText('In advance')).toBeVisible()
     const api = row('API requests')
     await expect(api.getByText('Tiered')).toBeVisible()
     await expect(api.queryByText('$0.002')).toBeNull()
-    await expect(api.getByText('Monthly')).toBeVisible()
-    await expect(api.getByText('In arrears')).toBeVisible()
-    // No contract line has this price: no interval or timing, and no unit price to show.
-    await expect(row('Seat overage').getAllByText('—')).toHaveLength(3)
+    // No contract line has this price: no unit price to show.
+    await expect(row('Seat overage').getByText('—')).toBeVisible()
     await expect(section.getByText('Subtotal')).toBeVisible()
     await expect(section.getByText('Discount')).toBeVisible()
     await expect(section.getByText('−$359.05')).toBeVisible()
@@ -949,7 +944,7 @@ export const UpcomingInvoice: Story = {
 
 /**
  * A preview line priced in a custom unit shows the unit's rate, not a currency
- * amount; a charge billed every few periods says so.
+ * amount.
  */
 export const UpcomingInvoiceCustomUnitAndPeriodCount: Story = {
   args: {
@@ -974,8 +969,6 @@ export const UpcomingInvoiceCustomUnitAndPeriodCount: Story = {
       (await canvas.findByRole('heading', { name: 'Upcoming invoice' })).closest('section')!,
     )
     const row = (name: string) => within(section.getByText(name).closest('tr')!)
-    await expect(row('Platform fee').getByText('Every 3 months')).toBeVisible()
-    await expect(row('Platform fee').queryByText('Monthly')).toBeNull()
     await expect(row('Onboarding').getByText('10 TOK')).toBeVisible()
     await expect(row('Onboarding').queryByText('$2.00')).toBeNull()
   },
