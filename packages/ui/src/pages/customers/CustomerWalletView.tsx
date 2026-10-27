@@ -4,7 +4,6 @@ import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
   BellIcon,
   ArrowUpRightIcon,
-  InfoIcon,
   MinusIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -53,7 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
+import { InfoHint } from '@ui/compositions/forms/InfoHint'
 import {
   AppFailure,
   ConfirmDialog,
@@ -1078,12 +1077,7 @@ function Balance({
     <div className="space-y-1.5">
       <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
         {label}
-        <Tooltip>
-          <TooltipTrigger render={<span aria-label={hint} className="inline-flex" />}>
-            <InfoIcon className="size-3.5" aria-hidden="true" />
-          </TooltipTrigger>
-          <TooltipContent className="max-w-60">{hint}</TooltipContent>
-        </Tooltip>
+        <InfoHint>{hint}</InfoHint>
       </p>
       <p className="text-3xl font-medium tabular-nums">
         {credits(creditValue)}{' '}

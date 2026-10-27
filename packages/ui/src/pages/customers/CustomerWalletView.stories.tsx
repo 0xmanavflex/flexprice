@@ -264,6 +264,8 @@ export const Default: Story = {
     await expect(canvas.getByText('Real-time balance')).toBeVisible()
     await expect(canvas.getByText('Last invoiced balance')).toBeVisible()
     await expect(canvas.queryByText(/Available now/)).toBeNull()
+    // Each hint is a button, so the keyboard reaches it too.
+    await expect(canvas.getAllByRole('button', { name: 'More information' })).toHaveLength(2)
     await expect(canvas.getByText('Active')).toBeInTheDocument()
     await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
     await expect(canvas.getByText('Expiring soon')).toBeInTheDocument()

@@ -2287,6 +2287,7 @@
         "EmptyState",
         "Field",
         "FormDialog",
+        "InfoHint",
         "LabelWithHint",
         "LoadingRows",
         "MetadataCard",
@@ -4364,6 +4365,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "CustomerWalletView",
         "Field",
         "FormCard",
         "FormRow",
