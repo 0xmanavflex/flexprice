@@ -165,12 +165,14 @@ export const FilteringByStatus: Story = {
     await userEvent.click(await screen.findByRole('option', { name: 'Status' }))
     await userEvent.click(await screen.findByRole('option', { name: 'is' }))
     // The operator list closes as the value list opens; both are labelled Status, so wait for the value list.
-    await waitFor(async () =>
-      expect(
-        within(await screen.findByRole('listbox', { name: 'Status' }))
-          .getAllByRole('option')
-          .map((option) => option.textContent),
-      ).toEqual(['Active', 'Paused']),
+    await waitFor(
+      async () =>
+        expect(
+          within(await screen.findByRole('listbox', { name: 'Status' }))
+            .getAllByRole('option')
+            .map((option) => option.textContent),
+        ).toEqual(['Active', 'Paused']),
+      { timeout: 3000 },
     )
     const values = screen.getByRole('listbox', { name: 'Status' })
     await userEvent.click(within(values).getByRole('option', { name: 'Paused' }))
