@@ -38,6 +38,8 @@ export interface OptionComboboxProps {
    */
   searchable?: boolean
   disabled?: boolean
+  /** For a picker with no visible label of its own. */
+  'aria-label'?: string | undefined
   'aria-describedby'?: string | undefined
   'aria-invalid'?: true | undefined
 }
@@ -51,6 +53,7 @@ export function OptionCombobox({
   emptyText = 'No matches.',
   searchable = false,
   disabled,
+  'aria-label': label,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
 }: OptionComboboxProps) {
@@ -72,6 +75,7 @@ export function OptionCombobox({
         {...(id ? { id } : {})}
         placeholder={placeholder}
         className="w-full"
+        aria-label={label}
         aria-describedby={describedBy}
         aria-invalid={invalid}
       >

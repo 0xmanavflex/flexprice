@@ -72,7 +72,10 @@ test('a super admin manages members, but never their own roles', async ({ page, 
   await page.goto('/settings?section=team&tab=members')
   const me = page.getByRole('row').filter({ hasText: 'demo@flexprice.io' })
   await expect(me.getByRole('button', { name: /^Actions for / })).toHaveCount(0)
-  await page.getByRole('button', { name: /^Actions for / }).first().click()
+  await page
+    .getByRole('button', { name: /^Actions for / })
+    .first()
+    .click()
   await expect(page.getByRole('menuitem', { name: 'Edit roles' })).toBeVisible()
   await page.keyboard.press('Escape')
   await page.goto('/plans/new')

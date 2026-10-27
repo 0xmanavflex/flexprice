@@ -8,7 +8,6 @@ import {
   createCustomerSchema,
   emptyCustomer,
   KEY_PREFIX,
-  countryOptions,
   suggestKey,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
@@ -16,7 +15,7 @@ import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
 import { FormDisclosure } from '@ui/compositions/forms/FormDisclosure'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
-import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
+import { AddressPicker, useAddressRegions } from '@ui/compositions/forms/AddressRegionFields'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { TimezoneCombobox } from '@ui/compositions/forms/TimezoneCombobox'
 import { provenance } from '@ui/provenance'
@@ -34,7 +33,7 @@ export const CustomerFormProvenance = provenance({
     'ui/input',
     'compositions/form-page',
     'compositions/option-select',
-    'compositions/option-combobox',
+    'compositions/address-region-fields',
     'compositions/timezone-combobox',
     'compositions/form-disclosure',
   ],
@@ -63,12 +62,6 @@ const ADDRESS_FIELDS = [
   'addressPostalCode',
   'addressCountry',
 ] as const satisfies readonly (keyof CreateCustomer)[]
-
-/** Countries, named in the viewer's language and found by name or code. */
-const COUNTRY_CHOICES = countryOptions().map((option) => ({
-  value: option.code,
-  label: option.label,
-}))
 
 const TAX_OPTIONS = Object.values(CustomerTaxTreatment).map((value) => ({
   value,
@@ -103,6 +96,22 @@ export function CustomerForm({
   })
 
   const errors = form.formState.errors
+
+  const [addressCountry = '', addressState = '', addressCity = ''] = form.watch([
+    'addressCountry',
+    'addressState',
+    'addressCity',
+  ])
+  const regions = useAddressRegions({
+    value: { country: addressCountry, state: addressState, city: addressCity },
+    onChange: (next) => {
+      const options = { shouldDirty: true, shouldValidate: form.formState.isSubmitted }
+      form.setValue('addressCountry', next.country, options)
+      form.setValue('addressState', next.state, options)
+      form.setValue('addressCity', next.city, options)
+    },
+    disabled: isSubmitting,
+  })
 
   const submitAll = form.handleSubmit((values) => onSubmit(values))
 
@@ -165,17 +174,30 @@ export function CustomerForm({
         )}
       </FormRow>
       <FormRow
+        label="Country"
+        hint="Stored as the two-letter code; search by name."
+        error={errors.addressCountry?.message}
+      >
+        {({ id, ...field }) => (
+          <AddressPicker picker={regions.country} id={id} {...field} autoComplete="country" />
+        )}
+      </FormRow>
+      <FormRow
+        label="State"
+        hint="State, province or region, from the chosen country."
+        error={errors.addressState?.message}
+      >
+        {({ id, ...field }) => (
+          <AddressPicker picker={regions.state} id={id} {...field} autoComplete="address-level1" />
+        )}
+      </FormRow>
+      <FormRow
         label="City"
-        hint="City or town for the billing address."
+        hint="City or town, from the chosen state."
         error={errors.addressCity?.message}
       >
         {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressCity')} />
-        )}
-      </FormRow>
-      <FormRow label="State" hint="State, province or region." error={errors.addressState?.message}>
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressState')} />
+          <AddressPicker picker={regions.city} id={id} {...field} autoComplete="address-level2" />
         )}
       </FormRow>
       <FormRow
@@ -189,31 +211,6 @@ export function CustomerForm({
             disabled={isSubmitting}
             {...field}
             {...form.register('addressPostalCode')}
-          />
-        )}
-      </FormRow>
-      <FormRow
-        label="Country"
-        hint="Stored as the two-letter code; search by name."
-        error={errors.addressCountry?.message}
-      >
-        {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="addressCountry"
-            render={({ field: control }) => (
-              <OptionCombobox
-                id={id}
-                {...field}
-                searchable
-                value={control.value || undefined}
-                onValueChange={(value) => control.onChange(value)}
-                options={COUNTRY_CHOICES}
-                placeholder="Search countries…"
-                emptyText="No matching country."
-                disabled={isSubmitting}
-              />
-            )}
           />
         )}
       </FormRow>

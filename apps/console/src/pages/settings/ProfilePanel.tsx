@@ -1,7 +1,13 @@
 import { useId } from 'react'
 import { type Tenant, type UpdateTenant, toUpdateTenantDraft, updateTenantSchema } from '@fp/domain'
 import { useTenant, useUpdateTenant, useUserInfo } from '@fp/query'
-import { SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
+import {
+  AddressPicker,
+  type AddressPickerModel,
+  SettingRow,
+  SettingsFieldGroup,
+  useAddressRegions,
+} from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import {
   ActionError,
@@ -180,41 +186,106 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               busy={busy}
               autoComplete="address-line2"
             />
-            <TextField
-              label="City"
-              path="address.city"
-              draft={draft}
-              busy={busy}
-              autoComplete="address-level2"
-            />
-            <TextField
-              label="State or province"
-              path="address.state"
-              draft={draft}
-              busy={busy}
-              autoComplete="address-level1"
-            />
+            <AddressRegionRows draft={draft} busy={busy} />
             <TextField
               label="Postal code"
               path="address.postalCode"
               draft={draft}
               busy={busy}
               autoComplete="postal-code"
-            />
-            <TextField
-              label="Country"
-              path="address.country"
-              draft={draft}
-              busy={busy}
-              autoComplete="country"
-              hint="Two-letter code, for example US or IN."
-              placeholder="US"
               last
             />
           </SettingsFieldGroup>
         </SettingsBlock>
       </Panel>
     </form>
+  )
+}
+
+/**
+ * Country, state and city as the shared dependent pickers, one settings row
+ * each. The country is stored as its two-letter code, as before; state and
+ * city as their names.
+ */
+function AddressRegionRows({
+  draft,
+  busy,
+}: {
+  draft: ReturnType<typeof useDraft<UpdateTenant>>
+  busy: boolean
+}) {
+  const regions = useAddressRegions({
+    value: {
+      country: draft.text('address.country'),
+      state: draft.text('address.state'),
+      city: draft.text('address.city'),
+    },
+    onChange: (next) =>
+      draft.update((current) => ({
+        ...current,
+        address: { ...current.address, country: next.country, state: next.state, city: next.city },
+      })),
+    disabled: busy,
+  })
+  return (
+    <>
+      <RegionRow
+        label="Country"
+        path="address.country"
+        draft={draft}
+        picker={regions.country}
+        autoComplete="country"
+      />
+      <RegionRow
+        label="State or province"
+        path="address.state"
+        draft={draft}
+        picker={regions.state}
+        autoComplete="address-level1"
+      />
+      <RegionRow
+        label="City"
+        path="address.city"
+        draft={draft}
+        picker={regions.city}
+        autoComplete="address-level2"
+      />
+    </>
+  )
+}
+
+function RegionRow({
+  label,
+  path,
+  draft,
+  picker,
+  autoComplete,
+}: {
+  label: string
+  path: string
+  draft: ReturnType<typeof useDraft<UpdateTenant>>
+  picker: AddressPickerModel
+  autoComplete: string
+}) {
+  const id = useId()
+  const error = draft.error(path)
+  return (
+    <SettingRow title={label} labelFor={id}>
+      <div className="flex w-full flex-col gap-1">
+        <AddressPicker
+          picker={picker}
+          id={id}
+          autoComplete={autoComplete}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
+        />
+        {error ? (
+          <p id={`${id}-error`} role="alert" className="text-destructive text-xs">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </SettingRow>
   )
 }
 

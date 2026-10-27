@@ -107,7 +107,7 @@ export const Edit: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
     await expect(canvas.queryByRole('complementary')).toBeNull()
-    await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
+    await expect(canvas.getByRole('combobox', { name: /city/i })).toBeInTheDocument()
     // Renaming a saved customer never rewrites its external ID.
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
     await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue('acme')
@@ -164,6 +164,79 @@ export const CountryIsSearchable: Story = {
     await userEvent.click(option)
     await expect(country).toHaveValue('United Kingdom (GB)')
     await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
+  },
+}
+
+/**
+ * State follows the country and city follows the state.
+ *
+ * Both were free text. They are now lists from the bundled region dataset,
+ * and a new country clears a state that belonged to the old one.
+ */
+export const StateAndCityFollowCountry: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(document.body)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Corp')
+    await userEvent.click(canvas.getByRole('button', { name: /Billing address/ }))
+    await expect(canvas.getByRole('combobox', { name: 'State' })).toHaveAttribute('data-disabled')
+
+    await userEvent.type(canvas.getByRole('combobox', { name: 'Country' }), 'India')
+    await userEvent.click(await body.findByRole('option', { name: /India \(IN\)/ }))
+    const state = canvas.getByRole('combobox', { name: 'State' })
+    await waitFor(() => expect(state).toHaveAttribute('placeholder', 'Search states…'), {
+      timeout: 5000,
+    })
+    await userEvent.type(state, 'Karna')
+    await userEvent.click(await body.findByRole('option', { name: 'Karnataka' }, { timeout: 5000 }))
+    const city = canvas.getByRole('combobox', { name: 'City' })
+    await waitFor(() => expect(city).toHaveAttribute('placeholder', 'Search cities…'), {
+      timeout: 5000,
+    })
+    await userEvent.type(city, 'Bengal')
+    await userEvent.click(await body.findByRole('option', { name: 'Bengaluru' }, { timeout: 5000 }))
+    await userEvent.type(canvas.getByRole('textbox', { name: /postal code/i }), '560001')
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Create customer' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        addressCountry: 'IN',
+        addressState: 'Karnataka',
+        addressCity: 'Bengaluru',
+        addressPostalCode: '560001',
+      }),
+    )
+  },
+}
+
+/** A saved state the dataset does not list stays shown, and a new country clears it. */
+export const SavedRegionKept: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Acme Corp',
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
+    defaultValue: {
+      externalId: 'acme',
+      name: 'Acme Corp',
+      addressCountry: 'US',
+      addressState: 'CA',
+      addressCity: 'San Francisco',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const state = canvas.getByRole('combobox', { name: 'State' })
+    await expect(state).toHaveValue('CA')
+    await expect(canvas.getByRole('combobox', { name: 'City' })).toHaveValue('San Francisco')
+
+    const country = canvas.getByRole('combobox', { name: 'Country' })
+    await userEvent.clear(country)
+    await userEvent.type(country, 'Canada')
+    await userEvent.click(
+      await within(document.body).findByRole('option', { name: /Canada \(CA\)/ }),
+    )
+    await expect(state).toHaveValue('')
+    await expect(canvas.getByRole('combobox', { name: 'City' })).toHaveValue('')
   },
 }
 
