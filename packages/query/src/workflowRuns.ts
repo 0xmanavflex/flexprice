@@ -172,6 +172,9 @@ export function useWorkflowRun(handle: (WorkflowHandle & { since: number }) | nu
     queryFn: () => fetchWorkflowRun(client, handle as WorkflowHandle),
     enabled: handle !== null,
     retry: false,
+    // A failed read is the watcher's to report ("Could not check the sync"),
+    // not the route's: it must not replace the page the sync started from.
+    throwOnError: false,
     // A finished sync is read once; there is nothing to cache across watches.
     gcTime: 0,
     refetchInterval: (query) => {
