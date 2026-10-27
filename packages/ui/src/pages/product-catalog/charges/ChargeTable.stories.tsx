@@ -353,6 +353,24 @@ export const SummaryUnchanged: Story = {
   },
 }
 
+/** Every charge has ended: the summary says none are live, not that there were none. */
+export const SummaryAllEnded: Story = {
+  args: {
+    charges: chargeFixtures.map((charge) => ({
+      ...charge,
+      endDate: new Date('2026-10-01T00:00:00Z'),
+    })),
+    variant: 'summary',
+    onShowAll: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('No active charges')).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).not.toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: /show all charges/i })).toBeInTheDocument()
+  },
+}
+
 /**
  * Beside a side rail.
  *

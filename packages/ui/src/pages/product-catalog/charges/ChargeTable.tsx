@@ -532,7 +532,14 @@ export function ChargeTable({
             loadingLabel="Loading charges"
             empty={{
               scene: 'catalog',
-              title: 'No charges yet',
+              // A summary with only ended charges is not a contract without
+              // charges: say none are live, and Show all charges reaches them.
+              ...(variant === 'summary' && ended.length > 0
+                ? {
+                    title: 'No active charges',
+                    description: 'Ended charges are listed under Show all charges.',
+                  }
+                : { title: 'No charges yet' }),
             }}
           >
             {null}
