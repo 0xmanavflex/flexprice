@@ -52,6 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
+import { InfoHint } from '@ui/compositions/forms/InfoHint'
 import {
   AppFailure,
   ConfirmDialog,
@@ -297,14 +298,16 @@ export function CustomerWalletView({
         <div className="grid grid-cols-2 divide-x">
           <div className="p-6">
             <Balance
-              label="Available now"
+              label="Real-time balance"
+              hint="Last invoiced balance minus usage recorded since the last invoice. This is what the next charge draws from."
               credits={wallet.realTimeCreditBalance}
               value={formatMoney(wallet.realTimeBalance)}
             />
           </div>
           <div className="p-6">
             <Balance
-              label="Last invoiced"
+              label="Last invoiced balance"
+              hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
               credits={wallet.creditBalance}
               value={formatMoney(wallet.balance)}
             />
@@ -318,7 +321,9 @@ export function CustomerWalletView({
               {
                 label: 'Status',
                 value: (
-                  <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+                  <Pill tone={STATUS_TONE[wallet.status]}>
+                    {WALLET_STATUS_LABEL[wallet.status]}
+                  </Pill>
                 ),
               },
               { label: 'Consumption rate', value: creditRate(wallet.conversionRate, currency) },
@@ -363,7 +368,8 @@ export function CustomerWalletView({
           empty={{
             scene: 'customers',
             title: 'No top-ups yet',
-            description: 'Credits added to this wallet appear here. Open a row to see what drew them down.',
+            description:
+              'Credits added to this wallet appear here. Open a row to see what drew them down.',
           }}
         >
           <WalletLedgerTable transactions={transactions} now={asOf} noun="top-ups" />
@@ -1008,8 +1014,7 @@ function creditRate(rate: string, currency: string): string {
 
 function autoTopupSummary(wallet: Wallet, currency: string): string {
   if (!wallet.autoTopup.enabled) return 'Off'
-  const whole = (amount: string) =>
-    formatMoney(money(amount, currency)).replace(/\.00$/, '')
+  const whole = (amount: string) => formatMoney(money(amount, currency)).replace(/\.00$/, '')
   return `Below ${whole(wallet.autoTopup.threshold)}, add ${whole(wallet.autoTopup.amount)}`
 }
 
@@ -1025,7 +1030,10 @@ function UsageSinceInvoice({ wallet }: { wallet: Wallet }) {
   const used = Number.isFinite(invoiced) && Number.isFinite(live) ? Math.max(0, invoiced - live) : 0
   const available = Number.isFinite(live) ? Math.max(0, live) : 0
   const share = invoiced > 0 ? Math.min(1, used / invoiced) : 0
-  const usedMoney = Math.max(0, Number(wallet.balance.amount) - Number(wallet.realTimeBalance.amount))
+  const usedMoney = Math.max(
+    0,
+    Number(wallet.balance.amount) - Number(wallet.realTimeBalance.amount),
+  )
   const usedLabel = formatCredits(String(used))
   const availableLabel = formatCredits(String(available))
   const usedValue = Number.isFinite(usedMoney)
@@ -1056,17 +1064,22 @@ function UsageSinceInvoice({ wallet }: { wallet: Wallet }) {
 
 function Balance({
   label,
+  hint,
   credits: creditValue,
   value,
 }: {
   label: string
+  hint: string
   credits: string
   value: string
 }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
+      <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        {label}
+        <InfoHint>{hint}</InfoHint>
+      </p>
       <p className="text-3xl font-medium tabular-nums">
-        <span className="sr-only">{label}: </span>
         {credits(creditValue)}{' '}
         <span className="text-muted-foreground text-base font-normal">credits</span>
       </p>

@@ -1,5 +1,5 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { CouponCreateForm } from './CouponCreateForm'
 
 /** Create a coupon: the full-page body. Fixtures in, a validated `CreateCoupon` out. */
@@ -119,6 +119,46 @@ export const MetadataProblemBlocksCreate: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /create coupon/i }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ metadata: { campaign: 'orphan' } }),
+    )
+  },
+}
+
+/**
+ * The redeemable days are UTC days, whatever the browser's zone: from midnight
+ * UTC on the first day to the end of the last day. The calendar opens on this month.
+ */
+export const RedeemableDaysAreUtc: Story = {
+  parameters: {
+    // Base UI focus guards and the vendored calendar popover: see DateInput.stories.tsx.
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          { id: 'aria-dialog-name', enabled: false },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const now = new Date()
+    const month = now.toLocaleString('en-US', { month: 'long' })
+    const day = (d: number) =>
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Launch')
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Percent/ }), '20')
+    await userEvent.click(canvas.getByRole('button', { name: /^Redeemable from/ }))
+    await userEvent.click(await screen.findByRole('button', { name: new RegExp(`${month} 10`) }))
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(canvas.getByRole('button', { name: /^Redeemable until/ }))
+    await userEvent.click(await screen.findByRole('button', { name: new RegExp(`${month} 20`) }))
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(canvas.getByRole('button', { name: /create coupon/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        redeemAfter: new Date(`${day(10)}T00:00:00.000Z`),
+        redeemBefore: new Date(`${day(20)}T23:59:59.999Z`),
+      }),
     )
   },
 }

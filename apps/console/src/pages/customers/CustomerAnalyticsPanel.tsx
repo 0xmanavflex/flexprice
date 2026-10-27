@@ -9,6 +9,7 @@ import {
   UsageWindowSize,
 } from '@fp/query'
 import { CustomerAnalyticsView, type AnalyticsQuery } from '@fp/ui/pages'
+import { priceSpan } from './analyticsPriceSpan'
 
 const RANGE_DAYS = 30
 const DAY = 86_400_000
@@ -152,6 +153,13 @@ export function CustomerAnalyticsPanel({
           points: row.points.map((point) => ({
             label: dayLabel.format(point.timestamp),
             value: point.usage,
+          })),
+          // One feature row even after a price change; each price's revenue in its breakdown.
+          prices: row.prices.map((price) => ({
+            id: price.id,
+            label: priceSpan(price.from, price.to),
+            usage: grouped.format(price.usage),
+            revenue: price.revenue ? formatMoney(price.revenue) : null,
           })),
         }
       })}

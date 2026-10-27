@@ -120,7 +120,7 @@ export function SignUpScreen({
 
   if (sentTo) {
     return (
-      <AuthFrame quote="truffle">
+      <AuthFrame quote="optimality">
         <div className="flex w-full flex-col gap-6" role="status">
           <FormHead
             title="Check your email"
@@ -162,7 +162,7 @@ export function SignUpScreen({
   }
 
   return (
-    <AuthFrame quote="truffle">
+    <AuthFrame quote="optimality">
       <form
         onSubmit={form.handleSubmit(({ email, password }) => onSubmit({ email, password }))}
         noValidate

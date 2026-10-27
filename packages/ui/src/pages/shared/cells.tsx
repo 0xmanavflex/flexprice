@@ -7,6 +7,7 @@ import { Skeleton } from '@ui/components/primitives/skeleton'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { usePillSize } from '../../compositions/detail/pillSize'
+import { formatStoredDay } from '../../compositions/forms/DateInput'
 import { Money } from './Money'
 
 /**
@@ -600,17 +601,27 @@ export function idColumn<T>(
 }
 
 /** A date, as the reader's locale writes it. Muted: it is metadata, not the
- *  reason anyone opened the page. */
+ *  reason anyone opened the page. `storedDay` reads a day field (saved as a
+ *  UTC day) on its own day, in every zone; see `formatStoredDay`. */
 export function dateColumn<T>(
   id: string,
   header: string,
   get: (row: T) => Date | null | undefined,
-  options?: ColumnOptions & { locale?: string | undefined; dateStyle?: 'short' | 'medium' },
+  options?: ColumnOptions & {
+    locale?: string | undefined
+    dateStyle?: 'short' | 'medium'
+    storedDay?: boolean
+  },
 ): EntityColumn<T> {
   const format = (value: Date) =>
-    new Intl.DateTimeFormat(options?.locale, { dateStyle: options?.dateStyle ?? 'medium' }).format(
-      value,
-    )
+    options?.storedDay
+      ? formatStoredDay(value, {
+          locale: options.locale,
+          ...(options.dateStyle ? { dateStyle: options.dateStyle } : {}),
+        })
+      : new Intl.DateTimeFormat(options?.locale, {
+          dateStyle: options?.dateStyle ?? 'medium',
+        }).format(value)
   return {
     id,
     header,

@@ -874,7 +874,7 @@ export const NoCommitments: Story = {
   },
 }
 
-/** Overview's summary lists only what the contract changed from its plan. */
+/** Overview's summary lists the live charges, the ones the contract changed first. */
 export const ContractSpecificCharges: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -883,16 +883,16 @@ export const ContractSpecificCharges: Story = {
     )
     await expect(section.queryByText(/active charges/)).toBeNull()
     await expect(section.getByText('Onboarding')).toBeVisible()
-    await expect(section.queryByText('Platform fee')).toBeNull()
+    // A plan charge left as the plan sets it is still a charge on the contract.
+    await expect(section.getByText('Platform fee')).toBeVisible()
   },
 }
 
 /**
- * A contract that follows its plan still gets the section: it says so.
+ * A contract that follows its plan lists its plan charges.
  *
- * The old Overview dropped the section entirely, which read as "this contract
- * has no charges" rather than "none of them were changed". The summary states
- * which it is.
+ * The summary once showed only changed charges, so a contract billed exactly
+ * as its plan read "No changes" with an empty block, as if it had no charges.
  */
 export const NoContractSpecificCharges: Story = {
   // Only the line with nothing on it: the other plan line carries a
@@ -904,9 +904,8 @@ export const NoContractSpecificCharges: Story = {
     const section = within(
       (await canvas.findByRole('heading', { name: 'Charges' })).closest('section')!,
     )
-    await expect(
-      section.getByText('Every charge is billed as the plan sets it. Changed charges show here.'),
-    ).toBeVisible()
+    await expect(section.getByText('Platform fee')).toBeVisible()
+    await expect(section.queryByText('No charges yet')).toBeNull()
   },
 }
 
@@ -939,6 +938,18 @@ export const UpcomingInvoice: Story = {
     await expect(section.getByText('Prepaid credits')).toBeVisible()
     await expect(section.getByText('Amount due')).toBeVisible()
     await expect(section.getByText('$3,389.96')).toBeVisible()
+    // One right edge: every amount figure and every total ends on the same line.
+    const sectionEl = canvas.getByRole('heading', { name: 'Upcoming invoice' }).closest('section')!
+    const right = (el: Element) => Math.round(el.getBoundingClientRect().right)
+    const edge = right(section.getByRole('columnheader', { name: 'Amount' }).firstElementChild!)
+    const amounts = [...sectionEl.querySelectorAll('tbody tr')].map(
+      (tr) => [...tr.querySelectorAll('td')].at(-1)!.firstElementChild!,
+    )
+    const totals = [...sectionEl.querySelectorAll('dd')]
+    await expect(amounts.length).toBeGreaterThan(0)
+    for (const figure of [...amounts, ...totals]) {
+      await expect(Math.abs(right(figure) - edge)).toBeLessThanOrEqual(1)
+    }
   },
 }
 
@@ -1001,6 +1012,7 @@ export const UpcomingInvoicePlain: Story = {
   },
 }
 
+/** Nothing to bill: the section is left out, not shown empty. */
 export const UpcomingInvoiceAllZero: Story = {
   args: {
     ...BASE,
@@ -1016,7 +1028,55 @@ export const UpcomingInvoiceAllZero: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('Nothing to bill yet')).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
+    await expect(canvas.queryByText('Nothing to bill yet')).toBeNull()
+  },
+}
+
+/** A refetch that failed over a cached empty preview still shows, with its error. */
+export const UpcomingInvoiceEmptyThenFailed: Story = {
+  args: {
+    ...BASE,
+    preview: { data: { ...PREVIEW, lines: [] }, isError: true, onRetry: fn() },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Upcoming invoice' })).toBeVisible()
+    await expect(canvas.getByText('The invoice preview could not be loaded')).toBeVisible()
+  },
+}
+
+/**
+ * Sections with rows come first: empty entry-point sections (here
+ * Entitlements, Credit grants and Add-ons) sit below the ones that have
+ * something to read, each group in its usual order.
+ */
+export const SectionsWithRowsFirst: Story = {
+  args: {
+    ...BASE,
+    entitlements: ready([]),
+    creditGrants: ready([]),
+    addons: ready([]),
+    // Cached empty, then a failed refresh: not known to be empty, so it keeps its place.
+    coupons: { data: [], isError: true, onRetry: fn() },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByRole('heading', { name: 'Taxes' })
+    const order = [
+      'Upcoming invoice',
+      'Charges',
+      'Coupons',
+      'Taxes',
+      'Entitlements',
+      'Credit grants',
+      'Add-ons',
+    ]
+    const tops = order.map(
+      (name) => canvas.getByRole('heading', { name }).getBoundingClientRect().top,
+    )
+    await expect([...tops].sort((a, b) => a - b)).toEqual(tops)
   },
 }
 

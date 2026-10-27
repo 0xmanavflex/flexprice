@@ -13,7 +13,7 @@ export { InfoHint, InfoHintProvenance } from './forms/InfoHint'
 export type { InfoHintProps } from './forms/InfoHint'
 export type { FieldProps } from './forms/Field'
 
-export { FormCard, FormRow, FormCardProvenance } from './forms/FormCard'
+export { DashedRule, FormCard, FormRow, FormCardProvenance } from './forms/FormCard'
 export type { FormCardProps, FormRowProps } from './forms/FormCard'
 export { FormDisclosure, FormDisclosureProvenance } from './forms/FormDisclosure'
 export type { FormDisclosureProps } from './forms/FormDisclosure'
@@ -153,8 +153,19 @@ export type {
   AddressRegionPickers,
   AddressRegionValue,
 } from './forms/AddressRegionFields'
-export { DateInput, DateInputProvenance, formatDateValue, parseDateValue } from './forms/DateInput'
-export type { DateInputProps } from './forms/DateInput'
+export {
+  DateInput,
+  DateInputProvenance,
+  DayCalendar,
+  formatDateValue,
+  formatStoredDay,
+  parseDateValue,
+  storedDayOf,
+  utcDayEnd,
+  utcDayOf,
+  utcDayStart,
+} from './forms/DateInput'
+export type { DateInputProps, DayCalendarProps } from './forms/DateInput'
 
 export * from './shell'
 

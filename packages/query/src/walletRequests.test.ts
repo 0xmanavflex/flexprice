@@ -260,7 +260,8 @@ describe('toWallet alert settings', () => {
       }).alertSettings,
     ).toEqual({
       alertEnabled: true,
-      thresholdType: 'percentage',
+      // No type stored: the API evaluates it as absolute, so it reads as absolute.
+      thresholdType: 'absolute',
       critical: { threshold: '10', condition: 'below' },
     })
     expect(toWallet({ id: 'wallet_2' }).alertSettings).toBeNull()

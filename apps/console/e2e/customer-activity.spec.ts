@@ -26,6 +26,17 @@ test.beforeEach(async ({ context, page }) => {
   )
 })
 
+/** Adds `Actor is <name>` through the table's standard filter. */
+async function filterActor(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Filter', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Advanced filter' })
+  await dialog.getByRole('button', { name: 'Add filter' }).click()
+  await page.getByRole('option', { name: 'Actor', exact: true }).click()
+  await page.getByRole('option', { name: 'is', exact: true }).click()
+  await page.getByRole('listbox', { name: 'Actor' }).getByRole('option', { name }).click()
+  await page.keyboard.press('Escape')
+}
+
 const events = (page: Page) =>
   page
     .getByRole('region', { name: 'Activity events' })
@@ -41,8 +52,8 @@ test('lists who did what to which record, with the zone named', async ({ page })
   // The actor and the subject are separate: the record under the title, the
   // person in their own column, with the channel.
   await expect(created).toContainText('Customer ·')
-  // Whoever it was, the channel is named beside them.
-  await expect(created).toContainText('Dashboard')
+  // The channel has its own Source column.
+  await expect(created.getByRole('cell').nth(2)).toHaveText('Dashboard')
   // Invoices come from the billing workflow, not a person.
   await expect(events(page).filter({ hasText: 'Invoice created' }).first()).toContainText(
     'Billing workflow',
@@ -53,7 +64,8 @@ test('lists who did what to which record, with the zone named', async ({ page })
 test('opens an event with its subject, state and request metadata', async ({ page }) => {
   await page.goto(`/customers/${CUSTOMER}?tab=activity`)
   const created = events(page).filter({ hasText: 'Customer created' })
-  await created.getByRole('button', { name: /^Open details: Customer created/ }).click()
+  await created.getByRole('button', { name: 'Row actions' }).click()
+  await page.getByRole('menuitem', { name: 'View details' }).click()
 
   const sheet = page.getByRole('dialog')
   await expect(sheet.getByRole('heading', { name: 'Customer created' })).toBeVisible()
@@ -78,12 +90,11 @@ test('filters by actor on the server and by text on the page', async ({ page }) 
       new URL(request.url()).pathname.endsWith('/activity') &&
       (request.postDataJSON() as { actor_types?: string[] }).actor_types?.[0] === 'system',
   )
-  await page.getByRole('combobox', { name: 'Actor' }).click()
-  await page.getByRole('option', { name: 'System' }).click()
+  await filterActor(page, 'System')
   await asked
   await expect(events(page).filter({ hasText: 'Customer created' })).toHaveCount(0)
 
-  await page.getByRole('searchbox', { name: 'Search activity' }).fill('no such event anywhere')
+  await page.getByRole('textbox', { name: 'Search events' }).fill('no such event anywhere')
   await expect(page.getByText('No activity matches')).toBeVisible()
 })
 
@@ -108,10 +119,9 @@ test('the overview card shows events at a glance and opens one in the drawer', a
 
 test('keeps its filters in the URL, so a reload opens the same trail', async ({ page }) => {
   await page.goto(`/customers/${CUSTOMER}?tab=activity`)
-  await page.getByRole('combobox', { name: 'Actor' }).click()
-  await page.getByRole('option', { name: 'System' }).click()
+  await filterActor(page, 'System')
   await expect(page).toHaveURL(/actor=system/)
   await page.reload()
-  await expect(page.getByRole('combobox', { name: 'Actor' })).toHaveText(/System/)
+  await expect(page.getByRole('button', { name: 'Filter. 1 active' })).toBeVisible()
   await expect(events(page).filter({ hasText: 'Customer created' })).toHaveCount(0)
 })

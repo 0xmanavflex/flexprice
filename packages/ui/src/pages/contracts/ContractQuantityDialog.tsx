@@ -8,6 +8,7 @@ import {
   type SubscriptionLine,
 } from '@fp/domain'
 import { Composer } from '@ui/compositions/detail/DetailKit'
+import { DateInput } from '@ui/compositions/forms/DateInput'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import {
   Field,
@@ -26,6 +27,7 @@ export const ContractQuantityDialogProvenance = provenance({
   composes: [
     'compositions/form-dialog',
     'compositions/detail-kit',
+    'compositions/date-input',
     'ui/input',
     'ui/field',
     '@reui/alert',
@@ -216,13 +218,15 @@ function QuantityFlow({
 
         <Field className="gap-2">
           <FieldLabel htmlFor="change-date">Effective from</FieldLabel>
-          <Input
+          <DateInput
             id="change-date"
-            type="date"
             value={effectiveDate}
             disabled={busy}
+            clearable
+            clearLabel="Clear effective date"
+            placeholder="Now"
             aria-invalid={touched && errors.effectiveDate ? true : undefined}
-            onChange={(event) => setEffectiveDate(event.target.value)}
+            onValueChange={setEffectiveDate}
           />
           <FieldDescription>
             Leave empty to apply now.

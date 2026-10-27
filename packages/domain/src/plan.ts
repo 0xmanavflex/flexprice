@@ -50,6 +50,12 @@ export interface Plan {
   usageChargeCount: number
   /** The pricing-card headline, or null when the plan prices nothing yet. */
   headline: PlanHeadline | null
+  /**
+   * What the plan's usage charges meter, as a customer reads them (each
+   * charge's display name, else its meter's name), without repeats. Empty
+   * when the list was read without meters.
+   */
+  usageNames: string[]
   /** Free-form key/value fields, empty when none. */
   metadata: Record<string, string>
   createdAt: Date | null
@@ -91,6 +97,20 @@ export function planKindLabel(kind: PlanKind, noun = 'plan'): string {
   const shape =
     kind === PlanKind.Hybrid ? 'Hybrid' : kind === PlanKind.Usage ? 'Usage-based' : 'Flat-rate'
   return noun ? `${shape} ${noun}` : shape
+}
+
+/**
+ * A usage-only plan's price, as a customer reads it: "Usage-based · API calls".
+ *
+ * A plan with no fixed fee has no flat price to show, and "plus usage" after
+ * nothing reads as a blank. Two names at most, then a count.
+ */
+export function usageBasedLabel(names: readonly string[]): string {
+  const unique = [...new Set(names.map((name) => name.trim()).filter(Boolean))]
+  if (unique.length === 0) return 'Usage-based'
+  const shown = unique.slice(0, 2).join(', ')
+  const more = unique.length > 2 ? ` +${unique.length - 2} more` : ''
+  return `Usage-based · ${shown}${more}`
 }
 
 export function planKind(plan: Pick<Plan, 'fixedChargeCount' | 'usageChargeCount'>): PlanKind {

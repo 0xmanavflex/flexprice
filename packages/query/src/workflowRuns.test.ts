@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_WORKFLOW_QUERY, WorkflowStatus } from '@fp/domain'
 import type { Flexprice } from '@fp/api'
-import { fetchWorkflowRuns, toWorkflowFilter, toWorkflowRun } from './workflowRuns'
+import {
+  fetchWorkflowRun,
+  fetchWorkflowRuns,
+  isFinishedWorkflow,
+  toWorkflowFilter,
+  toWorkflowRun,
+} from './workflowRuns'
 
 describe('toWorkflowRun', () => {
   it('maps a run and names its type', () => {
@@ -66,5 +72,51 @@ describe('fetchWorkflowRuns', () => {
     const page = await fetchWorkflowRuns(client, DEFAULT_WORKFLOW_QUERY)
     expect(page.total).toBe(9)
     expect(page.runs[0]?.status).toBe(WorkflowStatus.Running)
+  })
+})
+
+describe('fetchWorkflowRun', () => {
+  it('searches by the workflow id and returns the started run', async () => {
+    const queryWorkflow = vi.fn(async () => ({
+      items: [
+        { runId: 'run_new', workflowId: 'price-sync-plan_1', status: 'Running' },
+        { runId: 'run_old', workflowId: 'price-sync-plan_1', status: 'Completed' },
+      ],
+    }))
+    const client = { workflows: { queryWorkflow } } as unknown as Flexprice
+    const run = await fetchWorkflowRun(client, {
+      workflowId: 'price-sync-plan_1',
+      runId: 'run_new',
+    })
+    expect(queryWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({ workflowId: 'price-sync-plan_1' }),
+    )
+    expect(run?.id).toBe('run_new')
+    expect(run?.status).toBe(WorkflowStatus.Running)
+  })
+
+  it('is null while the run has not reached the search yet', async () => {
+    const queryWorkflow = vi.fn(async () => ({
+      items: [{ runId: 'run_old', status: 'Completed' }],
+    }))
+    const client = { workflows: { queryWorkflow } } as unknown as Flexprice
+    expect(await fetchWorkflowRun(client, { workflowId: 'wf', runId: 'run_new' })).toBeNull()
+  })
+})
+
+describe('isFinishedWorkflow', () => {
+  it('stops on completed, failed, canceled, terminated and timed out', () => {
+    const run = (status: WorkflowStatus | null) => toWorkflowRun({ status: status ?? '' })
+    for (const status of [
+      WorkflowStatus.Completed,
+      WorkflowStatus.Failed,
+      WorkflowStatus.Canceled,
+      WorkflowStatus.Terminated,
+      WorkflowStatus.TimedOut,
+    ]) {
+      expect(isFinishedWorkflow({ ...run(null), status })).toBe(true)
+    }
+    expect(isFinishedWorkflow({ ...run(null), status: WorkflowStatus.Running })).toBe(false)
+    expect(isFinishedWorkflow(null)).toBe(false)
   })
 })

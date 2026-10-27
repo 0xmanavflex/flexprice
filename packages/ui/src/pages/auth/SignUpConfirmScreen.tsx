@@ -28,7 +28,7 @@ export function SignUpConfirmScreen({
   onSignIn,
 }: SignUpConfirmScreenProps) {
   return (
-    <AuthFrame quote="truffle">
+    <AuthFrame quote="optimality">
       {error ? (
         <div className="flex w-full flex-col gap-6" role="alert">
           <FormHead title="We could not finish your sign-up" description={error} />
