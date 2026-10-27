@@ -93,6 +93,43 @@ export function formatDateValue(value: string | undefined, zone: 'local' | 'utc'
   return zone === 'utc' ? `${text} UTC` : text
 }
 
+export interface DayCalendarProps {
+  /** `YYYY-MM-DD`, or empty for none. */
+  value: string | undefined
+  /** Called with the picked day as `YYYY-MM-DD`. Picking the selected day again keeps it. */
+  onValueChange: (value: string) => void
+  /** Earliest pickable day, `YYYY-MM-DD` or a `Date`. */
+  min?: string | Date | undefined
+  /** Latest pickable day, `YYYY-MM-DD` or a `Date`. */
+  max?: string | Date | undefined
+}
+
+/**
+ * The bare day calendar `DateInput` opens, for a popover that has its own
+ * trigger (a toolbar's "From" / "To" range buttons). Same calendar, same days.
+ */
+export function DayCalendar({ value, onValueChange, min, max }: DayCalendarProps) {
+  const selected = parseDateValue(value)
+  const minDate = toDate(min)
+  const maxDate = toDate(max)
+  const disabledDays = [
+    ...(minDate ? [{ before: minDate }] : []),
+    ...(maxDate ? [{ after: maxDate }] : []),
+  ]
+  const month = selected ?? minDate ?? maxDate
+  return (
+    <Calendar
+      mode="single"
+      {...(selected ? { selected } : {})}
+      {...(month ? { defaultMonth: month } : {})}
+      {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
+      onSelect={(date) => {
+        if (date) onValueChange(toDay(date))
+      }}
+    />
+  )
+}
+
 export function DateInput({
   id,
   value,

@@ -140,8 +140,14 @@ export { OptionCombobox, OptionComboboxProvenance } from './forms/OptionCombobox
 export type { OptionComboboxProps } from './forms/OptionCombobox'
 export { TimezoneCombobox, TimezoneComboboxProvenance } from './forms/TimezoneCombobox'
 export type { TimezoneComboboxProps } from './forms/TimezoneCombobox'
-export { DateInput, DateInputProvenance, formatDateValue, parseDateValue } from './forms/DateInput'
-export type { DateInputProps } from './forms/DateInput'
+export {
+  DateInput,
+  DateInputProvenance,
+  DayCalendar,
+  formatDateValue,
+  parseDateValue,
+} from './forms/DateInput'
+export type { DateInputProps, DayCalendarProps } from './forms/DateInput'
 
 export * from './shell'
 
