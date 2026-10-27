@@ -171,8 +171,15 @@ export const StandardFilterAndSort: Story = {
     await expect(fields).toEqual(['Action', 'Actor', 'Person', 'Source'])
     await userEvent.click(screen.getByRole('option', { name: 'Person' }))
     await userEvent.click(await screen.findByRole('option', { name: 'is' }))
-    const people = await screen.findByRole('listbox', { name: 'Person' })
-    await userEvent.click(within(people).getByRole('option', { name: 'Asha' }))
+    // The operator list closes as the value list opens; wait for the value list.
+    const asha = await waitFor(
+      () =>
+        within(screen.getByRole('listbox', { name: 'Person' })).getByRole('option', {
+          name: 'Asha',
+        }),
+      { timeout: 3000 },
+    )
+    await userEvent.click(asha)
     await waitFor(() =>
       expect(args.onFiltersChange).toHaveBeenCalledWith(
         expect.objectContaining({ actorType: 'user', actorId: 'user_2' }),
@@ -198,8 +205,15 @@ export const PersonOverridesActor: Story = {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Add filter' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Person' }))
     await userEvent.click(await screen.findByRole('option', { name: 'is' }))
-    const people = await screen.findByRole('listbox', { name: 'Person' })
-    await userEvent.click(within(people).getByRole('option', { name: 'Asha' }))
+    // The operator list closes as the value list opens; wait for the value list.
+    const asha = await waitFor(
+      () =>
+        within(screen.getByRole('listbox', { name: 'Person' })).getByRole('option', {
+          name: 'Asha',
+        }),
+      { timeout: 3000 },
+    )
+    await userEvent.click(asha)
     await waitFor(() =>
       expect(args.onFiltersChange).toHaveBeenLastCalledWith(
         expect.objectContaining({ actorType: 'user', actorId: 'user_2' }),
