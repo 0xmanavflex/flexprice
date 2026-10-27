@@ -124,6 +124,8 @@ interface PlaygroundProps {
   startDate?: string
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** Gives the plan's first charge dates of its own (`YYYY-MM-DD`, from and to). */
+  datedCharge?: { start: string; end?: string }
   /** Opens with these add-ons (and their commitments) already chosen. */
   seededAddons?: CreateSubscription['addons']
   /** Customers (by id) that cannot inherit, as the page loads them. */
@@ -152,6 +154,7 @@ function SubscriptionFormPlayground({
   endDate,
   planTrial,
   phase,
+  datedCharge,
   seededAddons,
   inheritanceBlocks,
   onSubmit,
@@ -181,8 +184,18 @@ function SubscriptionFormPlayground({
         ? []
         : [
             ...makeCharges(Math.ceil(chargeCount / 2), Math.floor(chargeCount / 2)).map(
-              (charge, index) =>
-                index === 0 && planTrial ? { ...charge, trialPeriodDays: planTrial } : charge,
+              (charge, index) => ({
+                ...charge,
+                ...(index === 0 && planTrial ? { trialPeriodDays: planTrial } : {}),
+                ...(index === 0 && datedCharge
+                  ? {
+                      startDate: new Date(`${datedCharge.start}T00:00:00Z`),
+                      ...(datedCharge.end
+                        ? { endDate: new Date(`${datedCharge.end}T00:00:00Z`) }
+                        : {}),
+                    }
+                  : {}),
+              }),
             ),
             ...(otherCadences
               ? [
@@ -218,7 +231,16 @@ function SubscriptionFormPlayground({
           ]
         : [],
     }
-  }, [planId, planLoading, chargeCount, entitlementCount, otherCadences, planGrant, planTrial])
+  }, [
+    planId,
+    planLoading,
+    chargeCount,
+    entitlementCount,
+    otherCadences,
+    planGrant,
+    planTrial,
+    datedCharge,
+  ])
 
   return (
     <SubscriptionForm
@@ -491,6 +513,41 @@ async function openCommitment(canvas: ReturnType<typeof within>) {
   throw new Error('No usage charge to commit on')
 }
 
+/** Whether the charges table scrolls sideways. */
+const scrollsSideways = (canvasElement: HTMLElement) => {
+  // The list table's scroller carries its minimum width.
+  const scroller = canvasElement.querySelector<HTMLElement>('[style*="--table-min"]')
+  if (!scroller) throw new Error('No table scroller')
+  return scroller.scrollWidth > scroller.clientWidth + 1
+}
+
+/**
+ * The charges table fits the wizard without scrolling sideways, even with the
+ * "In effect" column a dated charge brings: the price stays on one line.
+ */
+export const ChargesFitWithoutScrolling: Story = {
+  args: {
+    prefilled: true,
+    step: 'phases',
+    chargeCount: 6,
+    datedCharge: { start: '2026-11-01', end: '2027-01-01' },
+  },
+  decorators: [
+    // The room the console gives the wizard on a 1280px screen, beside its sidebar.
+    (Story) => (
+      <div className="w-[960px]">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('columnheader', { name: 'In effect' })).toBeVisible()
+    await expect(canvas.getByText('Nov 1, 2026 → Jan 1, 2027')).toBeVisible()
+    await waitFor(() => expect(scrollsSideways(canvasElement)).toBe(false))
+  },
+}
+
 /**
  * A contract of one phase lists the plan's charges in one Charges card, with
  * no phase chrome; proration is not here (it is a billing term, in Dates and
@@ -506,7 +563,8 @@ export const PhaseCharges: Story = {
     await expect(canvas.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeVisible()
-    await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeVisible()
+    // Every charge runs with the phase, so there is no "In effect" column.
+    await expect(canvas.queryByRole('columnheader', { name: 'In effect' })).toBeNull()
     const dialog = await openCommitment(canvas)
     await expect(dialog.getByRole('heading', { name: 'Configure commitment' })).toBeVisible()
     await expect(dialog.getByText('True-up')).toBeVisible()

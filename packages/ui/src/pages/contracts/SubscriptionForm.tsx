@@ -1649,11 +1649,19 @@ function ChargesTable({
   const committingCharge = charges.find((charge) => charge.id === committing)
   const repricingCharge = charges.find((charge) => charge.id === repricing)
 
+  // "In effect" only earns its column when a charge has dates of its own.
+  const dated = rows.some((row) => chargeInEffect(row) !== 'With the phase')
+
+  /*
+   * Widths that fit the wizard's measure without a sideways scroll: the cells
+   * keep the table's own padding, and nothing but the charge (its change chips)
+   * may take a second line.
+   */
   const columns: DetailColumn<ChargeRow>[] = [
     {
       key: 'charge',
       header: 'Charge',
-      width: 320,
+      width: 224,
       className: 'whitespace-normal',
       text: (row) => row.name,
       cell: (row) => {
@@ -1728,13 +1736,12 @@ function ChargesTable({
       key: 'price',
       header: 'Price',
       width: 200,
-      className: 'whitespace-normal',
       text: (row) => row.price,
       cell: (row) => (
         <span className="flex min-w-0 flex-col tabular-nums">
-          <span>{row.price}</span>
+          <span className="truncate">{row.price}</span>
           {row.kind === 'plan' && byId.has(row.charge.id) ? (
-            <span className="text-muted-foreground text-xs line-through">
+            <span className="text-muted-foreground truncate text-xs line-through">
               {priceText(row.charge, undefined)}
             </span>
           ) : null}
@@ -1744,7 +1751,7 @@ function ChargesTable({
     {
       key: 'quantity',
       header: 'Quantity',
-      width: 100,
+      width: 104,
       cell: (row) =>
         row.type !== 'Fixed' ? null : row.kind === 'plan' ? (
           <Input
@@ -1762,7 +1769,7 @@ function ChargesTable({
     {
       key: 'timing',
       header: 'Billing timing',
-      width: 120,
+      width: 128,
       cell: (row) => {
         const cadence =
           row.kind === 'plan' ? row.charge.invoiceCadence : row.extra.charge.invoiceCadence
@@ -1773,14 +1780,18 @@ function ChargesTable({
         )
       },
     },
-    {
-      key: 'inEffect',
-      header: 'In effect',
-      width: 160,
-      cell: (row) => (
-        <span className="text-muted-foreground tabular-nums">{chargeInEffect(row)}</span>
-      ),
-    },
+    ...(dated
+      ? [
+          {
+            key: 'inEffect',
+            header: 'In effect',
+            width: 184,
+            cell: (row: ChargeRow) => (
+              <span className="text-muted-foreground tabular-nums">{chargeInEffect(row)}</span>
+            ),
+          },
+        ]
+      : []),
     {
       key: 'actions',
       header: '',
