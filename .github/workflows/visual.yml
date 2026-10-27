@@ -3,7 +3,7 @@ name: Visual
 # Screenshot regression: one viewport capture per route against a mock-backed
 # console, compared with the baselines in `apps/console/e2e/visual/__screenshots__`.
 #
-# Baselines are generated on Linux chromium, which is what `ubuntu-latest` runs,
+# Baselines are generated on Linux chromium on the pinned `ubuntu-24.04` runner,
 # so a diff here is a real pixel change and not an OS font difference. To accept
 # one, update the baselines in the PR and say why (`e2e/visual/README.md`).
 #
@@ -34,7 +34,9 @@ concurrency:
 jobs:
   screenshots:
     name: Screenshots
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: that label is moving to Ubuntu 26, and a
+    # baseline made on one image fails on the other.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

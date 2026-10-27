@@ -25,7 +25,9 @@ jobs:
     if: >-
       github.event.label.name == 'update-visual-baselines' &&
       github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: that label is moving to Ubuntu 26, and a
+    # baseline made on one image fails on the other.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
