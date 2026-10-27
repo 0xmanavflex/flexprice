@@ -291,6 +291,8 @@ export function useSyncPlanPrices() {
 
   return useMutation({
     mutationFn: (id: string) => call(() => client.plans.syncPlanPrices(id)),
+    // A failure is told through the shared toasts; the page announces a start.
+    meta: { notify: { error: 'Could not start the sync.' } },
   })
 }
 
