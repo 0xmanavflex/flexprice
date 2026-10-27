@@ -568,6 +568,7 @@ export type {
   RevenueSummary,
 } from './revenue'
 export type {
+  FeatureUsagePrice,
   FeatureUsageRow,
   UsageAnalytics,
   UsageAnalyticsQuery,

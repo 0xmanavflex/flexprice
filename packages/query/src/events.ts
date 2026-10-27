@@ -1,6 +1,7 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import { money, type Money } from '@fp/domain'
+import { addDecimals } from './collections'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -52,6 +53,23 @@ export interface UsagePoint {
   usage: number
 }
 
+/**
+ * One subscription line item's share of a feature's usage: the feature under
+ * one price. A price change ends one line item and starts another for the
+ * same feature, so a feature can carry several.
+ */
+export interface FeatureUsagePrice {
+  /** The subscription line item; the price id when the server sent none. */
+  id: string
+  priceId: string
+  /** When this line item started and ended, to tell the prices apart. Null when not sent or open. */
+  from: Date | null
+  to: Date | null
+  usage: number
+  /** What this price billed, after discounts. Null when the server did not price it. */
+  revenue: Money | null
+}
+
 /** One metered feature's usage over the window. */
 export interface FeatureUsageRow {
   featureId: string
@@ -64,8 +82,13 @@ export interface FeatureUsageRow {
   points: UsagePoint[]
   /** The meter behind the feature, to match its row in the cost analytics. */
   meterId: string
-  /** What this feature's usage is billed at, after discounts. Null when the server did not price it. */
+  /**
+   * What this feature's usage is billed at, after discounts: the server's
+   * per-price amounts added exactly. Null when the server priced none of them.
+   */
   revenue: Money | null
+  /** The feature's usage per price, in the server's order. One entry unless the price changed. */
+  prices: FeatureUsagePrice[]
 }
 
 export interface UsageAnalytics {
@@ -116,6 +139,16 @@ interface AnalyticsItemWire {
   eventName?: string | undefined
   eventCount?: number | undefined
   totalUsage?: string | undefined
+  aggregationType?: string | undefined
+  priceId?: string | undefined
+  subLineItemId?: string | undefined
+  /** With `expand: subscription_line_item`: when this price applied. */
+  subscriptionLineItem?:
+    | {
+        startDate?: Date | string | undefined
+        endDate?: Date | string | undefined
+      }
+    | undefined
   points?: AnalyticsPointWire[] | undefined
   feature?:
     | {
@@ -159,6 +192,12 @@ function priced(amount: string | undefined, currency: string | undefined): Money
   return amount !== undefined && amount !== '' && code !== '' ? money(amount, code) : null
 }
 
+function instant(value: Date | string | undefined): Date | null {
+  if (value === undefined || value === '') return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 function toFeatureRow(wire: AnalyticsItemWire, currency?: string): FeatureUsageRow {
   const points = (wire.points ?? [])
     .map(toPoint)
@@ -180,7 +219,70 @@ function toFeatureRow(wire: AnalyticsItemWire, currency?: string): FeatureUsageR
     // `total_cost` on an analytics item is what the usage bills at after
     // discounts: revenue, not what it costs to serve.
     revenue: priced(wire.totalCost, wire.currency || currency),
+    prices: [
+      {
+        id: wire.subLineItemId || wire.priceId || '',
+        priceId: wire.priceId ?? '',
+        from: instant(wire.subscriptionLineItem?.startDate),
+        to: instant(wire.subscriptionLineItem?.endDate),
+        usage: quantity(wire.totalUsage),
+        revenue: priced(wire.totalCost, wire.currency || currency),
+      },
+    ],
   }
+}
+
+/**
+ * Aggregations whose usage over two separate periods is the sum of each. For
+ * the rest (max, latest, unique count, average) the larger of the two is the
+ * closest honest reading: adding two maxima would invent usage.
+ */
+const ADDITIVE = new Set(['SUM', 'COUNT', 'SUM_WITH_MULTIPLIER', 'WEIGHTED_SUM'])
+
+/**
+ * One row per feature.
+ *
+ * The server answers one item per subscription line item, even when asked to
+ * group by feature (`meter_usage.go`, `toUsageAnalyticsResponseDTO`). After a
+ * price change a feature has two line items, which read as two features. This
+ * folds them back into one row: usage and points combined, revenue the exact
+ * sum of the server's own per-price amounts, and each price kept in `prices`.
+ */
+function byFeature(items: readonly AnalyticsItemWire[], currency?: string): FeatureUsageRow[] {
+  const rows = new Map<string, { row: FeatureUsageRow; additive: boolean }>()
+  for (const item of items) {
+    const next = toFeatureRow(item, currency)
+    const held = rows.get(next.featureId)
+    if (!held) {
+      rows.set(next.featureId, {
+        row: next,
+        additive: ADDITIVE.has((item.aggregationType ?? 'SUM').toUpperCase()),
+      })
+      continue
+    }
+    const { row, additive } = held
+    const combine = (a: number, b: number) => (additive ? a + b : Math.max(a, b))
+    row.usage = combine(row.usage, next.usage)
+    row.eventCount += next.eventCount
+    row.prices.push(...next.prices)
+    const byTime = new Map(row.points.map((point) => [point.timestamp.getTime(), { ...point }]))
+    for (const point of next.points) {
+      const same = byTime.get(point.timestamp.getTime())
+      if (same) {
+        same.eventCount += point.eventCount
+        same.usage = combine(same.usage, point.usage)
+      } else byTime.set(point.timestamp.getTime(), { ...point })
+    }
+    row.points = [...byTime.values()].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+    const priced = row.prices.flatMap((price) => (price.revenue ? [price.revenue] : []))
+    const code = priced[0]?.currency
+    row.revenue =
+      code && priced.every((amount) => amount.currency === code)
+        ? money(addDecimals(priced.map((amount) => amount.amount)), code)
+        : null
+    if (!row.meterId) row.meterId = next.meterId
+  }
+  return [...rows.values()].map(({ row }) => row)
 }
 
 /**
@@ -210,9 +312,9 @@ function combineSeries(features: FeatureUsageRow[]): UsagePoint[] {
 }
 
 export function toUsageAnalytics(wire: AnalyticsResponseWire): UsageAnalytics {
-  const features = (wire.items ?? [])
-    .map((item) => toFeatureRow(item, wire.currency))
-    .sort((a, b) => b.usage - a.usage || b.eventCount - a.eventCount)
+  const features = byFeature(wire.items ?? [], wire.currency).sort(
+    (a, b) => b.usage - a.usage || b.eventCount - a.eventCount,
+  )
 
   const points = combineSeries(features)
   const eventCount = features.reduce((sum, feature) => sum + feature.eventCount, 0)
@@ -240,7 +342,9 @@ async function fetchUsageAnalytics(
       windowSize: query.windowSize as never,
       // `feature` is what carries the name and lookup key onto each row; without
       // it the usage panel can only show an id.
-      expand: ['feature'],
+      // `subscription_line_item` dates each price, so a feature whose price
+      // changed can show which part of the window each one billed.
+      expand: ['feature', 'subscription_line_item'],
       groupBy: ['feature_id'],
       ...(query.externalCustomerId !== undefined
         ? { externalCustomerId: query.externalCustomerId }

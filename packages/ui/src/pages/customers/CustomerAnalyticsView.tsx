@@ -13,7 +13,7 @@ import { Input } from '@ui/components/primitives/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { Switch } from '@ui/components/primitives/switch'
-import { SegmentMeter } from '@ui/compositions/detail/DetailKit'
+import { SegmentMeter, TotalRow, TotalsList } from '@ui/compositions/detail/DetailKit'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { ErrorState } from '@ui/compositions/feedback/States'
 import { Section } from '@ui/compositions/layout/Section'
@@ -39,6 +39,7 @@ export const CustomerAnalyticsViewProvenance = provenance({
     'primitives/popover',
     'primitives/switch',
     'compositions/layout/Section',
+    'compositions/detail/DetailKit',
     'shared/charts',
     'shared/DetailTable',
   ],
@@ -62,6 +63,75 @@ export interface FeatureAnalytics {
   cost: string | null
   /** Usage per day across the range. */
   points: MetricPoint[]
+  /**
+   * The feature's revenue per price, when it billed under more than one in
+   * the range (a price change): the row stays one feature, and this says what
+   * each price brought in.
+   */
+  prices?: FeaturePriceAnalytics[] | undefined
+}
+
+/** One price's part of a feature's usage and revenue, already formatted. */
+export interface FeaturePriceAnalytics {
+  id: string
+  /** Which price: when it applied, e.g. `Oct 1 – Oct 14`. */
+  label: string
+  /** Usage under this price, formatted. */
+  usage: string
+  revenue: string | null
+}
+
+/** The feature's revenue, and when it billed under several prices, a list of each. */
+function FeatureRevenue({ feature }: { feature: FeatureAnalytics }) {
+  const prices = feature.prices ?? []
+  return (
+    <span className="flex min-w-0 items-baseline gap-1.5">
+      <span className="tabular-nums">{feature.revenue ?? DASH}</span>
+      {prices.length > 1 ? (
+        <Popover>
+          <PopoverTrigger
+            openOnHover
+            delay={150}
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="h-5 shrink-0 px-1.5 text-xs"
+                aria-label={`Revenue by price: ${prices.length} prices`}
+              />
+            }
+          >
+            {prices.length} prices
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="w-72 p-3"
+            aria-label={`${feature.name}: revenue by price`}
+          >
+            <p className="text-muted-foreground pb-2 text-xs">Revenue by price</p>
+            <TotalsList className="max-w-none">
+              {prices.map((price, index) => (
+                <TotalRow
+                  key={`${price.id}-${index}`}
+                  label={
+                    <>
+                      {price.label}
+                      <span className="text-muted-foreground block text-xs tabular-nums">
+                        {price.usage}
+                        {feature.unit ? ` ${feature.unit}` : ''}
+                      </span>
+                    </>
+                  }
+                  value={price.revenue ?? DASH}
+                />
+              ))}
+            </TotalsList>
+          </PopoverContent>
+        </Popover>
+      ) : null}
+    </span>
+  )
 }
 
 export interface AnalyticsTotals {
@@ -336,7 +406,7 @@ export function CustomerAnalyticsView({
                 {
                   key: 'revenue',
                   header: 'Revenue',
-                  cell: (f) => <span className="tabular-nums">{f.revenue ?? DASH}</span>,
+                  cell: (f) => <FeatureRevenue feature={f} />,
                 },
                 {
                   key: 'cost',

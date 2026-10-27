@@ -18,6 +18,14 @@ const grouped = new Intl.NumberFormat()
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 const dayLabel = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
 
+/** When a price applied: "Oct 1 – Oct 14", "From Oct 15", or "Price" with no dates. */
+function priceSpan(from: Date | null, to: Date | null): string {
+  if (from && to) return `${dayLabel.format(from)} – ${dayLabel.format(to)}`
+  if (from) return `From ${dayLabel.format(from)}`
+  if (to) return `Until ${dayLabel.format(to)}`
+  return 'Price'
+}
+
 /**
  * A customer's Analytics tab, on the redesign's layout, with real data.
  *
@@ -152,6 +160,13 @@ export function CustomerAnalyticsPanel({
           points: row.points.map((point) => ({
             label: dayLabel.format(point.timestamp),
             value: point.usage,
+          })),
+          // One feature row even after a price change; each price's revenue in its breakdown.
+          prices: row.prices.map((price) => ({
+            id: price.id,
+            label: priceSpan(price.from, price.to),
+            usage: grouped.format(price.usage),
+            revenue: price.revenue ? formatMoney(price.revenue) : null,
           })),
         }
       })}
