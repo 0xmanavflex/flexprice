@@ -50,8 +50,9 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await auto.getByLabel('Below').fill('100')
   await auto.getByLabel('Add').fill('500')
   await auto.getByRole('button', { name: 'Save' }).click()
+  // The Auto top-up property now summarises the rule it runs.
   await expect(page.getByRole('button', { name: /auto top-up on/i })).toContainText(
-    'Auto top-up on',
+    'Below $100, add $500',
   )
 
   await page.getByRole('button', { name: 'Wallet actions' }).click()
