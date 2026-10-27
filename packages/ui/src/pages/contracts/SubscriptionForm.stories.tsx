@@ -7,6 +7,10 @@ import {
   type CreateSubscription,
   CreditGrantCadence,
   CreditGrantExpiryType,
+  type Entitlement,
+  EntitlementGrantDurationUnit,
+  EntitlementGrantMeasure,
+  UsageResetPeriod,
   InheritanceBlock,
   PriceType,
   type SubscriptionPhase,
@@ -124,6 +128,8 @@ interface PlaygroundProps {
   startDate?: string
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** Changes to the plan's entitlements, by id (`ent_0`…). */
+  entitlementPatch?: Record<string, Partial<Entitlement>>
   /** Gives the plan's first charge dates of its own (`YYYY-MM-DD`, from and to). */
   datedCharge?: { start: string; end?: string }
   /** Opens with these add-ons (and their commitments) already chosen. */
@@ -155,6 +161,7 @@ function SubscriptionFormPlayground({
   planTrial,
   phase,
   datedCharge,
+  entitlementPatch,
   seededAddons,
   inheritanceBlocks,
   onSubmit,
@@ -218,7 +225,9 @@ function SubscriptionFormPlayground({
                 ]
               : []),
           ],
-      entitlements: planLoading ? [] : makeEntitlements(entitlementCount),
+      entitlements: planLoading
+        ? []
+        : makeEntitlements(entitlementCount).map((e) => ({ ...e, ...entitlementPatch?.[e.id] })),
       creditGrants: planGrant
         ? [
             {
@@ -240,6 +249,7 @@ function SubscriptionFormPlayground({
     planGrant,
     planTrial,
     datedCharge,
+    entitlementPatch,
   ])
 
   return (
@@ -1182,21 +1192,39 @@ export const PhaseLoading: Story = {
 }
 
 /**
- * The plan's entitlements can be changed for this contract alone, with the
- * entitlement form's fields: a metered allowance's value type and value, a
- * static value. A config entitlement keeps the plan's (no row menu).
+ * The plan's entitlements can be changed for this contract alone, the way the
+ * entitlement form edits them: a grant with its value type and value, an older
+ * usage limit as a limit, a static value. A config entitlement keeps the plan's.
  */
 export const EditsEntitlements: Story = {
-  args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },
+  args: {
+    prefilled: true,
+    step: 'commitments',
+    chargeCount: 2,
+    entitlementCount: 5,
+    // Custom domain carries grant config: 100 a day.
+    entitlementPatch: {
+      ent_3: {
+        usageLimit: null,
+        usageResetPeriod: null,
+        grantQuota: '100',
+        grantMeasure: EntitlementGrantMeasure.Quantity,
+        grantDurationUnit: EntitlementGrantDurationUnit.Day,
+        grantDurationValue: 1,
+      },
+    },
+  },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('AI Tokens')).toBeVisible()
     expect(canvas.queryByRole('button', { name: 'Actions for Video minutes' })).toBeNull()
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Actions for AI Tokens' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Custom domain' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
-    let dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · AI Tokens' }))
-    await expect(dialog.getByRole('textbox', { name: /^Value/ })).toHaveValue('10000')
+    let dialog = within(
+      await screen.findByRole('dialog', { name: 'Edit entitlement · Custom domain' }),
+    )
+    await expect(dialog.getByRole('textbox', { name: /^Value/ })).toHaveValue('100')
     await userEvent.click(dialog.getByRole('combobox', { name: /^Value type/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Amount' }))
     const value = dialog.getByRole('textbox', { name: /^Value/ })
@@ -1204,6 +1232,18 @@ export const EditsEntitlements: Story = {
     await userEvent.type(value, '500')
     await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
     await expect(await canvas.findByText('500 of usage value')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for AI Tokens' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · AI Tokens' }))
+    // An older usage limit stays a limit: no value type to turn it into a grant.
+    expect(dialog.queryByRole('combobox', { name: /^Value type/ })).toBeNull()
+    const tokens = dialog.getByRole('textbox', { name: /^Usage limit/ })
+    await expect(tokens).toHaveValue('10000')
+    await userEvent.clear(tokens)
+    await userEvent.type(tokens, '20000')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('20,000')).toBeVisible()
 
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for Seats' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
@@ -1220,12 +1260,47 @@ export const EditsEntitlements: Story = {
         expect.objectContaining({
           entitlementOverrides: [
             {
-              entitlementId: 'ent_0',
-              usageLimit: 10_000,
-              grant: expect.objectContaining({ measure: 'amount', quota: '500' }),
+              entitlementId: 'ent_3',
+              grant: expect.objectContaining({ measure: 'amount', quota: '500', unit: 'day' }),
             },
+            { entitlementId: 'ent_0', usageLimit: 20_000 },
             { entitlementId: 'ent_2', staticValue: '25' },
           ],
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * A lifetime usage limit (resets never) stays a lifetime limit: only the
+ * number changes, and no recurring grant is sent in its place.
+ */
+export const EntitlementNeverResetKeepsItsLimit: Story = {
+  args: {
+    prefilled: true,
+    step: 'commitments',
+    chargeCount: 2,
+    entitlementCount: 5,
+    entitlementPatch: { ent_0: { usageResetPeriod: UsageResetPeriod.Never } },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for AI Tokens' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Edit entitlement · AI Tokens' }),
+    )
+    expect(dialog.queryByRole('combobox', { name: /^Usage resets/ })).toBeNull()
+    const limit = dialog.getByRole('textbox', { name: /^Usage limit/ })
+    await userEvent.clear(limit)
+    await userEvent.type(limit, '500')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entitlementOverrides: [{ entitlementId: 'ent_0', usageLimit: 500 }],
         }),
       ),
     )

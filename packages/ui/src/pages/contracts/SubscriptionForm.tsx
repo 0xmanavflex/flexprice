@@ -58,8 +58,6 @@ import {
   CreditGrantCadence,
   CreditGrantExpiryType,
   type Entitlement,
-  EntitlementAggregationMode,
-  EntitlementGrantAllocationBehavior,
   EntitlementGrantDurationUnit,
   EntitlementGrantMeasure,
   entitlementGrant,
@@ -68,7 +66,6 @@ import {
   meteredGrantSchema,
   meteredAllowanceLabel,
   meteredResetLabel,
-  UsageResetPeriod,
   type PriceOverride,
   type PriceTier,
   SUBSCRIPTION_BILLING_PERIODS,
@@ -3345,29 +3342,6 @@ function resetsText(entitlement: Entitlement): string {
 
 type EntitlementOverride = CreateSubscription['entitlementOverrides'][number]
 
-/**
- * A metered entitlement's allowance as a grant, to edit with the entitlement
- * form's fields: its own grant config, or one built from an older usage limit
- * (its limit per billing period, or per day or week when it resets so).
- */
-function grantOf(entitlement: Entitlement): MeteredGrant {
-  const own = entitlementGrant(entitlement)
-  if (own) return own
-  const unit =
-    entitlement.usageResetPeriod === UsageResetPeriod.Daily
-      ? EntitlementGrantDurationUnit.Day
-      : entitlement.usageResetPeriod === UsageResetPeriod.Weekly
-        ? EntitlementGrantDurationUnit.Week
-        : EntitlementGrantDurationUnit.SubscriptionPeriod
-  return {
-    measure: EntitlementGrantMeasure.Quantity,
-    quota: entitlement.usageLimit == null ? null : String(entitlement.usageLimit),
-    unit: entitlement.usageLimit == null ? EntitlementGrantDurationUnit.SubscriptionPeriod : unit,
-    allocation: EntitlementGrantAllocationBehavior.FirstUsage,
-    aggregation: EntitlementAggregationMode.Additive,
-  }
-}
-
 const GRANT_UNIT_LABEL: Record<MeteredGrant['unit'], string> = {
   [EntitlementGrantDurationUnit.SubscriptionPeriod]: 'Every billing period',
   [EntitlementGrantDurationUnit.Hour]: 'Hourly',
@@ -3383,6 +3357,7 @@ function entitlementValueText(entitlement: Entitlement, override?: EntitlementOv
     const value = Number(quota).toLocaleString('en-US', { maximumFractionDigits: 20 })
     return measure === EntitlementGrantMeasure.Amount ? `${value} of usage value` : value
   }
+  if (override?.usageLimit !== undefined) return override.usageLimit.toLocaleString('en-US')
   if (override?.staticValue !== undefined) return override.staticValue
   if (override?.isEnabled !== undefined) return override.isEnabled ? 'On' : 'Off'
   return planEntitlementValue(entitlement)
@@ -3537,8 +3512,16 @@ function EntitlementOverrideDialog({
   /** null: back to the plan's. */
   onSave: (next: EntitlementOverride | null) => void
 }) {
-  const planGrant = entitlement ? grantOf(entitlement) : null
+  // Edited the way it was made, as the entitlement form does: a grant with the
+  // grant fields, an older usage limit as a limit. The override takes no reset
+  // period, so a limit keeps the plan's (monthly, never, …); turning it into a
+  // grant would change how often it renews.
+  const planGrant = entitlement ? entitlementGrant(entitlement) : null
   const [grant, setGrant] = useState<MeteredGrant | null>(override?.grant ?? planGrant)
+  const planLimit = entitlement?.usageLimit == null ? '' : String(entitlement.usageLimit)
+  const [limit, setLimit] = useState(
+    override?.usageLimit !== undefined ? String(override.usageLimit) : planLimit,
+  )
   const [staticValue, setStaticValue] = useState(
     override?.staticValue ?? entitlement?.staticValue ?? '',
   )
@@ -3551,6 +3534,16 @@ function EntitlementOverrideDialog({
   const save = () => {
     switch (entitlement.featureType) {
       case FeatureType.Metered: {
+        if (!planGrant) {
+          const value = limit.trim()
+          if (!/^\d+$/.test(value)) {
+            setError('Enter a whole number')
+            return
+          }
+          return onSave(
+            value === planLimit ? null : { entitlementId: id, usageLimit: Number(value) },
+          )
+        }
         const parsed = meteredGrantSchema.safeParse(grant)
         if (!parsed.success || !grant) {
           setError(parsed.error?.issues[0]?.message ?? 'Enter a value above zero')
@@ -3600,7 +3593,28 @@ function EntitlementOverrideDialog({
         <p className="text-muted-foreground text-[13px]">
           For this contract only. The plan keeps its own: {planEntitlementValue(entitlement)}.
         </p>
-        {entitlement.featureType === FeatureType.Metered && grant ? (
+        {entitlement.featureType === FeatureType.Metered && !planGrant ? (
+          <Field
+            label="Usage limit"
+            hint={`The allowance for this contract. It resets as on the plan: ${resetsText(entitlement).toLowerCase()}.`}
+            error={error}
+          >
+            {({ id: fieldId, ...field }) => (
+              <Input
+                id={fieldId}
+                inputMode="numeric"
+                placeholder={planLimit ? undefined : 'Unlimited on the plan'}
+                {...field}
+                value={limit}
+                onChange={(event) => {
+                  setLimit(event.target.value)
+                  setError(undefined)
+                }}
+              />
+            )}
+          </Field>
+        ) : null}
+        {entitlement.featureType === FeatureType.Metered && planGrant && grant ? (
           <GrantAllowanceFields
             value={grant}
             onChange={(next) => {
