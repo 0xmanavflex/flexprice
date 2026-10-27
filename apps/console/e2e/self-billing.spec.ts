@@ -69,7 +69,9 @@ test('a trial shows its pill on every page, and the card leads to billing and Up
   await expect(pill).toBeVisible()
   await pill.hover()
   const card = page.getByRole('dialog', { name: 'Free trial' })
-  await expect(card.getByText(/Then \$199 a month \+ 0\.5%\./)).toBeVisible()
+  await expect(
+    card.getByText(/Then \$199(\.00)? a month \+ 0\.5% of what you bill through Flexprice\./),
+  ).toBeVisible()
   await card.getByRole('button', { name: 'View details' }).click()
   await expect(page).toHaveURL(/\/settings\/usage-billing$/)
   await expect(page.getByText('Free trial, 30 days')).toBeVisible()

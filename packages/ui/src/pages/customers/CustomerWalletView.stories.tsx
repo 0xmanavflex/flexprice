@@ -260,7 +260,9 @@ export const AlertSettingsFromMenu: Story = {
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Real-time balance')).not.toBeInTheDocument()
+    // The balances are "Available now" and "Last invoiced"; the old label is gone.
+    await expect(canvas.queryByText(/Real-time balance/)).toBeNull()
+    await expect(canvas.getByText(/^Available now/)).toBeInTheDocument()
     await expect(canvas.getByText('Active')).toBeInTheDocument()
     await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
     await expect(canvas.getByText('Expiring soon')).toBeInTheDocument()
@@ -328,7 +330,8 @@ export const UnreadableBalance: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Available now')).toBeVisible()
+    // The label is read out with the figure ("Available now: — credits").
+    await expect(canvas.getByText(/^Available now/)).toBeInTheDocument()
     await expect(canvas.queryByText(/since the last invoice/i)).toBeNull()
   },
 }
