@@ -173,3 +173,41 @@ export const PicksTheRange: Story = {
     await expect(args.onQueryChange).toHaveBeenCalledWith({ ...QUERY, from: '2026-10-05' })
   },
 }
+
+/**
+ * A feature whose price changed mid-range is one row, not two: its revenue is
+ * the total, and "2 prices" lists what each price brought in.
+ */
+export const PriceChangedInRange: Story = {
+  args: {
+    features: [
+      {
+        ...FEATURES[0]!,
+        prices: [
+          { id: 'li_old', label: 'Oct 1 – Oct 14', usage: '70,000', revenue: '$140.00' },
+          { id: 'li_new', label: 'From Oct 15', usage: '50,000', revenue: '$100.00' },
+        ],
+      },
+      ...FEATURES.slice(1),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const table = within(canvas.getByRole('table'))
+    await expect(table.getAllByText('API Calls')).toHaveLength(1)
+    await userEvent.click(table.getByRole('button', { name: /Revenue by price: 2 prices/ }))
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('Revenue by price')).toBeVisible()
+    await expect(body.getByText('Oct 1 – Oct 14')).toBeVisible()
+    await expect(body.getByText('$140.00')).toBeVisible()
+    await expect(body.getByText('From Oct 15')).toBeVisible()
+    await expect(body.getByText('$100.00')).toBeVisible()
+  },
+}
+
+/** A feature under one price has no price list. */
+export const OnePrice: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole('button', { name: /prices/ })).toBeNull()
+  },
+}

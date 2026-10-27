@@ -71,7 +71,9 @@ export const Unlimited: Story = {
   args: { feature: 'Active users', used: 3412, limit: null, unit: 'users', softLimit: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Unlimited')).toBeInTheDocument()
+    await expect(canvas.getByText('3,412 of unlimited users')).toBeInTheDocument()
+    // Said once: no second "Unlimited" where the bar would be.
+    await expect(canvas.getAllByText(/unlimited/i)).toHaveLength(1)
     await expect(canvas.queryByRole('progressbar')).not.toBeInTheDocument()
     await expect(canvas.queryByText(/Soft limit/)).not.toBeInTheDocument()
   },

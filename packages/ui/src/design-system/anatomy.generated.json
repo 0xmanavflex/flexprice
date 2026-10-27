@@ -2114,7 +2114,9 @@
         "ErrorState",
         "MetricChart",
         "Section",
-        "SegmentMeter"
+        "SegmentMeter",
+        "TotalRow",
+        "TotalsList"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerAnalyticsView.stories.tsx"
@@ -7855,6 +7857,7 @@
       ],
       "usedBy": [
         "CreditNoteDetailView",
+        "CustomerAnalyticsView",
         "InvoiceDetailView",
         "InvoiceForm",
         "SubscriptionDetailView"
@@ -7871,6 +7874,7 @@
       ],
       "usedBy": [
         "CreditNoteDetailView",
+        "CustomerAnalyticsView",
         "InvoiceDetailView",
         "InvoiceForm",
         "SubscriptionDetailView"
