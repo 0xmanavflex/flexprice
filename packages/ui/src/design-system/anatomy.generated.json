@@ -938,7 +938,8 @@
       "file": "src/pages/contracts/ChargeAlertForm.tsx",
       "layer": "surface",
       "composes": [
-        "Composer"
+        "Composer",
+        "DashedRule"
       ],
       "usedBy": [
         "EntityAlertDialog",
@@ -2337,6 +2338,18 @@
       "usedBy": [],
       "story": "./src/pages/home/DashboardHome.stories.tsx"
     },
+    "DashedRule": {
+      "file": "src/compositions/forms/FormCard.tsx",
+      "layer": "composition",
+      "composes": [
+        "Field",
+        "InfoHint"
+      ],
+      "usedBy": [
+        "ChargeAlertForm"
+      ],
+      "story": "./src/compositions/forms/FormCard.stories.tsx"
+    },
     "Database": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -3484,6 +3497,7 @@
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
+        "DashedRule",
         "DataExportDialog",
         "DownloadDialog",
         "EntitlementCreateForm",
@@ -4374,6 +4388,7 @@
       "composes": [],
       "usedBy": [
         "CustomerWalletView",
+        "DashedRule",
         "Field",
         "FormCard",
         "FormRow",

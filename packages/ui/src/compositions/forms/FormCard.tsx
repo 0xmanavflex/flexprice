@@ -35,6 +35,15 @@ export const FormCardProvenance = provenance({
 const dashedRule =
   'border-border bg-transparent data-horizontal:h-0 data-horizontal:border-t data-horizontal:border-dashed'
 
+/**
+ * The dashed rule between a form's rows, for a form that is not a `FormCard`
+ * but splits into parts the same way (an alert's info, warning and critical
+ * levels), so both read alike.
+ */
+export function DashedRule(props: { 'data-testid'?: string }) {
+  return <Separator className={dashedRule} {...props} />
+}
+
 function flattenRows(children: ReactNode): ReactNode[] {
   return Children.toArray(children).flatMap((child) =>
     isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment

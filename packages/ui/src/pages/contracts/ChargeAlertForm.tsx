@@ -13,13 +13,19 @@ import {
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
-import { Separator } from '@ui/components/primitives/separator'
+import { DashedRule } from '@ui/compositions/forms/FormCard'
 import { Switch } from '@ui/components/primitives/switch'
 import { provenance } from '@ui/provenance'
 
 export const ChargeAlertFormProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/detail/DetailKit', 'ui/button', 'ui/input', 'ui/separator', 'ui/switch'],
+  composes: [
+    'compositions/detail/DetailKit',
+    'ui/button',
+    'ui/input',
+    'compositions/forms/FormCard',
+    'ui/switch',
+  ],
   note: 'Edit the thresholds of one charge alert setting. The watched line cannot be changed.',
 })
 
@@ -27,10 +33,6 @@ const TYPES = [AlertThresholdType.Absolute, AlertThresholdType.Percentage].map((
   value,
   label: ALERT_THRESHOLD_TYPE_LABEL[value],
 }))
-
-/** The dashed rule `FormCard` draws between its rows, so the levels read as the settings form does. */
-const LEVEL_RULE =
-  'border-border bg-transparent data-horizontal:h-0 data-horizontal:border-t data-horizontal:border-dashed'
 
 const CONDITIONS = [AlertCondition.Below, AlertCondition.Above].map((value) => ({
   value,
@@ -146,9 +148,7 @@ export function ChargeAlertForm({
           return (
             <div key={severity} className="flex flex-col gap-4">
               {/* Info, warning and critical are separate levels: a rule between each. */}
-              {index > 0 ? (
-                <Separator data-testid="alert-level-rule" className={LEVEL_RULE} />
-              ) : null}
+              {index > 0 ? <DashedRule data-testid="alert-level-rule" /> : null}
               <div className="flex flex-col gap-2">
                 {/* The severity is named once: on its switch, or as the row's label. */}
                 <div className="flex items-center justify-between gap-3 text-sm">
