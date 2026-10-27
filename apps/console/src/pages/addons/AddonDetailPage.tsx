@@ -44,13 +44,13 @@ import {
   EntitlementTable,
   type FeatureOption,
   Pill,
-  toast,
 } from '@fp/ui/pages'
 import { ConfirmDialog, EditableCard, FormDialog, MetadataCard } from '@fp/ui/compositions'
 import { ArchiveIcon, PencilIcon, PuzzleIcon, RefreshCwIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 import { CatalogCharges } from '../shared/CatalogCharges'
+import { useContractSync } from '../shared/useContractSync'
 
 export interface AddonDetailPageProps {
   addonId: string
@@ -89,6 +89,7 @@ export function AddonDetailPage({
   const addon = useAddon(addonId)
   const update = useUpdateAddon()
   const sync = useSyncAddonPrices()
+  const syncing = useContractSync('add-on')
   const remove = useDeleteAddon()
   // Fetched here too (deduped by react-query) so the rail can carry real counts.
   const prices = usePrices(PriceEntityType.Addon, addonId)
@@ -138,16 +139,10 @@ export function AddonDetailPage({
         {
           // Pushes edited prices to every contract that carries this add-on.
           id: 'sync',
-          label: sync.isPending ? 'Syncing…' : 'Sync to contracts',
+          label: sync.isPending || syncing.watching ? 'Syncing…' : 'Sync to contracts',
           icon: <RefreshCwIcon className="text-muted-foreground" aria-hidden />,
-          disabled: sync.isPending || data.status === 'archived',
-          onSelect: () =>
-            sync.mutate(addonId, {
-              onSuccess: () =>
-                toast('Sync started', {
-                  description: 'Contracts with this add-on are being brought up to date.',
-                }),
-            }),
+          disabled: sync.isPending || syncing.watching || data.status === 'archived',
+          onSelect: () => sync.mutate(addonId, { onSuccess: syncing.started }),
         },
         {
           id: 'archive',

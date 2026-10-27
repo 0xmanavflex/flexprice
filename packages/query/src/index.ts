@@ -574,7 +574,19 @@ export type {
   UsagePoint,
   UsageWindow,
 } from './events'
-export { fetchWorkflowRuns, toWorkflowFilter, toWorkflowRun, useWorkflowRuns } from './workflowRuns'
+export {
+  FINISHED_WORKFLOW_STATUSES,
+  WORKFLOW_POLL_MS,
+  WORKFLOW_WATCH_MAX_MS,
+  fetchWorkflowRun,
+  fetchWorkflowRuns,
+  isFinishedWorkflow,
+  toWorkflowFilter,
+  toWorkflowRun,
+  useWorkflowRun,
+  useWorkflowRuns,
+} from './workflowRuns'
+export type { WorkflowHandle } from './workflowRuns'
 export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'

@@ -95,6 +95,7 @@ import { TerminateChargeDialog } from '../shared/TerminateChargeDialog'
 import { priceHistoryRows } from '@/pages/shared/priceHistory'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
+import { useContractSync } from '../shared/useContractSync'
 
 /**
  * A plan's detail page: the hub where a plan is completed.
@@ -183,6 +184,7 @@ export function PlanDetailPage({
   const update = useUpdatePlan()
   const archive = useArchivePlan()
   const sync = useSyncPlanPrices()
+  const syncing = useContractSync('plan')
 
   // The header's kind badge is read off the charges. The Overview sections
   // read the same key, so react-query serves them from this one fetch.
@@ -257,11 +259,11 @@ export function PlanDetailPage({
                   </DropdownMenuItem>
                 ) : null}
                 <DropdownMenuItem
-                  disabled={sync.isPending || isArchived}
-                  onClick={() => sync.mutate(planId)}
+                  disabled={sync.isPending || syncing.watching || isArchived}
+                  onClick={() => sync.mutate(planId, { onSuccess: syncing.started })}
                 >
                   <RefreshCwIcon className="text-muted-foreground" aria-hidden />
-                  {sync.isPending ? 'Syncing…' : 'Sync to contracts'}
+                  {sync.isPending || syncing.watching ? 'Syncing…' : 'Sync to contracts'}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEdit(planId)}>
                   <PencilIcon className="text-muted-foreground" aria-hidden />

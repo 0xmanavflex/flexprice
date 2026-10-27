@@ -4,7 +4,7 @@ import {
   type WorkflowQuery,
   type WorkflowRun,
   WORKFLOW_STATUS_WIRE,
-  type WorkflowStatus,
+  WorkflowStatus,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
@@ -113,5 +113,71 @@ export function useWorkflowRuns(query: WorkflowQuery) {
     queryKey: queryKeys.workflowRuns.list({ ...query, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchWorkflowRuns(client, query),
     placeholderData: (previous) => previous,
+  })
+}
+
+/** What a call that starts a workflow answers: the workflow and the run it started. */
+export interface WorkflowHandle {
+  workflowId: string
+  runId: string
+}
+
+/** The statuses a run does not leave: polling stops on any of them. */
+export const FINISHED_WORKFLOW_STATUSES: ReadonlySet<WorkflowStatus> = new Set([
+  WorkflowStatus.Completed,
+  WorkflowStatus.Failed,
+  WorkflowStatus.Canceled,
+  WorkflowStatus.Terminated,
+  WorkflowStatus.TimedOut,
+])
+
+export const isFinishedWorkflow = (run: WorkflowRun | null | undefined): boolean =>
+  Boolean(run?.status && FINISHED_WORKFLOW_STATUSES.has(run.status))
+
+/** How often a watched run is read, and how long it is watched before giving up. */
+export const WORKFLOW_POLL_MS = 2_000
+export const WORKFLOW_WATCH_MAX_MS = 5 * 60_000
+
+/**
+ * One run, found through the same search the Workflows page uses, filtered to
+ * its workflow id. `null` until the run shows up in the search.
+ */
+export async function fetchWorkflowRun(
+  client: Flexprice,
+  handle: WorkflowHandle,
+): Promise<WorkflowRun | null> {
+  const page = await fetchWorkflowRuns(client, {
+    page: 1,
+    pageSize: 10,
+    search: handle.workflowId,
+    statuses: [],
+    sortDirection: 'desc',
+  })
+  return (
+    page.runs.find((run) => run.id === handle.runId) ??
+    (handle.runId ? null : (page.runs[0] ?? null))
+  )
+}
+
+/**
+ * Watches one run until it finishes: read every {@link WORKFLOW_POLL_MS}
+ * until its status is final, the read fails, or {@link WORKFLOW_WATCH_MAX_MS}
+ * has passed since `since`. `null` watches nothing. Unmounting stops it.
+ */
+export function useWorkflowRun(handle: (WorkflowHandle & { since: number }) | null) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: [...queryKeys.workflowRuns.all(), 'run', handle?.workflowId, handle?.runId] as const,
+    queryFn: () => fetchWorkflowRun(client, handle as WorkflowHandle),
+    enabled: handle !== null,
+    retry: false,
+    // A finished sync is read once; there is nothing to cache across watches.
+    gcTime: 0,
+    refetchInterval: (query) => {
+      if (!handle || query.state.status === 'error') return false
+      if (isFinishedWorkflow(query.state.data)) return false
+      return Date.now() - handle.since < WORKFLOW_WATCH_MAX_MS ? WORKFLOW_POLL_MS : false
+    },
   })
 }
