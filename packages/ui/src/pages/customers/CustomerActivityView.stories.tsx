@@ -239,6 +239,8 @@ export const SortOldestFirst: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /^Sort by Time/ }))
     await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Ascending' }))
     await waitFor(() => expect(firstTitle()).toBe('Invoice created'))
+    // Sorting is the loaded page's: the API only returns newest first, and the footer says so.
+    await expect(canvas.getByText(/sorted within this page/)).toBeVisible()
   },
 }
 
