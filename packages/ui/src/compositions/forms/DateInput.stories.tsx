@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { DateInput, type DateInputProps } from './DateInput'
+import { DateInput, DayCalendar, type DateInputProps, type DayCalendarProps } from './DateInput'
 import { Field } from './Field'
 
 type PlaygroundArgs = DateInputProps & {
@@ -244,5 +244,90 @@ export const TodayStandsOut: Story = {
     await expect(todayColor).not.toBe('rgba(0, 0, 0, 0)')
     await expect(todayColor).not.toBe(getComputedStyle(selected).backgroundColor)
     await expect(todayColor).toBe(tokenBackground('bg-primary/15'))
+    // Hover cannot be faked for CSS, so check Tailwind emitted today's hover rule,
+    // and that it skips a selected today.
+    const flatten = (rules: CSSRuleList): CSSRule[] =>
+      [...rules].flatMap((rule) =>
+        'cssRules' in rule ? [rule, ...flatten((rule as CSSGroupingRule).cssRules)] : [rule],
+      )
+    const hoverRule = [...document.styleSheets]
+      .flatMap((sheet) => {
+        try {
+          return flatten(sheet.cssRules)
+        } catch {
+          return []
+        }
+      })
+      .find(
+        (rule) =>
+          rule instanceof CSSStyleRule &&
+          /button:not\(\[data-selected-single=["']?true["']?\]\):hover/.test(rule.selectorText),
+      )
+    await expect(hoverRule).toBeDefined()
+  },
+}
+
+/** A selected today is the selected day: solid primary on the button, over today's tint. */
+export const SelectedTodayIsSolid: Story = {
+  args: (() => {
+    const now = new Date()
+    const pad2 = (n: number) => String(n).padStart(2, '0')
+    return { value: `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}` }
+  })(),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Start date' }))
+    const today = await screen.findByRole('button', { name: /^Today/ })
+    await expect(today).toHaveAttribute('data-selected-single', 'true')
+    await expect(getComputedStyle(today).backgroundColor).toBe(tokenBackground('bg-primary'))
+    await expect(getComputedStyle(today).color).toBe(
+      (() => {
+        const probe = document.createElement('div')
+        probe.className = 'text-primary-foreground'
+        document.body.append(probe)
+        const color = getComputedStyle(probe).color
+        probe.remove()
+        return color
+      })(),
+    )
+  },
+}
+
+/**
+ * `DayCalendar`: the bare day calendar `DateInput` opens, for a popover with
+ * its own trigger (the analytics range's "From" / "To"). It opens on the
+ * value's month, keeps days outside `min` / `max` disabled, and reports a day.
+ */
+export const BareDayCalendar: StoryObj<DayCalendarProps> = {
+  args: { value: '2026-03-15', min: '2026-03-10', max: '2026-03-20', onValueChange: fn() },
+  render: function Render({ value, onValueChange, ...rest }) {
+    const [current, setCurrent] = useState(value)
+    return (
+      <DayCalendar
+        {...rest}
+        value={current}
+        onValueChange={(next) => {
+          setCurrent(next)
+          onValueChange(next)
+        }}
+      />
+    )
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /March 15/ })).toHaveAttribute(
+      'data-selected-single',
+      'true',
+    )
+    await expect(canvas.getByRole('button', { name: /March 5/ })).toBeDisabled()
+    await expect(canvas.getByRole('button', { name: /March 25/ })).toBeDisabled()
+    // Month and year menus in the caption, for jumping years back.
+    await expect(canvas.getByRole('combobox', { name: /month/i })).toBeInTheDocument()
+    await expect(canvas.getByRole('combobox', { name: /year/i })).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: /March 18/ }))
+    await expect(args.onValueChange).toHaveBeenCalledWith('2026-03-18')
+    await expect(canvas.getByRole('button', { name: /March 18/ })).toHaveAttribute(
+      'data-selected-single',
+      'true',
+    )
   },
 }

@@ -122,7 +122,8 @@ export interface DayCalendarProps {
 
 /**
  * The bare day calendar `DateInput` opens, for a popover that has its own
- * trigger (a toolbar's "From" / "To" range buttons). Same calendar, same days.
+ * trigger (a toolbar's "From" / "To" range buttons). Same calendar, same days,
+ * with month and year menus in the caption for jumping far back.
  */
 export function DayCalendar({ value, onValueChange, min, max }: DayCalendarProps) {
   const selected = parseDateValue(value)
@@ -137,6 +138,8 @@ export function DayCalendar({ value, onValueChange, min, max }: DayCalendarProps
     <Calendar
       mode="single"
       classNames={dayPickerClassNames}
+      // Month and year menus: a range can start years back without paging month by month.
+      captionLayout="dropdown"
       {...(selected ? { selected } : {})}
       {...(month ? { defaultMonth: month } : {})}
       {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
