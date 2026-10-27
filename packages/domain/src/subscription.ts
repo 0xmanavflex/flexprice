@@ -11,6 +11,7 @@ import { type Charge } from './price'
 import { type Money } from './money'
 import { BILLING_PERIOD_LABEL, BillingModel, BillingPeriod, TierMode } from './price'
 import { priceOverrideSchema, type PriceOverride } from './priceOverride'
+import { meteredGrantSchema } from './entitlement'
 
 /**
  * A subscription, as the list reads it.
@@ -472,6 +473,13 @@ export const createSubscriptionSchema = z
         usageLimit: z.number().int().nonnegative('Cannot be negative').optional(),
         /** Boolean: whether the feature is on; omitted keeps the plan's. */
         isEnabled: z.boolean().optional(),
+        /** Static: the value for this customer; omitted keeps the plan's. */
+        staticValue: z.string().trim().min(1, 'Enter a value').optional(),
+        /**
+         * Metered: the allowance for this customer as a grant (value type,
+         * value or unlimited, window, stacking), as the entitlement form sets it.
+         */
+        grant: meteredGrantSchema.optional(),
       }),
     ),
     /**
@@ -492,11 +500,13 @@ export const createSubscriptionSchema = z
         autoApply: z.boolean(),
       }),
     ),
-    // Each add-on may commit on its own usage charges, as V1's add-on card.
+    // Each add-on may reprice its charges and commit on its usage charges, as V1's add-on card.
     addons: z.array(
       z.object({
         addonId: z.string().min(1),
         name: z.string(),
+        /** New prices for the add-on's own charges (`override_line_items`). */
+        priceOverrides: z.array(priceOverrideSchema).optional(),
         commitments: z.array(chargeCommitmentSchema).optional(),
       }),
     ),
@@ -738,7 +748,9 @@ export interface SubscriptionDetail extends Subscription {
 }
 
 /** An inherited contract mirrors its parent's: it has no lines of its own and is read-only. */
-export function isInheritedContract(contract: Pick<SubscriptionDetail, 'subscriptionType'>): boolean {
+export function isInheritedContract(
+  contract: Pick<SubscriptionDetail, 'subscriptionType'>,
+): boolean {
   return contract.subscriptionType === 'inherited'
 }
 
@@ -1065,9 +1077,11 @@ export interface SubscriptionTax {
   priority: number
 }
 
-/** Attach an add-on to one contract, with commitments on its usage charges. */
+/** Attach an add-on to one contract, with new prices on its charges and commitments on its usage charges. */
 export interface AddContractAddon {
   addonId: string
+  /** New prices for the add-on's own charges, sent as `override_line_items`. */
+  priceOverrides?: PriceOverride[]
   commitments?: ChargeCommitment[]
 }
 

@@ -83,6 +83,58 @@ describe('toCreateSubscriptionRequest', () => {
     expect(parsed['override_entitlements']).toHaveLength(1)
   })
 
+  it('sends entitlement overrides: a grant patch, a static value, a switch', () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        entitlementOverrides: [
+          {
+            entitlementId: 'ent_api',
+            grant: {
+              measure: 'amount',
+              quota: '50',
+              unit: 'day',
+              allocation: 'first_usage',
+              aggregation: 'additive',
+            },
+          },
+          {
+            entitlementId: 'ent_all',
+            grant: {
+              measure: 'quantity',
+              quota: null,
+              unit: 'day',
+              allocation: 'first_usage',
+              aggregation: 'parallel',
+            },
+          },
+          { entitlementId: 'ent_seats', staticValue: '25' },
+          { entitlementId: 'ent_sso', isEnabled: false },
+        ],
+      } as CreateSubscription),
+    ) as Record<string, unknown>
+    expect(wire['override_entitlements']).toEqual([
+      {
+        entitlement_id: 'ent_api',
+        grant_measure: 'amount',
+        grant_quota: '50',
+        grant_duration_unit: 'day',
+        grant_duration_value: 1,
+        grant_allocation_behavior: 'first_usage',
+        aggregation_mode: 'additive',
+      },
+      {
+        entitlement_id: 'ent_all',
+        grant_measure: 'quantity',
+        grant_unlimited: true,
+        grant_duration_unit: 'subscription_period',
+        aggregation_mode: 'parallel',
+      },
+      { entitlement_id: 'ent_seats', static_value: '25' },
+      { entitlement_id: 'ent_sso', is_enabled: false },
+    ])
+  })
+
   it('routes invoices to another customer by external id', () => {
     expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('inheritance')
     const request = toCreateSubscriptionRequest({
@@ -628,6 +680,75 @@ describe('contract-scoped creators', () => {
     expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
       override_line_items: [{ price_id: 'price_addon_api', bucket_size: 'HOUR' }],
     })
+  })
+
+  it("sends an add-on's new prices, fixed and usage, as its override_line_items", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      priceOverrides: [
+        { priceId: 'price_addon_seat', billingModel: BillingModel.FlatFee, amount: '15' },
+        {
+          priceId: 'price_addon_api',
+          billingModel: BillingModel.Package,
+          amount: '2',
+          divideBy: 1000,
+          bucketSize: '',
+        },
+      ],
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'quantity',
+          value: '100',
+          overageFactor: '',
+          trueUp: false,
+          windowed: true,
+          bucketSize: 'HOUR',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      addon_id: 'addon_1',
+      override_line_items: [
+        { price_id: 'price_addon_seat', billing_model: 'FLAT_FEE', amount: '15' },
+        {
+          price_id: 'price_addon_api',
+          billing_model: 'PACKAGE',
+          amount: '2',
+          transform_quantity: { divide_by: 1000 },
+          bucket_size: 'HOUR',
+        },
+      ],
+      line_item_commitments: { price_addon_api: { commitment_type: 'quantity' } },
+    })
+  })
+
+  it("sends a new contract's add-on prices on that add-on", () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        addons: [
+          {
+            addonId: 'addon_1',
+            name: 'Support',
+            priceOverrides: [
+              { priceId: 'price_addon_seat', billingModel: BillingModel.FlatFee, amount: '15' },
+            ],
+          },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(wire['override_line_items']).toBeUndefined()
+    expect(wire['addons']).toEqual([
+      {
+        addon_id: 'addon_1',
+        override_line_items: [
+          { price_id: 'price_addon_seat', billing_model: 'FLAT_FEE', amount: '15' },
+        ],
+      },
+    ])
   })
 
   it('applies a coupon as an add modification', () => {

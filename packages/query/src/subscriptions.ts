@@ -21,6 +21,7 @@ import {
   type PauseSubscription,
   type ResumeSubscription,
   type ChargeCommitment,
+  type PriceOverride,
   CommitmentType,
   type CommitmentPriceBase,
   type CommitmentWindow,
@@ -456,8 +457,7 @@ export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): Subscr
   // the wire shape (`is_enabled`, `usage_limit`), and that body is what the
   // section has to show.
   const entitlement = wire.entitlement as
-    | (NonNullable<SubscriptionFeatureWire['entitlement']> & Record<string, unknown>)
-    | undefined
+    (NonNullable<SubscriptionFeatureWire['entitlement']> & Record<string, unknown>) | undefined
   const period = stringValue(entitlement?.usageResetPeriod ?? entitlement?.usage_reset_period)
   const limit = entitlement?.usageLimit ?? entitlement?.usage_limit
   return {
@@ -928,20 +928,67 @@ function toLineItemCommitment(commitment: ChargeCommitment): Record<string, unkn
   }
 }
 
-/** An add-on's commitments as `line_item_commitments`, keyed by the add-on's price. */
-function addonCommitments(commitments: ChargeCommitment[] | undefined): {
+/**
+ * An add-on's own pricing as the attach takes it: new prices as
+ * `override_line_items` and commitments as `line_item_commitments`, both keyed
+ * by the add-on's price. A bucket size chosen with a commitment rides on that
+ * price's override line, as for a plan charge.
+ */
+function addonPricing(addon: {
+  priceOverrides?: PriceOverride[] | undefined
+  commitments?: ChargeCommitment[] | undefined
+}): {
   lineItemCommitments?: Record<string, Record<string, unknown>>
   overrideLineItems?: FlexpriceModels.OverrideLineItemRequest[]
 } {
-  if (!commitments || commitments.length === 0) return {}
-  // A bucket size chosen with the commitment goes as the price's override, as for a plan charge.
-  const buckets = withBuckets([], commitments)
-  return {
-    lineItemCommitments: Object.fromEntries(
-      commitments.map((commitment) => [commitment.priceId, toLineItemCommitment(commitment)]),
+  const commitments = addon.commitments ?? []
+  const lines = withBuckets(
+    (addon.priceOverrides ?? []).map(
+      (override) => toOverrideLineItem(override) as unknown as Record<string, unknown>,
     ),
-    ...(buckets.length > 0
-      ? { overrideLineItems: buckets as FlexpriceModels.OverrideLineItemRequest[] }
+    commitments,
+  )
+  return {
+    ...(commitments.length > 0
+      ? {
+          lineItemCommitments: Object.fromEntries(
+            commitments.map((commitment) => [commitment.priceId, toLineItemCommitment(commitment)]),
+          ),
+        }
+      : {}),
+    ...(lines.length > 0
+      ? { overrideLineItems: lines as FlexpriceModels.OverrideLineItemRequest[] }
+      : {}),
+  }
+}
+
+/**
+ * One entitlement override as `override_entitlements` takes it. A metered
+ * grant goes as the grant patch, as an entitlement's own grant is sent: an
+ * unlimited allowance as `grant_unlimited` on a billing-period window, a
+ * window's length and start only when it is hourly, daily or weekly.
+ */
+function toOverrideEntitlement(
+  override: CreateSubscription['entitlementOverrides'][number],
+): Record<string, unknown> {
+  const grant = override.grant
+  const unlimited = grant?.quota === null
+  const unit = grant ? (unlimited ? 'subscription_period' : grant.unit) : undefined
+  return {
+    entitlementId: override.entitlementId,
+    ...(override.usageLimit !== undefined ? { usageLimit: override.usageLimit } : {}),
+    ...(override.isEnabled !== undefined ? { isEnabled: override.isEnabled } : {}),
+    ...(override.staticValue !== undefined ? { staticValue: override.staticValue } : {}),
+    ...(grant
+      ? {
+          grantMeasure: grant.measure,
+          ...(unlimited ? { grantUnlimited: true } : { grantQuota: grant.quota }),
+          grantDurationUnit: unit,
+          ...(unit !== 'subscription_period'
+            ? { grantDurationValue: grant.every ?? 1, grantAllocationBehavior: grant.allocation }
+            : {}),
+          aggregationMode: grant.aggregation,
+        }
       : {}),
   }
 }
@@ -1035,11 +1082,7 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
       : {}),
     ...(draft.entitlementOverrides.length > 0
       ? {
-          overrideEntitlements: draft.entitlementOverrides.map((override) => ({
-            entitlementId: override.entitlementId,
-            ...(override.usageLimit !== undefined ? { usageLimit: override.usageLimit } : {}),
-            ...(override.isEnabled !== undefined ? { isEnabled: override.isEnabled } : {}),
-          })),
+          overrideEntitlements: draft.entitlementOverrides.map(toOverrideEntitlement),
         }
       : {}),
     // The API uses this list *instead of* the plan's grants, so it is sent only
@@ -1070,7 +1113,7 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
       ? {
           addons: draft.addons.map((addon) => ({
             addonId: addon.addonId,
-            ...addonCommitments(addon.commitments),
+            ...addonPricing(addon),
           })),
         }
       : {}),
@@ -1233,7 +1276,9 @@ export function useSubscriptionEntitlements(id: string) {
     queryFn: async () => {
       try {
         const response = await call(() => client.subscriptions.getSubscriptionEntitlements(id))
-        return ((response.features ?? []) as SubscriptionFeatureWire[]).map(toSubscriptionEntitlement)
+        return ((response.features ?? []) as SubscriptionFeatureWire[]).map(
+          toSubscriptionEntitlement,
+        )
       } catch (error) {
         const recovered = subscriptionEntitlementsFromRejection(error)
         if (recovered) return recovered
@@ -2050,7 +2095,7 @@ export function toAddAddonRequest(
   subscriptionId: string,
   draft: AddContractAddon,
 ): FlexpriceModels.AddAddonRequest {
-  return { subscriptionId, addonId: draft.addonId, ...addonCommitments(draft.commitments) }
+  return { subscriptionId, addonId: draft.addonId, ...addonPricing(draft) }
 }
 
 /** A coupon applied to one contract, or to one of its charges, as a `coupon` modification. */

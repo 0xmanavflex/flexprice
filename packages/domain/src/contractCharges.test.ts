@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { BillingPeriod, PriceType, type Charge } from './price'
 import {
+  attachableAddonCharges,
   attachableAddonCommitments,
+  attachableAddonOverrides,
   cadenceAllowed,
   selectContractCharges,
 } from './contractCharges'
@@ -106,5 +108,42 @@ describe('attachableAddonCommitments', () => {
 
   it('keeps every commitment while the charges are unknown', () => {
     expect(attachableAddonCommitments(commitments, undefined, monthly)).toEqual(commitments)
+  })
+})
+
+describe('attachableAddonCharges: an add-on with a fixed and a usage charge', () => {
+  const addon = [
+    charge('fixed', BillingPeriod.Monthly, { type: PriceType.Fixed }),
+    charge('usage', BillingPeriod.Monthly, { type: PriceType.Usage }),
+    charge('setup', BillingPeriod.OneTime, { type: PriceType.Fixed }),
+    charge('annual', BillingPeriod.Annual, { type: PriceType.Usage }),
+  ]
+
+  it('offers every charge that attaches, fixed and usage alike', () => {
+    expect(attachableAddonCharges(addon, monthly).map((c) => c.id)).toEqual([
+      'fixed',
+      'usage',
+      'setup',
+    ])
+  })
+})
+
+describe('attachableAddonOverrides', () => {
+  const addon = [
+    charge('usd-fixed', BillingPeriod.Monthly, { type: PriceType.Fixed }),
+    charge('usd-usage', BillingPeriod.Monthly, { type: PriceType.Usage }),
+    charge('eur-fixed', BillingPeriod.Monthly, { type: PriceType.Fixed, currency: 'eur' }),
+  ]
+  const overrides = ['usd-fixed', 'usd-usage', 'eur-fixed'].map((priceId) => ({ priceId }))
+
+  it('keeps overrides on fixed and usage charges that attach, drops the rest', () => {
+    expect(attachableAddonOverrides(overrides, addon, monthly).map((o) => o.priceId)).toEqual([
+      'usd-fixed',
+      'usd-usage',
+    ])
+  })
+
+  it('keeps every override while the charges are unknown', () => {
+    expect(attachableAddonOverrides(overrides, undefined, monthly)).toEqual(overrides)
   })
 })

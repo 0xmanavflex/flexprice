@@ -7,6 +7,10 @@ import {
   type CreateSubscription,
   CreditGrantCadence,
   CreditGrantExpiryType,
+  type Entitlement,
+  EntitlementGrantDurationUnit,
+  EntitlementGrantMeasure,
+  UsageResetPeriod,
   InheritanceBlock,
   PriceType,
   type SubscriptionPhase,
@@ -37,7 +41,7 @@ const ADDONS: SubscriptionAddonOption[] = [
   { value: 'addon_storage', label: 'Extra storage', type: 'Usage' },
 ]
 const TAX_RATES = [{ code: 'GST18', name: 'GST', percentage: '18' }]
-/** Extra storage's usage charge, so it can carry a commitment. */
+/** Extra storage's charges: a fixed base and a usage charge, each repriceable; the usage one can carry a commitment. */
 const STORAGE_CHARGES = [
   {
     ...makeCharge(2, { type: PriceType.Usage, billingModel: BillingModel.FlatFee }),
@@ -53,6 +57,11 @@ const STORAGE_CHARGES = [
     }),
     entityId: 'addon_storage',
     displayName: 'Storage archive (GB)',
+  },
+  {
+    ...makeCharge(4, { type: PriceType.Fixed, billingModel: BillingModel.FlatFee }),
+    entityId: 'addon_storage',
+    displayName: 'Storage base',
   },
 ]
 const PLAN_NAMES = ['Starter', 'Pro', 'Business', 'Scale', 'Enterprise']
@@ -119,6 +128,10 @@ interface PlaygroundProps {
   startDate?: string
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** Changes to the plan's entitlements, by id (`ent_0`…). */
+  entitlementPatch?: Record<string, Partial<Entitlement>>
+  /** Gives the plan's first charge dates of its own (`YYYY-MM-DD`, from and to). */
+  datedCharge?: { start: string; end?: string }
   /** Opens with these add-ons (and their commitments) already chosen. */
   seededAddons?: CreateSubscription['addons']
   /** Customers (by id) that cannot inherit, as the page loads them. */
@@ -147,6 +160,8 @@ function SubscriptionFormPlayground({
   endDate,
   planTrial,
   phase,
+  datedCharge,
+  entitlementPatch,
   seededAddons,
   inheritanceBlocks,
   onSubmit,
@@ -176,8 +191,18 @@ function SubscriptionFormPlayground({
         ? []
         : [
             ...makeCharges(Math.ceil(chargeCount / 2), Math.floor(chargeCount / 2)).map(
-              (charge, index) =>
-                index === 0 && planTrial ? { ...charge, trialPeriodDays: planTrial } : charge,
+              (charge, index) => ({
+                ...charge,
+                ...(index === 0 && planTrial ? { trialPeriodDays: planTrial } : {}),
+                ...(index === 0 && datedCharge
+                  ? {
+                      startDate: new Date(`${datedCharge.start}T00:00:00Z`),
+                      ...(datedCharge.end
+                        ? { endDate: new Date(`${datedCharge.end}T00:00:00Z`) }
+                        : {}),
+                    }
+                  : {}),
+              }),
             ),
             ...(otherCadences
               ? [
@@ -200,7 +225,9 @@ function SubscriptionFormPlayground({
                 ]
               : []),
           ],
-      entitlements: planLoading ? [] : makeEntitlements(entitlementCount),
+      entitlements: planLoading
+        ? []
+        : makeEntitlements(entitlementCount).map((e) => ({ ...e, ...entitlementPatch?.[e.id] })),
       creditGrants: planGrant
         ? [
             {
@@ -213,7 +240,17 @@ function SubscriptionFormPlayground({
           ]
         : [],
     }
-  }, [planId, planLoading, chargeCount, entitlementCount, otherCadences, planGrant, planTrial])
+  }, [
+    planId,
+    planLoading,
+    chargeCount,
+    entitlementCount,
+    otherCadences,
+    planGrant,
+    planTrial,
+    datedCharge,
+    entitlementPatch,
+  ])
 
   return (
     <SubscriptionForm
@@ -240,7 +277,7 @@ function SubscriptionFormPlayground({
       onPlanChange={handlePlanChange}
       coupons={COUPONS}
       addons={ADDONS}
-      addonCharges={(addonId) => (addonId === 'addon_storage' ? STORAGE_CHARGES : undefined)}
+      addonCharges={(addonId) => (addonId === 'addon_storage' ? STORAGE_CHARGES : [])}
       taxRates={TAX_RATES}
       customerTaxes={[
         {
@@ -486,6 +523,67 @@ async function openCommitment(canvas: ReturnType<typeof within>) {
   throw new Error('No usage charge to commit on')
 }
 
+/** Whether the charges table scrolls sideways. */
+const scrollsSideways = (canvasElement: HTMLElement) => {
+  // The list table's scroller carries its minimum width.
+  const scroller = canvasElement.querySelector<HTMLElement>('[style*="--table-min"]')
+  if (!scroller) throw new Error('No table scroller')
+  return scroller.scrollWidth > scroller.clientWidth + 1
+}
+
+/**
+ * The charges table fits the wizard without scrolling sideways, and the price
+ * stays on one line. A charge's own dates read under its name, not in a column.
+ */
+export const ChargesFitWithoutScrolling: Story = {
+  args: {
+    prefilled: true,
+    step: 'phases',
+    chargeCount: 6,
+    datedCharge: { start: '2026-10-01', end: '2027-01-01' },
+  },
+  decorators: [
+    // The room the console gives the wizard on a 1280px screen, beside its sidebar.
+    (Story) => (
+      <div className="w-[960px]">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/· Oct 1, 2026 → Jan 1, 2027$/)).toBeVisible()
+    expect(canvas.queryByRole('columnheader', { name: 'In effect' })).toBeNull()
+    // In effect on the contract's first day, so there is nothing to note.
+    expect(canvas.queryByText(/outside the contract start/)).toBeNull()
+    await waitFor(() => expect(scrollsSideways(canvasElement)).toBe(false))
+  },
+}
+
+/**
+ * A plan charge that starts after the contract does: one short note under the
+ * table, and no extra column.
+ */
+export const ChargeOutsideContractStart: Story = {
+  args: {
+    prefilled: true,
+    step: 'phases',
+    chargeCount: 6,
+    datedCharge: { start: '2026-11-01' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByText(
+        /^One charge sits outside the contract start \(Oct 20, 2026\): Platform base, from Nov 1, 2026\. It bills only while its own dates are in effect\.$/,
+        {},
+        { timeout: 5000 },
+      ),
+    ).toBeVisible()
+    expect(canvas.queryByRole('columnheader', { name: 'In effect' })).toBeNull()
+  },
+}
+
 /**
  * A contract of one phase lists the plan's charges in one Charges card, with
  * no phase chrome; proration is not here (it is a billing term, in Dates and
@@ -501,7 +599,8 @@ export const PhaseCharges: Story = {
     await expect(canvas.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeVisible()
-    await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeVisible()
+    // Every charge runs with the phase, so there is no "In effect" column.
+    await expect(canvas.queryByRole('columnheader', { name: 'In effect' })).toBeNull()
     const dialog = await openCommitment(canvas)
     await expect(dialog.getByRole('heading', { name: 'Configure commitment' })).toBeVisible()
     await expect(dialog.getByText('True-up')).toBeVisible()
@@ -900,11 +999,26 @@ export const AddsAnAddon: Story = {
     ).toBeVisible()
     await userEvent.click(picker)
     await userEvent.click(await screen.findByRole('option', { name: /Premium support/ }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Add add-on · Premium support' }),
+    )
+    await expect(
+      dialog.getByText(
+        "This add-on has no charges in this contract's currency and billing period.",
+      ),
+    ).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
     await expect(await canvas.findByRole('columnheader', { name: 'Add-on' })).toBeVisible()
-    await expect(canvas.getByRole('columnheader', { name: 'Type' })).toBeVisible()
+    await expect(canvas.getByRole('columnheader', { name: 'Charges' })).toBeVisible()
+    // One rule, under the card's title: none runs into the table or under the picker.
+    const card = canvas.getByRole('heading', { name: 'Add-ons' }).closest('section')!
+    await expect(card.querySelectorAll('[data-slot="separator"]')).toHaveLength(1)
     await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toBeVisible()
     await userEvent.click(canvas.getByRole('combobox', { name: /^Add another/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Add add-on' }),
+    )
     await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Extra storage' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove add-on' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
@@ -918,6 +1032,58 @@ export const AddsAnAddon: Story = {
   },
 }
 
+/**
+ * Picking an add-on lists all its charges that bill on this contract, fixed and
+ * usage (not the quarterly one on a monthly contract). Each can be repriced
+ * before the add-on is added; the new price is sent on the add-on.
+ */
+export const AddonPriceOverride: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
+    let dialog = within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' }))
+    await expect(dialog.getByText('Storage base')).toBeVisible()
+    await expect(dialog.getByText('Storage (GB)')).toBeVisible()
+    expect(dialog.queryByText('Storage archive (GB)')).toBeNull()
+    await userEvent.click(dialog.getByRole('button', { name: 'Actions for Storage base' }))
+    const override = await screen.findByRole('menuitem', { name: 'Override price' })
+    // A fixed charge takes no commitment.
+    expect(screen.queryByRole('menuitem', { name: 'Add commitment' })).toBeNull()
+    await userEvent.click(override)
+    const price = within(
+      await screen.findByRole('dialog', { name: 'Override price · Storage base' }),
+    )
+    await userEvent.type(price.getByLabelText(/^Amount/), '20')
+    await userEvent.click(price.getByRole('button', { name: 'Save override' }))
+    dialog = within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' }))
+    await expect(await dialog.findByText('$20.00')).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
+    await expect(await canvas.findByText(/\$20\.00 \(changed\)/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addons: [
+            {
+              addonId: 'addon_storage',
+              name: 'Extra storage',
+              priceOverrides: [
+                expect.objectContaining({
+                  priceId: STORAGE_CHARGES[2]!.id,
+                  billingModel: BillingModel.FlatFee,
+                  amount: '20',
+                }),
+              ],
+            },
+          ],
+        }),
+      ),
+    )
+  },
+}
+
 /** As V1's add-on card: an add-on's usage charge can carry a commitment, sent with the add-on. */
 export const AddonCommitment: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 2 },
@@ -925,14 +1091,19 @@ export const AddonCommitment: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('combobox', { name: /^Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
-    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Extra storage' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Actions for Storage (GB)' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add commitment' }))
+    const commitment = within(await screen.findByRole('dialog'))
+    await userEvent.type(await commitment.findByRole('textbox', { name: /^Commitment \(/ }), '250')
+    await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
     await userEvent.click(
-      await screen.findByRole('menuitem', { name: 'Add commitment: Storage (GB)' }),
+      within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' })).getByRole(
+        'button',
+        { name: 'Add add-on' },
+      ),
     )
-    const dialog = within(await screen.findByRole('dialog'))
-    await userEvent.type(await dialog.findByRole('textbox', { name: /^Commitment \(/ }), '250')
-    await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
-    await expect(await canvas.findByText(/^Storage \(GB\): /)).toBeVisible()
+    await expect(await canvas.findByText('Storage (GB)')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -952,9 +1123,10 @@ export const AddonCommitment: Story = {
 }
 
 /**
- * Commitments saved on both of the add-on's charges, then the contract moved to
- * monthly: the quarterly price no longer attaches, so its commitment is
- * neither listed nor sent (the API would refuse it). The monthly one stays.
+ * Commitments saved on both of the add-on's usage charges, then the contract
+ * moved to monthly: the quarterly price no longer attaches, so its commitment
+ * is neither listed nor sent (the API would refuse it). The monthly one stays,
+ * and Edit reopens the add-on's charges with it.
  */
 export const AddonCommitmentAfterPeriodChange: Story = {
   args: {
@@ -965,7 +1137,7 @@ export const AddonCommitmentAfterPeriodChange: Story = {
       {
         addonId: 'addon_storage',
         name: 'Extra storage',
-        commitments: STORAGE_CHARGES.map((charge) => ({
+        commitments: STORAGE_CHARGES.slice(0, 2).map((charge) => ({
           priceId: charge.id,
           type: 'amount' as const,
           value: '250',
@@ -981,14 +1153,18 @@ export const AddonCommitmentAfterPeriodChange: Story = {
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText(/^Storage \(GB\): /)).toBeVisible()
-    expect(canvas.queryByText(/^Storage archive \(GB\): /)).toBeNull()
+    await expect(await canvas.findByText('Storage (GB)')).toBeVisible()
+    expect(canvas.queryByText('Storage archive (GB)')).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for Extra storage' }))
-    await expect(
-      await screen.findByRole('menuitem', { name: 'Edit commitment: Storage (GB)' }),
-    ).toBeVisible()
-    expect(screen.queryByRole('menuitem', { name: /Storage archive/ })).toBeNull()
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Edit add-on · Extra storage' }),
+    )
+    expect(dialog.queryByText('Storage archive (GB)')).toBeNull()
+    await userEvent.click(dialog.getByRole('button', { name: 'Actions for Storage (GB)' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Edit commitment' })).toBeVisible()
     await userEvent.keyboard('{Escape}')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save add-on' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -1015,6 +1191,199 @@ export const PhaseLoading: Story = {
   args: { prefilled: true, step: 'phases', planLoading: true },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText(/Loading the plan's charges/)).toBeVisible()
+  },
+}
+
+/**
+ * The plan's entitlements can be changed for this contract alone, the way the
+ * entitlement form edits them: a grant with its value type and value, an older
+ * usage limit as a limit, a static value. A config entitlement keeps the plan's.
+ */
+export const EditsEntitlements: Story = {
+  args: {
+    prefilled: true,
+    step: 'commitments',
+    chargeCount: 2,
+    entitlementCount: 5,
+    // Custom domain carries grant config: 100 a day.
+    entitlementPatch: {
+      ent_3: {
+        usageLimit: null,
+        usageResetPeriod: null,
+        grantQuota: '100',
+        grantMeasure: EntitlementGrantMeasure.Quantity,
+        grantDurationUnit: EntitlementGrantDurationUnit.Day,
+        grantDurationValue: 1,
+      },
+    },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('AI Tokens')).toBeVisible()
+    expect(canvas.queryByRole('button', { name: 'Actions for Video minutes' })).toBeNull()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Custom domain' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    let dialog = within(
+      await screen.findByRole('dialog', { name: 'Edit entitlement · Custom domain' }),
+    )
+    await expect(dialog.getByRole('textbox', { name: /^Value/ })).toHaveValue('100')
+    await userEvent.click(dialog.getByRole('combobox', { name: /^Value type/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Amount' }))
+    const value = dialog.getByRole('textbox', { name: /^Value/ })
+    await userEvent.clear(value)
+    await userEvent.type(value, '500')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('500 of usage value')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for AI Tokens' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · AI Tokens' }))
+    // An older usage limit stays a limit: no value type to turn it into a grant.
+    expect(dialog.queryByRole('combobox', { name: /^Value type/ })).toBeNull()
+    const tokens = dialog.getByRole('textbox', { name: /^Usage limit/ })
+    await expect(tokens).toHaveValue('10000')
+    await userEvent.clear(tokens)
+    await userEvent.type(tokens, '20000')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('20,000')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Seats' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · Seats' }))
+    const seats = dialog.getByRole('textbox', { name: /^Value/ })
+    await userEvent.clear(seats)
+    await userEvent.type(seats, '25')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('25')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entitlementOverrides: [
+            {
+              entitlementId: 'ent_3',
+              grant: expect.objectContaining({ measure: 'amount', quota: '500', unit: 'day' }),
+            },
+            { entitlementId: 'ent_0', usageLimit: 20_000 },
+            { entitlementId: 'ent_2', staticValue: '25' },
+          ],
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * A lifetime usage limit (resets never) stays a lifetime limit: only the
+ * number changes, and no recurring grant is sent in its place.
+ */
+export const EntitlementNeverResetKeepsItsLimit: Story = {
+  args: {
+    prefilled: true,
+    step: 'commitments',
+    chargeCount: 2,
+    entitlementCount: 5,
+    entitlementPatch: { ent_0: { usageResetPeriod: UsageResetPeriod.Never } },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for AI Tokens' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Edit entitlement · AI Tokens' }),
+    )
+    expect(dialog.queryByRole('combobox', { name: /^Usage resets/ })).toBeNull()
+    const limit = dialog.getByRole('textbox', { name: /^Usage limit/ })
+    await userEvent.clear(limit)
+    await userEvent.type(limit, '500')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entitlementOverrides: [{ entitlementId: 'ent_0', usageLimit: 500 }],
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * An unlimited usage limit opens blank; saving it unchanged is no change, and
+ * a limit past what the API can hold is refused.
+ */
+export const EntitlementUnlimitedLimitUnchanged: Story = {
+  args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Custom domain' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Edit entitlement · Custom domain' }),
+    )
+    await expect(dialog.getByRole('textbox', { name: /^Usage limit/ })).toHaveValue('')
+    await userEvent.type(dialog.getByRole('textbox', { name: /^Usage limit/ }), '99999999999999999')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await dialog.findByText('Enter a smaller number')).toBeVisible()
+    await userEvent.clear(dialog.getByRole('textbox', { name: /^Usage limit/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(canvas.queryByText('Changed')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ entitlementOverrides: [] }),
+      ),
+    )
+  },
+}
+
+/** Entitlement changes belong to the plan: choosing another plan drops them. */
+export const EntitlementChangesClearOnPlanSwitch: Story = {
+  args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for SSO' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · SSO' }))
+    await userEvent.click(dialog.getByRole('switch'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('Changed')).toBeVisible()
+    const steps = within(canvas.getByRole('group', { name: 'Contract steps' }))
+    await userEvent.click(steps.getByRole('button', { name: /Contract/ }))
+    await userEvent.click(await canvas.findByRole('combobox', { name: /^Plan/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Starter/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ planId: 'plan_0', entitlementOverrides: [] }),
+      ),
+    )
+  },
+}
+
+/** Saving a change back to the plan's values, or Reset to plan, sends nothing for it. */
+export const EntitlementResetToPlan: Story = {
+  args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for SSO' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · SSO' }))
+    await userEvent.click(dialog.getByRole('switch'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('Changed')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for SSO' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Reset to plan' }))
+    await waitFor(() => expect(canvas.queryByText('Changed')).toBeNull())
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ entitlementOverrides: [] }),
+      ),
+    )
   },
 }
 

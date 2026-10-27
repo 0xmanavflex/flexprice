@@ -21,6 +21,7 @@ import {
   useRemoveSubscriptionTax,
   useAddons,
   useEntitiesCharges,
+  useFeaturesByMeters,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
   useCancelSubscription,
@@ -63,7 +64,7 @@ import {
 import { EntityAlertDialog, SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
-import { usePlanFormOptions } from '../plans/planFormOptions'
+import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
 import { railActivity } from '@/pages/shared/activityLog'
 import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { detailGate } from '../shared/detailGate'
@@ -177,13 +178,19 @@ export function SubscriptionDetailPage({
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
-  // The usage charges of add-ons that have any, so attaching one can commit on them.
-  const addonCharges = useEntitiesCharges(
-    PriceEntityType.Addon,
-    (addonCatalogue.data?.addons ?? [])
-      .filter((addon) => addon.status === 'published' && addon.usageChargeCount > 0)
-      .map((addon) => addon.id),
+  // The charges of add-ons that have any, so attaching one can reprice them and commit on usage.
+  const addonIds = (addonCatalogue.data?.addons ?? [])
+    .filter((addon) => addon.status === 'published' && addon.chargeCount > 0)
+    .map((addon) => addon.id)
+  const addonCharges = useEntitiesCharges(PriceEntityType.Addon, addonIds)
+  // The add-on charges' meters, by id: the feature picker reads only its first page,
+  // and an add-on price override needs its charge's meter to offer a bucket size.
+  const addonMeters = useFeaturesByMeters(
+    [...(addonCharges.data?.values() ?? [])]
+      .flat()
+      .flatMap((charge) => (charge.meterId ? [charge.meterId] : [])),
   )
+  const meters = withMeters(formOptions.meters, addonMeters.data ?? [])
   const taxRateCatalogue = useTaxRates({
     ...DEFAULT_TAX_RATE_QUERY,
     pageSize: 100,
@@ -314,7 +321,14 @@ export function SubscriptionDetailPage({
           addons: (addonCatalogue.data?.addons ?? [])
             .filter((addon) => addon.status === 'published')
             .map((addon) => ({ id: addon.id, name: addon.name })),
-          addonCharges: (addonId) => addonCharges.data?.get(addonId),
+          // Undefined while unknown (loading or failed); a loaded add-on missing from the result has none.
+          addonCharges: (addonId) =>
+            addonCatalogue.data && addonIds.length === 0
+              ? []
+              : addonCharges.data
+                ? (addonCharges.data.get(addonId) ?? [])
+                : undefined,
+          addonChargesFailed: addonCharges.isError && !addonCharges.data,
           coupons: (couponCatalogue.data?.coupons ?? [])
             .filter((coupon) => coupon.code !== '')
             .map((coupon) => ({ code: coupon.code, name: coupon.name })),
@@ -347,7 +361,7 @@ export function SubscriptionDetailPage({
         onPause={(draft) => pause.mutateAsync({ id: data.id, draft })}
         onResume={(draft) => resume.mutateAsync({ id: data.id, draft })}
         onAlertSettings={contractAlert.openAlertSettings}
-        meters={formOptions.meters}
+        meters={meters}
         priceUnits={formOptions.units.filter((unit) => unit.baseCurrency === data.currency)}
         onAddCharge={async (draft) => {
           await addLine.mutateAsync({ id: data.id, draft })

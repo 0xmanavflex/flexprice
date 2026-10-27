@@ -203,6 +203,43 @@
       "usedBy": [],
       "story": null
     },
+    "AddonChargesDialog": {
+      "file": "src/pages/contracts/SubscriptionForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "CalendarIcon",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
+        "ChoiceCards",
+        "Composer",
+        "ContractChargeDialog",
+        "CreditGrantCreateForm",
+        "DateInput",
+        "DetailTable",
+        "EmptyState",
+        "Field",
+        "FormCard",
+        "FormDialog",
+        "FormPage",
+        "FormRow",
+        "GrantAllowanceFields",
+        "LabelWithHint",
+        "OptionCombobox",
+        "OptionSelect",
+        "PencilIcon",
+        "PlusIcon",
+        "PriceOverrideForm",
+        "RowActionsMenu",
+        "SimpleTable",
+        "UserIcon",
+        "UsersIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [
+        "ContractSectionDialogs"
+      ],
+      "story": "./src/pages/contracts/SubscriptionForm.stories.tsx"
+    },
     "AddonForm": {
       "file": "src/pages/product-catalog/addons/AddonForm.tsx",
       "layer": "surface",
@@ -897,6 +934,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AddonChargesDialog",
         "ApiCard",
         "CustomerAnalyticsView",
         "DashboardHome",
@@ -972,7 +1010,7 @@
         "PlusIcon"
       ],
       "usedBy": [
-        "ContractSectionDialogs",
+        "AddonChargesDialog",
         "SubscriptionForm"
       ],
       "story": null
@@ -987,6 +1025,7 @@
         "OptionSelect"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "SubscriptionForm"
       ],
       "story": "./src/pages/contracts/ChargeCouponDialog.stories.tsx"
@@ -1291,6 +1330,7 @@
       ],
       "usedBy": [
         "AddChargeDialog",
+        "AddonChargesDialog",
         "ChargeForm",
         "ContractChargeDialog",
         "CreditGrantCreateForm",
@@ -1458,6 +1498,7 @@
       "usedBy": [
         "AddCardDialog",
         "AddCreditsDialog",
+        "AddonChargesDialog",
         "AutoTopupDialog",
         "ChargeAlertForm",
         "ChargeCommitmentDialog",
@@ -1477,6 +1518,7 @@
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "RemoveCardDialog",
+        "SubscriptionForm",
         "TaxDialog"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1615,6 +1657,7 @@
         "FormDialog"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "SubscriptionDetailView",
         "SubscriptionForm"
       ],
@@ -1659,14 +1702,13 @@
       "file": "src/pages/contracts/ContractSectionDialogs.tsx",
       "layer": "surface",
       "composes": [
-        "ChargeCommitmentDialog",
+        "AddonChargesDialog",
         "Composer",
         "CreditGrantCreateForm",
         "EntitlementCreateForm",
         "FormDialog",
         "LabelWithHint",
         "OptionSelect",
-        "SimpleTable",
         "TaxDialog"
       ],
       "usedBy": [
@@ -1990,6 +2032,7 @@
         "OptionSelect"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "ContractSectionDialogs",
         "PlanForm",
         "SubscriptionForm"
@@ -2475,6 +2518,7 @@
       ],
       "usedBy": [
         "ActivityEventSheet",
+        "AddonChargesDialog",
         "ChargeForm",
         "ContractAddChargeForm",
         "ContractChargeDialog",
@@ -2673,6 +2717,7 @@
         "SortMenu"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "AddonSubscriptionsView",
         "ChargeTable",
         "CouponRedemptionsView",
@@ -2914,6 +2959,7 @@
         "SceneIllustration"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "AddonSubscriptionsView",
         "CostMarginCard",
         "CouponRedemptionsView",
@@ -3518,6 +3564,7 @@
         "AcceptInvitationForm",
         "AddCardDialog",
         "AddCreditsDialog",
+        "AddonChargesDialog",
         "AutoTopupDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
@@ -3559,6 +3606,7 @@
         "SignInForm",
         "SignUpScreen",
         "SpecField",
+        "SubscriptionForm",
         "SyncOptions",
         "UpgradeView",
         "UsageTermsFields",
@@ -3887,6 +3935,7 @@
         "InfoHint"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "AddonForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -3917,6 +3966,7 @@
         "AddCardDialog",
         "AddChargeDialog",
         "AddCreditsDialog",
+        "AddonChargesDialog",
         "AutoTopupDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
@@ -3991,6 +4041,7 @@
         "WorkflowStepper"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "AddonForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -4027,6 +4078,7 @@
         "InfoHint"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "AddonForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -4170,8 +4222,10 @@
         "OptionSelect"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "EntitlementCreateForm",
-        "EntitlementEditForm"
+        "EntitlementEditForm",
+        "SubscriptionForm"
       ],
       "story": "./src/pages/product-catalog/entitlements/GrantAllowanceFields.stories.tsx"
     },
@@ -4730,6 +4784,7 @@
         "InfoHint"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "ContractIntegrations",
         "ContractSectionDialogs",
         "CustomerTaxSection",
@@ -4737,6 +4792,7 @@
         "EnvironmentCopyForm",
         "EnvironmentForm",
         "InvoiceForm",
+        "SubscriptionForm",
         "TaxDialog"
       ],
       "story": "./src/compositions/forms/LabelWithHint.stories.tsx"
@@ -5397,6 +5453,7 @@
         "OptionBody"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "AddressPicker",
         "ChargeForm",
         "EntitlementCreateForm",
@@ -5413,6 +5470,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "AddonChargesDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",
@@ -5709,6 +5767,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AddonChargesDialog",
         "AddonGrid",
         "CostSheetGrid",
         "CouponGrid",
@@ -6052,6 +6111,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AddonChargesDialog",
         "AddonGrid",
         "ChargeCommitmentDialog",
         "ChargeSheet",
@@ -6279,6 +6339,7 @@
         "SimpleTable"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "SubscriptionForm"
       ],
       "story": "./src/pages/product-catalog/charges/PriceOverrideForm.stories.tsx"
@@ -6657,6 +6718,7 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "ChargeTable",
         "CreditGrantTable",
         "CustomerDetail",
@@ -7209,8 +7271,8 @@
         "LockedMark"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "ConnectionExports",
-        "ContractSectionDialogs",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -7504,15 +7566,19 @@
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChoiceCards",
+        "Composer",
         "ContractChargeDialog",
         "CreditGrantCreateForm",
         "DateInput",
         "DetailTable",
         "EmptyState",
+        "Field",
         "FormCard",
         "FormDialog",
         "FormPage",
         "FormRow",
+        "GrantAllowanceFields",
+        "LabelWithHint",
         "OptionCombobox",
         "OptionSelect",
         "PencilIcon",
@@ -8129,6 +8195,7 @@
       "composes": [],
       "usedBy": [
         "ActivityEventSheet",
+        "AddonChargesDialog",
         "CustomerActivityView",
         "CustomerGrid",
         "InvoiceDetailView",
@@ -8157,6 +8224,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AddonChargesDialog",
         "PageShell",
         "ShellSearch",
         "SubscriptionForm"
@@ -8193,6 +8261,7 @@
       "composes": [],
       "usedBy": [
         "ActivityEventSheet",
+        "AddonChargesDialog",
         "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",

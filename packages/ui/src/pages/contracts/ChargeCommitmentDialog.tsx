@@ -72,6 +72,11 @@ export interface ChargeCommitmentDialogProps {
     bucketSize: BucketSize | ''
     /** Seeds a new window's price. */
     unitAmount: string
+    /**
+     * With `unitAmount` a price per package: the package's size, so a new
+     * window starts as a package price rather than reading it as per unit.
+     */
+    packageSize?: string | undefined
     priceBase: CommitmentPriceBase | undefined
   } | null
   commitment: ChargeCommitment | undefined
@@ -119,7 +124,7 @@ const HOURS = TIMES.filter((time) => time.endsWith(':00'))
 
 let windowSeq = 0
 
-function newWindow(price: string): CommitmentWindow {
+function newWindow(price: string, packageSize = ''): CommitmentWindow {
   windowSeq += 1
   return {
     id: `window_${windowSeq}`,
@@ -129,9 +134,9 @@ function newWindow(price: string): CommitmentWindow {
     value: '',
     overageFactor: '',
     trueUp: false,
-    billingModel: WindowBillingModel.PerUnit,
+    billingModel: packageSize ? WindowBillingModel.Package : WindowBillingModel.PerUnit,
     price,
-    packageSize: '',
+    packageSize,
   }
 }
 
@@ -379,7 +384,11 @@ function CommitmentBody({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => set({ windows: [...draft.windows, newWindow(charge.unitAmount)] })}
+              onClick={() =>
+                set({
+                  windows: [...draft.windows, newWindow(charge.unitAmount, charge.packageSize)],
+                })
+              }
             >
               <PlusIcon aria-hidden />
               Add window
