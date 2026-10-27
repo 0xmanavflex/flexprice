@@ -2294,7 +2294,7 @@
         "OptionSelect",
         "Pill",
         "PlusIcon",
-        "Section",
+        "Properties",
         "SubTabState",
         "WalletIcon",
         "WalletLedgerTable"
@@ -6323,6 +6323,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "CustomerActivityView",
+        "CustomerWalletView",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -6777,7 +6778,6 @@
         "CustomerEventsGrid",
         "CustomerTaxSection",
         "CustomerUsageSummary",
-        "CustomerWalletView",
         "DataExportDetail",
         "EntitlementTable",
         "ExportRunList",
