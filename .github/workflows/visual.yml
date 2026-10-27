@@ -10,10 +10,8 @@ name: Visual
 # The Playwright config starts the app itself (`VITE_USE_MOCKS=true`).
 #
 # Text renders slightly differently on a laptop or a dev container than on this
-# runner, enough to fail a text-heavy page. So baselines are made here: add the
-# `update-visual-baselines` label to a PR and the `Update baselines` job
-# regenerates them on this runner, commits them to the PR branch and removes
-# the label. Review the image diff in the PR before merging.
+# runner, enough to fail a text-heavy page, so baselines are made on this runner:
+# see `visual-update.yml`.
 on:
   # Called by `pipeline.yml` on a push to main, so main runs these in order
   # rather than all at once. The triggers below still fire on their own for
@@ -25,7 +23,6 @@ on:
       - feat/v2-foundation
       - 'ci/**'
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
 
 permissions:
   contents: read
@@ -37,7 +34,6 @@ concurrency:
 jobs:
   screenshots:
     name: Screenshots
-    if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -74,58 +70,3 @@ jobs:
             apps/console/playwright-report
             apps/console/test-results
           retention-days: 7
-
-  update-baselines:
-    name: Update baselines
-    if: >-
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'update-visual-baselines' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-      pull-requests: write
-    concurrency:
-      group: visual-update-${{ github.event.pull_request.number }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-        env:
-          HUSKY: 0
-
-      - name: Install the Playwright browser
-        run: pnpm --filter console exec playwright install --with-deps chromium
-
-      - name: Regenerate the baselines
-        run: pnpm test:visual:update
-
-      # A push made with GITHUB_TOKEN starts no workflow, so the next push to
-      # the PR is what runs Screenshots against these.
-      - name: Commit them to the PR branch
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add apps/console/e2e/visual/__screenshots__
-          if git diff --cached --quiet; then
-            echo 'Baselines already match this runner.'
-          else
-            git commit -m 'test(visual): regenerate baselines on the CI runner'
-            git push
-          fi
-
-      - name: Remove the label
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label update-visual-baselines
