@@ -129,8 +129,9 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
   showTitle?: boolean
   /**
-   * Forces the "In effect" and "Billing timing" columns on. They are on by
-   * default in the wide layout and in the column menu in the narrow one.
+   * Brings "Billing timing" on screen in the narrow layout. Both it and "In
+   * effect" are on by default in the wide layout; the narrow one keeps "In
+   * effect" in the column menu either way, so its row stays uncluttered.
    */
   showDates?: boolean
   description?: string
@@ -352,7 +353,7 @@ export function ChargeTable({
     {
       key: 'name',
       header: chargeColumnLabel,
-      width: narrow ? 220 : 280,
+      width: narrow ? 220 : 260,
       sortBy: (charge) => nameOf(charge),
       text: (charge) => `${nameOf(charge)} ${kindLine(charge, period, locale, source?.(charge))}`,
       cell: (charge) => (
@@ -367,7 +368,7 @@ export function ChargeTable({
     {
       key: 'price',
       header: 'Price',
-      width: narrow ? 160 : 200,
+      width: narrow ? 150 : 170,
       cell: (charge) => (
         <span className="block min-w-0">
           <span className="block tabular-nums">{priceLabel(charge)}</span>
@@ -382,7 +383,7 @@ export function ChargeTable({
     {
       key: 'flags',
       header: 'Flags',
-      width: narrow ? 230 : 360,
+      width: narrow ? 230 : 300,
       cell: (charge) => (
         <ChargeFlags
           detail={details?.get(charge.id)}
@@ -405,8 +406,8 @@ export function ChargeTable({
     charge.invoiceCadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'
 
   // After price: quantity (when a page knows it), billing timing and the dates
-  // the charge is in effect, then flags. Timing and dates sit in the column
-  // menu, not on screen, in the narrow layout beside a side rail.
+  // the charge is in effect, then flags. Beside a side rail (narrow) the dates
+  // sit in the column menu, and timing too unless `showDates` asks for it.
   const middle: DetailColumn<Charge>[] = []
   if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
     middle.push({
@@ -423,21 +424,21 @@ export function ChargeTable({
     {
       key: 'timing',
       header: 'Billing timing',
-      width: 130,
+      // Wide enough that its header never runs into "In effect".
+      width: 170,
       text: timing,
       cell: (charge) => <span>{timing(charge)}</span>,
-      // `showDates` brings both on screen in the narrow layout: when a charge
-      // is billed belongs with when it is in effect.
       ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
     },
     {
       key: 'dates',
       header: 'In effect',
-      width: 220,
+      width: 240,
       sortBy: (charge) => charge.startDate?.getTime() ?? 0,
       text: inEffect,
       cell: (charge) => <span className="tabular-nums">{inEffect(charge)}</span>,
-      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
+      // Too much for a row beside a side rail; still one click away in the column menu.
+      ...(narrow ? { hiddenByDefault: true } : {}),
     },
   )
   columns.splice(2, 0, ...middle)

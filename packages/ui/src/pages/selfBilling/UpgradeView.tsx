@@ -16,6 +16,7 @@ import { Spinner } from '@ui/components/primitives/spinner'
 import { Field } from '@ui/compositions/forms/Field'
 import { InfoHint } from '@ui/compositions/forms/InfoHint'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
+import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
 import { ArrowLeftIcon, CheckIcon, LockIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -210,6 +211,8 @@ export function UpgradeView({
   const addressError = errors.country ?? errors.line1 ?? errors.city ?? errors.postalCode
   const set = (key: keyof CheckoutDetails) => (value: string) =>
     setDetails((current) => ({ ...current, [key]: value }))
+  // The header names the page: Settings › Usage & billing › Upgrade, the middle crumb the way back.
+  usePublishDetailTrail([{ label: 'Usage & billing', onClick: onBack }, { label: 'Upgrade' }])
 
   const submit = () => {
     setTried(true)
@@ -234,7 +237,9 @@ export function UpgradeView({
   )
 
   return (
-    <div className="grid min-h-full flex-1 lg:grid-cols-2">
+    // `flex-1`, not `min-h-full`: the shell's scroller also holds the header,
+    // so a full-height page under it always overflowed by the header's height.
+    <div className="grid flex-1 lg:grid-cols-2">
       <Offer state={state} eventCap={eventCap} today={today} onBack={onBack} />
       <section
         aria-labelledby="upgrade-billing-details"

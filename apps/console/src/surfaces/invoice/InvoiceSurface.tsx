@@ -30,12 +30,8 @@ export function InvoiceSurface({ pathname }: { pathname: string }) {
 function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
   const { data, error, isPending, refetch } = useHostedInvoice(link.apiOrigin, link.token)
   const { pay, isPending: isPaying } = usePayHostedInvoice(link.apiOrigin, link.token)
-  const { download, isPending: isDownloading } = useHostedInvoiceDownload(
-    link.apiOrigin,
-    link.token,
-  )
+  const { download } = useHostedInvoiceDownload(link.apiOrigin, link.token)
   const [payError, setPayError] = useState<string | null>(null)
-  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [preview, setPreview] = useState<{ url: string | null; error: string | null } | null>(null)
 
   useEffect(() => {
@@ -82,27 +78,7 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
     }
   }
 
-  const onDownload = async () => {
-    setDownloadError(null)
-    // Opened on the click itself so pop-up blockers allow it; pointed at the PDF once the API answers.
-    const tab = window.open('about:blank', '_blank')
-    if (tab) tab.opener = null
-    try {
-      const url = await download()
-      if (url === null || !isSafeNavigationUrl(url)) {
-        tab?.close()
-        setDownloadError(GENERIC_ERROR)
-        return
-      }
-      if (tab) tab.location.replace(url)
-      else window.location.assign(url)
-    } catch (cause) {
-      tab?.close()
-      setDownloadError(messageOf(cause))
-    }
-  }
-
-  // The preview shows the same PDF Download saves, fetched when it opens: each link lasts an hour.
+  // The preview fetches the PDF's link when it opens (each link lasts an hour); its Download PDF saves it.
   const onPreview = async () => {
     setPreview({ url: null, error: null })
     try {
@@ -126,9 +102,6 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
       onPay={() => void onPay()}
       isPaying={isPaying}
       payError={payError}
-      onDownload={() => void onDownload()}
-      isDownloading={isDownloading}
-      downloadError={downloadError}
       onPreview={() => void onPreview()}
       preview={preview}
       onClosePreview={() => setPreview(null)}
