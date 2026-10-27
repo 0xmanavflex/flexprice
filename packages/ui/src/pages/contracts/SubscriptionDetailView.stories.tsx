@@ -874,7 +874,7 @@ export const NoCommitments: Story = {
   },
 }
 
-/** Overview's summary lists only what the contract changed from its plan. */
+/** Overview's summary lists the live charges, the ones the contract changed first. */
 export const ContractSpecificCharges: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -883,16 +883,16 @@ export const ContractSpecificCharges: Story = {
     )
     await expect(section.queryByText(/active charges/)).toBeNull()
     await expect(section.getByText('Onboarding')).toBeVisible()
-    await expect(section.queryByText('Platform fee')).toBeNull()
+    // A plan charge left as the plan sets it is still a charge on the contract.
+    await expect(section.getByText('Platform fee')).toBeVisible()
   },
 }
 
 /**
- * A contract that follows its plan still gets the section: it says so.
+ * A contract that follows its plan lists its plan charges.
  *
- * The old Overview dropped the section entirely, which read as "this contract
- * has no charges" rather than "none of them were changed". The summary states
- * which it is.
+ * The summary once showed only changed charges, so a contract billed exactly
+ * as its plan read "No changes" with an empty block, as if it had no charges.
  */
 export const NoContractSpecificCharges: Story = {
   // Only the line with nothing on it: the other plan line carries a
@@ -904,9 +904,8 @@ export const NoContractSpecificCharges: Story = {
     const section = within(
       (await canvas.findByRole('heading', { name: 'Charges' })).closest('section')!,
     )
-    await expect(
-      section.getByText('Every charge is billed as the plan sets it. Changed charges show here.'),
-    ).toBeVisible()
+    await expect(section.getByText('Platform fee')).toBeVisible()
+    await expect(section.queryByText('No charges yet')).toBeNull()
   },
 }
 
