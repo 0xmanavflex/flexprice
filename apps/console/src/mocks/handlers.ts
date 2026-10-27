@@ -5284,6 +5284,41 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     sourceFor('subscriptions').items.unshift(row)
+    // As the API (handleFxOverride): each fx_rates entry becomes one of the
+    // contract's own rates, converting into the invoicing customer's currency.
+    const inlineFx = Array.isArray(body['fx_rates'])
+      ? (body['fx_rates'] as Record<string, unknown>[])
+      : []
+    // The API refuses fx_rates when the payer has no other billing currency; the
+    // mock simply makes no rate then.
+    if (inlineFx.length > 0) {
+      const payerExternal = readString(
+        (body['inheritance'] ?? {}) as Record<string, unknown>,
+        'invoicing_customer_external_id',
+      )
+      const payer = sourceFor('customers').items.find((c) =>
+        payerExternal
+          ? readString(c, 'external_id') === payerExternal
+          : readString(c, 'id') === readString(body, 'customer_id'),
+      )
+      const to = payer ? readString(payer, 'billing_currency').toLowerCase() : ''
+      if (to)
+        inlineFx.forEach((fx, index) =>
+          fxRates.push({
+            id: `fxrate_${row.id}_${index}`,
+            scope: 'subscription',
+            scope_id: row.id,
+            from_currency: (readString(body, 'currency') || 'usd').toLowerCase(),
+            to_currency: to,
+            rate: String(fx['rate'] ?? ''),
+            ...(fx['start_date'] ? { start_date: fx['start_date'] } : {}),
+            ...(fx['end_date'] ? { end_date: fx['end_date'] } : {}),
+            source: 'fixed',
+            status: 'published',
+            updated_at: new Date().toISOString(),
+          }),
+        )
+    }
     // An active contract bills its in-advance fixed charges at once, as the API
     // does, so the customer's first invoice is there to find on their Invoices
     // tab. Drafts and future starts have not begun, so they bill nothing yet.
