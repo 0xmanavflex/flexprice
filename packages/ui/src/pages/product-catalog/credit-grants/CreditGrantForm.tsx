@@ -279,34 +279,6 @@ export function CreditGrantCreateForm({
               />
             )}
           </Field>
-          {cadence === CreditGrantCadence.Recurring ? (
-            <Field
-              label="Refreshes every"
-              hint="How often a recurring grant issues its credits again."
-              required
-              error={messageOf(errors, 'period')}
-            >
-              {({ id }) => (
-                <Controller
-                  control={form.control}
-                  name="period"
-                  render={({ field }) => (
-                    <OptionSelect
-                      id={id}
-                      value={field.value ?? ''}
-                      onValueChange={field.onChange}
-                      options={optionsOf(
-                        Object.values(CreditGrantPeriod),
-                        CREDIT_GRANT_PERIOD_LABEL,
-                      )}
-                      placeholder="Choose a period"
-                      disabled={isSubmitting}
-                    />
-                  )}
-                />
-              )}
-            </Field>
-          ) : null}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -383,11 +355,40 @@ export function CreditGrantCreateForm({
               />
             )}
           </Field>
-          <p className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-sm">
-            {summary}
-          </p>
         </div>
       </div>
+
+      {/* Recurring options open here, full width, above the note: not beside it. */}
+      {cadence === CreditGrantCadence.Recurring ? (
+        // Half width on wide screens, lined up with the left column above.
+        <div className="md:w-1/2 md:pr-3">
+          <Field
+            label="Refreshes every"
+            hint="How often a recurring grant issues its credits again."
+            required
+            error={messageOf(errors, 'period')}
+          >
+            {({ id }) => (
+              <Controller
+                control={form.control}
+                name="period"
+                render={({ field }) => (
+                  <OptionSelect
+                    id={id}
+                    value={field.value ?? ''}
+                    onValueChange={field.onChange}
+                    options={optionsOf(Object.values(CreditGrantPeriod), CREDIT_GRANT_PERIOD_LABEL)}
+                    placeholder="Choose a period"
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : null}
+      {/* The explanatory note is always the last block, full width. */}
+      <p className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-sm">{summary}</p>
 
       <FormActions
         mode="create"
