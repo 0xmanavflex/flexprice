@@ -462,6 +462,14 @@ export function SubscriptionForm({
     : undefined
   const fxMissing = fxNeeded && fxGlobalRates !== undefined && !globalRate
   const fxMissingMessage = `No exchange rate for ${contractCurrency.toUpperCase()} → ${billingCurrency.toUpperCase()}. Add a global rate in Settings › Currency first: the API needs one even when the contract sets its own.`
+  // A rate entered while the currencies differed means nothing once they match,
+  // and a half-typed one would otherwise fail validation from a hidden card.
+  useEffect(() => {
+    if (!fxNeeded && form.getValues('fxRates').length > 0) {
+      form.setValue('fxRates', [])
+      form.clearErrors('fxRates')
+    }
+  }, [fxNeeded, form])
   /** Flags a contract the API would refuse for want of a rate; true when it was flagged. */
   const fxBlocked = () => {
     if (fxMissing) form.setError('fxRates', { type: 'validate', message: fxMissingMessage })

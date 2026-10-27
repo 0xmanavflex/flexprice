@@ -1442,6 +1442,35 @@ export const FxOverrideWhenCurrenciesDiffer: Story = {
   },
 }
 
+/**
+ * A rate typed while the currencies differed is dropped once the contract
+ * moves to the invoicing currency: a hidden, half-typed rate never blocks submit.
+ */
+export const FxRateDroppedWhenCurrenciesMatch: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [{ fromCurrency: 'usd', toCurrency: 'inr', rate: '83.00' }],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(await canvas.findByRole('textbox', { name: /^Exchange rate/ }), '0')
+    // Invoiced to another customer, who has no billing currency of their own.
+    await userEvent.click(canvas.getByRole('radio', { name: /Another customer/ }))
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Invoiced to/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Globex' }))
+    await waitFor(() =>
+      expect(canvas.queryByRole('heading', { name: 'Currency conversion' })).toBeNull(),
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fxRates: [] })),
+    )
+  },
+}
+
 /** With no global rate for the pair, the API refuses the contract: the wizard says so first. */
 export const FxMissingGlobalRate: Story = {
   args: {

@@ -5266,6 +5266,8 @@ export const handlers = [
     const inlineFx = Array.isArray(body['fx_rates'])
       ? (body['fx_rates'] as Record<string, unknown>[])
       : []
+    // The API refuses fx_rates when the payer has no other billing currency; the
+    // mock simply makes no rate then.
     if (inlineFx.length > 0) {
       const payerExternal = readString(
         (body['inheritance'] ?? {}) as Record<string, unknown>,
@@ -5277,21 +5279,22 @@ export const handlers = [
           : readString(c, 'id') === readString(body, 'customer_id'),
       )
       const to = payer ? readString(payer, 'billing_currency').toLowerCase() : ''
-      inlineFx.forEach((fx, index) =>
-        fxRates.push({
-          id: `fxrate_${row.id}_${index}`,
-          scope: 'subscription',
-          scope_id: row.id,
-          from_currency: (readString(body, 'currency') || 'usd').toLowerCase(),
-          to_currency: to,
-          rate: String(fx['rate'] ?? ''),
-          ...(fx['start_date'] ? { start_date: fx['start_date'] } : {}),
-          ...(fx['end_date'] ? { end_date: fx['end_date'] } : {}),
-          source: 'fixed',
-          status: 'published',
-          updated_at: new Date().toISOString(),
-        }),
-      )
+      if (to)
+        inlineFx.forEach((fx, index) =>
+          fxRates.push({
+            id: `fxrate_${row.id}_${index}`,
+            scope: 'subscription',
+            scope_id: row.id,
+            from_currency: (readString(body, 'currency') || 'usd').toLowerCase(),
+            to_currency: to,
+            rate: String(fx['rate'] ?? ''),
+            ...(fx['start_date'] ? { start_date: fx['start_date'] } : {}),
+            ...(fx['end_date'] ? { end_date: fx['end_date'] } : {}),
+            source: 'fixed',
+            status: 'published',
+            updated_at: new Date().toISOString(),
+          }),
+        )
     }
     // An active contract bills its in-advance fixed charges at once, as the API
     // does, so the customer's first invoice is there to find on their Invoices

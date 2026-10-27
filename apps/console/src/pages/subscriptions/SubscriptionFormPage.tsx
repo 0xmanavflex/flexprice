@@ -7,6 +7,7 @@ import {
   useCreateSubscription,
   useCreditGrants,
   useCustomerTaxAssociations,
+  useCustomer,
   useCustomers,
   useFeaturesByMeters,
   useFxRates,
@@ -122,18 +123,22 @@ export function SubscriptionFormPage({
     [associations.data],
   )
 
-  const customerOptions = useMemo(
-    () =>
-      (customers.data?.customers ?? []).map((c) => ({
-        value: c.id,
-        // The name in the field; the email under it in the list (and beside it on Review).
-        label: c.name,
-        ...(c.email ? { hint: c.email } : {}),
-        externalId: c.externalId || undefined,
-        billingCurrency: c.billingCurrency || undefined,
-      })),
-    [customers.data],
-  )
+  // The chosen customer itself, which may sit past the picker's first page: its
+  // billing currency decides whether the contract converts.
+  const chosen = useCustomer(chosenCustomer)
+  const customerOptions = useMemo(() => {
+    const list = customers.data?.customers ?? []
+    const all =
+      chosen.data && !list.some((c) => c.id === chosen.data.id) ? [chosen.data, ...list] : list
+    return all.map((c) => ({
+      value: c.id,
+      // The name in the field; the email under it in the list (and beside it on Review).
+      label: c.name,
+      ...(c.email ? { hint: c.email } : {}),
+      externalId: c.externalId || undefined,
+      billingCurrency: c.billingCurrency || undefined,
+    }))
+  }, [customers.data, chosen.data])
   // Who can inherit from the chosen customer: anyone without a contract of their own.
   const inheritanceBlocks = useInheritanceBlocks(
     chosenCustomer,
