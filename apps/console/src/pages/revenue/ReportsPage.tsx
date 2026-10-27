@@ -422,10 +422,9 @@ export function ReportsPage({
         },
       }}
       revenue={{
-        status: statusOf(
-          revenueSeries,
-          points.every((point) => point.revenue === 0 && !point.previous),
-        ),
+        // An all-zero series is drawn as the empty state by the chart itself;
+        // the totals come from their own read and still show.
+        status: statusOf(revenueSeries, points.length === 0),
         reason: revenueSeries.isError ? 'The billing report did not respond.' : undefined,
         onRetry: retry(revenueAll, revenueSeries),
         total: figure(revenue, moneyOrDash),

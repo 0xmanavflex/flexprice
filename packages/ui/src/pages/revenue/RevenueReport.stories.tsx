@@ -334,6 +334,25 @@ export const RevenueEmpty: Story = {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('No revenue in this range')).toBeVisible()
     await expect(canvas.queryByLabelText('Revenue by period table')).toBeNull()
+    // The totals come from their own read: only the chart gives way.
+    await expect(canvas.getByText('Total revenue')).toBeVisible()
+  },
+}
+
+/** Days to pay with no series: the chart is empty, the average and payers stay. */
+export const PaymentsWithoutSeries: Story = {
+  args: {
+    view: 'payments',
+    payments: {
+      ...BASE.payments,
+      series: BASE.payments.series.map((point) => ({ ...point, days: null })),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No payments in this range')).toBeVisible()
+    await expect(canvas.getByText('Paid within a week')).toBeVisible()
+    await expect(canvas.getByText('Payments by customer')).toBeVisible()
   },
 }
 

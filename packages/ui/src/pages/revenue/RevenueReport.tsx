@@ -345,13 +345,23 @@ function NotReady({
   )
 }
 
-/**
- * A ready report with nothing to draw is empty: an all-zero chart says
- * nothing, so it shows the empty state instead.
- */
+/** A ready report whose rows are all gone is empty. */
 function withData<T extends ReportState>(state: T, hasData: boolean): T {
   return state.status === 'ready' && !hasData ? { ...state, status: 'empty' } : state
 }
+
+/**
+ * Where a chart would be when it has nothing to draw: the empty state, not
+ * axes over a line at zero. Only the chart gives way; the figures above it
+ * come from their own reads and stay.
+ */
+function NoChartData({ title }: { title: string }) {
+  return <SectionEmpty scene="billing" title={title} />
+}
+
+const daysHaveData = (series: { days: number | null }[]) =>
+  series.some((point) => point.days !== null)
+const eventsHaveData = (series: { events: number }[]) => series.some((point) => point.events > 0)
 
 const revenueHasData = (series: RevenuePoint[]) =>
   series.some((point) => point.revenue !== 0 || (point.previous ?? 0) !== 0)
@@ -793,18 +803,9 @@ export function RevenueReport(props: RevenueReportProps) {
 const axisMoney = (value: number) => short(value)
 
 function OverviewTab(props: RevenueReportProps) {
-  const { receivables, comparing, rangeLabel, onViewChange } = props
-  const revenue = withData(props.revenue, revenueHasData(props.revenue.series))
-  const payments = withData(
-    props.payments,
-    props.payments.series.some((point) => point.days !== null),
-  )
-  const topFive = billedRows(props.customers.rows).slice(0, 5)
-  const customers = withData(props.customers, topFive.length > 0)
-  const usage = withData(
-    props.usage,
-    props.usage.series.some((point) => point.events > 0),
-  )
+  const { revenue, receivables, payments, customers, usage, comparing, rangeLabel, onViewChange } =
+    props
+  const topFive = billedRows(customers.rows).slice(0, 5)
   return (
     <div className="flex flex-col gap-5">
       <Panel
@@ -831,20 +832,26 @@ function OverviewTab(props: RevenueReportProps) {
                   tile('Contract revenue', revenue.contract, false),
                 ]}
               />
-              <RevenueChart
-                series={revenue.series}
-                comparing={comparing}
-                height={260}
-                formatAxis={axisMoney}
-              />
-              <Legend
-                items={[
-                  { label: 'Revenue', color: REVENUE },
-                  ...(comparing
-                    ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }]
-                    : []),
-                ]}
-              />
+              {revenueHasData(revenue.series) ? (
+                <>
+                  <RevenueChart
+                    series={revenue.series}
+                    comparing={comparing}
+                    height={260}
+                    formatAxis={axisMoney}
+                  />
+                  <Legend
+                    items={[
+                      { label: 'Revenue', color: REVENUE },
+                      ...(comparing
+                        ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }]
+                        : []),
+                    ]}
+                  />
+                </>
+              ) : (
+                <NoChartData title="No revenue in this range" />
+              )}
             </>
           ) : (
             <NotReady state={revenue} empty="No revenue in this range" />
@@ -913,7 +920,11 @@ function OverviewTab(props: RevenueReportProps) {
                     { label: 'Median', value: payments.median },
                   ]}
                 />
-                <DaysChart series={payments.series} />
+                {daysHaveData(payments.series) ? (
+                  <DaysChart series={payments.series} />
+                ) : (
+                  <NoChartData title="No payments in this range" />
+                )}
               </>
             ) : (
               <NotReady state={payments} height={240} empty="No payments in this range" />
@@ -938,7 +949,9 @@ function OverviewTab(props: RevenueReportProps) {
           )}
         >
           <Surface>
-            {customers.status === 'ready' ? (
+            {customers.status === 'ready' && topFive.length === 0 ? (
+              <NoChartData title="No billed customers in this range" />
+            ) : customers.status === 'ready' ? (
               <>
                 <CustomerBars rows={topFive} height={236} />
                 <Legend
@@ -977,7 +990,11 @@ function OverviewTab(props: RevenueReportProps) {
                     { label: 'Peak day', value: usage.peak },
                   ]}
                 />
-                <EventsChart series={usage.series} height={220} />
+                {eventsHaveData(usage.series) ? (
+                  <EventsChart series={usage.series} height={220} />
+                ) : (
+                  <NoChartData title="No events in this range" />
+                )}
                 <BasedOn text={usage.basedOn} />
               </>
             ) : (
@@ -1057,8 +1074,7 @@ function RevenueTable({ series, comparing }: { series: RevenuePoint[]; comparing
 }
 
 function RevenueTab(props: RevenueReportProps) {
-  const { comparing, rangeLabel } = props
-  const revenue = withData(props.revenue, revenueHasData(props.revenue.series))
+  const { revenue, comparing, rangeLabel } = props
   return (
     <Panel
       title="Revenue over time"
@@ -1084,14 +1100,26 @@ function RevenueTab(props: RevenueReportProps) {
                 { label: 'Usage share', value: revenue.usageShare },
               ]}
             />
-            <RevenueChart series={revenue.series} comparing={comparing} formatAxis={axisMoney} />
-            <Legend
-              items={[
-                { label: 'Revenue', color: REVENUE },
-                ...(comparing ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }] : []),
-              ]}
-            />
-            <RevenueTable series={revenue.series} comparing={comparing} />
+            {revenueHasData(revenue.series) ? (
+              <>
+                <RevenueChart
+                  series={revenue.series}
+                  comparing={comparing}
+                  formatAxis={axisMoney}
+                />
+                <Legend
+                  items={[
+                    { label: 'Revenue', color: REVENUE },
+                    ...(comparing
+                      ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }]
+                      : []),
+                  ]}
+                />
+                <RevenueTable series={revenue.series} comparing={comparing} />
+              </>
+            ) : (
+              <NoChartData title="No revenue in this range" />
+            )}
           </>
         ) : (
           <NotReady state={revenue} height={320} empty="No revenue in this range" />
@@ -1144,9 +1172,8 @@ function CreditTypeTable({
 }
 
 function CustomersTab(props: RevenueReportProps) {
-  const { comparing, rangeLabel } = props
-  const top = billedRows(props.customers.rows).slice(0, 10)
-  const customers = withData(props.customers, top.length > 0)
+  const { customers, comparing, rangeLabel } = props
+  const top = billedRows(customers.rows).slice(0, 10)
   const largest = top[0]
   return (
     <div className="flex flex-col gap-5">
@@ -1178,13 +1205,19 @@ function CustomersTab(props: RevenueReportProps) {
                   },
                 ]}
               />
-              <CustomerBars rows={top} height={Math.max(160, top.length * 32 + 20)} />
-              <Legend
-                items={[
-                  { label: 'Usage', color: USAGE_TONE },
-                  { label: 'Contract', color: CONTRACT_TONE },
-                ]}
-              />
+              {top.length > 0 ? (
+                <>
+                  <CustomerBars rows={top} height={Math.max(160, top.length * 32 + 20)} />
+                  <Legend
+                    items={[
+                      { label: 'Usage', color: USAGE_TONE },
+                      { label: 'Contract', color: CONTRACT_TONE },
+                    ]}
+                  />
+                </>
+              ) : (
+                <NoChartData title="No billed customers in this range" />
+              )}
             </>
           ) : (
             <NotReady state={customers} height={330} empty="No billed customers in this range" />
@@ -1603,11 +1636,7 @@ function ReceivablesTab({ receivables }: RevenueReportProps) {
 }
 
 function PaymentsTab(props: RevenueReportProps) {
-  const { comparing, rangeLabel } = props
-  const payments = withData(
-    props.payments,
-    props.payments.series.some((point) => point.days !== null),
-  )
+  const { payments, comparing, rangeLabel } = props
   return (
     <div className="flex flex-col gap-5">
       <Panel
@@ -1637,7 +1666,11 @@ function PaymentsTab(props: RevenueReportProps) {
                   { label: 'Paid within a week', value: payments.withinWeek },
                 ]}
               />
-              <DaysChart series={payments.series} height={260} />
+              {daysHaveData(payments.series) ? (
+                <DaysChart series={payments.series} height={260} />
+              ) : (
+                <NoChartData title="No payments in this range" />
+              )}
             </>
           ) : (
             <NotReady state={payments} empty="No payments in this range" />
@@ -1709,11 +1742,7 @@ function PaymentsTab(props: RevenueReportProps) {
 }
 
 function UsageTab(props: RevenueReportProps) {
-  const { rangeLabel } = props
-  const usage = withData(
-    props.usage,
-    props.usage.series.some((point) => point.events > 0),
-  )
+  const { usage, rangeLabel } = props
   return (
     <div className="flex flex-col gap-5">
       <Panel
@@ -1739,7 +1768,11 @@ function UsageTab(props: RevenueReportProps) {
                   { label: 'Peak day', value: usage.peak },
                 ]}
               />
-              <EventsChart series={usage.series} height={260} />
+              {eventsHaveData(usage.series) ? (
+                <EventsChart series={usage.series} height={260} />
+              ) : (
+                <NoChartData title="No events in this range" />
+              )}
               <BasedOn text={usage.basedOn} />
             </>
           ) : (
