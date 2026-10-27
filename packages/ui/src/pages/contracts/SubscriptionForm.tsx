@@ -3154,59 +3154,68 @@ function AddonsSection({
       status="optional"
       icon={<PuzzleIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
     >
-      {selected.length > 0 ? (
-        <div className="px-5 pt-4 sm:px-6">
-          <Frame>
-            <SimpleTable columns={columns} rows={selected} getRowId={(addon) => addon.addonId} />
-          </Frame>
-        </div>
-      ) : null}
-      <FormRow
-        label={selected.length > 0 ? 'Add another' : 'Add-on'}
-        hint="An add-on brings its own charges and entitlements onto the contract."
-      >
-        {({ id, ...field }) =>
-          options.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No add-ons exist yet.</p>
-          ) : (
-            <OptionCombobox
-              // A fresh picker after each pick, so it reads empty again.
-              key={selected.length}
-              id={id}
-              {...field}
-              value=""
-              placeholder={selected.length > 0 ? 'Add another add-on…' : 'Choose an add-on…'}
-              options={available}
-              onValueChange={(addonId) => {
-                const option = available.find((o) => o.value === addonId)
-                if (!option) return
-                const addon = { addonId: option.value, name: option.label }
-                // Without the add-on's charges there is nothing to price: add it as it is.
-                if (!chargesOf) onChange([...selected, addon])
-                else
-                  setOpen({
-                    ...addon,
-                    adding: true,
-                    pricing: { priceOverrides: [], commitments: [] },
-                  })
-              }}
-            />
-          )
-        }
-      </FormRow>
-      <AddonChargesDialog
-        open={open !== null}
-        title={open ? `${open.adding ? 'Add add-on' : 'Edit add-on'} · ${open.name}` : ''}
-        submitLabel={open?.adding ? 'Add add-on' : 'Save add-on'}
-        charges={open ? chargesFor(open.addonId) : null}
-        chargesFailed={chargesFailed}
-        currency={currency}
-        meters={meters}
-        value={open?.pricing ?? { priceOverrides: [], commitments: [] }}
-        onChange={(pricing) => setOpen((current) => (current ? { ...current, pricing } : current))}
-        onClose={() => setOpen(null)}
-        onSubmit={save}
-      />
+      {/*
+       * One card row: the table, the picker under it and the (portalled)
+       * dialog. As separate rows the card ruled a line under the table and
+       * another, empty, under the dialog.
+       */}
+      <div>
+        {selected.length > 0 ? (
+          <div className="px-5 pt-4 sm:px-6">
+            <Frame>
+              <SimpleTable columns={columns} rows={selected} getRowId={(addon) => addon.addonId} />
+            </Frame>
+          </div>
+        ) : null}
+        <FormRow
+          label={selected.length > 0 ? 'Add another' : 'Add-on'}
+          hint="An add-on brings its own charges and entitlements onto the contract."
+        >
+          {({ id, ...field }) =>
+            options.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No add-ons exist yet.</p>
+            ) : (
+              <OptionCombobox
+                // A fresh picker after each pick, so it reads empty again.
+                key={selected.length}
+                id={id}
+                {...field}
+                value=""
+                placeholder={selected.length > 0 ? 'Add another add-on…' : 'Choose an add-on…'}
+                options={available}
+                onValueChange={(addonId) => {
+                  const option = available.find((o) => o.value === addonId)
+                  if (!option) return
+                  const addon = { addonId: option.value, name: option.label }
+                  // Without the add-on's charges there is nothing to price: add it as it is.
+                  if (!chargesOf) onChange([...selected, addon])
+                  else
+                    setOpen({
+                      ...addon,
+                      adding: true,
+                      pricing: { priceOverrides: [], commitments: [] },
+                    })
+                }}
+              />
+            )
+          }
+        </FormRow>
+        <AddonChargesDialog
+          open={open !== null}
+          title={open ? `${open.adding ? 'Add add-on' : 'Edit add-on'} · ${open.name}` : ''}
+          submitLabel={open?.adding ? 'Add add-on' : 'Save add-on'}
+          charges={open ? chargesFor(open.addonId) : null}
+          chargesFailed={chargesFailed}
+          currency={currency}
+          meters={meters}
+          value={open?.pricing ?? { priceOverrides: [], commitments: [] }}
+          onChange={(pricing) =>
+            setOpen((current) => (current ? { ...current, pricing } : current))
+          }
+          onClose={() => setOpen(null)}
+          onSubmit={save}
+        />
+      </div>
     </FormCard>
   )
 }

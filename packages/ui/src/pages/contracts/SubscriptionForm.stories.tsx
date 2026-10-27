@@ -1000,6 +1000,9 @@ export const AddsAnAddon: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
     await expect(await canvas.findByRole('columnheader', { name: 'Add-on' })).toBeVisible()
     await expect(canvas.getByRole('columnheader', { name: 'Charges' })).toBeVisible()
+    // One rule, under the card's title: none runs into the table or under the picker.
+    const card = canvas.getByRole('heading', { name: 'Add-ons' }).closest('section')!
+    await expect(card.querySelectorAll('[data-slot="separator"]')).toHaveLength(1)
     await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toBeVisible()
     await userEvent.click(canvas.getByRole('combobox', { name: /^Add another/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
