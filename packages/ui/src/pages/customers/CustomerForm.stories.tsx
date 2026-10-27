@@ -107,7 +107,7 @@ export const Edit: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
     await expect(canvas.queryByRole('complementary')).toBeNull()
-    await expect(canvas.getByRole('combobox', { name: /city/i })).toBeInTheDocument()
+    await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
     // Renaming a saved customer never rewrites its external ID.
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
     await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue('acme')
@@ -209,6 +209,27 @@ export const StateAndCityFollowCountry: Story = {
   },
 }
 
+/** A saved city with no state or country stays editable. */
+export const CityOnlyAddressEditable: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Acme Corp',
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
+    defaultValue: { externalId: 'acme', name: 'Acme Corp', addressCity: 'London' },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const city = canvas.getByRole('textbox', { name: 'City' })
+    await expect(city).toHaveValue('London')
+    await userEvent.clear(city)
+    await userEvent.type(city, 'Birmingham')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ addressCity: 'Birmingham' }),
+    )
+  },
+}
+
 /** A saved state the dataset does not list stays shown, and a new country clears it. */
 export const SavedRegionKept: Story = {
   args: {
@@ -236,7 +257,8 @@ export const SavedRegionKept: Story = {
       await within(document.body).findByRole('option', { name: /Canada \(CA\)/ }),
     )
     await expect(state).toHaveValue('')
-    await expect(canvas.getByRole('combobox', { name: 'City' })).toHaveValue('')
+    // No state chosen yet: city is typed, since state is optional.
+    await expect(canvas.getByRole('textbox', { name: 'City' })).toHaveValue('')
   },
 }
 

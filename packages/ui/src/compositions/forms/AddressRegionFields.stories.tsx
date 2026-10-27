@@ -54,12 +54,12 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-/** Nothing chosen: state waits for a country, city for a state. */
+/** Nothing chosen: state waits for a country; city, needed even without a state, is typed until a state is chosen. */
 export const Empty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('combobox', { name: 'State' })).toHaveAttribute('data-disabled')
-    await expect(canvas.getByRole('combobox', { name: 'City' })).toHaveAttribute('data-disabled')
+    await expect(canvas.getByRole('textbox', { name: 'City' })).toBeEnabled()
   },
 }
 
@@ -103,5 +103,63 @@ export const TypedWhereNoList: Story = {
     })
     await userEvent.type(canvas.getByRole('textbox', { name: 'State' }), 'St Helier')
     await expect(canvas.getByRole('textbox', { name: 'City' })).toBeEnabled()
+  },
+}
+
+/** A place the dataset does not list is entered by typing it and choosing "Use …". */
+export const UnlistedPlace: Story = {
+  args: { initial: { country: 'US', state: 'California', city: '' } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const city = canvas.getByRole('combobox', { name: 'City' })
+    await waitFor(() => expect(city).toHaveAttribute('placeholder', 'Search cities…'), {
+      timeout: 5000,
+    })
+    await userEvent.type(city, 'Smallville')
+    await userEvent.click(await screen.findByRole('option', { name: 'Use "Smallville"' }))
+    await expect(args.onChange).toHaveBeenLastCalledWith({
+      country: 'US',
+      state: 'California',
+      city: 'Smallville',
+    })
+    await expect(city).toHaveValue('Smallville')
+
+    // The same for a state, and the city it held is cleared.
+    const state = canvas.getByRole('combobox', { name: 'State' })
+    await userEvent.clear(state)
+    await userEvent.type(state, 'Jefferson')
+    await userEvent.click(await screen.findByRole('option', { name: 'Use "Jefferson"' }))
+    await expect(args.onChange).toHaveBeenLastCalledWith({
+      country: 'US',
+      state: 'Jefferson',
+      city: '',
+    })
+  },
+}
+
+/** State is optional, so a city can be typed with no state chosen. */
+export const CityWithoutState: Story = {
+  args: { initial: { country: 'GB', state: '', city: '' } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const city = canvas.getByRole('textbox', { name: 'City' })
+    await expect(city).toBeEnabled()
+    await userEvent.type(city, 'London')
+    await expect(args.onChange).toHaveBeenLastCalledWith({
+      country: 'GB',
+      state: '',
+      city: 'London',
+    })
+  },
+}
+
+/** An older address with only a city stays editable: the city is a typed field. */
+export const SavedCityOnly: Story = {
+  args: { initial: { country: '', state: '', city: 'London' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const city = canvas.getByRole('textbox', { name: 'City' })
+    await expect(city).toHaveValue('London')
+    await expect(city).toBeEnabled()
   },
 }
