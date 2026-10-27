@@ -135,7 +135,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - When the customer's billing currency differs from the plan's, the contract flow offers the FX
     override and sends it.
   - If it already does, record that here with the steps used to check.
-- **Status.** In review (PR open), [#257](https://github.com/flexprice/portal/pull/257). Verified first: the API accepts `fx_rates` on create, but the console had no field for it.
+- **Status.** Done (merged), [#257](https://github.com/flexprice/portal/pull/257). Verified first: the API accepts `fx_rates` on create, but the console had no field for it.
 
 ## Contract page
 
