@@ -1232,6 +1232,30 @@ export const EditsEntitlements: Story = {
   },
 }
 
+/** Entitlement changes belong to the plan: choosing another plan drops them. */
+export const EntitlementChangesClearOnPlanSwitch: Story = {
+  args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for SSO' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · SSO' }))
+    await userEvent.click(dialog.getByRole('switch'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('Changed')).toBeVisible()
+    const steps = within(canvas.getByRole('group', { name: 'Contract steps' }))
+    await userEvent.click(steps.getByRole('button', { name: /Contract/ }))
+    await userEvent.click(await canvas.findByRole('combobox', { name: /^Plan/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Starter/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ planId: 'plan_0', entitlementOverrides: [] }),
+      ),
+    )
+  },
+}
+
 /** Saving a change back to the plan's values, or Reset to plan, sends nothing for it. */
 export const EntitlementResetToPlan: Story = {
   args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },

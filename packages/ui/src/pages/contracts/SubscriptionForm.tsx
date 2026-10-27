@@ -476,6 +476,8 @@ export function SubscriptionForm({
       shouldValidate: true,
     })
     if (name === 'customerId') onCustomerChange?.(value)
+    // Entitlement changes name the old plan's entitlements: another plan starts without them.
+    if (name === 'planId' && value !== values.planId) form.setValue('entitlementOverrides', [])
   }
 
   // V1 starts a contract with the chosen customer's tax rates; once per customer.
@@ -615,6 +617,13 @@ export function SubscriptionForm({
         discounts: phase.discounts.filter((d) => !d.priceId || billed.has(d.priceId)),
       })),
       chargeCommitments: draft.chargeCommitments.filter((c) => billed.has(c.priceId)),
+      // Only changes to this plan's entitlements: the API refuses any other id.
+      entitlementOverrides:
+        plan && !plan.isLoading
+          ? draft.entitlementOverrides.filter((o) =>
+              plan.entitlements.some((e) => e.id === o.entitlementId),
+            )
+          : draft.entitlementOverrides,
       // An add-on override or commitment on a price this currency and period do
       // not attach would be refused: it was set before either changed, and is hidden now.
       addons: draft.addons.map((addon) =>
@@ -3380,8 +3389,14 @@ function entitlementValueText(entitlement: Entitlement, override?: EntitlementOv
 }
 
 function entitlementResetsText(entitlement: Entitlement, override?: EntitlementOverride): string {
-  if (override?.grant)
-    return override.grant.quota === null ? '—' : GRANT_UNIT_LABEL[override.grant.unit]
+  if (override?.grant) {
+    const { quota, unit, every } = override.grant
+    if (quota === null) return '—'
+    // As `meteredResetLabel` reads a grant: a longer window says how long.
+    return every && unit !== EntitlementGrantDurationUnit.SubscriptionPeriod
+      ? `Every ${every} ${unit}s`
+      : GRANT_UNIT_LABEL[unit]
+  }
   if (entitlement.featureType !== FeatureType.Metered) return '—'
   return meteredResetLabel(entitlement) ?? resetsText(entitlement)
 }
