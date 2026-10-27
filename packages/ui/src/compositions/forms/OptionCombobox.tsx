@@ -25,6 +25,8 @@ export interface OptionComboboxProps {
   id?: string
   value: string | undefined
   onValueChange: (value: string) => void
+  /** What the person has typed in the search box, as they type it. */
+  onInputValueChange?: ((text: string) => void) | undefined
   options: readonly Option[]
   placeholder?: string
   emptyText?: string
@@ -48,6 +50,7 @@ export function OptionCombobox({
   id,
   value,
   onValueChange,
+  onInputValueChange,
   options,
   placeholder = 'Search…',
   emptyText = 'No matches.',
@@ -66,6 +69,9 @@ export function OptionCombobox({
       itemToStringLabel={(option) => (option as Option).label}
       itemToStringValue={(option) => (option as Option).value}
       openOnInputClick
+      {...(onInputValueChange
+        ? { onInputValueChange: (text: string) => onInputValueChange(text) }
+        : {})}
       isItemEqualToValue={(a, b) => (a as Option).value === (b as Option).value}
       {...(disabled !== undefined ? { disabled } : {})}
     >

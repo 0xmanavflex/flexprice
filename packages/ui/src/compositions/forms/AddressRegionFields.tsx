@@ -22,10 +22,13 @@ import type { Option } from './OptionSelect'
  * each country's cities are their own chunk, fetched when that country is
  * chosen.
  *
- * Where the dataset has nothing (a country with no states listed, a state
- * with no cities) the control falls back to a typed field, so an address can
- * always be completed. A saved value the dataset does not know stays
- * selectable. Postal code is not here: it stays a typed field in each form.
+ * A place the dataset does not list can still be entered: the state and
+ * city lists offer what was typed ("Use …"). Where the dataset has nothing (a
+ * country with no states listed, a state with no cities), or the parent is
+ * not chosen (city without a state, since state is optional; an older saved
+ * state or city with no country), the control is a typed field, so an
+ * address can always be completed and older addresses stay editable. A saved
+ * value the dataset does not know stays selectable. Postal code is not here: it stays a typed field in each form.
  *
  * Layout belongs to the form: `useAddressRegions` returns one picker per
  * field and `AddressPicker` renders it inside whatever row the form uses
@@ -47,6 +50,8 @@ export interface AddressRegionValue {
 /** What one address control shows: a searchable list, or a typed field where no list exists. */
 export interface AddressPickerModel {
   kind: 'list' | 'text'
+  /** A list that also offers what was typed, for a place the dataset does not list. */
+  allowCustom: boolean
   value: string
   onValueChange: (value: string) => void
   options: readonly Option[]
@@ -149,13 +154,29 @@ export function useAddressRegions({
   const states = useRegionNames(country)
   const cities = useRegionNames(country, state)
 
-  // A country the dataset has no states for: state and city are typed.
-  const statesTyped = country !== '' && states !== undefined && states.length === 0
-  const citiesTyped = statesTyped || (state !== '' && cities !== undefined && cities.length === 0)
+  /*
+   * A saved state with no country (an older address) is typed, so it stays
+   * editable. Decided once, from the value the form opened with: clearing it
+   * must not turn the field into a disabled list mid-edit.
+   */
+  const [legacyState] = useState(() => country === '' && state !== '')
+  /*
+   * State: a list (with a typed "Use …" choice) once a country with states
+   * is chosen; typed where the dataset lists none for the country.
+   */
+  const stateList = country !== '' && (states === undefined || states.length > 0)
+  const stateTyped = !stateList && (country !== '' || legacyState)
+  /*
+   * City: a list for the chosen state; typed whenever no state is chosen
+   * (state is optional, city is not) or the dataset lists no cities for it.
+   */
+  const cityList = stateList && state !== '' && (cities === undefined || cities.length > 0)
+  const cityTyped = !cityList
 
   return {
     country: {
       kind: 'list',
+      allowCustom: false,
       value: country,
       onValueChange: (next) =>
         onChange(next === country ? value : { country: next, state: '', city: '' }),
@@ -165,35 +186,31 @@ export function useAddressRegions({
       disabled,
     },
     state: {
-      kind: statesTyped ? 'text' : 'list',
+      kind: stateTyped ? 'text' : 'list',
+      allowCustom: true,
       value: state,
       onValueChange: (next) =>
         onChange(next === state ? value : { ...value, state: next, city: '' }),
       options: withCurrent(toOptions(states ?? []), state),
-      placeholder: !country
-        ? 'Choose a country first'
-        : states === undefined
-          ? 'Loading states…'
-          : statesTyped
-            ? 'State or region'
+      placeholder: stateTyped
+        ? 'State or region'
+        : !country
+          ? 'Choose a country first'
+          : states === undefined
+            ? 'Loading states…'
             : 'Search states…',
       emptyText: states === undefined ? 'Loading states…' : 'No matching state.',
-      disabled: disabled || country === '',
+      disabled: disabled || (!stateList && !stateTyped),
     },
     city: {
-      kind: citiesTyped ? 'text' : 'list',
+      kind: cityTyped ? 'text' : 'list',
+      allowCustom: true,
       value: city,
       onValueChange: (next) => onChange({ ...value, city: next }),
       options: withCurrent(toOptions(cities ?? []), city),
-      placeholder: citiesTyped
-        ? 'City'
-        : !state
-          ? 'Choose a state first'
-          : cities === undefined
-            ? 'Loading cities…'
-            : 'Search cities…',
+      placeholder: cityTyped ? 'City' : cities === undefined ? 'Loading cities…' : 'Search cities…',
       emptyText: cities === undefined ? 'Loading cities…' : 'No matching city.',
-      disabled: disabled || (!citiesTyped && state === ''),
+      disabled,
     },
   }
 }
@@ -233,12 +250,39 @@ export function AddressPicker({
     )
   }
   return (
+    <ListPicker picker={picker} id={id} label={label} describedBy={describedBy} invalid={invalid} />
+  )
+}
+
+/** The searchable list; with `allowCustom`, what was typed is offered too. */
+function ListPicker({
+  picker,
+  id,
+  label,
+  describedBy,
+  invalid,
+}: {
+  picker: AddressPickerModel
+  id: string | undefined
+  label: string | undefined
+  describedBy: string | undefined
+  invalid: true | undefined
+}) {
+  const [query, setQuery] = useState('')
+  const typed = query.trim()
+  const listed = picker.options.some((option) => option.label.toLowerCase() === typed.toLowerCase())
+  const options =
+    picker.allowCustom && typed !== '' && !listed
+      ? [...picker.options, { value: typed, label: `Use "${typed}"` }]
+      : picker.options
+  return (
     <OptionCombobox
       {...(id ? { id } : {})}
       searchable
       value={picker.value || undefined}
       onValueChange={picker.onValueChange}
-      options={picker.options}
+      onInputValueChange={setQuery}
+      options={options}
       placeholder={picker.placeholder}
       emptyText={picker.emptyText}
       disabled={picker.disabled}
