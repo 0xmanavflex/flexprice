@@ -1035,6 +1035,19 @@ export const UpcomingInvoiceAllZero: Story = {
   },
 }
 
+/** A refetch that failed over a cached empty preview still shows, with its error. */
+export const UpcomingInvoiceEmptyThenFailed: Story = {
+  args: {
+    ...BASE,
+    preview: { data: { ...PREVIEW, lines: [] }, isError: true, onRetry: fn() },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Upcoming invoice' })).toBeVisible()
+    await expect(canvas.getByText('The invoice preview could not be loaded')).toBeVisible()
+  },
+}
+
 /**
  * Sections with rows come first: empty entry-point sections (here
  * Entitlements, Credit grants and Add-ons) sit below the ones that have
@@ -1046,6 +1059,8 @@ export const SectionsWithRowsFirst: Story = {
     entitlements: ready([]),
     creditGrants: ready([]),
     addons: ready([]),
+    // Cached empty, then a failed refresh: not known to be empty, so it keeps its place.
+    coupons: { data: [], isError: true, onRetry: fn() },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
