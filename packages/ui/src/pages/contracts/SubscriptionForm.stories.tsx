@@ -128,6 +128,16 @@ interface PlaygroundProps {
   startDate?: string
   /** Opens with these changes on the contract's (single) phase. */
   phase?: Partial<SubscriptionPhase>
+  /** The first customer's billing currency (lower-case), when it invoices in another. */
+  billingCurrency?: string
+  /** The global exchange rates; undefined leaves them unknown. */
+  fxGlobalRates?: { fromCurrency: string; toCurrency: string; rate: string }[]
+  /** The custom currencies and their factors; defaults to none. `null`: not loaded. */
+  fxCustomCurrencies?: Record<string, Record<string, string>> | null
+  /** With `fxCustomCurrencies: null`: the settings failed, rather than still loading. */
+  fxSettingsFailed?: boolean
+  /** Opens with this contract currency instead of USD. */
+  currency?: string
   /** Changes to the plan's entitlements, by id (`ent_0`…). */
   entitlementPatch?: Record<string, Partial<Entitlement>>
   /** Gives the plan's first charge dates of its own (`YYYY-MM-DD`, from and to). */
@@ -162,6 +172,11 @@ function SubscriptionFormPlayground({
   phase,
   datedCharge,
   entitlementPatch,
+  billingCurrency,
+  fxGlobalRates,
+  fxCustomCurrencies = {},
+  fxSettingsFailed = false,
+  currency,
   seededAddons,
   inheritanceBlocks,
   onSubmit,
@@ -181,7 +196,13 @@ function SubscriptionFormPlayground({
     [onStepChange],
   )
 
-  const customers = useMemo(() => makeCustomers(customerCount), [customerCount])
+  const customers = useMemo(
+    () =>
+      makeCustomers(customerCount).map((c, i) =>
+        i === 0 && billingCurrency ? { ...c, billingCurrency } : c,
+      ),
+    [customerCount, billingCurrency],
+  )
   const plans = useMemo(() => makePlans(planCount), [planCount])
   const plan = useMemo<SubscriptionPlanContext | undefined>(() => {
     if (!planId) return undefined
@@ -190,20 +211,22 @@ function SubscriptionFormPlayground({
       charges: planLoading
         ? []
         : [
-            ...makeCharges(Math.ceil(chargeCount / 2), Math.floor(chargeCount / 2)).map(
-              (charge, index) => ({
-                ...charge,
-                ...(index === 0 && planTrial ? { trialPeriodDays: planTrial } : {}),
-                ...(index === 0 && datedCharge
-                  ? {
-                      startDate: new Date(`${datedCharge.start}T00:00:00Z`),
-                      ...(datedCharge.end
-                        ? { endDate: new Date(`${datedCharge.end}T00:00:00Z`) }
-                        : {}),
-                    }
-                  : {}),
-              }),
-            ),
+            ...makeCharges(
+              Math.ceil(chargeCount / 2),
+              Math.floor(chargeCount / 2),
+              currency ? { currency: currency.toLowerCase() } : {},
+            ).map((charge, index) => ({
+              ...charge,
+              ...(index === 0 && planTrial ? { trialPeriodDays: planTrial } : {}),
+              ...(index === 0 && datedCharge
+                ? {
+                    startDate: new Date(`${datedCharge.start}T00:00:00Z`),
+                    ...(datedCharge.end
+                      ? { endDate: new Date(`${datedCharge.end}T00:00:00Z`) }
+                      : {}),
+                  }
+                : {}),
+            })),
             ...(otherCadences
               ? [
                   {
@@ -250,6 +273,7 @@ function SubscriptionFormPlayground({
     planTrial,
     datedCharge,
     entitlementPatch,
+    currency,
   ])
 
   return (
@@ -264,6 +288,7 @@ function SubscriptionFormPlayground({
               ...PREFILLED,
               ...(noTrial ? { trialPeriodDays: 0 } : {}),
               ...(startDate ? { startDate } : {}),
+              ...(currency ? { currency } : {}),
               ...(seededAddons ? { addons: seededAddons } : {}),
               ...(endDate || phase
                 ? { phases: [{ ...emptyPhase(), endDate: endDate ?? '', ...phase }] }
@@ -272,6 +297,9 @@ function SubscriptionFormPlayground({
           }
         : {})}
       customers={customers}
+      {...(fxGlobalRates ? { fxGlobalRates } : {})}
+      {...(fxCustomCurrencies ? { fxCustomCurrencies } : {})}
+      fxSettingsFailed={fxSettingsFailed}
       plans={plans}
       plan={plan}
       onPlanChange={handlePlanChange}
@@ -1383,6 +1411,195 @@ export const EntitlementResetToPlan: Story = {
       expect(args.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ entitlementOverrides: [] }),
       ),
+    )
+  },
+}
+
+/**
+ * The customer is invoiced in INR while the contract bills in USD: Billing
+ * offers the contract's own exchange rate over the global one, with a window,
+ * and sends it as `fx_rates`.
+ */
+export const FxOverrideWhenCurrenciesDiffer: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [{ fromCurrency: 'usd', toCurrency: 'inr', rate: '83.00' }],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Currency conversion' })).toBeVisible()
+    await expect(
+      canvas.getByText(
+        "This contract bills in USD; its invoices go out in INR, the billing customer's currency.",
+      ),
+    ).toBeVisible()
+    const rate = canvas.getByRole('textbox', { name: /^Exchange rate/ })
+    await expect(rate).toHaveAttribute('placeholder', '83.00 (global rate)')
+    // Blank is allowed: the global rate applies, and nothing is sent.
+    await userEvent.type(rate, '0')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await expect(await canvas.findByText('Enter a rate above zero')).toBeVisible()
+    await userEvent.clear(rate)
+    await userEvent.type(rate, '84.5')
+    await expect(canvas.getByText('Valid from')).toBeVisible()
+    await expect(canvas.getByText('Valid until')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fxRates: [{ rate: '84.5', startDate: '', endDate: '' }],
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * A rate typed while the currencies differed is dropped once the contract
+ * moves to the invoicing currency: a hidden, half-typed rate never blocks submit.
+ */
+export const FxRateDroppedWhenCurrenciesMatch: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [{ fromCurrency: 'usd', toCurrency: 'inr', rate: '83.00' }],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(await canvas.findByRole('textbox', { name: /^Exchange rate/ }), '0')
+    // Invoiced to another customer, who has no billing currency of their own.
+    await userEvent.click(canvas.getByRole('radio', { name: /Another customer/ }))
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Invoiced to/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Globex' }))
+    await waitFor(() =>
+      expect(canvas.queryByRole('heading', { name: 'Currency conversion' })).toBeNull(),
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fxRates: [] })),
+    )
+  },
+}
+
+/**
+ * A contract in a custom currency converts at that currency's own factor, as
+ * the API does: no global rate is needed, nothing blocks, and no contract rate
+ * is offered (the API refuses fx_rates for a custom currency).
+ */
+export const FxCustomCurrencyConverts: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    currency: 'CRD',
+    billingCurrency: 'usd',
+    fxGlobalRates: [],
+    fxCustomCurrencies: { crd: { usd: '0.01' } },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Currency conversion' })).toBeVisible()
+    await expect(canvas.getByText('1 CRD = 0.01 USD')).toBeVisible()
+    expect(canvas.queryByRole('textbox', { name: /^Exchange rate/ })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: 'CRD', fxRates: [] }),
+      ),
+    )
+    expect(canvas.queryByText(/No conversion factor|No exchange rate/)).toBeNull()
+  },
+}
+
+/**
+ * The custom currency config failed to load, so the wizard cannot tell
+ * whether USD → INR is converted: with no global rate it warns, never blocks,
+ * and the API stays the final check.
+ */
+export const FxConfigFailedWarnsOnly: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [],
+    fxCustomCurrencies: null,
+    fxSettingsFailed: true,
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByText(
+        'Could not load currency settings. If USD → INR has no global rate, the API will refuse this contract.',
+      ),
+    ).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fxRates: [] })),
+    )
+  },
+}
+
+/** While the currency settings are still loading: no warning, and nothing blocks. */
+export const FxSettingsLoadingSaysNothing: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [],
+    fxCustomCurrencies: null,
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Currency conversion' })).toBeVisible()
+    expect(canvas.queryByText(/Could not load currency settings/)).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() => expect(args.onSubmit).toHaveBeenCalled())
+  },
+}
+
+/** With no global rate for the pair, the API refuses the contract: the wizard says so first. */
+export const FxMissingGlobalRate: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(await canvas.findByRole('textbox', { name: /^Exchange rate/ }), '84.5')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await expect(
+      await canvas.findByText(/^No exchange rate for USD → INR\. Add a global rate/),
+    ).toBeVisible()
+    expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
+/** Invoiced in the contract's own currency: no conversion card, and no `fx_rates`. */
+export const NoFxWhenCurrenciesMatch: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'usd',
+    fxGlobalRates: [],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Payment' })).toBeVisible()
+    expect(canvas.queryByRole('heading', { name: 'Currency conversion' })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fxRates: [] })),
     )
   },
 }

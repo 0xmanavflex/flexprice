@@ -55,6 +55,7 @@ export interface CustomerWire {
   email?: string | undefined
   externalId?: string | undefined
   addressCountry?: string | undefined
+  billingCurrency?: string | undefined
   status?: string | undefined
   integrations?: CustomerIntegrationWire[] | undefined
   createdAt?: Date | undefined
@@ -96,6 +97,7 @@ export function toCustomer(wire: CustomerWire): Customer {
     email: wire.email ?? '',
     externalId: wire.externalId ?? '',
     addressCountry: wire.addressCountry ?? '',
+    ...(wire.billingCurrency ? { billingCurrency: wire.billingCurrency.toLowerCase() } : {}),
     status,
     integrations: toCustomerIntegrations(wire.integrations),
     createdAt: wire.createdAt ?? null,

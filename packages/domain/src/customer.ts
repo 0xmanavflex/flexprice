@@ -63,6 +63,11 @@ export interface Customer {
   externalId: string
   /** ISO 3166-1 alpha-2 country of the customer's address. Empty when unset. */
   addressCountry: string
+  /**
+   * The currency invoices are issued in, lower-case; empty bills in the
+   * contract's own currency. Optional: only the customer API sends it.
+   */
+  billingCurrency?: string
   status: CustomerStatus
   /** Integrations this customer is connected to. Empty when none are. */
   integrations: CustomerIntegration[]
