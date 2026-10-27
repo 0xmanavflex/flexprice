@@ -100,6 +100,8 @@ export function CouponCreateForm({
         onSubmit(values)
       })}
       noValidate
+      // The standard gap between a form page's cards (FeatureForm, WebhookEndpointForm).
+      className="flex flex-col gap-6"
     >
       <FormCard title="Coupon details">
         <FormRow
