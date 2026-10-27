@@ -79,6 +79,29 @@ export const FirstTime: Story = {
   },
 }
 
+/**
+ * Checkout needs a city but not a state: with no state chosen the city is
+ * typed, and a city the dataset does not list can be entered.
+ */
+export const CityWithoutState: Story = {
+  args: {
+    defaultValues: { ...ORGANIZATION, state: '', city: '' },
+    fromOrganization: true,
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const city = canvas.getByRole('textbox', { name: 'City' })
+    await expect(city).toBeEnabled()
+    await userEvent.type(city, 'Brisbane')
+    await userEvent.click(canvas.getByRole('button', { name: 'Continue to payment' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ country: 'US', state: '', city: 'Brisbane' }),
+      ),
+    )
+  },
+}
+
 /** Filled in from Organization. */
 export const FromOrganization: Story = {
   args: { state: 'trialing', defaultValues: ORGANIZATION, fromOrganization: true },
