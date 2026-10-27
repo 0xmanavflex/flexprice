@@ -2846,7 +2846,7 @@ export function AddonChargesDialog({
                 chargesFailed ? (
                   <p role="alert" className="text-destructive text-[13px]">
                     The add-on&apos;s charges could not be loaded, so they cannot be repriced now.
-                    Close this and try again.
+                    Add it as it is, or reload the page to price it.
                   </p>
                 ) : (
                   <p className="text-muted-foreground text-[13px]">
