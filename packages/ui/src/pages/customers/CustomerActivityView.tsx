@@ -227,7 +227,12 @@ export function resolveActivityFilters(
   previous: Pick<ActivityFilters, 'actorType' | 'actorId'>,
 ): Pick<ActivityFilters, 'action' | 'actorType' | 'actorId' | 'source'> {
   const read = (field: ActivityFilterField) =>
-    String(flat.findLast((entry) => entry.field === field)?.values[0] ?? '')
+    // The last rule with a value: a row still waiting for its value (Add
+    // filter, then "is") must not clear the filter it is about to replace.
+    String(
+      flat.findLast((entry) => entry.field === field && entry.values.some(hasValue))?.values[0] ??
+        '',
+    )
   const actorId = read('actorId')
   let actorType = read('actorType')
   const personChanged = actorId !== (previous.actorId ?? '')
@@ -534,6 +539,8 @@ export function CustomerActivityView({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-3">
           <p className="text-muted-foreground text-[13px]" aria-live="polite">
             {summary}
+            {/* The API returns newest first and takes no sort, so any other order is this page's. */}
+            {sort.field === 'at' && sort.direction === 'desc' ? null : ' · sorted within this page'}
           </p>
           <div className="flex items-center gap-2">
             <Select

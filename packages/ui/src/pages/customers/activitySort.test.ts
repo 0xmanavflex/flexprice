@@ -46,6 +46,15 @@ describe('resolving the activity filter', () => {
     ).toBe('invoice.paid')
   })
 
+  it('a rule still waiting for its value keeps the earlier filter', () => {
+    expect(
+      resolveActivityFilters(
+        [rule('action', 'customer.created'), { field: 'action', operator: 'is', values: [] }],
+        { actorType: '' },
+      ).action,
+    ).toBe('customer.created')
+  })
+
   it('a newly chosen person sets the actor to people, over another actor type', () => {
     expect(
       resolveActivityFilters([rule('actorType', 'system'), rule('actorId', 'user_2')], {
