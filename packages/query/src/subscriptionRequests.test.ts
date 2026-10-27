@@ -630,6 +630,75 @@ describe('contract-scoped creators', () => {
     })
   })
 
+  it("sends an add-on's new prices, fixed and usage, as its override_line_items", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      priceOverrides: [
+        { priceId: 'price_addon_seat', billingModel: BillingModel.FlatFee, amount: '15' },
+        {
+          priceId: 'price_addon_api',
+          billingModel: BillingModel.Package,
+          amount: '2',
+          divideBy: 1000,
+          bucketSize: '',
+        },
+      ],
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'quantity',
+          value: '100',
+          overageFactor: '',
+          trueUp: false,
+          windowed: true,
+          bucketSize: 'HOUR',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      addon_id: 'addon_1',
+      override_line_items: [
+        { price_id: 'price_addon_seat', billing_model: 'FLAT_FEE', amount: '15' },
+        {
+          price_id: 'price_addon_api',
+          billing_model: 'PACKAGE',
+          amount: '2',
+          transform_quantity: { divide_by: 1000 },
+          bucket_size: 'HOUR',
+        },
+      ],
+      line_item_commitments: { price_addon_api: { commitment_type: 'quantity' } },
+    })
+  })
+
+  it("sends a new contract's add-on prices on that add-on", () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        addons: [
+          {
+            addonId: 'addon_1',
+            name: 'Support',
+            priceOverrides: [
+              { priceId: 'price_addon_seat', billingModel: BillingModel.FlatFee, amount: '15' },
+            ],
+          },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(wire['override_line_items']).toBeUndefined()
+    expect(wire['addons']).toEqual([
+      {
+        addon_id: 'addon_1',
+        override_line_items: [
+          { price_id: 'price_addon_seat', billing_model: 'FLAT_FEE', amount: '15' },
+        ],
+      },
+    ])
+  })
+
   it('applies a coupon as an add modification', () => {
     const request = toAddCouponRequest('sub_1', { couponCode: ' WELCOME10 ' })
     expect(ExecuteSubscriptionModifyRequest$outboundSchema.parse(request)).toEqual({

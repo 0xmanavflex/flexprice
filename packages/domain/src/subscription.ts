@@ -492,11 +492,13 @@ export const createSubscriptionSchema = z
         autoApply: z.boolean(),
       }),
     ),
-    // Each add-on may commit on its own usage charges, as V1's add-on card.
+    // Each add-on may reprice its charges and commit on its usage charges, as V1's add-on card.
     addons: z.array(
       z.object({
         addonId: z.string().min(1),
         name: z.string(),
+        /** New prices for the add-on's own charges (`override_line_items`). */
+        priceOverrides: z.array(priceOverrideSchema).optional(),
         commitments: z.array(chargeCommitmentSchema).optional(),
       }),
     ),
@@ -738,7 +740,9 @@ export interface SubscriptionDetail extends Subscription {
 }
 
 /** An inherited contract mirrors its parent's: it has no lines of its own and is read-only. */
-export function isInheritedContract(contract: Pick<SubscriptionDetail, 'subscriptionType'>): boolean {
+export function isInheritedContract(
+  contract: Pick<SubscriptionDetail, 'subscriptionType'>,
+): boolean {
   return contract.subscriptionType === 'inherited'
 }
 
@@ -1065,9 +1069,11 @@ export interface SubscriptionTax {
   priority: number
 }
 
-/** Attach an add-on to one contract, with commitments on its usage charges. */
+/** Attach an add-on to one contract, with new prices on its charges and commitments on its usage charges. */
 export interface AddContractAddon {
   addonId: string
+  /** New prices for the add-on's own charges, sent as `override_line_items`. */
+  priceOverrides?: PriceOverride[]
   commitments?: ChargeCommitment[]
 }
 

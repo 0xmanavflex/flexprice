@@ -172,3 +172,19 @@ export function attachableAddonCommitments<T extends { priceId: string }>(
   )
   return commitments.filter((commitment) => attachable.has(commitment.priceId))
 }
+
+/**
+ * An add-on's price overrides that still apply: those on a charge, fixed or
+ * usage, the API attaches to this contract (`attachableAddonCharges`). As with
+ * commitments, an override on a price the contract no longer takes is dropped,
+ * and while the add-on's charges are not known the overrides are kept.
+ */
+export function attachableAddonOverrides<T extends { priceId: string }>(
+  overrides: readonly T[],
+  charges: readonly Charge[] | undefined,
+  contract: { currency: string; billingPeriod: BillingPeriod | string },
+): T[] {
+  if (!charges) return [...overrides]
+  const attachable = new Set(attachableAddonCharges(charges, contract).map((charge) => charge.id))
+  return overrides.filter((override) => attachable.has(override.priceId))
+}

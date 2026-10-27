@@ -1,21 +1,16 @@
 import { useState } from 'react'
-import { Button } from '@ui/components/primitives/button'
-import { ScaleIcon } from '@ui/icons'
-import { ChargeCommitmentDialog, commitmentText } from './ChargeCommitmentDialog'
-import { commitmentChargeOf } from './SubscriptionForm'
+import { AddonChargesDialog, type AddonPricing } from './SubscriptionForm'
 import {
   emptyTaxAssociation,
   type AddContractAddon,
   type AddContractCoupon,
   type Charge,
-  type ChargeCommitment,
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreateTaxAssociation,
-  PriceType,
   attachableAddonCharges,
 } from '@fp/domain'
-import { Composer, SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
@@ -230,9 +225,10 @@ function PickDialog({
 }
 
 /**
- * Attach an add-on, and commit on its usage charges if you like, as V1's add-on
- * card: each usage charge of the chosen add-on gets Add commitment, which opens
- * the same commitment dialog as a plan charge.
+ * Attach an add-on, repricing its charges first if you like, as V1's add-on
+ * card: choosing one lists all its charges, fixed and usage, each with
+ * Override price (sent as `override_line_items`) and, on a usage charge, Add
+ * commitment, the same dialogs as a plan charge.
  */
 function AddonDialog({
   open,
@@ -256,128 +252,58 @@ function AddonDialog({
   onSubmit: (draft: AddContractAddon) => void
 }) {
   const [addonId, setAddonId] = useState('')
-  const [commitments, setCommitments] = useState<ChargeCommitment[]>([])
-  const [committing, setCommitting] = useState<Charge | null>(null)
+  const [pricing, setPricing] = useState<AddonPricing>({ priceOverrides: [], commitments: [] })
   const [problem, setProblem] = useState<string | null>(null)
   // Only the prices the API will attach (this currency, this period or one-time).
-  const usage = addonId
-    ? attachableAddonCharges(chargesOf?.(addonId) ?? [], { currency, billingPeriod }).filter(
-        (charge) => charge.type === PriceType.Usage,
-      )
-    : []
-  const commitmentOn = (priceId: string) => commitments.find((c) => c.priceId === priceId)
+  const loaded = addonId ? chargesOf?.(addonId) : undefined
+  const charges =
+    !addonId || !chargesOf
+      ? null
+      : loaded
+        ? attachableAddonCharges(loaded, { currency, billingPeriod })
+        : undefined
 
   return (
-    <>
-      <FormDialog
-        open={open && committing === null}
-        onOpenChange={(next) => (next ? undefined : onClose())}
-        title="Add add-on"
-        size="sm"
-        isPending={pending}
-      >
-        <Composer
-          submitLabel="Add add-on"
-          onCancel={onClose}
-          submitting={pending}
-          disabled={addons.length === 0}
-          onSubmit={() => {
-            if (!addonId) return setProblem('Choose an add-on')
-            setProblem(null)
-            onSubmit({ addonId, ...(commitments.length > 0 ? { commitments } : {}) })
+    <AddonChargesDialog
+      open={open}
+      title="Add add-on"
+      submitLabel="Add add-on"
+      charges={charges}
+      currency={currency}
+      value={pricing}
+      onChange={setPricing}
+      pending={pending}
+      error={problem ?? error}
+      disabled={addons.length === 0}
+      onClose={onClose}
+      onSubmit={() => {
+        if (!addonId) return setProblem('Choose an add-on')
+        setProblem(null)
+        onSubmit({
+          addonId,
+          ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
+          ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+        })
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        <LabelWithHint htmlFor="pick-add-on" hint="The add-on to attach to this contract.">
+          Add-on
+        </LabelWithHint>
+        <OptionSelect
+          id="pick-add-on"
+          value={addonId || undefined}
+          onValueChange={(next) => {
+            setAddonId(next)
+            setPricing({ priceOverrides: [], commitments: [] })
           }}
-        >
-          <div className="flex flex-col gap-2">
-            <LabelWithHint htmlFor="pick-add-on" hint="The add-on to attach to this contract.">
-              Add-on
-            </LabelWithHint>
-            <OptionSelect
-              id="pick-add-on"
-              value={addonId || undefined}
-              onValueChange={(next) => {
-                setAddonId(next)
-                setCommitments([])
-              }}
-              options={addons.map((a) => ({ value: a.id, label: a.name }))}
-              placeholder="Select add-on"
-            />
-            {addons.length === 0 ? (
-              <p className="text-muted-foreground text-[13px]">
-                No add-ons are available to attach.
-              </p>
-            ) : null}
-          </div>
-          {usage.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <LabelWithHint hint="A minimum on a usage charge of this add-on: spend or units per period. Optional.">
-                Commitments
-              </LabelWithHint>
-              <SimpleTable
-                rows={usage}
-                getRowId={(charge) => charge.id}
-                columns={[
-                  {
-                    key: 'charge',
-                    header: 'Usage charge',
-                    cell: (charge) => {
-                      const commitment = commitmentOn(charge.id)
-                      return (
-                        <span className="flex min-w-0 flex-col">
-                          <span className="truncate font-medium">
-                            {commitmentChargeOf(charge).name}
-                          </span>
-                          <span className="text-muted-foreground truncate text-xs">
-                            {commitment ? commitmentText(commitment, currency) : 'No commitment'}
-                          </span>
-                        </span>
-                      )
-                    },
-                  },
-                  {
-                    key: 'action',
-                    header: '',
-                    className: 'w-24 text-right',
-                    cell: (charge) => {
-                      const has = commitmentOn(charge.id) !== undefined
-                      return (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-3"
-                          aria-label={`${has ? 'Edit' : 'Add'} commitment on ${commitmentChargeOf(charge).name}`}
-                          onClick={() => setCommitting(charge)}
-                        >
-                          <ScaleIcon aria-hidden /> {has ? 'Edit' : 'Add'}
-                        </Button>
-                      )
-                    },
-                  },
-                ]}
-              />
-            </div>
-          ) : null}
-          {problem || error ? (
-            <p role="alert" className="text-destructive text-sm">
-              {problem ?? error}
-            </p>
-          ) : null}
-        </Composer>
-      </FormDialog>
-      <ChargeCommitmentDialog
-        charge={committing ? commitmentChargeOf(committing) : null}
-        commitment={committing ? commitmentOn(committing.id) : undefined}
-        currency={currency}
-        onClose={() => setCommitting(null)}
-        onSave={(next) => {
-          if (committing)
-            setCommitments((current) => [
-              ...current.filter((c) => c.priceId !== committing.id),
-              ...(next ? [next] : []),
-            ])
-          setCommitting(null)
-        }}
-      />
-    </>
+          options={addons.map((a) => ({ value: a.id, label: a.name }))}
+          placeholder="Select add-on"
+        />
+        {addons.length === 0 ? (
+          <p className="text-muted-foreground text-[13px]">No add-ons are available to attach.</p>
+        ) : null}
+      </div>
+    </AddonChargesDialog>
   )
 }

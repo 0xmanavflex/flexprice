@@ -37,7 +37,7 @@ const ADDONS: SubscriptionAddonOption[] = [
   { value: 'addon_storage', label: 'Extra storage', type: 'Usage' },
 ]
 const TAX_RATES = [{ code: 'GST18', name: 'GST', percentage: '18' }]
-/** Extra storage's usage charge, so it can carry a commitment. */
+/** Extra storage's charges: a fixed base and a usage charge, each repriceable; the usage one can carry a commitment. */
 const STORAGE_CHARGES = [
   {
     ...makeCharge(2, { type: PriceType.Usage, billingModel: BillingModel.FlatFee }),
@@ -53,6 +53,11 @@ const STORAGE_CHARGES = [
     }),
     entityId: 'addon_storage',
     displayName: 'Storage archive (GB)',
+  },
+  {
+    ...makeCharge(4, { type: PriceType.Fixed, billingModel: BillingModel.FlatFee }),
+    entityId: 'addon_storage',
+    displayName: 'Storage base',
   },
 ]
 const PLAN_NAMES = ['Starter', 'Pro', 'Business', 'Scale', 'Enterprise']
@@ -240,7 +245,7 @@ function SubscriptionFormPlayground({
       onPlanChange={handlePlanChange}
       coupons={COUPONS}
       addons={ADDONS}
-      addonCharges={(addonId) => (addonId === 'addon_storage' ? STORAGE_CHARGES : undefined)}
+      addonCharges={(addonId) => (addonId === 'addon_storage' ? STORAGE_CHARGES : [])}
       taxRates={TAX_RATES}
       customerTaxes={[
         {
@@ -900,11 +905,23 @@ export const AddsAnAddon: Story = {
     ).toBeVisible()
     await userEvent.click(picker)
     await userEvent.click(await screen.findByRole('option', { name: /Premium support/ }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Add add-on · Premium support' }),
+    )
+    await expect(
+      dialog.getByText(
+        "This add-on has no charges in this contract's currency and billing period.",
+      ),
+    ).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
     await expect(await canvas.findByRole('columnheader', { name: 'Add-on' })).toBeVisible()
-    await expect(canvas.getByRole('columnheader', { name: 'Type' })).toBeVisible()
+    await expect(canvas.getByRole('columnheader', { name: 'Charges' })).toBeVisible()
     await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toBeVisible()
     await userEvent.click(canvas.getByRole('combobox', { name: /^Add another/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Add add-on' }),
+    )
     await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Extra storage' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove add-on' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
@@ -918,6 +935,58 @@ export const AddsAnAddon: Story = {
   },
 }
 
+/**
+ * Picking an add-on lists all its charges that bill on this contract, fixed and
+ * usage (not the quarterly one on a monthly contract). Each can be repriced
+ * before the add-on is added; the new price is sent on the add-on.
+ */
+export const AddonPriceOverride: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
+    let dialog = within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' }))
+    await expect(dialog.getByText('Storage base')).toBeVisible()
+    await expect(dialog.getByText('Storage (GB)')).toBeVisible()
+    expect(dialog.queryByText('Storage archive (GB)')).toBeNull()
+    await userEvent.click(dialog.getByRole('button', { name: 'Actions for Storage base' }))
+    const override = await screen.findByRole('menuitem', { name: 'Override price' })
+    // A fixed charge takes no commitment.
+    expect(screen.queryByRole('menuitem', { name: 'Add commitment' })).toBeNull()
+    await userEvent.click(override)
+    const price = within(
+      await screen.findByRole('dialog', { name: 'Override price · Storage base' }),
+    )
+    await userEvent.type(price.getByLabelText(/^Amount/), '20')
+    await userEvent.click(price.getByRole('button', { name: 'Save override' }))
+    dialog = within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' }))
+    await expect(await dialog.findByText('$20.00')).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
+    await expect(await canvas.findByText(/\$20\.00 \(changed\)/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          addons: [
+            {
+              addonId: 'addon_storage',
+              name: 'Extra storage',
+              priceOverrides: [
+                expect.objectContaining({
+                  priceId: STORAGE_CHARGES[2]!.id,
+                  billingModel: BillingModel.FlatFee,
+                  amount: '20',
+                }),
+              ],
+            },
+          ],
+        }),
+      ),
+    )
+  },
+}
+
 /** As V1's add-on card: an add-on's usage charge can carry a commitment, sent with the add-on. */
 export const AddonCommitment: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 2 },
@@ -925,14 +994,19 @@ export const AddonCommitment: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('combobox', { name: /^Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Extra storage/ }))
-    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for Extra storage' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Actions for Storage (GB)' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add commitment' }))
+    const commitment = within(await screen.findByRole('dialog'))
+    await userEvent.type(await commitment.findByRole('textbox', { name: /^Commitment \(/ }), '250')
+    await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
     await userEvent.click(
-      await screen.findByRole('menuitem', { name: 'Add commitment: Storage (GB)' }),
+      within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' })).getByRole(
+        'button',
+        { name: 'Add add-on' },
+      ),
     )
-    const dialog = within(await screen.findByRole('dialog'))
-    await userEvent.type(await dialog.findByRole('textbox', { name: /^Commitment \(/ }), '250')
-    await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
-    await expect(await canvas.findByText(/^Storage \(GB\): /)).toBeVisible()
+    await expect(await canvas.findByText('Storage (GB)')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
@@ -952,9 +1026,10 @@ export const AddonCommitment: Story = {
 }
 
 /**
- * Commitments saved on both of the add-on's charges, then the contract moved to
- * monthly: the quarterly price no longer attaches, so its commitment is
- * neither listed nor sent (the API would refuse it). The monthly one stays.
+ * Commitments saved on both of the add-on's usage charges, then the contract
+ * moved to monthly: the quarterly price no longer attaches, so its commitment
+ * is neither listed nor sent (the API would refuse it). The monthly one stays,
+ * and Edit reopens the add-on's charges with it.
  */
 export const AddonCommitmentAfterPeriodChange: Story = {
   args: {
@@ -965,7 +1040,7 @@ export const AddonCommitmentAfterPeriodChange: Story = {
       {
         addonId: 'addon_storage',
         name: 'Extra storage',
-        commitments: STORAGE_CHARGES.map((charge) => ({
+        commitments: STORAGE_CHARGES.slice(0, 2).map((charge) => ({
           priceId: charge.id,
           type: 'amount' as const,
           value: '250',
@@ -981,14 +1056,18 @@ export const AddonCommitmentAfterPeriodChange: Story = {
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText(/^Storage \(GB\): /)).toBeVisible()
-    expect(canvas.queryByText(/^Storage archive \(GB\): /)).toBeNull()
+    await expect(await canvas.findByText('Storage (GB)')).toBeVisible()
+    expect(canvas.queryByText('Storage archive (GB)')).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for Extra storage' }))
-    await expect(
-      await screen.findByRole('menuitem', { name: 'Edit commitment: Storage (GB)' }),
-    ).toBeVisible()
-    expect(screen.queryByRole('menuitem', { name: /Storage archive/ })).toBeNull()
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Edit add-on · Extra storage' }),
+    )
+    expect(dialog.queryByText('Storage archive (GB)')).toBeNull()
+    await userEvent.click(dialog.getByRole('button', { name: 'Actions for Storage (GB)' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Edit commitment' })).toBeVisible()
     await userEvent.keyboard('{Escape}')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save add-on' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(

@@ -861,6 +861,7 @@ export type { TimezoneOption } from './timezones'
 export {
   attachableAddonCharges,
   attachableAddonCommitments,
+  attachableAddonOverrides,
   cadenceAllowed,
   selectContractCharges,
 } from './contractCharges'

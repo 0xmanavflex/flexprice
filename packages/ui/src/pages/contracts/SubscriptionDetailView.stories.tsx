@@ -1229,7 +1229,11 @@ export const AddAddon: Story = {
   },
 }
 
-/** As V1: attaching an add-on can commit on its usage charges, through the same dialog as a plan charge. */
+/**
+ * Choosing an add-on lists all its charges, fixed and usage. Each can be
+ * repriced and a usage charge can carry a commitment before it is attached;
+ * both are sent with the add-on.
+ */
 export const AddAddonWithCommitment: Story = {
   parameters: menuA11y,
   args: {
@@ -1241,6 +1245,12 @@ export const AddAddonWithCommitment: Story = {
               {
                 ...makeCharge(1, { type: PriceType.Usage, billingModel: BillingModel.FlatFee }),
                 entityId: 'addon_support',
+                displayName: 'Support tickets',
+              },
+              {
+                ...makeCharge(2, { type: PriceType.Fixed, billingModel: BillingModel.FlatFee }),
+                entityId: 'addon_support',
+                displayName: 'Support seat',
               },
             ]
           : undefined,
@@ -1249,19 +1259,35 @@ export const AddAddonWithCommitment: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
-    const dialog = within(await screen.findByRole('dialog'))
+    let dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
-    await userEvent.click(await dialog.findByRole('button', { name: /^Add commitment on / }))
+    await expect(await dialog.findByText('Support seat')).toBeVisible()
+    await expect(dialog.getByText('Support tickets')).toBeVisible()
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Actions for Support seat' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Override price' }))
+    const price = within(
+      await screen.findByRole('dialog', { name: 'Override price · Support seat' }),
+    )
+    await userEvent.type(price.getByLabelText(/^Amount/), '40')
+    await userEvent.click(price.getByRole('button', { name: 'Save override' }))
+
+    dialog = within(await screen.findByRole('dialog', { name: 'Add add-on' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Actions for Support tickets' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add commitment' }))
     const commitment = within(await screen.findByRole('dialog'))
     await userEvent.type(await commitment.findByRole('textbox', { name: /^Commitment \(/ }), '500')
     await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
-    const back = within(await screen.findByRole('dialog'))
+    const back = within(await screen.findByRole('dialog', { name: 'Add add-on' }))
     await userEvent.click(back.getByRole('button', { name: 'Add add-on' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith(
         expect.objectContaining({
           addonId: 'addon_support',
+          priceOverrides: [
+            expect.objectContaining({ billingModel: BillingModel.FlatFee, amount: '40' }),
+          ],
           commitments: [expect.objectContaining({ value: '500' })],
         }),
       ),

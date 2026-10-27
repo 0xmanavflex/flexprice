@@ -86,10 +86,11 @@ export function SubscriptionFormPage({
     ...PICKER_PAGE,
     statuses: [AddonStatus.Published],
   })
-  // Usage charges of the add-ons that have any, read in one search, so each can carry a commitment.
+  // The charges of the add-ons that have any, read in one search, so each can be
+  // repriced before it is added and a usage charge can carry a commitment.
   const addonCharges = useEntitiesCharges(
     PriceEntityType.Addon,
-    (addons.data?.addons ?? []).filter((a) => a.usageChargeCount > 0).map((a) => a.id),
+    (addons.data?.addons ?? []).filter((a) => a.chargeCount > 0).map((a) => a.id),
   )
   // Refetched on focus: "Create a tax rate" opens in a new tab, and the rate
   // made there should be pickable on return without losing this draft.
@@ -177,7 +178,12 @@ export function SubscriptionFormPage({
         label: addon.name,
         type: addonType(addon.fixedChargeCount, addon.usageChargeCount),
       }))}
-      addonCharges={(addonId) => addonCharges.data?.get(addonId)}
+      addonCharges={(addonId) =>
+        // Undefined only while loading: an add-on missing from the result has no charges.
+        addonCharges.isFetching && !addonCharges.data
+          ? undefined
+          : (addonCharges.data?.get(addonId) ?? [])
+      }
       createTaxRateHref="/taxes/new"
       taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
         code: rate.code,

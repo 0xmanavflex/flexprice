@@ -35,6 +35,7 @@ import {
   InvoiceCadence,
   attachableAddonCharges,
   attachableAddonCommitments,
+  attachableAddonOverrides,
   type ChargeCommitment,
   type CreateCreditGrant,
   type CreateSubscription,
@@ -75,7 +76,13 @@ import { Input } from '@ui/components/primitives/input'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import { Switch } from '@ui/components/primitives/switch'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
-import { ChoiceCards, SimpleTable, type SimpleColumn } from '@ui/compositions/detail/DetailKit'
+import {
+  ChoiceCards,
+  Composer,
+  SimpleTable,
+  type SimpleColumn,
+} from '@ui/compositions/detail/DetailKit'
+import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { parseDateValue } from '@ui/compositions/forms/DateInput'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
@@ -588,19 +595,22 @@ export function SubscriptionForm({
         discounts: phase.discounts.filter((d) => !d.priceId || billed.has(d.priceId)),
       })),
       chargeCommitments: draft.chargeCommitments.filter((c) => billed.has(c.priceId)),
-      // An add-on commitment on a price this currency and period do not attach
-      // would be refused: it was set before either changed, and is hidden now.
-      addons: draft.addons.map((addon) => {
-        if (!addon.commitments) return addon
-        const commitments = attachableAddonCommitments(
-          addon.commitments,
-          addonCharges?.(addon.addonId),
-          draft,
-        )
-        return commitments.length > 0
-          ? { ...addon, commitments }
-          : { addonId: addon.addonId, name: addon.name }
-      }),
+      // An add-on override or commitment on a price this currency and period do
+      // not attach would be refused: it was set before either changed, and is hidden now.
+      addons: draft.addons.map((addon) =>
+        withAddonPricing(addon, {
+          priceOverrides: attachableAddonOverrides(
+            addon.priceOverrides ?? [],
+            addonCharges?.(addon.addonId),
+            draft,
+          ),
+          commitments: attachableAddonCommitments(
+            addon.commitments ?? [],
+            addonCharges?.(addon.addonId),
+            draft,
+          ),
+        }),
+      ),
       optedInChargeIds: draft.optedInChargeIds.filter((id) => billed.has(id)),
       includePriceIds: selection.includePriceIds,
       // Not offered with fixed charges; a value typed before they were added is not sent.
@@ -1023,6 +1033,7 @@ export function SubscriptionForm({
           chargesOf={addonCharges}
           currency={values.currency}
           billingPeriod={values.billingPeriod}
+          meters={meters}
         />
       </div>
     ) : (
@@ -2627,10 +2638,274 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
   )
 }
 
+/** An add-on's own pricing on one contract: new prices on its charges, commitments on its usage charges. */
+export interface AddonPricing {
+  priceOverrides: PriceOverride[]
+  commitments: ChargeCommitment[]
+}
+
+/**
+ * An add-on's charges, fixed and usage, before it is added to a contract. Each
+ * charge can take a new price, sent as the add-on's `override_line_items`, and
+ * each usage charge a commitment, as a plan charge can. The price and
+ * commitment dialogs replace this one while open, so only one dialog shows.
+ *
+ * `charges` are only those the API attaches (`attachableAddonCharges`); null
+ * hides the table (no add-on chosen yet), undefined says they are loading.
+ */
+export function AddonChargesDialog({
+  open,
+  title,
+  submitLabel,
+  charges,
+  currency,
+  meters = [],
+  value,
+  onChange,
+  pending = false,
+  error,
+  disabled,
+  onClose,
+  onSubmit,
+  children,
+}: {
+  open: boolean
+  title: string
+  submitLabel: string
+  charges: readonly Charge[] | null | undefined
+  currency: string
+  /** The metered features, so a usage charge's override offers a bucket where the API takes one. */
+  meters?: readonly MeterOption[] | undefined
+  value: AddonPricing
+  onChange: (next: AddonPricing) => void
+  pending?: boolean
+  error?: string | null | undefined
+  disabled?: boolean
+  onClose: () => void
+  onSubmit: () => void
+  /** Above the charges: the add-on picker, where the dialog chooses one. */
+  children?: ReactNode
+}) {
+  const [editing, setEditing] = useState<{
+    kind: 'price' | 'commitment'
+    charge: Charge
+  } | null>(null)
+  const overrideOf = (priceId: string) => value.priceOverrides.find((o) => o.priceId === priceId)
+  const commitmentOf = (priceId: string) => value.commitments.find((c) => c.priceId === priceId)
+  const without = <T extends { priceId: string }>(list: T[], priceId: string) =>
+    list.filter((item) => item.priceId !== priceId)
+  const columns: SimpleColumn<Charge>[] = [
+    {
+      key: 'charge',
+      header: 'Charge',
+      cell: (charge) => {
+        const commitment = commitmentOf(charge.id)
+        return (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate font-medium">{chargeName(charge)}</span>
+            <span className="text-muted-foreground truncate text-xs">
+              {chargeKind(charge)}
+              {commitment ? ` · ${commitmentText(commitment, currency)}` : ''}
+            </span>
+          </span>
+        )
+      },
+    },
+    {
+      key: 'price',
+      header: 'Price',
+      cell: (charge) => {
+        const override = overrideOf(charge.id)
+        return (
+          <span className="flex min-w-0 flex-col tabular-nums">
+            <span>{priceText(charge, override)}</span>
+            {override ? (
+              <span className="text-muted-foreground text-xs line-through">
+                {priceText(charge, undefined)}
+              </span>
+            ) : null}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'w-10 text-right',
+      cell: (charge) => {
+        const name = chargeName(charge)
+        const changed = overrideOf(charge.id) !== undefined || commitmentOf(charge.id) !== undefined
+        return (
+          <RowActionsMenu
+            label={name}
+            extra={[
+              {
+                label: overrideOf(charge.id) ? 'Edit price' : 'Override price',
+                icon: <CircleDollarSignIcon aria-hidden />,
+                onSelect: () => setEditing({ kind: 'price', charge }),
+              },
+              ...(charge.type === PriceType.Usage
+                ? [
+                    {
+                      label: commitmentOf(charge.id) ? 'Edit commitment' : 'Add commitment',
+                      icon: <ScaleIcon aria-hidden />,
+                      onSelect: () => setEditing({ kind: 'commitment', charge }),
+                    },
+                  ]
+                : []),
+              ...(changed
+                ? [
+                    {
+                      label: 'Reset to add-on price',
+                      icon: <RotateCcwIcon aria-hidden />,
+                      onSelect: () =>
+                        onChange({
+                          priceOverrides: without(value.priceOverrides, charge.id),
+                          commitments: without(value.commitments, charge.id),
+                        }),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        )
+      },
+    },
+  ]
+  const repricing = editing?.kind === 'price' ? editing.charge : null
+  const committing = editing?.kind === 'commitment' ? editing.charge : null
+  return (
+    <>
+      <FormDialog
+        open={open && editing === null}
+        onOpenChange={(next) => (next ? undefined : onClose())}
+        title={title}
+        size="lg"
+        isPending={pending}
+      >
+        <Composer
+          submitLabel={submitLabel}
+          onCancel={onClose}
+          submitting={pending}
+          {...(disabled !== undefined ? { disabled } : {})}
+          onSubmit={onSubmit}
+        >
+          {children}
+          {charges === null ? null : (
+            <div className="flex flex-col gap-2">
+              <LabelWithHint hint="Every charge this add-on bills on the contract. Change a price, or commit on a usage charge, before adding it. Optional.">
+                Charges
+              </LabelWithHint>
+              {charges === undefined ? (
+                <p className="text-muted-foreground text-[13px]">
+                  Loading the add-on&apos;s charges…
+                </p>
+              ) : (
+                <SimpleTable
+                  rows={[...charges]}
+                  getRowId={(charge) => charge.id}
+                  columns={columns}
+                  empty="This add-on has no charges in this contract's currency and billing period."
+                />
+              )}
+            </div>
+          )}
+          {error ? (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          ) : null}
+        </Composer>
+      </FormDialog>
+      <FormDialog
+        open={open && repricing !== null}
+        onOpenChange={(next) => (next ? undefined : setEditing(null))}
+        size="lg"
+        title={repricing ? `Override price · ${chargeName(repricing)}` : ''}
+      >
+        {repricing ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-muted-foreground text-xs">
+              Add-on price: <PlanPriceText charge={repricing} />
+            </p>
+            <PriceOverrideForm
+              key={repricing.id}
+              priceId={repricing.id}
+              meter={
+                repricing.type === PriceType.Usage
+                  ? meters.find((meter) => meter.id === repricing.meterId)
+                  : undefined
+              }
+              {...(overrideOf(repricing.id) ? { defaultValue: overrideOf(repricing.id)! } : {})}
+              onSubmit={(override) => {
+                // One bucket per charge reaches the API: a bucket chosen here
+                // becomes the commitment's too, so neither silently loses.
+                const commitment = commitmentOf(repricing.id)
+                onChange({
+                  priceOverrides: [...without(value.priceOverrides, repricing.id), override],
+                  commitments:
+                    commitment &&
+                    override.bucketSize &&
+                    override.bucketSize !== commitment.bucketSize
+                      ? value.commitments.map((c) =>
+                          c.priceId === repricing.id
+                            ? { ...c, bucketSize: override.bucketSize! }
+                            : c,
+                        )
+                      : value.commitments,
+                })
+                setEditing(null)
+              }}
+            />
+          </div>
+        ) : null}
+      </FormDialog>
+      <ChargeCommitmentDialog
+        charge={
+          open && committing ? commitmentChargeOf(committing, overrideOf(committing.id)) : null
+        }
+        commitment={committing ? commitmentOf(committing.id) : undefined}
+        currency={currency}
+        onClose={() => setEditing(null)}
+        onSave={(next) => {
+          if (committing) {
+            const override = overrideOf(committing.id)
+            onChange({
+              // And the other way: a commitment's new bucket replaces one the price override chose.
+              priceOverrides:
+                next && override?.bucketSize && override.bucketSize !== next.bucketSize
+                  ? value.priceOverrides.map((o) =>
+                      o.priceId === committing.id ? { ...o, bucketSize: next.bucketSize } : o,
+                    )
+                  : value.priceOverrides,
+              commitments: [...without(value.commitments, committing.id), ...(next ? [next] : [])],
+            })
+          }
+          setEditing(null)
+        }}
+      />
+    </>
+  )
+}
+
+/** An add-on draft with only the pricing it carries: empty lists are left off. */
+function withAddonPricing(
+  addon: { addonId: string; name: string },
+  pricing: AddonPricing,
+): CreateSubscription['addons'][number] {
+  return {
+    addonId: addon.addonId,
+    name: addon.name,
+    ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
+    ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+  }
+}
+
 /**
  * Add-ons the contract starts with: a table once there is one, and a picker
- * under it for the next. An add-on has no quantity on a new contract: the
- * API takes none.
+ * under it for the next. Picking an add-on opens its charges, fixed and usage,
+ * to reprice or commit on before it is added; Edit reopens them. An add-on has
+ * no quantity on a new contract: the API takes none.
  */
 function AddonsSection({
   selected,
@@ -2639,6 +2914,7 @@ function AddonsSection({
   chargesOf,
   currency,
   billingPeriod,
+  meters,
 }: {
   selected: CreateSubscription['addons']
   options: readonly SubscriptionAddonOption[]
@@ -2646,103 +2922,103 @@ function AddonsSection({
   chargesOf?: ((addonId: string) => readonly Charge[] | undefined) | undefined
   currency: string
   billingPeriod: BillingPeriod
+  meters: readonly MeterOption[]
 }) {
-  // The add-on charge whose commitment dialog is open.
-  const [committing, setCommitting] = useState<{ addonId: string; charge: Charge } | null>(null)
+  // The add-on whose charges dialog is open: one being added, or one already on the contract.
+  const [open, setOpen] = useState<{
+    addonId: string
+    name: string
+    adding: boolean
+    pricing: AddonPricing
+  } | null>(null)
   // Only the prices the API will attach (this currency, this period or one-time).
-  const usageOf = (addonId: string) =>
-    attachableAddonCharges(chargesOf?.(addonId) ?? [], { currency, billingPeriod }).filter(
-      (charge) => charge.type === PriceType.Usage,
-    )
-  // Only the commitments that are sent: one on a price the contract no longer
-  // takes (its currency or period changed since) is dropped on submit.
-  const commitmentsOf = (addonId: string) =>
-    attachableAddonCommitments(
-      selected.find((a) => a.addonId === addonId)?.commitments ?? [],
-      chargesOf?.(addonId),
-      { currency, billingPeriod },
-    )
-  const setCommitment = (addonId: string, priceId: string, next: ChargeCommitment | null) =>
-    onChange(
-      selected.map((addon) => {
-        if (addon.addonId !== addonId) return addon
-        const rest = (addon.commitments ?? []).filter((c) => c.priceId !== priceId)
-        const commitments = next ? [...rest, next] : rest
-        return commitments.length > 0
-          ? { ...addon, commitments }
-          : { addonId: addon.addonId, name: addon.name }
-      }),
-    )
+  const chargesFor = (addonId: string) => {
+    const charges = chargesOf?.(addonId)
+    return charges ? attachableAddonCharges(charges, { currency, billingPeriod }) : undefined
+  }
+  // Only what is sent: an override or commitment on a price the contract no
+  // longer takes (its currency or period changed since) is dropped on submit.
+  const pricingOf = (addon: CreateSubscription['addons'][number]): AddonPricing => ({
+    priceOverrides: attachableAddonOverrides(
+      addon.priceOverrides ?? [],
+      chargesOf?.(addon.addonId),
+      {
+        currency,
+        billingPeriod,
+      },
+    ),
+    commitments: attachableAddonCommitments(addon.commitments ?? [], chargesOf?.(addon.addonId), {
+      currency,
+      billingPeriod,
+    }),
+  })
   const available = options.filter((o) => !selected.some((a) => a.addonId === o.value))
   const optionOf = (addonId: string) => options.find((o) => o.value === addonId)
-  // A price shows only when the page knows one; the add-on list carries none today.
-  const priced = options.some((o) => o.price)
-  type Row = { id: string; name: string; option: SubscriptionAddonOption | undefined }
-  const rows: Row[] = selected.map((addon) => ({
-    id: addon.addonId,
-    name: addon.name || optionOf(addon.addonId)?.label || addon.addonId,
-    option: optionOf(addon.addonId),
-  }))
-  const columns: SimpleColumn<Row>[] = [
+  const nameOf = (addon: CreateSubscription['addons'][number]) =>
+    addon.name || optionOf(addon.addonId)?.label || addon.addonId
+  const edit = (addon: CreateSubscription['addons'][number]) =>
+    setOpen({
+      addonId: addon.addonId,
+      name: nameOf(addon),
+      adding: false,
+      pricing: pricingOf(addon),
+    })
+  const save = () => {
+    if (!open) return
+    const next = withAddonPricing(open, open.pricing)
+    onChange(
+      open.adding
+        ? [...selected, next]
+        : selected.map((addon) => (addon.addonId === open.addonId ? next : addon)),
+    )
+    setOpen(null)
+  }
+  const columns: SimpleColumn<CreateSubscription['addons'][number]>[] = [
     {
       key: 'addon',
       header: 'Add-on',
-      cell: (row) => <span className="font-medium">{row.name}</span>,
+      cell: (addon) => <span className="font-medium">{nameOf(addon)}</span>,
     },
     {
-      key: 'type',
-      header: 'Type',
-      cell: (row) => <span className="text-muted-foreground">{row.option?.type ?? '—'}</span>,
-    },
-    ...(priced
-      ? [
-          {
-            key: 'price',
-            header: 'Price',
-            className: 'text-right tabular-nums',
-            cell: (row: Row) => row.option?.price ?? '—',
-          },
-        ]
-      : []),
-    ...(chargesOf
-      ? [
-          {
-            key: 'commitments',
-            header: 'Commitments',
-            cell: (row: Row) => {
-              const commitments = commitmentsOf(row.id)
-              return commitments.length === 0 ? (
-                <span className="text-muted-foreground">—</span>
-              ) : (
-                <span className="flex flex-col gap-0.5 text-[13px]">
-                  {commitments.map((commitment) => {
-                    const charge = usageOf(row.id).find((c) => c.id === commitment.priceId)
-                    return (
-                      <span key={commitment.priceId}>
-                        {charge ? `${chargeName(charge)}: ` : ''}
-                        {commitmentText(commitment, currency)}
-                      </span>
-                    )
-                  })}
+      key: 'charges',
+      header: 'Charges',
+      cell: (addon) => {
+        const charges = chargesFor(addon.addonId)
+        if (!charges)
+          return (
+            <span className="text-muted-foreground">{optionOf(addon.addonId)?.type ?? '—'}</span>
+          )
+        if (charges.length === 0) return <span className="text-muted-foreground">—</span>
+        const pricing = pricingOf(addon)
+        return (
+          <span className="flex flex-col gap-0.5 text-[13px]">
+            {charges.map((charge) => {
+              const override = pricing.priceOverrides.find((o) => o.priceId === charge.id)
+              const commitment = pricing.commitments.find((c) => c.priceId === charge.id)
+              return (
+                <span key={charge.id}>
+                  <span className="font-medium">{chargeName(charge)}</span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {`: ${priceText(charge, override)}`}
+                    {override ? ' (changed)' : ''}
+                    {commitment ? ` · ${commitmentText(commitment, currency)}` : ''}
+                  </span>
                 </span>
               )
-            },
-          },
-        ]
-      : []),
+            })}
+          </span>
+        )
+      },
+    },
     {
       key: 'actions',
       header: '',
       className: 'w-10 text-right',
-      cell: (row) => (
+      cell: (addon) => (
         <RowActionsMenu
-          label={row.name}
-          extra={usageOf(row.id).map((charge) => ({
-            label: `${commitmentsOf(row.id).some((c) => c.priceId === charge.id) ? 'Edit' : 'Add'} commitment: ${chargeName(charge)}`,
-            icon: <ScaleIcon aria-hidden />,
-            onSelect: () => setCommitting({ addonId: row.id, charge }),
-          }))}
-          onRemove={() => onChange(selected.filter((a) => a.addonId !== row.id))}
+          label={nameOf(addon)}
+          {...(chargesOf ? { onEdit: () => edit(addon) } : {})}
+          onRemove={() => onChange(selected.filter((a) => a.addonId !== addon.addonId))}
           removeLabel="Remove add-on"
         />
       ),
@@ -2754,10 +3030,10 @@ function AddonsSection({
       status="optional"
       icon={<PuzzleIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
     >
-      {rows.length > 0 ? (
+      {selected.length > 0 ? (
         <div className="px-5 pt-4 sm:px-6">
           <Frame>
-            <SimpleTable columns={columns} rows={rows} />
+            <SimpleTable columns={columns} rows={selected} getRowId={(addon) => addon.addonId} />
           </Frame>
         </div>
       ) : null}
@@ -2779,25 +3055,32 @@ function AddonsSection({
               options={available}
               onValueChange={(addonId) => {
                 const option = available.find((o) => o.value === addonId)
-                if (option) onChange([...selected, { addonId: option.value, name: option.label }])
+                if (!option) return
+                const addon = { addonId: option.value, name: option.label }
+                // Without the add-on's charges there is nothing to price: add it as it is.
+                if (!chargesOf) onChange([...selected, addon])
+                else
+                  setOpen({
+                    ...addon,
+                    adding: true,
+                    pricing: { priceOverrides: [], commitments: [] },
+                  })
               }}
             />
           )
         }
       </FormRow>
-      <ChargeCommitmentDialog
-        charge={committing ? commitmentChargeOf(committing.charge) : null}
-        commitment={
-          committing
-            ? commitmentsOf(committing.addonId).find((c) => c.priceId === committing.charge.id)
-            : undefined
-        }
+      <AddonChargesDialog
+        open={open !== null}
+        title={open ? `${open.adding ? 'Add add-on' : 'Edit add-on'} · ${open.name}` : ''}
+        submitLabel={open?.adding ? 'Add add-on' : 'Save add-on'}
+        charges={open ? chargesFor(open.addonId) : null}
         currency={currency}
-        onClose={() => setCommitting(null)}
-        onSave={(next) => {
-          if (committing) setCommitment(committing.addonId, committing.charge.id, next)
-          setCommitting(null)
-        }}
+        meters={meters}
+        value={open?.pricing ?? { priceOverrides: [], commitments: [] }}
+        onChange={(pricing) => setOpen((current) => (current ? { ...current, pricing } : current))}
+        onClose={() => setOpen(null)}
+        onSubmit={save}
       />
     </FormCard>
   )
@@ -3644,9 +3927,11 @@ function ReviewStep({
               : `${values.addons.length}: ${values.addons
                   .map(
                     (addon) =>
-                      addon.name ||
-                      addons.find((a) => a.value === addon.addonId)?.label ||
-                      addon.addonId,
+                      `${
+                        addon.name ||
+                        addons.find((a) => a.value === addon.addonId)?.label ||
+                        addon.addonId
+                      }${addon.priceOverrides?.length ? ` (${addon.priceOverrides.length} repriced)` : ''}`,
                   )
                   .join(', ')}`
           }
