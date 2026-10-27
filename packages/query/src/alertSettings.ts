@@ -93,9 +93,13 @@ export function toAlertConfig(wire: AlertConfigWire | undefined): AlertSettingCo
   if (!info && !warning && !critical) return null
   return {
     alertEnabled: wire.alertEnabled ?? true,
+    // Unset means absolute to the API (flexprice `types.AlertThresholdType`:
+    // "Empty value is treated as absolute"), as settings written before the
+    // type existed are. Reading it as percentage turned "below 100 credits"
+    // into "below 100%", and saving wrote that back.
     thresholdType: ALERT_THRESHOLD_TYPES.has(wire.alertThresholdType ?? '')
       ? (wire.alertThresholdType as AlertThresholdType)
-      : AlertThresholdType.Percentage,
+      : AlertThresholdType.Absolute,
     ...(info ? { info } : {}),
     ...(warning ? { warning } : {}),
     ...(critical ? { critical } : {}),
@@ -109,7 +113,8 @@ export function toAlertSetting(wire: AlertSettingWire): AlertSetting {
 
   const thresholdType = ALERT_THRESHOLD_TYPES.has(wire.config?.alertThresholdType ?? '')
     ? (wire.config?.alertThresholdType as AlertThresholdType)
-    : AlertThresholdType.Percentage
+    : // Unset is absolute to the API, as in `toAlertConfig`.
+      AlertThresholdType.Absolute
 
   return {
     id: wire.id ?? '',

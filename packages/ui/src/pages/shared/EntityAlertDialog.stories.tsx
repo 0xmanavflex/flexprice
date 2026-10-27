@@ -61,3 +61,22 @@ export const EditsAnAlert: Story = {
 export const Loading: Story = { args: { isLoading: true } }
 
 export const LoadFailed: Story = { args: { loadFailed: true, onRetry: fn() } }
+
+/** Info, warning and critical are separated by a rule, and each threshold row's buttons match its input's height. */
+export const LevelsAreSeparated: Story = {
+  play: async () => {
+    const body = await screen.findByRole('dialog')
+    const dialog = within(body)
+    // Three levels, two rules between them.
+    await expect(dialog.getAllByTestId('alert-level-rule')).toHaveLength(2)
+    const input = dialog.getByRole('textbox', { name: /^Warning threshold/ })
+    const condition = within(dialog.getByRole('group', { name: 'Warning condition' })).getByRole(
+      'button',
+      { name: 'Rises above' },
+    )
+    const unit = dialog.getByRole('button', { name: 'Percentage' })
+    const height = input.getBoundingClientRect().height
+    await expect(condition.getBoundingClientRect().height).toBe(height)
+    await expect(unit.getBoundingClientRect().height).toBe(height)
+  },
+}
