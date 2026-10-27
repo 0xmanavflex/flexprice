@@ -1181,6 +1181,80 @@ export const PhaseLoading: Story = {
   },
 }
 
+/**
+ * The plan's entitlements can be changed for this contract alone, with the
+ * entitlement form's fields: a metered allowance's value type and value, a
+ * static value. A config entitlement keeps the plan's (no row menu).
+ */
+export const EditsEntitlements: Story = {
+  args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('AI Tokens')).toBeVisible()
+    expect(canvas.queryByRole('button', { name: 'Actions for Video minutes' })).toBeNull()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for AI Tokens' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    let dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · AI Tokens' }))
+    await expect(dialog.getByRole('textbox', { name: /^Value/ })).toHaveValue('10000')
+    await userEvent.click(dialog.getByRole('combobox', { name: /^Value type/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Amount' }))
+    const value = dialog.getByRole('textbox', { name: /^Value/ })
+    await userEvent.clear(value)
+    await userEvent.type(value, '500')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('500 of usage value')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Seats' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · Seats' }))
+    const seats = dialog.getByRole('textbox', { name: /^Value/ })
+    await userEvent.clear(seats)
+    await userEvent.type(seats, '25')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('25')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entitlementOverrides: [
+            {
+              entitlementId: 'ent_0',
+              usageLimit: 10_000,
+              grant: expect.objectContaining({ measure: 'amount', quota: '500' }),
+            },
+            { entitlementId: 'ent_2', staticValue: '25' },
+          ],
+        }),
+      ),
+    )
+  },
+}
+
+/** Saving a change back to the plan's values, or Reset to plan, sends nothing for it. */
+export const EntitlementResetToPlan: Story = {
+  args: { prefilled: true, step: 'commitments', chargeCount: 2, entitlementCount: 5 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for SSO' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement · SSO' }))
+    await userEvent.click(dialog.getByRole('switch'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await expect(await canvas.findByText('Changed')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for SSO' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Reset to plan' }))
+    await waitFor(() => expect(canvas.queryByText('Changed')).toBeNull())
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ entitlementOverrides: [] }),
+      ),
+    )
+  },
+}
+
 /** Commitments & benefits: the contract's commitment first, then entitlements, grants and taxes. */
 export const CommitmentsStep: Story = {
   args: { prefilled: true, step: 'commitments', chargeCount: 4, entitlementCount: 12 },

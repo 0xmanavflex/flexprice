@@ -83,6 +83,58 @@ describe('toCreateSubscriptionRequest', () => {
     expect(parsed['override_entitlements']).toHaveLength(1)
   })
 
+  it('sends entitlement overrides: a grant patch, a static value, a switch', () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        entitlementOverrides: [
+          {
+            entitlementId: 'ent_api',
+            grant: {
+              measure: 'amount',
+              quota: '50',
+              unit: 'day',
+              allocation: 'first_usage',
+              aggregation: 'additive',
+            },
+          },
+          {
+            entitlementId: 'ent_all',
+            grant: {
+              measure: 'quantity',
+              quota: null,
+              unit: 'day',
+              allocation: 'first_usage',
+              aggregation: 'parallel',
+            },
+          },
+          { entitlementId: 'ent_seats', staticValue: '25' },
+          { entitlementId: 'ent_sso', isEnabled: false },
+        ],
+      } as CreateSubscription),
+    ) as Record<string, unknown>
+    expect(wire['override_entitlements']).toEqual([
+      {
+        entitlement_id: 'ent_api',
+        grant_measure: 'amount',
+        grant_quota: '50',
+        grant_duration_unit: 'day',
+        grant_duration_value: 1,
+        grant_allocation_behavior: 'first_usage',
+        aggregation_mode: 'additive',
+      },
+      {
+        entitlement_id: 'ent_all',
+        grant_measure: 'quantity',
+        grant_unlimited: true,
+        grant_duration_unit: 'subscription_period',
+        aggregation_mode: 'parallel',
+      },
+      { entitlement_id: 'ent_seats', static_value: '25' },
+      { entitlement_id: 'ent_sso', is_enabled: false },
+    ])
+  })
+
   it('routes invoices to another customer by external id', () => {
     expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('inheritance')
     const request = toCreateSubscriptionRequest({

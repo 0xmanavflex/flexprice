@@ -11,6 +11,7 @@ import { type Charge } from './price'
 import { type Money } from './money'
 import { BILLING_PERIOD_LABEL, BillingModel, BillingPeriod, TierMode } from './price'
 import { priceOverrideSchema, type PriceOverride } from './priceOverride'
+import { meteredGrantSchema } from './entitlement'
 
 /**
  * A subscription, as the list reads it.
@@ -472,6 +473,13 @@ export const createSubscriptionSchema = z
         usageLimit: z.number().int().nonnegative('Cannot be negative').optional(),
         /** Boolean: whether the feature is on; omitted keeps the plan's. */
         isEnabled: z.boolean().optional(),
+        /** Static: the value for this customer; omitted keeps the plan's. */
+        staticValue: z.string().trim().min(1, 'Enter a value').optional(),
+        /**
+         * Metered: the allowance for this customer as a grant (value type,
+         * value or unlimited, window, stacking), as the entitlement form sets it.
+         */
+        grant: meteredGrantSchema.optional(),
       }),
     ),
     /**

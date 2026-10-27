@@ -962,6 +962,37 @@ function addonPricing(addon: {
   }
 }
 
+/**
+ * One entitlement override as `override_entitlements` takes it. A metered
+ * grant goes as the grant patch, as an entitlement's own grant is sent: an
+ * unlimited allowance as `grant_unlimited` on a billing-period window, a
+ * window's length and start only when it is hourly, daily or weekly.
+ */
+function toOverrideEntitlement(
+  override: CreateSubscription['entitlementOverrides'][number],
+): Record<string, unknown> {
+  const grant = override.grant
+  const unlimited = grant?.quota === null
+  const unit = grant ? (unlimited ? 'subscription_period' : grant.unit) : undefined
+  return {
+    entitlementId: override.entitlementId,
+    ...(override.usageLimit !== undefined ? { usageLimit: override.usageLimit } : {}),
+    ...(override.isEnabled !== undefined ? { isEnabled: override.isEnabled } : {}),
+    ...(override.staticValue !== undefined ? { staticValue: override.staticValue } : {}),
+    ...(grant
+      ? {
+          grantMeasure: grant.measure,
+          ...(unlimited ? { grantUnlimited: true } : { grantQuota: grant.quota }),
+          grantDurationUnit: unit,
+          ...(unit !== 'subscription_period'
+            ? { grantDurationValue: grant.every ?? 1, grantAllocationBehavior: grant.allocation }
+            : {}),
+          aggregationMode: grant.aggregation,
+        }
+      : {}),
+  }
+}
+
 /** A phase's discounts as the API's two coupon fields: whole-phase ids, and ids per charge. */
 function couponFields(phase: SubscriptionPhase): Record<string, unknown> {
   const whole = phase.discounts.filter((d) => !d.priceId).map((d) => d.couponId)
@@ -1051,11 +1082,7 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
       : {}),
     ...(draft.entitlementOverrides.length > 0
       ? {
-          overrideEntitlements: draft.entitlementOverrides.map((override) => ({
-            entitlementId: override.entitlementId,
-            ...(override.usageLimit !== undefined ? { usageLimit: override.usageLimit } : {}),
-            ...(override.isEnabled !== undefined ? { isEnabled: override.isEnabled } : {}),
-          })),
+          overrideEntitlements: draft.entitlementOverrides.map(toOverrideEntitlement),
         }
       : {}),
     // The API uses this list *instead of* the plan's grants, so it is sent only

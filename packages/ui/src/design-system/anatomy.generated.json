@@ -216,10 +216,12 @@
         "DateInput",
         "DetailTable",
         "EmptyState",
+        "Field",
         "FormCard",
         "FormDialog",
         "FormPage",
         "FormRow",
+        "GrantAllowanceFields",
         "LabelWithHint",
         "OptionCombobox",
         "OptionSelect",
@@ -3507,6 +3509,7 @@
         "AcceptInvitationForm",
         "AddCardDialog",
         "AddCreditsDialog",
+        "AddonChargesDialog",
         "AutoTopupDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
@@ -3547,6 +3550,7 @@
         "SignInForm",
         "SignUpScreen",
         "SpecField",
+        "SubscriptionForm",
         "SyncOptions",
         "UpgradeView",
         "UsageTermsFields",
@@ -4162,8 +4166,10 @@
         "OptionSelect"
       ],
       "usedBy": [
+        "AddonChargesDialog",
         "EntitlementCreateForm",
-        "EntitlementEditForm"
+        "EntitlementEditForm",
+        "SubscriptionForm"
       ],
       "story": "./src/pages/product-catalog/entitlements/GrantAllowanceFields.stories.tsx"
     },
@@ -7511,10 +7517,12 @@
         "DateInput",
         "DetailTable",
         "EmptyState",
+        "Field",
         "FormCard",
         "FormDialog",
         "FormPage",
         "FormRow",
+        "GrantAllowanceFields",
         "LabelWithHint",
         "OptionCombobox",
         "OptionSelect",

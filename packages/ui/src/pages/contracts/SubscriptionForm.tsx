@@ -58,7 +58,17 @@ import {
   CreditGrantCadence,
   CreditGrantExpiryType,
   type Entitlement,
+  EntitlementAggregationMode,
+  EntitlementGrantAllocationBehavior,
+  EntitlementGrantDurationUnit,
+  EntitlementGrantMeasure,
+  entitlementGrant,
   FeatureType,
+  type MeteredGrant,
+  meteredGrantSchema,
+  meteredAllowanceLabel,
+  meteredResetLabel,
+  UsageResetPeriod,
   type PriceOverride,
   type PriceTier,
   SUBSCRIPTION_BILLING_PERIODS,
@@ -85,6 +95,8 @@ import {
   type SimpleColumn,
 } from '@ui/compositions/detail/DetailKit'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
+import { Field } from '@ui/compositions/forms/Field'
+import { GrantAllowanceFields } from '@ui/pages/product-catalog/entitlements/GrantAllowanceFields'
 import { parseDateValue } from '@ui/compositions/forms/DateInput'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
@@ -1062,6 +1074,8 @@ export function SubscriptionForm({
             planLabel={planLabel}
             entitlements={plan?.entitlements ?? []}
             isLoading={plan?.isLoading ?? true}
+            overrides={values.entitlementOverrides}
+            onChange={(next) => set('entitlementOverrides', next)}
           />
         ) : (
           noPlan('Entitlements')
@@ -3320,25 +3334,97 @@ function resetsText(entitlement: Entitlement): string {
     : USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod]
 }
 
+type EntitlementOverride = CreateSubscription['entitlementOverrides'][number]
+
 /**
- * The plan's entitlements, as a table. A metered allowance or an on/off
- * feature can be changed for this contract alone, in its row.
+ * A metered entitlement's allowance as a grant, to edit with the entitlement
+ * form's fields: its own grant config, or one built from an older usage limit
+ * (its limit per billing period, or per day or week when it resets so).
+ */
+function grantOf(entitlement: Entitlement): MeteredGrant {
+  const own = entitlementGrant(entitlement)
+  if (own) return own
+  const unit =
+    entitlement.usageResetPeriod === UsageResetPeriod.Daily
+      ? EntitlementGrantDurationUnit.Day
+      : entitlement.usageResetPeriod === UsageResetPeriod.Weekly
+        ? EntitlementGrantDurationUnit.Week
+        : EntitlementGrantDurationUnit.SubscriptionPeriod
+  return {
+    measure: EntitlementGrantMeasure.Quantity,
+    quota: entitlement.usageLimit == null ? null : String(entitlement.usageLimit),
+    unit: entitlement.usageLimit == null ? EntitlementGrantDurationUnit.SubscriptionPeriod : unit,
+    allocation: EntitlementGrantAllocationBehavior.FirstUsage,
+    aggregation: EntitlementAggregationMode.Additive,
+  }
+}
+
+const GRANT_UNIT_LABEL: Record<MeteredGrant['unit'], string> = {
+  [EntitlementGrantDurationUnit.SubscriptionPeriod]: 'Every billing period',
+  [EntitlementGrantDurationUnit.Hour]: 'Hourly',
+  [EntitlementGrantDurationUnit.Day]: 'Daily',
+  [EntitlementGrantDurationUnit.Week]: 'Weekly',
+}
+
+/** What the contract grants, in words: the override when there is one, else the plan's. */
+function entitlementValueText(entitlement: Entitlement, override?: EntitlementOverride): string {
+  if (override?.grant) {
+    const { quota, measure } = override.grant
+    if (quota === null) return 'Unlimited'
+    const value = Number(quota).toLocaleString('en-US', { maximumFractionDigits: 20 })
+    return measure === EntitlementGrantMeasure.Amount ? `${value} of usage value` : value
+  }
+  if (override?.staticValue !== undefined) return override.staticValue
+  if (override?.isEnabled !== undefined) return override.isEnabled ? 'On' : 'Off'
+  return planEntitlementValue(entitlement)
+}
+
+function entitlementResetsText(entitlement: Entitlement, override?: EntitlementOverride): string {
+  if (override?.grant)
+    return override.grant.quota === null ? '—' : GRANT_UNIT_LABEL[override.grant.unit]
+  if (entitlement.featureType !== FeatureType.Metered) return '—'
+  return meteredResetLabel(entitlement) ?? resetsText(entitlement)
+}
+
+/**
+ * The plan's entitlements, as a table. A metered, static or on/off one can be
+ * changed for this contract alone from its row, with the entitlement form's
+ * own fields (a metered allowance's value type, value, window and stacking).
+ * A config entitlement keeps the plan's.
  */
 function EntitlementsSection({
   planLabel,
   entitlements,
   isLoading,
+  overrides,
+  onChange,
 }: {
   planLabel: string | undefined
   entitlements: Entitlement[]
   isLoading: boolean
+  overrides: EntitlementOverride[]
+  onChange: (next: EntitlementOverride[]) => void
 }) {
+  const [editing, setEditing] = useState<Entitlement | null>(null)
+  const overrideOf = (id: string) => overrides.find((o) => o.entitlementId === id)
+  const nameOf = (entitlement: Entitlement) => entitlement.featureName ?? entitlement.featureId
+  const editable = (entitlement: Entitlement) =>
+    entitlement.featureType === FeatureType.Metered ||
+    entitlement.featureType === FeatureType.Static ||
+    entitlement.featureType === FeatureType.Boolean
   const columns: SimpleColumn<Entitlement>[] = [
     {
       key: 'feature',
       header: 'Feature',
       cell: (entitlement) => (
-        <span className="font-medium">{entitlement.featureName ?? entitlement.featureId}</span>
+        <span className="flex items-center gap-1.5">
+          <span className="font-medium">{nameOf(entitlement)}</span>
+          {overrideOf(entitlement.id) ? (
+            <Badge variant="outline" size="sm" className="shrink-0 font-normal">
+              Changed
+            </Badge>
+          ) : null}
+        </span>
       ),
     },
     {
@@ -3346,15 +3432,51 @@ function EntitlementsSection({
       header: 'Type',
       cell: (entitlement) => FEATURE_TYPE_LABEL[entitlement.featureType] ?? entitlement.featureType,
     },
-    { key: 'allowance', header: 'Allowance', cell: planEntitlementValue },
-    { key: 'resets', header: 'Resets', cell: resetsText },
+    {
+      key: 'allowance',
+      header: 'Allowance',
+      cell: (entitlement) => (
+        <span className="tabular-nums">
+          {entitlementValueText(entitlement, overrideOf(entitlement.id))}
+        </span>
+      ),
+    },
+    {
+      key: 'resets',
+      header: 'Resets',
+      cell: (entitlement) => entitlementResetsText(entitlement, overrideOf(entitlement.id)),
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'w-10 text-right',
+      cell: (entitlement) =>
+        editable(entitlement) ? (
+          <RowActionsMenu
+            label={nameOf(entitlement)}
+            onEdit={() => setEditing(entitlement)}
+            extra={
+              overrideOf(entitlement.id)
+                ? [
+                    {
+                      label: 'Reset to plan',
+                      icon: <RotateCcwIcon aria-hidden />,
+                      onSelect: () =>
+                        onChange(overrides.filter((o) => o.entitlementId !== entitlement.id)),
+                    },
+                  ]
+                : undefined
+            }
+          />
+        ) : null,
+    },
   ]
 
   return (
     <FormCard
       title="Entitlements"
       icon={<KeyRoundIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-      description={`From the ${planLabel ? `${planLabel} ` : ''}plan. Entitlements are set on the plan, not on a contract.`}
+      description={`From the ${planLabel ? `${planLabel} ` : ''}plan. Change one for this contract alone from its row.`}
     >
       <div className="px-5 py-4 sm:px-6">
         <Frame>
@@ -3367,7 +3489,135 @@ function EntitlementsSection({
           )}
         </Frame>
       </div>
+      <EntitlementOverrideDialog
+        key={editing?.id ?? 'closed'}
+        entitlement={editing}
+        override={editing ? overrideOf(editing.id) : undefined}
+        onClose={() => setEditing(null)}
+        onSave={(next) => {
+          if (!editing) return
+          const rest = overrides.filter((o) => o.entitlementId !== editing.id)
+          onChange(next ? [...rest, next] : rest)
+          setEditing(null)
+        }}
+      />
     </FormCard>
+  )
+}
+
+/**
+ * One entitlement, changed for this contract: a metered allowance with the
+ * entitlement form's `GrantAllowanceFields`, a static value, or on/off. Saving
+ * the plan's own values clears the change rather than sending them again.
+ */
+function EntitlementOverrideDialog({
+  entitlement,
+  override,
+  onClose,
+  onSave,
+}: {
+  entitlement: Entitlement | null
+  override: EntitlementOverride | undefined
+  onClose: () => void
+  /** null: back to the plan's. */
+  onSave: (next: EntitlementOverride | null) => void
+}) {
+  const planGrant = entitlement ? grantOf(entitlement) : null
+  const [grant, setGrant] = useState<MeteredGrant | null>(override?.grant ?? planGrant)
+  const [staticValue, setStaticValue] = useState(
+    override?.staticValue ?? entitlement?.staticValue ?? '',
+  )
+  const [enabled, setEnabled] = useState(override?.isEnabled ?? Boolean(entitlement?.isEnabled))
+  const [error, setError] = useState<string | undefined>(undefined)
+  if (!entitlement) return null
+  const id = entitlement.id
+  const name = entitlement.featureName ?? entitlement.featureId
+
+  const save = () => {
+    switch (entitlement.featureType) {
+      case FeatureType.Metered: {
+        const parsed = meteredGrantSchema.safeParse(grant)
+        if (!parsed.success || !grant) {
+          setError(parsed.error?.issues[0]?.message ?? 'Enter a value above zero')
+          return
+        }
+        const same = JSON.stringify(grant) === JSON.stringify(planGrant)
+        // The API reads a missing usage limit as none, so an older limit is kept as it was.
+        return onSave(
+          same
+            ? null
+            : {
+                entitlementId: id,
+                grant,
+                ...(entitlement.usageLimit != null ? { usageLimit: entitlement.usageLimit } : {}),
+              },
+        )
+      }
+      case FeatureType.Static: {
+        const value = staticValue.trim()
+        if (!value) {
+          setError('Enter a value')
+          return
+        }
+        return onSave(
+          value === (entitlement.staticValue ?? '')
+            ? null
+            : { entitlementId: id, staticValue: value },
+        )
+      }
+      default:
+        return onSave(
+          enabled === Boolean(entitlement.isEnabled)
+            ? null
+            : { entitlementId: id, isEnabled: enabled },
+        )
+    }
+  }
+
+  return (
+    <FormDialog
+      open
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      title={`Edit entitlement · ${name}`}
+      size={entitlement.featureType === FeatureType.Metered ? 'lg' : 'sm'}
+    >
+      <Composer submitLabel="Save entitlement" onCancel={onClose} onSubmit={save}>
+        <p className="text-muted-foreground text-[13px]">
+          For this contract only. The plan keeps its own: {planEntitlementValue(entitlement)}.
+        </p>
+        {entitlement.featureType === FeatureType.Metered && grant ? (
+          <GrantAllowanceFields
+            value={grant}
+            onChange={(next) => {
+              setGrant(next)
+              setError(undefined)
+            }}
+            quotaError={error}
+          />
+        ) : null}
+        {entitlement.featureType === FeatureType.Static ? (
+          <Field label="Value" hint="How much of the feature this contract includes." error={error}>
+            {({ id: fieldId, ...field }) => (
+              <Input
+                id={fieldId}
+                {...field}
+                value={staticValue}
+                onChange={(event) => {
+                  setStaticValue(event.target.value)
+                  setError(undefined)
+                }}
+              />
+            )}
+          </Field>
+        ) : null}
+        {entitlement.featureType === FeatureType.Boolean ? (
+          <label className="flex items-center gap-2 text-sm">
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+            Enabled on this contract
+          </label>
+        ) : null}
+      </Composer>
+    </FormDialog>
   )
 }
 
@@ -4155,9 +4405,8 @@ function PlanPriceText({ charge }: { charge: Charge }) {
 function planEntitlementValue(entitlement: Entitlement): string {
   switch (entitlement.featureType) {
     case FeatureType.Metered:
-      return entitlement.usageLimit == null
-        ? 'Unlimited'
-        : entitlement.usageLimit.toLocaleString('en-US')
+      // The grant's value when it has grant config, else its usage limit.
+      return meteredAllowanceLabel(entitlement)
     case FeatureType.Static:
       return entitlement.staticValue || '—'
     default:
