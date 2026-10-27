@@ -335,9 +335,13 @@ export const Summary: Story = {
     await expect(canvas.queryByText(/active charges/)).not.toBeInTheDocument()
     const names = canvas.getAllByRole('row').map((row) => row.textContent ?? '')
     // The changed charge leads; the unchanged ones follow instead of vanishing.
-    await expect(names.findIndex((text) => text.includes('Platform base'))).toBeLessThan(
-      names.findIndex((text) => text.includes('Included storage')),
-    )
+    const changedIndex = names.findIndex((text) => text.includes('Platform base'))
+    const unchangedIndex = names.findIndex((text) => text.includes('Included storage'))
+    await expect(changedIndex).toBeGreaterThanOrEqual(0)
+    await expect(unchangedIndex).toBeGreaterThanOrEqual(0)
+    await expect(changedIndex).toBeLessThan(unchangedIndex)
+    // A few rows and a way to the rest: no filter or sort on the summary.
+    await expect(canvas.queryByRole('button', { name: 'Filter' })).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: /show all charges/i }))
     await expect(args.onShowAll).toHaveBeenCalled()
   },

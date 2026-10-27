@@ -548,7 +548,9 @@ export function ChargeTable({
           <DetailTable
             compact
             label="Charges"
-            toolbar
+            // The summary is a few rows; filtering or sorting them would only
+            // reorder what is shown, so those live on the full table.
+            toolbar={variant === 'full'}
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
             // filter keeps it.
