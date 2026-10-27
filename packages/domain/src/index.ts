@@ -1062,5 +1062,8 @@ export type {
   RevenueMonth,
   RevenueRow,
   RevenueWaterfall,
+  Rollforward,
+  RollforwardAccount,
+  RollforwardRow,
   SubscriptionRevenue,
 } from './revenueRecognition'

@@ -769,6 +769,11 @@ export type { FxRateOwner, FxRateWire } from './fxRates'
 export {
   toContractJournal,
   toPerformanceObligation,
+  toRollforward,
+  useAccountEntries,
+  useRevenueContracts,
+  useRollforward,
+  useSubscriptionContract,
   toRevenueContract,
   toRevenueWaterfall,
   useContractJournal,
@@ -776,4 +781,4 @@ export {
   useRevenueRecognitionEnabled,
   useSubscriptionRevenue,
 } from './revenueRecognition'
-export type { CustomerRevenueQuery } from './revenueRecognition'
+export type { CustomerRevenueQuery, RollforwardQuery } from './revenueRecognition'

@@ -38,6 +38,8 @@ export interface RevenueContract {
   /** Exclusive; null for an open-ended subscription. */
   termEnd: Date | null
   status: string
+  /** The subscription behind it; known only from a single-contract read. */
+  subscriptionId: string | null
 }
 
 export interface PerformanceObligation {
@@ -172,4 +174,32 @@ export interface ContractJournal {
   lineCount: number
   debits: Money
   credits: Money
+}
+
+/** The balance-sheet accounts a rollforward walks. */
+export type RollforwardAccount = 'deferred_revenue' | 'unbilled_receivable'
+
+/**
+ * One account's month: opening → movements → closing, in the account's normal direction (+ = the
+ * balance grew). e.g. deferred: 229,166.67 opening − 20,833.34 earned = 208,333.33 closing.
+ */
+export interface RollforwardRow {
+  customerId: string | null
+  contractId: string | null
+  opening: Money
+  invoiced: Money
+  earned: Money
+  /** Credit notes, payments, refunds and anything else. */
+  adjustments: Money
+  closing: Money
+}
+
+export interface Rollforward {
+  /** `YYYY-MM`. */
+  period: string
+  totals: RollforwardRow | null
+  /** One page of customer × contract rows. */
+  rows: RollforwardRow[]
+  /** Rows across every page. */
+  count: number
 }

@@ -12,6 +12,8 @@ export interface RevenueContractWire {
   term_start?: string
   term_end?: string | null
   contract_status?: string
+  /** Only on `GET /contracts/{id}`. */
+  associations?: Array<{ entity_type?: string; entity_id?: string }> | null
 }
 
 export interface PerformanceObligationWire {
@@ -64,16 +66,28 @@ interface Auth {
 const post = async (auth: Auth, path: string, body: unknown) =>
   request(auth.serverURL, path, { method: 'POST', ...auth, body })
 
-/** `POST /contracts/search` by subscription: the revenue contract behind it, if any. */
+/** `POST /contracts/search` by subscription or by contract; no associations. */
 export async function searchRevenueContracts(
   auth: Auth,
-  subscriptionIds: string[],
+  filter: { subscription_ids: string[] } | { contract_ids: string[] },
 ): Promise<RevenueContractWire[]> {
+  const ids = 'subscription_ids' in filter ? filter.subscription_ids : filter.contract_ids
   const body = (await post(auth, '/contracts/search', {
-    subscription_ids: subscriptionIds,
-    limit: subscriptionIds.length,
+    ...filter,
+    limit: ids.length,
   })) as { items?: RevenueContractWire[] | null } | null
   return body?.items ?? []
+}
+
+/** `GET /contracts/{id}`: the contract with its associations (its subscription). */
+export async function fetchRevenueContract(
+  auth: Auth,
+  contractId: string,
+): Promise<RevenueContractWire> {
+  return ((await request(auth.serverURL, `/contracts/${encodeURIComponent(contractId)}`, {
+    method: 'GET',
+    ...auth,
+  })) ?? {}) as RevenueContractWire
 }
 
 /** `POST /performance_obligations/search`: a contract's POBs. */
@@ -115,16 +129,54 @@ export interface JournalEntryWire {
   }> | null
 }
 
-/** `POST /journal_entries/search`: one page of a contract's entries, oldest first. */
+/** `POST /journal_entries/search`: one page of a contract's entries, oldest first; times are business-date bounds. */
 export async function searchJournalEntries(
   auth: Auth,
-  contractId: string,
+  filter: { contract_ids: string[]; accounts?: string[]; start_time?: string; end_time?: string },
   page: { limit: number; offset: number },
 ): Promise<{ items: JournalEntryWire[]; total: number }> {
   const body = (await post(auth, '/journal_entries/search', {
-    contract_ids: [contractId],
+    ...filter,
     sort: [{ field: 'business_date', direction: 'asc' }],
     ...page,
   })) as { items?: JournalEntryWire[] | null; pagination?: { total?: number } } | null
   return { items: body?.items ?? [], total: body?.pagination?.total ?? 0 }
+}
+
+export interface RollforwardRowWire {
+  period?: string
+  account?: string
+  customer_id?: string | null
+  contract_id?: string | null
+  pob_id?: string | null
+  opening?: string
+  /** By category: `invoiced`, `earned`, `adjustments`, `payments`, `refunds`; absent when nothing moved. */
+  movements?: Record<string, string> | null
+  closing?: string
+}
+
+export interface RollforwardWire {
+  totals?: RollforwardRowWire[] | null
+  items?: RollforwardRowWire[] | null
+  pagination?: { total?: number } | null
+}
+
+export interface RollforwardRequest {
+  period_start: string
+  period_end: string
+  currency: string
+  accounts: string[]
+  group_by?: Array<'customer_id' | 'contract_id' | 'pob_id'>
+  customer_ids?: string[]
+  contract_ids?: string[]
+  limit?: number
+  offset?: number
+}
+
+/** `POST /revenue_reports/rollforward`: per ended month and account, opening → movements → closing. */
+export async function fetchRollforward(
+  auth: Auth,
+  body: RollforwardRequest,
+): Promise<RollforwardWire> {
+  return ((await post(auth, '/revenue_reports/rollforward', body)) ?? {}) as RollforwardWire
 }

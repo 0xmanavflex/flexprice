@@ -42,6 +42,10 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   // Tenant onboarding: any signed-in member answers it, as in V1 (ungated there).
   '/onboarding': OPEN,
   '/reports': OPEN,
+  // Revenue recognition reports read like Reports: no entity of their own to gate on.
+  '/revenue-recognition': OPEN,
+  '/deferred-rollforward': OPEN,
+  '/unbilled-rollforward': OPEN,
   // The old address of Reports; it redirects there.
   '/revenue': OPEN,
 

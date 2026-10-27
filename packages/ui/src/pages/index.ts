@@ -36,6 +36,8 @@ export {
   RevenueRecognitionReportProvenance,
 } from './revenue/RevenueRecognitionReport'
 export type { RevenueRecognitionReportProps } from './revenue/RevenueRecognitionReport'
+export { AccountRollforward, AccountRollforwardProvenance } from './revenue/AccountRollforward'
+export type { AccountRollforwardProps } from './revenue/AccountRollforward'
 export type {
   AgingBucket,
   CreditRow,

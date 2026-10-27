@@ -221,7 +221,7 @@ const preview: Preview = {
               ['Payment table', 'Payment form', 'Collections summary', 'Payment status badge'],
             ],
             'Revenue',
-            ['Revenue dashboard', 'Revenue recognition'],
+            ['Revenue dashboard', 'Revenue recognition', 'Deferred rollforward'],
             'Developers',
             [
               'Webhooks',

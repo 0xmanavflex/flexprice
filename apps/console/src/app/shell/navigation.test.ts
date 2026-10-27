@@ -191,6 +191,8 @@ describe('every destination resolves', () => {
     '/',
     '/reports',
     '/revenue-recognition',
+    '/deferred-rollforward',
+    '/unbilled-rollforward',
     '/features',
     '/plans',
     '/addons',

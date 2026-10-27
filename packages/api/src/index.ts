@@ -75,7 +75,9 @@ export type { RevenueDashboardWire } from './revenue'
 /** Revenue recognition: contracts, POBs and the waterfall, live but absent from the SDK. See `revenueRecognition.ts`. */
 export {
   fetchPerformanceObligations,
+  fetchRevenueContract,
   fetchRevenueWaterfall,
+  fetchRollforward,
   searchJournalEntries,
   searchRevenueContracts,
 } from './revenueRecognition'
@@ -85,6 +87,9 @@ export type {
   RevenueContractWire,
   RevenueWaterfallRequest,
   RevenueWaterfallWire,
+  RollforwardRequest,
+  RollforwardRowWire,
+  RollforwardWire,
   WaterfallCellWire,
 } from './revenueRecognition'
 

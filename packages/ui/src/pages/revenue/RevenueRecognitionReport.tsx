@@ -26,7 +26,7 @@ export const RevenueRecognitionReportProvenance = provenance({
     'compositions/layout/Section',
     'compositions/detail/DetailKit',
     'primitives/input-group',
-    'pages/home/DashboardHome#FilterSelect',
+    'pages/home/DashboardHome',
     'primitives/switch',
   ],
   note: "Revenue › Revenue recognition, after Tabs': the revenue total over each month's label, customers × months below, month-end deferred and unbilled behind Details, and the current month tinted.",

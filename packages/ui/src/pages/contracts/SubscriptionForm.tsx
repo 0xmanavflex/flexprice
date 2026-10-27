@@ -314,6 +314,20 @@ export const SUBSCRIPTION_FORM_STEPS = [
   { id: 'review', title: 'Review' },
 ] as const
 
+/** The first failed field as "path: message", e.g. "addons.0.startDate: Choose a date". */
+function firstFieldError(errors: object, path = ''): string | null {
+  for (const [key, value] of Object.entries(errors)) {
+    if (!value || typeof value !== 'object' || key === 'ref') continue
+    const at = path ? `${path}.${key}` : key
+    if ('message' in value && typeof value.message === 'string' && value.message) {
+      return `${at}: ${value.message}`
+    }
+    const nested = firstFieldError(value, at)
+    if (nested) return nested
+  }
+  return null
+}
+
 const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
   plan: [
     'customerId',
@@ -787,7 +801,12 @@ export function SubscriptionForm({
       },
       (failed) => {
         const bad = stepOf(failed)
-        if (bad) flow.goTo(bad)
+        if (bad) {
+          flow.goTo(bad)
+          return
+        }
+        // A field no step asks for (add-ons, taxes, opted-in charges…) would otherwise fail silently.
+        setConflict(firstFieldError(failed) ?? 'Some details are not valid. Review each step.')
       },
     )
   const submitAll = submitWith({})

@@ -4,6 +4,7 @@ import {
   toContractJournal,
   toPerformanceObligation,
   toRevenueWaterfall,
+  toRollforward,
 } from './revenueRecognition'
 
 describe('toRevenueWaterfall', () => {
@@ -132,5 +133,42 @@ describe('toContractJournal', () => {
     expect(journal.lineCount).toBe(3)
     expect(journal.debits.amount).toBe('6000')
     expect(journal.credits.amount).toBe('6000')
+  })
+})
+
+describe('toRollforward', () => {
+  it('keeps invoiced and earned apart and folds every other movement into adjustments', () => {
+    const rollforward = toRollforward(
+      {
+        totals: [
+          {
+            period: '2026-09',
+            account: 'deferred_revenue',
+            opening: '573534.51',
+            movements: { invoiced: '248769.99', earned: '-271470.11' },
+            closing: '550834.39',
+          },
+        ],
+        items: [
+          {
+            customer_id: 'cust_1',
+            contract_id: 'contract_1',
+            opening: '100',
+            movements: { earned: '-50', adjustments: '-20', refunds: '5' },
+            closing: '35',
+          },
+        ],
+        pagination: { total: 16 },
+      },
+      '2026-09',
+      'USD',
+    )
+    expect(rollforward.totals?.closing.amount).toBe('550834.39')
+    expect(rollforward.totals?.adjustments.amount).toBe('0')
+    const row = rollforward.rows[0]
+    expect(row?.invoiced.amount).toBe('0')
+    expect(row?.earned.amount).toBe('-50')
+    expect(row?.adjustments.amount).toBe('-15')
+    expect(rollforward.count).toBe(16)
   })
 })

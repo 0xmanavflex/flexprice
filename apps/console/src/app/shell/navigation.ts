@@ -70,6 +70,8 @@ export const NAV: NavEntry[] = [
     label: 'Revenue',
     children: [
       { id: 'revenue-recognition', label: 'Revenue recognition', path: '/revenue-recognition' },
+      { id: 'deferred-rollforward', label: 'Deferred rollforward', path: '/deferred-rollforward' },
+      { id: 'unbilled-rollforward', label: 'Unbilled rollforward', path: '/unbilled-rollforward' },
     ],
   },
   { id: 'reports', label: 'Reports', path: '/reports' },

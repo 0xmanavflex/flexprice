@@ -47,6 +47,7 @@ export const ACME_REVENUE: SubscriptionRevenue = {
     termStart: new Date('2026-01-01T00:00:00Z'),
     termEnd: new Date('2027-01-01T00:00:00Z'),
     status: 'active',
+    subscriptionId: 'subs_acme',
   },
   obligations: [
     {

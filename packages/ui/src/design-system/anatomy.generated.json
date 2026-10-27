@@ -77,6 +77,22 @@
       "usedBy": [],
       "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
     },
+    "AccountRollforward": {
+      "file": "src/pages/revenue/AccountRollforward.tsx",
+      "layer": "surface",
+      "composes": [
+        "CalendarIcon",
+        "EntityLink",
+        "FilterSelect",
+        "OverviewTiles",
+        "Section",
+        "Sheet",
+        "SimpleTable",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/revenue/AccountRollforward.stories.tsx"
+    },
     "AccountSettings": {
       "file": "src/components/blocks/settings-7/components/account-settings.tsx",
       "layer": "vendor/blocks",
@@ -945,6 +961,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AccountRollforward",
         "AddonChargesDialog",
         "ApiCard",
         "CustomerAnalyticsView",
@@ -3133,6 +3150,7 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "AccountRollforward",
         "CustomerDetail",
         "EntitlementTable",
         "EntitlementUsage",
@@ -3861,6 +3879,7 @@
         "ValuePlaceholder"
       ],
       "usedBy": [
+        "AccountRollforward",
         "RevenueRecognitionReport",
         "RevenueReport"
       ],
@@ -5551,6 +5570,7 @@
         "LockedMark"
       ],
       "usedBy": [
+        "AccountRollforward",
         "CustomerDetail",
         "CustomerUsageSummary",
         "RevenueReport",
@@ -6947,6 +6967,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "AccountRollforward",
         "ActivityEventSheet",
         "ActivityLog",
         "ActivitySection",
@@ -7154,6 +7175,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AccountRollforward",
         "ActivityEventSheet",
         "ChargeSheet",
         "ConnectIntegrationSheet",
@@ -7341,6 +7363,7 @@
         "LockedMark"
       ],
       "usedBy": [
+        "AccountRollforward",
         "AddonChargesDialog",
         "BonusSlabTable",
         "ConnectionExports",
@@ -7740,6 +7763,7 @@
         "TableSkeleton"
       ],
       "usedBy": [
+        "AccountRollforward",
         "ChargeTable",
         "CreditGrantTable",
         "CustomerDetail",
@@ -10070,6 +10094,13 @@
         "PageShell"
       ]
     },
+    "./src/pages/revenue/AccountRollforward.stories.tsx": {
+      "title": "App/Revenue/Deferred rollforward",
+      "component": "AccountRollforward",
+      "uses": [
+        "AccountRollforward"
+      ]
+    },
     "./src/pages/revenue/RevenueRecognitionReport.stories.tsx": {
       "title": "App/Revenue/Revenue recognition",
       "component": "RevenueRecognitionReport",
@@ -11089,6 +11120,14 @@
       "route": "/revenue-recognition",
       "uses": [
         "RevenueRecognitionReport"
+      ]
+    },
+    "RollforwardPage": {
+      "file": "apps/console/src/pages/revenue/RollforwardPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "AccountRollforward"
       ]
     },
     "CheckoutReturnPage": {

@@ -76,6 +76,14 @@ export const queryKeys = {
       ['revenueRecognition', 'subscription', environmentId, subscriptionId] as const,
     customers: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
       ['revenueRecognition', 'customers', environmentId, filter] as const,
+    rollforward: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'rollforward', environmentId, filter] as const,
+    contracts: (environmentId: string | null, contractIds: readonly string[]) =>
+      ['revenueRecognition', 'contracts', environmentId, contractIds] as const,
+    subscriptionContract: (environmentId: string | null, subscriptionId: string) =>
+      ['revenueRecognition', 'subscriptionContract', environmentId, subscriptionId] as const,
+    entries: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'entries', environmentId, filter] as const,
     journal: (environmentId: string | null, contractId: string) =>
       ['revenueRecognition', 'journal', environmentId, contractId] as const,
   },
