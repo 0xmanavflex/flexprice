@@ -984,7 +984,7 @@ export function SubscriptionDetailView({
               {rowsFirst([
                 {
                   id: 'charges',
-                  empty: lines.data?.length === 0,
+                  empty: knownEmpty(lines),
                   node: (
                     <>
                       {/*
@@ -1078,7 +1078,7 @@ export function SubscriptionDetailView({
                 },
                 {
                   id: 'entitlements',
-                  empty: entitlements.data?.length === 0,
+                  empty: knownEmpty(entitlements),
                   node: (
                     <>
                       <PartSection
@@ -1104,7 +1104,7 @@ export function SubscriptionDetailView({
                 },
                 {
                   id: 'creditGrants',
-                  empty: creditGrants.data?.length === 0,
+                  empty: knownEmpty(creditGrants),
                   node: (
                     <>
                       <PartSection
@@ -1195,7 +1195,7 @@ export function SubscriptionDetailView({
                 },
                 {
                   id: 'addons',
-                  empty: (addons ?? NO_PART).data?.length === 0,
+                  empty: knownEmpty(addons ?? NO_PART),
                   node: (
                     <>
                       <PartSection
@@ -1271,7 +1271,7 @@ export function SubscriptionDetailView({
                 },
                 {
                   id: 'coupons',
-                  empty: (coupons ?? NO_PART).data?.length === 0,
+                  empty: knownEmpty(coupons ?? NO_PART),
                   node: (
                     <>
                       <PartSection
@@ -1336,7 +1336,7 @@ export function SubscriptionDetailView({
                 },
                 {
                   id: 'taxes',
-                  empty: (taxes ?? NO_PART).data?.length === 0,
+                  empty: knownEmpty(taxes ?? NO_PART),
                   node: (
                     <>
                       <PartSection
@@ -2051,6 +2051,15 @@ function unitAmount(amount: string): string {
 }
 
 /**
+ * A part known to have no rows: it arrived empty and is neither refetching
+ * nor failed. A cached empty result under a failed refresh is not empty: its
+ * error must stay where it can be seen.
+ */
+function knownEmpty(part: SubscriptionPart<readonly unknown[]>): boolean {
+  return !part.isLoading && !part.isError && part.data?.length === 0
+}
+
+/**
  * The Overview's sections, those with rows first: an empty entry-point
  * section sinks below every section that has something to read. The sort is
  * stable, so each group keeps the order it was given.
@@ -2100,7 +2109,9 @@ function InvoicePreviewSection({
 
   // Nothing to bill: the section is left out rather than shown empty. The
   // trial block above stays, because there the empty state is the news.
-  if (preview.data && preview.data.lines.length === 0) return null
+  // A failed or running refetch over a cached empty preview still shows, so
+  // its error and retry are not hidden.
+  if (!preview.isLoading && !preview.isError && preview.data?.lines.length === 0) return null
 
   const data = preview.data
   const period =
