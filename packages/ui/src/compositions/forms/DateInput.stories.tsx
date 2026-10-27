@@ -211,3 +211,38 @@ export const Bounded: Story = {
     await expect(screen.getByRole('button', { name: /March 25/ })).toBeDisabled()
   },
 }
+
+/** The background a token paints, read from a throwaway probe element. */
+function tokenBackground(className: string) {
+  const probe = document.createElement('div')
+  probe.className = className
+  document.body.append(probe)
+  const color = getComputedStyle(probe).backgroundColor
+  probe.remove()
+  return color
+}
+
+/**
+ * Today is a primary tint: not the muted grey a hovered day gets, and not the
+ * solid primary of the selected day. Opens on this month with the 15th picked
+ * (or the 16th when today is the 15th).
+ */
+export const TodayStandsOut: Story = {
+  args: (() => {
+    const now = new Date()
+    const day = now.getDate() === 15 ? 16 : 15
+    const pad2 = (n: number) => String(n).padStart(2, '0')
+    return { value: `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(day)}` }
+  })(),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Start date' }))
+    const today = await screen.findByRole('button', { name: /^Today/ })
+    const todayCell = today.closest('td')!
+    const selected = document.querySelector<HTMLElement>('[data-selected-single="true"]')!
+    const todayColor = getComputedStyle(todayCell).backgroundColor
+    await expect(todayColor).not.toBe(tokenBackground('bg-muted'))
+    await expect(todayColor).not.toBe('rgba(0, 0, 0, 0)')
+    await expect(todayColor).not.toBe(getComputedStyle(selected).backgroundColor)
+    await expect(todayColor).toBe(tokenBackground('bg-primary/15'))
+  },
+}

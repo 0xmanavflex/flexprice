@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
+import { getDefaultClassNames } from 'react-day-picker'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -32,7 +33,7 @@ import { provenance } from '@ui/provenance'
 export const DateInputProvenance = provenance({
   source: 'composition',
   composes: ['ui/popover', 'ui/calendar', 'ui/button', 'ui/input', 'ui/select'],
-  note: 'Day or instant picker over the stock Calendar in a Popover; the time row is the reference DateTimeField (hours, minutes, Local/UTC).',
+  note: 'Day or instant picker over the stock Calendar in a Popover, with today as a primary tint (darker than hover, lighter than the selected day); the time row is the reference DateTimeField (hours, minutes, Local/UTC).',
 })
 
 export interface DateInputProps {
@@ -56,6 +57,21 @@ export interface DateInputProps {
   'aria-label'?: string
   'aria-describedby'?: string | undefined
   'aria-invalid'?: true | undefined
+}
+
+/**
+ * Today on the stock calendar is `bg-muted`, the same as a hovered day, so it
+ * reads as "the one under the pointer". Here today is a primary tint with
+ * primary text, darker than hover (and it stays tinted when hovered), and the
+ * selected day stays solid primary on top, so all three are distinct.
+ */
+const dayPickerClassNames = {
+  today: cn(
+    'bg-primary/15 text-primary rounded-(--cell-radius) font-medium data-[selected=true]:rounded-none',
+    // Hovering today darkens the tint; a selected today keeps its solid primary.
+    '[&_button:not([data-selected-single=true]):hover]:bg-primary/25 [&_button:not([data-selected-single=true]):hover]:text-primary',
+    getDefaultClassNames().today,
+  ),
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -120,6 +136,7 @@ export function DayCalendar({ value, onValueChange, min, max }: DayCalendarProps
   return (
     <Calendar
       mode="single"
+      classNames={dayPickerClassNames}
       {...(selected ? { selected } : {})}
       {...(month ? { defaultMonth: month } : {})}
       {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
@@ -223,6 +240,7 @@ export function DateInput({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
+          classNames={dayPickerClassNames}
           {...(calendarDay ? { selected: calendarDay } : {})}
           {...(month ? { defaultMonth: month } : {})}
           {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
