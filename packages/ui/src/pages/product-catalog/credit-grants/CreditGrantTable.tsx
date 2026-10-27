@@ -11,6 +11,7 @@ import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabSta
 import { Button } from '@ui/components/primitives/button'
 import { PlusIcon } from '@ui/icons'
 
+import { formatStoredDay } from '@ui/compositions/forms/DateInput'
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
@@ -147,7 +148,7 @@ function CreditGrantTableInner({
                   cell: (grant: CreditGrant) => (
                     <span className="text-muted-foreground tabular-nums">
                       {grant.endDate
-                        ? grant.endDate.toLocaleDateString('en-US', { dateStyle: 'medium' })
+                        ? formatStoredDay(grant.endDate, { locale: 'en-US' })
                         : 'No end'}
                     </span>
                   ),

@@ -85,12 +85,18 @@ function status(label: string | undefined): ActivityStatus[] {
   return [{ label, tone: TONE[label.toLowerCase()] ?? 'neutral' }]
 }
 
+/** For an API key or a customer, what kind of actor it is; a person or the system needs no label. */
+function actorKind(entry: ActivityEntry): string {
+  return entry.actorType === 'api_key'
+    ? 'API key'
+    : entry.actorType === 'customer'
+      ? 'Customer'
+      : ''
+}
+
 /** The channel and, for a non-person, what kind of actor it is. */
 function actorDetail(entry: ActivityEntry): string {
-  const source = activitySourceLabel(entry.source)
-  const kind =
-    entry.actorType === 'api_key' ? 'API key' : entry.actorType === 'customer' ? 'Customer' : ''
-  return [kind, source].filter(Boolean).join(' · ') || '—'
+  return [actorKind(entry), activitySourceLabel(entry.source)].filter(Boolean).join(' · ') || '—'
 }
 
 export function toActivityRow(entry: ActivityEntry, customerName?: string): ActivityRowView {
@@ -147,6 +153,8 @@ export function toActivityRow(entry: ActivityEntry, customerName?: string): Acti
     ...(href ? { entityHref: href } : {}),
     actor: activityActor(entry),
     actorDetail: actorDetail(entry),
+    ...(actorKind(entry) ? { actorKind: actorKind(entry) } : {}),
+    source: activitySourceLabel(entry.source),
     at: entry.occurredAt ? activityStamp(entry.occurredAt) : '—',
     atUtc: entry.occurredAt ? activityStampUtc(entry.occurredAt) : '',
     statuses,
@@ -224,7 +232,7 @@ export function CustomerActivityPanel({
     limit: pageSize,
   })
 
-  // The Person filter: the tenant's people, read once the actor is User.
+  // The Person filter: the tenant's people. Choosing one sets the actor to User.
   const people = useMembers({
     page: 1,
     pageSize: 100,
@@ -234,13 +242,11 @@ export function CustomerActivityPanel({
   })
   const personOptions = useMemo(
     () =>
-      filters.actorType === 'user'
-        ? (people.data?.members ?? []).map((member) => ({
-            value: member.id,
-            label: member.name || member.email || member.id,
-          }))
-        : [],
-    [filters.actorType, people.data],
+      (people.data?.members ?? []).map((member) => ({
+        value: member.id,
+        label: member.name || member.email || member.id,
+      })),
+    [people.data],
   )
 
   const entries = useMemo(() => page.data?.entries ?? [], [page.data])

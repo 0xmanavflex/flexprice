@@ -8,7 +8,8 @@ import { provenance } from '@ui/provenance'
  * Three states that a plain progress bar gets wrong:
  *
  * - **Unlimited.** Not 100%, and not 0%: there is no denominator, so a bar is
- *   the wrong shape entirely and it says so in words instead.
+ *   the wrong shape entirely. The reading says it once ("3,412 of unlimited"),
+ *   with nothing under it.
  * - **Over the limit.** The bar caps at full but the number keeps counting, so
  *   "1,200 of 1,000" stays readable rather than silently clamping.
  * - **Zero allowance.** Dividing by it is how you get `NaN%` on screen.
@@ -50,7 +51,7 @@ export function UsageMeter({ label, used, limit, unit, locale, hideLabel }: Usag
     unlimited || exhausted ? 0 : used >= limit ? 100 : Math.floor(Math.max(0, (used / limit) * 100))
 
   const summary = unlimited
-    ? `${format(used)}${unit ? ` ${unit}` : ''} used of unlimited`
+    ? `${format(used)} of unlimited${unit ? ` ${unit}` : ''}`
     : `${format(used)} of ${format(limit)}${unit ? ` ${unit}` : ''}`
 
   return (
@@ -67,9 +68,8 @@ export function UsageMeter({ label, used, limit, unit, locale, hideLabel }: Usag
         </span>
       </div>
 
-      {unlimited ? (
-        <p className="text-muted-foreground text-xs">Unlimited</p>
-      ) : (
+      {/* Unlimited has no bar and no second "Unlimited": the reading already says it. */}
+      {unlimited ? null : (
         <Progress
           value={percent}
           aria-label={`${label}: ${summary}`}

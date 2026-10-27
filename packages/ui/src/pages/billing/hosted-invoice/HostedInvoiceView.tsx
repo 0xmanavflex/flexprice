@@ -33,6 +33,7 @@ export const HostedInvoiceViewProvenance = provenance({
   composes: [
     'reui/badge',
     'reui/alert',
+    'primitives/tooltip',
     'compositions/layout/Section',
     'primitives/button',
     'primitives/skeleton',
@@ -234,11 +235,7 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
                 amount={money(invoice.amountRemaining)}
                 isPaying={props.isPaying}
                 onPay={props.onPay}
-                unavailable={
-                  payUnavailable
-                    ? `Online payment isn’t available for this invoice. Contact ${invoice.tenant.name || 'the business that sent it'} to pay.`
-                    : null
-                }
+                unavailable={payUnavailable ? invoice.tenant : null}
               />
             ) : null}
 
@@ -293,9 +290,10 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
 
 /**
  * Pay, or, when the business has not turned online payment on, Pay disabled
- * with the reason in a tooltip. A disabled button gets no pointer events, so
- * the tooltip hangs on a focusable wrapper; the reason is also the button's
- * description, for screen readers.
+ * with a tooltip saying to contact the business, its email a link. A disabled
+ * button gets no pointer events, so the tooltip hangs on a focusable wrapper,
+ * and the popup stays open while hovered so the link can be clicked. The
+ * reason is also the button's description, for screen readers.
  */
 function PayButton({
   amount,
@@ -306,7 +304,8 @@ function PayButton({
   amount: ReactNode
   isPaying: boolean
   onPay: () => void
-  unavailable: string | null
+  /** The business to contact when online payment is off; null when Pay works. */
+  unavailable: HostedInvoice['tenant'] | null
 }) {
   const reasonId = useId()
   const button = (
@@ -322,12 +321,27 @@ function PayButton({
     </Button>
   )
   if (unavailable === null) return button
+  const merchant = unavailable.name || 'the business that sent it'
+  const email = unavailable.contactEmail
   return (
     <Tooltip>
-      <TooltipTrigger render={<span tabIndex={0} className="flex w-full" />}>{button}</TooltipTrigger>
-      <TooltipContent className="max-w-64">{unavailable}</TooltipContent>
+      <TooltipTrigger render={<span tabIndex={0} className="flex w-full" />}>
+        {button}
+      </TooltipTrigger>
+      <TooltipContent className="block max-w-64">
+        Online payment isn’t available. Contact {merchant}
+        {email ? (
+          <>
+            {' at '}
+            <a href={`mailto:${email}`} className="font-medium underline underline-offset-2">
+              {email}
+            </a>
+          </>
+        ) : null}{' '}
+        to pay.
+      </TooltipContent>
       <span id={reasonId} className="sr-only">
-        {unavailable}
+        {`Online payment isn’t available. Contact ${merchant}${email ? ` at ${email}` : ''} to pay.`}
       </span>
     </Tooltip>
   )
@@ -342,10 +356,10 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-/** The block's centred column on the page background. */
+/** The block's centred column on a light grey page, the cards on top. */
 function Page({ children }: { children: ReactNode }) {
   return (
-    <main className="bg-muted/40 text-foreground min-h-svh w-full">
+    <main className="bg-muted text-foreground min-h-svh w-full">
       <div className="mx-auto w-full max-w-6xl px-4 py-10 md:py-14">{children}</div>
     </main>
   )

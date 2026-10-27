@@ -329,6 +329,57 @@ export const CountHidesTheAggregationTarget: Story = {
   },
 }
 
+/**
+ * Ticking "Use a custom expression" only turns the field into the expression
+ * box: no examples block, just a faint placeholder expression.
+ */
+export const CustomExpressionPlaceholder: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const before = canvasElement.querySelectorAll('textarea, input').length
+    await userEvent.click(await canvas.findByRole('checkbox', { name: 'Use a custom expression' }))
+    const expression = await canvas.findByLabelText(/^Custom expression/)
+    await expect(expression.tagName).toBe('TEXTAREA')
+    await expect(expression).toHaveValue('')
+    await expect(expression).toHaveAttribute('placeholder', 'duration_seconds / 60 / 100')
+    // The field replaced the event field in place; nothing else appeared.
+    await expect(canvasElement.querySelectorAll('textarea, input').length).toBe(before)
+  },
+}
+
+/**
+ * The aggregation inputs show a faint example where the label alone is not
+ * enough; Count has no inputs at all.
+ */
+export const AggregationPlaceholders: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByLabelText(/^Event field/)).toHaveAttribute(
+      'placeholder',
+      'tokens',
+    )
+
+    await chooseOption('Aggregation', /^Sum with Multiplier$/)
+    const multiplier = await canvas.findByLabelText(/^Multiplier/)
+    await expect(multiplier).toHaveAttribute('type', 'number')
+    await expect(multiplier).toHaveAttribute('placeholder', '0.001')
+
+    await chooseOption('Aggregation', /^Max$/)
+    await expect(await canvas.findByLabelText(/^Group by/)).toHaveAttribute('placeholder', 'region')
+
+    await chooseOption('Aggregation', /^Count Unique$/)
+    await expect(await canvas.findByLabelText(/^Event field/)).toHaveAttribute(
+      'placeholder',
+      'user_id',
+    )
+
+    await chooseOption('Aggregation', /^Count$/)
+    await expect(canvas.queryByLabelText(/^Event field/)).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Multiplier/)).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Group by/)).not.toBeInTheDocument()
+  },
+}
+
 /** A zero multiplier is rejected inline. */
 export const ZeroMultiplierRejected: Story = {
   args: {

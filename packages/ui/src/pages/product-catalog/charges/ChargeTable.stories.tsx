@@ -320,8 +320,8 @@ export const WithDates: Story = {
 }
 
 /**
- * The summary a contract's Overview shows: the changed charges only, and a way
- * to the rest, with no subtitle above it.
+ * The summary a contract's Overview shows: the live charges, changed ones
+ * first, and a way to the rest, with no subtitle above it.
  */
 export const Summary: Story = {
   args: {
@@ -333,20 +333,45 @@ export const Summary: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText(/active charges/)).not.toBeInTheDocument()
-    await expect(canvas.queryByText('Included storage')).not.toBeInTheDocument()
+    const names = canvas.getAllByRole('row').map((row) => row.textContent ?? '')
+    // The changed charge leads; the unchanged ones follow instead of vanishing.
+    const changedIndex = names.findIndex((text) => text.includes('Platform base'))
+    const unchangedIndex = names.findIndex((text) => text.includes('Included storage'))
+    await expect(changedIndex).toBeGreaterThanOrEqual(0)
+    await expect(unchangedIndex).toBeGreaterThanOrEqual(0)
+    await expect(changedIndex).toBeLessThan(unchangedIndex)
+    // A few rows and a way to the rest: no filter or sort on the summary.
+    await expect(canvas.queryByRole('button', { name: 'Filter' })).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: /show all charges/i }))
     await expect(args.onShowAll).toHaveBeenCalled()
   },
 }
 
-/** Nothing changed: the summary says so rather than showing an empty table. */
+/** Nothing changed: the charges still list, as the plan sets them. */
 export const SummaryUnchanged: Story = {
   args: { charges: chargeFixtures, variant: 'summary', onShowAll: fn() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      canvas.getByText('Every charge is billed as the plan sets it. Changed charges show here.'),
-    ).toBeInTheDocument()
+    await expect(canvas.getByText('Included storage')).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).not.toBeInTheDocument()
+  },
+}
+
+/** Every charge has ended: the summary says none are live, not that there were none. */
+export const SummaryAllEnded: Story = {
+  args: {
+    charges: chargeFixtures.map((charge) => ({
+      ...charge,
+      endDate: new Date('2026-10-01T00:00:00Z'),
+    })),
+    variant: 'summary',
+    onShowAll: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('No active charges')).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).not.toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: /show all charges/i })).toBeInTheDocument()
   },
 }
 

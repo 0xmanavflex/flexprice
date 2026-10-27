@@ -23,6 +23,8 @@ import {
   creditGrantToEdit,
   entitlementToEdit,
   planKind,
+  PlanKind,
+  usageBasedLabel,
 } from '@fp/domain'
 import {
   useArchivePlan,
@@ -95,6 +97,7 @@ import { TerminateChargeDialog } from '../shared/TerminateChargeDialog'
 import { priceHistoryRows } from '@/pages/shared/priceHistory'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
+import { useContractSync } from '../shared/useContractSync'
 
 /**
  * A plan's detail page: the hub where a plan is completed.
@@ -183,6 +186,7 @@ export function PlanDetailPage({
   const update = useUpdatePlan()
   const archive = useArchivePlan()
   const sync = useSyncPlanPrices()
+  const syncing = useContractSync('plan', planId)
 
   // The header's kind badge is read off the charges. The Overview sections
   // read the same key, so react-query serves them from this one fetch.
@@ -257,11 +261,11 @@ export function PlanDetailPage({
                   </DropdownMenuItem>
                 ) : null}
                 <DropdownMenuItem
-                  disabled={sync.isPending || isArchived}
-                  onClick={() => sync.mutate(planId)}
+                  disabled={sync.isPending || syncing.watching || isArchived}
+                  onClick={() => sync.mutate(planId, { onSuccess: syncing.started })}
                 >
                   <RefreshCwIcon className="text-muted-foreground" aria-hidden />
-                  {sync.isPending ? 'Syncing…' : 'Sync to contracts'}
+                  {sync.isPending || syncing.watching ? 'Syncing…' : 'Sync to contracts'}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEdit(planId)}>
                   <PencilIcon className="text-muted-foreground" aria-hidden />
@@ -832,12 +836,16 @@ function InformationTab({
  * `planKind`, so the badge and the column cannot drift apart.
  */
 function planKindLabel(charges: Charge[]): string {
-  return PLAN_KIND_LABEL[
-    planKind({
-      fixedChargeCount: charges.filter((c) => c.type === PriceType.Fixed).length,
-      usageChargeCount: charges.filter((c) => c.type === PriceType.Usage).length,
-    })
-  ]
+  const usage = charges.filter((c) => c.type === PriceType.Usage)
+  const kind = planKind({
+    fixedChargeCount: charges.filter((c) => c.type === PriceType.Fixed).length,
+    usageChargeCount: usage.length,
+  })
+  // Usage only: no flat price to qualify, so name what it meters instead.
+  if (kind === PlanKind.Usage) {
+    return usageBasedLabel(usage.map((c) => c.displayName || c.meterName || ''))
+  }
+  return PLAN_KIND_LABEL[kind]
 }
 
 function billedLabel(charges: Charge[]): string | null {

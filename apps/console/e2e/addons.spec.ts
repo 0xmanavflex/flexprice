@@ -85,3 +85,22 @@ test.describe('the add-ons list', () => {
     await expect(page.getByLabel('Name', { exact: true })).toBeHidden()
   })
 })
+
+test.describe('syncing an add-on to its contracts', () => {
+  test('says the sync started, then that it finished', async ({ page }) => {
+    await page.goto('/addons')
+    const rows = new CatalogListPage(page, { heading: 'Add-ons', searchLabel: 'Search add-ons' })
+    await expect(rows.rows().first()).toBeVisible({ timeout: 45_000 })
+    await rows.rows().first().getByRole('button', { name: 'Row actions' }).click()
+    await page.getByRole('menuitem', { name: 'View add-on' }).click()
+    await expect(page).toHaveURL(/\/addons\/[^/]+$/)
+
+    const search = page.waitForRequest(isWrite('POST', /\/v1\/workflows\/search$/))
+    await page.getByRole('button', { name: 'Add-on actions' }).click()
+    await page.getByRole('menuitem', { name: 'Sync to contracts' }).click()
+    await expect(page.getByText('Sync started')).toBeVisible()
+    // The run is read back through the workflow search until it finishes.
+    await search
+    await expect(page.getByText('Sync finished')).toBeVisible()
+  })
+})

@@ -8,7 +8,6 @@ import {
   createCustomerSchema,
   emptyCustomer,
   KEY_PREFIX,
-  countryOptions,
   suggestKey,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
@@ -16,13 +15,13 @@ import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
 import { FormDisclosure } from '@ui/compositions/forms/FormDisclosure'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
-import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
+import { AddressPicker, useAddressRegions } from '@ui/compositions/forms/AddressRegionFields'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { TimezoneCombobox } from '@ui/compositions/forms/TimezoneCombobox'
 import { provenance } from '@ui/provenance'
 
 /**
- * Create or edit a customer on its own page: name, ID and email, then the optional rest under More details.
+ * Create or edit a customer on its own page: name, ID and email, then billing configuration (tax treatment, timezone), then the billing address under a disclosure.
  *
  * Presentational: it emits a validated `CreateCustomer` (an edit carries the
  * same fields) and never imports `@fp/query`. The external ID is the key the
@@ -34,11 +33,11 @@ export const CustomerFormProvenance = provenance({
     'ui/input',
     'compositions/form-page',
     'compositions/option-select',
-    'compositions/option-combobox',
+    'compositions/address-region-fields',
     'compositions/timezone-combobox',
     'compositions/form-disclosure',
   ],
-  note: 'RHF + the domain schema, one page: name, external ID and email up front, the rest folded under More details, no preview rail. Create and edit share it. Lineage: compositions/field.',
+  note: 'RHF + the domain schema, one page: name, external ID and email up front, a Billing configuration card (tax treatment, timezone) shown on create and edit, the address folded under Billing address, no preview rail. Create and edit share it. Lineage: compositions/field.',
 })
 
 export interface CustomerFormProps {
@@ -55,22 +54,14 @@ export interface CustomerFormProps {
 
 const FORM_ID = 'customer-form'
 
-const OPTIONAL_FIELDS = [
+const ADDRESS_FIELDS = [
   'addressLine1',
   'addressLine2',
   'addressCity',
   'addressState',
   'addressPostalCode',
   'addressCountry',
-  'timezone',
-  'taxTreatment',
 ] as const satisfies readonly (keyof CreateCustomer)[]
-
-/** Countries, named in the viewer's language and found by name or code. */
-const COUNTRY_CHOICES = countryOptions().map((option) => ({
-  value: option.code,
-  label: option.label,
-}))
 
 const TAX_OPTIONS = Object.values(CustomerTaxTreatment).map((value) => ({
   value,
@@ -105,6 +96,22 @@ export function CustomerForm({
   })
 
   const errors = form.formState.errors
+
+  const [addressCountry = '', addressState = '', addressCity = ''] = form.watch([
+    'addressCountry',
+    'addressState',
+    'addressCity',
+  ])
+  const regions = useAddressRegions({
+    value: { country: addressCountry, state: addressState, city: addressCity },
+    onChange: (next) => {
+      const options = { shouldDirty: true, shouldValidate: form.formState.isSubmitted }
+      form.setValue('addressCountry', next.country, options)
+      form.setValue('addressState', next.state, options)
+      form.setValue('addressCity', next.city, options)
+    },
+    disabled: isSubmitting,
+  })
 
   const submitAll = form.handleSubmit((values) => onSubmit(values))
 
@@ -167,17 +174,30 @@ export function CustomerForm({
         )}
       </FormRow>
       <FormRow
+        label="Country"
+        hint="Stored as the two-letter code; search by name."
+        error={errors.addressCountry?.message}
+      >
+        {({ id, ...field }) => (
+          <AddressPicker picker={regions.country} id={id} {...field} autoComplete="country" />
+        )}
+      </FormRow>
+      <FormRow
+        label="State"
+        hint="State, province or region, from the chosen country."
+        error={errors.addressState?.message}
+      >
+        {({ id, ...field }) => (
+          <AddressPicker picker={regions.state} id={id} {...field} autoComplete="address-level1" />
+        )}
+      </FormRow>
+      <FormRow
         label="City"
-        hint="City or town for the billing address."
+        hint="City or town, from the chosen state."
         error={errors.addressCity?.message}
       >
         {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressCity')} />
-        )}
-      </FormRow>
-      <FormRow label="State" hint="State, province or region." error={errors.addressState?.message}>
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressState')} />
+          <AddressPicker picker={regions.city} id={id} {...field} autoComplete="address-level2" />
         )}
       </FormRow>
       <FormRow
@@ -194,57 +214,11 @@ export function CustomerForm({
           />
         )}
       </FormRow>
-      <FormRow
-        label="Country"
-        hint="Stored as the two-letter code; search by name."
-        error={errors.addressCountry?.message}
-      >
-        {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="addressCountry"
-            render={({ field: control }) => (
-              <OptionCombobox
-                id={id}
-                {...field}
-                searchable
-                value={control.value || undefined}
-                onValueChange={(value) => control.onChange(value)}
-                options={COUNTRY_CHOICES}
-                placeholder="Search countries…"
-                emptyText="No matching country."
-                disabled={isSubmitting}
-              />
-            )}
-          />
-        )}
-      </FormRow>
     </>
   )
 
-  const additionalRows = (
+  const billingRows = (
     <>
-      <FormRow
-        label="Timezone"
-        hint="The customer's local time zone, e.g. Europe/London."
-        error={errors.timezone?.message}
-      >
-        {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="timezone"
-            render={({ field: control }) => (
-              <TimezoneCombobox
-                id={id}
-                {...field}
-                value={control.value || undefined}
-                onValueChange={(value) => control.onChange(value)}
-                disabled={isSubmitting}
-              />
-            )}
-          />
-        )}
-      </FormRow>
       <FormRow
         label="Tax treatment"
         hint="How tax is handled on this customer's invoices."
@@ -267,6 +241,27 @@ export function CustomerForm({
           />
         )}
       </FormRow>
+      <FormRow
+        label="Timezone"
+        hint="The customer's local time zone, e.g. Europe/London."
+        error={errors.timezone?.message}
+      >
+        {({ id, ...field }) => (
+          <Controller
+            control={form.control}
+            name="timezone"
+            render={({ field: control }) => (
+              <TimezoneCombobox
+                id={id}
+                {...field}
+                value={control.value || undefined}
+                onValueChange={(value) => control.onChange(value)}
+                disabled={isSubmitting}
+              />
+            )}
+          />
+        )}
+      </FormRow>
     </>
   )
 
@@ -276,14 +271,20 @@ export function CustomerForm({
         <FormCard title="Customer details" status="required">
           {detailsRows}
         </FormCard>
+        <FormCard
+          title="Billing configuration"
+          status="optional"
+          description="How this customer is taxed and which time zone their billing runs in."
+        >
+          {billingRows}
+        </FormCard>
         <FormDisclosure
-          title="More details"
-          summary="Billing address, timezone and tax treatment. All optional."
+          title="Billing address"
+          summary="Printed on invoices. Optional."
           defaultOpen={isEdit}
-          forceOpen={OPTIONAL_FIELDS.some((name) => errors[name])}
+          forceOpen={ADDRESS_FIELDS.some((name) => errors[name])}
         >
           {addressRows}
-          {additionalRows}
         </FormDisclosure>
       </div>
     </form>
