@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AddonChargesDialog, type AddonPricing } from './SubscriptionForm'
+import type { MeterOption } from '../product-catalog/charges/ChargeForm'
 import {
   emptyTaxAssociation,
   type AddContractAddon,
@@ -42,6 +43,8 @@ export interface ContractSectionOptions {
   addonCharges?: ((addonId: string) => readonly Charge[] | undefined) | undefined
   /** The add-ons' charges could not be loaded. */
   addonChargesFailed?: boolean | undefined
+  /** The metered features, so an add-on usage charge's override offers a bucket where the API takes one. */
+  meters?: readonly MeterOption[] | undefined
   /** The contract's currency, for commitment amounts. */
   currency?: string | undefined
   /** The contract's billing period: only prices that attach get a commitment. */
@@ -116,6 +119,7 @@ export function ContractSectionDialogs({
         addons={options.addons}
         chargesOf={options.addonCharges}
         chargesFailed={options.addonChargesFailed ?? false}
+        meters={options.meters ?? []}
         currency={options.currency ?? ''}
         billingPeriod={options.billingPeriod ?? ''}
         pending={pending}
@@ -238,6 +242,7 @@ function AddonDialog({
   addons,
   chargesOf,
   chargesFailed,
+  meters,
   currency,
   billingPeriod,
   pending,
@@ -249,6 +254,7 @@ function AddonDialog({
   addons: { id: string; name: string }[]
   chargesOf: ((addonId: string) => readonly Charge[] | undefined) | undefined
   chargesFailed: boolean
+  meters: readonly MeterOption[]
   currency: string
   billingPeriod: string
   pending: boolean
@@ -275,6 +281,7 @@ function AddonDialog({
       submitLabel="Add add-on"
       charges={charges}
       chargesFailed={chargesFailed}
+      meters={meters}
       currency={currency}
       value={pricing}
       onChange={setPricing}

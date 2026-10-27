@@ -1295,6 +1295,22 @@ export const AddAddonWithCommitment: Story = {
   },
 }
 
+/** While the chosen add-on's charges load, it cannot be attached: they could not be priced yet. */
+export const AddAddonWaitsForCharges: Story = {
+  parameters: menuA11y,
+  args: { sectionOptions: { ...SECTION_OPTIONS, addonCharges: () => undefined } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
+    await expect(await dialog.findByText(/Loading the add-on's charges/)).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Add add-on' })).toBeDisabled()
+    await expect(args.onAddAddon).not.toHaveBeenCalled()
+  },
+}
+
 /** The add-ons' charges failed to load: the dialog says so rather than "Loading" for ever. */
 export const AddAddonChargesFailed: Story = {
   parameters: menuA11y,
