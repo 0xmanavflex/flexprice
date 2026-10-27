@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { DateInput, type DateInputProps } from './DateInput'
+import { DateInput, DayCalendar, type DateInputProps, type DayCalendarProps } from './DateInput'
 import { Field } from './Field'
 
 type PlaygroundArgs = DateInputProps & {
@@ -209,5 +209,42 @@ export const Bounded: Story = {
     await expect(await screen.findByRole('button', { name: /March 5/ })).toBeDisabled()
     await expect(screen.getByRole('button', { name: /March 12/ })).toBeEnabled()
     await expect(screen.getByRole('button', { name: /March 25/ })).toBeDisabled()
+  },
+}
+
+/**
+ * `DayCalendar`: the bare day calendar `DateInput` opens, for a popover with
+ * its own trigger (the analytics range's "From" / "To"). It opens on the
+ * value's month, keeps days outside `min` / `max` disabled, and reports a day.
+ */
+export const BareDayCalendar: StoryObj<DayCalendarProps> = {
+  args: { value: '2026-03-15', min: '2026-03-10', max: '2026-03-20', onValueChange: fn() },
+  render: function Render({ value, onValueChange, ...rest }) {
+    const [current, setCurrent] = useState(value)
+    return (
+      <DayCalendar
+        {...rest}
+        value={current}
+        onValueChange={(next) => {
+          setCurrent(next)
+          onValueChange(next)
+        }}
+      />
+    )
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /March 15/ })).toHaveAttribute(
+      'data-selected-single',
+      'true',
+    )
+    await expect(canvas.getByRole('button', { name: /March 5/ })).toBeDisabled()
+    await expect(canvas.getByRole('button', { name: /March 25/ })).toBeDisabled()
+    await userEvent.click(canvas.getByRole('button', { name: /March 18/ }))
+    await expect(args.onValueChange).toHaveBeenCalledWith('2026-03-18')
+    await expect(canvas.getByRole('button', { name: /March 18/ })).toHaveAttribute(
+      'data-selected-single',
+      'true',
+    )
   },
 }

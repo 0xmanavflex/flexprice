@@ -8646,6 +8646,7 @@
       "component": "DateInput",
       "uses": [
         "DateInput",
+        "DayCalendar",
         "Field"
       ]
     },
