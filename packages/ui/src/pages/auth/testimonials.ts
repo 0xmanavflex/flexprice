@@ -18,6 +18,7 @@ export interface Testimonial {
   stage?: string
 }
 
+// The order the reviews play in, from the 2026-10-27 review.
 export const TESTIMONIALS: Testimonial[] = [
   {
     id: 'optimality',
@@ -31,18 +32,6 @@ export const TESTIMONIALS: Testimonial[] = [
     logoClass: 'h-8',
   },
   {
-    id: 'truffle',
-    quote:
-      'Flexprice saved us thousands of development hours that we would have spent building in-house. Managing pricing plans and experimenting with models is now effortless.',
-    name: 'Shaunak Srivastava',
-    role: 'Co-founder (YC 25)',
-    company: 'Truffle AI',
-    photo: AUTH_PEOPLE.shaunak,
-    logo: AUTH_LOGOS.truffle,
-    logoClass: 'h-4',
-    stage: 'Y Combinator',
-  },
-  {
     id: 'vapi',
     quote:
       'Honestly the customer dashboard was the one thing our team felt the most. We stopped getting those billing questions that used to pile up every month by using Flexprice.',
@@ -51,7 +40,8 @@ export const TESTIMONIALS: Testimonial[] = [
     company: 'Vapi',
     photo: AUTH_PEOPLE.ram,
     logo: AUTH_LOGOS.vapi,
-    logoClass: 'h-5',
+    // A solid wordmark with no padding: one step down so it weighs what the others do.
+    logoClass: 'h-4',
     stage: 'Series B',
   },
   {
@@ -89,6 +79,18 @@ export const TESTIMONIALS: Testimonial[] = [
     logoClass: 'h-5',
     stage: 'Series A',
   },
+  {
+    id: 'truffle',
+    quote:
+      'Flexprice saved us thousands of development hours that we would have spent building in-house. Managing pricing plans and experimenting with models is now effortless.',
+    name: 'Shaunak Srivastava',
+    role: 'Co-founder (YC 25)',
+    company: 'Truffle AI',
+    photo: AUTH_PEOPLE.shaunak,
+    logo: AUTH_LOGOS.truffle,
+    logoClass: 'h-4',
+    stage: 'Y Combinator',
+  },
 ]
 
 /**
@@ -99,9 +101,9 @@ export const TESTIMONIALS: Testimonial[] = [
  */
 export const CUSTOMER_LOGOS = [
   { name: 'Krutrim', src: AUTH_LOGOS.krutrim, height: 38, offset: -8 },
-  { name: 'Vapi', src: AUTH_LOGOS.vapi, height: 21, offset: 0 },
+  { name: 'Vapi', src: AUTH_LOGOS.vapi, height: 16, offset: 0 },
   { name: 'Simplismart', src: AUTH_LOGOS.simplismart, height: 30, offset: -9 },
   { name: 'Aftershoot', src: AUTH_LOGOS.aftershoot, height: 31, offset: -6 },
-  { name: 'Facilio', src: AUTH_LOGOS.facilio, height: 24, offset: -7 },
+  { name: 'Facilio', src: AUTH_LOGOS.facilio, height: 20, offset: -6 },
   { name: 'Gigin', src: AUTH_LOGOS.gigin, height: 23, offset: 0 },
 ]
