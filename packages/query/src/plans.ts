@@ -60,6 +60,23 @@ function toHeadline(prices: unknown[] | undefined): PlanHeadline | null {
   return { amount, period }
 }
 
+/**
+ * What a plan's usage charges meter, as a customer reads them: the charge's
+ * display name, else its meter's name (`expand: 'meters'`), without repeats.
+ */
+function usageNames(prices: Array<Record<string, unknown>>): string[] {
+  const names = prices
+    .filter((price) => price['type'] === 'USAGE')
+    .map((price) => {
+      const display = typeof price['displayName'] === 'string' ? price['displayName'].trim() : ''
+      const meter = price['meter'] as Record<string, unknown> | undefined
+      const meterName = typeof meter?.['name'] === 'string' ? meter['name'].trim() : ''
+      return display || meterName
+    })
+    .filter(Boolean)
+  return [...new Set(names)]
+}
+
 export function toPlan(wire: PlanWire): Plan {
   const prices: Array<Record<string, unknown>> = Array.isArray(wire.prices)
     ? (wire.prices as Array<Record<string, unknown>>)
@@ -83,6 +100,7 @@ export function toPlan(wire: PlanWire): Plan {
     fixedChargeCount: prices.filter((price) => price['type'] === 'FIXED').length,
     usageChargeCount: prices.filter((price) => price['type'] === 'USAGE').length,
     headline: toHeadline(wire.prices),
+    usageNames: usageNames(prices),
     metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -102,7 +120,8 @@ export function toPlanFilter(query: PlanQuery): Record<string, unknown> {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
-    expand: 'prices',
+    // Meters too, so a usage-only plan can name what it meters.
+    expand: 'prices,meters',
     ...(query.search || (query.filters?.length ?? 0) > 0
       ? {
           filters: [

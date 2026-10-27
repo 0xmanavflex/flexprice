@@ -22,6 +22,8 @@ import {
   PlanStatus,
   PLAN_FILTERS,
   planKind,
+  PlanKind,
+  usageBasedLabel,
 } from '@fp/domain'
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
@@ -82,6 +84,9 @@ const PERIOD_SHORT: Record<string, string | undefined> = BILLING_PERIOD_SHORT
  * amount rather than printing the enum at someone.
  */
 function headlinePrice(plan: Plan): string | null {
+  // A usage-only plan has no flat price: the API's first price is a usage
+  // rate, and showing it as the base price reads as a blank flat fee.
+  if (planKind(plan) === PlanKind.Usage) return usageBasedLabel(plan.usageNames)
   if (!plan.headline) return null
   const short = PERIOD_SHORT[plan.headline.period]
   return short ? `${plan.headline.amount} /${short}` : plan.headline.amount
@@ -275,6 +280,9 @@ export function PlanGrid({
         hiddenByDefault: true,
         text: (row) => headlinePrice(row) ?? '',
         cell: (row) => {
+          if (planKind(row) === PlanKind.Usage) {
+            return <span className="text-muted-foreground">{usageBasedLabel(row.usageNames)}</span>
+          }
           if (!row.headline) return <EmDash />
           const short = PERIOD_SHORT[row.headline.period]
           return (

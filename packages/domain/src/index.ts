@@ -217,6 +217,7 @@ export {
   emptyPlan,
   planKind,
   planKindLabel,
+  usageBasedLabel,
 } from './plan'
 export type { CreatePlan, Plan, PlanHeadline, PlanQuery } from './plan'
 
