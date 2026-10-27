@@ -9,6 +9,7 @@ import {
   UsageWindowSize,
 } from '@fp/query'
 import { CustomerAnalyticsView, type AnalyticsQuery } from '@fp/ui/pages'
+import { priceSpan } from './analyticsPriceSpan'
 
 const RANGE_DAYS = 30
 const DAY = 86_400_000
@@ -17,14 +18,6 @@ const isoDay = (date: Date) => date.toISOString().slice(0, 10)
 const grouped = new Intl.NumberFormat()
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 const dayLabel = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
-
-/** When a price applied: "Oct 1 – Oct 14", "From Oct 15", or "Price" with no dates. */
-function priceSpan(from: Date | null, to: Date | null): string {
-  if (from && to) return `${dayLabel.format(from)} – ${dayLabel.format(to)}`
-  if (from) return `From ${dayLabel.format(from)}`
-  if (to) return `Until ${dayLabel.format(to)}`
-  return 'Price'
-}
 
 /**
  * A customer's Analytics tab, on the redesign's layout, with real data.
