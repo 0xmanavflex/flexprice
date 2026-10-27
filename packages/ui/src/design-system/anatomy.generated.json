@@ -8682,6 +8682,7 @@
       "title": "Building blocks/Forms/FormCard",
       "component": "FormCard",
       "uses": [
+        "DashedRule",
         "DateInput",
         "FormCard",
         "FormRow",
