@@ -132,8 +132,8 @@ interface PlaygroundProps {
   billingCurrency?: string
   /** The global exchange rates; undefined leaves them unknown. */
   fxGlobalRates?: { fromCurrency: string; toCurrency: string; rate: string }[]
-  /** The custom currencies and their factors; defaults to none. */
-  fxCustomCurrencies?: Record<string, Record<string, string>>
+  /** The custom currencies and their factors; defaults to none. `null`: the config failed to load. */
+  fxCustomCurrencies?: Record<string, Record<string, string>> | null
   /** Opens with this contract currency instead of USD. */
   currency?: string
   /** Changes to the plan's entitlements, by id (`ent_0`…). */
@@ -295,7 +295,7 @@ function SubscriptionFormPlayground({
         : {})}
       customers={customers}
       {...(fxGlobalRates ? { fxGlobalRates } : {})}
-      fxCustomCurrencies={fxCustomCurrencies}
+      {...(fxCustomCurrencies ? { fxCustomCurrencies } : {})}
       plans={plans}
       plan={plan}
       onPlanChange={handlePlanChange}
@@ -1509,6 +1509,30 @@ export const FxCustomCurrencyConverts: Story = {
       ),
     )
     expect(canvas.queryByText(/No conversion factor|No exchange rate/)).toBeNull()
+  },
+}
+
+/**
+ * The custom currency config failed to load, but USD → INR are both ISO
+ * codes, so the pair is an ordinary one: with no global rate, it is still refused.
+ */
+export const FxConfigFailedOrdinaryPairBlocked: Story = {
+  args: {
+    prefilled: true,
+    step: 'billing',
+    chargeCount: 2,
+    billingCurrency: 'inr',
+    fxGlobalRates: [],
+    fxCustomCurrencies: null,
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('textbox', { name: /^Exchange rate/ })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await expect(
+      await canvas.findByText(/^No exchange rate for USD → INR\. Add a global rate/),
+    ).toBeVisible()
+    expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
 

@@ -463,20 +463,24 @@ export function SubscriptionForm({
   )
   // As the API's `conversionAvailable`: a custom currency converts at its own
   // factor (and takes no contract rate: the API refuses fx_rates for it), any
-  // other at the global rate for the pair. Nothing blocks until both are known.
+  // other at the global rate for the pair. Until the custom currency config is
+  // known, a pair of two ISO 4217 codes is taken as ordinary (no custom
+  // currency carries an ISO code); any other pair blocks nothing.
+  const configKnown = fxCustomCurrencies !== undefined
   const customFactors = fxCustomCurrencies?.[contractCurrency]
   const customFactor = fxNeeded && customFactors ? customFactors[billingCurrency] : undefined
   const fxCustom = fxNeeded && customFactors !== undefined
+  const isoPair = isoCurrency(contractCurrency) && isoCurrency(billingCurrency)
+  const fxOrdinary = fxNeeded && (configKnown ? !fxCustom : isoPair)
   const fxOverridable = fxNeeded && !fxCustom
   const globalRate = fxOverridable
     ? fxGlobalRates?.find(
         (r) => r.fromCurrency === contractCurrency && r.toCurrency === billingCurrency,
       )
     : undefined
-  const fxMissing =
-    fxNeeded &&
-    fxCustomCurrencies !== undefined &&
-    (fxCustom ? !(Number(customFactor ?? 0) > 0) : fxGlobalRates !== undefined && !globalRate)
+  const fxMissing = fxCustom
+    ? !(Number(customFactor ?? 0) > 0)
+    : fxOrdinary && fxGlobalRates !== undefined && !globalRate
   const pair = `${contractCurrency.toUpperCase()} → ${billingCurrency.toUpperCase()}`
   const fxMissingMessage = fxCustom
     ? `No conversion factor for ${pair}. Set ${contractCurrency.toUpperCase()}'s factor for ${billingCurrency.toUpperCase()} in the custom currency settings first.`
@@ -4006,6 +4010,12 @@ function TaxesSection({
 /* ------------------------------------------------------------------------- */
 
 /** How and when the contract invoices, and who pays. */
+const ISO_CURRENCIES = new Set(currencyCodes().map((code) => code.toLowerCase()))
+/** An ISO 4217 code, as the browser knows them; a custom currency is never one. */
+function isoCurrency(code: string): boolean {
+  return ISO_CURRENCIES.has(code.toLowerCase())
+}
+
 /** A contract billed in one currency and invoiced in another. */
 interface FxConversion {
   /** Lower-case codes: the contract's currency, and the invoicing customer's. */
