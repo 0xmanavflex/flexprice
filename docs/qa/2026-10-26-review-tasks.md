@@ -140,7 +140,8 @@ Status: `Pending`, `In Progress`, `Blocked`, `Completed` (merged), `Open` (PR op
 - **Problem.** The API takes `override_line_items` on an add-on. The console offers no price override
   for add-on charges.
 - **Acceptance.** An add-on's charges can be repriced in the wizard and in the Add add-on dialog.
-- **Status.** Blocked on #197 (add-on commitments), which touches the same add-on code.
+- **Status.** Superseded: #197 has merged, and this work now lives in D-10 of
+  `2026-10-27-dogfood-tasks.md` (add-ons expand into all their charges, editable before adding).
 
 ### R-15 Contract detail: read-only metadata on cancelled contracts, and inherited contracts
 - **Problem.**
