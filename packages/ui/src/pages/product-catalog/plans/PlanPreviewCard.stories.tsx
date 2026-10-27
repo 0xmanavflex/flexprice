@@ -79,6 +79,22 @@ export const FixedAndUsage: Story = {
   },
 }
 
+/** Usage only: no blank flat price and no "plus usage"; the headline names what it meters. */
+export const UsageOnly: Story = {
+  args: {
+    charges: [tieredUsage, packageUsage],
+    meterLabel: (id) => (id === 'meter_api' ? 'API calls' : 'Tokens'),
+    trialDays: 14,
+  },
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement)
+    await expect(c.getByText('Usage-based · API calls, Tokens')).toBeVisible()
+    await expect(c.queryByText(/plus usage/)).toBeNull()
+    await expect(c.queryByText('—')).toBeNull()
+    await expect(c.getByText('14-day free trial')).toBeVisible()
+  },
+}
+
 export const FullPlan: Story = {
   args: {
     trialDays: 14,

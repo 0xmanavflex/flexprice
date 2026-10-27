@@ -143,6 +143,10 @@ export const BasePriceStaysReachable: Story = {
     // An unrecognised period falls back to the bare amount rather than
     // printing the raw enum at someone.
     await expect(canvas.getByText('Custom')).toBeInTheDocument()
+    // A usage-only plan has no flat price: it names what it meters instead of
+    // showing its first usage rate as a base price.
+    await expect(canvas.getByText('Usage-based · API calls')).toBeInTheDocument()
+    await expect(canvas.queryByText(/\$0\.002/)).toBeNull()
   },
 }
 

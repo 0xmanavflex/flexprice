@@ -17,7 +17,7 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
-import { DateInput } from '@ui/compositions/forms/DateInput'
+import { DateInput, storedDayOf, utcDayEnd } from '@ui/compositions/forms/DateInput'
 import { Field } from '@ui/compositions/forms/Field'
 import { FormActions } from '@ui/compositions/forms/FormActions'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
@@ -64,14 +64,6 @@ const messageOf = (errors: unknown, key: string): string | undefined =>
 
 const optionsOf = <T extends string>(values: T[], labels: Record<T, string>) =>
   values.map((value) => ({ value, label: labels[value] }))
-
-const pad = (n: number) => String(n).padStart(2, '0')
-const toIso = (date: Date | undefined) =>
-  date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : ''
-const endOfDay = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return y && m && d ? new Date(y, m - 1, d, 23, 59, 59) : undefined
-}
 
 export function CreditGrantEditForm({
   defaultValue,
@@ -125,8 +117,9 @@ export function CreditGrantEditForm({
                 render={({ field }) => (
                   <DateInput
                     id={id}
-                    value={toIso(field.value)}
-                    onValueChange={(iso) => field.onChange(iso ? endOfDay(iso) : undefined)}
+                    value={storedDayOf(field.value)}
+                    // Issues through the day picked: the end of that UTC day, in every browser zone.
+                    onValueChange={(day) => field.onChange(utcDayEnd(day))}
                     disabled={isSubmitting}
                     aria-describedby={describedBy}
                     aria-invalid={invalid}
@@ -279,34 +272,6 @@ export function CreditGrantCreateForm({
               />
             )}
           </Field>
-          {cadence === CreditGrantCadence.Recurring ? (
-            <Field
-              label="Refreshes every"
-              hint="How often a recurring grant issues its credits again."
-              required
-              error={messageOf(errors, 'period')}
-            >
-              {({ id }) => (
-                <Controller
-                  control={form.control}
-                  name="period"
-                  render={({ field }) => (
-                    <OptionSelect
-                      id={id}
-                      value={field.value ?? ''}
-                      onValueChange={field.onChange}
-                      options={optionsOf(
-                        Object.values(CreditGrantPeriod),
-                        CREDIT_GRANT_PERIOD_LABEL,
-                      )}
-                      placeholder="Choose a period"
-                      disabled={isSubmitting}
-                    />
-                  )}
-                />
-              )}
-            </Field>
-          ) : null}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -383,11 +348,40 @@ export function CreditGrantCreateForm({
               />
             )}
           </Field>
-          <p className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-sm">
-            {summary}
-          </p>
         </div>
       </div>
+
+      {/* Recurring options open here, full width, above the note: not beside it. */}
+      {cadence === CreditGrantCadence.Recurring ? (
+        // Half width on wide screens, lined up with the left column above.
+        <div className="md:w-1/2 md:pr-3">
+          <Field
+            label="Refreshes every"
+            hint="How often a recurring grant issues its credits again."
+            required
+            error={messageOf(errors, 'period')}
+          >
+            {({ id }) => (
+              <Controller
+                control={form.control}
+                name="period"
+                render={({ field }) => (
+                  <OptionSelect
+                    id={id}
+                    value={field.value ?? ''}
+                    onValueChange={field.onChange}
+                    options={optionsOf(Object.values(CreditGrantPeriod), CREDIT_GRANT_PERIOD_LABEL)}
+                    placeholder="Choose a period"
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : null}
+      {/* The explanatory note is always the last block, full width. */}
+      <p className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-sm">{summary}</p>
 
       <FormActions
         mode="create"

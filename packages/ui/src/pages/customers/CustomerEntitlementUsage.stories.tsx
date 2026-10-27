@@ -75,7 +75,7 @@ export const Default: Story = {
 export const States: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('90,210 used of unlimited')).toBeVisible()
+    await expect(canvas.getByText('90,210 of unlimited')).toBeVisible()
     await expect(canvas.queryByRole('progressbar', { name: /AI tokens/ })).toBeNull()
     await expect(canvas.getByText('12 of 10')).toHaveClass('text-destructive')
     await expect(canvas.getByText('Included')).toBeVisible()

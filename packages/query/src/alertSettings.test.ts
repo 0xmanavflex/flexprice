@@ -8,6 +8,7 @@ import {
   toAlertSettingConfig,
 } from '@fp/domain'
 import {
+  toAlertConfig,
   toAlertSetting,
   toAlertSettingFilter,
   toCreateAlertSettingRequest,
@@ -87,6 +88,22 @@ describe('toAlertSetting', () => {
     expect(setting.id).toBe('')
     expect(setting.entityType).toBe(AlertEntityType.Subscription)
     expect(configuredSeverities(setting)).toEqual([])
+  })
+})
+
+describe('an alert setting with no threshold type', () => {
+  // The API treats an unset type as absolute (settings saved before it existed).
+  const untyped = { alertEnabled: true, critical: { condition: 'below', threshold: '100' } }
+
+  it('reads an inline wallet or feature setting as absolute', () => {
+    expect(toAlertConfig(untyped)?.thresholdType).toBe(AlertThresholdType.Absolute)
+  })
+
+  it('reads a per-entity record as absolute', () => {
+    const { alertThresholdType: _type, ...config } = settingWire.config
+    expect(toAlertSetting({ ...settingWire, config }).thresholdType).toBe(
+      AlertThresholdType.Absolute,
+    )
   })
 })
 

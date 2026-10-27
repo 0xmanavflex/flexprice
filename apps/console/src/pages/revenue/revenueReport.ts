@@ -138,6 +138,23 @@ export function percentOf(part: number, whole: number): string {
   return whole > 0 ? `${Math.round((part / whole) * 100)}%` : '—'
 }
 
+/**
+ * The currency with the most revenue, or the first listed when none has any.
+ * Reports list currencies alphabetically, so the first can be one with next
+ * to nothing in it while the real revenue sits in another.
+ */
+export function largestCurrency(
+  currencies: string[],
+  revenueOf: (currency: string) => number,
+): string | undefined {
+  let best: { currency: string; value: number } | undefined
+  for (const currency of currencies) {
+    const value = revenueOf(currency)
+    if (value > 0 && (!best || value > best.value)) best = { currency, value }
+  }
+  return best?.currency ?? currencies[0]
+}
+
 /* ---- Revenue over time ----------------------------------------------------- */
 
 const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' })

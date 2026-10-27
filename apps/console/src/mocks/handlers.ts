@@ -1197,6 +1197,27 @@ const workflowRuns: Record<string, unknown>[] = Array.from({ length: 30 }, (_, i
   }
 })
 
+/** A price sync as the mock runs it: done at once, recorded where the search finds it. */
+function startPriceSync(workflowId: string) {
+  const runId = `run_${Date.now()}`
+  const now = new Date().toISOString()
+  workflowRuns.unshift({
+    workflow_id: workflowId,
+    run_id: runId,
+    workflow_type: 'PriceSyncV2Workflow',
+    status: 'Completed',
+    task_queue: 'billing',
+    start_time: now,
+    close_time: now,
+    duration_ms: 0,
+  })
+  return {
+    message: 'price sync workflow started successfully',
+    workflow_id: workflowId,
+    run_id: runId,
+  }
+}
+
 /** Scheduled exports, authored to the wire: snake_case, `job_config` nested. */
 const scheduledTasks: Record<string, unknown>[] = [
   ['invoice', 'daily', true, 'acme-billing', 'us-east-1', 'flexprice/invoices/'],
@@ -2545,12 +2566,14 @@ function sourceFor(key: string): Corpus {
 }
 
 export const handlers = [
-  // Price sync: starts a workflow and answers its handle, as the API does.
+  // Price sync: starts a workflow and answers its handle, as the API does. The
+  // run lands in the workflow search already finished, so the console's watch
+  // sees it complete on its first read.
   http.post(`${BASE}/plans/:id/sync/subscriptions`, ({ params }) =>
-    HttpResponse.json({ workflow_id: `sync-plan-${String(params['id'])}`, run_id: 'run_mock' }),
+    HttpResponse.json(startPriceSync(`sync-plan-${String(params['id'])}`)),
   ),
   http.post(`${BASE}/addons/:id/sync/subscriptions`, ({ params }) =>
-    HttpResponse.json({ workflow_id: `sync-addon-${String(params['id'])}`, run_id: 'run_mock' }),
+    HttpResponse.json(startPriceSync(`sync-addon-${String(params['id'])}`)),
   ),
   // The Svix API behind the webhook portal: see `svixHandlers.ts`.
   ...svixHandlers,

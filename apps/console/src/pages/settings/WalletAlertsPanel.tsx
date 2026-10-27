@@ -181,7 +181,6 @@ function WalletAlertsForm({
                 <Button
                   key={option}
                   type="button"
-                  size="sm"
                   variant={draft.value.thresholdType === option ? 'default' : 'outline'}
                   aria-pressed={draft.value.thresholdType === option}
                   disabled={busy}
@@ -212,7 +211,6 @@ function WalletAlertsForm({
                         <Button
                           key={condition}
                           type="button"
-                          size="sm"
                           variant={value.condition === condition ? 'default' : 'outline'}
                           aria-pressed={value.condition === condition}
                           disabled={busy}
@@ -236,7 +234,6 @@ function WalletAlertsForm({
                     {percentage ? <span className="text-muted-foreground text-sm">%</span> : null}
                     <Button
                       type="button"
-                      size="sm"
                       variant="ghost"
                       aria-label={`Remove the ${name.toLowerCase()} threshold`}
                       disabled={busy}
@@ -249,7 +246,6 @@ function WalletAlertsForm({
                   <div className="flex items-center gap-3">
                     <Button
                       type="button"
-                      size="sm"
                       variant="outline"
                       aria-label={`Add a ${name.toLowerCase()} threshold`}
                       disabled={busy}

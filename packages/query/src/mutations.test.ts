@@ -176,6 +176,18 @@ describe('cost sheet requests', () => {
 })
 
 describe('customer requests', () => {
+  it('sends the billing configuration chosen on create', () => {
+    const request = toCreateCustomerRequest({
+      ...emptyCustomer(),
+      externalId: 'c1',
+      name: 'Acme',
+      taxTreatment: 'exempt',
+      timezone: 'Asia/Kolkata',
+    })
+    expect(request).toMatchObject({ taxTreatment: 'exempt', timezone: 'Asia/Kolkata' })
+    survives(CreateCustomerRequest$outboundSchema as never, request)
+  })
+
   it('maps phone to contact and omits blanks', () => {
     const request = toCreateCustomerRequest({
       ...emptyCustomer(),

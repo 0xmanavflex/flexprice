@@ -104,7 +104,7 @@ test.describe('the customers list', () => {
       timeout: 20_000,
     })
 
-    await page.getByLabel('City').fill('London')
+    await page.getByLabel('Address line 1').fill('1 London Wall')
 
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/customers$/))
     await page.getByRole('button', { name: 'Save changes' }).click()
