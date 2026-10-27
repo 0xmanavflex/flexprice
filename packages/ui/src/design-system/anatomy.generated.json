@@ -242,6 +242,18 @@
       "usedBy": [],
       "story": "./src/pages/product-catalog/addons/AddonSubscriptionsView.stories.tsx"
     },
+    "AddressPicker": {
+      "file": "src/compositions/forms/AddressRegionFields.tsx",
+      "layer": "composition",
+      "composes": [
+        "OptionCombobox"
+      ],
+      "usedBy": [
+        "CustomerForm",
+        "UpgradeView"
+      ],
+      "story": "./src/compositions/forms/AddressRegionFields.stories.tsx"
+    },
     "AddUserIcon": {
       "file": "src/reui/icons/default/outline/add-user.tsx",
       "layer": "other",
@@ -2202,11 +2214,11 @@
       "file": "src/pages/customers/CustomerForm.tsx",
       "layer": "surface",
       "composes": [
+        "AddressPicker",
         "FormCard",
         "FormDisclosure",
         "FormPage",
         "FormRow",
-        "OptionCombobox",
         "OptionSelect",
         "TimezoneCombobox"
       ],
@@ -5385,14 +5397,13 @@
         "OptionBody"
       ],
       "usedBy": [
+        "AddressPicker",
         "ChargeForm",
-        "CustomerForm",
         "EntitlementCreateForm",
         "EntitlementEditForm",
         "FxRatesSection",
         "SubscriptionForm",
         "TimezoneCombobox",
-        "UpgradeView",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/OptionCombobox.stories.tsx"
@@ -7985,12 +7996,12 @@
       "file": "src/pages/selfBilling/UpgradeView.tsx",
       "layer": "surface",
       "composes": [
+        "AddressPicker",
         "ArrowLeftIcon",
         "CheckIcon",
         "Field",
         "InfoHint",
-        "LockIcon",
-        "OptionCombobox"
+        "LockIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/selfBilling/UpgradeView.stories.tsx"
@@ -8656,6 +8667,14 @@
         "EmptyState",
         "GridToolbar",
         "ListState"
+      ]
+    },
+    "./src/compositions/forms/AddressRegionFields.stories.tsx": {
+      "title": "Building blocks/Forms/AddressRegionFields",
+      "component": null,
+      "uses": [
+        "AddressPicker",
+        "Field"
       ]
     },
     "./src/compositions/forms/CheckboxRow.stories.tsx": {

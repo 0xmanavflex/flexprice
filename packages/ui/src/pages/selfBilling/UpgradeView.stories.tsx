@@ -54,12 +54,49 @@ export const FirstTime: Story = {
     await userEvent.type(canvas.getByRole('combobox', { name: /^Address/ }), 'United States')
     await userEvent.click(await screen.findByRole('option', { name: 'United States (US)' }))
     await userEvent.type(canvas.getByLabelText('Street'), '548 Market St')
-    await userEvent.type(canvas.getByLabelText('City'), 'San Francisco')
+    // State and city are lists for the chosen country, the city for the chosen state.
+    await userEvent.type(canvas.getByRole('combobox', { name: 'State' }), 'California')
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'California' }, { timeout: 5000 }),
+    )
+    await userEvent.type(canvas.getByRole('combobox', { name: 'City' }), 'San Francisco')
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'San Francisco' }, { timeout: 5000 }),
+    )
     await userEvent.type(canvas.getByLabelText('Postal code'), '94104')
     await userEvent.click(canvas.getByRole('button', { name: 'Continue to payment' }))
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Acme Inc', country: 'US', postalCode: '94104' }),
+        expect.objectContaining({
+          name: 'Acme Inc',
+          country: 'US',
+          state: 'California',
+          city: 'San Francisco',
+          postalCode: '94104',
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * Checkout needs a city but not a state: with no state chosen the city is
+ * typed, and a city the dataset does not list can be entered.
+ */
+export const CityWithoutState: Story = {
+  args: {
+    defaultValues: { ...ORGANIZATION, state: '', city: '' },
+    fromOrganization: true,
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const city = canvas.getByRole('textbox', { name: 'City' })
+    await expect(city).toBeEnabled()
+    await userEvent.type(city, 'Brisbane')
+    await userEvent.click(canvas.getByRole('button', { name: 'Continue to payment' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ country: 'US', state: '', city: 'Brisbane' }),
       ),
     )
   },

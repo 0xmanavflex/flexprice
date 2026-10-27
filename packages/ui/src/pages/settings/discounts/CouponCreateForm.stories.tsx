@@ -43,6 +43,18 @@ export const Playground: Story = {
 
 export const Default: Story = {}
 
+/** Coupon details and Metadata are separate cards with the standard gap between them. */
+export const GapBetweenDetailsAndMetadata: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const details = canvas.getByRole('heading', { name: 'Coupon details' }).closest('section')!
+    const metadata = canvas.getByRole('heading', { name: 'Metadata' }).closest('section')!
+    const gap = metadata.getBoundingClientRect().top - details.getBoundingClientRect().bottom
+    // gap-6: 24px.
+    await expect(gap).toBe(24)
+  },
+}
+
 export const Submitting: Story = {
   // While submitting every field is disabled, so the scrollable page body has
   // nothing focusable left in it; the state is transient and the body is not a

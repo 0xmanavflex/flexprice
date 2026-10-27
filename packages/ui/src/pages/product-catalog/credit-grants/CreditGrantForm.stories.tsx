@@ -142,3 +142,31 @@ export const EndDateIsAUtcDay: Story = {
     )
   },
 }
+
+/**
+ * The explanatory note is the last block, full width; recurring options open
+ * above it, not in the column beside it.
+ */
+export const RecurringOpensAboveTheNote: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const form = canvasElement.querySelector('form')!
+    const note = canvas.getByText(/^Subscribers receive once/)
+    // The note sits directly in the form, after every field, before the actions.
+    await expect(note.parentElement).toBe(form)
+
+    await userEvent.click(canvas.getByRole('radio', { name: /Recurring/ }))
+    const period = await canvas.findByRole('combobox', { name: /Refreshes every/ })
+    const recurringNote = canvas.getByText(/^Every .*, subscribers receive/)
+    await expect(recurringNote.parentElement).toBe(form)
+    await expect(
+      period.compareDocumentPosition(recurringNote) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    // Nothing but the actions comes after the note.
+    const fields = form.querySelectorAll('input, [role="combobox"]')
+    const last = fields[fields.length - 1]!
+    await expect(
+      recurringNote.compareDocumentPosition(last) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy()
+  },
+}
