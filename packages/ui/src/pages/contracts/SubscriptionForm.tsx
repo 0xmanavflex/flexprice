@@ -8,6 +8,7 @@ import {
   KeyRoundIcon,
   LayersIcon,
   ExternalLinkIcon,
+  InfoIcon,
   MoreHorizontalIcon,
   CircleDollarSignIcon,
   PencilIcon,
@@ -70,6 +71,7 @@ import {
   InheritanceBlock,
   contractDateToInstant,
 } from '@fp/domain'
+import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
@@ -1558,6 +1560,46 @@ export function chargeInEffect(row: ChargeRow): string {
   return `${startDate ? fmt(startDate, 'UTC') : '—'} → ${endDate ? fmt(endDate, 'UTC') : 'Ongoing'}`
 }
 
+/** A contract date (a day, or an instant with a time) as its `YYYY-MM-DD` day; blank stays blank. */
+function contractDayOrBlank(value: string): string {
+  return value ? contractDay(value) : ''
+}
+
+/**
+ * Whether a plan charge is in effect on a `YYYY-MM-DD` day. Its dates are
+ * calendar days at midnight UTC, so they are compared as UTC days.
+ */
+export function inEffectOn(charge: Charge, day: string): boolean {
+  const iso = (date: Date) => date.toISOString().slice(0, 10)
+  if (charge.startDate && iso(charge.startDate) > day) return false
+  if (charge.endDate && iso(charge.endDate) <= day) return false
+  return true
+}
+
+/** "One charge sits outside the contract start (Nov 1, 2026): Seats, from Dec 1, 2026." */
+export function outsideNote(charges: readonly Charge[], start: string): string {
+  const day = formatDay(start)
+  const which = charges
+    .map((charge) => {
+      const fmt = (date: Date) =>
+        date.toLocaleDateString('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
+      const when =
+        charge.startDate && charge.startDate.toISOString().slice(0, 10) > start
+          ? `from ${fmt(charge.startDate)}`
+          : charge.endDate
+            ? `ended ${fmt(charge.endDate)}`
+            : ''
+      return `${chargeName(charge)}${when ? `, ${when}` : ''}`
+    })
+    .join('; ')
+  const lead =
+    charges.length === 1
+      ? 'One charge sits outside the contract start'
+      : `${charges.length.toLocaleString('en-US')} charges sit outside the contract start`
+  const each = charges.length === 1 ? 'It bills' : 'Each bills'
+  return `${lead}${day ? ` (${day})` : ''}: ${which}. ${each} only while its own dates are in effect.`
+}
+
 /** A change a charge row carries, drawn as a chip under its name that opens the matching dialog. */
 function ChargeFlag({
   icon,
@@ -1609,6 +1651,7 @@ function ChargesTable({
   onCoupon,
   onReset,
   meters,
+  phaseStart = '',
 }: {
   charges: Charge[]
   extraCharges: AddContractCharge[]
@@ -1633,6 +1676,8 @@ function ChargesTable({
   onReset: (priceId: string) => void
   /** The metered features, so a usage charge's override offers a bucket only where the API takes one. */
   meters: MeterOption[]
+  /** `YYYY-MM-DD`: the phase's first day, to note plan charges not in effect on it. */
+  phaseStart?: string
 }) {
   // " in Phase 2" on a contract of phases; nothing on a contract of one.
   const inPhase = phaseLabel ? ` in ${phaseLabel}` : ''
@@ -1690,8 +1735,8 @@ function ChargesTable({
   const committingCharge = charges.find((charge) => charge.id === committing)
   const repricingCharge = charges.find((charge) => charge.id === repricing)
 
-  // "In effect" only earns its column when a charge has dates of its own.
-  const dated = rows.some((row) => chargeInEffect(row) !== 'With the phase')
+  // Plan charges not in effect on the phase's first day: one note under the table, not a column.
+  const outside = phaseStart ? charges.filter((charge) => !inEffectOn(charge, phaseStart)) : []
 
   /*
    * Widths that fit the wizard's measure without a sideways scroll: the cells
@@ -1758,7 +1803,10 @@ function ChargesTable({
         return (
           <span className="flex min-w-0 flex-col gap-0.5 py-2">
             <span className="truncate font-medium">{row.name}</span>
-            <span className="text-muted-foreground text-xs">{chargeKind(charge)}</span>
+            <span className="text-muted-foreground text-xs">
+              {chargeKind(charge)}
+              {charge.startDate || charge.endDate ? ` · ${chargeInEffect(row)}` : ''}
+            </span>
             {flags.length > 0 ? (
               <span className="flex flex-wrap items-center gap-1.5 pt-1">
                 {flags}
@@ -1821,18 +1869,6 @@ function ChargesTable({
         )
       },
     },
-    ...(dated
-      ? [
-          {
-            key: 'inEffect',
-            header: 'In effect',
-            width: 184,
-            cell: (row: ChargeRow) => (
-              <span className="text-muted-foreground tabular-nums">{chargeInEffect(row)}</span>
-            ),
-          },
-        ]
-      : []),
     {
       key: 'actions',
       header: '',
@@ -1917,6 +1953,12 @@ function ChargesTable({
         compact
         border
       />
+      {outside.length > 0 ? (
+        <Alert variant="info">
+          <InfoIcon aria-hidden />
+          <AlertDescription>{outsideNote(outside, phaseStart)}</AlertDescription>
+        </Alert>
+      ) : null}
       <FormDialog
         open={repricingCharge !== undefined}
         onOpenChange={(open) => (open ? undefined : setRepricing(null))}
@@ -2349,6 +2391,8 @@ function PhasesStep({
           }
           onEditExtra={(at) => setEditingExtra({ phase: index, index: at })}
           meters={meters}
+          // A day, though the start may carry a time.
+          phaseStart={contractDayOrBlank(starts[index] || (index === 0 ? today : ''))}
           couponOf={(priceId) => couponOn(index, priceId)}
           onCoupon={(priceId) => setCouponing({ phase: index, priceId })}
           onReset={(priceId) => {

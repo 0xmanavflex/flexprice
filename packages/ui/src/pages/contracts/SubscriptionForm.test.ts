@@ -1,7 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { type AddContractCharge, BillingModel, PriceType } from '@fp/domain'
 import { makeCharge } from '../product-catalog/plans/planDetailFixtures'
-import { type ChargeRow, chargeInEffect, commitmentChargeOf, windowSeed } from './SubscriptionForm'
+import {
+  type ChargeRow,
+  chargeInEffect,
+  commitmentChargeOf,
+  inEffectOn,
+  outsideNote,
+  windowSeed,
+} from './SubscriptionForm'
 
 const base = {
   id: 'c1',
@@ -98,5 +105,34 @@ describe('windowSeed', () => {
         tiers: [{ upTo: null, unitAmount: '1' }],
       } as never),
     ).toEqual({ unitAmount: '' })
+  })
+})
+
+describe('inEffectOn and outsideNote', () => {
+  const at = (day: string) => new Date(`${day}T00:00:00Z`)
+  const seat = { ...makeCharge(0, { type: PriceType.Fixed }), displayName: 'Seats' }
+
+  it('reads a charge in effect from its start day, and not from its end day', () => {
+    expect(inEffectOn({ ...seat, startDate: at('2026-11-01') }, '2026-11-01')).toBe(true)
+    expect(inEffectOn({ ...seat, startDate: at('2026-11-02') }, '2026-11-01')).toBe(false)
+    expect(inEffectOn({ ...seat, endDate: at('2026-11-01') }, '2026-11-01')).toBe(false)
+    expect(inEffectOn(seat, '2026-11-01')).toBe(true)
+  })
+
+  it('names each charge outside the start and when it applies', () => {
+    expect(outsideNote([{ ...seat, startDate: at('2026-12-01') }], '2026-11-01')).toBe(
+      'One charge sits outside the contract start (Nov 1, 2026): Seats, from Dec 1, 2026. It bills only while its own dates are in effect.',
+    )
+    expect(
+      outsideNote(
+        [
+          { ...seat, startDate: at('2026-12-01') },
+          { ...seat, displayName: 'Setup', endDate: at('2026-10-01') },
+        ],
+        '2026-11-01',
+      ),
+    ).toBe(
+      '2 charges sit outside the contract start (Nov 1, 2026): Seats, from Dec 1, 2026; Setup, ended Oct 1, 2026. Each bills only while its own dates are in effect.',
+    )
   })
 })

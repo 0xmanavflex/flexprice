@@ -522,15 +522,15 @@ const scrollsSideways = (canvasElement: HTMLElement) => {
 }
 
 /**
- * The charges table fits the wizard without scrolling sideways, even with the
- * "In effect" column a dated charge brings: the price stays on one line.
+ * The charges table fits the wizard without scrolling sideways, and the price
+ * stays on one line. A charge's own dates read under its name, not in a column.
  */
 export const ChargesFitWithoutScrolling: Story = {
   args: {
     prefilled: true,
     step: 'phases',
     chargeCount: 6,
-    datedCharge: { start: '2026-11-01', end: '2027-01-01' },
+    datedCharge: { start: '2026-10-01', end: '2027-01-01' },
   },
   decorators: [
     // The room the console gives the wizard on a 1280px screen, beside its sidebar.
@@ -542,9 +542,35 @@ export const ChargesFitWithoutScrolling: Story = {
   ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('columnheader', { name: 'In effect' })).toBeVisible()
-    await expect(canvas.getByText('Nov 1, 2026 → Jan 1, 2027')).toBeVisible()
+    await expect(await canvas.findByText(/· Oct 1, 2026 → Jan 1, 2027$/)).toBeVisible()
+    expect(canvas.queryByRole('columnheader', { name: 'In effect' })).toBeNull()
+    // In effect on the contract's first day, so there is nothing to note.
+    expect(canvas.queryByText(/outside the contract start/)).toBeNull()
     await waitFor(() => expect(scrollsSideways(canvasElement)).toBe(false))
+  },
+}
+
+/**
+ * A plan charge that starts after the contract does: one short note under the
+ * table, and no extra column.
+ */
+export const ChargeOutsideContractStart: Story = {
+  args: {
+    prefilled: true,
+    step: 'phases',
+    chargeCount: 6,
+    datedCharge: { start: '2026-11-01' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByText(
+        /^One charge sits outside the contract start \(Oct 20, 2026\): Platform base, from Nov 1, 2026\. It bills only while its own dates are in effect\.$/,
+        {},
+        { timeout: 5000 },
+      ),
+    ).toBeVisible()
+    expect(canvas.queryByRole('columnheader', { name: 'In effect' })).toBeNull()
   },
 }
 
