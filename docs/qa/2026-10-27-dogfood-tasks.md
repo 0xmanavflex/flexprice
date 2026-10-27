@@ -24,7 +24,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
 - **Where.** `packages/ui/src/pages/customers/CustomerForm.tsx`, plus a new shared address
   composition.
 - **Open question.** Where the state and city lists come from (a bundled dataset or an API).
-- **Status.** Open.
+- **Status.** Done (merged), [#241](https://github.com/flexprice/portal/pull/241).
 
 ### D-02 Billing configuration while creating a customer (P2)
 - **Problem.** Billing settings, including taxable, can only be set after the customer exists.
@@ -33,7 +33,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
     including taxable.
   - The values are saved on create.
 - **Where.** `CustomerForm.tsx`, `apps/console/src/pages/customers/CustomerFormPage.tsx`.
-- **Status.** Open.
+- **Status.** Done (merged), [#231](https://github.com/flexprice/portal/pull/231).
 
 ## Features and meters
 
@@ -44,7 +44,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
     by 100.
   - There is no examples block above the field.
 - **Where.** `packages/ui/src/pages/product-catalog/products/FeatureForm.tsx` (~559-581).
-- **Status.** Open.
+- **Status.** Done (merged), [#247](https://github.com/flexprice/portal/pull/247).
 
 ### D-04 Placeholders on aggregation inputs (P3)
 - **Acceptance.**
@@ -53,7 +53,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - Count has no fields.
   - Count unique, latest, max and sum-with-multiplier keep the fields they already have.
 - **Where.** `FeatureForm.tsx`.
-- **Status.** Open.
+- **Status.** Done (merged), [#248](https://github.com/flexprice/portal/pull/248).
 
 ## Dates
 
@@ -61,7 +61,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
 - **Acceptance.** The selected day in the shared calendar is clearly darker than today and hover
   (tokens only).
 - **Where.** The shared calendar / date input composition.
-- **Status.** Open.
+- **Status.** Done (merged), [#235](https://github.com/flexprice/portal/pull/235).
 
 ### D-06 Date fields carry time and timezone (P2)
 - **Acceptance.**
@@ -70,7 +70,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - Every changed field sends an instant.
 - **Open question.** Which fields need time and which are calendar days only (for example the
   analytics range).
-- **Status.** Open.
+- **Status.** Done (merged), [#237](https://github.com/flexprice/portal/pull/237).
 
 ### D-07 No native browser calendars (P2)
 - **Problem.** These use `type="date"`, which opens the browser's own picker:
@@ -80,7 +80,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
 - **Acceptance.**
   - Every date input uses the shared calendar.
   - `git grep 'type="date"' packages/ui/src` returns nothing.
-- **Status.** Open.
+- **Status.** Done (merged), [#233](https://github.com/flexprice/portal/pull/233).
 
 ## Contract creation
 
@@ -92,14 +92,14 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - Quantity, billing timing and in effect line up with the other columns.
   - No column wraps onto two lines.
 - **Where.** `packages/ui/src/pages/contracts/SubscriptionForm.tsx` (charges table).
-- **Status.** Open.
+- **Status.** Done (merged), [#243](https://github.com/flexprice/portal/pull/243).
 
 ### D-09 A charge outside the contract start is a note, not a column (P3)
 - **Acceptance.**
   - When a plan charge falls outside the contract's start date, no extra column appears.
   - A short info note says one charge sits outside the contract start.
 - **Where.** `SubscriptionForm.tsx` ("In effect" handling).
-- **Status.** Open.
+- **Status.** Done (merged), [#253](https://github.com/flexprice/portal/pull/253).
 
 ### D-10 Add-ons expand into all their charges, editable before adding (P1)
 - **Problem.**
@@ -112,7 +112,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
 - **Where.** `SubscriptionForm.tsx` (add-ons), the contract detail Add add-on dialog, and
   `packages/domain/src/contractCharges.ts` (`attachableAddonCharges`).
 - **Note.** This replaces R-14 in `2026-10-26-review-tasks.md`.
-- **Status.** Open.
+- **Status.** Done (merged), [#239](https://github.com/flexprice/portal/pull/239).
 
 ### D-11 Entitlements are editable in the contract flow (P2)
 - **Problem.** Metered and static entitlements on a new contract are read-only.
@@ -120,7 +120,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   type (quantity or amount).
 - **Where.** `SubscriptionForm.tsx`, reusing the plan entitlement form fields
   (`GrantAllowanceFields`).
-- **Status.** Open.
+- **Status.** Done (merged), [#255](https://github.com/flexprice/portal/pull/255).
 
 ### D-12 Add-on edit: finish it, fix spacing and the rule line (P3)
 - **Acceptance.**
@@ -128,14 +128,14 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - The add-ons table has the section's standard spacing.
   - No divider line runs into the table.
 - **Where.** `SubscriptionForm.tsx` (add-ons section).
-- **Status.** Open.
+- **Status.** Done (merged), [#256](https://github.com/flexprice/portal/pull/256).
 
 ### D-13 Check the FX override when billing and plan currency differ (P2, verify first)
 - **Acceptance.**
   - When the customer's billing currency differs from the plan's, the contract flow offers the FX
     override and sends it.
   - If it already does, record that here with the steps used to check.
-- **Status.** Open (verify).
+- **Status.** Done (merged), [#257](https://github.com/flexprice/portal/pull/257). Verified first: the API accepts `fx_rates` on create, but the console had no field for it.
 
 ## Contract page
 
@@ -144,14 +144,14 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - The upcoming invoice table has an Amount column and a Subtotal row.
   - Every number column is right-aligned on one edge.
 - **Where.** `packages/ui/src/pages/contracts/SubscriptionDetailView.tsx` (upcoming invoice).
-- **Status.** Open.
+- **Status.** Done (merged), [#232](https://github.com/flexprice/portal/pull/232).
 
 ### D-15 Unlimited entitlements say "unlimited" once (P3)
 - **Acceptance.**
   - A limited entitlement reads "0 of 30" with a bar.
   - An unlimited one reads "N of unlimited" once, with no second "Unlimited" under the bar.
 - **Where.** `packages/ui/src/pages/shared/EntitlementUsage.tsx` (~137).
-- **Status.** Open.
+- **Status.** Done (merged), [#234](https://github.com/flexprice/portal/pull/234).
 
 ### D-16 Sections with rows come first (P3)
 - **Acceptance.**
@@ -161,7 +161,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
 - **Open question.** The session agreed to hide upcoming invoice when there is none, while the
   summary says it always stays at the top. Confirm which.
 - **Where.** `SubscriptionDetailView.tsx`.
-- **Status.** Open.
+- **Status.** Done (merged), [#238](https://github.com/flexprice/portal/pull/238).
 
 ### D-17 A contract with charges shows them (P1)
 - **Problem.** The charges block is empty on a contract whose subscription has two charges.
@@ -169,7 +169,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - Every charge on the subscription shows on the contract page.
   - The cause is found, whether mapping, a filter or the API, and covered by a test.
 - **Where.** `SubscriptionDetailView.tsx`, `packages/query/src/subscriptions.ts`.
-- **Status.** Open.
+- **Status.** Done (merged), [#229](https://github.com/flexprice/portal/pull/229).
 
 ### D-18 One feature after a price change, not two (P2, verify first)
 - **Problem.** After a price change, one feature with two subscription line items shows as two
@@ -178,7 +178,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - Usage by feature groups line items by feature.
   - Each price's revenue still shows, inside the feature's row or a breakdown.
 - **Where.** Customer usage / analytics (`CustomerAnalyticsView.tsx` and its panel).
-- **Status.** Open (verify).
+- **Status.** Done (merged), [#244](https://github.com/flexprice/portal/pull/244). Verified first: the analytics API returns one item per contract line, so a price change split a feature in two.
 
 ## Credit grants and coupons
 
@@ -187,12 +187,12 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - The long explanatory note is the last block in the form, full width.
   - Recurring options ("refreshes every…") open above the note, not beside it.
 - **Where.** `packages/ui/src/pages/product-catalog/credit-grants/CreditGrantForm.tsx`.
-- **Status.** Open.
+- **Status.** Done (merged), [#249](https://github.com/flexprice/portal/pull/249).
 
 ### D-20 Coupon create: space between details and metadata (P3)
 - **Acceptance.** The coupon form has the standard section gap between details and metadata.
 - **Where.** `packages/ui/src/pages/settings/discounts/CouponForm.tsx`.
-- **Status.** Open.
+- **Status.** Done (merged), [#251](https://github.com/flexprice/portal/pull/251).
 
 ## Wallet and activity
 
@@ -202,7 +202,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - It uses the names the summary used before.
 - **Where.** `packages/ui/src/pages/customers/CustomerWalletView.tsx`. Check git history for the
   previous labels.
-- **Status.** Open.
+- **Status.** Done (merged), [#230](https://github.com/flexprice/portal/pull/230).
 
 ### D-22 Activity table: columns and the standard filters (P2)
 - **Acceptance.**
@@ -216,7 +216,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
 - **Where.** `packages/ui/src/pages/customers/CustomerActivityView.tsx`,
   `apps/console/src/pages/customers/CustomerActivityPanel.tsx` and `activitySearch.ts`.
 - **Note.** Keep the Person filter (#222) inside the new filter.
-- **Status.** Open.
+- **Status.** Done (merged), [#240](https://github.com/flexprice/portal/pull/240).
 
 ## Alerts, hosted invoice, plans
 
@@ -227,7 +227,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - Find out why part of the form does not load.
 - **Where.** `packages/ui/src/pages/shared/EntityAlertDialog.tsx`, `ChargeAlertForm.tsx`,
   `apps/console/src/pages/settings/WalletAlertsPanel.tsx`.
-- **Status.** Open.
+- **Status.** Done (merged), [#250](https://github.com/flexprice/portal/pull/250).
 
 ### D-24 Hosted invoice: gray page and a disabled Pay with tooltip (P2)
 - **Acceptance.**
@@ -236,7 +236,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - Hovering Pay shows a tooltip saying to contact the merchant, with their email as a link.
   - The long inline copy goes.
 - **Where.** `packages/ui/src/pages/billing/hosted-invoice/HostedInvoiceView.tsx` (~265).
-- **Status.** Open.
+- **Status.** Done (merged), [#252](https://github.com/flexprice/portal/pull/252).
 
 ### D-25 Usage-only plans: no blank flat price (P2)
 - **Acceptance.**
@@ -244,7 +244,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - It names the usage feature the way a customer would read it, for example "Usage-based · API
     calls".
 - **Where.** Plans list and plan cards / plan detail header.
-- **Status.** Open.
+- **Status.** Done (merged), [#254](https://github.com/flexprice/portal/pull/254).
 
 ## Onboarding
 
@@ -256,7 +256,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - The grid sits at eye level.
   - The form stays as in the artifact, with reviews on the right.
 - **Where.** `packages/ui/src/pages/auth/testimonials.ts` and the sign-in / onboarding layout.
-- **Status.** Open.
+- **Status.** Done (merged), [#246](https://github.com/flexprice/portal/pull/246).
 
 ## Sync
 
@@ -266,7 +266,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - When a sync fails, the toast says it failed.
 - **Open question.** Whether the API reports completion synchronously or needs polling or a
   webhook.
-- **Status.** Open.
+- **Status.** Done (merged), [#242](https://github.com/flexprice/portal/pull/242).
 
 ## Reports
 
@@ -282,7 +282,7 @@ JSON on entitlements (already built), and the reports and usage questions that w
   - The last 12 months shows data where data exists.
 - **Where.** `apps/console/src/pages/revenue/ReportsPage.tsx`,
   `packages/ui/src/pages/revenue/RevenueReport.tsx`.
-- **Status.** Open.
+- **Status.** Done (merged), [#236](https://github.com/flexprice/portal/pull/236).
 
 ## Progress
 

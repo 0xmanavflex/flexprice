@@ -39,7 +39,8 @@ export default defineConfig({
   snapshotPathTemplate: '{testDir}/__screenshots__/{arg}{ext}',
 
   reporter: process.env.CI
-    ? [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
+    ? // `github` turns each failure into a check annotation, readable without the log.
+      [['list'], ['github'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
     : [['list']],
 
   expect: {
