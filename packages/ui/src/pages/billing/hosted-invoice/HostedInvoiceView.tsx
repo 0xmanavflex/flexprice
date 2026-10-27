@@ -1,10 +1,11 @@
 import { type ReactNode, useId, useState } from 'react'
 import { type HostedInvoice, type Money as MoneyValue, isOverdue } from '@fp/domain'
-import { ChevronRightIcon, CircleAlertIcon, DownloadIcon } from '@ui/icons'
+import { ChevronRightIcon, CircleAlertIcon } from '@ui/icons'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { Spinner } from '@ui/components/primitives/spinner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { ErrorState } from '@ui/compositions/feedback/States'
 import { Panel } from '@ui/compositions/layout/Section'
@@ -20,7 +21,7 @@ const FLEXPRICE_URL = 'https://flexprice.io'
 
 /**
  * The page behind a hosted invoice link, as the hosted invoice redesign lays
- * it out: a summary card (the state, the amount, Pay and Download, the
+ * it out: a summary card (the state, the amount, Pay, the
  * invoice's essentials) beside "What you're paying for", the charges grouped
  * by plan or add-on over the totals. "All invoice details" opens both parties'
  * addresses, the memo and the payments; "Preview invoice" shows the PDF.
@@ -56,9 +57,6 @@ export type HostedInvoiceViewProps = { locale?: string } & (
       onPay: () => void
       isPaying: boolean
       payError: string | null
-      onDownload: () => void
-      isDownloading: boolean
-      downloadError: string | null
       /** Opens the PDF preview; the app fetches its link and passes it as `preview`. */
       onPreview: () => void
       /** Null when the preview is closed; `url` null while its link is fetched. */
@@ -151,8 +149,7 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
   const day = (value: Date) => formatHostedDate(value, locale, 'UTC')
   const status = statusOf(invoice, props.now ?? new Date())
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const payUnavailableId = useId()
-  const error = props.payError ?? props.downloadError
+  const error = props.payError
   const payable = status.key === 'due' || status.key === 'overdue'
   const payUnavailable = payable && !invoice.payEnabled
   const merchant = invoice.tenant.name || 'Invoice'
@@ -232,41 +229,18 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              {payable ? (
-                <Button
-                  type="button"
-                  className="w-full"
-                  disabled={!invoice.payEnabled || props.isPaying}
-                  aria-describedby={payUnavailable ? payUnavailableId : undefined}
-                  onClick={props.onPay}
-                >
-                  {props.isPaying ? <Spinner aria-hidden="true" /> : null}
-                  Pay {money(invoice.amountRemaining)}
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                disabled={props.isDownloading}
-                onClick={props.onDownload}
-                aria-label={`Download invoice ${invoice.number}`}
-              >
-                {props.isDownloading ? (
-                  <Spinner aria-hidden="true" />
-                ) : (
-                  <DownloadIcon className="size-4" aria-hidden="true" />
-                )}
-                Download invoice
-              </Button>
-              {payUnavailable ? (
-                <p id={payUnavailableId} className="text-muted-foreground text-xs">
-                  Online payment isn’t available for this invoice. Contact{' '}
-                  {invoice.tenant.name || 'the business that sent it'} to pay.
-                </p>
-              ) : null}
-            </div>
+            {payable ? (
+              <PayButton
+                amount={money(invoice.amountRemaining)}
+                isPaying={props.isPaying}
+                onPay={props.onPay}
+                unavailable={
+                  payUnavailable
+                    ? `Online payment isn’t available for this invoice. Contact ${invoice.tenant.name || 'the business that sent it'} to pay.`
+                    : null
+                }
+              />
+            ) : null}
 
             <dl className="flex flex-col gap-2.5 border-t pt-5 text-[13px]">
               {invoice.customer ? <Fact label="Billed to">{invoice.customer.name}</Fact> : null}
@@ -317,6 +291,48 @@ function Receipt(props: Extract<HostedInvoiceViewProps, { kind: 'invoice' }>) {
   )
 }
 
+/**
+ * Pay, or, when the business has not turned online payment on, Pay disabled
+ * with the reason in a tooltip. A disabled button gets no pointer events, so
+ * the tooltip hangs on a focusable wrapper; the reason is also the button's
+ * description, for screen readers.
+ */
+function PayButton({
+  amount,
+  isPaying,
+  onPay,
+  unavailable,
+}: {
+  amount: ReactNode
+  isPaying: boolean
+  onPay: () => void
+  unavailable: string | null
+}) {
+  const reasonId = useId()
+  const button = (
+    <Button
+      type="button"
+      className="w-full"
+      disabled={unavailable !== null || isPaying}
+      aria-describedby={unavailable === null ? undefined : reasonId}
+      onClick={onPay}
+    >
+      {isPaying ? <Spinner aria-hidden="true" /> : null}
+      Pay {amount}
+    </Button>
+  )
+  if (unavailable === null) return button
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span tabIndex={0} className="flex w-full" />}>{button}</TooltipTrigger>
+      <TooltipContent className="max-w-64">{unavailable}</TooltipContent>
+      <span id={reasonId} className="sr-only">
+        {unavailable}
+      </span>
+    </Tooltip>
+  )
+}
+
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
@@ -329,7 +345,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 /** The block's centred column on the page background. */
 function Page({ children }: { children: ReactNode }) {
   return (
-    <main className="bg-background text-foreground min-h-svh w-full">
+    <main className="bg-muted/40 text-foreground min-h-svh w-full">
       <div className="mx-auto w-full max-w-6xl px-4 py-10 md:py-14">{children}</div>
     </main>
   )
