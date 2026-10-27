@@ -1,4 +1,4 @@
-import { useState, type MouseEvent, type ReactNode } from 'react'
+import { useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import type { ActivityField } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -16,16 +16,18 @@ import {
   SheetTitle,
 } from '@ui/components/primitives/sheet'
 import { Section } from '@ui/compositions/layout/Section'
-import { Properties, SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { Properties } from '@ui/compositions/detail/DetailKit'
 import { DateInput } from '@ui/compositions/forms/DateInput'
-import { SubTabState } from '@ui/compositions/detail/SubTabState'
-import { Toolbar } from '@ui/compositions/tables/Toolbar'
+import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
+import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
+import type { FilterField } from '@ui/components/reui/filters/filters-types'
 import {
   ActivityIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CodeIcon,
   CreditCardIcon,
+  EyeIcon,
   FileTextIcon,
   ReceiptIcon,
   RepeatIcon,
@@ -33,9 +35,9 @@ import {
   WalletIcon,
 } from '@ui/icons'
 import { provenance } from '@ui/provenance'
-import { cn } from '@ui/lib/cn'
 import { CopyValue } from '../shared/CopyValue'
-import { Pill, type PillTone } from '../shared/cells'
+import { EntityList } from '../shared/EntityList'
+import { EmDash, Pill, Tag, type EntityColumn, type PillTone } from '../shared/cells'
 
 /**
  * A customer's full audit trail, as its own tab: filters, the event list and
@@ -55,6 +57,7 @@ export const CustomerActivityViewProvenance = provenance({
     'primitives/select',
     'primitives/sheet',
     'compositions/layout/Section',
+    'pages/shared/EntityList',
     'shared/CopyValue',
     'shared/cells',
   ],
@@ -88,6 +91,10 @@ export interface ActivityRowView {
   actor: string
   /** How: "Dashboard", "API key · API", "Workflow". */
   actorDetail: string
+  /** What kind of actor, when not a person or the system: "API key", "Customer". */
+  actorKind?: string | undefined
+  /** The channel it came through: "API", "Dashboard", "Workflow". */
+  source: string
   /** In the viewer's zone, with the zone named: "23 Oct 2026, 21:51 IST". */
   at: string
   /** The same instant in UTC, for the sheet. */
@@ -161,42 +168,55 @@ const ENTITY_ICON: Record<string, typeof UserIcon> = {
   credit_note: ReceiptIcon,
 }
 
-const ALL = '__all'
+/** `is` only: each filter is one value, as the URL and the request carry it. */
+const IS_OPERATOR = [{ value: 'is', label: 'is' }]
 
-function FilterSelect({
-  label,
-  value,
-  allLabel,
-  options,
-  onChange,
-  className,
-}: {
-  label: string
-  value: string
-  allLabel: string
-  options: ReadonlyArray<{ value: string; label: string }>
-  onChange: (value: string) => void
-  className?: string
-}) {
-  const items = [{ value: ALL, label: allLabel }, ...options]
-  return (
-    <Select
-      value={value || ALL}
-      items={items}
-      onValueChange={(next) => onChange(next === ALL || next === null ? '' : String(next))}
-    >
-      <SelectTrigger aria-label={label} className={cn('h-9 w-full sm:w-44', className)}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {items.map((item) => (
-          <SelectItem key={item.value} value={item.value}>
-            {item.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
+function selectField(
+  id: ActivityFilterField,
+  label: string,
+  options: ReadonlyArray<{ value: string; label: string }>,
+): FilterField {
+  return {
+    id,
+    label,
+    type: 'select',
+    options: options.map((option) => ({ ...option })),
+    operators: IS_OPERATOR,
+    defaultOperator: 'is',
+  }
+}
+
+type ActivityFilterField = 'action' | 'actorType' | 'actorId' | 'source'
+
+export type ActivitySortField = 'at' | 'event' | 'actor' | 'source'
+
+const SORT_OPTIONS: Array<{ value: ActivitySortField; label: string }> = [
+  { value: 'at', label: 'Time' },
+  { value: 'event', label: 'Event' },
+  { value: 'actor', label: 'Actor' },
+  { value: 'source', label: 'Source' },
+]
+
+const SORT_TEXT: Record<Exclude<ActivitySortField, 'at'>, (row: ActivityRowView) => string> = {
+  event: (row) => row.title,
+  actor: (row) => row.actor,
+  source: (row) => row.source,
+}
+
+/**
+ * The page in the chosen order. The API returns newest first and nothing
+ * else, so the default is the order it sent and every other order rearranges
+ * the page on screen.
+ */
+export function sortActivityRows(
+  rows: readonly ActivityRowView[],
+  field: ActivitySortField,
+  direction: 'asc' | 'desc',
+): ActivityRowView[] {
+  if (field === 'at') return direction === 'desc' ? [...rows] : [...rows].reverse()
+  const text = SORT_TEXT[field]
+  const sign = direction === 'asc' ? 1 : -1
+  return [...rows].sort((a, b) => sign * text(a).localeCompare(text(b)))
 }
 
 function RecordLink({
@@ -249,207 +269,227 @@ export function CustomerActivityView({
   onNavigate,
 }: CustomerActivityViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [sort, setSort] = useState<{ field: ActivitySortField; direction: 'asc' | 'desc' }>({
+    field: 'at',
+    direction: 'desc',
+  })
   const selected = rows.find((row) => row.id === selectedId) ?? null
   const set = (patch: Partial<ActivityFilters>) => onFiltersChange({ ...filters, ...patch })
+  const sorted = useMemo(
+    () => sortActivityRows(rows, sort.field, sort.direction),
+    [rows, sort.field, sort.direction],
+  )
 
-  const activeFilters = [filters.action, filters.actorType, filters.actorId, filters.source].filter(
-    Boolean,
-  ).length
+  const fields = useMemo(
+    () => [
+      selectField('action', 'Action', actionOptions),
+      selectField('actorType', 'Actor', actorOptions),
+      // A person is a user: choosing one also sets the actor to people (#222).
+      ...(personOptions.length > 0 ? [selectField('actorId', 'Person', personOptions)] : []),
+      selectField('source', 'Source', sourceOptions),
+    ],
+    [actionOptions, actorOptions, personOptions, sourceOptions],
+  )
+
+  const active: Array<[ActivityFilterField, string]> = (
+    [
+      ['action', filters.action],
+      ['actorType', filters.actorType],
+      ['actorId', filters.actorId ?? ''],
+      ['source', filters.source],
+    ] as Array<[ActivityFilterField, string]>
+  ).filter(([, value]) => value !== '')
+  const query = createFilterQuery(
+    active.map(([id, value]) => createFilterRule({ id, path: [id], operator: 'is', value })),
+  )
+  const isFiltered = active.length > 0 || filters.search.trim() !== ''
+  const clear = () => set({ search: '', action: '', actorType: '', actorId: '', source: '' })
+
+  const columns: EntityColumn<ActivityRowView>[] = [
+    {
+      id: 'event',
+      header: 'Event',
+      width: 360,
+      hideable: false,
+      sortable: true,
+      text: (row) => `${row.title} · ${row.entityNoun} · ${row.entityLabel}`,
+      cell: (row) => {
+        const Icon = ENTITY_ICON[row.entityType] ?? ActivityIcon
+        return (
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
+              <Icon aria-hidden className="size-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">{row.title}</span>
+              <span className="text-muted-foreground block truncate text-[13px]">
+                {row.entityNoun} ·{' '}
+                <RecordLink row={row} onNavigate={onNavigate}>
+                  {row.entityLabel}
+                </RecordLink>
+              </span>
+            </span>
+          </span>
+        )
+      },
+    },
+    {
+      id: 'actor',
+      header: 'Actor',
+      width: 200,
+      sortable: true,
+      text: (row) => row.actor,
+      cell: (row) => (
+        <span className="block min-w-0">
+          <span className="block truncate text-[13px]">{row.actor}</span>
+          {row.actorKind ? (
+            <span className="text-muted-foreground block text-xs">{row.actorKind}</span>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      id: 'source',
+      header: 'Source',
+      width: 140,
+      sortable: true,
+      text: (row) => row.source,
+      cell: (row) => (row.source ? <Tag>{row.source}</Tag> : <EmDash />),
+    },
+    {
+      id: 'at',
+      header: 'Time',
+      width: 220,
+      sortable: true,
+      text: (row) => row.at,
+      cell: (row) => (
+        <span className="text-muted-foreground block truncate text-[13px] tabular-nums">
+          {row.at}
+        </span>
+      ),
+    },
+  ]
+
+  const rangeControls = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Select
+        value={filters.range}
+        items={ACTIVITY_RANGES.map((range) => ({ value: range.value, label: range.label }))}
+        onValueChange={(range) => range && set({ range: range as ActivityRange })}
+      >
+        <SelectTrigger aria-label="Date range" className="h-8 w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ACTIVITY_RANGES.map((range) => (
+            <SelectItem key={range.value} value={range.value}>
+              {range.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {filters.range === 'custom' ? (
+        <>
+          <DateInput
+            aria-label="From"
+            value={filters.from ?? ''}
+            onValueChange={(from) => set({ from })}
+            {...(filters.to ? { max: filters.to } : {})}
+            placeholder="From"
+            className="h-8 w-40"
+          />
+          <DateInput
+            aria-label="To"
+            value={filters.to ?? ''}
+            onValueChange={(to) => set({ to })}
+            {...(filters.from ? { min: filters.from } : {})}
+            placeholder="To"
+            className="h-8 w-40"
+          />
+        </>
+      ) : null}
+    </div>
+  )
 
   return (
     <>
       <Section
         title="Activity"
         description="Audit log of every change made to this customer and its records."
+        actions={rangeControls}
         flush
       >
-        <div className="border-b px-6 py-4">
-          <Toolbar
-            search={filters.search}
-            onSearchChange={(search) => set({ search })}
-            searchLabel="Search activity"
-            searchPlaceholder="Search events, IDs or people…"
-            activeFilterCount={activeFilters}
-            onClear={() => set({ action: '', actorType: '', actorId: '', source: '' })}
-            filters={
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                <FilterSelect
-                  label="Action"
-                  value={filters.action}
-                  allLabel="All actions"
-                  options={actionOptions}
-                  onChange={(action) => set({ action })}
-                />
-                <FilterSelect
-                  label="Actor"
-                  value={filters.actorType}
-                  allLabel="All actors"
-                  options={actorOptions}
-                  // A person only narrows people: another actor type drops them.
-                  onChange={(actorType) => set({ actorType, actorId: '' })}
-                />
-                {filters.actorType === 'user' && personOptions.length > 0 ? (
-                  <FilterSelect
-                    label="Person"
-                    value={filters.actorId ?? ''}
-                    allLabel="All people"
-                    options={personOptions}
-                    onChange={(actorId) => set({ actorId })}
-                  />
-                ) : null}
-                <FilterSelect
-                  label="Source"
-                  value={filters.source}
-                  allLabel="All sources"
-                  options={sourceOptions}
-                  onChange={(source) => set({ source })}
-                />
-                <Select
-                  value={filters.range}
-                  items={ACTIVITY_RANGES.map((range) => ({
-                    value: range.value,
-                    label: range.label,
-                  }))}
-                  onValueChange={(range) => range && set({ range: range as ActivityRange })}
-                >
-                  <SelectTrigger aria-label="Date range" className="h-9 w-full sm:w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACTIVITY_RANGES.map((range) => (
-                      <SelectItem key={range.value} value={range.value}>
-                        {range.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {filters.range === 'custom' ? (
-                  <>
-                    <DateInput
-                      aria-label="From"
-                      value={filters.from ?? ''}
-                      onValueChange={(from) => set({ from })}
-                      {...(filters.to ? { max: filters.to } : {})}
-                      placeholder="From"
-                      className="h-9 w-full sm:w-40"
-                    />
-                    <DateInput
-                      aria-label="To"
-                      value={filters.to ?? ''}
-                      onValueChange={(to) => set({ to })}
-                      {...(filters.from ? { min: filters.from } : {})}
-                      placeholder="To"
-                      className="h-9 w-full sm:w-40"
-                    />
-                  </>
-                ) : null}
-              </div>
-            }
-          />
-        </div>
-
-        <SubTabState
-          hasData={rows.length > 0}
+        <EntityList<ActivityRowView>
+          label="Activity events"
+          noun="events"
+          headingAs="h3"
+          compact
+          hideFooter
+          rows={sorted}
+          total={rows.length}
+          columns={columns}
+          getRowId={(row) => row.id}
+          // Paging is by cursor, in the footer below; the list shows one page.
+          page={1}
+          pageSize={pageSize}
+          onPaginationChange={() => undefined}
+          search={filters.search}
+          onSearchChange={(search) => set({ search })}
+          searchPlaceholder="Search events, IDs or people…"
+          filter={{
+            fields,
+            query,
+            flat: true,
+            activeCount: active.length,
+            onQueryChange: (_next, flat: FlatFilter[]) => {
+              const read = (field: ActivityFilterField) =>
+                String(flat.find((entry) => entry.field === field)?.values[0] ?? '')
+              const actorId = read('actorId')
+              const picked = read('actorType')
+              // A person is a user, so a person sets the actor to people; any
+              // other actor type drops the person.
+              const actorType = actorId && (!picked || picked === 'user') ? 'user' : picked
+              set({
+                action: read('action'),
+                actorType,
+                actorId: actorType === 'user' ? actorId : '',
+                source: read('source'),
+              })
+            },
+          }}
+          sort={{
+            options: SORT_OPTIONS,
+            field: sort.field,
+            direction: sort.direction,
+            activeCount: sort.field === 'at' && sort.direction === 'desc' ? 0 : 1,
+            onChange: (field, direction) =>
+              setSort({ field: field as ActivitySortField, direction }),
+          }}
+          onRowClick={(row) => setSelectedId(row.id)}
+          rowActions={(row) => [
+            {
+              label: 'View details',
+              icon: <EyeIcon aria-hidden className="size-4" />,
+              readOnly: true,
+              onSelect: () => setSelectedId(row.id),
+            },
+          ]}
           isLoading={isLoading}
+          isProvisional={isFetching}
           error={error}
-          onRetry={onRetry}
-          columns={4}
-          loadingLabel="Loading activity"
+          {...(onRetry ? { onRetry } : {})}
+          isPageLocalFilter
+          isFiltered={isFiltered}
+          onClearFilters={clear}
+          filteredEmptyTitle="No activity matches"
+          filteredEmptyDescription="Nothing was recorded for this customer with these filters. Widen the date range or clear a filter."
           empty={{
             scene: 'customers',
             title: 'No activity matches',
             description:
-              'Nothing was recorded for this customer with these filters. Widen the date range or clear a filter.',
+              'Nothing was recorded for this customer in this date range. Widen the date range.',
           }}
-        >
-          <div
-            aria-label="Activity events"
-            role="region"
-            className={cn(isFetching && 'opacity-60 transition-opacity')}
-          >
-            <SimpleTable
-              rows={rows}
-              getRowId={(row) => row.id}
-              // A pointer can click the whole row; the chevron button is the
-              // same action for the keyboard, so the record link is never
-              // nested inside a control.
-              onRowClick={(row) => setSelectedId(row.id)}
-              columns={[
-                {
-                  key: 'event',
-                  header: 'Event',
-                  cell: (row) => {
-                    const Icon = ENTITY_ICON[row.entityType] ?? ActivityIcon
-                    return (
-                      <span className="flex min-w-0 items-center gap-3">
-                        <span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
-                          <Icon aria-hidden className="size-4" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-medium">{row.title}</span>
-                          <span className="text-muted-foreground block max-w-80 truncate text-[13px]">
-                            {row.entityNoun} ·{' '}
-                            <RecordLink row={row} onNavigate={onNavigate}>
-                              {row.entityLabel}
-                            </RecordLink>
-                          </span>
-                        </span>
-                      </span>
-                    )
-                  },
-                },
-                {
-                  key: 'actor',
-                  header: 'Actor',
-                  cell: (row) => (
-                    <span className="block">
-                      <span className="block text-[13px]">{row.actor}</span>
-                      <span className="text-muted-foreground block text-xs">{row.actorDetail}</span>
-                    </span>
-                  ),
-                },
-                {
-                  key: 'at',
-                  header: 'Time',
-                  cell: (row) => (
-                    <span className="text-muted-foreground text-[13px] tabular-nums">{row.at}</span>
-                  ),
-                },
-                {
-                  key: 'status',
-                  header: 'Status',
-                  cell: (row) => (
-                    <span className="flex gap-1.5">
-                      {row.statuses.map((status) => (
-                        <Pill key={status.label} tone={status.tone}>
-                          {status.label}
-                        </Pill>
-                      ))}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'open',
-                  header: '',
-                  className: 'w-12',
-                  cell: (row) => (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Open details: ${row.title}, ${row.entityNoun} ${row.entityLabel}, by ${row.actor}, ${row.at}`}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        setSelectedId(row.id)
-                      }}
-                    >
-                      <ChevronRightIcon aria-hidden />
-                    </Button>
-                  ),
-                },
-              ]}
-            />
-          </div>
-        </SubTabState>
+        />
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-3">
           <p className="text-muted-foreground text-[13px]" aria-live="polite">

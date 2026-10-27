@@ -108,13 +108,14 @@
         "CopyValue",
         "CreditCardIcon",
         "DateInput",
+        "EmDash",
+        "EntityList",
+        "EyeIcon",
         "Pill",
         "Properties",
         "Section",
         "Sheet",
-        "SimpleTable",
-        "SubTabState",
-        "Toolbar",
+        "Tag",
         "UserIcon",
         "WalletIcon"
       ],
@@ -2086,13 +2087,14 @@
         "CopyValue",
         "CreditCardIcon",
         "DateInput",
+        "EmDash",
+        "EntityList",
+        "EyeIcon",
         "Pill",
         "Properties",
         "Section",
         "Sheet",
-        "SimpleTable",
-        "SubTabState",
-        "Toolbar",
+        "Tag",
         "UserIcon",
         "WalletIcon"
       ],
@@ -2832,7 +2834,9 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "AddonGrid",
+        "CustomerActivityView",
         "CustomerDetail",
         "CustomerGrid",
         "EntitlementTable",
@@ -3046,11 +3050,13 @@
         "WriteGate"
       ],
       "usedBy": [
+        "ActivityEventSheet",
         "AddonGrid",
         "ConnectionExports",
         "CostSheetGrid",
         "CouponGrid",
         "CreditNoteGrid",
+        "CustomerActivityView",
         "CustomerGrid",
         "DataExportDetail",
         "DataExportGrid",
@@ -3309,10 +3315,12 @@
       "composes": [],
       "usedBy": [
         "AcceptInvitationForm",
+        "ActivityEventSheet",
         "ActivityLog",
         "ActivitySection",
         "ChargeTable",
         "ConnectionExports",
+        "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
         "DataExportGrid",
@@ -7154,10 +7162,8 @@
         "LockedMark"
       ],
       "usedBy": [
-        "ActivityEventSheet",
         "ConnectionExports",
         "ContractSectionDialogs",
-        "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -7523,10 +7529,8 @@
         "TableSkeleton"
       ],
       "usedBy": [
-        "ActivityEventSheet",
         "ChargeTable",
         "CreditGrantTable",
-        "CustomerActivityView",
         "CustomerDetail",
         "CustomerEntitlementUsage",
         "CustomerEventsGrid",
@@ -7635,7 +7639,9 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ActivityEventSheet",
         "AddonGrid",
+        "CustomerActivityView",
         "EventGrid",
         "FeatureGrid",
         "PlanGrid"
@@ -7822,10 +7828,7 @@
       "file": "src/compositions/tables/Toolbar.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [
-        "ActivityEventSheet",
-        "CustomerActivityView"
-      ],
+      "usedBy": [],
       "story": "./src/compositions/tables/Toolbar.stories.tsx"
     },
     "TotalRow": {
