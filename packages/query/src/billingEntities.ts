@@ -224,6 +224,7 @@ export function useEnableBillingEntities() {
       return toMode(await enableBillingEntities(serverURL, token, environmentId))
     },
     onSuccess: refresh,
+    meta: { notify: { error: 'Could not enable billing entities.' } },
   })
 }
 

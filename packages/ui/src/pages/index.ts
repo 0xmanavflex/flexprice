@@ -293,6 +293,16 @@ export {
 } from './collections/payments/PaymentStatusBadge'
 export { TaxRateGrid, TaxRateGridProvenance } from './settings/taxes/TaxRateGrid'
 export type { TaxRateGridProps } from './settings/taxes/TaxRateGrid'
+export {
+  BillingEntityGrid,
+  BillingEntityGridProvenance,
+} from './settings/billing-entities/BillingEntityGrid'
+export type { BillingEntityGridProps } from './settings/billing-entities/BillingEntityGrid'
+export {
+  BillingEntitiesEnableCard,
+  BillingEntitiesEnableCardProvenance,
+} from './settings/billing-entities/BillingEntitiesEnableCard'
+export type { BillingEntitiesEnableCardProps } from './settings/billing-entities/BillingEntitiesEnableCard'
 export { EventGrid, EventGridProvenance } from './developers/events/EventGrid'
 export type { EventGridProps } from './developers/events/EventGrid'
 export { EventDetailSheet, EventDetailSheetProvenance } from './developers/events/EventDetailSheet'

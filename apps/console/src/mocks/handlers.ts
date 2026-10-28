@@ -339,8 +339,33 @@ interface EntityEnvironment {
   readsSinceEnable: number
   rows: Record<string, unknown>[]
 }
-const entityEnvironments = new Map<string, EntityEnvironment>()
-let entitySeq = 0
+/** Kept in sessionStorage so a reload mid-enable finds the same state, as the real API would. */
+const ENTITIES_KEY = 'flexprice.mock.billingEntities'
+function loadEntityState(): { environments: Map<string, EntityEnvironment>; seq: number } {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(ENTITIES_KEY) ?? 'null') as {
+      environments: [string, EntityEnvironment][]
+      seq: number
+    } | null
+    if (stored) return { environments: new Map(stored.environments), seq: stored.seq }
+  } catch {
+    /* no storage or a stale shape: start off */
+  }
+  return { environments: new Map(), seq: 0 }
+}
+const entityState = loadEntityState()
+const entityEnvironments = entityState.environments
+let entitySeq = entityState.seq
+function saveEntityState() {
+  try {
+    sessionStorage.setItem(
+      ENTITIES_KEY,
+      JSON.stringify({ environments: [...entityEnvironments], seq: entitySeq }),
+    )
+  } catch {
+    /* no storage: the state lives for the page only */
+  }
+}
 const ENTITIES_NOT_ENABLED = 'Billing entities are not enabled in this environment'
 
 function entityEnvironment(request: Request): EntityEnvironment {
@@ -351,6 +376,15 @@ function entityEnvironment(request: Request): EntityEnvironment {
     entityEnvironments.set(id, state)
   }
   return state
+}
+
+/** `localStorage['flexprice.mock.taxEngine']` puts the environment on an external tax engine. */
+function mockTaxEngine(): string | null {
+  try {
+    return localStorage.getItem('flexprice.mock.taxEngine')
+  } catch {
+    return null
+  }
 }
 
 function seedDefaultEntity(): Record<string, unknown> {
@@ -3936,7 +3970,7 @@ export const handlers = [
    * `/billing-entities`: off until a super admin enables it. As the real API:
    * enable is refused for anyone else (switch user with
    * `localStorage['flexprice.mock.userId']`) and for an environment on an
-   * external tax engine (`x-mock-tax-engine: stripe`); the entity routes are
+   * external tax engine (`localStorage['flexprice.mock.taxEngine'] = 'stripe'`); the entity routes are
    * refused until the mode is `enabled`.
    */
   http.get(`${BASE}/billing-entities/status`, ({ request }) => {
@@ -3945,6 +3979,7 @@ export const handlers = [
       state.mode = 'enabled'
       state.rows = [seedDefaultEntity()]
     }
+    saveEntityState()
     return HttpResponse.json({ mode: state.mode })
   }),
 
@@ -3956,7 +3991,7 @@ export const handlers = [
         { status: 403 },
       )
     }
-    const engine = request.headers.get('x-mock-tax-engine')
+    const engine = mockTaxEngine()
     if (engine) {
       return HttpResponse.json(
         {
@@ -3968,6 +4003,7 @@ export const handlers = [
     if (state.mode === 'off') {
       state.mode = 'enabling'
       state.readsSinceEnable = 0
+      saveEntityState()
       return HttpResponse.json({ mode: 'enabling' }, { status: 202 })
     }
     return HttpResponse.json({ mode: state.mode }, { status: state.mode === 'enabled' ? 200 : 202 })
@@ -4019,6 +4055,7 @@ export const handlers = [
       created_at: new Date().toISOString(),
     }
     state.rows.push(row)
+    saveEntityState()
     return HttpResponse.json(row, { status: 201 })
   }),
 
@@ -4038,6 +4075,7 @@ export const handlers = [
       return HttpResponse.json({ message: 'Invoice prefix already in use' }, { status: 409 })
     }
     Object.assign(row, body)
+    saveEntityState()
     // seller_details is replaced whole, as the backend does; absent leaves it unchanged.
     return HttpResponse.json(row)
   }),

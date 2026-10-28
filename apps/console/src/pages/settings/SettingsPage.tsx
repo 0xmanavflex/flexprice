@@ -10,6 +10,7 @@ import {
   Building2Icon,
   CoinsIcon,
   GaugeIcon,
+  LandmarkIcon,
   PaletteIcon,
   PercentIcon,
   ReceiptTextIcon,
@@ -19,6 +20,7 @@ import {
   TicketPercentIcon,
   UsersIcon,
 } from '@fp/ui/icons'
+import { BillingEntitiesPanel } from './BillingEntitiesPanel'
 import { AppearancePanel } from './AppearancePanel'
 import { CurrenciesPanel } from './CurrenciesPanel'
 import { FxRatesPanel } from '../forex/FxRatesPanel'
@@ -84,6 +86,7 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   team: <UsersIcon aria-hidden className="size-4" />,
   organization: <Building2Icon aria-hidden className="size-4" />,
   discounts: <TicketPercentIcon aria-hidden className="size-4" />,
+  'billing-entities': <LandmarkIcon aria-hidden className="size-4" />,
   taxes: <PercentIcon aria-hidden className="size-4" />,
   'cost-tracking': <CoinsIcon aria-hidden className="size-4" />,
   'usage-billing': <GaugeIcon aria-hidden className="size-4" />,
@@ -248,6 +251,8 @@ function SettingsPanel({
   switch (key) {
     case 'organization/profile':
       return gated(RBAC_ENTITY.Tenant, <ProfilePanel />, false)
+    case 'billing-entities/entities':
+      return <BillingEntitiesPanel onOpenPage={onOpenPage} />
     case 'team/members':
       // Gated row by row: invite needs user write, roles and removal super admin.
       return <MembersPanel />
