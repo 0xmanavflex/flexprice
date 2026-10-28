@@ -4,6 +4,15 @@ import { Button } from '@ui/components/primitives/button'
 import { Badge } from '@ui/components/reui/badge'
 import { cn } from '@ui/lib/cn'
 
+export interface ConnectorCardConnection {
+  id: string
+  label: string
+  /** The owning entity's name. */
+  entity?: string | undefined
+  /** `label` is a line saying an entity has no connection. */
+  missing?: boolean | undefined
+}
+
 export interface ConnectorCardProps {
   name: string
   description: string
@@ -13,9 +22,9 @@ export interface ConnectorCardProps {
   onConnect: () => void
   onConfigure: () => void
   /** The connected action's label; "Configure" by default. */
-  configureLabel?: string
-  /** Under the description, e.g. the connections it holds. */
-  children?: ReactNode
+  configureLabel?: string | undefined
+  /** Under the description: each connection with the entity that owns it, or an entity that has none (`missing`). */
+  connections?: ConnectorCardConnection[] | undefined
   testId?: string
   className?: string
 }
@@ -35,7 +44,7 @@ export function ConnectorCard({
   onConnect,
   onConfigure,
   configureLabel = 'Configure',
-  children,
+  connections,
   testId,
   className,
 }: ConnectorCardProps) {
@@ -68,7 +77,22 @@ export function ConnectorCard({
             {description}
           </p>
         </div>
-        {children}
+        {connections && connections.length > 0 ? (
+          <ul className="flex flex-col gap-1.5 text-[13px]">
+            {connections.map((item) => (
+              <li
+                key={item.id}
+                className={cn(
+                  'flex items-center justify-between gap-2',
+                  item.missing && 'text-muted-foreground',
+                )}
+              >
+                <span className="truncate">{item.label}</span>
+                {item.entity ? <Badge variant="outline">{item.entity}</Badge> : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
 
       <div className="flex items-center justify-between gap-3 px-3 py-2.5">

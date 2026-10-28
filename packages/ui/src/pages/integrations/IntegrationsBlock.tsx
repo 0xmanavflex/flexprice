@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { SearchIcon } from '@ui/icons'
 import { effectiveEntityId, type Integration } from '@fp/domain'
-import { ConnectorCard } from '@ui/compositions/layout/ConnectorCard'
+import { ConnectorCard, type ConnectorCardConnection } from '@ui/compositions/layout/ConnectorCard'
 import { Button } from '@ui/components/primitives/button'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import {
@@ -21,7 +21,6 @@ import {
 import { Bone, SkeletonRegion } from '@ui/compositions/feedback/Skeletons'
 import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
 import { provenance } from '@ui/provenance'
-import { Pill } from '../shared/cells'
 import type { ListBillingEntity } from '../shared/billingEntityColumn'
 
 /**
@@ -81,34 +80,26 @@ export interface IntegrationsBlockProps {
   entities?: readonly ListBillingEntity[] | undefined
 }
 
-/** A connected provider's connections, each with its entity, and one line per entity without one. */
-function EntityConnections({
-  integration,
-  entities,
-}: {
-  integration: Integration
-  entities: readonly ListBillingEntity[]
-}) {
+/** A connected provider's connections with their entities, and one line per entity without one. */
+function entityConnections(
+  integration: Integration,
+  entities: readonly ListBillingEntity[],
+): ConnectorCardConnection[] {
+  const nameOf = (id: string) => entities.find((entity) => entity.id === id)?.name
   const owned = integration.connections.map((connection) => ({
-    connection,
+    id: connection.id,
+    label: connection.name,
+    entity: nameOf(effectiveEntityId(connection, entities)) ?? '—',
     entityId: effectiveEntityId(connection, entities),
   }))
-  const missing = entities.filter((entity) => !owned.some((item) => item.entityId === entity.id))
-  return (
-    <ul className="flex flex-col gap-1.5 text-[13px]">
-      {owned.map(({ connection, entityId }) => (
-        <li key={connection.id} className="flex items-center justify-between gap-2">
-          <span className="truncate">{connection.name}</span>
-          <Pill size="sm">{entities.find((entity) => entity.id === entityId)?.name ?? '—'}</Pill>
-        </li>
-      ))}
-      {missing.map((entity) => (
-        <li key={entity.id} className="text-muted-foreground">
-          {entity.name} has no {integration.name} account
-        </li>
-      ))}
-    </ul>
-  )
+  const missing = entities
+    .filter((entity) => !owned.some((item) => item.entityId === entity.id))
+    .map((entity) => ({
+      id: entity.id,
+      label: `${entity.name} has no ${integration.name} account`,
+      missing: true,
+    }))
+  return [...owned.map(({ entityId: _entityId, ...item }) => item), ...missing]
 }
 
 function GallerySkeleton() {
@@ -202,12 +193,11 @@ export function IntegrationsBlock({
       connected={isConnected(integration)}
       onConnect={() => onConnect?.(integration)}
       onConfigure={() => onConfigure?.(integration)}
-      {...(entities && isConnected(integration) ? { configureLabel: 'Manage' } : {})}
-    >
-      {entities && isConnected(integration) ? (
-        <EntityConnections integration={integration} entities={entities} />
-      ) : null}
-    </ConnectorCard>
+      configureLabel={entities && isConnected(integration) ? 'Manage' : undefined}
+      connections={
+        entities && isConnected(integration) ? entityConnections(integration, entities) : undefined
+      }
+    />
   )
 
   const grid = 'grid gap-4 md:grid-cols-2 xl:grid-cols-3'

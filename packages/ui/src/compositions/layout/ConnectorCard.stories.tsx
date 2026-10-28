@@ -62,6 +62,24 @@ export const Connected: Story = {
   },
 }
 
+/** With billing entities: each connection beside its entity, and a line for an entity without one. */
+export const WithEntityConnections: Story = {
+  args: {
+    connected: true,
+    configureLabel: 'Manage',
+    connections: [
+      { id: 'c1', label: 'Stripe US', entity: 'Northwind US' },
+      { id: 'be_uk', label: 'Northwind UK has no Stripe account', missing: true },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Northwind US')).toBeVisible()
+    await expect(canvas.getByText('Northwind UK has no Stripe account')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Manage Stripe' })).toBeVisible()
+  },
+}
+
 /** No `docsUrl`: the setup-guide arrow is omitted. */
 export const WithoutDocsLink: Story = {
   args: { docsUrl: undefined },
