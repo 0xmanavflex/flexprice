@@ -429,6 +429,10 @@ for (const row of prices.items) {
     const [tierName, , , monthly] = tierOf(Number(planScoped[1]))
     if (planScoped[2] === 'base') {
       row.amount = monthly.toFixed(2)
+      // The API derives display_amount from amount (`Price.GetDisplayAmount`),
+      // so the two never disagree there; a fixture where they do shows one price
+      // in the charges table and another on the plan card.
+      row.display_amount = `$${row.amount}`
       row.display_name = `${tierName} base`
     }
     continue
