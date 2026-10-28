@@ -1,49 +1,46 @@
 import { describe, expect, it } from 'vitest'
-import { countConnections, toIntegrations } from './integrations'
-
-describe('countConnections', () => {
-  it('counts published connections per provider and ignores the rest', () => {
-    const counts = countConnections([
-      { provider_type: 'stripe', connection_status: 'published' },
-      { provider_type: 'stripe' },
-      { provider_type: 'stripe', connection_status: 'archived' },
-      { provider_type: 'hubspot', connection_status: 'draft' },
-      { connection_status: 'published' },
-    ])
-    expect(counts.get('stripe')).toBe(2)
-    expect(counts.has('hubspot')).toBe(false)
-  })
-})
+import { toIntegrations } from './integrations'
 
 describe('toIntegrations', () => {
   it('lists the whole catalogue, matching zoho to its zoho_books connections', () => {
-    const all = toIntegrations([{ provider_type: 'zoho_books', connection_status: 'published' }])
-    expect(all.find((i) => i.id === 'zoho')?.connections).toBe(1)
-    expect(all.find((i) => i.id === 'stripe')?.connections).toBe(0)
+    const all = toIntegrations([
+      { id: 'conn_z', provider_type: 'zoho_books', connection_status: 'published' },
+    ])
+    expect(all.find((i) => i.id === 'zoho')?.connections).toHaveLength(1)
+    expect(all.find((i) => i.id === 'stripe')?.connections).toEqual([])
     expect(all.length).toBeGreaterThan(10)
   })
 
-  it('attaches the published connection with its sync switches, and no secrets', () => {
+  it('keeps every published connection per provider in wire order, with its entity and no secrets', () => {
     const all = toIntegrations([
       {
         id: 'conn_1',
         name: 'Stripe (live)',
         provider_type: 'stripe',
         connection_status: 'published',
+        billing_entity_id: 'be_1',
         sync_config: { invoice: { outbound: true }, plan: { inbound: false } },
         metadata: { region: 'eu', ignored: 3 as unknown as string },
         created_at: '2026-10-01T00:00:00Z',
       },
-      { id: 'conn_2', name: 'Old', provider_type: 'razorpay', connection_status: 'archived' },
+      { id: 'conn_2', name: 'Stripe EU', provider_type: 'stripe', billing_entity_id: 'be_2' },
+      { id: 'conn_3', name: 'Draft', provider_type: 'stripe', connection_status: 'draft' },
+      { id: 'conn_4', name: 'Old', provider_type: 'razorpay', connection_status: 'archived' },
     ])
-    expect(all.find((i) => i.id === 'stripe')?.connection).toEqual({
+    const stripe = all.find((i) => i.id === 'stripe')!
+    expect(stripe.connections.map((c) => [c.id, c.billingEntityId])).toEqual([
+      ['conn_1', 'be_1'],
+      ['conn_2', 'be_2'],
+    ])
+    expect(stripe.connections[0]).toEqual({
       id: 'conn_1',
       name: 'Stripe (live)',
       providerType: 'stripe',
       syncConfig: { invoice: { outbound: true }, plan: { inbound: false } },
       metadata: { region: 'eu' },
+      billingEntityId: 'be_1',
       createdAt: '2026-10-01T00:00:00Z',
     })
-    expect(all.find((i) => i.id === 'razorpay')?.connection).toBeUndefined()
+    expect(all.find((i) => i.id === 'razorpay')?.connections).toEqual([])
   })
 })

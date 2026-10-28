@@ -6,7 +6,7 @@ import { IntegrationLogo } from './IntegrationsBlock'
 
 function connected(id: string, connection: IntegrationConnection): Integration {
   const spec = INTEGRATION_CATALOG.find((item) => item.id === id)!
-  return { ...spec, connections: 1, connection }
+  return { ...spec, connections: [connection] }
 }
 
 const stripe = connected('stripe', {
@@ -15,6 +15,7 @@ const stripe = connected('stripe', {
   providerType: 'stripe',
   syncConfig: { invoice: { outbound: true } },
   metadata: {},
+  billingEntityId: null,
   createdAt: '2026-08-12T09:30:00Z',
 })
 

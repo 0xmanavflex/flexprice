@@ -6,7 +6,7 @@ import { IntegrationLogo } from './IntegrationsBlock'
 
 function integration(id: string): Integration {
   const spec = INTEGRATION_CATALOG.find((item) => item.id === id)!
-  return { ...spec, connections: 0 }
+  return { ...spec, connections: [] }
 }
 
 const meta = {

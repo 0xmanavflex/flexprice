@@ -288,6 +288,7 @@ const connectionRows: Record<string, unknown>[] = [
     name: 'Stripe',
     provider_type: 'stripe',
     connection_status: 'published',
+    billing_entity_id: null,
     metadata: {},
     sync_config: {
       customer: { outbound: true },
@@ -4112,12 +4113,17 @@ export const handlers = [
    * duplicate is refused, secrets are accepted and never echoed, and DELETE
    * archives.
    */
-  http.get(`${BASE}/connections`, () =>
-    HttpResponse.json({
-      connections: connectionRows.filter((row) => row['connection_status'] !== 'archived'),
+  http.get(`${BASE}/connections`, ({ request }) => {
+    const billingEntityId = new URL(request.url).searchParams.get('billing_entity_id')
+    return HttpResponse.json({
+      connections: connectionRows.filter(
+        (row) =>
+          row['connection_status'] !== 'archived' &&
+          (!billingEntityId || row['billing_entity_id'] === billingEntityId),
+      ),
       pagination: { total: connectionRows.length, limit: 100, offset: 0 },
-    }),
-  ),
+    })
+  }),
 
   http.post(`${BASE}/connections`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
@@ -4133,6 +4139,7 @@ export const handlers = [
       name: body['name'],
       provider_type: provider,
       connection_status: 'published',
+      billing_entity_id: body['billing_entity_id'] ?? null,
       metadata: body['metadata'] ?? {},
       sync_config: body['sync_config'] ?? {},
       created_at: new Date().toISOString(),
@@ -4148,6 +4155,8 @@ export const handlers = [
     if (typeof body['name'] === 'string') row['name'] = body['name']
     if (body['metadata']) row['metadata'] = body['metadata']
     if (body['sync_config']) row['sync_config'] = body['sync_config']
+    if (typeof body['billing_entity_id'] === 'string')
+      row['billing_entity_id'] = body['billing_entity_id']
     // As the API: replaced keys are merged and kept, never sent back.
     const replaced = body['encrypted_secret_data'] as Record<string, string> | undefined
     if (replaced) {

@@ -91,7 +91,7 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
           linkable: (providers.data ?? [])
             .filter(
               (provider) =>
-                provider.connection &&
+                provider.connections.length > 0 &&
                 !mappings.data.some((mapping) => mapping.providerType === provider.providerType),
             )
             .map(({ providerType, name }) => ({ providerType, name })),

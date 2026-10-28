@@ -12,8 +12,11 @@ export async function listConnections(
   serverURL: string,
   token: string,
   environmentId: string,
+  billingEntityId?: string,
 ): Promise<unknown> {
-  return request(serverURL, '/connections?status=published&limit=100', {
+  const query = new URLSearchParams({ status: 'published', limit: '100' })
+  if (billingEntityId) query.set('billing_entity_id', billingEntityId)
+  return request(serverURL, `/connections?${query}`, {
     method: 'GET',
     token,
     environmentId,
@@ -27,6 +30,7 @@ export interface ConnectionRequest {
   encrypted_secret_data?: Record<string, string>
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
+  billing_entity_id?: string
 }
 
 export interface ConnectionUpdate {
@@ -34,6 +38,7 @@ export interface ConnectionUpdate {
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
   encrypted_secret_data?: Record<string, string>
+  billing_entity_id?: string
 }
 
 export interface OAuthInitRequest {
@@ -42,6 +47,7 @@ export interface OAuthInitRequest {
   credentials: Record<string, string>
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
+  billing_entity_id?: string
 }
 
 export interface OAuthCompleteRequest {

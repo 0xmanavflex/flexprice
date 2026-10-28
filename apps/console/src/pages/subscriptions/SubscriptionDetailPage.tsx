@@ -243,7 +243,10 @@ export function SubscriptionDetailPage({
   const data = subscription.data
   const linkedTypes = new Set((integrationLinks.data ?? []).map((link) => link.providerType))
   const linkableProviders = (integrations.data ?? [])
-    .filter((integration) => integration.connection && !linkedTypes.has(integration.providerType))
+    .filter(
+      (integration) =>
+        integration.connections.length > 0 && !linkedTypes.has(integration.providerType),
+    )
     .map((integration) => ({ providerType: integration.providerType, name: integration.name }))
   const close = () => setDialog(null)
 

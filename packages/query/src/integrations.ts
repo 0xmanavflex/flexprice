@@ -34,6 +34,7 @@ export interface ConnectionWire {
   connection_status?: string
   metadata?: Record<string, unknown> | null
   sync_config?: Record<string, { inbound?: boolean; outbound?: boolean } | undefined> | null
+  billing_entity_id?: string | null
   created_at?: string
 }
 
@@ -60,55 +61,46 @@ export function toIntegrationConnection(wire: ConnectionWire): IntegrationConnec
     providerType: wire.provider_type ?? '',
     syncConfig,
     metadata,
+    billingEntityId: wire.billing_entity_id ?? null,
     createdAt: wire.created_at,
   }
 }
 
-/** Published connections per `provider_type`; drafts and archived ones do not count. */
-export function countConnections(wires: ConnectionWire[]): Map<string, number> {
-  const counts = new Map<string, number>()
-  for (const wire of wires) {
-    if (!wire.provider_type) continue
-    if (!isPublished(wire)) continue
-    counts.set(wire.provider_type, (counts.get(wire.provider_type) ?? 0) + 1)
-  }
-  return counts
-}
-
+/** Every published connection of each provider, in wire order; drafts and archived ones do not count. */
 export function toIntegrations(wires: ConnectionWire[]): Integration[] {
-  const counts = countConnections(wires)
-  return INTEGRATION_CATALOG.map((spec) => {
-    const first = wires.find((w) => w.id && w.provider_type === spec.providerType && isPublished(w))
-    return {
-      ...spec,
-      connections: counts.get(spec.providerType) ?? 0,
-      connection: first ? toIntegrationConnection(first) : undefined,
-    }
-  })
+  return INTEGRATION_CATALOG.map((spec) => ({
+    ...spec,
+    connections: wires
+      .filter((w) => w.id && w.provider_type === spec.providerType && isPublished(w))
+      .map(toIntegrationConnection),
+  }))
 }
 
 export async function fetchIntegrations(
   serverURL: string,
   auth: AuthSource,
+  billingEntityId?: string,
 ): Promise<Integration[]> {
   const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
   if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to view integrations.')
 
-  const body = await listConnections(serverURL, token, environmentId ?? '')
+  const body = await listConnections(serverURL, token, environmentId ?? '', billingEntityId)
   const record = (body ?? {}) as { connections?: ConnectionWire[] | null }
   return toIntegrations(record.connections ?? [])
 }
 
-export function useIntegrations(options: { enabled?: boolean } = {}) {
+export function useConnections(options: { billingEntityId?: string; enabled?: boolean } = {}) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
 
   return useQuery({
-    queryKey: queryKeys.integrations.all(),
-    queryFn: () => fetchIntegrations(serverURL, auth),
+    queryKey: queryKeys.integrations.list(options.billingEntityId),
+    queryFn: () => fetchIntegrations(serverURL, auth, options.billingEntityId),
     enabled: options.enabled ?? true,
   })
 }
+
+export const useIntegrations = useConnections
 
 /** Token and environment for a write, or the error a signed-out caller should see. */
 async function credentials(auth: AuthSource) {

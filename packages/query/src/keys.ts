@@ -177,6 +177,7 @@ export const queryKeys = {
   },
   integrations: {
     all: () => ['integrations'] as const,
+    list: (billingEntityId?: string) => ['integrations', 'list', billingEntityId ?? null] as const,
   },
   billingEntities: {
     all: () => ['billingEntities'] as const,

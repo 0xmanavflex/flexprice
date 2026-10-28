@@ -103,7 +103,7 @@ function TaxEngineForm({ environmentId, config }: { environmentId: string; confi
     external &&
     draft.value.provider === TaxProvider.Stripe &&
     integrations.isSuccess &&
-    (stripe?.connections ?? 0) === 0
+    (stripe?.connections.length ?? 0) === 0
 
   const saveError = mutationMessage(update.error, 'The tax settings could not be saved.')
   const resetError = mutationMessage(reset.error, 'The tax settings could not be reset.')

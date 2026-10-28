@@ -27,7 +27,7 @@ import { provenance } from '@ui/provenance'
  * `components/blocks/settings-13`; the live page renders its layout (heading
  * and three-up grid) with the real catalogue through `ConnectorCard`.
  *
- * Connection state is real (`connections > 0`). Connect and Configure are
+ * Connection state is real (`connections.length > 0`). Connect and Configure are
  * callbacks: the page opens the connect or manage sheet, so this block holds no
  * connection state of its own.
  *
@@ -145,7 +145,7 @@ export function IntegrationsBlock({
     const needle = query.trim().toLowerCase()
     return needle === '' || `${i.name} ${i.description}`.toLowerCase().includes(needle)
   })
-  const isConnected = (i: Integration) => i.connections > 0
+  const isConnected = (i: Integration) => i.connections.length > 0
   const connected = visible.filter(isConnected)
   const available = visible.filter((i) => !isConnected(i))
 

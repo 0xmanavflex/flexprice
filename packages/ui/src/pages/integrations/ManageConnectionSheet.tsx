@@ -88,9 +88,9 @@ export function ManageConnectionSheet({
   return (
     <Sheet open={integration !== null} onOpenChange={(open) => !open && !busy && onClose()}>
       <SheetContent className="gap-0">
-        {integration?.connection && spec ? (
+        {integration?.connections[0] && spec ? (
           <ManageForm
-            key={integration.connection.id}
+            key={integration.connections[0].id}
             integration={integration}
             spec={spec}
             logo={logo}
@@ -134,7 +134,7 @@ function ManageForm({
   saveError: string | null
   disconnectError: string | null
 }) {
-  const connection = integration.connection!
+  const connection = integration.connections[0]!
   const [confirming, setConfirming] = useState(false)
   const form = useCalmForm<ConnectionFormValues>({
     resolver: standardSchemaResolver(

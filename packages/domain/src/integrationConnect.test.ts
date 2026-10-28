@@ -132,6 +132,12 @@ describe('addresses', () => {
     )
   })
 
+  it('ends the webhook URL with the connection id when given', () => {
+    expect(webhookUrl('https://api.flexprice.io/v1', 'stripe', 't', 'e', 'conn_1')).toBe(
+      'https://api.flexprice.io/v1/webhooks/stripe/t/e/conn_1',
+    )
+  })
+
   it('adds Stripe events for the inbound sync that needs them', () => {
     const stripe = spec('stripe')
     expect(webhookEvents(stripe, {})).not.toContain('product.created')
@@ -154,6 +160,7 @@ describe('manage changes', () => {
     providerType: 'chargebee',
     syncConfig: { invoice: { outbound: false } },
     metadata: {},
+    billingEntityId: null,
   }
   const chargebee = spec('chargebee')
 

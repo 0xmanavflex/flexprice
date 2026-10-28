@@ -622,7 +622,7 @@ export {
 } from './dataExports'
 export type { DataExportPage, DataExportWire, ExportRunWire, S3ConnectionWire } from './dataExports'
 export {
-  countConnections,
+  useConnections,
   fetchIntegrations,
   toIntegrationConnection,
   toIntegrations,

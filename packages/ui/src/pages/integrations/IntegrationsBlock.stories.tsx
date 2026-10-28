@@ -1,7 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { INTEGRATION_CATALOG, type Integration } from '@fp/domain'
+import { INTEGRATION_CATALOG, type Integration, type IntegrationConnection } from '@fp/domain'
 import { IntegrationsBlock } from './IntegrationsBlock'
+
+function connection(providerType: string): IntegrationConnection {
+  return {
+    id: `conn_${providerType}`,
+    name: providerType,
+    providerType,
+    syncConfig: {},
+    metadata: {},
+    billingEntityId: null,
+  }
+}
 
 /** The first `count` catalogue entries (cycled past the catalogue's end); the first `connected` are connected. */
 function makeIntegrations(count: number, connected: number): Integration[] {
@@ -12,7 +23,7 @@ function makeIntegrations(count: number, connected: number): Integration[] {
       ...spec,
       id: lap === 0 ? spec.id : `${spec.id}_${lap}`,
       name: lap === 0 ? spec.name : `${spec.name} ${lap + 1}`,
-      connections: index < connected ? 1 : 0,
+      connections: index < connected ? [connection(spec.providerType)] : [],
     }
   })
 }

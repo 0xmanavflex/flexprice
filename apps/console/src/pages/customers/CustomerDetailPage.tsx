@@ -109,13 +109,13 @@ export function CustomerDetailPage({
   const pushCustomer = usePushCustomerToIntegrations(customerId)
   // The providers a push reaches: connected, with customer sync on outbound.
   const pushTargets = (integrations.data ?? [])
-    .filter((integration) => integration.connection?.syncConfig.customer?.outbound)
+    .filter((integration) => integration.connections[0]?.syncConfig.customer?.outbound)
     .map((integration) => integration.name)
   // Where a card can be saved: the connected providers with a hosted setup page.
   const cardProviders = (integrations.data ?? [])
     .filter(
       (integration) =>
-        integration.connection &&
+        integration.connections.length > 0 &&
         (CARD_SETUP_PROVIDERS as readonly string[]).includes(integration.providerType),
     )
     .map(({ providerType, name }) => ({ providerType, name }))
@@ -215,7 +215,7 @@ export function CustomerDetailPage({
                 linkable: integrations.data
                   .filter(
                     (integration) =>
-                      integration.connection &&
+                      integration.connections.length > 0 &&
                       !integrationLinks.data.some(
                         (link) => link.providerType === integration.providerType,
                       ),

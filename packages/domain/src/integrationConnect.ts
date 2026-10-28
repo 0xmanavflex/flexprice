@@ -538,13 +538,14 @@ export interface ConnectionPayload {
   encrypted_secret_data: Record<string, string>
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
+  billing_entity_id?: string
 }
 
 /** The `POST /connections` (or `/oauth/init`) body for a filled-in form. Blank optional values are left out. */
 export function toConnectionPayload(
   spec: ConnectionSpec,
   values: ConnectionFormValues,
-  context: { externalId?: string } = {},
+  context: { externalId?: string; billingEntityId?: string | undefined } = {},
 ): ConnectionPayload {
   const secrets: Record<string, string> = {}
   const metadata: Record<string, string> = {}
@@ -575,6 +576,7 @@ export function toConnectionPayload(
     encrypted_secret_data: secrets,
     ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     ...(Object.keys(syncConfig).length > 0 ? { sync_config: syncConfig } : {}),
+    ...(context.billingEntityId ? { billing_entity_id: context.billingEntityId } : {}),
   }
 }
 
@@ -584,8 +586,10 @@ export function webhookUrl(
   providerType: string,
   tenantId: string,
   environmentId: string,
+  connectionId?: string,
 ): string {
-  return `${apiBase.replace(/\/+$/, '')}/webhooks/${providerType}/${tenantId}/${environmentId}`
+  const base = `${apiBase.replace(/\/+$/, '')}/webhooks/${providerType}/${tenantId}/${environmentId}`
+  return connectionId ? `${base}/${connectionId}` : base
 }
 
 /** Events to subscribe to for this provider, widened by what the reader chose to sync. */
