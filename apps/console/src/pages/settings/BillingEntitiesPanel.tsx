@@ -35,7 +35,7 @@ export function BillingEntitiesPanel({ onOpenPage }: { onOpenPage: (href: string
 
 function EnableOffer({ mode }: { mode: BillingEntityMode }) {
   const { current } = useEnvironments()
-  const { isSuperAdmin } = useAccess()
+  const { isSuperAdmin, status } = useAccess()
   const write = useWriteAccess(RBAC_ENTITY.Setting, { superAdmin: true })
   const enable = useEnableBillingEntities()
   const [confirming, setConfirming] = useState(false)
@@ -45,7 +45,7 @@ function EnableOffer({ mode }: { mode: BillingEntityMode }) {
       <BillingEntitiesEnableCard
         environmentName={current.name}
         canEnable={write.allowed}
-        disabledReason={isSuperAdmin ? write.reason : SUPER_ADMIN_ONLY}
+        disabledReason={status === 'ready' && !isSuperAdmin ? SUPER_ADMIN_ONLY : write.reason}
         isEnabling={mode === BillingEntityMode.Enabling || enable.isSuccess}
         onEnable={() => setConfirming(true)}
       />
