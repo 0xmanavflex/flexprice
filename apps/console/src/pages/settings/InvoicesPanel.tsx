@@ -2,12 +2,18 @@ import { useState } from 'react'
 import {
   INVOICE_NUMBER_FORMATS,
   INVOICE_NUMBER_FORMAT_LABEL,
+  BillingEntityMode,
   type InvoiceConfig,
   invoiceConfigSchema,
   previewInvoiceNumber,
   splitDelay,
 } from '@fp/domain'
-import { useInvoiceConfig, useResetInvoiceConfig, useUpdateInvoiceConfig } from '@fp/query'
+import {
+  useBillingEntityStatus,
+  useInvoiceConfig,
+  useResetInvoiceConfig,
+  useUpdateInvoiceConfig,
+} from '@fp/query'
 import { ConfirmDialog, EmptyState, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
 import {
   Button,
@@ -33,6 +39,7 @@ import {
   PanelUnavailable,
   queryPhase,
 } from './panelKit'
+import { EntityManagedLink } from './EntityManagedLink'
 import { useDraft } from './useDraft'
 
 /**
@@ -68,6 +75,7 @@ import { useDraft } from './useDraft'
 export function InvoicesPanel() {
   const { environmentId } = useSession()
   const config = useInvoiceConfig(environmentId)
+  const entityStatus = useBillingEntityStatus()
 
   const failure = toFailure(config.error, 'your invoice settings')
 
@@ -95,12 +103,20 @@ export function InvoicesPanel() {
 
   const phase = queryPhase(config)
   if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
-  if (phase === 'loading' || !config.data) return <PanelLoading rows={6} />
+  if (phase === 'loading' || !config.data || entityStatus.isPending)
+    return <PanelLoading rows={6} />
 
   // Keyed on the environment rather than on the record: the draft should
   // survive a save: the mutation writes its own response into this cache
   // entry: and be re-seeded only when the environment underneath it changes.
-  return <InvoiceForm key={environmentId} environmentId={environmentId} config={config.data} />
+  return (
+    <InvoiceForm
+      key={environmentId}
+      environmentId={environmentId}
+      config={config.data}
+      prefixOnEntities={entityStatus.data === BillingEntityMode.Enabled}
+    />
+  )
 }
 
 /** The units a finalisation delay is worth showing in, smallest first. */
@@ -134,7 +150,15 @@ function toNumber(text: string): number {
   return Number.isFinite(parsed) ? parsed : Number.NaN
 }
 
-function InvoiceForm({ environmentId, config }: { environmentId: string; config: InvoiceConfig }) {
+function InvoiceForm({
+  environmentId,
+  config,
+  prefixOnEntities,
+}: {
+  environmentId: string
+  config: InvoiceConfig
+  prefixOnEntities: boolean
+}) {
   const update = useUpdateInvoiceConfig(environmentId)
   const reset = useResetInvoiceConfig(environmentId)
   const draft = useDraft<InvoiceConfig>(invoiceConfigSchema, config)
@@ -239,17 +263,30 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
               legend="Invoice numbering"
               description="The parts an invoice number is built from."
             >
-              <TextRow
-                id="invoice-prefix"
-                title="Prefix"
-                description="The literal an invoice number opens with."
-                required
-                busy={busy}
-                placeholder="INV"
-                value={draft.text('prefix')}
-                error={draft.error('prefix')}
-                onChange={(value) => draft.setText('prefix', value)}
-              />
+              {prefixOnEntities ? (
+                <SettingRow
+                  title="Prefix"
+                  description="The literal an invoice number opens with."
+                  labelFor="invoice-prefix"
+                >
+                  <div className="flex w-full flex-col gap-1">
+                    <Input id="invoice-prefix" readOnly value="Set on each billing entity" />
+                    <EntityManagedLink>Manage billing entities</EntityManagedLink>
+                  </div>
+                </SettingRow>
+              ) : (
+                <TextRow
+                  id="invoice-prefix"
+                  title="Prefix"
+                  description="The literal an invoice number opens with."
+                  required
+                  busy={busy}
+                  placeholder="INV"
+                  value={draft.text('prefix')}
+                  error={draft.error('prefix')}
+                  onChange={(value) => draft.setText('prefix', value)}
+                />
+              )}
               <TextRow
                 id="invoice-separator"
                 title="Separator"

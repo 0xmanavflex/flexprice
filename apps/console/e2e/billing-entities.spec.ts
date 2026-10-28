@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
 const WRITER = 'user_01M38QUSER0000000000002' // all_writer, not a super admin
@@ -149,4 +150,53 @@ test('billing entities: a taxes or integrations link falls back to the details t
   const base = page.url().split('?')[0]
   await page.goto(`${base}?tab=integrations`)
   await expect(page.getByRole('textbox', { name: /^name/i })).toBeVisible()
+})
+
+async function enableEntities(page: Page) {
+  await page.goto(SECTION)
+  await page.getByRole('button', { name: 'Enable billing entities' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Enable billing entities' }).click()
+  await expect(page.getByRole('cell', { name: 'Default' })).toBeVisible()
+}
+
+test('billing entities: invoicing prefix is editable while entities are off', async ({ page }) => {
+  await page.goto('/settings?section=invoicing&tab=invoices')
+  const prefix = page.getByRole('textbox', { name: /^prefix/i })
+  await expect(prefix).toBeEditable()
+  await expect(page.getByRole('link', { name: 'Manage billing entities' })).toHaveCount(0)
+})
+
+test('billing entities: invoicing prefix is read-only and points to the entities once enabled', async ({
+  page,
+}) => {
+  await enableEntities(page)
+  await page.goto('/settings?section=invoicing&tab=invoices')
+  const prefix = page.getByRole('textbox', { name: /^prefix/i })
+  await expect(prefix).toHaveValue('Set on each billing entity')
+  await expect(prefix).not.toBeEditable()
+  await page.getByRole('link', { name: 'Manage billing entities' }).click()
+  await expect(page).toHaveURL(/section=billing-entities/)
+  await expect(page.getByRole('cell', { name: 'Default' })).toBeVisible()
+})
+
+test('billing entities: organization profile is editable while entities are off', async ({
+  page,
+}) => {
+  await page.goto('/settings?section=organization&tab=profile')
+  await expect(page.getByRole('textbox', { name: /billing email/i })).toBeEditable()
+  await expect(page.getByRole('link', { name: 'Manage default entity' })).toHaveCount(0)
+})
+
+test('billing entities: organization profile seller details are read-only and link to the default entity once enabled', async ({
+  page,
+}) => {
+  await enableEntities(page)
+  await page.goto('/settings?section=organization&tab=profile')
+  await expect(page.getByText('Seller details now live on billing entities.')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: /billing email/i })).not.toBeEditable()
+  await expect(page.getByRole('textbox', { name: /^phone/i })).not.toBeEditable()
+  await expect(page.getByRole('textbox', { name: /address line 1/i })).not.toBeEditable()
+  await expect(page.getByRole('textbox', { name: /^name/i })).toBeEditable()
+  await page.getByRole('link', { name: 'Manage default entity' }).click()
+  await expect(page).toHaveURL(/\/settings\/billing-entities\/[^/?]+/)
 })

@@ -1,6 +1,18 @@
 import { useId } from 'react'
-import { type Tenant, type UpdateTenant, toUpdateTenantDraft, updateTenantSchema } from '@fp/domain'
-import { useTenant, useUpdateTenant, useUserInfo } from '@fp/query'
+import {
+  BillingEntityMode,
+  type Tenant,
+  type UpdateTenant,
+  toUpdateTenantDraft,
+  updateTenantSchema,
+} from '@fp/domain'
+import {
+  useBillingEntities,
+  useBillingEntityStatus,
+  useTenant,
+  useUpdateTenant,
+  useUserInfo,
+} from '@fp/query'
 import {
   AddressPicker,
   type AddressPickerModel,
@@ -21,6 +33,7 @@ import {
   PanelUnavailable,
   queryPhase,
 } from './panelKit'
+import { EntityManagedLink } from './EntityManagedLink'
 import { useDraft } from './useDraft'
 
 /**
@@ -49,6 +62,7 @@ export function ProfilePanel() {
   const me = useUserInfo()
   const tenantId = me.data?.tenantId ?? ''
   const tenant = useTenant(tenantId)
+  const entityStatus = useBillingEntityStatus()
 
   const failure = toFailure(me.error ?? tenant.error, 'your organisation')
 
@@ -84,14 +98,23 @@ export function ProfilePanel() {
   }
   const tenantPhase = queryPhase(tenant)
   if (tenantPhase === 'idle') return <PanelUnavailable reason="unavailable" />
-  if (tenantPhase === 'loading' || !tenant.data) return <PanelLoading rows={6} />
+  if (tenantPhase === 'loading' || !tenant.data || entityStatus.isPending)
+    return <PanelLoading rows={6} />
 
   // Keyed on the record so a refetch that genuinely changes the organisation
   // re-seeds the draft rather than leaving the values it mounted with.
-  return <ProfileForm key={tenant.data.id} tenant={tenant.data} />
+  return (
+    <ProfileForm
+      key={tenant.data.id}
+      tenant={tenant.data}
+      sellerOnEntities={entityStatus.data === BillingEntityMode.Enabled}
+    />
+  )
 }
 
-function ProfileForm({ tenant }: { tenant: Tenant }) {
+function ProfileForm({ tenant, sellerOnEntities }: { tenant: Tenant; sellerOnEntities: boolean }) {
+  const entities = useBillingEntities()
+  const defaultEntityId = entities.data?.find((entity) => entity.isDefault)?.id
   const update = useUpdateTenant()
   const draft = useDraft<UpdateTenant>(updateTenantSchema, toUpdateTenantDraft(tenant))
 
@@ -117,6 +140,16 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
             legend="Organisation"
             description="The name on your invoices, and where Flexprice reaches you."
           >
+            {sellerOnEntities ? (
+              <SettingRow
+                title="Seller details"
+                description="Seller details now live on billing entities."
+              >
+                <EntityManagedLink entityId={defaultEntityId}>
+                  Manage default entity
+                </EntityManagedLink>
+              </SettingRow>
+            ) : null}
             <TextField
               label="Name"
               path="name"
@@ -130,6 +163,7 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               path="billingEmail"
               draft={draft}
               busy={busy}
+              readOnly={sellerOnEntities}
               type="email"
               hint="Where invoices from Flexprice are sent."
               placeholder="billing@northwind.example"
@@ -139,6 +173,7 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               path="helpEmail"
               draft={draft}
               busy={busy}
+              readOnly={sellerOnEntities}
               type="email"
               hint="Shown to your customers when they need help with a bill."
               placeholder="support@northwind.example"
@@ -148,6 +183,7 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               path="phone"
               draft={draft}
               busy={busy}
+              readOnly={sellerOnEntities}
               type="tel"
               placeholder="+1 555 0142"
               last
@@ -177,6 +213,7 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               path="address.line1"
               draft={draft}
               busy={busy}
+              readOnly={sellerOnEntities}
               autoComplete="address-line1"
             />
             <TextField
@@ -184,14 +221,36 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               path="address.line2"
               draft={draft}
               busy={busy}
+              readOnly={sellerOnEntities}
               autoComplete="address-line2"
             />
-            <AddressRegionRows draft={draft} busy={busy} />
+            {sellerOnEntities ? (
+              <>
+                <TextField
+                  label="Country"
+                  path="address.country"
+                  draft={draft}
+                  busy={busy}
+                  readOnly
+                />
+                <TextField
+                  label="State or province"
+                  path="address.state"
+                  draft={draft}
+                  busy={busy}
+                  readOnly
+                />
+                <TextField label="City" path="address.city" draft={draft} busy={busy} readOnly />
+              </>
+            ) : (
+              <AddressRegionRows draft={draft} busy={busy} />
+            )}
             <TextField
               label="Postal code"
               path="address.postalCode"
               draft={draft}
               busy={busy}
+              readOnly={sellerOnEntities}
               autoComplete="postal-code"
               last
             />
@@ -300,12 +359,14 @@ function TextField({
   placeholder,
   type,
   autoComplete,
+  readOnly,
   last,
 }: {
   label: string
   path: string
   draft: ReturnType<typeof useDraft<UpdateTenant>>
   busy: boolean
+  readOnly?: boolean
   required?: boolean
   hint?: string
   placeholder?: string
@@ -337,6 +398,7 @@ function TextField({
           id={id}
           disabled={busy}
           required={required}
+          readOnly={readOnly}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
           value={draft.text(path)}
