@@ -71,3 +71,39 @@ test('billing entities: reloading while enabling still shows enabling, then the 
   await page.reload()
   await expect(page.getByRole('cell', { name: 'Default' })).toBeVisible()
 })
+
+test('billing entities: create an entity, a taken prefix is refused, then edit it on its page', async ({
+  page,
+}) => {
+  await page.goto(SECTION)
+  await page.getByRole('button', { name: 'Enable billing entities' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Enable billing entities' }).click()
+  await expect(page.getByRole('cell', { name: 'Default' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'New entity' }).click()
+  await page.getByRole('textbox', { name: /^name/i }).fill('Acme India')
+  await page.getByRole('textbox', { name: /legal name/i }).fill('Acme India Pvt Ltd')
+  const prefix = page.getByRole('textbox', { name: /invoice prefix/i })
+  await prefix.fill('NWS')
+  await page.getByRole('button', { name: 'Create billing entity' }).click()
+  await expect(page.getByText('Invoice prefix already in use').first()).toBeVisible()
+
+  await prefix.fill('NWIN')
+  await expect(page.getByTestId('invoice-number-example')).toContainText(/^NWIN-/)
+  await page.getByRole('button', { name: 'Create billing entity' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Acme India' })).toBeVisible()
+  await expect(page.getByTestId('invoice-number-example')).toContainText(/^NWIN-/)
+  await page.getByRole('textbox', { name: /invoice prefix/i }).fill('NWIN2')
+  await expect(page.getByTestId('invoice-number-example')).toContainText(/^NWIN2-/)
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Billing entity saved')).toBeVisible()
+})
+
+test('billing entities: a stale link to an entity page returns to the section while entities are off', async ({
+  page,
+}) => {
+  await page.goto('/settings/billing-entities/new')
+  await expect(page).toHaveURL(/section=billing-entities/)
+  await expect(page.getByRole('button', { name: 'Enable billing entities' })).toBeVisible()
+})

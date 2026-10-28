@@ -299,6 +299,20 @@ export {
 } from './settings/billing-entities/BillingEntityGrid'
 export type { BillingEntityGridProps } from './settings/billing-entities/BillingEntityGrid'
 export {
+  BillingEntityDetail,
+  BillingEntityDetailProvenance,
+  BILLING_ENTITY_TABS,
+} from './settings/billing-entities/BillingEntityDetail'
+export type {
+  BillingEntityDetailProps,
+  BillingEntityTab,
+} from './settings/billing-entities/BillingEntityDetail'
+export {
+  BillingEntityForm,
+  BillingEntityFormProvenance,
+} from './settings/billing-entities/BillingEntityForm'
+export type { BillingEntityFormProps } from './settings/billing-entities/BillingEntityForm'
+export {
   BillingEntitiesEnableCard,
   BillingEntitiesEnableCardProvenance,
 } from './settings/billing-entities/BillingEntitiesEnableCard'

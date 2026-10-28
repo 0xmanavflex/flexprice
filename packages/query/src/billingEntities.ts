@@ -246,6 +246,9 @@ export function useCreateBillingEntity() {
       )
     },
     onSuccess: refresh,
+    meta: {
+      notify: { success: 'Billing entity created', error: 'Could not create the billing entity.' },
+    },
   })
 }
 
@@ -268,5 +271,8 @@ export function useUpdateBillingEntity() {
       )
     },
     onSuccess: refresh,
+    meta: {
+      notify: { success: 'Billing entity saved', error: 'Could not save the billing entity.' },
+    },
   })
 }

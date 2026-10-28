@@ -127,6 +127,17 @@ const CustomerDetailPage = lazy(() =>
 )
 import { parseCustomerTab } from '@/pages/customers/CustomerDetailPage'
 import { parseActivitySearch, type ActivitySearch } from '@/pages/customers/activitySearch'
+const BillingEntityFormPage = lazy(() =>
+  import('@/pages/settings/billing-entities/BillingEntityFormPage').then((m) => ({
+    default: m.BillingEntityFormPage,
+  })),
+)
+const BillingEntityDetailPage = lazy(() =>
+  import('@/pages/settings/billing-entities/BillingEntityDetailPage').then((m) => ({
+    default: m.BillingEntityDetailPage,
+  })),
+)
+import { parseBillingEntityTab } from '@/pages/settings/billing-entities/BillingEntityDetailPage'
 const CustomerFormPage = lazy(() =>
   import('@/pages/customers/CustomerFormPage').then((m) => ({ default: m.CustomerFormPage })),
 )
@@ -135,7 +146,12 @@ const CustomerSubscriptionFormPage = lazy(() =>
     default: m.CustomerSubscriptionFormPage,
   })),
 )
-import { parseSubscriptionTab, type CustomerTab, type SubscriptionTab } from '@fp/ui/pages'
+import {
+  parseSubscriptionTab,
+  type BillingEntityTab,
+  type CustomerTab,
+  type SubscriptionTab,
+} from '@fp/ui/pages'
 import { parseCustomerSearch } from './customerSearch'
 import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
 const SubscriptionListPage = lazy(() =>
@@ -2386,6 +2402,68 @@ function TaxEditRouteComponent() {
   return <TaxFormPage mode="edit" taxRateId={taxRateId} onCancel={toList} onDone={toList} />
 }
 
+/** Billing entity create and detail: full pages inside the Settings frame. */
+const billingEntityCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/billing-entities/new',
+  component: BillingEntityCreateRouteComponent,
+})
+
+function BillingEntityCreateRouteComponent() {
+  const navigate = useNavigate()
+
+  return (
+    <SettingsListFrame sectionId="billing-entities">
+      <BillingEntityFormPage
+        onCancel={() => void navigate({ to: '/settings', search: BILLING_ENTITIES_SECTION })}
+        onDone={(entityId) =>
+          void navigate({
+            to: '/settings/billing-entities/$entityId',
+            params: { entityId },
+            search: {} as never,
+          })
+        }
+      />
+    </SettingsListFrame>
+  )
+}
+
+const billingEntityDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/billing-entities/$entityId',
+  validateSearch: (search: Record<string, unknown>): { tab: BillingEntityTab } => ({
+    tab: parseBillingEntityTab(search['tab']),
+  }),
+  search: { middlewares: [stripSearchParams({ tab: 'details' })] },
+  component: BillingEntityDetailRouteComponent,
+})
+
+function BillingEntityDetailRouteComponent() {
+  const { entityId } = billingEntityDetailRoute.useParams()
+  const { tab } = billingEntityDetailRoute.useSearch()
+  const navigate = useNavigate()
+
+  return (
+    <SettingsListFrame sectionId="billing-entities">
+      <BillingEntityDetailPage
+        entityId={entityId}
+        tab={tab}
+        onTabChange={(next) =>
+          void navigate({
+            to: '/settings/billing-entities/$entityId',
+            params: { entityId },
+            search: { tab: next },
+            replace: true,
+          })
+        }
+        onBack={() => void navigate({ to: '/settings', search: BILLING_ENTITIES_SECTION })}
+      />
+    </SettingsListFrame>
+  )
+}
+
+const BILLING_ENTITIES_SECTION = { section: 'billing-entities', tab: 'entities' } as const
+
 const eventsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/events',
@@ -2815,6 +2893,8 @@ export const routeTree = rootRoute.addChildren([
     checkoutRoute,
     taxCreateRoute,
     taxEditRoute,
+    billingEntityCreateRoute,
+    billingEntityDetailRoute,
     eventsRoute,
     settingsRoute,
     subscriptionCreateRoute,

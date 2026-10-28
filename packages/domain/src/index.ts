@@ -623,6 +623,7 @@ export {
   portalTabSchema,
   portalThemeSchema,
   portalUsageGraphSchema,
+  entityInvoicePreview,
   previewInvoiceNumber,
   quotedFiatCurrencies,
   rolloutToSubscriptionsActionSchema,

@@ -126,6 +126,8 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   '/settings': OPEN,
   // The tenant's own Flexprice account: open to anyone signed in, and to a
   // locked account above all: paying is its way back.
+  '/settings/billing-entities/new': write(E.Setting),
+  '/settings/billing-entities/$entityId': { writes: E.Setting },
   '/settings/usage-billing': OPEN,
   '/settings/usage-billing/go-live': OPEN,
   '/billing/checkout/success': OPEN,

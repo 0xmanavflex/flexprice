@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   defaultInvoiceConfig,
+  entityInvoicePreview,
   invoiceConfigSchema,
   previewInvoiceNumber,
   splitDelay,
 } from './invoiceConfig'
+
+const yyyymm = () => {
+  const now = new Date()
+  return `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+}
 
 const ON = new Date('2026-09-29T00:00:00Z')
 
@@ -41,6 +47,20 @@ describe('previewInvoiceNumber', () => {
     expect(
       previewInvoiceNumber({ ...defaultInvoiceConfig(), suffixLength: 3, startSequence: 42 }, ON),
     ).toBe('INV-202609-042')
+  })
+})
+
+describe('entityInvoicePreview', () => {
+  it("swaps the entity's prefix into the environment's numbering scheme", () => {
+    const config = {
+      ...defaultInvoiceConfig(),
+      prefix: 'NWS',
+      separator: '-',
+      format: 'YYYYMM',
+      startSequence: 1,
+      suffixLength: 5,
+    }
+    expect(entityInvoicePreview(config, 'NWIN')).toBe(`NWIN-${yyyymm()}-00001`)
   })
 })
 

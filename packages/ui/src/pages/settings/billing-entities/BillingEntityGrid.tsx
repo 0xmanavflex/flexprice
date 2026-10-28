@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { PlusIcon } from '@ui/icons'
-import type { BillingEntity } from '@fp/domain'
+import { RBAC_ENTITY, type BillingEntity } from '@fp/domain'
+import { WriteGate } from '@ui/compositions/access/Access'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList } from '../../shared/EntityList'
@@ -94,10 +95,12 @@ export function BillingEntityGrid({
       exportFileName="billing-entities"
       primaryAction={
         onCreate ? (
-          <Button onClick={onCreate}>
-            <PlusIcon aria-hidden className="size-4" />
-            New entity
-          </Button>
+          <WriteGate entity={RBAC_ENTITY.Setting}>
+            <Button onClick={onCreate}>
+              <PlusIcon aria-hidden className="size-4" />
+              New entity
+            </Button>
+          </WriteGate>
         ) : undefined
       }
       {...(onOpen ? { onRowClick: onOpen } : {})}

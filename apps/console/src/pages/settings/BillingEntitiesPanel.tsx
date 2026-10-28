@@ -28,7 +28,12 @@ export function BillingEntitiesPanel({ onOpenPage }: { onOpenPage: (href: string
   }
   if (status.data === undefined) return <PanelLoading rows={3} />
   if (status.data === BillingEntityMode.Enabled) {
-    return <EntityList onCreate={() => onOpenPage(NEW_ENTITY_HREF)} />
+    return (
+      <EntityList
+        onCreate={() => onOpenPage(NEW_ENTITY_HREF)}
+        onOpen={(id) => onOpenPage(`/settings/billing-entities/${encodeURIComponent(id)}`)}
+      />
+    )
   }
   return <EnableOffer mode={status.data} />
 }
@@ -63,7 +68,7 @@ function EnableOffer({ mode }: { mode: BillingEntityMode }) {
   )
 }
 
-function EntityList({ onCreate }: { onCreate: () => void }) {
+function EntityList({ onCreate, onOpen }: { onCreate: () => void; onOpen: (id: string) => void }) {
   const entities = useBillingEntities()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -100,6 +105,7 @@ function EntityList({ onCreate }: { onCreate: () => void }) {
         isLoading={entities.isPending}
         error={failure?.message ?? null}
         onRetry={() => void entities.refetch()}
+        onOpen={(entity) => onOpen(entity.id)}
         onCreate={onCreate}
       />
     </WidePanel>
