@@ -7,6 +7,7 @@ import {
   toApiError,
 } from './errors'
 import { fetchWithTimeout, transportError } from './timeout'
+import { reportRawUnauthorized } from './unauthorized'
 
 /**
  * Tenant settings: the routes the SDK cannot make, part two.
@@ -153,6 +154,8 @@ export async function request(
   }
 
   const text = await response.text()
+
+  if (response.status === 401) reportRawUnauthorized(`Bearer ${init.token}`)
 
   if (!response.ok) {
     const { message, details, fromServer } = readErrorBody(

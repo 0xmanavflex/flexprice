@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createFlexpriceClient, call } from './client'
 import { ApiError, ErrorKind } from './errors'
+import { listCreditNotes } from './creditNotes'
 
 const SERVER = 'https://api.test.flexprice.io/v1'
 
@@ -358,5 +359,27 @@ describe('401 handling', () => {
     ])
 
     expect(onUnauthorized).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('a 401 from a raw route', () => {
+  it('ends the session once, like an SDK 401', async () => {
+    const onUnauthorized = vi.fn()
+    createFlexpriceClient({
+      serverURL: SERVER,
+      auth: { getToken: async () => 'jwt-abc', getEnvironmentId: async () => 'env_123' },
+      onUnauthorized,
+    })
+    vi.stubGlobal('fetch', async () => new Response('{}', { status: 401 }))
+    const params = { limit: 10, offset: 0 }
+
+    await expect(listCreditNotes(SERVER, 'jwt-abc', 'env_123', params)).rejects.toMatchObject({
+      kind: ErrorKind.Unauthorized,
+    })
+    await expect(listCreditNotes(SERVER, 'jwt-abc', 'env_123', params)).rejects.toBeInstanceOf(
+      ApiError,
+    )
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+    vi.unstubAllGlobals()
   })
 })
