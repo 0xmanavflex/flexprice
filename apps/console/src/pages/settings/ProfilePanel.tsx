@@ -163,7 +163,6 @@ function ProfileForm({ tenant, sellerOnEntities }: { tenant: Tenant; sellerOnEnt
               path="billingEmail"
               draft={draft}
               busy={busy}
-              readOnly={sellerOnEntities}
               type="email"
               hint="Where invoices from Flexprice are sent."
               placeholder="billing@northwind.example"
@@ -173,7 +172,6 @@ function ProfileForm({ tenant, sellerOnEntities }: { tenant: Tenant; sellerOnEnt
               path="helpEmail"
               draft={draft}
               busy={busy}
-              readOnly={sellerOnEntities}
               type="email"
               hint="Shown to your customers when they need help with a bill."
               placeholder="support@northwind.example"
@@ -183,7 +181,6 @@ function ProfileForm({ tenant, sellerOnEntities }: { tenant: Tenant; sellerOnEnt
               path="phone"
               draft={draft}
               busy={busy}
-              readOnly={sellerOnEntities}
               type="tel"
               placeholder="+1 555 0142"
               last
@@ -213,7 +210,6 @@ function ProfileForm({ tenant, sellerOnEntities }: { tenant: Tenant; sellerOnEnt
               path="address.line1"
               draft={draft}
               busy={busy}
-              readOnly={sellerOnEntities}
               autoComplete="address-line1"
             />
             <TextField
@@ -221,36 +217,14 @@ function ProfileForm({ tenant, sellerOnEntities }: { tenant: Tenant; sellerOnEnt
               path="address.line2"
               draft={draft}
               busy={busy}
-              readOnly={sellerOnEntities}
               autoComplete="address-line2"
             />
-            {sellerOnEntities ? (
-              <>
-                <TextField
-                  label="Country"
-                  path="address.country"
-                  draft={draft}
-                  busy={busy}
-                  readOnly
-                />
-                <TextField
-                  label="State or province"
-                  path="address.state"
-                  draft={draft}
-                  busy={busy}
-                  readOnly
-                />
-                <TextField label="City" path="address.city" draft={draft} busy={busy} readOnly />
-              </>
-            ) : (
-              <AddressRegionRows draft={draft} busy={busy} />
-            )}
+            <AddressRegionRows draft={draft} busy={busy} />
             <TextField
               label="Postal code"
               path="address.postalCode"
               draft={draft}
               busy={busy}
-              readOnly={sellerOnEntities}
               autoComplete="postal-code"
               last
             />
@@ -359,14 +333,12 @@ function TextField({
   placeholder,
   type,
   autoComplete,
-  readOnly,
   last,
 }: {
   label: string
   path: string
   draft: ReturnType<typeof useDraft<UpdateTenant>>
   busy: boolean
-  readOnly?: boolean
   required?: boolean
   hint?: string
   placeholder?: string
@@ -398,7 +370,6 @@ function TextField({
           id={id}
           disabled={busy}
           required={required}
-          readOnly={readOnly}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
           value={draft.text(path)}
