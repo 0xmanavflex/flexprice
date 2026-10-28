@@ -8,6 +8,7 @@ import {
   type ConnectionFormValues,
   type ConnectionSpec,
   type Integration,
+  type IntegrationConnection,
   connectionSpecFor,
   connectionToFormValues,
   manageFormSchema,
@@ -60,6 +61,8 @@ export const ManageConnectionSheetProvenance = provenance({
 export interface ManageConnectionSheetProps {
   /** The connected integration. `null` closes the sheet. */
   integration: Integration | null
+  /** The one connection being managed; `null` closes the sheet. */
+  connection: IntegrationConnection | null
   logo: ReactNode
   context: ConnectionContext
   onClose: () => void
@@ -73,6 +76,7 @@ export interface ManageConnectionSheetProps {
 
 export function ManageConnectionSheet({
   integration,
+  connection,
   logo,
   context,
   onClose,
@@ -86,12 +90,16 @@ export function ManageConnectionSheet({
   const spec = integration ? connectionSpecFor(integration.providerType) : undefined
   const busy = isSaving || isDisconnecting
   return (
-    <Sheet open={integration !== null} onOpenChange={(open) => !open && !busy && onClose()}>
+    <Sheet
+      open={integration !== null && connection !== null}
+      onOpenChange={(open) => !open && !busy && onClose()}
+    >
       <SheetContent className="gap-0">
-        {integration?.connections[0] && spec ? (
+        {integration && connection && spec ? (
           <ManageForm
-            key={integration.connections[0].id}
+            key={connection.id}
             integration={integration}
+            connection={connection}
             spec={spec}
             logo={logo}
             context={context}
@@ -103,7 +111,7 @@ export function ManageConnectionSheet({
             saveError={saveError}
             disconnectError={disconnectError}
           />
-        ) : integration ? (
+        ) : integration && connection ? (
           <SheetHeader>
             <SheetTitle>{integration.name}</SheetTitle>
             <SheetDescription>This connection cannot be managed here.</SheetDescription>
@@ -116,6 +124,7 @@ export function ManageConnectionSheet({
 
 function ManageForm({
   integration,
+  connection,
   spec,
   logo,
   context,
@@ -126,15 +135,15 @@ function ManageForm({
   isDisconnecting,
   saveError,
   disconnectError,
-}: Omit<ManageConnectionSheetProps, 'integration'> & {
+}: Omit<ManageConnectionSheetProps, 'integration' | 'connection'> & {
   integration: Integration
+  connection: IntegrationConnection
   spec: ConnectionSpec
   isSaving: boolean
   isDisconnecting: boolean
   saveError: string | null
   disconnectError: string | null
 }) {
-  const connection = integration.connections[0]!
   const [confirming, setConfirming] = useState(false)
   const form = useCalmForm<ConnectionFormValues>({
     resolver: standardSchemaResolver(

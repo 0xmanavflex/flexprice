@@ -35,7 +35,7 @@ import {
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
   useCustomerIntegrationLinks,
-  useIntegrations,
+  useConnections,
   useLinkCustomerIntegration,
   useTaxRates,
   useUnlinkCustomerIntegration,
@@ -182,7 +182,7 @@ export function SubscriptionDetailPage({
   // customer overview reads, narrowed to this contract.
   const entitlementUsage = useContractUsageSummary(customerId, subscriptionId)
   const integrationLinks = useCustomerIntegrationLinks(customerId)
-  const integrations = useIntegrations()
+  const integrations = useConnections()
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const createEntitlement = useCreateSubscriptionEntitlement(subscriptionId)

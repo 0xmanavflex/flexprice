@@ -94,13 +94,13 @@ export function useConnections(options: { billingEntityId?: string; enabled?: bo
   const auth = useFlexpriceAuth()
 
   return useQuery({
-    queryKey: queryKeys.integrations.list(options.billingEntityId),
+    queryKey: queryKeys.integrations.list(
+      options.billingEntityId ? { billingEntityId: options.billingEntityId } : {},
+    ),
     queryFn: () => fetchIntegrations(serverURL, auth, options.billingEntityId),
     enabled: options.enabled ?? true,
   })
 }
-
-export const useIntegrations = useConnections
 
 /** Token and environment for a write, or the error a signed-out caller should see. */
 async function credentials(auth: AuthSource) {

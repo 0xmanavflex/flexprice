@@ -12,6 +12,10 @@ export interface ConnectorCardProps {
   connected: boolean
   onConnect: () => void
   onConfigure: () => void
+  /** The connected action's label; "Configure" by default. */
+  configureLabel?: string
+  /** Under the description, e.g. the connections it holds. */
+  children?: ReactNode
   testId?: string
   className?: string
 }
@@ -30,6 +34,8 @@ export function ConnectorCard({
   connected,
   onConnect,
   onConfigure,
+  configureLabel = 'Configure',
+  children,
   testId,
   className,
 }: ConnectorCardProps) {
@@ -62,6 +68,7 @@ export function ConnectorCard({
             {description}
           </p>
         </div>
+        {children}
       </div>
 
       <div className="flex items-center justify-between gap-3 px-3 py-2.5">
@@ -76,11 +83,11 @@ export function ConnectorCard({
               size="sm"
               variant="ghost"
               className="text-muted-foreground h-7 px-2"
-              aria-label={`Configure ${name}`}
+              aria-label={`${configureLabel} ${name}`}
               onClick={onConfigure}
             >
               <SettingsIcon aria-hidden="true" />
-              Configure
+              {configureLabel}
             </Button>
           </>
         ) : (

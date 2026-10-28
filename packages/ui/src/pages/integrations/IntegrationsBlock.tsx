@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SearchIcon } from '@ui/icons'
-import type { Integration } from '@fp/domain'
+import { effectiveEntityId, type Integration } from '@fp/domain'
 import { ConnectorCard } from '@ui/compositions/layout/ConnectorCard'
 import { Button } from '@ui/components/primitives/button'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
@@ -21,6 +21,8 @@ import {
 import { Bone, SkeletonRegion } from '@ui/compositions/feedback/Skeletons'
 import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
 import { provenance } from '@ui/provenance'
+import { Pill } from '../shared/cells'
+import type { ListBillingEntity } from '../shared/billingEntityColumn'
 
 /**
  * The integrations gallery. The `settings-13` block is kept verbatim in
@@ -64,10 +66,49 @@ export interface IntegrationsBlockProps {
   error?: IntegrationsFailure | null
   /** Open the connect flow for an unconnected integration. */
   onConnect?: ((integration: Integration) => void) | undefined
-  /** Open the manage sheet for a connected integration. */
+  /**
+   * Open the manage sheet for a connected integration, or, with `entities`,
+   * its provider page.
+   */
   onConfigure?: ((integration: Integration) => void) | undefined
   onRetry?: (() => void) | undefined
   isRetrying?: boolean | undefined
+  /**
+   * The environment's billing entities, given only while they are enabled: a
+   * connected card then lists its connections by entity and the entities that
+   * lack one.
+   */
+  entities?: readonly ListBillingEntity[] | undefined
+}
+
+/** A connected provider's connections, each with its entity, and one line per entity without one. */
+function EntityConnections({
+  integration,
+  entities,
+}: {
+  integration: Integration
+  entities: readonly ListBillingEntity[]
+}) {
+  const owned = integration.connections.map((connection) => ({
+    connection,
+    entityId: effectiveEntityId(connection, entities),
+  }))
+  const missing = entities.filter((entity) => !owned.some((item) => item.entityId === entity.id))
+  return (
+    <ul className="flex flex-col gap-1.5 text-[13px]">
+      {owned.map(({ connection, entityId }) => (
+        <li key={connection.id} className="flex items-center justify-between gap-2">
+          <span className="truncate">{connection.name}</span>
+          <Pill size="sm">{entities.find((entity) => entity.id === entityId)?.name ?? '—'}</Pill>
+        </li>
+      ))}
+      {missing.map((entity) => (
+        <li key={entity.id} className="text-muted-foreground">
+          {entity.name} has no {integration.name} account
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 function GallerySkeleton() {
@@ -123,6 +164,7 @@ export function IntegrationsBlock({
   onConfigure,
   onRetry,
   isRetrying,
+  entities,
 }: IntegrationsBlockProps) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState(ALL)
@@ -160,7 +202,12 @@ export function IntegrationsBlock({
       connected={isConnected(integration)}
       onConnect={() => onConnect?.(integration)}
       onConfigure={() => onConfigure?.(integration)}
-    />
+      {...(entities && isConnected(integration) ? { configureLabel: 'Manage' } : {})}
+    >
+      {entities && isConnected(integration) ? (
+        <EntityConnections integration={integration} entities={entities} />
+      ) : null}
+    </ConnectorCard>
   )
 
   const grid = 'grid gap-4 md:grid-cols-2 xl:grid-cols-3'

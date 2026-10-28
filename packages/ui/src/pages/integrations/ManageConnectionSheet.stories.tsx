@@ -25,6 +25,7 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   args: {
     integration: stripe,
+    connection: stripe.connections[0]!,
     logo: <IntegrationLogo integration={stripe} />,
     context: {
       webhookBaseUrl: 'https://api.flexprice.io/v1',
@@ -108,5 +109,5 @@ export const SaveFailed: Story = {
 }
 
 export const Closed: Story = {
-  args: { integration: null },
+  args: { integration: null, connection: null },
 }

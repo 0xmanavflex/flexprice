@@ -78,6 +78,22 @@ export const AllConnected: Story = {
   args: { integrations: makeIntegrations(INTEGRATION_CATALOG.length, INTEGRATION_CATALOG.length) },
 }
 
+/** With billing entities on, a connected card lists its connections by entity and the entities without one. */
+export const WithBillingEntities: Story = {
+  args: {
+    integrations: makeIntegrations(INTEGRATION_CATALOG.length, 1),
+    entities: [
+      { id: 'be_us', name: 'Northwind US', isDefault: true },
+      { id: 'be_uk', name: 'Northwind UK', isDefault: false },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Northwind UK has no Stripe account')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Manage Stripe' })).toBeInTheDocument()
+  },
+}
+
 /** No catalogue at all is the first-run state, not a filtered miss. */
 export const Empty: Story = {
   args: { integrations: [] },

@@ -12,7 +12,7 @@ import {
   useBillingEntityStatus,
   useCustomer,
   useCustomerIntegrationLinks,
-  useIntegrations,
+  useConnections,
   useLinkCustomerIntegration,
   useUnlinkCustomerIntegration,
   usePushCustomerToIntegrations,
@@ -103,7 +103,7 @@ export function CustomerDetailPage({
   const [openActivityId, setOpenActivityId] = useState<string | null>(null)
   const openActivity = activity.data?.find((entry) => entry.id === openActivityId) ?? null
   const integrationLinks = useCustomerIntegrationLinks(customerId)
-  const integrations = useIntegrations()
+  const integrations = useConnections()
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const pushCustomer = usePushCustomerToIntegrations(customerId)

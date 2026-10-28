@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures'
+import { ShellPage } from './pages/shell'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -12,6 +13,8 @@ test.beforeEach(async ({ context }) => {
     JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }),
   )
 })
+
+const SANDBOX_ENVIRONMENT = 'env_01KVSNYVPMAP6JJGDF177V2DE6'
 
 test.describe('integrations', () => {
   test('shows the catalogue with connection status', async ({ page }) => {
@@ -77,5 +80,83 @@ test.describe('integrations', () => {
     await confirm.getByRole('button', { name: 'Disconnect' }).click()
 
     await expect(page.getByTestId('integration-stripe')).toContainText('Not connected')
+  })
+
+  test('lists connections per billing entity and manages them from the provider page', async ({
+    page,
+  }) => {
+    await page.addInitScript((environmentId) => {
+      if (window.sessionStorage.getItem('flexprice.mock.billingEntities')) return
+      const entity = (id: string, name: string, isDefault: boolean, prefix: string) => ({
+        id,
+        name,
+        legal_name: name,
+        is_default: isDefault,
+        invoice_number_prefix: prefix,
+        seller_details: { address: {} },
+        tax_identifiers: [],
+        status: 'published',
+        created_at: '2026-10-01T00:00:00Z',
+      })
+      window.sessionStorage.setItem(
+        'flexprice.mock.billingEntities',
+        JSON.stringify({
+          seq: 3,
+          environments: [
+            [
+              environmentId,
+              {
+                mode: 'enabled',
+                readsSinceEnable: 2,
+                rows: [
+                  entity('be_us', 'Northwind US', true, 'US'),
+                  entity('be_eu', 'Northwind EU', false, 'EU'),
+                  entity('be_uk', 'Northwind UK', false, 'UK'),
+                ],
+              },
+            ],
+          ],
+        }),
+      )
+    }, SANDBOX_ENVIRONMENT)
+
+    const shell = new ShellPage(page)
+    await shell.goto('/')
+    await expect(shell.home).toBeVisible()
+    const created = await page.evaluate(async (environmentId) => {
+      const response = await fetch('/v1/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Environment-ID': environmentId },
+        body: JSON.stringify({
+          name: 'Stripe EU',
+          provider_type: 'stripe',
+          billing_entity_id: 'be_eu',
+          encrypted_secret_data: {},
+        }),
+      })
+      return response.status
+    }, SANDBOX_ENVIRONMENT)
+    expect(created).toBe(201)
+    // Client-side, so the mock keeps the connection.
+    await shell.go('Integrations')
+
+    const card = page.getByTestId('integration-stripe')
+    await expect(card).toContainText('Stripe EU')
+    await expect(card).toContainText('Northwind EU')
+    await expect(card).toContainText('Northwind UK has no Stripe account')
+
+    await card.getByRole('button', { name: 'Manage Stripe' }).click()
+    await expect(page).toHaveURL(/\/integrations\/stripe$/)
+    await expect(page.getByRole('row')).toHaveCount(4)
+    const uk = page.getByRole('row').filter({ hasText: 'Northwind UK' })
+    await expect(uk.getByRole('button', { name: 'Connect Northwind UK' })).toBeVisible()
+
+    await page
+      .getByRole('row')
+      .filter({ hasText: 'Stripe EU' })
+      .getByRole('button', { name: 'Configure Stripe EU' })
+      .click()
+    const sheet = page.getByRole('dialog', { name: /Stripe/ })
+    await expect(sheet.getByLabel('Connection name')).toHaveValue('Stripe EU')
   })
 })

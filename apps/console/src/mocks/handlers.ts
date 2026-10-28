@@ -4109,7 +4109,8 @@ export const handlers = [
 
   /*
    * `/connections` and the OAuth pair: connect, edit and disconnect a
-   * provider. Like the real API: one published connection per provider, a
+   * provider. Like the real API: one published connection per provider (per
+   * provider and billing entity once the environment's entities are enabled), a
    * duplicate is refused, secrets are accepted and never echoed, and DELETE
    * archives.
    */
@@ -4128,7 +4129,15 @@ export const handlers = [
   http.post(`${BASE}/connections`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
     const provider = String(body['provider_type'] ?? '')
-    if (publishedProviders().includes(provider) && provider !== 's3' && provider !== 'gcs') {
+    const perEntity = entityEnvironment(request).mode === 'enabled'
+    const entityId = body['billing_entity_id'] ?? null
+    const taken = connectionRows.some(
+      (row) =>
+        row['connection_status'] === 'published' &&
+        row['provider_type'] === provider &&
+        (!perEntity || (row['billing_entity_id'] ?? null) === entityId),
+    )
+    if (taken && provider !== 's3' && provider !== 'gcs') {
       return HttpResponse.json(
         { message: `A connection for ${provider} already exists in this environment` },
         { status: 409 },

@@ -535,6 +535,11 @@ export type {
   PricingPlanCardProps,
   PricingPlanSection,
 } from './product-catalog/pricing-widget/PricingPlanCard'
+export {
+  ProviderConnections,
+  ProviderConnectionsProvenance,
+} from './integrations/ProviderConnections'
+export type { ProviderConnectionsProps } from './integrations/ProviderConnections'
 export { PricingCatalogBlock } from './product-catalog/pricing-widget/PricingCatalogBlock'
 export { toast, Toaster } from 'sonner'
 

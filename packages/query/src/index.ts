@@ -629,7 +629,6 @@ export {
   useCompleteOAuth,
   useConnectIntegration,
   useDisconnectIntegration,
-  useIntegrations,
   useStartOAuth,
   useUpdateConnection,
 } from './integrations'
