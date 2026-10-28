@@ -94,6 +94,8 @@ export interface Payment {
   createdAt: Date | null
   /** When it landed. Null until (and unless) it does. */
   succeededAt: Date | null
+  /** The billing entity this payment was collected for; absent when the API sends none. */
+  billingEntityId?: string
   /** The gateway's own id for the charge (`pi_…`), when it went through one. */
   gatewayPaymentId?: string
 }

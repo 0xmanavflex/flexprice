@@ -109,7 +109,13 @@ function str(source: Record<string, unknown>, key: string): string {
 export async function request(
   serverURL: string,
   path: string,
-  init: { method: string; token: string; environmentId: string; body?: unknown },
+  init: {
+    method: string
+    token: string
+    environmentId: string
+    body?: unknown
+    signal?: AbortSignal
+  },
 ): Promise<unknown> {
   if (init.environmentId.length === 0) {
     /*
@@ -138,6 +144,7 @@ export async function request(
       method: init.method,
       headers,
       ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      ...(init.signal ? { signal: init.signal } : {}),
     })
   } catch (cause) {
     // `fetch` rejects only for transport: offline, DNS, CORS, abort, deadline.

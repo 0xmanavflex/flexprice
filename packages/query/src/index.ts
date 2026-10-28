@@ -67,6 +67,7 @@ export { PASSWORD_ONLY, useAuthCapabilities, useAuthCapabilitiesValue } from './
 export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
 
 export {
+  fetchInvoice,
   fetchInvoices,
   isServerFilterable,
   toCreateInvoiceRequest,

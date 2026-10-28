@@ -338,6 +338,33 @@ describe('runInvoiceEdit: the whole edit page, in the order the API needs', () =
   })
 })
 
+describe('toInvoice billing entity', () => {
+  it('keeps the billing entity and the seller snapshot', () => {
+    const invoice = toInvoice({
+      billingEntityId: 'be_1',
+      sellerSnapshot: {
+        billingEntityId: 'be_1',
+        legalName: 'Acme Ltd',
+        sellerDetails: { email: 's@acme.test', address: { addressCity: 'Pune' } },
+        taxIdentifiers: [{ country: 'IN', type: 'GST', value: '27AAA' }],
+      },
+    })
+    expect(invoice.billingEntityId).toBe('be_1')
+    expect(invoice.sellerSnapshot).toMatchObject({
+      legalName: 'Acme Ltd',
+      email: 's@acme.test',
+      address: { city: 'Pune' },
+      taxIdentifiers: [{ country: 'IN', type: 'GST', value: '27AAA' }],
+    })
+  })
+
+  it('leaves both off when the wire has none', () => {
+    const invoice = toInvoice({})
+    expect(invoice).not.toHaveProperty('billingEntityId')
+    expect(invoice).not.toHaveProperty('sellerSnapshot')
+  })
+})
+
 describe('toInvoice subscription', () => {
   // The row menu's "View contract" needs it; one-off invoices have none.
   it('keeps the contract that raised the invoice, and null when there is none', () => {

@@ -82,6 +82,7 @@ export type {
   InvoiceDetail,
   InvoiceDetailLine,
   InvoiceQuery,
+  InvoiceSellerSnapshot,
   InvoiceStatusInput,
   InvoiceTax,
 } from './invoice'

@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type Flexprice, call } from '@fp/api'
+import {
+  type AuthSource,
+  type Flexprice,
+  call,
+  createCustomer,
+  getCustomer,
+  searchCustomers,
+} from '@fp/api'
 import {
   CUSTOMER_FILTERS,
   type CreateCustomer,
@@ -25,7 +32,8 @@ import {
   toFilterConditions,
   toMetadataFilter,
 } from './search'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
+import { credentials, fromWire, toWireBody } from './wire'
 import { type SubscriptionWire, toSubscription } from './subscriptions'
 import { type InvoicePage, fetchInvoices } from './invoices'
 import { type FeatureUsageWire, toFeatureUsage } from './tenant'
@@ -51,6 +59,7 @@ export interface CustomerIntegrationWire {
 /** The wire shape this reads, after the SDK camelCases the response. */
 export interface CustomerWire {
   id?: string | undefined
+  billingEntityId?: string | undefined
   name?: string | undefined
   email?: string | undefined
   externalId?: string | undefined
@@ -101,6 +110,7 @@ export function toCustomer(wire: CustomerWire): Customer {
     ...(wire.billingCurrency ? { billingCurrency: wire.billingCurrency.toLowerCase() } : {}),
     ...(wire.timezone ? { timezone: wire.timezone } : {}),
     status,
+    ...(wire.billingEntityId ? { billingEntityId: wire.billingEntityId } : {}),
     integrations: toCustomerIntegrations(wire.integrations),
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -143,15 +153,25 @@ export interface CustomerPage {
 }
 
 export async function fetchCustomers(
-  client: Flexprice,
+  serverURL: string,
+  auth: AuthSource,
   query: CustomerQuery,
   signal?: AbortSignal,
 ): Promise<CustomerPage> {
-  const response = await call(
-    (options) => client.customers.queryCustomer(toCustomerFilter(query) as never, options),
-    signal,
+  const { token, environmentId } = await credentials(auth, 'Sign in to view customers.')
+  const response = fromWire<{
+    items?: CustomerWire[] | null
+    pagination?: { total?: number }
+  }>(
+    await searchCustomers(
+      serverURL,
+      token,
+      environmentId,
+      toWireBody(toCustomerFilter(query)),
+      signal,
+    ),
   )
-  const customers = (response.items ?? []).map((item) => toCustomer(item as CustomerWire))
+  const customers = (response?.items ?? []).map(toCustomer)
 
   /*
    * No narrowing happens here any more, and that is the fix.
@@ -175,16 +195,17 @@ export async function fetchCustomers(
    */
   return {
     customers,
-    total: response.pagination?.total ?? 0,
+    total: response?.pagination?.total ?? 0,
   }
 }
 
 export function useCustomers(query: CustomerQuery, options: { enabled?: boolean } = {}) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery({
     queryKey: queryKeys.customers.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: ({ signal }) => fetchCustomers(client, query, signal),
+    queryFn: ({ signal }) => fetchCustomers(serverURL, auth, query, signal),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -233,12 +254,14 @@ export function toCustomerDetail(wire: CustomerDetailWire): CustomerDetail {
 }
 
 export async function fetchCustomer(
-  client: Flexprice,
+  serverURL: string,
+  auth: AuthSource,
   id: string,
   signal?: AbortSignal,
 ): Promise<CustomerDetail> {
-  const response = await call((options) => client.customers.getCustomer(id, options), signal)
-  return toCustomerDetail(response as CustomerDetailWire)
+  const { token, environmentId } = await credentials(auth, 'Sign in to view this customer.')
+  const body = await getCustomer(serverURL, token, environmentId, id, signal)
+  return toCustomerDetail(fromWire<CustomerDetailWire>(body))
 }
 
 /**
@@ -249,11 +272,12 @@ export async function fetchCustomer(
  * a detail page reads the customer first and scopes the rest to what it finds.
  */
 export function useCustomer(id: string) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery({
     queryKey: queryKeys.customers.detail(id),
-    queryFn: ({ signal }) => fetchCustomer(client, id, signal),
+    queryFn: ({ signal }) => fetchCustomer(serverURL, auth, id, signal),
     enabled: id.length > 0,
   })
 }
@@ -308,12 +332,15 @@ export function useCustomerSubscriptions(customerId: string) {
  * is derived, so a draft reads "Draft" and a past-due one "Overdue".
  */
 export function useCustomerInvoices(customerId: string) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery<InvoicePage>({
     queryKey: queryKeys.invoices.list({ customerId }),
     queryFn: ({ signal }) =>
-      fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, pageSize: 200 }, signal, { customerId }),
+      fetchInvoices(serverURL, auth, { ...DEFAULT_INVOICE_QUERY, pageSize: 200 }, signal, {
+        customerId,
+      }),
     enabled: customerId.length > 0,
   })
 }
@@ -443,13 +470,21 @@ export function toUpdateCustomerRequest(draft: EditCustomer): Record<string, unk
 }
 
 export function useCreateCustomer() {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
   const queryClient = useQueryClient()
 
   return useMutation({
     meta: { notify: { success: 'Customer created', error: 'Could not create the customer.' } },
-    mutationFn: (draft: CreateCustomer) =>
-      call(() => client.customers.createCustomer(toCreateCustomerRequest(draft) as never)),
+    mutationFn: async (draft: CreateCustomer) => {
+      const { token, environmentId } = await credentials(auth, 'Sign in to create a customer.')
+      return createCustomer(
+        serverURL,
+        token,
+        environmentId,
+        toWireBody(toCreateCustomerRequest(draft)),
+      )
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })

@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Flexprice } from '@fp/api'
-import { call } from '@fp/api'
+import { type AuthSource, type Flexprice, call, getInvoice, searchInvoices } from '@fp/api'
 import {
   type CreateInvoice,
   type Invoice,
   type InvoiceDetail,
   type InvoiceQuery,
+  type InvoiceSellerSnapshot,
   InvoiceLinePriceType,
   InvoiceSortField,
   InvoiceStatus,
@@ -19,7 +19,8 @@ import {
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { toFilterConditions } from './search'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
+import { credentials, fromWire, toWireBody } from './wire'
 
 /**
  * The translation layer, and the reason it is not in a component.
@@ -93,7 +94,59 @@ export function toInvoiceFilter(
 }
 
 /** The shape this mapper reads. Structural, so a fixture need not be complete. */
+export interface SellerSnapshotWire {
+  billingEntityId?: string | undefined
+  legalName?: string | undefined
+  sellerDetails?:
+    | {
+        email?: string | undefined
+        helpEmail?: string | undefined
+        phone?: string | undefined
+        address?:
+          | {
+              addressLine1?: string | undefined
+              addressLine2?: string | undefined
+              addressCity?: string | undefined
+              addressState?: string | undefined
+              addressPostalCode?: string | undefined
+              addressCountry?: string | undefined
+            }
+          | undefined
+      }
+    | undefined
+  taxIdentifiers?:
+    | { country?: string | undefined; type?: string | undefined; value?: string | undefined }[]
+    | undefined
+}
+
+function toSellerSnapshot(wire: SellerSnapshotWire): InvoiceSellerSnapshot {
+  const details = wire.sellerDetails
+  const address = details?.address
+  return {
+    billingEntityId: wire.billingEntityId ?? '',
+    legalName: wire.legalName ?? '',
+    email: details?.email ?? '',
+    helpEmail: details?.helpEmail ?? '',
+    phone: details?.phone ?? '',
+    address: {
+      line1: address?.addressLine1 ?? '',
+      line2: address?.addressLine2 ?? '',
+      city: address?.addressCity ?? '',
+      state: address?.addressState ?? '',
+      postalCode: address?.addressPostalCode ?? '',
+      country: address?.addressCountry ?? '',
+    },
+    taxIdentifiers: (wire.taxIdentifiers ?? []).map((identifier) => ({
+      country: identifier.country ?? '',
+      type: identifier.type ?? '',
+      value: identifier.value ?? '',
+    })),
+  }
+}
+
 export interface InvoiceWire {
+  billingEntityId?: string | undefined
+  sellerSnapshot?: SellerSnapshotWire | undefined
   subscriptionId?: string | undefined
   id?: string | undefined
   invoiceNumber?: string | undefined
@@ -142,6 +195,8 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
     issuedAt: wire.issueDate ?? null,
     periodStart: wire.periodStart ?? null,
     periodEnd: wire.periodEnd ?? null,
+    ...(wire.billingEntityId ? { billingEntityId: wire.billingEntityId } : {}),
+    ...(wire.sellerSnapshot ? { sellerSnapshot: toSellerSnapshot(wire.sellerSnapshot) } : {}),
   }
 }
 
@@ -152,18 +207,28 @@ export interface InvoicePage {
 }
 
 export async function fetchInvoices(
-  client: Flexprice,
+  serverURL: string,
+  auth: AuthSource,
   query: InvoiceQuery,
   signal?: AbortSignal,
   scope?: { customerId?: string },
 ): Promise<InvoicePage> {
-  const response = await call(
-    (options) => client.invoices.queryInvoice(toInvoiceFilter(query, scope) as never, options),
-    signal,
+  const { token, environmentId } = await credentials(auth, 'Sign in to view invoices.')
+  const response = fromWire<{
+    items?: InvoiceWire[] | null
+    pagination?: { total?: number }
+  }>(
+    await searchInvoices(
+      serverURL,
+      token,
+      environmentId,
+      toWireBody(toInvoiceFilter(query, scope)),
+      signal,
+    ),
   )
   return {
-    invoices: (response.items ?? []).map((item) => toInvoice(item as InvoiceWire)),
-    total: response.pagination?.total ?? 0,
+    invoices: (response?.items ?? []).map((item) => toInvoice(item)),
+    total: response?.pagination?.total ?? 0,
   }
 }
 
@@ -176,11 +241,12 @@ export async function fetchInvoices(
  * component.
  */
 export function useInvoices(query: InvoiceQuery, options: { enabled?: boolean } = {}) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery({
     queryKey: queryKeys.invoices.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: ({ signal }) => fetchInvoices(client, query, signal),
+    queryFn: ({ signal }) => fetchInvoices(serverURL, auth, query, signal),
     // Keeps the previous page on screen while the next one loads, so sorting a
     // grid does not blank it. TanStack's replacement for keepPreviousData.
     enabled: options.enabled ?? true,
@@ -291,20 +357,26 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
   }
 }
 
+export async function fetchInvoice(
+  serverURL: string,
+  auth: AuthSource,
+  id: string,
+  signal?: AbortSignal,
+): Promise<InvoiceDetail> {
+  const { token, environmentId } = await credentials(auth, 'Sign in to view this invoice.')
+  const body = await getInvoice(serverURL, token, environmentId, id, signal)
+  return toInvoiceDetail(fromWire<InvoiceDetailWire>(body))
+}
+
 /** One invoice with its lines: `GET /invoices/{id}`. */
 export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery({
     enabled: options.enabled ?? true,
     queryKey: queryKeys.invoices.detail(id),
-    queryFn: async ({ signal }) =>
-      toInvoiceDetail(
-        (await call(
-          (options) => client.invoices.getInvoice(id, undefined, undefined, undefined, options),
-          signal,
-        )) as InvoiceDetailWire,
-      ),
+    queryFn: ({ signal }) => fetchInvoice(serverURL, auth, id, signal),
   })
 }
 
@@ -316,20 +388,15 @@ export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
  * cached) and resolves to its link, or null when no PDF exists yet.
  */
 export function useInvoicePdfLink() {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
   const queryClient = useQueryClient()
 
   return (id: string): Promise<string | null> =>
     queryClient
       .fetchQuery({
         queryKey: queryKeys.invoices.detail(id),
-        queryFn: async ({ signal }) =>
-          toInvoiceDetail(
-            (await call(
-              (options) => client.invoices.getInvoice(id, undefined, undefined, undefined, options),
-              signal,
-            )) as InvoiceDetailWire,
-          ),
+        queryFn: ({ signal }) => fetchInvoice(serverURL, auth, id, signal),
       })
       .then((invoice) => invoice.invoicePdfUrl)
 }
