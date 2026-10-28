@@ -85,6 +85,7 @@ test('billing entities: create an entity, a taken prefix is refused, then edit i
   await page.getByRole('button', { name: 'New entity' }).click()
   await page.getByRole('textbox', { name: /^name/i }).fill('Acme India')
   await page.getByRole('textbox', { name: /legal name/i }).fill('Acme India Pvt Ltd')
+  await page.getByRole('button', { name: 'Next' }).click()
   const prefix = page.getByRole('textbox', { name: /invoice prefix/i })
   await prefix.fill('NWS')
   await page.getByRole('button', { name: 'Create billing entity' }).click()
@@ -141,9 +142,7 @@ test('billing entities: add a default tax on an entity, it posts as an auto-appl
   await expect(page.getByRole('cell', { name: /Canada GST/ })).toBeVisible()
 })
 
-test('billing entities: an integrations link falls back to the details tab', async ({
-  page,
-}) => {
+test('billing entities: an integrations link falls back to the details tab', async ({ page }) => {
   await page.goto(SECTION)
   await page.getByRole('button', { name: 'Enable billing entities' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Enable billing entities' }).click()
@@ -214,6 +213,7 @@ async function addIndiaEntity(page: Page) {
   await page.getByRole('button', { name: 'New entity' }).click()
   await page.getByRole('textbox', { name: /^name/i }).fill('Northwind India')
   await page.getByRole('textbox', { name: /legal name/i }).fill('Northwind India Pvt Ltd')
+  await page.getByRole('button', { name: 'Next' }).click()
   await page.getByRole('textbox', { name: /invoice prefix/i }).fill('NWIN')
   await page.getByRole('button', { name: 'Create billing entity' }).click()
   await expect(page.getByRole('heading', { name: 'Northwind India' })).toBeVisible()

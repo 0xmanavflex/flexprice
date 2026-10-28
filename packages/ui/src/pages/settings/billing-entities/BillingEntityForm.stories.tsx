@@ -29,20 +29,24 @@ type Story = StoryObj<typeof meta>
 export const Create: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Create billing entity' }))
-    await expect(await canvas.findByText('Enter a name.')).toBeInTheDocument()
-    await expect(args.onSubmit).not.toHaveBeenCalled()
-
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Acme India ')
     await userEvent.type(canvas.getByRole('textbox', { name: /legal name/i }), 'Acme India Pvt Ltd')
-    await userEvent.type(canvas.getByRole('textbox', { name: /invoice prefix/i }), 'ACME-IN')
     await userEvent.click(canvas.getByRole('button', { name: 'Add tax ID' }))
-    await userEvent.click(canvas.getByRole('button', { name: 'Create billing entity' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await expect(await canvas.findByText('Enter a tax ID type.')).toBeInTheDocument()
-    await expect(args.onSubmit).not.toHaveBeenCalled()
     await userEvent.type(canvas.getByRole('textbox', { name: 'Tax ID 1 type' }), 'GSTIN')
     await userEvent.type(canvas.getByRole('textbox', { name: 'Tax ID 1 value' }), '29ABCDE1234F1Z5')
-    await userEvent.click(canvas.getByRole('button', { name: 'Create billing entity' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+
+    await userEvent.click(await canvas.findByRole('button', { name: 'Create billing entity' }))
+    await expect(await canvas.findByText('Enter an invoice prefix.')).toBeInTheDocument()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+
+    await userEvent.type(canvas.getByRole('textbox', { name: /invoice prefix/i }), 'ACME-IN')
+    await userEvent.click(canvas.getByRole('button', { name: 'Previous' }))
+    await expect(await canvas.findByRole('textbox', { name: /^name/i })).toHaveValue(' Acme India ')
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Create billing entity' }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Acme India',
@@ -50,5 +54,14 @@ export const Create: Story = {
         taxIdentifiers: [expect.objectContaining({ type: 'GSTIN', value: '29ABCDE1234F1Z5' })],
       }),
     )
+  },
+}
+
+export const NextNeedsAName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(await canvas.findByText('Enter a name.')).toBeInTheDocument()
+    await expect(canvas.queryByRole('textbox', { name: /invoice prefix/i })).not.toBeInTheDocument()
   },
 }

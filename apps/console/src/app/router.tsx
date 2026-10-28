@@ -2406,14 +2406,25 @@ function TaxEditRouteComponent() {
 const billingEntityCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/billing-entities/new',
+  validateSearch: (search: Record<string, unknown>): { step?: string } =>
+    typeof search.step === 'string' ? { step: search.step } : {},
   component: BillingEntityCreateRouteComponent,
 })
 
 function BillingEntityCreateRouteComponent() {
   const navigate = useNavigate()
+  const { step } = billingEntityCreateRoute.useSearch()
 
   return (
     <BillingEntityFormPage
+      {...(step ? { step } : {})}
+      onStepChange={(next) =>
+        void navigate({
+          to: '/settings/billing-entities/new',
+          search: { step: next },
+          replace: true,
+        })
+      }
       onCancel={() => void navigate({ to: '/settings', search: BILLING_ENTITIES_SECTION })}
       onDone={(entityId) =>
         void navigate({
