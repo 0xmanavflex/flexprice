@@ -13,7 +13,7 @@ export { InfoHint, InfoHintProvenance } from './forms/InfoHint'
 export type { InfoHintProps } from './forms/InfoHint'
 export type { FieldProps } from './forms/Field'
 
-export { FormCard, FormRow, FormCardProvenance } from './forms/FormCard'
+export { DashedRule, FormCard, FormRow, FormCardProvenance } from './forms/FormCard'
 export type { FormCardProps, FormRowProps } from './forms/FormCard'
 export { FormDisclosure, FormDisclosureProvenance } from './forms/FormDisclosure'
 export type { FormDisclosureProps } from './forms/FormDisclosure'
@@ -140,8 +140,32 @@ export { OptionCombobox, OptionComboboxProvenance } from './forms/OptionCombobox
 export type { OptionComboboxProps } from './forms/OptionCombobox'
 export { TimezoneCombobox, TimezoneComboboxProvenance } from './forms/TimezoneCombobox'
 export type { TimezoneComboboxProps } from './forms/TimezoneCombobox'
-export { DateInput, DateInputProvenance, formatDateValue, parseDateValue } from './forms/DateInput'
-export type { DateInputProps } from './forms/DateInput'
+export {
+  AddressPicker,
+  AddressRegionFieldsProvenance,
+  loadCities,
+  loadStates,
+  useAddressRegions,
+} from './forms/AddressRegionFields'
+export type {
+  AddressPickerModel,
+  AddressPickerProps,
+  AddressRegionPickers,
+  AddressRegionValue,
+} from './forms/AddressRegionFields'
+export {
+  DateInput,
+  DateInputProvenance,
+  DayCalendar,
+  formatDateValue,
+  formatStoredDay,
+  parseDateValue,
+  storedDayOf,
+  utcDayEnd,
+  utcDayOf,
+  utcDayStart,
+} from './forms/DateInput'
+export type { DateInputProps, DayCalendarProps } from './forms/DateInput'
 
 export * from './shell'
 

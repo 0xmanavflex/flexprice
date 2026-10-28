@@ -291,13 +291,13 @@ export function DetailTabs({
   )
 }
 
-/** Label/value pairs in a responsive grid. */
+/** Label/value pairs in a responsive grid; `1` stacks them, for a narrow sheet. */
 export function Properties({
   items,
   columns = 3,
 }: {
   items: { label: string; value: ReactNode }[]
-  columns?: 2 | 3 | 4
+  columns?: 1 | 2 | 3 | 4 | 5
 }) {
   return (
     <dl
@@ -306,6 +306,7 @@ export function Properties({
         columns === 2 && 'sm:grid-cols-2',
         columns === 3 && 'sm:grid-cols-2 lg:grid-cols-3',
         columns === 4 && 'sm:grid-cols-2 lg:grid-cols-4',
+        columns === 5 && 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5',
       )}
     >
       {items.map((item) => (

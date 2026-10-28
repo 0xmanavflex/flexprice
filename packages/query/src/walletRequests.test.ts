@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CreateWalletRequest$outboundSchema,
+  ListWalletTransactionsResponse$inboundSchema,
   TopUpWalletRequest$outboundSchema,
   UpdateWalletRequest$outboundSchema,
 } from '@flexprice/sdk/sdk/models'
@@ -12,6 +13,8 @@ import {
   toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
+  withConsumption,
+  type WalletTransactionWire,
 } from './wallets'
 
 describe('wallet requests', () => {
@@ -114,25 +117,48 @@ describe('auto top-up', () => {
     })
   })
 
-  it('sends a cool-off only when one is set, and reads it back', () => {
+  it('sends the cool-off while it is on, clears it when off, and reads it back', () => {
     const on = { enabled: true, threshold: '100', amount: '500', invoicing: true }
     const body = UpdateWalletRequest$outboundSchema.parse(
-      toUpdateAutoTopupRequest({ ...on, cooldownValue: '6', cooldownUnit: 'hour' }),
+      toUpdateAutoTopupRequest({
+        ...on,
+        cooldownEnabled: true,
+        cooldownValue: '6',
+        cooldownUnit: 'hour',
+      }),
     )
     expect(body.auto_topup?.cooldown).toEqual({ value: 6, unit: 'hour' })
-    expect(toUpdateAutoTopupRequest({ ...on, cooldownValue: '' })['autoTopup']).not.toHaveProperty(
-      'cooldown',
-    )
+    // Off sends an empty cool-off, which the API reads as "clear it".
+    expect(
+      UpdateWalletRequest$outboundSchema.parse(
+        toUpdateAutoTopupRequest({ ...on, cooldownEnabled: false, cooldownValue: '6' }),
+      ).auto_topup?.cooldown,
+    ).toEqual({ value: 0, unit: 'hour' })
+    // Undecided (an older draft): the saved one is left alone.
+    expect(toUpdateAutoTopupRequest({ ...on })['autoTopup']).not.toHaveProperty('cooldown')
     expect(
       toWallet({ id: 'w', autoTopup: { enabled: true, cooldown: { value: 2, unit: 'day' } } })
         .autoTopup,
-    ).toMatchObject({ cooldownValue: '2', cooldownUnit: 'day' })
+    ).toMatchObject({ cooldownEnabled: true, cooldownValue: '2', cooldownUnit: 'day' })
+    expect(toWallet({ id: 'w', autoTopup: { enabled: true } }).autoTopup).toMatchObject({
+      cooldownEnabled: false,
+    })
   })
 
-  it('rejects a cool-off that is not a whole number', () => {
+  it('needs a whole-number cool-off while it is on', () => {
     const on = { enabled: true, threshold: '1', amount: '1', invoicing: true }
-    expect(autoTopupSchema.safeParse({ ...on, cooldownValue: '1.5' }).success).toBe(false)
-    expect(autoTopupSchema.safeParse({ ...on, cooldownValue: '30' }).success).toBe(true)
+    expect(
+      autoTopupSchema.safeParse({ ...on, cooldownEnabled: true, cooldownValue: '1.5' }).success,
+    ).toBe(false)
+    expect(
+      autoTopupSchema.safeParse({ ...on, cooldownEnabled: true, cooldownValue: '' }).success,
+    ).toBe(false)
+    expect(
+      autoTopupSchema.safeParse({ ...on, cooldownEnabled: true, cooldownValue: '30' }).success,
+    ).toBe(true)
+    expect(
+      autoTopupSchema.safeParse({ ...on, cooldownEnabled: false, cooldownValue: 'x' }).success,
+    ).toBe(true)
   })
 
   it('sends only the switch when off, so saved values survive', () => {
@@ -161,7 +187,13 @@ describe('auto top-up', () => {
   it('reads the saved settings off a wallet', () => {
     expect(
       toWallet({ id: 'w', autoTopup: { enabled: true, threshold: 100, amount: 500 } }).autoTopup,
-    ).toEqual({ enabled: true, threshold: '100', amount: '500', invoicing: true })
+    ).toEqual({
+      enabled: true,
+      threshold: '100',
+      amount: '500',
+      invoicing: true,
+      cooldownEnabled: false,
+    })
     expect(toWallet({ id: 'w' }).autoTopup.enabled).toBe(false)
   })
 })
@@ -228,9 +260,55 @@ describe('toWallet alert settings', () => {
       }).alertSettings,
     ).toEqual({
       alertEnabled: true,
-      thresholdType: 'percentage',
+      // No type stored: the API evaluates it as absolute, so it reads as absolute.
+      thresholdType: 'absolute',
       critical: { threshold: '10', condition: 'below' },
     })
     expect(toWallet({ id: 'wallet_2' }).alertSettings).toBeNull()
+  })
+})
+
+describe('wallet transaction breakdown', () => {
+  it("reads each top-up's draw-down from the debits that name it", () => {
+    const transactions = withConsumption([
+      toWalletTransaction({ id: 'top_1', type: 'credit', creditAmount: '100' }),
+      toWalletTransaction({
+        id: 'deb_1',
+        type: 'debit',
+        description: 'API calls',
+        referenceType: 'INVOICE',
+        referenceId: 'inv_9',
+        metadata: { source: 'usage', count: 3 },
+        consumptionBreakdown: [{ creditTransactionId: 'top_1', credits: '40' }],
+      }),
+    ])
+    expect(transactions[0]?.consumption).toEqual([
+      { id: 'deb_1', product: 'API calls', contract: 'Invoice inv_9', credits: '40' },
+    ])
+    // Only string metadata is kept; no money is derived for the credits.
+    expect(transactions[1]?.metadata).toEqual({ source: 'usage' })
+    expect(transactions[1]?.reference).toEqual({ type: 'INVOICE', id: 'inv_9' })
+  })
+
+  it('keeps consumption_breakdown through the SDK response parse', () => {
+    // The raw wire, as the API sends it: the SDK must not strip the breakdown.
+    const parsed = ListWalletTransactionsResponse$inboundSchema.parse({
+      items: [
+        { id: 'top_1', type: 'credit', credit_amount: '100' },
+        {
+          id: 'deb_1',
+          type: 'debit',
+          description: 'API calls',
+          consumption_breakdown: [{ credit_transaction_id: 'top_1', credits: '40' }],
+        },
+      ],
+    })
+    const transactions = withConsumption(
+      ((parsed.items ?? []) as WalletTransactionWire[]).map(toWalletTransaction),
+    )
+    expect(transactions[1]?.drawnFrom).toEqual([{ topUpId: 'top_1', credits: '40' }])
+    expect(transactions[0]?.consumption).toEqual([
+      { id: 'deb_1', product: 'API calls', contract: '', credits: '40' },
+    ])
   })
 })

@@ -32,7 +32,6 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemFooter,
   ItemGroup,
   ItemMedia,
   ItemTitle,
@@ -191,22 +190,25 @@ export function ExportsOverview({ s3Connections, onOpenS3, children }: ExportsOv
   return (
     <PageBody>
       <div className="flex flex-col gap-6">
-        <Section
-          title="Overview"
-          description="Send billing data to your own storage on a schedule."
-        >
-          <ItemGroup className="grid gap-3 md:grid-cols-3">
-            {HIGHLIGHTS.map((item) => (
-              <Item key={item.title} role="listitem" variant="outline" className="items-start">
-                <ItemMedia variant="icon">{item.icon}</ItemMedia>
-                <ItemContent>
-                  <ItemTitle>{item.title}</ItemTitle>
-                  <ItemDescription>{item.body}</ItemDescription>
-                </ItemContent>
-              </Item>
-            ))}
-          </ItemGroup>
-        </Section>
+        {/* What exports do, for the first visit only: once a bucket is connected it is noise. */}
+        {s3Connections === 0 ? (
+          <Section
+            title="Overview"
+            description="Send billing data to your own storage on a schedule."
+          >
+            <ItemGroup className="grid gap-3 md:grid-cols-3">
+              {HIGHLIGHTS.map((item) => (
+                <Item key={item.title} role="listitem" variant="outline" className="items-start">
+                  <ItemMedia variant="icon">{item.icon}</ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{item.title}</ItemTitle>
+                    <ItemDescription>{item.body}</ItemDescription>
+                  </ItemContent>
+                </Item>
+              ))}
+            </ItemGroup>
+          </Section>
+        ) : null}
         <Section title="Destinations">
           <Item
             variant="outline"
@@ -228,13 +230,6 @@ export function ExportsOverview({ s3Connections, onOpenS3, children }: ExportsOv
                 ? null
                 : `${s3Connections} ${s3Connections === 1 ? 'connection' : 'connections'}`}
             </ItemActions>
-            <ItemFooter className="justify-start gap-1.5">
-              {['Storage', 'Data warehouse', 'Analytics'].map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
-                </Badge>
-              ))}
-            </ItemFooter>
           </Item>
         </Section>
         {children}
@@ -519,12 +514,7 @@ export function DataExportDetail({
         <DetailList
           columns={1}
           items={[
-            {
-              label: 'Status',
-              value: (
-                <Pill tone={enabled ? 'success' : 'neutral'}>{enabled ? 'Active' : 'Paused'}</Pill>
-              ),
-            },
+            // The status is the header's badge; it is not repeated here.
             { label: 'Data', value: dataExport.entityLabel },
             { label: 'Runs', value: dataExport.intervalLabel },
             { label: 'Connection', value: connection?.name || '—' },
@@ -686,7 +676,7 @@ export function DataExportDetail({
 const RUN_TONE: Record<string, PillTone> = {
   COMPLETED: 'success',
   FAILED: 'danger',
-  PROCESSING: 'info',
+  PROCESSING: 'warning',
   PENDING: 'warning',
 }
 

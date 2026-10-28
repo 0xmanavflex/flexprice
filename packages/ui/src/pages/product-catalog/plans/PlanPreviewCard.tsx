@@ -9,8 +9,10 @@ import {
   CreditGrantPeriod,
   FeatureType,
   PriceType,
+  usageBasedLabel,
 } from '@fp/domain'
 import { FormPreview, PreviewSection } from '@ui/compositions/forms/FormPreview'
+import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -198,7 +200,13 @@ export function PlanPreviewCard({
   const period = short ? (PERIOD_WORD[short] ?? short) : undefined
 
   const trial = trialDays && trialDays > 0 ? `${trialDays}-day free trial` : null
-  const tail = [trial, usageCharges.length > 0 ? 'plus usage' : null].filter(Boolean).join(' · ')
+  // With no fixed fee there is no flat price for usage to be "plus": the
+  // headline is the usage itself, named as a customer reads it.
+  const usageOnly = !base && usageCharges.length > 0
+  const usageNames = usageCharges.map((charge) => chargeLabel(charge, meterLabel))
+  const tail = [trial, usageCharges.length > 0 && !usageOnly ? 'plus usage' : null]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <FormPreview
@@ -227,8 +235,13 @@ export function PlanPreviewCard({
                   ) : null}
                 </>
               ) : (
-                <span className="text-muted-foreground text-3xl font-medium">
-                  {usageCharges.length > 0 ? 'Usage-based' : '—'}
+                <span
+                  className={cn(
+                    'font-medium',
+                    usageOnly ? 'text-2xl' : 'text-muted-foreground text-3xl',
+                  )}
+                >
+                  {usageOnly ? usageBasedLabel(usageNames) : '—'}
                 </span>
               )}
             </div>

@@ -79,12 +79,13 @@ export const OverLimit: Story = {
   },
 }
 
-/** Unlimited is not 100%, and not 0%: there is no denominator. */
+/** Unlimited is not 100%, and not 0%: there is no denominator. It is said once, in the reading. */
 export const Unlimited: Story = {
   args: { limit: null },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Unlimited')).toBeInTheDocument()
+    await expect(canvas.getByText('4,200 of unlimited calls')).toBeInTheDocument()
+    await expect(canvas.getAllByText(/unlimited/i)).toHaveLength(1)
     await expect(canvas.queryByRole('progressbar')).not.toBeInTheDocument()
   },
 }

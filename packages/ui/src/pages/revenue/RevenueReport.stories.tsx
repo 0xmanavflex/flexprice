@@ -20,6 +20,7 @@ const SERIES = MONTHS.map((label, i) => ({
   label,
   revenue: 38000 + i * 6200,
   previous: 33000 + i * 4000,
+  display: { revenue: usd(38000 + i * 6200), previous: usd(33000 + i * 4000) },
 }))
 
 const NAMES = [
@@ -120,6 +121,64 @@ const BASE: RevenueReportProps = {
     arpu: { value: '$4,295', change: 0.04 },
     topTenShare: '78%',
     onOpenCustomer: fn(),
+    credits: {
+      status: 'ready',
+      rows: [
+        {
+          id: 'cust_0',
+          name: 'Acme Robotics',
+          paid: 1200,
+          free: 300,
+          total: 1500,
+          share: 0.75,
+          display: { paid: '$1,200', free: '$300', total: '$1,500', share: '75%' },
+        },
+        {
+          id: 'cust_1',
+          name: 'Northwind',
+          paid: 400,
+          free: 100,
+          total: 500,
+          share: 0.25,
+          display: { paid: '$400', free: '$100', total: '$500', share: '25%' },
+        },
+      ],
+      total: '$2,000',
+      toppedUp: '$3,500',
+      paidShare: '80%',
+      consumedTypes: [
+        {
+          id: 'paid',
+          label: 'Paid credits',
+          customers: 2,
+          amount: 1600,
+          display: { amount: '$1,600' },
+        },
+        {
+          id: 'free',
+          label: 'Free credits',
+          customers: 2,
+          amount: 400,
+          display: { amount: '$400' },
+        },
+      ],
+      topupTypes: [
+        {
+          id: 'PURCHASED_CREDIT_DIRECT',
+          label: 'Purchased, paid directly',
+          customers: 2,
+          amount: 3000,
+          display: { amount: '$3,000' },
+        },
+        {
+          id: 'FREE_CREDIT_GRANT',
+          label: 'Free grant',
+          customers: 1,
+          amount: 500,
+          display: { amount: '$500' },
+        },
+      ],
+    },
   },
   receivables: {
     status: 'ready',
@@ -141,6 +200,7 @@ const BASE: RevenueReportProps = {
         name: 'Initech',
         invoices: 3,
         overdue: 4200,
+        outstanding: 6100,
         display: { overdue: '$4,200', outstanding: '$6,100' },
         oldestDays: 64,
       },
@@ -149,6 +209,7 @@ const BASE: RevenueReportProps = {
         name: 'Hooli',
         invoices: 1,
         overdue: 1900,
+        outstanding: 1900,
         display: { overdue: '$1,900', outstanding: '$1,900' },
         oldestDays: 12,
       },
@@ -252,8 +313,76 @@ export const SwitchingTabs: Story = {
   },
 }
 
-export const RevenueTab: Story = { args: { view: 'revenue' } }
-export const Customers: Story = { args: { view: 'customers' } }
+/** The chart and, under it, the table of every period. */
+export const RevenueTab: Story = {
+  args: { view: 'revenue' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const table = await canvas.findByLabelText('Revenue by period table')
+    await expect(within(table).getByText('Jul')).toBeVisible()
+    await expect(within(table).getByText(usd(38000))).toBeVisible()
+  },
+}
+
+/** A range with no revenue draws the empty state, not a flat line at zero. */
+export const RevenueEmpty: Story = {
+  args: {
+    view: 'revenue',
+    revenue: { ...BASE.revenue, series: MONTHS.map((label) => ({ label, revenue: 0 })) },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No revenue in this range')).toBeVisible()
+    await expect(canvas.queryByLabelText('Revenue by period table')).toBeNull()
+    // The totals come from their own read: only the chart gives way.
+    await expect(canvas.getByText('Total revenue')).toBeVisible()
+  },
+}
+
+/** Days to pay with no series: the chart is empty, the average and payers stay. */
+export const PaymentsWithoutSeries: Story = {
+  args: {
+    view: 'payments',
+    payments: {
+      ...BASE.payments,
+      series: BASE.payments.series.map((point) => ({ ...point, days: null })),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No payments in this range')).toBeVisible()
+    await expect(canvas.getByText('Paid within a week')).toBeVisible()
+    await expect(canvas.getByText('Payments by customer')).toBeVisible()
+  },
+}
+
+/** Credits consumed and credits topped up are separate, titled panels. */
+export const Customers: Story = {
+  args: { view: 'customers' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Credits consumed' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Credits topped up' })).toBeVisible()
+    await expect(canvas.getByLabelText('Credits consumed by type table')).toBeVisible()
+    await expect(canvas.getByLabelText('Credits topped up by source table')).toBeVisible()
+  },
+}
+
+/** Customers billed nothing: Top 10 shows the empty state, not bars at zero. */
+export const CustomersWithoutRevenue: Story = {
+  args: {
+    view: 'customers',
+    customers: {
+      ...BASE.customers,
+      rows: ROWS.map((row) => ({ ...row, revenue: 0, usage: 0, contract: 0, share: 0 })),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText('No billed customers in this range'),
+    ).toBeVisible()
+  },
+}
 export const Receivables: Story = { args: { view: 'receivables' } }
 export const Payments: Story = { args: { view: 'payments' } }
 

@@ -13,7 +13,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts'
-import { CalendarIcon } from '@ui/icons'
+import { CalendarIcon, DownloadIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import {
@@ -29,6 +29,7 @@ import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { FilterSelect, type FilterOption } from '../home/DashboardHome'
 import { DetailTable } from '../shared/DetailTable'
+import { csvFilename, downloadCsv, toCsv, type CsvColumn } from './reportCsv'
 import { Panel } from '../shared/Panel'
 import { TrendBadge, toneColor, toneRamp } from '../shared/charts'
 
@@ -77,6 +78,8 @@ export interface RevenuePoint {
   revenue: number
   /** The same bucket in the comparison period. */
   previous?: number | undefined
+  /** The two figures formatted as money, for the table under the chart. */
+  display?: { revenue: string; previous?: string | undefined } | undefined
 }
 
 export interface CustomerRevenueRow {
@@ -97,6 +100,8 @@ export interface CreditRow {
   paid: number
   free: number
   total: number
+  /** Share of all credits consumed, 0–1. */
+  share: number
   display: { paid: string; free: string; total: string; share: string }
 }
 
@@ -122,6 +127,7 @@ export interface OverdueCustomerRow {
   /** How many invoices are overdue; omitted when the source does not count them. */
   invoices?: number | undefined
   overdue: number
+  outstanding: number
   display: { overdue: string; outstanding: string }
   oldestDays: number
 }
@@ -339,6 +345,30 @@ function NotReady({
   )
 }
 
+/** A ready report whose rows are all gone is empty. */
+function withData<T extends ReportState>(state: T, hasData: boolean): T {
+  return state.status === 'ready' && !hasData ? { ...state, status: 'empty' } : state
+}
+
+/**
+ * Where a chart would be when it has nothing to draw: the empty state, not
+ * axes over a line at zero. Only the chart gives way; the figures above it
+ * come from their own reads and stay.
+ */
+function NoChartData({ title }: { title: string }) {
+  return <SectionEmpty scene="billing" title={title} />
+}
+
+const daysHaveData = (series: { days: number | null }[]) =>
+  series.some((point) => point.days !== null)
+const eventsHaveData = (series: { events: number }[]) => series.some((point) => point.events > 0)
+
+const revenueHasData = (series: RevenuePoint[]) =>
+  series.some((point) => point.revenue !== 0 || (point.previous ?? 0) !== 0)
+
+/** Customers that billed something; a zero bar is not a customer to rank. */
+const billedRows = (rows: CustomerRevenueRow[]) => rows.filter((row) => row.revenue > 0)
+
 function BasedOn({ text }: { text?: string | undefined }) {
   return text ? <p className="text-muted-foreground border-t px-5 py-3 text-xs">{text}</p> : null
 }
@@ -350,6 +380,104 @@ function ViewReport({ onClick }: { onClick: () => void }) {
     </Button>
   )
 }
+
+function CsvButton<T>({
+  name,
+  rangeLabel,
+  columns,
+  rows,
+}: {
+  name: string
+  rangeLabel: string
+  columns: CsvColumn<T>[]
+  rows: T[]
+}) {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-7 gap-1.5 px-2.5"
+      disabled={rows.length === 0}
+      aria-label={`Download ${name} as CSV`}
+      onClick={() => downloadCsv(csvFilename(name, rangeLabel), toCsv(columns, rows))}
+    >
+      <DownloadIcon className="size-3.5" />
+      CSV
+    </Button>
+  )
+}
+
+const asOfToday = () => `as of ${new Date().toLocaleDateString('en-CA')}`
+
+const withCsv = (csv: ReactNode, extra?: ReactNode) => (
+  <div className="flex items-center gap-2">
+    {csv}
+    {extra}
+  </div>
+)
+
+const revenueColumns = (comparing: boolean): CsvColumn<RevenuePoint>[] => [
+  { header: 'period', value: (row) => row.label },
+  { header: 'revenue', value: (row) => row.revenue },
+  ...(comparing ? [{ header: 'previous', value: (row: RevenuePoint) => row.previous }] : []),
+]
+
+const AGING_COLUMNS: CsvColumn<AgingBucket>[] = [
+  { header: 'bucket', value: (row) => row.label },
+  { header: 'amount', value: (row) => row.amount },
+]
+
+const DAYS_COLUMNS: CsvColumn<{ label: string; days: number | null }>[] = [
+  { header: 'period', value: (row) => row.label },
+  { header: 'average_days', value: (row) => row.days },
+]
+
+const EVENTS_COLUMNS: CsvColumn<{ label: string; events: number }>[] = [
+  { header: 'period', value: (row) => row.label },
+  { header: 'events', value: (row) => row.events },
+]
+
+export const CUSTOMER_COLUMNS: CsvColumn<CustomerRevenueRow>[] = [
+  { header: 'customer', value: (row) => row.name },
+  { header: 'revenue', value: (row) => row.revenue },
+  { header: 'contract', value: (row) => (row.display.contract === '—' ? '' : row.contract) },
+  { header: 'usage', value: (row) => (row.display.usage === '—' ? '' : row.usage) },
+  { header: 'share', value: (row) => row.share },
+]
+
+const RANKED_CUSTOMER_COLUMNS: CsvColumn<CustomerRevenueRow & { rank: number }>[] = [
+  { header: 'rank', value: (row) => row.rank },
+  ...CUSTOMER_COLUMNS,
+]
+
+const CREDIT_CUSTOMER_COLUMNS: CsvColumn<CreditRow>[] = [
+  { header: 'customer', value: (row) => row.name },
+  { header: 'consumed', value: (row) => row.total },
+  { header: 'paid', value: (row) => row.paid },
+  { header: 'free', value: (row) => row.free },
+  { header: 'share', value: (row) => row.share },
+]
+
+const CREDIT_TYPE_COLUMNS: CsvColumn<CreditTypeRow>[] = [
+  { header: 'type', value: (row) => row.label },
+  { header: 'customers', value: (row) => row.customers },
+  { header: 'amount', value: (row) => row.amount },
+]
+
+const OVERDUE_COLUMNS: CsvColumn<OverdueCustomerRow>[] = [
+  { header: 'customer', value: (row) => row.name },
+  { header: 'overdue_invoices', value: (row) => row.invoices },
+  { header: 'overdue', value: (row) => row.overdue },
+  { header: 'outstanding', value: (row) => row.outstanding },
+  { header: 'oldest_days', value: (row) => row.oldestDays },
+]
+
+const PAYER_COLUMNS: CsvColumn<PayerRow>[] = [
+  { header: 'customer', value: (row) => row.name },
+  { header: 'paid_invoices', value: (row) => row.paid },
+  { header: 'collected', value: (row) => row.collected },
+  { header: 'average_days', value: (row) => row.averageDays },
+]
 
 function Surface({ children }: { children: ReactNode }) {
   return (
@@ -674,22 +802,24 @@ export function RevenueReport(props: RevenueReportProps) {
 
 const axisMoney = (value: number) => short(value)
 
-function OverviewTab({
-  revenue,
-  receivables,
-  payments,
-  customers,
-  usage,
-  comparing,
-  rangeLabel,
-  onViewChange,
-}: RevenueReportProps) {
+function OverviewTab(props: RevenueReportProps) {
+  const { revenue, receivables, payments, customers, usage, comparing, rangeLabel, onViewChange } =
+    props
+  const topFive = billedRows(customers.rows).slice(0, 5)
   return (
     <div className="flex flex-col gap-5">
       <Panel
         title="Revenue over time"
         description={`Invoiced revenue per ${revenue.grain}, ${rangeLabel}`}
-        action={<ViewReport onClick={() => onViewChange('revenue')} />}
+        action={withCsv(
+          <CsvButton
+            name="Revenue over time"
+            rangeLabel={rangeLabel}
+            columns={revenueColumns(comparing)}
+            rows={revenue.status === 'ready' ? revenue.series : []}
+          />,
+          <ViewReport onClick={() => onViewChange('revenue')} />,
+        )}
       >
         <Surface>
           {revenue.status === 'ready' ? (
@@ -702,20 +832,26 @@ function OverviewTab({
                   tile('Contract revenue', revenue.contract, false),
                 ]}
               />
-              <RevenueChart
-                series={revenue.series}
-                comparing={comparing}
-                height={260}
-                formatAxis={axisMoney}
-              />
-              <Legend
-                items={[
-                  { label: 'Revenue', color: REVENUE },
-                  ...(comparing
-                    ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }]
-                    : []),
-                ]}
-              />
+              {revenueHasData(revenue.series) ? (
+                <>
+                  <RevenueChart
+                    series={revenue.series}
+                    comparing={comparing}
+                    height={260}
+                    formatAxis={axisMoney}
+                  />
+                  <Legend
+                    items={[
+                      { label: 'Revenue', color: REVENUE },
+                      ...(comparing
+                        ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }]
+                        : []),
+                    ]}
+                  />
+                </>
+              ) : (
+                <NoChartData title="No revenue in this range" />
+              )}
             </>
           ) : (
             <NotReady state={revenue} empty="No revenue in this range" />
@@ -728,7 +864,15 @@ function OverviewTab({
         <Panel
           title="Receivables aging"
           description="Unpaid balance by days past due, as of today"
-          action={<ViewReport onClick={() => onViewChange('receivables')} />}
+          action={withCsv(
+            <CsvButton
+              name="Receivables aging"
+              rangeLabel={asOfToday()}
+              columns={AGING_COLUMNS}
+              rows={receivables.status === 'ready' ? receivables.buckets : []}
+            />,
+            <ViewReport onClick={() => onViewChange('receivables')} />,
+          )}
         >
           <Surface>
             {receivables.status === 'ready' ? (
@@ -756,7 +900,15 @@ function OverviewTab({
         <Panel
           title="Days to pay over time"
           description="Average days from issue to payment"
-          action={<ViewReport onClick={() => onViewChange('payments')} />}
+          action={withCsv(
+            <CsvButton
+              name="Days to pay"
+              rangeLabel={rangeLabel}
+              columns={DAYS_COLUMNS}
+              rows={payments.status === 'ready' ? payments.series : []}
+            />,
+            <ViewReport onClick={() => onViewChange('payments')} />,
+          )}
         >
           <Surface>
             {payments.status === 'ready' ? (
@@ -768,7 +920,11 @@ function OverviewTab({
                     { label: 'Median', value: payments.median },
                   ]}
                 />
-                <DaysChart series={payments.series} />
+                {daysHaveData(payments.series) ? (
+                  <DaysChart series={payments.series} />
+                ) : (
+                  <NoChartData title="No payments in this range" />
+                )}
               </>
             ) : (
               <NotReady state={payments} height={240} empty="No payments in this range" />
@@ -782,12 +938,22 @@ function OverviewTab({
         <Panel
           title="Top 5 customers"
           description="Highest revenue in the period"
-          action={<ViewReport onClick={() => onViewChange('customers')} />}
+          action={withCsv(
+            <CsvButton
+              name="Top 5 customers"
+              rangeLabel={rangeLabel}
+              columns={CUSTOMER_COLUMNS}
+              rows={customers.status === 'ready' ? topFive : []}
+            />,
+            <ViewReport onClick={() => onViewChange('customers')} />,
+          )}
         >
           <Surface>
-            {customers.status === 'ready' ? (
+            {customers.status === 'ready' && topFive.length === 0 ? (
+              <NoChartData title="No billed customers in this range" />
+            ) : customers.status === 'ready' ? (
               <>
-                <CustomerBars rows={customers.rows.slice(0, 5)} height={236} />
+                <CustomerBars rows={topFive} height={236} />
                 <Legend
                   items={[
                     { label: 'Usage', color: USAGE_TONE },
@@ -804,7 +970,15 @@ function OverviewTab({
         <Panel
           title="Events volume"
           description="Usage events ingested per day"
-          action={<ViewReport onClick={() => onViewChange('usage')} />}
+          action={withCsv(
+            <CsvButton
+              name="Events volume"
+              rangeLabel={rangeLabel}
+              columns={EVENTS_COLUMNS}
+              rows={usage.status === 'ready' ? usage.series : []}
+            />,
+            <ViewReport onClick={() => onViewChange('usage')} />,
+          )}
         >
           <Surface>
             {usage.status === 'ready' ? (
@@ -816,7 +990,11 @@ function OverviewTab({
                     { label: 'Peak day', value: usage.peak },
                   ]}
                 />
-                <EventsChart series={usage.series} height={220} />
+                {eventsHaveData(usage.series) ? (
+                  <EventsChart series={usage.series} height={220} />
+                ) : (
+                  <NoChartData title="No events in this range" />
+                )}
                 <BasedOn text={usage.basedOn} />
               </>
             ) : (
@@ -829,10 +1007,85 @@ function OverviewTab({
   )
 }
 
-function RevenueTab({ revenue, comparing, rangeLabel }: RevenueReportProps) {
+const compactMoney = (value: number) => short(value)
+
+function RevenueTable({ series, comparing }: { series: RevenuePoint[]; comparing: boolean }) {
+  const rows = series.map((point, index) => ({ ...point, id: String(index), index }))
+  type Row = (typeof rows)[number]
+  const change = (row: Row) => (row.previous ? (row.revenue - row.previous) / row.previous : null)
+  return (
+    <div className="border-t">
+      <DetailTable<Row>
+        compact
+        label="Revenue by period"
+        noun="periods"
+        rows={rows}
+        toolbar={false}
+        columns={[
+          {
+            key: 'period',
+            header: 'Period',
+            sortBy: (row) => row.index,
+            cell: (row) => <span className="font-medium">{row.label}</span>,
+          },
+          {
+            key: 'revenue',
+            header: 'Revenue',
+            sortBy: (row) => row.revenue,
+            cell: (row) => (
+              <span className="tabular-nums">
+                {row.display?.revenue ?? compactMoney(row.revenue)}
+              </span>
+            ),
+          },
+          ...(comparing
+            ? [
+                {
+                  key: 'previous',
+                  header: 'Previous period',
+                  sortBy: (row: Row) => row.previous ?? 0,
+                  cell: (row: Row) => (
+                    <span className="text-muted-foreground tabular-nums">
+                      {row.previous == null
+                        ? '—'
+                        : (row.display?.previous ?? compactMoney(row.previous))}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'change',
+                  header: 'Change',
+                  sortBy: (row: Row) => change(row) ?? 0,
+                  cell: (row: Row) => {
+                    const value = change(row)
+                    return value === null ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <Change figure={{ value: '', change: value }} />
+                    )
+                  },
+                },
+              ]
+            : []),
+        ]}
+      />
+    </div>
+  )
+}
+
+function RevenueTab(props: RevenueReportProps) {
+  const { revenue, comparing, rangeLabel } = props
   return (
     <Panel
       title="Revenue over time"
+      action={
+        <CsvButton
+          name="Revenue over time"
+          rangeLabel={rangeLabel}
+          columns={revenueColumns(comparing)}
+          rows={revenue.status === 'ready' ? revenue.series : []}
+        />
+      }
       description={`Invoiced revenue per ${revenue.grain}, ${rangeLabel}`}
     >
       <Surface>
@@ -847,13 +1100,26 @@ function RevenueTab({ revenue, comparing, rangeLabel }: RevenueReportProps) {
                 { label: 'Usage share', value: revenue.usageShare },
               ]}
             />
-            <RevenueChart series={revenue.series} comparing={comparing} formatAxis={axisMoney} />
-            <Legend
-              items={[
-                { label: 'Revenue', color: REVENUE },
-                ...(comparing ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }] : []),
-              ]}
-            />
+            {revenueHasData(revenue.series) ? (
+              <>
+                <RevenueChart
+                  series={revenue.series}
+                  comparing={comparing}
+                  formatAxis={axisMoney}
+                />
+                <Legend
+                  items={[
+                    { label: 'Revenue', color: REVENUE },
+                    ...(comparing
+                      ? [{ label: 'Previous period', color: PREVIOUS, dashed: true }]
+                      : []),
+                  ]}
+                />
+                <RevenueTable series={revenue.series} comparing={comparing} />
+              </>
+            ) : (
+              <NoChartData title="No revenue in this range" />
+            )}
           </>
         ) : (
           <NotReady state={revenue} height={320} empty="No revenue in this range" />
@@ -864,17 +1130,27 @@ function RevenueTab({ revenue, comparing, rangeLabel }: RevenueReportProps) {
   )
 }
 
-function CreditTypeTable({ label, rows }: { label: string; rows: CreditTypeRow[] }) {
+function CreditTypeTable({
+  label,
+  header,
+  rows,
+}: {
+  label: string
+  header: string
+  rows: CreditTypeRow[]
+}) {
   return (
     <DetailTable<CreditTypeRow>
       compact
       label={label}
       noun="types"
       rows={rows}
+      toolbar={false}
+      footer={false}
       columns={[
         {
           key: 'label',
-          header: label,
+          header,
           sortBy: (row) => row.label,
           cell: (row) => <span className="font-medium">{row.label}</span>,
         },
@@ -895,13 +1171,22 @@ function CreditTypeTable({ label, rows }: { label: string; rows: CreditTypeRow[]
   )
 }
 
-function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) {
-  const top = customers.rows.slice(0, 10)
-  const largest = customers.rows[0]
+function CustomersTab(props: RevenueReportProps) {
+  const { customers, comparing, rangeLabel } = props
+  const top = billedRows(customers.rows).slice(0, 10)
+  const largest = top[0]
   return (
     <div className="flex flex-col gap-5">
       <Panel
         title="Top 10 customers"
+        action={
+          <CsvButton
+            name="Top 10 customers"
+            rangeLabel={rangeLabel}
+            columns={CUSTOMER_COLUMNS}
+            rows={customers.status === 'ready' ? top : []}
+          />
+        }
         description={`Revenue per customer, ${rangeLabel}, split into usage and contract`}
       >
         <Surface>
@@ -920,13 +1205,19 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
                   },
                 ]}
               />
-              <CustomerBars rows={top} height={Math.max(160, top.length * 32 + 20)} />
-              <Legend
-                items={[
-                  { label: 'Usage', color: USAGE_TONE },
-                  { label: 'Contract', color: CONTRACT_TONE },
-                ]}
-              />
+              {top.length > 0 ? (
+                <>
+                  <CustomerBars rows={top} height={Math.max(160, top.length * 32 + 20)} />
+                  <Legend
+                    items={[
+                      { label: 'Usage', color: USAGE_TONE },
+                      { label: 'Contract', color: CONTRACT_TONE },
+                    ]}
+                  />
+                </>
+              ) : (
+                <NoChartData title="No billed customers in this range" />
+              )}
             </>
           ) : (
             <NotReady state={customers} height={330} empty="No billed customers in this range" />
@@ -936,49 +1227,107 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
 
       {customers.credits ? (
         <>
-          <Panel
-            title="Credits consumed and topped up"
-            description={`Wallet credits added and applied to invoices, ${rangeLabel}`}
-          >
-            <Surface>
-              {customers.credits.status === 'ready' ? (
-                <>
-                  <OverviewTiles
-                    variant="flush"
-                    tiles={[
-                      {
-                        label: 'Customers using credits',
-                        value: String(customers.credits.rows.length),
-                      },
-                      { label: 'Credits consumed', value: customers.credits.total },
-                      { label: 'Credits topped up', value: customers.credits.toppedUp },
-                      { label: 'Paid share', value: customers.credits.paidShare },
-                    ]}
-                  />
-                  <div className="grid gap-5 p-5 lg:grid-cols-2">
-                    <CreditTypeTable
-                      label="Consumed by credit type"
-                      rows={customers.credits.consumedTypes}
-                    />
-                    <CreditTypeTable
-                      label="Topped up by source"
-                      rows={customers.credits.topupTypes}
-                    />
-                  </div>
-                </>
-              ) : (
-                <NotReady
-                  state={customers.credits}
-                  height={200}
-                  empty="No credit activity in this range"
+          {/* Consumed and topped up are two reports: each its own titled panel. */}
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Panel
+              title="Credits consumed"
+              action={
+                <CsvButton
+                  name="Credits consumed"
+                  rangeLabel={rangeLabel}
+                  columns={CREDIT_TYPE_COLUMNS}
+                  rows={customers.credits.status === 'ready' ? customers.credits.consumedTypes : []}
                 />
-              )}
-            </Surface>
-          </Panel>
+              }
+              description={`Wallet credits applied to invoices, ${rangeLabel}, by credit type`}
+            >
+              <Surface>
+                {customers.credits.status === 'ready' &&
+                customers.credits.consumedTypes.length > 0 ? (
+                  <>
+                    <OverviewTiles
+                      variant="flush"
+                      tiles={[
+                        { label: 'Total consumed', value: customers.credits.total },
+                        {
+                          label: 'Customers using credits',
+                          value: String(customers.credits.rows.length),
+                        },
+                        { label: 'Paid share', value: customers.credits.paidShare },
+                      ]}
+                    />
+                    <div className="p-5">
+                      <CreditTypeTable
+                        label="Credits consumed by type"
+                        header="Credit type"
+                        rows={customers.credits.consumedTypes}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <NotReady
+                    state={withData(customers.credits, false)}
+                    height={200}
+                    empty="No credits consumed in this range"
+                  />
+                )}
+                <BasedOn
+                  text={
+                    customers.credits.status === 'ready' ? customers.credits.basedOn : undefined
+                  }
+                />
+              </Surface>
+            </Panel>
+
+            <Panel
+              title="Credits topped up"
+              action={
+                <CsvButton
+                  name="Credits topped up"
+                  rangeLabel={rangeLabel}
+                  columns={CREDIT_TYPE_COLUMNS}
+                  rows={customers.credits.status === 'ready' ? customers.credits.topupTypes : []}
+                />
+              }
+              description={`Wallet credits added, ${rangeLabel}, by source`}
+            >
+              <Surface>
+                {customers.credits.status === 'ready' && customers.credits.topupTypes.length > 0 ? (
+                  <>
+                    <OverviewTiles
+                      variant="flush"
+                      tiles={[{ label: 'Total topped up', value: customers.credits.toppedUp }]}
+                    />
+                    <div className="p-5">
+                      <CreditTypeTable
+                        label="Credits topped up by source"
+                        header="Source"
+                        rows={customers.credits.topupTypes}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <NotReady
+                    state={withData(customers.credits, false)}
+                    height={200}
+                    empty="No credits topped up in this range"
+                  />
+                )}
+              </Surface>
+            </Panel>
+          </div>
 
           {customers.credits.status === 'ready' && customers.credits.rows.length > 0 ? (
             <Panel
               title="Credit consumption by customer"
+              action={
+                <CsvButton
+                  name="Credit consumption by customer"
+                  rangeLabel={rangeLabel}
+                  columns={CREDIT_CUSTOMER_COLUMNS}
+                  rows={customers.credits?.status === 'ready' ? customers.credits.rows : []}
+                />
+              }
               description={`Credits applied to invoices per customer, ${rangeLabel}, split into paid and free`}
             >
               <Surface>
@@ -1043,7 +1392,25 @@ function CustomersTab({ customers, comparing, rangeLabel }: RevenueReportProps) 
       ) : null}
 
       {customers.all ? (
-        <Panel title="All customers" description="Ordered by revenue, highest first">
+        <Panel
+          title="All customers"
+          action={
+            <CsvButton
+              name={`All customers rows ${(customers.all.offset ?? 0) + 1}-${(customers.all.offset ?? 0) + (customers.all.status === 'ready' ? customers.all.rows.length : 0)}`}
+              rangeLabel={rangeLabel}
+              columns={RANKED_CUSTOMER_COLUMNS}
+              rows={
+                customers.all.status === 'ready'
+                  ? customers.all.rows.map((row, index) => ({
+                      ...row,
+                      rank: (customers.all?.offset ?? 0) + index + 1,
+                    }))
+                  : []
+              }
+            />
+          }
+          description="Ordered by revenue, highest first"
+        >
           <Surface>
             {customers.all.status === 'error' ? (
               <NotReady state={customers.all} empty="No customers in this range" />
@@ -1154,6 +1521,14 @@ function ReceivablesTab({ receivables }: RevenueReportProps) {
     <div className="flex flex-col gap-5">
       <Panel
         title="Receivables aging"
+        action={
+          <CsvButton
+            name="Receivables aging"
+            rangeLabel={asOfToday()}
+            columns={AGING_COLUMNS}
+            rows={receivables.status === 'ready' ? receivables.buckets : []}
+          />
+        }
         description="Unpaid balance on finalized invoices, by days past the due date. As of today: the range and comparison do not apply."
       >
         <Surface>
@@ -1191,6 +1566,14 @@ function ReceivablesTab({ receivables }: RevenueReportProps) {
       {receivables.status === 'ready' && receivables.customers.length > 0 ? (
         <Panel
           title="Overdue customers"
+          action={
+            <CsvButton
+              name="Overdue customers"
+              rangeLabel={asOfToday()}
+              columns={OVERDUE_COLUMNS}
+              rows={receivables.customers}
+            />
+          }
           description="Customers with overdue invoices, largest balance first"
         >
           <Surface>
@@ -1252,11 +1635,20 @@ function ReceivablesTab({ receivables }: RevenueReportProps) {
   )
 }
 
-function PaymentsTab({ payments, comparing }: RevenueReportProps) {
+function PaymentsTab(props: RevenueReportProps) {
+  const { payments, comparing, rangeLabel } = props
   return (
     <div className="flex flex-col gap-5">
       <Panel
         title="Days to pay"
+        action={
+          <CsvButton
+            name="Days to pay"
+            rangeLabel={rangeLabel}
+            columns={DAYS_COLUMNS}
+            rows={payments.status === 'ready' ? payments.series : []}
+          />
+        }
         description="Days from issuing an invoice to the payment that settled it, for payments in the period"
       >
         <Surface>
@@ -1274,7 +1666,11 @@ function PaymentsTab({ payments, comparing }: RevenueReportProps) {
                   { label: 'Paid within a week', value: payments.withinWeek },
                 ]}
               />
-              <DaysChart series={payments.series} height={260} />
+              {daysHaveData(payments.series) ? (
+                <DaysChart series={payments.series} height={260} />
+              ) : (
+                <NoChartData title="No payments in this range" />
+              )}
             </>
           ) : (
             <NotReady state={payments} empty="No payments in this range" />
@@ -1286,6 +1682,14 @@ function PaymentsTab({ payments, comparing }: RevenueReportProps) {
       {payments.status === 'ready' && payments.payers.length > 0 ? (
         <Panel
           title="Payments by customer"
+          action={
+            <CsvButton
+              name="Payments by customer"
+              rangeLabel={rangeLabel}
+              columns={PAYER_COLUMNS}
+              rows={payments.payers}
+            />
+          }
           description="Paid invoices, amount collected and average days to pay, slowest first"
         >
           <Surface>
@@ -1337,11 +1741,20 @@ function PaymentsTab({ payments, comparing }: RevenueReportProps) {
   )
 }
 
-function UsageTab({ usage }: RevenueReportProps) {
+function UsageTab(props: RevenueReportProps) {
+  const { usage, rangeLabel } = props
   return (
     <div className="flex flex-col gap-5">
       <Panel
         title="Events volume"
+        action={
+          <CsvButton
+            name="Events volume"
+            rangeLabel={rangeLabel}
+            columns={EVENTS_COLUMNS}
+            rows={usage.status === 'ready' ? usage.series : []}
+          />
+        }
         description="Usage events ingested per day, across every feature"
       >
         <Surface>
@@ -1355,7 +1768,11 @@ function UsageTab({ usage }: RevenueReportProps) {
                   { label: 'Peak day', value: usage.peak },
                 ]}
               />
-              <EventsChart series={usage.series} height={260} />
+              {eventsHaveData(usage.series) ? (
+                <EventsChart series={usage.series} height={260} />
+              ) : (
+                <NoChartData title="No events in this range" />
+              )}
               <BasedOn text={usage.basedOn} />
             </>
           ) : (

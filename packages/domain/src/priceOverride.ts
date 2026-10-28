@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { BucketSize } from './contractCharge'
 import { BillingModel, TierMode, nonNegativeAmount, tiersSchema } from './price'
 
 /**
@@ -34,7 +35,15 @@ export {
 } from './price'
 export type { PriceTier } from './price'
 
-const base = { priceId: z.string().min(1) }
+const base = {
+  priceId: z.string().min(1),
+  /**
+   * Usage charges only: the window usage is summed in before it is priced
+   * (`bucket_size` on the override). Blank keeps the charge's own.
+   */
+  // Lazy: `contractCharge` imports this module, so `BucketSize` is read on first parse, not at load.
+  bucketSize: z.lazy(() => z.union([z.literal(''), z.enum(BucketSize)])).optional(),
+}
 
 export const priceOverrideSchema = z.discriminatedUnion('billingModel', [
   z.object({

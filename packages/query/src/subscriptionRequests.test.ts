@@ -83,6 +83,91 @@ describe('toCreateSubscriptionRequest', () => {
     expect(parsed['override_entitlements']).toHaveLength(1)
   })
 
+  it('sends entitlement overrides: a grant patch, a static value, a switch', () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        entitlementOverrides: [
+          {
+            entitlementId: 'ent_api',
+            grant: {
+              measure: 'amount',
+              quota: '50',
+              unit: 'day',
+              allocation: 'first_usage',
+              aggregation: 'additive',
+            },
+          },
+          {
+            entitlementId: 'ent_all',
+            grant: {
+              measure: 'quantity',
+              quota: null,
+              unit: 'day',
+              allocation: 'first_usage',
+              aggregation: 'parallel',
+            },
+          },
+          { entitlementId: 'ent_seats', staticValue: '25' },
+          { entitlementId: 'ent_sso', isEnabled: false },
+        ],
+      } as CreateSubscription),
+    ) as Record<string, unknown>
+    expect(wire['override_entitlements']).toEqual([
+      {
+        entitlement_id: 'ent_api',
+        grant_measure: 'amount',
+        grant_quota: '50',
+        grant_duration_unit: 'day',
+        grant_duration_value: 1,
+        grant_allocation_behavior: 'first_usage',
+        aggregation_mode: 'additive',
+      },
+      {
+        entitlement_id: 'ent_all',
+        grant_measure: 'quantity',
+        grant_unlimited: true,
+        grant_duration_unit: 'subscription_period',
+        aggregation_mode: 'parallel',
+      },
+      { entitlement_id: 'ent_seats', static_value: '25' },
+      { entitlement_id: 'ent_sso', is_enabled: false },
+    ])
+  })
+
+  it("sends the contract's own exchange rate as fx_rates, with instants for its window", () => {
+    expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('fxRates')
+    expect(
+      toCreateSubscriptionRequest({ ...base, fxRates: [{ rate: '', startDate: '', endDate: '' }] }),
+    ).not.toHaveProperty('fxRates')
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        fxRates: [
+          {
+            rate: '83.25',
+            startDate: '2026-11-01T09:30:00.000Z',
+            endDate: '2027-11-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(wire['fx_rates']).toEqual([
+      {
+        rate: '83.25',
+        start_date: '2026-11-01T09:30:00.000Z',
+        end_date: '2027-11-01T00:00:00.000Z',
+      },
+    ])
+    const open = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        fxRates: [{ rate: '83', startDate: '', endDate: '' }],
+      }),
+    ) as Record<string, unknown>
+    expect(open['fx_rates']).toEqual([{ rate: '83' }])
+  })
+
   it('routes invoices to another customer by external id', () => {
     expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('inheritance')
     const request = toCreateSubscriptionRequest({
@@ -119,6 +204,15 @@ describe('toCreateSubscriptionRequest', () => {
     })
     expect(parsed['commitment_amount']).toBe('1000')
     expect(parsed).not.toHaveProperty('auto_invoice_threshold')
+  })
+
+  it('sends true-up only beside a positive commitment', () => {
+    const on = (commitmentAmount: string) =>
+      toCreateSubscriptionRequest({ ...base, commitmentAmount, enableTrueUp: true })
+    expect(on('1000')['enableTrueUp']).toBe(true)
+    // Zero is no commitment, so there is no shortfall to bill.
+    expect(on('0')['enableTrueUp']).toBe(false)
+    expect(on('')).not.toHaveProperty('enableTrueUp')
   })
 
   it("leaves the plan's grants alone until they are changed, then sends the whole list", () => {
@@ -236,6 +330,45 @@ describe('toCreateSubscriptionRequest: V1 contract fields', () => {
       subscription_status: 'draft',
     })
     expect(wire).not.toHaveProperty('phases')
+  })
+
+  it('keeps the bucket a price override chose over its commitment’s', () => {
+    const commitment = {
+      type: 'quantity' as const,
+      value: '100',
+      duration: '' as const,
+      overageFactor: '',
+      trueUp: false,
+      bucketSize: 'HOUR' as const,
+      windowed: false,
+      windows: [],
+    }
+    const request = toCreateSubscriptionRequest({
+      ...base,
+      phases: [
+        {
+          ...emptyPhase(),
+          priceOverrides: [
+            {
+              priceId: 'price_api',
+              billingModel: BillingModel.FlatFee,
+              amount: '0.01',
+              bucketSize: 'DAY',
+            },
+            { priceId: 'price_gpu', billingModel: BillingModel.FlatFee, amount: '2' },
+          ],
+        },
+      ],
+      chargeCommitments: [
+        { ...commitment, priceId: 'price_api' },
+        { ...commitment, priceId: 'price_gpu' },
+      ],
+    })
+    expect(request.overrideLineItems).toEqual([
+      expect.objectContaining({ priceId: 'price_api', bucketSize: 'DAY' }),
+      // No bucket chosen on the override: the commitment's is sent.
+      expect.objectContaining({ priceId: 'price_gpu', bucketSize: 'HOUR' }),
+    ])
   })
 
   it('sends a charge commitment per bucket, with its period, bucket size and time windows', () => {
@@ -528,6 +661,127 @@ describe('contract-scoped creators', () => {
       subscription_id: 'sub_1',
       addon_id: 'addon_1',
     })
+  })
+
+  it("sends an add-on's commitments keyed by its price, as the SDK serialises them", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'amount',
+          value: '500',
+          overageFactor: '1.5',
+          trueUp: true,
+          windowed: false,
+          bucketSize: '',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      addon_id: 'addon_1',
+      line_item_commitments: {
+        price_addon_api: {
+          commitment_type: 'amount',
+          commitment_amount: 500,
+          overage_factor: 1.5,
+          enable_true_up: true,
+        },
+      },
+    })
+  })
+
+  it("sends an add-on commitment's bucket size as that price's override", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'quantity',
+          value: '100',
+          overageFactor: '',
+          trueUp: false,
+          windowed: true,
+          bucketSize: 'HOUR',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      override_line_items: [{ price_id: 'price_addon_api', bucket_size: 'HOUR' }],
+    })
+  })
+
+  it("sends an add-on's new prices, fixed and usage, as its override_line_items", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      priceOverrides: [
+        { priceId: 'price_addon_seat', billingModel: BillingModel.FlatFee, amount: '15' },
+        {
+          priceId: 'price_addon_api',
+          billingModel: BillingModel.Package,
+          amount: '2',
+          divideBy: 1000,
+          bucketSize: '',
+        },
+      ],
+      commitments: [
+        {
+          priceId: 'price_addon_api',
+          type: 'quantity',
+          value: '100',
+          overageFactor: '',
+          trueUp: false,
+          windowed: true,
+          bucketSize: 'HOUR',
+          duration: '',
+          windows: [],
+        },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      addon_id: 'addon_1',
+      override_line_items: [
+        { price_id: 'price_addon_seat', billing_model: 'FLAT_FEE', amount: '15' },
+        {
+          price_id: 'price_addon_api',
+          billing_model: 'PACKAGE',
+          amount: '2',
+          transform_quantity: { divide_by: 1000 },
+          bucket_size: 'HOUR',
+        },
+      ],
+      line_item_commitments: { price_addon_api: { commitment_type: 'quantity' } },
+    })
+  })
+
+  it("sends a new contract's add-on prices on that add-on", () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        addons: [
+          {
+            addonId: 'addon_1',
+            name: 'Support',
+            priceOverrides: [
+              { priceId: 'price_addon_seat', billingModel: BillingModel.FlatFee, amount: '15' },
+            ],
+          },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(wire['override_line_items']).toBeUndefined()
+    expect(wire['addons']).toEqual([
+      {
+        addon_id: 'addon_1',
+        override_line_items: [
+          { price_id: 'price_addon_seat', billing_model: 'FLAT_FEE', amount: '15' },
+        ],
+      },
+    ])
   })
 
   it('applies a coupon as an add modification', () => {

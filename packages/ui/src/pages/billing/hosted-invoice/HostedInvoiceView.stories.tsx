@@ -23,9 +23,6 @@ const meta = {
     onPay: fn(),
     isPaying: false,
     payError: null,
-    onDownload: fn(),
-    isDownloading: false,
-    downloadError: null,
     onPreview: fn(),
     preview: null,
     onClosePreview: fn(),
@@ -37,9 +34,9 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const pay = /^Pay /
-type InvoiceArgs = { onPay: () => void; onDownload: () => void; onPreview: () => void }
+type InvoiceArgs = { onPay: () => void; onPreview: () => void }
 
-/** Due: the amount due leads the card, Pay and Download under it, the charges beside it. */
+/** Due: the amount due leads the card, Pay under it, the charges beside it. */
 export const Due: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
@@ -52,8 +49,8 @@ export const Due: Story = {
     await waitFor(() => expect((args as InvoiceArgs).onPreview).toHaveBeenCalledTimes(1))
     await userEvent.click(canvas.getByRole('button', { name: pay }))
     await waitFor(() => expect((args as InvoiceArgs).onPay).toHaveBeenCalledTimes(1))
-    await userEvent.click(canvas.getByRole('button', { name: 'Download invoice INV-2026-01488' }))
-    await waitFor(() => expect((args as InvoiceArgs).onDownload).toHaveBeenCalledTimes(1))
+    // Downloading is the preview's job (Download PDF); the card has no second button.
+    await expect(canvas.queryByRole('button', { name: /Download invoice/ })).toBeNull()
   },
 }
 
@@ -169,13 +166,46 @@ export const PayError: Story = {
   },
 }
 
+/** Online payment off: Pay is disabled, and hovering it says to contact the business, its email a link. */
 export const PayDisabled: Story = {
   args: { invoice: { ...DEMO_HOSTED_INVOICE, payEnabled: false } },
   play: async ({ canvasElement }) => {
-    const button = within(canvasElement).getByRole('button', { name: pay })
+    const canvas = within(canvasElement)
+    const { name, contactEmail } = DEMO_HOSTED_INVOICE.tenant
+    const reason = `Online payment isn’t available. Contact ${name} at ${contactEmail} to pay.`
+    const button = canvas.getByRole('button', { name: pay })
     await expect(button).toBeDisabled()
+    await expect(button).toHaveAccessibleDescription(reason)
+    // Not printed on the page: only in the tooltip.
+    await expect(canvas.queryByText(/Online payment isn’t available/, { selector: 'p' })).toBeNull()
+    await userEvent.hover(button.parentElement as HTMLElement)
+    const tooltip = await waitFor(() => {
+      const found = canvasElement.ownerDocument.querySelector<HTMLElement>(
+        '[data-slot=tooltip-content]',
+      )
+      expect(found).toHaveTextContent(reason)
+      return found as HTMLElement
+    })
+    await expect(within(tooltip).getByRole('link', { name: contactEmail ?? '' })).toHaveAttribute(
+      'href',
+      `mailto:${contactEmail}`,
+    )
+  },
+}
+
+/** No email on file: the tooltip names the business without a link. */
+export const PayDisabledNoEmail: Story = {
+  args: {
+    invoice: {
+      ...DEMO_HOSTED_INVOICE,
+      payEnabled: false,
+      tenant: { ...DEMO_HOSTED_INVOICE.tenant, contactEmail: null },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole('button', { name: pay })
     await expect(button).toHaveAccessibleDescription(
-      `Online payment isn’t available for this invoice. Contact ${DEMO_HOSTED_INVOICE.tenant.name} to pay.`,
+      `Online payment isn’t available. Contact ${DEMO_HOSTED_INVOICE.tenant.name} to pay.`,
     )
   },
 }

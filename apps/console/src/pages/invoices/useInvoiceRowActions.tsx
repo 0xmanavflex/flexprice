@@ -154,8 +154,13 @@ export function useInvoiceRowActions({
         },
       })
     }
-    // The link the customer receives: issued once an invoice is finalized.
-    if (invoice.status !== InvoiceStatus.Draft) {
+    // The link the customer receives: issued once an invoice is finalized, and
+    // pointless on a voided or skipped one, which nobody pays.
+    if (
+      invoice.status !== InvoiceStatus.Draft &&
+      invoice.status !== InvoiceStatus.Void &&
+      invoice.status !== InvoiceStatus.Skipped
+    ) {
       items.push({
         label: 'Open hosted invoice',
         icon: <ExternalLinkIcon aria-hidden className="size-4" />,

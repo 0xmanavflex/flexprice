@@ -213,7 +213,7 @@ export function ReviewPanel({ start }: { start?: string }) {
           aria-hidden="true"
           className="from-background/30 via-background/50 to-background/80 absolute inset-0 bg-gradient-to-b"
         />
-        <div className="relative flex flex-1 flex-col justify-center gap-[clamp(3rem,8vh,5rem)] py-[7vh] pl-16 xl:pl-20">
+        <div className="relative flex flex-1 flex-col justify-center gap-[clamp(2rem,5vh,3.5rem)] py-[7vh] pl-16 xl:pl-20">
           <ReviewCarousel start={startIndex} />
           <div className="pr-16 xl:pr-20">
             <p className={cn('mb-7 text-sm', inkMuted)}>Trusted by</p>

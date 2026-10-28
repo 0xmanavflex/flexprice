@@ -436,7 +436,7 @@ test.describe('live flows', () => {
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
     await openRowMenu(name, 'Edit customer')
     await page.getByRole('button', { name: /Billing address/ }).click()
-    await fill(main, 'City', 'London')
+    await fill(main, 'Address line 1', '1 London Wall')
     await submitPage()
     await open('/customers')
     await search(name)

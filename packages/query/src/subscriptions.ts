@@ -21,6 +21,7 @@ import {
   type PauseSubscription,
   type ResumeSubscription,
   type ChargeCommitment,
+  type PriceOverride,
   CommitmentType,
   type CommitmentPriceBase,
   type CommitmentWindow,
@@ -138,6 +139,8 @@ export interface SubscriptionWire {
   enableTrueUp?: boolean | undefined
   /** Set on a contract inherited from, or grouped under, another contract. */
   parentSubscriptionId?: string | undefined
+  subscriptionType?: string | undefined
+  invoicingCustomerId?: string | undefined
   latestInvoice?: { id?: string | undefined; invoiceNumber?: string | undefined } | undefined
 }
 
@@ -219,6 +222,12 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
           number: wire.latestInvoice.invoiceNumber?.trim() || '',
         }
       : null,
+    subscriptionType: (wire.subscriptionType ?? '').toLowerCase(),
+    parentSubscriptionId: wire.parentSubscriptionId || null,
+    invoicingCustomerId:
+      wire.invoicingCustomerId && wire.invoicingCustomerId !== wire.customerId
+        ? wire.invoicingCustomerId
+        : null,
   }
 }
 
@@ -365,6 +374,7 @@ function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
         ? price.transformQuantity.divideBy
         : null,
     priceUnit: custom ? (price.priceUnit ?? '') : '',
+    ...(custom && price.priceUnitAmount ? { priceUnitAmount: price.priceUnitAmount } : {}),
     meterId: wire.meterId || price.meterId || '',
     billingPeriod:
       wire.billingPeriod && wire.billingPeriod in BILLING_PERIOD_LABEL
@@ -443,15 +453,62 @@ export interface SubscriptionFeatureWire {
 }
 
 export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): SubscriptionEntitlement {
-  const period = wire.entitlement?.usageResetPeriod ?? ''
+  // The SDK camel-cases a body it accepts. A 200 the schema rejects is still
+  // the wire shape (`is_enabled`, `usage_limit`), and that body is what the
+  // section has to show.
+  const entitlement = wire.entitlement as
+    (NonNullable<SubscriptionFeatureWire['entitlement']> & Record<string, unknown>) | undefined
+  const period = stringValue(entitlement?.usageResetPeriod ?? entitlement?.usage_reset_period)
+  const limit = entitlement?.usageLimit ?? entitlement?.usage_limit
   return {
     featureId: wire.feature?.id ?? '',
     name: wire.feature?.name || wire.feature?.id || 'Feature',
-    enabled: wire.entitlement?.isEnabled ?? false,
-    usageLimit: wire.entitlement?.usageLimit ?? null,
-    softLimit: wire.entitlement?.isSoftLimit ?? false,
+    enabled: booleanValue(entitlement?.isEnabled ?? entitlement?.is_enabled),
+    usageLimit: typeof limit === 'number' ? limit : null,
+    softLimit: booleanValue(entitlement?.isSoftLimit ?? entitlement?.is_soft_limit),
     resetPeriodLabel:
       period && period !== 'NEVER' ? (BILLING_PERIOD_LABEL[period as BillingPeriod] ?? period) : '',
+  }
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function booleanValue(value: unknown): boolean {
+  return value === true
+}
+
+/**
+ * Entitlements from a request the server accepted and the SDK then rejected.
+ *
+ * HTTP 200 with a body the generated schema will not parse becomes an
+ * `ApiError`, and the contract section renders that as "could not be loaded"
+ * even though `features` is sitting in the response. Read that body instead.
+ * A real failure (4xx/5xx, or a body with no `features`) stays an error.
+ */
+export function subscriptionEntitlementsFromRejection(
+  error: unknown,
+): SubscriptionEntitlement[] | undefined {
+  if (!(error instanceof ApiError) || error.cause == null || typeof error.cause !== 'object') {
+    return undefined
+  }
+  const cause = error.cause as { rawValue?: unknown; body?: unknown; statusCode?: unknown }
+  const status = typeof cause.statusCode === 'number' ? cause.statusCode : error.status
+  if (status !== undefined && (status < 200 || status >= 300)) return undefined
+  const body = cause.rawValue ?? parsedBody(cause.body)
+  if (!body || typeof body !== 'object' || !('features' in body)) return undefined
+  const features = (body as { features: unknown }).features
+  if (!Array.isArray(features)) return undefined
+  return (features as SubscriptionFeatureWire[]).map(toSubscriptionEntitlement)
+}
+
+function parsedBody(body: unknown): unknown {
+  if (typeof body !== 'string' || body.trim() === '') return undefined
+  try {
+    return JSON.parse(body) as unknown
+  } catch {
+    return undefined
   }
 }
 
@@ -545,6 +602,43 @@ export async function fetchSubscriptions(
  * `useCoupons`, so the page can keep its query in the URL rather than in
  * component state.
  */
+/**
+ * The contracts that hang from this one (`parent_subscription_id`), as V1
+ * lists them on a parent: their customer, plan and status. A contract with no
+ * children reads an empty list.
+ */
+export function useInheritedContracts(parentId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.list({ parentId }),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.subscriptions.querySubscription(
+            {
+              filters: [
+                {
+                  field: 'parent_subscription_id',
+                  operator: 'eq',
+                  dataType: 'string',
+                  value: { string: parentId },
+                },
+              ],
+              expand: 'plan,customer',
+              limit: 100,
+              offset: 0,
+            },
+            options,
+          ),
+        signal,
+      )
+      return (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
+    },
+    enabled: parentId.length > 0,
+  })
+}
+
 export function useSubscriptions(query: SubscriptionQuery) {
   const client = useFlexprice()
 
@@ -756,6 +850,10 @@ function overrideLines(phase: SubscriptionPhase): Record<string, unknown>[] {
 /**
  * A charge's bucket size, set with its commitment, folded into the override
  * lines: onto the charge's own override when it has one, else a line of its own.
+ *
+ * The API takes one `bucket_size` per charge. A bucket the price override chose
+ * itself wins: the form keeps the two in step when either dialog saves, and
+ * this keeps an explicit choice from being overwritten if they ever differ.
  */
 function withBuckets(
   lines: Record<string, unknown>[],
@@ -767,7 +865,7 @@ function withBuckets(
   if (buckets.size === 0) return lines
   const merged = lines.map((line) => {
     const bucket = buckets.get(line.priceId as string)
-    return bucket ? { ...line, bucketSize: bucket } : line
+    return bucket && !line.bucketSize ? { ...line, bucketSize: bucket } : line
   })
   const covered = new Set(lines.map((line) => line.priceId))
   for (const [priceId, bucketSize] of buckets)
@@ -830,6 +928,71 @@ function toLineItemCommitment(commitment: ChargeCommitment): Record<string, unkn
   }
 }
 
+/**
+ * An add-on's own pricing as the attach takes it: new prices as
+ * `override_line_items` and commitments as `line_item_commitments`, both keyed
+ * by the add-on's price. A bucket size chosen with a commitment rides on that
+ * price's override line, as for a plan charge.
+ */
+function addonPricing(addon: {
+  priceOverrides?: PriceOverride[] | undefined
+  commitments?: ChargeCommitment[] | undefined
+}): {
+  lineItemCommitments?: Record<string, Record<string, unknown>>
+  overrideLineItems?: FlexpriceModels.OverrideLineItemRequest[]
+} {
+  const commitments = addon.commitments ?? []
+  const lines = withBuckets(
+    (addon.priceOverrides ?? []).map(
+      (override) => toOverrideLineItem(override) as unknown as Record<string, unknown>,
+    ),
+    commitments,
+  )
+  return {
+    ...(commitments.length > 0
+      ? {
+          lineItemCommitments: Object.fromEntries(
+            commitments.map((commitment) => [commitment.priceId, toLineItemCommitment(commitment)]),
+          ),
+        }
+      : {}),
+    ...(lines.length > 0
+      ? { overrideLineItems: lines as FlexpriceModels.OverrideLineItemRequest[] }
+      : {}),
+  }
+}
+
+/**
+ * One entitlement override as `override_entitlements` takes it. A metered
+ * grant goes as the grant patch, as an entitlement's own grant is sent: an
+ * unlimited allowance as `grant_unlimited` on a billing-period window, a
+ * window's length and start only when it is hourly, daily or weekly.
+ */
+function toOverrideEntitlement(
+  override: CreateSubscription['entitlementOverrides'][number],
+): Record<string, unknown> {
+  const grant = override.grant
+  const unlimited = grant?.quota === null
+  const unit = grant ? (unlimited ? 'subscription_period' : grant.unit) : undefined
+  return {
+    entitlementId: override.entitlementId,
+    ...(override.usageLimit !== undefined ? { usageLimit: override.usageLimit } : {}),
+    ...(override.isEnabled !== undefined ? { isEnabled: override.isEnabled } : {}),
+    ...(override.staticValue !== undefined ? { staticValue: override.staticValue } : {}),
+    ...(grant
+      ? {
+          grantMeasure: grant.measure,
+          ...(unlimited ? { grantUnlimited: true } : { grantQuota: grant.quota }),
+          grantDurationUnit: unit,
+          ...(unit !== 'subscription_period'
+            ? { grantDurationValue: grant.every ?? 1, grantAllocationBehavior: grant.allocation }
+            : {}),
+          aggregationMode: grant.aggregation,
+        }
+      : {}),
+  }
+}
+
 /** A phase's discounts as the API's two coupon fields: whole-phase ids, and ids per charge. */
 function couponFields(phase: SubscriptionPhase): Record<string, unknown> {
   const whole = phase.discounts.filter((d) => !d.priceId).map((d) => d.couponId)
@@ -870,6 +1033,18 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
     ...(contractStart ? { startDate: contractStart } : {}),
     ...(last?.endDate ? { endDate: utcDay(last.endDate) } : {}),
     ...(draft.trialPeriodDays ? { trialPeriodDays: draft.trialPeriodDays } : {}),
+    // This contract's own rate to the invoicing customer's billing currency; only rates set.
+    ...(draft.fxRates.some((fx) => fx.rate)
+      ? {
+          fxRates: draft.fxRates
+            .filter((fx) => fx.rate)
+            .map((fx) => ({
+              rate: fx.rate,
+              ...(fx.startDate ? { startDate: contractDateToInstant(fx.startDate) } : {}),
+              ...(fx.endDate ? { endDate: contractDateToInstant(fx.endDate) } : {}),
+            })),
+        }
+      : {}),
     ...(draft.includePriceIds ? { includePriceIds: draft.includePriceIds } : {}),
     ...(first && withBuckets(overrideLines(first), phased ? [] : draft.chargeCommitments).length > 0
       ? {
@@ -913,16 +1088,13 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
           commitmentAmount: draft.commitmentAmount,
           ...(draft.commitmentDuration ? { commitmentDuration: draft.commitmentDuration } : {}),
           ...(draft.overageFactor ? { overageFactor: draft.overageFactor } : {}),
-          enableTrueUp: draft.enableTrueUp,
+          // True-up needs a commitment to bill against; a zero amount is none.
+          enableTrueUp: draft.enableTrueUp && Number(draft.commitmentAmount) > 0,
         }
       : {}),
     ...(draft.entitlementOverrides.length > 0
       ? {
-          overrideEntitlements: draft.entitlementOverrides.map((override) => ({
-            entitlementId: override.entitlementId,
-            ...(override.usageLimit !== undefined ? { usageLimit: override.usageLimit } : {}),
-            ...(override.isEnabled !== undefined ? { isEnabled: override.isEnabled } : {}),
-          })),
+          overrideEntitlements: draft.entitlementOverrides.map(toOverrideEntitlement),
         }
       : {}),
     // The API uses this list *instead of* the plan's grants, so it is sent only
@@ -950,7 +1122,12 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
         }
       : {}),
     ...(draft.addons.length > 0
-      ? { addons: draft.addons.map((addon) => ({ addonId: addon.addonId })) }
+      ? {
+          addons: draft.addons.map((addon) => ({
+            addonId: addon.addonId,
+            ...addonPricing(addon),
+          })),
+        }
       : {}),
     billingCycle: draft.billingCycle,
     ...(draft.billingAnchor ? { billingAnchor: utcDay(draft.billingAnchor) } : {}),
@@ -1109,8 +1286,16 @@ export function useSubscriptionEntitlements(id: string) {
   return useQuery({
     queryKey: queryKeys.subscriptions.entitlements(id),
     queryFn: async () => {
-      const response = await call(() => client.subscriptions.getSubscriptionEntitlements(id))
-      return ((response.features ?? []) as SubscriptionFeatureWire[]).map(toSubscriptionEntitlement)
+      try {
+        const response = await call(() => client.subscriptions.getSubscriptionEntitlements(id))
+        return ((response.features ?? []) as SubscriptionFeatureWire[]).map(
+          toSubscriptionEntitlement,
+        )
+      } catch (error) {
+        const recovered = subscriptionEntitlementsFromRejection(error)
+        if (recovered) return recovered
+        throw error
+      }
     },
     enabled: id.length > 0,
   })
@@ -1645,6 +1830,7 @@ export function toInvoicePreview(wire: InvoicePreviewWire): InvoicePreview {
     periodEnd: wire.periodEnd ?? null,
     lines: detail.lines.map((line) => ({
       id: line.id,
+      priceId: line.priceId ?? '',
       name: line.description,
       detail: line.detail,
       quantity: line.quantity,
@@ -1921,7 +2107,7 @@ export function toAddAddonRequest(
   subscriptionId: string,
   draft: AddContractAddon,
 ): FlexpriceModels.AddAddonRequest {
-  return { subscriptionId, addonId: draft.addonId }
+  return { subscriptionId, addonId: draft.addonId, ...addonPricing(draft) }
 }
 
 /** A coupon applied to one contract, or to one of its charges, as a `coupon` modification. */

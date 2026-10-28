@@ -1197,6 +1197,27 @@ const workflowRuns: Record<string, unknown>[] = Array.from({ length: 30 }, (_, i
   }
 })
 
+/** A price sync as the mock runs it: done at once, recorded where the search finds it. */
+function startPriceSync(workflowId: string) {
+  const runId = `run_${Date.now()}`
+  const now = new Date().toISOString()
+  workflowRuns.unshift({
+    workflow_id: workflowId,
+    run_id: runId,
+    workflow_type: 'PriceSyncV2Workflow',
+    status: 'Completed',
+    task_queue: 'billing',
+    start_time: now,
+    close_time: now,
+    duration_ms: 0,
+  })
+  return {
+    message: 'price sync workflow started successfully',
+    workflow_id: workflowId,
+    run_id: runId,
+  }
+}
+
 /** Scheduled exports, authored to the wire: snake_case, `job_config` nested. */
 const scheduledTasks: Record<string, unknown>[] = [
   ['invoice', 'daily', true, 'acme-billing', 'us-east-1', 'flexprice/invoices/'],
@@ -1279,6 +1300,9 @@ const manualRuns = new Map<string, Record<string, unknown>[]>()
  */
 /** Tax rates attached to entities, mutated by the association handlers. */
 /** Forex rates: a global USD → INR and EUR → USD, and one customer override. */
+/** Connection keys the API holds but never returns, by connection id. */
+const connectionSecrets = new Map<string, Record<string, string>>()
+
 const fxRates: Record<string, unknown>[] = [
   {
     id: 'fxrate_usd_inr',
@@ -2542,12 +2566,14 @@ function sourceFor(key: string): Corpus {
 }
 
 export const handlers = [
-  // Price sync: starts a workflow and answers its handle, as the API does.
+  // Price sync: starts a workflow and answers its handle, as the API does. The
+  // run lands in the workflow search already finished, so the console's watch
+  // sees it complete on its first read.
   http.post(`${BASE}/plans/:id/sync/subscriptions`, ({ params }) =>
-    HttpResponse.json({ workflow_id: `sync-plan-${String(params['id'])}`, run_id: 'run_mock' }),
+    HttpResponse.json(startPriceSync(`sync-plan-${String(params['id'])}`)),
   ),
   http.post(`${BASE}/addons/:id/sync/subscriptions`, ({ params }) =>
-    HttpResponse.json({ workflow_id: `sync-addon-${String(params['id'])}`, run_id: 'run_mock' }),
+    HttpResponse.json(startPriceSync(`sync-addon-${String(params['id'])}`)),
   ),
   // The Svix API behind the webhook portal: see `svixHandlers.ts`.
   ...svixHandlers,
@@ -3855,6 +3881,14 @@ export const handlers = [
     if (typeof body['name'] === 'string') row['name'] = body['name']
     if (body['metadata']) row['metadata'] = body['metadata']
     if (body['sync_config']) row['sync_config'] = body['sync_config']
+    // As the API: replaced keys are merged and kept, never sent back.
+    const replaced = body['encrypted_secret_data'] as Record<string, string> | undefined
+    if (replaced) {
+      const kept = connectionSecrets.get(String(row['id'])) ?? {}
+      for (const [key, value] of Object.entries(replaced)) if (value) kept[key] = value
+      connectionSecrets.set(String(row['id']), kept)
+      row['updated_at'] = new Date().toISOString()
+    }
     return HttpResponse.json(row)
   }),
 
@@ -5250,6 +5284,41 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     sourceFor('subscriptions').items.unshift(row)
+    // As the API (handleFxOverride): each fx_rates entry becomes one of the
+    // contract's own rates, converting into the invoicing customer's currency.
+    const inlineFx = Array.isArray(body['fx_rates'])
+      ? (body['fx_rates'] as Record<string, unknown>[])
+      : []
+    // The API refuses fx_rates when the payer has no other billing currency; the
+    // mock simply makes no rate then.
+    if (inlineFx.length > 0) {
+      const payerExternal = readString(
+        (body['inheritance'] ?? {}) as Record<string, unknown>,
+        'invoicing_customer_external_id',
+      )
+      const payer = sourceFor('customers').items.find((c) =>
+        payerExternal
+          ? readString(c, 'external_id') === payerExternal
+          : readString(c, 'id') === readString(body, 'customer_id'),
+      )
+      const to = payer ? readString(payer, 'billing_currency').toLowerCase() : ''
+      if (to)
+        inlineFx.forEach((fx, index) =>
+          fxRates.push({
+            id: `fxrate_${row.id}_${index}`,
+            scope: 'subscription',
+            scope_id: row.id,
+            from_currency: (readString(body, 'currency') || 'usd').toLowerCase(),
+            to_currency: to,
+            rate: String(fx['rate'] ?? ''),
+            ...(fx['start_date'] ? { start_date: fx['start_date'] } : {}),
+            ...(fx['end_date'] ? { end_date: fx['end_date'] } : {}),
+            source: 'fixed',
+            status: 'published',
+            updated_at: new Date().toISOString(),
+          }),
+        )
+    }
     // An active contract bills its in-advance fixed charges at once, as the API
     // does, so the customer's first invoice is there to find on their Invoices
     // tab. Drafts and future starts have not begun, so they bill nothing yet.

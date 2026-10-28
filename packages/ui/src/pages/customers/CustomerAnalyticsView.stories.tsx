@@ -77,15 +77,17 @@ export const Default: Story = {
   },
 }
 
-/** No cost sheet: cost and margin read "—", never a made-up zero. */
+/** No cost sheet: cost and margin read "—", never a made-up zero, and a line says why. */
 export const WithoutCostSheet: Story = {
   args: {
     totals: { revenue: '$500.00', cost: null, margin: null, marginPercent: null },
     features: FEATURES.map((f) => ({ ...f, cost: null })),
+    costNote: 'No cost sheet, so no cost or margin. Add one under Cost sheets.',
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getAllByText('—').length).toBeGreaterThanOrEqual(3)
+    await expect(canvas.getByText(/^No cost sheet, so no cost or margin/)).toBeVisible()
   },
 }
 
@@ -152,5 +154,60 @@ export const WithHeading: Story = {
       .find((element) => element.getAttribute('role') === 'switch')
     await expect(includeChildren).toBeVisible()
     await expect(canvas.queryByText(/Usage of this contract's metered features/)).toBeNull()
+  },
+}
+
+/** The range ends are picked on the shared day calendar, inside the range, and sent as days. */
+export const PicksTheRange: Story = {
+  parameters: {
+    // Base UI focus guards around the portalled popover: see DateInput.stories.tsx.
+    a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /^From 2026-10-01/ }))
+    const body = within(document.body)
+    // Past the range's end cannot be the start.
+    await expect(await body.findByRole('button', { name: /October 25/ })).toBeDisabled()
+    await userEvent.click(body.getByRole('button', { name: /October 5/ }))
+    await expect(args.onQueryChange).toHaveBeenCalledWith({ ...QUERY, from: '2026-10-05' })
+  },
+}
+
+/**
+ * A feature whose price changed mid-range is one row, not two: its revenue is
+ * the total, and "2 prices" lists what each price brought in.
+ */
+export const PriceChangedInRange: Story = {
+  args: {
+    features: [
+      {
+        ...FEATURES[0]!,
+        prices: [
+          { id: 'li_old', label: 'Oct 1 – Oct 14', usage: '70,000', revenue: '$140.00' },
+          { id: 'li_new', label: 'From Oct 15', usage: '50,000', revenue: '$100.00' },
+        ],
+      },
+      ...FEATURES.slice(1),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const table = within(canvas.getByRole('table'))
+    await expect(table.getAllByText('API Calls')).toHaveLength(1)
+    await userEvent.click(table.getByRole('button', { name: /Revenue by price: 2 prices/ }))
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('Revenue by price')).toBeVisible()
+    await expect(body.getByText('Oct 1 – Oct 14')).toBeVisible()
+    await expect(body.getByText('$140.00')).toBeVisible()
+    await expect(body.getByText('From Oct 15')).toBeVisible()
+    await expect(body.getByText('$100.00')).toBeVisible()
+  },
+}
+
+/** A feature under one price has no price list. */
+export const OnePrice: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole('button', { name: /prices/ })).toBeNull()
   },
 }

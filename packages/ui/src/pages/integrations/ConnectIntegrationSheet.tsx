@@ -17,6 +17,7 @@ import {
   toConnectionPayload,
   webhookEvents,
   webhookUrl,
+  rotatableFields,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
@@ -287,8 +288,9 @@ function ConnectForm({
             ))}
             <p className="text-muted-foreground flex items-start gap-2 text-xs">
               <InfoIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-              Keys are encrypted and never shown again. To change one later, disconnect and connect
-              again.
+              {rotatableFields(spec).length > 0
+                ? 'Keys are encrypted and never shown again. You can replace them later from Configure.'
+                : 'Keys are encrypted and never shown again. To change one later, disconnect and connect again.'}
             </p>
             {spec.credentialHelp ? (
               <a

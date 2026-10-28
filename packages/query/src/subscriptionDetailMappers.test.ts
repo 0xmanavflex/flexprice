@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { ApiError, ErrorKind } from '@fp/api'
 import { NO_USAGE_TERMS } from '@fp/domain'
 import {
   toCreateLineItemRequest,
   toDeleteLineItemRequest,
   toPendingSchedules,
   toSubscriptionDetail,
+  subscriptionEntitlementsFromRejection,
   toSubscriptionEntitlement,
   toLineChangePreview,
   toLineItemChangeRequest,
@@ -48,6 +50,36 @@ describe('subscription detail mappers', () => {
         entitlement: { isEnabled: true, usageLimit: 10, usageResetPeriod: 'MONTHLY' },
       }),
     ).toMatchObject({ enabled: true, usageLimit: 10, resetPeriodLabel: 'Monthly' })
+  })
+
+  it('reads the wire names when the SDK rejected a 200', () => {
+    const body = {
+      features: [
+        {
+          feature: { id: 'feat_1', name: 'test' },
+          entitlement: { is_enabled: true, usage_limit: 30, is_soft_limit: false },
+        },
+      ],
+    }
+    const error = new ApiError(ErrorKind.Unknown, 'schema', {
+      status: 200,
+      cause: { statusCode: 200, rawValue: body },
+    })
+    expect(subscriptionEntitlementsFromRejection(error)).toEqual([
+      {
+        featureId: 'feat_1',
+        name: 'test',
+        enabled: true,
+        usageLimit: 30,
+        softLimit: false,
+        resetPeriodLabel: '',
+      },
+    ])
+    const failed = new ApiError(ErrorKind.Server, 'no', {
+      status: 500,
+      cause: { statusCode: 500, body: JSON.stringify(body) },
+    })
+    expect(subscriptionEntitlementsFromRejection(failed)).toBeUndefined()
   })
 
   it('carries metadata and terms on the detail', () => {

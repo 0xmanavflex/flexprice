@@ -17,7 +17,7 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
-import { DateInput } from '@ui/compositions/forms/DateInput'
+import { DateInput, storedDayOf, utcDayEnd } from '@ui/compositions/forms/DateInput'
 import { Field } from '@ui/compositions/forms/Field'
 import { FormActions } from '@ui/compositions/forms/FormActions'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
@@ -65,21 +65,22 @@ const messageOf = (errors: unknown, key: string): string | undefined =>
 const optionsOf = <T extends string>(values: T[], labels: Record<T, string>) =>
   values.map((value) => ({ value, label: labels[value] }))
 
-const pad = (n: number) => String(n).padStart(2, '0')
-const toIso = (date: Date | undefined) =>
-  date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : ''
-const endOfDay = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return y && m && d ? new Date(y, m - 1, d, 23, 59, 59) : undefined
-}
-
 export function CreditGrantEditForm({
   defaultValue,
   isSubmitting = false,
   submitError = null,
   onSubmit,
   submitLabel,
-}: CreditGrantFormProps<EditCreditGrant> & { defaultValue: EditCreditGrant }) {
+  allowEndDate = true,
+}: CreditGrantFormProps<EditCreditGrant> & {
+  defaultValue: EditCreditGrant
+  /**
+   * False for a plan's grant: the API cannot hold a future end date on one; any
+   * end date archives it at once, so it would vanish from the plan. Removing the
+   * grant is the honest way to end it.
+   */
+  allowEndDate?: boolean
+}) {
   const form = useCalmForm<EditCreditGrant>({
     resolver: standardSchemaResolver(editCreditGrantSchema) as Resolver<EditCreditGrant>,
     defaultValues: defaultValue,
@@ -102,30 +103,38 @@ export function CreditGrantEditForm({
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
         )}
       </Field>
-      <div className="max-w-xs">
-        <Field
-          label="End date"
-          hint="Optional. The grant stops issuing credits after this day."
-          error={errors.endDate?.message}
-        >
-          {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
-            <Controller
-              control={form.control}
-              name="endDate"
-              render={({ field }) => (
-                <DateInput
-                  id={id}
-                  value={toIso(field.value)}
-                  onValueChange={(iso) => field.onChange(iso ? endOfDay(iso) : undefined)}
-                  disabled={isSubmitting}
-                  aria-describedby={describedBy}
-                  aria-invalid={invalid}
-                />
-              )}
-            />
-          )}
-        </Field>
-      </div>
+      {allowEndDate ? (
+        <div className="max-w-xs">
+          <Field
+            label="End date"
+            hint="Optional. The grant stops issuing credits after this day."
+            error={errors.endDate?.message}
+          >
+            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
+              <Controller
+                control={form.control}
+                name="endDate"
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={storedDayOf(field.value)}
+                    // Issues through the day picked: the end of that UTC day, in every browser zone.
+                    onValueChange={(day) => field.onChange(utcDayEnd(day))}
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                    aria-invalid={invalid}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          A plan's grant has no end date. To stop issuing it, remove it from the plan; contracts
+          already given its credits keep them.
+        </p>
+      )}
       <FormActions
         mode="edit"
         isSubmitting={isSubmitting}
@@ -263,34 +272,6 @@ export function CreditGrantCreateForm({
               />
             )}
           </Field>
-          {cadence === CreditGrantCadence.Recurring ? (
-            <Field
-              label="Refreshes every"
-              hint="How often a recurring grant issues its credits again."
-              required
-              error={messageOf(errors, 'period')}
-            >
-              {({ id }) => (
-                <Controller
-                  control={form.control}
-                  name="period"
-                  render={({ field }) => (
-                    <OptionSelect
-                      id={id}
-                      value={field.value ?? ''}
-                      onValueChange={field.onChange}
-                      options={optionsOf(
-                        Object.values(CreditGrantPeriod),
-                        CREDIT_GRANT_PERIOD_LABEL,
-                      )}
-                      placeholder="Choose a period"
-                      disabled={isSubmitting}
-                    />
-                  )}
-                />
-              )}
-            </Field>
-          ) : null}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -367,11 +348,40 @@ export function CreditGrantCreateForm({
               />
             )}
           </Field>
-          <p className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-sm">
-            {summary}
-          </p>
         </div>
       </div>
+
+      {/* Recurring options open here, full width, above the note: not beside it. */}
+      {cadence === CreditGrantCadence.Recurring ? (
+        // Half width on wide screens, lined up with the left column above.
+        <div className="md:w-1/2 md:pr-3">
+          <Field
+            label="Refreshes every"
+            hint="How often a recurring grant issues its credits again."
+            required
+            error={messageOf(errors, 'period')}
+          >
+            {({ id }) => (
+              <Controller
+                control={form.control}
+                name="period"
+                render={({ field }) => (
+                  <OptionSelect
+                    id={id}
+                    value={field.value ?? ''}
+                    onValueChange={field.onChange}
+                    options={optionsOf(Object.values(CreditGrantPeriod), CREDIT_GRANT_PERIOD_LABEL)}
+                    placeholder="Choose a period"
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : null}
+      {/* The explanatory note is always the last block, full width. */}
+      <p className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-sm">{summary}</p>
 
       <FormActions
         mode="create"

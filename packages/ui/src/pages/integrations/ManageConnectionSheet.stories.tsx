@@ -42,7 +42,7 @@ type Story = StoryObj<typeof meta>
 
 const screenOf = (canvasElement: HTMLElement) => within(canvasElement.ownerDocument.body)
 
-/** Stripe: rename, sync switches and the webhook address; its keys are write-only. */
+/** Stripe: rename, sync switches (customers too, for Stripe Tax), replaceable keys and the webhook address. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const screen = screenOf(canvasElement)
@@ -65,6 +65,24 @@ export const SavesOnlyChanges: Story = {
   },
 }
 
+/** A Stripe key can be replaced; left blank, the stored one is kept and not sent. */
+export const ReplacesAKey: Story = {
+  play: async ({ canvasElement, args }) => {
+    const screen = screenOf(canvasElement)
+    await userEvent.type(await screen.findByLabelText(/^Secret key/), 'sk_live_new')
+    await userEvent.click(screen.getByRole('switch', { name: 'Push customers' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(args.onSave).toHaveBeenCalledOnce())
+    await expect(args.onSave).toHaveBeenCalledWith(
+      'conn_stripe',
+      expect.objectContaining({
+        encrypted_secret_data: { secret_key: 'sk_live_new' },
+        sync_config: expect.objectContaining({ customer: { outbound: true } }),
+      }),
+    )
+  },
+}
+
 /** Disconnecting asks first, and says it archives the connection. */
 export const ConfirmsDisconnect: Story = {
   // The soft `destructive` button variant is 3.82:1 by design; see ConfirmDialog.stories.
@@ -73,7 +91,7 @@ export const ConfirmsDisconnect: Story = {
     const screen = screenOf(canvasElement)
     await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Stripe' }))
     const dialog = await screen.findByRole('dialog', { name: 'Disconnect Stripe?' })
-    await expect(dialog).toHaveTextContent(/archives this connection/)
+    await expect(dialog).toHaveTextContent(/this connection is archived/)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Disconnect' }))
     await expect(args.onDisconnect).toHaveBeenCalledWith('conn_stripe')
   },

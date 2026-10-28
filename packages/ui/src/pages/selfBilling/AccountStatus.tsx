@@ -15,6 +15,7 @@ import { Progress } from '@ui/components/primitives/progress'
 import { AlertCircleIcon, ClockIcon, InfoIcon, LockIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { useState } from 'react'
 
 /**
  * The tenant's own Flexprice account, as the shell shows it: a pill in the top
@@ -118,14 +119,19 @@ const PILL_VARIANT = {
   locked: 'destructive-light',
 } as const
 
-/** The top-bar pill. Nothing once the account is active. Hover opens the card; it closes 200ms after the pointer leaves. */
+/** The top-bar pill. Nothing once the account is active. Hover opens the card; it closes 200ms after the pointer leaves, and immediately when View details or Upgrade is chosen. */
 export function AccountStatusPill(props: AccountStatusProps) {
   const pill = accountPill(props.summary, props.today)
+  const [open, setOpen] = useState(false)
   if (!pill) return null
   const Icon =
     pill.tone === 'locked' ? LockIcon : pill.tone === 'urgent' ? AlertCircleIcon : ClockIcon
+  const leave = (go: () => void) => {
+    setOpen(false)
+    go()
+  }
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         openOnHover
         delay={120}
@@ -147,7 +153,11 @@ export function AccountStatusPill(props: AccountStatusProps) {
         className="w-80"
         aria-label={pill.tone === 'locked' ? 'Account locked' : 'Free trial'}
       >
-        <AccountCard {...props} />
+        <AccountCard
+          {...props}
+          onViewDetails={() => leave(props.onViewDetails)}
+          onUpgrade={() => leave(props.onUpgrade)}
+        />
       </PopoverContent>
     </Popover>
   )
@@ -159,11 +169,19 @@ export function AccountLockedDialog({
   onOpenChange,
   ...props
 }: AccountStatusProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const leave = (go: () => void) => {
+    onOpenChange(false)
+    go()
+  }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogTitle className="sr-only">Account locked</DialogTitle>
-        <AccountCard {...props} />
+        <AccountCard
+          {...props}
+          onViewDetails={() => leave(props.onViewDetails)}
+          onUpgrade={() => leave(props.onUpgrade)}
+        />
       </DialogContent>
     </Dialog>
   )

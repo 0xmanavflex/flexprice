@@ -75,8 +75,8 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
    */
   period?: BillingPeriod | string
   /**
-   * `summary` shows only the changed charges and a link to the rest: the
-   * contract Overview. `full` shows every charge, narrowed by the Status filter
+   * `summary` shows the first few live charges, changed ones first, and a
+   * link to the rest: the contract Overview. `full` shows every charge, narrowed by the Status filter
    * (Active, Changed, Ended) beside the billing model: the Charges tab.
    */
   variant?: 'summary' | 'full'
@@ -129,8 +129,9 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
   showTitle?: boolean
   /**
-   * Forces the "In effect" column (when each charge starts and ends) on. It is
-   * on by default in the wide layout and in the column menu in the narrow one.
+   * Brings "Billing timing" on screen in the narrow layout. Both it and "In
+   * effect" are on by default in the wide layout; the narrow one keeps "In
+   * effect" in the column menu either way, so its row stays uncluttered.
    */
   showDates?: boolean
   description?: string
@@ -224,6 +225,9 @@ function kindLine(
   return `${kind} · ${rest}`
 }
 
+/** The live charges the summary variant lists before "Show all charges". */
+const SUMMARY_ROWS = 5
+
 /** Changed charges first (the more flags, the higher), then fixed before usage, then by name. */
 function ordering(details: ReadonlyMap<string, ChargeDetail> | undefined) {
   const weight = (charge: Charge) => (isChargeCustomised(details?.get(charge.id)) ? 1 : 0)
@@ -277,18 +281,19 @@ export function ChargeTable({
   const openAt = (charge: Charge, section?: ChargeSection) =>
     setOpen(section ? { charge, section } : { charge })
 
-  const { active, changed, ended } = useMemo(() => {
+  const { active, ended } = useMemo(() => {
     const order = ordering(details)
-    const live = charges.filter((charge) => !charge.endDate).sort(order)
     return {
-      active: live,
-      changed: live.filter((charge) => isChargeCustomised(details?.get(charge.id))),
+      active: charges.filter((charge) => !charge.endDate).sort(order),
       ended: charges.filter((charge) => charge.endDate).sort(order),
     }
   }, [charges, details])
 
-  // The full table lists every charge, live first; Status narrows it.
-  const rows = variant === 'summary' ? changed : [...active, ...ended]
+  // The full table lists every charge, live first; Status narrows it. The
+  // summary lists the live ones (changed first, so they lead) up to a few,
+  // and "Show all charges" goes to the rest. Unchanged charges are still
+  // charges: a contract on its plan's prices must not read as empty.
+  const rows = variant === 'summary' ? active.slice(0, SUMMARY_ROWS) : [...active, ...ended]
   const statusOf = (charge: Charge) =>
     charge.endDate ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
 
@@ -352,7 +357,7 @@ export function ChargeTable({
     {
       key: 'name',
       header: chargeColumnLabel,
-      width: narrow ? 220 : 280,
+      width: narrow ? 220 : 260,
       sortBy: (charge) => nameOf(charge),
       text: (charge) => `${nameOf(charge)} ${kindLine(charge, period, locale, source?.(charge))}`,
       cell: (charge) => (
@@ -367,7 +372,7 @@ export function ChargeTable({
     {
       key: 'price',
       header: 'Price',
-      width: narrow ? 160 : 200,
+      width: narrow ? 150 : 170,
       cell: (charge) => (
         <span className="block min-w-0">
           <span className="block tabular-nums">{priceLabel(charge)}</span>
@@ -382,7 +387,7 @@ export function ChargeTable({
     {
       key: 'flags',
       header: 'Flags',
-      width: narrow ? 230 : 360,
+      width: narrow ? 230 : 300,
       cell: (charge) => (
         <ChargeFlags
           detail={details?.get(charge.id)}
@@ -405,8 +410,8 @@ export function ChargeTable({
     charge.invoiceCadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'
 
   // After price: quantity (when a page knows it), billing timing and the dates
-  // the charge is in effect, then flags. Timing and dates sit in the column
-  // menu, not on screen, in the narrow layout beside a side rail.
+  // the charge is in effect, then flags. Beside a side rail (narrow) the dates
+  // sit in the column menu, and timing too unless `showDates` asks for it.
   const middle: DetailColumn<Charge>[] = []
   if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
     middle.push({
@@ -423,19 +428,21 @@ export function ChargeTable({
     {
       key: 'timing',
       header: 'Billing timing',
-      width: 130,
+      // Wide enough that its header never runs into "In effect".
+      width: 170,
       text: timing,
       cell: (charge) => <span>{timing(charge)}</span>,
-      ...(narrow ? { hiddenByDefault: true } : {}),
+      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
     },
     {
       key: 'dates',
       header: 'In effect',
-      width: 220,
+      width: 240,
       sortBy: (charge) => charge.startDate?.getTime() ?? 0,
       text: inEffect,
       cell: (charge) => <span className="tabular-nums">{inEffect(charge)}</span>,
-      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
+      // Too much for a row beside a side rail; still one click away in the column menu.
+      ...(narrow ? { hiddenByDefault: true } : {}),
     },
   )
   columns.splice(2, 0, ...middle)
@@ -525,11 +532,14 @@ export function ChargeTable({
             loadingLabel="Loading charges"
             empty={{
               scene: 'catalog',
-              title: variant === 'summary' ? 'No changes' : 'No charges yet',
-              description:
-                variant === 'summary'
-                  ? 'Every charge is billed as the plan sets it. Changed charges show here.'
-                  : undefined,
+              // A summary with only ended charges is not a contract without
+              // charges: say none are live, and Show all charges reaches them.
+              ...(variant === 'summary' && ended.length > 0
+                ? {
+                    title: 'No active charges',
+                    description: 'Ended charges are listed under Show all charges.',
+                  }
+                : { title: 'No charges yet' }),
             }}
           >
             {null}
@@ -538,7 +548,9 @@ export function ChargeTable({
           <DetailTable
             compact
             label="Charges"
-            toolbar
+            // The summary is a few rows; filtering or sorting them would only
+            // reorder what is shown, so those live on the full table.
+            toolbar={variant === 'full'}
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
             // filter keeps it.

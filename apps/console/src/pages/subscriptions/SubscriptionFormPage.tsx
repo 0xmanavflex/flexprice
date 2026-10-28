@@ -2,11 +2,16 @@ import { useMemo, useState } from 'react'
 import {
   explainContractHierarchyError,
   useAddons,
+  useEntitiesCharges,
   useCoupons,
   useCreateSubscription,
   useCreditGrants,
   useCustomerTaxAssociations,
+  useCustomCurrencyConfig,
+  useCustomer,
   useCustomers,
+  useFeaturesByMeters,
+  useFxRates,
   useInheritanceBlocks,
   usePlanEntitlements,
   usePlans,
@@ -25,11 +30,13 @@ import {
   DEFAULT_PLAN_QUERY,
   DEFAULT_TAX_RATE_QUERY,
   formatMoney,
+  FxRateScope,
   PriceEntityType,
   TaxRateStatus,
 } from '@fp/domain'
 import { SubscriptionForm } from '@fp/ui/pages'
-import { usePlanFormOptions } from '../plans/planFormOptions'
+import { useSession } from '@/app/session'
+import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
 
 export interface SubscriptionFormPageProps {
   /** Set when opened from a customer's own page: the Customer step is dropped. */
@@ -68,6 +75,28 @@ export function SubscriptionFormPage({
   const planGrants = useCreditGrants(CreditGrantScope.Plan, planId)
   // The metered features and price units a charge added to this contract alone can use.
   const formOptions = usePlanFormOptions()
+  // The global exchange rates: a contract invoiced in another currency needs one for its pair.
+  const fxRates = useFxRates({ scope: FxRateScope.Tenant })
+  // And the custom currencies, which convert at their own factor instead.
+  const { environmentId } = useSession()
+  const currencyConfig = useCustomCurrencyConfig(environmentId)
+  const fxCustomCurrencies = useMemo(
+    () =>
+      currencyConfig.data
+        ? Object.fromEntries(
+            Object.entries(currencyConfig.data.customCurrencies).map(([code, currency]) => [
+              code.toLowerCase(),
+              Object.fromEntries(
+                Object.entries(currency.fiatConversionFactors).map(([fiat, factor]) => [
+                  fiat.toLowerCase(),
+                  factor,
+                ]),
+              ),
+            ]),
+          )
+        : undefined,
+    [currencyConfig.data],
+  )
   const coupons = useCoupons({
     ...DEFAULT_COUPON_QUERY,
     ...PICKER_PAGE,
@@ -78,6 +107,18 @@ export function SubscriptionFormPage({
     ...PICKER_PAGE,
     statuses: [AddonStatus.Published],
   })
+  // The charges of the add-ons that have any, read in one search, so each can be
+  // repriced before it is added and a usage charge can carry a commitment.
+  const addonIds = (addons.data?.addons ?? []).filter((a) => a.chargeCount > 0).map((a) => a.id)
+  const addonCharges = useEntitiesCharges(PriceEntityType.Addon, addonIds)
+  // The plan's and the add-ons' usage charges' meters, by id: the picker reads only
+  // the first page of features, and a price override needs its charge's meter to offer a bucket.
+  const planMeters = useFeaturesByMeters(
+    [...(charges.data ?? []), ...[...(addonCharges.data?.values() ?? [])].flat()].flatMap(
+      (charge) => (charge.meterId ? [charge.meterId] : []),
+    ),
+  )
+  const meters = withMeters(formOptions.meters, planMeters.data ?? [])
   // Refetched on focus: "Create a tax rate" opens in a new tab, and the rate
   // made there should be pickable on return without losing this draft.
   const taxRates = useTaxRates(
@@ -104,17 +145,22 @@ export function SubscriptionFormPage({
     [associations.data],
   )
 
-  const customerOptions = useMemo(
-    () =>
-      (customers.data?.customers ?? []).map((c) => ({
-        value: c.id,
-        // The name in the field; the email under it in the list (and beside it on Review).
-        label: c.name,
-        ...(c.email ? { hint: c.email } : {}),
-        externalId: c.externalId || undefined,
-      })),
-    [customers.data],
-  )
+  // The chosen customer itself, which may sit past the picker's first page: its
+  // billing currency decides whether the contract converts.
+  const chosen = useCustomer(chosenCustomer)
+  const customerOptions = useMemo(() => {
+    const list = customers.data?.customers ?? []
+    const all =
+      chosen.data && !list.some((c) => c.id === chosen.data.id) ? [chosen.data, ...list] : list
+    return all.map((c) => ({
+      value: c.id,
+      // The name in the field; the email under it in the list (and beside it on Review).
+      label: c.name,
+      ...(c.email ? { hint: c.email } : {}),
+      externalId: c.externalId || undefined,
+      billingCurrency: c.billingCurrency || undefined,
+    }))
+  }, [customers.data, chosen.data])
   // Who can inherit from the chosen customer: anyone without a contract of their own.
   const inheritanceBlocks = useInheritanceBlocks(
     chosenCustomer,
@@ -145,8 +191,16 @@ export function SubscriptionFormPage({
           : undefined
       }
       onPlanChange={setPlanId}
+      // Undefined while unknown (loading or failed): the form blocks on a missing rate only once it knows.
+      fxCustomCurrencies={fxCustomCurrencies}
+      fxSettingsFailed={currencyConfig.isError}
+      fxGlobalRates={fxRates.data?.map((rate) => ({
+        fromCurrency: rate.fromCurrency,
+        toCurrency: rate.toCurrency,
+        rate: rate.rate,
+      }))}
       onCustomerChange={setChosenCustomer}
-      meters={formOptions.meters}
+      meters={meters}
       priceUnits={formOptions.units}
       couponsStatus={coupons.isPending ? 'loading' : coupons.isError ? 'failed' : 'ready'}
       coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
@@ -164,6 +218,15 @@ export function SubscriptionFormPage({
         label: addon.name,
         type: addonType(addon.fixedChargeCount, addon.usageChargeCount),
       }))}
+      // Undefined while unknown (loading or failed); a loaded add-on missing from the result has none.
+      addonCharges={(addonId) =>
+        addons.data && addonIds.length === 0
+          ? []
+          : addonCharges.data
+            ? (addonCharges.data.get(addonId) ?? [])
+            : undefined
+      }
+      addonChargesFailed={addonCharges.isError && !addonCharges.data}
       createTaxRateHref="/taxes/new"
       taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
         code: rate.code,

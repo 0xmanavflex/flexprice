@@ -7,6 +7,7 @@ import { Skeleton } from '@ui/components/primitives/skeleton'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { usePillSize } from '../../compositions/detail/pillSize'
+import { formatStoredDay } from '../../compositions/forms/DateInput'
 import { Money } from './Money'
 
 /**
@@ -126,13 +127,14 @@ export interface EntityColumn<T> {
  * reviewed. The mapping to tokens lives here so the whole console's greens are
  * one green.
  */
-export type PillTone = 'neutral' | 'success' | 'info' | 'warning' | 'danger'
+export type PillTone = 'neutral' | 'success' | 'info' | 'trial' | 'warning' | 'danger'
 
 /** The dot: tone is carried by a 6px dot, in semantic tokens. */
 const DOT_TONE: Record<PillTone, string> = {
   neutral: 'bg-muted-foreground',
   success: 'bg-success',
   info: 'bg-info',
+  trial: 'bg-trial',
   warning: 'bg-warning',
   danger: 'bg-destructive',
 }
@@ -194,9 +196,9 @@ const STATUS_TONE: Record<string, PillTone> = {
   finalized: 'info',
   // Open awaits payment: orange, as the invoice chips (walkthrough 6.1).
   open: 'warning',
-  trialing: 'info',
-  scheduled: 'info',
-  running: 'info',
+  trialing: 'trial',
+  scheduled: 'warning',
+  running: 'warning',
   draft: 'neutral',
   archived: 'neutral',
   inactive: 'neutral',
@@ -215,8 +217,10 @@ const STATUS_TONE: Record<string, PillTone> = {
   'partially paid': 'warning',
   overdue: 'danger',
   failed: 'danger',
-  cancelled: 'danger',
-  canceled: 'danger',
+  cancelled: 'neutral',
+  canceled: 'neutral',
+  incomplete: 'warning',
+  overpaid: 'success',
 }
 
 /** A status word as a dot pill; the tone is looked up from the word. */
@@ -597,17 +601,27 @@ export function idColumn<T>(
 }
 
 /** A date, as the reader's locale writes it. Muted: it is metadata, not the
- *  reason anyone opened the page. */
+ *  reason anyone opened the page. `storedDay` reads a day field (saved as a
+ *  UTC day) on its own day, in every zone; see `formatStoredDay`. */
 export function dateColumn<T>(
   id: string,
   header: string,
   get: (row: T) => Date | null | undefined,
-  options?: ColumnOptions & { locale?: string | undefined; dateStyle?: 'short' | 'medium' },
+  options?: ColumnOptions & {
+    locale?: string | undefined
+    dateStyle?: 'short' | 'medium'
+    storedDay?: boolean
+  },
 ): EntityColumn<T> {
   const format = (value: Date) =>
-    new Intl.DateTimeFormat(options?.locale, { dateStyle: options?.dateStyle ?? 'medium' }).format(
-      value,
-    )
+    options?.storedDay
+      ? formatStoredDay(value, {
+          locale: options.locale,
+          ...(options.dateStyle ? { dateStyle: options.dateStyle } : {}),
+        })
+      : new Intl.DateTimeFormat(options?.locale, {
+          dateStyle: options?.dateStyle ?? 'medium',
+        }).format(value)
   return {
     id,
     header,

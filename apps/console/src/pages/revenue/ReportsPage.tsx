@@ -32,6 +32,7 @@ import {
   creditTypeRows,
   alignToWindow,
   formatAmount,
+  largestCurrency,
   percentOf,
   rangeWindow,
   resolveGrain,
@@ -127,9 +128,15 @@ export function ReportsPage({
   // Revenue across every currency first: it says which currencies there are.
   const revenueAll = useCardReport('invoice_total', { ...base, shape: 'scalar' })
   const currencies = reportCurrencies(revenueAll.data)
+  // Without a choice, the currency with the most revenue: the report lists
+  // currencies alphabetically, and the first can be one with next to nothing.
   const currency =
-    (search.currency && currencies.includes(search.currency) ? search.currency : currencies[0]) ??
-    'USD'
+    (search.currency && currencies.includes(search.currency)
+      ? search.currency
+      : largestCurrency(
+          currencies,
+          (code) => reportScalar(revenueAll.data, 'invoice_total', code).value ?? 0,
+        )) ?? 'USD'
   const inCurrency = { ...base, currency: currency.toLowerCase() }
 
   const revenueSeries = useCardReport('invoice_total', {
@@ -274,6 +281,10 @@ export function ReportsPage({
     label: point.label,
     revenue: point.value ?? 0,
     ...(point.previous != null ? { previous: point.previous } : {}),
+    display: {
+      revenue: money(point.value ?? 0),
+      ...(point.previous != null ? { previous: money(point.previous) } : {}),
+    },
   }))
 
   const creditBreakdown = reportBreakdown(
@@ -306,7 +317,8 @@ export function ReportsPage({
       share: total > 0 ? row.value / total : 0,
     }
   }
-  const customerRows = customerRevenue.map(toRow)
+  // A customer with nothing billed is not one to rank or chart.
+  const customerRows = customerRevenue.filter((row) => row.value > 0).map(toRow)
   const pageBreakdown = reportBreakdown(
     customerPage.data,
     'invoice_total',
@@ -339,6 +351,7 @@ export function ReportsPage({
       id,
       name: nameOf(id),
       overdue: entry.overdue,
+      outstanding: entry.outstanding,
       display: { overdue: money(entry.overdue), outstanding: money(entry.outstanding) },
       oldestDays: entry.oldest,
     }))
@@ -409,6 +422,8 @@ export function ReportsPage({
         },
       }}
       revenue={{
+        // An all-zero series is drawn as the empty state by the chart itself;
+        // the totals come from their own read and still show.
         status: statusOf(revenueSeries, points.length === 0),
         reason: revenueSeries.isError ? 'The billing report did not respond.' : undefined,
         onRetry: retry(revenueAll, revenueSeries),
@@ -522,7 +537,7 @@ export function ReportsPage({
         onOpenCustomer: openCustomer,
       }}
       usage={{
-        status: statusOf(eventsReport, events.length === 0),
+        status: statusOf(eventsReport, eventsTotal === 0),
         reason: eventsReport.isError ? 'The events report did not respond.' : undefined,
         onRetry: retry(eventsReport),
         ...(eventsLimited

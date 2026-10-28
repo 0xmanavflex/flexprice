@@ -91,7 +91,7 @@ export const Live: Story = {
   args: { summary: ACCOUNTS.live, billingEmail: 'billing@acme.io' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Pay as you go · $199.00 a month + 0.5%')).toBeVisible()
+    await expect(canvas.getByText('Pay as you go · $199.00 a month + 0.5% of what you bill through Flexprice')).toBeVisible()
     await expect(canvas.getByText('Next invoice on Oct 31, 2026.')).toBeVisible()
     await expect(canvas.getByText('No limit on your plan')).toBeVisible()
     await expect(canvas.getByText('0.5% fee so far: $921.00')).toBeVisible()

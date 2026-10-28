@@ -1,11 +1,15 @@
 import { useState } from 'react'
+import { AddonChargesDialog, type AddonPricing } from './SubscriptionForm'
+import type { MeterOption } from '../product-catalog/charges/ChargeForm'
 import {
   emptyTaxAssociation,
   type AddContractAddon,
   type AddContractCoupon,
+  type Charge,
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreateTaxAssociation,
+  attachableAddonCharges,
 } from '@fp/domain'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
@@ -35,6 +39,16 @@ export type ContractSectionKind = 'entitlement' | 'creditGrant' | 'addon' | 'cou
 export interface ContractSectionOptions {
   features: FeatureOption[]
   addons: { id: string; name: string }[]
+  /** An add-on's charges, so each usage charge can carry a commitment, as V1. */
+  addonCharges?: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  /** The add-ons' charges could not be loaded. */
+  addonChargesFailed?: boolean | undefined
+  /** The metered features, so an add-on usage charge's override offers a bucket where the API takes one. */
+  meters?: readonly MeterOption[] | undefined
+  /** The contract's currency, for commitment amounts. */
+  currency?: string | undefined
+  /** The contract's billing period: only prices that attach get a commitment. */
+  billingPeriod?: string | undefined
   coupons: { code: string; name: string }[]
   taxRates: TaxRateOption[]
 }
@@ -99,18 +113,19 @@ export function ContractSectionDialogs({
         />
       </FormDialog>
 
-      <PickDialog
+      <AddonDialog
+        key={kind === 'addon' ? 'open' : 'closed'}
         open={kind === 'addon'}
-        title="Add add-on"
-        label="Add-on"
-        hint="The add-on to attach to this contract."
-        submitLabel="Add add-on"
-        emptyNote="No add-ons are available to attach."
-        options={options.addons.map((a) => ({ value: a.id, label: a.name }))}
+        addons={options.addons}
+        chargesOf={options.addonCharges}
+        chargesFailed={options.addonChargesFailed ?? false}
+        meters={options.meters ?? []}
+        currency={options.currency ?? ''}
+        billingPeriod={options.billingPeriod ?? ''}
         pending={pending}
         error={error}
         onClose={onClose}
-        onSubmit={(addonId) => onRun(actions.onAddAddon?.({ addonId }))}
+        onSubmit={(draft) => onRun(actions.onAddAddon?.(draft))}
       />
 
       <PickDialog
@@ -213,5 +228,95 @@ function PickDialog({
         ) : null}
       </Composer>
     </FormDialog>
+  )
+}
+
+/**
+ * Attach an add-on, repricing its charges first if you like, as V1's add-on
+ * card: choosing one lists all its charges, fixed and usage, each with
+ * Override price (sent as `override_line_items`) and, on a usage charge, Add
+ * commitment, the same dialogs as a plan charge.
+ */
+function AddonDialog({
+  open,
+  addons,
+  chargesOf,
+  chargesFailed,
+  meters,
+  currency,
+  billingPeriod,
+  pending,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean
+  addons: { id: string; name: string }[]
+  chargesOf: ((addonId: string) => readonly Charge[] | undefined) | undefined
+  chargesFailed: boolean
+  meters: readonly MeterOption[]
+  currency: string
+  billingPeriod: string
+  pending: boolean
+  error: string | null
+  onClose: () => void
+  onSubmit: (draft: AddContractAddon) => void
+}) {
+  const [addonId, setAddonId] = useState('')
+  const [pricing, setPricing] = useState<AddonPricing>({ priceOverrides: [], commitments: [] })
+  const [problem, setProblem] = useState<string | null>(null)
+  // Only the prices the API will attach (this currency, this period or one-time).
+  const loaded = addonId ? chargesOf?.(addonId) : undefined
+  const charges =
+    !addonId || !chargesOf
+      ? null
+      : loaded
+        ? attachableAddonCharges(loaded, { currency, billingPeriod })
+        : undefined
+
+  return (
+    <AddonChargesDialog
+      open={open}
+      title="Add add-on"
+      submitLabel="Add add-on"
+      charges={charges}
+      chargesFailed={chargesFailed}
+      meters={meters}
+      currency={currency}
+      value={pricing}
+      onChange={setPricing}
+      pending={pending}
+      error={problem ?? error}
+      disabled={addons.length === 0}
+      onClose={onClose}
+      onSubmit={() => {
+        if (!addonId) return setProblem('Choose an add-on')
+        setProblem(null)
+        onSubmit({
+          addonId,
+          ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
+          ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+        })
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        <LabelWithHint htmlFor="pick-add-on" hint="The add-on to attach to this contract.">
+          Add-on
+        </LabelWithHint>
+        <OptionSelect
+          id="pick-add-on"
+          value={addonId || undefined}
+          onValueChange={(next) => {
+            setAddonId(next)
+            setPricing({ priceOverrides: [], commitments: [] })
+          }}
+          options={addons.map((a) => ({ value: a.id, label: a.name }))}
+          placeholder="Select add-on"
+        />
+        {addons.length === 0 ? (
+          <p className="text-muted-foreground text-[13px]">No add-ons are available to attach.</p>
+        ) : null}
+      </div>
+    </AddonChargesDialog>
   )
 }

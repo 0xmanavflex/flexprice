@@ -307,11 +307,10 @@ export async function fetchWebhookDashboard(
  * tenant without billing. Verified live: the plural path returns 200 with the
  * `{usage, subscriptions}` body the SDK's own response model describes.
  *
- * **The real fix is the backend's OpenAPI path plus an SDK republish**, after
- * which this function and its caller both disappear and
- * `client.tenants.getTenantBillingUsage()` works as written. Nothing here
- * should grow: it exists to stop a correct screen from rendering an error while
- * that one-character change is made.
+ * SDK 2.1.43 adds `selfBilling.getTenantBillingSummary()` on the plural path,
+ * so this function and its caller can move to it (camelCased, so `@fp/query`'s
+ * normalising step goes too). Nothing here should grow: it exists to stop a
+ * correct screen from rendering an error until that switch is made.
  *
  * Returns the raw JSON body, which — unlike everything reached through the SDK
  * — is **snake_case**, because there is no generated client to camelCase it.

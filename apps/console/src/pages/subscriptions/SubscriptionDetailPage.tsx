@@ -5,6 +5,7 @@ import {
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
   DEFAULT_TAX_RATE_QUERY,
+  PriceEntityType,
   SubscriptionStatus,
   type SubscriptionCancellationType,
   lineRevertDraft,
@@ -19,6 +20,8 @@ import {
   useRemoveSubscriptionAddon,
   useRemoveSubscriptionTax,
   useAddons,
+  useEntitiesCharges,
+  useFeaturesByMeters,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
   useCancelSubscription,
@@ -35,6 +38,7 @@ import {
   useDeleteSubscriptionLineItem,
   useExecuteLineChange,
   usePreviewLineChange,
+  useInheritedContracts,
   useSubscription,
   useContractChargeAlerts,
   useSubscriptionAddons,
@@ -60,7 +64,7 @@ import {
 import { EntityAlertDialog, SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
-import { usePlanFormOptions } from '../plans/planFormOptions'
+import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
 import { railActivity } from '@/pages/shared/activityLog'
 import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { detailGate } from '../shared/detailGate'
@@ -72,6 +76,8 @@ export interface SubscriptionDetailPageProps {
   onOpenCustomer: (customerId: string) => void
   onOpenPlan: (planId: string) => void
   onOpenInvoice: (invoiceId: string) => void
+  /** Another contract: an inherited one's parent, or a parent's inherited contracts. */
+  onOpenContract?: (subscriptionId: string) => void
 }
 
 const CANCEL_OPTIONS = [
@@ -109,8 +115,13 @@ export function SubscriptionDetailPage({
   onOpenCustomer,
   onOpenPlan,
   onOpenInvoice,
+  onOpenContract,
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
+  // A parent's inherited contracts, as V1 lists them; only a parent has any.
+  const inheritedContracts = useInheritedContracts(
+    subscription.data?.subscriptionType === 'parent' ? subscriptionId : '',
+  )
   const lines = useSubscriptionLines(subscriptionId)
   // The Usage tab's breakdown is matched by the customer's external id.
   const contractCustomer = useCustomer(subscription.data?.customerId ?? '')
@@ -167,6 +178,19 @@ export function SubscriptionDetailPage({
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
+  // The charges of add-ons that have any, so attaching one can reprice them and commit on usage.
+  const addonIds = (addonCatalogue.data?.addons ?? [])
+    .filter((addon) => addon.status === 'published' && addon.chargeCount > 0)
+    .map((addon) => addon.id)
+  const addonCharges = useEntitiesCharges(PriceEntityType.Addon, addonIds)
+  // The add-on charges' meters, by id: the feature picker reads only its first page,
+  // and an add-on price override needs its charge's meter to offer a bucket size.
+  const addonMeters = useFeaturesByMeters(
+    [...(addonCharges.data?.values() ?? [])]
+      .flat()
+      .flatMap((charge) => (charge.meterId ? [charge.meterId] : [])),
+  )
+  const meters = withMeters(formOptions.meters, addonMeters.data ?? [])
   const taxRateCatalogue = useTaxRates({
     ...DEFAULT_TAX_RATE_QUERY,
     pageSize: 100,
@@ -297,6 +321,14 @@ export function SubscriptionDetailPage({
           addons: (addonCatalogue.data?.addons ?? [])
             .filter((addon) => addon.status === 'published')
             .map((addon) => ({ id: addon.id, name: addon.name })),
+          // Undefined while unknown (loading or failed); a loaded add-on missing from the result has none.
+          addonCharges: (addonId) =>
+            addonCatalogue.data && addonIds.length === 0
+              ? []
+              : addonCharges.data
+                ? (addonCharges.data.get(addonId) ?? [])
+                : undefined,
+          addonChargesFailed: addonCharges.isError && !addonCharges.data,
           coupons: (couponCatalogue.data?.coupons ?? [])
             .filter((coupon) => coupon.code !== '')
             .map((coupon) => ({ code: coupon.code, name: coupon.name })),
@@ -317,6 +349,10 @@ export function SubscriptionDetailPage({
         onBack={onNavigateToList}
         onOpenCustomer={() => onOpenCustomer(data.customerId)}
         onOpenPlan={() => onOpenPlan(data.planId)}
+        {...(onOpenContract ? { onOpenContract } : {})}
+        {...(data.subscriptionType === 'parent'
+          ? { inheritedContracts: part(inheritedContracts) }
+          : {})}
         onOpenInvoice={onOpenInvoice}
         {...(data.status === SubscriptionStatus.Incomplete
           ? { onActivate: () => setDialog('activate') }
@@ -325,7 +361,7 @@ export function SubscriptionDetailPage({
         onPause={(draft) => pause.mutateAsync({ id: data.id, draft })}
         onResume={(draft) => resume.mutateAsync({ id: data.id, draft })}
         onAlertSettings={contractAlert.openAlertSettings}
-        meters={formOptions.meters}
+        meters={meters}
         priceUnits={formOptions.units.filter((unit) => unit.baseCurrency === data.currency)}
         onAddCharge={async (draft) => {
           await addLine.mutateAsync({ id: data.id, draft })

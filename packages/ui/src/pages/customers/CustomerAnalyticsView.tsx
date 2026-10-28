@@ -9,11 +9,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { Input } from '@ui/components/primitives/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { Switch } from '@ui/components/primitives/switch'
-import { SegmentMeter } from '@ui/compositions/detail/DetailKit'
+import { SegmentMeter, TotalRow, TotalsList } from '@ui/compositions/detail/DetailKit'
+import { DayCalendar } from '@ui/compositions/forms/DateInput'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { ErrorState } from '@ui/compositions/feedback/States'
 import { Section } from '@ui/compositions/layout/Section'
@@ -37,8 +37,10 @@ export const CustomerAnalyticsViewProvenance = provenance({
   composes: [
     'primitives/dropdown-menu',
     'primitives/popover',
+    'compositions/date-input',
     'primitives/switch',
     'compositions/layout/Section',
+    'compositions/detail/DetailKit',
     'shared/charts',
     'shared/DetailTable',
   ],
@@ -62,6 +64,75 @@ export interface FeatureAnalytics {
   cost: string | null
   /** Usage per day across the range. */
   points: MetricPoint[]
+  /**
+   * The feature's revenue per price, when it billed under more than one in
+   * the range (a price change): the row stays one feature, and this says what
+   * each price brought in.
+   */
+  prices?: FeaturePriceAnalytics[] | undefined
+}
+
+/** One price's part of a feature's usage and revenue, already formatted. */
+export interface FeaturePriceAnalytics {
+  id: string
+  /** Which price: when it applied, e.g. `Oct 1 – Oct 14`. */
+  label: string
+  /** Usage under this price, formatted. */
+  usage: string
+  revenue: string | null
+}
+
+/** The feature's revenue, and when it billed under several prices, a list of each. */
+function FeatureRevenue({ feature }: { feature: FeatureAnalytics }) {
+  const prices = feature.prices ?? []
+  return (
+    <span className="flex min-w-0 items-baseline gap-1.5">
+      <span className="tabular-nums">{feature.revenue ?? DASH}</span>
+      {prices.length > 1 ? (
+        <Popover>
+          <PopoverTrigger
+            openOnHover
+            delay={150}
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="h-5 shrink-0 px-1.5 text-xs"
+                aria-label={`Revenue by price: ${prices.length} prices`}
+              />
+            }
+          >
+            {prices.length} prices
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="w-72 p-3"
+            aria-label={`${feature.name}: revenue by price`}
+          >
+            <p className="text-muted-foreground pb-2 text-xs">Revenue by price</p>
+            <TotalsList className="max-w-none">
+              {prices.map((price, index) => (
+                <TotalRow
+                  key={`${price.id}-${index}`}
+                  label={
+                    <>
+                      {price.label}
+                      <span className="text-muted-foreground block text-xs tabular-nums">
+                        {price.usage}
+                        {feature.unit ? ` ${feature.unit}` : ''}
+                      </span>
+                    </>
+                  }
+                  value={price.revenue ?? DASH}
+                />
+              ))}
+            </TotalsList>
+          </PopoverContent>
+        </Popover>
+      ) : null}
+    </span>
+  )
 }
 
 export interface AnalyticsTotals {
@@ -100,6 +171,11 @@ export interface CustomerAnalyticsViewProps {
   /** One muted line under the filters, for what the figures cover (a contract's scope). */
   note?: string | undefined
   /**
+   * Why cost and margin are blank, under the totals: no cost sheet, say. A
+   * blank figure otherwise reads as a zero or as a failed read.
+   */
+  costNote?: string | undefined
+  /**
    * When set, the filters and Include children sit on this heading's row,
    * at the right, and the note is not shown.
    */
@@ -135,18 +211,8 @@ function DateButton({
         {label} {value}
         <ChevronDownIcon className="opacity-50" aria-hidden="true" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-2">
-        <Input
-          type="date"
-          aria-label={label}
-          value={value}
-          {...(min ? { min } : {})}
-          {...(max ? { max } : {})}
-          onChange={(event) => {
-            if (event.target.value) onChange(event.target.value)
-          }}
-          className="h-8"
-        />
+      <PopoverContent align="start" className="w-auto p-0" aria-label={label}>
+        <DayCalendar value={value} onValueChange={onChange} min={min} max={max} />
       </PopoverContent>
     </Popover>
   )
@@ -164,6 +230,7 @@ export function CustomerAnalyticsView({
   error = null,
   onRetry,
   note,
+  costNote,
   title,
 }: CustomerAnalyticsViewProps) {
   const [activeTab, setActiveTab] = useState('')
@@ -181,52 +248,52 @@ export function CustomerAnalyticsView({
   const filters = (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-2 px-3"
-                aria-label="Features"
-                disabled={featureOptions.length === 0}
-              />
-            }
-          >
-            <LayersIcon aria-hidden="true" className="size-4" />
-            {all ? 'All features' : `${chosen.length} features`}
-            <ChevronDownIcon className="opacity-50" aria-hidden="true" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                Metered features
-              </DropdownMenuLabel>
-              {featureOptions.map((f) => (
-                <DropdownMenuCheckboxItem
-                  key={f.id}
-                  closeOnClick={false}
-                  checked={chosen.includes(f.id)}
-                  onCheckedChange={(on) => toggle(f.id, on)}
-                >
-                  {f.name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DateButton
-          icon
-          label="From"
-          value={query.from}
-          max={query.to}
-          onChange={(from) => onQueryChange({ ...query, from })}
-        />
-        <DateButton
-          label="To"
-          value={query.to}
-          min={query.from}
-          onChange={(to) => onQueryChange({ ...query, to })}
-        />
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 px-3"
+              aria-label="Features"
+              disabled={featureOptions.length === 0}
+            />
+          }
+        >
+          <LayersIcon aria-hidden="true" className="size-4" />
+          {all ? 'All features' : `${chosen.length} features`}
+          <ChevronDownIcon className="opacity-50" aria-hidden="true" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+              Metered features
+            </DropdownMenuLabel>
+            {featureOptions.map((f) => (
+              <DropdownMenuCheckboxItem
+                key={f.id}
+                closeOnClick={false}
+                checked={chosen.includes(f.id)}
+                onCheckedChange={(on) => toggle(f.id, on)}
+              >
+                {f.name}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DateButton
+        icon
+        label="From"
+        value={query.from}
+        max={query.to}
+        onChange={(from) => onQueryChange({ ...query, from })}
+      />
+      <DateButton
+        label="To"
+        value={query.to}
+        min={query.from}
+        onChange={(to) => onQueryChange({ ...query, to })}
+      />
       <label
         className={`text-muted-foreground flex items-center gap-2 text-[13px] ${title ? '' : 'ml-auto'}`}
       >
@@ -269,6 +336,7 @@ export function CustomerAnalyticsView({
           </div>
         ))}
       </dl>
+      {costNote ? <p className="text-muted-foreground -mt-2 text-xs">{costNote}</p> : null}
 
       {error ? (
         <ErrorState
@@ -329,7 +397,7 @@ export function CustomerAnalyticsView({
                 {
                   key: 'revenue',
                   header: 'Revenue',
-                  cell: (f) => <span className="tabular-nums">{f.revenue ?? DASH}</span>,
+                  cell: (f) => <FeatureRevenue feature={f} />,
                 },
                 {
                   key: 'cost',

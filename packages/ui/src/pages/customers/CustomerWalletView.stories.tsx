@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { type Wallet, type WalletTransaction, WalletStatus, money } from '@fp/domain'
 import { CustomerWalletView, type CustomerWalletViewProps } from './CustomerWalletView'
+import { WalletLedgerTable } from './WalletLedgerTable'
 
 const REASONS = [
   'Purchased credits',
@@ -259,11 +260,16 @@ export const AlertSettingsFromMenu: Story = {
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Real-time balance')).toBeInTheDocument()
-    await expect(canvas.getByText('Last invoiced balance')).toBeInTheDocument()
+    // Each balance is named: the ongoing (real-time) figure apart from the last invoiced total.
+    await expect(canvas.getByText('Real-time balance')).toBeVisible()
+    await expect(canvas.getByText('Last invoiced balance')).toBeVisible()
+    await expect(canvas.queryByText(/Available now/)).toBeNull()
+    // Each hint is a button, so the keyboard reaches it too.
+    await expect(canvas.getAllByRole('button', { name: 'More information' })).toHaveLength(2)
     await expect(canvas.getByText('Active')).toBeInTheDocument()
-    await expect(canvas.queryByText('Consumption rate')).toBeNull()
-    await expect(canvas.queryByText('Expiring soon')).toBeNull()
+    await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
+    await expect(canvas.getByText('Expiring soon')).toBeInTheDocument()
+    await expect(canvas.getByText(/used, not yet invoiced/)).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /auto top-up off/i })).toBeEnabled()
     await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /top up wallet/i })).toBeEnabled()
@@ -327,6 +333,7 @@ export const UnreadableBalance: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    // The figure keeps its name even when it cannot be read.
     await expect(canvas.getByText('Real-time balance')).toBeVisible()
     await expect(canvas.queryByText(/since the last invoice/i)).toBeNull()
   },
@@ -335,7 +342,7 @@ export const UnreadableBalance: Story = {
 export const NoTransactions: Story = {
   args: { transactions: [] },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('No transactions yet')).toBeInTheDocument()
+    await expect(await within(canvasElement).findByText('No top-ups yet')).toBeInTheDocument()
   },
 }
 
@@ -367,6 +374,46 @@ export const ExpandsConsumption: Story = {
 }
 
 export const LongLedger: Story = { args: { transactions: makeTransactions(40) } }
+
+/** A debit raised for an invoice: its reference and metadata show, and search finds them. */
+const INVOICE_DEBIT: WalletTransaction = {
+  id: 'wtx_invoice_debit',
+  direction: 'out',
+  reason: 'Invoice payment',
+  description: '',
+  credits: '300',
+  amount: money('3.00', 'USD'),
+  createdAt: new Date('2026-09-18T00:00:00Z'),
+  creditsAvailable: null,
+  expiresAt: null,
+  reference: { type: 'INVOICE', id: 'inv_9' },
+  metadata: { source: 'usage' },
+}
+
+/** The ledger on its own (no titled section), so its search bar shows. */
+export const SearchesReferenceAndMetadata: Story = {
+  render: () => (
+    <WalletLedgerTable transactions={[INVOICE_DEBIT, ...makeTransactions(3)]} now={NOW} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText(/source: usage/)).toBeNull()
+    await expect(canvas.queryByText('Invoice payment')).toBeNull()
+    await userEvent.type(canvas.getByPlaceholderText(/^Search/), 'Purchased')
+    await waitFor(() => expect(canvas.queryByText('Usage draw-down')).toBeNull())
+    await expect(canvas.getByText('Purchased credits')).toBeInTheDocument()
+  },
+}
+
+/** The whole ledger is read page by page, so a long one is not called incomplete. */
+export const FullLedgerNotTruncated: Story = {
+  args: { transactions: makeTransactions(250) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Remaining')).toBeInTheDocument()
+    await expect(canvas.queryByText(/older entries/i)).toBeNull()
+  },
+}
 
 /** A terminated wallet cannot be topped up. */
 export const Terminated: Story = {
@@ -468,7 +515,7 @@ export const AutoTopupOn: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole('button', { name: /auto top-up on/i }),
-    ).toHaveTextContent('Auto top-up on')
+    ).toHaveTextContent(/Below/)
   },
 }
 

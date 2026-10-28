@@ -116,6 +116,27 @@ export const Edit: Story = {
   },
 }
 
+/**
+ * Billing configuration is set while creating, not only after.
+ *
+ * Tax treatment and timezone sat in a collapsed "More details" fold, so on
+ * create they read as edit-only settings. They are now their own card, open on
+ * create and edit, and the chosen values go out with the create.
+ */
+export const CreateWithBillingConfiguration: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Billing configuration')).toBeVisible()
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Corp')
+    await userEvent.click(canvas.getByRole('combobox', { name: 'Tax treatment' }))
+    await userEvent.click(await within(document.body).findByRole('option', { name: 'Exempt' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create customer' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Acme Corp', taxTreatment: 'exempt' }),
+    )
+  },
+}
+
 export const SubmitError: Story = {
   args: { submitError: 'A customer with that external ID already exists.' },
   play: async ({ canvasElement }) => {
@@ -133,8 +154,8 @@ export const SubmitError: Story = {
 export const CountryIsSearchable: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // Both fields live in the collapsed "More details" disclosure.
-    await userEvent.click(canvas.getByRole('button', { name: /More details/ }))
+    // The address lives in the collapsed "Billing address" disclosure on create.
+    await userEvent.click(canvas.getByRole('button', { name: /Billing address/ }))
     const country = canvas.getByRole('combobox', { name: 'Country' })
     await userEvent.type(country, 'united king')
     const option = await within(document.body).findByRole('option', {
@@ -147,6 +168,101 @@ export const CountryIsSearchable: Story = {
 }
 
 /**
+ * State follows the country and city follows the state.
+ *
+ * Both were free text. They are now lists from the bundled region dataset,
+ * and a new country clears a state that belonged to the old one.
+ */
+export const StateAndCityFollowCountry: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const body = within(document.body)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Corp')
+    await userEvent.click(canvas.getByRole('button', { name: /Billing address/ }))
+    await expect(canvas.getByRole('combobox', { name: 'State' })).toHaveAttribute('data-disabled')
+
+    await userEvent.type(canvas.getByRole('combobox', { name: 'Country' }), 'India')
+    await userEvent.click(await body.findByRole('option', { name: /India \(IN\)/ }))
+    const state = canvas.getByRole('combobox', { name: 'State' })
+    await waitFor(() => expect(state).toHaveAttribute('placeholder', 'Search states…'), {
+      timeout: 5000,
+    })
+    await userEvent.type(state, 'Karna')
+    await userEvent.click(await body.findByRole('option', { name: 'Karnataka' }, { timeout: 5000 }))
+    const city = canvas.getByRole('combobox', { name: 'City' })
+    await waitFor(() => expect(city).toHaveAttribute('placeholder', 'Search cities…'), {
+      timeout: 5000,
+    })
+    await userEvent.type(city, 'Bengal')
+    await userEvent.click(await body.findByRole('option', { name: 'Bengaluru' }, { timeout: 5000 }))
+    await userEvent.type(canvas.getByRole('textbox', { name: /postal code/i }), '560001')
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Create customer' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        addressCountry: 'IN',
+        addressState: 'Karnataka',
+        addressCity: 'Bengaluru',
+        addressPostalCode: '560001',
+      }),
+    )
+  },
+}
+
+/** A saved city with no state or country stays editable. */
+export const CityOnlyAddressEditable: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Acme Corp',
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
+    defaultValue: { externalId: 'acme', name: 'Acme Corp', addressCity: 'London' },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const city = canvas.getByRole('textbox', { name: 'City' })
+    await expect(city).toHaveValue('London')
+    await userEvent.clear(city)
+    await userEvent.type(city, 'Birmingham')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ addressCity: 'Birmingham' }),
+    )
+  },
+}
+
+/** A saved state the dataset does not list stays shown, and a new country clears it. */
+export const SavedRegionKept: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Acme Corp',
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
+    defaultValue: {
+      externalId: 'acme',
+      name: 'Acme Corp',
+      addressCountry: 'US',
+      addressState: 'CA',
+      addressCity: 'San Francisco',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const state = canvas.getByRole('combobox', { name: 'State' })
+    await expect(state).toHaveValue('CA')
+    await expect(canvas.getByRole('combobox', { name: 'City' })).toHaveValue('San Francisco')
+
+    const country = canvas.getByRole('combobox', { name: 'Country' })
+    await userEvent.clear(country)
+    await userEvent.type(country, 'Canada')
+    await userEvent.click(
+      await within(document.body).findByRole('option', { name: /Canada \(CA\)/ }),
+    )
+    await expect(state).toHaveValue('')
+    // No state chosen yet: city is typed, since state is optional.
+    await expect(canvas.getByRole('textbox', { name: 'City' })).toHaveValue('')
+  },
+}
+
+/**
  * Time zones are found by abbreviation and offset, which is the reported bug.
  *
  * The options were bare IANA names, so someone looking for their own zone had
@@ -155,7 +271,6 @@ export const CountryIsSearchable: Story = {
 export const TimezoneFoundByAbbreviation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /More details/ }))
     const timezone = canvas.getByRole('combobox', { name: 'Timezone' })
     await userEvent.type(timezone, 'IST')
     /*

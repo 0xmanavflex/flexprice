@@ -1,4 +1,4 @@
-import { BillingPeriod, type Charge } from './price'
+import { BillingPeriod, PriceType, type Charge } from './price'
 
 /**
  * Which of a plan's charges a new contract will actually bill: the backend's
@@ -131,4 +131,60 @@ export function selectContractCharges(
     excluded,
     includePriceIds: anyOptedIn ? attached.map((charge) => charge.id) : null,
   }
+}
+
+/**
+ * The add-on prices the API attaches to a contract: its currency, and its
+ * billing period or one-time (`ValidateAndFilterPricesForSubscription`, strict
+ * period match for add-ons). Commitments are only offered on these.
+ */
+export function attachableAddonCharges(
+  charges: readonly Charge[],
+  contract: { currency: string; billingPeriod: BillingPeriod | string },
+): Charge[] {
+  const currency = contract.currency.trim().toUpperCase()
+  return charges.filter(
+    (charge) =>
+      charge.currency.trim().toUpperCase() === currency &&
+      (charge.billingPeriod === contract.billingPeriod ||
+        charge.billingPeriod === BillingPeriod.OneTime),
+  )
+}
+
+/**
+ * An add-on's commitments that still apply: those on a usage charge the API
+ * attaches to this contract (`attachableAddonCharges`). A commitment saved
+ * before the contract's currency or billing period changed points at a price
+ * the contract no longer takes, so it is neither shown nor sent. While the
+ * add-on's charges are not known, nothing can be checked and the commitments
+ * are kept as they are.
+ */
+export function attachableAddonCommitments<T extends { priceId: string }>(
+  commitments: readonly T[],
+  charges: readonly Charge[] | undefined,
+  contract: { currency: string; billingPeriod: BillingPeriod | string },
+): T[] {
+  if (!charges) return [...commitments]
+  const attachable = new Set(
+    attachableAddonCharges(charges, contract)
+      .filter((charge) => charge.type === PriceType.Usage)
+      .map((charge) => charge.id),
+  )
+  return commitments.filter((commitment) => attachable.has(commitment.priceId))
+}
+
+/**
+ * An add-on's price overrides that still apply: those on a charge, fixed or
+ * usage, the API attaches to this contract (`attachableAddonCharges`). As with
+ * commitments, an override on a price the contract no longer takes is dropped,
+ * and while the add-on's charges are not known the overrides are kept.
+ */
+export function attachableAddonOverrides<T extends { priceId: string }>(
+  overrides: readonly T[],
+  charges: readonly Charge[] | undefined,
+  contract: { currency: string; billingPeriod: BillingPeriod | string },
+): T[] {
+  if (!charges) return [...overrides]
+  const attachable = new Set(attachableAddonCharges(charges, contract).map((charge) => charge.id))
+  return overrides.filter((override) => attachable.has(override.priceId))
 }

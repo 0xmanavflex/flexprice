@@ -1226,7 +1226,9 @@ export function DashboardHome({
       : null
 
   return (
-    <div className="flex flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
+    // As much room under the cards as over them: a deeper bottom pad made the
+    // page scroll into blank space when the cards themselves fit.
+    <div className="flex flex-1 flex-col gap-5 px-10 py-8 2xl:px-14">
       <MetricsSection
         events={events}
         {...(revenue ? { revenue } : {})}

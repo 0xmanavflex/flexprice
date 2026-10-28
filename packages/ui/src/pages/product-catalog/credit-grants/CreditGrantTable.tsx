@@ -11,6 +11,7 @@ import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabSta
 import { Button } from '@ui/components/primitives/button'
 import { PlusIcon } from '@ui/icons'
 
+import { formatStoredDay } from '@ui/compositions/forms/DateInput'
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
@@ -138,6 +139,22 @@ function CreditGrantTableInner({
               </span>
             ),
           },
+          // When an add-on's grant stops issuing credits, once an end date is set.
+          ...(grants.some((grant) => grant.endDate)
+            ? [
+                {
+                  key: 'ends',
+                  header: 'Ends',
+                  cell: (grant: CreditGrant) => (
+                    <span className="text-muted-foreground tabular-nums">
+                      {grant.endDate
+                        ? formatStoredDay(grant.endDate, { locale: 'en-US' })
+                        : 'No end'}
+                    </span>
+                  ),
+                },
+              ]
+            : []),
           {
             key: 'priority',
             header: 'Priority',

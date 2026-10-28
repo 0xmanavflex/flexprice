@@ -131,7 +131,21 @@ const WALLETS: Record<string, unknown>[] = [
   },
 ]
 
+/** Daily invoice payments, newest first: with the rows below, more than a page of history. */
+const DAILY_PAYMENTS = Array.from({ length: 12 }, (_, i) => ({
+  id: `wtx_daily_${i + 1}`,
+  type: 'debit',
+  transaction_reason: 'INVOICE_PAYMENT',
+  description: `INV-2026-0${1500 + 12 - i}`,
+  amount: '4',
+  credit_amount: '40',
+  transaction_status: 'COMPLETED',
+  created_at: day(-(i + 1)),
+  currency: 'usd',
+}))
+
 const TRANSACTIONS = [
+  ...DAILY_PAYMENTS,
   {
     id: 'wtx_1',
     type: 'debit',
@@ -376,13 +390,24 @@ export const portalHandlers = [
   http.get(`${BASE}/wallets/:id/transactions`, ({ request }) => {
     const query = new URL(request.url).searchParams
     const limit = Number(query.get('limit') ?? 20)
+    const offset = Number(query.get('offset') ?? 0)
+    // As the API (`QueryFilter`: limit 1 to 1000); more is a 400, not a shorter page.
+    if (limit < 1 || limit > 1000) {
+      return HttpResponse.json(
+        { error: { message: 'limit must be between 1 and 1000' } },
+        { status: 400 },
+      )
+    }
     const type = query.get('type')
     // As the API: `credit` or `debit`, lowercase; anything else is a 400.
     if (type !== null && type !== 'credit' && type !== 'debit') {
       return HttpResponse.json({ error: { message: 'invalid transaction type' } }, { status: 400 })
     }
     const rows = TRANSACTIONS.filter((t) => !type || t.type === type)
-    return HttpResponse.json({ items: rows.slice(0, limit), pagination: { total: rows.length } })
+    return HttpResponse.json({
+      items: rows.slice(offset, offset + limit),
+      pagination: { total: rows.length, limit, offset },
+    })
   }),
   http.put(`${BASE}/wallets/:id/auto-topup`, async ({ request }) => {
     const body = (await request.json()) as {

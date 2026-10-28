@@ -6,6 +6,7 @@ import {
   customerRows,
   daysToPay,
   creditRows,
+  largestCurrency,
   creditTypeRows,
   previousWindow,
   rangeWindow,
@@ -45,6 +46,18 @@ describe('windows', () => {
   it('puts the comparison window immediately before, the same length', () => {
     const window = { start: day('2026-10-01'), end: day('2026-10-11') }
     expect(previousWindow(window)).toEqual({ start: day('2026-09-21'), end: day('2026-10-01') })
+  })
+})
+
+describe('largestCurrency', () => {
+  it('picks the currency with the most revenue, not the first listed', () => {
+    const revenue: Record<string, number> = { EUR: 12, INR: 0, USD: 48_000 }
+    expect(largestCurrency(['EUR', 'INR', 'USD'], (code) => revenue[code] ?? 0)).toBe('USD')
+  })
+
+  it('falls back to the first listed when nothing was billed', () => {
+    expect(largestCurrency(['EUR', 'USD'], () => 0)).toBe('EUR')
+    expect(largestCurrency([], () => 0)).toBeUndefined()
   })
 })
 
@@ -309,6 +322,7 @@ describe('creditRows', () => {
     expect(rows[1]).toMatchObject({ name: 'A', paid: 30, free: 10, total: 40 })
     expect(rows[0]).toMatchObject({ paid: 0, free: 90, total: 90 })
     expect(rows.map((row) => row.display.share)).toEqual(['69%', '31%'])
+    expect(rows.map((row) => row.share)).toEqual([90 / 130, 40 / 130])
   })
 })
 

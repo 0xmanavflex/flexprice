@@ -64,9 +64,15 @@ export function isServerFilterable(status: InvoiceStatus): boolean {
 
 /** Builds the request. Page numbers are 1-based for people, offsets are not. */
 export function toInvoiceFilter(query: InvoiceQuery): Record<string, unknown> {
-  const statuses = query.statuses
-    .map((s) => STATUS_TO_API[s])
-    .filter((s): s is string => s !== undefined)
+  // Paid and overdue are derived from finalized invoices, so asking for either
+  // asks the server for finalized ones too; the page then keeps the matches.
+  const derived = query.statuses.some((s) => !isServerFilterable(s))
+  const statuses = [
+    ...new Set([
+      ...query.statuses.map((s) => STATUS_TO_API[s]).filter((s): s is string => s !== undefined),
+      ...(derived ? ['FINALIZED'] : []),
+    ]),
+  ]
 
   return {
     limit: query.pageSize,
@@ -207,6 +213,7 @@ export interface InvoiceDetailWire extends InvoiceWire {
   lineItems?:
     | {
         id?: string | undefined
+        priceId?: string | undefined
         displayName?: string | undefined
         planDisplayName?: string | undefined
         meterDisplayName?: string | undefined
@@ -257,6 +264,7 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
     amountPaid: wire.amountPaid ?? '0',
     lines: (wire.lineItems ?? []).map((line, index) => ({
       id: line.id ?? `line_${index}`,
+      priceId: line.priceId ?? '',
       description: line.displayName || line.planDisplayName || line.meterDisplayName || 'Line item',
       detail:
         line.periodStart && line.periodEnd

@@ -209,6 +209,7 @@ export {
   toCostSheet,
   toCostSheetFilter,
   useCostSheet,
+  useHasCostSheet,
   useCostSheets,
   toCreateCostSheetRequest,
   toUpdateCostSheetRequest,
@@ -260,6 +261,7 @@ export {
   toPendingSchedules,
   toSubscription,
   toSubscriptionDetail,
+  subscriptionEntitlementsFromRejection,
   toSubscriptionEntitlement,
   toSubscriptionFilter,
   toSubscriptionLine,
@@ -305,6 +307,7 @@ export {
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
+  useInheritedContracts,
   useSubscriptions,
   useUpdateSubscriptionLineItem,
 } from './subscriptions'
@@ -372,6 +375,7 @@ export {
   toUpdatePriceRequest,
   useCreateBulkPrices,
   useFeatureCharges,
+  useEntitiesCharges,
   usePrices,
   usePriceHistory,
   useTerminatePrice,
@@ -564,13 +568,26 @@ export type {
   RevenueSummary,
 } from './revenue'
 export type {
+  FeatureUsagePrice,
   FeatureUsageRow,
   UsageAnalytics,
   UsageAnalyticsQuery,
   UsagePoint,
   UsageWindow,
 } from './events'
-export { fetchWorkflowRuns, toWorkflowFilter, toWorkflowRun, useWorkflowRuns } from './workflowRuns'
+export {
+  FINISHED_WORKFLOW_STATUSES,
+  WORKFLOW_POLL_MS,
+  WORKFLOW_WATCH_MAX_MS,
+  fetchWorkflowRun,
+  fetchWorkflowRuns,
+  isFinishedWorkflow,
+  toWorkflowFilter,
+  toWorkflowRun,
+  useWorkflowRun,
+  useWorkflowRuns,
+} from './workflowRuns'
+export type { WorkflowHandle } from './workflowRuns'
 export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'
@@ -615,6 +632,7 @@ export {
   toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
+  withConsumption,
   useCreateWallet,
   useCustomerWallets,
   useDebitWallet,
@@ -713,6 +731,8 @@ export {
   usePortalSpend,
   usePortalSubscriptions,
   usePortalTopUps,
+  usePortalWalletFlows,
+  usePortalWalletTransactionPages,
   usePortalWalletTransactions,
   usePortalWallets,
   useRemovePortalPaymentMethod,

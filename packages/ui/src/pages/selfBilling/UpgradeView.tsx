@@ -1,10 +1,9 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   AccountState,
   type CheckoutDetails,
   SELF_BILLING_PLAN,
   checkoutDetailsSchema,
-  countryOptions,
   longDate,
   planRateText,
   usd,
@@ -15,7 +14,8 @@ import { Input } from '@ui/components/primitives/input'
 import { Spinner } from '@ui/components/primitives/spinner'
 import { Field } from '@ui/compositions/forms/Field'
 import { InfoHint } from '@ui/compositions/forms/InfoHint'
-import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
+import { AddressPicker, useAddressRegions } from '@ui/compositions/forms/AddressRegionFields'
+import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
 import { ArrowLeftIcon, CheckIcon, LockIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -38,7 +38,7 @@ export const UpgradeViewProvenance = provenance({
     'ui/spinner',
     'compositions/field',
     'compositions/info-hint',
-    'compositions/option-combobox',
+    'compositions/address-region-fields',
   ],
   note: 'Self-billing Upgrade page (reference go-live): offer on a gray gradient, billing details form.',
 })
@@ -202,14 +202,16 @@ export function UpgradeView({
 }: UpgradeViewProps) {
   const [details, setDetails] = useState<CheckoutDetails>(defaultValues)
   const [tried, setTried] = useState(false)
-  const countries = useMemo(
-    () => countryOptions().map((o) => ({ value: o.code, label: o.label })),
-    [],
-  )
+  const regions = useAddressRegions({
+    value: { country: details.country, state: details.state, city: details.city },
+    onChange: (next) => setDetails((current) => ({ ...current, ...next })),
+  })
   const errors = tried ? errorsOf(details) : {}
   const addressError = errors.country ?? errors.line1 ?? errors.city ?? errors.postalCode
   const set = (key: keyof CheckoutDetails) => (value: string) =>
     setDetails((current) => ({ ...current, [key]: value }))
+  // The header names the page: Settings › Usage & billing › Upgrade, the middle crumb the way back.
+  usePublishDetailTrail([{ label: 'Usage & billing', onClick: onBack }, { label: 'Upgrade' }])
 
   const submit = () => {
     setTried(true)
@@ -234,7 +236,9 @@ export function UpgradeView({
   )
 
   return (
-    <div className="grid min-h-full flex-1 lg:grid-cols-2">
+    // `flex-1`, not `min-h-full`: the shell's scroller also holds the header,
+    // so a full-height page under it always overflowed by the header's height.
+    <div className="grid flex-1 lg:grid-cols-2">
       <Offer state={state} eventCap={eventCap} today={today} onBack={onBack} />
       <section
         aria-labelledby="upgrade-billing-details"
@@ -279,19 +283,26 @@ export function UpgradeView({
           <Field label="Address" hint="Kept in Settings → Organization." error={addressError}>
             {({ id }) => (
               <div className="flex flex-col gap-2">
-                <OptionCombobox
+                <AddressPicker
+                  picker={regions.country}
                   id={id}
-                  value={details.country || undefined}
-                  onValueChange={set('country')}
-                  options={countries}
-                  placeholder="Country"
-                  searchable
                   aria-invalid={errors.country ? true : undefined}
+                  autoComplete="country"
                 />
                 {input('line1', { placeholder: 'Street', label: 'Street' })}
                 <div className="grid grid-cols-3 gap-2">
-                  {input('city', { placeholder: 'City', label: 'City' })}
-                  {input('state', { placeholder: 'State', label: 'State' })}
+                  <AddressPicker
+                    picker={regions.state}
+                    aria-label="State"
+                    aria-invalid={errors.state ? true : undefined}
+                    autoComplete="address-level1"
+                  />
+                  <AddressPicker
+                    picker={regions.city}
+                    aria-label="City"
+                    aria-invalid={errors.city ? true : undefined}
+                    autoComplete="address-level2"
+                  />
                   {input('postalCode', { placeholder: 'Postal code', label: 'Postal code' })}
                 </div>
               </div>

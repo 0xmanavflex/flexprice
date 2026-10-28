@@ -47,7 +47,7 @@ describe('accountPill', () => {
 describe('accountCopy', () => {
   it('words each state as the spec does', () => {
     expect(accountCopy(trial(), TODAY)).toBe(
-      'Ends on Nov 4, 2026, or at 50,000 events. Then $199 a month + 0.5%.',
+      'Ends on Nov 4, 2026, or at 50,000 events. Then $199.00 a month + 0.5% of what you bill through Flexprice.',
     )
     expect(accountCopy(trial({ trialEndsOn: '2026-10-23' }), TODAY)).toBe(
       'Ends on Oct 23, 2026. After that your account becomes read-only.',

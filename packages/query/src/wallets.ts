@@ -9,6 +9,7 @@ import {
   type DebitWallet,
   type TopUpWallet,
   type Wallet,
+  type WalletConsumption,
   type WalletTransaction,
   WalletStatus,
   moneyOr,
@@ -61,6 +62,12 @@ export interface WalletTransactionWire {
   creditsAvailable?: string | undefined
   expiryDate?: Date | undefined
   createdAt?: Date | undefined
+  metadata?: Record<string, unknown> | undefined
+  referenceType?: string | undefined
+  referenceId?: string | undefined
+  transactionStatus?: string | undefined
+  consumptionBreakdown?:
+    { creditTransactionId?: string | undefined; credits?: string | undefined }[] | undefined
 }
 
 const STATUSES = new Set<string>(Object.values(WalletStatus))
@@ -126,7 +133,65 @@ export function toWalletTransaction(wire: WalletTransactionWire, index = 0): Wal
     createdAt: wire.createdAt ?? null,
     creditsAvailable: wire.creditsAvailable ?? null,
     expiresAt: wire.expiryDate ?? null,
+    metadata: Object.fromEntries(
+      Object.entries(wire.metadata ?? {}).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string',
+      ),
+    ),
+    reference:
+      wire.referenceType && wire.referenceId
+        ? { type: wire.referenceType, id: wire.referenceId }
+        : null,
+    ...(wire.transactionStatus ? { status: wire.transactionStatus.toLowerCase() } : {}),
+    ...(wire.consumptionBreakdown?.length
+      ? {
+          drawnFrom: wire.consumptionBreakdown
+            .filter((line) => line.creditTransactionId && line.credits)
+            .map((line) => ({
+              topUpId: line.creditTransactionId as string,
+              credits: line.credits as string,
+            })),
+        }
+      : {}),
   }
+}
+
+const REFERENCE_LABEL: Record<string, string> = {
+  INVOICE: 'Invoice',
+  PAYMENT: 'Payment',
+  EXTERNAL: 'External',
+  REQUEST: 'Request',
+}
+
+/**
+ * Each top-up's draw-down, from the debits that name it in their
+ * `consumption_breakdown`: so a top-up row expands to the debits that used it.
+ * Only credits are reported; no money is derived for them.
+ */
+export function withConsumption(transactions: WalletTransaction[]): WalletTransaction[] {
+  const drawn = new Map<string, WalletConsumption[]>()
+  for (const tx of transactions) {
+    for (const line of tx.drawnFrom ?? []) {
+      const reference =
+        tx.reference && tx.reference.type !== 'REQUEST'
+          ? `${REFERENCE_LABEL[tx.reference.type] ?? tx.reference.type} ${tx.reference.id}`
+          : ''
+      const note = tx.description.trim()
+      drawn.set(line.topUpId, [
+        ...(drawn.get(line.topUpId) ?? []),
+        {
+          id: tx.id,
+          product: note && !/[_=]/.test(note) && !/[0-9a-f]{10,}/i.test(note) ? note : tx.reason,
+          contract: reference,
+          credits: line.credits,
+        },
+      ])
+    }
+  }
+  return transactions.map((tx) => {
+    const consumption = tx.direction === 'in' ? drawn.get(tx.id) : undefined
+    return consumption ? { ...tx, consumption } : tx
+  })
 }
 
 /** Builds `POST /wallets`. */
@@ -179,15 +244,18 @@ export function toUpdateAutoTopupRequest(draft: AutoTopup): Record<string, unkno
       threshold: Number(draft.threshold),
       amount: Number(draft.amount),
       invoicing: draft.invoicing,
-      // Sent only when set: a blank cool-off leaves whatever the wallet has.
-      ...(draft.cooldownValue
+      // On sends the cool-off; off sends an empty one, which the API reads as
+      // "clear it" (`Duration.IsEmpty`). Left undecided, the saved one is kept.
+      ...(draft.cooldownEnabled === true && draft.cooldownValue
         ? {
             cooldown: {
               value: Number(draft.cooldownValue),
               unit: draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour,
             },
           }
-        : {}),
+        : draft.cooldownEnabled === false
+          ? { cooldown: { value: 0, unit: draft.cooldownUnit ?? AutoTopupCooldownUnit.Hour } }
+          : {}),
     },
   }
 }
@@ -197,9 +265,13 @@ const COOLDOWN_UNITS = new Set<string>(Object.values(AutoTopupCooldownUnit))
 /** The wire's cool-off, as the draft's two fields. Seconds and unknown units are read as none. */
 function toCooldown(
   wire: { unit?: string | undefined; value?: number | undefined } | undefined,
-): Pick<AutoTopup, 'cooldownValue' | 'cooldownUnit'> {
-  if (!wire?.value || !COOLDOWN_UNITS.has(wire.unit ?? '')) return {}
-  return { cooldownValue: String(wire.value), cooldownUnit: wire.unit as AutoTopupCooldownUnit }
+): Pick<AutoTopup, 'cooldownEnabled' | 'cooldownValue' | 'cooldownUnit'> {
+  if (!wire?.value || !COOLDOWN_UNITS.has(wire.unit ?? '')) return { cooldownEnabled: false }
+  return {
+    cooldownEnabled: true,
+    cooldownValue: String(wire.value),
+    cooldownUnit: wire.unit as AutoTopupCooldownUnit,
+  }
 }
 
 /** A customer's wallets: `GET /customers/{id}/wallets`. */
@@ -240,6 +312,8 @@ export function useWalletBalance(walletId: string | null) {
   })
 }
 
+const TRANSACTIONS_PAGE = 200
+
 export function useWalletTransactions(walletId: string | null) {
   const client = useFlexprice()
 
@@ -247,10 +321,23 @@ export function useWalletTransactions(walletId: string | null) {
     queryKey: queryKeys.wallets.transactions(walletId ?? ''),
     enabled: walletId !== null,
     queryFn: async () => {
-      const response = await call(() =>
-        client.wallets.getWalletTransactions({ idPathParameter: walletId ?? '', limit: 200 }),
-      )
-      return ((response.items ?? []) as WalletTransactionWire[]).map(toWalletTransaction)
+      // Page by page to the reported total: a debit can draw from a top-up on
+      // another page, so the breakdown needs them all.
+      const wires: WalletTransactionWire[] = []
+      for (let offset = 0; ; offset += TRANSACTIONS_PAGE) {
+        const response = await call(() =>
+          client.wallets.getWalletTransactions({
+            idPathParameter: walletId ?? '',
+            limit: TRANSACTIONS_PAGE,
+            offset,
+          }),
+        )
+        const items = (response.items ?? []) as WalletTransactionWire[]
+        wires.push(...items)
+        if (items.length < TRANSACTIONS_PAGE || wires.length >= (response.pagination?.total ?? 0))
+          break
+      }
+      return withConsumption(wires.map(toWalletTransaction))
     },
   })
 }

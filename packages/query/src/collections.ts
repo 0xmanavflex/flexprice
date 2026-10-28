@@ -38,7 +38,7 @@ export interface CollectionsSummary {
 }
 
 /** Adds exact decimals, in the smallest unit of the longest fraction seen. */
-function addDecimals(values: readonly string[]): string {
+export function addDecimals(values: readonly string[]): string {
   const scale = Math.max(0, ...values.map((value) => value.split('.')[1]?.length ?? 0))
   const total = values.reduce((sum, value) => {
     const [whole = '0', fraction = ''] = value.split('.')

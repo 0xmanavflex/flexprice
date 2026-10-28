@@ -1,7 +1,7 @@
 import { ChargeSection, chargeFlags, type ChargeDetail, type ChargeFlag } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
-import { BellIcon, ClockIcon, PencilIcon, ScaleIcon, TicketPercentIcon } from '@ui/icons'
+import { BellIcon, CircleDollarSignIcon, ClockIcon, ScaleIcon, TicketPercentIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -30,8 +30,8 @@ export const ChargeFlagsProvenance = provenance({
  * sit at 14px on a tinted row, and the raw tokens are tuned for a filled chip,
  * not for text on the row's own background.
  */
-const APPEARANCE: Record<ChargeSection, { icon: typeof PencilIcon; tone: string }> = {
-  [ChargeSection.Price]: { icon: PencilIcon, tone: 'text-info-foreground' },
+const APPEARANCE: Record<ChargeSection, { icon: typeof ScaleIcon; tone: string }> = {
+  [ChargeSection.Price]: { icon: CircleDollarSignIcon, tone: 'text-info-foreground' },
   [ChargeSection.Discount]: { icon: TicketPercentIcon, tone: 'text-success-foreground' },
   [ChargeSection.Commitment]: { icon: ScaleIcon, tone: 'text-primary' },
   [ChargeSection.Alerts]: { icon: BellIcon, tone: 'text-warning-foreground' },

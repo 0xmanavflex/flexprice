@@ -110,12 +110,20 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
   stripe: {
     providerType: 'stripe',
     setup: 'credentials',
+    // Every key can be replaced on Configure: the API merges whichever are sent.
     fields: [
-      secret('secret_key', 'Secret key', { placeholder: 'sk_live_…' }),
-      text('publishable_key', 'Publishable key', { placeholder: 'pk_live_…' }),
-      webhookSecret({ placeholder: 'whsec_…' }),
+      secret('secret_key', 'Secret key', { placeholder: 'sk_live_…', rotatable: true }),
+      text('publishable_key', 'Publishable key', { placeholder: 'pk_live_…', rotatable: true }),
+      webhookSecret({ placeholder: 'whsec_…', rotatable: true }),
     ],
     sync: [
+      {
+        entity: 'customer',
+        direction: 'outbound',
+        label: 'Push customers',
+        description:
+          'Create a Stripe customer for each Flexprice customer. Stripe Tax needs it to calculate tax.',
+      },
       {
         entity: 'plan',
         direction: 'inbound',
