@@ -57,7 +57,7 @@ export const Details: Story = {
   render: () => <DetailsHarness onSubmit={fn()} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('Acme Deutschland GmbH')).toBeInTheDocument()
+    await expect(await canvas.findByRole('heading', { name: secondEntity!.name })).toBeInTheDocument()
     await expect(canvas.getByTestId('invoice-number-example').textContent).toMatch(/^ACME-DE-/)
     const prefix = canvas.getByRole('textbox', { name: /invoice prefix/i })
     await userEvent.clear(prefix)

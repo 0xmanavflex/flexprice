@@ -7,7 +7,7 @@ import { EntityHeader } from '../../shared/EntityHeader'
 import { Pill } from '../../shared/cells'
 
 /**
- * A billing entity's detail page: an `EntityHeader` (name, legal name, ID
+ * A billing entity's detail page: an `EntityHeader` (name, ID
  * copy chip, "Default" for the default entity) over `DetailTabs`. Each tab's
  * body is a slot, so the page that owns the data decides what fills it;
  * Integrations shows only when its slot is given.
@@ -57,12 +57,7 @@ export function BillingEntityDetail({
         trail={[{ label: 'Billing entities', onClick: onBack }, { label: entity.name }]}
         icon={<Building2Icon aria-hidden className="size-4" />}
         title={entity.name}
-        badges={
-          <>
-            {entity.isDefault ? <Pill size="sm">Default</Pill> : null}
-            <span className="text-muted-foreground text-xs">{entity.legalName}</span>
-          </>
-        }
+        badges={entity.isDefault ? <Pill size="sm">Default</Pill> : null}
         id={entity.id}
       />
       <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-w-0 flex-col gap-6 px-6 pb-10">

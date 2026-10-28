@@ -245,7 +245,7 @@ export function BillingEntityForm({
       <FormCard
         title="Tax IDs"
         status="optional"
-        description="Printed on invoices as the seller's tax registrations."
+        description="Your registration numbers (e.g. GSTIN, VAT) printed on invoices. Tax rates are under Taxes."
         adornment={
           <Button
             type="button"
