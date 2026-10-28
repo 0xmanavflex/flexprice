@@ -46,6 +46,14 @@ export interface BillingEntity {
   createdAt: Date | null
 }
 
+/** The entity a customer bills from; a customer without one (backfill may lag) bills from the default. */
+export function effectiveEntityId(
+  customer: { billingEntityId?: string | null | undefined },
+  entities: readonly Pick<BillingEntity, 'id' | 'isDefault'>[],
+): string {
+  return customer.billingEntityId || (entities.find((entity) => entity.isDefault)?.id ?? '')
+}
+
 /** What the create and edit forms hold. */
 export type BillingEntityDraft = Pick<
   BillingEntity,

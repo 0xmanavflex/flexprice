@@ -8,6 +8,7 @@ import {
   searchCustomers,
 } from '@fp/api'
 import {
+  CUSTOMER_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   type CreateCustomer,
   type Customer,
@@ -17,6 +18,7 @@ import {
   type CustomerDetail,
   type CustomerQuery,
   CustomerSortField,
+  type ListFilterSpec,
   CustomerStatus,
   CustomerTaxTreatment,
   DEFAULT_INVOICE_QUERY,
@@ -31,6 +33,7 @@ import {
   statusFilterField,
   toFilterConditions,
   toMetadataFilter,
+  toTopLevelChoice,
 } from './search'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 import { credentials, fromWire, toWireBody } from './wire'
@@ -123,9 +126,14 @@ const SORT_FIELD: Record<CustomerSortField, string> = {
   [CustomerSortField.UpdatedAt]: 'updated_at',
 }
 
-export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> {
-  const conditions = toFilterConditions(query.filters ?? [], CUSTOMER_FILTERS)
-  const metadata = toMetadataFilter(query.filters ?? [], CUSTOMER_FILTERS)
+/** `specs` are the filters the list offers: the entity filter is among them only while entities are enabled. */
+export function toCustomerFilter(
+  query: CustomerQuery,
+  specs: readonly ListFilterSpec[] = CUSTOMER_FILTERS,
+): Record<string, unknown> {
+  const conditions = toFilterConditions(query.filters ?? [], specs)
+  const metadata = toMetadataFilter(query.filters ?? [], specs)
+  const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, CUSTOMER_ENTITY_FILTER.field)
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
@@ -144,6 +152,7 @@ export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> 
       : {}),
     // Metadata pairs are the search's own map, every pair matching.
     ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+    ...(billingEntityId ? { billingEntityId } : {}),
   }
 }
 
@@ -157,6 +166,7 @@ export async function fetchCustomers(
   auth: AuthSource,
   query: CustomerQuery,
   signal?: AbortSignal,
+  specs?: readonly ListFilterSpec[],
 ): Promise<CustomerPage> {
   const { token, environmentId } = await credentials(auth, 'Sign in to view customers.')
   const response = fromWire<{
@@ -167,7 +177,7 @@ export async function fetchCustomers(
       serverURL,
       token,
       environmentId,
-      toWireBody(toCustomerFilter(query)),
+      toWireBody(toCustomerFilter(query, specs)),
       signal,
     ),
   )
@@ -199,13 +209,27 @@ export async function fetchCustomers(
   }
 }
 
-export function useCustomers(query: CustomerQuery, options: { enabled?: boolean } = {}) {
+/** `specs`: the filters the list offers, when they differ from `CUSTOMER_FILTERS` (the entity filter). */
+export function useCustomers(
+  query: CustomerQuery,
+  options: { enabled?: boolean; specs?: readonly ListFilterSpec[] } = {},
+) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
+  const billingEntityId = toTopLevelChoice(
+    query.filters ?? [],
+    options.specs ?? CUSTOMER_FILTERS,
+    CUSTOMER_ENTITY_FILTER.field,
+  )
 
   return useQuery({
-    queryKey: queryKeys.customers.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: ({ signal }) => fetchCustomers(serverURL, auth, query, signal),
+    queryKey: queryKeys.customers.list({
+      ...query,
+      statuses: [...query.statuses].sort(),
+      // Whether the entity filter is sent, so turning entities on refetches.
+      ...(billingEntityId ? { billingEntityId } : {}),
+    }),
+    queryFn: ({ signal }) => fetchCustomers(serverURL, auth, query, signal, options.specs),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -457,6 +481,7 @@ export function toCreateCustomerRequest(draft: CreateCustomer): Record<string, u
   }
   if (draft.taxTreatment) request.taxTreatment = draft.taxTreatment
   if (draft.metadata) request.metadata = draft.metadata
+  if (draft.billingEntityId) request.billingEntityId = draft.billingEntityId
   return request
 }
 

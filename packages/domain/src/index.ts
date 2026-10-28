@@ -51,6 +51,7 @@ export {
   splitKeyValue,
   runnableFilters,
   sameListFilters,
+  withChoiceFilter,
   withFilterOptions,
 } from './listFilter'
 export type { FilterKind, ListFilter, ListFilterSpec } from './listFilter'
@@ -317,6 +318,7 @@ export {
   ACTIVE_CUSTOMERS_FILTER,
   isCustomerQueryFiltered,
   CUSTOMER_FILTERS,
+  CUSTOMER_ENTITY_FILTER,
   createCustomerSchema,
   editCustomerSchema,
   emptyCustomer,
@@ -1078,6 +1080,7 @@ export type {
 export {
   BillingEntityMode,
   billingEntitySchema,
+  effectiveEntityId,
   emptyBillingEntity,
   type BillingEntity,
   type BillingEntityDraft,

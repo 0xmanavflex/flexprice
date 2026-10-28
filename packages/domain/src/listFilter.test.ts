@@ -4,6 +4,7 @@ import {
   type ListFilterSpec,
   decodeListFilters,
   encodeListFilters,
+  isRunnableFilter,
   runnableFilters,
   splitKeyValue,
 } from './listFilter'
@@ -71,5 +72,22 @@ describe('key/value filters', () => {
     expect(
       runnableFilters([{ field: 'metadata', op: FilterOp.Eq, value: 'a=b' }], specs),
     ).toHaveLength(1)
+  })
+})
+
+describe('choice filters', () => {
+  const spec: ListFilterSpec = {
+    field: 'billing_entity_id',
+    label: 'Billing entity',
+    kind: 'choice',
+  }
+
+  it('runs on one chosen value only', () => {
+    expect(
+      isRunnableFilter({ field: 'billing_entity_id', op: FilterOp.Eq, value: 'be_1' }, spec),
+    ).toBe(true)
+    expect(
+      isRunnableFilter({ field: 'billing_entity_id', op: FilterOp.Eq, value: ['be_1'] }, spec),
+    ).toBe(false)
   })
 })

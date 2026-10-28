@@ -107,6 +107,8 @@ export function toFilterConditions(
     // A key/value pair is not a filter condition: it travels as the search's
     // own `metadata` map (see `toMetadataFilter`).
     if (spec.kind === 'keyvalue') return []
+    // A choice travels as its own top-level field (see `toTopLevelChoice`).
+    if (spec.kind === 'choice') return []
     const base = { field: filter.field, operator: filter.op }
     switch (spec.kind) {
       case 'options':
@@ -140,4 +142,19 @@ export function toMetadataFilter(
     if (pair) metadata[pair.key] = pair.value
   }
   return metadata
+}
+
+/**
+ * The chosen value of a `choice` field, for a search that takes it as a
+ * top-level param. Undefined when the field is not among the specs, so a stale
+ * URL filter for a field this list no longer offers is never sent.
+ */
+export function toTopLevelChoice(
+  filters: readonly ListFilter[],
+  specs: readonly ListFilterSpec[],
+  field: string,
+): string | undefined {
+  if (specs.find((spec) => spec.field === field)?.kind !== 'choice') return undefined
+  const chosen = runnableFilters(filters, specs).find((filter) => filter.field === field)
+  return chosen ? (chosen.value as string) : undefined
 }

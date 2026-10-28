@@ -195,6 +195,14 @@ export function useBillingEntities(options: { enabled?: boolean } = {}) {
   })
 }
 
+/** The entity filter's choices; null while entities are not enabled, so lists leave the filter out. */
+export function useEntityFilterOptions(): { value: string; label: string }[] | null {
+  const status = useBillingEntityStatus()
+  const entities = useBillingEntities()
+  if (status.data !== BillingEntityMode.Enabled) return null
+  return (entities.data ?? []).map((entity) => ({ value: entity.id, label: entity.name }))
+}
+
 export function useBillingEntity(id: string) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()

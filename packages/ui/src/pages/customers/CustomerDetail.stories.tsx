@@ -103,6 +103,7 @@ function Harness({
   onRetryInvoices,
   onRetrySubscriptions,
   events,
+  billingEntity,
   initialTab = 'overview',
 }: {
   customer?: CustomerDetailModel
@@ -124,6 +125,7 @@ function Harness({
   onRetryInvoices?: () => void
   onRetrySubscriptions?: () => void
   events?: ReactNode
+  billingEntity?: { name: string; onOpen: () => void }
   initialTab?: CustomerTab
 }) {
   const [tab, setTab] = useState<CustomerTab>(initialTab)
@@ -151,6 +153,7 @@ function Harness({
         {...(onStreamEvents ? { onStreamEvents } : {})}
         {...(streamEventsReason ? { streamEventsReason } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
+        billingEntity={billingEntity}
       />
     </div>
   )
@@ -352,6 +355,16 @@ export const CreatesInvoiceFromMenu: Story = {
     await userEvent.click(await body.findByRole('menuitem', { name: 'Create invoice' }))
     await expect(args.onCreateInvoice).toHaveBeenCalledOnce()
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
+  },
+}
+
+/** Entities enabled: the issuing entity sits under Related, read-only, a link to the entity. */
+export const BillingEntityInRelated: Story = {
+  args: { billingEntity: { name: 'Northwind India', onOpen: fn() } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Northwind India' }))
+    await expect(args.billingEntity?.onOpen).toHaveBeenCalled()
   },
 }
 

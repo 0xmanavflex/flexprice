@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { billingEntitySchema, emptyBillingEntity } from './billingEntity'
+import { billingEntitySchema, effectiveEntityId, emptyBillingEntity } from './billingEntity'
 
 const valid = {
   ...emptyBillingEntity(),
@@ -23,5 +23,17 @@ describe('billingEntitySchema tax IDs', () => {
       taxIdentifiers: [{ type: ' GSTIN ', value: ' 29ABCDE1234F1Z5 ' }],
     })
     expect(parsed.taxIdentifiers).toEqual([{ type: 'GSTIN', value: '29ABCDE1234F1Z5' }])
+  })
+})
+
+describe('effectiveEntityId', () => {
+  const entities = [
+    { id: 'be_i', isDefault: false },
+    { id: 'be_d', isDefault: true },
+  ]
+
+  it('reads a customer without an entity as the default one', () => {
+    expect(effectiveEntityId({ billingEntityId: null }, entities)).toBe('be_d')
+    expect(effectiveEntityId({ billingEntityId: 'be_i' }, entities)).toBe('be_i')
   })
 })

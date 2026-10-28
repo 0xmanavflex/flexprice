@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CustomerStatus, DEFAULT_CUSTOMER_QUERY } from '@fp/domain'
+import {
+  CUSTOMER_ENTITY_FILTER,
+  CUSTOMER_FILTERS,
+  CustomerStatus,
+  DEFAULT_CUSTOMER_QUERY,
+} from '@fp/domain'
 
 /** The default query without its "Active" filter, so each case sees only what it sets. */
 const ALL_CUSTOMERS = { ...DEFAULT_CUSTOMER_QUERY, filters: [] }
@@ -160,6 +165,23 @@ describe('toCustomerFilter', () => {
     expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)['filters']).toEqual([
       { field: 'status', operator: 'in', dataType: 'array', value: { array: ['published'] } },
     ])
+  })
+
+  it('sends a chosen billing entity as the top-level field, not a condition', () => {
+    const filters = [{ field: 'billing_entity_id', op: 'eq' as const, value: 'be_1' }]
+    const filter = toCustomerFilter({ ...ALL_CUSTOMERS, filters }, [
+      ...CUSTOMER_FILTERS,
+      CUSTOMER_ENTITY_FILTER,
+    ])
+    expect(filter['billingEntityId']).toBe('be_1')
+    expect(filter).not.toHaveProperty('filters')
+  })
+
+  it('drops a billing entity from the URL when entities are off', () => {
+    const filters = [{ field: 'billing_entity_id', op: 'eq' as const, value: 'be_1' }]
+    expect(toCustomerFilter({ ...ALL_CUSTOMERS, filters }, CUSTOMER_FILTERS)).not.toHaveProperty(
+      'billingEntityId',
+    )
   })
 
   it('expands integrations so the list can show each customer’s marks', () => {

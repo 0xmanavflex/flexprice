@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from './fixtures'
+import { ShellPage } from './pages/shell'
 
 const WRITER = 'user_01M38QUSER0000000000002' // all_writer, not a super admin
 
@@ -206,4 +207,99 @@ test('billing entities: organization profile seller details are read-only and li
   await expect(page.getByRole('textbox', { name: /^name/i })).toBeEditable()
   await page.getByRole('link', { name: 'Manage default entity' }).click()
   await expect(page).toHaveURL(/\/settings\/billing-entities\/[^/?]+/)
+})
+
+async function addIndiaEntity(page: Page) {
+  await enableEntities(page)
+  await page.getByRole('button', { name: 'New entity' }).click()
+  await page.getByRole('textbox', { name: /^name/i }).fill('Northwind India')
+  await page.getByRole('textbox', { name: /legal name/i }).fill('Northwind India Pvt Ltd')
+  await page.getByRole('textbox', { name: /invoice prefix/i }).fill('NWIN')
+  await page.getByRole('button', { name: 'Create billing entity' }).click()
+  await expect(page.getByRole('heading', { name: 'Northwind India' })).toBeVisible()
+}
+
+const searchBody = (page: Page) =>
+  page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().includes('/customers/search'),
+  )
+
+test('billing entities: customers show their entity, filter by it, and pick one at create', async ({
+  page,
+}) => {
+  await addIndiaEntity(page)
+
+  await page.goto('/customers/new')
+  const picker = page.getByRole('combobox', { name: /billing entity/i })
+  await expect(picker).toHaveText(/Northwind Systems/)
+  await picker.click()
+  await page.getByRole('option', { name: 'Northwind India' }).click()
+  await page.getByRole('textbox', { name: /^name/i }).fill('Bharat Freight')
+  const created = page.waitForRequest(
+    (request) => request.method() === 'POST' && /\/customers$/.test(request.url()),
+  )
+  await page.getByRole('button', { name: 'Create customer' }).click()
+  const entityId = (await created).postDataJSON().billing_entity_id as string
+  expect(entityId).toBeTruthy()
+  await expect(page.getByRole('button', { name: 'Northwind India' })).toBeVisible()
+
+  // In-app, so the mock keeps the customer just created.
+  await page.getByRole('button', { name: 'Customers' }).first().click()
+  await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toBeVisible()
+  // Customers created before entities carry none: they read as the default entity.
+  await expect(page.getByRole('cell', { name: 'Northwind Systems' }).first()).toBeVisible()
+
+  await page.getByRole('button', { name: /^Filter/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Advanced filter' })
+  await dialog.getByRole('button', { name: 'Add filter' }).click()
+  await page.getByRole('option', { name: 'Billing entity', exact: true }).click()
+  await page.getByRole('option', { name: 'is', exact: true }).click()
+  const asked = searchBody(page)
+  await page.getByRole('option', { name: 'Northwind India' }).click()
+  const body = (await asked).postDataJSON()
+  expect(body.billing_entity_id).toBe(entityId)
+  expect(JSON.stringify(body.filters ?? [])).not.toContain('billing_entity_id')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('cell', { name: 'Bharat Freight' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Northwind Systems' })).toHaveCount(0)
+})
+
+test('billing entities: customers have no entity column, filter or picker while entities are off', async ({
+  page,
+}) => {
+  await page.goto('/customers')
+  await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toHaveCount(0)
+  await page.getByRole('button', { name: /^Filter/ }).click()
+  await page
+    .getByRole('dialog', { name: 'Advanced filter' })
+    .getByRole('button', { name: 'Add filter' })
+    .click()
+  await expect(page.getByRole('option', { name: 'Email', exact: true })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Billing entity', exact: true })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+
+  await page.goto('/customers/new')
+  await expect(page.getByRole('textbox', { name: /^name/i })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: /billing entity/i })).toHaveCount(0)
+})
+
+test('billing entities: switching to an environment without entities drops the customer entity column and a stale entity filter', async ({
+  page,
+}) => {
+  await enableEntities(page)
+  await page.goto('/customers')
+  await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toBeVisible()
+
+  const shell = new ShellPage(page)
+  await shell.switchEnvironment('Production')
+  await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toHaveCount(0)
+
+  const stale = encodeURIComponent(
+    JSON.stringify([{ field: 'billing_entity_id', op: 'eq', value: 'be_mock_1' }]),
+  )
+  const asked = searchBody(page)
+  await page.goto(`/customers?filters=${stale}`)
+  expect((await asked).postDataJSON()).not.toHaveProperty('billing_entity_id')
+  await expect(page.getByRole('row').nth(1)).toBeVisible()
 })

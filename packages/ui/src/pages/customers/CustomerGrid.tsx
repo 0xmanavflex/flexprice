@@ -11,6 +11,8 @@ import {
   PlusIcon,
 } from '@ui/icons'
 import {
+  type BillingEntity,
+  CUSTOMER_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,
@@ -19,7 +21,9 @@ import {
   CustomerSortField,
   CustomerStatus,
   DEFAULT_CUSTOMER_QUERY,
+  effectiveEntityId,
   isCustomerQueryFiltered,
+  withChoiceFilter,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
@@ -140,6 +144,8 @@ export interface CustomerGridProps {
   locale?: string
   /** Contracts per customer id, when the page has counted them; absent customers show an em dash. */
   contractCounts?: Record<string, number>
+  /** The environment's billing entities, only while they are enabled: adds the Billing entity column and filter. */
+  billingEntities?: readonly Pick<BillingEntity, 'id' | 'name' | 'isDefault'>[] | undefined
 }
 
 export function CustomerGrid({
@@ -159,6 +165,7 @@ export function CustomerGrid({
   onClearFilters,
   locale,
   contractCounts,
+  billingEntities,
 }: CustomerGridProps) {
   const columns = useMemo<EntityColumn<Customer>[]>(
     () => [
@@ -176,6 +183,15 @@ export function CustomerGrid({
       // it is a value like any other: and it is the field support actually
       // searches by.
       textColumn<Customer>('email', 'Email', (row) => row.email, { width: 220 }),
+      ...(billingEntities
+        ? [
+            pillColumn<Customer>('billingEntity', 'Billing entity', (row) => {
+              const id = effectiveEntityId(row, billingEntities)
+              const name = billingEntities.find((entity) => entity.id === id)?.name
+              return name ? { label: name } : null
+            }),
+          ]
+        : []),
       {
         ...idColumn<Customer>('externalId', 'External ID', (row) => row.externalId, { width: 170 }),
         cell: (row) =>
@@ -235,7 +251,7 @@ export function CustomerGrid({
         { width: 100, hiddenByDefault: true },
       ),
     ],
-    [locale, contractCounts],
+    [locale, contractCounts, billingEntities],
   )
 
   const isDefaultSort =
@@ -306,11 +322,16 @@ export function CustomerGrid({
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search customers…"
       /*
-       * Field-by-field filters (name, external ID, email, status, created),
+       * Field-by-field filters (name, external ID, email, status, created, and
+       * billing entity while entities are enabled),
        * applied by the search endpoint so the total and pages agree with them.
        */
       filter={granularFilter({
-        specs: CUSTOMER_FILTERS,
+        specs: withChoiceFilter(
+          CUSTOMER_FILTERS,
+          CUSTOMER_ENTITY_FILTER,
+          billingEntities?.map((entity) => ({ value: entity.id, label: entity.name })) ?? null,
+        ),
         filters: query.filters ?? [],
         onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}

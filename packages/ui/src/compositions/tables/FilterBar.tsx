@@ -429,6 +429,7 @@ const OP_LABEL: Record<FilterOp, string> = {
 const KIND_TYPE: Record<FilterKind, 'text' | 'select' | 'number'> = {
   text: 'text',
   options: 'select',
+  choice: 'select',
   number: 'number',
   date: 'text',
   keyvalue: 'text',

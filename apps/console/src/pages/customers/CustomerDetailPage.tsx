@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
+  BillingEntityMode,
   CARD_SETUP_PROVIDERS,
   CustomerStatus,
   SubscriptionStatus,
+  effectiveEntityId,
 } from '@fp/domain'
 import {
+  useBillingEntities,
+  useBillingEntityStatus,
   useCustomer,
   useCustomerIntegrationLinks,
   useIntegrations,
@@ -157,6 +161,8 @@ export function CustomerDetailPage({
     })
   }
   const navigate = useNavigate()
+  const entitiesOn = useBillingEntityStatus().data === BillingEntityMode.Enabled
+  const entities = useBillingEntities()
   // The customer is already on screen, so the menu leaves out "View customer".
   const invoiceRows = useInvoiceRowActions({
     onRecordPayment: (invoiceId) =>
@@ -183,10 +189,25 @@ export function CustomerDetailPage({
   // access scope: inline edits, metadata, integration links, the wallet and
   // tax panels: cannot write either.
   const archived = customer.data.status === CustomerStatus.Archived
+  const entityId = entitiesOn ? effectiveEntityId(customer.data, entities.data ?? []) : ''
+  const entity = entities.data?.find((item) => item.id === entityId)
 
   return (
     <>
       <CustomerDetail
+        {...(entity
+          ? {
+              billingEntity: {
+                name: entity.name,
+                onOpen: () =>
+                  void navigate({
+                    to: '/settings/billing-entities/$entityId',
+                    params: { entityId: entity.id },
+                    search: {} as never,
+                  }),
+              },
+            }
+          : {})}
         {...(!archived && integrationLinks.isSuccess && integrations.isSuccess
           ? {
               integrationControls: {

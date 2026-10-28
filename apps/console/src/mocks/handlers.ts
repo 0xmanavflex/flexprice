@@ -581,6 +581,16 @@ const search = (path: string, key: string) =>
     const refused = rejectUnknownExpand(key, body.expand)
     if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
+    // As the API: `billing_entity_id` is refused unless entities are on; a customer without one is the default's.
+    const entityId = (body as { billing_entity_id?: string }).billing_entity_id
+    let entityDefault: string | undefined
+    if (entityId) {
+      const entities = entityEnvironment(request)
+      if (entities.mode !== 'enabled') {
+        return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+      }
+      entityDefault = readString(entities.rows.find((row) => row['is_default']) ?? {}, 'id')
+    }
     const source = sourceFor(key)
     // The API's rule: a subscription search that names no status answers active only.
     const wanted =
@@ -594,12 +604,14 @@ const search = (path: string, key: string) =>
     const pairs = metadata ? Object.entries(metadata) : []
     const matching = source.items.filter((row) => {
       if (wanted?.length && !wanted.includes(readString(row, 'subscription_status'))) return false
+      if (entityId && (readString(row, 'billing_entity_id') || entityDefault) !== entityId)
+        return false
       if (pairs.length === 0) return true
       const held = (row['metadata'] ?? {}) as Record<string, unknown>
       return pairs.every(([k, v]) => held[k] === v)
     })
     const result = page(
-      wanted?.length || pairs.length > 0 ? { ...source, items: matching } : source,
+      wanted?.length || pairs.length > 0 || entityId ? { ...source, items: matching } : source,
       body,
     )
     const payload =

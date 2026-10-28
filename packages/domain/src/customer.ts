@@ -202,6 +202,13 @@ export const CUSTOMER_FILTERS: readonly ListFilterSpec[] = [
   { field: 'metadata', label: 'Metadata', kind: 'keyvalue' },
 ]
 
+/** Sent as the search's top-level `billing_entity_id`; offered only while entities are enabled. */
+export const CUSTOMER_ENTITY_FILTER: ListFilterSpec = {
+  field: 'billing_entity_id',
+  label: 'Billing entity',
+  kind: 'choice',
+}
+
 const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} characters or fewer`)
 
 /**
@@ -231,6 +238,7 @@ export const createCustomerSchema = z.object({
     .union([z.literal(''), z.string().trim().length(2, 'Use a two-letter country code')])
     .optional(),
   metadata: z.record(z.string(), z.string()).optional(),
+  billingEntityId: z.string().optional(),
 })
 
 export type CreateCustomer = z.infer<typeof createCustomerSchema>
