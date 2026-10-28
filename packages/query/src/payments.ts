@@ -19,7 +19,7 @@ import { credentials, fromWire } from './wire'
 /**
  * Payments: the translation between product vocabulary and the API.
  *
- * Reached through `GET /payments` (`client.payments.listPayments`), a plain
+ * Reached through `GET /payments`, a plain
  * paginated list rather than the `POST /search` the catalogue resources use.
  * The wire keeps the amount as a bare string beside a separate `currency` and
  * spreads the lifecycle across nine values; the domain joins the first into a
@@ -27,9 +27,9 @@ import { credentials, fromWire } from './wire'
  */
 
 /**
- * The wire shape this reads, after the SDK camelCases the response.
+ * The wire shape this reads, camelCased by `fromWire`.
  *
- * `createdAt`/`succeededAt` arrive as `Date` (the SDK parses them). Structural,
+ * `createdAt`/`succeededAt` arrive as `Date` (`fromWire` revives them). Structural,
  * so a fixture need not carry all ~30 fields to exercise the mapper.
  */
 export interface PaymentWire {

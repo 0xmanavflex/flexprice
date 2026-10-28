@@ -265,7 +265,7 @@ const preview: Preview = {
               'Taxes',
               ['Tax rate table', 'Tax rate form'],
               'Billing entities',
-              ['Billing entity table'],
+              ['Billing entity table', 'Billing entity form', 'Billing entity detail'],
               'Price units',
               ['Price unit table', 'Price unit form'],
               'Groups',

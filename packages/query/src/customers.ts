@@ -45,21 +45,21 @@ import { sortWithTieBreak } from './listSort'
 /**
  * Customers: the translation between billing vocabulary and the API.
  *
- * Reached through `POST /customers/search` (`client.customers.queryCustomer`),
- * the same search shape the catalogue lists use. The wire's status knows a
+ * Reached through `POST /customers/search`, the same search shape the
+ * catalogue lists use. The wire's status knows a
  * soft-deleted state the list has no column for, so it collapses to the two a
  * billing list shows, with anything unrecognised falling to published rather
  * than vanishing from the list.
  */
 
-/** One row of the customer's `integrations` array, after the SDK camelCases it. */
+/** One row of the customer's `integrations` array, camelCased by `fromWire`. */
 export interface CustomerIntegrationWire {
   providerType?: string | undefined
   providerEntityId?: string | undefined
   status?: string | undefined
 }
 
-/** The wire shape this reads, after the SDK camelCases the response. */
+/** The wire shape this reads, camelCased by `fromWire`. */
 export interface CustomerWire {
   id?: string | undefined
   billingEntityId?: string | undefined
@@ -238,7 +238,7 @@ export function useCustomers(
 /**
  * The detail read model, richer than the list's.
  *
- * `GET /customers/{id}` (`client.customers.getCustomer`) returns the fuller
+ * `GET /customers/{id}` returns the fuller
  * record: the postal address, a phone, the timezone, the tax treatment and any
  * metadata: that the search list drops. Everything optional collapses to empty
  * rather than absent, so the detail page renders a dash, never a hole.
@@ -545,7 +545,7 @@ export function useDeleteCustomer() {
   })
 }
 
-/** One row of `GET /integrations/mappings`, after the SDK camelCases it. */
+/** One row of `GET /integrations/mappings`, camelCased by `fromWire`. */
 export interface IntegrationMappingWire {
   id?: string | undefined
   providerType?: string | undefined

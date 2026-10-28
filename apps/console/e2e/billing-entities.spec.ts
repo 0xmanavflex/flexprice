@@ -130,17 +130,18 @@ test('billing entities: add a default tax on an entity, it posts as an auto-appl
   await page.getByRole('option', { name: /Canada GST/ }).click()
 
   const created = page.waitForResponse(
-    (r) => r.request().method() === 'POST' && r.url().includes('/taxes/associations'),
+    (r) => r.request().method() === 'POST' && /\/taxes\/associations$/.test(r.url()),
   )
   await dialog.getByRole('button', { name: 'Add tax rate' }).click()
   expect(await (await created).json()).toMatchObject({
+    entity_id: expect.any(String),
     entity_type: 'billing_entity',
     auto_apply: true,
   })
   await expect(page.getByRole('cell', { name: /Canada GST/ })).toBeVisible()
 })
 
-test('billing entities: a taxes or integrations link falls back to the details tab', async ({
+test('billing entities: an integrations link falls back to the details tab', async ({
   page,
 }) => {
   await page.goto(SECTION)
@@ -195,16 +196,15 @@ test('billing entities: organization profile is editable while entities are off'
   await expect(page.getByRole('link', { name: 'Manage default entity' })).toHaveCount(0)
 })
 
-test('billing entities: organization profile seller details are read-only and link to the default entity once enabled', async ({
+test('billing entities: organization profile stays editable and links to the default entity once enabled', async ({
   page,
 }) => {
   await enableEntities(page)
   await page.goto('/settings?section=organization&tab=profile')
   await expect(page.getByText('Seller details now live on billing entities.')).toBeVisible()
-  await expect(page.getByRole('textbox', { name: /billing email/i })).not.toBeEditable()
-  await expect(page.getByRole('textbox', { name: /^phone/i })).not.toBeEditable()
-  await expect(page.getByRole('textbox', { name: /address line 1/i })).not.toBeEditable()
-  await expect(page.getByRole('textbox', { name: /^name/i })).toBeEditable()
+  await expect(page.getByRole('textbox', { name: /billing email/i })).toBeEditable()
+  await expect(page.getByRole('textbox', { name: /^phone/i })).toBeEditable()
+  await expect(page.getByRole('textbox', { name: /address line 1/i })).toBeEditable()
   await page.getByRole('link', { name: 'Manage default entity' }).click()
   await expect(page).toHaveURL(/\/settings\/billing-entities\/[^/?]+/)
 })
