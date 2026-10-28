@@ -4038,6 +4038,7 @@ export const handlers = [
       return HttpResponse.json({ message: 'Invoice prefix already in use' }, { status: 409 })
     }
     Object.assign(row, body)
+    // seller_details is replaced whole, as the backend does; absent leaves it unchanged.
     return HttpResponse.json(row)
   }),
 

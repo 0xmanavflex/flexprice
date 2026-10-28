@@ -55,9 +55,9 @@ describe('toBillingEntityRequest', () => {
     })
   })
 
-  it('leaves seller_details out when nothing is filled', () => {
+  it('still sends an empty seller_details when nothing is filled', () => {
     const request = toBillingEntityRequest({ ...emptyBillingEntity(), name: 'A', legalName: 'A' })
-    expect(request).not.toHaveProperty('seller_details')
+    expect(request.seller_details).toEqual({})
   })
 })
 

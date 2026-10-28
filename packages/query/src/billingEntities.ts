@@ -87,7 +87,7 @@ export function toBillingEntity(wire: BillingEntityWire): BillingEntity {
   }
 }
 
-/** The create and update body. Empty seller fields are left out; tax identifiers go whole. */
+/** The create and update body. Empty seller fields are left out, but seller_details is always sent (a missing one means unchanged on update); tax identifiers go whole. */
 export function toBillingEntityRequest(draft: BillingEntityDraft): Record<string, unknown> {
   const { seller } = draft
   const address = compact<Record<string, string>>({
@@ -110,7 +110,7 @@ export function toBillingEntityRequest(draft: BillingEntityDraft): Record<string
     name: draft.name,
     legal_name: draft.legalName,
     invoice_number_prefix: draft.invoiceNumberPrefix,
-    ...(Object.keys(sellerDetails).length > 0 ? { seller_details: sellerDetails } : {}),
+    seller_details: sellerDetails,
     tax_identifiers: draft.taxIdentifiers,
   }
 }
