@@ -48,7 +48,9 @@ export function BillingEntityDetail({
   taxes,
   integrations,
 }: BillingEntityDetailProps) {
-  const body = tab === 'integrations' ? integrations : tab === 'taxes' ? taxes : details
+  const shownTab: BillingEntityTab =
+    (tab === 'taxes' && taxes) || (tab === 'integrations' && integrations) ? tab : 'details'
+  const body = shownTab === 'taxes' ? taxes : shownTab === 'integrations' ? integrations : details
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <EntityHeader
@@ -65,7 +67,7 @@ export function BillingEntityDetail({
       />
       <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-w-0 flex-col gap-6 px-6 pb-10">
         <DetailTabs
-          value={tab}
+          value={shownTab}
           onValueChange={(next) => onTabChange(next as BillingEntityTab)}
           tabs={[
             { value: 'details', label: 'Details' },

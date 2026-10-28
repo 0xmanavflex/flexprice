@@ -542,10 +542,15 @@ export { CUSTOMER_EVENTS_LIMIT, CustomerEventsGrid } from './customers/CustomerE
 export type { CustomerEvent, CustomerEventsGridProps } from './customers/CustomerEventsGrid'
 export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
-export { CustomerTaxSection } from './customers/CustomerTaxSection'
+export { CustomerTaxSection, TaxAssociationSection } from './customers/CustomerTaxSection'
 export { FxRatesSection } from './shared/FxRatesSection'
 export type { FxRatesSectionProps } from './shared/FxRatesSection'
-export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
+export type {
+  CustomerTaxSectionProps,
+  TaxAssociationCopy,
+  TaxAssociationSectionProps,
+  TaxRateOption,
+} from './customers/CustomerTaxSection'
 export {
   CustomerEntitlementUsage,
   CustomerEntitlementUsageProvenance,

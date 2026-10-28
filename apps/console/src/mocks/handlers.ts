@@ -5762,7 +5762,12 @@ export const handlers = [
   http.get(`${BASE}/taxes/associations`, ({ request }) => {
     const url = new URL(request.url)
     const entityId = url.searchParams.get('entity_id')
-    const items = taxAssociations.filter((row) => !entityId || row['entity_id'] === entityId)
+    const entityType = url.searchParams.get('entity_type')
+    const items = taxAssociations.filter(
+      (row) =>
+        (!entityId || row['entity_id'] === entityId) &&
+        (!entityType || row['entity_type'] === entityType),
+    )
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
   }),
   http.post(`${BASE}/taxes/associations`, async ({ request }) => {

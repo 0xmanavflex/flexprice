@@ -659,6 +659,7 @@ export {
   toUpdateTaxAssociationRequest,
   useCreateTaxAssociation,
   useCustomerTaxAssociations,
+  useEntityTaxAssociations,
   useDeleteTaxAssociation,
   useUpdateTaxAssociation,
 } from './taxAssociations'

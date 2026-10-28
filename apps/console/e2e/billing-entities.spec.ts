@@ -107,3 +107,46 @@ test('billing entities: a stale link to an entity page returns to the section wh
   await expect(page).toHaveURL(/section=billing-entities/)
   await expect(page.getByRole('button', { name: 'Enable billing entities' })).toBeVisible()
 })
+
+test('billing entities: add a default tax on an entity, it posts as an auto-applied entity tax', async ({
+  page,
+}) => {
+  await page.goto(SECTION)
+  await page.getByRole('button', { name: 'Enable billing entities' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Enable billing entities' }).click()
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
+
+  await page.getByRole('tab', { name: 'Taxes' }).click()
+  await expect(
+    page.getByText(
+      'Added automatically to new customers of this entity. Existing customers keep their taxes.',
+    ),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Add tax rate' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('combobox', { name: 'Tax rate' }).click()
+  await page.getByRole('option', { name: /Canada GST/ }).click()
+
+  const created = page.waitForResponse(
+    (r) => r.request().method() === 'POST' && r.url().includes('/taxes/associations'),
+  )
+  await dialog.getByRole('button', { name: 'Add tax rate' }).click()
+  expect(await (await created).json()).toMatchObject({
+    entity_type: 'billing_entity',
+    auto_apply: true,
+  })
+  await expect(page.getByRole('cell', { name: /Canada GST/ })).toBeVisible()
+})
+
+test('billing entities: a taxes or integrations link falls back to the details tab', async ({
+  page,
+}) => {
+  await page.goto(SECTION)
+  await page.getByRole('button', { name: 'Enable billing entities' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Enable billing entities' }).click()
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
+  await page.waitForURL(/billing-entities\/[^/?]+/)
+  const base = page.url().split('?')[0]
+  await page.goto(`${base}?tab=integrations`)
+  await expect(page.getByRole('textbox', { name: /^name/i })).toBeVisible()
+})

@@ -41,7 +41,7 @@ export function toTaxAssociation(wire: TaxAssociationWire): TaxAssociation {
 }
 
 /** What a tax association can be attached to, on the wire. */
-export type TaxAssociationEntityType = 'customer' | 'subscription'
+export type TaxAssociationEntityType = 'customer' | 'subscription' | 'billing_entity'
 
 export function toCreateTaxAssociationRequest(
   entityId: string,
@@ -66,23 +66,30 @@ export function toUpdateTaxAssociationRequest(draft: EditTaxAssociation): Record
   }
 }
 
-export function useCustomerTaxAssociations(customerId: string) {
+export function useEntityTaxAssociations(entityType: TaxAssociationEntityType, entityId: string) {
   const client = useFlexprice()
 
   return useQuery({
-    queryKey: queryKeys.taxAssociations.forEntity('customer', customerId),
+    queryKey: queryKeys.taxAssociations.forEntity(entityType, entityId),
     queryFn: async () => {
       const response = await call(() =>
-        client.taxAssociations.listTaxAssociations('customer', customerId),
+        client.taxAssociations.listTaxAssociations(entityType, entityId),
       )
       return (response.items ?? []).map((item) => toTaxAssociation(item as TaxAssociationWire))
     },
     // No customer chosen yet (a new invoice) means nothing to ask for.
-    enabled: customerId.length > 0,
+    enabled: entityId.length > 0,
   })
 }
 
-export function useCreateTaxAssociation(customerId: string) {
+export function useCustomerTaxAssociations(customerId: string) {
+  return useEntityTaxAssociations('customer', customerId)
+}
+
+export function useCreateTaxAssociation(
+  entityId: string,
+  entityType: TaxAssociationEntityType = 'customer',
+) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
@@ -90,7 +97,7 @@ export function useCreateTaxAssociation(customerId: string) {
     mutationFn: (draft: CreateTaxAssociation) =>
       call(() =>
         client.taxAssociations.createTaxAssociation(
-          toCreateTaxAssociationRequest(customerId, draft) as never,
+          toCreateTaxAssociationRequest(entityId, draft, entityType) as never,
         ),
       ),
     onSuccess: () => {
