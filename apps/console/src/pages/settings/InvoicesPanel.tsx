@@ -5,10 +5,12 @@ import {
   BillingEntityMode,
   type InvoiceConfig,
   invoiceConfigSchema,
+  entityInvoicePreview,
   previewInvoiceNumber,
   splitDelay,
 } from '@fp/domain'
 import {
+  useBillingEntities,
   useBillingEntityStatus,
   useInvoiceConfig,
   useResetInvoiceConfig,
@@ -76,6 +78,8 @@ export function InvoicesPanel() {
   const { environmentId } = useSession()
   const config = useInvoiceConfig(environmentId)
   const entityStatus = useBillingEntityStatus()
+  const entities = useBillingEntities()
+  const onEntities = entityStatus.data === BillingEntityMode.Enabled
 
   const failure = toFailure(config.error, 'your invoice settings')
 
@@ -103,7 +107,12 @@ export function InvoicesPanel() {
 
   const phase = queryPhase(config)
   if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
-  if (phase === 'loading' || !config.data || entityStatus.isPending)
+  if (
+    phase === 'loading' ||
+    !config.data ||
+    entityStatus.isPending ||
+    (onEntities && entities.isPending)
+  )
     return <PanelLoading rows={6} />
 
   // Keyed on the environment rather than on the record: the draft should
@@ -114,7 +123,9 @@ export function InvoicesPanel() {
       key={environmentId}
       environmentId={environmentId}
       config={config.data}
-      prefixOnEntities={entityStatus.data === BillingEntityMode.Enabled}
+      prefixOnEntities={onEntities}
+      entityPrefix={entities.data?.find((entity) => entity.isDefault)?.invoiceNumberPrefix}
+      canReset={entityStatus.data === BillingEntityMode.Off}
     />
   )
 }
@@ -154,10 +165,14 @@ function InvoiceForm({
   environmentId,
   config,
   prefixOnEntities,
+  entityPrefix,
+  canReset,
 }: {
   environmentId: string
   config: InvoiceConfig
   prefixOnEntities: boolean
+  entityPrefix: string | undefined
+  canReset: boolean
 }) {
   const update = useUpdateInvoiceConfig(environmentId)
   const reset = useResetInvoiceConfig(environmentId)
@@ -224,7 +239,12 @@ function InvoiceForm({
   // The preview renders only from a draft the schema accepts, so it never
   // shows a number the API would refuse.
   const parsed = invoiceConfigSchema.safeParse(draft.value)
-  const preview = parsed.success && parsed.data ? previewInvoiceNumber(parsed.data) : null
+  const preview =
+    parsed.success && parsed.data
+      ? prefixOnEntities && entityPrefix !== undefined
+        ? entityInvoicePreview(parsed.data, entityPrefix)
+        : previewInvoiceNumber(parsed.data)
+      : null
 
   return (
     <>
@@ -440,14 +460,16 @@ function InvoiceForm({
                 {!resetError && reset.isSuccess ? (
                   <ActionNote message="Back to the defaults." />
                 ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => setResetting(true)}
-                >
-                  Reset to defaults
-                </Button>
+                {canReset ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => setResetting(true)}
+                  >
+                    Reset to defaults
+                  </Button>
+                ) : null}
                 <Button type="submit" variant="outline" disabled={busy}>
                   {update.isPending ? 'Saving…' : 'Save changes'}
                 </Button>

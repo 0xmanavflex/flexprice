@@ -164,16 +164,23 @@ test('billing entities: invoicing prefix is editable while entities are off', as
   const prefix = page.getByRole('textbox', { name: /^prefix/i })
   await expect(prefix).toBeEditable()
   await expect(page.getByRole('link', { name: 'Manage billing entities' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Reset to defaults' })).toBeVisible()
 })
 
 test('billing entities: invoicing prefix is read-only and points to the entities once enabled', async ({
   page,
 }) => {
   await enableEntities(page)
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
+  await page.getByRole('textbox', { name: /invoice prefix/i }).fill('ZZ')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Billing entity saved')).toBeVisible()
   await page.goto('/settings?section=invoicing&tab=invoices')
   const prefix = page.getByRole('textbox', { name: /^prefix/i })
   await expect(prefix).toHaveValue('Set on each billing entity')
   await expect(prefix).not.toBeEditable()
+  await expect(page.getByText(/^ZZ-\d{6}-/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reset to defaults' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Manage billing entities' }).click()
   await expect(page).toHaveURL(/section=billing-entities/)
   await expect(page.getByRole('cell', { name: 'Default' })).toBeVisible()
