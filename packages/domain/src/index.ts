@@ -747,7 +747,6 @@ export type {
   DebitWallet,
   TopUpWallet,
   Wallet,
-  WalletConsumption,
   WalletTransactionReference,
   WalletTransaction,
   WalletTransactionDirection,

@@ -367,12 +367,12 @@ export function CustomerWalletView({
           loadingLabel="Loading transactions"
           empty={{
             scene: 'customers',
-            title: 'No top-ups yet',
+            title: 'No transactions yet',
             description:
-              'Credits added to this wallet appear here. Open a row to see what drew them down.',
+              'Top-ups and debits on this wallet appear here. Open a debit to see which top-ups it drew from.',
           }}
         >
-          <WalletLedgerTable transactions={transactions} now={asOf} noun="top-ups" />
+          <WalletLedgerTable transactions={transactions} now={asOf} noun="transactions" />
         </SubTabState>
       </section>
 

@@ -9,7 +9,6 @@ import {
   type DebitWallet,
   type TopUpWallet,
   type Wallet,
-  type WalletConsumption,
   type WalletTransaction,
   WalletStatus,
   moneyOr,
@@ -156,44 +155,6 @@ export function toWalletTransaction(wire: WalletTransactionWire, index = 0): Wal
   }
 }
 
-const REFERENCE_LABEL: Record<string, string> = {
-  INVOICE: 'Invoice',
-  PAYMENT: 'Payment',
-  EXTERNAL: 'External',
-  REQUEST: 'Request',
-}
-
-/**
- * Each top-up's draw-down, from the debits that name it in their
- * `consumption_breakdown`: so a top-up row expands to the debits that used it.
- * Only credits are reported; no money is derived for them.
- */
-export function withConsumption(transactions: WalletTransaction[]): WalletTransaction[] {
-  const drawn = new Map<string, WalletConsumption[]>()
-  for (const tx of transactions) {
-    for (const line of tx.drawnFrom ?? []) {
-      const reference =
-        tx.reference && tx.reference.type !== 'REQUEST'
-          ? `${REFERENCE_LABEL[tx.reference.type] ?? tx.reference.type} ${tx.reference.id}`
-          : ''
-      const note = tx.description.trim()
-      drawn.set(line.topUpId, [
-        ...(drawn.get(line.topUpId) ?? []),
-        {
-          id: tx.id,
-          product: note && !/[_=]/.test(note) && !/[0-9a-f]{10,}/i.test(note) ? note : tx.reason,
-          contract: reference,
-          credits: line.credits,
-        },
-      ])
-    }
-  }
-  return transactions.map((tx) => {
-    const consumption = tx.direction === 'in' ? drawn.get(tx.id) : undefined
-    return consumption ? { ...tx, consumption } : tx
-  })
-}
-
 /** Builds `POST /wallets`. */
 export function toCreateWalletRequest(
   customerId: string,
@@ -321,8 +282,8 @@ export function useWalletTransactions(walletId: string | null) {
     queryKey: queryKeys.wallets.transactions(walletId ?? ''),
     enabled: walletId !== null,
     queryFn: async () => {
-      // Page by page to the reported total: a debit can draw from a top-up on
-      // another page, so the breakdown needs them all.
+      // Page by page to the reported total: a debit names the top-ups it drew
+      // from by id, and the ledger labels them from this list.
       const wires: WalletTransactionWire[] = []
       for (let offset = 0; ; offset += TRANSACTIONS_PAGE) {
         const response = await call(() =>
@@ -337,7 +298,7 @@ export function useWalletTransactions(walletId: string | null) {
         if (items.length < TRANSACTIONS_PAGE || wires.length >= (response.pagination?.total ?? 0))
           break
       }
-      return withConsumption(wires.map(toWalletTransaction))
+      return wires.map(toWalletTransaction)
     },
   })
 }
