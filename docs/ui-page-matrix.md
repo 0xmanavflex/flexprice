@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-72 route pages.
+74 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -70,7 +70,9 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | selfBilling | `CheckoutReturnPage` | Other | — | CheckoutReturnView, NextStep |
 | selfBilling | `UpgradePage` | Other | Field | PageLoadingState, UpgradeView |
 | selfBilling | `UsageBillingPage` | Other | Section, SimpleTable | UsageBillingView |
-| settings | `SettingsPage` | Settings | DetailTabs, EmptyState | BadgeDollarSignIcon, BellIcon, Building2Icon, CoinsIcon, EmbeddedPageContext, GaugeIcon, PaletteIcon, PercentIcon, ReceiptTextIcon, RepeatIcon, SettingsSection, SettingsShell, SmileIcon, TagIcon, TicketPercentIcon, UsersIcon, WriteGate |
+| settings | `SettingsPage` | Settings | DetailTabs, EmptyState | BadgeDollarSignIcon, BellIcon, Building2Icon, CoinsIcon, EmbeddedPageContext, GaugeIcon, LandmarkIcon, PaletteIcon, PercentIcon, ReceiptTextIcon, RepeatIcon, SettingsSection, SettingsShell, SmileIcon, TagIcon, TicketPercentIcon, UsersIcon, WriteGate |
+| settings | `BillingEntityDetailPage` | Detail | DetailHeader, DetailTabs, Field, FormCard, FormPage, Section, WorkflowStepper | BILLING_ENTITY_TABS, BillingEntityDetail, BillingEntityForm |
+| settings | `BillingEntityFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | BillingEntityForm |
 | subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
 | subscriptions | `SubscriptionDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Properties, RowActionsMenu, Section, SimpleTable, SortMenu | DateInput, EntityAlertDialog, Input, OptionSelect, SubscriptionDetailView, SubscriptionPart, SubscriptionTab, Switch |
 | subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, FormPage, RowActionsMenu, Section, SimpleTable, SortMenu, WorkflowStepper | SubscriptionForm |
