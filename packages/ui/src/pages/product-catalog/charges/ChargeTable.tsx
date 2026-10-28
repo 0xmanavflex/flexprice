@@ -129,9 +129,9 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
   showTitle?: boolean
   /**
-   * Brings "Billing timing" on screen in the narrow layout. Both it and "In
-   * effect" are on by default in the wide layout; the narrow one keeps "In
-   * effect" in the column menu either way, so its row stays uncluttered.
+   * Brings "Billing timing" and "In effect" on screen in the narrow layout.
+   * Both are on by default in the wide layout; without this the narrow one
+   * keeps them in the column menu, so its row stays uncluttered.
    */
   showDates?: boolean
   description?: string
@@ -190,6 +190,20 @@ function nameOf(charge: Charge): string {
 // viewer west of Greenwich does not see the day before.
 const DATE_OPTIONS = { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' } as const
 const DATE = new Intl.DateTimeFormat(undefined, DATE_OPTIONS)
+// "In effect" carries the time too, in UTC like the stored value, as the date
+// inputs show it ("Oct 21, 2026, 09:30 AM UTC").
+const DATE_TIME_OPTIONS = {
+  ...DATE_OPTIONS,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+} as const
+const DATE_TIME = new Intl.DateTimeFormat(undefined, DATE_TIME_OPTIONS)
+
+/** Whether a charge's end has passed. A future end date is scheduled: the charge still bills. */
+export function hasEnded(charge: Charge, now: number = Date.now()): boolean {
+  return charge.endDate !== null && charge.endDate.getTime() <= now
+}
 
 const STATUS_TONE: Record<string, PillTone> = {
   Active: 'success',
@@ -217,7 +231,7 @@ function kindLine(
   // Lifecycle first (it changes what the row means), then where the charge
   // came from where a page can say, then the billing model as the default.
   const rest = charge.endDate
-    ? `Ended ${format.format(charge.endDate)}`
+    ? `${hasEnded(charge) ? 'Ended' : 'Ends'} ${format.format(charge.endDate)}`
     : charge.startDate && charge.startDate.getTime() > Date.now()
       ? `Starts ${format.format(charge.startDate)}`
       : (source ??
@@ -284,8 +298,8 @@ export function ChargeTable({
   const { active, ended } = useMemo(() => {
     const order = ordering(details)
     return {
-      active: charges.filter((charge) => !charge.endDate).sort(order),
-      ended: charges.filter((charge) => charge.endDate).sort(order),
+      active: charges.filter((charge) => !hasEnded(charge)).sort(order),
+      ended: charges.filter((charge) => hasEnded(charge)).sort(order),
     }
   }, [charges, details])
 
@@ -295,7 +309,7 @@ export function ChargeTable({
   // charges: a contract on its plan's prices must not read as empty.
   const rows = variant === 'summary' ? active.slice(0, SUMMARY_ROWS) : [...active, ...ended]
   const statusOf = (charge: Charge) =>
-    charge.endDate ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
+    hasEnded(charge) ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
 
   const addButton = onAdd ? (
     // Follows the surrounding AccessScope (price on a plan, subscription on a contract).
@@ -399,19 +413,20 @@ export function ChargeTable({
     },
   ]
 
-  const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
+  const format = locale ? new Intl.DateTimeFormat(locale, DATE_TIME_OPTIONS) : DATE_TIME
+  const at = (date: Date) => `${format.format(date)} UTC`
   const inEffect = (charge: Charge) =>
     !charge.startDate && !charge.endDate
       ? 'Always'
-      : `${charge.startDate ? format.format(charge.startDate) : '—'} → ${
-          charge.endDate ? format.format(charge.endDate) : 'Ongoing'
+      : `${charge.startDate ? at(charge.startDate) : '—'} → ${
+          charge.endDate ? at(charge.endDate) : 'Ongoing'
         }`
   const timing = (charge: Charge) =>
     charge.invoiceCadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'
 
   // After price: quantity (when a page knows it), billing timing and the dates
-  // the charge is in effect, then flags. Beside a side rail (narrow) the dates
-  // sit in the column menu, and timing too unless `showDates` asks for it.
+  // the charge is in effect, then flags. Beside a side rail (narrow) timing and
+  // dates sit in the column menu unless `showDates` asks for them.
   const middle: DetailColumn<Charge>[] = []
   if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
     middle.push({
@@ -440,9 +455,23 @@ export function ChargeTable({
       width: 240,
       sortBy: (charge) => charge.startDate?.getTime() ?? 0,
       text: inEffect,
-      cell: (charge) => <span className="tabular-nums">{inEffect(charge)}</span>,
-      // Too much for a row beside a side rail; still one click away in the column menu.
-      ...(narrow ? { hiddenByDefault: true } : {}),
+      // Start over end, so the times fit without widening the table.
+      cell: (charge) =>
+        !charge.startDate && !charge.endDate ? (
+          <span>Always</span>
+        ) : (
+          <div className="tabular-nums">
+            <p className="text-sm">{charge.startDate ? at(charge.startDate) : '—'}</p>
+            <p className="text-muted-foreground text-xs">
+              {charge.endDate
+                ? `${hasEnded(charge) ? 'Ended' : 'Ends'} ${at(charge.endDate)}`
+                : 'Ongoing'}
+            </p>
+          </div>
+        ),
+      // Too much for a row beside a side rail unless the page asks for dates;
+      // otherwise one click away in the column menu.
+      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
     },
   )
   columns.splice(2, 0, ...middle)

@@ -50,7 +50,7 @@ function PlanChargesViewInner({
             }))
       }
       layout="narrow"
-      // When each charge is billed, on screen; "In effect" stays in the column menu here.
+      // When each charge is billed and when it is in effect, on screen.
       showDates
       {...(details ? { details } : {})}
       {...(onRevert && !readOnly ? { onRevert } : {})}
