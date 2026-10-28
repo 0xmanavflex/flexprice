@@ -79,8 +79,8 @@ export const billingEntitySchema = z.object({
   }),
   taxIdentifiers: z.array(
     z.object({
-      type: z.string().optional(),
-      value: z.string().optional(),
+      type: z.string().trim().min(1, 'Enter a tax ID type.'),
+      value: z.string().trim().min(1, 'Enter a tax ID value.'),
       country: z.string().optional(),
     }),
   ),

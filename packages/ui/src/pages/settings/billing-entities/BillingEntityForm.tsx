@@ -260,7 +260,14 @@ export function BillingEntityForm({
         }
       >
         {taxIds.fields.map((entry, index) => (
-          <FormRow key={entry.id} label={`Tax ID ${index + 1}`}>
+          <FormRow
+            key={entry.id}
+            label={`Tax ID ${index + 1}`}
+            error={
+              errors.taxIdentifiers?.[index]?.type?.message ??
+              errors.taxIdentifiers?.[index]?.value?.message
+            }
+          >
             <div className="flex items-center gap-2">
               <Input
                 aria-label={`Tax ID ${index + 1} type`}
