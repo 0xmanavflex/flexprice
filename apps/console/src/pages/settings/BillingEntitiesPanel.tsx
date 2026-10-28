@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { BillingEntityMode } from '@fp/domain'
+import { BillingEntityMode, RBAC_ENTITY } from '@fp/domain'
 import { useBillingEntities, useBillingEntityStatus, useEnableBillingEntities } from '@fp/query'
-import { ConfirmDialog, useAccess } from '@fp/ui/compositions'
+import { ConfirmDialog, useAccess, useWriteAccess } from '@fp/ui/compositions'
 import { BillingEntitiesEnableCard, BillingEntityGrid } from '@fp/ui/pages'
 import { useEnvironments } from '@/app/shell/useEnvironments'
 import { Panel, PanelError, PanelLoading, WidePanel, toFailure } from './panelKit'
 
+const SUPER_ADMIN_ONLY = 'Only super admins can enable billing entities.'
 const NEW_ENTITY_HREF = '/settings/billing-entities/new'
 
 /**
@@ -35,6 +36,7 @@ export function BillingEntitiesPanel({ onOpenPage }: { onOpenPage: (href: string
 function EnableOffer({ mode }: { mode: BillingEntityMode }) {
   const { current } = useEnvironments()
   const { isSuperAdmin } = useAccess()
+  const write = useWriteAccess(RBAC_ENTITY.Setting, { superAdmin: true })
   const enable = useEnableBillingEntities()
   const [confirming, setConfirming] = useState(false)
 
@@ -42,7 +44,8 @@ function EnableOffer({ mode }: { mode: BillingEntityMode }) {
     <Panel>
       <BillingEntitiesEnableCard
         environmentName={current.name}
-        canEnable={isSuperAdmin}
+        canEnable={write.allowed}
+        disabledReason={isSuperAdmin ? write.reason : SUPER_ADMIN_ONLY}
         isEnabling={mode === BillingEntityMode.Enabling || enable.isSuccess}
         onEnable={() => setConfirming(true)}
       />

@@ -67,7 +67,13 @@ export const EnableCard: StoryObj<typeof BillingEntitiesEnableCard> = {
 
 export const EnableCardNotSuperAdmin: StoryObj<typeof BillingEntitiesEnableCard> = {
   render: (args) => <BillingEntitiesEnableCard {...args} />,
-  args: { environmentName: 'Sandbox', canEnable: false, isEnabling: false, onEnable: fn() },
+  args: {
+    environmentName: 'Sandbox',
+    canEnable: false,
+    disabledReason: 'Only super admins can enable billing entities.',
+    isEnabling: false,
+    onEnable: fn(),
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(
@@ -85,6 +91,26 @@ export const EnableCardEnabling: StoryObj<typeof BillingEntitiesEnableCard> = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByText('Enabling billing entities in Sandbox…'),
+    ).toBeInTheDocument()
+  },
+}
+
+export const EnableCardLocked: StoryObj<typeof BillingEntitiesEnableCard> = {
+  render: (args) => <BillingEntitiesEnableCard {...args} />,
+  args: {
+    environmentName: 'Sandbox',
+    canEnable: false,
+    disabledReason: 'This account is read-only until it upgrades.',
+    isEnabling: false,
+    onEnable: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByRole('button', { name: 'Enable billing entities' }),
+    ).toBeDisabled()
+    await expect(
+      canvas.getByText('This account is read-only until it upgrades.'),
     ).toBeInTheDocument()
   },
 }

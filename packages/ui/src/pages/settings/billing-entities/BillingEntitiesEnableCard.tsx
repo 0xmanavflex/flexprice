@@ -12,6 +12,8 @@ export const BillingEntitiesEnableCardProvenance = provenance({
 export interface BillingEntitiesEnableCardProps {
   environmentName: string
   canEnable: boolean
+  /** Why Enable is disabled, shown under the description. */
+  disabledReason?: string | null
   onEnable: () => void
   /** The environment is assigning its customers to the default entity. */
   isEnabling: boolean
@@ -20,6 +22,7 @@ export interface BillingEntitiesEnableCardProps {
 export function BillingEntitiesEnableCard({
   environmentName,
   canEnable,
+  disabledReason = null,
   onEnable,
   isEnabling,
 }: BillingEntitiesEnableCardProps) {
@@ -49,9 +52,9 @@ export function BillingEntitiesEnableCard({
             Issue invoices from more than one legal seller. Each billing entity has its own name,
             address, tax IDs and invoice prefix.
           </p>
-          {canEnable ? null : (
-            <p className="text-muted-foreground">Only super admins can enable billing entities.</p>
-          )}
+          {!canEnable && disabledReason ? (
+            <p className="text-muted-foreground">{disabledReason}</p>
+          ) : null}
         </div>
       )}
     </Section>
