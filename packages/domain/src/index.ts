@@ -318,7 +318,6 @@ export {
   ACTIVE_CUSTOMERS_FILTER,
   isCustomerQueryFiltered,
   CUSTOMER_FILTERS,
-  CUSTOMER_ENTITY_FILTER,
   createCustomerSchema,
   editCustomerSchema,
   emptyCustomer,
@@ -1078,6 +1077,7 @@ export type {
   SubscriptionRevenue,
 } from './revenueRecognition'
 export {
+  BILLING_ENTITY_FILTER,
   BillingEntityMode,
   billingEntitySchema,
   effectiveEntityId,

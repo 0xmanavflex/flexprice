@@ -8,7 +8,7 @@ import {
   searchCustomers,
 } from '@fp/api'
 import {
-  CUSTOMER_ENTITY_FILTER,
+  BILLING_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   type CreateCustomer,
   type Customer,
@@ -133,7 +133,7 @@ export function toCustomerFilter(
 ): Record<string, unknown> {
   const conditions = toFilterConditions(query.filters ?? [], specs)
   const metadata = toMetadataFilter(query.filters ?? [], specs)
-  const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, CUSTOMER_ENTITY_FILTER.field)
+  const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, BILLING_ENTITY_FILTER.field)
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
@@ -219,7 +219,7 @@ export function useCustomers(
   const billingEntityId = toTopLevelChoice(
     query.filters ?? [],
     options.specs ?? CUSTOMER_FILTERS,
-    CUSTOMER_ENTITY_FILTER.field,
+    BILLING_ENTITY_FILTER.field,
   )
 
   return useQuery({

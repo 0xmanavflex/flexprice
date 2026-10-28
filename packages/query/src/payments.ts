@@ -1,6 +1,8 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type AuthSource, call, listPayments } from '@fp/api'
 import {
+  BILLING_ENTITY_FILTER,
+  type ListFilterSpec,
   type Payment,
   type PaymentDetail,
   type PaymentQuery,
@@ -10,6 +12,7 @@ import {
   toPaymentStatus,
 } from '@fp/domain'
 import { queryKeys } from './keys'
+import { toTopLevelChoice } from './search'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 import { credentials, fromWire } from './wire'
 
@@ -97,8 +100,10 @@ export async function fetchPayments(
   auth: AuthSource,
   query: PaymentQuery,
   signal?: AbortSignal,
+  specs: readonly ListFilterSpec[] = [],
 ): Promise<PaymentPage> {
   const { token, environmentId } = await credentials(auth, 'Sign in to view payments.')
+  const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, BILLING_ENTITY_FILTER.field)
   const response = fromWire<{
     items?: PaymentWire[] | null
     pagination?: { total?: number }
@@ -107,7 +112,11 @@ export async function fetchPayments(
       serverURL,
       token,
       environmentId,
-      { limit: query.pageSize, offset: (query.page - 1) * query.pageSize },
+      {
+        limit: query.pageSize,
+        offset: (query.page - 1) * query.pageSize,
+        ...(billingEntityId ? { billingEntityId } : {}),
+      },
       signal,
     ),
   )
@@ -137,13 +146,27 @@ export async function fetchPayments(
  * listing payments is a GET with an offset: which is what lets the page hand
  * its state to a URL instead of to a component.
  */
-export function usePayments(query: PaymentQuery) {
+/** `specs`: the filters the list offers; the entity filter only while entities are enabled. */
+export function usePayments(
+  query: PaymentQuery,
+  options: { specs?: readonly ListFilterSpec[] } = {},
+) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
+  const billingEntityId = toTopLevelChoice(
+    query.filters ?? [],
+    options.specs ?? [],
+    BILLING_ENTITY_FILTER.field,
+  )
 
   return useQuery({
-    queryKey: queryKeys.payments.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: ({ signal }) => fetchPayments(serverURL, auth, query, signal),
+    queryKey: queryKeys.payments.list({
+      ...query,
+      statuses: [...query.statuses].sort(),
+      // Whether the entity filter is sent, so turning entities on refetches.
+      ...(billingEntityId ? { billingEntityId } : {}),
+    }),
+    queryFn: ({ signal }) => fetchPayments(serverURL, auth, query, signal, options.specs),
     // Keeps the previous page on screen while the next one loads, so paging does
     // not blank the grid. TanStack's replacement for keepPreviousData.
     placeholderData: (previous) => previous,

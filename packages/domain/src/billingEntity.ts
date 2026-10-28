@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { ListFilterSpec } from './listFilter'
 
 /**
  * A billing entity: the legal seller an invoice is issued from. Entities exist
@@ -52,6 +53,13 @@ export function effectiveEntityId(
   entities: readonly Pick<BillingEntity, 'id' | 'isDefault'>[],
 ): string {
   return customer.billingEntityId || (entities.find((entity) => entity.isDefault)?.id ?? '')
+}
+
+/** A list's entity filter, sent as the request's top-level `billing_entity_id`; offered only while entities are enabled. */
+export const BILLING_ENTITY_FILTER: ListFilterSpec = {
+  field: 'billing_entity_id',
+  label: 'Billing entity',
+  kind: 'choice',
 }
 
 /** What the create and edit forms hold. */

@@ -1,4 +1,11 @@
-import { type CreditNoteQuery, CreditNoteStatus, DEFAULT_CREDIT_NOTE_QUERY } from '@fp/domain'
+import {
+  BILLING_ENTITY_FILTER,
+  type CreditNoteQuery,
+  CreditNoteStatus,
+  DEFAULT_CREDIT_NOTE_QUERY,
+  decodeListFilters,
+  runnableFilters,
+} from '@fp/domain'
 
 /**
  * The credit memo query, as URL search params. Total, like every list codec
@@ -33,5 +40,7 @@ export function parseCreditNoteSearch(raw: Record<string, unknown>): CreditNoteQ
     ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     statuses: [...new Set(statuses)],
+    // Kept here; the list sends it only while entities are enabled.
+    filters: runnableFilters(decodeListFilters(raw['filters']), [BILLING_ENTITY_FILTER]),
   }
 }

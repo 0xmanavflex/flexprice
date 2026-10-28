@@ -793,6 +793,7 @@ export {
   useBillingEntity,
   useBillingEntityStatus,
   useEntityFilterOptions,
+  useCustomerBillingEntity,
   useCreateBillingEntity,
   useEnableBillingEntities,
   useUpdateBillingEntity,

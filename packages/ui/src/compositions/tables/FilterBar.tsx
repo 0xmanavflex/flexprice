@@ -624,16 +624,52 @@ export function granularFilter({
       return rules.length === query.rules.length ? query : { ...query, rules }
     },
     onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
-      const next = flat.map((entry): ListFilter => {
-        const spec = specs.find((candidate) => candidate.field === entry.field)
-        return {
-          field: entry.field,
-          op: entry.operator as FilterOp,
-          value:
-            spec?.kind === 'options' ? entry.values.map(String) : String(entry.values[0] ?? ''),
-        }
-      })
-      onChange(latestPairPerKey(runnableFilters(next, specs), specs))
+      onChange(readGranularFilters(flat, specs))
+    },
+  }
+}
+
+/** The complete filters among the bar's rules, for the fields these specs describe. */
+function readGranularFilters(flat: FlatFilter[], specs: readonly ListFilterSpec[]): ListFilter[] {
+  const next = flat.map((entry): ListFilter => {
+    const spec = specs.find((candidate) => candidate.field === entry.field)
+    return {
+      field: entry.field,
+      op: entry.operator as FilterOp,
+      value: spec?.kind === 'options' ? entry.values.map(String) : String(entry.values[0] ?? ''),
+    }
+  })
+  return latestPairPerKey(runnableFilters(next, specs), specs)
+}
+
+/**
+ * A list's status filter with granular fields beside it in the same bar (the
+ * billing entity, while entities are enabled). One change reports both, so
+ * neither overwrites the other.
+ */
+export function statusWithFieldsFilter<S extends string>({
+  values,
+  choices,
+  specs,
+  filters,
+  onChange,
+}: {
+  values: readonly S[]
+  choices: readonly { value: S; label: string }[]
+  specs: readonly ListFilterSpec[]
+  filters: readonly ListFilter[]
+  onChange: (values: S[], filters: ListFilter[]) => void
+}) {
+  const status = statusFilter({ values, choices, onChange: () => undefined })
+  const fields = granularFilter({ specs, filters, onChange: () => undefined })
+  const allowed = new Set<string>(choices.map((choice) => choice.value))
+  return {
+    fields: [...status.fields, ...fields.fields],
+    query: createFilterQuery([...status.query.rules, ...fields.query.rules]),
+    activeCount: status.activeCount + fields.activeCount,
+    flat: true,
+    onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
+      onChange(readSelectFilter(flat, 'status', allowed) as S[], readGranularFilters(flat, specs))
     },
   }
 }

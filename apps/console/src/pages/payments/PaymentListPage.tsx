@@ -1,5 +1,15 @@
-import type { Payment, PaymentQuery } from '@fp/domain'
-import { usePayments, useEntityIntegrationColumns } from '@fp/query'
+import {
+  BILLING_ENTITY_FILTER,
+  type Payment,
+  type PaymentQuery,
+  withChoiceFilter,
+} from '@fp/domain'
+import {
+  useBillingEntities,
+  useEntityFilterOptions,
+  usePayments,
+  useEntityIntegrationColumns,
+} from '@fp/query'
 import { PaymentGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { toListFailure } from '../shared/listFailure'
@@ -24,7 +34,11 @@ export function PaymentListPage({
   onCreate,
   onPaymentClick,
 }: PaymentListPageProps) {
-  const payments = usePayments(query)
+  const entityOptions = useEntityFilterOptions()
+  const entities = useBillingEntities()
+  const payments = usePayments(query, {
+    specs: withChoiceFilter([], BILLING_ENTITY_FILTER, entityOptions),
+  })
 
   const failure = toListFailure(payments.error, 'payments')
   const rows = payments.data?.payments ?? []
@@ -33,8 +47,10 @@ export function PaymentListPage({
     rows.map((payment) => payment.id),
   )
   const total = payments.data?.total ?? 0
-  const isFiltered = query.search.length > 0 || query.statuses.length > 0
-  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+  const isFiltered =
+    query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
   return (
     <>
@@ -62,6 +78,7 @@ export function PaymentListPage({
             total={total}
             query={query}
             onQueryChange={onQueryChange}
+            billingEntities={entityOptions ? (entities.data ?? []) : undefined}
             {...(onCreate ? { onCreate } : {})}
             {...(onPaymentClick ? { onPaymentClick } : {})}
             onClearFilters={clearFilters}

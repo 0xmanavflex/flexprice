@@ -368,6 +368,20 @@ function saveEntityState() {
 }
 const ENTITIES_NOT_ENABLED = 'Billing entities are not enabled in this environment'
 
+/** As the API: `billing_entity_id` is refused unless entities are on; a record without one is the default's. */
+function entityScope(
+  request: Request,
+  entityId: string | null | undefined,
+): { refused: Response } | { keep: (row: Record<string, unknown>) => boolean } {
+  if (!entityId) return { keep: () => true }
+  const entities = entityEnvironment(request)
+  if (entities.mode !== 'enabled') {
+    return { refused: HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 }) }
+  }
+  const fallback = readString(entities.rows.find((row) => row['is_default']) ?? {}, 'id')
+  return { keep: (row) => (readString(row, 'billing_entity_id') || fallback) === entityId }
+}
+
 function entityEnvironment(request: Request): EntityEnvironment {
   const id = request.headers.get('X-Environment-ID') ?? ''
   let state = entityEnvironments.get(id)
@@ -581,16 +595,9 @@ const search = (path: string, key: string) =>
     const refused = rejectUnknownExpand(key, body.expand)
     if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
-    // As the API: `billing_entity_id` is refused unless entities are on; a customer without one is the default's.
     const entityId = (body as { billing_entity_id?: string }).billing_entity_id
-    let entityDefault: string | undefined
-    if (entityId) {
-      const entities = entityEnvironment(request)
-      if (entities.mode !== 'enabled') {
-        return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
-      }
-      entityDefault = readString(entities.rows.find((row) => row['is_default']) ?? {}, 'id')
-    }
+    const entity = entityScope(request, entityId)
+    if ('refused' in entity) return entity.refused
     const source = sourceFor(key)
     // The API's rule: a subscription search that names no status answers active only.
     const wanted =
@@ -604,8 +611,7 @@ const search = (path: string, key: string) =>
     const pairs = metadata ? Object.entries(metadata) : []
     const matching = source.items.filter((row) => {
       if (wanted?.length && !wanted.includes(readString(row, 'subscription_status'))) return false
-      if (entityId && (readString(row, 'billing_entity_id') || entityDefault) !== entityId)
-        return false
+      if (!entity.keep(row)) return false
       if (pairs.length === 0) return true
       const held = (row['metadata'] ?? {}) as Record<string, unknown>
       return pairs.every(([k, v]) => held[k] === v)
@@ -3395,6 +3401,8 @@ export const handlers = [
       offset: Number(url.searchParams.get('offset') ?? 0),
     }
     if (demoEmpty()) return HttpResponse.json(emptyPage(window))
+    const entity = entityScope(request, url.searchParams.get('billing_entity_id'))
+    if ('refused' in entity) return entity.refused
     const destinationId = url.searchParams.get('destination_id')
     if (destinationId) {
       const items = [
@@ -3406,14 +3414,16 @@ export const handlers = [
         pagination: { total: items.length, limit: window.limit, offset: window.offset },
       })
     }
-    const base = page(corpus['invoices'] as Corpus, window) as {
+    const source = corpus['invoices'] as Corpus
+    const base = page({ ...source, items: source.items.filter(entity.keep) }, window) as {
       items: Record<string, unknown>[]
       pagination: { total: number }
     }
+    const recorded = paymentStore.filter(entity.keep)
     return HttpResponse.json({
       ...base,
-      items: window.offset === 0 ? [...paymentStore, ...base.items] : base.items,
-      pagination: { ...base.pagination, total: base.pagination.total + paymentStore.length },
+      items: window.offset === 0 ? [...recorded, ...base.items] : base.items,
+      pagination: { ...base.pagination, total: base.pagination.total + recorded.length },
     })
   }),
   http.post(`${BASE}/payments`, async ({ request }) => {
@@ -3902,9 +3912,13 @@ export const handlers = [
     const limit = Number(url.searchParams.get('limit') ?? 25)
     const offset = Number(url.searchParams.get('offset') ?? 0)
     const statuses = url.searchParams.getAll('credit_note_status')
+    const entity = entityScope(request, url.searchParams.get('billing_entity_id'))
+    if ('refused' in entity) return entity.refused
 
     const matches = creditNotes.filter(
-      (note) => statuses.length === 0 || statuses.includes(String(note['credit_note_status'])),
+      (note) =>
+        (statuses.length === 0 || statuses.includes(String(note['credit_note_status']))) &&
+        entity.keep(note),
     )
     return HttpResponse.json({
       items: matches.slice(offset, offset + limit),

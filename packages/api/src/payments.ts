@@ -12,6 +12,8 @@ export interface ListPaymentsParams {
   /** Only payments collected against this destination, e.g. an invoice. */
   destinationId?: string
   destinationType?: string
+  /** Only payments of this billing entity; sent only while entities are enabled. */
+  billingEntityId?: string
 }
 
 export async function listPayments(
@@ -27,6 +29,7 @@ export async function listPayments(
   })
   if (params.destinationId) search.set('destination_id', params.destinationId)
   if (params.destinationType) search.set('destination_type', params.destinationType)
+  if (params.billingEntityId) search.set('billing_entity_id', params.billingEntityId)
   return request(serverURL, `/payments?${search.toString()}`, {
     method: 'GET',
     token,

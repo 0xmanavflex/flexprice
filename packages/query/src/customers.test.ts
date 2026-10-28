@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  CUSTOMER_ENTITY_FILTER,
+  BILLING_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   CustomerStatus,
   DEFAULT_CUSTOMER_QUERY,
@@ -171,7 +171,7 @@ describe('toCustomerFilter', () => {
     const filters = [{ field: 'billing_entity_id', op: 'eq' as const, value: 'be_1' }]
     const filter = toCustomerFilter({ ...ALL_CUSTOMERS, filters }, [
       ...CUSTOMER_FILTERS,
-      CUSTOMER_ENTITY_FILTER,
+      BILLING_ENTITY_FILTER,
     ])
     expect(filter['billingEntityId']).toBe('be_1')
     expect(filter).not.toHaveProperty('filters')

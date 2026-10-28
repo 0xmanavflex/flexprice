@@ -12,7 +12,9 @@ import {
   invoiceDocumentStatus,
   PAYMENT_STATUS_LABEL,
   isStoredInvoiceStatus,
+  BILLING_ENTITY_FILTER,
   INVOICE_FILTERS,
+  withChoiceFilter,
   withFilterOptions,
 } from '@fp/domain'
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
@@ -27,6 +29,11 @@ import {
   textColumn,
 } from '../../shared/cells'
 import { INVOICE_DOCUMENT_STATUS_TONE, PAYMENT_STATUS_TONE } from '../../shared/statusTones'
+import {
+  billingEntityChoices,
+  billingEntityColumn,
+  type ListBillingEntity,
+} from '../../shared/billingEntityColumn'
 
 /**
  * The invoice list, on the shared `EntityList`.
@@ -134,6 +141,8 @@ export interface InvoiceGridProps {
   isProvisional?: boolean
   /** Locale for dates and amounts. Supplied by the app, never read from a global. */
   locale?: string
+  /** The environment's billing entities, only while they are enabled: adds the Billing entity column and filter. */
+  billingEntities?: readonly ListBillingEntity[] | undefined
 }
 
 export function InvoiceGrid({
@@ -155,6 +164,7 @@ export function InvoiceGrid({
   isRefreshing = false,
   isProvisional = false,
   locale,
+  billingEntities,
 }: InvoiceGridProps) {
   const columns = useMemo<EntityColumn<Invoice>[]>(
     () => [
@@ -170,6 +180,7 @@ export function InvoiceGrid({
         width: 180,
         onOpen: onOpenCustomer ? (row) => onOpenCustomer(row.customerId) : undefined,
       }),
+      ...(billingEntities ? [billingEntityColumn<Invoice>(billingEntities)] : []),
       dateColumn<Invoice>('issuedAt', 'Invoice date', (row) => row.issuedAt, {
         width: 120,
         sortable: true,
@@ -230,7 +241,7 @@ export function InvoiceGrid({
         { width: 220, muted: true, hiddenByDefault: true },
       ),
     ],
-    [locale, onOpenCustomer, integrationMappings],
+    [locale, onOpenCustomer, integrationMappings, billingEntities],
   )
 
   const isDefaultSort =
@@ -309,7 +320,11 @@ export function InvoiceGrid({
          * number.
          */
         filter={granularFilter({
-          specs: withFilterOptions(INVOICE_FILTERS, filterOptions ?? {}),
+          specs: withChoiceFilter(
+            withFilterOptions(INVOICE_FILTERS, filterOptions ?? {}),
+            BILLING_ENTITY_FILTER,
+            billingEntities ? billingEntityChoices(billingEntities) : null,
+          ),
           filters: query.filters ?? [],
           onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
         })}

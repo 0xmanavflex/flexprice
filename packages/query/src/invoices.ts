@@ -15,10 +15,12 @@ import {
   toPaymentStatus,
   toWirePaymentStatus,
   PaymentStatus,
+  BILLING_ENTITY_FILTER,
   INVOICE_FILTERS,
+  type ListFilterSpec,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { toFilterConditions } from './search'
+import { toFilterConditions, toTopLevelChoice } from './search'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 import { credentials, fromWire, toWireBody } from './wire'
 
@@ -64,9 +66,11 @@ export function isServerFilterable(status: InvoiceStatus): boolean {
 }
 
 /** Builds the request. Page numbers are 1-based for people, offsets are not. */
+/** `specs` are the filters the list offers: the entity filter is among them only while entities are enabled. */
 export function toInvoiceFilter(
   query: InvoiceQuery,
   scope?: { customerId?: string },
+  specs: readonly ListFilterSpec[] = INVOICE_FILTERS,
 ): Record<string, unknown> {
   // Paid and overdue are derived from finalized invoices, so asking for either
   // asks the server for finalized ones too; the page then keeps the matches.
@@ -77,6 +81,8 @@ export function toInvoiceFilter(
       ...(derived ? ['FINALIZED'] : []),
     ]),
   ]
+  const conditions = toFilterConditions(query.filters ?? [], specs)
+  const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, BILLING_ENTITY_FILTER.field)
 
   return {
     limit: query.pageSize,
@@ -84,12 +90,11 @@ export function toInvoiceFilter(
     sort: [{ field: SORT_FIELD_TO_API[query.sortBy], direction: query.sortDirection }],
     // Line items are never rendered in a list, and they dominate the payload.
     skipLineItems: true,
-    ...((query.filters?.length ?? 0) > 0
-      ? { filters: toFilterConditions(query.filters ?? [], INVOICE_FILTERS) }
-      : {}),
+    ...(conditions.length > 0 ? { filters: conditions } : {}),
     ...(statuses.length > 0 ? { invoiceStatus: statuses } : {}),
     ...(query.search ? { externalCustomerId: query.search } : {}),
     ...(scope?.customerId ? { customerId: scope.customerId } : {}),
+    ...(billingEntityId ? { billingEntityId } : {}),
   }
 }
 
@@ -212,6 +217,7 @@ export async function fetchInvoices(
   query: InvoiceQuery,
   signal?: AbortSignal,
   scope?: { customerId?: string },
+  specs?: readonly ListFilterSpec[],
 ): Promise<InvoicePage> {
   const { token, environmentId } = await credentials(auth, 'Sign in to view invoices.')
   const response = fromWire<{
@@ -222,7 +228,7 @@ export async function fetchInvoices(
       serverURL,
       token,
       environmentId,
-      toWireBody(toInvoiceFilter(query, scope)),
+      toWireBody(toInvoiceFilter(query, scope, specs)),
       signal,
     ),
   )
@@ -240,13 +246,27 @@ export async function fetchInvoices(
  * offset: which is what lets the page hand its state to a URL instead of to a
  * component.
  */
-export function useInvoices(query: InvoiceQuery, options: { enabled?: boolean } = {}) {
+/** `specs`: the filters the list offers, when they differ from `INVOICE_FILTERS` (the entity filter). */
+export function useInvoices(
+  query: InvoiceQuery,
+  options: { enabled?: boolean; specs?: readonly ListFilterSpec[] } = {},
+) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
+  const billingEntityId = toTopLevelChoice(
+    query.filters ?? [],
+    options.specs ?? INVOICE_FILTERS,
+    BILLING_ENTITY_FILTER.field,
+  )
 
   return useQuery({
-    queryKey: queryKeys.invoices.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: ({ signal }) => fetchInvoices(serverURL, auth, query, signal),
+    queryKey: queryKeys.invoices.list({
+      ...query,
+      statuses: [...query.statuses].sort(),
+      // Whether the entity filter is sent, so turning entities on refetches.
+      ...(billingEntityId ? { billingEntityId } : {}),
+    }),
+    queryFn: ({ signal }) => fetchInvoices(serverURL, auth, query, signal, undefined, options.specs),
     // Keeps the previous page on screen while the next one loads, so sorting a
     // grid does not blank it. TanStack's replacement for keepPreviousData.
     enabled: options.enabled ?? true,

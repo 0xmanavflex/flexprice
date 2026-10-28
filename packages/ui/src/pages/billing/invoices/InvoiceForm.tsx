@@ -120,6 +120,8 @@ export interface InvoiceFormParty {
   email: string
   /** Address lines, already joined; empty ones left out. */
   address: string[]
+  /** Tax IDs, each "type value". */
+  taxIds?: string[]
 }
 
 /** A tax rate the person can add to a new invoice. */
@@ -1335,6 +1337,11 @@ function PartyBlock({
           {party.address.map((line) => (
             <span key={line} className="text-muted-foreground">
               {line}
+            </span>
+          ))}
+          {party.taxIds?.map((taxId) => (
+            <span key={taxId} className="text-muted-foreground">
+              {taxId}
             </span>
           ))}
         </>

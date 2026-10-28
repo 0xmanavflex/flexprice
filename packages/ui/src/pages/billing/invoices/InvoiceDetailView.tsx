@@ -111,6 +111,8 @@ export interface InvoiceDetailViewProps {
   onSend?: () => void
   onRetryPayment?: () => void
   onOpenCustomer?: () => void
+  /** The entity issuing this invoice, while entities are enabled; a link to the entity under Related. */
+  billingEntity?: { name: string; onOpen: () => void } | undefined
   onOpenSubscription?: () => void
   onOpenPayment?: (paymentId: string) => void
   onOpenCreditNote?: (creditNoteId: string) => void
@@ -164,6 +166,7 @@ export function InvoiceDetailView({
   onSend,
   onRetryPayment,
   onOpenCustomer,
+  billingEntity,
   onOpenSubscription,
   onOpenPayment,
   onOpenCreditNote,
@@ -229,6 +232,16 @@ export function InvoiceDetailView({
       value: invoice.billTo.name,
       ...(onOpenCustomer ? { onOpen: onOpenCustomer } : {}),
     },
+    ...(billingEntity
+      ? [
+          {
+            id: 'billing-entity',
+            label: 'Billing entity',
+            value: billingEntity.name,
+            onOpen: billingEntity.onOpen,
+          },
+        ]
+      : []),
     {
       id: 'subscription',
       label: 'Contract',
@@ -888,6 +901,11 @@ function Party({
             </div>
           ) : null}
           {party.email ? <p className="text-muted-foreground">{party.email}</p> : null}
+          {party.taxIds?.map((taxId) => (
+            <p key={taxId} className="text-muted-foreground">
+              {taxId}
+            </p>
+          ))}
         </div>
       </div>
     </div>

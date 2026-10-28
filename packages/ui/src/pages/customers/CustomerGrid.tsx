@@ -11,8 +11,7 @@ import {
   PlusIcon,
 } from '@ui/icons'
 import {
-  type BillingEntity,
-  CUSTOMER_ENTITY_FILTER,
+  BILLING_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,
@@ -21,7 +20,6 @@ import {
   CustomerSortField,
   CustomerStatus,
   DEFAULT_CUSTOMER_QUERY,
-  effectiveEntityId,
   isCustomerQueryFiltered,
   withChoiceFilter,
 } from '@fp/domain'
@@ -39,6 +37,11 @@ import {
   textColumn,
 } from '../shared/cells'
 import { CopyValue } from '../shared/CopyValue'
+import {
+  billingEntityChoices,
+  billingEntityColumn,
+  type ListBillingEntity,
+} from '../shared/billingEntityColumn'
 import { IntegrationChips } from './IntegrationMark'
 
 /**
@@ -145,7 +148,7 @@ export interface CustomerGridProps {
   /** Contracts per customer id, when the page has counted them; absent customers show an em dash. */
   contractCounts?: Record<string, number>
   /** The environment's billing entities, only while they are enabled: adds the Billing entity column and filter. */
-  billingEntities?: readonly Pick<BillingEntity, 'id' | 'name' | 'isDefault'>[] | undefined
+  billingEntities?: readonly ListBillingEntity[] | undefined
 }
 
 export function CustomerGrid({
@@ -183,15 +186,7 @@ export function CustomerGrid({
       // it is a value like any other: and it is the field support actually
       // searches by.
       textColumn<Customer>('email', 'Email', (row) => row.email, { width: 220 }),
-      ...(billingEntities
-        ? [
-            pillColumn<Customer>('billingEntity', 'Billing entity', (row) => {
-              const id = effectiveEntityId(row, billingEntities)
-              const name = billingEntities.find((entity) => entity.id === id)?.name
-              return name ? { label: name } : null
-            }),
-          ]
-        : []),
+      ...(billingEntities ? [billingEntityColumn<Customer>(billingEntities)] : []),
       {
         ...idColumn<Customer>('externalId', 'External ID', (row) => row.externalId, { width: 170 }),
         cell: (row) =>
@@ -329,8 +324,8 @@ export function CustomerGrid({
       filter={granularFilter({
         specs: withChoiceFilter(
           CUSTOMER_FILTERS,
-          CUSTOMER_ENTITY_FILTER,
-          billingEntities?.map((entity) => ({ value: entity.id, label: entity.name })) ?? null,
+          BILLING_ENTITY_FILTER,
+          billingEntities ? billingEntityChoices(billingEntities) : null,
         ),
         filters: query.filters ?? [],
         onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),

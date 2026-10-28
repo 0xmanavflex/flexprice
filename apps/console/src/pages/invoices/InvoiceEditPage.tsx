@@ -9,6 +9,7 @@ import {
   type LineItemEdit,
   serverReason,
   useCustomer,
+  useCustomerBillingEntity,
   useInvoice,
   useInvoicePayments,
   useSaveInvoiceEdit,
@@ -23,7 +24,7 @@ import {
   type InvoiceEditDraft,
   linesChanged,
 } from '@fp/ui/pages'
-import { customerParty, tenantParty } from './invoiceParties'
+import { billFromFor, customerParty, tenantParty } from './invoiceParties'
 
 export interface InvoiceEditPageProps {
   invoiceId: string
@@ -46,6 +47,7 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
   const payments = useInvoicePayments(invoiceId)
   const save = useSaveInvoiceEdit()
   const customer = useCustomer(invoice.data?.customerId ?? '')
+  const customerEntity = useCustomerBillingEntity(customer.data)
   const me = useUserInfo()
   const tenant = useTenant(me.data?.tenantId || invoice.data?.tenantId || '')
 
@@ -143,7 +145,7 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
         { label: 'Edit' },
       ]}
       invoice={editable}
-      billFrom={tenantParty(tenant.data)}
+      billFrom={billFromFor(data, customerEntity, tenantParty(tenant.data))}
       billTo={customerParty(customer.data)}
       paymentChoices={manualPaymentStatusChoices(data.paymentStatus)}
       paymentStatusBlocked={manualPaymentStatusBlocked({

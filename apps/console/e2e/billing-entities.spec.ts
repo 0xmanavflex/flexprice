@@ -303,3 +303,103 @@ test('billing entities: switching to an environment without entities drops the c
   expect((await asked).postDataJSON()).not.toHaveProperty('billing_entity_id')
   await expect(page.getByRole('row').nth(1)).toBeVisible()
 })
+
+async function giveDefaultEntityATaxId(page: Page) {
+  await enableEntities(page)
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
+  await page.getByRole('textbox', { name: /legal name/i }).fill('Northwind Systems Pvt Ltd')
+  await page.getByRole('button', { name: 'Add tax ID' }).click()
+  await page.getByRole('textbox', { name: 'Tax ID 1 type' }).fill('GSTIN')
+  await page.getByRole('textbox', { name: 'Tax ID 1 value' }).fill('29ABCDE1234F1Z5')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Billing entity saved')).toBeVisible()
+}
+
+test("billing entities: a draft invoice is billed from its customer's entity, linked under Related", async ({
+  page,
+}) => {
+  await giveDefaultEntityATaxId(page)
+
+  await page.goto('/invoices?status=draft')
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
+  await expect(page).toHaveURL(/\/invoices\/[^/]+$/)
+  await expect(page.getByText('Northwind Systems Pvt Ltd')).toBeVisible()
+  await expect(page.getByText('GSTIN 29ABCDE1234F1Z5')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Northwind Systems', exact: true }).click()
+  await expect(page).toHaveURL(/\/settings\/billing-entities\/[^/?]+/)
+})
+
+test('billing entities: invoices, payments and credit memos show their entity and filter by it', async ({
+  page,
+}) => {
+  await addIndiaEntity(page)
+
+  const pickIndia = async () => {
+    await page.getByRole('button', { name: /^Filter/ }).click()
+    await page
+      .getByRole('dialog', { name: 'Advanced filter' })
+      .getByRole('button', { name: 'Add filter' })
+      .click()
+    await page.getByRole('option', { name: 'Billing entity', exact: true }).click()
+    await page.getByRole('option', { name: 'is', exact: true }).click()
+    await page.getByRole('option', { name: 'Northwind India' }).click()
+  }
+
+  await page.goto('/invoices')
+  await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Northwind Systems' }).first()).toBeVisible()
+  const searched = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().includes('/invoices/search'),
+  )
+  await pickIndia()
+  const body = (await searched).postDataJSON()
+  expect(body.billing_entity_id).toMatch(/^be_mock_/)
+  expect(JSON.stringify(body.filters ?? [])).not.toContain('billing_entity_id')
+  await page.keyboard.press('Escape')
+  // Every mock invoice belongs to the default entity.
+  await expect(page.getByRole('cell', { name: 'Northwind Systems' })).toHaveCount(0)
+
+  await page.goto('/payments')
+  await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toBeVisible()
+  const listed = page.waitForRequest(
+    (request) =>
+      request.method() === 'GET' && /\/payments\?.*billing_entity_id=be_mock_/.test(request.url()),
+  )
+  await pickIndia()
+  await listed
+
+  await page.goto('/credit-memos')
+  await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toBeVisible()
+  const memos = page.waitForRequest(
+    (request) =>
+      request.method() === 'GET' &&
+      /\/creditnotes\?.*billing_entity_id=be_mock_/.test(request.url()),
+  )
+  await pickIndia()
+  await memos
+})
+
+test('billing entities: invoices, payments and credit memos are unchanged while entities are off', async ({
+  page,
+}) => {
+  for (const path of ['/invoices', '/payments', '/credit-memos']) {
+    await page.goto(path)
+    await expect(page.getByRole('row').nth(1)).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toHaveCount(0)
+    await page.getByRole('button', { name: /^Filter/ }).click()
+    await page
+      .getByRole('dialog', { name: 'Advanced filter' })
+      .getByRole('button', { name: 'Add filter' })
+      .click()
+    await expect(page.getByRole('option').first()).toBeVisible()
+    await expect(page.getByRole('option', { name: 'Billing entity', exact: true })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+  }
+
+  await page.goto('/invoices?status=draft')
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
+  await expect(page.getByText('Bill from')).toBeVisible()
+  await expect(page.getByText('Northwind Systems').first()).toBeVisible()
+  await expect(page.getByText('Billing entity')).toHaveCount(0)
+})

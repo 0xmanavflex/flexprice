@@ -2,7 +2,7 @@ import {
   type CustomerQuery,
   CustomerSortField,
   CustomerStatus,
-  CUSTOMER_ENTITY_FILTER,
+  BILLING_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   DEFAULT_CUSTOMER_QUERY,
   FilterOp,
@@ -67,7 +67,7 @@ export function parseCustomerSearch(raw: Record<string, unknown>): CustomerQuery
         : // The entity filter is kept here; the list sends it only while entities are enabled.
           runnableFilters(decodeListFilters(raw['filters']), [
             ...CUSTOMER_FILTERS,
-            CUSTOMER_ENTITY_FILTER,
+            BILLING_ENTITY_FILTER,
           ]),
   }
 }

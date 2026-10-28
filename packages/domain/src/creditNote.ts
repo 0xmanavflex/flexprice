@@ -6,6 +6,7 @@
  * this boundary as a `Money`, never a bare number beside a currency.
  */
 import { z } from 'zod'
+import type { ListFilter } from './listFilter'
 import type { Money } from './money'
 
 export const CreditNoteStatus = {
@@ -42,6 +43,8 @@ export interface CreditNote {
   invoiceNumber: string
   customerName: string
   createdAt: Date | null
+  /** The billing entity that issued it; absent when the API sends none. */
+  billingEntityId?: string
 }
 
 export interface CreditNoteQuery {
@@ -49,6 +52,8 @@ export interface CreditNoteQuery {
   pageSize: number
   search: string
   statuses: CreditNoteStatus[]
+  /** Field filters sent to the server; only the billing entity, while entities are enabled. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_CREDIT_NOTE_QUERY: CreditNoteQuery = {
@@ -56,6 +61,7 @@ export const DEFAULT_CREDIT_NOTE_QUERY: CreditNoteQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
+  filters: [],
 }
 
 export const CreditNoteReason = {

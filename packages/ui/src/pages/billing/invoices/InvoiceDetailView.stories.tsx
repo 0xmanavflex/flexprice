@@ -28,6 +28,8 @@ interface InvoiceShape {
   hasHostedLink?: boolean
   /** `total_discount`: coupons and discounts taken off the subtotal. */
   discount?: number
+  /** Tax IDs on the issuer's block, as a billing entity prints them. */
+  issuerTaxIds?: string[]
   paymentsState: SubTabMode
   creditNotesState: SubTabMode
 }
@@ -73,7 +75,9 @@ function makeInvoice(
   const { from, payment, ...base } = DEMO_INVOICE
   return {
     ...base,
-    ...(args.hasIssuer && from ? { from } : {}),
+    ...(args.hasIssuer && from
+      ? { from: args.issuerTaxIds ? { ...from, taxIds: args.issuerTaxIds } : from }
+      : {}),
     ...(args.hasIssuer && payment ? { payment } : {}),
     id: `inv_${args.status}`,
     number: args.hasNumber && args.status !== InvoiceStatus.Draft ? 'INV-20418' : null,
@@ -124,6 +128,7 @@ function InvoiceDetailPlayground({
   hasNumber,
   hasHostedLink = false,
   discount,
+  issuerTaxIds,
   paymentsState,
   creditNotesState,
   onRetrySubTab,
@@ -142,6 +147,7 @@ function InvoiceDetailPlayground({
     hasNumber,
     hasHostedLink,
     ...(discount ? { discount } : {}),
+    ...(issuerTaxIds ? { issuerTaxIds } : {}),
   })
   return (
     <InvoiceDetailView
@@ -288,6 +294,20 @@ export const MoreMenu: Story = {
     await expect(screen.getByRole('menuitem', { name: /Send communication/ })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('menuitem', { name: 'Void invoice' }))
     await expect(args.onVoid).toHaveBeenCalledOnce()
+  },
+}
+
+/** Entities enabled: Bill from carries the entity's tax ID, and Related links the entity. */
+export const BillingEntity: Story = {
+  args: {
+    issuerTaxIds: ['GSTIN 29ABCDE1234F1Z5'],
+    billingEntity: { name: 'Northwind India', onOpen: fn() },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('GSTIN 29ABCDE1234F1Z5')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Northwind India' }))
+    await expect(args.billingEntity?.onOpen).toHaveBeenCalled()
   },
 }
 

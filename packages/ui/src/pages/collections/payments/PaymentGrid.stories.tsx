@@ -1,6 +1,6 @@
 import { type ComponentProps, useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import {
   DEFAULT_PAYMENT_QUERY,
   type Payment,
@@ -83,6 +83,44 @@ function manyPayments(count: number): Payment[] {
 }
 
 export const Default: Story = {}
+
+/**
+ * Entities enabled: a Billing entity column (a payment without one reads as the
+ * default) and a Billing entity field beside Status in the filter, reported
+ * together with the statuses.
+ */
+export const WithBillingEntities: Story = {
+  args: {
+    billingEntities: [
+      { id: 'be_default', name: 'Northwind Inc', isDefault: true },
+      { id: 'be_india', name: 'Northwind India', isDefault: false },
+    ],
+    query: { ...DEFAULT_PAYMENT_QUERY, statuses: [PaymentStatus.Failed] },
+    payments: paymentFixtures().map((payment, index) =>
+      index === 0 ? { ...payment, billingEntityId: 'be_india' } : payment,
+    ),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('columnheader', { name: /billing entity/i })).toBeVisible()
+    await expect(canvas.getByText('Northwind India')).toBeInTheDocument()
+    await expect(canvas.getAllByText('Northwind Inc').length).toBeGreaterThanOrEqual(1)
+
+    await userEvent.click(canvas.getByRole('button', { name: /^Filter/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add filter' }))
+    await userEvent.click(await screen.findByRole('option', { name: /^Billing entity$/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /^is$/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Northwind India' }))
+    await waitFor(() =>
+      expect(args.onQueryChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          statuses: [PaymentStatus.Failed],
+          filters: [{ field: 'billing_entity_id', op: 'eq', value: 'be_india' }],
+        }),
+      ),
+    )
+  },
+}
 
 /**
  * Method is a real field; a payment recorded by hand has none and dashes.

@@ -5,6 +5,8 @@ import {
   type CreditNote,
   type CreditNoteQuery,
   CreditNoteStatus,
+  BILLING_ENTITY_FILTER,
+  withChoiceFilter,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
@@ -15,9 +17,14 @@ import {
   pillColumn,
   textColumn,
 } from '../../shared/cells'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { statusFilter, statusWithFieldsFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { CREDIT_NOTE_STATUS_TONE } from '../../shared/statusTones'
+import {
+  billingEntityChoices,
+  billingEntityColumn,
+  type ListBillingEntity,
+} from '../../shared/billingEntityColumn'
 
 /**
  * The credit memo list, on the shared `EntityList`.
@@ -74,6 +81,8 @@ export interface CreditNoteGridProps {
   onCreate?: () => void
   onClearFilters?: () => void
   locale?: string
+  /** The environment's billing entities, only while they are enabled: adds the Billing entity column and filter. */
+  billingEntities?: readonly ListBillingEntity[] | undefined
 }
 
 export function CreditNoteGrid({
@@ -88,6 +97,7 @@ export function CreditNoteGrid({
   onCreate,
   onClearFilters,
   locale,
+  billingEntities,
 }: CreditNoteGridProps) {
   const columns = useMemo<EntityColumn<CreditNote>[]>(
     () => [
@@ -96,6 +106,7 @@ export function CreditNoteGrid({
         hideable: false,
       }),
       textColumn<CreditNote>('customer', 'Customer', (row) => row.customerName, { width: 180 }),
+      ...(billingEntities ? [billingEntityColumn<CreditNote>(billingEntities)] : []),
       textColumn<CreditNote>('invoice', 'Invoice number', (row) => row.invoiceNumber, {
         width: 150,
       }),
@@ -112,7 +123,7 @@ export function CreditNoteGrid({
         tone: STATUS_TONE[row.status],
       })),
     ],
-    [locale],
+    [locale, billingEntities],
   )
 
   const rowActions = (creditNote: CreditNote): EntityRowAction[] => {
@@ -134,6 +145,12 @@ export function CreditNoteGrid({
     return actions
   }
 
+  const entitySpecs = withChoiceFilter(
+    [],
+    BILLING_ENTITY_FILTER,
+    billingEntities ? billingEntityChoices(billingEntities) : null,
+  )
+
   return (
     <EntityList<CreditNote>
       label="Credit memos"
@@ -148,11 +165,22 @@ export function CreditNoteGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search by number, invoice or customer…"
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
-      })}
+      filter={
+        entitySpecs.length > 0
+          ? statusWithFieldsFilter({
+              values: query.statuses,
+              choices: STATUS_CHOICES,
+              specs: entitySpecs,
+              filters: query.filters ?? [],
+              onChange: (statuses, filters) =>
+                onQueryChange({ ...query, statuses, filters, page: 1 }),
+            })
+          : statusFilter({
+              values: query.statuses,
+              choices: STATUS_CHOICES,
+              onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+            })
+      }
       rowActions={rowActions}
       exportFileName="credit-notes"
       {...(onCreate ? { primaryAction: <Button onClick={onCreate}>New credit memo</Button> } : {})}
@@ -160,7 +188,9 @@ export function CreditNoteGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No credit memos match these filters"
       empty={{

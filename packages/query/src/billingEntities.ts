@@ -15,6 +15,7 @@ import {
   type SellerAddress,
   type SellerDetails,
   type TaxIdentifier,
+  effectiveEntityId,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
@@ -201,6 +202,17 @@ export function useEntityFilterOptions(): { value: string; label: string }[] | n
   const entities = useBillingEntities()
   if (status.data !== BillingEntityMode.Enabled) return null
   return (entities.data ?? []).map((entity) => ({ value: entity.id, label: entity.name }))
+}
+
+/** The entity a customer bills from; null while entities are not enabled or still loading. */
+export function useCustomerBillingEntity(
+  customer: { billingEntityId?: string | null | undefined } | undefined,
+): BillingEntity | null {
+  const status = useBillingEntityStatus()
+  const entities = useBillingEntities()
+  if (status.data !== BillingEntityMode.Enabled || !customer || !entities.data) return null
+  const id = effectiveEntityId(customer, entities.data)
+  return entities.data.find((entity) => entity.id === id) ?? null
 }
 
 export function useBillingEntity(id: string) {

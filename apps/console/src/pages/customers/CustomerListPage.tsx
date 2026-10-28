@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  CUSTOMER_ENTITY_FILTER,
+  BILLING_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   type Customer,
   type CustomerQuery,
@@ -50,7 +50,7 @@ export function CustomerListPage({
   const entityOptions = useEntityFilterOptions()
   const entities = useBillingEntities()
   const customers = useCustomers(query, {
-    specs: withChoiceFilter(CUSTOMER_FILTERS, CUSTOMER_ENTITY_FILTER, entityOptions),
+    specs: withChoiceFilter(CUSTOMER_FILTERS, BILLING_ENTITY_FILTER, entityOptions),
   })
   const remove = useDeleteCustomer()
 
