@@ -156,7 +156,7 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
     await expect(topUp).toBeHidden()
     await expect(page.getByText('625 credits').first()).toBeVisible()
     await expect(
-      page.getByRole('region', { name: 'Top-ups table' }).getByText('Purchased credits'),
+      page.getByRole('region', { name: 'Transactions table' }).getByText('Purchased credits'),
     ).toBeVisible()
   })
 

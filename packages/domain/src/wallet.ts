@@ -85,23 +85,6 @@ export interface Wallet {
 
 export type WalletTransactionDirection = 'in' | 'out'
 
-/**
- * Credits one debit drew from a top-up: the API reports, on each debit, which
- * top-ups it drew from (`consumption_breakdown`), and this is that, inverted.
- */
-export interface WalletConsumption {
-  /** The debit's id. */
-  id: string
-  /** What drew the credits: the debit's reason. */
-  product: string
-  /** What it was for: the debit's description or reference. */
-  contract: string
-  /** Credits drawn, as a positive decimal string. */
-  credits: string
-  /** Money for those credits; absent, as the API reports credits only. */
-  amount?: Money | undefined
-}
-
 /** A transaction's reference: what it was raised for (an invoice, a payment). */
 export interface WalletTransactionReference {
   type: string
@@ -121,8 +104,6 @@ export interface WalletTransaction {
   creditsAvailable: string | null
   /** When the credits lapse; null for credits that never expire. */
   expiresAt: Date | null
-  /** Per-debit draw-down of this top-up, from the debits' `consumption_breakdown`. */
-  consumption?: WalletConsumption[]
   /** Debits only: the top-ups this drew from, and how many credits from each. */
   drawnFrom?: { topUpId: string; credits: string }[]
   /** Free-form key/value fields; `{}` when none. */

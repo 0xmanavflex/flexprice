@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { type WalletConsumption, type WalletTransaction, formatMoney, money } from '@fp/domain'
+import { type WalletTransaction, formatMoney, money } from '@fp/domain'
 import { ChevronDownIcon, ChevronRightIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -8,7 +8,7 @@ import { DetailTable } from '../shared/DetailTable'
 export const WalletLedgerTableProvenance = provenance({
   source: 'composition',
   composes: ['pages/shared/DetailTable'],
-  note: 'DetailTable over a wallet’s top-ups: signed credits, remaining, consumed bar and expiry, with per-product child rows when the API reports them.',
+  note: 'DetailTable over a wallet’s transactions: top-ups and debits as signed credits, remaining, consumed bar and expiry on top-ups, and each debit opening to the top-ups it drew from.',
 })
 
 /** An expiry this close is called out in amber. */
@@ -75,12 +75,19 @@ function shareOf(total: WalletTransaction['amount'], part: number, whole: number
   return Number.isFinite(value) ? formatMoney(money(value.toFixed(2), total.currency)) : '—'
 }
 
+/** One top-up a debit drew from: the API's `consumption_breakdown` line, with the top-up when loaded. */
+interface DebitSource {
+  topUpId: string
+  credits: string
+  topUp: WalletTransaction | undefined
+}
+
 type LedgerRow =
   | { kind: 'topup'; id: string; tx: WalletTransaction }
   | { kind: 'debit'; id: string; tx: WalletTransaction }
-  | { kind: 'child'; id: string; tx: WalletTransaction; line: WalletConsumption }
+  /** `tx` is the debit, so the row sorts and searches with it. */
+  | { kind: 'source'; id: string; tx: WalletTransaction; source: DebitSource }
 
-/** "Invoice inv_1 · key: value": a transaction's reference and metadata, as one line. */
 /** Ids and request dumps. They stay searchable and stay off the row. */
 function looksTechnical(text: string): boolean {
   const value = text.trim()
@@ -92,7 +99,7 @@ function looksTechnical(text: string): boolean {
 }
 
 /** "Auto top-up · INV-2026-01441 · added Sep 24, 2026". Never a request id. */
-function topUpLine(tx: WalletTransaction): string {
+function detailLine(tx: WalletTransaction): string {
   const description = tx.description.trim()
   const reference = tx.reference?.id.trim() ?? ''
   return [
@@ -104,7 +111,18 @@ function topUpLine(tx: WalletTransaction): string {
     .join(' · ')
 }
 
-const hasBreakdown = (tx: WalletTransaction) => (tx.consumption?.length ?? 0) > 0
+const hasBreakdown = (tx: WalletTransaction) => (tx.drawnFrom?.length ?? 0) > 0
+
+/** "Added Sep 24, 2026 · expires Dec 1, 2026": which top-up a debit drew from. */
+function sourceLine(topUp: WalletTransaction | undefined, topUpId: string): string {
+  if (!topUp) return `Top-up …${topUpId.slice(-6)}`
+  return [
+    topUp.createdAt ? `added ${formatDay(topUp.createdAt)}` : '',
+    topUp.expiresAt ? `expires ${formatDay(topUp.expiresAt)}` : 'never expires',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
 
 function ConsumedBar({
   share,
@@ -118,7 +136,7 @@ function ConsumedBar({
   if (share === null) return <span className="text-muted-foreground text-sm">{'—'}</span>
   const percent = Math.min(100, Math.max(0, Math.round(share * 100)))
   const hot = percent >= 90
-  const tone = expired ? 'bg-destructive' : hot ? 'bg-warning' : 'bg-muted-foreground/40'
+  const tone = expired ? 'bg-destructive' : hot ? 'bg-warning' : 'bg-muted-foreground'
   const text = expired
     ? 'text-destructive-foreground dark:text-destructive'
     : hot
@@ -170,9 +188,10 @@ function Expires({ date, now }: { date: Date | null; now: Date }) {
 }
 
 /**
- * The wallet's one ledger, newest first. Credits in are top-ups: they carry
- * remaining, consumed and expiry, and open to the products that drew them down
- * when the API says so. Credits out are debits, shown as a plain negative row.
+ * The wallet's one ledger, newest first: top-ups and debits side by side. A
+ * top-up carries remaining, consumed and expiry. A debit opens to the top-ups
+ * it drew from, read from its own `consumption_breakdown`, so it needs no
+ * other page of the ledger.
  */
 export function WalletLedgerTable({
   transactions,
@@ -194,62 +213,65 @@ export function WalletLedgerTable({
       return next
     })
 
+  const byId = new Map(ordered.map((tx) => [tx.id, tx]))
   const rows: LedgerRow[] = ordered.flatMap((tx): LedgerRow[] =>
     tx.direction === 'out'
-      ? []
-      : [
-          { kind: 'topup', id: tx.id, tx },
+      ? [
+          { kind: 'debit', id: tx.id, tx },
           ...(open.has(tx.id)
-            ? (tx.consumption ?? []).map((line): LedgerRow => ({
-                kind: 'child',
-                id: `${tx.id}:${line.id}`,
+            ? (tx.drawnFrom ?? []).map((line, index): LedgerRow => ({
+                kind: 'source',
+                id: `${tx.id}:${line.topUpId}:${index}`,
                 tx,
-                line,
+                source: { ...line, topUp: byId.get(line.topUpId) },
               }))
             : []),
-        ],
+        ]
+      : [{ kind: 'topup', id: tx.id, tx }],
   )
-  const topUps = ordered.filter((tx) => tx.direction !== 'out')
-  const anyBreakdown = topUps.some(hasBreakdown)
+  const anyBreakdown = ordered.some(hasBreakdown)
 
-  /** Children sort and search with their top-up, so they stay beneath it. */
+  /** Sources sort and search with their debit, so they stay beneath it. */
   const sortKey = (pick: (tx: WalletTransaction) => number) => (row: LedgerRow) => pick(row.tx)
 
   return (
     <>
       <DetailTable<LedgerRow>
         compact
-        label="Top-ups"
+        label="Transactions"
         noun={noun}
         rows={rows}
-        empty="No top-ups yet."
+        empty="No transactions yet."
         searchText={(row) =>
-          row.kind === 'child'
-            ? `${row.tx.reason} ${row.line.product} ${row.line.contract}`
-            : `${row.tx.reason} ${topUpLine(row.tx)} ${row.tx.description} ${row.tx.reference?.id ?? ''}`
+          row.kind === 'source'
+            ? `${row.tx.reason} ${row.source.topUp?.reason ?? ''} ${row.source.topUpId}`
+            : `${row.tx.reason} ${detailLine(row.tx)} ${row.tx.description} ${row.tx.reference?.id ?? ''}`
         }
         columns={[
           {
-            key: 'topup',
-            header: 'Top-up',
+            key: 'transaction',
+            header: 'Transaction',
             width: 280,
             cell: (row) =>
-              row.kind === 'child' ? (
+              row.kind === 'source' ? (
                 <div className="flex min-w-0 items-center gap-2 pl-8">
                   <div className="min-w-0">
-                    <p className="truncate text-sm">{row.line.product}</p>
-                    {row.line.contract && !looksTechnical(row.line.contract) ? (
-                      <p className="text-muted-foreground truncate text-xs">{row.line.contract}</p>
-                    ) : null}
+                    <p className="truncate text-sm">
+                      {'From '}
+                      {row.source.topUp?.reason || 'a top-up'}
+                    </p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {sourceLine(row.source.topUp, row.source.topUpId)}
+                    </p>
                   </div>
                 </div>
               ) : (
                 <div className="flex min-w-0 items-center gap-2">
-                  {row.kind === 'topup' && hasBreakdown(row.tx) ? (
+                  {row.kind === 'debit' && hasBreakdown(row.tx) ? (
                     <button
                       type="button"
                       aria-expanded={open.has(row.tx.id)}
-                      aria-label={`${open.has(row.tx.id) ? 'Collapse' : 'Expand'} ${row.tx.reason || 'top-up'}`}
+                      aria-label={`${open.has(row.tx.id) ? 'Collapse' : 'Expand'} ${row.tx.reason || 'debit'}`}
                       onClick={() => toggle(row.tx.id)}
                       className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex size-6 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-3"
                     >
@@ -264,7 +286,7 @@ export function WalletLedgerTable({
                   ) : null}
                   <div className="min-w-0">
                     <p className="truncate text-sm">{row.tx.reason || '—'}</p>
-                    <p className="text-muted-foreground truncate text-xs">{topUpLine(row.tx)}</p>
+                    <p className="text-muted-foreground truncate text-xs">{detailLine(row.tx)}</p>
                   </div>
                 </div>
               ),
@@ -275,22 +297,14 @@ export function WalletLedgerTable({
             width: 130,
             sortBy: sortKey((tx) => Number(tx.credits)),
             cell: (row) =>
-              row.kind === 'child' ? (
-                <div>
-                  <p className="text-destructive-foreground dark:text-destructive text-sm font-medium tabular-nums">
-                    {'−'}
-                    {formatCredits(row.line.credits)}
-                  </p>
-                  {row.line.amount ? (
-                    <p className="text-muted-foreground text-xs tabular-nums">
-                      {'−'}
-                      {formatMoney(row.line.amount)}
-                    </p>
-                  ) : null}
-                </div>
+              row.kind === 'source' ? (
+                <p className="text-muted-foreground text-sm tabular-nums">
+                  {'−'}
+                  {formatCredits(row.source.credits)}
+                </p>
               ) : row.kind === 'debit' ? (
                 <div>
-                  <p className="text-sm font-medium tabular-nums">
+                  <p className="text-destructive-foreground dark:text-destructive text-sm font-medium tabular-nums">
                     {'−'}
                     {formatCredits(row.tx.credits)}
                   </p>
@@ -338,15 +352,16 @@ export function WalletLedgerTable({
               return left === null || total <= 0 ? -1 : (total - left) / total
             }),
             cell: (row) => {
-              if (row.kind === 'child') {
-                const total = Number(row.tx.credits)
-                const used = Number(row.line.credits)
-                return (
+              if (row.kind === 'source') {
+                // How much of that top-up this one debit took.
+                const total = Number(row.source.topUp?.credits)
+                const used = Number(row.source.credits)
+                return row.source.topUp ? (
                   <ConsumedBar
                     share={total > 0 && Number.isFinite(used) ? used / total : null}
                     label="of the top-up"
                   />
-                )
+                ) : null
               }
               if (row.kind === 'debit') return null
               const left = toNumber(row.tx.creditsAvailable)
@@ -371,10 +386,10 @@ export function WalletLedgerTable({
           },
         ]}
       />
-      {topUps.length === 0 ? null : (
+      {ordered.length === 0 ? null : (
         <p className="text-muted-foreground border-t px-6 py-3 text-xs">
           Usage draws on the top-up that expires soonest, among those it is allowed to use. Open a
-          row to see every debit against it.
+          debit to see which top-ups it drew from.
         </p>
       )}
     </>

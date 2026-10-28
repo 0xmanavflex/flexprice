@@ -312,10 +312,50 @@ export const WithDates: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeInTheDocument()
-    await expect(canvas.getByText('Jan 1, 2026 → Ongoing')).toBeInTheDocument()
-    await expect(canvas.getByText('Jun 1, 2025 → Feb 1, 2026')).toBeInTheDocument()
+    // Start and end each carry their time, in UTC.
+    await expect(canvas.getByText('Jan 1, 2026, 12:00 AM UTC')).toBeInTheDocument()
+    await expect(canvas.getByText('Ongoing')).toBeInTheDocument()
+    await expect(canvas.getByText('Jun 1, 2025, 12:00 AM UTC')).toBeInTheDocument()
+    await expect(canvas.getByText('Ended Feb 1, 2026, 12:00 AM UTC')).toBeInTheDocument()
     // Billing timing has its own column, beside the dates.
     await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeInTheDocument()
+  },
+}
+
+/** An end date still ahead is scheduled: the charge is active and says when it ends. */
+export const ScheduledEnd: Story = {
+  args: {
+    charges: [
+      {
+        ...(chargeFixtures[0] as Charge),
+        displayName: 'Seat fee',
+        startDate: new Date('2026-01-01T00:00:00Z'),
+        endDate: new Date('2099-10-30T09:30:00Z'),
+      },
+    ],
+    showDates: true,
+    locale: 'en-US',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Fixed · Ends Oct 30, 2099')).toBeInTheDocument()
+    await expect(canvas.getByText('Ends Oct 30, 2099, 09:30 AM UTC')).toBeInTheDocument()
+    await expect(canvas.queryByText(/^Ended/)).not.toBeInTheDocument()
+  },
+}
+
+/** A plan's charges beside its side rail still show when each is in effect. */
+export const NarrowWithDates: Story = {
+  args: {
+    charges: [{ ...(chargeFixtures[0] as Charge), startDate: new Date('2026-01-01T00:00:00Z') }],
+    layout: 'narrow',
+    showDates: true,
+    locale: 'en-US',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeInTheDocument()
+    await expect(canvas.getByText('Jan 1, 2026, 12:00 AM UTC')).toBeInTheDocument()
   },
 }
 
