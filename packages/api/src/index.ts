@@ -243,3 +243,13 @@ export {
   updatePortalAutoTopup,
 } from './customerPortal'
 export type { PortalAuth } from './customerPortal'
+
+export {
+  createBillingEntity,
+  enableBillingEntities,
+  getBillingEntity,
+  getBillingEntityStatus,
+  listBillingEntities,
+  updateBillingEntity,
+} from './billingEntities'
+export type { ListBillingEntitiesParams } from './billingEntities'

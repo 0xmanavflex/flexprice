@@ -329,6 +329,57 @@ function publishedProviders(): string[] {
 }
 
 /**
+ * Billing entities, per environment (`X-Environment-ID`). Every environment
+ * starts `off`. Enabling answers `enabling`; the second status read after it
+ * reports `enabled` and seeds the default entity from the tenant, its prefix
+ * taken from `invoice_config`.
+ */
+interface EntityEnvironment {
+  mode: 'off' | 'enabling' | 'enabled'
+  readsSinceEnable: number
+  rows: Record<string, unknown>[]
+}
+const entityEnvironments = new Map<string, EntityEnvironment>()
+let entitySeq = 0
+const ENTITIES_NOT_ENABLED = 'Billing entities are not enabled in this environment'
+
+function entityEnvironment(request: Request): EntityEnvironment {
+  const id = request.headers.get('X-Environment-ID') ?? ''
+  let state = entityEnvironments.get(id)
+  if (!state) {
+    state = { mode: 'off', readsSinceEnable: 0, rows: [] }
+    entityEnvironments.set(id, state)
+  }
+  return state
+}
+
+function seedDefaultEntity(): Record<string, unknown> {
+  const prefix = String(settingsStore['invoice_config']?.['prefix'] ?? 'INV')
+  return {
+    id: `be_mock_${++entitySeq}`,
+    name: TENANT_REF.name,
+    legal_name: TENANT_REF.name,
+    is_default: true,
+    invoice_number_prefix: prefix,
+    seller_details: { address: {} },
+    tax_identifiers: [],
+    status: 'published',
+    created_at: new Date().toISOString(),
+  }
+}
+
+function mockUserIsSuperAdmin(): boolean {
+  let id: string | null = null
+  try {
+    id = localStorage.getItem('flexprice.mock.userId')
+  } catch {
+    /* no storage: the demo user */
+  }
+  const user = users.find((item) => item['id'] === id) ?? users[0]
+  return ((user?.['roles'] as string[] | undefined) ?? []).includes('super_admin')
+}
+
+/**
  * Per-customer provider mappings once someone has linked or unlinked one.
  * Until then a customer's mappings are the demo slice below; the first write
  * freezes that slice into this map so the list marks, the contract header and
@@ -3879,6 +3930,115 @@ export const handlers = [
       ...creditNotes.find((note) => note['id'] === id),
       total_amount: String(creditNotes.find((note) => note['id'] === id)?.['total_amount']),
     })
+  }),
+
+  /*
+   * `/billing-entities`: off until a super admin enables it. As the real API:
+   * enable is refused for anyone else (switch user with
+   * `localStorage['flexprice.mock.userId']`) and for an environment on an
+   * external tax engine (`x-mock-tax-engine: stripe`); the entity routes are
+   * refused until the mode is `enabled`.
+   */
+  http.get(`${BASE}/billing-entities/status`, ({ request }) => {
+    const state = entityEnvironment(request)
+    if (state.mode === 'enabling' && ++state.readsSinceEnable >= 2) {
+      state.mode = 'enabled'
+      state.rows = [seedDefaultEntity()]
+    }
+    return HttpResponse.json({ mode: state.mode })
+  }),
+
+  http.post(`${BASE}/billing-entities/enable`, ({ request }) => {
+    const state = entityEnvironment(request)
+    if (!mockUserIsSuperAdmin()) {
+      return HttpResponse.json(
+        { message: 'Only a super admin can enable billing entities' },
+        { status: 403 },
+      )
+    }
+    const engine = request.headers.get('x-mock-tax-engine')
+    if (engine) {
+      return HttpResponse.json(
+        {
+          message: `Billing entities cannot be used while this environment calculates tax with ${engine}. Turn the external tax engine off first.`,
+        },
+        { status: 400 },
+      )
+    }
+    if (state.mode === 'off') {
+      state.mode = 'enabling'
+      state.readsSinceEnable = 0
+      return HttpResponse.json({ mode: 'enabling' }, { status: 202 })
+    }
+    return HttpResponse.json({ mode: state.mode }, { status: state.mode === 'enabled' ? 200 : 202 })
+  }),
+
+  http.get(`${BASE}/billing-entities`, ({ request }) => {
+    const state = entityEnvironment(request)
+    if (state.mode !== 'enabled') {
+      return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+    }
+    const isDefault = new URL(request.url).searchParams.get('is_default')
+    const items =
+      isDefault === null
+        ? state.rows
+        : state.rows.filter((row) => String(row['is_default']) === isDefault)
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: 1000, offset: 0 },
+    })
+  }),
+
+  http.get(`${BASE}/billing-entities/:id`, ({ request, params }) => {
+    const state = entityEnvironment(request)
+    if (state.mode !== 'enabled') {
+      return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+    }
+    const row = state.rows.find((item) => item['id'] === params['id'])
+    return row
+      ? HttpResponse.json(row)
+      : HttpResponse.json({ message: 'Billing entity not found' }, { status: 404 })
+  }),
+
+  http.post(`${BASE}/billing-entities`, async ({ request }) => {
+    const state = entityEnvironment(request)
+    if (state.mode !== 'enabled') {
+      return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+    }
+    const body = (await request.json()) as Record<string, unknown>
+    const prefix = String(body['invoice_number_prefix'] ?? '')
+    if (state.rows.some((row) => row['invoice_number_prefix'] === prefix)) {
+      return HttpResponse.json({ message: 'Invoice prefix already in use' }, { status: 409 })
+    }
+    const row = {
+      tax_identifiers: [],
+      ...body,
+      id: `be_mock_${++entitySeq}`,
+      is_default: false,
+      status: 'published',
+      created_at: new Date().toISOString(),
+    }
+    state.rows.push(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+
+  http.put(`${BASE}/billing-entities/:id`, async ({ request, params }) => {
+    const state = entityEnvironment(request)
+    if (state.mode !== 'enabled') {
+      return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+    }
+    const row = state.rows.find((item) => item['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Billing entity not found' }, { status: 404 })
+    const body = (await request.json()) as Record<string, unknown>
+    const prefix = body['invoice_number_prefix']
+    if (
+      typeof prefix === 'string' &&
+      state.rows.some((item) => item !== row && item['invoice_number_prefix'] === prefix)
+    ) {
+      return HttpResponse.json({ message: 'Invoice prefix already in use' }, { status: 409 })
+    }
+    Object.assign(row, body)
+    return HttpResponse.json(row)
   }),
 
   /*

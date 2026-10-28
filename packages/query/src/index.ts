@@ -784,3 +784,15 @@ export {
   useSubscriptionRevenue,
 } from './revenueRecognition'
 export type { CustomerRevenueQuery, RollforwardQuery } from './revenueRecognition'
+export {
+  statusRefetchInterval,
+  toBillingEntity,
+  toBillingEntityRequest,
+  useBillingEntities,
+  useBillingEntity,
+  useBillingEntityStatus,
+  useCreateBillingEntity,
+  useEnableBillingEntities,
+  useUpdateBillingEntity,
+} from './billingEntities'
+export type { BillingEntityWire } from './billingEntities'

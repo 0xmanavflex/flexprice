@@ -1074,3 +1074,13 @@ export type {
   RollforwardRow,
   SubscriptionRevenue,
 } from './revenueRecognition'
+export {
+  BillingEntityMode,
+  billingEntitySchema,
+  emptyBillingEntity,
+  type BillingEntity,
+  type BillingEntityDraft,
+  type SellerAddress,
+  type SellerDetails,
+  type TaxIdentifier,
+} from './billingEntity'
