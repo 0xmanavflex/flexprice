@@ -2402,7 +2402,7 @@ function TaxEditRouteComponent() {
   return <TaxFormPage mode="edit" taxRateId={taxRateId} onCancel={toList} onDone={toList} />
 }
 
-/** Billing entity create and detail: full pages inside the Settings frame. */
+/** Billing entity create is a full page; detail sits inside the Settings frame. */
 const billingEntityCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/billing-entities/new',
@@ -2413,18 +2413,16 @@ function BillingEntityCreateRouteComponent() {
   const navigate = useNavigate()
 
   return (
-    <SettingsListFrame sectionId="billing-entities">
-      <BillingEntityFormPage
-        onCancel={() => void navigate({ to: '/settings', search: BILLING_ENTITIES_SECTION })}
-        onDone={(entityId) =>
-          void navigate({
-            to: '/settings/billing-entities/$entityId',
-            params: { entityId },
-            search: {} as never,
-          })
-        }
-      />
-    </SettingsListFrame>
+    <BillingEntityFormPage
+      onCancel={() => void navigate({ to: '/settings', search: BILLING_ENTITIES_SECTION })}
+      onDone={(entityId) =>
+        void navigate({
+          to: '/settings/billing-entities/$entityId',
+          params: { entityId },
+          search: {} as never,
+        })
+      }
+    />
   )
 }
 
