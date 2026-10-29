@@ -699,10 +699,11 @@ function MetricsSection({
          * The invitation sits over a blurred chart rather than replacing it, so
          * the shape of what will appear is visible while it is still empty:
          * the design's own choice, and it keeps the panel from collapsing and
-         * shifting everything below it the moment data arrives.
+         * shifting everything below it the moment data arrives. No drawing in
+         * the card: its own box carries a band of blank space above the lines,
+         * which left a gap over the message.
          */
         <BlurredEmpty
-          scene="home"
           title={periodEmpty ? periodCopy.title : firstRunCopy.title}
           description={periodEmpty ? periodCopy.description : firstRunCopy.description}
           action={

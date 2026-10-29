@@ -394,8 +394,6 @@ function ShellLayout() {
             <>
               <SupportChat />
               <AnalyticsIdentity />
-              <VersionCheck />
-              <EnvironmentToaster />
             </>
           }
         >
@@ -414,6 +412,10 @@ function ShellLayout() {
             </RouteAccessGate>
           </Suspense>
         </ConsoleShell>
+        {/* Toasters render a <section> each; inside the header cluster every one
+          added a flex gap between search and Create. */}
+        <VersionCheck />
+        <EnvironmentToaster />
       </AccessProvider>
     </AccountLockProvider>
   )
