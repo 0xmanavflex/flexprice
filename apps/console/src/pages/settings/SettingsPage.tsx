@@ -30,6 +30,7 @@ import { SubscriptionsPanel } from './SubscriptionsPanel'
 import { TaxEnginePanel } from './TaxEnginePanel'
 import { TagsPanel } from './TagsPanel'
 import { WalletAlertsPanel } from './WalletAlertsPanel'
+import { BonusCreditsPanel } from './BonusCreditsPanel'
 import { SettingsUnavailable, UNAVAILABLE_COPY } from './SettingsUnavailable'
 import {
   RAIL_SECTIONS,
@@ -264,6 +265,8 @@ function SettingsPanel({
       return gated(RBAC_ENTITY.Setting, <TagsPanel onOpenPage={onOpenPage} />, false)
     case 'alerts/wallet-alerts':
       return gated(RBAC_ENTITY.AlertSettings, <WalletAlertsPanel />)
+    case 'alerts/bonus-credits':
+      return gated(RBAC_ENTITY.Setting, <BonusCreditsPanel />)
     case 'appearance/theme':
       return <AppearancePanel />
     default:

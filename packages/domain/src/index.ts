@@ -1010,3 +1010,18 @@ export {
   type PricingOption,
   type PricingSelection,
 } from './pricingWidget'
+
+export {
+  BONUS_EXPIRY_UNIT_LABEL,
+  BonusExpiryUnit,
+  BonusType,
+  DEFAULT_BONUS_CREDITS_CONFIG,
+  bonusCreditsConfigSchema,
+  bonusExpiryText,
+  bonusSlabSchema,
+  bonusText,
+  emptyBonusSlab,
+  resolveBonus,
+  sortBonusSlabs,
+} from './bonusCredits'
+export type { BonusCreditsConfig, BonusSlab } from './bonusCredits'

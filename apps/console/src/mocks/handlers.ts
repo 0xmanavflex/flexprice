@@ -903,6 +903,8 @@ type SettingsValue = Record<string, unknown>
 const SETTINGS_DEFAULTS: Record<string, SettingsValue> = {
   // `{}`: Flexprice's native engine, off.
   tax_config: {},
+  // Off, no slabs: purchased top-ups earn no bonus until slabs are set.
+  bonus_credits_topup_config: { enabled: false, slabs: [] },
   invoice_config: {
     prefix: 'INV',
     separator: '-',

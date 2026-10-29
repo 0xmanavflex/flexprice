@@ -17,6 +17,7 @@ import {
   AUTO_TOPUP_COOLDOWN_UNIT_LABEL,
   AutoTopupCooldownUnit,
   type AutoTopup,
+  type BonusCreditsConfig,
   type CreateWallet,
   type DebitWallet,
   type TopUpWallet,
@@ -27,6 +28,8 @@ import {
   walletLabel,
   WalletStatus,
   autoTopupSchema,
+  bonusExpiryText,
+  bonusText,
   createWalletSchema,
   debitWalletSchema,
   emptyDebit,
@@ -34,6 +37,7 @@ import {
   emptyWallet,
   formatMoney,
   money,
+  resolveBonus,
   topUpWalletSchema,
   currencyCodes,
 } from '@fp/domain'
@@ -92,6 +96,8 @@ export interface CustomerWalletViewProps {
   createError?: string | null
   onTopUp: (draft: TopUpWallet) => Promise<unknown>
   topUpError?: string | null
+  /** Settings → Wallets → Bonus credits, to preview the bonus a purchased top-up earns. */
+  bonusConfig?: BonusCreditsConfig | null
   onDebit: (draft: DebitWallet) => Promise<unknown>
   debitError?: string | null
   onTerminate: () => Promise<unknown>
@@ -134,6 +140,7 @@ export function CustomerWalletView({
   createError = null,
   onTopUp,
   topUpError = null,
+  bonusConfig = null,
   onDebit,
   debitError = null,
   onTerminate,
@@ -408,6 +415,7 @@ export function CustomerWalletView({
         onClose={close}
         pending={pending}
         error={topUpError}
+        bonusConfig={bonusConfig}
         onSubmit={(draft) => run(() => onTopUp(draft))}
       />
       <DebitDialog
@@ -688,15 +696,19 @@ function TopUpDialog({
   onClose,
   pending,
   error,
+  bonusConfig,
   onSubmit,
 }: {
   open: boolean
   onClose: () => void
   pending: boolean
   error: string | null
+  bonusConfig: BonusCreditsConfig | null
   onSubmit: (draft: TopUpWallet) => void
 }) {
   const [draft, setDraft] = useState<TopUpWallet>(emptyTopUp())
+  // What the bonus settings would grant this top-up, when nothing is typed over them.
+  const settled = resolveBonus(bonusConfig, draft.credits)
   const [problem, setProblem] = useState<string | null>(null)
   const set = (patch: Partial<TopUpWallet>) => setDraft((current) => ({ ...current, ...patch }))
 
@@ -805,6 +817,49 @@ function TopUpDialog({
             />
           </Field>
         </div>
+        {draft.kind === 'purchased' ? (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field>
+              <LabelWithHint
+                htmlFor="topup-bonus"
+                hint="Extra credits granted with this top-up. Blank uses the bonus settings; a number here replaces them."
+              >
+                Bonus credits
+              </LabelWithHint>
+              <Input
+                id="topup-bonus"
+                className="h-9"
+                inputMode="decimal"
+                placeholder={settled ? settled.credits : 'From bonus settings'}
+                value={draft.bonusCredits}
+                onChange={(event) => set({ bonusCredits: event.target.value })}
+              />
+            </Field>
+            <Field>
+              <LabelWithHint
+                htmlFor="topup-bonus-expiry"
+                hint="The bonus credits lapse on this day. Overrides the expiry a bonus slab sets. Optional."
+              >
+                Bonus expires on
+              </LabelWithHint>
+              <DateInput
+                id="topup-bonus-expiry"
+                value={draft.bonusExpiryDate}
+                onValueChange={(bonusExpiryDate) => set({ bonusExpiryDate })}
+                placeholder={settled ? 'As the slab sets' : 'Never'}
+              />
+            </Field>
+            <p className="text-muted-foreground text-xs sm:col-span-2" aria-live="polite">
+              {draft.bonusCredits.trim()
+                ? `${draft.bonusCredits.trim()} bonus credits, as entered. The bonus settings are skipped for this top-up.`
+                : settled
+                  ? `Earns ${settled.credits} bonus credits from the bonus settings: ${bonusText(settled.slab)}, ${draft.bonusExpiryDate ? 'expiring on the date above' : bonusExpiryText(settled.slab)}.`
+                  : bonusConfig?.enabled
+                    ? 'No bonus slab applies to this amount.'
+                    : 'No bonus: bonus credits are off in Settings → Wallets.'}
+            </p>
+          </div>
+        ) : null}
         {draft.kind === 'purchased' ? (
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
