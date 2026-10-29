@@ -191,12 +191,8 @@ export const Overview: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     // Both tables on one tab, beside the rail: this is the whole page.
-    await expect(
-      canvas.getByText('Every plan and add-on that bills for this feature'),
-    ).toBeInTheDocument()
-    await expect(
-      canvas.getByText('What each plan includes before charges apply'),
-    ).toBeInTheDocument()
+    await expect(canvas.getByText('Plan / add-on')).toBeInTheDocument()
+    await expect(canvas.getByRole('heading', { name: 'Entitlements' })).toBeInTheDocument()
     await expect(canvas.getByText('Send a test event')).toBeInTheDocument()
     await expect(canvas.getByText('Metadata')).toBeInTheDocument()
   },
@@ -298,11 +294,10 @@ export const BooleanFeature: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('tab', { name: /Overview/ })).toBeInTheDocument()
-    await expect(
-      canvas.getByText('What each plan includes before charges apply'),
-    ).toBeInTheDocument()
+    await expect(canvas.getByRole('heading', { name: 'Entitlements' })).toBeInTheDocument()
     await expect(canvas.queryByText('Send a test event')).toBeNull()
-    await expect(canvas.queryByText(/bills for this feature/)).toBeNull()
+    // No charges table: a boolean feature is never billed.
+    await expect(canvas.queryByText('Plan / add-on')).toBeNull()
   },
 }
 
