@@ -345,3 +345,11 @@ describe('toInvoice subscription', () => {
     expect(toInvoice({ id: 'inv_2' }).subscriptionId).toBeNull()
   })
 })
+
+describe('a customer-scoped invoice search', () => {
+  it('scopes by internal customer id, which still resolves once the customer is archived', () => {
+    const filter = toInvoiceFilter(DEFAULT_INVOICE_QUERY, { customerId: 'cust_archived' })
+    expect(filter).toMatchObject({ customerId: 'cust_archived' })
+    expect(filter).not.toHaveProperty('externalCustomerId')
+  })
+})
