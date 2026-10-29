@@ -219,7 +219,7 @@ export function PlanDetailPage({
         }
         icon={<LayersIcon />}
         title={record.name}
-        id={record.lookupKey || record.id}
+        id={record.id}
         leading={
           mappings.controls ? (
             <ContractIntegrations

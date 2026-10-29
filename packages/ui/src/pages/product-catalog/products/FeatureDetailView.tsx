@@ -233,7 +233,7 @@ export function FeatureDetailView({
         }
         icon={<Glyph />}
         title={feature.name}
-        id={feature.lookupKey || feature.id}
+        id={feature.id}
         badges={
           <>
             <Status value={FEATURE_STATUS_LABEL[feature.status]} />

@@ -72,7 +72,7 @@ export function CostSheetDetailPage({
           </Pill>
         </>
       }
-      id={data.lookupKey || data.id}
+      id={data.id}
       menuLabel="Cost sheet actions"
       menu={[
         {

@@ -127,7 +127,7 @@ export function AddonDetailPage({
       icon={<PuzzleIcon />}
       title={data.name}
       badges={badges}
-      id={data.lookupKey || data.id}
+      id={data.id}
       menuLabel="Add-on actions"
       menu={[
         {
