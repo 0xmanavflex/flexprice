@@ -8,8 +8,12 @@ import {
   useUpdateConnection,
 } from '@fp/query'
 import {
+  connectSteps,
   oauthRedirectUri,
+  type BillingEntity,
+  type ConnectionChanges,
   type ConnectionPayload,
+  type ConnectionSpec,
   type Integration,
   type IntegrationConnection,
 } from '@fp/domain'
@@ -30,16 +34,25 @@ function messageOf(error: unknown): string {
     : 'Something went wrong. Try again.'
 }
 
-/** The connect and manage sheets of the integrations pages, with the mutations behind them. */
-export function useIntegrationSheets(integrations: Integration[]): {
-  openConnect: (integrationId: string) => void
+/**
+ * The connect and manage sheets of the integrations pages, with the mutations
+ * behind them. `entities` is given only while billing entities are enabled.
+ */
+export function useIntegrationSheets(
+  integrations: Integration[],
+  entities?: readonly Pick<BillingEntity, 'id' | 'name' | 'isDefault'>[],
+): {
+  openConnect: (integrationId: string, billingEntityId?: string) => void
   openManage: (integrationId: string, connectionId: string) => void
   sheets: ReactNode
 } {
   const { session, environmentId } = useSession()
   const serverURL = useFlexpriceServerURL()
 
-  const [connecting, setConnecting] = useState<string | null>(null)
+  const [connecting, setConnecting] = useState<{
+    integrationId: string
+    billingEntityId?: string | undefined
+  } | null>(null)
   const [managing, setManaging] = useState<{ integrationId: string; connectionId: string } | null>(
     null,
   )
@@ -49,7 +62,7 @@ export function useIntegrationSheets(integrations: Integration[]): {
   const update = useUpdateConnection()
   const disconnect = useDisconnectIntegration()
 
-  const connectTarget = integrations.find((item) => item.id === connecting) ?? null
+  const connectTarget = integrations.find((item) => item.id === connecting?.integrationId) ?? null
   const manageTarget = integrations.find((item) => item.id === managing?.integrationId) ?? null
   const manageConnection: IntegrationConnection | null =
     manageTarget?.connections.find((item) => item.id === managing?.connectionId) ?? null
@@ -66,6 +79,7 @@ export function useIntegrationSheets(integrations: Integration[]): {
     setConnecting(null)
     connect.reset()
     startOAuth.reset()
+    update.reset()
   }
   const closeManage = () => {
     setManaging(null)
@@ -73,33 +87,37 @@ export function useIntegrationSheets(integrations: Integration[]): {
     disconnect.reset()
   }
 
-  const submitConnect = (payload: ConnectionPayload, spec: { setup: 'credentials' | 'oauth' }) => {
-    const name = connectTarget?.name ?? 'The integration'
+  const submitConnect = async (
+    payload: ConnectionPayload,
+    spec: ConnectionSpec,
+  ): Promise<string | null> => {
     if (spec.setup === 'oauth') {
-      startOAuth.mutate(payload, {
-        onSuccess: ({ oauthUrl, sessionId }) => {
-          savePendingOAuth({
-            provider: payload.provider_type,
-            sessionId,
-            organizationId: payload.metadata?.organization_id,
-          })
-          window.location.assign(oauthUrl)
-        },
+      const { oauthUrl, sessionId } = await startOAuth.mutateAsync(payload)
+      savePendingOAuth({
+        provider: payload.provider_type,
+        sessionId,
+        organizationId: payload.metadata?.organization_id,
       })
-      return
+      window.location.assign(oauthUrl)
+      return null
     }
-    connect.mutate(payload, {
-      onSuccess: () => {
-        toast(`${name} connected`)
-        closeConnect()
-      },
-    })
+    const created = await connect.mutateAsync(payload)
+    // A Webhook step that follows says so itself, and a toast would cover its buttons.
+    if (!entities || !connectSteps(spec, { perConnectionWebhook: true }).includes('webhook'))
+      toast(`${connectTarget?.name ?? 'The integration'} connected`)
+    return created.id
   }
 
-  const connectError = connect.error ?? startOAuth.error
+  const saveWebhook = async (id: string, changes: ConnectionChanges) => {
+    await update.mutateAsync({ id, ...changes })
+    toast('Webhook saved')
+  }
+
+  const connectError = connect.error ?? startOAuth.error ?? update.error
 
   return {
-    openConnect: setConnecting,
+    openConnect: (integrationId, billingEntityId) =>
+      setConnecting({ integrationId, billingEntityId }),
     openManage: (integrationId, connectionId) => setManaging({ integrationId, connectionId }),
     sheets: (
       <>
@@ -107,9 +125,14 @@ export function useIntegrationSheets(integrations: Integration[]): {
           integration={connectTarget}
           logo={connectTarget ? <IntegrationLogo integration={connectTarget} /> : null}
           context={context}
+          entities={entities}
+          billingEntityId={connecting?.billingEntityId}
           onClose={closeConnect}
           onSubmit={submitConnect}
-          isPending={connect.isPending || startOAuth.isPending || startOAuth.isSuccess}
+          onSaveWebhook={saveWebhook}
+          isPending={
+            connect.isPending || startOAuth.isPending || startOAuth.isSuccess || update.isPending
+          }
           error={connectError ? messageOf(connectError) : null}
         />
 
@@ -118,6 +141,7 @@ export function useIntegrationSheets(integrations: Integration[]): {
           connection={manageConnection}
           logo={manageTarget ? <IntegrationLogo integration={manageTarget} /> : null}
           context={context}
+          entities={entities}
           onClose={closeManage}
           onSave={(id, changes) =>
             update.mutate(

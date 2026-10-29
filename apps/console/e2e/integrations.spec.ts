@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { ShellPage } from './pages/shell'
 
@@ -15,6 +16,68 @@ test.beforeEach(async ({ context }) => {
 })
 
 const SANDBOX_ENVIRONMENT = 'env_01KVSNYVPMAP6JJGDF177V2DE6'
+
+/** Billing entities on in the sandbox: US (default), EU and UK. */
+async function enableEntities(page: Page) {
+  await page.addInitScript((environmentId) => {
+    if (window.sessionStorage.getItem('flexprice.mock.billingEntities')) return
+    const entity = (id: string, name: string, isDefault: boolean, prefix: string) => ({
+      id,
+      name,
+      legal_name: name,
+      is_default: isDefault,
+      invoice_number_prefix: prefix,
+      seller_details: { address: {} },
+      tax_identifiers: [],
+      status: 'published',
+      created_at: '2026-10-01T00:00:00Z',
+    })
+    window.sessionStorage.setItem(
+      'flexprice.mock.billingEntities',
+      JSON.stringify({
+        seq: 3,
+        environments: [
+          [
+            environmentId,
+            {
+              mode: 'enabled',
+              readsSinceEnable: 2,
+              rows: [
+                entity('be_us', 'Northwind US', true, 'US'),
+                entity('be_eu', 'Northwind EU', false, 'EU'),
+                entity('be_uk', 'Northwind UK', false, 'UK'),
+              ],
+            },
+          ],
+        ],
+      }),
+    )
+  }, SANDBOX_ENVIRONMENT)
+}
+
+/** From the Stripe page, creates Stripe for Northwind UK and returns the sheet on its webhook step. */
+async function connectStripeForUk(page: Page) {
+  await page.goto('/integrations/stripe')
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Northwind UK' })
+    .getByRole('button', { name: 'Connect Northwind UK' })
+    .click()
+  const sheet = page.getByRole('dialog', { name: /Connect Stripe/ })
+  await expect(sheet.getByRole('combobox', { name: /Billing entity/ })).toHaveText(/Northwind UK/)
+  await sheet.getByLabel('Connection name').fill('Stripe UK')
+  await sheet.getByRole('textbox', { name: /^Secret key/ }).fill('sk_test_uk')
+  await sheet.getByLabel('Publishable key').fill('pk_test_uk')
+  await sheet.getByRole('button', { name: 'Continue' }).click()
+  const create = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().endsWith('/connections'),
+  )
+  await sheet.getByRole('button', { name: 'Connect Stripe' }).click()
+  const body = (await create).postDataJSON() as Record<string, unknown>
+  expect(body['billing_entity_id']).toBe('be_uk')
+  expect(body['encrypted_secret_data']).not.toHaveProperty('webhook_secret')
+  return sheet
+}
 
 test.describe('integrations', () => {
   test('shows the catalogue with connection status', async ({ page }) => {
@@ -85,40 +148,7 @@ test.describe('integrations', () => {
   test('lists connections per billing entity and manages them from the provider page', async ({
     page,
   }) => {
-    await page.addInitScript((environmentId) => {
-      if (window.sessionStorage.getItem('flexprice.mock.billingEntities')) return
-      const entity = (id: string, name: string, isDefault: boolean, prefix: string) => ({
-        id,
-        name,
-        legal_name: name,
-        is_default: isDefault,
-        invoice_number_prefix: prefix,
-        seller_details: { address: {} },
-        tax_identifiers: [],
-        status: 'published',
-        created_at: '2026-10-01T00:00:00Z',
-      })
-      window.sessionStorage.setItem(
-        'flexprice.mock.billingEntities',
-        JSON.stringify({
-          seq: 3,
-          environments: [
-            [
-              environmentId,
-              {
-                mode: 'enabled',
-                readsSinceEnable: 2,
-                rows: [
-                  entity('be_us', 'Northwind US', true, 'US'),
-                  entity('be_eu', 'Northwind EU', false, 'EU'),
-                  entity('be_uk', 'Northwind UK', false, 'UK'),
-                ],
-              },
-            ],
-          ],
-        }),
-      )
-    }, SANDBOX_ENVIRONMENT)
+    await enableEntities(page)
 
     const shell = new ShellPage(page)
     await shell.goto('/')
@@ -158,5 +188,64 @@ test.describe('integrations', () => {
       .click()
     const sheet = page.getByRole('dialog', { name: /Stripe/ })
     await expect(sheet.getByLabel('Connection name')).toHaveValue('Stripe EU')
+  })
+
+  test('connects Stripe for an entity, then saves its own webhook secret', async ({ page }) => {
+    await enableEntities(page)
+    const sheet = await connectStripeForUk(page)
+
+    const url = sheet.getByText(/\/webhooks\/stripe\/[^/]+\/[^/]+\/conn_mock_\d+$/)
+    await expect(url).toBeVisible()
+    await sheet.getByRole('textbox', { name: /^Webhook signing secret/ }).fill('whsec_uk')
+    const save = page.waitForRequest(
+      (request) =>
+        request.method() === 'PUT' && /\/connections\/conn_mock_\d+$/.test(request.url()),
+    )
+    await sheet.getByRole('button', { name: 'Save webhook' }).click()
+    expect((await save).postDataJSON()).toEqual({
+      encrypted_secret_data: { webhook_secret: 'whsec_uk' },
+    })
+    await expect(sheet).toBeHidden()
+    await expect(page.getByRole('row').filter({ hasText: 'Northwind UK' })).toContainText(
+      'Stripe UK',
+    )
+  })
+
+  test('leaves the webhook for later and finds it on Configure', async ({ page }) => {
+    await enableEntities(page)
+    const sheet = await connectStripeForUk(page)
+    const address = await sheet
+      .getByText(/\/webhooks\/stripe\/[^/]+\/[^/]+\/conn_mock_\d+$/)
+      .textContent()
+    await sheet.getByRole('button', { name: 'Do this later' }).click()
+    await expect(sheet).toBeHidden()
+
+    await page
+      .getByRole('row')
+      .filter({ hasText: 'Stripe UK' })
+      .getByRole('button', { name: 'Configure Stripe UK' })
+      .click()
+    const manage = page.getByRole('dialog', { name: /Stripe/ })
+    await expect(manage.getByText(address!, { exact: true })).toBeVisible()
+    await expect(manage.getByRole('textbox', { name: /^Webhook signing secret/ })).toHaveValue('')
+    await expect(manage.getByRole('combobox', { name: /Billing entity/ })).toHaveText(
+      /Northwind UK/,
+    )
+  })
+
+  test('starts QuickBooks consent for a billing entity', async ({ page }) => {
+    await enableEntities(page)
+    await page.goto('/integrations')
+    await page.getByRole('button', { name: 'Connect QuickBooks' }).click()
+    const sheet = page.getByRole('dialog', { name: /Connect QuickBooks/ })
+    await sheet.getByRole('textbox', { name: /^Client ID/ }).fill('qb_client')
+    await sheet.getByRole('textbox', { name: /^Client secret/ }).fill('qb_secret')
+    await sheet.getByRole('button', { name: 'Continue' }).click()
+    const init = page.waitForRequest((request) => request.url().endsWith('/oauth/init'))
+    await sheet.getByRole('button', { name: 'Continue to QuickBooks' }).click()
+    expect((await init).postDataJSON()).toMatchObject({
+      provider: 'quickbooks',
+      billing_entity_id: 'be_us',
+    })
   })
 })

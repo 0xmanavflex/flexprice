@@ -6,6 +6,7 @@ import {
   connectionFormSchema,
   connectionSpecFor,
   connectionToFormValues,
+  fieldsForStep,
   defaultConnectionValues,
   gcpSetupScript,
   marketplaceExternalId,
@@ -13,6 +14,7 @@ import {
   oauthRedirectUri,
   toConnectionChanges,
   toConnectionPayload,
+  toWebhookChanges,
   webhookEvents,
   webhookUrl,
 } from './integrationConnect'
@@ -39,6 +41,23 @@ describe('connect payload', () => {
     const stripe = spec('stripe')
     const payload = toConnectionPayload(stripe, defaultConnectionValues(stripe, 'Stripe'))
     expect(payload.sync_config).toMatchObject({ plan: { inbound: false } })
+  })
+
+  it('leaves the webhook secret for after create when the webhook is per connection', () => {
+    const stripe = spec('stripe')
+    const values = defaultConnectionValues(stripe, 'Stripe')
+    values.fields['secret_key'] = 'sk'
+    values.fields['webhook_secret'] = 'whsec'
+    expect(toConnectionPayload(stripe, values).encrypted_secret_data).toEqual({
+      secret_key: 'sk',
+      webhook_secret: 'whsec',
+    })
+    expect(
+      toConnectionPayload(stripe, values, { perConnectionWebhook: true }).encrypted_secret_data,
+    ).toEqual({ secret_key: 'sk' })
+    expect(toWebhookChanges(stripe, values)).toEqual({
+      encrypted_secret_data: { webhook_secret: 'whsec' },
+    })
   })
 
   it('routes metadata fields out of the secrets', () => {
@@ -107,8 +126,24 @@ describe('connect form', () => {
   })
 
   it('has a webhook step only where the provider posts events', () => {
-    expect(connectSteps(spec('razorpay'))).toEqual(['credentials', 'sync', 'webhook'])
-    expect(connectSteps(spec('tabs'))).not.toContain('webhook')
+    const off = { perConnectionWebhook: false }
+    expect(connectSteps(spec('razorpay'), off)).toEqual(['credentials', 'sync', 'webhook'])
+    expect(connectSteps(spec('tabs'), off)).not.toContain('webhook')
+    expect(connectSteps(spec('quickbooks'), off)).toContain('webhook')
+  })
+
+  it('drops the webhook step for OAuth providers when the webhook is per connection', () => {
+    const on = { perConnectionWebhook: true }
+    expect(connectSteps(spec('stripe'), on)).toEqual(['credentials', 'sync', 'webhook'])
+    expect(connectSteps(spec('quickbooks'), on)).toEqual(['credentials', 'sync'])
+  })
+
+  it('keeps webhook fields the API needs at create on credentials', () => {
+    const keys = (step: 'credentials' | 'webhook', perConnection: boolean) =>
+      fieldsForStep(spec('chargebee'), step, perConnection).map((f) => f.key)
+    expect(keys('webhook', false)).toEqual(['webhook_username', 'webhook_password'])
+    expect(keys('webhook', true)).toEqual([])
+    expect(keys('credentials', true)).toContain('webhook_password')
   })
 
   it('does not offer sync combinations the API rejects', () => {
@@ -135,6 +170,9 @@ describe('addresses', () => {
   it('ends the webhook URL with the connection id when given', () => {
     expect(webhookUrl('https://api.flexprice.io/v1', 'stripe', 't', 'e', 'conn_1')).toBe(
       'https://api.flexprice.io/v1/webhooks/stripe/t/e/conn_1',
+    )
+    expect(webhookUrl('https://api.flexprice.io/v1', 'tabs', 't', 'e', 'conn_1')).toBe(
+      'https://api.flexprice.io/v1/webhooks/tabs/t/e',
     )
   })
 

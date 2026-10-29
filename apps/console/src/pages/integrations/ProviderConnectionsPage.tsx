@@ -16,7 +16,11 @@ export function ProviderConnectionsPage({
   const integrations = useConnections()
   const status = useBillingEntityStatus()
   const entities = useBillingEntities()
-  const { openConnect, openManage, sheets } = useIntegrationSheets(integrations.data ?? [])
+  const enabled = status.data === BillingEntityMode.Enabled
+  const { openConnect, openManage, sheets } = useIntegrationSheets(
+    integrations.data ?? [],
+    enabled ? entities.data : undefined,
+  )
 
   const off = status.data !== undefined && status.data !== BillingEntityMode.Enabled
   if (integrations.isPending || status.isPending || (!off && entities.isPending)) {
@@ -45,7 +49,7 @@ export function ProviderConnectionsPage({
         entities={entities.data}
         onBack={onBack}
         onConfigure={(connection) => openManage(integration.id, connection.id)}
-        onConnect={() => openConnect(integration.id)}
+        onConnect={(entity) => openConnect(integration.id, entity.id)}
       />
       {sheets}
     </>

@@ -320,7 +320,10 @@ const connectionRows: Record<string, unknown>[] = [
 ]
 const STORAGE_PROVIDERS = new Set(['s3', 'gcs'])
 let connectionSeq = 0
-const pendingOAuth = new Map<string, { name: unknown; provider: string; metadata: unknown }>()
+const pendingOAuth = new Map<
+  string,
+  { name: unknown; provider: string; metadata: unknown; billingEntityId: unknown }
+>()
 
 function publishedProviders(): string[] {
   return connectionRows
@@ -4161,11 +4164,30 @@ export const handlers = [
     const row = connectionRows.find((item) => item['id'] === params['id'])
     if (!row) return HttpResponse.json({ message: 'Connection not found' }, { status: 404 })
     const body = (await request.json()) as Record<string, unknown>
+    const target = body['billing_entity_id']
+    if (typeof target === 'string') {
+      const scope = entityScope(request, target)
+      if ('refused' in scope) return scope.refused
+      const taken = connectionRows.some(
+        (other) =>
+          other !== row &&
+          other['connection_status'] === 'published' &&
+          other['provider_type'] === row['provider_type'] &&
+          scope.keep(other),
+      )
+      if (taken) {
+        return HttpResponse.json(
+          {
+            message: `A published connection for provider '${String(row['provider_type'])}' already exists for this billing entity`,
+          },
+          { status: 409 },
+        )
+      }
+    }
     if (typeof body['name'] === 'string') row['name'] = body['name']
     if (body['metadata']) row['metadata'] = body['metadata']
     if (body['sync_config']) row['sync_config'] = body['sync_config']
-    if (typeof body['billing_entity_id'] === 'string')
-      row['billing_entity_id'] = body['billing_entity_id']
+    if (typeof target === 'string') row['billing_entity_id'] = target
     // As the API: replaced keys are merged and kept, never sent back.
     const replaced = body['encrypted_secret_data'] as Record<string, string> | undefined
     if (replaced) {
@@ -4187,7 +4209,15 @@ export const handlers = [
   http.post(`${BASE}/oauth/init`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
     const provider = String(body['provider'] ?? '')
-    if (publishedProviders().includes(provider)) {
+    const scope = entityScope(request, body['billing_entity_id'] as string | undefined)
+    if ('refused' in scope) return scope.refused
+    const taken = connectionRows.some(
+      (row) =>
+        row['connection_status'] === 'published' &&
+        row['provider_type'] === provider &&
+        scope.keep(row),
+    )
+    if (taken) {
       return HttpResponse.json(
         { message: `A connection for ${provider} already exists in this environment` },
         { status: 409 },
@@ -4200,7 +4230,12 @@ export const handlers = [
     callback.searchParams.set('code', 'mock-code')
     callback.searchParams.set('state', sessionId)
     if (provider === 'quickbooks') callback.searchParams.set('realmId', 'mock-realm')
-    pendingOAuth.set(sessionId, { name: body['name'], provider, metadata: body['metadata'] })
+    pendingOAuth.set(sessionId, {
+      name: body['name'],
+      provider,
+      metadata: body['metadata'],
+      billingEntityId: body['billing_entity_id'] ?? null,
+    })
     return HttpResponse.json({ oauth_url: callback.toString(), session_id: sessionId })
   }),
 
@@ -4216,6 +4251,7 @@ export const handlers = [
       name: pending.name,
       provider_type: pending.provider,
       connection_status: 'published',
+      billing_entity_id: pending.billingEntityId,
       metadata: pending.metadata ?? {},
       sync_config: {},
       created_at: new Date().toISOString(),

@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Controller, type Control, type FieldErrors } from 'react-hook-form'
+import { Controller, type Control, type FieldErrors, type Path } from 'react-hook-form'
 import { EyeIcon, EyeOffIcon } from '@ui/icons'
 import {
   type ConnectionField,
   type ConnectionFormValues,
   type ConnectionSpec,
+  type Integration,
   type SyncOption,
+  effectiveEntityId,
   syncKey,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -22,6 +24,7 @@ import {
 import { Field } from '@ui/compositions/forms/Field'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
+import type { ListBillingEntity } from '../shared/billingEntityColumn'
 
 /**
  * The pieces both connection sheets draw from a provider's spec: a field per
@@ -92,81 +95,139 @@ function SecretInput({
   )
 }
 
-export function SpecField({
+export function SpecField<T extends { fields: Record<string, string> }>({
   field,
   control,
   errors,
   disabled,
 }: {
   field: ConnectionField
-  control: Control<ConnectionFormValues>
-  errors: FieldErrors<ConnectionFormValues>
+  control: Control<T>
+  errors: FieldErrors<T>
   disabled?: boolean
 }) {
-  const name = `fields.${field.key}` as const
+  const name = `fields.${field.key}` as Path<T>
   const message = (errors.fields as Record<string, { message?: string }> | undefined)?.[field.key]
     ?.message
   return (
     <Controller
       control={control}
       name={name}
-      render={({ field: bound }) => (
-        <Field
-          label={field.label}
-          required={field.required}
-          error={message}
-          {...(field.hint ? { hint: field.hint } : {})}
-        >
-          {(aria) => {
-            if (field.kind === 'secret')
+      render={({ field: raw }) => {
+        const bound = raw as unknown as {
+          value: string | undefined
+          onChange: (value: string) => void
+          onBlur: () => void
+        }
+        return (
+          <Field
+            label={field.label}
+            required={field.required}
+            error={message}
+            {...(field.hint ? { hint: field.hint } : {})}
+          >
+            {(aria) => {
+              if (field.kind === 'secret')
+                return (
+                  <SecretInput
+                    {...aria}
+                    value={bound.value ?? ''}
+                    onChange={bound.onChange}
+                    onBlur={bound.onBlur}
+                    placeholder={field.placeholder}
+                    label={field.label}
+                  />
+                )
+              if (field.kind === 'select')
+                return (
+                  <OptionSelect
+                    id={aria.id}
+                    value={bound.value ?? ''}
+                    onValueChange={bound.onChange}
+                    options={field.options ?? []}
+                    aria-describedby={aria['aria-describedby']}
+                    aria-invalid={aria['aria-invalid']}
+                    {...(disabled ? { disabled } : {})}
+                  />
+                )
+              if (field.kind === 'textarea')
+                return (
+                  <Textarea
+                    {...aria}
+                    rows={6}
+                    spellCheck={false}
+                    autoComplete="off"
+                    className="font-mono text-xs"
+                    placeholder={field.placeholder}
+                    value={bound.value ?? ''}
+                    onChange={(event) => bound.onChange(event.target.value)}
+                    onBlur={bound.onBlur}
+                  />
+                )
               return (
-                <SecretInput
+                <Input
                   {...aria}
-                  value={bound.value ?? ''}
-                  onChange={bound.onChange}
-                  onBlur={bound.onBlur}
-                  placeholder={field.placeholder}
-                  label={field.label}
-                />
-              )
-            if (field.kind === 'select')
-              return (
-                <OptionSelect
-                  id={aria.id}
-                  value={bound.value ?? ''}
-                  onValueChange={bound.onChange}
-                  options={field.options ?? []}
-                  aria-describedby={aria['aria-describedby']}
-                  aria-invalid={aria['aria-invalid']}
-                  {...(disabled ? { disabled } : {})}
-                />
-              )
-            if (field.kind === 'textarea')
-              return (
-                <Textarea
-                  {...aria}
-                  rows={6}
-                  spellCheck={false}
                   autoComplete="off"
-                  className="font-mono text-xs"
+                  spellCheck={false}
                   placeholder={field.placeholder}
                   value={bound.value ?? ''}
                   onChange={(event) => bound.onChange(event.target.value)}
                   onBlur={bound.onBlur}
                 />
               )
-            return (
-              <Input
-                {...aria}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={field.placeholder}
-                value={bound.value ?? ''}
-                onChange={(event) => bound.onChange(event.target.value)}
-                onBlur={bound.onBlur}
-              />
-            )
-          }}
+            }}
+          </Field>
+        )
+      }}
+    />
+  )
+}
+
+/** The entities a connection of this provider can belong to; one that already has another is shown but not choosable. */
+export function BillingEntityField({
+  integration,
+  entities,
+  connectionId,
+  control,
+  error,
+  disabled,
+}: {
+  integration: Integration
+  entities: readonly ListBillingEntity[]
+  /** The connection being moved, which does not block its own entity. */
+  connectionId?: string
+  control: Control<ConnectionFormValues>
+  error?: string | undefined
+  disabled?: boolean
+}) {
+  const options = entities.map((entity) => {
+    const holder = integration.connections.find(
+      (item) => item.id !== connectionId && effectiveEntityId(item, entities) === entity.id,
+    )
+    return {
+      value: entity.id,
+      label: entity.name,
+      ...(holder ? { disabled: true, hint: `Has ${holder.name}` } : {}),
+    }
+  })
+  return (
+    <Controller
+      control={control}
+      name="billingEntityId"
+      render={({ field: bound }) => (
+        <Field label="Billing entity" required error={error}>
+          {(aria) => (
+            <OptionSelect
+              id={aria.id}
+              value={bound.value ?? ''}
+              onValueChange={bound.onChange}
+              options={options}
+              placeholder="Choose a billing entity"
+              aria-describedby={aria['aria-describedby']}
+              aria-invalid={aria['aria-invalid']}
+              {...(disabled ? { disabled } : {})}
+            />
+          )}
         </Field>
       )}
     />

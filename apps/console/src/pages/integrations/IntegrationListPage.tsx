@@ -14,7 +14,10 @@ export function IntegrationListPage({
   const status = useBillingEntityStatus()
   const entities = useBillingEntities()
   const enabled = status.data === BillingEntityMode.Enabled && entities.data !== undefined
-  const { openConnect, openManage, sheets } = useIntegrationSheets(integrations.data ?? [])
+  const { openConnect, openManage, sheets } = useIntegrationSheets(
+    integrations.data ?? [],
+    enabled ? entities.data : undefined,
+  )
 
   return (
     <>

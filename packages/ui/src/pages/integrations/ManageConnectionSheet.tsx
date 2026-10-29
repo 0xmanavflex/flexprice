@@ -5,12 +5,15 @@ import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { InfoIcon, TriangleAlert } from '@ui/icons'
 import {
   type ConnectionChanges,
+  type ConnectionField,
   type ConnectionFormValues,
   type ConnectionSpec,
   type Integration,
   type IntegrationConnection,
   connectionSpecFor,
   connectionToFormValues,
+  effectiveEntityId,
+  fieldsForStep,
   manageFormSchema,
   rotatableFields,
   toConnectionChanges,
@@ -32,13 +35,14 @@ import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { Field } from '@ui/compositions/forms/Field'
 import { provenance } from '@ui/provenance'
-import { SpecField, SyncOptions, WebhookGuide } from './ConnectionFields'
+import type { ListBillingEntity } from '../shared/billingEntityColumn'
+import { BillingEntityField, SpecField, SyncOptions, WebhookGuide } from './ConnectionFields'
 import type { ConnectionContext } from './ConnectIntegrationSheet'
 
 /**
- * One connected provider: rename it, change what syncs, copy the webhook
- * address, replace the few secrets the API lets a connection replace, and
- * disconnect.
+ * One connection: rename it, move it to another billing entity, change what
+ * syncs, copy its webhook address and set its signing secret, replace the few
+ * keys the API lets a connection replace, and disconnect.
  *
  * It says what the API cannot do instead of hiding it. Keys are never returned,
  * so there is nothing to reveal; most of them cannot be changed in place, so the
@@ -65,6 +69,8 @@ export interface ManageConnectionSheetProps {
   connection: IntegrationConnection | null
   logo: ReactNode
   context: ConnectionContext
+  /** The environment's billing entities, given only while they are enabled: adds the move and the per-connection webhook. */
+  entities?: readonly ListBillingEntity[] | undefined
   onClose: () => void
   onSave: (id: string, changes: ConnectionChanges) => void
   onDisconnect: (id: string) => void
@@ -79,6 +85,7 @@ export function ManageConnectionSheet({
   connection,
   logo,
   context,
+  entities,
   onClose,
   onSave,
   onDisconnect,
@@ -103,6 +110,7 @@ export function ManageConnectionSheet({
             spec={spec}
             logo={logo}
             context={context}
+            entities={entities}
             onClose={onClose}
             onSave={onSave}
             onDisconnect={onDisconnect}
@@ -128,6 +136,7 @@ function ManageForm({
   spec,
   logo,
   context,
+  entities,
   onClose,
   onSave,
   onDisconnect,
@@ -145,16 +154,22 @@ function ManageForm({
   disconnectError: string | null
 }) {
   const [confirming, setConfirming] = useState(false)
+  // Entities on: the connection has its own webhook address and its webhook fields can be set here.
+  const perConnectionWebhook = entities !== undefined
   const form = useCalmForm<ConnectionFormValues>({
     resolver: standardSchemaResolver(
       manageFormSchema(spec),
     ) as unknown as Resolver<ConnectionFormValues>,
-    defaultValues: connectionToFormValues(spec, connection),
+    defaultValues: {
+      ...connectionToFormValues(spec, connection, perConnectionWebhook),
+      ...(entities ? { billingEntityId: effectiveEntityId(connection, entities) } : {}),
+    },
   })
   const { control, register, watch, formState } = form
   const { errors } = formState
 
-  const secrets = rotatableFields(spec)
+  const webhookFields = perConnectionWebhook ? fieldsForStep(spec, 'webhook', true) : []
+  const secrets = rotatableFields(spec).filter((f) => !webhookFields.includes(f))
   const sync = watch('sync')
   const webhook = spec.webhook
     ? {
@@ -163,16 +178,22 @@ function ManageForm({
           spec.providerType,
           context.tenantId,
           context.environmentId,
+          perConnectionWebhook ? connection.id : undefined,
         ),
         events: webhookEvents(spec, sync),
       }
     : null
 
   const save = form.handleSubmit((values) => {
-    const changes = toConnectionChanges(spec, connection, values)
+    const changes = toConnectionChanges(spec, connection, values, entities)
     if (Object.keys(changes).length > 0) onSave(connection.id, changes)
   })
-  const changed = Object.keys(toConnectionChanges(spec, connection, watch())).length > 0
+  const changed = Object.keys(toConnectionChanges(spec, connection, watch(), entities)).length > 0
+  const keep = (field: ConnectionField) => ({
+    ...field,
+    required: false,
+    placeholder: 'Leave blank to keep the current value',
+  })
 
   return (
     <>
@@ -207,6 +228,16 @@ function ManageForm({
             <Field label="Connection name" required error={errors.name?.message}>
               {(aria) => <Input {...aria} autoComplete="off" {...register('name')} />}
             </Field>
+            {entities ? (
+              <BillingEntityField
+                integration={integration}
+                entities={entities}
+                connectionId={connection.id}
+                control={control}
+                error={errors.billingEntityId?.message}
+                disabled={isSaving}
+              />
+            ) : null}
           </section>
 
           {spec.sync.length > 0 ? (
@@ -224,6 +255,9 @@ function ManageForm({
                 Webhook
               </h3>
               <WebhookGuide spec={spec} url={webhook.url} events={webhook.events} />
+              {webhookFields.map((field) => (
+                <SpecField key={field.key} field={keep(field)} control={control} errors={errors} />
+              ))}
             </section>
           ) : null}
 
@@ -239,16 +273,7 @@ function ManageForm({
                 : 'To change them, disconnect and connect again.'}
             </p>
             {secrets.map((field) => (
-              <SpecField
-                key={field.key}
-                field={{
-                  ...field,
-                  required: false,
-                  placeholder: 'Leave blank to keep the current value',
-                }}
-                control={control}
-                errors={errors}
-              />
+              <SpecField key={field.key} field={keep(field)} control={control} errors={errors} />
             ))}
           </section>
 

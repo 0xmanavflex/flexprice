@@ -23,7 +23,8 @@ const meta = {
       redirectUri: 'https://app.flexprice.io/tools/integrations/oauth/callback',
     },
     onClose: fn(),
-    onSubmit: fn(),
+    onSubmit: fn(async () => 'conn_new'),
+    onSaveWebhook: fn(async () => {}),
   },
 } satisfies Meta<typeof ConnectIntegrationSheet>
 
@@ -101,6 +102,72 @@ export const SubmitsThePayload: Story = {
       }),
       expect.anything(),
     )
+  },
+}
+
+/**
+ * Entities on: the connection is created for an entity (one that already has
+ * Razorpay is not choosable), then the Webhook step shows its own address and
+ * saves the signing secret onto it.
+ */
+export const PerEntityWithItsOwnWebhook: Story = {
+  args: {
+    integration: {
+      ...integration('razorpay'),
+      connections: [
+        {
+          id: 'conn_us',
+          name: 'Razorpay US',
+          providerType: 'razorpay',
+          syncConfig: {},
+          metadata: {},
+          billingEntityId: 'be_us',
+        },
+      ],
+    },
+    entities: [
+      { id: 'be_us', name: 'Northwind US', isDefault: true },
+      { id: 'be_uk', name: 'Northwind UK', isDefault: false },
+    ],
+  },
+  play: async ({ canvasElement, args }) => {
+    const screen = screenOf(canvasElement)
+    await userEvent.click(await screen.findByRole('combobox', { name: /Billing entity/ }))
+    await expect(await screen.findByRole('option', { name: /Northwind US/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('option', { name: /Northwind UK/ }))
+    await userEvent.type(screen.getByLabelText(/Key ID/), 'rzp_test_abc')
+    await userEvent.type(screen.getByLabelText(/Key secret/, { selector: 'input' }), 'shh')
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Connect Razorpay' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          billing_entity_id: 'be_uk',
+          encrypted_secret_data: { key_id: 'rzp_test_abc', secret_key: 'shh' },
+        }),
+        expect.anything(),
+      ),
+    )
+
+    await expect(
+      await screen.findByText(
+        'https://api.flexprice.io/v1/webhooks/razorpay/tenant_demo/env_demo/conn_new',
+      ),
+    ).toBeInTheDocument()
+    await userEvent.type(
+      screen.getByLabelText(/Webhook signing secret/, { selector: 'input' }),
+      'whsec',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Save webhook' }))
+    await waitFor(() =>
+      expect(args.onSaveWebhook).toHaveBeenCalledWith('conn_new', {
+        encrypted_secret_data: { webhook_secret: 'whsec' },
+      }),
+    )
+    await waitFor(() => expect(args.onClose).toHaveBeenCalled())
   },
 }
 
