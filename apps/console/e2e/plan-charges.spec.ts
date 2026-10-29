@@ -100,7 +100,8 @@ test.describe('plan charges, entitlements and credit grants', () => {
     const sheet = page.getByRole('dialog')
     // At least the old price and the new one; a reused mock may hold more.
     await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
-    await expect(sheet.getByText('History').first()).toBeVisible()
+    // The old price's tag, not the History heading ("History · N versions").
+    await expect(sheet.getByText('History', { exact: true }).first()).toBeVisible()
 
     // Reverting brings the earlier price back as a new version.
     await sheet.getByRole('button', { name: 'Revert to this version' }).click()
