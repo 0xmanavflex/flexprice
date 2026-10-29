@@ -9,8 +9,6 @@ export interface ConnectorCardConnection {
   label: string
   /** The owning entity's name. */
   entity?: string | undefined
-  /** `label` is a line saying an entity has no connection. */
-  missing?: boolean | undefined
 }
 
 export interface ConnectorCardProps {
@@ -23,7 +21,7 @@ export interface ConnectorCardProps {
   onConfigure: () => void
   /** The connected action's label; "Configure" by default. */
   configureLabel?: string | undefined
-  /** Under the description: each connection with the entity that owns it, or an entity that has none (`missing`). */
+  /** Under the description: each connection with the entity that owns it. */
   connections?: ConnectorCardConnection[] | undefined
   testId?: string
   className?: string
@@ -80,13 +78,7 @@ export function ConnectorCard({
         {connections && connections.length > 0 ? (
           <ul className="flex flex-col gap-1.5 text-[13px]">
             {connections.map((item) => (
-              <li
-                key={item.id}
-                className={cn(
-                  'flex items-center justify-between gap-2',
-                  item.missing && 'text-muted-foreground',
-                )}
-              >
+              <li key={item.id} className="flex items-center justify-between gap-2">
                 <span className="truncate">{item.label}</span>
                 {item.entity ? <Badge variant="outline">{item.entity}</Badge> : null}
               </li>

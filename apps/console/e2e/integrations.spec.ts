@@ -202,7 +202,7 @@ test.describe('integrations', () => {
     const card = page.getByTestId('integration-stripe')
     await expect(card).toContainText('Stripe EU')
     await expect(card).toContainText('Northwind EU')
-    await expect(card).toContainText('Northwind UK has no Stripe account')
+    await expect(card).not.toContainText('Northwind UK')
 
     await card.getByRole('button', { name: 'Manage Stripe' }).click()
     await expect(page).toHaveURL(/\/integrations\/stripe$/)
