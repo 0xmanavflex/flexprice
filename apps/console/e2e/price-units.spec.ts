@@ -83,7 +83,7 @@ test.describe('environment copy', () => {
     const dialog = page.getByRole('dialog', { name: 'Copy environment' })
     await expect(dialog).toBeVisible()
     // From a sandbox, the target starts on Production.
-    await expect(dialog.getByRole('combobox', { name: /Copy to/ })).toHaveText(/Production/)
+    await expect(dialog.getByRole('combobox', { name: /Copy into/ })).toHaveText(/Production/)
     await expect(dialog.getByText(/go live in/)).toBeVisible()
     await dialog.getByRole('button', { name: 'Copy plans and features' }).click()
 
