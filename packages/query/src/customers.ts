@@ -56,6 +56,7 @@ export interface CustomerWire {
   externalId?: string | undefined
   addressCountry?: string | undefined
   billingCurrency?: string | undefined
+  timezone?: string | undefined
   status?: string | undefined
   integrations?: CustomerIntegrationWire[] | undefined
   createdAt?: Date | undefined
@@ -98,6 +99,7 @@ export function toCustomer(wire: CustomerWire): Customer {
     externalId: wire.externalId ?? '',
     addressCountry: wire.addressCountry ?? '',
     ...(wire.billingCurrency ? { billingCurrency: wire.billingCurrency.toLowerCase() } : {}),
+    ...(wire.timezone ? { timezone: wire.timezone } : {}),
     status,
     integrations: toCustomerIntegrations(wire.integrations),
     createdAt: wire.createdAt ?? null,

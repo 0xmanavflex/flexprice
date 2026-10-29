@@ -191,6 +191,8 @@ export interface SubscriptionCustomerOption extends Option {
   externalId?: string | undefined
   /** The currency their invoices go out in, when it is set; else the contract's own. */
   billingCurrency?: string | undefined
+  /** The IANA zone the customer bills in; the contract's dates and times default to it. */
+  timezone?: string | undefined
 }
 
 /** A global exchange rate, one unit of `fromCurrency` in `toCurrency` (lower-case codes). */
@@ -932,6 +934,7 @@ export function SubscriptionForm({
             id={id}
             {...field}
             withTime
+            timeZone={customer?.timezone}
             value={values.startDate}
             onValueChange={(value) =>
               form.setValue('startDate', value, { shouldDirty: true, shouldValidate: true })
@@ -948,6 +951,7 @@ export function SubscriptionForm({
             id={id}
             {...field}
             withTime
+            timeZone={customer?.timezone}
             clearable
             clearLabel="Clear end date"
             value={contractEnd}
@@ -999,6 +1003,7 @@ export function SubscriptionForm({
                   <DateInput
                     id="contract-billing-date"
                     withTime
+                    timeZone={customer?.timezone}
                     min={contractDay(values.startDate || today)}
                     value={control.value}
                     onValueChange={(value) => {

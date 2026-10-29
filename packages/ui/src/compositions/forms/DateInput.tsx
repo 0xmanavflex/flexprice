@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CalendarIcon, XIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Calendar } from '@ui/components/primitives/calendar'
@@ -43,8 +43,15 @@ export interface DateInputProps {
   onValueChange: (value: string) => void
   placeholder?: string
   disabled?: boolean
-  /** Pick a time of day too, in local time or UTC. */
+  /** Pick a time of day too, in local time, UTC or `timeZone`. */
   withTime?: boolean
+  /**
+   * An IANA zone (e.g. the customer's `Asia/Kolkata`) offered beside Local and
+   * UTC and chosen by default, so a time is entered in the zone it bills in.
+   * Changing it (another customer) moves the picker to it unless the zone
+   * was picked by hand.
+   */
+  timeZone?: string | undefined
   /** Earliest pickable day, `YYYY-MM-DD` or a `Date`. */
   min?: string | Date
   /** Latest pickable day, `YYYY-MM-DD` or a `Date`. */
@@ -146,8 +153,91 @@ export function formatStoredDay(
 const toDate = (value: string | Date | undefined): Date | undefined =>
   value instanceof Date ? value : parseDateValue(value)
 
-/** "Oct 21, 2026" or, with a time, "Oct 21, 2026, 09:30 AM" (with " UTC" in UTC). */
-export function formatDateValue(value: string | undefined, zone: 'local' | 'utc' = 'local') {
+/** Where a time is read and written: the browser's zone, UTC, or an IANA zone. */
+export type DateZone = 'local' | 'utc' | (string & {})
+
+/** Whether `zone` is an IANA zone this browser knows (`Asia/Kolkata`); not Local or UTC. */
+export function isNamedZone(zone: string | undefined): zone is string {
+  if (!zone || zone === 'local' || zone === 'utc' || zone.toUpperCase() === 'UTC') return false
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: zone })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** The calendar parts of `date` as a clock in `zone` reads them. */
+export function zonedParts(date: Date, zone: DateZone) {
+  if (zone === 'utc')
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth(),
+      day: date.getUTCDate(),
+      hour: date.getUTCHours(),
+      minute: date.getUTCMinutes(),
+    }
+  if (!isNamedZone(zone))
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth(),
+      day: date.getDate(),
+      hour: date.getHours(),
+      minute: date.getMinutes(),
+    }
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hourCycle: 'h23',
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, Number(part.value)]),
+  ) as Record<string, number>
+  return {
+    year: parts['year'] ?? 0,
+    month: (parts['month'] ?? 1) - 1,
+    day: parts['day'] ?? 1,
+    hour: (parts['hour'] ?? 0) % 24,
+    minute: parts['minute'] ?? 0,
+  }
+}
+
+/**
+ * The instant a clock in `zone` reads as `year-month-day h:m` (month 0-based).
+ * For an IANA zone the offset is read at a guess and once more at the result,
+ * so a time either side of a daylight-saving change lands on the right hour.
+ */
+export function zonedInstant(
+  zone: DateZone,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+): Date {
+  if (zone === 'utc') return new Date(Date.UTC(year, month, day, hour, minute))
+  if (!isNamedZone(zone)) return new Date(year, month, day, hour, minute)
+  const wall = Date.UTC(year, month, day, hour, minute)
+  const offsetAt = (instant: number) => {
+    const p = zonedParts(new Date(instant), zone)
+    return (
+      Date.UTC(p.year, p.month, p.day, p.hour, p.minute) - Math.floor(instant / 60_000) * 60_000
+    )
+  }
+  const first = wall - offsetAt(wall)
+  return new Date(wall - offsetAt(first))
+}
+
+/**
+ * "Oct 21, 2026" or, with a time, "Oct 21, 2026, 09:30 AM" in the zone, with
+ * " UTC" in UTC and the zone's name in an IANA zone ("… Asia/Kolkata").
+ */
+export function formatDateValue(value: string | undefined, zone: DateZone = 'local') {
   const date = parseDateValue(value)
   if (!date) return ''
   if (!value || DAY.test(value)) return date.toLocaleDateString('en-US', { dateStyle: 'medium' })
@@ -158,9 +248,9 @@ export function formatDateValue(value: string | undefined, zone: 'local' | 'utc'
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    ...(zone === 'utc' ? { timeZone: 'UTC' } : {}),
+    ...(zone === 'utc' ? { timeZone: 'UTC' } : isNamedZone(zone) ? { timeZone: zone } : {}),
   })
-  return zone === 'utc' ? `${text} UTC` : text
+  return zone === 'utc' ? `${text} UTC` : isNamedZone(zone) ? `${text} ${zone}` : text
 }
 
 export interface DayCalendarProps {
@@ -215,32 +305,32 @@ export function DateInput({
   max,
   clearable = false,
   clearLabel = 'Clear date',
+  timeZone,
   className,
   'aria-label': ariaLabel,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
 }: DateInputProps) {
-  const [zone, setZone] = useState<'local' | 'utc'>('local')
-  const utc = zone === 'utc'
+  const named = isNamedZone(timeZone) ? timeZone : undefined
+  const [picked, setPicked] = useState<DateZone | null>(null)
+  // A zone picked by hand stays; otherwise the given zone (the customer's) leads.
+  const zone: DateZone = picked ?? named ?? 'local'
+  // Another customer with another zone: drop a hand pick of the old one.
+  useEffect(() => {
+    setPicked((current) => (current && isNamedZone(current) && current !== named ? null : current))
+  }, [named])
   const selected = parseDateValue(value)
   const minDate = toDate(min)
   const maxDate = toDate(max)
-  const hours = selected ? (utc ? selected.getUTCHours() : selected.getHours()) : 0
-  const minutes = selected ? (utc ? selected.getUTCMinutes() : selected.getMinutes()) : 0
+  const clock = selected ? zonedParts(selected, zone) : null
+  const hours = clock?.hour ?? 0
+  const minutes = clock?.minute ?? 0
 
   /** `day`'s calendar date at `h:m` in the chosen zone. */
-  const at = (day: Date, h: number, m: number) => {
-    const next = utc
-      ? new Date(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), h, m))
-      : new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m)
-    return next.toISOString()
-  }
-  /** The day the calendar shows as selected: in UTC, the instant's UTC date. */
-  const calendarDay = selected
-    ? utc
-      ? new Date(selected.getUTCFullYear(), selected.getUTCMonth(), selected.getUTCDate())
-      : selected
-    : undefined
+  const at = (day: Date, h: number, m: number) =>
+    zonedInstant(zone, day.getFullYear(), day.getMonth(), day.getDate(), h, m).toISOString()
+  /** The day the calendar shows as selected: the instant's date in the chosen zone. */
+  const calendarDay = clock ? new Date(clock.year, clock.month, clock.day) : undefined
 
   const pick = (date: Date | undefined) => {
     if (!date) return onValueChange('')
@@ -327,14 +417,19 @@ export function DateInput({
                 onCommit={(m) => setTime(hours, m)}
               />
             </div>
-            <Select
-              value={zone}
-              onValueChange={(next) => setZone(next === 'utc' ? 'utc' : 'local')}
-            >
-              <SelectTrigger size="sm" className="h-8 w-20 text-xs" aria-label="Time zone">
-                <SelectValue>{utc ? 'UTC' : 'Local'}</SelectValue>
+            <Select value={zone} onValueChange={(next) => next && setPicked(next)}>
+              <SelectTrigger
+                size="sm"
+                className="h-8 w-auto max-w-40 min-w-20 text-xs"
+                aria-label="Time zone"
+                title={zoneLabel(zone)}
+              >
+                <SelectValue>
+                  <span className="truncate">{zoneLabel(zone)}</span>
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent align="end">
+              <SelectContent align="end" className="w-auto min-w-(--anchor-width)">
+                {named ? <SelectItem value={named}>{named}</SelectItem> : null}
                 <SelectItem value="local">Local</SelectItem>
                 <SelectItem value="utc">UTC</SelectItem>
               </SelectContent>
@@ -345,6 +440,8 @@ export function DateInput({
     </Popover>
   )
 }
+
+const zoneLabel = (zone: DateZone) => (zone === 'utc' ? 'UTC' : zone === 'local' ? 'Local' : zone)
 
 /** One half of the time row: typed freely, clamped and applied on blur or Enter. */
 function TimePart({
