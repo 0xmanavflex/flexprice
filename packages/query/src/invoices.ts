@@ -205,6 +205,7 @@ export interface InvoiceDetailWire extends InvoiceWire {
   subtotal?: string | undefined
   totalTax?: string | undefined
   totalPrepaidCreditsApplied?: string | undefined
+  totalDiscount?: string | undefined
   amountPaid?: string | undefined
   finalizedAt?: Date | undefined
   paidAt?: Date | undefined
@@ -261,6 +262,7 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
     subtotal: wire.subtotal ?? '0',
     tax: wire.totalTax ?? '0',
     prepaidCredits: wire.totalPrepaidCreditsApplied ?? '0',
+    discount: wire.totalDiscount ?? '0',
     amountPaid: wire.amountPaid ?? '0',
     lines: (wire.lineItems ?? []).map((line, index) => ({
       id: line.id ?? `line_${index}`,

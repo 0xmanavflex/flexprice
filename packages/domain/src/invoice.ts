@@ -294,6 +294,8 @@ export interface InvoiceDetail extends Invoice {
   subtotal: string
   tax: string
   prepaidCredits: string
+  /** Coupons and line discounts taken off the subtotal (`total_discount`), as a positive decimal. */
+  discount: string
   amountPaid: string
   lines: InvoiceDetailLine[]
   finalizedAt: Date | null
