@@ -1,4 +1,5 @@
 import type { Invoice } from '@fp/domain'
+import { useNavigate } from '@tanstack/react-router'
 import { useContractJournal, useSubscriptionRevenue } from '@fp/query'
 import { SubscriptionJournal } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
@@ -15,6 +16,7 @@ export function SubscriptionJournalPanel({
   onOpenInvoice?: ((invoiceId: string) => void) | undefined
 }) {
   const { environmentId } = useSession()
+  const navigate = useNavigate()
   // Shared with the Revenue tab's query: the same contract and POB names.
   const revenue = useSubscriptionRevenue(environmentId, subscriptionId)
   const journal = useContractJournal(environmentId, revenue.data?.contract)
@@ -32,6 +34,12 @@ export function SubscriptionJournalPanel({
         (invoices ?? []).map((invoice) => [invoice.id, invoice.number]),
       )}
       onOpenInvoice={onOpenInvoice}
+      onOpenCreditNote={(creditNoteId) =>
+        void navigate({ to: '/credit-memos/$creditNoteId', params: { creditNoteId } })
+      }
+      onOpenPayment={(paymentId) =>
+        void navigate({ to: '/payments/$paymentId', params: { paymentId } })
+      }
     />
   )
 }

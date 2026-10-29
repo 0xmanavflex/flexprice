@@ -33,6 +33,8 @@ export interface SubscriptionJournalProps {
   /** Invoice id → number, for invoice descriptions. */
   invoiceNumbers?: Readonly<Record<string, string>> | undefined
   onOpenInvoice?: ((invoiceId: string) => void) | undefined
+  onOpenCreditNote?: ((creditNoteId: string) => void) | undefined
+  onOpenPayment?: ((paymentId: string) => void) | undefined
 }
 
 const dayFormat = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
@@ -75,7 +77,10 @@ export function SubscriptionJournal({
   obligationNames = {},
   invoiceNumbers = {},
   onOpenInvoice,
+  onOpenCreditNote,
+  onOpenPayment,
 }: SubscriptionJournalProps) {
+  const entries = journal?.entries ?? []
   const pobName = (id: string | null) => (id ? (obligationNames[id] ?? shortId(id)) : '—')
 
   const description = (entry: JournalEntry) => {
@@ -88,7 +93,9 @@ export function SubscriptionJournal({
       )
     }
     if (entry.sourceType === 'pob') return pobName(entry.sourceId)
-    return `${SOURCE_LABEL[entry.sourceType] ?? entry.sourceType}: ${shortId(entry.sourceId)}`
+    const label = `${SOURCE_LABEL[entry.sourceType] ?? entry.sourceType}: ${shortId(entry.sourceId)}`
+    const open = { credit_note: onOpenCreditNote, payment: onOpenPayment }[entry.sourceType]
+    return open ? <EntityLink label={label} onOpen={() => open(entry.sourceId)} /> : label
   }
 
   const columns: DetailColumn<JournalEntry>[] = [
@@ -153,16 +160,8 @@ export function SubscriptionJournal({
         <Lines entry={entry} value={(line) => (line.credit ? formatMoney(line.credit) : '')} />
       ),
     },
-    {
-      key: 'reversal',
-      header: 'Reversal',
-      width: 90,
-      className: 'align-top',
-      cell: (entry) => (entry.reversalOf ? shortId(entry.reversalOf) : '—'),
-    },
   ]
 
-  const entries = journal?.entries ?? []
   return (
     <Section
       table
