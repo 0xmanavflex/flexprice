@@ -730,6 +730,7 @@ export * from './integrationConnect'
 export {
   WalletKind,
   WALLET_KIND_LABEL,
+  walletLabel,
   WALLET_STATUS_LABEL,
   WalletStatus,
   WalletTopUpKind,

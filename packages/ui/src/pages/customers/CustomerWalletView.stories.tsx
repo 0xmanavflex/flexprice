@@ -35,6 +35,8 @@ function makeWallets(
       currency,
       status: i === 0 ? status : WalletStatus.Active,
       walletType: i === 2 ? 'POST_PAID' : 'PRE_PAID',
+      // The third is a named postpaid wallet; the rest fall back to their description.
+      name: i === 2 ? `Postpaid Wallet - ${currency}` : '',
       description: i === 0 ? 'Prepaid credits' : `Wallet ${i + 1}`,
       metadata: i === 0 ? { cost_center: 'ops' } : {},
       creditBalance: current,
@@ -467,6 +469,23 @@ export const MultipleWallets: Story = {
     await expect(
       within(canvasElement).getByRole('combobox', { name: 'Wallet' }),
     ).toBeInTheDocument()
+  },
+}
+
+/** A postpaid wallet is named for what it is, never "Prepaid credits", and its type shows. */
+export const PostpaidWallet: Story = {
+  args: {
+    wallets: makeWallets(3, WalletStatus.Active, 10000, 7500),
+    selectedId: 'wallet_3',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toHaveTextContent(
+      'Postpaid Wallet - GBP',
+    )
+    await expect(canvas.getByRole('combobox', { name: 'Wallet' })).not.toHaveTextContent(/Prepaid/)
+    await expect(canvas.getByText('Type')).toBeVisible()
+    await expect(canvas.getByText('Postpaid')).toBeVisible()
   },
 }
 

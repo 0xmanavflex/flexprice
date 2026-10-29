@@ -30,6 +30,7 @@ export interface WalletWire {
   currency?: string | undefined
   walletStatus?: string | undefined
   walletType?: string | undefined
+  name?: string | undefined
   description?: string | undefined
   metadata?: Record<string, string> | undefined
   creditBalance?: string | undefined
@@ -87,6 +88,7 @@ export function toWallet(wire: WalletWire): Wallet {
     status: STATUSES.has(wire.walletStatus ?? '')
       ? (wire.walletStatus as WalletStatus)
       : WalletStatus.Active,
+    name: wire.name ?? '',
     description: wire.description ?? '',
     creditBalance: credits,
     balance: moneyOr(amount, currency),
