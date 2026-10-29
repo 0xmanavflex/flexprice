@@ -129,7 +129,8 @@ export function toEntitlementRequest(
       }
       return {
         ...common,
-        usageLimit: draft.usageLimit,
+        // Unlimited is no limit at all: the SDK rejects null, so the key is left out.
+        ...(draft.usageLimit !== null ? { usageLimit: draft.usageLimit } : {}),
         ...(draft.usageResetPeriod ? { usageResetPeriod: draft.usageResetPeriod } : {}),
         isSoftLimit: draft.isSoftLimit,
       }
