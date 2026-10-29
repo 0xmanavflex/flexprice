@@ -24,7 +24,6 @@ import {
   entitlementToEdit,
   planKind,
   PlanKind,
-  usageBasedLabel,
 } from '@fp/domain'
 import {
   useArchivePlan,
@@ -844,10 +843,7 @@ function planKindLabel(charges: Charge[]): string {
     fixedChargeCount: charges.filter((c) => c.type === PriceType.Fixed).length,
     usageChargeCount: usage.length,
   })
-  // Usage only: no flat price to qualify, so name what it meters instead.
-  if (kind === PlanKind.Usage) {
-    return usageBasedLabel(usage.map((c) => c.displayName || c.meterName || ''))
-  }
+  if (kind === PlanKind.Usage) return 'Usage-based'
   return PLAN_KIND_LABEL[kind]
 }
 

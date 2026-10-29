@@ -1,18 +1,16 @@
-import { CheckIcon } from '@ui/icons'
+import { CheckIcon, CoinsIcon } from '@ui/icons'
 import type { ReactNode } from 'react'
 import {
-  BILLING_PERIOD_SHORT,
   BillingModel,
   BillingPeriod,
   type CreateCharge,
+  CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
   CreditGrantPeriod,
   FeatureType,
   PriceType,
-  usageBasedLabel,
 } from '@fp/domain'
-import { FormPreview, PreviewSection } from '@ui/compositions/forms/FormPreview'
-import { cn } from '@ui/lib/cn'
+import { FormPreview } from '@ui/compositions/forms/FormPreview'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -66,16 +64,7 @@ export interface PreviewLine {
   value?: ReactNode
 }
 
-const CREDIT_PERIOD_SHORT: Record<CreditGrantPeriod, string> = {
-  [CreditGrantPeriod.Daily]: 'day',
-  [CreditGrantPeriod.Weekly]: 'wk',
-  [CreditGrantPeriod.Monthly]: 'mo',
-  [CreditGrantPeriod.Quarterly]: 'qtr',
-  [CreditGrantPeriod.HalfYearly]: '6 mo',
-  [CreditGrantPeriod.Annual]: 'yr',
-}
-
-/** One "Credits" line for a grant: "5,000 once" or "2,000 / mo". */
+/** One "Credits" line, as the pricing widget writes it. */
 export function creditLine(g: {
   key: string
   name: string
@@ -83,17 +72,19 @@ export function creditLine(g: {
   cadence: CreditGrantCadence
   period?: CreditGrantPeriod | null | undefined
 }): PreviewLine {
-  const amount = Number(g.credits || 0).toLocaleString()
-  const when =
+  const credits = Number(g.credits || 0)
+  const amount = Number.isFinite(credits) ? credits.toLocaleString('en-US') : String(g.credits)
+  const cadence =
     g.cadence === CreditGrantCadence.Recurring && g.period
-      ? `/ ${CREDIT_PERIOD_SHORT[g.period]}`
-      : 'once'
-  return { key: g.key, label: g.name || 'Credit grant', value: `${amount} ${when}` }
+      ? CREDIT_GRANT_PERIOD_LABEL[g.period].toLowerCase()
+      : 'one-time'
+  return {
+    key: g.key,
+    label: `${amount} credits · ${g.name || 'Credit grant'} · ${cadence}`,
+  }
 }
 
-const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
-
-/** One "Included" line for an entitlement, staged or saved: both share these fields. */
+/** One "Included" line, as the pricing widget writes it: allowance, then the name. */
 export function includedLine(e: {
   key: string
   name: string
@@ -105,19 +96,17 @@ export function includedLine(e: {
   isEnabled?: boolean | null | undefined
 }): PreviewLine {
   switch (e.featureType) {
-    case FeatureType.Metered:
-      return {
-        key: e.key,
-        label: e.name,
-        value:
-          e.usageLimit == null
-            ? 'Unlimited'
-            : [compact.format(e.usageLimit), e.unit].filter(Boolean).join(' '),
-      }
+    case FeatureType.Metered: {
+      const allowance =
+        e.usageLimit == null ? 'Unlimited' : Number(e.usageLimit).toLocaleString('en-US')
+      return { key: e.key, label: `${allowance} ${e.name}` }
+    }
     case FeatureType.Static:
-      return { key: e.key, label: e.name, value: e.staticValue || undefined }
+      return { key: e.key, label: e.staticValue ? `${e.staticValue} ${e.name}` : e.name }
     default:
-      return { key: e.key, label: e.name, value: e.isEnabled === false ? 'Off' : undefined }
+      return e.isEnabled === false
+        ? { key: e.key, label: e.name, value: 'Off' }
+        : { key: e.key, label: e.name }
   }
 }
 
@@ -171,42 +160,33 @@ export function pricingSummary(
   }
 }
 
-function More({ n }: { n: number }) {
-  return n > 0 ? <li className="text-muted-foreground text-xs">and {n} more</li> : null
+const PER: Record<string, string> = {
+  [BillingPeriod.Daily]: 'day',
+  [BillingPeriod.Weekly]: 'week',
+  [BillingPeriod.Monthly]: 'month',
+  [BillingPeriod.Quarterly]: 'quarter',
+  [BillingPeriod.HalfYearly]: 'half-year',
+  [BillingPeriod.Annual]: 'year',
 }
-
-const CAP = 3
-const PERIOD_WORD: Record<string, string> = { mo: 'month', yr: 'year' }
 
 export function PlanPreviewCard({
   charges,
-  meterLabel = (id) => id,
-  meterUnit,
   trialDays,
   included = [],
   credits = [],
   locale,
   className,
   variant = 'rail',
-  jumpTargets,
-  onJump,
 }: PlanPreviewCardProps) {
   const currency = (charges.find((c) => c.currency)?.currency ?? 'USD').toUpperCase()
-  const usageCharges = charges.filter((c) => c.type === PriceType.Usage)
-  const fixed = charges.filter((c) => c.type !== PriceType.Usage)
-  const base = fixed.find((c) => c.billingModel === BillingModel.FlatFee) ?? fixed[0]
-  const extras = fixed.filter((c) => c !== base)
-  const short = base ? BILLING_PERIOD_SHORT[base.billingPeriod as BillingPeriod] : undefined
-  const period = short ? (PERIOD_WORD[short] ?? short) : undefined
-
+  const recurring = charges.filter(
+    (charge) => charge.type === PriceType.Fixed && charge.billingPeriod !== BillingPeriod.OneTime,
+  )
+  const hasUsage = charges.some((charge) => charge.type === PriceType.Usage)
+  const total = recurring.reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0)
+  const price = recurring.length > 0 ? money(total, currency, locale) : null
+  const per = recurring[0] ? (PER[recurring[0].billingPeriod] ?? recurring[0].billingPeriod) : null
   const trial = trialDays && trialDays > 0 ? `${trialDays}-day free trial` : null
-  // With no fixed fee there is no flat price for usage to be "plus": the
-  // headline is the usage itself, named as a customer reads it.
-  const usageOnly = !base && usageCharges.length > 0
-  const usageNames = usageCharges.map((charge) => chargeLabel(charge, meterLabel))
-  const tail = [trial, usageCharges.length > 0 && !usageOnly ? 'plus usage' : null]
-    .filter(Boolean)
-    .join(' · ')
 
   return (
     <FormPreview
@@ -221,121 +201,57 @@ export function PlanPreviewCard({
         </p>
       ) : (
         <>
-          <div className="space-y-1">
-            <div className="flex items-baseline gap-1.5">
-              {base ? (
-                <>
-                  <span className="text-3xl font-medium tabular-nums">
-                    {base.billingModel === BillingModel.FlatFee
-                      ? money(Number(base.amount || 0), currency, locale)
-                      : pricingSummary(base, currency, locale)}
-                  </span>
-                  {period ? (
-                    <span className="text-muted-foreground text-sm">/ {period}</span>
-                  ) : null}
-                </>
-              ) : (
-                <span
-                  className={cn(
-                    'font-medium',
-                    usageOnly ? 'text-2xl' : 'text-muted-foreground text-3xl',
-                  )}
-                >
-                  {usageOnly ? usageBasedLabel(usageNames) : '—'}
-                </span>
-              )}
-            </div>
-            {tail ? <p className="text-muted-foreground text-xs">{tail}</p> : null}
+          <div className="flex flex-col gap-1">
+            {price ? (
+              <p className="flex items-baseline gap-1">
+                <span className="text-2xl font-medium tabular-nums">{price}</span>
+                {per ? <span className="text-muted-foreground text-sm">/{per}</span> : null}
+              </p>
+            ) : (
+              <p className="text-2xl font-medium">Usage-based</p>
+            )}
+            {price && hasUsage ? (
+              <p className="text-muted-foreground text-xs">Plus usage</p>
+            ) : !price ? (
+              <p className="text-muted-foreground text-xs">Billed on what is used</p>
+            ) : null}
+            {trial ? <p className="text-muted-foreground text-[13px]">{trial}</p> : null}
           </div>
 
-          {extras.length > 0 ? (
-            <PreviewSection
-              onJump={onJump}
-              title="Also billed"
-              {...(jumpTargets?.charges ? { jumpTo: jumpTargets.charges } : {})}
-            >
-              <ul className="space-y-2 text-[13px]">
-                {extras.slice(0, CAP).map((charge, index) => (
-                  <li key={index} className="flex justify-between gap-3">
-                    <span>{chargeLabel(charge, meterLabel)}</span>
-                    <span className="text-muted-foreground text-right tabular-nums">
-                      {charge.billingPeriod === BillingPeriod.OneTime
-                        ? `${pricingSummary(charge, currency, locale)} once`
-                        : pricingSummary(charge, currency, locale)}
-                    </span>
-                  </li>
-                ))}
-                <More n={extras.length - CAP} />
-              </ul>
-            </PreviewSection>
-          ) : null}
-
-          {usageCharges.length > 0 ? (
-            <PreviewSection
-              onJump={onJump}
-              title="Usage"
-              {...(jumpTargets?.charges ? { jumpTo: jumpTargets.charges } : {})}
-            >
-              <ul className="space-y-2.5 text-[13px]">
-                {usageCharges.slice(0, CAP).map((charge, index) => (
-                  <li key={index} className="space-y-0.5">
-                    <span className="block">{chargeLabel(charge, meterLabel)}</span>
-                    <span className="text-muted-foreground block tabular-nums">
-                      {pricingSummary(
-                        charge,
-                        currency,
-                        locale,
-                        charge.meterId ? meterUnit?.(charge.meterId) : undefined,
-                      )}
-                    </span>
-                  </li>
-                ))}
-                <More n={usageCharges.length - CAP} />
-              </ul>
-            </PreviewSection>
-          ) : null}
-
           {included.length > 0 ? (
-            <PreviewSection
-              onJump={onJump}
-              title="Included"
-              {...(jumpTargets?.included ? { jumpTo: jumpTargets.included } : {})}
-            >
-              <ul className="space-y-2 text-[13px]">
-                {included.slice(0, CAP).map((line) => (
-                  <li key={line.key} className="flex items-start gap-2">
-                    <CheckIcon aria-hidden className="text-success mt-0.5 size-3.5 shrink-0" />
-                    <span className="flex flex-1 justify-between gap-3">
-                      <span>{line.label}</span>
-                      {line.value ? (
-                        <span className="text-muted-foreground text-right">{line.value}</span>
-                      ) : null}
-                    </span>
-                  </li>
-                ))}
-                <More n={included.length - CAP} />
+            <div className="flex flex-col gap-2 border-t pt-4">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">Included</p>
+              <ul className="flex flex-col gap-2">
+                {included
+                  .filter((line) => line.value !== 'Off')
+                  .map((line) => (
+                    <li key={line.key} className="flex items-start gap-2 text-sm">
+                      <CheckIcon
+                        className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                        aria-hidden="true"
+                      />
+                      {line.label}
+                    </li>
+                  ))}
               </ul>
-            </PreviewSection>
+            </div>
           ) : null}
 
           {credits.length > 0 ? (
-            <PreviewSection
-              onJump={onJump}
-              title="Credits"
-              {...(jumpTargets?.credits ? { jumpTo: jumpTargets.credits } : {})}
-            >
-              <ul className="space-y-2 text-[13px]">
-                {credits.slice(0, CAP).map((line) => (
-                  <li key={line.key} className="flex justify-between gap-3">
-                    <span>{line.label}</span>
-                    {line.value ? (
-                      <span className="text-muted-foreground tabular-nums">{line.value}</span>
-                    ) : null}
+            <div className="flex flex-col gap-2 border-t pt-4">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">Credits</p>
+              <ul className="flex flex-col gap-2">
+                {credits.map((line) => (
+                  <li key={line.key} className="flex items-start gap-2 text-sm">
+                    <CoinsIcon
+                      className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    {line.label}
                   </li>
                 ))}
-                <More n={credits.length - CAP} />
               </ul>
-            </PreviewSection>
+            </div>
           ) : null}
         </>
       )}
