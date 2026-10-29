@@ -36,8 +36,8 @@ export function orgNameError(name: string): string | undefined {
   return word ? `The name can't include the word “${word}”. Choose another one.` : undefined
 }
 
-/** A website: a domain with a dot, optionally with http(s)://, a port and a path. */
-const WEBSITE = /^(https?:\/\/)?([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(:\d+)?(\/\S*)?$/i
+/** A website: a domain with a dot, optionally with http(s)://, a port, and a path, query or fragment. */
+const WEBSITE = /^(https?:\/\/)?([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(:\d+)?([/?#]\S*)?$/i
 
 export const tenantOnboardingSchema = z.object({
   orgName: z

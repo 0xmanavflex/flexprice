@@ -53,6 +53,9 @@ describe('the website answer', () => {
     expect(ok('acme.com')).toBe(true)
     expect(ok('https://www.acme.co.uk/pricing')).toBe(true)
     expect(ok('http://app.acme.io:8080')).toBe(true)
+    // A query or fragment straight after the domain, as a pasted link has.
+    expect(ok('https://acme.com?ref=invite')).toBe(true)
+    expect(ok('acme.com#pricing')).toBe(true)
   })
 
   it('refuses text that is not a website', () => {
