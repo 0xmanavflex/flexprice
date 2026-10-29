@@ -71,12 +71,14 @@ describe('recordOnboarding', () => {
     expect(mocks.captureError).not.toHaveBeenCalled()
   })
 
-  it('reports an HTTP error', async () => {
-    await recordOnboarding(ROW, { url: URL, fetch: respond('boom', { status: 500 }) })
+  it('reports an HTTP error without the response body or anything typed', async () => {
+    const body = 'error for Acme <billing@acme.com>'
+    await recordOnboarding(ROW, { url: URL, fetch: respond(body, { status: 500 }) })
     expect(mocks.captureError).toHaveBeenCalledWith(
       expect.objectContaining({ message: expect.stringContaining('HTTP 500') }),
-      expect.anything(),
+      { reason: expect.stringContaining('HTTP 500'), tenantId: 'tenant_1', status: 500 },
     )
+    expect(JSON.stringify(mocks.captureError.mock.calls)).not.toContain('acme.com')
   })
 
   it('reports an Apps Script failure served as HTTP 200', async () => {

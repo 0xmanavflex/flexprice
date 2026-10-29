@@ -37,15 +37,28 @@ test('a new tenant answers the onboarding questions, then lands on Home', async 
   await expect(page.getByText('Enter your organization name')).toBeVisible()
 
   await page.getByLabel('Organization name').fill('Acme Robotics')
+  await page.getByLabel('Website').fill('hello')
+  await page.getByRole('button', { name: 'Get started' }).click()
+  await expect(page.getByText('Enter a website, for example acme.com')).toBeVisible()
   await page.getByLabel('Website').fill('https://acme.com')
   await page.getByRole('radio', { name: 'Product Hunt' }).click()
 
   await page.getByRole('button', { name: 'Get started' }).click()
   await expect(page).toHaveURL(/\/$/)
 
-  // What the mocked API saved, read back through the page (MSW serves it).
+  // What was saved, read back for whichever tenant the session belongs to.
   const saved = await page.evaluate(async () => {
-    const res = await fetch('https://mock.flexprice.test/v1/tenants/tenant_demo')
+    const session = JSON.parse(window.localStorage.getItem('flexprice.session') ?? '{}') as {
+      token?: string
+    }
+    const headers = { Authorization: `Bearer ${session.token ?? ''}` }
+    const base = 'https://mock.flexprice.test/v1'
+    const me = (await (await fetch(`${base}/users/me`, { headers })).json()) as {
+      tenant_id?: string
+      tenant?: { id?: string }
+    }
+    const tenantId = me.tenant_id ?? me.tenant?.id ?? ''
+    const res = await fetch(`${base}/tenants/${tenantId}`, { headers })
     return (await res.json()) as { name: string; metadata: Record<string, string> }
   })
   expect(saved.name).toBe('Acme Robotics')
@@ -68,4 +81,29 @@ test('an onboarded tenant stays on Home, and /onboarding steps aside', async ({
   await expect(page).toHaveURL(/\/$/)
   await page.goto('/')
   await expect(page).not.toHaveURL(/onboarding/)
+})
+
+test('a direct visit with no environment stored picks one before reading the tenant', async ({
+  context,
+  page,
+}) => {
+  await signIn(context, { onboarded: false })
+  await context.addInitScript(() => {
+    try {
+      window.localStorage.removeItem('flexprice.environment')
+    } catch {
+      /* private-mode browser */
+    }
+  })
+  const tenantRead = page.waitForRequest(
+    (r) => r.method() === 'GET' && /\/tenants\/[^/]+$/.test(new URL(r.url()).pathname),
+  )
+  await page.goto('/onboarding')
+  expect((await tenantRead).headers()['x-environment-id']).toBeTruthy()
+
+  await page.getByLabel('Organization name').fill('Acme Robotics')
+  await page.getByLabel('Website').fill('acme.com')
+  await page.getByRole('radio', { name: 'Product Hunt' }).click()
+  await page.getByRole('button', { name: 'Get started' }).click()
+  await expect(page).toHaveURL(/\/$/)
 })

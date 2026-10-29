@@ -50,7 +50,9 @@ function reportFailure(
   row: OnboardingSheetRow,
   extra: Record<string, unknown> = {},
 ) {
-  const context = { reason, tenantId: row.tenantId, orgName: row.orgName, ...extra }
+  // Only the reason and ids: nothing the person typed, and never the sheet's
+  // response, which can echo customer data back.
+  const context = { reason, tenantId: row.tenantId, ...extra }
   console.error('[onboarding] Failed to record onboarding to the Google Sheet.', context)
   captureError(new Error(`Onboarding sheet recording failed: ${reason}`), context)
 }
@@ -89,7 +91,7 @@ export async function recordOnboarding(
     })
     const body = await res.text().catch(() => '')
     if (!res.ok) {
-      reportFailure(`HTTP ${res.status} ${res.statusText}`, row, { body: body.slice(0, 500) })
+      reportFailure(`HTTP ${res.status} ${res.statusText}`, row, { status: res.status })
       return
     }
     const scriptError = findAppsScriptError(body, res.headers.get('content-type'))

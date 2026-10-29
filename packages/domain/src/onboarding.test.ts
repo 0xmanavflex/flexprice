@@ -45,6 +45,24 @@ describe('tenantOnboardingSchema', () => {
   })
 })
 
+describe('the website answer', () => {
+  const valid = { orgName: 'Acme', referralSource: 'Reddit' }
+  const ok = (orgUrl: string) => tenantOnboardingSchema.safeParse({ ...valid, orgUrl }).success
+
+  it('takes a domain, with or without a scheme, port or path', () => {
+    expect(ok('acme.com')).toBe(true)
+    expect(ok('https://www.acme.co.uk/pricing')).toBe(true)
+    expect(ok('http://app.acme.io:8080')).toBe(true)
+  })
+
+  it('refuses text that is not a website', () => {
+    expect(ok('hello')).toBe(false)
+    expect(ok('acme')).toBe(false)
+    expect(ok('ftp://acme.com')).toBe(false)
+    expect(ok('acme .com')).toBe(false)
+  })
+})
+
 describe('onboardedMetadata', () => {
   it("keeps the tenant's existing keys and adds the flag and answers under V1's keys", () => {
     expect(

@@ -4,6 +4,7 @@ import { type TenantOnboarding, isTenantOnboarded, onboardedMetadata } from '@fp
 import { ApiError, ErrorKind, useCurrentUser, useTenant, useUpdateTenantMetadata } from '@fp/query'
 import { OnboardingScreen, toast } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
+import { useEnvironments } from '@/app/shell/useEnvironments'
 import { recordOnboarding } from '@/app/onboarding/recordOnboarding'
 
 export function messageForOnboardingError(error: unknown): string {
@@ -15,6 +16,8 @@ export function messageForOnboardingError(error: unknown): string {
       return 'Saving your workspace took too long. Try again.'
     case ErrorKind.Server:
       return 'Flexprice is having trouble right now. Try again in a moment.'
+    case ErrorKind.Forbidden:
+      return 'Only an admin can finish setting up this workspace.'
     default:
       return error.message || "We couldn't save your workspace. Try again."
   }
@@ -30,10 +33,14 @@ export function messageForOnboardingError(error: unknown): string {
  */
 export function OnboardingPage() {
   const navigate = useNavigate()
-  const { session } = useSession()
+  const { session, environmentId } = useSession()
+  // This route sits outside the shell, which is what normally picks an
+  // environment. The tenant read needs X-Environment-ID, so a direct visit with
+  // none stored picks the default here, and the tenant waits for it.
+  useEnvironments()
   const user = useCurrentUser(session?.token ?? null).data
   const tenantId = user?.tenantId ?? ''
-  const tenant = useTenant(tenantId)
+  const tenant = useTenant(environmentId ? tenantId : '')
   const update = useUpdateTenantMetadata()
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -65,7 +72,16 @@ export function OnboardingPage() {
           toast.success("You're all set!")
           void navigate({ to: '/', replace: true })
         },
-        onError: (error) => setFailure(messageForOnboardingError(error)),
+        onError: (error) => {
+          // A member who cannot write the tenant cannot finish onboarding; the
+          // form is a dead end for them, so Home it is, with the reason.
+          if (error instanceof ApiError && error.kind === ErrorKind.Forbidden) {
+            toast.info(messageForOnboardingError(error))
+            void navigate({ to: '/', replace: true })
+            return
+          }
+          setFailure(messageForOnboardingError(error))
+        },
       },
     )
   }

@@ -36,6 +36,9 @@ export function orgNameError(name: string): string | undefined {
   return word ? `The name can't include the word “${word}”. Choose another one.` : undefined
 }
 
+/** A website: a domain with a dot, optionally with http(s)://, a port and a path. */
+const WEBSITE = /^(https?:\/\/)?([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(:\d+)?(\/\S*)?$/i
+
 export const tenantOnboardingSchema = z.object({
   orgName: z
     .string()
@@ -44,7 +47,11 @@ export const tenantOnboardingSchema = z.object({
       const message = orgNameError(value)
       if (message) ctx.addIssue({ code: 'custom', message })
     }),
-  orgUrl: z.string().trim().min(1, "Enter your organization's website"),
+  orgUrl: z
+    .string()
+    .trim()
+    .min(1, "Enter your organization's website")
+    .regex(WEBSITE, 'Enter a website, for example acme.com'),
   referralSource: z.string().min(1, 'Pick where you found us'),
 })
 
