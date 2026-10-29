@@ -299,7 +299,6 @@ function EntitlementsSection({
     return (
       <Section
         title="Entitlements"
-        description="What each plan includes before charges apply"
         flush
       >
         <SubTabState
@@ -326,7 +325,6 @@ function EntitlementsSection({
       table
       showTitle
       title="Entitlements"
-      description="What each plan includes before charges apply"
     >
       <DetailTable
         compact
@@ -433,8 +431,6 @@ function OverviewTab({
               : charges.map(({ charge, parentName }) => ({ ...charge, displayName: parentName }))
           }
           chargeColumnLabel="Plan / add-on"
-          description="Every plan and add-on that bills for this feature"
-          emptyDescription="No plan or add-on prices this feature yet."
           layout="narrow"
           hideRowActions
           addLabel="Add charge"

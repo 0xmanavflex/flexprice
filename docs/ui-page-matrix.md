@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-69 route pages.
+70 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -16,6 +16,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | addons | `AddonListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | AddonGrid, Button, ListState, PageBody |
 | auth | `AuthCallbackPage` | Other | — | AuthFrame, Button |
 | auth | `ForgotPasswordPage` | Other | Field | AuthFrame, ForgotPasswordForm |
+| auth | `OnboardingPage` | Other | Field | OnboardingScreen |
 | auth | `ResetPasswordPage` | Other | Field | AuthFrame, SetPasswordForm |
 | auth | `SignInPage` | Other | Field | RegionField, SignInScreen |
 | auth | `SignUpConfirmPage` | Other | — | SignUpConfirmScreen |

@@ -70,6 +70,10 @@ export interface Tenant {
 export const TenantMetadataKey = {
   /** Set when the tenant is done onboarding; the support chat stops auto-opening. */
   OnboardingCompleted: 'onboarding_completed',
+  /** Where the tenant heard about Flexprice, from the onboarding form (V1's key). */
+  OnboardingReferralSource: 'onboarding_referral_source',
+  /** The organization's website, from the onboarding form (V1's key). */
+  OnboardingOrganizationUrl: 'onboarding_organization_url',
 } as const
 export type TenantMetadataKey = (typeof TenantMetadataKey)[keyof typeof TenantMetadataKey]
 

@@ -17,6 +17,12 @@ import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabSta
 import type { ReactElement } from 'react'
 import { ArrowRightIcon, CircleSlashIcon, CopyIcon, EyeIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@ui/components/primitives/tooltip'
 import { Section } from '@ui/compositions/layout/Section'
 
 import { provenance } from '@ui/provenance'
@@ -25,7 +31,6 @@ import { DetailTable, type DetailColumn } from '../../shared/DetailTable'
 import { Pill, type PillTone } from '../../shared/cells'
 import { ChargeFlags } from './ChargeFlags'
 import { ChargeSheet } from './ChargeSheet'
-
 /**
  * A charges section: what a plan, add-on, contract or cost sheet bills.
  *
@@ -129,9 +134,9 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
   showTitle?: boolean
   /**
-   * Brings "Billing timing" and "In effect" on screen in the narrow layout.
-   * Both are on by default in the wide layout; without this the narrow one
-   * keeps them in the column menu, so its row stays uncluttered.
+   * Brings "Billing timing" on screen in the narrow layout.
+   * It is on by default in the wide layout; without this the narrow one
+   * keeps it in the column menu. "In effect" is always on screen.
    */
   showDates?: boolean
   description?: string
@@ -190,15 +195,33 @@ function nameOf(charge: Charge): string {
 // viewer west of Greenwich does not see the day before.
 const DATE_OPTIONS = { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' } as const
 const DATE = new Intl.DateTimeFormat(undefined, DATE_OPTIONS)
-// "In effect" carries the time too, in UTC like the stored value, as the date
-// inputs show it ("Oct 21, 2026, 09:30 AM UTC").
-const DATE_TIME_OPTIONS = {
-  ...DATE_OPTIONS,
+
+/** "Jan 1, 2026 → Ongoing". One line everywhere this table is shown. */
+function inEffect(charge: Charge, locale?: string): string {
+  const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
+  const start = charge.startDate ? format.format(charge.startDate) : 'Start date not set'
+  const end = charge.endDate ? format.format(charge.endDate) : 'Ongoing'
+  return `${start} → ${end}`
+}
+
+const STAMP_OPTIONS = {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
-  hour12: true,
+  second: '2-digit',
+  hour12: false,
+  timeZoneName: 'longOffset',
 } as const
-const DATE_TIME = new Intl.DateTimeFormat(undefined, DATE_TIME_OPTIONS)
+
+/** "28 Oct 2026, 09:15:32 GMT+5:30", in the viewer's zone. */
+function stamp(date: Date, locale?: string): string {
+  const parts = new Intl.DateTimeFormat(locale, STAMP_OPTIONS).formatToParts(date)
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? ''
+  return `${part('day')} ${part('month')} ${part('year')}, ${part('hour')}:${part('minute')}:${part('second')} ${part('timeZoneName')}`
+}
 
 /** Whether a charge's end has passed. A future end date is scheduled: the charge still bills. */
 export function hasEnded(charge: Charge, now: number = Date.now()): boolean {
@@ -385,6 +408,35 @@ export function ChargeTable({
       ),
     },
     {
+      key: 'in-effect',
+      header: 'In effect',
+      width: 240,
+      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
+      text: (charge) => inEffect(charge, locale),
+      cell: (charge) => (
+        <Tooltip>
+          <TooltipTrigger
+            render={<span className="text-sm tabular-nums" />}
+            aria-label={`In effect: start ${charge.startDate ? stamp(charge.startDate, locale) : 'not set'}, end ${charge.endDate ? stamp(charge.endDate, locale) : 'ongoing'}`}
+          >
+            {inEffect(charge, locale)}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="flex-col items-stretch gap-1 px-3 py-2">
+            <span className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
+              <span className="opacity-70">Start</span>
+              <span className="tabular-nums">
+                {charge.startDate ? stamp(charge.startDate, locale) : 'Not set'}
+              </span>
+              <span className="opacity-70">End</span>
+              <span className="tabular-nums">
+                {charge.endDate ? stamp(charge.endDate, locale) : 'Ongoing'}
+              </span>
+            </span>
+          </TooltipContent>
+        </Tooltip>
+      ),
+    },
+    {
       key: 'price',
       header: 'Price',
       width: narrow ? 150 : 170,
@@ -414,20 +466,12 @@ export function ChargeTable({
     },
   ]
 
-  const format = locale ? new Intl.DateTimeFormat(locale, DATE_TIME_OPTIONS) : DATE_TIME
-  const at = (date: Date) => `${format.format(date)} UTC`
-  const inEffect = (charge: Charge) =>
-    !charge.startDate && !charge.endDate
-      ? 'Always'
-      : `${charge.startDate ? at(charge.startDate) : '—'} → ${
-          charge.endDate ? at(charge.endDate) : 'Ongoing'
-        }`
   const timing = (charge: Charge) =>
     charge.invoiceCadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'
 
-  // After price: quantity (when a page knows it), billing timing and the dates
-  // the charge is in effect, then flags. Beside a side rail (narrow) timing and
-  // dates sit in the column menu unless `showDates` asks for them.
+  // After the in-effect column: quantity (when a page knows it) and billing
+  // timing, then price and flags. Beside a side rail, timing sits in the
+  // column menu unless `showDates` asks for it.
   const middle: DetailColumn<Charge>[] = []
   if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
     middle.push({
@@ -440,41 +484,15 @@ export function ChargeTable({
       ),
     })
   }
-  middle.push(
-    {
-      key: 'timing',
-      header: 'Billing timing',
-      // Wide enough that its header never runs into "In effect".
-      width: 170,
-      text: timing,
-      cell: (charge) => <span>{timing(charge)}</span>,
-      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
-    },
-    {
-      key: 'dates',
-      header: 'In effect',
-      width: 240,
-      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
-      text: inEffect,
-      // Start over end, so the times fit without widening the table.
-      cell: (charge) =>
-        !charge.startDate && !charge.endDate ? (
-          <span>Always</span>
-        ) : (
-          <div className="tabular-nums">
-            <p className="text-sm">{charge.startDate ? at(charge.startDate) : '—'}</p>
-            <p className="text-muted-foreground text-xs">
-              {charge.endDate
-                ? `${hasEnded(charge) ? 'Ended' : 'Ends'} ${at(charge.endDate)}`
-                : 'Ongoing'}
-            </p>
-          </div>
-        ),
-      // Too much for a row beside a side rail unless the page asks for dates;
-      // otherwise one click away in the column menu.
-      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
-    },
-  )
+  middle.push({
+    key: 'timing',
+    header: 'Billing timing',
+    // Wide enough that its header never runs into "In effect".
+    width: 170,
+    text: timing,
+    cell: (charge) => <span>{timing(charge)}</span>,
+    ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
+  })
   columns.splice(2, 0, ...middle)
   columns.push({
     key: 'status',
@@ -546,7 +564,8 @@ export function ChargeTable({
   const description = variant === 'summary' ? undefined : sectionDescription
 
   return (
-    <>
+    <TooltipProvider delay={300}>
+      <>
       <Section
         table
         showTitle={showTitle}
@@ -623,6 +642,7 @@ export function ChargeTable({
           : {})}
         onClose={() => setOpen(null)}
       />
-    </>
+      </>
+    </TooltipProvider>
   )
 }

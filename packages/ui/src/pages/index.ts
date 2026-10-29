@@ -343,6 +343,8 @@ export { SignUpConfirmScreen, SignUpConfirmScreenProvenance } from './auth/SignU
 export type { SignUpConfirmScreenProps } from './auth/SignUpConfirmScreen'
 export { ForgotPasswordForm, ForgotPasswordFormProvenance } from './auth/ForgotPasswordForm'
 export type { ForgotPasswordFormProps } from './auth/ForgotPasswordForm'
+export { OnboardingScreen, OnboardingScreenProvenance } from './auth/OnboardingScreen'
+export type { OnboardingScreenProps } from './auth/OnboardingScreen'
 export { AuthFrame } from './auth/AuthFrame'
 export type { AuthFrameProps } from './auth/AuthFrame'
 export { SetPasswordForm, SetPasswordFormProvenance } from './auth/SetPasswordForm'

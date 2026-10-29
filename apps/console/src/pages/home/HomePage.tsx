@@ -25,6 +25,7 @@ import {
 import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
 import { CUSTOM_RANGE_ID, DashboardHome } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
+import { useOnboardingGate } from '@/app/onboarding/useOnboardingGate'
 import { qualityOf, withoutData } from './queryView'
 import type { QueryView } from './queryView'
 import type {
@@ -198,6 +199,8 @@ export function HomePage({
   search: HomeSearch
   onSearchChange: (next: HomeSearch) => void
 }) {
+  // A tenant that has not answered the onboarding questions answers them first.
+  useOnboardingGate()
   const navigate = useNavigate()
   const { environmentId } = useSession()
   const rangeId = search.range
