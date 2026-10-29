@@ -41,6 +41,7 @@ describe('toSelfBillingSummary', () => {
     )
     expect(summary).toEqual({
       state: 'suspended',
+      plan: null,
       trialEndsOn: '2026-10-10',
       invoices: [
         {
@@ -75,6 +76,69 @@ describe('toSelfBillingSummary', () => {
       }).events,
     ).toEqual({ used: 12480000, cap: null })
     expect(toSelfBillingSummary({ status: 'trialing' }).events).toBeNull()
+  })
+
+  it('reads the plan and its charges from the API, and none when it sends none', () => {
+    const { plan } = toSelfBillingSummary({
+      status: 'trialing',
+      plan: {
+        id: 'plan_1',
+        name: 'Pay as you go',
+        description: 'For everyone',
+        charges: [
+          {
+            price_id: 'price_base',
+            display_name: 'Platform fee',
+            type: 'FIXED',
+            amount: '199',
+            currency: 'usd',
+            billing_period: 'MONTHLY',
+            billing_period_count: 1,
+          },
+          {
+            price_id: 'price_rate',
+            display_name: 'Billing fee',
+            type: 'USAGE',
+            amount: '0.005',
+            currency: 'usd',
+            billing_period: 'MONTHLY',
+            transform_quantity: { divide_by: 0 },
+            meter_display_name: 'Invoice value',
+          },
+        ],
+      },
+    })
+    expect(plan).toEqual({
+      id: 'plan_1',
+      name: 'Pay as you go',
+      description: 'For everyone',
+      charges: [
+        {
+          id: 'price_base',
+          name: 'Platform fee',
+          type: 'fixed',
+          amount: '199',
+          currency: 'USD',
+          billingPeriod: 'MONTHLY',
+          billingPeriodCount: 1,
+          divideBy: null,
+          meterName: null,
+        },
+        {
+          id: 'price_rate',
+          name: 'Billing fee',
+          type: 'usage',
+          amount: '0.005',
+          currency: 'USD',
+          billingPeriod: 'MONTHLY',
+          billingPeriodCount: 1,
+          divideBy: null,
+          meterName: 'Invoice value',
+        },
+      ],
+    })
+    expect(toSelfBillingSummary({ status: 'trialing' }).plan).toBeNull()
+    expect(toSelfBillingSummary({ status: 'trialing', plan: { id: '', charges: [] } }).plan).toBeNull()
   })
 })
 

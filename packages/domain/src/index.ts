@@ -886,7 +886,6 @@ export {
 } from './access'
 export type { AccessGrants, AccessRequirement, RbacAction, RbacEntity } from './access'
 export {
-  SELF_BILLING_PLAN,
   AccountState,
   CheckoutStatus,
   CHECKOUT_SLOW_AFTER_MS,
@@ -900,8 +899,12 @@ export {
   daysUntil,
   emptyCheckoutDetails,
   lockReason,
+  chargePriceText,
   longDate,
-  planRateText,
+  periodText,
+  planMoney,
+  planFixedTotal,
+  planPriceText,
   selfInvoiceStatus,
   shortDate,
   trialProgress,
@@ -913,8 +916,10 @@ export type {
   CheckoutOutcome,
   LockReason,
   PillTone,
+  SelfBillingCharge,
   SelfBillingCheckout,
   SelfBillingInvoice,
+  SelfBillingPlan,
   SelfBillingStatus,
   SelfBillingSummary,
   SelfInvoiceStatus,

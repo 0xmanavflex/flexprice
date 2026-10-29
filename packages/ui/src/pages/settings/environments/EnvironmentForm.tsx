@@ -16,9 +16,6 @@ import {
   ENVIRONMENT_TYPE_LABEL,
   EnvironmentType,
   SANDBOX_AUTO_CANCELLATION_DAYS,
-  SELF_BILLING_PLAN,
-  planRateText,
-  usd,
   type CreateEnvironment,
   createEnvironmentSchema,
   emptyEnvironment,
@@ -103,6 +100,8 @@ export type ProductionOffer =
       kind: 'upgrade'
       /** The trial's event cap, for "The 50,000 event limit is lifted". */
       eventCap: number | null
+      /** The plan's price as the API reports it ("$199.00 a month + …"). Null while unknown. */
+      price: string | null
       onUpgrade: () => void
     }
   | {
@@ -267,10 +266,9 @@ export function EnvironmentForm({
               <SparklesIcon aria-hidden className="text-primary mt-0.5 size-4 shrink-0" />
               <div className="flex flex-col gap-0.5">
                 <p className="text-sm font-medium">Production comes with an upgrade</p>
-                <p className="text-muted-foreground text-[13px]">
-                  {usd(SELF_BILLING_PLAN.base)} a month + {planRateText} of what you bill through
-                  Flexprice in production.
-                </p>
+                {upgrade.price ? (
+                  <p className="text-muted-foreground text-[13px]">{upgrade.price}, in production.</p>
+                ) : null}
               </div>
             </div>
             <ul className="flex flex-col gap-1.5 pl-6.5 text-[13px]">

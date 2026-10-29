@@ -211,14 +211,19 @@ export const ProductionEmailOnly: Story = {
 export const ProductionIsTheUpgrade: Story = {
   args: {
     canCreateProduction: false,
-    production: { kind: 'upgrade', eventCap: 50_000, onUpgrade: fn() },
+    production: {
+      kind: 'upgrade',
+      eventCap: 50_000,
+      price: '$199.00 a month + $0.005 per Invoice value',
+      onUpgrade: fn(),
+    },
   },
   play: async ({ args }) => {
     const canvas = dialog()
     await userEvent.click(canvas.getByRole('radio', { name: /production/i }))
     await waitFor(() => expect(canvas.getByText('Production comes with an upgrade')).toBeVisible())
     await expect(
-      canvas.getByText('$199.00 a month + 0.5% of what you bill through Flexprice in production.'),
+      canvas.getByText('$199.00 a month + $0.005 per Invoice value, in production.'),
     ).toBeVisible()
     await expect(canvas.getByText('The 50,000 event limit is lifted')).toBeVisible()
     await expect(canvas.queryByRole('textbox', { name: /name/i })).toBeNull()

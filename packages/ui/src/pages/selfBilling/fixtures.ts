@@ -1,10 +1,42 @@
-import type { SelfBillingSummary } from '@fp/domain'
+import type { SelfBillingPlan, SelfBillingSummary } from '@fp/domain'
 
 /** Today in every self-billing story: the prototype's Oct 20, 2026. */
 export const TODAY = '2026-10-20'
 
+/** The plan as `/portal/billing/summary` reports it: the console holds no prices. */
+export const PLAN: SelfBillingPlan = {
+  id: 'plan_payg',
+  name: 'Pay as you go',
+  description: 'A platform fee, plus a share of what you bill in production.',
+  charges: [
+    {
+      id: 'price_platform',
+      name: 'Platform fee',
+      type: 'fixed',
+      amount: '199',
+      currency: 'USD',
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 1,
+      divideBy: null,
+      meterName: null,
+    },
+    {
+      id: 'price_billed',
+      name: 'Billing fee',
+      type: 'usage',
+      amount: '0.005',
+      currency: 'USD',
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 1,
+      divideBy: null,
+      meterName: 'Invoice value',
+    },
+  ],
+}
+
 const TRIAL: SelfBillingSummary = {
   state: 'trialing',
+  plan: PLAN,
   trialEndsOn: '2026-11-04',
   invoices: [],
   events: { used: 31_240, cap: 50_000 },
@@ -38,6 +70,7 @@ export const ACCOUNTS = {
   },
   live: {
     state: 'active',
+    plan: PLAN,
     trialEndsOn: null,
     events: { used: 12_480_000, cap: null },
     billed: 184_200,

@@ -708,6 +708,7 @@ export {
   toCheckoutBody,
   toSelfBillingCheckout,
   toSelfBillingStatus,
+  toSelfBillingPlan,
   toSelfBillingSummary,
   useCancelSelfBillingCheckout,
   useRefreshSelfBilling,

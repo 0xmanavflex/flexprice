@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { emptyCheckoutDetails } from '@fp/domain'
 import { UpgradeView } from './UpgradeView'
-import { TODAY } from './fixtures'
+import { PLAN, TODAY } from './fixtures'
 
 const ORGANIZATION = {
   name: 'Acme Inc',
@@ -23,6 +23,7 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   args: {
     state: 'trialing',
+    plan: PLAN,
     eventCap: 50_000,
     defaultValues: { ...emptyCheckoutDetails(), email: 'ola@flexprice.io' },
     fromOrganization: false,

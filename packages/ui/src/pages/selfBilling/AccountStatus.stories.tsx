@@ -33,7 +33,7 @@ export const Trial: Story = {
     await userEvent.hover(pill)
     await expect(
       await screen.findByText(
-        'Ends on Nov 4, 2026, or at 50,000 events. Then $199.00 a month + 0.5% of what you bill through Flexprice.',
+        'Ends on Nov 4, 2026, or at 50,000 events. Then $199.00 a month + $0.005 per Invoice value.',
       ),
     ).toBeVisible()
     await expect(screen.getByRole('progressbar', { name: 'Trial' })).toBeVisible()

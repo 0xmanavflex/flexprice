@@ -3,14 +3,49 @@ import {
   accountCopy,
   accountPill,
   checkoutOutcome,
+  chargePriceText,
   lockReason,
+  periodText,
+  planFixedTotal,
+  planPriceText,
   selfInvoiceStatus,
+  type SelfBillingCharge,
+  type SelfBillingPlan,
   type SelfBillingSummary,
 } from './selfBilling'
+
+const charge = (patch: Partial<SelfBillingCharge> = {}): SelfBillingCharge => ({
+  id: 'price_base',
+  name: 'Platform fee',
+  type: 'fixed',
+  amount: '199',
+  currency: 'USD',
+  billingPeriod: 'MONTHLY',
+  billingPeriodCount: 1,
+  divideBy: null,
+  meterName: null,
+  ...patch,
+})
+const PLAN: SelfBillingPlan = {
+  id: 'plan_payg',
+  name: 'Pay as you go',
+  description: '',
+  charges: [
+    charge(),
+    charge({
+      id: 'price_usage',
+      name: 'Billing fee',
+      type: 'usage',
+      amount: '0.005',
+      meterName: 'Invoice value',
+    }),
+  ],
+}
 
 const TODAY = '2026-10-20'
 const trial = (patch: Partial<SelfBillingSummary> = {}): SelfBillingSummary => ({
   state: 'trialing',
+  plan: PLAN,
   trialEndsOn: '2026-11-04',
   invoices: [],
   events: { used: 31_240, cap: 50_000 },
@@ -47,7 +82,7 @@ describe('accountPill', () => {
 describe('accountCopy', () => {
   it('words each state as the spec does', () => {
     expect(accountCopy(trial(), TODAY)).toBe(
-      'Ends on Nov 4, 2026, or at 50,000 events. Then $199.00 a month + 0.5% of what you bill through Flexprice.',
+      'Ends on Nov 4, 2026, or at 50,000 events. Then $199.00 a month + $0.005 per Invoice value.',
     )
     expect(accountCopy(trial({ trialEndsOn: '2026-10-23' }), TODAY)).toBe(
       'Ends on Oct 23, 2026. After that your account becomes read-only.',
@@ -96,5 +131,43 @@ describe('checkoutOutcome', () => {
       'processing',
     )
     expect(checkoutOutcome(null, 'success', 61_000)).toBe('slow')
+  })
+})
+
+describe('the plan, as the API reports it', () => {
+  it('prices a fixed charge by its period', () => {
+    expect(chargePriceText(charge())).toBe('$199.00 a month')
+    expect(chargePriceText(charge({ billingPeriod: 'QUARTERLY' }))).toBe('$199.00 every 3 months')
+    expect(chargePriceText(charge({ billingPeriod: '' }))).toBe('$199.00')
+  })
+
+  it('prices a usage charge per unit, or per the units it groups', () => {
+    expect(chargePriceText(PLAN.charges[1]!)).toBe('$0.005 per Invoice value')
+    expect(
+      chargePriceText(charge({ type: 'usage', amount: '2', divideBy: 1000, meterName: 'API calls' })),
+    ).toBe('$2.00 per 1,000 API calls')
+  })
+
+  it('joins the charges, and has nothing to say without a plan', () => {
+    expect(planPriceText(PLAN)).toBe('$199.00 a month + $0.005 per Invoice value')
+    expect(planPriceText(null)).toBeNull()
+    expect(planPriceText({ ...PLAN, charges: [] })).toBeNull()
+  })
+
+  it('sums the flat fees: what an upgrade charges up front', () => {
+    expect(planFixedTotal(PLAN)).toEqual({ amount: 199, currency: 'USD' })
+    expect(planFixedTotal({ ...PLAN, charges: [PLAN.charges[1]!] })).toBeNull()
+  })
+
+  it('says when a period repeats', () => {
+    expect(periodText('ANNUAL')).toBe('a year')
+    expect(periodText('MONTHLY', 2)).toBe('every 2 months')
+    expect(periodText('SOMETHING')).toBe('')
+  })
+
+  it('leaves the price out of the trial line when there is no plan', () => {
+    expect(accountCopy(trial({ plan: null }), TODAY)).toBe(
+      'Ends on Nov 4, 2026, or at 50,000 events.',
+    )
   })
 })

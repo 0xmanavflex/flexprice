@@ -1,13 +1,13 @@
 import {
   AccountState,
-  SELF_BILLING_PLAN,
   type SelfBillingInvoice,
   type SelfBillingSummary,
   URGENT_SHARE,
   daysUntil,
   lockReason,
+  chargePriceText,
   longDate,
-  planRateText,
+  planPriceText,
   usd,
 } from '@fp/domain'
 import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
@@ -67,7 +67,6 @@ export interface UsageBillingViewProps {
   portalError?: string | null
 }
 
-const planPrice = `${usd(SELF_BILLING_PLAN.base)} a month + ${planRateText} of what you bill through Flexprice`
 const unpaid = (summary: SelfBillingSummary) => summary.invoices.find((i) => i.status !== 'paid')
 
 /** Locked only: the page cannot open quietly on a read-only account. */
@@ -111,6 +110,9 @@ function PlanBlock({
   const byLimit = state === AccountState.Suspended && lockReason(summary, today) === 'event_limit'
   const nextInvoice = state === AccountState.Active ? (summary.period?.end ?? null) : null
   const due = unpaid(summary)
+  const { plan } = summary
+  const then = planPriceText(plan)
+  const onTrial = state === AccountState.Trialing || byLimit
   return (
     <SettingsBlock
       label="Plan"
@@ -118,8 +120,7 @@ function PlanBlock({
       info={
         state === AccountState.Trialing ? (
           <span>
-            Your trial ends on {ends}, in {left} days. Then {usd(SELF_BILLING_PLAN.base)} a month +{' '}
-            {planRateText} of what you bill through Flexprice.
+            Your trial ends on {ends}, in {left} days.{then ? ` Then ${then}.` : ''}
           </span>
         ) : nextInvoice ? (
           <span>Next invoice on {longDate(nextInvoice)}.</span>
@@ -142,13 +143,24 @@ function PlanBlock({
       }
     >
       <SettingsFieldGroup legend="Plan" description="Your Flexprice plan and its dates.">
-        <SettingRow title="Plan">
+        <SettingRow
+          title="Plan"
+          {...(plan?.description ? { titleAddon: <DelayedHint text={plan.description} /> } : {})}
+        >
           <span className="text-sm">
-            {state === AccountState.Trialing || byLimit
-              ? `Free trial, ${SELF_BILLING_PLAN.trialDays} days`
-              : `${SELF_BILLING_PLAN.name} · ${planPrice}`}
+            {onTrial
+              ? plan?.name
+                ? `Free trial, then ${plan.name}`
+                : 'Free trial'
+              : (plan?.name ?? 'Your Flexprice plan')}
           </span>
         </SettingRow>
+        {/* The plan's charges, one row each, as the API reports them. */}
+        {plan?.charges.map((charge) => (
+          <SettingRow key={charge.id || charge.name} title={charge.name || 'Charge'}>
+            <span className="text-sm tabular-nums">{chargePriceText(charge)}</span>
+          </SettingRow>
+        ))}
         {state === AccountState.Active && !nextInvoice ? null : (
           <SettingRow
             title={
@@ -259,14 +271,12 @@ function UsageBlock({ summary, today }: { summary: SelfBillingSummary; today: st
           <p className="text-muted-foreground flex items-center gap-2 text-[13px] [&_svg]:size-4">
             <TrendingUpIcon aria-hidden />
             Billed through Flexprice
-            <DelayedHint
-              text={`What you invoiced your customers this period. Flexprice charges ${planRateText} of it once you're live.`}
-            />
+            <DelayedHint text="What you invoiced your customers this period. Your plan's usage charges apply to it once you're live." />
           </p>
           <p className="text-2xl font-medium tracking-tight tabular-nums">{usd(billed)}</p>
           <p className="text-muted-foreground text-[13px] tabular-nums">
             {summary.state === AccountState.Active
-              ? `${planRateText} fee so far: ${usd(Math.round(billed * SELF_BILLING_PLAN.rate * 100) / 100)}`
+              ? 'Charged as your plan sets out'
               : 'No fee during the trial'}
           </p>
         </div>

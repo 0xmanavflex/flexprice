@@ -2,11 +2,13 @@ import { useState, type ReactNode } from 'react'
 import {
   AccountState,
   type CheckoutDetails,
-  SELF_BILLING_PLAN,
+  type SelfBillingPlan,
+  chargePriceText,
   checkoutDetailsSchema,
   longDate,
-  planRateText,
-  usd,
+  planFixedTotal,
+  planMoney,
+  planPriceText,
 } from '@fp/domain'
 import flexpriceIcon from '@ui/assets/flexprice-icon.png'
 import { Button } from '@ui/components/primitives/button'
@@ -45,6 +47,8 @@ export const UpgradeViewProvenance = provenance({
 
 export interface UpgradeViewProps {
   state: AccountState
+  /** The plan an upgrade puts the account on, from the billing summary. Null while unknown. */
+  plan: SelfBillingPlan | null
   /** The trial's event cap, when the summary has one. */
   eventCap: number | null
   /** The form's opening values: from Organization when it exists, else just the billing email. */
@@ -70,21 +74,30 @@ function monthAfter(day: string): string {
 }
 
 /** What is due now, and what every invoice after it is made of. */
-function BillingBox({ today }: { today: string }) {
-  const base = usd(SELF_BILLING_PLAN.base)
+function BillingBox({ today, plan }: { today: string; plan: SelfBillingPlan | null }) {
+  const fixed = planFixedTotal(plan)
+  const base = fixed ? planMoney(fixed.amount, fixed.currency) : null
+  const recurring = planPriceText(plan)
   const steps: [string, string, string][] = [
-    ['Today', base, 'The platform fee for your first month.'],
-    [
-      `From ${longDate(monthAfter(today))}, monthly`,
-      `${base} + ${planRateText}`,
-      'The platform fee, plus a share of what you invoice your customers through Flexprice in production.',
-    ],
+    ...(base
+      ? ([['Today', base, 'The flat fees for your first period.']] as [string, string, string][])
+      : []),
+    ...(recurring
+      ? ([
+          [
+            `From ${longDate(monthAfter(today))}`,
+            recurring,
+            "Your plan's charges, on what you invoice your customers through Flexprice in production.",
+          ],
+        ] as [string, string, string][])
+      : []),
   ]
+  if (steps.length === 0) return null
   return (
     <div className="bg-background flex flex-col rounded-xl border shadow-xs">
       <div className="flex items-baseline justify-between gap-4 px-5 py-4">
         <span className="text-sm font-medium">Due today</span>
-        <span className="text-xl font-medium tracking-tight tabular-nums">{base}</span>
+        <span className="text-xl font-medium tracking-tight tabular-nums">{base ?? '—'}</span>
       </div>
       <div className="border-t px-5 py-4">
         <h2 className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">
@@ -123,10 +136,13 @@ function BillingBox({ today }: { today: string }) {
 
 function Offer({
   state,
+  plan,
   eventCap,
   today,
   onBack,
-}: Pick<UpgradeViewProps, 'state' | 'eventCap' | 'today' | 'onBack'>) {
+}: Pick<UpgradeViewProps, 'state' | 'plan' | 'eventCap' | 'today' | 'onBack'>) {
+  const fixed = planFixedTotal(plan)
+  const usage = plan?.charges.filter((charge) => charge.type === 'usage') ?? []
   const locked = state === AccountState.Suspended
   const benefits = [
     ...(locked ? ['Your account can be edited again'] : []),
@@ -153,16 +169,21 @@ function Offer({
           <p className="text-muted-foreground text-sm">
             {locked ? 'Upgrade to unlock your account' : 'Upgrade Flexprice'}
           </p>
-          <p className="text-4xl font-medium tracking-tight tabular-nums">
-            {usd(SELF_BILLING_PLAN.base)}
-            <span className="text-muted-foreground text-base font-normal"> a month</span>
-          </p>
-          <p className="text-muted-foreground text-[13px]">
-            {SELF_BILLING_PLAN.name}, plus {planRateText} of what you bill through Flexprice in
-            production.
-          </p>
+          {fixed ? (
+            <p className="text-4xl font-medium tracking-tight tabular-nums">
+              {planMoney(fixed.amount, fixed.currency)}
+            </p>
+          ) : null}
+          {plan ? (
+            <p className="text-muted-foreground text-[13px]">
+              {plan.name}
+              {usage.length > 0
+                ? `, plus ${usage.map(chargePriceText).join(' and ')} in production.`
+                : '.'}
+            </p>
+          ) : null}
         </div>
-        <BillingBox today={today} />
+        <BillingBox today={today} plan={plan} />
         <ul className="flex flex-col gap-2 text-[13px]">
           {benefits.map((benefit) => (
             <li key={benefit} className="flex items-start gap-2">
@@ -191,6 +212,7 @@ function errorsOf(details: CheckoutDetails): Errors {
 
 export function UpgradeView({
   state,
+  plan,
   eventCap,
   defaultValues,
   fromOrganization,
@@ -239,7 +261,7 @@ export function UpgradeView({
     // `flex-1`, not `min-h-full`: the shell's scroller also holds the header,
     // so a full-height page under it always overflowed by the header's height.
     <div className="grid flex-1 lg:grid-cols-2">
-      <Offer state={state} eventCap={eventCap} today={today} onBack={onBack} />
+      <Offer state={state} plan={plan} eventCap={eventCap} today={today} onBack={onBack} />
       <section
         aria-labelledby="upgrade-billing-details"
         className="flex flex-col gap-8 px-10 py-8 2xl:px-14"

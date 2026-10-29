@@ -1,4 +1,4 @@
-import { AccountState, type CreateEnvironment } from '@fp/domain'
+import { AccountState, type CreateEnvironment, planPriceText } from '@fp/domain'
 import { useCreateEnvironment, useSelfBillingStatus, useSelfBillingSummary } from '@fp/query'
 import type { ShellEnvironment } from '@fp/ui/compositions'
 import { EnvironmentForm, type ProductionOffer } from '@fp/ui/pages'
@@ -46,6 +46,7 @@ function useProductionOffer(
       production: {
         kind: 'upgrade',
         eventCap: summary.data?.events?.cap ?? null,
+        price: planPriceText(summary.data?.plan ?? null),
         onUpgrade: () => {
           close()
           upgrade()

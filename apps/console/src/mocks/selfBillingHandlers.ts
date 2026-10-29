@@ -47,7 +47,56 @@ const invoice = (number: string, total: string, paid: boolean, due: number) => (
   pdf_url: paid ? `https://example.com/${number}.pdf` : '',
 })
 
+/** The plan the summary reports, in the API's shape: the console prices nothing itself. */
+const PLAN = {
+  id: 'plan_selfbilling_payg',
+  name: 'Pay as you go',
+  description: 'A platform fee, plus a share of what you bill in production.',
+  charges: [
+    {
+      price_id: 'price_platform',
+      line_item_id: '',
+      display_name: 'Platform fee',
+      type: 'FIXED',
+      quantity: '1',
+      amount: '199',
+      currency: 'usd',
+      billing_model: 'FLAT_FEE',
+      billing_period: 'MONTHLY',
+      billing_period_count: 1,
+      invoice_cadence: 'ADVANCE',
+      transform_quantity: { divide_by: 0 },
+      meter_id: '',
+      meter_display_name: '',
+      price_unit_type: 'FIAT',
+      price_unit_amount: '',
+    },
+    {
+      price_id: 'price_billed',
+      line_item_id: '',
+      display_name: 'Billing fee',
+      type: 'USAGE',
+      quantity: '0',
+      amount: '0.005',
+      currency: 'usd',
+      billing_model: 'FLAT_FEE',
+      billing_period: 'MONTHLY',
+      billing_period_count: 1,
+      invoice_cadence: 'ARREAR',
+      transform_quantity: { divide_by: 0 },
+      meter_id: 'meter_invoice_value',
+      meter_display_name: 'Invoice value',
+      price_unit_type: 'FIAT',
+      price_unit_amount: '',
+    },
+  ],
+}
+
 function summaryOf(state: MockState) {
+  return { plan: PLAN, ...summaryByState(state) }
+}
+
+function summaryByState(state: MockState) {
   switch (state) {
     case 'trial':
       return {
