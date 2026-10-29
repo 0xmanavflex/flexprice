@@ -1693,7 +1693,8 @@
         "Composer",
         "DateInput",
         "Field",
-        "FormDialog"
+        "FormDialog",
+        "SimpleTable"
       ],
       "usedBy": [
         "SubscriptionDetailView"
@@ -6031,7 +6032,8 @@
         "EntityList",
         "PencilIcon",
         "Status",
-        "Tag"
+        "Tag",
+        "WandSparklesIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanGrid.stories.tsx"
@@ -7281,6 +7283,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "ConnectionExports",
+        "ContractQuantityDialog",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -8290,6 +8293,22 @@
       ],
       "usedBy": [
         "CustomerWalletView"
+      ],
+      "story": null
+    },
+    "WandSparkles": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "WandSparklesIcon": {
+      "file": "src/icons/local/wand-sparkles.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "PlanGrid"
       ],
       "story": null
     },

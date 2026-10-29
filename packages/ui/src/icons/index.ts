@@ -144,6 +144,7 @@ import static_user from '../reui/icons/default/outline/user'
 import static_users from '../reui/icons/default/outline/users'
 import static_wallet from '../reui/icons/default/outline/wallet'
 import static_wrench from '../reui/icons/default/outline/wrench'
+import local_wandSparkles from './local/wand-sparkles'
 
 export type { IconComponent, IconProps } from './factory'
 export type LucideIcon = IconComponent
@@ -475,6 +476,8 @@ export const Users: IconComponent = staticIcon(static_users, 'Users')
 export { Users as UsersIcon }
 export const Wallet: IconComponent = staticIcon(static_wallet, 'Wallet')
 export { Wallet as WalletIcon }
+export const WandSparkles: IconComponent = staticIcon(local_wandSparkles, 'WandSparkles')
+export { WandSparkles as WandSparklesIcon }
 export const Waypoints: IconComponent = staticIcon(static_route, 'Waypoints')
 export { Waypoints as WaypointsIcon }
 export const Webhook: IconComponent = animatedIcon(animated_ringsLinked, 'Webhook')

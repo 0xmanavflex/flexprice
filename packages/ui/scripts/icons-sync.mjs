@@ -13,6 +13,11 @@
  *   pnpm icons:sync            install what is missing, normalize, regenerate
  *   pnpm icons:sync --force    reinstall every icon from the registry
  *   pnpm icons:sync --offline  skip installing; only normalize and regenerate
+ *
+ * An entry with `local` instead of `reui` names a repo-owned icon in
+ * `src/icons/local/<name>.tsx` (same shape as a registry icon: a component
+ * taking `className`), for a glyph the registry set does not have. Those are
+ * never installed or removed here, only exported.
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, globSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -29,6 +34,8 @@ const map = JSON.parse(readFileSync(mapPath, 'utf8'))
 const style = map.style
 const entries = Object.entries(map.icons).sort(([a], [b]) => a.localeCompare(b))
 
+const localDir = resolve(root, 'src/icons/local')
+const isLocal = (icon) => typeof icon.local === 'string'
 const variantOf = (icon) => (icon.animated ? 'animated' : 'default')
 const styleOf = (icon) => icon.style ?? style
 const fileOf = (variant, iconStyle, name) => resolve(vendorDir, variant, iconStyle, `${name}.tsx`)
@@ -36,19 +43,23 @@ const fileOf = (variant, iconStyle, name) => resolve(vendorDir, variant, iconSty
 // Keyed by variant/style/name; an icon may override the map's default style.
 const wanted = new Map()
 for (const [, icon] of entries) {
+  if (isLocal(icon)) continue
   const variant = variantOf(icon)
   const iconStyle = styleOf(icon)
   wanted.set(`${variant}/${iconStyle}/${icon.reui}`, [variant, iconStyle, icon.reui])
 }
 
 const failures = []
-for (const [key] of Object.entries(map.icons)) {
+for (const [key, icon] of Object.entries(map.icons)) {
   if (!/^[A-Z][A-Za-z0-9]*$/.test(key)) failures.push(`"${key}" is not a PascalCase export name`)
+  if (isLocal(icon) && !existsSync(resolve(localDir, `${icon.local}.tsx`)))
+    failures.push(`local icon missing: src/icons/local/${icon.local}.tsx`)
 }
 
 if (!args.has('--offline')) {
   const missing = [...wanted.values()].filter(
-    ([variant, iconStyle, name]) => args.has('--force') || !existsSync(fileOf(variant, iconStyle, name)),
+    ([variant, iconStyle, name]) =>
+      args.has('--force') || !existsSync(fileOf(variant, iconStyle, name)),
   )
   for (let i = 0; i < missing.length; i += 20) {
     const items = missing
@@ -60,7 +71,9 @@ if (!args.has('--offline')) {
       env: process.env,
     })
   }
-  console.log(missing.length === 0 ? 'all icons already installed' : `installed ${missing.length} icons`)
+  console.log(
+    missing.length === 0 ? 'all icons already installed' : `installed ${missing.length} icons`,
+  )
 }
 
 const HEADER = `// @ts-nocheck — vendored from the ReUI registry (Motion Icons); do not hand-edit.
@@ -68,7 +81,8 @@ const HEADER = `// @ts-nocheck — vendored from the ReUI registry (Motion Icons
 `
 
 for (const [variant, iconStyle, name] of wanted.values()) {
-  if (!existsSync(fileOf(variant, iconStyle, name))) failures.push(`not installed: ${variant}/${iconStyle}/${name}`)
+  if (!existsSync(fileOf(variant, iconStyle, name)))
+    failures.push(`not installed: ${variant}/${iconStyle}/${name}`)
 }
 
 // Normalise every vendored icon: the registry source imports `cn` by a bare
@@ -92,14 +106,27 @@ for (const file of globSync('**/*.tsx', { cwd: vendorDir })) {
 const identifier = (variant, iconStyle, name) =>
   `${variant === 'animated' ? 'animated' : 'static'}_${iconStyle === style ? '' : `${iconStyle}_`}${name.replaceAll(/-(\w)/g, (_, c) => c.toUpperCase()).replaceAll(/\W/g, '_')}`
 
-const imports = [...wanted.values()]
-  .sort(([av, as, an], [bv, bs, bn]) => `${av}/${as}/${an}`.localeCompare(`${bv}/${bs}/${bn}`))
-  .map(
-    ([variant, iconStyle, name]) =>
-      `import ${identifier(variant, iconStyle, name)} from '../reui/icons/${variant}/${iconStyle}/${name}'`,
-  )
+const localIdentifier = (name) =>
+  `local_${name.replaceAll(/-(\w)/g, (_, c) => c.toUpperCase()).replaceAll(/\W/g, '_')}`
+
+const imports = [
+  ...[...wanted.values()]
+    .sort(([av, as, an], [bv, bs, bn]) => `${av}/${as}/${an}`.localeCompare(`${bv}/${bs}/${bn}`))
+    .map(
+      ([variant, iconStyle, name]) =>
+        `import ${identifier(variant, iconStyle, name)} from '../reui/icons/${variant}/${iconStyle}/${name}'`,
+    ),
+  ...[...new Set(entries.filter(([, icon]) => isLocal(icon)).map(([, icon]) => icon.local))]
+    .sort()
+    .map((name) => `import ${localIdentifier(name)} from './local/${name}'`),
+]
 
 const exports = entries.map(([key, icon]) => {
+  if (isLocal(icon)) {
+    const rotate = icon.rotate === undefined ? '' : `, ${icon.rotate}`
+    return `export const ${key}: IconComponent = staticIcon(${localIdentifier(icon.local)}, '${key}'${rotate})
+export { ${key} as ${key}Icon }`
+  }
   const variant = variantOf(icon)
   const factory = icon.animated ? 'animatedIcon' : 'staticIcon'
   const rotate = icon.rotate === undefined ? '' : `, ${icon.rotate}`
@@ -128,4 +155,7 @@ if (failures.length > 0) {
   console.error(failures.map((f) => `  ${f}`).join('\n'))
   process.exit(1)
 }
-console.log(`icons: ${entries.length} names -> ${wanted.size} ReUI icons (${style})`)
+const locals = entries.filter(([, icon]) => isLocal(icon)).length
+console.log(
+  `icons: ${entries.length} names -> ${wanted.size} ReUI icons (${style})${locals ? `, ${locals} local` : ''}`,
+)
