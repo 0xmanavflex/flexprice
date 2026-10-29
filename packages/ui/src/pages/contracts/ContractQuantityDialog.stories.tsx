@@ -86,3 +86,56 @@ export const ClearsTheEffectiveDay: Story = {
     await expect(dialog.getByRole('button', { name: 'Effective from' })).toHaveTextContent('Now')
   },
 }
+
+/** Quantity and price both changed: the preview shows each, before and after, and the price of each line. */
+export const PreviewShowsPriceAndQuantity: Story = {
+  args: {
+    onPreview: fn(async () => ({
+      lines: [
+        {
+          id: 'li_seats',
+          action: 'ended',
+          quantity: '5',
+          startDate: new Date('2026-09-30T00:00:00Z'),
+          endDate: new Date('2026-10-27T00:00:00Z'),
+        },
+        {
+          id: 'li_seats_2',
+          action: 'created',
+          quantity: '8',
+          startDate: new Date('2026-10-27T00:00:00Z'),
+          endDate: null,
+        },
+      ],
+      invoices: [
+        { action: 'created', status: 'preview', amountDue: { amount: '21.77', currency: 'USD' } },
+      ],
+    })),
+  },
+  play: async () => {
+    const dialog = within(await screen.findByRole('dialog'))
+    const quantity = dialog.getByRole('textbox', { name: 'Quantity' })
+    await userEvent.clear(quantity)
+    await userEvent.type(quantity, '8')
+    const price = dialog.getByRole('textbox', { name: /Price/ })
+    await userEvent.clear(price)
+    await userEvent.type(price, '25')
+    await userEvent.click(dialog.getByRole('button', { name: 'Preview change' }))
+
+    await dialog.findByText('Before')
+    const [summary, lines] = dialog.getAllByRole('table')
+    const quantityRow = within(within(summary!).getByText('Quantity').closest('tr')!)
+    await expect(quantityRow.getByText('5')).toBeVisible()
+    await expect(quantityRow.getByText('8')).toBeVisible()
+    const priceRow = within(within(summary!).getByText('Price').closest('tr')!)
+    await expect(priceRow.getByText('$20.00')).toBeVisible()
+    await expect(priceRow.getByText('$25.00')).toBeVisible()
+    // Each line carries its own price: the old one ended, the new one started.
+    const ended = within(within(lines!).getByText('Ended').closest('tr')!)
+    await expect(ended.getByText('$20.00')).toBeVisible()
+    const started = within(within(lines!).getByText('New line').closest('tr')!)
+    await expect(started.getByText('$25.00')).toBeVisible()
+    await expect(started.getByText(/Ongoing/)).toBeVisible()
+    await expect(dialog.getByText('$21.77')).toBeVisible()
+  },
+}
