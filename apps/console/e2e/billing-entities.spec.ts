@@ -330,21 +330,19 @@ test("billing entities: a draft invoice is billed from its customer's entity, li
   await expect(page).toHaveURL(/\/settings\/billing-entities\/[^/?]+/)
 })
 
-test('billing entities: invoices, payments and credit memos show their entity and filter by it', async ({
-  page,
-}) => {
-  await addIndiaEntity(page)
+async function pickIndia(page: Page) {
+  await page.getByRole('button', { name: /^Filter/ }).click()
+  await page
+    .getByRole('dialog', { name: 'Advanced filter' })
+    .getByRole('button', { name: 'Add filter' })
+    .click()
+  await page.getByRole('option', { name: 'Billing entity', exact: true }).click()
+  await page.getByRole('option', { name: 'is', exact: true }).click()
+  await page.getByRole('option', { name: 'Northwind India' }).click()
+}
 
-  const pickIndia = async () => {
-    await page.getByRole('button', { name: /^Filter/ }).click()
-    await page
-      .getByRole('dialog', { name: 'Advanced filter' })
-      .getByRole('button', { name: 'Add filter' })
-      .click()
-    await page.getByRole('option', { name: 'Billing entity', exact: true }).click()
-    await page.getByRole('option', { name: 'is', exact: true }).click()
-    await page.getByRole('option', { name: 'Northwind India' }).click()
-  }
+test('billing entities: invoices show their entity and filter by it', async ({ page }) => {
+  await addIndiaEntity(page)
 
   await page.goto('/invoices')
   await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toBeVisible()
@@ -352,13 +350,17 @@ test('billing entities: invoices, payments and credit memos show their entity an
   const searched = page.waitForRequest(
     (request) => request.method() === 'POST' && request.url().includes('/invoices/search'),
   )
-  await pickIndia()
+  await pickIndia(page)
   const body = (await searched).postDataJSON()
   expect(body.billing_entity_id).toMatch(/^be_mock_/)
   expect(JSON.stringify(body.filters ?? [])).not.toContain('billing_entity_id')
   await page.keyboard.press('Escape')
   // Every mock invoice belongs to the default entity.
   await expect(page.getByRole('cell', { name: 'Northwind Systems' })).toHaveCount(0)
+})
+
+test('billing entities: payments show their entity and filter by it', async ({ page }) => {
+  await addIndiaEntity(page)
 
   await page.goto('/payments')
   await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toBeVisible()
@@ -366,8 +368,12 @@ test('billing entities: invoices, payments and credit memos show their entity an
     (request) =>
       request.method() === 'GET' && /\/payments\?.*billing_entity_id=be_mock_/.test(request.url()),
   )
-  await pickIndia()
+  await pickIndia(page)
   await listed
+})
+
+test('billing entities: credit memos show their entity and filter by it', async ({ page }) => {
+  await addIndiaEntity(page)
 
   await page.goto('/credit-memos')
   await expect(page.getByRole('columnheader', { name: 'Billing entity' })).toBeVisible()
@@ -376,7 +382,7 @@ test('billing entities: invoices, payments and credit memos show their entity an
       request.method() === 'GET' &&
       /\/creditnotes\?.*billing_entity_id=be_mock_/.test(request.url()),
   )
-  await pickIndia()
+  await pickIndia(page)
   await memos
 })
 
