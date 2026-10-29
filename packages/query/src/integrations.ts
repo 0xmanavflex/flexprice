@@ -93,7 +93,7 @@ export function useConnections(options: { enabled?: boolean } = {}) {
   const auth = useFlexpriceAuth()
 
   return useQuery({
-    queryKey: queryKeys.integrations.list(),
+    queryKey: queryKeys.integrations.all(),
     queryFn: () => fetchIntegrations(serverURL, auth),
     enabled: options.enabled ?? true,
   })

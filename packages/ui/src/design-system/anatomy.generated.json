@@ -367,6 +367,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "BillingEntityIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
         "FxRatesSection",
@@ -798,6 +799,20 @@
       "usedBy": [],
       "story": "./src/pages/settings/billing-entities/BillingEntityDetail.stories.tsx"
     },
+    "BillingEntityField": {
+      "file": "src/pages/integrations/ConnectionFields.tsx",
+      "layer": "surface",
+      "composes": [
+        "EyeIcon",
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "ConnectIntegrationSheet",
+        "ManageConnectionSheet"
+      ],
+      "story": null
+    },
     "BillingEntityForm": {
       "file": "src/pages/settings/billing-entities/BillingEntityForm.tsx",
       "layer": "surface",
@@ -825,6 +840,19 @@
       ],
       "usedBy": [],
       "story": "./src/pages/settings/billing-entities/BillingEntityGrid.stories.tsx"
+    },
+    "BillingEntityIntegrations": {
+      "file": "src/pages/settings/billing-entities/BillingEntityIntegrations.tsx",
+      "layer": "surface",
+      "composes": [
+        "AppFailure",
+        "IntegrationLogo",
+        "LoadingRows",
+        "Section",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/billing-entities/BillingEntityIntegrations.stories.tsx"
     },
     "BillingIconTile": {
       "file": "src/components/blocks/solution-billing-4/components/billing-icon-tile.tsx",
@@ -1641,6 +1669,7 @@
       "layer": "surface",
       "composes": [
         "ArrowUpRightIcon",
+        "BillingEntityField",
         "Field",
         "Sheet",
         "SpecField",
@@ -2378,6 +2407,17 @@
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerGrid.stories.tsx"
+    },
+    "CustomerPaymentsSection": {
+      "file": "src/pages/customers/CustomerPaymentsSection.tsx",
+      "layer": "surface",
+      "composes": [
+        "Field",
+        "OptionSelect",
+        "Section"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerPaymentsSection.stories.tsx"
     },
     "CustomerPortalView": {
       "file": "src/pages/customer-portal/CustomerPortalView.tsx",
@@ -3205,6 +3245,7 @@
         "DataExportDetail",
         "ExportRunList",
         "ExportsOverview",
+        "ProviderConnections",
         "S3ConnectionList"
       ],
       "story": "./src/pages/shared/EntityHeader.stories.tsx"
@@ -3517,6 +3558,7 @@
         "ActivityEventSheet",
         "ActivityLog",
         "ActivitySection",
+        "BillingEntityField",
         "ChargeTable",
         "ConnectionExports",
         "CustomerActivityView",
@@ -3673,6 +3715,7 @@
         "AddCreditsDialog",
         "AddonChargesDialog",
         "AutoTopupDialog",
+        "BillingEntityField",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",
@@ -3683,6 +3726,7 @@
         "ContractQuantityDialog",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
+        "CustomerPaymentsSection",
         "CustomerWalletView",
         "DashedRule",
         "DataExportDialog",
@@ -4644,7 +4688,9 @@
         "ErrorState",
         "SkeletonRegion"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "BillingEntityIntegrations"
+      ],
       "story": "./src/pages/integrations/IntegrationsBlock.stories.tsx"
     },
     "IntegrationMark": {
@@ -5130,6 +5176,7 @@
         "SkeletonRegion"
       ],
       "usedBy": [
+        "BillingEntityIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
         "EntityAlertDialog",
@@ -5228,6 +5275,7 @@
       "file": "src/pages/integrations/ManageConnectionSheet.tsx",
       "layer": "surface",
       "composes": [
+        "BillingEntityField",
         "ConfirmDialog",
         "Field",
         "Sheet",
@@ -5600,6 +5648,7 @@
       "composes": [],
       "usedBy": [
         "AddonChargesDialog",
+        "BillingEntityField",
         "BonusSlabTable",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
@@ -5613,6 +5662,7 @@
         "CreditGrantEditForm",
         "CreditNoteForm",
         "CustomerForm",
+        "CustomerPaymentsSection",
         "CustomerTaxSection",
         "CustomerWalletView",
         "DataExportDialog",
@@ -6008,6 +6058,7 @@
         "PaymentStatusDialog",
         "PlanAiSetupView",
         "PortalEmpty",
+        "ProviderConnections",
         "RadioRows",
         "S3ConnectionList",
         "SubscriptionDetailView",
@@ -6592,6 +6643,18 @@
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
+    "ProviderConnections": {
+      "file": "src/pages/integrations/ProviderConnections.tsx",
+      "layer": "surface",
+      "composes": [
+        "EntityHeader",
+        "Pill",
+        "Section",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/integrations/ProviderConnections.stories.tsx"
+    },
     "PulseIcon": {
       "file": "src/reui/icons/default/outline/pulse.tsx",
       "layer": "other",
@@ -7058,6 +7121,7 @@
         "ActivitySection",
         "AddonSubscriptionsView",
         "BillingEntitiesEnableCard",
+        "BillingEntityIntegrations",
         "ChargeTable",
         "ConnectionExports",
         "ContextualSection",
@@ -7069,6 +7133,7 @@
         "CustomerDetail",
         "CustomerEntitlementUsage",
         "CustomerEventsGrid",
+        "CustomerPaymentsSection",
         "CustomerTaxSection",
         "CustomerUsageSummary",
         "DataExportDetail",
@@ -7088,6 +7153,7 @@
         "PortalInvoices",
         "PortalOverview",
         "PortalUsage",
+        "ProviderConnections",
         "RelatedCard",
         "RevenueRecognitionReport",
         "S3ConnectionList",
@@ -7452,6 +7518,7 @@
       "usedBy": [
         "AccountRollforward",
         "AddonChargesDialog",
+        "BillingEntityIntegrations",
         "BonusSlabTable",
         "ConnectionExports",
         "ContractQuantityDialog",
@@ -7461,6 +7528,7 @@
         "ExportsOverview",
         "PlanAiSetupView",
         "PortalOverview",
+        "ProviderConnections",
         "RevenueRecognitionReport",
         "S3ConnectionList",
         "SubscriptionForm",
@@ -9738,6 +9806,13 @@
         "CustomerGrid"
       ]
     },
+    "./src/pages/customers/CustomerPaymentsSection.stories.tsx": {
+      "title": "App/Customers/Customer payments section",
+      "component": "CustomerPaymentsSection",
+      "uses": [
+        "CustomerPaymentsSection"
+      ]
+    },
     "./src/pages/customers/CustomersListPage.stories.tsx": {
       "title": "App/Customers/Customer list",
       "component": null,
@@ -9937,6 +10012,14 @@
       "uses": [
         "IntegrationLogo",
         "ManageConnectionSheet"
+      ]
+    },
+    "./src/pages/integrations/ProviderConnections.stories.tsx": {
+      "title": "App/Integrations/Provider connections",
+      "component": "ProviderConnections",
+      "uses": [
+        "IntegrationLogo",
+        "ProviderConnections"
       ]
     },
     "./src/pages/product-catalog/addons/AddonForm.stories.tsx": {
@@ -10286,6 +10369,13 @@
       "uses": [
         "BillingEntitiesEnableCard",
         "BillingEntityGrid"
+      ]
+    },
+    "./src/pages/settings/billing-entities/BillingEntityIntegrations.stories.tsx": {
+      "title": "App/Settings/Billing entities/Billing entity integrations",
+      "component": "BillingEntityIntegrations",
+      "uses": [
+        "BillingEntityIntegrations"
       ]
     },
     "./src/pages/settings/cost-sheets/CostMarginCard.stories.tsx": {
@@ -11049,12 +11139,9 @@
     "IntegrationListPage": {
       "file": "apps/console/src/pages/integrations/IntegrationListPage.tsx",
       "pattern": "List",
-      "route": null,
+      "route": "/integrations",
       "uses": [
-        "ConnectIntegrationSheet",
-        "IntegrationLogo",
-        "IntegrationsBlock",
-        "ManageConnectionSheet"
+        "IntegrationsBlock"
       ]
     },
     "OAuthCallbackPage": {
@@ -11065,6 +11152,17 @@
         "ErrorState",
         "PageBody",
         "PageLoadingState"
+      ]
+    },
+    "ProviderConnectionsPage": {
+      "file": "apps/console/src/pages/integrations/ProviderConnectionsPage.tsx",
+      "pattern": "Other",
+      "route": "/integrations/$provider",
+      "uses": [
+        "ErrorState",
+        "IntegrationLogo",
+        "PageLoadingState",
+        "ProviderConnections"
       ]
     },
     "InvoiceDetailPage": {

@@ -177,8 +177,6 @@ export const queryKeys = {
   },
   integrations: {
     all: () => ['integrations'] as const,
-    list: (filter: Readonly<Record<string, unknown>> = {}) =>
-      ['integrations', 'list', filter] as const,
   },
   billingEntities: {
     all: () => ['billingEntities'] as const,

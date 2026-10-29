@@ -4322,7 +4322,7 @@ export const handlers = [
     )
     if (taken) {
       return HttpResponse.json(
-        { message: connectionExists(provider, owner.entityId) },
+        { message: connectionExists(`'${provider}'`, owner.entityId) },
         { status: 409 },
       )
     }
