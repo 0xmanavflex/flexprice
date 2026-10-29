@@ -20,6 +20,8 @@ import { FilterSelect, type FilterOption } from '../home/DashboardHome'
 import { EntityLink } from '../shared/cells'
 import { RevenueAmount, amountOrDash, currentPeriod, monthLabel } from './RevenueAmount'
 
+const dayFormat = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
+
 export const RevenueRecognitionReportProvenance = provenance({
   source: 'composition',
   composes: [
@@ -35,6 +37,8 @@ export const RevenueRecognitionReportProvenance = provenance({
 export interface RevenueRecognitionReportProps {
   /** One page of customers; its totals cover every customer the search matches. */
   waterfall: RevenueWaterfall | undefined
+  /** The last month-end recognized in the environment; null before the first run. */
+  recognizedThrough?: Date | null | undefined
   /** Customer id → name; an id without a name shows as the id. */
   customerNames: Readonly<Record<string, string>>
   isLoading: boolean
@@ -97,6 +101,7 @@ function TotalHeader({ total, label, end }: { total: ReactNode; label: string; e
 
 export function RevenueRecognitionReport({
   waterfall,
+  recognizedThrough,
   customerNames,
   isLoading,
   error,
@@ -132,19 +137,24 @@ export function RevenueRecognitionReport({
       className: PINNED,
       cell: (row) => {
         const name = customerNames[row.id] ?? row.id
+        // A fixed width, so a long name truncates rather than widening the pinned column.
         return (
-          <Stack
-            details={details}
-            lines={[
-              onOpenCustomer ? (
-                <EntityLink label={name} onOpen={() => onOpenCustomer(row.id)} />
-              ) : (
-                name
-              ),
-              'Deferred',
-              'Unbilled',
-            ]}
-          />
+          <div className="w-48">
+            <Stack
+              details={details}
+              lines={[
+                onOpenCustomer ? (
+                  <EntityLink label={name} onOpen={() => onOpenCustomer(row.id)} />
+                ) : (
+                  <span title={name} className="block truncate">
+                    {name}
+                  </span>
+                ),
+                'Deferred',
+                'Unbilled',
+              ]}
+            />
+          </div>
         )
       },
     },
@@ -239,6 +249,13 @@ export function RevenueRecognitionReport({
           }}
         />
         <div className="ml-auto flex items-center gap-3">
+          {recognizedThrough !== undefined ? (
+            <span className="text-muted-foreground text-xs">
+              {recognizedThrough
+                ? `Recognized through ${dayFormat.format(recognizedThrough)}`
+                : 'Not recognized yet'}
+            </span>
+          ) : null}
           <label className="flex items-center gap-2 text-sm">
             <Switch checked={details} onCheckedChange={onDetailsChange} />
             Details

@@ -86,6 +86,8 @@ export const queryKeys = {
       ['revenueRecognition', 'entries', environmentId, filter] as const,
     journal: (environmentId: string | null, contractId: string) =>
       ['revenueRecognition', 'journal', environmentId, contractId] as const,
+    recognizedThrough: (environmentId: string | null) =>
+      ['revenueRecognition', 'recognizedThrough', environmentId] as const,
   },
   events: {
     all: () => ['events'] as const,

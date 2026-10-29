@@ -4,6 +4,7 @@ import {
   useCustomerNames,
   useCustomerRevenue,
   useCustomers,
+  useRecognizedThrough,
   useRevenueRecognitionEnabled,
 } from '@fp/query'
 import { RevenueRecognitionReport } from '@fp/ui/pages'
@@ -59,11 +60,13 @@ export function RevenueRecognitionPage({
   )
   const ids = useMemo(() => (revenue.data?.rows ?? []).map((row) => row.id), [revenue.data])
   const names = useCustomerNames(ids)
+  const recognizedThrough = useRecognizedThrough(enabled.data ? environmentId : null)
   const failure = toListFailure(enabled.error ?? matches.error ?? revenue.error, 'revenue')
 
   return (
     <RevenueRecognitionReport
       waterfall={enabled.data === false || noMatch ? undefined : revenue.data}
+      recognizedThrough={recognizedThrough.data}
       customerNames={names.data ?? {}}
       isLoading={
         enabled.isPending ||

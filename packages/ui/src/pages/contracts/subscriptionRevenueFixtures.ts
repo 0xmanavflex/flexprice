@@ -49,6 +49,7 @@ export const ACME_REVENUE: SubscriptionRevenue = {
     status: 'active',
     subscriptionId: 'subs_acme',
   },
+  recognizedThrough: new Date('2026-02-28T00:00:00Z'),
   obligations: [
     {
       id: 'pob_annual',

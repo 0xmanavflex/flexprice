@@ -39,7 +39,7 @@ const dayFormat = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZo
 /** How the POB's amount is spread; usage always earns daily over the days it covers, whatever is stored. */
 const spreadLabel = (pob: PerformanceObligation) => {
   if (pob.recognitionMethod === RecognitionMethod.AsConsumed) return 'Daily, as used'
-  if (pob.recognitionMethod === RecognitionMethod.PointInTime) return 'On deliverance day'
+  if (pob.recognitionMethod === RecognitionMethod.PointInTime) return 'On delivery day'
   return pob.amortizationMethod ? AMORTIZATION_METHOD_LABEL[pob.amortizationMethod] : '—'
 }
 
@@ -102,7 +102,7 @@ export function SubscriptionRevenue({
     },
     {
       key: 'earned',
-      header: 'Recognized to date',
+      header: 'Earned to date',
       className: 'text-right tabular-nums',
       cell: (pob) => amountOrDash(rowByPob.get(pob.id)?.earned ?? null),
     },
@@ -168,7 +168,8 @@ export function SubscriptionRevenue({
   ]
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    // The detail body shrinks to the viewport, so a tall tab carries its own bottom space.
+    <div className="flex min-w-0 flex-col gap-6 pb-10">
       <Section table showTitle title="Performance obligations">
         <SubTabState
           {...state}
@@ -182,6 +183,17 @@ export function SubscriptionRevenue({
         table
         showTitle
         title="Revenue by performance obligation"
+        {...(revenue
+          ? {
+              actions: (
+                <span className="text-muted-foreground text-xs">
+                  {revenue.recognizedThrough
+                    ? `Recognized through ${dayFormat.format(revenue.recognizedThrough)}`
+                    : 'Not recognized yet'}
+                </span>
+              ),
+            }
+          : {})}
         description="Grey amounts are not posted yet: earned this month, or invoiced for later months. Hover a month for posted, pending and scheduled. Deferred and unbilled are month-end balances of ended months."
       >
         <SubTabState {...state} columns={4} loadingLabel="Loading revenue">

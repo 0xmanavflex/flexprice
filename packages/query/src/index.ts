@@ -778,6 +778,7 @@ export {
   toRevenueWaterfall,
   useContractJournal,
   useCustomerRevenue,
+  useRecognizedThrough,
   useRevenueRecognitionEnabled,
   useSubscriptionRevenue,
 } from './revenueRecognition'

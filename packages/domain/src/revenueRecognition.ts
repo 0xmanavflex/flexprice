@@ -89,6 +89,8 @@ export interface SubscriptionRevenue {
   contract: RevenueContract
   obligations: PerformanceObligation[]
   waterfall: RevenueWaterfall
+  /** The last month-end recognized for the contract; null before its first. */
+  recognizedThrough: Date | null
 }
 
 const MAX_MONTHS = 36

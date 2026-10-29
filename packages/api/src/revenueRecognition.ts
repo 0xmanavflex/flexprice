@@ -143,6 +143,21 @@ export async function searchJournalEntries(
   return { items: body?.items ?? [], total: body?.pagination?.total ?? 0 }
 }
 
+/** The last month-end recognition posted, over the environment or these contracts; null before the first run. */
+export async function fetchRecognizedThrough(
+  auth: Auth,
+  contractIds?: string[],
+): Promise<string | null> {
+  const body = (await post(auth, '/journal_entries/search', {
+    event_types: ['revenue_earned'],
+    ...(contractIds ? { contract_ids: contractIds } : {}),
+    sort: [{ field: 'business_date', direction: 'desc' }],
+    limit: 1,
+    offset: 0,
+  })) as { items?: JournalEntryWire[] | null } | null
+  return body?.items?.[0]?.business_date ?? null
+}
+
 export interface RollforwardRowWire {
   period?: string
   account?: string

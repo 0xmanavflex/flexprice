@@ -62,6 +62,7 @@ const meta = {
   component: RevenueRecognitionReport,
   args: {
     waterfall: WATERFALL,
+    recognizedThrough: new Date('2026-02-28T00:00:00Z'),
     customerNames: { cust_acme: 'Acme', cust_globex: 'Globex' },
     isLoading: false,
     from: '2026-01',
@@ -87,6 +88,7 @@ export const Summary: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Revenue total')).toBeVisible()
     await expect(canvas.getByText('Globex')).toBeVisible()
+    await expect(canvas.getByText('Recognized through Feb 28, 2026')).toBeVisible()
   },
 }
 

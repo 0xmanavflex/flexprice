@@ -4,6 +4,7 @@ import {
   ErrorKind,
   SettingKey,
   fetchPerformanceObligations,
+  fetchRecognizedThrough,
   fetchRevenueContract,
   fetchRevenueWaterfall,
   fetchRollforward,
@@ -183,7 +184,7 @@ export function useSubscriptionRevenue(
       if (!wire?.id) return null
       const contract = toRevenueContract(wire)
       const periods = revenuePeriods(contract.termStart, contract.termEnd)
-      const [obligations, waterfall] = await Promise.all([
+      const [obligations, waterfall, recognizedThrough] = await Promise.all([
         fetchPerformanceObligations(auth, contract.id),
         fetchRevenueWaterfall(auth, {
           period_start: periods.start,
@@ -194,11 +195,13 @@ export function useSubscriptionRevenue(
           details: true,
           limit: 100,
         }),
+        fetchRecognizedThrough(auth, [contract.id]),
       ])
       return {
         contract,
         obligations: obligations.map(toPerformanceObligation),
         waterfall: toRevenueWaterfall(waterfall, contract.currency),
+        recognizedThrough: date(recognizedThrough),
       }
     },
     enabled: Boolean(environmentId && subscriptionId),
@@ -413,6 +416,17 @@ export function useRevenueContracts(
       return Object.fromEntries(wires.map((wire) => [wire.id ?? '', toRevenueContract(wire)]))
     },
     enabled: Boolean(environmentId) && ids.length > 0,
+    staleTime: 5 * 60_000,
+  })
+}
+
+/** The last month-end recognized in the environment; null before the first recognition run. */
+export function useRecognizedThrough(environmentId: string | null): UseQueryResult<Date | null> {
+  const authFor = useAuth()
+  return useQuery({
+    queryKey: queryKeys.revenueRecognition.recognizedThrough(environmentId),
+    queryFn: async () => date(await fetchRecognizedThrough(await authFor(environmentId as string))),
+    enabled: Boolean(environmentId),
     staleTime: 5 * 60_000,
   })
 }
