@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { call } from '@fp/api'
+import { ApiError, ErrorKind, call, listCreditGrants } from '@fp/api'
 import {
   CreditGrantCadence,
   type CreditGrantExpiryDurationUnit,
@@ -11,7 +11,7 @@ import {
   type EditCreditGrant,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
  * Credit grants: a balance a plan hands its subscribers.
@@ -150,6 +150,76 @@ export function useCreditGrants(scope: CreditGrantScope, id: string) {
       return (response.items ?? []).map((item) => toCreditGrant(item as CreditGrantWire))
     },
     enabled: id.length > 0,
+  })
+}
+
+/** A grant as `GET /creditgrants` returns it: raw JSON, not camelCased by the SDK. */
+interface CreditGrantRow {
+  id?: string
+  name?: string
+  scope?: string
+  plan_id?: string | null
+  credits?: string
+  cadence?: string
+  period?: string
+  period_count?: number
+  expiration_type?: string
+  expiration_duration?: number
+  expiration_duration_unit?: string
+  conversion_rate?: string
+  priority?: number
+  metadata?: Record<string, string>
+}
+
+/** How many grants one catalogue of plans could reasonably carry. */
+const PLANS_GRANTS_LIMIT = 1000
+
+/**
+ * The credit grants of several plans in one read, grouped by plan: the
+ * pricing widget shows every plan's grants at once. Uses `GET /creditgrants`
+ * with `plan_ids` (`@fp/api`), as `usePlanLinkage` does, rather than one
+ * request per plan.
+ */
+export function usePlansCreditGrants(planIds: readonly string[]) {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const ids = [...new Set(planIds)].sort()
+
+  return useQuery({
+    queryKey: queryKeys.creditGrants.list({ scope: 'plans-detail', planIds: ids }),
+    queryFn: async () => {
+      const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+      if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to view credit grants.')
+      const body = await listCreditGrants(serverURL, token, environmentId ?? '', {
+        limit: PLANS_GRANTS_LIMIT,
+        offset: 0,
+        planIds: ids,
+      })
+      const rows = ((body as { items?: CreditGrantRow[] | null } | null)?.items ??
+        []) as CreditGrantRow[]
+      const byPlan = new Map<string, CreditGrant[]>()
+      for (const row of rows) {
+        if (!row.plan_id) continue
+        const grant = toCreditGrant({
+          id: row.id,
+          name: row.name,
+          scope: row.scope,
+          credits: row.credits,
+          cadence: row.cadence,
+          period: row.period,
+          periodCount: row.period_count,
+          expirationType: row.expiration_type,
+          expirationDuration: row.expiration_duration,
+          expirationDurationUnit: row.expiration_duration_unit,
+          conversionRate: row.conversion_rate,
+          priority: row.priority,
+          metadata: row.metadata,
+        })
+        byPlan.set(row.plan_id, [...(byPlan.get(row.plan_id) ?? []), grant])
+      }
+      return byPlan as ReadonlyMap<string, readonly CreditGrant[]>
+    },
+    enabled: ids.length > 0,
   })
 }
 

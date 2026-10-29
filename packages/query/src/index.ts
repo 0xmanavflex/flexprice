@@ -401,6 +401,7 @@ export {
   toCreditGrantRequest,
   useCreateCreditGrant,
   useCreditGrants,
+  usePlansCreditGrants,
   useDeleteCreditGrant,
   toUpdateCreditGrantRequest,
   useUpdateCreditGrant,
