@@ -228,12 +228,21 @@ function toItems(entries: NavEntry[], icons: Record<string, React.ReactNode>): S
   }))
 }
 
-/** Builds what the shell renders. */
-export function toNavGroups(icons: Record<string, React.ReactNode> = {}): ShellNavGroup[] {
+/** Builds what the shell renders, without the `hidden` top-level rows. */
+export function toNavGroups(
+  icons: Record<string, React.ReactNode> = {},
+  hidden: readonly string[] = [],
+): ShellNavGroup[] {
   // The primary tree carries no heading: a lone label over the main section
   // names the obvious. The footer group is pinned to the bottom of the rail.
   return [
-    { id: 'main', items: toItems(NAV, icons) },
+    {
+      id: 'main',
+      items: toItems(
+        NAV.filter((entry) => !hidden.includes(entry.id)),
+        icons,
+      ),
+    },
     { id: 'footer', pinned: true, items: toItems(FOOTER_NAV, icons) },
   ]
 }
