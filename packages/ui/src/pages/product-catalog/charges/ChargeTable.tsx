@@ -303,11 +303,12 @@ export function ChargeTable({
     }
   }, [charges, details])
 
-  // The full table lists every charge, live first; Status narrows it. The
-  // summary lists the live ones (changed first, so they lead) up to a few,
-  // and "Show all charges" goes to the rest. Unchanged charges are still
+  // Only charges billing now (or only scheduled so far) are rows: one whose
+  // end date has passed is history, reached from its charge's History, never
+  // a row of its own. The summary lists the first few (changed first, so they
+  // lead) and "Show all charges" goes to the rest. Unchanged charges are still
   // charges: a contract on its plan's prices must not read as empty.
-  const rows = variant === 'summary' ? active.slice(0, SUMMARY_ROWS) : [...active, ...ended]
+  const rows = variant === 'summary' ? active.slice(0, SUMMARY_ROWS) : active
   const statusOf = (charge: Charge) =>
     hasEnded(charge) ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
 
@@ -561,12 +562,12 @@ export function ChargeTable({
             loadingLabel="Loading charges"
             empty={{
               scene: 'catalog',
-              // A summary with only ended charges is not a contract without
-              // charges: say none are live, and Show all charges reaches them.
-              ...(variant === 'summary' && ended.length > 0
+              // Charges that have all ended are not a record without charges:
+              // say none are live.
+              ...(ended.length > 0
                 ? {
                     title: 'No active charges',
-                    description: 'Ended charges are listed under Show all charges.',
+                    description: 'Every charge here has ended.',
                   }
                 : { title: 'No charges yet' }),
             }}
@@ -589,7 +590,7 @@ export function ChargeTable({
                 label: 'Billing model',
                 value: (charge: Charge) => modelLabel(charge),
               },
-              // Always offered on the full table, so ended charges can be asked for.
+              // Active or Changed: ended charges are not rows, so not a status.
               ...(variant === 'full' ? [{ id: 'status', label: 'Status', value: statusOf }] : []),
               ...(facets ?? []),
             ]}

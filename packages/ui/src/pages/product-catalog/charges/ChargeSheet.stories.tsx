@@ -328,3 +328,53 @@ export const HistoryNewestFirst: Story = {
     await expect(row.parentElement!.firstElementChild).toBe(row)
   },
 }
+
+/**
+ * A change scheduled for a later date: the price billing today stays Current,
+ * the new one is Upcoming with the date it starts, and an ended one is History.
+ */
+export const ScheduledChange: Story = {
+  args: {
+    charge: fixed,
+    detail: {
+      versions: [
+        {
+          id: 'v1000',
+          price: '₹1,000.00',
+          startDate: new Date('2099-12-01T00:00:00Z'),
+          endDate: null,
+          updatedAt: new Date('2026-10-28T00:00:00Z'),
+        },
+        {
+          id: 'v600',
+          price: '₹600.00',
+          startDate: new Date('2026-03-01T00:00:00Z'),
+          endDate: new Date('2099-12-01T00:00:00Z'),
+          updatedAt: new Date('2026-03-01T00:00:00Z'),
+        },
+        {
+          id: 'v500',
+          price: '₹500.00',
+          startDate: new Date('2026-01-01T00:00:00Z'),
+          endDate: new Date('2026-03-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+    } satisfies ChargeDetail,
+  },
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    // The tag, not the section heading of the same name: the one inside a row.
+    const rowOf = async (tag: string) =>
+      (await screen.findAllByText(tag)).map((el) => el.closest('li')).find(Boolean)!
+    const current = await rowOf('Current')
+    await expect(within(current).getByText('₹600.00')).toBeVisible()
+    // Its end is scheduled, not past.
+    await expect(within(current).getByText(/Ends Dec 1, 2099/)).toBeVisible()
+    const upcoming = await rowOf('Upcoming')
+    await expect(within(upcoming).getByText('₹1,000.00')).toBeVisible()
+    await expect(within(upcoming).getByText('Starts Dec 1, 2099')).toBeVisible()
+    const history = await rowOf('History')
+    await expect(within(history).getByText('₹500.00')).toBeVisible()
+  },
+}

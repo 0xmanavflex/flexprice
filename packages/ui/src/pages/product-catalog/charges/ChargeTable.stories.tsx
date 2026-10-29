@@ -286,9 +286,8 @@ export const Views: Story = {
     // Status is a filter beside the billing model, not a row of chips above the table.
     await expect(canvas.queryByRole('button', { name: 'Active 3' })).not.toBeInTheDocument()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).not.toHaveClass('sr-only')
-    // Every charge is listed, live first; an ended one says when it ended.
-    await expect(canvas.getByText('Legacy seat fee')).toBeInTheDocument()
-    await expect(canvas.getByText('Fixed · Ended Feb 1, 2026')).toBeInTheDocument()
+    // Only charges billing now are rows: an ended one is history, not a row.
+    await expect(canvas.queryByText('Legacy seat fee')).not.toBeInTheDocument()
     await expect(canvas.getByText('Platform base')).toBeInTheDocument()
   },
 }
@@ -315,8 +314,8 @@ export const WithDates: Story = {
     // Start and end each carry their time, in UTC.
     await expect(canvas.getByText('Jan 1, 2026, 12:00 AM UTC')).toBeInTheDocument()
     await expect(canvas.getByText('Ongoing')).toBeInTheDocument()
-    await expect(canvas.getByText('Jun 1, 2025, 12:00 AM UTC')).toBeInTheDocument()
-    await expect(canvas.getByText('Ended Feb 1, 2026, 12:00 AM UTC')).toBeInTheDocument()
+    // The ended charge is history, not a row.
+    await expect(canvas.queryByText('Jun 1, 2025, 12:00 AM UTC')).not.toBeInTheDocument()
     // Billing timing has its own column, beside the dates.
     await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeInTheDocument()
   },

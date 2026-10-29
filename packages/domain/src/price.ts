@@ -527,11 +527,47 @@ export function chargeToDraft(charge: Charge): CreateCharge {
   }
 }
 
+/**
+ * Where one version of a charge sits in time.
+ *
+ * - `current`: started (now or earlier) and not yet ended: it bills now. A
+ *   future end date keeps it current: it is scheduled to end, not ended.
+ * - `upcoming`: starts in the future (a change scheduled for a later date).
+ * - `history`: its end date has passed.
+ */
+export type VersionStatus = 'current' | 'upcoming' | 'history'
+
+interface Dated {
+  startDate: Date | null
+  endDate: Date | null
+}
+
+export function versionStatus(version: Dated, now: number = Date.now()): VersionStatus {
+  if (version.endDate && version.endDate.getTime() <= now) return 'history'
+  if (version.startDate && version.startDate.getTime() > now) return 'upcoming'
+  return 'current'
+}
+
+/**
+ * The version a charges table shows, from versions sorted newest first: the
+ * one billing now. With none billing now, the next to start (a charge that is
+ * only scheduled so far); with none of those either, the last to end.
+ */
+export function currentVersion<T extends Dated>(
+  newestFirst: readonly T[],
+  now: number = Date.now(),
+): T {
+  const current = newestFirst.find((version) => versionStatus(version, now) === 'current')
+  if (current) return current
+  const upcoming = newestFirst.filter((version) => versionStatus(version, now) === 'upcoming')
+  return (upcoming[upcoming.length - 1] ?? newestFirst[0]) as T
+}
+
 /** One charge across its versions. */
 export interface ChargeLineage {
-  /** The version that bills now, or the last one when the charge has ended. */
+  /** The version that bills now (`currentVersion`): never one only scheduled while another bills. */
   current: Charge
-  /** Every version, newest first; `current` is the first. */
+  /** Every version, newest first, `current` among them. */
   versions: Charge[]
 }
 
@@ -543,7 +579,10 @@ export interface ChargeLineage {
  * on that keeps the ended prices as what they are: earlier, inactive
  * versions of one charge: instead of rows of their own or nothing at all.
  */
-export function chargeLineages(charges: readonly Charge[]): ChargeLineage[] {
+export function chargeLineages(
+  charges: readonly Charge[],
+  now: number = Date.now(),
+): ChargeLineage[] {
   const groups = new Map<string, Charge[]>()
   for (const charge of charges) {
     const root = charge.parentPriceId || charge.id
@@ -555,6 +594,6 @@ export function chargeLineages(charges: readonly Charge[]): ChargeLineage[] {
     (b.sequence ?? 0) - (a.sequence ?? 0)
   return [...groups.values()].map((group) => {
     const versions = [...group].sort(newestFirst)
-    return { current: versions[0] as Charge, versions }
+    return { current: currentVersion(versions, now), versions }
   })
 }

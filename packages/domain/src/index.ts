@@ -107,6 +107,9 @@ export {
   priceTierSchema,
   tiersSchema,
   chargeLineages,
+  currentVersion,
+  versionStatus,
+  type VersionStatus,
   type ChargeLineage,
 } from './price'
 export type { Charge, CreateCharge, PriceTier, Tier } from './price'
