@@ -307,6 +307,7 @@ import { AuthCallbackPage } from '@/pages/auth/AuthCallbackPage'
 import { SignUpConfirmPage } from '@/pages/auth/SignUpConfirmPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
+import { OnboardingPage } from '@/pages/auth/OnboardingPage'
 
 /**
  * The shell wraps every route except the ones you can reach signed out.
@@ -631,6 +632,24 @@ const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reset-password',
   component: ResetPasswordPage,
+})
+
+/**
+ * Tenant onboarding: the three questions a new workspace answers once.
+ *
+ * Outside the shell, like sign-up, because it is the step between creating an
+ * account and seeing the console. Not public, though: it needs the session
+ * whose tenant it updates, so it takes the shell's guard.
+ */
+const onboardingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/onboarding',
+  beforeLoad: ({ location }) => {
+    if (needsSignIn()) {
+      throw redirect({ to: '/sign-in', search: { redirect: location.href, sso: undefined } })
+    }
+  },
+  component: OnboardingPage,
 })
 
 function SignInRouteComponent() {
@@ -2617,6 +2636,7 @@ export const routeTree = rootRoute.addChildren([
   authCallbackRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
+  onboardingRoute,
   shellRoute.addChildren([
     ...legacyRoutes,
     customerContractRedirect,

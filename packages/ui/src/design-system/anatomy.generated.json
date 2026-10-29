@@ -649,6 +649,7 @@
       ],
       "usedBy": [
         "GoogleButton",
+        "OnboardingScreen",
         "SignInScreen",
         "SignUpConfirmScreen",
         "SignUpScreen",
@@ -3596,6 +3597,7 @@
         "InvoiceForm",
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
+        "OnboardingScreen",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "PriceOverrideForm",
@@ -4026,6 +4028,7 @@
         "ReviewPanel"
       ],
       "usedBy": [
+        "OnboardingScreen",
         "SignInForm",
         "SignUpConfirmScreen",
         "SignUpScreen"
@@ -5430,6 +5433,17 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "OnboardingScreen": {
+      "file": "src/pages/auth/OnboardingScreen.tsx",
+      "layer": "surface",
+      "composes": [
+        "AuthFrame",
+        "Field",
+        "FormHead"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/auth/OnboardingScreen.stories.tsx"
     },
     "OpenInvoicesCard": {
       "file": "src/components/blocks/solution-billing-4/components/open-invoices-card.tsx",
@@ -9158,6 +9172,13 @@
         "ForgotPasswordForm"
       ]
     },
+    "./src/pages/auth/OnboardingScreen.stories.tsx": {
+      "title": "App/Sign-in/Onboarding screen",
+      "component": "OnboardingScreen",
+      "uses": [
+        "OnboardingScreen"
+      ]
+    },
     "./src/pages/auth/RegionField.stories.tsx": {
       "title": "App/Sign-in/Region field",
       "component": null,
@@ -10395,6 +10416,14 @@
       "uses": [
         "AuthFrame",
         "ForgotPasswordForm"
+      ]
+    },
+    "OnboardingPage": {
+      "file": "apps/console/src/pages/auth/OnboardingPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "OnboardingScreen"
       ]
     },
     "ResetPasswordPage": {

@@ -39,6 +39,8 @@ const OPEN: RouteAccess = {}
 
 export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   '/': OPEN,
+  // Tenant onboarding: any signed-in member answers it, as in V1 (ungated there).
+  '/onboarding': OPEN,
   '/reports': OPEN,
   // The old address of Reports; it redirects there.
   '/revenue': OPEN,
