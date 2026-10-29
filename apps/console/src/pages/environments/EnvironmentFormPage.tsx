@@ -34,7 +34,11 @@ function useProductionOffer(
   onSelectEnvironment: (id: string) => void,
   close: () => void,
 ): { production?: ProductionOffer; canCreateProduction: boolean } {
-  const status = useSelfBillingStatus()
+  // Waits for an environment: the status query is read once per session
+  // (staleTime Infinity), so a read without one would fail and stick, and the
+  // shell's trial pill and lock, which read the same entry, would never appear.
+  const { environmentId } = useSession()
+  const status = useSelfBillingStatus({ enabled: Boolean(environmentId) })
   const billed = Boolean(status.data?.enabled)
   const summary = useSelfBillingSummary({ enabled: billed })
   const { upgrade } = useAccountLock()
