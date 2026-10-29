@@ -62,16 +62,14 @@ export const Connected: Story = {
   },
 }
 
-/** With billing entities: each connection beside its entity. */
-export const WithEntityConnections: Story = {
+/** With billing entities: the connected action reads Manage. */
+export const WithManageLabel: Story = {
   args: {
     connected: true,
     configureLabel: 'Manage',
-    connections: [{ id: 'c1', label: 'Stripe US', entity: 'Northwind US' }],
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Northwind US')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Manage Stripe' })).toBeVisible()
   },
 }

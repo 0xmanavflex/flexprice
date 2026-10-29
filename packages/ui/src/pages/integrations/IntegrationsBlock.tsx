@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { SearchIcon } from '@ui/icons'
-import { effectiveEntityId, type Integration } from '@fp/domain'
-import { ConnectorCard, type ConnectorCardConnection } from '@ui/compositions/layout/ConnectorCard'
+import type { Integration } from '@fp/domain'
+import { ConnectorCard } from '@ui/compositions/layout/ConnectorCard'
 import { Button } from '@ui/components/primitives/button'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import {
@@ -74,22 +74,9 @@ export interface IntegrationsBlockProps {
   isRetrying?: boolean | undefined
   /**
    * The environment's billing entities, given only while they are enabled: a
-   * connected card then lists its connections by entity.
+   * connected card's action then reads Manage.
    */
   entities?: readonly ListBillingEntity[] | undefined
-}
-
-/** A connected provider's connections with their entities. */
-function entityConnections(
-  integration: Integration,
-  entities: readonly ListBillingEntity[],
-): ConnectorCardConnection[] {
-  const nameOf = (id: string) => entities.find((entity) => entity.id === id)?.name
-  return integration.connections.map((connection) => ({
-    id: connection.id,
-    label: connection.name,
-    entity: nameOf(effectiveEntityId(connection, entities)) ?? '—',
-  }))
 }
 
 function GallerySkeleton() {
@@ -184,9 +171,6 @@ export function IntegrationsBlock({
       onConnect={() => onConnect?.(integration)}
       onConfigure={() => onConfigure?.(integration)}
       configureLabel={entities && isConnected(integration) ? 'Manage' : undefined}
-      connections={
-        entities && isConnected(integration) ? entityConnections(integration, entities) : undefined
-      }
     />
   )
 

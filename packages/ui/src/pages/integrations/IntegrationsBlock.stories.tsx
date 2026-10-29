@@ -78,7 +78,7 @@ export const AllConnected: Story = {
   args: { integrations: makeIntegrations(INTEGRATION_CATALOG.length, INTEGRATION_CATALOG.length) },
 }
 
-/** With billing entities on, a connected card lists its connections by entity. */
+/** With billing entities on, a connected card shows Manage and no entities. */
 export const WithBillingEntities: Story = {
   args: {
     integrations: makeIntegrations(INTEGRATION_CATALOG.length, 1),
@@ -89,7 +89,7 @@ export const WithBillingEntities: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.queryByText(/Northwind UK/)).not.toBeInTheDocument()
+    await expect(canvas.queryByText(/Northwind/)).not.toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: 'Manage Stripe' })).toBeInTheDocument()
   },
 }

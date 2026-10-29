@@ -200,9 +200,8 @@ test.describe('integrations', () => {
     await shell.go('Integrations')
 
     const card = page.getByTestId('integration-stripe')
-    await expect(card).toContainText('Stripe EU')
-    await expect(card).toContainText('Northwind EU')
-    await expect(card).not.toContainText('Northwind UK')
+    await expect(card).not.toContainText('Stripe EU')
+    await expect(card).not.toContainText('Northwind')
 
     await card.getByRole('button', { name: 'Manage Stripe' }).click()
     await expect(page).toHaveURL(/\/integrations\/stripe$/)
