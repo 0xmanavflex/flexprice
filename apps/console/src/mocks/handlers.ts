@@ -793,8 +793,29 @@ const tenant: Record<string, unknown> = {
       address_country: 'US',
     },
   },
+  // Onboarded, as every demo tenant is: Home sends a tenant without this flag to
+  // `/onboarding`, which would turn every journey and screenshot into the form.
+  metadata: { onboarding_completed: 'true' },
   created_at: '2025-08-11T10:00:00Z',
   updated_at: '2026-09-02T16:30:00Z',
+}
+
+/**
+ * `localStorage['flexprice.mock.notOnboarded'] = 'true'` plays a brand-new
+ * tenant: its metadata reads empty until onboarding saves the flag, so Home
+ * sends it to `/onboarding`. Used by `e2e/onboarding.spec.ts`.
+ */
+const NOT_ONBOARDED_KEY = 'flexprice.mock.notOnboarded'
+let onboardedThisSession = false
+
+function tenantAsSeen(): Record<string, unknown> {
+  let fresh = false
+  try {
+    fresh = localStorage.getItem(NOT_ONBOARDED_KEY) === 'true'
+  } catch {
+    /* no storage: the onboarded demo tenant */
+  }
+  return fresh && !onboardedThisSession ? { ...tenant, metadata: {} } : tenant
 }
 
 /** `AlertSettingsResponse`: per-entity rules, thresholds as decimal strings. */
@@ -3536,7 +3557,7 @@ export const handlers = [
 
   http.get(`${BASE}/tenants/:id`, ({ params }) =>
     String(params['id']) === TENANT_ID
-      ? HttpResponse.json(tenant)
+      ? HttpResponse.json(tenantAsSeen())
       : // Asking for anybody else's tenant is a 403 on the live API, not a 404.
         HttpResponse.json(
           { code: 'permission_denied', message: 'Forbidden', http_status_code: 403 },
@@ -3550,6 +3571,12 @@ export const handlers = [
     if (typeof body['name'] === 'string') tenant['name'] = body['name']
     if (body['billing_details'] && typeof body['billing_details'] === 'object') {
       tenant['billing_details'] = body['billing_details']
+    }
+    // Replaced whole, as the API does: the caller sends every key it keeps.
+    if (body['metadata'] && typeof body['metadata'] === 'object') {
+      tenant['metadata'] = body['metadata']
+      const metadata = body['metadata'] as Record<string, unknown>
+      if (metadata['onboarding_completed'] === 'true') onboardedThisSession = true
     }
     tenant['updated_at'] = new Date().toISOString()
     return HttpResponse.json(tenant)
