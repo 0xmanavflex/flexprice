@@ -809,6 +809,16 @@
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
+    "BonusSlabTable": {
+      "file": "src/pages/settings/wallets/BonusSlabTable.tsx",
+      "layer": "surface",
+      "composes": [
+        "OptionSelect",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/wallets/BonusSlabTable.stories.tsx"
+    },
     "BookOpen": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -5475,6 +5485,7 @@
       "composes": [],
       "usedBy": [
         "AddonChargesDialog",
+        "BonusSlabTable",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",
@@ -7282,6 +7293,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "BonusSlabTable",
         "ConnectionExports",
         "ContractQuantityDialog",
         "CustomerDetail",
@@ -10162,6 +10174,13 @@
       "component": "TaxRateGrid",
       "uses": [
         "TaxRateGrid"
+      ]
+    },
+    "./src/pages/settings/wallets/BonusSlabTable.stories.tsx": {
+      "title": "App/Settings/Wallets/Bonus slab table",
+      "component": "BonusSlabTable",
+      "uses": [
+        "BonusSlabTable"
       ]
     },
     "./src/pages/shared/ArcGauge.stories.tsx": {
