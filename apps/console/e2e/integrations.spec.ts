@@ -17,42 +17,71 @@ test.beforeEach(async ({ context }) => {
 
 const SANDBOX_ENVIRONMENT = 'env_01KVSNYVPMAP6JJGDF177V2DE6'
 
-/** Billing entities on in the sandbox: US (default), EU and UK. */
-async function enableEntities(page: Page) {
-  await page.addInitScript((environmentId) => {
-    if (window.sessionStorage.getItem('flexprice.mock.billingEntities')) return
-    const entity = (id: string, name: string, isDefault: boolean, prefix: string) => ({
-      id,
-      name,
-      legal_name: name,
-      is_default: isDefault,
-      invoice_number_prefix: prefix,
-      seller_details: { address: {} },
-      tax_identifiers: [],
-      status: 'published',
-      created_at: '2026-10-01T00:00:00Z',
-    })
-    window.sessionStorage.setItem(
-      'flexprice.mock.billingEntities',
-      JSON.stringify({
-        seq: 3,
-        environments: [
-          [
-            environmentId,
-            {
-              mode: 'enabled',
-              readsSinceEnable: 2,
-              rows: [
-                entity('be_us', 'Northwind US', true, 'US'),
-                entity('be_eu', 'Northwind EU', false, 'EU'),
-                entity('be_uk', 'Northwind UK', false, 'UK'),
-              ],
-            },
+/** Billing entities on in the sandbox: US (default), EU and UK unless others are given. */
+async function enableEntities(
+  page: Page,
+  entities: [id: string, name: string, prefix: string][] = [
+    ['be_us', 'Northwind US', 'US'],
+    ['be_eu', 'Northwind EU', 'EU'],
+    ['be_uk', 'Northwind UK', 'UK'],
+  ],
+) {
+  await page.addInitScript(
+    ({ environmentId, entities }) => {
+      if (window.sessionStorage.getItem('flexprice.mock.billingEntities')) return
+      window.sessionStorage.setItem(
+        'flexprice.mock.billingEntities',
+        JSON.stringify({
+          seq: entities.length,
+          environments: [
+            [
+              environmentId,
+              {
+                mode: 'enabled',
+                readsSinceEnable: 2,
+                rows: entities.map(([id, name, prefix], index) => ({
+                  id,
+                  name,
+                  legal_name: name,
+                  is_default: index === 0,
+                  invoice_number_prefix: prefix,
+                  seller_details: { address: {} },
+                  tax_identifiers: [],
+                  status: 'published',
+                  created_at: '2026-10-01T00:00:00Z',
+                })),
+              },
+            ],
           ],
-        ],
-      }),
+        }),
+      )
+    },
+    { environmentId: SANDBOX_ENVIRONMENT, entities },
+  )
+}
+
+/** Connections the mock adds to its own, kept across reloads. */
+async function seedConnections(
+  page: Page,
+  rows: [id: string, name: string, provider: string, entity: string][],
+) {
+  await page.addInitScript((rows) => {
+    window.sessionStorage.setItem(
+      'flexprice.mock.connections',
+      JSON.stringify(
+        rows.map(([id, name, provider, entity]) => ({
+          id,
+          name,
+          provider_type: provider,
+          connection_status: 'published',
+          billing_entity_id: entity,
+          metadata: {},
+          sync_config: {},
+          created_at: '2026-10-01T00:00:00Z',
+        })),
+      ),
     )
-  }, SANDBOX_ENVIRONMENT)
+  }, rows)
 }
 
 /** From the Stripe page, creates Stripe for Northwind UK and returns the sheet on its webhook step. */
@@ -247,5 +276,61 @@ test.describe('integrations', () => {
       provider: 'quickbooks',
       billing_entity_id: 'be_us',
     })
+  })
+
+  test("an entity's integrations tab lists its connections and connects one for it", async ({
+    page,
+  }) => {
+    await enableEntities(page)
+    await page.goto('/settings/billing-entities/be_uk?tab=integrations')
+
+    const payments = page.getByRole('region', { name: 'Payments' })
+    // The environment's Stripe belongs to the default entity, not to Northwind UK.
+    await expect(payments.getByRole('row', { name: /Stripe/ })).toContainText('—')
+    await payments.getByRole('button', { name: 'Connect Stripe' }).click()
+    const sheet = page.getByRole('dialog', { name: /Connect Stripe/ })
+    await expect(sheet.getByRole('combobox', { name: /Billing entity/ })).toHaveText(/Northwind UK/)
+  })
+
+  test("a customer's preferred payment gateway is one of their entity's payment connections", async ({
+    page,
+  }) => {
+    await enableEntities(page, [
+      ['be_in', 'Northwind India', 'IN'],
+      ['be_us', 'Northwind US', 'US'],
+    ])
+    await seedConnections(page, [
+      ['conn_rzp_in', 'Razorpay India', 'razorpay', 'be_in'],
+      ['conn_qb_in', 'QuickBooks India', 'quickbooks', 'be_in'],
+      ['conn_stripe_us', 'Stripe US', 'stripe', 'be_us'],
+    ])
+    await page.goto('/customers')
+    await page.getByRole('row').nth(1).getByRole('cell').first().click()
+    await page.getByRole('tab', { name: 'Information' }).click()
+
+    const gateway = page.getByRole('combobox', { name: 'Preferred payment gateway' })
+    await expect(gateway).toHaveText('Automatic')
+    await gateway.click()
+    // The customer bills from the default entity, Northwind India.
+    await expect(page.getByRole('option')).toHaveText(['Automatic', 'Stripe', 'Razorpay India'])
+    const saved = page.waitForRequest(
+      (request) => request.method() === 'PUT' && request.url().endsWith('/preferred-connection'),
+    )
+    await page.getByRole('option', { name: 'Razorpay India' }).click()
+    expect((await saved).postDataJSON()).toEqual({ connection_id: 'conn_rzp_in' })
+    await expect(gateway).toHaveText('Razorpay India')
+
+    await page.reload()
+    await expect(gateway).toHaveText('Razorpay India')
+
+    const cleared = page.waitForRequest(
+      (request) => request.method() === 'DELETE' && request.url().endsWith('/preferred-connection'),
+    )
+    await gateway.click()
+    await page.getByRole('option', { name: 'Automatic' }).click()
+    await cleared
+    await expect(gateway).toHaveText('Automatic')
+    await page.reload()
+    await expect(gateway).toHaveText('Automatic')
   })
 })

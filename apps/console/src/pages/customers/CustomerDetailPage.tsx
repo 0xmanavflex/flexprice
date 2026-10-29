@@ -39,6 +39,7 @@ import { useEnvironments } from '@/app/shell/useEnvironments'
 import { useCustomerPortal } from '@/app/customerPortal/useCustomerPortal'
 import { CustomerAnalyticsPanel } from '@/pages/customers/CustomerAnalyticsPanel'
 import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
+import { CustomerPaymentsPanel } from '@/pages/customers/CustomerPaymentsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
@@ -369,6 +370,11 @@ export function CustomerDetailPage({
         }
         // Read-only, not disabled wholesale: switching between wallets still works.
         wallet={<CustomerWalletPanel customerId={customer.data.id} readOnly={archived} />}
+        paymentSettings={
+          <fieldset disabled={archived} className="contents">
+            <CustomerPaymentsPanel customer={customer.data} />
+          </fieldset>
+        }
         taxes={
           <fieldset disabled={archived} className="contents">
             <CustomerTaxPanel customerId={customer.data.id} />

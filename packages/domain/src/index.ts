@@ -736,6 +736,7 @@ export type {
 export { CARD_SETUP_PROVIDERS, INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './integrationConnect'
+export { PAYMENT_GATEWAY_PROVIDERS, gatewayCandidates, preferredGateway } from './paymentGateway'
 export {
   WalletKind,
   WALLET_KIND_LABEL,

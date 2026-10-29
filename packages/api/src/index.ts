@@ -107,7 +107,13 @@ export type { ListCreditNotesParams } from './creditNotes'
  * Customer, invoice and payment calls that carry billing-entity fields; raw
  * fetch until the SDK has them. See `customers.ts`, `invoices.ts`, `payments.ts`.
  */
-export { createCustomer, getCustomer, searchCustomers } from './customers'
+export {
+  clearPreferredConnection,
+  createCustomer,
+  getCustomer,
+  searchCustomers,
+  setPreferredConnection,
+} from './customers'
 export { getInvoice, searchInvoices } from './invoices'
 export { listPayments } from './payments'
 export type { ListPaymentsParams } from './payments'

@@ -318,7 +318,26 @@ const connectionRows: Record<string, unknown>[] = [
     created_at: '2026-03-02T10:00:00Z',
   },
 ]
+// `sessionStorage['flexprice.mock.connections']` adds rows, so a test's connections survive a reload.
+try {
+  const seeded = JSON.parse(sessionStorage.getItem('flexprice.mock.connections') ?? '[]') as Record<
+    string,
+    unknown
+  >[]
+  connectionRows.push(...seeded)
+} catch {
+  /* no storage: the demo connections only */
+}
 const STORAGE_PROVIDERS = new Set(['s3', 'gcs'])
+const PAYMENT_GATEWAY_PROVIDERS = new Set([
+  'stripe',
+  'razorpay',
+  'nomod',
+  'moyasar',
+  'paddle',
+  'whop',
+  'chargebee',
+])
 let connectionSeq = 0
 const pendingOAuth = new Map<
   string,
@@ -438,6 +457,29 @@ function mockUserIsSuperAdmin(): boolean {
  * the link/unlink calls all read the same rows.
  */
 const customerMappings = new Map<string, Record<string, unknown>[]>()
+
+/** Customer id → preferred connection id, kept in sessionStorage so a reload finds it. */
+const PREFERRED_KEY = 'flexprice.mock.preferredConnections'
+function preferredConnections(): Record<string, string> {
+  try {
+    return JSON.parse(sessionStorage.getItem(PREFERRED_KEY) ?? '{}') as Record<string, string>
+  } catch {
+    return {}
+  }
+}
+function savePreferredConnection(customerId: string, connectionId: string | null) {
+  const next = preferredConnections()
+  if (connectionId) next[customerId] = connectionId
+  else delete next[customerId]
+  try {
+    sessionStorage.setItem(PREFERRED_KEY, JSON.stringify(next))
+  } catch {
+    /* no storage: kept for the page only */
+  }
+}
+function withPreferredConnection<T extends Record<string, unknown>>(row: T): T {
+  return { ...row, preferred_connection_id: preferredConnections()[readString(row, 'id')] ?? null }
+}
 
 function demoMappingRows(customerId: string): Record<string, unknown>[] {
   const row = (corpus['customers'] as Corpus).items.find(
@@ -3342,8 +3384,41 @@ export const handlers = [
   http.get(`${BASE}/customers/:id`, ({ params }) => {
     const customer = byId('customers', String(params['id']))
     return customer
-      ? HttpResponse.json(withDemoIntegrations(customer))
+      ? HttpResponse.json(withPreferredConnection(withDemoIntegrations(customer)))
       : HttpResponse.json({ message: 'Customer not found' }, { status: 404 })
+  }),
+
+  /*
+   * A customer's preferred payment connection. As the API: it must be a
+   * published payment gateway, of the customer's entity while entities are on.
+   */
+  http.put(`${BASE}/customers/:id/preferred-connection`, async ({ params, request }) => {
+    const customer = byId('customers', String(params['id']))
+    if (!customer) return HttpResponse.json({ message: 'Customer not found' }, { status: 404 })
+    const { connection_id: connectionId } = (await request.json()) as { connection_id?: string }
+    const connection = connectionRows.find(
+      (row) => row['id'] === connectionId && row['connection_status'] === 'published',
+    )
+    const entities = entityEnvironment(request)
+    const fallback = readString(entities.rows.find((row) => row['is_default']) ?? {}, 'id')
+    const entityOf = (row: Record<string, unknown>) =>
+      readString(row, 'billing_entity_id') || fallback
+    const allowed =
+      connection !== undefined &&
+      PAYMENT_GATEWAY_PROVIDERS.has(String(connection['provider_type'])) &&
+      (entities.mode !== 'enabled' || entityOf(connection) === entityOf(customer))
+    if (!allowed) {
+      return HttpResponse.json({ message: 'connection not allowed for customer' }, { status: 400 })
+    }
+    savePreferredConnection(readString(customer, 'id'), String(connectionId))
+    return HttpResponse.json(withPreferredConnection(withDemoIntegrations(customer)))
+  }),
+
+  http.delete(`${BASE}/customers/:id/preferred-connection`, ({ params }) => {
+    const customer = byId('customers', String(params['id']))
+    if (!customer) return HttpResponse.json({ message: 'Customer not found' }, { status: 404 })
+    savePreferredConnection(readString(customer, 'id'), null)
+    return HttpResponse.json(withPreferredConnection(withDemoIntegrations(customer)))
   }),
 
   // A customer's subscriptions, keyed by the *external* id (the endpoint the SDK

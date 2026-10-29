@@ -227,6 +227,8 @@ export interface CustomerDetailProps {
   onRetryEntitlements?: (() => void) | undefined
   /** The Wallet section's contents; omitted, the empty state shows. */
   wallet?: ReactNode
+  /** The Payments section on the Information tab, before Taxes; omitted, it is not shown. */
+  paymentSettings?: ReactNode
   /** The Taxes section on the Information tab; omitted, it is not shown. */
   taxes?: ReactNode
   /** The FX overrides section on the Information tab, after Taxes; omitted, it is not shown. */
@@ -300,6 +302,7 @@ export function CustomerDetail({
   entitlementsError = false,
   onRetryEntitlements,
   wallet,
+  paymentSettings,
   taxes,
   fxOverrides,
   billingEntity,
@@ -583,6 +586,7 @@ export function CustomerDetail({
             onUpdateField={onUpdateField}
             onUpdateMetadata={onUpdateMetadata}
             onEdit={onEdit}
+            paymentSettings={paymentSettings}
             taxes={taxes}
             fxOverrides={fxOverrides}
             integrationControls={integrationControls}
@@ -1568,6 +1572,7 @@ function InformationTab({
   onUpdateField,
   onUpdateMetadata,
   onEdit,
+  paymentSettings,
   taxes,
   fxOverrides,
   integrationControls,
@@ -1577,6 +1582,7 @@ function InformationTab({
   onUpdateField: CustomerDetailProps['onUpdateField']
   onUpdateMetadata: CustomerDetailProps['onUpdateMetadata']
   onEdit: (() => void) | undefined
+  paymentSettings: ReactNode
   taxes: ReactNode
   fxOverrides: ReactNode
   integrationControls: CustomerDetailProps['integrationControls']
@@ -1668,6 +1674,7 @@ function InformationTab({
           ) : null}
         </EditableCard>
 
+        {paymentSettings}
         {taxes}
         {fxOverrides}
       </div>
