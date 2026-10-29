@@ -135,7 +135,7 @@ const CustomerSubscriptionFormPage = lazy(() =>
     default: m.CustomerSubscriptionFormPage,
   })),
 )
-import type { CustomerTab } from '@fp/ui/pages'
+import { parseSubscriptionTab, type CustomerTab, type SubscriptionTab } from '@fp/ui/pages'
 import { parseCustomerSearch } from './customerSearch'
 import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
 const SubscriptionListPage = lazy(() =>
@@ -742,16 +742,33 @@ const subscriptionCreateRoute = createRoute({
 const subscriptionDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/contracts/$subscriptionId',
+  // The open tab is a search param, as on a customer, so going back to a
+  // contract (from an invoice, a plan, another contract) reopens that tab.
+  // Optional, so a plain link to a contract opens it on Overview.
+  validateSearch: (search: Record<string, unknown>): { tab?: SubscriptionTab } => {
+    const tab = parseSubscriptionTab(search['tab'])
+    return tab === 'overview' ? {} : { tab }
+  },
   component: SubscriptionDetailRouteComponent,
 })
 
 function SubscriptionDetailRouteComponent() {
   const { subscriptionId } = subscriptionDetailRoute.useParams()
+  const { tab } = subscriptionDetailRoute.useSearch()
   const navigate = useNavigate()
 
   return (
     <SubscriptionDetailPage
       subscriptionId={subscriptionId}
+      tab={tab ?? 'overview'}
+      onTabChange={(next) =>
+        void navigate({
+          to: '/contracts/$subscriptionId',
+          params: { subscriptionId },
+          search: next === 'overview' ? {} : { tab: next },
+          replace: true,
+        })
+      }
       onNavigateToList={() => void navigate({ to: '/contracts', search: {} as never })}
       onOpenCustomer={(customerId) =>
         void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })

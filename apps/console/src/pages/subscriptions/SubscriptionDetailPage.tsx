@@ -61,7 +61,12 @@ import {
   useActivityLog,
   serverReason,
 } from '@fp/query'
-import { EntityAlertDialog, SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
+import {
+  EntityAlertDialog,
+  SubscriptionDetailView,
+  type SubscriptionPart,
+  type SubscriptionTab,
+} from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
@@ -78,6 +83,9 @@ export interface SubscriptionDetailPageProps {
   onOpenInvoice: (invoiceId: string) => void
   /** Another contract: an inherited one's parent, or a parent's inherited contracts. */
   onOpenContract?: (subscriptionId: string) => void
+  /** The open tab, kept in the URL so going back reopens it. */
+  tab?: SubscriptionTab
+  onTabChange?: (tab: SubscriptionTab) => void
 }
 
 const CANCEL_OPTIONS = [
@@ -116,6 +124,8 @@ export function SubscriptionDetailPage({
   onOpenPlan,
   onOpenInvoice,
   onOpenContract,
+  tab,
+  onTabChange,
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
   // A parent's inherited contracts, as V1 lists them; only a parent has any.
@@ -229,6 +239,8 @@ export function SubscriptionDetailPage({
   return (
     <>
       <SubscriptionDetailView
+        tab={tab}
+        onTabChange={onTabChange}
         subscription={data}
         lines={part(lines)}
         {...(() => {

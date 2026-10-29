@@ -242,11 +242,14 @@ export type { SubscriptionFormProps, SubscriptionPlanContext } from './contracts
 export { SubscriptionGrid, SubscriptionGridProvenance } from './contracts/SubscriptionGrid'
 export type { SubscriptionGridProps } from './contracts/SubscriptionGrid'
 export {
+  SUBSCRIPTION_TABS,
   SubscriptionDetailView,
   SubscriptionDetailViewProvenance,
+  parseSubscriptionTab,
 } from './contracts/SubscriptionDetailView'
 export type {
   SubscriptionActivity,
+  SubscriptionTab,
   SubscriptionDetailViewProps,
   SubscriptionPart,
 } from './contracts/SubscriptionDetailView'
