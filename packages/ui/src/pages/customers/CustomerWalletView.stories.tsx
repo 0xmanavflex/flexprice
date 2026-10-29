@@ -489,6 +489,18 @@ export const PostpaidWallet: Story = {
   },
 }
 
+/** The wallet ID is one click away in the wallet menu, even on a closed wallet. */
+export const CopiesWalletId: Story = {
+  args: { wallets: makeWallets(1, WalletStatus.Closed, 0, 0) },
+  play: async ({ canvasElement }) => {
+    const writeText = fn(async () => undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Wallet actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Copy wallet ID' }))
+    await expect(writeText).toHaveBeenCalledWith('wallet_1')
+  },
+}
+
 /** Top up opens a dialog. */
 export const OpensTopUpDialog: Story = {
   play: async ({ canvasElement }) => {

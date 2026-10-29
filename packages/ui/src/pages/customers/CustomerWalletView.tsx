@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
   BellIcon,
   ArrowUpRightIcon,
+  CopyIcon,
   MinusIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -266,6 +268,17 @@ export function CustomerWalletView({
               <MoreHorizontalIcon aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              {/* Read-only, so it stays available on a closed wallet. */}
+              <DropdownMenuItem
+                onClick={() => {
+                  void navigator.clipboard?.writeText(wallet.id)
+                  toast.success('Wallet ID copied')
+                }}
+              >
+                <CopyIcon className="text-muted-foreground" aria-hidden="true" />
+                Copy wallet ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem disabled={closed} onClick={() => open('auto-topup')}>
                 <RepeatIcon className="text-muted-foreground" aria-hidden="true" />
                 Auto top-up settings
