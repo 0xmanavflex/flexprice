@@ -792,6 +792,7 @@ export {
   toBillingEntityRequest,
   useBillingEntities,
   useBillingEntity,
+  useBillingEntityMode,
   useBillingEntityStatus,
   useEntityFilterOptions,
   useCustomerBillingEntity,
@@ -799,4 +800,4 @@ export {
   useEnableBillingEntities,
   useUpdateBillingEntity,
 } from './billingEntities'
-export type { BillingEntityWire } from './billingEntities'
+export type { BillingEntityModeState, BillingEntityWire } from './billingEntities'

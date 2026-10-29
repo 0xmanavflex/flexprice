@@ -89,7 +89,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     id: 'whop',
     name: 'Whop',
     providerType: 'whop',
-    categories: ['Invoices', 'Payments'],
+    categories: ['Payments', 'Invoices'],
     description: 'Sync invoices to Whop and keep payment status current.',
   },
   {

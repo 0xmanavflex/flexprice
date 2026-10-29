@@ -1,10 +1,11 @@
-import { effectiveEntityId, type BillingEntity, type Integration } from '@fp/domain'
+import { connectionForEntity, type BillingEntity, type Integration } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { AppFailure, LoadingRows } from '../../../compositions'
+import { AppFailure } from '@ui/compositions/feedback/AppFailure'
+import { LoadingRows } from '@ui/compositions/feedback/States'
 import { SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
-import { IntegrationLogo } from '../../integrations/IntegrationsBlock'
+import { IntegrationLogo } from '@ui/pages/integrations/IntegrationsBlock'
 
 /**
  * A billing entity's Integrations tab: one Section per category, a row per
@@ -59,10 +60,7 @@ export function BillingEntityIntegrations({
     .filter((integration) => !integration.premium)
     .map((integration) => ({
       integration,
-      connection:
-        integration.connections.find(
-          (connection) => effectiveEntityId(connection, entities) === entity.id,
-        ) ?? null,
+      connection: connectionForEntity(integration, entity.id, entities),
     }))
   const categories = [...new Set(rows.map((row) => row.integration.categories[0] ?? 'Other'))]
 

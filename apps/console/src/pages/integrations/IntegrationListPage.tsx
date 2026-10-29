@@ -1,5 +1,4 @@
-import { BillingEntityMode } from '@fp/domain'
-import { useBillingEntities, useBillingEntityStatus, useConnections } from '@fp/query'
+import { useBillingEntityMode, useConnections } from '@fp/query'
 import { IntegrationsBlock } from '@fp/ui/pages'
 import { toListFailure } from '@/pages/shared/listFailure'
 import { useIntegrationSheets } from './useIntegrationSheets'
@@ -11,28 +10,26 @@ export function IntegrationListPage({
 }) {
   const integrations = useConnections()
   const failure = toListFailure(integrations.error, 'integrations')
-  const status = useBillingEntityStatus()
-  const entities = useBillingEntities()
-  const enabled = status.data === BillingEntityMode.Enabled && entities.data !== undefined
+  const { mode, entities } = useBillingEntityMode()
   const { openConnect, openManage, sheets } = useIntegrationSheets(
     integrations.data ?? [],
-    enabled ? entities.data : undefined,
+    entities,
   )
 
   return (
     <>
       <IntegrationsBlock
-        integrations={integrations.data ?? []}
+        integrations={mode === 'loading' ? [] : (integrations.data ?? [])}
         // `isLoading`, not `isPending`: the request is in flight, not merely unanswered.
-        isLoading={integrations.isLoading}
+        isLoading={integrations.isLoading || mode === 'loading'}
         error={failure}
         onRetry={() => void integrations.refetch()}
         isRetrying={integrations.isRefetching}
-        entities={enabled ? entities.data : undefined}
+        entities={entities}
         onConnect={(integration) => openConnect(integration.id)}
         onConfigure={(integration) => {
           const first = integration.connections[0]
-          if (enabled) onOpenProvider(integration.id)
+          if (entities) onOpenProvider(integration.id)
           else if (first) openManage(integration.id, first.id)
         }}
       />

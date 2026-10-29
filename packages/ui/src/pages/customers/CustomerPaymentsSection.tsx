@@ -1,4 +1,6 @@
-import { Field, OptionSelect, Section } from '../../compositions'
+import { Field } from '@ui/compositions/forms/Field'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
+import { Section } from '@ui/compositions/layout/Section'
 
 const AUTOMATIC = 'automatic'
 

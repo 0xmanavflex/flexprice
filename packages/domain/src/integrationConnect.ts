@@ -640,6 +640,19 @@ export const PER_CONNECTION_WEBHOOK_PROVIDERS: readonly string[] = [
   'whop',
 ]
 
+/** The connection a billing entity owns for this provider; one without an entity is the default's. */
+export function connectionForEntity(
+  integration: { connections: readonly IntegrationConnection[] },
+  entityId: string,
+  entities: readonly Pick<BillingEntity, 'id' | 'isDefault'>[],
+): IntegrationConnection | null {
+  return (
+    integration.connections.find(
+      (connection) => effectiveEntityId(connection, entities) === entityId,
+    ) ?? null
+  )
+}
+
 /** The address the provider posts events to. The API does not return it; it is built from the tenant, environment and, where the route takes it, the connection. */
 export function webhookUrl(
   apiBase: string,

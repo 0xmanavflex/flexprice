@@ -405,6 +405,36 @@ function entityScope(
   return { keep: (row) => (readString(row, 'billing_entity_id') || fallback) === entityId }
 }
 
+/**
+ * As the API: a new connection belongs to the given entity, or the default
+ * while entities are on; naming one while they are off is refused.
+ */
+function connectionOwner(
+  request: Request,
+  requested: string | undefined,
+):
+  | { refused: Response }
+  | { entityId: string | null; keep: (row: Record<string, unknown>) => boolean } {
+  const entities = entityEnvironment(request)
+  if (entities.mode !== 'enabled') {
+    if (requested) {
+      return { refused: HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 }) }
+    }
+    return { entityId: null, keep: () => true }
+  }
+  const fallback = readString(entities.rows.find((row) => row['is_default']) ?? {}, 'id')
+  const entityId = requested || fallback
+  return {
+    entityId,
+    keep: (row) => (readString(row, 'billing_entity_id') || fallback) === entityId,
+  }
+}
+
+/** The API's duplicate-connection hint. */
+function connectionExists(provider: string, entityId: string | null): string {
+  return `A published connection for provider ${provider} already exists ${entityId ? 'for this billing entity' : 'in this environment'}`
+}
+
 function entityEnvironment(request: Request): EntityEnvironment {
   const id = request.headers.get('X-Environment-ID') ?? ''
   let state = entityEnvironments.get(id)
@@ -4192,14 +4222,9 @@ export const handlers = [
    * duplicate is refused, secrets are accepted and never echoed, and DELETE
    * archives.
    */
-  http.get(`${BASE}/connections`, ({ request }) => {
-    const billingEntityId = new URL(request.url).searchParams.get('billing_entity_id')
+  http.get(`${BASE}/connections`, () => {
     return HttpResponse.json({
-      connections: connectionRows.filter(
-        (row) =>
-          row['connection_status'] !== 'archived' &&
-          (!billingEntityId || row['billing_entity_id'] === billingEntityId),
-      ),
+      connections: connectionRows.filter((row) => row['connection_status'] !== 'archived'),
       pagination: { total: connectionRows.length, limit: 100, offset: 0 },
     })
   }),
@@ -4207,17 +4232,20 @@ export const handlers = [
   http.post(`${BASE}/connections`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
     const provider = String(body['provider_type'] ?? '')
-    const perEntity = entityEnvironment(request).mode === 'enabled'
-    const entityId = body['billing_entity_id'] ?? null
+    const storage = STORAGE_PROVIDERS.has(provider)
+    const owner = storage
+      ? { entityId: null, keep: () => true }
+      : connectionOwner(request, body['billing_entity_id'] as string | undefined)
+    if ('refused' in owner) return owner.refused
     const taken = connectionRows.some(
       (row) =>
         row['connection_status'] === 'published' &&
         row['provider_type'] === provider &&
-        (!perEntity || (row['billing_entity_id'] ?? null) === entityId),
+        owner.keep(row),
     )
-    if (taken && provider !== 's3' && provider !== 'gcs') {
+    if (taken && !storage) {
       return HttpResponse.json(
-        { message: `A connection for ${provider} already exists in this environment` },
+        { message: connectionExists(`'${provider}'`, owner.entityId) },
         { status: 409 },
       )
     }
@@ -4226,7 +4254,7 @@ export const handlers = [
       name: body['name'],
       provider_type: provider,
       connection_status: 'published',
-      billing_entity_id: body['billing_entity_id'] ?? null,
+      billing_entity_id: owner.entityId,
       metadata: body['metadata'] ?? {},
       sync_config: body['sync_config'] ?? {},
       created_at: new Date().toISOString(),
@@ -4253,7 +4281,7 @@ export const handlers = [
       if (taken) {
         return HttpResponse.json(
           {
-            message: `A published connection for provider '${String(row['provider_type'])}' already exists for this billing entity`,
+            message: connectionExists(`'${String(row['provider_type'])}'`, target),
           },
           { status: 409 },
         )
@@ -4284,17 +4312,17 @@ export const handlers = [
   http.post(`${BASE}/oauth/init`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
     const provider = String(body['provider'] ?? '')
-    const scope = entityScope(request, body['billing_entity_id'] as string | undefined)
-    if ('refused' in scope) return scope.refused
+    const owner = connectionOwner(request, body['billing_entity_id'] as string | undefined)
+    if ('refused' in owner) return owner.refused
     const taken = connectionRows.some(
       (row) =>
         row['connection_status'] === 'published' &&
         row['provider_type'] === provider &&
-        scope.keep(row),
+        owner.keep(row),
     )
     if (taken) {
       return HttpResponse.json(
-        { message: `A connection for ${provider} already exists in this environment` },
+        { message: connectionExists(provider, owner.entityId) },
         { status: 409 },
       )
     }
@@ -4309,7 +4337,7 @@ export const handlers = [
       name: body['name'],
       provider,
       metadata: body['metadata'],
-      billingEntityId: body['billing_entity_id'] ?? null,
+      billingEntityId: owner.entityId,
     })
     return HttpResponse.json({ oauth_url: callback.toString(), session_id: sessionId })
   }),

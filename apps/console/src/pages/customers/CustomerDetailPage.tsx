@@ -5,6 +5,7 @@ import {
   CARD_SETUP_PROVIDERS,
   CustomerStatus,
   SubscriptionStatus,
+  connectionForEntity,
   effectiveEntityId,
 } from '@fp/domain'
 import {
@@ -108,9 +109,22 @@ export function CustomerDetailPage({
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const pushCustomer = usePushCustomerToIntegrations(customerId)
+  const entitiesOn = useBillingEntityStatus().data === BillingEntityMode.Enabled
+  const entities = useBillingEntities()
+  // With entities on, a push reaches the customer's entity's connection.
+  const pushEntityId =
+    entitiesOn && customer.data && entities.data
+      ? effectiveEntityId(customer.data, entities.data)
+      : null
   // The providers a push reaches: connected, with customer sync on outbound.
   const pushTargets = (integrations.data ?? [])
-    .filter((integration) => integration.connections[0]?.syncConfig.customer?.outbound)
+    .filter(
+      (integration) =>
+        (pushEntityId !== null
+          ? connectionForEntity(integration, pushEntityId, entities.data ?? [])
+          : integration.connections[0]
+        )?.syncConfig.customer?.outbound,
+    )
     .map((integration) => integration.name)
   // Where a card can be saved: the connected providers with a hosted setup page.
   const cardProviders = (integrations.data ?? [])
@@ -162,8 +176,6 @@ export function CustomerDetailPage({
     })
   }
   const navigate = useNavigate()
-  const entitiesOn = useBillingEntityStatus().data === BillingEntityMode.Enabled
-  const entities = useBillingEntities()
   // The customer is already on screen, so the menu leaves out "View customer".
   const invoiceRows = useInvoiceRowActions({
     onRecordPayment: (invoiceId) =>

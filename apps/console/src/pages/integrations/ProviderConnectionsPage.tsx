@@ -1,5 +1,5 @@
-import { BillingEntityMode } from '@fp/domain'
-import { useBillingEntities, useBillingEntityStatus, useConnections } from '@fp/query'
+import { Navigate } from '@tanstack/react-router'
+import { useBillingEntityMode, useConnections } from '@fp/query'
 import { ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { IntegrationLogo, ProviderConnections } from '@fp/ui/pages'
 import { toListFailure } from '@/pages/shared/listFailure'
@@ -14,28 +14,31 @@ export function ProviderConnectionsPage({
   onBack: () => void
 }) {
   const integrations = useConnections()
-  const status = useBillingEntityStatus()
-  const entities = useBillingEntities()
-  const enabled = status.data === BillingEntityMode.Enabled
+  const entityMode = useBillingEntityMode()
   const { openConnect, openManage, sheets } = useIntegrationSheets(
     integrations.data ?? [],
-    enabled ? entities.data : undefined,
+    entityMode.entities,
   )
 
-  const off = status.data !== undefined && status.data !== BillingEntityMode.Enabled
-  if (integrations.isPending || status.isPending || (!off && entities.isPending)) {
+  if (entityMode.mode === 'off') return <Navigate to="/integrations" replace />
+  if (integrations.isPending || entityMode.mode === 'loading') {
     return <PageLoadingState variant="detail" label="Loading integration" />
   }
   const integration = integrations.data?.find((item) => item.id === providerId)
-  if (!integration || off || !entities.data) {
-    const failure = toListFailure(integrations.error ?? entities.error, 'this integration')
+  if (!integration || entityMode.mode === 'error') {
+    const failure = toListFailure(integrations.error ?? entityMode.error, 'this integration')
     return (
       <ErrorState
         variant="page"
         title={failure ? 'This integration could not be loaded' : 'This integration does not exist'}
         {...(failure ? { description: failure.message, kind: failure.kind } : {})}
         {...(failure?.canRetry
-          ? { onRetry: () => void Promise.all([integrations.refetch(), entities.refetch()]) }
+          ? {
+              onRetry: () => {
+                void integrations.refetch()
+                entityMode.refetch()
+              },
+            }
           : {})}
       />
     )
@@ -46,7 +49,7 @@ export function ProviderConnectionsPage({
       <ProviderConnections
         integration={integration}
         logo={<IntegrationLogo integration={integration} />}
-        entities={entities.data}
+        entities={entityMode.entities}
         onBack={onBack}
         onConfigure={(connection) => openManage(integration.id, connection.id)}
         onConnect={(entity) => openConnect(integration.id, entity.id)}

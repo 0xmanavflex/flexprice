@@ -12,10 +12,8 @@ export async function listConnections(
   serverURL: string,
   token: string,
   environmentId: string,
-  billingEntityId?: string,
 ): Promise<unknown> {
   const query = new URLSearchParams({ status: 'published', limit: '100' })
-  if (billingEntityId) query.set('billing_entity_id', billingEntityId)
   return request(serverURL, `/connections?${query}`, {
     method: 'GET',
     token,

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SearchIcon } from '@ui/icons'
-import { effectiveEntityId, type Integration } from '@fp/domain'
+import { connectionForEntity, effectiveEntityId, type Integration } from '@fp/domain'
 import { ConnectorCard, type ConnectorCardConnection } from '@ui/compositions/layout/ConnectorCard'
 import { Button } from '@ui/components/primitives/button'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
@@ -90,16 +90,15 @@ function entityConnections(
     id: connection.id,
     label: connection.name,
     entity: nameOf(effectiveEntityId(connection, entities)) ?? '—',
-    entityId: effectiveEntityId(connection, entities),
   }))
   const missing = entities
-    .filter((entity) => !owned.some((item) => item.entityId === entity.id))
+    .filter((entity) => !connectionForEntity(integration, entity.id, entities))
     .map((entity) => ({
       id: entity.id,
       label: `${entity.name} has no ${integration.name} account`,
       missing: true,
     }))
-  return [...owned.map(({ entityId: _entityId, ...item }) => item), ...missing]
+  return [...owned, ...missing]
 }
 
 function GallerySkeleton() {

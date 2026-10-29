@@ -3,6 +3,7 @@ import type { IntegrationConnection } from './integration'
 import {
   awsTrustPolicy,
   connectSteps,
+  connectionForEntity,
   connectionFormSchema,
   connectionSpecFor,
   connectionToFormValues,
@@ -225,5 +226,25 @@ describe('manage changes', () => {
     const values = connectionToFormValues(chargebee, connection)
     values.fields['webhook_username'] = 'hook'
     expect(manageFormSchema(chargebee).safeParse(values).success).toBe(false)
+  })
+})
+
+describe('connectionForEntity', () => {
+  it('gives a connection without an entity to the default entity', () => {
+    const entities = [
+      { id: 'be_us', isDefault: true },
+      { id: 'be_eu', isDefault: false },
+    ]
+    const unowned: IntegrationConnection = {
+      id: 'conn_1',
+      name: 'Stripe',
+      providerType: 'stripe',
+      syncConfig: {},
+      metadata: {},
+      billingEntityId: null,
+    }
+    const integration = { connections: [unowned] }
+    expect(connectionForEntity(integration, 'be_us', entities)).toBe(unowned)
+    expect(connectionForEntity(integration, 'be_eu', entities)).toBeNull()
   })
 })

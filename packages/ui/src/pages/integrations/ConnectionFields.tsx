@@ -7,7 +7,7 @@ import {
   type ConnectionSpec,
   type Integration,
   type SyncOption,
-  effectiveEntityId,
+  connectionForEntity,
   syncKey,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -201,8 +201,10 @@ export function BillingEntityField({
   disabled?: boolean
 }) {
   const options = entities.map((entity) => {
-    const holder = integration.connections.find(
-      (item) => item.id !== connectionId && effectiveEntityId(item, entities) === entity.id,
+    const holder = connectionForEntity(
+      { connections: integration.connections.filter((item) => item.id !== connectionId) },
+      entity.id,
+      entities,
     )
     return {
       value: entity.id,

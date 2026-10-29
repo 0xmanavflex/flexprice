@@ -15,7 +15,7 @@ import {
   connectionFormSchema,
   connectionSpecFor,
   defaultConnectionValues,
-  effectiveEntityId,
+  connectionForEntity,
   fieldsForStep,
   toConnectionPayload,
   toWebhookChanges,
@@ -109,6 +109,8 @@ export interface ConnectIntegrationSheetProps {
   onClose: () => void
   /** Creates the connection; resolves to its id, or `null` when the reader leaves for the provider. */
   onSubmit: (payload: ConnectionPayload, spec: ConnectionSpec) => Promise<string | null>
+  /** The connection exists; `webhookStepFollows` is true when the sheet stays open on its Webhook step. */
+  onConnected?: ((connectionId: string, info: { webhookStepFollows: boolean }) => void) | undefined
   /** Saves the webhook step's secrets on the new connection. */
   onSaveWebhook: (connectionId: string, changes: ConnectionChanges) => Promise<void>
   /** The environment's billing entities, given only while they are enabled: adds the entity picker and the per-connection webhook. */
@@ -132,6 +134,7 @@ export function ConnectIntegrationSheet({
   context,
   onClose,
   onSubmit,
+  onConnected,
   onSaveWebhook,
   entities,
   billingEntityId,
@@ -152,6 +155,7 @@ export function ConnectIntegrationSheet({
               context={context}
               onClose={onClose}
               onSubmit={onSubmit}
+              onConnected={onConnected}
               onSaveWebhook={onSaveWebhook}
               entities={entities}
               billingEntityId={billingEntityId}
@@ -198,7 +202,9 @@ function ConnectFlow(props: FlowProps) {
       steps={steps}
       perConnectionWebhook={perConnectionWebhook}
       onCreated={(id, sync) => {
-        if (perConnectionWebhook && steps.includes('webhook')) setCreated({ id, sync })
+        const webhookStepFollows = perConnectionWebhook && steps.includes('webhook')
+        props.onConnected?.(id, { webhookStepFollows })
+        if (webhookStepFollows) setCreated({ id, sync })
         else props.onClose()
       }}
     />
@@ -243,10 +249,7 @@ function ConnectForm({
   // With a per-connection webhook, this form ends where the connection is created.
   const stepIds = perConnectionWebhook ? steps.filter((id) => id !== 'webhook') : steps
   const firstFree = entities?.find(
-    (entity) =>
-      !integration.connections.some(
-        (connection) => effectiveEntityId(connection, entities) === entity.id,
-      ),
+    (entity) => !connectionForEntity(integration, entity.id, entities),
   )
   const form = useCalmForm<ConnectionFormValues>({
     resolver: standardSchemaResolver(

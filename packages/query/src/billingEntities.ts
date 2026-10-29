@@ -196,6 +196,33 @@ export function useBillingEntities(options: { enabled?: boolean } = {}) {
   })
 }
 
+export type BillingEntityModeState =
+  | { mode: 'loading'; entities: undefined; error: null; refetch: () => void }
+  | { mode: 'off'; entities: undefined; error: null; refetch: () => void }
+  | { mode: 'error'; entities: undefined; error: unknown; refetch: () => void }
+  | { mode: 'enabled'; entities: BillingEntity[]; error: null; refetch: () => void }
+
+/** The environment's entity mode with its entities once enabled; `enabling` counts as off. */
+export function useBillingEntityMode(): BillingEntityModeState {
+  const status = useBillingEntityStatus()
+  const entities = useBillingEntities()
+  const enabled = status.data === BillingEntityMode.Enabled
+  const refetch = () => {
+    void status.refetch()
+    if (enabled) void entities.refetch()
+  }
+  // A failed background refetch keeps the last answer.
+  const error =
+    (status.data === undefined ? status.error : null) ??
+    (enabled && !entities.data ? entities.error : null)
+  if (error) return { mode: 'error', entities: undefined, error, refetch }
+  if (status.isPending || (enabled && !entities.data)) {
+    return { mode: 'loading', entities: undefined, error: null, refetch }
+  }
+  if (!enabled || !entities.data) return { mode: 'off', entities: undefined, error: null, refetch }
+  return { mode: 'enabled', entities: entities.data, error: null, refetch }
+}
+
 /** The entity filter's choices; null while entities are not enabled, so lists leave the filter out. */
 export function useEntityFilterOptions(): { value: string; label: string }[] | null {
   const status = useBillingEntityStatus()

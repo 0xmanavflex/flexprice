@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { effectiveEntityId, type Integration, type IntegrationConnection } from '@fp/domain'
+import { connectionForEntity, type Integration, type IntegrationConnection } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
@@ -38,10 +38,7 @@ export function ProviderConnections({
 }: ProviderConnectionsProps) {
   const rows = entities.map((entity) => ({
     entity,
-    connection:
-      integration.connections.find(
-        (connection) => effectiveEntityId(connection, entities) === entity.id,
-      ) ?? null,
+    connection: connectionForEntity(integration, entity.id, entities),
   }))
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">

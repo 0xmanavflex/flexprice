@@ -79,25 +79,22 @@ export function toIntegrations(wires: ConnectionWire[]): Integration[] {
 export async function fetchIntegrations(
   serverURL: string,
   auth: AuthSource,
-  billingEntityId?: string,
 ): Promise<Integration[]> {
   const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
   if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to view integrations.')
 
-  const body = await listConnections(serverURL, token, environmentId ?? '', billingEntityId)
+  const body = await listConnections(serverURL, token, environmentId ?? '')
   const record = (body ?? {}) as { connections?: ConnectionWire[] | null }
   return toIntegrations(record.connections ?? [])
 }
 
-export function useConnections(options: { billingEntityId?: string; enabled?: boolean } = {}) {
+export function useConnections(options: { enabled?: boolean } = {}) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
 
   return useQuery({
-    queryKey: queryKeys.integrations.list(
-      options.billingEntityId ? { billingEntityId: options.billingEntityId } : {},
-    ),
-    queryFn: () => fetchIntegrations(serverURL, auth, options.billingEntityId),
+    queryKey: queryKeys.integrations.list(),
+    queryFn: () => fetchIntegrations(serverURL, auth),
     enabled: options.enabled ?? true,
   })
 }

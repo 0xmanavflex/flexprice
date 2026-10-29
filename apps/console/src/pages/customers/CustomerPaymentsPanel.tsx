@@ -1,7 +1,6 @@
 import { BillingEntityMode, gatewayCandidates, preferredGateway, type Customer } from '@fp/domain'
 import {
-  useBillingEntities,
-  useBillingEntityStatus,
+  useBillingEntityMode,
   useClearPreferredConnection,
   useConnections,
   useSetPreferredConnection,
@@ -15,29 +14,29 @@ export function CustomerPaymentsPanel({
   customer: Pick<Customer, 'id' | 'billingEntityId' | 'preferredConnectionId'>
 }) {
   const integrations = useConnections()
-  const status = useBillingEntityStatus()
-  const entities = useBillingEntities()
+  const { mode, entities } = useBillingEntityMode()
   const set = useSetPreferredConnection(customer.id)
   const clear = useClearPreferredConnection(customer.id)
 
   const gateways = gatewayCandidates(
     (integrations.data ?? []).flatMap((integration) => integration.connections),
     customer,
-    entities.data ?? [],
-    status.data,
+    entities ?? [],
+    mode === 'enabled' ? BillingEntityMode.Enabled : BillingEntityMode.Off,
   )
-
-  const loading =
-    integrations.isPending ||
-    status.isPending ||
-    (status.data === BillingEntityMode.Enabled && entities.isPending)
 
   return (
     <CustomerPaymentsSection
       gateways={gateways}
       value={preferredGateway(customer.preferredConnectionId, gateways)}
       onChange={(connectionId) => (connectionId ? set.mutate(connectionId) : clear.mutate())}
-      disabled={loading || set.isPending || clear.isPending}
+      disabled={
+        integrations.isPending ||
+        mode === 'loading' ||
+        mode === 'error' ||
+        set.isPending ||
+        clear.isPending
+      }
     />
   )
 }

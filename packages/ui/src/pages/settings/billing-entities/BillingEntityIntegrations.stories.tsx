@@ -38,7 +38,7 @@ const integrations: Integration[] = INTEGRATION_CATALOG.map((spec) => ({
 
 /** A billing entity's connections by category, with Connect for the providers it lacks. */
 const meta = {
-  title: 'App/Settings/Billing entity integrations',
+  title: 'App/Settings/Billing entities/Billing entity integrations',
   component: BillingEntityIntegrations,
   parameters: { layout: 'padded' },
   args: {
