@@ -20,7 +20,9 @@ import {
   type TopUpWallet,
   type Wallet,
   type WalletTransaction,
+  WALLET_KIND_LABEL,
   WALLET_STATUS_LABEL,
+  walletLabel,
   WalletStatus,
   autoTopupSchema,
   createWalletSchema,
@@ -224,16 +226,14 @@ export function CustomerWalletView({
             <SelectValue>
               {(value) => {
                 const chosen = wallets.find((candidate) => candidate.id === value)
-                return chosen
-                  ? `${chosen.description || 'Prepaid credits'} · ${chosen.currency.toUpperCase()}`
-                  : value
+                return chosen ? walletLabel(chosen) : value
               }}
             </SelectValue>
           </SelectTrigger>
           <SelectContent align="start">
             {wallets.map((candidate) => (
               <SelectItem key={candidate.id} value={candidate.id}>
-                {candidate.description || 'Prepaid credits'} · {candidate.currency.toUpperCase()}
+                {walletLabel(candidate)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -325,6 +325,10 @@ export function CustomerWalletView({
                     {WALLET_STATUS_LABEL[wallet.status]}
                   </Pill>
                 ),
+              },
+              {
+                label: 'Type',
+                value: wallet.walletType ? WALLET_KIND_LABEL[wallet.walletType] : '—',
               },
               { label: 'Consumption rate', value: creditRate(wallet.conversionRate, currency) },
               { label: 'Top-up rate', value: creditRate(wallet.topupConversionRate, currency) },

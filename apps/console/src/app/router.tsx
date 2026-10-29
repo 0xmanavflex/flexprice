@@ -2198,8 +2198,9 @@ function PricingWidgetRouteComponent() {
 
   return (
     <PricingWidgetPage
-      onCreatePlan={() => void navigate({ to: '/plans/new' })}
-      onEditPlan={(planId) => void navigate({ to: '/plans/$planId/edit', params: { planId } })}
+      onViewPlan={(planId) =>
+        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+      }
     />
   )
 }

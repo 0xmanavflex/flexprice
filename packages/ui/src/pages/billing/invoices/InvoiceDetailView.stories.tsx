@@ -26,6 +26,8 @@ interface InvoiceShape {
   hasNumber: boolean
   /** The invoice has a `hosted_invoice_url`: Open and Copy hosted invoice link are live. */
   hasHostedLink?: boolean
+  /** `total_discount`: coupons and discounts taken off the subtotal. */
+  discount?: number
   paymentsState: SubTabMode
   creditNotesState: SubTabMode
 }
@@ -84,6 +86,7 @@ function makeInvoice(
     hostedUrl: args.hasHostedLink ? HOSTED_URL : null,
     lines,
     prepaidCredits: Math.min(100, subtotal),
+    ...(args.discount ? { discount: args.discount } : {}),
     paid: args.paidAmount,
     payments: Array.from({ length: args.paymentCount }, (_, index) => ({
       id: `pay_${index + 1}`,
@@ -120,6 +123,7 @@ function InvoiceDetailPlayground({
   hasSubscription,
   hasNumber,
   hasHostedLink = false,
+  discount,
   paymentsState,
   creditNotesState,
   onRetrySubTab,
@@ -137,6 +141,7 @@ function InvoiceDetailPlayground({
     hasSubscription,
     hasNumber,
     hasHostedLink,
+    ...(discount ? { discount } : {}),
   })
   return (
     <InvoiceDetailView
@@ -296,9 +301,10 @@ export const HostedLink: Story = {
     await expect(
       await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
     ).not.toHaveAttribute('aria-disabled', 'true')
-    await expect(
-      screen.getByRole('menuitem', { name: /Open hosted invoice/ }),
-    ).not.toHaveAttribute('aria-disabled', 'true')
+    await expect(screen.getByRole('menuitem', { name: /Open hosted invoice/ })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
     // The Related card names the page, not the raw URL.
     await expect(canvas.getByRole('link', { name: 'Open hosted invoice' })).toHaveAttribute(
       'href',
@@ -348,6 +354,16 @@ export const Overdue: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(within(canvas.getByRole('banner')).getByText('Overdue')).toBeVisible()
+  },
+}
+
+/** A coupon took $50 off: the discount shows under the subtotal and the total is net of it. */
+export const WithDiscount: Story = {
+  args: { discount: 50 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Discount')).toBeVisible()
+    await expect(canvas.getByText('− $50.00')).toBeVisible()
   },
 }
 

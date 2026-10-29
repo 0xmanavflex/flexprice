@@ -18,6 +18,8 @@ export interface ActivityLogEntry {
   at: string
   /** The full, zone-named time, shown on hover. */
   atTitle?: string | undefined
+  /** A status tag beside the title, e.g. a version's Current / Upcoming / History. */
+  tag?: ReactNode
   /** The record that was acted on, highlighted before the summary. */
   record?: string | undefined
   /** What happened, muted. */
@@ -57,7 +59,7 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
             className="border-muted-foreground/50 bg-background relative mt-1.5 size-2 shrink-0 rounded-full border"
           />
           <div className="min-w-0 space-y-0.5">
-            <p className="text-sm leading-5 font-medium">
+            <p className="flex flex-wrap items-center gap-2 text-sm leading-5 font-medium">
               {entry.onSelect ? (
                 <Button
                   variant="link"
@@ -73,6 +75,7 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
               ) : (
                 entry.title
               )}
+              {entry.tag}
             </p>
             <p
               className="text-muted-foreground text-xs tabular-nums"

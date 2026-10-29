@@ -9,7 +9,13 @@ import {
 } from './contractCharge'
 import { type Charge } from './price'
 import { type Money } from './money'
-import { BILLING_PERIOD_LABEL, BillingModel, BillingPeriod, TierMode } from './price'
+import {
+  BILLING_PERIOD_LABEL,
+  BillingModel,
+  BillingPeriod,
+  TierMode,
+  currentVersion,
+} from './price'
 import { priceOverrideSchema, type PriceOverride } from './priceOverride'
 import { meteredGrantSchema } from './entitlement'
 
@@ -860,9 +866,9 @@ export type SubscriptionLineSource = 'plan' | 'addon' | 'contract'
 
 /** One charge on a contract across its versions. */
 export interface LineLineage {
-  /** The version that bills now, or the last one when the charge has ended. */
+  /** The version that bills now (`currentVersion`): never one only scheduled while another bills. */
   current: SubscriptionLine
-  /** Every version, newest first; `current` is the first. */
+  /** Every version, newest first, `current` among them. */
   versions: SubscriptionLine[]
 }
 
@@ -876,7 +882,10 @@ export interface LineLineage {
  * inactive, not deleted: so the table shows each charge once and its history
  * lists every price it has had.
  */
-export function lineLineages(lines: readonly SubscriptionLine[]): LineLineage[] {
+export function lineLineages(
+  lines: readonly SubscriptionLine[],
+  now: number = Date.now(),
+): LineLineage[] {
   const parent = new Map<string, string>()
   const find = (id: string): string => {
     let root = id
@@ -909,7 +918,7 @@ export function lineLineages(lines: readonly SubscriptionLine[]): LineLineage[] 
 
   return [...groups.values()].map((group) => {
     const versions = [...group].sort(newestFirst)
-    return { current: versions[0] as SubscriptionLine, versions }
+    return { current: currentVersion(versions, now), versions }
   })
 }
 

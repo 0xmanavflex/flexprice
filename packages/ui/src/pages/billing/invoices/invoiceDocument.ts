@@ -73,6 +73,8 @@ export interface InvoiceDocument {
   totals?: { subtotal: number; total: number; due: number }
   lines: InvoiceLine[]
   prepaidCredits: number
+  /** Coupons and discounts taken off the subtotal, positive. Absent or 0 when none. */
+  discount?: number
   tax: number
   paid: number
   customerId: string
@@ -154,7 +156,7 @@ export function displayStatus(
 export function invoiceTotals(doc: InvoiceDocument) {
   if (doc.totals) return doc.totals
   const subtotal = doc.lines.reduce((sum, line) => sum + line.amount, 0)
-  const total = subtotal + doc.tax - doc.prepaidCredits
+  const total = subtotal - (doc.discount ?? 0) + doc.tax - doc.prepaidCredits
   return { subtotal, total, due: Math.max(0, total - doc.paid) }
 }
 

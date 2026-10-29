@@ -821,6 +821,9 @@ function InvoiceDocumentArticle({
       <div className="mx-8 flex justify-end border-t py-6">
         <TotalsList>
           <TotalRow label="Subtotal" value={money(totals.subtotal)} />
+          {invoice.discount ? (
+            <TotalRow label="Discount" value={`− ${money(invoice.discount)}`} />
+          ) : null}
           {invoice.prepaidCredits ? (
             <TotalRow label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
           ) : null}

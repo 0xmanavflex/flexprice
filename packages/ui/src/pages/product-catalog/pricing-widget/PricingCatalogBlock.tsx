@@ -1,197 +1,189 @@
-import { useState } from 'react'
-import { toast, Toaster } from 'sonner'
-import {
-  FeatureType,
-  PlanStatus,
-  type Entitlement,
-  type Plan as PlanRecord,
-  meteredAllowanceLabel,
-} from '@fp/domain'
-import { CodeXmlIcon, CopyIcon, PlusIcon, ZapIcon } from '@ui/icons'
-import { PlanTile } from '@ui/components/blocks/solution-billing-2/components/plan-tile'
-import type { Plan } from '@ui/components/blocks/solution-billing-2/components/data'
-import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
+import type { PricingCard, PricingOption, PricingSelection } from '@fp/domain'
+import { CheckIcon, CoinsIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
-import { ButtonGroup } from '@ui/components/primitives/button-group'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
+import { PageBody, PageHeader } from '@ui/compositions/layout/Page'
+import { Section } from '@ui/compositions/layout/Section'
+import { provenance } from '@ui/provenance'
+
+export const PricingCatalogBlockProvenance = provenance({
+  source: 'composition',
+  composes: [
+    'compositions/layout/Page',
+    'compositions/layout/Section',
+    'compositions/forms/OptionSelect',
+  ],
+  note: 'The pricing widget, as V1 shows it: a billing-period and currency picker, then one Section per plan priced in them, with its fee, what it includes and the credits it grants.',
+})
 
 /**
- * The pricing widget: ReUI `solution-billing-2` plan tiles fed the real plan
- * catalogue, with the embed snippet beneath. The vendored `PlanTile` is
- * mounted as-is; `toTile` is the adapter.
+ * The pricing widget page: the published plans as a pricing page would show
+ * them, for one billing period and one currency at a time.
+ *
+ * Presentational only. The cards, the options and the default selection are
+ * worked out in `@fp/domain` (`pricingWidget.ts`); the console page fetches.
  */
 export interface PricingCatalogBlockProps {
-  plans: PlanRecord[]
-  entitlements: Entitlement[]
-  /** True while the catalogue is still loading, so the empty state is not shown prematurely. */
+  cards: readonly PricingCard[]
+  periods: readonly PricingOption[]
+  currencies: readonly PricingOption[]
+  /** Null until there is a priced plan to pick a period and currency from. */
+  selection: PricingSelection | null
+  onSelectionChange: (next: PricingSelection) => void
+  /** True while plans or their prices are loading. */
   loading?: boolean
-  onCreatePlan: () => void
-  onEditPlan: (planId: string) => void
-  /** Written into the embed snippet's `data-tenant`. */
-  tenant?: string
+  /** Whether any published plan exists at all, priced or not. */
+  hasPlans: boolean
+  onViewPlan: (planId: string) => void
 }
 
-type Interval = 'monthly' | 'annual'
+function PlanCard({ card, onViewPlan }: { card: PricingCard; onViewPlan: (id: string) => void }) {
+  return (
+    <Section title={card.name} as="h2" bodyClassName="flex flex-col gap-5">
+      <div className="flex flex-col gap-1">
+        {card.price ? (
+          <p className="flex items-baseline gap-1">
+            <span className="text-2xl font-medium tabular-nums">{card.price}</span>
+            <span className="text-muted-foreground text-sm">/{card.per}</span>
+          </p>
+        ) : (
+          <p className="text-2xl font-medium">Usage-based</p>
+        )}
+        {card.price && card.hasUsage ? (
+          <p className="text-muted-foreground text-xs">Plus usage</p>
+        ) : !card.price ? (
+          <p className="text-muted-foreground text-xs">Billed on what is used</p>
+        ) : null}
+        {card.description ? (
+          <p className="text-muted-foreground text-[13px]">{card.description}</p>
+        ) : null}
+      </div>
 
-/** Features a tile shows before "Show more". The widget is a pitch, not a spec sheet. */
-const VISIBLE_FEATURES = 3
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={() => onViewPlan(card.planId)}
+      >
+        View plan
+      </Button>
 
-function describe(e: Entitlement): string {
-  switch (e.featureType) {
-    case FeatureType.Metered:
-      return meteredAllowanceLabel(e)
-    case FeatureType.Static:
-      return e.staticValue ?? '—'
-    case FeatureType.Boolean:
-      return e.isEnabled ? 'Included' : 'Off'
-    default:
-      return 'Custom'
-  }
-}
+      {card.included.length > 0 ? (
+        <div className="flex flex-col gap-2 border-t pt-4">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">Included</p>
+          <ul className="flex flex-col gap-2" aria-label={`Included in ${card.name}`}>
+            {card.included.map((line) => (
+              <li key={line.id} className="flex items-start gap-2 text-sm">
+                <CheckIcon
+                  className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                  aria-hidden="true"
+                />
+                {line.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
-function toTile(plan: PlanRecord, entitlements: Entitlement[], showAll: boolean): Plan {
-  const amount = Number((plan.headline?.amount ?? '').replace(/[^0-9.]/g, '')) || 0
-  const yearly = /year|annual/i.test(plan.headline?.period ?? '')
-  return {
-    id: plan.id,
-    name: plan.name,
-    status: plan.status === PlanStatus.Published ? 'active' : 'archived',
-    isPublic: true,
-    monthlyPrice: yearly ? Math.round(amount / 12) : amount,
-    annualPrice: yearly ? amount : amount * 12,
-    perSeat: false,
-    entitlements: (showAll
-      ? entitlements.filter((e) => e.entityId === plan.id)
-      : entitlements.filter((e) => e.entityId === plan.id).slice(0, VISIBLE_FEATURES)
-    ).map((e) => ({
-      id: e.id,
-      icon: <ZapIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />,
-      label: e.featureName ?? 'Feature',
-      value: describe(e),
-    })),
-    addOns: [],
-  }
+      {card.credits.length > 0 ? (
+        <div className="flex flex-col gap-2 border-t pt-4">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">Credits</p>
+          <ul className="flex flex-col gap-2" aria-label={`Credits in ${card.name}`}>
+            {card.credits.map((line) => (
+              <li key={line.id} className="flex items-start gap-2 text-sm">
+                <CoinsIcon
+                  className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                  aria-hidden="true"
+                />
+                {line.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </Section>
+  )
 }
 
 export function PricingCatalogBlock({
-  plans,
-  entitlements,
+  cards,
+  periods,
+  currencies,
+  selection,
+  onSelectionChange,
   loading = false,
-  onCreatePlan,
-  onEditPlan,
-  tenant = 'your-tenant',
+  hasPlans,
+  onViewPlan,
 }: PricingCatalogBlockProps) {
-  const [interval, setInterval] = useState<Interval>('monthly')
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
-  const featureCount = (planId: string) => entitlements.filter((e) => e.entityId === planId).length
-  const toggle = (planId: string) =>
-    setExpanded((current) => {
-      const next = new Set(current)
-      if (!next.delete(planId)) next.add(planId)
-      return next
-    })
-  const tiles = plans.map((plan) => toTile(plan, entitlements, expanded.has(plan.id)))
-  const published = tiles.filter((tile) => tile.status === 'active').length
-
-  const snippet = `<script src="https://js.flexprice.io/pricing.js" data-tenant="${tenant}" data-interval="${interval}"></script>`
-
-  const copySnippet = () => {
-    void navigator.clipboard?.writeText(snippet)
-    toast.success('Embed code copied')
-  }
+  const pickers =
+    selection && (periods.length > 0 || currencies.length > 0) ? (
+      <>
+        <div className="w-40">
+          <label htmlFor="pricing-widget-period" className="sr-only">
+            Billing period
+          </label>
+          <OptionSelect
+            id="pricing-widget-period"
+            value={selection.period}
+            options={periods}
+            onValueChange={(period) => onSelectionChange({ ...selection, period })}
+          />
+        </div>
+        <div className="w-32">
+          <label htmlFor="pricing-widget-currency" className="sr-only">
+            Currency
+          </label>
+          <OptionSelect
+            id="pricing-widget-currency"
+            value={selection.currency}
+            options={currencies}
+            onValueChange={(currency) => onSelectionChange({ ...selection, currency })}
+          />
+        </div>
+      </>
+    ) : null
 
   return (
-    <div className="flex flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <ButtonGroup>
-          <Button
-            type="button"
-            variant={interval === 'monthly' ? 'secondary' : 'outline'}
-            aria-pressed={interval === 'monthly'}
-            onClick={() => setInterval('monthly')}
+    <>
+      <PageHeader title="Pricing widget" {...(pickers ? { actions: pickers } : {})} />
+      <PageBody>
+        {loading ? (
+          <div
+            className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+            role="status"
+            aria-busy="true"
+            aria-label="Loading plans"
           >
-            Monthly
-          </Button>
-          <Button
-            type="button"
-            variant={interval === 'annual' ? 'secondary' : 'outline'}
-            aria-pressed={interval === 'annual'}
-            onClick={() => setInterval('annual')}
-          >
-            Annual
-          </Button>
-        </ButtonGroup>
-        <Button type="button" variant="outline" onClick={onCreatePlan}>
-          <PlusIcon aria-hidden="true" />
-          Create plan
-        </Button>
-        <Button type="button" onClick={copySnippet}>
-          <CodeXmlIcon aria-hidden="true" />
-          Get embed code
-        </Button>
-      </div>
-
-      {loading ? (
-        <div
-          className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-          aria-busy="true"
-          aria-label="Loading plans"
-        >
-          {[0, 1, 2].map((key) => (
-            <Skeleton key={key} className="h-72 rounded-xl" />
-          ))}
-        </div>
-      ) : tiles.length === 0 ? (
-        <EmptyState
-          scene="catalog"
-          title="No plans to show yet"
-          description="Publish a plan and it appears here, ready to embed on your pricing page."
-        />
-      ) : (
-        <>
-          <Alert variant="info">
-            <CodeXmlIcon aria-hidden="true" />
-            <AlertTitle>Pricing widget</AlertTitle>
-            <AlertDescription>
-              {published} published {published === 1 ? 'plan is' : 'plans are'} shown. Open a plan
-              to change what the widget displays.
-            </AlertDescription>
-          </Alert>
-          {/* The vendored tile sets the plan name and price in semibold; the console
-              tops out at medium, so the grid brings those two back to it. */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [&_.text-2xl]:font-medium [&_h3]:font-medium">
-            {tiles.map((tile) => {
-              const total = featureCount(tile.id)
-              const hidden = total - VISIBLE_FEATURES
-              return (
-                <div key={tile.id} className="flex flex-col gap-2">
-                  <PlanTile plan={tile} onEdit={onEditPlan} />
-                  {hidden > 0 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="self-center"
-                      aria-expanded={expanded.has(tile.id)}
-                      onClick={() => toggle(tile.id)}
-                    >
-                      {expanded.has(tile.id)
-                        ? 'Show fewer features'
-                        : `Show ${hidden} more ${hidden === 1 ? 'feature' : 'features'}`}
-                    </Button>
-                  ) : null}
-                </div>
-              )
-            })}
+            {[0, 1, 2].map((key) => (
+              <Skeleton key={key} className="h-72 rounded-xl" />
+            ))}
           </div>
-          <div className="text-muted-foreground flex items-center gap-2 text-xs">
-            <CopyIcon className="size-3.5" aria-hidden="true" />
-            <code className="font-mono">{snippet}</code>
+        ) : !hasPlans ? (
+          <EmptyState
+            scene="catalog"
+            title="No plans to show yet"
+            description="Publish a plan and it appears here, as your pricing page would show it."
+          />
+        ) : cards.length === 0 ? (
+          <EmptyState
+            scene="catalog"
+            title="No plans priced here"
+            description={
+              selection
+                ? 'No published plan has a charge in this billing period and currency. Choose another.'
+                : 'Add charges to a published plan and it appears here.'
+            }
+          />
+        ) : (
+          <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {cards.map((card) => (
+              <PlanCard key={card.planId} card={card} onViewPlan={onViewPlan} />
+            ))}
           </div>
-        </>
-      )}
-      <Toaster />
-    </div>
+        )}
+      </PageBody>
+    </>
   )
 }

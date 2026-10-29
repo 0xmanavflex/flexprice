@@ -1067,6 +1067,7 @@
       "composes": [
         "ActivityLog",
         "ConfirmDialog",
+        "Pill",
         "PlusIcon",
         "Sheet"
       ],
@@ -1229,6 +1230,7 @@
         "PlanAiSetupView",
         "PlanPreviewCard",
         "PortalEmpty",
+        "PricingCatalogBlock",
         "Properties",
         "RadioRows",
         "RegionField",
@@ -1816,7 +1818,6 @@
         "PlanGrid",
         "PortalEmpty",
         "PriceUnitGrid",
-        "PricingCatalogBlock",
         "Properties",
         "RadioRows",
         "SegmentMeter",
@@ -5494,6 +5495,7 @@
         "MeteredEntitlementFields",
         "PaymentForm",
         "PriceOverrideForm",
+        "PricingCatalogBlock",
         "RunExportDialog",
         "S3ConnectionDialog",
         "SpecField",
@@ -5560,6 +5562,7 @@
         "ExportRunList",
         "ExportsOverview",
         "FormPage",
+        "PricingCatalogBlock",
         "S3ConnectionList"
       ],
       "story": "./src/compositions/layout/Page.stories.tsx"
@@ -5568,7 +5571,9 @@
       "file": "src/compositions/layout/Page.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "PricingCatalogBlock"
+      ],
       "story": "./src/compositions/layout/Page.stories.tsx"
     },
     "PageLoadingState": {
@@ -5845,6 +5850,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "CatalogStatusBadge",
+        "ChargeSheet",
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
@@ -6059,9 +6065,7 @@
       "file": "src/components/blocks/solution-billing-2/components/plan-tile.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "PricingCatalogBlock"
-      ],
+      "usedBy": [],
       "story": null
     },
     "Play": {
@@ -6146,7 +6150,6 @@
         "PortalCredits",
         "PortalOverview",
         "PriceUnitGrid",
-        "PricingCatalogBlock",
         "RunExportDialog",
         "S3ConnectionDialog",
         "S3ConnectionList",
@@ -6380,10 +6383,12 @@
       "file": "src/pages/product-catalog/pricing-widget/PricingCatalogBlock.tsx",
       "layer": "surface",
       "composes": [
-        "CopyIcon",
+        "CheckIcon",
         "EmptyState",
-        "PlanTile",
-        "PlusIcon"
+        "OptionSelect",
+        "PageBody",
+        "PageHeader",
+        "Section"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx"
@@ -6914,6 +6919,7 @@
         "PortalInvoices",
         "PortalOverview",
         "PortalUsage",
+        "PricingCatalogBlock",
         "RelatedCard",
         "S3ConnectionList",
         "SubscriptionDetailView",
@@ -9871,7 +9877,7 @@
     },
     "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx": {
       "title": "App/Product catalog/Pricing widgets/Pricing widget",
-      "component": null,
+      "component": "PricingCatalogBlock",
       "uses": [
         "PricingCatalogBlock"
       ]

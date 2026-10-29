@@ -107,6 +107,7 @@ export function toInvoiceDocument(
       kind: line.priceType,
     })),
     prepaidCredits: num(invoice.prepaidCredits),
+    discount: num(invoice.discount),
     tax: num(invoice.tax),
     paid: num(invoice.amountPaid),
     totals: {
