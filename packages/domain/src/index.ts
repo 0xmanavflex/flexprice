@@ -821,6 +821,7 @@ export {
   EVENT_DEBUG_STAGE_LABEL,
   EVENT_DEBUG_STAGE_WIRE,
   eventDebugSummary,
+  missingAggregationFields,
   toEventDebug,
 } from './eventDebug'
 export type {
@@ -830,6 +831,7 @@ export type {
   EventDebugStage,
   EventDebugStageResult,
   EventVersion,
+  MissingAggregationField,
   ProcessedUsage,
 } from './eventDebug'
 

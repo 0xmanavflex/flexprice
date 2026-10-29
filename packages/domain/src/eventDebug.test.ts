@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { EVENT_DEBUG_STAGES, eventDebugSummary, toEventDebug } from './eventDebug'
+import {
+  EVENT_DEBUG_STAGES,
+  eventDebugSummary,
+  missingAggregationFields,
+  toEventDebug,
+} from './eventDebug'
 
 /**
  * A real `GET /events/lookup` response, trimmed to the fields this reads.
@@ -288,5 +293,45 @@ describe('toEventDebug processed usage', () => {
 
   it('is empty before the event has been processed', () => {
     expect(toEventDebug(LIVE).processedUsage).toEqual([])
+  })
+})
+
+describe('missingAggregationFields', () => {
+  const withMeters = (meters: unknown[]) =>
+    toEventDebug({
+      ...LIVE,
+      debug_tracker: {
+        ...LIVE.debug_tracker,
+        meter_matching: { status: 'found', matched_meters: meters },
+      },
+    })
+  const meter = (aggregation: Record<string, unknown>) => ({
+    meter_id: 'meter_1',
+    event_name: 'tokens',
+    meter: { name: 'Tokens', aggregation },
+  })
+
+  it('names a meter whose field the event does not carry', () => {
+    const debug = withMeters([meter({ type: 'SUM', field: 'tokens' })])
+    expect(missingAggregationFields(debug, { model: 'gpt' })).toEqual([
+      { meterId: 'meter_1', meterName: 'Tokens', field: 'tokens', aggregation: 'SUM' },
+    ])
+  })
+
+  it('is quiet when the field is there, even as zero', () => {
+    const debug = withMeters([meter({ type: 'SUM', field: 'tokens' })])
+    expect(missingAggregationFields(debug, { tokens: 0 })).toEqual([])
+  })
+
+  it('ignores counts and expressions, which read no single field', () => {
+    const debug = withMeters([
+      meter({ type: 'COUNT', field: '' }),
+      meter({ type: 'SUM', field: 'tokens', expression: 'properties.a * 2' }),
+    ])
+    expect(missingAggregationFields(debug, {})).toEqual([])
+  })
+
+  it('is quiet when no meter matched', () => {
+    expect(missingAggregationFields(withMeters([]), {})).toEqual([])
   })
 })

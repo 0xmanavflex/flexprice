@@ -142,6 +142,7 @@ export function EventDetailSheet({
               {showTrace ? (
                 <EventTrace
                   debug={debug}
+                  properties={event.properties}
                   {...(locale ? { locale } : {})}
                   isPending={debugPending}
                   error={debugError}

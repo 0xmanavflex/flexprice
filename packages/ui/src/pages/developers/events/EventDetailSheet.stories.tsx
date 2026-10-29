@@ -190,6 +190,37 @@ export const Traced: Story = {
   },
 }
 
+/** The meter sums a property the event left out: it matched, but adds nothing. */
+export const MissingAggregationField: Story = {
+  args: {
+    debug: {
+      ...TRACED,
+      stages: TRACED.stages.map((stage) =>
+        stage.stage === 'meterMatching'
+          ? {
+              ...stage,
+              raw: {
+                status: 'found',
+                matched_meters: [
+                  {
+                    meter_id: 'mtr_1',
+                    event_name: 'api_call',
+                    meter: { name: 'API Calls', aggregation: { type: 'SUM', field: 'duration_ms' } },
+                  },
+                ],
+              },
+            }
+          : stage,
+      ),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const sheet = within(canvasElement.ownerDocument.body)
+    await expect(sheet.getByText('This event has no "duration_ms" property')).toBeVisible()
+    await expect(sheet.getByText(/API Calls takes the sum of/)).toBeVisible()
+  },
+}
+
 /** A failure names the stage, and the stages after it read as not reached. */
 export const FailedAtTheMeter: Story = {
   args: { debug: NO_METER },
