@@ -56,6 +56,7 @@ export interface CustomerWire {
   externalId?: string | undefined
   addressCountry?: string | undefined
   billingCurrency?: string | undefined
+  timezone?: string | undefined
   status?: string | undefined
   integrations?: CustomerIntegrationWire[] | undefined
   createdAt?: Date | undefined
@@ -98,6 +99,7 @@ export function toCustomer(wire: CustomerWire): Customer {
     externalId: wire.externalId ?? '',
     addressCountry: wire.addressCountry ?? '',
     ...(wire.billingCurrency ? { billingCurrency: wire.billingCurrency.toLowerCase() } : {}),
+    ...(wire.timezone ? { timezone: wire.timezone } : {}),
     status,
     integrations: toCustomerIntegrations(wire.integrations),
     createdAt: wire.createdAt ?? null,
@@ -258,11 +260,13 @@ export function useCustomer(id: string) {
 
 export async function fetchCustomerSubscriptions(
   client: Flexprice,
-  externalId: string,
+  customerId: string,
 ): Promise<Subscription[]> {
   const response = await call(() =>
     client.subscriptions.querySubscription({
-      externalCustomerId: externalId,
+      // The internal id, not the external one: the API resolves an external id
+      // to published customers only, so an archived customer's would 404.
+      customerId,
       // The search returns only active subscriptions unless told otherwise, so a
       // trialing or draft contract would vanish. Same set V1's overview asks for,
       // plus paused, which the Live contracts tile counts.
@@ -275,43 +279,42 @@ export async function fetchCustomerSubscriptions(
 }
 
 /**
- * A customer's subscriptions, scoped by their external id.
+ * A customer's subscriptions, scoped by their internal id.
  *
- * The subscription search narrowed by `externalCustomerId`, which is why the page
- * waits on `useCustomer` before calling this. Not
+ * The subscription search narrowed by `customerId`. Not the external id: the
+ * API resolves that to a published customer only, so an archived customer's
+ * contracts would fail to load (404) rather than show. Not
  * `GET /customers/external/{id}/subscriptions`: that endpoint rejects any
  * `expand` (400), so the plan name could not be resolved and the whole tab
  * failed. Not a paged list: a single customer's subscriptions are a handful,
  * shown whole rather than behind a pager.
  */
-export function useCustomerSubscriptions(externalId: string) {
+export function useCustomerSubscriptions(customerId: string) {
   const client = useFlexprice()
 
   return useQuery({
-    queryKey: queryKeys.subscriptions.list({ customerExternalId: externalId }),
-    queryFn: () => fetchCustomerSubscriptions(client, externalId),
-    enabled: externalId.length > 0,
+    queryKey: queryKeys.subscriptions.list({ customerId }),
+    queryFn: () => fetchCustomerSubscriptions(client, customerId),
+    enabled: customerId.length > 0,
   })
 }
 
 /**
- * A customer's invoices, scoped by their external id.
+ * A customer's invoices, scoped by their internal id.
  *
- * Invoices have no dedicated per-customer endpoint; the list search narrows by
- * `externalCustomerId` instead (that is what the global list's search box does),
- * so this reuses `fetchInvoices` with the external id as the filter. Gated on a
- * real id so it does not fetch the whole book while the customer is still
- * loading. Returns the same `InvoicePage` the list does: status is derived, so
- * a draft reads "Draft" and a past-due one "Overdue".
+ * Invoices have no dedicated per-customer endpoint; the invoice search takes a
+ * `customerId`, which still resolves once the customer is archived (the
+ * external id does not). Returns the same `InvoicePage` the list does: status
+ * is derived, so a draft reads "Draft" and a past-due one "Overdue".
  */
-export function useCustomerInvoices(externalId: string) {
+export function useCustomerInvoices(customerId: string) {
   const client = useFlexprice()
 
   return useQuery<InvoicePage>({
-    queryKey: queryKeys.invoices.list({ externalCustomerId: externalId }),
-    queryFn: () =>
-      fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, search: externalId, pageSize: 200 }),
-    enabled: externalId.length > 0,
+    queryKey: queryKeys.invoices.list({ customerId }),
+    queryFn: ({ signal }) =>
+      fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, pageSize: 200 }, signal, { customerId }),
+    enabled: customerId.length > 0,
   })
 }
 

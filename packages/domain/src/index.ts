@@ -821,6 +821,7 @@ export {
   EVENT_DEBUG_STAGE_LABEL,
   EVENT_DEBUG_STAGE_WIRE,
   eventDebugSummary,
+  missingAggregationFields,
   toEventDebug,
 } from './eventDebug'
 export type {
@@ -830,6 +831,7 @@ export type {
   EventDebugStage,
   EventDebugStageResult,
   EventVersion,
+  MissingAggregationField,
   ProcessedUsage,
 } from './eventDebug'
 
@@ -884,7 +886,6 @@ export {
 } from './access'
 export type { AccessGrants, AccessRequirement, RbacAction, RbacEntity } from './access'
 export {
-  SELF_BILLING_PLAN,
   AccountState,
   CheckoutStatus,
   CHECKOUT_SLOW_AFTER_MS,
@@ -898,8 +899,12 @@ export {
   daysUntil,
   emptyCheckoutDetails,
   lockReason,
+  chargePriceText,
   longDate,
-  planRateText,
+  periodText,
+  planMoney,
+  planFixedTotal,
+  planPriceText,
   selfInvoiceStatus,
   shortDate,
   trialProgress,
@@ -911,8 +916,10 @@ export type {
   CheckoutOutcome,
   LockReason,
   PillTone,
+  SelfBillingCharge,
   SelfBillingCheckout,
   SelfBillingInvoice,
+  SelfBillingPlan,
   SelfBillingStatus,
   SelfBillingSummary,
   SelfInvoiceStatus,
@@ -1003,12 +1010,18 @@ export {
   type PricingOption,
   type PricingSelection,
 } from './pricingWidget'
+
 export {
-  BANNED_ORG_NAME_WORDS,
-  type OnboardingSheetRow,
-  REFERRAL_SOURCES,
-  type TenantOnboarding,
-  onboardedMetadata,
-  orgNameError,
-  tenantOnboardingSchema,
-} from './onboarding'
+  BONUS_EXPIRY_UNIT_LABEL,
+  BonusExpiryUnit,
+  BonusType,
+  DEFAULT_BONUS_CREDITS_CONFIG,
+  bonusCreditsConfigSchema,
+  bonusExpiryText,
+  bonusSlabSchema,
+  bonusText,
+  emptyBonusSlab,
+  resolveBonus,
+  sortBonusSlabs,
+} from './bonusCredits'
+export type { BonusCreditsConfig, BonusSlab } from './bonusCredits'

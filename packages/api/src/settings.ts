@@ -64,6 +64,8 @@ export const SettingKey = {
   CustomerOnboarding: 'customer_onboarding',
   WalletBalanceAlertConfig: 'wallet_balance_alert_config',
   TaxConfig: 'tax_config',
+  /** Bonus credits on a purchased wallet top-up, by slab. */
+  BonusCreditsTopupConfig: 'bonus_credits_topup_config',
   /** 404s on deployments without SSO. See `useSamlConfig` in `@fp/query`. */
   SamlConfig: 'saml_config',
 } as const

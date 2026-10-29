@@ -65,6 +65,9 @@ interface SearchBody {
   /** How the plan detail page's subscriptions metric scopes to one plan. */
   plan_id?: string
   planId?: string
+  /** A customer's contracts and invoices, by internal id (works for archived customers). */
+  customer_id?: string
+  customerId?: string
   /** How a customer's invoices scope: the list search narrows by external id. */
   external_customer_id?: string
   externalCustomerId?: string
@@ -190,12 +193,22 @@ function page(source: Corpus, body: SearchBody) {
   // an unknown external id scopes to nothing rather than the whole book.
   const externalCustomerId = body.external_customer_id ?? body.externalCustomerId
   if (externalCustomerId) {
+    // As the API: an external id resolves to a published customer only, so an
+    // archived customer's external id finds nothing (the API answers 404).
     const customer = (corpus.customers as Corpus).items.find(
-      (row) => readString(row, 'external_id') === externalCustomerId,
+      (row) =>
+        readString(row, 'external_id') === externalCustomerId &&
+        readString(row, 'status') !== 'archived',
     )
     const customerId = customer ? readString(customer, 'id') : ''
     rows = rows.filter((row) => readString(row, 'customer_id') === customerId)
   }
+
+  // A customer's contracts or invoices by internal id, as the customer page
+  // reads them: unlike the external id, it still resolves once archived.
+  const scopedCustomerId = body.customer_id ?? body.customerId
+  if (scopedCustomerId)
+    rows = rows.filter((row) => readString(row, 'customer_id') === scopedCustomerId)
 
   // A contract's invoices. The captured invoices point at the captured
   // subscriptions, not the synthetic ones the console lists, so a row also
@@ -911,6 +924,8 @@ type SettingsValue = Record<string, unknown>
 const SETTINGS_DEFAULTS: Record<string, SettingsValue> = {
   // `{}`: Flexprice's native engine, off.
   tax_config: {},
+  // Off, no slabs: purchased top-ups earn no bonus until slabs are set.
+  bonus_credits_topup_config: { enabled: false, slabs: [] },
   invoice_config: {
     prefix: 'INV',
     separator: '-',

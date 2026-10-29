@@ -19,6 +19,11 @@ import {
 import {
   AlertCondition,
   AlertThresholdType,
+  type BonusCreditsConfig,
+  BonusExpiryUnit,
+  type BonusSlab,
+  BonusType,
+  sortBonusSlabs,
   type CustomCurrencyConfig,
   type CustomCurrencyDefinition,
   type CustomerOnboarding,
@@ -564,6 +569,52 @@ export function toWalletAlertConfigRequest(config: WalletAlertConfig): Record<st
   }
 }
 
+/* ----------------------------- Bonus credits ----------------------------- */
+
+const EXPIRY_UNITS = new Set<string>(Object.values(BonusExpiryUnit))
+
+export function toBonusCreditsConfig(value: unknown): BonusCreditsConfig {
+  const wire = record(value)
+  return {
+    enabled: bool(wire, 'enabled'),
+    slabs: list(wire['slabs']).map((raw): BonusSlab => {
+      const slab = record(raw)
+      const bonus = record(slab['bonus'])
+      const unit = str(slab, 'expiration_duration_unit').toUpperCase()
+      const duration = slab['expiration_duration']
+      return {
+        threshold: decimal(slab, 'threshold', ''),
+        bonusType: str(bonus, 'type') === BonusType.Flat ? BonusType.Flat : BonusType.Percentage,
+        bonusValue: decimal(bonus, 'value', ''),
+        expiryDuration: typeof duration === 'number' && duration > 0 ? String(duration) : '',
+        expiryUnit: EXPIRY_UNITS.has(unit) ? (unit as BonusExpiryUnit) : BonusExpiryUnit.Month,
+      }
+    }),
+  }
+}
+
+/**
+ * The whole config, slabs highest threshold first with the one operator the
+ * backend takes (`gte`). A slab without an expiry sends neither expiry field:
+ * the API wants both or none.
+ */
+export function toBonusCreditsConfigRequest(config: BonusCreditsConfig): Record<string, unknown> {
+  return {
+    enabled: config.enabled,
+    slabs: sortBonusSlabs(config.slabs).map((slab) => ({
+      threshold: slab.threshold.trim(),
+      operator: 'gte',
+      bonus: { type: slab.bonusType, value: slab.bonusValue.trim() },
+      ...(slab.expiryDuration
+        ? {
+            expiration_duration: Number(slab.expiryDuration),
+            expiration_duration_unit: slab.expiryUnit,
+          }
+        : {}),
+    })),
+  }
+}
+
 /* --------------------------------- SAML ---------------------------------- */
 
 export function toSamlConfig(value: unknown): SamlConfig {
@@ -635,6 +686,12 @@ const walletAlertCodec: SettingCodec<WalletAlertConfig> = {
   key: SettingKey.WalletBalanceAlertConfig,
   read: toWalletAlertConfig,
   write: toWalletAlertConfigRequest,
+}
+
+const bonusCreditsCodec: SettingCodec<BonusCreditsConfig> = {
+  key: SettingKey.BonusCreditsTopupConfig,
+  read: toBonusCreditsConfig,
+  write: toBonusCreditsConfigRequest,
 }
 
 /** A settings hook's guard: no environment, no request. */
@@ -906,6 +963,25 @@ export function useResetWalletAlertConfig(
   environmentId: string | null,
 ): UseMutationResult<WalletAlertConfig, Error, void> {
   return useSettingReset(walletAlertCodec, environmentId)
+}
+
+/** Bonus credits on a purchased top-up: `GET/PUT/DELETE /settings/bonus_credits_topup_config`. */
+export function useBonusCreditsConfig(
+  environmentId: string | null,
+): UseQueryResult<BonusCreditsConfig> {
+  return useSettingQuery(bonusCreditsCodec, environmentId)
+}
+
+export function useUpdateBonusCreditsConfig(
+  environmentId: string | null,
+): UseMutationResult<BonusCreditsConfig, Error, BonusCreditsConfig> {
+  return useSettingUpdate(bonusCreditsCodec, environmentId)
+}
+
+export function useResetBonusCreditsConfig(
+  environmentId: string | null,
+): UseMutationResult<BonusCreditsConfig, Error, void> {
+  return useSettingReset(bonusCreditsCodec, environmentId)
 }
 
 /**

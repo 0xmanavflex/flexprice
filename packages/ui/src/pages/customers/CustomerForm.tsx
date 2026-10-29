@@ -256,6 +256,7 @@ export function CustomerForm({
                 {...field}
                 value={control.value || undefined}
                 onValueChange={(value) => control.onChange(value)}
+                offerLocal
                 disabled={isSubmitting}
               />
             )}

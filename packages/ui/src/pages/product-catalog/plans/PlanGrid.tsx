@@ -7,7 +7,7 @@ import {
   LayersIcon,
   PencilIcon,
   ReceiptTextIcon,
-  SparklesIcon,
+  WandSparklesIcon,
   SquareStackIcon,
 } from '@ui/icons'
 import {
@@ -399,8 +399,10 @@ export function PlanGrid({
           <>
             {onCreateWithAi ? (
               <Button variant="outline" onClick={onCreateWithAi}>
-                <SparklesIcon aria-hidden />
-                Create with AI
+                {/* The AI entry point's mark: a violet wand, and a violet sheen
+                    across the label (still under reduced motion). */}
+                <WandSparklesIcon aria-hidden className="ai-accent" />
+                <span className="ai-shimmer">Create with AI</span>
               </Button>
             ) : null}
             {onCreate ? <Button onClick={onCreate}>New plan</Button> : null}

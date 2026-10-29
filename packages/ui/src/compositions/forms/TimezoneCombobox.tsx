@@ -21,6 +21,12 @@ export interface TimezoneComboboxProps {
   value: string | undefined
   onValueChange: (value: string) => void
   disabled?: boolean
+  /**
+   * Lead with "Local": this browser's own zone, so the person setting it up can
+   * pick their zone without searching. It stores the zone's IANA name, like
+   * any other option.
+   */
+  offerLocal?: boolean
   'aria-describedby'?: string | undefined
   'aria-invalid'?: true | undefined
 }
@@ -30,12 +36,34 @@ const TIMEZONE_OPTIONS: Option[] = toTimezoneOptions(IANA_TIMEZONES).map((option
   label: option.label,
 }))
 
-/** A saved zone the catalogue does not know stays selectable. */
-function optionsFor(current: string | undefined): readonly Option[] {
-  if (!current || TIMEZONE_OPTIONS.some((option) => option.value === current)) {
-    return TIMEZONE_OPTIONS
+/** This browser's IANA zone, or null where the runtime does not say. */
+export function localTimezone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null
+  } catch {
+    return null
   }
-  return [{ value: current, label: toTimezoneOption(current).label }, ...TIMEZONE_OPTIONS]
+}
+
+/**
+ * The options, with "Local" first when asked for (and in place of its own
+ * catalogue row, so one zone is never listed twice), and a saved zone the
+ * catalogue does not know kept selectable.
+ */
+export function timezoneOptionsFor(
+  current: string | undefined,
+  local: string | null,
+): readonly Option[] {
+  const localOption: Option[] = local
+    ? [{ value: local, label: `Local · ${toTimezoneOption(local).label}` }]
+    : []
+  const rest = TIMEZONE_OPTIONS.filter((option) => option.value !== local)
+  const known = current === local || rest.some((option) => option.value === current)
+  return [
+    ...localOption,
+    ...(!current || known ? [] : [{ value: current, label: toTimezoneOption(current).label }]),
+    ...rest,
+  ]
 }
 
 export function TimezoneCombobox({
@@ -43,6 +71,7 @@ export function TimezoneCombobox({
   value,
   onValueChange,
   disabled,
+  offerLocal = false,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
 }: TimezoneComboboxProps) {
@@ -52,7 +81,7 @@ export function TimezoneCombobox({
       searchable
       value={value || undefined}
       onValueChange={onValueChange}
-      options={optionsFor(value)}
+      options={timezoneOptionsFor(value, offerLocal ? localTimezone() : null)}
       placeholder="Search time zones…"
       emptyText="No matching time zone."
       {...(disabled !== undefined ? { disabled } : {})}

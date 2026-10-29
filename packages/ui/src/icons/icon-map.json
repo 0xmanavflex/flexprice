@@ -1,5 +1,5 @@
 {
-  "$comment": "Source of truth for the icon system. Key = the lucide-style name the code imports (without the Icon suffix); reui = ReUI Motion Icons item (outline style unless the entry sets style); animated = use the animated variant; rotate = degrees to turn the icon. Edit this file, then run `pnpm --filter @fp/ui icons:sync`.",
+  "$comment": "Source of truth for the icon system. Key = the lucide-style name the code imports (without the Icon suffix); reui = ReUI Motion Icons item (outline style unless the entry sets style); animated = use the animated variant; rotate = degrees to turn the icon. local = a repo-owned icon in src/icons/local/<name>.tsx, for a glyph the registry does not have. Edit this file, then run `pnpm --filter @fp/ui icons:sync`.",
   "style": "outline",
   "icons": {
     "Activity": { "reui": "pulse" },
@@ -165,6 +165,7 @@
     "UserPlus": { "reui": "add-user" },
     "Users": { "reui": "users" },
     "Wallet": { "reui": "wallet" },
+    "WandSparkles": { "local": "wand-sparkles" },
     "Waypoints": { "reui": "route" },
     "Webhook": { "reui": "rings-linked", "animated": true },
     "Workflow": { "reui": "squares-ring", "animated": true },

@@ -166,6 +166,12 @@ export interface SubscriptionPart<T> {
 export type SubscriptionActivity = InvoiceActivity
 
 export interface SubscriptionDetailViewProps {
+  /**
+   * The open tab, when the page keeps it (in the URL), so going back to the
+   * contract opens the tab it was left on. Without it the view keeps its own.
+   */
+  tab?: SubscriptionTab | undefined
+  onTabChange?: ((tab: SubscriptionTab) => void) | undefined
   subscription: SubscriptionDetail
   lines: SubscriptionPart<SubscriptionLine[]>
   /**
@@ -299,7 +305,21 @@ export interface SubscriptionDetailViewProps {
   priceUnits?: PriceUnitOption[] | undefined
 }
 
-type SubscriptionTab = 'overview' | 'information' | 'charges' | 'usage' | 'invoices'
+export const SUBSCRIPTION_TABS = [
+  'overview',
+  'information',
+  'charges',
+  'usage',
+  'invoices',
+] as const
+export type SubscriptionTab = (typeof SUBSCRIPTION_TABS)[number]
+
+/** A `?tab=` value as a contract tab; anything else is the Overview. */
+export function parseSubscriptionTab(value: unknown): SubscriptionTab {
+  return SUBSCRIPTION_TABS.includes(value as SubscriptionTab)
+    ? (value as SubscriptionTab)
+    : 'overview'
+}
 
 const day = (date: Date | null | undefined) =>
   date
@@ -451,8 +471,12 @@ export function SubscriptionDetailView({
   onChangeQuantity,
   meters = [],
   priceUnits = [],
+  tab: controlledTab,
+  onTabChange,
 }: SubscriptionDetailViewProps) {
-  const [tab, setTab] = useState<SubscriptionTab>('overview')
+  const [localTab, setLocalTab] = useState<SubscriptionTab>('overview')
+  const tab = controlledTab ?? localTab
+  const setTab = (next: SubscriptionTab) => (onTabChange ? onTabChange(next) : setLocalTab(next))
   const [pauseMode, setPauseMode] = useState<'pause' | 'resume' | null>(null)
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
   const [saving, setSaving] = useState(false)

@@ -331,3 +331,34 @@ export const BareDayCalendar: StoryObj<DayCalendarProps> = {
     )
   },
 }
+
+/**
+ * Given the customer's zone, the picker opens in it: the trigger reads the
+ * time there and a time typed is that zone's clock. Local and UTC stay one
+ * pick away.
+ */
+export const InTheCustomersZone: Story = {
+  args: {
+    value: '2026-10-21T04:00:00.000Z',
+    withTime: true,
+    timeZone: 'Asia/Kolkata',
+    label: 'Starts',
+  },
+  play: async ({ canvasElement, args }) => {
+    const trigger = within(canvasElement).getByRole('button', { name: 'Starts' })
+    await expect(trigger).toHaveTextContent('Oct 21, 2026, 09:30 AM Asia/Kolkata')
+    await userEvent.click(trigger)
+    await expect(await screen.findByRole('combobox', { name: 'Time zone' })).toHaveTextContent(
+      'Asia/Kolkata',
+    )
+    const hours = screen.getByRole('textbox', { name: 'Hours' })
+    await expect(hours).toHaveValue('09')
+    await userEvent.clear(hours)
+    await userEvent.type(hours, '14{Enter}')
+    // 14:30 in Kolkata is 09:00 UTC.
+    await expect(args.onValueChange).toHaveBeenLastCalledWith('2026-10-21T09:00:00.000Z')
+    await userEvent.click(screen.getByRole('combobox', { name: 'Time zone' }))
+    await expect(await screen.findByRole('option', { name: 'Local' })).toBeVisible()
+    await expect(screen.getByRole('option', { name: 'UTC' })).toBeVisible()
+  },
+}

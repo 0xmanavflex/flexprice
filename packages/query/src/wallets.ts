@@ -195,6 +195,14 @@ export function toTopUpRequest(draft: TopUpWallet): Record<string, unknown> {
     ...(draft.expiryDate ? { expiryDateUtc: `${draft.expiryDate}T00:00:00Z` } : {}),
     ...(draft.priority ? { priority: Number(draft.priority) } : {}),
     ...(referenceId ? { idempotencyKey: referenceId } : {}),
+    // Purchased only: a free grant earns no bonus. Blank bonus credits leave
+    // it to the bonus settings' slabs; the expiry overrides a slab's.
+    ...(draft.kind === 'purchased' && draft.bonusCredits.trim()
+      ? { bonusCreditsToAdd: draft.bonusCredits.trim() }
+      : {}),
+    ...(draft.kind === 'purchased' && draft.bonusExpiryDate
+      ? { bonusCreditsExpiryDateUtc: `${draft.bonusExpiryDate}T00:00:00Z` }
+      : {}),
   }
 }
 

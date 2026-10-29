@@ -810,6 +810,16 @@
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
+    "BonusSlabTable": {
+      "file": "src/pages/settings/wallets/BonusSlabTable.tsx",
+      "layer": "surface",
+      "composes": [
+        "OptionSelect",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/wallets/BonusSlabTable.stories.tsx"
+    },
     "BookOpen": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -1694,7 +1704,8 @@
         "Composer",
         "DateInput",
         "Field",
-        "FormDialog"
+        "FormDialog",
+        "SimpleTable"
       ],
       "usedBy": [
         "SubscriptionDetailView"
@@ -1797,6 +1808,7 @@
         "CouponGrid",
         "CreditNoteGrid",
         "CustomerGrid",
+        "CustomerWalletView",
         "DataExportGrid",
         "DetailHeaderCluster",
         "DetailMoreMenu",
@@ -2350,6 +2362,7 @@
         "ChoiceCards",
         "Composer",
         "ConfirmDialog",
+        "CopyIcon",
         "DateInput",
         "EmptyState",
         "Field",
@@ -5486,6 +5499,7 @@
       "composes": [],
       "usedBy": [
         "AddonChargesDialog",
+        "BonusSlabTable",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",
@@ -6043,7 +6057,8 @@
         "EntityList",
         "PencilIcon",
         "Status",
-        "Tag"
+        "Tag",
+        "WandSparklesIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanGrid.stories.tsx"
@@ -7292,7 +7307,9 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "BonusSlabTable",
         "ConnectionExports",
+        "ContractQuantityDialog",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -8302,6 +8319,22 @@
       ],
       "usedBy": [
         "CustomerWalletView"
+      ],
+      "story": null
+    },
+    "WandSparkles": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "WandSparklesIcon": {
+      "file": "src/icons/local/wand-sparkles.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "PlanGrid"
       ],
       "story": null
     },
@@ -10162,6 +10195,13 @@
       "component": "TaxRateGrid",
       "uses": [
         "TaxRateGrid"
+      ]
+    },
+    "./src/pages/settings/wallets/BonusSlabTable.stories.tsx": {
+      "title": "App/Settings/Wallets/Bonus slab table",
+      "component": "BonusSlabTable",
+      "uses": [
+        "BonusSlabTable"
       ]
     },
     "./src/pages/shared/ArcGauge.stories.tsx": {

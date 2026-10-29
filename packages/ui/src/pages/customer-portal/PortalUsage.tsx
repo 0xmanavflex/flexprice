@@ -444,18 +444,29 @@ function UsageTrend({
                 if (value === ALL) setMeasure('cost')
               }}
             >
-              <SelectTrigger className="h-8 w-44" aria-label="Feature">
+              <SelectTrigger
+                className="h-8 w-44"
+                aria-label="Feature"
+                // The trigger truncates a long name; hovering shows it whole.
+                title={featureId === ALL ? 'All features' : selected?.name}
+              >
                 <SelectValue>
                   {(value) =>
                     value === ALL ? 'All features' : items.find((i) => i.featureId === value)?.name
                   }
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent align="end">
+              {/* Wider than the trigger when the names need it, capped so the list
+                  stays on screen; a name longer than that wraps rather than
+                  running under the check mark. */}
+              <SelectContent
+                align="end"
+                className="w-auto max-w-[min(22rem,calc(100vw-2rem))] min-w-(--anchor-width)"
+              >
                 <SelectItem value={ALL}>All features</SelectItem>
                 {items.map((i) => (
                   <SelectItem key={i.featureId} value={i.featureId}>
-                    {i.name}
+                    <span className="min-w-0 break-words whitespace-normal">{i.name}</span>
                   </SelectItem>
                 ))}
               </SelectContent>

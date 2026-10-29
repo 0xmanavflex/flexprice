@@ -1,5 +1,12 @@
 import { type ReactNode } from 'react'
-import { type CheckoutOutcome, SELF_BILLING_PLAN, longDate, planRateText, usd } from '@fp/domain'
+import {
+  type CheckoutOutcome,
+  type SelfBillingPlan,
+  longDate,
+  planFixedTotal,
+  planMoney,
+  planPriceText,
+} from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Spinner } from '@ui/components/primitives/spinner'
 import {
@@ -32,7 +39,9 @@ export interface CheckoutReturnViewProps {
   /** Where the receipt and the "we'll email you" go. */
   billingEmail: string
   /** The invoice the payment settled, once the summary lists it. */
-  paidInvoice: { number: string; pdfUrl: string | null } | null
+  paidInvoice: { number: string; pdfUrl: string | null; total: number; currency: string } | null
+  /** The plan the account is now on, from the billing summary. Null while unknown. */
+  plan: SelfBillingPlan | null
   /** `YYYY-MM-DD` the next invoice is raised, when known. */
   nextInvoiceOn: string | null
   onBilling: () => void
@@ -40,6 +49,16 @@ export interface CheckoutReturnViewProps {
   onCheckAgain: () => void
   onOpenProduction: () => void
   onNextStep: (step: NextStep) => void
+}
+
+/** What was paid: the settled invoice's total, else the plan's flat fees. Null when neither is known. */
+function paidAmount({
+  paidInvoice,
+  plan,
+}: Pick<CheckoutReturnViewProps, 'paidInvoice' | 'plan'>): string | null {
+  if (paidInvoice) return planMoney(paidInvoice.total, paidInvoice.currency)
+  const fixed = planFixedTotal(plan)
+  return fixed ? planMoney(fixed.amount, fixed.currency) : null
 }
 
 interface Result {
@@ -51,7 +70,7 @@ interface Result {
 }
 
 function resultOf(props: CheckoutReturnViewProps): Result {
-  const amount = usd(SELF_BILLING_PLAN.base)
+  const amount = paidAmount(props)
   const back = (
     <Button variant="outline" onClick={props.onBilling}>
       Usage &amp; billing
@@ -63,7 +82,7 @@ function resultOf(props: CheckoutReturnViewProps): Result {
         icon: <Spinner className="size-5" />,
         tone: 'text-muted-foreground bg-muted',
         title: 'Confirming your payment',
-        body: `Stripe is confirming your payment of ${amount}. This usually takes a few seconds; keep this page open.`,
+        body: `Stripe is confirming your payment${amount ? ` of ${amount}` : ''}. This usually takes a few seconds; keep this page open.`,
         actions: null,
       }
     case 'success':
@@ -133,10 +152,13 @@ function resultOf(props: CheckoutReturnViewProps): Result {
 function Receipt({
   billingEmail,
   paidInvoice,
+  plan,
   nextInvoiceOn,
-}: Pick<CheckoutReturnViewProps, 'billingEmail' | 'paidInvoice' | 'nextInvoiceOn'>) {
+}: Pick<CheckoutReturnViewProps, 'billingEmail' | 'paidInvoice' | 'plan' | 'nextInvoiceOn'>) {
+  const amount = paidAmount({ paidInvoice, plan })
+  const charges = planPriceText(plan)
   const rows: [string, ReactNode][] = [
-    ['Paid', <span className="tabular-nums">{usd(SELF_BILLING_PLAN.base)}</span>],
+    ...(amount ? ([['Paid', <span className="tabular-nums">{amount}</span>]] as [string, ReactNode][]) : []),
     ...(paidInvoice
       ? ([
           [
@@ -166,9 +188,7 @@ function Receipt({
             'Next invoice',
             <span className="flex flex-col items-end">
               <span className="tabular-nums">{longDate(nextInvoiceOn)}</span>
-              <span className="text-muted-foreground text-xs">
-                {usd(SELF_BILLING_PLAN.base)} + {planRateText} of your billing
-              </span>
+              {charges ? <span className="text-muted-foreground text-xs">{charges}</span> : null}
             </span>,
           ],
         ] as [string, ReactNode][])
@@ -256,6 +276,7 @@ export function CheckoutReturnView(props: CheckoutReturnViewProps) {
             <Receipt
               billingEmail={props.billingEmail}
               paidInvoice={props.paidInvoice}
+              plan={props.plan}
               nextInvoiceOn={props.nextInvoiceOn}
             />
             <NextSteps onNextStep={props.onNextStep} />

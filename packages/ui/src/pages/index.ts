@@ -161,6 +161,8 @@ export { PlanGrid, PlanGridProvenance } from './product-catalog/plans/PlanGrid'
 export type { PlanGridProps } from './product-catalog/plans/PlanGrid'
 export { PlanForm, PlanFormProvenance } from './product-catalog/plans/PlanForm'
 export type { PlanFormProps, PlanFormValue } from './product-catalog/plans/PlanForm'
+export { BonusSlabTable, BonusSlabTableProvenance } from './settings/wallets/BonusSlabTable'
+export type { BonusSlabRowError, BonusSlabTableProps } from './settings/wallets/BonusSlabTable'
 export { TierTable, TierTableProvenance } from './product-catalog/charges/TierTable'
 export type { TierRowError, TierTableProps } from './product-catalog/charges/TierTable'
 export { PlanPreviewCard, PlanPreviewCardProvenance } from './product-catalog/plans/PlanPreviewCard'
@@ -242,11 +244,14 @@ export type { SubscriptionFormProps, SubscriptionPlanContext } from './contracts
 export { SubscriptionGrid, SubscriptionGridProvenance } from './contracts/SubscriptionGrid'
 export type { SubscriptionGridProps } from './contracts/SubscriptionGrid'
 export {
+  SUBSCRIPTION_TABS,
   SubscriptionDetailView,
   SubscriptionDetailViewProvenance,
+  parseSubscriptionTab,
 } from './contracts/SubscriptionDetailView'
 export type {
   SubscriptionActivity,
+  SubscriptionTab,
   SubscriptionDetailViewProps,
   SubscriptionPart,
 } from './contracts/SubscriptionDetailView'

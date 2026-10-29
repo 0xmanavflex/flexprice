@@ -253,7 +253,10 @@ export function useApplyPricingSchema() {
                 isEnabled: true,
                 ...(metered
                   ? {
-                      usageLimit: entitlement.isUnlimited ? null : entitlement.value,
+                      // Unlimited is no limit: the SDK rejects null, so the key is left out.
+                      ...(entitlement.isUnlimited || entitlement.value == null
+                        ? {}
+                        : { usageLimit: entitlement.value }),
                       usageResetPeriod: ResetUsage.BillingPeriod,
                       isSoftLimit: false,
                     }

@@ -159,6 +159,7 @@ export function SubscriptionFormPage({
       ...(c.email ? { hint: c.email } : {}),
       externalId: c.externalId || undefined,
       billingCurrency: c.billingCurrency || undefined,
+      timezone: c.timezone || undefined,
     }))
   }, [customers.data, chosen.data])
   // Who can inherit from the chosen customer: anyone without a contract of their own.

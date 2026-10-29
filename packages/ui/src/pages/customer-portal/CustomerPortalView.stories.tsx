@@ -11,6 +11,7 @@ import {
   noopPortalActions,
   portalData,
   portalInvoices,
+  portalSpend,
 } from './fixtures'
 import type { CustomerPortalData } from './types'
 
@@ -152,6 +153,48 @@ export const Usage: Story = {
     await expect(canvas.getByText('$13.11')).toBeVisible()
     await expect(canvas.getByText('1.4M over · billed as usage')).toBeVisible()
     await expect(canvas.getByText('$0.20 per 1K calls')).toBeVisible()
+  },
+}
+
+const LONG_STEMS = ['Compute memory GB-hours', 'Compute CPU hours', 'API requests']
+/** One unique long name per spend item, like the auto-named features in the report. */
+const LONG_NAMES = portalSpend.items.map(
+  (_, index) => `${LONG_STEMS[index % LONG_STEMS.length]} (pup 1792753${index} eu-west-1)`,
+)
+
+/** Long feature names: the list widens to fit them and wraps what is still too long, never clipping. */
+export const LongFeatureNames: Story = {
+  args: {
+    initialView: 'usage',
+    data: {
+      ...portalData,
+      spend: {
+        status: 'ready',
+        data: {
+          ...portalSpend,
+          items: portalSpend.items.map((item, index) => ({
+            ...item,
+            name: LONG_NAMES[index]!,
+          })),
+        },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: 'Feature' }))
+    for (const name of LONG_NAMES) {
+      const option = await screen.findByRole('option', { name })
+      // The whole name is inside the option's box, not cut off at its edge.
+      await expect(option.scrollWidth).toBeLessThanOrEqual(option.clientWidth + 1)
+    }
+    await userEvent.click(screen.getByRole('option', { name: LONG_NAMES[1]! }))
+    await waitFor(() =>
+      expect(canvas.getByRole('combobox', { name: 'Feature' })).toHaveAttribute(
+        'title',
+        LONG_NAMES[1],
+      ),
+    )
   },
 }
 

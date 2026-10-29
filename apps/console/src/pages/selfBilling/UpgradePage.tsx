@@ -73,6 +73,7 @@ export function UpgradePage({
   return (
     <UpgradeView
       state={state}
+      plan={summary.data?.plan ?? null}
       eventCap={summary.data?.events?.cap ?? null}
       defaultValues={checkoutDefaults(tenant, organization.userEmail)}
       fromOrganization={hasOrganizationDetails(tenant)}

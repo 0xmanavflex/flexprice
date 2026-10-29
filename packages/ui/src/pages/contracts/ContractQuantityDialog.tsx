@@ -2,12 +2,13 @@ import { CircleAlertIcon } from '@ui/icons'
 import { useState } from 'react'
 import {
   formatMoney,
+  money,
   validateLineChange,
   type ChangeLineQuantity,
   type LineChangePreview,
   type SubscriptionLine,
 } from '@fp/domain'
-import { Composer } from '@ui/compositions/detail/DetailKit'
+import { Composer, SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import {
@@ -146,7 +147,7 @@ function QuantityFlow({
           Review what this does to <strong className="text-foreground">{line.name}</strong> before
           it is saved.
         </p>
-        <PreviewSummary preview={preview} />
+        <PreviewSummary preview={preview} line={line} draft={draft} />
         <div>
           <Button
             type="button"
@@ -254,33 +255,141 @@ function QuantityFlow({
   )
 }
 
-function PreviewSummary({ preview }: { preview: LineChangePreview }) {
+/** A decimal the dialog validated, as money in the line's currency; the line's own price if it is not one. */
+function priceOf(amount: string, line: SubscriptionLine): string {
+  try {
+    return formatMoney(money(amount, line.amount.currency))
+  } catch {
+    return formatMoney(line.amount)
+  }
+}
+
+/** Equal as numbers: "1" and "1.00" are no change. */
+const same = (a: string, b: string) => Number(a) === Number(b)
+
+/**
+ * What the change does, before it is saved: first what changes on the charge
+ * (quantity and price, before and after), then the lines it ends and starts,
+ * each with its own quantity, price and dates, then any invoice it raises.
+ *
+ * The preview names each line's price by id only, so the price shown is the
+ * one the dialog knows: the old price on an ended line, the new one on a line
+ * the change starts.
+ */
+function PreviewSummary({
+  preview,
+  line,
+  draft,
+}: {
+  preview: LineChangePreview
+  line: SubscriptionLine
+  draft: ChangeLineQuantity
+}) {
+  const oldPrice = formatMoney(line.amount)
+  const newPrice = priceOf(draft.amount, line)
+  const changes = [
+    {
+      id: 'quantity',
+      label: 'Quantity',
+      before: line.quantity,
+      after: draft.quantity,
+      changed: !same(line.quantity, draft.quantity),
+    },
+    ...(line.amountEditable
+      ? [
+          {
+            id: 'price',
+            label: 'Price',
+            before: oldPrice,
+            after: newPrice,
+            changed: !same(line.amount.amount, draft.amount),
+          },
+        ]
+      : []),
+  ]
   const empty = preview.lines.length === 0 && preview.invoices.length === 0
+  // Start over end, so the table fits the dialog without scrolling sideways.
+  const inEffect = (item: LineChangePreview['lines'][number]) => (
+    <>
+      <span className="block">{item.startDate ? dayFormat.format(item.startDate) : '—'} →</span>
+      <span className="text-muted-foreground block">
+        {item.endDate ? dayFormat.format(item.endDate) : 'Ongoing'}
+      </span>
+    </>
+  )
+
   return (
-    <div className="space-y-3 rounded-md border p-3 text-sm" aria-label="Preview of the change">
-      {empty ? <p className="text-muted-foreground">No invoice or line changes result.</p> : null}
-      {preview.lines.length ? (
-        <ul className="space-y-1.5">
-          {preview.lines.map((item, index) => (
-            <li key={`${item.id}:${index}`} className="flex flex-wrap justify-between gap-2">
-              <span>
-                {ACTION_LABEL[item.action] ?? item.action}
-                {item.quantity ? ` · quantity ${item.quantity}` : ''}
-              </span>
-              <span className="text-muted-foreground tabular-nums">
-                {item.startDate ? `from ${dayFormat.format(item.startDate)}` : ''}
-                {item.endDate ? ` until ${dayFormat.format(item.endDate)}` : ''}
-              </span>
-            </li>
-          ))}
-        </ul>
+    <div className="flex flex-col gap-3" aria-label="Preview of the change">
+      <div className="overflow-hidden rounded-md border">
+        <SimpleTable
+          rows={changes}
+          columns={[
+            { key: 'label', header: 'Change', cell: (row) => row.label },
+            {
+              key: 'before',
+              header: 'Before',
+              className: 'text-right tabular-nums',
+              cell: (row) => row.before,
+            },
+            {
+              key: 'after',
+              header: 'After',
+              className: 'text-right tabular-nums',
+              cell: (row) =>
+                row.changed ? (
+                  <span className="text-foreground font-medium">{row.after}</span>
+                ) : (
+                  <span className="text-muted-foreground">No change</span>
+                ),
+            },
+          ]}
+        />
+      </div>
+
+      {empty ? (
+        <p className="text-muted-foreground text-sm">No invoice or line changes result.</p>
       ) : null}
+
+      {preview.lines.length ? (
+        <div className="overflow-hidden rounded-md border">
+          <SimpleTable
+            rows={preview.lines.map((item, index) => ({ ...item, key: `${item.id}:${index}` }))}
+            getRowId={(row) => row.key}
+            columns={[
+              {
+                key: 'line',
+                header: 'Line',
+                cell: (row) => ACTION_LABEL[row.action] ?? row.action,
+              },
+              {
+                key: 'quantity',
+                header: 'Qty',
+                className: 'text-right tabular-nums',
+                cell: (row) => row.quantity || '—',
+              },
+              {
+                key: 'price',
+                header: 'Price',
+                className: 'text-right tabular-nums',
+                cell: (row) => (row.action === 'ended' ? oldPrice : newPrice),
+              },
+              {
+                key: 'dates',
+                header: 'In effect',
+                className: 'tabular-nums whitespace-normal',
+                cell: (row) => inEffect(row),
+              },
+            ]}
+          />
+        </div>
+      ) : null}
+
       {preview.invoices.length ? (
-        <ul className="space-y-1.5 border-t pt-3">
+        <ul className="space-y-1.5 rounded-md border p-3 text-sm">
           {preview.invoices.map((item, index) => (
             <li key={index} className="flex flex-wrap justify-between gap-2">
               <span>{ACTION_LABEL[item.action] ?? item.action} invoice</span>
-              <span className="tabular-nums">
+              <span className="font-medium tabular-nums">
                 {item.amountDue ? formatMoney(item.amountDue) : '—'}
               </span>
             </li>

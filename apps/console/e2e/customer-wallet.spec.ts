@@ -35,7 +35,7 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   const topUp = page.getByRole('dialog', { name: 'Top up wallet' })
   await topUp.getByRole('button', { name: 'Top up' }).click()
   await expect(topUp.getByRole('alert')).toContainText('positive number of credits')
-  await topUp.getByLabel('Credits').fill('250')
+  await topUp.getByLabel('Credits', { exact: true }).fill('250')
   await topUp.getByRole('button', { name: 'Top up' }).click()
   await expect(page.getByText('1,250 credits').first()).toBeVisible()
   await expect(

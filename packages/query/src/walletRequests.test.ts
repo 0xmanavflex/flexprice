@@ -71,6 +71,24 @@ describe('wallet requests', () => {
     expect(free.transaction_reason).toBe('FREE_CREDIT_GRANT')
   })
 
+  it('sends a bonus with a purchased top-up, and never with a free grant', () => {
+    const bonus = { bonusCredits: '75', bonusExpiryDate: '2030-06-30' }
+    const purchased = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest({ ...emptyTopUp(), credits: '500', ...bonus }),
+    )
+    expect(purchased.bonus_credits_to_add).toBe('75')
+    expect(purchased.bonus_credits_expiry_date_utc).toBe('2030-06-30T00:00:00Z')
+    const free = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest({ ...emptyTopUp(), kind: 'free', credits: '5', ...bonus }),
+    )
+    expect(free).not.toHaveProperty('bonus_credits_to_add')
+    expect(free).not.toHaveProperty('bonus_credits_expiry_date_utc')
+    // Blank: the bonus settings' slabs decide.
+    expect(
+      TopUpWalletRequest$outboundSchema.parse(toTopUpRequest({ ...emptyTopUp(), credits: '5' })),
+    ).not.toHaveProperty('bonus_credits_to_add')
+  })
+
   it('sends an invoiced top-up with its expiry, priority and reference', () => {
     const body = TopUpWalletRequest$outboundSchema.parse(
       toTopUpRequest({

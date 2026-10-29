@@ -489,11 +489,70 @@ export const PostpaidWallet: Story = {
   },
 }
 
+/** The wallet ID is one click away in the wallet menu, even on a closed wallet. */
+export const CopiesWalletId: Story = {
+  args: { wallets: makeWallets(1, WalletStatus.Closed, 0, 0) },
+  play: async ({ canvasElement }) => {
+    const writeText = fn(async () => undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Wallet actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Copy wallet ID' }))
+    await expect(writeText).toHaveBeenCalledWith('wallet_1')
+  },
+}
+
 /** Top up opens a dialog. */
 export const OpensTopUpDialog: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
     await expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  },
+}
+
+/**
+ * A purchased top-up previews the bonus Settings → Wallets → Bonus credits
+ * would grant, and a typed bonus replaces it. A free grant has no bonus.
+ */
+export const PreviewsBonusCredits: Story = {
+  args: {
+    onTopUp: fn(async () => undefined),
+    bonusConfig: {
+      enabled: true,
+      slabs: [
+        {
+          threshold: '200',
+          bonusType: 'percentage',
+          bonusValue: '10',
+          expiryDuration: '3',
+          expiryUnit: 'MONTH',
+        },
+        {
+          threshold: '100',
+          bonusType: 'flat',
+          bonusValue: '50',
+          expiryDuration: '',
+          expiryUnit: 'MONTH',
+        },
+      ],
+    },
+  },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/^credits/i), '500')
+    await expect(
+      dialog.getByText(
+        'Earns 50 bonus credits from the bonus settings: 10% of the top-up, expires 3 months after the top-up.',
+      ),
+    ).toBeVisible()
+    await userEvent.type(dialog.getByLabelText(/^bonus credits/i), '75')
+    await expect(dialog.getByText(/75 bonus credits, as entered/)).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Top up' }))
+    await waitFor(() =>
+      expect(args.onTopUp).toHaveBeenCalledWith(
+        expect.objectContaining({ credits: '500', bonusCredits: '75' }),
+      ),
+    )
   },
 }
 

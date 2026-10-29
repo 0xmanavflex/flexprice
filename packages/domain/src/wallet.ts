@@ -205,6 +205,26 @@ export const topUpWalletSchema = z.object({
     ),
   /** A unique reference that keeps the same top-up from being applied twice. */
   referenceId: z.string().trim().max(255, 'Keep the reference under 255 characters'),
+  /**
+   * Purchased only. Bonus credits granted with the top-up, overriding the
+   * bonus settings' slabs; blank leaves the bonus to those slabs.
+   */
+  bonusCredits: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === '' || positive(value),
+      'Enter a positive number of bonus credits, or leave it blank',
+    ),
+  /** Purchased only. The day the bonus credits expire (`YYYY-MM-DD`); overrides a slab's expiry. */
+  bonusExpiryDate: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || DAY.test(value), 'Pick a bonus expiry date')
+    .refine(
+      (value) => value === '' || value >= today(),
+      'The bonus expiry date cannot be in the past',
+    ),
 })
 export type TopUpWallet = z.infer<typeof topUpWalletSchema>
 
@@ -230,6 +250,8 @@ export const emptyTopUp = (): TopUpWallet => ({
   expiryDate: '',
   priority: '',
   referenceId: '',
+  bonusCredits: '',
+  bonusExpiryDate: '',
 })
 
 export const autoTopupSchema = z

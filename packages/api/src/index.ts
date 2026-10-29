@@ -185,6 +185,8 @@ export type {
   SelfBillingInvoiceWire,
   SelfBillingPortalWire,
   SelfBillingStatusWire,
+  SelfBillingPlanChargeWire,
+  SelfBillingPlanWire,
   SelfBillingSummaryWire,
 } from './selfBilling'
 

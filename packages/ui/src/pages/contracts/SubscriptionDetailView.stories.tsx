@@ -1777,7 +1777,8 @@ export const ChangeQuantity: Story = {
       { quantity: '5', amount: '1500', effectiveDate: '' },
     )
     // The preview is shown before anything is saved.
-    await expect(await dialog.findByText('New line · quantity 5')).toBeVisible()
+    const newLine = (await dialog.findByText('New line')).closest('tr')!
+    await expect(within(newLine).getByText('5')).toBeVisible()
     await expect(args.onChangeQuantity).not.toHaveBeenCalled()
     await userEvent.click(dialog.getByRole('button', { name: 'Confirm change' }))
     await expect(args.onChangeQuantity).toHaveBeenCalledOnce()
