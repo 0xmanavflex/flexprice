@@ -17,8 +17,12 @@ export const HostedInvoicePreviewDialogProvenance = provenance({
 })
 
 export interface HostedInvoicePreviewDialogProps {
-  /** Null when closed; `url` null while the link is being fetched. */
-  preview: { url: string | null; error: string | null } | null
+  /**
+   * Null when closed; `url` null while the link is being fetched. `frameUrl`
+   * is what the frame shows (a `blob:` copy of the PDF, typed so the browser
+   * displays it); null when it cannot be shown here, undefined to frame `url`.
+   */
+  preview: { url: string | null; frameUrl?: string | null | undefined; error: string | null } | null
   onClose: () => void
   number: string
 }
@@ -27,8 +31,10 @@ export interface HostedInvoicePreviewDialogProps {
  * The invoice's PDF, shown where the customer is rather than in a new tab.
  *
  * The PDF is the real one (the link `GET /public/v1/invoices/pdf` answers), so
- * the preview is exactly what Download saves. Some billing providers refuse to
- * be framed; "Open in a new tab" is always there for that case.
+ * the preview is exactly what Download saves. A billing provider's link is
+ * often served as an attachment, which a frame downloads instead of showing;
+ * the container frames a typed copy, or says it cannot be shown, and "Open in
+ * a new tab" is always there.
  */
 export function HostedInvoicePreviewDialog({
   preview,
@@ -36,6 +42,7 @@ export function HostedInvoicePreviewDialog({
   number,
 }: HostedInvoicePreviewDialogProps) {
   const url = preview?.url ?? null
+  const frameUrl = preview?.frameUrl === undefined ? url : preview.frameUrl
   return (
     <Dialog open={preview !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
       <DialogContent className="flex h-[min(90svh,56rem)] w-[min(96vw,52rem)] max-w-none flex-col gap-3 p-4 sm:max-w-none">
@@ -74,8 +81,16 @@ export function HostedInvoicePreviewDialog({
             <p role="alert" className="text-destructive px-6 text-center text-sm">
               {preview.error}
             </p>
+          ) : url && frameUrl ? (
+            <iframe
+              title={`Invoice ${number}`}
+              src={frameUrl}
+              className="size-full border-0 bg-white"
+            />
           ) : url ? (
-            <iframe title={`Invoice ${number}`} src={url} className="size-full border-0 bg-white" />
+            <p className="text-muted-foreground max-w-sm px-6 text-center text-sm">
+              This PDF cannot be shown here. Open it in a new tab or download it.
+            </p>
           ) : (
             <span role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
               <Spinner aria-hidden />

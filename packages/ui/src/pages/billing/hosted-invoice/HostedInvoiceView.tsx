@@ -15,7 +15,10 @@ import { Money } from '../../shared/Money'
 import { formatHostedDate } from './format'
 import { HostedInvoiceCharges } from './HostedInvoiceCharges'
 import { HostedInvoiceDetailsSheet, type StatusBadge } from './HostedInvoiceDetailsSheet'
-import { HostedInvoicePreviewDialog } from './HostedInvoicePreviewDialog'
+import {
+  HostedInvoicePreviewDialog,
+  type HostedInvoicePreviewDialogProps,
+} from './HostedInvoicePreviewDialog'
 
 const FLEXPRICE_URL = 'https://flexprice.io'
 
@@ -61,7 +64,7 @@ export type HostedInvoiceViewProps = { locale?: string } & (
       /** Opens the PDF preview; the app fetches its link and passes it as `preview`. */
       onPreview: () => void
       /** Null when the preview is closed; `url` null while its link is fetched. */
-      preview: { url: string | null; error: string | null } | null
+      preview: HostedInvoicePreviewDialogProps['preview']
       onClosePreview: () => void
       /** Today, for "Overdue". Defaults to now; stories pass a fixed day. */
       now?: Date

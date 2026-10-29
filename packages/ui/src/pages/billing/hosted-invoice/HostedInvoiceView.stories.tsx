@@ -140,6 +140,20 @@ export const PreviewReady: Story = {
   },
 }
 
+/**
+ * A link the frame would download rather than show (a billing provider's
+ * attachment): no blank frame, just the new tab and the download.
+ */
+export const PreviewCannotFrame: Story = {
+  args: { preview: { url: 'about:blank', frameUrl: null, error: null } },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole('dialog'))
+    await expect(dialog.queryByTitle('Invoice INV-2026-01488')).toBeNull()
+    await expect(dialog.getByText(/cannot be shown here/)).toBeVisible()
+    await expect(dialog.getByRole('link', { name: 'Download PDF' })).toBeVisible()
+  },
+}
+
 export const PreviewFailed: Story = {
   args: { preview: { url: null, error: 'Something went wrong, please try again.' } },
   play: async () => {
