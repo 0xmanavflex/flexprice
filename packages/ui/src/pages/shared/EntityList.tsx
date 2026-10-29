@@ -1,11 +1,9 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type PointerEvent as ReactPointerEvent,
   type ReactElement,
   type ReactNode,
 } from 'react'
@@ -98,16 +96,15 @@ import type { EntityColumn } from './cells'
  *   **The page scrolls, not the table.** Sticky headers are off. A table with
  *   its own vertical scrollbar inside a page that also scrolls gives you two
  *   scrollbars and a body that is shorter than the screen; at twenty-five rows
- *   the page scroll is the honest one. Horizontal is different: a wide table
- *   scrolls sideways *within* the page, which is why the scroll area is here
- *   at all.
+ *   the page scroll is the honest one. A wide table still scrolls sideways, but
+ *   the horizontal bar stays hidden.
  *
  *   **Columns fill the page.** A `ResizeObserver` scales every non-fixed
  *   column so the set exactly spans the content width, rather than leaving the
  *   dead band on the right that a fixed-width table always leaves on a wide
  *   screen. When the page is too narrow the same scale runs backwards, down to
- *   {@link MIN_SCALE}: six per cent: after which the table gives up and
- *   scrolls instead of squeezing a date column into nothing.
+ *   {@link MIN_SCALE}: six per cent: after which the table scrolls sideways
+ *   instead of squeezing a date column into nothing. The bar itself stays hidden.
  *
  *   **Pinning is a consequence, not a setting.** The checkbox and `⋯` columns
  *   pin: and grow their divider: exactly when the table actually overflows.
@@ -447,109 +444,25 @@ function downloadCsv(filename: string, csv: string): void {
  * ------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------ *
- * Horizontal scroll
- *
- * The native bar hides until you scroll, so a table that runs past the card
- * looks clipped. This draws a bar whenever the rows are wider than the card,
- * and dragging it moves the same scroller.
+ * Horizontal scroll with the bar hidden. A wide table still moves
+ * sideways; the track and thumb are not drawn.
  * ------------------------------------------------------------------ */
 
 function TableScroller({
   minWidth,
-  scrolls,
   children,
 }: {
   minWidth: number
-  /** The columns are wider than the card, so the bar is shown. */
-  scrolls: boolean
   children: ReactNode
 }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ pointerId: number; startX: number; startScroll: number } | null>(null)
-  const [bar, setBar] = useState({ overflow: false, thumb: 0, offset: 0, track: 0 })
-
-  const measure = useCallback(() => {
-    const el = ref.current
-    if (!el) return
-    const max = el.scrollWidth - el.clientWidth
-    const overflow = max > 1
-    const track = Math.max(0, el.clientWidth - 24)
-    const thumb = overflow ? Math.max(32, (el.clientWidth / el.scrollWidth) * track) : 0
-    const offset = overflow && track > thumb ? (el.scrollLeft / max) * (track - thumb) : 0
-    setBar((prev) =>
-      prev.overflow === overflow &&
-      prev.track === track &&
-      Math.abs(prev.thumb - thumb) < 0.5 &&
-      Math.abs(prev.offset - offset) < 0.5
-        ? prev
-        : { overflow, thumb, offset, track },
-    )
-  }, [])
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    measure()
-    el.addEventListener('scroll', measure, { passive: true })
-    return () => el.removeEventListener('scroll', measure)
-  }, [measure])
-
-  useLayoutEffect(() => {
-    measure()
-  }, [measure, minWidth, scrolls])
-
-  const onThumbPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const el = ref.current
-    if (!el) return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    drag.current = { pointerId: event.pointerId, startX: event.clientX, startScroll: el.scrollLeft }
-  }
-
-  const onThumbPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const el = ref.current
-    const current = drag.current
-    if (!el || !current || current.pointerId !== event.pointerId) return
-    const max = el.scrollWidth - el.clientWidth
-    const travel = bar.track - bar.thumb
-    if (travel <= 0) return
-    el.scrollLeft = current.startScroll + ((event.clientX - current.startX) / travel) * max
-  }
-
-  const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (drag.current?.pointerId === event.pointerId) drag.current = null
-  }
-
   return (
-    <>
-      {/*
-        Focusable while the table is wider than its frame, so a keyboard can
-        scroll it with the arrow keys (axe: scrollable-region-focusable). The
-        thumb below is pointer-only and hidden from assistive tech.
-      */}
-      <div
-        ref={ref}
-        {...(bar.overflow ? { tabIndex: 0 } : {})}
-        className="focus-visible:ring-ring/50 w-full min-w-0 [scrollbar-width:none] overflow-x-auto rounded-md outline-none focus-visible:ring-2 [&::-webkit-scrollbar]:hidden"
-        style={{ '--table-min': `${minWidth}px` } as React.CSSProperties}
-      >
-        {children}
-      </div>
-      {scrolls ? (
-        <div className="pt-1.5" aria-hidden="true">
-          <div className="bg-muted relative mx-3 h-1.5 rounded-full">
-            <div
-              className="bg-muted-foreground/50 absolute inset-y-0 cursor-grab rounded-full active:cursor-grabbing"
-              style={{ width: bar.thumb, transform: `translateX(${bar.offset}px)` }}
-              onPointerDown={onThumbPointerDown}
-              onPointerMove={onThumbPointerMove}
-              onPointerUp={endDrag}
-              onPointerCancel={endDrag}
-            />
-          </div>
-        </div>
-      ) : null}
-    </>
+    <div
+      tabIndex={0}
+      className="focus-visible:ring-ring/50 w-full min-w-0 overflow-x-auto rounded-md [scrollbar-width:none] outline-none focus-visible:ring-2 [&::-webkit-scrollbar]:hidden"
+      style={{ '--table-min': `${minWidth}px` } as React.CSSProperties}
+    >
+      {children}
+    </div>
   )
 }
 
@@ -1183,7 +1096,7 @@ export function EntityList<T extends object>({
               }}
             >
               <DataGridContainer className="flex min-w-0 flex-col border-0 bg-transparent">
-                <TableScroller minWidth={tableMin} scrolls={overflows}>
+                <TableScroller minWidth={tableMin}>
                   <DataGridTable />
                 </TableScroller>
                 {total > 0 && !hideFooter ? (

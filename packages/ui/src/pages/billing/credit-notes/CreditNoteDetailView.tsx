@@ -220,7 +220,7 @@ export function CreditNoteDetailView({
             role="region"
             aria-label="Credited line comparison"
             tabIndex={0}
-            className="mx-8 overflow-x-auto border-t pt-3"
+            className="mx-8 overflow-x-auto border-t pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <div role="table" aria-label="Credited lines" className="min-w-[360px] text-sm">
               <div

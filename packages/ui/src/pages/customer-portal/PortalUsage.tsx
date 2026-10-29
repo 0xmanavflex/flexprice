@@ -694,7 +694,7 @@ function Breakdown({
             <Money value={value} {...(locale ? { locale } : {})} />
           )
           return (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/60 text-muted-foreground text-left text-[11px] tracking-wider uppercase">

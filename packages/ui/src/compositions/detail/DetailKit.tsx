@@ -495,7 +495,7 @@ export function SimpleTable<T>({
     getRowId ? getRowId(row) : String((row as { id?: string }).id ?? index)
   return (
     <div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <table className="w-full text-sm" onMouseOver={revealTruncated}>
           <thead>
             <tr className="bg-muted/60">

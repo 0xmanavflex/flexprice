@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import {
   BillingModel,
   BillingPeriod,
@@ -311,11 +311,13 @@ export const WithDates: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeInTheDocument()
-    // Start and end each carry their time, in UTC.
-    await expect(canvas.getByText('Jan 1, 2026, 12:00 AM UTC')).toBeInTheDocument()
-    await expect(canvas.getByText('Ongoing')).toBeInTheDocument()
+    await expect(canvas.getByText('Jan 1, 2026 → Ongoing')).toBeInTheDocument()
+    await userEvent.hover(canvas.getByText('Jan 1, 2026 → Ongoing'))
+    await expect(await screen.findByText('Start')).toBeInTheDocument()
+    await expect(screen.getByText('End')).toBeInTheDocument()
+    await expect(screen.getByText('Ongoing')).toBeInTheDocument()
     // The ended charge is history, not a row.
-    await expect(canvas.queryByText('Jun 1, 2025, 12:00 AM UTC')).not.toBeInTheDocument()
+    await expect(canvas.queryByText(/Jun 1, 2025/)).not.toBeInTheDocument()
     // Billing timing has its own column, beside the dates.
     await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeInTheDocument()
   },
@@ -338,7 +340,7 @@ export const ScheduledEnd: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Fixed · Ends Oct 30, 2099')).toBeInTheDocument()
-    await expect(canvas.getByText('Ends Oct 30, 2099, 09:30 AM UTC')).toBeInTheDocument()
+    await expect(canvas.getByText('Jan 1, 2026 → Oct 30, 2099')).toBeInTheDocument()
     await expect(canvas.queryByText(/^Ended/)).not.toBeInTheDocument()
   },
 }
@@ -354,7 +356,7 @@ export const NarrowWithDates: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeInTheDocument()
-    await expect(canvas.getByText('Jan 1, 2026, 12:00 AM UTC')).toBeInTheDocument()
+    await expect(canvas.getByText('Jan 1, 2026 → Ongoing')).toBeInTheDocument()
   },
 }
 
