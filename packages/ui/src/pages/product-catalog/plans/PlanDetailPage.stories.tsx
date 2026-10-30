@@ -158,10 +158,10 @@ function PlanDetailPage({
             {/* What a customer would be shown, beside what is being edited. */}
             <PlanCustomerPreview
               className="lg:sticky lg:top-6"
+              plan={{ id: 'plan_story', name: planName, description: '' }}
               charges={charges}
               entitlements={entitlements}
               grants={grants}
-              meterUnit={meterUnitOf}
             />
           </div>
         ) : null}

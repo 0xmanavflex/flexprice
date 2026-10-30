@@ -3,8 +3,14 @@ import { CreditGrantCadence, CreditGrantPeriod, type CreditGrant } from './credi
 import type { Entitlement } from './entitlement'
 import { FeatureType } from './feature'
 import { PlanStatus, type Plan } from './plan'
-import { BillingPeriod, PriceType, type Charge } from './price'
-import { defaultPricingSelection, pricingCards, pricingOptions } from './pricingWidget'
+import { BillingModel, BillingPeriod, PriceType, type Charge } from './price'
+import {
+  defaultPricingSelection,
+  pricingCards,
+  pricingOptions,
+  pricingPreview,
+  usageChargeCompact,
+} from './pricingWidget'
 
 const NOW = Date.UTC(2026, 9, 29)
 
@@ -122,9 +128,10 @@ describe('pricing widget', () => {
       now: NOW,
     })
     expect(cards.map((card) => [card.name, card.price, card.hasUsage])).toEqual([
-      ['Starter', '$19.00', false],
-      ['Pro', '$49.00', true],
-      ['Pay as you go', null, true],
+      ['Starter', '$19', false],
+      ['Pro', '$49', true],
+      // Usage only reads $0, as V1's card does.
+      ['Pay as you go', '$0', true],
     ])
     expect(cards[1]?.per).toBe('month')
     // A switched-off boolean feature is not "included".
@@ -133,6 +140,13 @@ describe('pricing widget', () => {
       '100 credits · Free credits · one-time',
       '2,500 credits · Monthly top-up · monthly',
     ])
+    expect(cards[2]?.credits[0]).toMatchObject({
+      amount: '100 credits',
+      name: 'Free credits',
+      cadence: 'one-time',
+      recurring: false,
+    })
+    expect(cards[1]?.included[0]).toMatchObject({ featureName: 'AI message' })
   })
 
   it('switches price and plans with the selection', () => {
@@ -145,7 +159,50 @@ describe('pricing widget', () => {
       now: NOW,
     })
     expect(annual.map((card) => [card.name, card.price, card.per])).toEqual([
-      ['Pro', '$490.00', 'year'],
+      ['Pro', '$490', 'year'],
     ])
+  })
+})
+
+describe('plan preview', () => {
+  it('reads a plan as its widget card does, with its usage charges', () => {
+    const preview = pricingPreview({
+      plan: plan('plan_pro', 'Pro'),
+      charges: chargesByPlan.get('plan_pro')!,
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview).toMatchObject({ name: 'Pro', price: '$49', per: 'month', hasUsage: true })
+    expect(preview?.usage.map((line) => line.price)).toEqual(['$0.01/unit'])
+  })
+
+  it('has nothing to show before the plan has a charge', () => {
+    expect(
+      pricingPreview({
+        plan: plan('plan_new', 'New'),
+        charges: [],
+        entitlements: [],
+        creditGrants: [],
+        now: NOW,
+      }),
+    ).toBeNull()
+  })
+
+  it('words usage as V1 does', () => {
+    expect(
+      usageChargeCompact(
+        charge('p', { type: PriceType.Usage, amount: '5', billingModel: BillingModel.Package }),
+      ),
+    ).toBe('$5/pkg')
+    expect(
+      usageChargeCompact(
+        charge('p', {
+          type: PriceType.Usage,
+          billingModel: BillingModel.Tiered,
+          tiers: [{ upTo: 1000, unitAmount: '0.002', flatAmount: '0' }],
+        } as Partial<Charge>),
+      ),
+    ).toBe('from $0.002/unit')
   })
 })

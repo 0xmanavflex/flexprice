@@ -328,7 +328,7 @@ export function PlanDetailPage({
           ) : null}
         </div>
         <SavedPlanPreview
-          planId={planId}
+          plan={{ id: planId, name: record.name, description: record.description }}
           onJump={(target) => {
             setJumpTarget(target)
             onTabChange('overview')
@@ -391,24 +391,22 @@ function OverviewTab({ planId, readOnly }: { planId: string; readOnly: boolean }
 }
 
 function SavedPlanPreview({
-  planId,
+  plan,
   onJump,
 }: {
-  planId: string
+  plan: { id: string; name: string; description: string }
   onJump: (target: string) => void
 }) {
-  const charges = usePrices(PriceEntityType.Plan, planId)
-  const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
-  const grants = useCreditGrants(CreditGrantScope.Plan, planId)
-  const { meters, allFeatures } = usePlanFormOptions()
+  const charges = usePrices(PriceEntityType.Plan, plan.id)
+  const entitlements = useEntitlements(EntitlementEntityType.Plan, plan.id)
+  const grants = useCreditGrants(CreditGrantScope.Plan, plan.id)
   return (
     <PlanCustomerPreview
       className="lg:sticky lg:top-6"
+      plan={plan}
       charges={charges.data ?? []}
       entitlements={entitlements.data ?? []}
       grants={grants.data ?? []}
-      meterUnit={(id) => meters.find((meter) => meter.id === id)?.unit}
-      featureUnit={(id) => allFeatures.find((feature) => feature.id === id)?.unitPlural}
       onJump={onJump}
     />
   )

@@ -1003,10 +1003,16 @@ export {
 } from './fxRate'
 export {
   defaultPricingSelection,
+  pricingAmount,
   pricingCards,
   pricingOptions,
+  pricingPreview,
+  usageChargeCompact,
   type PricingCard,
+  type PricingPreview,
   type PricingCardLine,
+  type PricingCreditLine,
+  type PricingIncludedLine,
   type PricingOption,
   type PricingSelection,
 } from './pricingWidget'

@@ -34,7 +34,11 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await dialog.getByRole('button', { name: 'Create charge', exact: true }).click()
     await expect(dialog).toBeHidden()
     await page.getByRole('tab', { name: 'Information' }).click()
-    await page.getByRole('link', { name: 'Also billed', exact: true }).click()
+    // The preview's price goes to its table, Charges.
+    await page
+      .getByRole('complementary', { name: 'Plan preview' })
+      .getByRole('link', { name: /\/month/ })
+      .click()
     await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
       'aria-selected',
       'true',
