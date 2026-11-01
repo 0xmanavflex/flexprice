@@ -262,6 +262,25 @@ describe('plan preview', () => {
     expect(preview?.price).toBe('from $61')
   })
 
+  it('keeps every decimal place a small tiered fee has, in its line and the total', () => {
+    const preview = pricingPreview({
+      plan: plan('plan_tiny', 'Tiny'),
+      charges: [
+        charge('plan_tiny', {
+          amount: '',
+          billingPeriod: BillingPeriod.OneTime,
+          billingModel: BillingModel.Tiered,
+          tiers: [{ upTo: null, unitAmount: '0.00000015', flatAmount: '0' }],
+        } as Partial<Charge>),
+      ],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview?.oneTime.map((line) => line.price)).toEqual(['from $0.00000015'])
+    expect(preview?.price).toBe('from $0.00000015')
+  })
+
   it('keeps every decimal place a small rate has', () => {
     expect(usageChargeCompact(charge('p', { type: PriceType.Usage, amount: '0.00000015' }))).toBe(
       '$0.00000015/unit',
