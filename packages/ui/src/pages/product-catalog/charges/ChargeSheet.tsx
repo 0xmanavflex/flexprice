@@ -7,6 +7,7 @@ import {
   type Charge,
   type ChargeCommitmentDetail,
   type ChargeDetail,
+  type ChargeHistory,
   ChargeSection,
   CommitmentType,
   InvoiceCadence,
@@ -97,6 +98,12 @@ export interface ChargeSheetProps {
    * rejects with an Error whose message is shown. Omitted, no revert is offered.
    */
   onRevert?: ((versionId: string) => Promise<unknown>) | undefined
+  /**
+   * The versions read from the history API as the sheet opened. Given, it
+   * replaces `detail.versions`, and its loading and error states show in the
+   * History section.
+   */
+  history?: ChargeHistory | undefined
 }
 
 function modelLabel(charge: Charge): string {
@@ -343,6 +350,7 @@ export function ChargeSheet({
   priceLabel,
   editableSections,
   onRevert,
+  history: fetched,
 }: ChargeSheetProps) {
   const body = useRef<HTMLDivElement>(null)
   const [reverting, setReverting] = useState<{ id: string; price: string; from: string } | null>(
@@ -385,7 +393,7 @@ export function ChargeSheet({
     month: 'short',
     year: 'numeric',
   })
-  const versions = [...(detail?.versions ?? [])].sort(
+  const versions = [...(fetched?.versions ?? detail?.versions ?? [])].sort(
     (a, b) =>
       (b.startDate?.getTime() ?? b.updatedAt?.getTime() ?? 0) -
       (a.startDate?.getTime() ?? a.updatedAt?.getTime() ?? 0),
@@ -553,6 +561,33 @@ export function ChargeSheet({
                 </p>
               )}
             </Box>
+          ) : null}
+
+          {fetched?.isLoading && history.length <= 1 ? (
+            <p role="status" className="text-muted-foreground flex items-center gap-2 pt-2 text-xs">
+              <ClockIcon aria-hidden className="size-3.5" />
+              Loading history…
+            </p>
+          ) : fetched?.error ? (
+            <div
+              role="alert"
+              className="text-muted-foreground flex flex-wrap items-center gap-2 pt-2 text-xs"
+            >
+              <ClockIcon aria-hidden className="size-3.5" />
+              {fetched.error}
+              {fetched.onRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5"
+                  onClick={fetched.onRetry}
+                >
+                  <RotateCcwIcon aria-hidden />
+                  Try again
+                </Button>
+              ) : null}
+            </div>
           ) : null}
 
           {history.length > 1 ? (

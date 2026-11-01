@@ -7,6 +7,7 @@ import {
   type BillingPeriod,
   type Charge,
   type ChargeDetail,
+  type ChargeHistory,
   type ChargeSection,
   InvoiceCadence,
   PriceType,
@@ -126,6 +127,13 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   editableSections?: (charge: Charge) => readonly ChargeSection[]
   /** Brings back a charge's previous price version, from its sheet's History. */
   onRevert?: ((charge: Charge, versionId: string) => Promise<unknown>) | undefined
+  /**
+   * Told which charge's sheet is open (`null` once closed), so the page can
+   * read that charge's history from the API and pass it back as `history`.
+   */
+  onOpenCharge?: ((charge: Charge | null) => void) | undefined
+  /** The open charge's versions from the history API. */
+  history?: ChargeHistory | undefined
   /** The summary variant's "Show all charges". */
   onShowAll?: () => void
   locale?: string
@@ -295,6 +303,8 @@ export function ChargeTable({
   onEditSection,
   editableSections,
   onRevert,
+  onOpenCharge,
+  history,
   onShowAll,
   emptyDescription,
   locale,
@@ -311,7 +321,12 @@ export function ChargeTable({
   isRetrying,
 }: ChargeTableProps) {
   // The sheet the rows and flags open, unless the page took the click instead.
-  const [open, setOpen] = useState<{ charge: Charge; section?: ChargeSection } | null>(null)
+  const [open, setOpenState] = useState<{ charge: Charge; section?: ChargeSection } | null>(null)
+  // The page hears which charge is open, to read its history as the sheet opens.
+  const setOpen = (next: { charge: Charge; section?: ChargeSection } | null) => {
+    setOpenState(next)
+    onOpenCharge?.(next?.charge ?? null)
+  }
   const narrow = layout === 'narrow'
   const hasActions = !hideRowActions && Boolean(onEdit || onTerminate || !onRowClick)
 
@@ -566,82 +581,83 @@ export function ChargeTable({
   return (
     <TooltipProvider delay={300}>
       <>
-      <Section
-        table
-        showTitle={showTitle}
-        title={title}
-        {...(description ? { description } : {})}
-        {...(headerAction && (showTitle || rows.length === 0) ? { action: headerAction } : {})}
-      >
-        {rows.length === 0 ? (
-          <SubTabState
-            hasData={false}
-            isLoading={false}
-            columns={4}
-            loadingLabel="Loading charges"
-            empty={{
-              scene: 'catalog',
-              // Charges that have all ended are not a record without charges:
-              // say none are live.
-              ...(ended.length > 0
-                ? {
-                    title: 'No active charges',
-                    description: 'Every charge here has ended.',
-                  }
-                : { title: 'No charges yet' }),
-            }}
-          >
-            {null}
-          </SubTabState>
-        ) : (
-          <DetailTable
-            compact
-            label="Charges"
-            // The summary is a few rows; filtering or sorting them would only
-            // reorder what is shown, so those live on the full table.
-            toolbar={variant === 'full'}
-            // The billing model left the columns for the grey line under the
-            // name, but it is still what someone narrows a long list by, so the
-            // filter keeps it.
-            facets={[
-              {
-                id: 'model',
-                label: 'Billing model',
-                value: (charge: Charge) => modelLabel(charge),
-              },
-              // Active or Changed: ended charges are not rows, so not a status.
-              ...(variant === 'full' ? [{ id: 'status', label: 'Status', value: statusOf }] : []),
-              ...(facets ?? []),
-            ]}
-            noun="charges"
-            {...(!showTitle && headerAction ? { action: headerAction } : {})}
-            rows={rows}
-            columns={columns}
-            onRowClick={onRowClick ?? ((charge: Charge) => openAt(charge))}
-          />
-        )}
-      </Section>
+        <Section
+          table
+          showTitle={showTitle}
+          title={title}
+          {...(description ? { description } : {})}
+          {...(headerAction && (showTitle || rows.length === 0) ? { action: headerAction } : {})}
+        >
+          {rows.length === 0 ? (
+            <SubTabState
+              hasData={false}
+              isLoading={false}
+              columns={4}
+              loadingLabel="Loading charges"
+              empty={{
+                scene: 'catalog',
+                // Charges that have all ended are not a record without charges:
+                // say none are live.
+                ...(ended.length > 0
+                  ? {
+                      title: 'No active charges',
+                      description: 'Every charge here has ended.',
+                    }
+                  : { title: 'No charges yet' }),
+              }}
+            >
+              {null}
+            </SubTabState>
+          ) : (
+            <DetailTable
+              compact
+              label="Charges"
+              // The summary is a few rows; filtering or sorting them would only
+              // reorder what is shown, so those live on the full table.
+              toolbar={variant === 'full'}
+              // The billing model left the columns for the grey line under the
+              // name, but it is still what someone narrows a long list by, so the
+              // filter keeps it.
+              facets={[
+                {
+                  id: 'model',
+                  label: 'Billing model',
+                  value: (charge: Charge) => modelLabel(charge),
+                },
+                // Active or Changed: ended charges are not rows, so not a status.
+                ...(variant === 'full' ? [{ id: 'status', label: 'Status', value: statusOf }] : []),
+                ...(facets ?? []),
+              ]}
+              noun="charges"
+              {...(!showTitle && headerAction ? { action: headerAction } : {})}
+              rows={rows}
+              columns={columns}
+              onRowClick={onRowClick ?? ((charge: Charge) => openAt(charge))}
+            />
+          )}
+        </Section>
 
-      <ChargeSheet
-        charge={open?.charge ?? null}
-        {...(open && editableSections ? { editableSections: editableSections(open.charge) } : {})}
-        priceLabel={open ? priceLabel(open.charge) : undefined}
-        {...(open ? { detail: details?.get(open.charge.id) } : {})}
-        {...(open?.section ? { section: open.section } : {})}
-        {...(onEditSection && open
-          ? {
-              onEdit: (part: ChargeSection) => {
-                setOpen(null)
-                onEditSection(open.charge, part)
-              },
-            }
-          : {})}
-        {...(locale ? { locale } : {})}
-        {...(onRevert && open
-          ? { onRevert: (versionId: string) => onRevert(open.charge, versionId) }
-          : {})}
-        onClose={() => setOpen(null)}
-      />
+        <ChargeSheet
+          charge={open?.charge ?? null}
+          {...(open && editableSections ? { editableSections: editableSections(open.charge) } : {})}
+          priceLabel={open ? priceLabel(open.charge) : undefined}
+          {...(open ? { detail: details?.get(open.charge.id) } : {})}
+          {...(open?.section ? { section: open.section } : {})}
+          {...(onEditSection && open
+            ? {
+                onEdit: (part: ChargeSection) => {
+                  setOpen(null)
+                  onEditSection(open.charge, part)
+                },
+              }
+            : {})}
+          {...(locale ? { locale } : {})}
+          {...(onRevert && open
+            ? { onRevert: (versionId: string) => onRevert(open.charge, versionId) }
+            : {})}
+          {...(open && history ? { history } : {})}
+          onClose={() => setOpen(null)}
+        />
       </>
     </TooltipProvider>
   )

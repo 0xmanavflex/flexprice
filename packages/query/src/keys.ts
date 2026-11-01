@@ -45,6 +45,8 @@ export const queryKeys = {
     detail: (id: string) => ['subscriptions', 'detail', id] as const,
     lines: (id: string) => ['subscriptions', 'lines', id] as const,
     lineHistory: (id: string) => ['subscriptions', 'lines', id, 'history'] as const,
+    /** One line item's versions: `GET /subscriptions/lineitems/{id}/history`. */
+    lineVersions: (lineId: string) => ['subscriptions', 'lineVersions', lineId] as const,
     usage: (id: string) => ['subscriptions', 'usage', id] as const,
     schedules: (id: string) => ['subscriptions', 'schedules', id] as const,
     invoices: (id: string, filter: Readonly<Record<string, unknown>> = {}) =>
@@ -188,6 +190,8 @@ export const queryKeys = {
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['prices', 'list', filter] as const,
     history: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['prices', 'history', filter] as const,
+    /** One plan price's versions: `GET /prices/{id}/history`. */
+    versions: (id: string) => ['prices', 'versions', id] as const,
   },
   entitlements: {
     all: () => ['entitlements'] as const,

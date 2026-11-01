@@ -52,6 +52,8 @@ import {
   type Charge,
   type ChargeCommitmentDetail,
   type ChargeDetail,
+  type ChargeHistory,
+  type ChargeVersion,
   type ChargeAlert,
   type CreditGrant,
   type EditContractCharge,
@@ -187,6 +189,20 @@ export interface SubscriptionDetailViewProps {
    */
   onRevertLine?:
     ((line: SubscriptionLine, previous: SubscriptionLine) => Promise<unknown>) | undefined
+  /**
+   * Which charge's sheet is open, by its line item (`null` once closed), so the
+   * page can read `GET /subscriptions/lineitems/{id}/history` for it.
+   */
+  onOpenLine?: ((line: SubscriptionLine | null) => void) | undefined
+  /** That read: every version of the open charge's line item. */
+  openLineHistory?:
+    | {
+        lines?: readonly SubscriptionLine[] | undefined
+        isLoading?: boolean | undefined
+        error?: string | null | undefined
+        onRetry?: (() => void) | undefined
+      }
+    | undefined
   entitlements: SubscriptionPart<SubscriptionEntitlement[]>
   /**
    * The customer's usage against this contract's entitlements
@@ -419,6 +435,8 @@ export function SubscriptionDetailView({
   lines,
   lineHistory,
   onRevertLine,
+  onOpenLine,
+  openLineHistory,
   entitlements,
   entitlementUsage,
   creditGrants,
@@ -611,21 +629,22 @@ export function SubscriptionDetailView({
     if (!chargeId || lineage.versions.length < 2) continue
     chargeRows.details.set(chargeId, {
       ...chargeRows.details.get(chargeId),
-      versions: lineage.versions.flatMap((version) =>
-        version.charge
-          ? [
-              {
-                id: version.id,
-                price: chargePriceLabel(version.charge),
-                startDate: version.startDate,
-                endDate: version.endDate,
-                updatedAt: version.charge.createdAt,
-              },
-            ]
-          : [],
-      ),
+      versions: lineVersions(lineage.versions),
     })
   }
+  // The open charge's versions as the history API returned them.
+  const chargeHistory: ChargeHistory | undefined = openLineHistory
+    ? {
+        ...(openLineHistory.lines ? { versions: lineVersions(openLineHistory.lines) } : {}),
+        isLoading: openLineHistory.isLoading,
+        error: openLineHistory.error,
+        onRetry: openLineHistory.onRetry,
+      }
+    : undefined
+  const openCharge = onOpenLine
+    ? (charge: Charge | null) =>
+        onOpenLine(charge ? (chargeRows.lineOf.get(charge.id) ?? null) : null)
+    : undefined
   for (const [chargeId, line] of chargeRows.lineOf) {
     const discounts = (coupons?.data ?? []).filter(
       (coupon) => coupon.active && coupon.lineItemId === line.id,
@@ -649,7 +668,9 @@ export function SubscriptionDetailView({
     onRevertLine && lineages && canEditCharges
       ? (charge: Charge, versionId: string) => {
           const lineage = lineages.find((candidate) => candidate.current.charge?.id === charge.id)
-          const previous = lineage?.versions.find((version) => version.id === versionId)
+          const previous =
+            lineage?.versions.find((version) => version.id === versionId) ??
+            openLineHistory?.lines?.find((version) => version.id === versionId)
           return lineage && previous
             ? onRevertLine(lineage.current, previous)
             : Promise.reject(new Error('That version is no longer on this contract.'))
@@ -1022,6 +1043,8 @@ export function SubscriptionDetailView({
                         editableSections={editableChargeSections}
                         variant="summary"
                         {...(revertCharge ? { onRevert: revertCharge } : {})}
+                        {...(openCharge ? { onOpenCharge: openCharge } : {})}
+                        {...(chargeHistory ? { history: chargeHistory } : {})}
                         layout="narrow"
                         charges={chargeRows.charges}
                         details={chargeRows.details}
@@ -1527,6 +1550,8 @@ export function SubscriptionDetailView({
               : {})}
             removeLabel="End charge"
             {...(revertCharge ? { onRevert: revertCharge } : {})}
+            {...(openCharge ? { onOpenCharge: openCharge } : {})}
+            {...(chargeHistory ? { history: chargeHistory } : {})}
             extraActions={(charge) => {
               const line = chargeRows.lineOf.get(charge.id)
               if (!line) return []
@@ -1930,6 +1955,23 @@ export function SubscriptionDetailView({
         onClose={() => setCommitmentCharge(null)}
       />
     </DetailShell>
+  )
+}
+
+/** A charge's line item versions as its sheet's History lists them. */
+function lineVersions(lines: readonly SubscriptionLine[]): ChargeVersion[] {
+  return lines.flatMap((version) =>
+    version.charge
+      ? [
+          {
+            id: version.id,
+            price: chargePriceLabel(version.charge),
+            startDate: version.startDate,
+            endDate: version.endDate,
+            updatedAt: version.charge.createdAt,
+          },
+        ]
+      : [],
   )
 }
 

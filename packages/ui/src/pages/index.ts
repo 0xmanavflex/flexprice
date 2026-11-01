@@ -493,6 +493,15 @@ export {
   ManageConnectionSheetProvenance,
 } from './integrations/ManageConnectionSheet'
 export type { ManageConnectionSheetProps } from './integrations/ManageConnectionSheet'
+export {
+  PricingPlanCard,
+  PricingPlanCardProvenance,
+  includedIcon,
+} from './product-catalog/pricing-widget/PricingPlanCard'
+export type {
+  PricingPlanCardProps,
+  PricingPlanSection,
+} from './product-catalog/pricing-widget/PricingPlanCard'
 export { PricingCatalogBlock } from './product-catalog/pricing-widget/PricingCatalogBlock'
 export { toast, Toaster } from 'sonner'
 

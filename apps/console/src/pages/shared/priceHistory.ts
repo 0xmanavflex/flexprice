@@ -1,4 +1,6 @@
-import { chargeLineages, type Charge, type ChargeDetail } from '@fp/domain'
+import { useState } from 'react'
+import { chargeLineages, type Charge, type ChargeDetail, type ChargeHistory } from '@fp/domain'
+import { usePlanPriceVersions } from '@fp/query'
 import { chargePriceLabel } from '@fp/ui/pages'
 
 /**
@@ -29,4 +31,39 @@ export function priceHistoryRows(prices: readonly Charge[]): {
     return lineage.current
   })
   return { charges, details }
+}
+
+/**
+ * The open plan charge's versions, read from `GET /prices/{id}/history` as its
+ * sheet opens. Spread `table` onto the charges table; `versions` are the
+ * prices read, for a revert to find the one picked.
+ */
+export function usePlanChargeHistory(): {
+  table: { onOpenCharge: (charge: Charge | null) => void; history?: ChargeHistory }
+  versions: readonly Charge[]
+} {
+  const [open, setOpen] = useState<Charge | null>(null)
+  const read = usePlanPriceVersions(open?.id ?? '')
+  const history: ChargeHistory | undefined = open
+    ? {
+        ...(read.data
+          ? {
+              versions: read.data.map((version) => ({
+                id: version.id,
+                price: chargePriceLabel(version),
+                startDate: version.startDate,
+                endDate: version.endDate,
+                updatedAt: version.createdAt,
+              })),
+            }
+          : {}),
+        isLoading: read.isLoading,
+        error: read.error ? 'The history could not be loaded.' : null,
+        onRetry: () => void read.refetch(),
+      }
+    : undefined
+  return {
+    table: { onOpenCharge: setOpen, ...(history ? { history } : {}) },
+    versions: read.data ?? [],
+  }
 }

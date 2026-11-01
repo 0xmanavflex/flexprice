@@ -1241,7 +1241,6 @@
         "PlanAiSetupView",
         "PlanPreviewCard",
         "PortalEmpty",
-        "PricingCatalogBlock",
         "Properties",
         "RadioRows",
         "RegionField",
@@ -6007,7 +6006,7 @@
       "file": "src/pages/product-catalog/plans/PlanCustomerPreview.tsx",
       "layer": "surface",
       "composes": [
-        "PlanPreviewCard"
+        "PricingPlanCard"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanCustomerPreview.stories.tsx"
@@ -6071,9 +6070,7 @@
         "FormPreview",
         "PreviewSection"
       ],
-      "usedBy": [
-        "PlanCustomerPreview"
-      ],
+      "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanPreviewCard.stories.tsx"
     },
     "PlansGallery": {
@@ -6412,15 +6409,24 @@
       "file": "src/pages/product-catalog/pricing-widget/PricingCatalogBlock.tsx",
       "layer": "surface",
       "composes": [
-        "CheckIcon",
         "EmptyState",
         "OptionSelect",
         "PageBody",
         "PageHeader",
-        "Section"
+        "PricingPlanCard"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx"
+    },
+    "PricingPlanCard": {
+      "file": "src/pages/product-catalog/pricing-widget/PricingPlanCard.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "PlanCustomerPreview",
+        "PricingCatalogBlock"
+      ],
+      "story": "./src/pages/product-catalog/pricing-widget/PricingPlanCard.stories.tsx"
     },
     "Printer": {
       "file": "src/icons/index.ts",
@@ -6948,7 +6954,6 @@
         "PortalInvoices",
         "PortalOverview",
         "PortalUsage",
-        "PricingCatalogBlock",
         "RelatedCard",
         "S3ConnectionList",
         "SubscriptionDetailView",
@@ -9934,6 +9939,13 @@
       "component": "PricingCatalogBlock",
       "uses": [
         "PricingCatalogBlock"
+      ]
+    },
+    "./src/pages/product-catalog/pricing-widget/PricingPlanCard.stories.tsx": {
+      "title": "App/Product catalog/Pricing widgets/Pricing plan card",
+      "component": "PricingPlanCard",
+      "uses": [
+        "PricingPlanCard"
       ]
     },
     "./src/pages/product-catalog/products/FeatureCloneDialog.stories.tsx": {

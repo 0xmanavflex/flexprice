@@ -3,8 +3,14 @@ import { CreditGrantCadence, CreditGrantPeriod, type CreditGrant } from './credi
 import type { Entitlement } from './entitlement'
 import { FeatureType } from './feature'
 import { PlanStatus, type Plan } from './plan'
-import { BillingPeriod, PriceType, type Charge } from './price'
-import { defaultPricingSelection, pricingCards, pricingOptions } from './pricingWidget'
+import { BillingModel, BillingPeriod, PriceType, type Charge } from './price'
+import {
+  defaultPricingSelection,
+  pricingCards,
+  pricingOptions,
+  pricingPreview,
+  usageChargeCompact,
+} from './pricingWidget'
 
 const NOW = Date.UTC(2026, 9, 29)
 
@@ -122,9 +128,10 @@ describe('pricing widget', () => {
       now: NOW,
     })
     expect(cards.map((card) => [card.name, card.price, card.hasUsage])).toEqual([
-      ['Starter', '$19.00', false],
-      ['Pro', '$49.00', true],
-      ['Pay as you go', null, true],
+      ['Starter', '$19', false],
+      ['Pro', '$49', true],
+      // Usage only reads $0, as V1's card does.
+      ['Pay as you go', '$0', true],
     ])
     expect(cards[1]?.per).toBe('month')
     // A switched-off boolean feature is not "included".
@@ -133,6 +140,13 @@ describe('pricing widget', () => {
       '100 credits · Free credits · one-time',
       '2,500 credits · Monthly top-up · monthly',
     ])
+    expect(cards[2]?.credits[0]).toMatchObject({
+      amount: '100 credits',
+      name: 'Free credits',
+      cadence: 'one-time',
+      recurring: false,
+    })
+    expect(cards[1]?.included[0]).toMatchObject({ featureName: 'AI message' })
   })
 
   it('switches price and plans with the selection', () => {
@@ -145,7 +159,161 @@ describe('pricing widget', () => {
       now: NOW,
     })
     expect(annual.map((card) => [card.name, card.price, card.per])).toEqual([
-      ['Pro', '$490.00', 'year'],
+      ['Pro', '$490', 'year'],
     ])
+  })
+})
+
+describe('plan preview', () => {
+  it('reads a plan as its widget card does, with its usage charges', () => {
+    const preview = pricingPreview({
+      plan: plan('plan_pro', 'Pro'),
+      charges: chargesByPlan.get('plan_pro')!,
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview).toMatchObject({ name: 'Pro', price: '$49', per: 'month', hasUsage: true })
+    expect(preview?.usage.map((line) => line.price)).toEqual(['$0.01/unit'])
+  })
+
+  it('has nothing to show before the plan has a charge', () => {
+    expect(
+      pricingPreview({
+        plan: plan('plan_new', 'New'),
+        charges: [],
+        entitlements: [],
+        creditGrants: [],
+        now: NOW,
+      }),
+    ).toBeNull()
+  })
+
+  it('shows one-time fees, and a plan with nothing else still has a preview', () => {
+    const setup = charge('plan_setup', {
+      amount: '49',
+      billingPeriod: BillingPeriod.OneTime,
+      displayName: 'Setup fee',
+    } as Partial<Charge>)
+    const alone = pricingPreview({
+      plan: plan('plan_setup', 'Setup only'),
+      charges: [setup],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(alone).toMatchObject({ price: '$49', per: null, hasUsage: false })
+    expect(alone?.oneTime).toEqual([{ id: setup.id, name: 'Setup fee', price: '$49' }])
+
+    const withFee = pricingPreview({
+      plan: plan('plan_pro', 'Pro'),
+      charges: [...chargesByPlan.get('plan_pro')!, { ...setup, entityId: 'plan_pro' }],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    // The fee is listed, not added to the monthly price.
+    expect(withFee).toMatchObject({ price: '$49', per: 'month' })
+    expect(withFee?.oneTime.map((line) => line.price)).toEqual(['$49'])
+  })
+
+  it('prices a tiered one-time fee from its tiers, not its empty amount', () => {
+    const preview = pricingPreview({
+      plan: plan('plan_tiered', 'Tiered setup'),
+      charges: [
+        charge('plan_tiered', {
+          amount: '',
+          billingPeriod: BillingPeriod.OneTime,
+          billingModel: BillingModel.Tiered,
+          displayName: 'Onboarding',
+          tiers: [{ upTo: 10, unitAmount: '0', flatAmount: '49' }],
+        } as Partial<Charge>),
+      ],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview?.price).toBe('from $49')
+    expect(preview?.oneTime.map((line) => line.price)).toEqual(['from $49'])
+  })
+
+  it('floors a tiered fee at one unit of its first band, and counts it in the total', () => {
+    const fee = (id: string, overrides: Partial<Charge>) =>
+      ({
+        ...charge('plan_mix', { billingPeriod: BillingPeriod.OneTime, ...overrides }),
+        id,
+      }) as Charge
+    const preview = pricingPreview({
+      plan: plan('plan_mix', 'Mixed'),
+      charges: [
+        fee('setup', { amount: '10', displayName: 'Setup' }),
+        fee('onboarding', {
+          amount: '',
+          billingModel: BillingModel.Tiered,
+          displayName: 'Onboarding',
+          tiers: [{ upTo: 10, unitAmount: '2', flatAmount: '49' }],
+        } as Partial<Charge>),
+      ],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview?.oneTime.map((line) => line.price)).toEqual(['$10', 'from $51'])
+    expect(preview?.price).toBe('from $61')
+  })
+
+  it('keeps every decimal place a small tiered fee has, in its line and the total', () => {
+    const preview = pricingPreview({
+      plan: plan('plan_tiny', 'Tiny'),
+      charges: [
+        charge('plan_tiny', {
+          amount: '',
+          billingPeriod: BillingPeriod.OneTime,
+          billingModel: BillingModel.Tiered,
+          tiers: [{ upTo: null, unitAmount: '0.00000015', flatAmount: '0' }],
+        } as Partial<Charge>),
+      ],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview?.oneTime.map((line) => line.price)).toEqual(['from $0.00000015'])
+    expect(preview?.price).toBe('from $0.00000015')
+  })
+
+  it('adds one-time fees exactly, without binary rounding', () => {
+    const fee = (id: string, amount: string) =>
+      ({ ...charge('plan_exact', { amount, billingPeriod: BillingPeriod.OneTime }), id }) as Charge
+    const preview = pricingPreview({
+      plan: plan('plan_exact', 'Exact'),
+      charges: [fee('a', '0.1'), fee('b', '0.00000000000000001')],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview?.price).toBe('$0.10000000000000001')
+  })
+
+  it('keeps every decimal place a small rate has', () => {
+    expect(usageChargeCompact(charge('p', { type: PriceType.Usage, amount: '0.00000015' }))).toBe(
+      '$0.00000015/unit',
+    )
+  })
+
+  it('words usage as V1 does', () => {
+    expect(
+      usageChargeCompact(
+        charge('p', { type: PriceType.Usage, amount: '5', billingModel: BillingModel.Package }),
+      ),
+    ).toBe('$5/pkg')
+    expect(
+      usageChargeCompact(
+        charge('p', {
+          type: PriceType.Usage,
+          billingModel: BillingModel.Tiered,
+          tiers: [{ upTo: 1000, unitAmount: '0.002', flatAmount: '0' }],
+        } as Partial<Charge>),
+      ),
+    ).toBe('from $0.002/unit')
   })
 })

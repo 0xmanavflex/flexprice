@@ -120,6 +120,7 @@ export type {
   ChargeCommitmentWindow,
   ChargeCoupon,
   ChargeDetail,
+  ChargeHistory,
   ChargeFlag,
   ChargeVersion,
 } from './chargeFlags'
@@ -1003,10 +1004,16 @@ export {
 } from './fxRate'
 export {
   defaultPricingSelection,
+  pricingAmount,
   pricingCards,
   pricingOptions,
+  pricingPreview,
+  usageChargeCompact,
   type PricingCard,
+  type PricingPreview,
   type PricingCardLine,
+  type PricingCreditLine,
+  type PricingIncludedLine,
   type PricingOption,
   type PricingSelection,
 } from './pricingWidget'

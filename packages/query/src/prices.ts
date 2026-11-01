@@ -399,6 +399,27 @@ export function usePriceHistory(entityType: PriceEntityType, entityId: string) {
 }
 
 /**
+ * Every version of one plan price, oldest first: `GET /prices/{id}/history`.
+ *
+ * Any version's ID returns the same timeline: edits point at the root price,
+ * and the API reads the root and every plan price under it. Plan prices only;
+ * an add-on's or a subscription override's price answers 400. Read when a
+ * charge's sheet opens (`id` empty until then), not for every row.
+ */
+export function usePlanPriceVersions(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.prices.versions(id),
+    queryFn: async ({ signal }) => {
+      const response = await call((options) => client.prices.getPriceHistory(id, options), signal)
+      return (response.items ?? []).map((item) => toCharge(item as ChargeWire))
+    },
+    enabled: id.length > 0,
+  })
+}
+
+/**
  * Save a plan's charges in one call.
  *
  * The editor collects a whole set and commits it together, so this is the bulk

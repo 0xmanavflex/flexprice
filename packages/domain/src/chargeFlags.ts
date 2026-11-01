@@ -157,6 +157,21 @@ export interface ChargeDetail {
   versions?: readonly ChargeVersion[] | undefined
 }
 
+/**
+ * A charge's versions as read from the API when its sheet opens:
+ * `GET /prices/{id}/history` for a plan's charge,
+ * `GET /subscriptions/lineitems/{id}/history` for a contract's.
+ * Replaces `ChargeDetail.versions` in the sheet once given.
+ */
+export interface ChargeHistory {
+  /** Every version, any order; the sheet sorts newest first. */
+  versions?: readonly ChargeVersion[] | undefined
+  isLoading?: boolean | undefined
+  /** Why the read failed, shown in place of the list. */
+  error?: string | null | undefined
+  onRetry?: (() => void) | undefined
+}
+
 export interface ChargeFlag {
   section: ChargeSection
   label: string
