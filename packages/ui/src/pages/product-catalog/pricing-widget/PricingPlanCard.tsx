@@ -66,6 +66,8 @@ export interface PricingPlanCardProps {
   /** Usage bills on top of the fee: a preview says "+ Usage" after the period. */
   hasUsage?: boolean
   usage?: PricingPlanUsage[]
+  /** One-time fees, listed in a preview: never part of the price per period. */
+  oneTime?: PricingPlanUsage[]
   included: PricingPlanIncluded[]
   credits: PricingPlanCredit[]
   /** The widget's button. Left out of a preview. */
@@ -84,7 +86,7 @@ export interface PricingPlanCardProps {
   className?: string
 }
 
-export type PricingPlanSection = 'price' | 'usage' | 'included' | 'credits'
+export type PricingPlanSection = 'price' | 'usage' | 'oneTime' | 'included' | 'credits'
 
 type Icon = typeof GaugeIcon
 
@@ -165,6 +167,7 @@ export function PricingPlanCard({
   per,
   hasUsage = false,
   usage = [],
+  oneTime = [],
   included,
   credits,
   onViewPlan,
@@ -182,6 +185,7 @@ export function PricingPlanCard({
         }
       : {}
   const charges = useCapped(usage, preview)
+  const fees = useCapped(oneTime, preview)
   const lines = useCapped(included, preview)
   const grants = useCapped(credits, preview)
 
@@ -248,6 +252,25 @@ export function PricingPlanCard({
                 </li>
               ))}
               {charges.toggle}
+            </ul>
+          </div>
+        ) : null}
+        {preview && oneTime.length > 0 ? (
+          <div className="border-t pt-3.5">
+            <Heading {...jump('oneTime')}>One-time</Heading>
+            <ul className="space-y-2">
+              {fees.shown.map((charge) => (
+                <li
+                  key={charge.key}
+                  className="flex items-start justify-between gap-2 text-[11px] leading-snug"
+                >
+                  <span className="text-muted-foreground min-w-0 flex-1">{charge.name}</span>
+                  <span className="shrink-0 font-medium whitespace-nowrap tabular-nums">
+                    {charge.price}
+                  </span>
+                </li>
+              ))}
+              {fees.toggle}
             </ul>
           </div>
         ) : null}

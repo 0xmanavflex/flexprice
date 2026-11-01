@@ -20,6 +20,7 @@ export interface PlanCustomerPreviewProps {
 const JUMP_TARGETS: Record<PricingPlanSection, string> = {
   price: 'section-charges',
   usage: 'section-charges',
+  oneTime: 'section-charges',
   included: 'section-entitlements',
   credits: 'section-credit-grants',
 }
@@ -49,6 +50,7 @@ export function PlanCustomerPreview({
           per={preview.per}
           hasUsage={preview.hasUsage}
           usage={preview.usage.map((line) => ({ ...line, key: line.id }))}
+          oneTime={preview.oneTime.map((line) => ({ ...line, key: line.id }))}
           included={preview.included.map((line) => ({ ...line, key: line.id }))}
           credits={preview.credits.map((line) => ({ ...line, key: line.id }))}
           sectionHref={(section) => `#${JUMP_TARGETS[section]}`}

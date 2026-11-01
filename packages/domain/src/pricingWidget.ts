@@ -62,8 +62,8 @@ export interface PricingCard {
    * meters usage reads "$0", as in V1, with usage on top.
    */
   price: string
-  /** "month", "year": what the price is per. */
-  per: string
+  /** "month", "year": what the price is per. Null for one-time fees alone. */
+  per: string | null
   /** Whether usage charges bill on top of the price. */
   hasUsage: boolean
   included: PricingIncludedLine[]
@@ -194,19 +194,39 @@ function creditLine(grant: CreditGrant): PricingCreditLine {
 /**
  * An amount as V1's pricing card prints it: the currency's symbol and the
  * number as it is, no forced cents ("$0", "$49", "$12.5").
+ *
+ * A stored decimal string keeps every place it has, so a token rate such as
+ * "0.00000015" never prints as "$0"; a computed number keeps up to six.
  */
-export function pricingAmount(amount: number, currency: string): string {
+export function pricingAmount(amount: number | string, currency: string): string {
+  const places =
+    typeof amount === 'string' ? (amount.split('.')[1] ?? '').replace(/0+$/, '').length : 0
   try {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
       currencyDisplay: 'narrowSymbol',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 6,
-    }).format(amount)
+      maximumFractionDigits: Math.min(20, Math.max(6, places)),
+    }).format(Number(amount) || 0)
   } catch {
     return `${currency} ${amount}`
   }
+}
+
+/** What a plan includes, as its card lists it: a switched-off feature is not included. */
+function includedLines(entitlements: readonly Entitlement[]): PricingIncludedLine[] {
+  return entitlements
+    .filter(
+      (entitlement) =>
+        entitlement.featureType !== FeatureType.Boolean || entitlement.isEnabled !== false,
+    )
+    .map((entitlement) => ({
+      id: entitlement.id,
+      label: includedLine(entitlement),
+      featureType: entitlement.featureType,
+      featureName: entitlement.featureName ?? 'Feature',
+    }))
 }
 
 /**
@@ -240,18 +260,7 @@ export function pricingCards(input: {
       price: pricingAmount(Number(total.toFixed(6)), input.selection.currency),
       per,
       hasUsage,
-      included: input.entitlements
-        .filter((entitlement) => entitlement.entityId === plan.id)
-        .filter(
-          (entitlement) =>
-            entitlement.featureType !== FeatureType.Boolean || entitlement.isEnabled !== false,
-        )
-        .map((entitlement) => ({
-          id: entitlement.id,
-          label: includedLine(entitlement),
-          featureType: entitlement.featureType,
-          featureName: entitlement.featureName ?? 'Feature',
-        })),
+      included: includedLines(input.entitlements.filter((e) => e.entityId === plan.id)),
       credits: (input.creditGrantsByPlan.get(plan.id) ?? []).map(creditLine),
       sortAmount: fixed.length > 0 ? total : Number.POSITIVE_INFINITY,
     })
@@ -265,16 +274,21 @@ export function pricingCards(input: {
 export function usageChargeCompact(charge: Charge): string {
   const currency = charge.currency.toUpperCase()
   if (charge.billingModel === BillingModel.Tiered && charge.tiers.length > 0) {
-    return `from ${pricingAmount(Number(charge.tiers[0]!.unitAmount || 0), currency)}/unit`
+    return `from ${pricingAmount(charge.tiers[0]!.unitAmount || '0', currency)}/unit`
   }
-  const amount = pricingAmount(Number(charge.amount || 0), currency)
+  const amount = pricingAmount(charge.amount || '0', currency)
   return charge.billingModel === BillingModel.Package ? `${amount}/pkg` : `${amount}/unit`
 }
 
 export interface PricingPreview extends PricingCard {
   /** The plan's usage charges in the previewed period and currency. */
   usage: { id: string; name: string; price: string }[]
+  /** One-time fees, in the previewed currency: never part of the recurring price. */
+  oneTime: { id: string; name: string; price: string }[]
 }
+
+const isOneTimeFee = (charge: Charge) =>
+  charge.type === PriceType.Fixed && charge.billingPeriod === BillingPeriod.OneTime
 
 /**
  * One plan as its pricing card would show it, for the plan's own preview: the
@@ -291,7 +305,36 @@ export function pricingPreview(input: {
   const now = input.now ?? Date.now()
   const chargesByPlan = new Map([[input.plan.id, input.charges]])
   const selection = defaultPricingSelection(chargesByPlan, now)
-  if (!selection) return null
+  const fees = live(input.charges, now).filter(isOneTimeFee)
+  const oneTimeIn = (currency: string) =>
+    fees
+      .filter((charge) => charge.currency.toUpperCase() === currency)
+      .map((charge) => ({
+        id: charge.id,
+        name: charge.displayName || 'One-time fee',
+        price: pricingAmount(charge.amount || '0', currency),
+      }))
+  if (!selection) {
+    // Only one-time fees: the card's price is what they come to, with no period.
+    const currency = fees[0]?.currency.toUpperCase()
+    if (!currency) return null
+    const oneTime = oneTimeIn(currency)
+    const total = fees
+      .filter((charge) => charge.currency.toUpperCase() === currency)
+      .reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0)
+    return {
+      planId: input.plan.id,
+      name: input.plan.name,
+      description: input.plan.description,
+      price: pricingAmount(Number(total.toFixed(6)), currency),
+      per: null,
+      hasUsage: false,
+      included: includedLines(input.entitlements),
+      credits: input.creditGrants.map(creditLine),
+      usage: [],
+      oneTime,
+    }
+  }
   const [card] = pricingCards({
     plans: [input.plan],
     chargesByPlan,
@@ -311,5 +354,5 @@ export function pricingPreview(input: {
       name: charge.displayName || charge.meterName || 'Usage',
       price: usageChargeCompact(charge),
     }))
-  return { ...card, usage }
+  return { ...card, usage, oneTime: oneTimeIn(selection.currency) }
 }

@@ -189,6 +189,40 @@ describe('plan preview', () => {
     ).toBeNull()
   })
 
+  it('shows one-time fees, and a plan with nothing else still has a preview', () => {
+    const setup = charge('plan_setup', {
+      amount: '49',
+      billingPeriod: BillingPeriod.OneTime,
+      displayName: 'Setup fee',
+    } as Partial<Charge>)
+    const alone = pricingPreview({
+      plan: plan('plan_setup', 'Setup only'),
+      charges: [setup],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(alone).toMatchObject({ price: '$49', per: null, hasUsage: false })
+    expect(alone?.oneTime).toEqual([{ id: setup.id, name: 'Setup fee', price: '$49' }])
+
+    const withFee = pricingPreview({
+      plan: plan('plan_pro', 'Pro'),
+      charges: [...chargesByPlan.get('plan_pro')!, { ...setup, entityId: 'plan_pro' }],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    // The fee is listed, not added to the monthly price.
+    expect(withFee).toMatchObject({ price: '$49', per: 'month' })
+    expect(withFee?.oneTime.map((line) => line.price)).toEqual(['$49'])
+  })
+
+  it('keeps every decimal place a small rate has', () => {
+    expect(usageChargeCompact(charge('p', { type: PriceType.Usage, amount: '0.00000015' }))).toBe(
+      '$0.00000015/unit',
+    )
+  })
+
   it('words usage as V1 does', () => {
     expect(
       usageChargeCompact(

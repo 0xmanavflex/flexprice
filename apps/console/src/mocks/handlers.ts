@@ -5263,9 +5263,15 @@ export const handlers = [
   http.get(`${BASE}/subscriptions/lineitems/:lineId/history`, ({ params }) => {
     const line = findContractLine(String(params['lineId']))
     if (!line) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    // A version's price points at the first; a line added without a price ID
+    // is its own lineage, by its ID without the "_vN" a reprice appends.
     const rootOf = (row: Record<string, unknown>) => {
       const price = (row['price'] ?? {}) as Record<string, unknown>
-      return readString(price, 'parent_price_id') || readString(price, 'id')
+      return (
+        readString(price, 'parent_price_id') ||
+        readString(price, 'id') ||
+        readString(row, 'id').replace(/(_v\d+)+$/, '')
+      )
     }
     const store = [...contractLineStore.values()].find((lines) => lines.includes(line)) ?? [line]
     const items = store

@@ -92,6 +92,24 @@ export const Preview: Story = {
   },
 }
 
+/** A plan billed only by one-time fees: the price has no period, and the fees are listed. */
+export const PreviewOneTimeOnly: Story = {
+  args: {
+    preview: true,
+    price: '$49',
+    per: null,
+    included: [],
+    credits: [],
+    oneTime: [{ key: 'f1', name: 'Setup fee', price: '$49' }],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('One-time')).toBeVisible()
+    await expect(canvas.getByText('Setup fee')).toBeVisible()
+    await expect(canvas.queryByText(/\/month/)).toBeNull()
+  },
+}
+
 /** A recurring grant reads its period after a slash: "2,500 credits · Top-up /monthly". */
 export const RecurringCredits: Story = {
   args: {
