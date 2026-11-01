@@ -217,6 +217,26 @@ describe('plan preview', () => {
     expect(withFee?.oneTime.map((line) => line.price)).toEqual(['$49'])
   })
 
+  it('prices a tiered one-time fee from its tiers, not its empty amount', () => {
+    const preview = pricingPreview({
+      plan: plan('plan_tiered', 'Tiered setup'),
+      charges: [
+        charge('plan_tiered', {
+          amount: '',
+          billingPeriod: BillingPeriod.OneTime,
+          billingModel: BillingModel.Tiered,
+          displayName: 'Onboarding',
+          tiers: [{ upTo: 10, unitAmount: '0', flatAmount: '49' }],
+        } as Partial<Charge>),
+      ],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview?.price).toBe('from $49')
+    expect(preview?.oneTime.map((line) => line.price)).toEqual(['from $49'])
+  })
+
   it('keeps every decimal place a small rate has', () => {
     expect(usageChargeCompact(charge('p', { type: PriceType.Usage, amount: '0.00000015' }))).toBe(
       '$0.00000015/unit',

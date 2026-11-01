@@ -290,6 +290,20 @@ export interface PricingPreview extends PricingCard {
 const isOneTimeFee = (charge: Charge) =>
   charge.type === PriceType.Fixed && charge.billingPeriod === BillingPeriod.OneTime
 
+const isTiered = (charge: Charge) =>
+  charge.billingModel === BillingModel.Tiered && charge.tiers.length > 0
+
+/**
+ * A fee as its line shows it. A tiered fee's price is in its tiers, not its
+ * amount, and depends on quantity: "from" its first band, never a fixed sum.
+ */
+function feePrice(charge: Charge, currency: string): string {
+  if (!isTiered(charge)) return pricingAmount(charge.amount || '0', currency)
+  const first = charge.tiers[0]!
+  const from = Number(first.flatAmount) > 0 ? first.flatAmount : first.unitAmount
+  return `from ${pricingAmount(from || '0', currency)}`
+}
+
 /**
  * One plan as its pricing card would show it, for the plan's own preview: the
  * period and currency the widget would open on, so the two agree. Null while
@@ -312,21 +326,27 @@ export function pricingPreview(input: {
       .map((charge) => ({
         id: charge.id,
         name: charge.displayName || 'One-time fee',
-        price: pricingAmount(charge.amount || '0', currency),
+        price: feePrice(charge, currency),
       }))
   if (!selection) {
     // Only one-time fees: the card's price is what they come to, with no period.
     const currency = fees[0]?.currency.toUpperCase()
     if (!currency) return null
     const oneTime = oneTimeIn(currency)
-    const total = fees
-      .filter((charge) => charge.currency.toUpperCase() === currency)
-      .reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0)
+    const inCurrency = fees.filter((charge) => charge.currency.toUpperCase() === currency)
+    const flat = inCurrency.filter((charge) => !isTiered(charge))
+    const tiered = inCurrency.filter(isTiered)
+    const total = flat.reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0)
+    // A lone tiered fee reads as its line does; with flat fees, the sum is a floor.
+    const price =
+      flat.length === 0 && tiered.length === 1
+        ? feePrice(tiered[0]!, currency)
+        : `${tiered.length > 0 ? 'from ' : ''}${pricingAmount(Number(total.toFixed(6)), currency)}`
     return {
       planId: input.plan.id,
       name: input.plan.name,
       description: input.plan.description,
-      price: pricingAmount(Number(total.toFixed(6)), currency),
+      price,
       per: null,
       hasUsage: false,
       included: includedLines(input.entitlements),
