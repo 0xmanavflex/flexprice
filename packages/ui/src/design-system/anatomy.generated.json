@@ -6067,8 +6067,7 @@
       "layer": "surface",
       "composes": [
         "CheckIcon",
-        "FormPreview",
-        "PreviewSection"
+        "FormPreview"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanPreviewCard.stories.tsx"
@@ -6353,9 +6352,7 @@
       "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [
-        "PlanPreviewCard"
-      ],
+      "usedBy": [],
       "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "PriceOverrideForm": {
