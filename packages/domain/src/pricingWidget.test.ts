@@ -281,6 +281,19 @@ describe('plan preview', () => {
     expect(preview?.price).toBe('from $0.00000015')
   })
 
+  it('adds one-time fees exactly, without binary rounding', () => {
+    const fee = (id: string, amount: string) =>
+      ({ ...charge('plan_exact', { amount, billingPeriod: BillingPeriod.OneTime }), id }) as Charge
+    const preview = pricingPreview({
+      plan: plan('plan_exact', 'Exact'),
+      charges: [fee('a', '0.1'), fee('b', '0.00000000000000001')],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview?.price).toBe('$0.10000000000000001')
+  })
+
   it('keeps every decimal place a small rate has', () => {
     expect(usageChargeCompact(charge('p', { type: PriceType.Usage, amount: '0.00000015' }))).toBe(
       '$0.00000015/unit',

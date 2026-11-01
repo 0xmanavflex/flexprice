@@ -911,7 +911,8 @@ function render({ value, scale }: Scaled): string {
   return negative && body !== '0' ? `-${body}` : body
 }
 
-function decimalSum(values: readonly string[]): string {
+/** Decimal strings added exactly, as scaled integers: no binary rounding. */
+export function decimalSum(values: readonly string[]): string {
   const parts = values.map(scaled)
   const scale = Math.max(0, ...parts.map((p) => p.scale))
   return render({ value: parts.reduce((sum, p) => sum + rescale(p, scale), 0n), scale })

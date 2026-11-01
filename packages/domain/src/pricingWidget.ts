@@ -1,3 +1,4 @@
+import { decimalSum } from './customerPortal'
 import { CREDIT_GRANT_PERIOD_LABEL, CreditGrantCadence, type CreditGrant } from './creditGrant'
 import { meteredAllowanceLabel, type Entitlement } from './entitlement'
 import { FeatureType } from './feature'
@@ -202,13 +203,18 @@ export function pricingAmount(amount: number | string, currency: string): string
   const places =
     typeof amount === 'string' ? (amount.split('.')[1] ?? '').replace(/0+$/, '').length : 0
   try {
+    // A decimal string is formatted as written (Intl.NumberFormat v3), not as a float.
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
       currencyDisplay: 'narrowSymbol',
       minimumFractionDigits: 0,
       maximumFractionDigits: Math.min(20, Math.max(6, places)),
-    }).format(Number(amount) || 0)
+    }).format(
+      typeof amount === 'string' && /^-?\d+(\.\d+)?$/.test(amount)
+        ? (amount as `${number}`)
+        : Number(amount) || 0,
+    )
   } catch {
     return `${currency} ${amount}`
   }
@@ -292,18 +298,6 @@ const isOneTimeFee = (charge: Charge) =>
 
 const isTiered = (charge: Charge) =>
   charge.billingModel === BillingModel.Tiered && charge.tiers.length > 0
-
-/**
- * Decimal strings added at the precision they carry, so "0.00000015" plus
- * "0" stays "0.00000015" instead of rounding away at six places.
- */
-function decimalSum(values: readonly string[]): string {
-  const places = Math.min(
-    20,
-    Math.max(0, ...values.map((value) => (value.split('.')[1] ?? '').length)),
-  )
-  return values.reduce((sum, value) => sum + (Number(value) || 0), 0).toFixed(places)
-}
 
 /**
  * What a tiered fee costs at least: one unit of its first band, the band's
