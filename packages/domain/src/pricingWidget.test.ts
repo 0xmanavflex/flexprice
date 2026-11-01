@@ -237,6 +237,31 @@ describe('plan preview', () => {
     expect(preview?.oneTime.map((line) => line.price)).toEqual(['from $49'])
   })
 
+  it('floors a tiered fee at one unit of its first band, and counts it in the total', () => {
+    const fee = (id: string, overrides: Partial<Charge>) =>
+      ({
+        ...charge('plan_mix', { billingPeriod: BillingPeriod.OneTime, ...overrides }),
+        id,
+      }) as Charge
+    const preview = pricingPreview({
+      plan: plan('plan_mix', 'Mixed'),
+      charges: [
+        fee('setup', { amount: '10', displayName: 'Setup' }),
+        fee('onboarding', {
+          amount: '',
+          billingModel: BillingModel.Tiered,
+          displayName: 'Onboarding',
+          tiers: [{ upTo: 10, unitAmount: '2', flatAmount: '49' }],
+        } as Partial<Charge>),
+      ],
+      entitlements: [],
+      creditGrants: [],
+      now: NOW,
+    })
+    expect(preview?.oneTime.map((line) => line.price)).toEqual(['$10', 'from $51'])
+    expect(preview?.price).toBe('from $61')
+  })
+
   it('keeps every decimal place a small rate has', () => {
     expect(usageChargeCompact(charge('p', { type: PriceType.Usage, amount: '0.00000015' }))).toBe(
       '$0.00000015/unit',

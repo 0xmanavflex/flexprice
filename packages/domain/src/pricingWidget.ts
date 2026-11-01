@@ -294,14 +294,18 @@ const isTiered = (charge: Charge) =>
   charge.billingModel === BillingModel.Tiered && charge.tiers.length > 0
 
 /**
- * A fee as its line shows it. A tiered fee's price is in its tiers, not its
- * amount, and depends on quantity: "from" its first band, never a fixed sum.
+ * What a tiered fee costs at least: one unit of its first band, the band's
+ * flat amount plus its unit amount. Its price depends on quantity past that.
  */
+function tieredFloor(charge: Charge): number {
+  const first = charge.tiers[0]!
+  return (Number(first.flatAmount) || 0) + (Number(first.unitAmount) || 0)
+}
+
+/** A fee as its line shows it: a tiered one "from" its floor, never its empty amount. */
 function feePrice(charge: Charge, currency: string): string {
   if (!isTiered(charge)) return pricingAmount(charge.amount || '0', currency)
-  const first = charge.tiers[0]!
-  const from = Number(first.flatAmount) > 0 ? first.flatAmount : first.unitAmount
-  return `from ${pricingAmount(from || '0', currency)}`
+  return `from ${pricingAmount(Number(tieredFloor(charge).toFixed(6)), currency)}`
 }
 
 /**
@@ -334,14 +338,12 @@ export function pricingPreview(input: {
     if (!currency) return null
     const oneTime = oneTimeIn(currency)
     const inCurrency = fees.filter((charge) => charge.currency.toUpperCase() === currency)
-    const flat = inCurrency.filter((charge) => !isTiered(charge))
-    const tiered = inCurrency.filter(isTiered)
-    const total = flat.reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0)
-    // A lone tiered fee reads as its line does; with flat fees, the sum is a floor.
-    const price =
-      flat.length === 0 && tiered.length === 1
-        ? feePrice(tiered[0]!, currency)
-        : `${tiered.length > 0 ? 'from ' : ''}${pricingAmount(Number(total.toFixed(6)), currency)}`
+    // Every fee counts: a tiered one at its floor, which makes the total a floor too.
+    const total = inCurrency.reduce(
+      (sum, charge) => sum + (isTiered(charge) ? tieredFloor(charge) : Number(charge.amount) || 0),
+      0,
+    )
+    const price = `${inCurrency.some(isTiered) ? 'from ' : ''}${pricingAmount(Number(total.toFixed(6)), currency)}`
     return {
       planId: input.plan.id,
       name: input.plan.name,
