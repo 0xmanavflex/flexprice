@@ -261,8 +261,8 @@ export function useRunDataExport() {
         client.scheduledTasks.triggerScheduledTaskRun(
           id,
           window.startTime && window.endTime
-            ? { startTime: window.startTime, endTime: window.endTime }
-            : {},
+            ? { customerExternalIds: [], startTime: window.startTime, endTime: window.endTime }
+            : { customerExternalIds: [] },
         ),
       ),
     onSuccess: refresh,
