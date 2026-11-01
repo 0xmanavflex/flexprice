@@ -183,7 +183,10 @@ export function PlanPreviewCard({
     (charge) => charge.type === PriceType.Fixed && charge.billingPeriod !== BillingPeriod.OneTime,
   )
   const hasUsage = charges.some((charge) => charge.type === PriceType.Usage)
-  const total = recurring.reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0)
+  const total = recurring.reduce((sum, charge) => {
+    if (charge.billingModel === BillingModel.Tiered) return sum
+    return sum + (Number(charge.amount) || 0)
+  }, 0)
   const price = recurring.length > 0 ? money(total, currency, locale) : null
   const per = recurring[0] ? (PER[recurring[0].billingPeriod] ?? recurring[0].billingPeriod) : null
   const trial = trialDays && trialDays > 0 ? `${trialDays}-day free trial` : null
