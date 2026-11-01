@@ -943,7 +943,7 @@ export function SubscriptionDetailView({
                 ? { count: chargeRows.charges.filter((charge) => !charge.endDate).length }
                 : {}),
             },
-            { value: 'usage', label: 'Usage' },
+            // { value: 'usage', label: 'Usage' },
             {
               value: 'invoices',
               label: 'Invoices',
