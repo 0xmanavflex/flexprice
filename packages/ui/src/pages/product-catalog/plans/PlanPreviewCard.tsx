@@ -6,7 +6,7 @@ import {
   type CreateCharge,
   CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
-  CreditGrantPeriod,
+  type CreditGrantPeriod,
   FeatureType,
   PriceType,
 } from '@fp/domain'
