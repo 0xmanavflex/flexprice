@@ -4256,6 +4256,38 @@ export const handlers = [
     priceCorpus.pagination.total = priceCorpus.items.length
     return HttpResponse.json({ items }, { status: 201 })
   }),
+  /**
+   * Every version of a plan price, oldest first: the root and every plan price
+   * whose `parent_price_id` is that root. Any version's ID gives the same list;
+   * a price that is not a plan's answers 400, as the API does.
+   */
+  http.get(`${BASE}/prices/:id/history`, ({ params }) => {
+    const price = byId('prices', String(params['id']))
+    if (!price) return HttpResponse.json({ error: { message: 'Price not found' } }, { status: 404 })
+    if (readString(price, 'entity_type') !== 'PLAN') {
+      return HttpResponse.json(
+        { error: { message: 'Price history is only available for plan prices' } },
+        { status: 400 },
+      )
+    }
+    const root = readString(price, 'parent_price_id') || readString(price, 'id')
+    const items = priceCorpus.items
+      .filter(
+        (row) =>
+          readString(row, 'entity_type') === 'PLAN' &&
+          readString(row, 'entity_id') === readString(price, 'entity_id') &&
+          (readString(row, 'id') === root || readString(row, 'parent_price_id') === root),
+      )
+      .sort(
+        (a, b) =>
+          Date.parse(readString(a, 'start_date') || readString(a, 'created_at')) -
+          Date.parse(readString(b, 'start_date') || readString(b, 'created_at')),
+      )
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: items.length, offset: 0 },
+    })
+  }),
   http.put(`${BASE}/prices/:id`, async ({ request, params }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     const { effective_from: effectiveFrom, ...patch } = body
@@ -5218,6 +5250,29 @@ export const handlers = [
       const lines = contractLines(id, row)
       return body['active_filter'] === false ? lines : lines.filter(lineIsActive)
     })
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: items.length, offset: 0 },
+    })
+  }),
+  /**
+   * Every version of one contract line, oldest first. The API walks the
+   * predecessor and successor pointers; here a version is a line of the same
+   * contract whose price shares the root price.
+   */
+  http.get(`${BASE}/subscriptions/lineitems/:lineId/history`, ({ params }) => {
+    const line = findContractLine(String(params['lineId']))
+    if (!line) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    const rootOf = (row: Record<string, unknown>) => {
+      const price = (row['price'] ?? {}) as Record<string, unknown>
+      return readString(price, 'parent_price_id') || readString(price, 'id')
+    }
+    const store = [...contractLineStore.values()].find((lines) => lines.includes(line)) ?? [line]
+    const items = store
+      .filter((row) => row === line || rootOf(row) === rootOf(line))
+      .sort(
+        (a, b) => Date.parse(readString(a, 'start_date')) - Date.parse(readString(b, 'start_date')),
+      )
     return HttpResponse.json({
       items,
       pagination: { total: items.length, limit: items.length, offset: 0 },

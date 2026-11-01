@@ -1,6 +1,12 @@
 import { RBAC_ENTITY } from '@fp/domain'
 import { AccessScope } from '@ui/compositions/access/Access'
-import { BillingModel, type Charge, type ChargeDetail, chargeToDraft } from '@fp/domain'
+import {
+  BillingModel,
+  type Charge,
+  type ChargeDetail,
+  type ChargeHistory,
+  chargeToDraft,
+} from '@fp/domain'
 import { ChargeTable } from '../charges/ChargeTable'
 import { chargeLabel, pricingSummary } from './PlanPreviewCard'
 
@@ -22,6 +28,10 @@ export interface PlanChargesViewProps {
   details?: ReadonlyMap<string, ChargeDetail> | undefined
   /** Brings back a charge's previous price version. */
   onRevert?: ((charge: Charge, versionId: string) => Promise<unknown>) | undefined
+  /** Which charge's sheet is open, so the page can read its history. */
+  onOpenCharge?: ((charge: Charge | null) => void) | undefined
+  /** The open charge's versions from `GET /prices/{id}/history`. */
+  history?: ChargeHistory | undefined
 }
 
 /** Plan actions and pricing labels composed over the shared charges table and sheet. */
@@ -37,6 +47,8 @@ function PlanChargesViewInner({
   meterUnit,
   details,
   onRevert,
+  onOpenCharge,
+  history,
 }: PlanChargesViewProps) {
   const meterName = (id: string) => charges.find((charge) => charge.meterId === id)?.meterName ?? id
   return (
@@ -54,6 +66,8 @@ function PlanChargesViewInner({
       showDates
       {...(details ? { details } : {})}
       {...(onRevert && !readOnly ? { onRevert } : {})}
+      {...(onOpenCharge ? { onOpenCharge } : {})}
+      {...(history ? { history } : {})}
       isLoading={loading ?? false}
       error={error ? 'Charges could not be loaded' : null}
       onRetry={onRetry}

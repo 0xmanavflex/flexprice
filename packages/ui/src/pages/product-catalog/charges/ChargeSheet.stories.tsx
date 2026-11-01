@@ -330,6 +330,46 @@ export const HistoryNewestFirst: Story = {
 }
 
 /**
+ * Versions read from the history API as the sheet opened: they replace the
+ * ones the page folded from its own list.
+ */
+export const HistoryFromApi: Story = {
+  args: {
+    ...OpenedAtASection.args,
+    detail: { ...OpenedAtASection.args!.detail, versions: [] },
+    history: { versions: OpenedAtASection.args!.detail!.versions },
+  },
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByText('Current')).toBeVisible()
+  },
+}
+
+/** The history read still running: the sheet says so where History goes. */
+export const HistoryLoading: Story = {
+  args: { charge: fixed, history: { isLoading: true } },
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByRole('status')).toHaveTextContent('Loading history')
+  },
+}
+
+/** The history read failed: the reason, and a way to try again. */
+export const HistoryFailed: Story = {
+  args: {
+    charge: fixed,
+    history: { error: 'The history could not be loaded.', onRetry: fn() },
+  },
+  play: async ({ canvasElement, args }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    const alert = await screen.findByRole('alert')
+    await expect(alert).toHaveTextContent('The history could not be loaded.')
+    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
+    await expect(args.history!.onRetry).toHaveBeenCalled()
+  },
+}
+
+/**
  * A change scheduled for a later date: the price billing today stays Current,
  * the new one is Upcoming with the date it starts, and an ended one is History.
  */

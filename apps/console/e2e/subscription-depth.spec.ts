@@ -121,7 +121,10 @@ test('a changed contract price stays as an inactive version, not gone', async ({
   await expect(rows.getByRole('button', { name: /History/ })).toBeVisible()
 
   // The old price is a version of the charge, kept inactive.
+  // Opening the sheet reads the line item's versions from the history API.
+  const historyRead = page.waitForRequest(/\/subscriptions\/lineitems\/[^/]+\/history$/)
   await rows.getByRole('button', { name: /History/ }).click()
+  await historyRead
   const sheet = page.getByRole('dialog')
   // At least the old price and the new one; a reused mock may hold more.
   await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()

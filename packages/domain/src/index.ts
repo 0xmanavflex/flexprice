@@ -120,6 +120,7 @@ export type {
   ChargeCommitmentWindow,
   ChargeCoupon,
   ChargeDetail,
+  ChargeHistory,
   ChargeFlag,
   ChargeVersion,
 } from './chargeFlags'

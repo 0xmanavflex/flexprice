@@ -94,7 +94,7 @@ import {
 import { usePlanFormOptions } from './planFormOptions'
 import { DuplicatePlanDialog } from './DuplicatePlanDialog'
 import { TerminateChargeDialog } from '../shared/TerminateChargeDialog'
-import { priceHistoryRows } from '@/pages/shared/priceHistory'
+import { priceHistoryRows, usePlanChargeHistory } from '@/pages/shared/priceHistory'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 import { useContractSync } from '../shared/useContractSync'
@@ -422,6 +422,8 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
   const [terminating, setTerminating] = useState<Charge | null>(null)
 
   const { charges: rows, details } = priceHistoryRows(charges.data ?? [])
+  // A charge's versions come from the history API when its sheet opens.
+  const chargeHistory = usePlanChargeHistory()
   const loading = charges.isPending || (charges.isError && charges.isFetching)
   const failed = charges.isError && !charges.isFetching
   const editing = form !== null && form !== 'add' ? form : null
@@ -451,9 +453,12 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
       <PlanChargesView
         charges={rows}
         details={details}
+        {...chargeHistory.table}
         onRevert={(charge, versionId) => {
           // No revert endpoint: the earlier price is saved as a new version from now.
-          const previous = (charges.data ?? []).find((price) => price.id === versionId)
+          const previous = [...chargeHistory.versions, ...(charges.data ?? [])].find(
+            (price) => price.id === versionId,
+          )
           return previous
             ? updatePrice.mutateAsync({
                 id: charge.id,

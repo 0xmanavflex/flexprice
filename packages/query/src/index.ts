@@ -304,6 +304,7 @@ export {
   useSubscriptionInvoicePreview,
   useSubscriptionLines,
   useSubscriptionLineHistory,
+  useSubscriptionLineVersions,
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
@@ -378,6 +379,7 @@ export {
   useEntitiesCharges,
   usePrices,
   usePriceHistory,
+  usePlanPriceVersions,
   useTerminatePrice,
   useUpdatePrice,
 } from './prices'

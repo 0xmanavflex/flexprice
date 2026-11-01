@@ -8,6 +8,7 @@ import {
   PriceEntityType,
   SubscriptionStatus,
   type SubscriptionCancellationType,
+  type SubscriptionLine,
   lineRevertDraft,
 } from '@fp/domain'
 import {
@@ -51,6 +52,7 @@ import {
   useSubscriptionLines,
   useCustomer,
   useSubscriptionLineHistory,
+  useSubscriptionLineVersions,
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
@@ -138,6 +140,9 @@ export function SubscriptionDetailPage({
   // Ended lines too, so a changed price stays visible as an inactive version.
   // If it fails, the page falls back to the lines billing now.
   const lineHistory = useSubscriptionLineHistory(subscriptionId)
+  // A charge's versions come from the history API when its sheet opens.
+  const [openLine, setOpenLine] = useState<SubscriptionLine | null>(null)
+  const lineVersions = useSubscriptionLineVersions(openLine?.id ?? '')
   const chargeAlerts = useContractChargeAlerts(subscriptionId)
   const entitlements = useSubscriptionEntitlements(subscriptionId)
   const creditGrants = useSubscriptionCreditGrants(subscriptionId)
@@ -281,6 +286,17 @@ export function SubscriptionDetailPage({
           }
         })()}
         {...(lineHistory.data ? { lineHistory: lineHistory.data } : {})}
+        onOpenLine={setOpenLine}
+        {...(openLine
+          ? {
+              openLineHistory: {
+                ...(lineVersions.data ? { lines: lineVersions.data } : {}),
+                isLoading: lineVersions.isLoading,
+                error: lineVersions.error ? 'The history could not be loaded.' : null,
+                onRetry: () => void lineVersions.refetch(),
+              },
+            }
+          : {})}
         onRevertLine={(line, previous) => {
           // No revert endpoint: the old price goes out as a new version from now.
           const draft = lineRevertDraft(previous, line.priceId)

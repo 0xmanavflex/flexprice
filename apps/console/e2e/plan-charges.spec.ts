@@ -100,7 +100,10 @@ test.describe('plan charges, entitlements and credit grants', () => {
 
     // Still one row per charge: the old prices are history, not extra rows and not gone.
     await expect(rows).toHaveCount(before)
+    // Opening the sheet reads the charge's versions from the history API.
+    const historyRead = page.waitForRequest(/\/prices\/[^/]+\/history$/)
     await row.getByRole('button', { name: /History/ }).click()
+    await historyRead
     const sheet = page.getByRole('dialog')
     // At least the old price and the new one; a reused mock may hold more.
     await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
