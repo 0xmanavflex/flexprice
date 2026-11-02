@@ -467,19 +467,11 @@ export function connectionSpecFor(providerType: string): ConnectionSpec | undefi
 /** The steps a provider's sheet shows, in order. A provider with nothing to choose or register skips the step. */
 export type ConnectStep = 'credentials' | 'sync' | 'webhook'
 
-/**
- * With `perConnectionWebhook` (billing entities enabled) the connection is
- * created on leaving the step before Webhook, because the webhook URL ends with
- * its id; QuickBooks and Zoho leave for the provider instead, so they have no
- * Webhook step then. Otherwise one submit at the end creates it.
- */
-export function connectSteps(
-  spec: ConnectionSpec,
-  { perConnectionWebhook }: { perConnectionWebhook: boolean },
-): ConnectStep[] {
+/** One submit at the end creates the connection; a per-connection webhook URL uses the id generated up front. */
+export function connectSteps(spec: ConnectionSpec): ConnectStep[] {
   const steps: ConnectStep[] = ['credentials']
   if (spec.sync.length > 0) steps.push('sync')
-  if (spec.webhook && !(perConnectionWebhook && spec.setup === 'oauth')) steps.push('webhook')
+  if (spec.webhook) steps.push('webhook')
   return steps
 }
 
@@ -536,13 +528,8 @@ function fieldRules(fields: ConnectionField[]) {
 }
 
 /** The create form's schema. Built from the spec so a field cannot be required in one place and not the other. */
-export function connectionFormSchema(
-  spec: ConnectionSpec,
-  { entity = false, perConnectionWebhook = false } = {},
-) {
-  const shape = fieldRules(
-    perConnectionWebhook ? fieldsForStep(spec, 'credentials', true) : spec.fields,
-  )
+export function connectionFormSchema(spec: ConnectionSpec, { entity = false } = {}) {
+  const shape = fieldRules(spec.fields)
   return z.object({
     billingEntityId: entity ? z.string().min(1, 'Choose a billing entity.') : z.string().optional(),
     name: z
@@ -570,6 +557,7 @@ export function connectionFormSchema(
 }
 
 export interface ConnectionPayload {
+  id?: string
   name: string
   provider_type: string
   encrypted_secret_data: Record<string, string>
@@ -585,18 +573,17 @@ export function toConnectionPayload(
   {
     externalId,
     billingEntityId,
-    perConnectionWebhook = false,
+    connectionId,
   }: {
     externalId?: string
     billingEntityId?: string | undefined
-    perConnectionWebhook?: boolean
+    connectionId?: string | undefined
   } = {},
 ): ConnectionPayload {
   const secrets: Record<string, string> = {}
   const metadata: Record<string, string> = {}
   const syncExtra: Record<string, unknown> = {}
-  const fields = perConnectionWebhook ? fieldsForStep(spec, 'credentials', true) : spec.fields
-  for (const field of fields) {
+  for (const field of spec.fields) {
     const value = (values.fields[field.key] ?? '').trim()
     if (value === '') continue
     if (field.target === 'metadata') metadata[field.key] = value
@@ -617,6 +604,7 @@ export function toConnectionPayload(
   }
 
   return {
+    ...(connectionId ? { id: connectionId } : {}),
     name: values.name.trim(),
     provider_type: spec.providerType,
     encrypted_secret_data: secrets,

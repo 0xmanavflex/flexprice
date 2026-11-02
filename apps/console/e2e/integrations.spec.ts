@@ -60,7 +60,9 @@ async function enableEntities(
   )
 }
 
-/** From the Stripe page, creates Stripe for Northwind UK and returns the sheet on its webhook step. */
+const CONNECTION_URL = /\/webhooks\/stripe\/[^/]+\/[^/]+\/(conn_[0-9A-HJKMNP-TV-Z]{26})$/
+
+/** From the Stripe page, connects Stripe for Northwind UK with its webhook secret in one submit. */
 async function connectStripeForUk(page: Page) {
   await page.goto('/integrations/stripe')
   await page
@@ -74,14 +76,23 @@ async function connectStripeForUk(page: Page) {
   await sheet.getByRole('textbox', { name: /^Secret key/ }).fill('sk_test_uk')
   await sheet.getByLabel('Publishable key').fill('pk_test_uk')
   await sheet.getByRole('button', { name: 'Continue' }).click()
+  await sheet.getByRole('button', { name: 'Continue' }).click()
+  // The address names the connection before it exists.
+  const address = (await sheet.getByText(CONNECTION_URL).textContent()) ?? ''
+  const id = CONNECTION_URL.exec(address)?.[1]
+  await sheet.getByRole('textbox', { name: /^Webhook signing secret/ }).fill('whsec_uk')
   const create = page.waitForRequest(
     (request) => request.method() === 'POST' && request.url().endsWith('/connections'),
   )
   await sheet.getByRole('button', { name: 'Connect Stripe' }).click()
   const body = (await create).postDataJSON() as Record<string, unknown>
-  expect(body['billing_entity_id']).toBe('be_uk')
-  expect(body['encrypted_secret_data']).not.toHaveProperty('webhook_secret')
-  return sheet
+  expect(body).toMatchObject({
+    id,
+    billing_entity_id: 'be_uk',
+    encrypted_secret_data: { webhook_secret: 'whsec_uk' },
+  })
+  await expect(sheet).toBeHidden()
+  return { address, id }
 }
 
 test.describe('integrations', () => {
@@ -194,35 +205,17 @@ test.describe('integrations', () => {
     await expect(sheet.getByLabel('Connection name')).toHaveValue('Stripe EU')
   })
 
-  test('connects Stripe for an entity, then saves its own webhook secret', async ({ page }) => {
+  test('connects Stripe for an entity with its own webhook in one step', async ({ page }) => {
     await enableEntities(page)
-    const sheet = await connectStripeForUk(page)
-
-    const url = sheet.getByText(/\/webhooks\/stripe\/[^/]+\/[^/]+\/conn_mock_\d+$/)
-    await expect(url).toBeVisible()
-    await sheet.getByRole('textbox', { name: /^Webhook signing secret/ }).fill('whsec_uk')
-    const save = page.waitForRequest(
-      (request) =>
-        request.method() === 'PUT' && /\/connections\/conn_mock_\d+$/.test(request.url()),
-    )
-    await sheet.getByRole('button', { name: 'Save webhook' }).click()
-    expect((await save).postDataJSON()).toEqual({
-      encrypted_secret_data: { webhook_secret: 'whsec_uk' },
+    const puts: string[] = []
+    page.on('request', (request) => {
+      if (request.method() === 'PUT') puts.push(request.url())
     })
-    await expect(sheet).toBeHidden()
+    const { address } = await connectStripeForUk(page)
+    expect(puts).toEqual([])
     await expect(page.getByRole('row').filter({ hasText: 'Northwind UK' })).toContainText(
       'Stripe UK',
     )
-  })
-
-  test('leaves the webhook for later and finds it on Configure', async ({ page }) => {
-    await enableEntities(page)
-    const sheet = await connectStripeForUk(page)
-    const address = await sheet
-      .getByText(/\/webhooks\/stripe\/[^/]+\/[^/]+\/conn_mock_\d+$/)
-      .textContent()
-    await sheet.getByRole('button', { name: 'Do this later' }).click()
-    await expect(sheet).toBeHidden()
 
     await page
       .getByRole('row')
@@ -230,11 +223,49 @@ test.describe('integrations', () => {
       .getByRole('button', { name: 'Configure Stripe UK' })
       .click()
     const manage = page.getByRole('dialog', { name: /Stripe/ })
-    await expect(manage.getByText(address!, { exact: true })).toBeVisible()
-    await expect(manage.getByRole('textbox', { name: /^Webhook signing secret/ })).toHaveValue('')
-    await expect(manage.getByRole('combobox', { name: /Billing entity/ })).toHaveText(
-      /Northwind UK/,
+    await expect(manage.getByText(address, { exact: true })).toBeVisible()
+  })
+
+  test('keeps the same connection id when a failed connect is retried', async ({ page }) => {
+    await enableEntities(page)
+    // Mock mode answers from a service worker, which `page.route` does not see.
+    await page.addInitScript(() => {
+      const ids: unknown[] = []
+      Object.assign(window, { __connectIds: ids })
+      const realFetch = window.fetch.bind(window)
+      window.fetch = async (input, init) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+        if (init?.method === 'POST' && /\/connections$/.test(url)) {
+          ids.push((JSON.parse(String(init.body)) as Record<string, unknown>)['id'])
+          if (ids.length === 1) {
+            return new Response(JSON.stringify({ message: 'Something went wrong' }), {
+              status: 500,
+              headers: { 'content-type': 'application/json' },
+            })
+          }
+        }
+        return realFetch(input, init)
+      }
+    })
+    await page.goto('/integrations')
+    await page.getByRole('button', { name: 'Connect Razorpay' }).click()
+    const sheet = page.getByRole('dialog', { name: /Connect Razorpay/ })
+    await sheet.getByLabel('Connection name').fill('Razorpay')
+    await sheet.getByLabel('Key ID').fill('rzp_test_abc')
+    await sheet.locator('input[data-slot="input-group-control"]').first().fill('shh')
+    await sheet.getByRole('button', { name: 'Continue' }).click()
+    await sheet.getByRole('button', { name: 'Continue' }).click()
+    await sheet.getByRole('button', { name: 'Connect Razorpay' }).click()
+    await expect(sheet.getByRole('alert')).toBeVisible()
+    await sheet.getByRole('button', { name: 'Connect Razorpay' }).click()
+    await expect(sheet).toBeHidden()
+    const ids = await page.evaluate(
+      () => (window as unknown as { __connectIds: unknown[] }).__connectIds,
     )
+    expect(ids).toHaveLength(2)
+    expect(ids[0]).toMatch(/^conn_[0-9A-HJKMNP-TV-Z]{26}$/)
+    expect(ids[1]).toBe(ids[0])
   })
 
   test('starts QuickBooks consent for a billing entity', async ({ page }) => {
@@ -245,11 +276,19 @@ test.describe('integrations', () => {
     await sheet.getByRole('textbox', { name: /^Client ID/ }).fill('qb_client')
     await sheet.getByRole('textbox', { name: /^Client secret/ }).fill('qb_secret')
     await sheet.getByRole('button', { name: 'Continue' }).click()
+    await sheet.getByRole('button', { name: 'Continue' }).click()
+    const address =
+      (await sheet
+        .getByText(/\/webhooks\/quickbooks\/[^/]+\/[^/]+\/conn_[0-9A-Z]{26}$/)
+        .textContent()) ?? ''
+    await sheet.getByRole('textbox', { name: /^Webhook verifier token/ }).fill('qb_verifier')
     const init = page.waitForRequest((request) => request.url().endsWith('/oauth/init'))
     await sheet.getByRole('button', { name: 'Continue to QuickBooks' }).click()
     expect((await init).postDataJSON()).toMatchObject({
+      id: address.split('/').pop(),
       provider: 'quickbooks',
       billing_entity_id: 'be_us',
+      credentials: { webhook_verifier_token: 'qb_verifier' },
     })
   })
 

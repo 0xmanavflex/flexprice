@@ -44,18 +44,19 @@ describe('connect payload', () => {
     expect(payload.sync_config).toMatchObject({ plan: { inbound: false } })
   })
 
-  it('leaves the webhook secret for after create when the webhook is per connection', () => {
+  it('sends the webhook secret, and the connection id when given, in one create', () => {
     const stripe = spec('stripe')
     const values = defaultConnectionValues(stripe, 'Stripe')
     values.fields['secret_key'] = 'sk'
     values.fields['webhook_secret'] = 'whsec'
-    expect(toConnectionPayload(stripe, values).encrypted_secret_data).toEqual({
-      secret_key: 'sk',
-      webhook_secret: 'whsec',
+    const offPayload = toConnectionPayload(stripe, values)
+    expect(offPayload.encrypted_secret_data).toEqual({ secret_key: 'sk', webhook_secret: 'whsec' })
+    expect(offPayload).not.toHaveProperty('id')
+    const perEntity = toConnectionPayload(stripe, values, { connectionId: 'conn_X' })
+    expect(perEntity).toMatchObject({
+      id: 'conn_X',
+      encrypted_secret_data: { secret_key: 'sk', webhook_secret: 'whsec' },
     })
-    expect(
-      toConnectionPayload(stripe, values, { perConnectionWebhook: true }).encrypted_secret_data,
-    ).toEqual({ secret_key: 'sk' })
     expect(toWebhookChanges(stripe, values)).toEqual({
       encrypted_secret_data: { webhook_secret: 'whsec' },
     })
@@ -126,17 +127,10 @@ describe('connect form', () => {
     expect(result.success).toBe(false)
   })
 
-  it('has a webhook step only where the provider posts events', () => {
-    const off = { perConnectionWebhook: false }
-    expect(connectSteps(spec('razorpay'), off)).toEqual(['credentials', 'sync', 'webhook'])
-    expect(connectSteps(spec('tabs'), off)).not.toContain('webhook')
-    expect(connectSteps(spec('quickbooks'), off)).toContain('webhook')
-  })
-
-  it('drops the webhook step for OAuth providers when the webhook is per connection', () => {
-    const on = { perConnectionWebhook: true }
-    expect(connectSteps(spec('stripe'), on)).toEqual(['credentials', 'sync', 'webhook'])
-    expect(connectSteps(spec('quickbooks'), on)).toEqual(['credentials', 'sync'])
+  it('has a webhook step only where the provider posts events, OAuth providers included', () => {
+    expect(connectSteps(spec('razorpay'))).toEqual(['credentials', 'sync', 'webhook'])
+    expect(connectSteps(spec('tabs'))).not.toContain('webhook')
+    expect(connectSteps(spec('quickbooks'))).toEqual(['credentials', 'sync', 'webhook'])
   })
 
   it('keeps webhook fields the API needs at create on credentials', () => {

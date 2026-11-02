@@ -332,8 +332,57 @@ const STORAGE_PROVIDERS = new Set(['s3', 'gcs'])
 let connectionSeq = 0
 const pendingOAuth = new Map<
   string,
-  { name: unknown; provider: string; metadata: unknown; billingEntityId: unknown }
+  {
+    id: string | undefined
+    name: unknown
+    provider: string
+    metadata: unknown
+    credentials: Record<string, string>
+    billingEntityId: unknown
+  }
 >()
+
+/** As the API: the credential that verifies a provider's inbound webhooks. */
+const WEBHOOK_SECRET_KEYS: Record<string, string[]> = {
+  stripe: ['webhook_secret'],
+  razorpay: ['webhook_secret'],
+  nomod: ['webhook_secret'],
+  moyasar: ['webhook_secret'],
+  paddle: ['webhook_secret'],
+  whop: ['webhook_secret'],
+  zoho_books: ['webhook_secret'],
+  quickbooks: ['webhook_verifier_token'],
+  chargebee: ['webhook_username', 'webhook_password'],
+  hubspot: ['client_secret'],
+}
+
+/** `webhook_secret_set` for a provider that receives webhooks; left out for the rest. */
+function webhookSecretField(provider: string, secrets: Record<string, string>) {
+  const keys = WEBHOOK_SECRET_KEYS[provider]
+  return keys ? { webhook_secret_set: keys.every((key) => Boolean(secrets[key])) } : {}
+}
+
+/** As the API: a client id must be conn_ + ULID and not taken; absent, one is made up. */
+function clientConnectionId(id: unknown): { id: string } | { refused: Response } {
+  if (id === undefined) return { id: `conn_mock_${++connectionSeq}` }
+  if (typeof id !== 'string' || !/^conn_[0-9A-HJKMNP-TV-Z]{26}$/.test(id)) {
+    return {
+      refused: HttpResponse.json(
+        { message: 'id must be conn_ followed by a ULID' },
+        { status: 400 },
+      ),
+    }
+  }
+  if (connectionRows.some((row) => row['id'] === id)) {
+    return {
+      refused: HttpResponse.json(
+        { message: 'A connection with this id already exists' },
+        { status: 409 },
+      ),
+    }
+  }
+  return { id }
+}
 
 function publishedProviders(): string[] {
   return connectionRows
@@ -4184,14 +4233,19 @@ export const handlers = [
         { status: 409 },
       )
     }
+    const assigned = clientConnectionId(body['id'])
+    if ('refused' in assigned) return assigned.refused
+    const secrets = (body['encrypted_secret_data'] ?? {}) as Record<string, string>
+    connectionSecrets.set(assigned.id, { ...secrets })
     const row = {
-      id: `conn_mock_${++connectionSeq}`,
+      id: assigned.id,
       name: body['name'],
       provider_type: provider,
       connection_status: 'published',
       billing_entity_id: owner.entityId,
       metadata: body['metadata'] ?? {},
       sync_config: body['sync_config'] ?? {},
+      ...webhookSecretField(provider, secrets),
       created_at: new Date().toISOString(),
     }
     connectionRows.push(row)
@@ -4232,6 +4286,7 @@ export const handlers = [
       const kept = connectionSecrets.get(String(row['id'])) ?? {}
       for (const [key, value] of Object.entries(replaced)) if (value) kept[key] = value
       connectionSecrets.set(String(row['id']), kept)
+      Object.assign(row, webhookSecretField(String(row['provider_type']), kept))
       row['updated_at'] = new Date().toISOString()
     }
     return HttpResponse.json(row)
@@ -4261,6 +4316,10 @@ export const handlers = [
         { status: 409 },
       )
     }
+    if (body['id'] !== undefined) {
+      const assigned = clientConnectionId(body['id'])
+      if ('refused' in assigned) return assigned.refused
+    }
     const sessionId = `oauth_mock_${++connectionSeq}`
     // The real flow leaves the reader at the provider; the mock sends them
     // straight back to the console's callback with a code.
@@ -4269,9 +4328,11 @@ export const handlers = [
     callback.searchParams.set('state', sessionId)
     if (provider === 'quickbooks') callback.searchParams.set('realmId', 'mock-realm')
     pendingOAuth.set(sessionId, {
+      id: typeof body['id'] === 'string' ? body['id'] : undefined,
       name: body['name'],
       provider,
       metadata: body['metadata'],
+      credentials: (body['credentials'] ?? {}) as Record<string, string>,
       billingEntityId: owner.entityId,
     })
     return HttpResponse.json({ oauth_url: callback.toString(), session_id: sessionId })
@@ -4285,13 +4346,14 @@ export const handlers = [
     }
     pendingOAuth.delete(String(body['session_id']))
     const row = {
-      id: `conn_mock_${++connectionSeq}`,
+      id: pending.id ?? `conn_mock_${++connectionSeq}`,
       name: pending.name,
       provider_type: pending.provider,
       connection_status: 'published',
       billing_entity_id: pending.billingEntityId,
       metadata: pending.metadata ?? {},
       sync_config: {},
+      ...webhookSecretField(pending.provider, pending.credentials),
       created_at: new Date().toISOString(),
     }
     connectionRows.push(row)

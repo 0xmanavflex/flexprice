@@ -24,7 +24,6 @@ const meta = {
     },
     onClose: fn(),
     onSubmit: fn(async () => 'conn_new'),
-    onSaveWebhook: fn(async () => {}),
   },
 } satisfies Meta<typeof ConnectIntegrationSheet>
 
@@ -106,9 +105,9 @@ export const SubmitsThePayload: Story = {
 }
 
 /**
- * Entities on: the connection is created for an entity (one that already has
- * Razorpay is not choosable), then the Webhook step shows its own address and
- * saves the signing secret onto it.
+ * Entities on: the connection is for an entity (one that already has Razorpay
+ * is not choosable); the Webhook step shows its own address before create, and
+ * one submit sends the signing secret with the keys.
  */
 export const PerEntityWithItsOwnWebhook: Story = {
   args: {
@@ -141,33 +140,46 @@ export const PerEntityWithItsOwnWebhook: Story = {
     await userEvent.type(screen.getByLabelText(/Key ID/), 'rzp_test_abc')
     await userEvent.type(screen.getByLabelText(/Key secret/, { selector: 'input' }), 'shh')
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Connect Razorpay' }))
-    await waitFor(() =>
-      expect(args.onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          billing_entity_id: 'be_uk',
-          encrypted_secret_data: { key_id: 'rzp_test_abc', secret_key: 'shh' },
-        }),
-        expect.anything(),
-      ),
-    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
 
-    await expect(
-      await screen.findByText(
-        'https://api.flexprice.io/v1/webhooks/razorpay/tenant_demo/env_demo/conn_new',
-      ),
-    ).toBeInTheDocument()
+    // The address names the connection before it exists, so the secret goes in the same submit.
+    const url = await screen.findByText(
+      /^https:\/\/api\.flexprice\.io\/v1\/webhooks\/razorpay\/tenant_demo\/env_demo\/conn_[0-9A-HJKMNP-TV-Z]{26}$/,
+    )
+    const id = url.textContent?.split('/').pop()
     await userEvent.type(
       screen.getByLabelText(/Webhook signing secret/, { selector: 'input' }),
       'whsec',
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Save webhook' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Connect Razorpay' }))
     await waitFor(() =>
-      expect(args.onSaveWebhook).toHaveBeenCalledWith('conn_new', {
-        encrypted_secret_data: { webhook_secret: 'whsec' },
-      }),
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id,
+          billing_entity_id: 'be_uk',
+          encrypted_secret_data: {
+            key_id: 'rzp_test_abc',
+            secret_key: 'shh',
+            webhook_secret: 'whsec',
+          },
+        }),
+        expect.anything(),
+      ),
     )
     await waitFor(() => expect(args.onClose).toHaveBeenCalled())
+  },
+}
+
+/** With entities on, an OAuth provider also shows its webhook before the reader leaves for consent. */
+export const OAuthPerEntityWebhook: Story = {
+  args: {
+    integration: integration('quickbooks'),
+    logo: null,
+    entities: [{ id: 'be_us', name: 'Northwind US', isDefault: true }],
+  },
+  play: async ({ canvasElement }) => {
+    const screen = screenOf(canvasElement)
+    await expect(await screen.findByRole('button', { name: /Webhook/ })).toBeInTheDocument()
   },
 }
 

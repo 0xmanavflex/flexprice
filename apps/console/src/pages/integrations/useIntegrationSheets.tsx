@@ -10,7 +10,6 @@ import {
 import {
   oauthRedirectUri,
   type BillingEntity,
-  type ConnectionChanges,
   type ConnectionPayload,
   type ConnectionSpec,
   type Integration,
@@ -104,12 +103,7 @@ export function useIntegrationSheets(
     return created.id
   }
 
-  const saveWebhook = async (id: string, changes: ConnectionChanges) => {
-    await update.mutateAsync({ id, ...changes })
-    toast('Webhook saved')
-  }
-
-  const connectError = connect.error ?? startOAuth.error ?? update.error
+  const connectError = connect.error ?? startOAuth.error
 
   return {
     openConnect: (integrationId, billingEntityId) =>
@@ -125,14 +119,8 @@ export function useIntegrationSheets(
           billingEntityId={connecting?.billingEntityId}
           onClose={closeConnect}
           onSubmit={submitConnect}
-          // A Webhook step that follows says so itself, and a toast would cover its buttons.
-          onConnected={(_id, { webhookStepFollows }) => {
-            if (!webhookStepFollows) toast(`${connectTarget?.name ?? 'The integration'} connected`)
-          }}
-          onSaveWebhook={saveWebhook}
-          isPending={
-            connect.isPending || startOAuth.isPending || startOAuth.isSuccess || update.isPending
-          }
+          onConnected={() => toast(`${connectTarget?.name ?? 'The integration'} connected`)}
+          isPending={connect.isPending || startOAuth.isPending || startOAuth.isSuccess}
           error={connectError ? messageOf(connectError) : null}
         />
 

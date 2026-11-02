@@ -4,23 +4,20 @@ import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { ArrowUpRightIcon, InfoIcon, TriangleAlert } from '@ui/icons'
 import {
-  type ConnectionChanges,
   type ConnectionFormValues,
   type ConnectionPayload,
   type ConnectionSpec,
   type ConnectStep,
   type Integration,
-  type WebhookFormValues,
   connectSteps,
   connectionFormSchema,
   connectionSpecFor,
   defaultConnectionValues,
   connectionForEntity,
   fieldsForStep,
+  newConnectionId,
   toConnectionPayload,
-  toWebhookChanges,
   webhookEvents,
-  webhookFormSchema,
   webhookUrl,
   rotatableFields,
   awsPermissionsPolicy,
@@ -109,10 +106,8 @@ export interface ConnectIntegrationSheetProps {
   onClose: () => void
   /** Creates the connection; resolves to its id, or `null` when the reader leaves for the provider. */
   onSubmit: (payload: ConnectionPayload, spec: ConnectionSpec) => Promise<string | null>
-  /** The connection exists; `webhookStepFollows` is true when the sheet stays open on its Webhook step. */
-  onConnected?: ((connectionId: string, info: { webhookStepFollows: boolean }) => void) | undefined
-  /** Saves the webhook step's secrets on the new connection. */
-  onSaveWebhook: (connectionId: string, changes: ConnectionChanges) => Promise<void>
+  /** The connection exists. */
+  onConnected?: ((connectionId: string) => void) | undefined
   /** The environment's billing entities, given only while they are enabled: adds the entity picker and the per-connection webhook. */
   entities?: readonly ListBillingEntity[] | undefined
   /** The entity to preselect, e.g. the provider page row's. */
@@ -135,7 +130,6 @@ export function ConnectIntegrationSheet({
   onClose,
   onSubmit,
   onConnected,
-  onSaveWebhook,
   entities,
   billingEntityId,
   isPending = false,
@@ -156,7 +150,6 @@ export function ConnectIntegrationSheet({
               onClose={onClose}
               onSubmit={onSubmit}
               onConnected={onConnected}
-              onSaveWebhook={onSaveWebhook}
               entities={entities}
               billingEntityId={billingEntityId}
               isPending={isPending}
@@ -186,26 +179,21 @@ type FlowProps = Omit<ConnectIntegrationSheetProps, 'integration'> & {
 }
 
 /**
- * With entities off, one form and one submit at the end. With them on, the
- * connection is created on leaving the step before Webhook, then the Webhook
- * step saves onto it.
+ * One form and one submit at the end. With entities on, the connection id is
+ * generated when the sheet opens so its own webhook URL shows before create.
  */
 function ConnectFlow(props: FlowProps) {
   const perConnectionWebhook = props.entities !== undefined
-  const steps = connectSteps(props.spec, { perConnectionWebhook })
-  const [created, setCreated] = useState<{ id: string; sync: Record<string, boolean> } | null>(null)
-  if (created)
-    return <WebhookForm {...props} steps={steps} connectionId={created.id} sync={created.sync} />
+  const [connectionId] = useState(() => (perConnectionWebhook ? newConnectionId() : undefined))
   return (
     <ConnectForm
       {...props}
-      steps={steps}
+      steps={connectSteps(props.spec)}
       perConnectionWebhook={perConnectionWebhook}
-      onCreated={(id, sync) => {
-        const webhookStepFollows = perConnectionWebhook && steps.includes('webhook')
-        props.onConnected?.(id, { webhookStepFollows })
-        if (webhookStepFollows) setCreated({ id, sync })
-        else props.onClose()
+      connectionId={connectionId}
+      onCreated={(id) => {
+        props.onConnected?.(id)
+        props.onClose()
       }}
     />
   )
@@ -237,6 +225,7 @@ function ConnectForm({
   onCreated,
   steps,
   perConnectionWebhook,
+  connectionId,
   entities,
   billingEntityId,
   isPending,
@@ -244,16 +233,15 @@ function ConnectForm({
 }: FlowProps & {
   steps: ConnectStep[]
   perConnectionWebhook: boolean
-  onCreated: (id: string, sync: Record<string, boolean>) => void
+  connectionId: string | undefined
+  onCreated: (id: string) => void
 }) {
-  // With a per-connection webhook, this form ends where the connection is created.
-  const stepIds = perConnectionWebhook ? steps.filter((id) => id !== 'webhook') : steps
   const firstFree = entities?.find(
     (entity) => !connectionForEntity(integration, entity.id, entities),
   )
   const form = useCalmForm<ConnectionFormValues>({
     resolver: standardSchemaResolver(
-      connectionFormSchema(spec, { entity: entities !== undefined, perConnectionWebhook }),
+      connectionFormSchema(spec, { entity: entities !== undefined }),
     ) as unknown as Resolver<ConnectionFormValues>,
     defaultValues: {
       ...defaultConnectionValues(spec, integration.name),
@@ -273,16 +261,11 @@ function ConnectForm({
         ]
 
   const flow = useFormSteps({
-    steps: stepIds.map((id) => ({ id, title: STEP_TITLE[id] })),
+    steps: steps.map((id) => ({ id, title: STEP_TITLE[id] })),
     validate: (id) => trigger(fieldNames(id as ConnectStep)),
   })
   const step = flow.step as ConnectStep
   const multi = steps.length > 1
-  // The Webhook step still shows in the stepper, reached once the connection exists.
-  const workflow =
-    stepIds.length < steps.length
-      ? [...flow.workflow, { id: 'webhook', title: STEP_TITLE.webhook, status: 'locked' as const }]
-      : flow.workflow
 
   const submit = form.handleSubmit(
     async (values) => {
@@ -291,7 +274,7 @@ function ConnectForm({
         id = await onSubmit(
           toConnectionPayload(spec, values, {
             billingEntityId: entities ? values.billingEntityId : undefined,
-            perConnectionWebhook,
+            connectionId,
             externalId: marketplaceExternalId(context.tenantId, context.environmentId),
           }),
           spec,
@@ -300,10 +283,10 @@ function ConnectForm({
         // The page shows the API's reason through `error`.
         return
       }
-      if (id !== null) onCreated(id, values.sync)
+      if (id !== null) onCreated(id)
     },
     (invalid) => {
-      const failing = stepIds.find((id) =>
+      const failing = steps.find((id) =>
         fieldNames(id).some((name) => {
           const [, key] = name.split('.')
           return name === 'name' || name === 'billingEntityId'
@@ -325,6 +308,7 @@ function ConnectForm({
           spec.providerType,
           context.tenantId,
           context.environmentId,
+          connectionId,
         ),
         events: webhookEvents(spec, sync),
       }
@@ -349,7 +333,7 @@ function ConnectForm({
           // Centred at the width its labels need, not stretched across the sheet.
           <div className="mx-auto w-full max-w-sm">
             <WorkflowStepper
-              steps={workflow}
+              steps={flow.workflow}
               currentStep={flow.step}
               onStepChange={flow.goTo}
               aria-label={`Connect ${integration.name}`}
@@ -480,7 +464,7 @@ function ConnectForm({
               event.
             </p>
             <WebhookGuide spec={spec} url={webhook.url} events={webhook.events} />
-            {fieldsForStep(spec, 'webhook').map((field) => (
+            {fieldsForStep(spec, 'webhook', perConnectionWebhook).map((field) => (
               <SpecField key={field.key} field={field} control={control} errors={errors} />
             ))}
           </div>
@@ -522,114 +506,5 @@ function MarketplaceNotConfigured() {
         use in the setup.
       </AlertDescription>
     </Alert>
-  )
-}
-
-/** The new connection's own webhook address, and the secrets the provider gives for it. */
-function WebhookForm({
-  integration,
-  spec,
-  logo,
-  context,
-  onClose,
-  onSaveWebhook,
-  steps,
-  connectionId,
-  sync,
-  isPending,
-  error,
-}: FlowProps & { steps: ConnectStep[]; connectionId: string; sync: Record<string, boolean> }) {
-  const fields = fieldsForStep(spec, 'webhook', true)
-  const form = useCalmForm<WebhookFormValues>({
-    resolver: standardSchemaResolver(
-      webhookFormSchema(spec),
-    ) as unknown as Resolver<WebhookFormValues>,
-    defaultValues: { fields: Object.fromEntries(fields.map((f) => [f.key, ''])) },
-  })
-  const { control, formState } = form
-
-  const save = form.handleSubmit(async (values) => {
-    const changes = toWebhookChanges(spec, values)
-    if (Object.keys(changes).length > 0) {
-      try {
-        await onSaveWebhook(connectionId, changes)
-      } catch {
-        return
-      }
-    }
-    onClose()
-  })
-
-  const url = webhookUrl(
-    context.webhookBaseUrl,
-    spec.providerType,
-    context.tenantId,
-    context.environmentId,
-    connectionId,
-  )
-
-  return (
-    <form
-      id="connect-integration-webhook"
-      onSubmit={save}
-      noValidate
-      className="flex min-h-0 flex-1 flex-col"
-    >
-      <ConnectHeader integration={integration} logo={logo} />
-
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
-        <div className="mx-auto w-full max-w-sm">
-          <WorkflowStepper
-            steps={steps.map((id) => ({
-              id,
-              title: STEP_TITLE[id],
-              status: id === 'webhook' ? 'current' : 'complete',
-            }))}
-            currentStep="webhook"
-            // The connection exists; its credentials are changed from Configure.
-            onStepChange={() => {}}
-            aria-label={`Connect ${integration.name}`}
-          />
-        </div>
-        {error ? (
-          <Alert variant="destructive" role="alert">
-            <TriangleAlert aria-hidden="true" />
-            <AlertTitle>The webhook was not saved</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-        <p className="text-muted-foreground text-[13px]">
-          {integration.name} is connected. In {integration.name}, add a webhook that posts to this
-          address and sends these events.
-          {fields.length > 0
-            ? ' It will give you a signing secret: enter it below so Flexprice can verify each event.'
-            : ''}
-        </p>
-        <div className="flex flex-col gap-5">
-          <WebhookGuide spec={spec} url={url} events={webhookEvents(spec, sync)} />
-          {fields.map((field) => (
-            <SpecField key={field.key} field={field} control={control} errors={formState.errors} />
-          ))}
-        </div>
-      </div>
-
-      <SheetFooter className="border-t">
-        <div className="flex items-center justify-end gap-2">
-          {fields.length > 0 ? (
-            <>
-              <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
-                Do this later
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? <Spinner aria-hidden="true" /> : null}
-                {isPending ? 'Saving…' : 'Save webhook'}
-              </Button>
-            </>
-          ) : (
-            <Button type="submit">Done</Button>
-          )}
-        </div>
-      </SheetFooter>
-    </form>
   )
 }

@@ -22,6 +22,8 @@ export async function listConnections(
 }
 
 export interface ConnectionRequest {
+  /** Client-generated `conn_` + ULID; the API generates one when absent. */
+  id?: string
   name: string
   provider_type: string
   /** Absent for a connection Flexprice manages itself, e.g. a managed S3 bucket. */
@@ -40,6 +42,8 @@ export interface ConnectionUpdate {
 }
 
 export interface OAuthInitRequest {
+  /** Client-generated `conn_` + ULID for the pending connection. */
+  id?: string
   provider: string
   name: string
   credentials: Record<string, string>
