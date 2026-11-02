@@ -240,8 +240,6 @@ export {
   useCreateCustomer,
   useUpdateCustomer,
   useDeleteCustomer,
-  useClearPreferredConnection,
-  useSetPreferredConnection,
   toIntegrationLinks,
   useCustomerIntegrationLinks,
   useLinkCustomerIntegration,

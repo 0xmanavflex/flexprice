@@ -2408,17 +2408,6 @@
       "usedBy": [],
       "story": "./src/pages/customers/CustomerGrid.stories.tsx"
     },
-    "CustomerPaymentsSection": {
-      "file": "src/pages/customers/CustomerPaymentsSection.tsx",
-      "layer": "surface",
-      "composes": [
-        "Field",
-        "OptionSelect",
-        "Section"
-      ],
-      "usedBy": [],
-      "story": "./src/pages/customers/CustomerPaymentsSection.stories.tsx"
-    },
     "CustomerPortalView": {
       "file": "src/pages/customer-portal/CustomerPortalView.tsx",
       "layer": "surface",
@@ -3726,7 +3715,6 @@
         "ContractQuantityDialog",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
-        "CustomerPaymentsSection",
         "CustomerWalletView",
         "DashedRule",
         "DataExportDialog",
@@ -5662,7 +5650,6 @@
         "CreditGrantEditForm",
         "CreditNoteForm",
         "CustomerForm",
-        "CustomerPaymentsSection",
         "CustomerTaxSection",
         "CustomerWalletView",
         "DataExportDialog",
@@ -7133,7 +7120,6 @@
         "CustomerDetail",
         "CustomerEntitlementUsage",
         "CustomerEventsGrid",
-        "CustomerPaymentsSection",
         "CustomerTaxSection",
         "CustomerUsageSummary",
         "DataExportDetail",
@@ -9804,13 +9790,6 @@
       "component": "CustomerGrid",
       "uses": [
         "CustomerGrid"
-      ]
-    },
-    "./src/pages/customers/CustomerPaymentsSection.stories.tsx": {
-      "title": "App/Customers/Customer payments section",
-      "component": "CustomerPaymentsSection",
-      "uses": [
-        "CustomerPaymentsSection"
       ]
     },
     "./src/pages/customers/CustomersListPage.stories.tsx": {

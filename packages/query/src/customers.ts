@@ -3,11 +3,9 @@ import {
   type AuthSource,
   type Flexprice,
   call,
-  clearPreferredConnection,
   createCustomer,
   getCustomer,
   searchCustomers,
-  setPreferredConnection,
 } from '@fp/api'
 import {
   BILLING_ENTITY_FILTER,
@@ -65,7 +63,6 @@ export interface CustomerIntegrationWire {
 export interface CustomerWire {
   id?: string | undefined
   billingEntityId?: string | undefined
-  preferredConnectionId?: string | null | undefined
   name?: string | undefined
   email?: string | undefined
   externalId?: string | undefined
@@ -117,7 +114,6 @@ export function toCustomer(wire: CustomerWire): Customer {
     ...(wire.timezone ? { timezone: wire.timezone } : {}),
     status,
     ...(wire.billingEntityId ? { billingEntityId: wire.billingEntityId } : {}),
-    ...(wire.preferredConnectionId ? { preferredConnectionId: wire.preferredConnectionId } : {}),
     integrations: toCustomerIntegrations(wire.integrations),
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -532,48 +528,6 @@ export function useUpdateCustomer() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.detail(id) })
     },
-  })
-}
-
-/** Payments go through `connectionId`; answers with the customer, which replaces the cached one. */
-export function useSetPreferredConnection(customerId: string) {
-  const serverURL = useFlexpriceServerURL()
-  const auth = useFlexpriceAuth()
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    meta: { notify: { success: 'Preferred payment gateway saved' } },
-    mutationFn: async (connectionId: string) => {
-      const { token, environmentId } = await credentials(auth, 'Sign in to edit this customer.')
-      const body = await setPreferredConnection(
-        serverURL,
-        token,
-        environmentId,
-        customerId,
-        connectionId,
-      )
-      return toCustomerDetail(fromWire<CustomerDetailWire>(body))
-    },
-    onSuccess: (customer) =>
-      queryClient.setQueryData(queryKeys.customers.detail(customerId), customer),
-  })
-}
-
-/** Back to Automatic: Flexprice picks the connection. */
-export function useClearPreferredConnection(customerId: string) {
-  const serverURL = useFlexpriceServerURL()
-  const auth = useFlexpriceAuth()
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    meta: { notify: { success: 'Preferred payment gateway saved' } },
-    mutationFn: async () => {
-      const { token, environmentId } = await credentials(auth, 'Sign in to edit this customer.')
-      const body = await clearPreferredConnection(serverURL, token, environmentId, customerId)
-      return toCustomerDetail(fromWire<CustomerDetailWire>(body))
-    },
-    onSuccess: (customer) =>
-      queryClient.setQueryData(queryKeys.customers.detail(customerId), customer),
   })
 }
 

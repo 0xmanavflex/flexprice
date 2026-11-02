@@ -73,8 +73,6 @@ export interface Customer {
   status: CustomerStatus
   /** The billing entity that issues this customer's invoices. Absent means the default entity. */
   billingEntityId?: string
-  /** The connection payments go through; absent means Flexprice picks one. */
-  preferredConnectionId?: string
   /** Integrations this customer is connected to. Empty when none are. */
   integrations: CustomerIntegration[]
   createdAt: Date | null

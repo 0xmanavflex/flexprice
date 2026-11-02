@@ -60,30 +60,6 @@ async function enableEntities(
   )
 }
 
-/** Connections the mock adds to its own, kept across reloads. */
-async function seedConnections(
-  page: Page,
-  rows: [id: string, name: string, provider: string, entity: string][],
-) {
-  await page.addInitScript((rows) => {
-    window.sessionStorage.setItem(
-      'flexprice.mock.connections',
-      JSON.stringify(
-        rows.map(([id, name, provider, entity]) => ({
-          id,
-          name,
-          provider_type: provider,
-          connection_status: 'published',
-          billing_entity_id: entity,
-          metadata: {},
-          sync_config: {},
-          created_at: '2026-10-01T00:00:00Z',
-        })),
-      ),
-    )
-  }, rows)
-}
-
 /** From the Stripe page, creates Stripe for Northwind UK and returns the sheet on its webhook step. */
 async function connectStripeForUk(page: Page) {
   await page.goto('/integrations/stripe')
@@ -289,47 +265,5 @@ test.describe('integrations', () => {
     await payments.getByRole('button', { name: 'Connect Stripe' }).click()
     const sheet = page.getByRole('dialog', { name: /Connect Stripe/ })
     await expect(sheet.getByRole('combobox', { name: /Billing entity/ })).toHaveText(/Northwind UK/)
-  })
-
-  test("a customer's preferred payment gateway is one of their entity's payment connections", async ({
-    page,
-  }) => {
-    await enableEntities(page, [
-      ['be_in', 'Northwind India', 'IN'],
-      ['be_us', 'Northwind US', 'US'],
-    ])
-    await seedConnections(page, [
-      ['conn_rzp_in', 'Razorpay India', 'razorpay', 'be_in'],
-      ['conn_qb_in', 'QuickBooks India', 'quickbooks', 'be_in'],
-      ['conn_stripe_us', 'Stripe US', 'stripe', 'be_us'],
-    ])
-    await page.goto('/customers')
-    await page.getByRole('row').nth(1).getByRole('cell').first().click()
-    await page.getByRole('tab', { name: 'Information' }).click()
-
-    const gateway = page.getByRole('combobox', { name: 'Preferred payment gateway' })
-    await expect(gateway).toHaveText('Automatic')
-    await gateway.click()
-    // The customer bills from the default entity, Northwind India.
-    await expect(page.getByRole('option')).toHaveText(['Automatic', 'Stripe', 'Razorpay India'])
-    const saved = page.waitForRequest(
-      (request) => request.method() === 'PUT' && request.url().endsWith('/preferred-connection'),
-    )
-    await page.getByRole('option', { name: 'Razorpay India' }).click()
-    expect((await saved).postDataJSON()).toEqual({ connection_id: 'conn_rzp_in' })
-    await expect(gateway).toHaveText('Razorpay India')
-
-    await page.reload()
-    await expect(gateway).toHaveText('Razorpay India')
-
-    const cleared = page.waitForRequest(
-      (request) => request.method() === 'DELETE' && request.url().endsWith('/preferred-connection'),
-    )
-    await gateway.click()
-    await page.getByRole('option', { name: 'Automatic' }).click()
-    await cleared
-    await expect(gateway).toHaveText('Automatic')
-    await page.reload()
-    await expect(gateway).toHaveText('Automatic')
   })
 })

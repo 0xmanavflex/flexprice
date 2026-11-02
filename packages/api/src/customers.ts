@@ -45,33 +45,3 @@ export async function createCustomer(
 ): Promise<unknown> {
   return request(serverURL, '/customers', { method: 'POST', token, environmentId, body })
 }
-
-/** Sets the connection the customer's payments go through; returns the customer. */
-export async function setPreferredConnection(
-  serverURL: string,
-  token: string,
-  environmentId: string,
-  id: string,
-  connectionId: string,
-): Promise<unknown> {
-  return request(serverURL, `/customers/${encodeURIComponent(id)}/preferred-connection`, {
-    method: 'PUT',
-    token,
-    environmentId,
-    body: { connection_id: connectionId },
-  })
-}
-
-/** Clears the preference so Flexprice picks the connection; returns the customer. */
-export async function clearPreferredConnection(
-  serverURL: string,
-  token: string,
-  environmentId: string,
-  id: string,
-): Promise<unknown> {
-  return request(serverURL, `/customers/${encodeURIComponent(id)}/preferred-connection`, {
-    method: 'DELETE',
-    token,
-    environmentId,
-  })
-}
