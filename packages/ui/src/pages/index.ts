@@ -31,6 +31,13 @@ export type {
   UsageRow,
 } from './home/DashboardHome'
 export { RevenueReport, RevenueReportProvenance } from './revenue/RevenueReport'
+export {
+  RevenueRecognitionReport,
+  RevenueRecognitionReportProvenance,
+} from './revenue/RevenueRecognitionReport'
+export type { RevenueRecognitionReportProps } from './revenue/RevenueRecognitionReport'
+export { AccountRollforward, AccountRollforwardProvenance } from './revenue/AccountRollforward'
+export type { AccountRollforwardProps } from './revenue/AccountRollforward'
 export type {
   AgingBucket,
   CreditRow,
@@ -161,6 +168,8 @@ export { PlanGrid, PlanGridProvenance } from './product-catalog/plans/PlanGrid'
 export type { PlanGridProps } from './product-catalog/plans/PlanGrid'
 export { PlanForm, PlanFormProvenance } from './product-catalog/plans/PlanForm'
 export type { PlanFormProps, PlanFormValue } from './product-catalog/plans/PlanForm'
+export { BonusSlabTable, BonusSlabTableProvenance } from './settings/wallets/BonusSlabTable'
+export type { BonusSlabRowError, BonusSlabTableProps } from './settings/wallets/BonusSlabTable'
 export { TierTable, TierTableProvenance } from './product-catalog/charges/TierTable'
 export type { TierRowError, TierTableProps } from './product-catalog/charges/TierTable'
 export { PlanPreviewCard, PlanPreviewCardProvenance } from './product-catalog/plans/PlanPreviewCard'
@@ -242,11 +251,14 @@ export type { SubscriptionFormProps, SubscriptionPlanContext } from './contracts
 export { SubscriptionGrid, SubscriptionGridProvenance } from './contracts/SubscriptionGrid'
 export type { SubscriptionGridProps } from './contracts/SubscriptionGrid'
 export {
+  SUBSCRIPTION_TABS,
   SubscriptionDetailView,
   SubscriptionDetailViewProvenance,
+  parseSubscriptionTab,
 } from './contracts/SubscriptionDetailView'
 export type {
   SubscriptionActivity,
+  SubscriptionTab,
   SubscriptionDetailViewProps,
   SubscriptionPart,
 } from './contracts/SubscriptionDetailView'
@@ -338,6 +350,8 @@ export { SignUpConfirmScreen, SignUpConfirmScreenProvenance } from './auth/SignU
 export type { SignUpConfirmScreenProps } from './auth/SignUpConfirmScreen'
 export { ForgotPasswordForm, ForgotPasswordFormProvenance } from './auth/ForgotPasswordForm'
 export type { ForgotPasswordFormProps } from './auth/ForgotPasswordForm'
+export { OnboardingScreen, OnboardingScreenProvenance } from './auth/OnboardingScreen'
+export type { OnboardingScreenProps } from './auth/OnboardingScreen'
 export { AuthFrame } from './auth/AuthFrame'
 export type { AuthFrameProps } from './auth/AuthFrame'
 export { SetPasswordForm, SetPasswordFormProvenance } from './auth/SetPasswordForm'
@@ -486,6 +500,15 @@ export {
   ManageConnectionSheetProvenance,
 } from './integrations/ManageConnectionSheet'
 export type { ManageConnectionSheetProps } from './integrations/ManageConnectionSheet'
+export {
+  PricingPlanCard,
+  PricingPlanCardProvenance,
+  includedIcon,
+} from './product-catalog/pricing-widget/PricingPlanCard'
+export type {
+  PricingPlanCardProps,
+  PricingPlanSection,
+} from './product-catalog/pricing-widget/PricingPlanCard'
 export { PricingCatalogBlock } from './product-catalog/pricing-widget/PricingCatalogBlock'
 export { toast, Toaster } from 'sonner'
 
@@ -606,6 +629,10 @@ export { CreditSettlement } from './billing/credit-notes/creditNoteDocument'
 export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocument'
 
 export { ContractIntegrations } from './contracts/ContractIntegrations'
+export { SubscriptionRevenue, SubscriptionRevenueProvenance } from './contracts/SubscriptionRevenue'
+export { SubscriptionJournal, SubscriptionJournalProvenance } from './contracts/SubscriptionJournal'
+export type { SubscriptionJournalProps } from './contracts/SubscriptionJournal'
+export type { SubscriptionRevenueProps } from './contracts/SubscriptionRevenue'
 
 export type { ContractIntegrationsProps } from './contracts/ContractIntegrations'
 export {

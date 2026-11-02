@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   ApiError,
+  useBonusCreditsConfig,
   useCreateWallet,
   useDebitWallet,
   useCustomerWallets,
@@ -16,6 +17,7 @@ import {
 import { emptyAlertSettingConfig } from '@fp/domain'
 import { CustomerWalletView, EntityAlertDialog, toast } from '@fp/ui/pages'
 import { subTab } from '@/pages/shared/subTab'
+import { useSession } from '@/app/session'
 
 export interface CustomerWalletPanelProps {
   customerId: string
@@ -55,6 +57,10 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
 
   const create = useCreateWallet(customerId)
   const topUp = useTopUpWallet(selected?.id ?? '')
+  // Only a preview in the top-up dialog: when it cannot be read, the dialog
+  // just does not predict the bonus.
+  const { environmentId } = useSession()
+  const bonusConfig = useBonusCreditsConfig(environmentId)
   const debit = useDebitWallet(selected?.id ?? '')
   const autoTopup = useUpdateAutoTopup(selected?.id ?? '')
   const walletAlerts = useUpdateWalletAlerts(selected?.id ?? '')
@@ -92,6 +98,7 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
           })
         }
         topUpError={failure(topUp.error, 'top up the wallet')}
+        bonusConfig={bonusConfig.data ?? null}
         onDebit={(draft) =>
           debit.mutateAsync(draft).then((result) => {
             toast.success('Wallet debited')

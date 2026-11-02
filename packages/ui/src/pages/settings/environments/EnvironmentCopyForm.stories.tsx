@@ -38,12 +38,12 @@ export const PromotesToProduction: Story = {
 export const IntoANewSandbox: Story = {
   play: async ({ args }) => {
     const canvas = dialog()
-    await userEvent.click(canvas.getByRole('combobox', { name: /Copy to/ }))
-    await userEvent.click(await canvas.findByRole('option', { name: 'New sandbox' }))
+    await userEvent.click(canvas.getByRole('combobox', { name: /Copy into/ }))
+    await userEvent.click(await canvas.findByRole('option', { name: /Create a new environment/ }))
     await userEvent.click(canvas.getByRole('button', { name: 'Copy plans and features' }))
     await expect(canvas.getByText('Name the new sandbox.')).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
-    await userEvent.type(canvas.getByRole('textbox', { name: /Name/ }), 'Demo')
+    await userEvent.type(canvas.getByRole('textbox', { name: /environment name/i }), 'Demo')
     await userEvent.click(canvas.getByRole('button', { name: 'Copy plans and features' }))
     await expect(args.onSubmit).toHaveBeenCalledWith({ name: 'Demo' })
   },
@@ -54,7 +54,7 @@ export const FromProduction: Story = {
   args: { source: PRODUCTION },
   play: async () => {
     const canvas = dialog()
-    await expect(canvas.getByRole('combobox', { name: /Copy to/ })).toHaveTextContent('Sandbox')
+    await expect(canvas.getByRole('combobox', { name: /Copy into/ })).toHaveTextContent('Sandbox')
     await expect(canvas.queryByText(/go live in/)).toBeNull()
   },
 }
@@ -64,5 +64,17 @@ export const Failed: Story = {
   args: { submitError: 'You have reached the maximum limit of 2 development environment(s)' },
   play: async () => {
     await expect(dialog().getByText(/maximum limit of 2 development/)).toBeInTheDocument()
+  },
+}
+
+/** As V1: what is copied, what is not, and that it runs in the background. */
+export const SaysWhatIsCopied: Story = {
+  play: async () => {
+    const canvas = dialog()
+    await expect(canvas.getByRole('heading', { name: 'What will be copied' })).toBeInTheDocument()
+    await expect(canvas.getByText('All active features')).toBeInTheDocument()
+    await expect(canvas.getByText('All active plans')).toBeInTheDocument()
+    await expect(canvas.getByText(/wallet balances are not copied/)).toBeInTheDocument()
+    await expect(canvas.getByText(/copied in the background/)).toBeInTheDocument()
   },
 }

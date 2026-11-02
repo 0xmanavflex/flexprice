@@ -72,3 +72,21 @@ export const KeepsUnknownValue: Story = {
     await expect(combobox.value).toContain('Mars/Olympus_Mons')
   },
 }
+
+/** With `offerLocal`, the browser's own zone leads as "Local" and stores its IANA name. */
+export const OffersLocal: Story = {
+  args: { offerLocal: true },
+  play: async ({ canvasElement, args }) => {
+    const local = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const input = within(canvasElement).getByRole('combobox', { name: 'Timezone' })
+    await userEvent.click(input)
+    const options = await screen.findAllByRole('option')
+    await expect(options[0]).toHaveTextContent(/^Local · /)
+    // Listed once, as Local, not again further down: no other label starts with the zone.
+    const named = (text: string | null) =>
+      (text ?? '').replace(/^Local · /, '').split(' ')[0] === local
+    await expect(options.filter((option) => named(option.textContent))).toHaveLength(1)
+    await userEvent.click(options[0]!)
+    await expect(args.onValueChange).toHaveBeenCalledWith(local)
+  },
+}

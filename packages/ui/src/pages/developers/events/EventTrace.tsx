@@ -4,8 +4,16 @@ import {
   type EventDebug,
   type EventDebugStageResult,
   eventDebugSummary,
+  missingAggregationFields,
 } from '@fp/domain'
-import { CheckIcon, ChevronRightIcon, CircleAlertIcon, MinusIcon } from '@ui/icons'
+import {
+  CheckIcon,
+  ChevronRightIcon,
+  CircleAlertIcon,
+  MinusIcon,
+  TriangleAlertIcon,
+} from '@ui/icons'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import {
   CodeBlock,
   CodeBlockCopyButton,
@@ -44,6 +52,8 @@ export interface EventTraceProps {
   onRetry?: (() => void) | undefined
   /** Opens a contract the event was matched to. */
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
+  /** The event's properties: a meter that reads a field the event lacks is flagged. */
+  properties?: Record<string, unknown> | undefined
 }
 
 export function EventTrace({
@@ -53,6 +63,7 @@ export function EventTrace({
   onRetry,
   onOpenSubscription,
   locale,
+  properties,
 }: EventTraceProps) {
   if (isPending) {
     return (
@@ -84,6 +95,7 @@ export function EventTrace({
   if (!debug) return null
 
   const failed = debug.failurePoint !== null
+  const missing = properties ? missingAggregationFields(debug, properties) : []
 
   return (
     <section className="flex flex-col gap-3" aria-label="Event trace">
@@ -93,6 +105,26 @@ export function EventTrace({
           {eventDebugSummary(debug)}
         </p>
       </div>
+      {missing.length > 0 ? (
+        <Alert variant="warning">
+          <TriangleAlertIcon aria-hidden />
+          <AlertTitle>
+            {missing.length === 1
+              ? `This event has no "${missing[0]!.field}" property`
+              : 'This event is missing properties its meters read'}
+          </AlertTitle>
+          <AlertDescription>
+            <ul className="flex flex-col gap-0.5">
+              {missing.map((item) => (
+                <li key={`${item.meterId}:${item.field}`}>
+                  {item.meterName} takes the {item.aggregation.toLowerCase()} of{' '}
+                  <code className="font-mono">{item.field}</code>, so this event adds nothing to it.
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <ol className="divide-border/60 flex flex-col divide-y rounded-lg border">
         {/*
           Where the trace starts.

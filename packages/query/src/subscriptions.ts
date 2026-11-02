@@ -1272,6 +1272,31 @@ export function useSubscriptionLineHistory(id: string) {
   })
 }
 
+/**
+ * Every version of one contract charge, oldest first:
+ * `GET /subscriptions/lineitems/{id}/history`.
+ *
+ * The API walks the line's predecessor and successor pointers, so any
+ * version's ID returns the same timeline. Versions cancelled before they
+ * started are left out. Read when a charge's sheet opens (`lineId` empty
+ * until then), not for every row.
+ */
+export function useSubscriptionLineVersions(lineId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.lineVersions(lineId),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) => client.subscriptions.getSubscriptionLineItemHistory(lineId, options),
+        signal,
+      )
+      return ((response.items ?? []) as SubscriptionLineWire[]).map(toSubscriptionLine)
+    },
+    enabled: lineId.length > 0,
+  })
+}
+
 /** The credit grants this contract was given, from the same read as the lines. */
 export function useSubscriptionCreditGrants(id: string) {
   return useSubscriptionFull(id, (response): CreditGrant[] =>

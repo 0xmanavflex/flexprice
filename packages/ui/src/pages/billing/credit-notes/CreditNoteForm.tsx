@@ -31,8 +31,14 @@ export const CreditNoteFormProvenance = provenance({
 })
 
 const REASONS = Object.entries(CREDIT_NOTE_REASON_LABEL).map(([value, label]) => ({ value, label }))
+/**
+ * "Let Flexprice decide" is the schema's `''` (no target sent). `OptionSelect`
+ * reads `''` as nothing chosen and shows its placeholder, so the field carries
+ * its own value for it and maps back at the field's edge.
+ */
+const FLEXPRICE_DECIDES = 'FLEXPRICE_DECIDES'
 const REFUND_TARGETS = [
-  { value: '', label: 'Let Flexprice decide' },
+  { value: FLEXPRICE_DECIDES, label: 'Let Flexprice decide' },
   ...Object.entries(CREDIT_NOTE_REFUND_TARGET_LABEL).map(([value, label]) => ({ value, label })),
 ]
 
@@ -215,8 +221,10 @@ export function CreditNoteForm({
                 render={({ field: control }) => (
                   <OptionSelect
                     id={id}
-                    value={control.value}
-                    onValueChange={control.onChange}
+                    value={control.value || FLEXPRICE_DECIDES}
+                    onValueChange={(next) =>
+                      control.onChange(next === FLEXPRICE_DECIDES ? '' : next)
+                    }
                     options={REFUND_TARGETS}
                     disabled={isSubmitting}
                   />

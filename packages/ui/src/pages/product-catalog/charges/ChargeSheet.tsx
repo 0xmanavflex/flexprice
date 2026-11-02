@@ -7,12 +7,15 @@ import {
   type Charge,
   type ChargeCommitmentDetail,
   type ChargeDetail,
+  type ChargeHistory,
   ChargeSection,
   CommitmentType,
   InvoiceCadence,
   PriceType,
   PriceWindowSize,
   TierMode,
+  type VersionStatus,
+  versionStatus,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Frame, FrameHeader, FramePanel, FrameTitle } from '@ui/components/reui/frame'
@@ -37,6 +40,7 @@ import {
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { Pill, type PillTone } from '../../shared/cells'
 
 /**
  * One charge, opened from its row or from one of its flags.
@@ -57,6 +61,19 @@ import { provenance } from '@ui/provenance'
  * quirk to fix rather than copy: two orders for the same five things is one
  * order too many.
  */
+/** Current is the active green, Upcoming blue, History muted grey. */
+const VERSION_TONE: Record<VersionStatus, PillTone> = {
+  current: 'success',
+  upcoming: 'info',
+  history: 'neutral',
+}
+
+const VERSION_LABEL: Record<VersionStatus, string> = {
+  current: 'Current',
+  upcoming: 'Upcoming',
+  history: 'History',
+}
+
 export const ChargeSheetProvenance = provenance({
   source: 'composition',
   composes: ['ui/sheet', 'reui/frame', 'reui/badge', 'compositions/ActivityLog'],
@@ -81,6 +98,12 @@ export interface ChargeSheetProps {
    * rejects with an Error whose message is shown. Omitted, no revert is offered.
    */
   onRevert?: ((versionId: string) => Promise<unknown>) | undefined
+  /**
+   * The versions read from the history API as the sheet opened. Given, it
+   * replaces `detail.versions`, and its loading and error states show in the
+   * History section.
+   */
+  history?: ChargeHistory | undefined
 }
 
 function modelLabel(charge: Charge): string {
@@ -327,6 +350,7 @@ export function ChargeSheet({
   priceLabel,
   editableSections,
   onRevert,
+  history: fetched,
 }: ChargeSheetProps) {
   const body = useRef<HTMLDivElement>(null)
   const [reverting, setReverting] = useState<{ id: string; price: string; from: string } | null>(
@@ -369,51 +393,65 @@ export function ChargeSheet({
     month: 'short',
     year: 'numeric',
   })
-  const versions = [...(detail?.versions ?? [])].sort(
+  const versions = [...(fetched?.versions ?? detail?.versions ?? [])].sort(
     (a, b) =>
       (b.startDate?.getTime() ?? b.updatedAt?.getTime() ?? 0) -
       (a.startDate?.getTime() ?? a.updatedAt?.getTime() ?? 0),
   )
 
-  const history: ActivityLogEntry[] = versions.map((version, index) => ({
-    id: version.id,
-    title: version.price,
-    at: version.startDate ? dates.format(version.startDate) : '—',
-    // The newest is the price billing now; every earlier one is kept, inactive.
-    record: index === 0 ? 'Current' : 'Inactive',
-    summary: [
-      version.endDate
-        ? `${index === 0 ? 'Ends' : 'Ended'} ${dates.format(version.endDate)}`
-        : 'No end date',
-      version.updatedAt ? `Last updated ${dates.format(version.updatedAt)}` : null,
-    ]
-      .filter(Boolean)
-      .join(' · '),
-    ...(version.actor ? { by: version.actor } : {}),
-    // Only the version just before the current one can be brought back.
-    ...(index === 1 && onRevert
-      ? {
-          action: (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 px-3"
-              onClick={() => {
-                setRevertError(null)
-                setReverting({
-                  id: version.id,
-                  price: version.price,
-                  from: version.startDate ? dates.format(version.startDate) : '',
-                })
-              }}
-            >
-              <RotateCcwIcon aria-hidden />
-              Revert to this version
-            </Button>
-          ),
-        }
-      : {}),
-  }))
+  // Each version by its dates: the one billing now, ones scheduled to start
+  // later, and ones that have ended. A future end date is still current.
+  const now = Date.now()
+  const statusOf = (version: (typeof versions)[number]) => versionStatus(version, now)
+  // Only the version that ended last can be brought back.
+  const revertible = versions.find((version) => statusOf(version) === 'history')
+
+  const history: ActivityLogEntry[] = versions.map((version) => {
+    const status = statusOf(version)
+    return {
+      id: version.id,
+      title: version.price,
+      tag: (
+        <Pill tone={VERSION_TONE[status]} size="sm">
+          {VERSION_LABEL[status]}
+        </Pill>
+      ),
+      at: version.startDate
+        ? `${status === 'upcoming' ? 'Starts' : 'From'} ${dates.format(version.startDate)}`
+        : '—',
+      summary: [
+        version.endDate
+          ? `${status === 'history' ? 'Ended' : 'Ends'} ${dates.format(version.endDate)}`
+          : 'No end date',
+        version.updatedAt ? `Last updated ${dates.format(version.updatedAt)}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      ...(version.actor ? { by: version.actor } : {}),
+      ...(version === revertible && onRevert
+        ? {
+            action: (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-3"
+                onClick={() => {
+                  setRevertError(null)
+                  setReverting({
+                    id: version.id,
+                    price: version.price,
+                    from: version.startDate ? dates.format(version.startDate) : '',
+                  })
+                }}
+              >
+                <RotateCcwIcon aria-hidden />
+                Revert to this version
+              </Button>
+            ),
+          }
+        : {}),
+    }
+  })
 
   const coupons = detail?.coupons ?? (detail?.coupon ? [detail.coupon] : [])
   const editAt = (part: ChargeSection) =>
@@ -523,6 +561,33 @@ export function ChargeSheet({
                 </p>
               )}
             </Box>
+          ) : null}
+
+          {fetched?.isLoading && history.length <= 1 ? (
+            <p role="status" className="text-muted-foreground flex items-center gap-2 pt-2 text-xs">
+              <ClockIcon aria-hidden className="size-3.5" />
+              Loading history…
+            </p>
+          ) : fetched?.error ? (
+            <div
+              role="alert"
+              className="text-muted-foreground flex flex-wrap items-center gap-2 pt-2 text-xs"
+            >
+              <ClockIcon aria-hidden className="size-3.5" />
+              {fetched.error}
+              {fetched.onRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5"
+                  onClick={fetched.onRetry}
+                >
+                  <RotateCcwIcon aria-hidden />
+                  Try again
+                </Button>
+              ) : null}
+            </div>
           ) : null}
 
           {history.length > 1 ? (

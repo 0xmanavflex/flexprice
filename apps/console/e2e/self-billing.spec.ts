@@ -70,11 +70,11 @@ test('a trial shows its pill on every page, and the card leads to billing and Up
   await pill.hover()
   const card = page.getByRole('dialog', { name: 'Free trial' })
   await expect(
-    card.getByText(/Then \$199(\.00)? a month \+ 0\.5% of what you bill through Flexprice\./),
+    card.getByText(/Then \$199\.00 a month \+ \$0\.005 per Invoice value\./),
   ).toBeVisible()
   await card.getByRole('button', { name: 'View details' }).click()
   await expect(page).toHaveURL(/\/settings\/usage-billing$/)
-  await expect(page.getByText('Free trial, 30 days')).toBeVisible()
+  await expect(page.getByText('Free trial, then Pay as you go')).toBeVisible()
   await expect(page.getByText('No invoices yet')).toBeVisible()
 
   await page.getByRole('button', { name: 'Upgrade' }).last().click()

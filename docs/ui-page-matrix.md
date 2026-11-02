@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-69 route pages.
+72 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -16,6 +16,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | addons | `AddonListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | AddonGrid, Button, ListState, PageBody |
 | auth | `AuthCallbackPage` | Other | — | AuthFrame, Button |
 | auth | `ForgotPasswordPage` | Other | Field | AuthFrame, ForgotPasswordForm |
+| auth | `OnboardingPage` | Other | Field | OnboardingScreen |
 | auth | `ResetPasswordPage` | Other | Field | AuthFrame, SetPasswordForm |
 | auth | `SignInPage` | Other | Field | RegionField, SignInScreen |
 | auth | `SignUpConfirmPage` | Other | — | SignUpConfirmScreen |
@@ -62,14 +63,16 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | price-units | `PriceUnitDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, Field, FormCard, MetricRail, Section | ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CoinsIcon, EditableCard, MetadataCard, PencilIcon, Pill |
 | price-units | `PriceUnitFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | PriceUnitForm |
 | price-units | `PriceUnitListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |
-| pricing-widget | `PricingWidgetPage` | Other | EmptyState | PricingCatalogBlock |
+| pricing-widget | `PricingWidgetPage` | Other | EmptyState, PageHeader | PricingCatalogBlock |
 | revenue | `ReportsPage` | Other | DetailTabs, EntityList, FilterBar, Panel, SortMenu | AgingBucket, CustomerRevenueRow, OverdueCustomerRow, PayerRow, ReportStatus, RevenueReport |
+| revenue | `RevenueRecognitionPage` | Dashboard | Panel, Section, SimpleTable | RevenueRecognitionReport |
+| revenue | `RollforwardPage` | Other | Panel, Section, SimpleTable | AccountRollforward |
 | selfBilling | `CheckoutReturnPage` | Other | — | CheckoutReturnView, NextStep |
 | selfBilling | `UpgradePage` | Other | Field | PageLoadingState, UpgradeView |
 | selfBilling | `UsageBillingPage` | Other | Section, SimpleTable | UsageBillingView |
 | settings | `SettingsPage` | Settings | DetailTabs, EmptyState | BadgeDollarSignIcon, BellIcon, Building2Icon, CoinsIcon, EmbeddedPageContext, GaugeIcon, PaletteIcon, PercentIcon, ReceiptTextIcon, RepeatIcon, SettingsSection, SettingsShell, SmileIcon, TagIcon, TicketPercentIcon, UsersIcon, WriteGate |
 | subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
-| subscriptions | `SubscriptionDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Properties, RowActionsMenu, Section, SortMenu | DateInput, EntityAlertDialog, Input, OptionSelect, SubscriptionDetailView, SubscriptionPart, Switch |
+| subscriptions | `SubscriptionDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Properties, RowActionsMenu, Section, SimpleTable, SortMenu | DateInput, EntityAlertDialog, Input, OptionSelect, SubscriptionDetailView, SubscriptionPart, SubscriptionTab, Switch |
 | subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, FormPage, RowActionsMenu, Section, SimpleTable, SortMenu, WorkflowStepper | SubscriptionForm |
 | subscriptions | `SubscriptionListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, OptionSelect, PageBody, SubscriptionGrid |
 | taxes | `TaxFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, TaxRateCreateForm, TaxRateEditForm |

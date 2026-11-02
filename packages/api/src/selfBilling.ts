@@ -36,8 +36,37 @@ export interface SelfBillingFeatureUsageWire {
   current_usage?: string
 }
 
+/** One charge on the tenant's Flexprice plan, as `/portal/billing/summary` reports it. */
+export interface SelfBillingPlanChargeWire {
+  price_id?: string
+  line_item_id?: string
+  display_name?: string
+  type?: string
+  quantity?: string
+  amount?: string
+  currency?: string
+  billing_model?: string
+  billing_period?: string
+  billing_period_count?: number
+  invoice_cadence?: string
+  transform_quantity?: { divide_by?: number } | null
+  meter_id?: string
+  meter_display_name?: string
+  price_unit_type?: string
+  price_unit_amount?: string
+}
+
+export interface SelfBillingPlanWire {
+  id?: string
+  name?: string
+  description?: string
+  charges?: SelfBillingPlanChargeWire[] | null
+}
+
 export interface SelfBillingSummaryWire {
   status?: string
+  /** The plan the tenant is on (or upgrades to), with its charges. */
+  plan?: SelfBillingPlanWire | null
   subscription_status?: string
   trial_ends_at?: string | null
   invoices?: SelfBillingInvoiceWire[] | null

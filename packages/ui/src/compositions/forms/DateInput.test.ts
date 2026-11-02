@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { formatStoredDay, storedDayOf, utcDayEnd, utcDayOf, utcDayStart } from './DateInput'
+import {
+  formatDateValue,
+  formatStoredDay,
+  isNamedZone,
+  storedDayOf,
+  utcDayEnd,
+  utcDayOf,
+  utcDayStart,
+  zonedInstant,
+  zonedParts,
+} from './DateInput'
 
 describe('UTC day helpers', () => {
   it('starts a day at midnight UTC', () => {
@@ -58,5 +68,41 @@ describe('stored day fields', () => {
   it('has no day for none', () => {
     expect(storedDayOf(undefined)).toBe('')
     expect(storedDayOf(new Date('nope'))).toBe('')
+  })
+})
+
+describe('zoned time', () => {
+  it('reads and writes a clock in an IANA zone', () => {
+    // 09:30 in Kolkata (UTC+5:30) is 04:00 UTC.
+    const instant = zonedInstant('Asia/Kolkata', 2026, 9, 21, 9, 30)
+    expect(instant.toISOString()).toBe('2026-10-21T04:00:00.000Z')
+    expect(zonedParts(instant, 'Asia/Kolkata')).toEqual({
+      year: 2026,
+      month: 9,
+      day: 21,
+      hour: 9,
+      minute: 30,
+    })
+  })
+
+  it('lands on the right hour either side of a daylight-saving change', () => {
+    // New York: EDT (UTC-4) before Nov 1 2026, EST (UTC-5) after.
+    expect(zonedInstant('America/New_York', 2026, 9, 31, 12, 0).toISOString()).toBe(
+      '2026-10-31T16:00:00.000Z',
+    )
+    expect(zonedInstant('America/New_York', 2026, 10, 2, 12, 0).toISOString()).toBe(
+      '2026-11-02T17:00:00.000Z',
+    )
+  })
+
+  it('treats UTC as UTC and anything unknown as not a named zone', () => {
+    expect(zonedInstant('utc', 2026, 0, 1, 0, 0).toISOString()).toBe('2026-01-01T00:00:00.000Z')
+    expect(isNamedZone('Asia/Kolkata')).toBe(true)
+    expect(isNamedZone('UTC')).toBe(false)
+    expect(isNamedZone('local')).toBe(false)
+    expect(isNamedZone('Not/AZone')).toBe(false)
+    expect(formatDateValue('2026-10-21T04:00:00.000Z', 'Asia/Kolkata')).toBe(
+      'Oct 21, 2026, 09:30 AM Asia/Kolkata',
+    )
   })
 })

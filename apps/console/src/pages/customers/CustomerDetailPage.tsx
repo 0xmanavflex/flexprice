@@ -102,9 +102,9 @@ export function CustomerDetailPage({
   const pushTargets = (integrations.data ?? [])
     .filter((integration) => integration.connection?.syncConfig.customer?.outbound)
     .map((integration) => integration.name)
-  const externalId = customer.data?.externalId ?? ''
-  const subscriptions = useCustomerSubscriptions(externalId)
-  const invoices = useCustomerInvoices(externalId)
+  // By internal id, so an archived customer's contracts and invoices still load.
+  const subscriptions = useCustomerSubscriptions(customerId)
+  const invoices = useCustomerInvoices(customerId)
   // No customer filter on the payments API: read the payments of the most recent invoices.
   const payments = useCustomerPayments(
     (invoices.data?.invoices ?? []).slice(0, 10).map((invoice) => invoice.id),

@@ -116,8 +116,11 @@ export const SETTINGS_SECTIONS = [
   },
   {
     id: 'alerts',
-    label: 'Wallet alerts',
-    tabs: [{ id: 'wallet-alerts', label: 'Wallet alerts' }],
+    label: 'Wallets',
+    tabs: [
+      { id: 'wallet-alerts', label: 'Wallet alerts' },
+      { id: 'bonus-credits', label: 'Bonus credits' },
+    ],
   },
   {
     id: 'tags',

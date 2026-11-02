@@ -63,7 +63,10 @@ export function isServerFilterable(status: InvoiceStatus): boolean {
 }
 
 /** Builds the request. Page numbers are 1-based for people, offsets are not. */
-export function toInvoiceFilter(query: InvoiceQuery): Record<string, unknown> {
+export function toInvoiceFilter(
+  query: InvoiceQuery,
+  scope?: { customerId?: string },
+): Record<string, unknown> {
   // Paid and overdue are derived from finalized invoices, so asking for either
   // asks the server for finalized ones too; the page then keeps the matches.
   const derived = query.statuses.some((s) => !isServerFilterable(s))
@@ -85,6 +88,7 @@ export function toInvoiceFilter(query: InvoiceQuery): Record<string, unknown> {
       : {}),
     ...(statuses.length > 0 ? { invoiceStatus: statuses } : {}),
     ...(query.search ? { externalCustomerId: query.search } : {}),
+    ...(scope?.customerId ? { customerId: scope.customerId } : {}),
   }
 }
 
@@ -151,9 +155,10 @@ export async function fetchInvoices(
   client: Flexprice,
   query: InvoiceQuery,
   signal?: AbortSignal,
+  scope?: { customerId?: string },
 ): Promise<InvoicePage> {
   const response = await call(
-    (options) => client.invoices.queryInvoice(toInvoiceFilter(query) as never, options),
+    (options) => client.invoices.queryInvoice(toInvoiceFilter(query, scope) as never, options),
     signal,
   )
   return {
@@ -205,6 +210,7 @@ export interface InvoiceDetailWire extends InvoiceWire {
   subtotal?: string | undefined
   totalTax?: string | undefined
   totalPrepaidCreditsApplied?: string | undefined
+  totalDiscount?: string | undefined
   amountPaid?: string | undefined
   finalizedAt?: Date | undefined
   paidAt?: Date | undefined
@@ -261,6 +267,7 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
     subtotal: wire.subtotal ?? '0',
     tax: wire.totalTax ?? '0',
     prepaidCredits: wire.totalPrepaidCreditsApplied ?? '0',
+    discount: wire.totalDiscount ?? '0',
     amountPaid: wire.amountPaid ?? '0',
     lines: (wire.lineItems ?? []).map((line, index) => ({
       id: line.id ?? `line_${index}`,

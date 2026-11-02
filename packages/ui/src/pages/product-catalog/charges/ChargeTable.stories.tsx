@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import {
   BillingModel,
   BillingPeriod,
@@ -286,9 +286,8 @@ export const Views: Story = {
     // Status is a filter beside the billing model, not a row of chips above the table.
     await expect(canvas.queryByRole('button', { name: 'Active 3' })).not.toBeInTheDocument()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).not.toHaveClass('sr-only')
-    // Every charge is listed, live first; an ended one says when it ended.
-    await expect(canvas.getByText('Legacy seat fee')).toBeInTheDocument()
-    await expect(canvas.getByText('Fixed · Ended Feb 1, 2026')).toBeInTheDocument()
+    // Only charges billing now are rows: an ended one is history, not a row.
+    await expect(canvas.queryByText('Legacy seat fee')).not.toBeInTheDocument()
     await expect(canvas.getByText('Platform base')).toBeInTheDocument()
   },
 }
@@ -313,9 +312,51 @@ export const WithDates: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeInTheDocument()
     await expect(canvas.getByText('Jan 1, 2026 → Ongoing')).toBeInTheDocument()
-    await expect(canvas.getByText('Jun 1, 2025 → Feb 1, 2026')).toBeInTheDocument()
+    await userEvent.hover(canvas.getByText('Jan 1, 2026 → Ongoing'))
+    await expect(await screen.findByText('Start')).toBeInTheDocument()
+    await expect(screen.getByText('End')).toBeInTheDocument()
+    await expect(screen.getByText('Ongoing')).toBeInTheDocument()
+    // The ended charge is history, not a row.
+    await expect(canvas.queryByText(/Jun 1, 2025/)).not.toBeInTheDocument()
     // Billing timing has its own column, beside the dates.
     await expect(canvas.getByRole('columnheader', { name: 'Billing timing' })).toBeInTheDocument()
+  },
+}
+
+/** An end date still ahead is scheduled: the charge is active and says when it ends. */
+export const ScheduledEnd: Story = {
+  args: {
+    charges: [
+      {
+        ...(chargeFixtures[0] as Charge),
+        displayName: 'Seat fee',
+        startDate: new Date('2026-01-01T00:00:00Z'),
+        endDate: new Date('2099-10-30T09:30:00Z'),
+      },
+    ],
+    showDates: true,
+    locale: 'en-US',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Fixed · Ends Oct 30, 2099')).toBeInTheDocument()
+    await expect(canvas.getByText('Jan 1, 2026 → Oct 30, 2099')).toBeInTheDocument()
+    await expect(canvas.queryByText(/^Ended/)).not.toBeInTheDocument()
+  },
+}
+
+/** A plan's charges beside its side rail still show when each is in effect. */
+export const NarrowWithDates: Story = {
+  args: {
+    charges: [{ ...(chargeFixtures[0] as Charge), startDate: new Date('2026-01-01T00:00:00Z') }],
+    layout: 'narrow',
+    showDates: true,
+    locale: 'en-US',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('columnheader', { name: 'In effect' })).toBeInTheDocument()
+    await expect(canvas.getByText('Jan 1, 2026 → Ongoing')).toBeInTheDocument()
   },
 }
 

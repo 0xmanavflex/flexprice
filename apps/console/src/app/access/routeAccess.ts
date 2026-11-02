@@ -39,7 +39,13 @@ const OPEN: RouteAccess = {}
 
 export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   '/': OPEN,
+  // Tenant onboarding: any signed-in member answers it, as in V1 (ungated there).
+  '/onboarding': OPEN,
   '/reports': OPEN,
+  // Revenue recognition has no RBAC entity of its own; its amounts come from invoices.
+  '/revenue-recognition': read(E.Invoice),
+  '/deferred-rollforward': read(E.Invoice),
+  '/unbilled-rollforward': read(E.Invoice),
   // The old address of Reports; it redirects there.
   '/revenue': OPEN,
 

@@ -79,7 +79,7 @@ export const FixedAndUsage: Story = {
   },
 }
 
-/** Usage only: no blank flat price and no "plus usage"; the headline names what it meters. */
+/** Usage only: no blank flat price and no "plus usage". The headline is the plan type. */
 export const UsageOnly: Story = {
   args: {
     charges: [tieredUsage, packageUsage],
@@ -88,9 +88,9 @@ export const UsageOnly: Story = {
   },
   play: async ({ canvasElement }) => {
     const c = within(canvasElement)
-    await expect(c.getByText('Usage-based · API calls, Tokens')).toBeVisible()
-    await expect(c.queryByText(/plus usage/)).toBeNull()
-    await expect(c.queryByText('—')).toBeNull()
+    await expect(c.getByText('Usage-based')).toBeVisible()
+    await expect(c.getByText('Billed on what is used')).toBeVisible()
+    await expect(c.queryByText(/plus usage/i)).toBeNull()
     await expect(c.getByText('14-day free trial')).toBeVisible()
   },
 }
@@ -134,8 +134,10 @@ export const FullPlan: Story = {
   },
   play: async ({ canvasElement }) => {
     const c = within(canvasElement)
-    await expect(c.getByText('14-day free trial · plus usage')).toBeInTheDocument()
-    await expect(c.getByText('and 1 more')).toBeInTheDocument()
+    await expect(c.getByText('Plus usage')).toBeInTheDocument()
+    await expect(c.getByText('14-day free trial')).toBeInTheDocument()
+    await expect(c.getByText('Unlimited Compute Minutes')).toBeInTheDocument()
+    await expect(c.getByText('SSO')).toBeInTheDocument()
   },
 }
 
@@ -167,9 +169,9 @@ export const ReadsLikeTheRedesign: Story = {
   },
   play: async ({ canvasElement }) => {
     const card = within(canvasElement)
-    await expect(card.getByText('2 tiers, from $0.002 per call')).toBeInTheDocument()
-    await expect(card.getByText('10K tokens')).toBeInTheDocument()
-    await expect(card.getByText('2,000 / mo')).toBeInTheDocument()
+    await expect(card.getByText('Plus usage')).toBeInTheDocument()
+    await expect(card.getByText('10,000 AI Tokens')).toBeInTheDocument()
+    await expect(card.getByText('2,000 credits · Monthly included credits · monthly')).toBeInTheDocument()
   },
 }
 

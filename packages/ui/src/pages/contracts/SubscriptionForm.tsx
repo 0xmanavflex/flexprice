@@ -191,6 +191,8 @@ export interface SubscriptionCustomerOption extends Option {
   externalId?: string | undefined
   /** The currency their invoices go out in, when it is set; else the contract's own. */
   billingCurrency?: string | undefined
+  /** The IANA zone the customer bills in; the contract's dates and times default to it. */
+  timezone?: string | undefined
 }
 
 /** A global exchange rate, one unit of `fromCurrency` in `toCurrency` (lower-case codes). */
@@ -311,6 +313,20 @@ export const SUBSCRIPTION_FORM_STEPS = [
   { id: 'billing', title: 'Billing' },
   { id: 'review', title: 'Review' },
 ] as const
+
+/** The first failed field as "path: message", e.g. "addons.0.startDate: Choose a date". */
+function firstFieldError(errors: object, path = ''): string | null {
+  for (const [key, value] of Object.entries(errors)) {
+    if (!value || typeof value !== 'object' || key === 'ref') continue
+    const at = path ? `${path}.${key}` : key
+    if ('message' in value && typeof value.message === 'string' && value.message) {
+      return `${at}: ${value.message}`
+    }
+    const nested = firstFieldError(value, at)
+    if (nested) return nested
+  }
+  return null
+}
 
 const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
   plan: [
@@ -785,7 +801,12 @@ export function SubscriptionForm({
       },
       (failed) => {
         const bad = stepOf(failed)
-        if (bad) flow.goTo(bad)
+        if (bad) {
+          flow.goTo(bad)
+          return
+        }
+        // A field no step asks for (add-ons, taxes, opted-in charges…) would otherwise fail silently.
+        setConflict(firstFieldError(failed) ?? 'Some details are not valid. Review each step.')
       },
     )
   const submitAll = submitWith({})
@@ -932,6 +953,7 @@ export function SubscriptionForm({
             id={id}
             {...field}
             withTime
+            timeZone={customer?.timezone}
             value={values.startDate}
             onValueChange={(value) =>
               form.setValue('startDate', value, { shouldDirty: true, shouldValidate: true })
@@ -948,6 +970,7 @@ export function SubscriptionForm({
             id={id}
             {...field}
             withTime
+            timeZone={customer?.timezone}
             clearable
             clearLabel="Clear end date"
             value={contractEnd}
@@ -999,6 +1022,7 @@ export function SubscriptionForm({
                   <DateInput
                     id="contract-billing-date"
                     withTime
+                    timeZone={customer?.timezone}
                     min={contractDay(values.startDate || today)}
                     value={control.value}
                     onValueChange={(value) => {

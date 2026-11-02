@@ -52,6 +52,8 @@ import {
   type Charge,
   type ChargeCommitmentDetail,
   type ChargeDetail,
+  type ChargeHistory,
+  type ChargeVersion,
   type ChargeAlert,
   type CreditGrant,
   type EditContractCharge,
@@ -166,6 +168,12 @@ export interface SubscriptionPart<T> {
 export type SubscriptionActivity = InvoiceActivity
 
 export interface SubscriptionDetailViewProps {
+  /**
+   * The open tab, when the page keeps it (in the URL), so going back to the
+   * contract opens the tab it was left on. Without it the view keeps its own.
+   */
+  tab?: SubscriptionTab | undefined
+  onTabChange?: ((tab: SubscriptionTab) => void) | undefined
   subscription: SubscriptionDetail
   lines: SubscriptionPart<SubscriptionLine[]>
   /**
@@ -181,6 +189,20 @@ export interface SubscriptionDetailViewProps {
    */
   onRevertLine?:
     ((line: SubscriptionLine, previous: SubscriptionLine) => Promise<unknown>) | undefined
+  /**
+   * Which charge's sheet is open, by its line item (`null` once closed), so the
+   * page can read `GET /subscriptions/lineitems/{id}/history` for it.
+   */
+  onOpenLine?: ((line: SubscriptionLine | null) => void) | undefined
+  /** That read: every version of the open charge's line item. */
+  openLineHistory?:
+    | {
+        lines?: readonly SubscriptionLine[] | undefined
+        isLoading?: boolean | undefined
+        error?: string | null | undefined
+        onRetry?: (() => void) | undefined
+      }
+    | undefined
   entitlements: SubscriptionPart<SubscriptionEntitlement[]>
   /**
    * The customer's usage against this contract's entitlements
@@ -240,6 +262,10 @@ export interface SubscriptionDetailViewProps {
    * usage charges for the period.
    */
   usageBreakdown?: ReactNode
+  /** The Revenue tab's content; omitted, the tab is hidden. */
+  revenue?: ReactNode
+  /** The Journal entries tab's content; omitted, the tab is hidden. */
+  journal?: ReactNode
   /** The FX overrides section on the Information tab; omitted, it is not shown. */
   fxOverrides?: ReactNode
   /**
@@ -299,7 +325,23 @@ export interface SubscriptionDetailViewProps {
   priceUnits?: PriceUnitOption[] | undefined
 }
 
-type SubscriptionTab = 'overview' | 'information' | 'charges' | 'usage' | 'invoices'
+export const SUBSCRIPTION_TABS = [
+  'overview',
+  'information',
+  'charges',
+  'usage',
+  'invoices',
+  'revenue',
+  'journal',
+] as const
+export type SubscriptionTab = (typeof SUBSCRIPTION_TABS)[number]
+
+/** A `?tab=` value as a contract tab; anything else is the Overview. */
+export function parseSubscriptionTab(value: unknown): SubscriptionTab {
+  return SUBSCRIPTION_TABS.includes(value as SubscriptionTab)
+    ? (value as SubscriptionTab)
+    : 'overview'
+}
 
 const day = (date: Date | null | undefined) =>
   date
@@ -399,6 +441,8 @@ export function SubscriptionDetailView({
   lines,
   lineHistory,
   onRevertLine,
+  onOpenLine,
+  openLineHistory,
   entitlements,
   entitlementUsage,
   creditGrants,
@@ -425,6 +469,8 @@ export function SubscriptionDetailView({
   onCreateChargeAlert,
   loadChargeAlert,
   usageBreakdown,
+  revenue,
+  journal,
   fxOverrides,
   onAddTax,
   onRemoveAddon,
@@ -451,8 +497,17 @@ export function SubscriptionDetailView({
   onChangeQuantity,
   meters = [],
   priceUnits = [],
+  tab: controlledTab,
+  onTabChange,
 }: SubscriptionDetailViewProps) {
-  const [tab, setTab] = useState<SubscriptionTab>('overview')
+  const [localTab, setLocalTab] = useState<SubscriptionTab>('overview')
+  const requested = controlledTab ?? localTab
+  // A Revenue or Journal link opens on Overview where revenue recognition is off.
+  const tab =
+    (requested === 'revenue' && !revenue) || (requested === 'journal' && !journal)
+      ? 'overview'
+      : requested
+  const setTab = (next: SubscriptionTab) => (onTabChange ? onTabChange(next) : setLocalTab(next))
   const [pauseMode, setPauseMode] = useState<'pause' | 'resume' | null>(null)
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
   const [saving, setSaving] = useState(false)
@@ -587,21 +642,22 @@ export function SubscriptionDetailView({
     if (!chargeId || lineage.versions.length < 2) continue
     chargeRows.details.set(chargeId, {
       ...chargeRows.details.get(chargeId),
-      versions: lineage.versions.flatMap((version) =>
-        version.charge
-          ? [
-              {
-                id: version.id,
-                price: chargePriceLabel(version.charge),
-                startDate: version.startDate,
-                endDate: version.endDate,
-                updatedAt: version.charge.createdAt,
-              },
-            ]
-          : [],
-      ),
+      versions: lineVersions(lineage.versions),
     })
   }
+  // The open charge's versions as the history API returned them.
+  const chargeHistory: ChargeHistory | undefined = openLineHistory
+    ? {
+        ...(openLineHistory.lines ? { versions: lineVersions(openLineHistory.lines) } : {}),
+        isLoading: openLineHistory.isLoading,
+        error: openLineHistory.error,
+        onRetry: openLineHistory.onRetry,
+      }
+    : undefined
+  const openCharge = onOpenLine
+    ? (charge: Charge | null) =>
+        onOpenLine(charge ? (chargeRows.lineOf.get(charge.id) ?? null) : null)
+    : undefined
   for (const [chargeId, line] of chargeRows.lineOf) {
     const discounts = (coupons?.data ?? []).filter(
       (coupon) => coupon.active && coupon.lineItemId === line.id,
@@ -625,7 +681,9 @@ export function SubscriptionDetailView({
     onRevertLine && lineages && canEditCharges
       ? (charge: Charge, versionId: string) => {
           const lineage = lineages.find((candidate) => candidate.current.charge?.id === charge.id)
-          const previous = lineage?.versions.find((version) => version.id === versionId)
+          const previous =
+            lineage?.versions.find((version) => version.id === versionId) ??
+            openLineHistory?.lines?.find((version) => version.id === versionId)
           return lineage && previous
             ? onRevertLine(lineage.current, previous)
             : Promise.reject(new Error('That version is no longer on this contract.'))
@@ -898,12 +956,14 @@ export function SubscriptionDetailView({
                 ? { count: chargeRows.charges.filter((charge) => !charge.endDate).length }
                 : {}),
             },
-            { value: 'usage', label: 'Usage' },
+            // { value: 'usage', label: 'Usage' },
             {
               value: 'invoices',
               label: 'Invoices',
               ...(invoices.data ? { count: invoices.data.length } : {}),
             },
+            ...(revenue ? [{ value: 'revenue', label: 'Revenue' }] : []),
+            ...(journal ? [{ value: 'journal', label: 'Journal entries' }] : []),
             { value: 'information', label: 'Information' },
           ]}
         />
@@ -998,6 +1058,8 @@ export function SubscriptionDetailView({
                         editableSections={editableChargeSections}
                         variant="summary"
                         {...(revertCharge ? { onRevert: revertCharge } : {})}
+                        {...(openCharge ? { onOpenCharge: openCharge } : {})}
+                        {...(chargeHistory ? { history: chargeHistory } : {})}
                         layout="narrow"
                         charges={chargeRows.charges}
                         details={chargeRows.details}
@@ -1503,6 +1565,8 @@ export function SubscriptionDetailView({
               : {})}
             removeLabel="End charge"
             {...(revertCharge ? { onRevert: revertCharge } : {})}
+            {...(openCharge ? { onOpenCharge: openCharge } : {})}
+            {...(chargeHistory ? { history: chargeHistory } : {})}
             extraActions={(charge) => {
               const line = chargeRows.lineOf.get(charge.id)
               if (!line) return []
@@ -1649,6 +1713,9 @@ export function SubscriptionDetailView({
             )}
           </>
         ) : null}
+
+        {tab === 'revenue' && revenue ? revenue : null}
+        {tab === 'journal' && journal ? journal : null}
 
         {tab === 'invoices' ? (
           <PartSection
@@ -1906,6 +1973,23 @@ export function SubscriptionDetailView({
         onClose={() => setCommitmentCharge(null)}
       />
     </DetailShell>
+  )
+}
+
+/** A charge's line item versions as its sheet's History lists them. */
+function lineVersions(lines: readonly SubscriptionLine[]): ChargeVersion[] {
+  return lines.flatMap((version) =>
+    version.charge
+      ? [
+          {
+            id: version.id,
+            price: chargePriceLabel(version.charge),
+            startDate: version.startDate,
+            endDate: version.endDate,
+            updatedAt: version.charge.createdAt,
+          },
+        ]
+      : [],
   )
 }
 

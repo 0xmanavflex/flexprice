@@ -65,6 +65,15 @@ export const NAV: NavEntry[] = [
     label: 'Collections',
     children: [{ id: 'payments', label: 'Payments', path: '/payments' }],
   },
+  {
+    id: 'revenue',
+    label: 'Revenue',
+    children: [
+      { id: 'revenue-recognition', label: 'Revenue recognition', path: '/revenue-recognition' },
+      { id: 'deferred-rollforward', label: 'Deferred rollforward', path: '/deferred-rollforward' },
+      { id: 'unbilled-rollforward', label: 'Unbilled rollforward', path: '/unbilled-rollforward' },
+    ],
+  },
   { id: 'reports', label: 'Reports', path: '/reports' },
   {
     id: 'developers',
@@ -185,8 +194,7 @@ export function labelForNavId(id: string): string | undefined {
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
   // Discounts, Taxes, Cost Tracking and Tags are rows of Settings that keep their own routes.
-  if (id.startsWith('settings-'))
-    return SECONDARY.find((entry) => entry.id === 'settings')
+  if (id.startsWith('settings-')) return SECONDARY.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),
   )
@@ -220,12 +228,21 @@ function toItems(entries: NavEntry[], icons: Record<string, React.ReactNode>): S
   }))
 }
 
-/** Builds what the shell renders. */
-export function toNavGroups(icons: Record<string, React.ReactNode> = {}): ShellNavGroup[] {
+/** Builds what the shell renders, without the `hidden` top-level rows. */
+export function toNavGroups(
+  icons: Record<string, React.ReactNode> = {},
+  hidden: readonly string[] = [],
+): ShellNavGroup[] {
   // The primary tree carries no heading: a lone label over the main section
   // names the obvious. The footer group is pinned to the bottom of the rail.
   return [
-    { id: 'main', items: toItems(NAV, icons) },
+    {
+      id: 'main',
+      items: toItems(
+        NAV.filter((entry) => !hidden.includes(entry.id)),
+        icons,
+      ),
+    },
     { id: 'footer', pinned: true, items: toItems(FOOTER_NAV, icons) },
   ]
 }

@@ -36,6 +36,8 @@ import { MutationToasts } from '@/app/notifications/MutationToasts'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { useMockAccounts } from '@/app/selfBilling/mockAccounts'
+import { useSession } from '@/app/session'
+import { useRevenueRecognitionEnabled } from '@fp/query'
 import { SUPPORT_CHAT_ACTION_ID, searchableDestinations, useGlobalSearch } from './useGlobalSearch'
 import { openSupportChat } from '@/app/supportChat/SupportChat'
 import {
@@ -153,6 +155,8 @@ export function ConsoleShell({
   const [creatingEnvironment, setCreatingEnvironment] = useState(false)
   const [copyingEnvironment, setCopyingEnvironment] = useState(false)
   const mockAccounts = useMockAccounts()
+  const { environmentId } = useSession()
+  const revenueRecognition = useRevenueRecognitionEnabled(environmentId)
   const [renamingEnvironment, setRenamingEnvironment] = useState<ShellEnvironment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const destinations = useMemo(() => searchableDestinations(), [])
@@ -209,7 +213,7 @@ export function ConsoleShell({
   return (
     <ShellDetailTrailProvider value={setDetailTrail}>
       <AppShell
-        navGroups={toNavGroups(ICONS)}
+        navGroups={toNavGroups(ICONS, revenueRecognition.data ? [] : ['revenue'])}
         {...(activeItemId === undefined ? {} : { activeItemId })}
         onNavigate={goTo}
         user={user}

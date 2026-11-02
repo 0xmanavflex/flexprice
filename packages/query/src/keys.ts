@@ -45,6 +45,8 @@ export const queryKeys = {
     detail: (id: string) => ['subscriptions', 'detail', id] as const,
     lines: (id: string) => ['subscriptions', 'lines', id] as const,
     lineHistory: (id: string) => ['subscriptions', 'lines', id, 'history'] as const,
+    /** One line item's versions: `GET /subscriptions/lineitems/{id}/history`. */
+    lineVersions: (lineId: string) => ['subscriptions', 'lineVersions', lineId] as const,
     usage: (id: string) => ['subscriptions', 'usage', id] as const,
     schedules: (id: string) => ['subscriptions', 'schedules', id] as const,
     invoices: (id: string, filter: Readonly<Record<string, unknown>> = {}) =>
@@ -65,6 +67,27 @@ export const queryKeys = {
       ['revenue', 'overview', filter] as const,
     series: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['revenue', 'series', filter] as const,
+  },
+  revenueRecognition: {
+    all: () => ['revenueRecognition'] as const,
+    enabled: (environmentId: string | null) =>
+      ['revenueRecognition', 'enabled', environmentId] as const,
+    subscription: (environmentId: string | null, subscriptionId: string) =>
+      ['revenueRecognition', 'subscription', environmentId, subscriptionId] as const,
+    customers: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'customers', environmentId, filter] as const,
+    rollforward: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'rollforward', environmentId, filter] as const,
+    contracts: (environmentId: string | null, contractIds: readonly string[]) =>
+      ['revenueRecognition', 'contracts', environmentId, contractIds] as const,
+    subscriptionContract: (environmentId: string | null, subscriptionId: string) =>
+      ['revenueRecognition', 'subscriptionContract', environmentId, subscriptionId] as const,
+    entries: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'entries', environmentId, filter] as const,
+    journal: (environmentId: string | null, contractId: string) =>
+      ['revenueRecognition', 'journal', environmentId, contractId] as const,
+    recognizedThrough: (environmentId: string | null) =>
+      ['revenueRecognition', 'recognizedThrough', environmentId] as const,
   },
   events: {
     all: () => ['events'] as const,
@@ -188,6 +211,8 @@ export const queryKeys = {
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['prices', 'list', filter] as const,
     history: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['prices', 'history', filter] as const,
+    /** One plan price's versions: `GET /prices/{id}/history`. */
+    versions: (id: string) => ['prices', 'versions', id] as const,
   },
   entitlements: {
     all: () => ['entitlements'] as const,

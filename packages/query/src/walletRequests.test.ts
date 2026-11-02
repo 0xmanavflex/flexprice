@@ -13,7 +13,6 @@ import {
   toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
-  withConsumption,
   type WalletTransactionWire,
 } from './wallets'
 
@@ -70,6 +69,24 @@ describe('wallet requests', () => {
     expect(purchased.transaction_reason).toBe('PURCHASED_CREDIT_DIRECT')
     expect(purchased.credits_to_add).toBe('100')
     expect(free.transaction_reason).toBe('FREE_CREDIT_GRANT')
+  })
+
+  it('sends a bonus with a purchased top-up, and never with a free grant', () => {
+    const bonus = { bonusCredits: '75', bonusExpiryDate: '2030-06-30' }
+    const purchased = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest({ ...emptyTopUp(), credits: '500', ...bonus }),
+    )
+    expect(purchased.bonus_credits_to_add).toBe('75')
+    expect(purchased.bonus_credits_expiry_date_utc).toBe('2030-06-30T00:00:00Z')
+    const free = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest({ ...emptyTopUp(), kind: 'free', credits: '5', ...bonus }),
+    )
+    expect(free).not.toHaveProperty('bonus_credits_to_add')
+    expect(free).not.toHaveProperty('bonus_credits_expiry_date_utc')
+    // Blank: the bonus settings' slabs decide.
+    expect(
+      TopUpWalletRequest$outboundSchema.parse(toTopUpRequest({ ...emptyTopUp(), credits: '5' })),
+    ).not.toHaveProperty('bonus_credits_to_add')
   })
 
   it('sends an invoiced top-up with its expiry, priority and reference', () => {
@@ -269,8 +286,8 @@ describe('toWallet alert settings', () => {
 })
 
 describe('wallet transaction breakdown', () => {
-  it("reads each top-up's draw-down from the debits that name it", () => {
-    const transactions = withConsumption([
+  it('keeps on each debit the top-ups it drew from', () => {
+    const transactions = [
       toWalletTransaction({ id: 'top_1', type: 'credit', creditAmount: '100' }),
       toWalletTransaction({
         id: 'deb_1',
@@ -279,13 +296,16 @@ describe('wallet transaction breakdown', () => {
         referenceType: 'INVOICE',
         referenceId: 'inv_9',
         metadata: { source: 'usage', count: 3 },
-        consumptionBreakdown: [{ creditTransactionId: 'top_1', credits: '40' }],
+        consumptionBreakdown: [
+          { creditTransactionId: 'top_1', credits: '40' },
+          // A line without a source or credits says nothing and is dropped.
+          { creditTransactionId: '', credits: '5' },
+        ],
       }),
-    ])
-    expect(transactions[0]?.consumption).toEqual([
-      { id: 'deb_1', product: 'API calls', contract: 'Invoice inv_9', credits: '40' },
-    ])
-    // Only string metadata is kept; no money is derived for the credits.
+    ]
+    expect(transactions[1]?.drawnFrom).toEqual([{ topUpId: 'top_1', credits: '40' }])
+    expect(transactions[0]?.drawnFrom).toBeUndefined()
+    // Only string metadata is kept.
     expect(transactions[1]?.metadata).toEqual({ source: 'usage' })
     expect(transactions[1]?.reference).toEqual({ type: 'INVOICE', id: 'inv_9' })
   })
@@ -303,12 +323,7 @@ describe('wallet transaction breakdown', () => {
         },
       ],
     })
-    const transactions = withConsumption(
-      ((parsed.items ?? []) as WalletTransactionWire[]).map(toWalletTransaction),
-    )
+    const transactions = ((parsed.items ?? []) as WalletTransactionWire[]).map(toWalletTransaction)
     expect(transactions[1]?.drawnFrom).toEqual([{ topUpId: 'top_1', credits: '40' }])
-    expect(transactions[0]?.consumption).toEqual([
-      { id: 'deb_1', product: 'API calls', contract: '', credits: '40' },
-    ])
   })
 })

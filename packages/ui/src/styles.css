@@ -278,7 +278,6 @@
   animation: fp-refresh-slide 1.1s ease-in-out infinite;
 }
 
-
 /*
  * Create with AI (plans). The prompt screen's ground: a soft vignette with a
  * dot field masked out of the centre; the review canvas's dotted surface; a
@@ -351,6 +350,9 @@
   100% {
     transform: translateX(120%);
   }
+}
+.ai-accent {
+  color: var(--color-violet-500);
 }
 .ai-shimmer {
   background: linear-gradient(

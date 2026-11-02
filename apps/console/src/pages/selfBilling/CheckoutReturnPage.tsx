@@ -90,7 +90,12 @@ export function CheckoutReturnPage({
     <CheckoutReturnView
       outcome={outcome}
       billingEmail={recalledCheckoutEmail() || organization.userEmail}
-      paidInvoice={paid ? { number: paid.number, pdfUrl: paid.pdfUrl } : null}
+      paidInvoice={
+        paid
+          ? { number: paid.number, pdfUrl: paid.pdfUrl, total: paid.total, currency: paid.currency }
+          : null
+      }
+      plan={summary.data?.plan ?? null}
       nextInvoiceOn={summary.data?.period?.end ?? null}
       onBilling={onBilling}
       onUpgrade={onUpgrade}

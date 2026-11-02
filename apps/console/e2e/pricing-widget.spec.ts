@@ -13,14 +13,20 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('pricing widget shows the plan catalogue block', async ({ page }) => {
+test('pricing widget shows the published plans for a billing period and currency', async ({
+  page,
+}) => {
   await page.goto('/pricing-widget')
 
-  await expect(page.getByRole('button', { name: 'Get embed code' })).toBeVisible()
-  // The catalogue renders its plan tiles once the plans have loaded; the page-level
-  // "Create plan" button is then the only one (the empty state has its own).
-  await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible()
-  await expect(page.getByText('No plans to show yet')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Create plan' })).toBeVisible()
-  await expect(page.getByText('Mara Whitfield')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Pricing widget', level: 1 })).toBeVisible()
+  // As V1: a billing period and a currency, no embed code and no banner.
+  await expect(page.getByRole('combobox', { name: 'Billing period' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Currency' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Get embed code' })).toHaveCount(0)
+  await expect(page.getByText(/published plans? (is|are) shown/)).toHaveCount(0)
+  // The mock catalogue prices plans, so cards render, each opening its plan.
+  const viewPlan = page.getByRole('button', { name: 'View plan' }).first()
+  await expect(viewPlan).toBeVisible()
+  await viewPlan.click()
+  await expect(page).toHaveURL(/\/plans\/[^/]+$/)
 })

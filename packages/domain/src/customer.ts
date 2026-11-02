@@ -68,6 +68,8 @@ export interface Customer {
    * contract's own currency. Optional: only the customer API sends it.
    */
   billingCurrency?: string
+  /** The IANA zone billing runs in, when set. Optional here; the detail always carries it. */
+  timezone?: string
   status: CustomerStatus
   /** Integrations this customer is connected to. Empty when none are. */
   integrations: CustomerIntegration[]

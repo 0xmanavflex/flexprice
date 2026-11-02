@@ -77,6 +77,22 @@
       "usedBy": [],
       "story": "./src/pages/selfBilling/AccountStatus.stories.tsx"
     },
+    "AccountRollforward": {
+      "file": "src/pages/revenue/AccountRollforward.tsx",
+      "layer": "surface",
+      "composes": [
+        "CalendarIcon",
+        "EntityLink",
+        "FilterSelect",
+        "OverviewTiles",
+        "Section",
+        "Sheet",
+        "SimpleTable",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/revenue/AccountRollforward.stories.tsx"
+    },
     "AccountSettings": {
       "file": "src/components/blocks/settings-7/components/account-settings.tsx",
       "layer": "vendor/blocks",
@@ -649,6 +665,7 @@
       ],
       "usedBy": [
         "GoogleButton",
+        "OnboardingScreen",
         "SignInScreen",
         "SignUpConfirmScreen",
         "SignUpScreen",
@@ -809,6 +826,16 @@
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
+    "BonusSlabTable": {
+      "file": "src/pages/settings/wallets/BonusSlabTable.tsx",
+      "layer": "surface",
+      "composes": [
+        "OptionSelect",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/wallets/BonusSlabTable.stories.tsx"
+    },
     "BookOpen": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -934,6 +961,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AccountRollforward",
         "AddonChargesDialog",
         "ApiCard",
         "CustomerAnalyticsView",
@@ -943,6 +971,7 @@
         "EnvironmentForm",
         "FilterSelect",
         "PortalUsage",
+        "RevenueRecognitionReport",
         "RevenueReport",
         "SubscriptionForm",
         "UsageCard"
@@ -1067,6 +1096,7 @@
       "composes": [
         "ActivityLog",
         "ConfirmDialog",
+        "Pill",
         "PlusIcon",
         "Sheet"
       ],
@@ -1691,7 +1721,8 @@
         "Composer",
         "DateInput",
         "Field",
-        "FormDialog"
+        "FormDialog",
+        "SimpleTable"
       ],
       "usedBy": [
         "SubscriptionDetailView"
@@ -1794,6 +1825,7 @@
         "CouponGrid",
         "CreditNoteGrid",
         "CustomerGrid",
+        "CustomerWalletView",
         "DataExportGrid",
         "DetailHeaderCluster",
         "DetailMoreMenu",
@@ -1816,7 +1848,6 @@
         "PlanGrid",
         "PortalEmpty",
         "PriceUnitGrid",
-        "PricingCatalogBlock",
         "Properties",
         "RadioRows",
         "SegmentMeter",
@@ -2348,6 +2379,7 @@
         "ChoiceCards",
         "Composer",
         "ConfirmDialog",
+        "CopyIcon",
         "DateInput",
         "EmptyState",
         "Field",
@@ -2741,6 +2773,7 @@
         "RevenueReport",
         "SubscriptionDetailView",
         "SubscriptionForm",
+        "SubscriptionJournal",
         "TaxDialog",
         "WalletLedgerTable",
         "WebhookEndpointDetail"
@@ -3117,11 +3150,14 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "AccountRollforward",
         "CustomerDetail",
         "EntitlementTable",
         "EntitlementUsage",
         "EntitlementUsageTable",
-        "SubscriptionDetailView"
+        "RevenueRecognitionReport",
+        "SubscriptionDetailView",
+        "SubscriptionJournal"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -3595,6 +3631,7 @@
         "InvoiceForm",
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
+        "OnboardingScreen",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "PriceOverrideForm",
@@ -3842,6 +3879,8 @@
         "ValuePlaceholder"
       ],
       "usedBy": [
+        "AccountRollforward",
+        "RevenueRecognitionReport",
         "RevenueReport"
       ],
       "story": "./src/pages/home/DashboardHome.stories.tsx"
@@ -4025,6 +4064,7 @@
         "ReviewPanel"
       ],
       "usedBy": [
+        "OnboardingScreen",
         "SignInForm",
         "SignUpConfirmScreen",
         "SignUpScreen"
@@ -5430,6 +5470,17 @@
       "usedBy": [],
       "story": null
     },
+    "OnboardingScreen": {
+      "file": "src/pages/auth/OnboardingScreen.tsx",
+      "layer": "surface",
+      "composes": [
+        "AuthFrame",
+        "Field",
+        "FormHead"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/auth/OnboardingScreen.stories.tsx"
+    },
     "OpenInvoicesCard": {
       "file": "src/components/blocks/solution-billing-4/components/open-invoices-card.tsx",
       "layer": "vendor/blocks",
@@ -5471,6 +5522,7 @@
       "composes": [],
       "usedBy": [
         "AddonChargesDialog",
+        "BonusSlabTable",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",
@@ -5494,6 +5546,7 @@
         "MeteredEntitlementFields",
         "PaymentForm",
         "PriceOverrideForm",
+        "PricingCatalogBlock",
         "RunExportDialog",
         "S3ConnectionDialog",
         "SpecField",
@@ -5517,6 +5570,7 @@
         "LockedMark"
       ],
       "usedBy": [
+        "AccountRollforward",
         "CustomerDetail",
         "CustomerUsageSummary",
         "RevenueReport",
@@ -5560,6 +5614,7 @@
         "ExportRunList",
         "ExportsOverview",
         "FormPage",
+        "PricingCatalogBlock",
         "S3ConnectionList"
       ],
       "story": "./src/compositions/layout/Page.stories.tsx"
@@ -5568,7 +5623,9 @@
       "file": "src/compositions/layout/Page.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "PricingCatalogBlock"
+      ],
       "story": "./src/compositions/layout/Page.stories.tsx"
     },
     "PageLoadingState": {
@@ -5845,6 +5902,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "CatalogStatusBadge",
+        "ChargeSheet",
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
@@ -5973,7 +6031,7 @@
       "file": "src/pages/product-catalog/plans/PlanCustomerPreview.tsx",
       "layer": "surface",
       "composes": [
-        "PlanPreviewCard"
+        "PricingPlanCard"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanCustomerPreview.stories.tsx"
@@ -6023,7 +6081,8 @@
         "EntityList",
         "PencilIcon",
         "Status",
-        "Tag"
+        "Tag",
+        "WandSparklesIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanGrid.stories.tsx"
@@ -6033,12 +6092,9 @@
       "layer": "surface",
       "composes": [
         "CheckIcon",
-        "FormPreview",
-        "PreviewSection"
+        "FormPreview"
       ],
-      "usedBy": [
-        "PlanCustomerPreview"
-      ],
+      "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanPreviewCard.stories.tsx"
     },
     "PlansGallery": {
@@ -6059,9 +6115,7 @@
       "file": "src/components/blocks/solution-billing-2/components/plan-tile.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "PricingCatalogBlock"
-      ],
+      "usedBy": [],
       "story": null
     },
     "Play": {
@@ -6146,7 +6200,6 @@
         "PortalCredits",
         "PortalOverview",
         "PriceUnitGrid",
-        "PricingCatalogBlock",
         "RunExportDialog",
         "S3ConnectionDialog",
         "S3ConnectionList",
@@ -6324,9 +6377,7 @@
       "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [
-        "PlanPreviewCard"
-      ],
+      "usedBy": [],
       "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "PriceOverrideForm": {
@@ -6380,13 +6431,24 @@
       "file": "src/pages/product-catalog/pricing-widget/PricingCatalogBlock.tsx",
       "layer": "surface",
       "composes": [
-        "CopyIcon",
         "EmptyState",
-        "PlanTile",
-        "PlusIcon"
+        "OptionSelect",
+        "PageBody",
+        "PageHeader",
+        "PricingPlanCard"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx"
+    },
+    "PricingPlanCard": {
+      "file": "src/pages/product-catalog/pricing-widget/PricingPlanCard.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "PlanCustomerPreview",
+        "PricingCatalogBlock"
+      ],
+      "story": "./src/pages/product-catalog/pricing-widget/PricingPlanCard.stories.tsx"
     },
     "Printer": {
       "file": "src/icons/index.ts",
@@ -6640,6 +6702,31 @@
       ],
       "story": null
     },
+    "RevenueAmount": {
+      "file": "src/pages/revenue/RevenueAmount.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "RevenueRecognitionReport",
+        "SubscriptionRevenue"
+      ],
+      "story": null
+    },
+    "RevenueRecognitionReport": {
+      "file": "src/pages/revenue/RevenueRecognitionReport.tsx",
+      "layer": "surface",
+      "composes": [
+        "CalendarIcon",
+        "EntityLink",
+        "FilterSelect",
+        "RevenueAmount",
+        "Section",
+        "SimpleTable",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/revenue/RevenueRecognitionReport.stories.tsx"
+    },
     "RevenueReport": {
       "file": "src/pages/revenue/RevenueReport.tsx",
       "layer": "surface",
@@ -6880,6 +6967,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "AccountRollforward",
         "ActivityEventSheet",
         "ActivityLog",
         "ActivitySection",
@@ -6915,8 +7003,11 @@
         "PortalOverview",
         "PortalUsage",
         "RelatedCard",
+        "RevenueRecognitionReport",
         "S3ConnectionList",
         "SubscriptionDetailView",
+        "SubscriptionJournal",
+        "SubscriptionRevenue",
         "TaxDialog",
         "UsageBillingView",
         "WebhookEndpointDetail",
@@ -7084,6 +7175,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AccountRollforward",
         "ActivityEventSheet",
         "ChargeSheet",
         "ConnectIntegrationSheet",
@@ -7271,8 +7363,11 @@
         "LockedMark"
       ],
       "usedBy": [
+        "AccountRollforward",
         "AddonChargesDialog",
+        "BonusSlabTable",
         "ConnectionExports",
+        "ContractQuantityDialog",
         "CustomerDetail",
         "DataExportDetail",
         "ExportRunList",
@@ -7280,8 +7375,10 @@
         "PlanAiSetupView",
         "PortalOverview",
         "PriceOverrideForm",
+        "RevenueRecognitionReport",
         "S3ConnectionList",
         "SubscriptionForm",
+        "SubscriptionRevenue",
         "TierTable",
         "UsageBillingView"
       ],
@@ -7606,6 +7703,30 @@
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionGrid.stories.tsx"
     },
+    "SubscriptionJournal": {
+      "file": "src/pages/contracts/SubscriptionJournal.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EntityLink",
+        "Section",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/contracts/SubscriptionJournal.stories.tsx"
+    },
+    "SubscriptionRevenue": {
+      "file": "src/pages/contracts/SubscriptionRevenue.tsx",
+      "layer": "surface",
+      "composes": [
+        "RevenueAmount",
+        "Section",
+        "SimpleTable",
+        "SubTabState"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/contracts/SubscriptionRevenue.stories.tsx"
+    },
     "SubscriptionStatusBadge": {
       "file": "src/pages/contracts/SubscriptionStatusBadge.tsx",
       "layer": "surface",
@@ -7642,6 +7763,7 @@
         "TableSkeleton"
       ],
       "usedBy": [
+        "AccountRollforward",
         "ChargeTable",
         "CreditGrantTable",
         "CustomerDetail",
@@ -7655,7 +7777,10 @@
         "InvoiceDetailView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
-        "SubscriptionDetailView"
+        "RevenueRecognitionReport",
+        "SubscriptionDetailView",
+        "SubscriptionJournal",
+        "SubscriptionRevenue"
       ],
       "story": "./src/compositions/detail/SubTabState.stories.tsx"
     },
@@ -8282,6 +8407,22 @@
       ],
       "usedBy": [
         "CustomerWalletView"
+      ],
+      "story": null
+    },
+    "WandSparkles": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "WandSparklesIcon": {
+      "file": "src/icons/local/wand-sparkles.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "PlanGrid"
       ],
       "story": null
     },
@@ -9152,6 +9293,13 @@
         "ForgotPasswordForm"
       ]
     },
+    "./src/pages/auth/OnboardingScreen.stories.tsx": {
+      "title": "App/Sign-in/Onboarding screen",
+      "component": "OnboardingScreen",
+      "uses": [
+        "OnboardingScreen"
+      ]
+    },
     "./src/pages/auth/RegionField.stories.tsx": {
       "title": "App/Sign-in/Region field",
       "component": null,
@@ -9370,6 +9518,20 @@
       "component": "SubscriptionGrid",
       "uses": [
         "SubscriptionGrid"
+      ]
+    },
+    "./src/pages/contracts/SubscriptionJournal.stories.tsx": {
+      "title": "App/Contracts/Contract journal",
+      "component": "SubscriptionJournal",
+      "uses": [
+        "SubscriptionJournal"
+      ]
+    },
+    "./src/pages/contracts/SubscriptionRevenue.stories.tsx": {
+      "title": "App/Contracts/Contract revenue",
+      "component": "SubscriptionRevenue",
+      "uses": [
+        "SubscriptionRevenue"
       ]
     },
     "./src/pages/contracts/SubscriptionsListPage.stories.tsx": {
@@ -9871,9 +10033,16 @@
     },
     "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx": {
       "title": "App/Product catalog/Pricing widgets/Pricing widget",
-      "component": null,
+      "component": "PricingCatalogBlock",
       "uses": [
         "PricingCatalogBlock"
+      ]
+    },
+    "./src/pages/product-catalog/pricing-widget/PricingPlanCard.stories.tsx": {
+      "title": "App/Product catalog/Pricing widgets/Pricing plan card",
+      "component": "PricingPlanCard",
+      "uses": [
+        "PricingPlanCard"
       ]
     },
     "./src/pages/product-catalog/products/FeatureCloneDialog.stories.tsx": {
@@ -9923,6 +10092,20 @@
         "ListState",
         "PageBody",
         "PageShell"
+      ]
+    },
+    "./src/pages/revenue/AccountRollforward.stories.tsx": {
+      "title": "App/Revenue/Deferred rollforward",
+      "component": "AccountRollforward",
+      "uses": [
+        "AccountRollforward"
+      ]
+    },
+    "./src/pages/revenue/RevenueRecognitionReport.stories.tsx": {
+      "title": "App/Revenue/Revenue recognition",
+      "component": "RevenueRecognitionReport",
+      "uses": [
+        "RevenueRecognitionReport"
       ]
     },
     "./src/pages/revenue/RevenueReport.stories.tsx": {
@@ -10135,6 +10318,13 @@
       "component": "TaxRateGrid",
       "uses": [
         "TaxRateGrid"
+      ]
+    },
+    "./src/pages/settings/wallets/BonusSlabTable.stories.tsx": {
+      "title": "App/Settings/Wallets/Bonus slab table",
+      "component": "BonusSlabTable",
+      "uses": [
+        "BonusSlabTable"
       ]
     },
     "./src/pages/shared/ArcGauge.stories.tsx": {
@@ -10389,6 +10579,14 @@
       "uses": [
         "AuthFrame",
         "ForgotPasswordForm"
+      ]
+    },
+    "OnboardingPage": {
+      "file": "apps/console/src/pages/auth/OnboardingPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "OnboardingScreen"
       ]
     },
     "ResetPasswordPage": {
@@ -10914,6 +11112,22 @@
       "route": "/reports",
       "uses": [
         "RevenueReport"
+      ]
+    },
+    "RevenueRecognitionPage": {
+      "file": "apps/console/src/pages/revenue/RevenueRecognitionPage.tsx",
+      "pattern": "Dashboard",
+      "route": "/revenue-recognition",
+      "uses": [
+        "RevenueRecognitionReport"
+      ]
+    },
+    "RollforwardPage": {
+      "file": "apps/console/src/pages/revenue/RollforwardPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "AccountRollforward"
       ]
     },
     "CheckoutReturnPage": {

@@ -26,7 +26,7 @@ import { AnalyticsIdentity, captureError } from './analytics'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
 import { DOCS_URL } from './shell/navigation'
-import type { InvoiceQuery } from '@fp/domain'
+import type { InvoiceQuery, RollforwardAccount } from '@fp/domain'
 const InvoiceFormPage = lazy(() =>
   import('@/pages/invoices/InvoiceFormPage').then((m) => ({ default: m.InvoiceFormPage })),
 )
@@ -135,7 +135,7 @@ const CustomerSubscriptionFormPage = lazy(() =>
     default: m.CustomerSubscriptionFormPage,
   })),
 )
-import type { CustomerTab } from '@fp/ui/pages'
+import { parseSubscriptionTab, type CustomerTab, type SubscriptionTab } from '@fp/ui/pages'
 import { parseCustomerSearch } from './customerSearch'
 import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
 const SubscriptionListPage = lazy(() =>
@@ -230,6 +230,16 @@ import { EnvironmentToaster } from '@/pages/shared/RecordElsewhere'
 import { RouteAccessGate } from '@/app/access/RouteAccessGate'
 import { DEFAULT_HOME_SEARCH, parseHomeSearch, type HomeSearch } from '@/app/homeSearch'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
+import {
+  DEFAULT_REVENUE_RECOGNITION_SEARCH,
+  parseRevenueRecognitionSearch,
+  type RevenueRecognitionSearch,
+} from '@/app/revenueRecognitionSearch'
+import {
+  DEFAULT_ROLLFORWARD_SEARCH,
+  parseRollforwardSearch,
+  type RollforwardSearch,
+} from '@/app/rollforwardSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
 )
@@ -291,6 +301,14 @@ const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
 const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
+const RollforwardPage = lazy(() =>
+  import('@/pages/revenue/RollforwardPage').then((m) => ({ default: m.RollforwardPage })),
+)
+const RevenueRecognitionPage = lazy(() =>
+  import('@/pages/revenue/RevenueRecognitionPage').then((m) => ({
+    default: m.RevenueRecognitionPage,
+  })),
+)
 const ReportsPage = lazy(() =>
   import('@/pages/revenue/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 )
@@ -307,6 +325,7 @@ import { AuthCallbackPage } from '@/pages/auth/AuthCallbackPage'
 import { SignUpConfirmPage } from '@/pages/auth/SignUpConfirmPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
+import { OnboardingPage } from '@/pages/auth/OnboardingPage'
 
 /**
  * The shell wraps every route except the ones you can reach signed out.
@@ -394,8 +413,6 @@ function ShellLayout() {
             <>
               <SupportChat />
               <AnalyticsIdentity />
-              <VersionCheck />
-              <EnvironmentToaster />
             </>
           }
         >
@@ -414,6 +431,10 @@ function ShellLayout() {
             </RouteAccessGate>
           </Suspense>
         </ConsoleShell>
+        {/* Toasters render a <section> each; inside the header cluster every one
+          added a flex gap between search and Create. */}
+        <VersionCheck />
+        <EnvironmentToaster />
       </AccessProvider>
     </AccountLockProvider>
   )
@@ -633,6 +654,24 @@ const resetPasswordRoute = createRoute({
   component: ResetPasswordPage,
 })
 
+/**
+ * Tenant onboarding: the three questions a new workspace answers once.
+ *
+ * Outside the shell, like sign-up, because it is the step between creating an
+ * account and seeing the console. Not public, though: it needs the session
+ * whose tenant it updates, so it takes the shell's guard.
+ */
+const onboardingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/onboarding',
+  beforeLoad: ({ location }) => {
+    if (needsSignIn()) {
+      throw redirect({ to: '/sign-in', search: { redirect: location.href, sso: undefined } })
+    }
+  },
+  component: OnboardingPage,
+})
+
 function SignInRouteComponent() {
   const { redirect: target, sso } = signInRoute.useSearch()
   return <SignInPage redirect={target} ssoTenantId={sso} />
@@ -742,16 +781,33 @@ const subscriptionCreateRoute = createRoute({
 const subscriptionDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/contracts/$subscriptionId',
+  // The open tab is a search param, as on a customer, so going back to a
+  // contract (from an invoice, a plan, another contract) reopens that tab.
+  // Optional, so a plain link to a contract opens it on Overview.
+  validateSearch: (search: Record<string, unknown>): { tab?: SubscriptionTab } => {
+    const tab = parseSubscriptionTab(search['tab'])
+    return tab === 'overview' ? {} : { tab }
+  },
   component: SubscriptionDetailRouteComponent,
 })
 
 function SubscriptionDetailRouteComponent() {
   const { subscriptionId } = subscriptionDetailRoute.useParams()
+  const { tab } = subscriptionDetailRoute.useSearch()
   const navigate = useNavigate()
 
   return (
     <SubscriptionDetailPage
       subscriptionId={subscriptionId}
+      tab={tab ?? 'overview'}
+      onTabChange={(next) =>
+        void navigate({
+          to: '/contracts/$subscriptionId',
+          params: { subscriptionId },
+          search: next === 'overview' ? {} : { tab: next },
+          replace: true,
+        })
+      }
       onNavigateToList={() => void navigate({ to: '/contracts', search: {} as never })}
       onOpenCustomer={(customerId) =>
         void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
@@ -1586,6 +1642,77 @@ function ReportsRouteComponent() {
   )
 }
 
+/** Revenue › Revenue recognition: customers × months; the range, page and Details are in the URL. */
+const revenueRecognitionRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/revenue-recognition',
+  validateSearch: (search: Record<string, unknown>): RevenueRecognitionSearch =>
+    parseRevenueRecognitionSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_REVENUE_RECOGNITION_SEARCH)] },
+  component: RevenueRecognitionRouteComponent,
+})
+
+function RevenueRecognitionRouteComponent() {
+  const search = useSearch({ from: revenueRecognitionRoute.id })
+  const navigate = useNavigate()
+  return (
+    <RevenueRecognitionPage
+      search={search}
+      onSearchChange={(next) =>
+        void navigate({ to: '/revenue-recognition', search: next, replace: true })
+      }
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+    />
+  )
+}
+
+/** Revenue › Deferred and Unbilled rollforward: one ended month; month, search and page are in the URL. */
+const deferredRollforwardRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/deferred-rollforward',
+  validateSearch: (search: Record<string, unknown>): RollforwardSearch =>
+    parseRollforwardSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_ROLLFORWARD_SEARCH)] },
+  component: () => <RollforwardRouteComponent account="deferred_revenue" />,
+})
+
+const unbilledRollforwardRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/unbilled-rollforward',
+  validateSearch: (search: Record<string, unknown>): RollforwardSearch =>
+    parseRollforwardSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_ROLLFORWARD_SEARCH)] },
+  component: () => <RollforwardRouteComponent account="unbilled_receivable" />,
+})
+
+function RollforwardRouteComponent({ account }: { account: RollforwardAccount }) {
+  const route = account === 'deferred_revenue' ? deferredRollforwardRoute : unbilledRollforwardRoute
+  const search = useSearch({ from: route.id })
+  const navigate = useNavigate()
+  return (
+    <RollforwardPage
+      account={account}
+      search={search}
+      onSearchChange={(next) => void navigate({ to: route.fullPath, search: next, replace: true })}
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+      onOpenInvoice={(invoiceId) =>
+        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId }, search: {} as never })
+      }
+      onOpenSubscription={(subscriptionId) =>
+        void navigate({
+          to: '/contracts/$subscriptionId',
+          params: { subscriptionId },
+          search: {} as never,
+        })
+      }
+    />
+  )
+}
+
 /** The page's old address: links and bookmarks to /revenue land on Reports, filters kept. */
 const revenueRedirectRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -2198,8 +2325,9 @@ function PricingWidgetRouteComponent() {
 
   return (
     <PricingWidgetPage
-      onCreatePlan={() => void navigate({ to: '/plans/new' })}
-      onEditPlan={(planId) => void navigate({ to: '/plans/$planId/edit', params: { planId } })}
+      onViewPlan={(planId) =>
+        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+      }
     />
   )
 }
@@ -2616,11 +2744,15 @@ export const routeTree = rootRoute.addChildren([
   authCallbackRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
+  onboardingRoute,
   shellRoute.addChildren([
     ...legacyRoutes,
     customerContractRedirect,
     homeRoute,
     reportsRoute,
+    revenueRecognitionRoute,
+    deferredRollforwardRoute,
+    unbilledRollforwardRoute,
     revenueRedirectRoute,
     featuresRoute,
     featureCreateRoute,

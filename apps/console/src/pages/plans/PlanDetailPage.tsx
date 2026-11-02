@@ -24,7 +24,6 @@ import {
   entitlementToEdit,
   planKind,
   PlanKind,
-  usageBasedLabel,
 } from '@fp/domain'
 import {
   useArchivePlan,
@@ -94,7 +93,7 @@ import {
 import { usePlanFormOptions } from './planFormOptions'
 import { DuplicatePlanDialog } from './DuplicatePlanDialog'
 import { TerminateChargeDialog } from '../shared/TerminateChargeDialog'
-import { priceHistoryRows } from '@/pages/shared/priceHistory'
+import { priceHistoryRows, usePlanChargeHistory } from '@/pages/shared/priceHistory'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 import { useContractSync } from '../shared/useContractSync'
@@ -219,7 +218,7 @@ export function PlanDetailPage({
         }
         icon={<LayersIcon />}
         title={record.name}
-        id={record.lookupKey || record.id}
+        id={record.id}
         leading={
           mappings.controls ? (
             <ContractIntegrations
@@ -328,7 +327,7 @@ export function PlanDetailPage({
           ) : null}
         </div>
         <SavedPlanPreview
-          planId={planId}
+          plan={{ id: planId, name: record.name, description: record.description }}
           onJump={(target) => {
             setJumpTarget(target)
             onTabChange('overview')
@@ -391,24 +390,22 @@ function OverviewTab({ planId, readOnly }: { planId: string; readOnly: boolean }
 }
 
 function SavedPlanPreview({
-  planId,
+  plan,
   onJump,
 }: {
-  planId: string
+  plan: { id: string; name: string; description: string }
   onJump: (target: string) => void
 }) {
-  const charges = usePrices(PriceEntityType.Plan, planId)
-  const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
-  const grants = useCreditGrants(CreditGrantScope.Plan, planId)
-  const { meters, allFeatures } = usePlanFormOptions()
+  const charges = usePrices(PriceEntityType.Plan, plan.id)
+  const entitlements = useEntitlements(EntitlementEntityType.Plan, plan.id)
+  const grants = useCreditGrants(CreditGrantScope.Plan, plan.id)
   return (
     <PlanCustomerPreview
       className="lg:sticky lg:top-6"
+      plan={plan}
       charges={charges.data ?? []}
       entitlements={entitlements.data ?? []}
       grants={grants.data ?? []}
-      meterUnit={(id) => meters.find((meter) => meter.id === id)?.unit}
-      featureUnit={(id) => allFeatures.find((feature) => feature.id === id)?.unitPlural}
       onJump={onJump}
     />
   )
@@ -424,6 +421,8 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
   const [terminating, setTerminating] = useState<Charge | null>(null)
 
   const { charges: rows, details } = priceHistoryRows(charges.data ?? [])
+  // A charge's versions come from the history API when its sheet opens.
+  const chargeHistory = usePlanChargeHistory()
   const loading = charges.isPending || (charges.isError && charges.isFetching)
   const failed = charges.isError && !charges.isFetching
   const editing = form !== null && form !== 'add' ? form : null
@@ -453,9 +452,12 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
       <PlanChargesView
         charges={rows}
         details={details}
+        {...chargeHistory.table}
         onRevert={(charge, versionId) => {
           // No revert endpoint: the earlier price is saved as a new version from now.
-          const previous = (charges.data ?? []).find((price) => price.id === versionId)
+          const previous = [...chargeHistory.versions, ...(charges.data ?? [])].find(
+            (price) => price.id === versionId,
+          )
           return previous
             ? updatePrice.mutateAsync({
                 id: charge.id,
@@ -841,10 +843,7 @@ function planKindLabel(charges: Charge[]): string {
     fixedChargeCount: charges.filter((c) => c.type === PriceType.Fixed).length,
     usageChargeCount: usage.length,
   })
-  // Usage only: no flat price to qualify, so name what it meters instead.
-  if (kind === PlanKind.Usage) {
-    return usageBasedLabel(usage.map((c) => c.displayName || c.meterName || ''))
-  }
+  if (kind === PlanKind.Usage) return 'Usage-based'
   return PLAN_KIND_LABEL[kind]
 }
 

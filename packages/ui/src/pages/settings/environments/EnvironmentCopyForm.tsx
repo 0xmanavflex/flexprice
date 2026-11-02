@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { InfoIcon, TriangleAlertIcon } from '@ui/icons'
+import { CircleCheckIcon, ClockIcon, InfoIcon, TriangleAlertIcon } from '@ui/icons'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
@@ -56,6 +56,18 @@ export interface EnvironmentCopyFormProps {
 }
 
 const NEW_SANDBOX = '__new_sandbox__'
+
+/** What the copy carries, as V1 lists it. */
+const COPIED = [
+  {
+    title: 'All active features',
+    description: 'Static, boolean and metered features, with their meters',
+  },
+  {
+    title: 'All active plans',
+    description: 'With every price, entitlement and credit grant on each plan',
+  },
+] as const
 
 /** From a sandbox, Production first: that is what taking a setup live means. */
 function defaultTarget(source: CopyableEnvironment, targets: readonly CopyableEnvironment[]) {
@@ -124,10 +136,17 @@ export function EnvironmentCopyForm({
         onSubmit={submit}
       >
         <p className="text-muted-foreground text-[13px]">
-          Copies every published plan and feature in <strong>{source.name}</strong>, with their
-          prices, entitlements and credit grants. Customers, contracts and invoices stay where they
-          are.
+          Copies from <strong className="text-foreground font-medium">{source.name}</strong>{' '}
+          {isNew ? 'into a new environment.' : 'into the environment you choose.'}
         </p>
+
+        <Alert variant="info">
+          <InfoIcon aria-hidden />
+          <AlertDescription>
+            Everything active is copied as it is. Archive anything you do not want carried over
+            before you copy.
+          </AlertDescription>
+        </Alert>
 
         <FieldGroup className="gap-4">
           <Field className="gap-2">
@@ -135,7 +154,7 @@ export function EnvironmentCopyForm({
               htmlFor="copy-target"
               hint="An existing environment, or a new sandbox made for the copy."
             >
-              Copy to
+              Copy into
             </LabelWithHint>
             <OptionSelect
               id="copy-target"
@@ -148,7 +167,11 @@ export function EnvironmentCopyForm({
                   label: environment.name,
                   hint: environment.kind === 'production' ? 'Production' : 'Sandbox',
                 })),
-                { value: NEW_SANDBOX, label: 'New sandbox' },
+                {
+                  value: NEW_SANDBOX,
+                  label: 'Create a new environment',
+                  hint: 'A new sandbox for the copy',
+                },
               ]}
             />
           </Field>
@@ -156,7 +179,7 @@ export function EnvironmentCopyForm({
           {isNew ? (
             <Field className="gap-2">
               <LabelWithHint htmlFor="copy-name" hint="What the new sandbox is called.">
-                Name
+                New environment name
                 <span aria-hidden className="text-destructive">
                   *
                 </span>
@@ -164,7 +187,7 @@ export function EnvironmentCopyForm({
               <Input
                 id="copy-name"
                 autoFocus
-                placeholder={`${source.name} copy`}
+                placeholder="For example Staging"
                 value={name}
                 disabled={isSubmitting}
                 aria-invalid={nameError ? true : undefined}
@@ -188,14 +211,39 @@ export function EnvironmentCopyForm({
           </Alert>
         ) : null}
 
-        <Alert variant="info">
-          <InfoIcon aria-hidden />
-          <AlertDescription>
-            Anything whose lookup key {isNew ? 'the target' : (target?.name ?? 'the target')}{' '}
-            already has is skipped, so running it again adds only what is new. It does not update
-            plans copied before.
-          </AlertDescription>
-        </Alert>
+        <section aria-labelledby="copy-what" className="overflow-hidden rounded-lg border">
+          <h3
+            id="copy-what"
+            className="bg-muted/40 text-muted-foreground border-b px-4 py-2.5 text-xs tracking-wide uppercase"
+          >
+            What will be copied
+          </h3>
+          <ul className="divide-y">
+            {COPIED.map((item) => (
+              <li key={item.title} className="flex items-start gap-3 px-4 py-3">
+                <CircleCheckIcon aria-hidden className="text-success mt-0.5 size-4 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">{item.title}</p>
+                  <p className="text-muted-foreground text-[13px]">{item.description}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="bg-muted/40 text-muted-foreground border-t px-4 py-2.5 text-[13px]">
+            Drafts, archived items, customers, contracts, invoices and wallet balances are not
+            copied.
+            {isNew
+              ? null
+              : ` Anything whose lookup key ${target?.name ?? 'the target'} already has is skipped, so running it again adds only what is new; plans copied before are not updated.`}
+          </p>
+        </section>
+
+        <p className="text-muted-foreground flex items-start gap-2 text-[13px]">
+          <ClockIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
+          {isNew
+            ? 'The environment is created at once. Features and plans are copied in the background and can take a few minutes to appear.'
+            : 'Features and plans are copied in the background and can take a few minutes to appear.'}
+        </p>
 
         {submitError ? (
           <p role="alert" className="text-destructive text-sm">

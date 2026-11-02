@@ -7,6 +7,7 @@ import {
   type BillingPeriod,
   type Charge,
   type ChargeDetail,
+  type ChargeHistory,
   type ChargeSection,
   InvoiceCadence,
   PriceType,
@@ -17,6 +18,12 @@ import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabSta
 import type { ReactElement } from 'react'
 import { ArrowRightIcon, CircleSlashIcon, CopyIcon, EyeIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@ui/components/primitives/tooltip'
 import { Section } from '@ui/compositions/layout/Section'
 
 import { provenance } from '@ui/provenance'
@@ -25,7 +32,6 @@ import { DetailTable, type DetailColumn } from '../../shared/DetailTable'
 import { Pill, type PillTone } from '../../shared/cells'
 import { ChargeFlags } from './ChargeFlags'
 import { ChargeSheet } from './ChargeSheet'
-
 /**
  * A charges section: what a plan, add-on, contract or cost sheet bills.
  *
@@ -121,6 +127,13 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   editableSections?: (charge: Charge) => readonly ChargeSection[]
   /** Brings back a charge's previous price version, from its sheet's History. */
   onRevert?: ((charge: Charge, versionId: string) => Promise<unknown>) | undefined
+  /**
+   * Told which charge's sheet is open (`null` once closed), so the page can
+   * read that charge's history from the API and pass it back as `history`.
+   */
+  onOpenCharge?: ((charge: Charge | null) => void) | undefined
+  /** The open charge's versions from the history API. */
+  history?: ChargeHistory | undefined
   /** The summary variant's "Show all charges". */
   onShowAll?: () => void
   locale?: string
@@ -129,9 +142,9 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** `false` hides the heading where the tab already names it, so it never reads "Charges, Charges". */
   showTitle?: boolean
   /**
-   * Brings "Billing timing" on screen in the narrow layout. Both it and "In
-   * effect" are on by default in the wide layout; the narrow one keeps "In
-   * effect" in the column menu either way, so its row stays uncluttered.
+   * Brings "Billing timing" on screen in the narrow layout.
+   * It is on by default in the wide layout; without this the narrow one
+   * keeps it in the column menu. "In effect" is always on screen.
    */
   showDates?: boolean
   description?: string
@@ -191,6 +204,38 @@ function nameOf(charge: Charge): string {
 const DATE_OPTIONS = { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' } as const
 const DATE = new Intl.DateTimeFormat(undefined, DATE_OPTIONS)
 
+/** "Jan 1, 2026 → Ongoing". One line everywhere this table is shown. */
+function inEffect(charge: Charge, locale?: string): string {
+  const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
+  const start = charge.startDate ? format.format(charge.startDate) : 'Start date not set'
+  const end = charge.endDate ? format.format(charge.endDate) : 'Ongoing'
+  return `${start} → ${end}`
+}
+
+const STAMP_OPTIONS = {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+  timeZoneName: 'longOffset',
+} as const
+
+/** "28 Oct 2026, 09:15:32 GMT+5:30", in the viewer's zone. */
+function stamp(date: Date, locale?: string): string {
+  const parts = new Intl.DateTimeFormat(locale, STAMP_OPTIONS).formatToParts(date)
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? ''
+  return `${part('day')} ${part('month')} ${part('year')}, ${part('hour')}:${part('minute')}:${part('second')} ${part('timeZoneName')}`
+}
+
+/** Whether a charge's end has passed. A future end date is scheduled: the charge still bills. */
+export function hasEnded(charge: Charge, now: number = Date.now()): boolean {
+  return charge.endDate !== null && charge.endDate.getTime() <= now
+}
+
 const STATUS_TONE: Record<string, PillTone> = {
   Active: 'success',
   Changed: 'warning',
@@ -217,7 +262,7 @@ function kindLine(
   // Lifecycle first (it changes what the row means), then where the charge
   // came from where a page can say, then the billing model as the default.
   const rest = charge.endDate
-    ? `Ended ${format.format(charge.endDate)}`
+    ? `${hasEnded(charge) ? 'Ended' : 'Ends'} ${format.format(charge.endDate)}`
     : charge.startDate && charge.startDate.getTime() > Date.now()
       ? `Starts ${format.format(charge.startDate)}`
       : (source ??
@@ -258,6 +303,8 @@ export function ChargeTable({
   onEditSection,
   editableSections,
   onRevert,
+  onOpenCharge,
+  history,
   onShowAll,
   emptyDescription,
   locale,
@@ -274,7 +321,12 @@ export function ChargeTable({
   isRetrying,
 }: ChargeTableProps) {
   // The sheet the rows and flags open, unless the page took the click instead.
-  const [open, setOpen] = useState<{ charge: Charge; section?: ChargeSection } | null>(null)
+  const [open, setOpenState] = useState<{ charge: Charge; section?: ChargeSection } | null>(null)
+  // The page hears which charge is open, to read its history as the sheet opens.
+  const setOpen = (next: { charge: Charge; section?: ChargeSection } | null) => {
+    setOpenState(next)
+    onOpenCharge?.(next?.charge ?? null)
+  }
   const narrow = layout === 'narrow'
   const hasActions = !hideRowActions && Boolean(onEdit || onTerminate || !onRowClick)
 
@@ -284,18 +336,19 @@ export function ChargeTable({
   const { active, ended } = useMemo(() => {
     const order = ordering(details)
     return {
-      active: charges.filter((charge) => !charge.endDate).sort(order),
-      ended: charges.filter((charge) => charge.endDate).sort(order),
+      active: charges.filter((charge) => !hasEnded(charge)).sort(order),
+      ended: charges.filter((charge) => hasEnded(charge)).sort(order),
     }
   }, [charges, details])
 
-  // The full table lists every charge, live first; Status narrows it. The
-  // summary lists the live ones (changed first, so they lead) up to a few,
-  // and "Show all charges" goes to the rest. Unchanged charges are still
+  // Only charges billing now (or only scheduled so far) are rows: one whose
+  // end date has passed is history, reached from its charge's History, never
+  // a row of its own. The summary lists the first few (changed first, so they
+  // lead) and "Show all charges" goes to the rest. Unchanged charges are still
   // charges: a contract on its plan's prices must not read as empty.
-  const rows = variant === 'summary' ? active.slice(0, SUMMARY_ROWS) : [...active, ...ended]
+  const rows = variant === 'summary' ? active.slice(0, SUMMARY_ROWS) : active
   const statusOf = (charge: Charge) =>
-    charge.endDate ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
+    hasEnded(charge) ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
 
   const addButton = onAdd ? (
     // Follows the surrounding AccessScope (price on a plan, subscription on a contract).
@@ -370,6 +423,35 @@ export function ChargeTable({
       ),
     },
     {
+      key: 'in-effect',
+      header: 'In effect',
+      width: 240,
+      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
+      text: (charge) => inEffect(charge, locale),
+      cell: (charge) => (
+        <Tooltip>
+          <TooltipTrigger
+            render={<span className="text-sm tabular-nums" />}
+            aria-label={`In effect: start ${charge.startDate ? stamp(charge.startDate, locale) : 'not set'}, end ${charge.endDate ? stamp(charge.endDate, locale) : 'ongoing'}`}
+          >
+            {inEffect(charge, locale)}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="flex-col items-stretch gap-1 px-3 py-2">
+            <span className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
+              <span className="opacity-70">Start</span>
+              <span className="tabular-nums">
+                {charge.startDate ? stamp(charge.startDate, locale) : 'Not set'}
+              </span>
+              <span className="opacity-70">End</span>
+              <span className="tabular-nums">
+                {charge.endDate ? stamp(charge.endDate, locale) : 'Ongoing'}
+              </span>
+            </span>
+          </TooltipContent>
+        </Tooltip>
+      ),
+    },
+    {
       key: 'price',
       header: 'Price',
       width: narrow ? 150 : 170,
@@ -399,19 +481,12 @@ export function ChargeTable({
     },
   ]
 
-  const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
-  const inEffect = (charge: Charge) =>
-    !charge.startDate && !charge.endDate
-      ? 'Always'
-      : `${charge.startDate ? format.format(charge.startDate) : '—'} → ${
-          charge.endDate ? format.format(charge.endDate) : 'Ongoing'
-        }`
   const timing = (charge: Charge) =>
     charge.invoiceCadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'
 
-  // After price: quantity (when a page knows it), billing timing and the dates
-  // the charge is in effect, then flags. Beside a side rail (narrow) the dates
-  // sit in the column menu, and timing too unless `showDates` asks for it.
+  // After the in-effect column: quantity (when a page knows it) and billing
+  // timing, then price and flags. Beside a side rail, timing sits in the
+  // column menu unless `showDates` asks for it.
   const middle: DetailColumn<Charge>[] = []
   if (!narrow && charges.some((charge) => details?.get(charge.id)?.quantity !== undefined)) {
     middle.push({
@@ -424,27 +499,15 @@ export function ChargeTable({
       ),
     })
   }
-  middle.push(
-    {
-      key: 'timing',
-      header: 'Billing timing',
-      // Wide enough that its header never runs into "In effect".
-      width: 170,
-      text: timing,
-      cell: (charge) => <span>{timing(charge)}</span>,
-      ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
-    },
-    {
-      key: 'dates',
-      header: 'In effect',
-      width: 240,
-      sortBy: (charge) => charge.startDate?.getTime() ?? 0,
-      text: inEffect,
-      cell: (charge) => <span className="tabular-nums">{inEffect(charge)}</span>,
-      // Too much for a row beside a side rail; still one click away in the column menu.
-      ...(narrow ? { hiddenByDefault: true } : {}),
-    },
-  )
+  middle.push({
+    key: 'timing',
+    header: 'Billing timing',
+    // Wide enough that its header never runs into "In effect".
+    width: 170,
+    text: timing,
+    cell: (charge) => <span>{timing(charge)}</span>,
+    ...(narrow && !showDates ? { hiddenByDefault: true } : {}),
+  })
   columns.splice(2, 0, ...middle)
   columns.push({
     key: 'status',
@@ -516,83 +579,86 @@ export function ChargeTable({
   const description = variant === 'summary' ? undefined : sectionDescription
 
   return (
-    <>
-      <Section
-        table
-        showTitle={showTitle}
-        title={title}
-        {...(description ? { description } : {})}
-        {...(headerAction && (showTitle || rows.length === 0) ? { action: headerAction } : {})}
-      >
-        {rows.length === 0 ? (
-          <SubTabState
-            hasData={false}
-            isLoading={false}
-            columns={4}
-            loadingLabel="Loading charges"
-            empty={{
-              scene: 'catalog',
-              // A summary with only ended charges is not a contract without
-              // charges: say none are live, and Show all charges reaches them.
-              ...(variant === 'summary' && ended.length > 0
-                ? {
-                    title: 'No active charges',
-                    description: 'Ended charges are listed under Show all charges.',
-                  }
-                : { title: 'No charges yet' }),
-            }}
-          >
-            {null}
-          </SubTabState>
-        ) : (
-          <DetailTable
-            compact
-            label="Charges"
-            // The summary is a few rows; filtering or sorting them would only
-            // reorder what is shown, so those live on the full table.
-            toolbar={variant === 'full'}
-            // The billing model left the columns for the grey line under the
-            // name, but it is still what someone narrows a long list by, so the
-            // filter keeps it.
-            facets={[
-              {
-                id: 'model',
-                label: 'Billing model',
-                value: (charge: Charge) => modelLabel(charge),
-              },
-              // Always offered on the full table, so ended charges can be asked for.
-              ...(variant === 'full' ? [{ id: 'status', label: 'Status', value: statusOf }] : []),
-              ...(facets ?? []),
-            ]}
-            noun="charges"
-            {...(!showTitle && headerAction ? { action: headerAction } : {})}
-            rows={rows}
-            columns={columns}
-            onRowClick={onRowClick ?? ((charge: Charge) => openAt(charge))}
-          />
-        )}
-      </Section>
+    <TooltipProvider delay={300}>
+      <>
+        <Section
+          table
+          showTitle={showTitle}
+          title={title}
+          {...(description ? { description } : {})}
+          {...(headerAction && (showTitle || rows.length === 0) ? { action: headerAction } : {})}
+        >
+          {rows.length === 0 ? (
+            <SubTabState
+              hasData={false}
+              isLoading={false}
+              columns={4}
+              loadingLabel="Loading charges"
+              empty={{
+                scene: 'catalog',
+                // Charges that have all ended are not a record without charges:
+                // say none are live.
+                ...(ended.length > 0
+                  ? {
+                      title: 'No active charges',
+                      description: 'Every charge here has ended.',
+                    }
+                  : { title: 'No charges yet' }),
+              }}
+            >
+              {null}
+            </SubTabState>
+          ) : (
+            <DetailTable
+              compact
+              label="Charges"
+              // The summary is a few rows; filtering or sorting them would only
+              // reorder what is shown, so those live on the full table.
+              toolbar={variant === 'full'}
+              // The billing model left the columns for the grey line under the
+              // name, but it is still what someone narrows a long list by, so the
+              // filter keeps it.
+              facets={[
+                {
+                  id: 'model',
+                  label: 'Billing model',
+                  value: (charge: Charge) => modelLabel(charge),
+                },
+                // Active or Changed: ended charges are not rows, so not a status.
+                ...(variant === 'full' ? [{ id: 'status', label: 'Status', value: statusOf }] : []),
+                ...(facets ?? []),
+              ]}
+              noun="charges"
+              {...(!showTitle && headerAction ? { action: headerAction } : {})}
+              rows={rows}
+              columns={columns}
+              onRowClick={onRowClick ?? ((charge: Charge) => openAt(charge))}
+            />
+          )}
+        </Section>
 
-      <ChargeSheet
-        charge={open?.charge ?? null}
-        {...(open && editableSections ? { editableSections: editableSections(open.charge) } : {})}
-        priceLabel={open ? priceLabel(open.charge) : undefined}
-        {...(open ? { detail: details?.get(open.charge.id) } : {})}
-        {...(open?.section ? { section: open.section } : {})}
-        {...(onEditSection && open
-          ? {
-              onEdit: (part: ChargeSection) => {
-                setOpen(null)
-                onEditSection(open.charge, part)
-              },
-            }
-          : {})}
-        {...(locale ? { locale } : {})}
-        {...(onRevert && open
-          ? { onRevert: (versionId: string) => onRevert(open.charge, versionId) }
-          : {})}
-        onClose={() => setOpen(null)}
-      />
-    </>
+        <ChargeSheet
+          charge={open?.charge ?? null}
+          {...(open && editableSections ? { editableSections: editableSections(open.charge) } : {})}
+          priceLabel={open ? priceLabel(open.charge) : undefined}
+          {...(open ? { detail: details?.get(open.charge.id) } : {})}
+          {...(open?.section ? { section: open.section } : {})}
+          {...(onEditSection && open
+            ? {
+                onEdit: (part: ChargeSection) => {
+                  setOpen(null)
+                  onEditSection(open.charge, part)
+                },
+              }
+            : {})}
+          {...(locale ? { locale } : {})}
+          {...(onRevert && open
+            ? { onRevert: (versionId: string) => onRevert(open.charge, versionId) }
+            : {})}
+          {...(open && history ? { history } : {})}
+          onClose={() => setOpen(null)}
+        />
+      </>
+    </TooltipProvider>
   )
 }

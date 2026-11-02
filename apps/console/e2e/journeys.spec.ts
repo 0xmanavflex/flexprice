@@ -151,12 +151,12 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
 
     await page.getByRole('button', { name: 'Top up wallet' }).click()
     const topUp = page.getByRole('dialog', { name: 'Top up wallet' })
-    await topUp.getByLabel('Credits').fill('125')
+    await topUp.getByLabel('Credits', { exact: true }).fill('125')
     await topUp.getByRole('button', { name: 'Top up' }).click()
     await expect(topUp).toBeHidden()
     await expect(page.getByText('625 credits').first()).toBeVisible()
     await expect(
-      page.getByRole('region', { name: 'Top-ups table' }).getByText('Purchased credits'),
+      page.getByRole('region', { name: 'Transactions table' }).getByText('Purchased credits'),
     ).toBeVisible()
   })
 

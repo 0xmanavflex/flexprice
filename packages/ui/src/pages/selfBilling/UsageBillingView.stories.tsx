@@ -31,10 +31,14 @@ export const Trial: Story = {
     const canvas = within(canvasElement)
     await expect(
       canvas.getByText(
-        'Your trial ends on Nov 4, 2026, in 15 days. Then $199.00 a month + 0.5% of what you bill through Flexprice.',
+        'Your trial ends on Nov 4, 2026, in 15 days. Then $199.00 a month + $0.005 per Invoice value.',
       ),
     ).toBeVisible()
-    await expect(canvas.getByText('Free trial, 30 days')).toBeVisible()
+    await expect(canvas.getByText('Free trial, then Pay as you go')).toBeVisible()
+    // The plan's charges, each priced as the API reports it.
+    await expect(canvas.getByText('Platform fee')).toBeVisible()
+    await expect(canvas.getByText('$199.00 a month')).toBeVisible()
+    await expect(canvas.getByText('$0.005 per Invoice value')).toBeVisible()
     await expect(canvas.getByText('Nov 4, 2026 · 15 days left')).toBeVisible()
     await expect(canvas.getByText('No fee during the trial')).toBeVisible()
     await expect(canvas.getByText('No invoices yet')).toBeVisible()
@@ -91,10 +95,11 @@ export const Live: Story = {
   args: { summary: ACCOUNTS.live, billingEmail: 'billing@acme.io' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Pay as you go · $199.00 a month + 0.5% of what you bill through Flexprice')).toBeVisible()
+    await expect(canvas.getByText('Pay as you go')).toBeVisible()
+    await expect(canvas.getByText('$199.00 a month')).toBeVisible()
     await expect(canvas.getByText('Next invoice on Oct 31, 2026.')).toBeVisible()
     await expect(canvas.getByText('No limit on your plan')).toBeVisible()
-    await expect(canvas.getByText('0.5% fee so far: $921.00')).toBeVisible()
+    await expect(canvas.getByText('Charged as your plan sets out')).toBeVisible()
     await expect(canvas.getByRole('link', { name: 'Download FP-0003' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: /Manage billing/ })).toBeEnabled()
     await expect(canvas.getByText('billing@acme.io')).toBeVisible()

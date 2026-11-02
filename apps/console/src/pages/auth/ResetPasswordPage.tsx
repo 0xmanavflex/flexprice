@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { AuthFrame, SetPasswordForm } from '@fp/ui/pages'
 import { useRegion } from '@/app/region'
+import { useSession } from '@/app/session'
 import {
   PasswordResetUnavailable,
   completePasswordReset,
@@ -20,10 +21,16 @@ import {
  * loaded with. It cannot be read later: supabase-js strips the fragment as soon
  * as it has consumed it, so a check on any subsequent render would conclude the
  * link was never there and show the expired screen over a working form.
+ *
+ * A console session already open in this browser ends once the password is
+ * changed. The page is reachable signed in, and `/sign-in` steps aside to the
+ * dashboard for a live session, so "Back to sign in" would otherwise land on
+ * the dashboard of whoever was signed in, under the old password.
  */
 export function ResetPasswordPage() {
   const navigate = useNavigate()
   const { region } = useRegion()
+  const session = useSession()
   const [arrivedWithLink] = useState(hasRecoveryToken)
   const [done, setDone] = useState(false)
   const [isSubmitting, setSubmitting] = useState(false)
@@ -45,7 +52,10 @@ export function ResetPasswordPage() {
             setSubmitting(true)
             setError(null)
             completePasswordReset(region, password)
-              .then(() => setDone(true))
+              .then(() => {
+                if (session.session) session.signOut()
+                setDone(true)
+              })
               .catch((cause: unknown) => {
                 setError(
                   cause instanceof PasswordResetUnavailable

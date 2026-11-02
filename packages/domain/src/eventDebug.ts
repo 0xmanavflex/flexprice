@@ -342,3 +342,39 @@ export function eventDebugSummary(debug: EventDebug): string {
       return 'Everything matched, but the quantity was not added to the customer’s usage.'
   }
 }
+
+/** A meter that sums (or maxes, averages…) a property this event does not carry. */
+export interface MissingAggregationField {
+  meterId: string
+  meterName: string
+  /** The property the meter reads, as `aggregation.field`. */
+  field: string
+  /** The aggregation, as the wire spells it: `SUM`, `MAX` and so on. */
+  aggregation: string
+}
+
+/**
+ * The matched meters that read a property the event does not have.
+ *
+ * A meter that aggregates a field (anything but a count, and not a CEL
+ * expression) takes its quantity from `properties[field]`. When the event
+ * leaves it out, the event matches and bills, but adds nothing: the most
+ * common "why is usage zero" there is, and nothing in the five stages says so.
+ */
+export function missingAggregationFields(
+  debug: EventDebug,
+  properties: Record<string, unknown>,
+): MissingAggregationField[] {
+  const stage = debug.stages.find((result) => result.stage === 'meterMatching')
+  if (!stage) return []
+  return list(stage.raw['matched_meters']).flatMap((match) => {
+    const meter = record(match['meter'])
+    const aggregation = record(meter['aggregation'])
+    const type = text(aggregation['type']).toUpperCase()
+    const field = text(aggregation['field']).trim()
+    if (!field || type === 'COUNT' || text(aggregation['expression']).trim()) return []
+    if (Object.prototype.hasOwnProperty.call(properties, field)) return []
+    const meterId = text(match['meter_id']) || text(meter['id'])
+    return [{ meterId, meterName: text(meter['name']) || meterId, field, aggregation: type }]
+  })
+}

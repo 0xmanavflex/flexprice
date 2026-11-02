@@ -468,6 +468,16 @@ export const env = {
   posthog,
   /** `VITE_PLATFORM_CONFIG`: what this deployment allows, and how people reach us. */
   platform,
+  /**
+   * The Google Apps Script web app that appends each completed onboarding to
+   * the team's sheet (V1's `VITE_GOOGLE_SHEETS_WEB_APP_URL`, same value).
+   * `null` when unset: onboarding still completes, and the missed row is
+   * reported (`app/onboarding/recordOnboarding.ts`). Never set under mocks, so
+   * local runs and the E2E suite write nothing.
+   */
+  googleSheetsWebAppUrl: useMocks
+    ? null
+    : (clean(import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL) ?? null),
   /** A production build: config warnings stay quiet there, as in V1. */
   isProd: import.meta.env.PROD,
   /**

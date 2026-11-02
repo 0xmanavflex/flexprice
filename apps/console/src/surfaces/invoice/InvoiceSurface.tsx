@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ApiError,
   useHostedInvoice,
@@ -10,6 +10,7 @@ import { publicApiUrls } from '../publicApi'
 import { type HostedInvoiceLink, parseHostedInvoiceLink } from './link'
 import { pageKind } from './pageKind'
 import { isSafeNavigationUrl } from '../safeUrl'
+import { frameablePdf } from './pdfFrame'
 
 const GENERIC_ERROR = 'Something went wrong, please try again.'
 
@@ -32,7 +33,20 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
   const { pay, isPending: isPaying } = usePayHostedInvoice(link.apiOrigin, link.token)
   const { download } = useHostedInvoiceDownload(link.apiOrigin, link.token)
   const [payError, setPayError] = useState<string | null>(null)
-  const [preview, setPreview] = useState<{ url: string | null; error: string | null } | null>(null)
+  const [preview, setPreview] = useState<{
+    url: string | null
+    frameUrl?: string | null
+    error: string | null
+  } | null>(null)
+  // The blob: copy the preview frames, released when the preview closes; the
+  // sequence drops an answer that arrives after the preview was closed.
+  const frame = useRef<string | null>(null)
+  const previewSeq = useRef(0)
+  const releaseFrame = () => {
+    if (frame.current) URL.revokeObjectURL(frame.current)
+    frame.current = null
+  }
+  useEffect(() => releaseFrame, [])
 
   useEffect(() => {
     if (data)
@@ -80,18 +94,25 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
 
   // The preview fetches the PDF's link when it opens (each link lasts an hour); its Download PDF saves it.
   const onPreview = async () => {
+    const seq = ++previewSeq.current
+    releaseFrame()
     setPreview({ url: null, error: null })
     try {
       const url = await download()
-      setPreview((open) =>
-        open === null
-          ? null
-          : url !== null && isSafeNavigationUrl(url)
-            ? { url, error: null }
-            : { url: null, error: GENERIC_ERROR },
-      )
+      if (seq !== previewSeq.current) return
+      if (url === null || !isSafeNavigationUrl(url)) {
+        setPreview({ url: null, error: GENERIC_ERROR })
+        return
+      }
+      const frameUrl = await frameablePdf(url)
+      if (seq !== previewSeq.current) {
+        if (frameUrl?.startsWith('blob:')) URL.revokeObjectURL(frameUrl)
+        return
+      }
+      if (frameUrl?.startsWith('blob:')) frame.current = frameUrl
+      setPreview({ url, frameUrl, error: null })
     } catch (cause) {
-      setPreview((open) => (open === null ? null : { url: null, error: messageOf(cause) }))
+      if (seq === previewSeq.current) setPreview({ url: null, error: messageOf(cause) })
     }
   }
 
@@ -104,7 +125,11 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
       payError={payError}
       onPreview={() => void onPreview()}
       preview={preview}
-      onClosePreview={() => setPreview(null)}
+      onClosePreview={() => {
+        previewSeq.current++
+        releaseFrame()
+        setPreview(null)
+      }}
     />
   )
 }

@@ -14,16 +14,33 @@
  */
 import { z } from 'zod'
 
-/** The one plan a tenant upgrades to, as the pricing page sells it. */
-export const SELF_BILLING_PLAN = {
-  name: 'Pay as you go',
-  /** The monthly platform fee, in USD. */
-  base: 199,
-  /** The share of what the tenant bills through Flexprice in production. */
-  rate: 0.005,
-  currency: 'USD',
-  trialDays: 30,
-} as const
+/**
+ * One charge on the tenant's Flexprice plan. Read from the summary's `plan`:
+ * the console holds no prices of its own.
+ */
+export interface SelfBillingCharge {
+  id: string
+  name: string
+  /** A flat fee each period, or a price per unit of a meter. */
+  type: 'fixed' | 'usage'
+  /** A decimal string, as the API sent it. */
+  amount: string
+  currency: string
+  /** The wire's period word: `MONTHLY`, `ANNUAL` and so on. Empty when not given. */
+  billingPeriod: string
+  billingPeriodCount: number
+  /** Units priced together: "$2 per 1,000 calls" has 1000. Null for one unit. */
+  divideBy: number | null
+  /** What a usage charge counts. Null for a fixed charge. */
+  meterName: string | null
+}
+
+export interface SelfBillingPlan {
+  id: string
+  name: string
+  description: string
+  charges: SelfBillingCharge[]
+}
 
 export const AccountState = {
   Trialing: 'trialing',
@@ -56,6 +73,8 @@ export interface SelfBillingInvoice {
 
 export interface SelfBillingSummary {
   state: AccountState
+  /** The plan the tenant is on, or upgrades to. Null when the API does not report one. */
+  plan: SelfBillingPlan | null
   /** `YYYY-MM-DD` the trial ends, while the subscription has one. */
   trialEndsOn: string | null
   invoices: SelfBillingInvoice[]
@@ -153,7 +172,70 @@ export function usd(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
 }
 
-export const planRateText = `${SELF_BILLING_PLAN.rate * 100}%`
+/** An amount in its currency, with as many decimals as a per-unit rate needs. */
+export function planMoney(amount: string | number, currency: string): string {
+  const n = Number(amount)
+  if (!Number.isFinite(n)) return String(amount)
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase() || 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    }).format(n)
+  } catch {
+    return `${n} ${currency.toUpperCase()}`
+  }
+}
+
+const PERIOD_UNIT: Record<string, [string, number]> = {
+  DAILY: ['day', 1],
+  WEEKLY: ['week', 1],
+  MONTHLY: ['month', 1],
+  QUARTERLY: ['month', 3],
+  HALF_YEARLY: ['month', 6],
+  ANNUAL: ['year', 1],
+  YEARLY: ['year', 1],
+}
+
+/** "a month", "every 3 months"; empty for a period the wire did not name. */
+export function periodText(period: string, count = 1): string {
+  const unit = PERIOD_UNIT[period.toUpperCase()]
+  if (!unit) return ''
+  const n = unit[1] * Math.max(1, count || 1)
+  return n === 1 ? `a ${unit[0]}` : `every ${n} ${unit[0]}s`
+}
+
+/** One charge's price: "$199.00 a month", "$2.00 per 1,000 API calls". */
+export function chargePriceText(charge: SelfBillingCharge): string {
+  const price = planMoney(charge.amount, charge.currency)
+  if (charge.type === 'fixed') {
+    const every = periodText(charge.billingPeriod, charge.billingPeriodCount)
+    return every ? `${price} ${every}` : price
+  }
+  const unit = charge.meterName || 'unit'
+  return charge.divideBy && charge.divideBy > 1
+    ? `${price} per ${charge.divideBy.toLocaleString('en-US')} ${unit}`
+    : `${price} per ${unit}`
+}
+
+/** Every charge's price, joined: "$199.00 a month + $0.005 per Invoice value". Null without charges. */
+export function planPriceText(plan: SelfBillingPlan | null): string | null {
+  if (!plan || plan.charges.length === 0) return null
+  return plan.charges.map(chargePriceText).join(' + ')
+}
+
+/** The plan's flat fees summed, in their currency: what an upgrade charges up front. */
+export function planFixedTotal(
+  plan: SelfBillingPlan | null,
+): { amount: number; currency: string } | null {
+  const fixed = plan?.charges.filter((charge) => charge.type === 'fixed') ?? []
+  if (fixed.length === 0) return null
+  const currency = fixed[0]!.currency
+  if (fixed.some((charge) => charge.currency !== currency)) return null
+  const amount = fixed.reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0)
+  return { amount, currency }
+}
 
 /** The hover card's line: why it is locked, or what happens next. */
 export function accountCopy(summary: SelfBillingSummary, today: string): string {
@@ -171,7 +253,8 @@ export function accountCopy(summary: SelfBillingSummary, today: string): string 
     return `${Math.round(trial.share * 100)}% of trial events used. At ${cap} your account becomes read-only.`
   if (trial.daysLeft <= URGENT_DAYS)
     return `Ends on ${ends}. After that your account becomes read-only.`
-  return `Ends on ${ends}${cap ? `, or at ${cap} events` : ''}. Then ${usd(SELF_BILLING_PLAN.base)} a month + ${planRateText} of what you bill through Flexprice.`
+  const then = planPriceText(summary.plan)
+  return `Ends on ${ends}${cap ? `, or at ${cap} events` : ''}.${then ? ` Then ${then}.` : ''}`
 }
 
 /** The reason every disabled write control gives while the account is locked. */

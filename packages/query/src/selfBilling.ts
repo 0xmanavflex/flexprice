@@ -7,6 +7,7 @@ import {
   type SelfBillingCheckoutWire,
   type SelfBillingFeatureUsageWire,
   type SelfBillingStatusWire,
+  type SelfBillingPlanWire,
   type SelfBillingSummaryWire,
   cancelSelfBillingCheckout,
   createSelfBillingPortalSession,
@@ -20,6 +21,7 @@ import {
   type CheckoutDetails,
   CheckoutStatus,
   type SelfBillingCheckout,
+  type SelfBillingPlan,
   type SelfBillingStatus,
   type SelfBillingSummary,
   selfInvoiceStatus,
@@ -74,6 +76,31 @@ const number = (value: string | number | null | undefined) => {
   return Number.isFinite(n) ? n : 0
 }
 
+/** The summary's plan, or null when it has none: the console prices nothing itself. */
+export function toSelfBillingPlan(wire: SelfBillingPlanWire | null | undefined): SelfBillingPlan | null {
+  if (!wire || (!wire.id && !wire.name)) return null
+  return {
+    id: wire.id ?? '',
+    name: wire.name ?? '',
+    description: wire.description ?? '',
+    charges: (wire.charges ?? []).map((charge) => {
+      const divideBy = Number(charge.transform_quantity?.divide_by ?? 0)
+      const usage = (charge.type ?? '').toUpperCase() === 'USAGE'
+      return {
+        id: charge.price_id || charge.line_item_id || '',
+        name: charge.display_name || charge.meter_display_name || '',
+        type: usage ? ('usage' as const) : ('fixed' as const),
+        amount: charge.amount ?? '0',
+        currency: (charge.currency ?? 'usd').toUpperCase(),
+        billingPeriod: charge.billing_period ?? '',
+        billingPeriodCount: charge.billing_period_count ?? 1,
+        divideBy: Number.isFinite(divideBy) && divideBy > 1 ? divideBy : null,
+        meterName: usage ? charge.meter_display_name || null : null,
+      }
+    }),
+  }
+}
+
 export function toSelfBillingSummary(
   wire: SelfBillingSummaryWire,
   today: string = localToday(),
@@ -85,6 +112,7 @@ export function toSelfBillingSummary(
   const end = day(wire.usage?.period?.end_time)
   return {
     state: toState(wire.status) ?? AccountState.Trialing,
+    plan: toSelfBillingPlan(wire.plan),
     trialEndsOn: day(wire.trial_ends_at),
     invoices: (wire.invoices ?? []).map((invoice) => {
       const dueDate = day(invoice.due_date)

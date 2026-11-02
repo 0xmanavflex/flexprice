@@ -57,7 +57,23 @@ export const WALLET_KIND_LABEL: Record<WalletKind, string> = {
   POST_PAID: 'Postpaid',
 }
 
-/** One prepaid wallet. Balances stay decimal strings; the API owns the arithmetic. */
+/**
+ * How a wallet is named in a picker: its name, else its description, else
+ * its type ("Postpaid wallet"), and the currency unless the name already says
+ * it. Never assumes prepaid: a postpaid wallet must not read as prepaid credits.
+ */
+export function walletLabel(
+  wallet: Pick<Wallet, 'name' | 'description' | 'walletType' | 'currency'>,
+): string {
+  const currency = wallet.currency.toUpperCase()
+  const base =
+    wallet.name.trim() ||
+    wallet.description.trim() ||
+    `${wallet.walletType ? WALLET_KIND_LABEL[wallet.walletType] : 'Credit'} wallet`
+  return new RegExp(`\\b${currency}\\b`, 'i').test(base) ? base : `${base} · ${currency}`
+}
+
+/** One wallet, prepaid or postpaid. Balances stay decimal strings; the API owns the arithmetic. */
 export interface Wallet {
   /** Balance alert thresholds stored on the wallet (`alert_settings`); null when none. */
   alertSettings?: AlertSettingConfig | null
@@ -67,6 +83,8 @@ export interface Wallet {
   status: WalletStatus
   /** Prepaid (drawn down in real time) or postpaid (settled on the invoice); null when the API does not say. */
   walletType: WalletKind | null
+  /** The wallet's own name (`name`), e.g. "Postpaid Wallet - USD"; empty when unnamed. */
+  name: string
   description: string
   /** Credits as of the last invoice. */
   creditBalance: string
@@ -84,23 +102,6 @@ export interface Wallet {
 }
 
 export type WalletTransactionDirection = 'in' | 'out'
-
-/**
- * Credits one debit drew from a top-up: the API reports, on each debit, which
- * top-ups it drew from (`consumption_breakdown`), and this is that, inverted.
- */
-export interface WalletConsumption {
-  /** The debit's id. */
-  id: string
-  /** What drew the credits: the debit's reason. */
-  product: string
-  /** What it was for: the debit's description or reference. */
-  contract: string
-  /** Credits drawn, as a positive decimal string. */
-  credits: string
-  /** Money for those credits; absent, as the API reports credits only. */
-  amount?: Money | undefined
-}
 
 /** A transaction's reference: what it was raised for (an invoice, a payment). */
 export interface WalletTransactionReference {
@@ -121,8 +122,6 @@ export interface WalletTransaction {
   creditsAvailable: string | null
   /** When the credits lapse; null for credits that never expire. */
   expiresAt: Date | null
-  /** Per-debit draw-down of this top-up, from the debits' `consumption_breakdown`. */
-  consumption?: WalletConsumption[]
   /** Debits only: the top-ups this drew from, and how many credits from each. */
   drawnFrom?: { topUpId: string; credits: string }[]
   /** Free-form key/value fields; `{}` when none. */
@@ -206,6 +205,26 @@ export const topUpWalletSchema = z.object({
     ),
   /** A unique reference that keeps the same top-up from being applied twice. */
   referenceId: z.string().trim().max(255, 'Keep the reference under 255 characters'),
+  /**
+   * Purchased only. Bonus credits granted with the top-up, overriding the
+   * bonus settings' slabs; blank leaves the bonus to those slabs.
+   */
+  bonusCredits: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === '' || positive(value),
+      'Enter a positive number of bonus credits, or leave it blank',
+    ),
+  /** Purchased only. The day the bonus credits expire (`YYYY-MM-DD`); overrides a slab's expiry. */
+  bonusExpiryDate: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || DAY.test(value), 'Pick a bonus expiry date')
+    .refine(
+      (value) => value === '' || value >= today(),
+      'The bonus expiry date cannot be in the past',
+    ),
 })
 export type TopUpWallet = z.infer<typeof topUpWalletSchema>
 
@@ -231,6 +250,8 @@ export const emptyTopUp = (): TopUpWallet => ({
   expiryDate: '',
   priority: '',
   referenceId: '',
+  bonusCredits: '',
+  bonusExpiryDate: '',
 })
 
 export const autoTopupSchema = z

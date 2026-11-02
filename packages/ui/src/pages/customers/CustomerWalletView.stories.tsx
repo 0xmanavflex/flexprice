@@ -35,6 +35,8 @@ function makeWallets(
       currency,
       status: i === 0 ? status : WalletStatus.Active,
       walletType: i === 2 ? 'POST_PAID' : 'PRE_PAID',
+      // The third is a named postpaid wallet; the rest fall back to their description.
+      name: i === 2 ? `Postpaid Wallet - ${currency}` : '',
       description: i === 0 ? 'Prepaid credits' : `Wallet ${i + 1}`,
       metadata: i === 0 ? { cost_center: 'ops' } : {},
       creditBalance: current,
@@ -85,7 +87,7 @@ const BARE_TOP_UP: WalletTransaction = {
   expiresAt: null,
 }
 
-/** A top-up with a per-product draw-down, which the wallet API does not send today. */
+/** A large top-up that debits drew down. */
 const WITH_BREAKDOWN: WalletTransaction = {
   id: 'wtx_breakdown',
   direction: 'in',
@@ -96,22 +98,37 @@ const WITH_BREAKDOWN: WalletTransaction = {
   createdAt: new Date('2026-09-01T00:00:00Z'),
   creditsAvailable: '8000',
   expiresAt: inDays(5),
-  consumption: [
-    {
-      id: 'c1',
-      product: 'Voice minutes',
-      contract: 'Acme annual 2026',
-      credits: '60000',
-      amount: money('30000.00', 'USD'),
-    },
-    {
-      id: 'c2',
-      product: 'Messages',
-      contract: 'Acme annual 2026',
-      credits: '32000',
-      amount: money('16000.00', 'USD'),
-    },
+}
+
+/** One debit that drew from two top-ups, as its `consumption_breakdown` says. */
+const SPLIT_DEBIT: WalletTransaction = {
+  id: 'wtx_split_debit',
+  direction: 'out',
+  reason: 'Manual debit',
+  description: 'Voice minutes overage',
+  credits: '670',
+  amount: money('335.00', 'USD'),
+  createdAt: new Date('2026-09-25T00:00:00Z'),
+  creditsAvailable: null,
+  expiresAt: null,
+  drawnFrom: [
+    { topUpId: 'wtx_breakdown', credits: '640' },
+    { topUpId: 'wtx_bare', credits: '30' },
   ],
+}
+
+/** A debit naming a top-up that is not in the loaded ledger. */
+const DEBIT_FROM_UNLOADED: WalletTransaction = {
+  id: 'wtx_unloaded_debit',
+  direction: 'out',
+  reason: 'Invoice payment',
+  description: '',
+  credits: '55',
+  amount: money('27.50', 'USD'),
+  createdAt: new Date('2026-09-26T00:00:00Z'),
+  creditsAvailable: null,
+  expiresAt: null,
+  drawnFrom: [{ topUpId: 'wtx_archived_0f3a9c', credits: '55' }],
 }
 
 const asyncOk = () => fn(async () => undefined)
@@ -342,7 +359,7 @@ export const UnreadableBalance: Story = {
 export const NoTransactions: Story = {
   args: { transactions: [] },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('No top-ups yet')).toBeInTheDocument()
+    await expect(await within(canvasElement).findByText('No transactions yet')).toBeInTheDocument()
   },
 }
 
@@ -359,17 +376,35 @@ export const LedgerColumns: Story = {
   },
 }
 
-/** A top-up with a per-product breakdown opens to show what drew it down. */
-export const ExpandsConsumption: Story = {
-  args: { transactions: [WITH_BREAKDOWN, BARE_TOP_UP] },
+/** Debits show beside top-ups; a debit opens to the top-ups it drew from. */
+export const ExpandsDebit: Story = {
+  args: { transactions: [SPLIT_DEBIT, WITH_BREAKDOWN, BARE_TOP_UP] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.queryByText('Voice minutes')).toBeNull()
-    await userEvent.click(await canvas.findByRole('button', { name: /expand subscription grant/i }))
-    await expect(await canvas.findByText('Voice minutes')).toBeInTheDocument()
-    await expect(canvas.getByText('Messages')).toBeInTheDocument()
-    await userEvent.click(canvas.getByRole('button', { name: /collapse subscription grant/i }))
-    await expect(canvas.queryByText('Voice minutes')).toBeNull()
+    // The debit is a row of its own, not hidden under a top-up.
+    await expect(await canvas.findByText('Manual debit')).toBeInTheDocument()
+    await expect(canvas.getByText('−670')).toBeInTheDocument()
+    await expect(canvas.queryByText('From Subscription grant')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /expand manual debit/i }))
+    await expect(await canvas.findByText('From Subscription grant')).toBeInTheDocument()
+    await expect(canvas.getByText('From Credit memo')).toBeInTheDocument()
+    await expect(canvas.getByText('−640')).toBeInTheDocument()
+    await expect(canvas.getByText('−30')).toBeInTheDocument()
+    // Top-ups do not expand.
+    await expect(canvas.queryByRole('button', { name: /expand subscription grant/i })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /collapse manual debit/i }))
+    await expect(canvas.queryByText('From Subscription grant')).toBeNull()
+  },
+}
+
+/** A source top-up outside the loaded ledger still shows, by its id. */
+export const DebitFromUnloadedTopUp: Story = {
+  args: { transactions: [DEBIT_FROM_UNLOADED, BARE_TOP_UP] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: /expand invoice payment/i }))
+    await expect(await canvas.findByText('From a top-up')).toBeInTheDocument()
+    await expect(canvas.getByText('Top-up …0f3a9c')).toBeInTheDocument()
   },
 }
 
@@ -398,9 +433,10 @@ export const SearchesReferenceAndMetadata: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText(/source: usage/)).toBeNull()
-    await expect(canvas.queryByText('Invoice payment')).toBeNull()
+    // Debits are rows of their own.
+    await expect(canvas.getByText('Invoice payment')).toBeInTheDocument()
     await userEvent.type(canvas.getByPlaceholderText(/^Search/), 'Purchased')
-    await waitFor(() => expect(canvas.queryByText('Usage draw-down')).toBeNull())
+    await waitFor(() => expect(canvas.queryByText('Invoice payment')).toBeNull())
     await expect(canvas.getByText('Purchased credits')).toBeInTheDocument()
   },
 }
@@ -436,11 +472,87 @@ export const MultipleWallets: Story = {
   },
 }
 
+/** A postpaid wallet is named for what it is, never "Prepaid credits", and its type shows. */
+export const PostpaidWallet: Story = {
+  args: {
+    wallets: makeWallets(3, WalletStatus.Active, 10000, 7500),
+    selectedId: 'wallet_3',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toHaveTextContent(
+      'Postpaid Wallet - GBP',
+    )
+    await expect(canvas.getByRole('combobox', { name: 'Wallet' })).not.toHaveTextContent(/Prepaid/)
+    await expect(canvas.getByText('Type')).toBeVisible()
+    await expect(canvas.getByText('Postpaid')).toBeVisible()
+  },
+}
+
+/** The wallet ID is one click away in the wallet menu, even on a closed wallet. */
+export const CopiesWalletId: Story = {
+  args: { wallets: makeWallets(1, WalletStatus.Closed, 0, 0) },
+  play: async ({ canvasElement }) => {
+    const writeText = fn(async () => undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Wallet actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Copy wallet ID' }))
+    await expect(writeText).toHaveBeenCalledWith('wallet_1')
+  },
+}
+
 /** Top up opens a dialog. */
 export const OpensTopUpDialog: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
     await expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  },
+}
+
+/**
+ * A purchased top-up previews the bonus Settings → Wallets → Bonus credits
+ * would grant, and a typed bonus replaces it. A free grant has no bonus.
+ */
+export const PreviewsBonusCredits: Story = {
+  args: {
+    onTopUp: fn(async () => undefined),
+    bonusConfig: {
+      enabled: true,
+      slabs: [
+        {
+          threshold: '200',
+          bonusType: 'percentage',
+          bonusValue: '10',
+          expiryDuration: '3',
+          expiryUnit: 'MONTH',
+        },
+        {
+          threshold: '100',
+          bonusType: 'flat',
+          bonusValue: '50',
+          expiryDuration: '',
+          expiryUnit: 'MONTH',
+        },
+      ],
+    },
+  },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/^credits/i), '500')
+    await expect(
+      dialog.getByText(
+        'Earns 50 bonus credits from the bonus settings: 10% of the top-up, expires 3 months after the top-up.',
+      ),
+    ).toBeVisible()
+    await userEvent.type(dialog.getByLabelText(/^bonus credits/i), '75')
+    await expect(dialog.getByText(/75 bonus credits, as entered/)).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Top up' }))
+    await waitFor(() =>
+      expect(args.onTopUp).toHaveBeenCalledWith(
+        expect.objectContaining({ credits: '500', bonusCredits: '75' }),
+      ),
+    )
   },
 }
 

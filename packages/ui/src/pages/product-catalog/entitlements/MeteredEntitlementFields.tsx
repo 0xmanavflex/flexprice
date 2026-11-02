@@ -157,10 +157,12 @@ export function MeteredEntitlementFields({
         <InfoIcon aria-hidden className="text-muted-foreground mt-0.5 size-4 shrink-0" />
         <div>
           <p>{summary}</p>
-          <p className="text-muted-foreground">
-            Usage beyond the value is billed at the plan&apos;s usage price
-            {usagePrice ? ` (${usagePrice})` : ''}.
-          </p>
+          {unlimited ? null : (
+            <p className="text-muted-foreground">
+              Usage beyond the value is billed at the plan&apos;s usage price
+              {usagePrice ? ` (${usagePrice})` : ''}.
+            </p>
+          )}
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { useSelfBillingStatus } from '@fp/query'
+import { useSession } from '@/app/session'
 import type { ReactNode } from 'react'
 import { RBAC_ENTITY, type RbacEntity } from '@fp/domain'
 import { EmbeddedPageContext, WriteGate } from '@fp/ui/compositions'
@@ -30,6 +31,7 @@ import { SubscriptionsPanel } from './SubscriptionsPanel'
 import { TaxEnginePanel } from './TaxEnginePanel'
 import { TagsPanel } from './TagsPanel'
 import { WalletAlertsPanel } from './WalletAlertsPanel'
+import { BonusCreditsPanel } from './BonusCreditsPanel'
 import { SettingsUnavailable, UNAVAILABLE_COPY } from './SettingsUnavailable'
 import {
   RAIL_SECTIONS,
@@ -130,7 +132,11 @@ export function toShellSections({
  * shell already read for the session.
  */
 function useShellSections(): SettingsSection[] {
-  const selfBilling = useSelfBillingStatus()
+  // Waits for an environment: the status query is read once per session
+  // (staleTime Infinity), so a read without one would fail and stick, and the
+  // shell's trial pill and lock, which read the same entry, would never appear.
+  const { environmentId } = useSession()
+  const selfBilling = useSelfBillingStatus({ enabled: Boolean(environmentId) })
   return toShellSections(selfBilling.data?.enabled ? {} : { hide: ['usage-billing'] })
 }
 
@@ -264,6 +270,8 @@ function SettingsPanel({
       return gated(RBAC_ENTITY.Setting, <TagsPanel onOpenPage={onOpenPage} />, false)
     case 'alerts/wallet-alerts':
       return gated(RBAC_ENTITY.AlertSettings, <WalletAlertsPanel />)
+    case 'alerts/bonus-credits':
+      return gated(RBAC_ENTITY.Setting, <BonusCreditsPanel />)
     case 'appearance/theme':
       return <AppearancePanel />
     default:

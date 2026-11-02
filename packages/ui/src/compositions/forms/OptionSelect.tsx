@@ -70,6 +70,8 @@ export interface OptionSelectProps {
   disabled?: boolean
   'aria-describedby'?: string | undefined
   'aria-invalid'?: true | undefined
+  /** The name when no visible label points at the trigger, as in a table cell. */
+  'aria-label'?: string | undefined
 }
 
 export function OptionSelect({
@@ -81,6 +83,7 @@ export function OptionSelect({
   disabled,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
+  'aria-label': label,
 }: OptionSelectProps) {
   return (
     <Select
@@ -94,6 +97,7 @@ export function OptionSelect({
         className="w-full"
         aria-describedby={describedBy}
         aria-invalid={invalid}
+        aria-label={label}
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

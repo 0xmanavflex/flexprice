@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
+import { useSession } from '@/app/session'
+import { SubscriptionJournalPanel } from './SubscriptionJournalPanel'
+import { SubscriptionRevenuePanel } from './SubscriptionRevenuePanel'
 import {
   AlertEntityType,
   DEFAULT_ADDON_QUERY,
@@ -8,11 +11,13 @@ import {
   PriceEntityType,
   SubscriptionStatus,
   type SubscriptionCancellationType,
+  type SubscriptionLine,
   lineRevertDraft,
 } from '@fp/domain'
 import {
   ApiError,
   useActivateSubscription,
+  useRevenueRecognitionEnabled,
   useRemoveSubscriptionCoupon,
   usePauseSubscription,
   useResumeSubscription,
@@ -51,6 +56,7 @@ import {
   useSubscriptionLines,
   useCustomer,
   useSubscriptionLineHistory,
+  useSubscriptionLineVersions,
   useSubscriptionSchedules,
   useSubscriptionTaxes,
   useSubscriptionUsage,
@@ -61,7 +67,12 @@ import {
   useActivityLog,
   serverReason,
 } from '@fp/query'
-import { EntityAlertDialog, SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
+import {
+  EntityAlertDialog,
+  SubscriptionDetailView,
+  type SubscriptionPart,
+  type SubscriptionTab,
+} from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
@@ -78,6 +89,9 @@ export interface SubscriptionDetailPageProps {
   onOpenInvoice: (invoiceId: string) => void
   /** Another contract: an inherited one's parent, or a parent's inherited contracts. */
   onOpenContract?: (subscriptionId: string) => void
+  /** The open tab, kept in the URL so going back reopens it. */
+  tab?: SubscriptionTab
+  onTabChange?: (tab: SubscriptionTab) => void
 }
 
 const CANCEL_OPTIONS = [
@@ -116,6 +130,8 @@ export function SubscriptionDetailPage({
   onOpenPlan,
   onOpenInvoice,
   onOpenContract,
+  tab,
+  onTabChange,
 }: SubscriptionDetailPageProps) {
   const subscription = useSubscription(subscriptionId)
   // A parent's inherited contracts, as V1 lists them; only a parent has any.
@@ -123,11 +139,16 @@ export function SubscriptionDetailPage({
     subscription.data?.subscriptionType === 'parent' ? subscriptionId : '',
   )
   const lines = useSubscriptionLines(subscriptionId)
+  const { environmentId } = useSession()
+  const revenueRecognition = useRevenueRecognitionEnabled(environmentId)
   // The Usage tab's breakdown is matched by the customer's external id.
   const contractCustomer = useCustomer(subscription.data?.customerId ?? '')
   // Ended lines too, so a changed price stays visible as an inactive version.
   // If it fails, the page falls back to the lines billing now.
   const lineHistory = useSubscriptionLineHistory(subscriptionId)
+  // A charge's versions come from the history API when its sheet opens.
+  const [openLine, setOpenLine] = useState<SubscriptionLine | null>(null)
+  const lineVersions = useSubscriptionLineVersions(openLine?.id ?? '')
   const chargeAlerts = useContractChargeAlerts(subscriptionId)
   const entitlements = useSubscriptionEntitlements(subscriptionId)
   const creditGrants = useSubscriptionCreditGrants(subscriptionId)
@@ -229,6 +250,8 @@ export function SubscriptionDetailPage({
   return (
     <>
       <SubscriptionDetailView
+        tab={tab}
+        onTabChange={onTabChange}
         subscription={data}
         lines={part(lines)}
         {...(() => {
@@ -269,6 +292,17 @@ export function SubscriptionDetailPage({
           }
         })()}
         {...(lineHistory.data ? { lineHistory: lineHistory.data } : {})}
+        onOpenLine={setOpenLine}
+        {...(openLine
+          ? {
+              openLineHistory: {
+                ...(lineVersions.data ? { lines: lineVersions.data } : {}),
+                isLoading: lineVersions.isLoading,
+                error: lineVersions.error ? 'The history could not be loaded.' : null,
+                onRetry: () => void lineVersions.refetch(),
+              },
+            }
+          : {})}
         onRevertLine={(line, previous) => {
           // No revert endpoint: the old price goes out as a new version from now.
           const draft = lineRevertDraft(previous, line.priceId)
@@ -279,6 +313,18 @@ export function SubscriptionDetailPage({
               )
         }}
         chargeAlerts={part(chargeAlerts)}
+        {...(revenueRecognition.data
+          ? {
+              revenue: <SubscriptionRevenuePanel subscriptionId={subscriptionId} />,
+              journal: (
+                <SubscriptionJournalPanel
+                  subscriptionId={subscriptionId}
+                  invoices={invoices.data}
+                  onOpenInvoice={onOpenInvoice}
+                />
+              ),
+            }
+          : {})}
         fxOverrides={
           // A contract converts from its own currency; an ended one keeps its rows read-only.
           <FxRatesPanel

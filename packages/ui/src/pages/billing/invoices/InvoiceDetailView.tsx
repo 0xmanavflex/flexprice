@@ -766,7 +766,7 @@ function InvoiceDocumentArticle({
 
       {/* Five columns need room: on a narrow screen the lines scroll sideways
           rather than the amounts being clipped. */}
-      <div className="mx-8 overflow-x-auto border-t pt-3">
+      <div className="mx-8 overflow-x-auto border-t pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div role="table" aria-label="Line items" className="min-w-[40rem] text-sm">
           <div
             role="row"
@@ -821,6 +821,9 @@ function InvoiceDocumentArticle({
       <div className="mx-8 flex justify-end border-t py-6">
         <TotalsList>
           <TotalRow label="Subtotal" value={money(totals.subtotal)} />
+          {invoice.discount ? (
+            <TotalRow label="Discount" value={`− ${money(invoice.discount)}`} />
+          ) : null}
           {invoice.prepaidCredits ? (
             <TotalRow label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
           ) : null}

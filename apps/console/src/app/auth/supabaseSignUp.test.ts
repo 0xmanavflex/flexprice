@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  */
 const auth = vi.hoisted(() => ({
   setSession: vi.fn(),
+  signUp: vi.fn(),
   signInWithPassword: vi.fn(),
   refreshSession: vi.fn(),
   signOut: vi.fn(async () => ({ error: null })),
@@ -26,10 +27,12 @@ vi.mock('./supabaseClient', () => ({
 
 import {
   ConfirmationLinkInvalid,
+  EmailAlreadyRegistered,
   EmailNotConfirmed,
   SupabaseCredentialsRefused,
   readConfirmedSession,
   signInWithSupabase,
+  startSignUp,
 } from './supabaseSignUp'
 
 const supabaseSession = (tenant: string | null, token = 'access.1') => ({
@@ -44,6 +47,36 @@ const supabaseSession = (tenant: string | null, token = 'access.1') => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+})
+
+describe('startSignUp', () => {
+  // The confirmation link is built from the page's origin.
+  beforeEach(() => {
+    vi.stubGlobal('location', { origin: 'https://app.example.com' })
+    return () => vi.unstubAllGlobals()
+  })
+
+  it('says the email is taken when Supabase returns a user with no identities', async () => {
+    // What Supabase answers for a confirmed account: a stand-in, no email sent.
+    auth.signUp.mockResolvedValue({
+      data: { user: { id: 'u', email: 'taken@example.com', identities: [] }, session: null },
+      error: null,
+    })
+    await expect(startSignUp('in', ' taken@example.com ', 'pw')).rejects.toBeInstanceOf(
+      EmailAlreadyRegistered,
+    )
+  })
+
+  it('resolves for a new address, or one registered but never confirmed', async () => {
+    auth.signUp.mockResolvedValue({
+      data: {
+        user: { id: 'u', email: 'new@example.com', identities: [{ id: 'i' }] },
+        session: null,
+      },
+      error: null,
+    })
+    await expect(startSignUp('in', 'new@example.com', 'pw')).resolves.toBeUndefined()
+  })
 })
 
 describe('readConfirmedSession', () => {

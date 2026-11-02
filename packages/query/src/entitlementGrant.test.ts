@@ -95,3 +95,30 @@ describe('toUpdateEntitlementRequest with a V1 grant', () => {
     })
   })
 })
+
+describe('toEntitlementRequest without a grant', () => {
+  const base = {
+    featureId: 'feat_1',
+    featureType: FeatureType.Metered,
+    usageResetPeriod: null,
+    isSoftLimit: false,
+  } as const
+
+  it('leaves the limit out for unlimited, since the SDK rejects null', () => {
+    const request = toEntitlementRequest(
+      metered({ ...base, usageLimit: null }),
+      'PLAN' as never,
+      'plan_1',
+    )
+    expect(request).not.toHaveProperty('usageLimit')
+  })
+
+  it('sends a limit of zero', () => {
+    const request = toEntitlementRequest(
+      metered({ ...base, usageLimit: 0 }),
+      'PLAN' as never,
+      'plan_1',
+    )
+    expect(request.usageLimit).toBe(0)
+  })
+})

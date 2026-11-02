@@ -328,3 +328,93 @@ export const HistoryNewestFirst: Story = {
     await expect(row.parentElement!.firstElementChild).toBe(row)
   },
 }
+
+/**
+ * Versions read from the history API as the sheet opened: they replace the
+ * ones the page folded from its own list.
+ */
+export const HistoryFromApi: Story = {
+  args: {
+    ...OpenedAtASection.args,
+    detail: { ...OpenedAtASection.args!.detail, versions: [] },
+    history: { versions: OpenedAtASection.args!.detail!.versions },
+  },
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByText('Current')).toBeVisible()
+  },
+}
+
+/** The history read still running: the sheet says so where History goes. */
+export const HistoryLoading: Story = {
+  args: { charge: fixed, history: { isLoading: true } },
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByRole('status')).toHaveTextContent('Loading history')
+  },
+}
+
+/** The history read failed: the reason, and a way to try again. */
+export const HistoryFailed: Story = {
+  args: {
+    charge: fixed,
+    history: { error: 'The history could not be loaded.', onRetry: fn() },
+  },
+  play: async ({ canvasElement, args }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    const alert = await screen.findByRole('alert')
+    await expect(alert).toHaveTextContent('The history could not be loaded.')
+    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
+    await expect(args.history!.onRetry).toHaveBeenCalled()
+  },
+}
+
+/**
+ * A change scheduled for a later date: the price billing today stays Current,
+ * the new one is Upcoming with the date it starts, and an ended one is History.
+ */
+export const ScheduledChange: Story = {
+  args: {
+    charge: fixed,
+    detail: {
+      versions: [
+        {
+          id: 'v1000',
+          price: '₹1,000.00',
+          startDate: new Date('2099-12-01T00:00:00Z'),
+          endDate: null,
+          updatedAt: new Date('2026-10-28T00:00:00Z'),
+        },
+        {
+          id: 'v600',
+          price: '₹600.00',
+          startDate: new Date('2026-03-01T00:00:00Z'),
+          endDate: new Date('2099-12-01T00:00:00Z'),
+          updatedAt: new Date('2026-03-01T00:00:00Z'),
+        },
+        {
+          id: 'v500',
+          price: '₹500.00',
+          startDate: new Date('2026-01-01T00:00:00Z'),
+          endDate: new Date('2026-03-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+    } satisfies ChargeDetail,
+  },
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    // The tag, not the section heading of the same name: the one inside a row.
+    const rowOf = async (tag: string) =>
+      (await screen.findAllByText(tag)).map((el) => el.closest('li')).find(Boolean)!
+    const current = await rowOf('Current')
+    await expect(within(current).getByText('₹600.00')).toBeVisible()
+    // Its end is scheduled, not past.
+    await expect(within(current).getByText(/Ends Dec 1, 2099/)).toBeVisible()
+    const upcoming = await rowOf('Upcoming')
+    await expect(within(upcoming).getByText('₹1,000.00')).toBeVisible()
+    await expect(within(upcoming).getByText('Starts Dec 1, 2099')).toBeVisible()
+    const history = await rowOf('History')
+    await expect(within(history).getByText('₹500.00')).toBeVisible()
+  },
+}

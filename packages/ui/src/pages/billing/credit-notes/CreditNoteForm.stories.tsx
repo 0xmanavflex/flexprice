@@ -157,3 +157,26 @@ export const ValidatesInvoice: Story = {
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
+
+/** "Refund to" shows the option chosen, the default included, and submits it. */
+export const ChoosesRefundTarget: Story = {
+  args: { invoiceLines: makeLines(2) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const page = within(canvasElement.ownerDocument.body)
+    const refundTo = canvas.getByRole('combobox', { name: 'Refund to' })
+    // The default is a real choice, not an empty field.
+    await expect(refundTo).toHaveTextContent('Let Flexprice decide')
+    await userEvent.click(refundTo)
+    await userEvent.click(await page.findByRole('option', { name: 'Prepaid wallet' }))
+    await waitFor(() => expect(refundTo).toHaveTextContent('Prepaid wallet'))
+    await userEvent.click(refundTo)
+    await userEvent.click(
+      await page.findByRole('option', { name: 'Back to the original payment method' }),
+    )
+    await waitFor(() => expect(refundTo).toHaveTextContent('Back to the original payment method'))
+    await userEvent.click(refundTo)
+    await userEvent.click(await page.findByRole('option', { name: 'Let Flexprice decide' }))
+    await waitFor(() => expect(refundTo).toHaveTextContent('Let Flexprice decide'))
+  },
+}

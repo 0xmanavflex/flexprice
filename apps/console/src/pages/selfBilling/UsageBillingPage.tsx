@@ -5,6 +5,7 @@ import {
   selfBillingToday,
 } from '@fp/query'
 import { UsageBillingView } from '@fp/ui/pages'
+import { useSession } from '@/app/session'
 import {
   Panel,
   PanelError,
@@ -19,7 +20,11 @@ import {
  * portal opens in a new tab, for paying an invoice or changing the card.
  */
 export function UsageBillingPage({ onUpgrade }: { onUpgrade: () => void }) {
-  const status = useSelfBillingStatus()
+  // Waits for an environment: the status query is read once per session
+  // (staleTime Infinity), so a read without one would fail and stick, and the
+  // shell's trial pill and lock, which read the same entry, would never appear.
+  const { environmentId } = useSession()
+  const status = useSelfBillingStatus({ enabled: Boolean(environmentId) })
   const summary = useSelfBillingSummary({ enabled: Boolean(status.data?.enabled) })
   const portal = useSelfBillingPortalSession()
 

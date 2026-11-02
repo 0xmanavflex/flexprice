@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { CheckoutReturnView } from './CheckoutReturnView'
+import { PLAN } from './fixtures'
 
 const meta = {
   title: 'App/Self-billing/Checkout return',
@@ -10,7 +11,13 @@ const meta = {
   args: {
     outcome: 'processing',
     billingEmail: 'billing@acme.io',
-    paidInvoice: { number: 'FP-0001', pdfUrl: 'https://example.com/fp-0001.pdf' },
+    paidInvoice: {
+      number: 'FP-0001',
+      pdfUrl: 'https://example.com/fp-0001.pdf',
+      total: 199,
+      currency: 'USD',
+    },
+    plan: PLAN,
     nextInvoiceOn: '2026-11-20',
     onBilling: fn(),
     onUpgrade: fn(),
@@ -43,7 +50,7 @@ export const Success: Story = {
     await expect(canvas.getByRole('heading', { name: "You're live" })).toBeVisible()
     await expect(canvas.getAllByRole('button')[0]).toHaveAccessibleName('Open production')
     await expect(canvas.getByText('Receipt sent to')).toBeVisible()
-    await expect(canvas.getByText('$199.00 + 0.5% of your billing')).toBeVisible()
+    await expect(canvas.getByText('$199.00 a month + $0.005 per Invoice value')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: /Create a production API key/ }))
     await expect(args.onNextStep).toHaveBeenCalledWith('api-key')
   },

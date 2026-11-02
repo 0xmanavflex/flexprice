@@ -65,6 +65,9 @@ interface SearchBody {
   /** How the plan detail page's subscriptions metric scopes to one plan. */
   plan_id?: string
   planId?: string
+  /** A customer's contracts and invoices, by internal id (works for archived customers). */
+  customer_id?: string
+  customerId?: string
   /** How a customer's invoices scope: the list search narrows by external id. */
   external_customer_id?: string
   externalCustomerId?: string
@@ -190,12 +193,22 @@ function page(source: Corpus, body: SearchBody) {
   // an unknown external id scopes to nothing rather than the whole book.
   const externalCustomerId = body.external_customer_id ?? body.externalCustomerId
   if (externalCustomerId) {
+    // As the API: an external id resolves to a published customer only, so an
+    // archived customer's external id finds nothing (the API answers 404).
     const customer = (corpus.customers as Corpus).items.find(
-      (row) => readString(row, 'external_id') === externalCustomerId,
+      (row) =>
+        readString(row, 'external_id') === externalCustomerId &&
+        readString(row, 'status') !== 'archived',
     )
     const customerId = customer ? readString(customer, 'id') : ''
     rows = rows.filter((row) => readString(row, 'customer_id') === customerId)
   }
+
+  // A customer's contracts or invoices by internal id, as the customer page
+  // reads them: unlike the external id, it still resolves once archived.
+  const scopedCustomerId = body.customer_id ?? body.customerId
+  if (scopedCustomerId)
+    rows = rows.filter((row) => readString(row, 'customer_id') === scopedCustomerId)
 
   // A contract's invoices. The captured invoices point at the captured
   // subscriptions, not the synthetic ones the console lists, so a row also
@@ -793,8 +806,29 @@ const tenant: Record<string, unknown> = {
       address_country: 'US',
     },
   },
+  // Onboarded, as every demo tenant is: Home sends a tenant without this flag to
+  // `/onboarding`, which would turn every journey and screenshot into the form.
+  metadata: { onboarding_completed: 'true' },
   created_at: '2025-08-11T10:00:00Z',
   updated_at: '2026-09-02T16:30:00Z',
+}
+
+/**
+ * `localStorage['flexprice.mock.notOnboarded'] = 'true'` plays a brand-new
+ * tenant: its metadata reads empty until onboarding saves the flag, so Home
+ * sends it to `/onboarding`. Used by `e2e/onboarding.spec.ts`.
+ */
+const NOT_ONBOARDED_KEY = 'flexprice.mock.notOnboarded'
+let onboardedThisSession = false
+
+function tenantAsSeen(): Record<string, unknown> {
+  let fresh = false
+  try {
+    fresh = localStorage.getItem(NOT_ONBOARDED_KEY) === 'true'
+  } catch {
+    /* no storage: the onboarded demo tenant */
+  }
+  return fresh && !onboardedThisSession ? { ...tenant, metadata: {} } : tenant
 }
 
 /** `AlertSettingsResponse`: per-entity rules, thresholds as decimal strings. */
@@ -890,6 +924,8 @@ type SettingsValue = Record<string, unknown>
 const SETTINGS_DEFAULTS: Record<string, SettingsValue> = {
   // `{}`: Flexprice's native engine, off.
   tax_config: {},
+  // Off, no slabs: purchased top-ups earn no bonus until slabs are set.
+  bonus_credits_topup_config: { enabled: false, slabs: [] },
   invoice_config: {
     prefix: 'INV',
     separator: '-',
@@ -3536,7 +3572,7 @@ export const handlers = [
 
   http.get(`${BASE}/tenants/:id`, ({ params }) =>
     String(params['id']) === TENANT_ID
-      ? HttpResponse.json(tenant)
+      ? HttpResponse.json(tenantAsSeen())
       : // Asking for anybody else's tenant is a 403 on the live API, not a 404.
         HttpResponse.json(
           { code: 'permission_denied', message: 'Forbidden', http_status_code: 403 },
@@ -3550,6 +3586,12 @@ export const handlers = [
     if (typeof body['name'] === 'string') tenant['name'] = body['name']
     if (body['billing_details'] && typeof body['billing_details'] === 'object') {
       tenant['billing_details'] = body['billing_details']
+    }
+    // Replaced whole, as the API does: the caller sends every key it keeps.
+    if (body['metadata'] && typeof body['metadata'] === 'object') {
+      tenant['metadata'] = body['metadata']
+      const metadata = body['metadata'] as Record<string, unknown>
+      if (metadata['onboarding_completed'] === 'true') onboardedThisSession = true
     }
     tenant['updated_at'] = new Date().toISOString()
     return HttpResponse.json(tenant)
@@ -4213,6 +4255,38 @@ export const handlers = [
     priceCorpus.items.push(...items)
     priceCorpus.pagination.total = priceCorpus.items.length
     return HttpResponse.json({ items }, { status: 201 })
+  }),
+  /**
+   * Every version of a plan price, oldest first: the root and every plan price
+   * whose `parent_price_id` is that root. Any version's ID gives the same list;
+   * a price that is not a plan's answers 400, as the API does.
+   */
+  http.get(`${BASE}/prices/:id/history`, ({ params }) => {
+    const price = byId('prices', String(params['id']))
+    if (!price) return HttpResponse.json({ error: { message: 'Price not found' } }, { status: 404 })
+    if (readString(price, 'entity_type') !== 'PLAN') {
+      return HttpResponse.json(
+        { error: { message: 'Price history is only available for plan prices' } },
+        { status: 400 },
+      )
+    }
+    const root = readString(price, 'parent_price_id') || readString(price, 'id')
+    const items = priceCorpus.items
+      .filter(
+        (row) =>
+          readString(row, 'entity_type') === 'PLAN' &&
+          readString(row, 'entity_id') === readString(price, 'entity_id') &&
+          (readString(row, 'id') === root || readString(row, 'parent_price_id') === root),
+      )
+      .sort(
+        (a, b) =>
+          Date.parse(readString(a, 'start_date') || readString(a, 'created_at')) -
+          Date.parse(readString(b, 'start_date') || readString(b, 'created_at')),
+      )
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: items.length, offset: 0 },
+    })
   }),
   http.put(`${BASE}/prices/:id`, async ({ request, params }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
@@ -5176,6 +5250,35 @@ export const handlers = [
       const lines = contractLines(id, row)
       return body['active_filter'] === false ? lines : lines.filter(lineIsActive)
     })
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: items.length, offset: 0 },
+    })
+  }),
+  /**
+   * Every version of one contract line, oldest first. The API walks the
+   * predecessor and successor pointers; here a version is a line of the same
+   * contract whose price shares the root price.
+   */
+  http.get(`${BASE}/subscriptions/lineitems/:lineId/history`, ({ params }) => {
+    const line = findContractLine(String(params['lineId']))
+    if (!line) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    // A version's price points at the first; a line added without a price ID
+    // is its own lineage, by its ID without the "_vN" a reprice appends.
+    const rootOf = (row: Record<string, unknown>) => {
+      const price = (row['price'] ?? {}) as Record<string, unknown>
+      return (
+        readString(price, 'parent_price_id') ||
+        readString(price, 'id') ||
+        readString(row, 'id').replace(/(_v\d+)+$/, '')
+      )
+    }
+    const store = [...contractLineStore.values()].find((lines) => lines.includes(line)) ?? [line]
+    const items = store
+      .filter((row) => row === line || rootOf(row) === rootOf(line))
+      .sort(
+        (a, b) => Date.parse(readString(a, 'start_date')) - Date.parse(readString(b, 'start_date')),
+      )
     return HttpResponse.json({
       items,
       pagination: { total: items.length, limit: items.length, offset: 0 },
