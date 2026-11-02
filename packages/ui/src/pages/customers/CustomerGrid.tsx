@@ -167,8 +167,9 @@ export function CustomerGrid({
         sortable: true,
         sortValue: CustomerSortField.Name,
         // The column the list is *for*. Hiding it leaves a table of
-        // attributes belonging to nobody.
+        // attributes belonging to nobody. Same weight as the other columns.
         hideable: false,
+        primary: false,
       }),
       // Its own column rather than a subtitle under the name. Stacked, it was
       // unsortable, unexportable and clipped twice as often; beside the name
