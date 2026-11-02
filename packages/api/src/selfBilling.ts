@@ -29,7 +29,7 @@ export interface SelfBillingFeatureUsageWire {
     id?: string
     name?: string
     lookup_key?: string
-    meter?: { event_name?: string } | null
+    meter?: { id?: string; event_name?: string } | null
   } | null
   total_limit?: number | null
   is_unlimited?: boolean

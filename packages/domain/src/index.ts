@@ -909,6 +909,7 @@ export {
   planMoney,
   planFixedTotal,
   planPriceText,
+  pricedCharges,
   selfInvoiceStatus,
   shortDate,
   trialProgress,

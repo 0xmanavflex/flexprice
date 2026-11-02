@@ -42,6 +42,21 @@ const STATES = new Set<string>(Object.values(AccountState))
 const toState = (value: string | undefined): AccountState | null =>
   value && STATES.has(value) ? (value as AccountState) : null
 
+/**
+ * The summary's account state. Its `status` says only whether the account is
+ * usable (`active`) or locked (`suspended`); a trial is `active` there and
+ * `trialing` in `subscription_status`, which decides it.
+ */
+function summaryState(status: string | undefined, subscriptionStatus: string | undefined) {
+  const state = toState(status)
+  if (state === AccountState.Active && subscriptionStatus === 'trialing')
+    return AccountState.Trialing
+  return state
+}
+
+/** The event the invoice-value meter counts: what the tenant bills through Flexprice. */
+const INVOICE_VALUE_EVENT = 'invoice_value'
+
 const CHECKOUT_STATUSES = new Set<string>(Object.values(CheckoutStatus))
 
 /** `2026-10-20T12:00:00Z` as `2026-10-20`; null for nothing or nonsense. */
@@ -76,9 +91,19 @@ const number = (value: string | number | null | undefined) => {
   return Number.isFinite(n) ? n : 0
 }
 
-/** The summary's plan, or null when it has none: the console prices nothing itself. */
-export function toSelfBillingPlan(wire: SelfBillingPlanWire | null | undefined): SelfBillingPlan | null {
+/**
+ * The summary's plan, or null when it has none: the console prices nothing itself.
+ *
+ * A charge on the invoice-value meter is a share of what the tenant bills. The
+ * charge names only its meter id, so it is recognised by that id against the
+ * usage feature counting `invoice_value`, or else by its meter's name.
+ */
+export function toSelfBillingPlan(
+  wire: SelfBillingPlanWire | null | undefined,
+  features: readonly SelfBillingFeatureUsageWire[] = [],
+): SelfBillingPlan | null {
   if (!wire || (!wire.id && !wire.name)) return null
+  const invoiceValueMeter = featureFor(features, INVOICE_VALUE_EVENT)?.feature?.meter?.id
   return {
     id: wire.id ?? '',
     name: wire.name ?? '',
@@ -96,6 +121,12 @@ export function toSelfBillingPlan(wire: SelfBillingPlanWire | null | undefined):
         billingPeriodCount: charge.billing_period_count ?? 1,
         divideBy: Number.isFinite(divideBy) && divideBy > 1 ? divideBy : null,
         meterName: usage ? charge.meter_display_name || null : null,
+        shareOfBilled:
+          usage &&
+          ((Boolean(invoiceValueMeter) && charge.meter_id === invoiceValueMeter) ||
+            /^invoice value$/i.test(
+              (charge.meter_display_name || charge.display_name || '').trim(),
+            )),
       }
     }),
   }
@@ -111,8 +142,8 @@ export function toSelfBillingSummary(
   const start = day(wire.usage?.period?.start_time)
   const end = day(wire.usage?.period?.end_time)
   return {
-    state: toState(wire.status) ?? AccountState.Trialing,
-    plan: toSelfBillingPlan(wire.plan),
+    state: summaryState(wire.status, wire.subscription_status) ?? AccountState.Trialing,
+    plan: toSelfBillingPlan(wire.plan, features),
     trialEndsOn: day(wire.trial_ends_at),
     invoices: (wire.invoices ?? []).map((invoice) => {
       const dueDate = day(invoice.due_date)
