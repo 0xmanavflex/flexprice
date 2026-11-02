@@ -87,9 +87,31 @@ export async function fetchIntegrations(
   const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
   if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to view integrations.')
 
-  const body = await listConnections(serverURL, token, environmentId ?? '')
-  const record = (body ?? {}) as { connections?: ConnectionWire[] | null }
-  return toIntegrations(record.connections ?? [])
+  // Every page: each billing entity has its own connections, so an
+  // environment can pass one page, and a connection left off would vanish
+  // from its entity's provider page and gateway picker.
+  const wires: ConnectionWire[] = []
+  for (let offset = 0; ; offset += CONNECTIONS_PAGE) {
+    const body = await listConnections(serverURL, token, environmentId ?? '', {
+      limit: CONNECTIONS_PAGE,
+      offset,
+    })
+    const record = (body ?? {}) as ConnectionsPage
+    const page = record.connections ?? []
+    wires.push(...page)
+    const total = record.total ?? record.pagination?.total
+    if (page.length < CONNECTIONS_PAGE || (total !== undefined && wires.length >= total)) break
+  }
+  return toIntegrations(wires)
+}
+
+const CONNECTIONS_PAGE = 100
+
+/** `GET /connections`: the API puts the counts at the top level; older shapes nest them. */
+interface ConnectionsPage {
+  connections?: ConnectionWire[] | null
+  total?: number
+  pagination?: { total?: number }
 }
 
 export function useConnections(options: { enabled?: boolean } = {}) {

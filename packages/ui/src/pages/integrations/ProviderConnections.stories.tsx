@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { INTEGRATION_CATALOG, type Integration } from '@fp/domain'
 import { IntegrationLogo } from './IntegrationsBlock'
 import { ProviderConnections } from './ProviderConnections'
@@ -54,9 +54,15 @@ export const Default: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByRole('heading', { name: 'Stripe' })).toBeInTheDocument()
-    await userEvent.click(canvas.getByRole('button', { name: 'Configure Stripe EU' }))
+    await userEvent.click(
+      within(canvas.getByRole('row', { name: /Stripe EU/ })).getByRole('button', {
+        name: /^Actions for /,
+      }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Configure' }))
     await expect(args.onConfigure).toHaveBeenCalledWith(stripe.connections[1])
-    await userEvent.click(canvas.getByRole('button', { name: 'Connect Northwind UK' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Northwind UK' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Connect' }))
     await expect(args.onConnect).toHaveBeenCalledWith(entities[2])
   },
 }

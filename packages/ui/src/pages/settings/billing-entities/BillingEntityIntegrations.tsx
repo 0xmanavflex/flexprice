@@ -4,7 +4,6 @@ import {
   type BillingEntity,
   type Integration,
 } from '@fp/domain'
-import { Button } from '@ui/components/primitives/button'
 import { AppFailure } from '@ui/compositions/feedback/AppFailure'
 import { LoadingRows } from '@ui/compositions/feedback/States'
 import { SimpleTable } from '@ui/compositions/detail/DetailKit'
@@ -12,6 +11,8 @@ import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { IntegrationLogo } from '@ui/pages/integrations/IntegrationsBlock'
 import { Pill } from '@ui/pages/shared/cells'
+import { RowActionsMenu } from '@ui/pages/shared/RowActionsMenu'
+import { PlugIcon } from '@ui/icons'
 
 /**
  * A billing entity's Integrations tab: one Section per category, a row per
@@ -20,7 +21,11 @@ import { Pill } from '@ui/pages/shared/cells'
  */
 export const BillingEntityIntegrationsProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/layout/Section', 'compositions/detail-kit'],
+  composes: [
+    'compositions/layout/Section',
+    'compositions/detail-kit',
+    'pages/shared/RowActionsMenu',
+  ],
   note: 'Entity integrations: a Section table per catalogue category, Connect per unconnected provider.',
 })
 
@@ -108,19 +113,20 @@ export function BillingEntityIntegrations({
               {
                 key: 'action',
                 header: '',
-                className: 'w-32 text-right',
+                className: 'w-12 text-right',
+                // A record's actions live in its row menu (docs/design-rules.md).
                 cell: ({ integration, connection }) =>
                   connection ? null : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3"
-                      aria-label={`Connect ${integration.name}`}
-                      onClick={() => onConnect(integration)}
-                    >
-                      Connect
-                    </Button>
+                    <RowActionsMenu
+                      label={integration.name}
+                      extra={[
+                        {
+                          label: 'Connect',
+                          icon: <PlugIcon aria-hidden />,
+                          onSelect: () => onConnect(integration),
+                        },
+                      ]}
+                    />
                   ),
               },
             ]}

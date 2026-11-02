@@ -12,8 +12,13 @@ export async function listConnections(
   serverURL: string,
   token: string,
   environmentId: string,
+  page: { limit: number; offset: number } = { limit: 100, offset: 0 },
 ): Promise<unknown> {
-  const query = new URLSearchParams({ status: 'published', limit: '100' })
+  const query = new URLSearchParams({
+    status: 'published',
+    limit: String(page.limit),
+    offset: String(page.offset),
+  })
   return request(serverURL, `/connections?${query}`, {
     method: 'GET',
     token,

@@ -5,12 +5,13 @@ import {
   type Integration,
   type IntegrationConnection,
 } from '@fp/domain'
-import { Button } from '@ui/components/primitives/button'
+import { PlugIcon, Settings2Icon } from '@ui/icons'
 import { SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { EntityHeader } from '../shared/EntityHeader'
 import { Pill } from '../shared/cells'
+import { RowActionsMenu } from '../shared/RowActionsMenu'
 import type { ListBillingEntity } from '../shared/billingEntityColumn'
 
 /**
@@ -20,7 +21,12 @@ import type { ListBillingEntity } from '../shared/billingEntityColumn'
  */
 export const ProviderConnectionsProvenance = provenance({
   source: 'composition',
-  composes: ['pages/shared/EntityHeader', 'compositions/detail-kit', 'compositions/layout/Section'],
+  composes: [
+    'pages/shared/EntityHeader',
+    'compositions/detail-kit',
+    'compositions/layout/Section',
+    'pages/shared/RowActionsMenu',
+  ],
   note: 'Provider page: EntityHeader over a Section table with one row per billing entity.',
 })
 
@@ -90,18 +96,29 @@ export function ProviderConnections({
               {
                 key: 'action',
                 header: '',
-                className: 'w-32 text-right',
+                className: 'w-12 text-right',
+                // A record's actions live in its row menu (docs/design-rules.md).
                 cell: ({ entity, connection }) => (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-3"
-                    aria-label={`${connection ? 'Configure' : 'Connect'} ${connection?.name ?? entity.name}`}
-                    onClick={() => (connection ? onConfigure(connection) : onConnect(entity))}
-                  >
-                    {connection ? 'Configure' : 'Connect'}
-                  </Button>
+                  <RowActionsMenu
+                    label={entity.name}
+                    extra={
+                      connection
+                        ? [
+                            {
+                              label: 'Configure',
+                              icon: <Settings2Icon aria-hidden />,
+                              onSelect: () => onConfigure(connection),
+                            },
+                          ]
+                        : [
+                            {
+                              label: 'Connect',
+                              icon: <PlugIcon aria-hidden />,
+                              onSelect: () => onConnect(entity),
+                            },
+                          ]
+                    }
+                  />
                 ),
               },
             ]}

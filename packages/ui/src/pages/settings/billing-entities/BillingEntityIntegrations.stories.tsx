@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { INTEGRATION_CATALOG, type Integration } from '@fp/domain'
 import { BillingEntityIntegrations } from './BillingEntityIntegrations'
 
@@ -61,7 +61,8 @@ export const Default: Story = {
     const payments = canvas.getByRole('region', { name: 'Payments' })
     await expect(within(payments).getByRole('row', { name: /Razorpay India/ })).toBeVisible()
     // Stripe belongs to the default entity, so this entity can still connect one.
-    await userEvent.click(within(payments).getByRole('button', { name: 'Connect Stripe' }))
+    await userEvent.click(within(payments).getByRole('button', { name: 'Actions for Stripe' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Connect' }))
     await expect(args.onConnect).toHaveBeenCalledWith(integrations[0])
   },
 }
