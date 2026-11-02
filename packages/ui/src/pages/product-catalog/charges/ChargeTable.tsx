@@ -29,9 +29,10 @@ import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
 import { DetailTable, type DetailColumn } from '../../shared/DetailTable'
-import { Pill, type PillTone } from '../../shared/cells'
+import { Pill } from '../../shared/cells'
 import { ChargeFlags } from './ChargeFlags'
 import { ChargeSheet } from './ChargeSheet'
+import { statusTone } from '../../shared/statusTones'
 /**
  * A charges section: what a plan, add-on, contract or cost sheet bills.
  *
@@ -234,12 +235,6 @@ function stamp(date: Date, locale?: string): string {
 /** Whether a charge's end has passed. A future end date is scheduled: the charge still bills. */
 export function hasEnded(charge: Charge, now: number = Date.now()): boolean {
   return charge.endDate !== null && charge.endDate.getTime() <= now
-}
-
-const STATUS_TONE: Record<string, PillTone> = {
-  Active: 'success',
-  Changed: 'warning',
-  Ended: 'neutral',
 }
 
 /**
@@ -515,7 +510,7 @@ export function ChargeTable({
     width: 110,
     text: statusOf,
     cell: (charge) => (
-      <Pill tone={STATUS_TONE[statusOf(charge)] ?? 'neutral'} size="sm">
+      <Pill tone={statusTone(statusOf(charge))} size="sm">
         {statusOf(charge)}
       </Pill>
     ),

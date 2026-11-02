@@ -47,16 +47,12 @@ import { Section } from '@ui/compositions/layout/Section'
 import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
 import { DetailList } from '@ui/compositions/tables/DetailList'
 import { provenance } from '@ui/provenance'
+import { ConnectorCard } from '@ui/compositions/layout/ConnectorCard'
+import { INTEGRATION_LOGOS, INTEGRATION_LOGOS_DARK } from '@ui/assets/integrations'
 import { EntityList, type EntityRowAction } from '../../shared/EntityList'
-import {
-  type EntityColumn,
-  Pill,
-  type PillTone,
-  idColumn,
-  pillColumn,
-  textColumn,
-} from '../../shared/cells'
+import { type EntityColumn, Pill, idColumn, pillColumn, textColumn } from '../../shared/cells'
 import { DataExportDialog, RunExportDialog, S3ConnectionDialog } from './ExportForms'
+import { statusTone } from '../../shared/statusTones'
 
 /**
  * The Exports flow, as V1 has it, on the console's kit:
@@ -177,6 +173,24 @@ const HIGHLIGHTS = [
   },
 ]
 
+/** The Amazon S3 mark, colour in light mode and white in dark, as the integration tiles draw theirs. */
+function S3Logo() {
+  return (
+    <>
+      <img
+        src={INTEGRATION_LOGOS['s3']}
+        alt=""
+        className="max-h-full max-w-full object-contain dark:hidden"
+      />
+      <img
+        src={INTEGRATION_LOGOS_DARK['s3']}
+        alt=""
+        className="hidden max-h-full max-w-full object-contain dark:block"
+      />
+    </>
+  )
+}
+
 export interface ExportsOverviewProps {
   /** How many S3 connections there are; null while loading. */
   s3Connections: number | null
@@ -210,27 +224,18 @@ export function ExportsOverview({ s3Connections, onOpenS3, children }: ExportsOv
           </Section>
         ) : null}
         <Section title="Destinations">
-          <Item
-            variant="outline"
-            className="items-start md:max-w-xl"
-            render={<button type="button" onClick={onOpenS3} />}
-          >
-            <ItemMedia variant="icon">
-              <UploadIcon aria-hidden />
-            </ItemMedia>
-            <ItemContent>
-              <ItemTitle>Amazon S3</ItemTitle>
-              <ItemDescription>
-                Export to an S3 bucket, or any S3-compatible storage, for your data warehouse and
-                analytics.
-              </ItemDescription>
-            </ItemContent>
-            <ItemActions className="text-muted-foreground text-xs">
-              {s3Connections === null
-                ? null
-                : `${s3Connections} ${s3Connections === 1 ? 'connection' : 'connections'}`}
-            </ItemActions>
-          </Item>
+          {/* The integrations gallery's card, so S3 reads as the connector it is. */}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <ConnectorCard
+              testId="export-destination-s3"
+              name="Amazon S3"
+              description="Export to an S3 bucket, or any S3-compatible storage, for your data warehouse and analytics."
+              logo={<S3Logo />}
+              connected={(s3Connections ?? 0) > 0}
+              onConnect={onOpenS3}
+              onConfigure={onOpenS3}
+            />
+          </div>
         </Section>
         {children}
       </div>
@@ -317,8 +322,8 @@ export function S3ConnectionList({
                 const count = exportCounts?.get(connection.id)
                 return (
                   <Item key={connection.id} role="listitem" className="rounded-none px-6 py-4">
-                    <ItemMedia variant="icon">
-                      <UploadIcon aria-hidden />
+                    <ItemMedia className="bg-background size-9 rounded-md border p-1.5 shadow-xs">
+                      <S3Logo />
                     </ItemMedia>
                     <ItemContent>
                       <ItemTitle>{connection.name}</ItemTitle>
@@ -673,13 +678,6 @@ export function DataExportDetail({
 
 /* ---- Runs ---------------------------------------------------------------- */
 
-const RUN_TONE: Record<string, PillTone> = {
-  COMPLETED: 'success',
-  FAILED: 'danger',
-  PROCESSING: 'warning',
-  PENDING: 'warning',
-}
-
 export interface ExportRunListProps {
   runs: ExportRun[]
   total: number
@@ -716,7 +714,7 @@ export function ExportRunList({
   const columns: EntityColumn<ExportRun>[] = [
     pillColumn<ExportRun>('status', 'Status', (run) => ({
       label: EXPORT_RUN_STATUS_LABEL[run.status as ExportRunStatus] ?? (run.status || 'Unknown'),
-      tone: RUN_TONE[run.status] ?? 'neutral',
+      tone: statusTone(run.status),
     })),
     textColumn<ExportRun>('from', 'Data from', (run) => formatDateTime(run.intervalStart, locale), {
       width: 180,

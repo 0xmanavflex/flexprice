@@ -8,6 +8,8 @@ import {
   type InvoiceQuery,
   InvoiceSortField,
   InvoiceStatus,
+  INVOICE_DOCUMENT_STATUS_LABEL,
+  invoiceDocumentStatus,
   PAYMENT_STATUS_LABEL,
   isStoredInvoiceStatus,
   INVOICE_FILTERS,
@@ -24,7 +26,7 @@ import {
   pillColumn,
   textColumn,
 } from '../../shared/cells'
-import { INVOICE_STATUS_TONE, PAYMENT_STATUS_TONE } from '../../shared/statusTones'
+import { INVOICE_DOCUMENT_STATUS_TONE, PAYMENT_STATUS_TONE } from '../../shared/statusTones'
 
 /**
  * The invoice list, on the shared `EntityList`.
@@ -53,26 +55,6 @@ export const InvoiceGridProvenance = provenance({
   note: 'Invoice columns and actions over the shared list table. Payment status visible; document status available through filtering and optional columns.',
 })
 
-/**
- * The labels, spelled here rather than imported.
- *
- * Every other status enum in `@fp/domain` ships a `*_STATUS_LABEL` map;
- * invoices do not. The strings match what `InvoiceFilters` used, so a row and
- * a control read the same word.
- */
-const STATUS_LABEL: Record<InvoiceStatus, string> = {
-  [InvoiceStatus.Draft]: 'Draft',
-  [InvoiceStatus.Open]: 'Open',
-  [InvoiceStatus.Paid]: 'Paid',
-  [InvoiceStatus.Overdue]: 'Overdue',
-  [InvoiceStatus.Void]: 'Void',
-  [InvoiceStatus.Skipped]: 'Skipped',
-}
-
-/** Only `overdue` is a problem; only `paid` is finished. Everything else is
- *  simply where the invoice has got to. */
-const STATUS_TONE = INVOICE_STATUS_TONE
-
 const PAYMENT_TONE = PAYMENT_STATUS_TONE
 
 const SORT_LABEL: Record<InvoiceSortField, string> = {
@@ -80,7 +62,7 @@ const SORT_LABEL: Record<InvoiceSortField, string> = {
   [InvoiceSortField.IssuedAt]: 'Issued',
   [InvoiceSortField.DueDate]: 'Due date',
   [InvoiceSortField.Total]: 'Total',
-  [InvoiceSortField.Status]: 'Status',
+  [InvoiceSortField.Status]: 'Invoice status',
 }
 
 const SORT_OPTIONS = Object.values(InvoiceSortField).map((value) => ({
@@ -214,13 +196,18 @@ export function InvoiceGrid({
         muteZero: true,
         ...(locale ? { locale } : {}),
       }),
+      // The document's own status, the API's `invoice_status`: what happened to
+      // the money is the payment status column beside it.
       pillColumn<Invoice>(
         'status',
-        'Status',
-        (row) => ({
-          label: STATUS_LABEL[row.status],
-          tone: STATUS_TONE[row.status],
-        }),
+        'Invoice status',
+        (row) => {
+          const status = invoiceDocumentStatus(row.status)
+          return {
+            label: INVOICE_DOCUMENT_STATUS_LABEL[status],
+            tone: INVOICE_DOCUMENT_STATUS_TONE[status],
+          }
+        },
         { hiddenByDefault: true },
       ),
       pillColumn<Invoice>('paymentStatus', 'Payment status', (row) =>

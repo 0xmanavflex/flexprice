@@ -13,7 +13,8 @@ import { Label } from '@ui/components/primitives/label'
 import { ChoiceCards, Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { provenance } from '@ui/provenance'
-import { Pill, type PillTone } from '../../shared/cells'
+import { Pill } from '../../shared/cells'
+import { PAYMENT_STATUS_TONE } from '../../shared/statusTones'
 
 export const PaymentStatusDialogProvenance = provenance({
   source: 'composition',
@@ -36,13 +37,6 @@ export interface PaymentStatusDialogProps {
   /** A refusal from the API, already a sentence. */
   error?: string | null
   onSubmit: (change: { status: PaymentStatus; amount?: string }) => void
-}
-
-const TONE: Partial<Record<PaymentStatus, PillTone>> = {
-  [Status.Succeeded]: 'success',
-  [Status.Overpaid]: 'success',
-  [Status.Failed]: 'danger',
-  [Status.Pending]: 'warning',
 }
 
 const DECIMAL = /^\d+(\.\d+)?$/
@@ -140,7 +134,7 @@ function Body({
           <dt className="text-muted-foreground text-xs">Current status</dt>
           <dd>
             {current ? (
-              <Pill tone={TONE[current] ?? 'neutral'}>{PAYMENT_STATUS_LABEL[current]}</Pill>
+              <Pill tone={PAYMENT_STATUS_TONE[current]}>{PAYMENT_STATUS_LABEL[current]}</Pill>
             ) : (
               <span className="text-muted-foreground">Not set</span>
             )}

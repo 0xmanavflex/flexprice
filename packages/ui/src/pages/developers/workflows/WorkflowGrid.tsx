@@ -13,11 +13,11 @@ import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import {
   type EntityColumn,
-  type PillTone,
   idColumn,
   pillColumn,
   textColumn,
 } from '../../shared/cells'
+import { WORKFLOW_STATUS_TONE } from '../../shared/statusTones'
 
 /**
  * The Workflows list, on the shared `EntityList`.
@@ -37,16 +37,6 @@ const STATUS_CHOICES = Object.values(WorkflowStatus).map((value) => ({
   value,
   label: WORKFLOW_STATUS_LABEL[value],
 }))
-
-const STATUS_TONE: Record<WorkflowStatus, PillTone> = {
-  [WorkflowStatus.Running]: 'warning',
-  [WorkflowStatus.Completed]: 'success',
-  [WorkflowStatus.Failed]: 'danger',
-  [WorkflowStatus.Canceled]: 'neutral',
-  [WorkflowStatus.Terminated]: 'neutral',
-  [WorkflowStatus.ContinuedAsNew]: 'warning',
-  [WorkflowStatus.TimedOut]: 'warning',
-}
 
 const GUIDES: EntityGuide[] = [
   {
@@ -120,7 +110,7 @@ export function WorkflowGrid({
       idColumn<WorkflowRun>('id', 'Run ID', (row) => row.id, { width: 200 }),
       pillColumn<WorkflowRun>('status', 'Status', (row) =>
         row.status
-          ? { label: WORKFLOW_STATUS_LABEL[row.status], tone: STATUS_TONE[row.status] }
+          ? { label: WORKFLOW_STATUS_LABEL[row.status], tone: WORKFLOW_STATUS_TONE[row.status] }
           : null,
       ),
       textColumn<WorkflowRun>(

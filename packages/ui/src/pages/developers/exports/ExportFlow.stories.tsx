@@ -29,8 +29,8 @@ export const Overview: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText('Automated exports')).toBeNull()
-    await expect(canvas.getByRole('button', { name: /Amazon S3/ })).toBeVisible()
-    await expect(canvas.getByText('2 connections')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Configure Amazon S3' })).toBeVisible()
+    await expect(canvas.getByText('Connected')).toBeVisible()
   },
 }
 

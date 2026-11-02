@@ -19,6 +19,7 @@ export const PLAN: SelfBillingPlan = {
       billingPeriodCount: 1,
       divideBy: null,
       meterName: null,
+      shareOfBilled: false,
     },
     {
       id: 'price_billed',
@@ -30,6 +31,20 @@ export const PLAN: SelfBillingPlan = {
       billingPeriodCount: 1,
       divideBy: null,
       meterName: 'Invoice value',
+      shareOfBilled: true,
+    },
+    // Meters the trial's event limit; priced at zero, so never shown as a price.
+    {
+      id: 'price_events',
+      name: 'Events',
+      type: 'usage',
+      amount: '0',
+      currency: 'USD',
+      billingPeriod: 'MONTHLY',
+      billingPeriodCount: 1,
+      divideBy: null,
+      meterName: 'Events',
+      shareOfBilled: false,
     },
   ],
 }

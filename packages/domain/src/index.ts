@@ -72,6 +72,9 @@ export {
   isStoredInvoiceStatus,
   needsAttention,
   STORED_INVOICE_STATUSES,
+  InvoiceDocumentStatus,
+  INVOICE_DOCUMENT_STATUS_LABEL,
+  invoiceDocumentStatus,
 } from './invoice'
 export type {
   CreateInvoice,
@@ -725,7 +728,7 @@ export type {
   S3Connection,
   S3ConnectionErrors,
 } from './dataExport'
-export { INTEGRATION_CATALOG } from './integration'
+export { CARD_SETUP_PROVIDERS, INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './integrationConnect'
 export {
@@ -906,6 +909,7 @@ export {
   planMoney,
   planFixedTotal,
   planPriceText,
+  pricedCharges,
   selfInvoiceStatus,
   shortDate,
   trialProgress,

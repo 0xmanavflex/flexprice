@@ -6,7 +6,8 @@ import {
 } from '@fp/domain'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
-import { EmDash, type EntityColumn, Pill, type PillTone } from '../../shared/cells'
+import { EmDash, type EntityColumn, Pill } from '../../shared/cells'
+import { WEBHOOK_DELIVERY_STATUS_TONE } from '../../shared/statusTones'
 
 /**
  * The webhook pages' shared cells: the delivery-status pill and a timestamp
@@ -14,15 +15,10 @@ import { EmDash, type EntityColumn, Pill, type PillTone } from '../../shared/cel
  * nothing) with the full instant, seconds and zone, on hover.
  */
 
-const STATUS_TONE: Record<WebhookDeliveryStatus, PillTone> = {
-  succeeded: 'success',
-  failed: 'danger',
-  pending: 'warning',
-  sending: 'warning',
-}
-
 export function WebhookStatusPill({ status }: { status: WebhookDeliveryStatus }) {
-  return <Pill tone={STATUS_TONE[status]}>{WEBHOOK_DELIVERY_STATUS_LABEL[status]}</Pill>
+  return (
+    <Pill tone={WEBHOOK_DELIVERY_STATUS_TONE[status]}>{WEBHOOK_DELIVERY_STATUS_LABEL[status]}</Pill>
+  )
 }
 
 /** The attempt-table filter: Svix's portal offers All, Succeeded and Failed; Pending is added. */

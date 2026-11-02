@@ -16,6 +16,7 @@ import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Pill, type PillTone } from '../shared/cells'
 import type { Load } from './types'
+import { PORTAL_SUBSCRIPTION_STATUS_TONE } from '../shared/statusTones'
 
 /**
  * The customer portal's building blocks, after the portal prototype
@@ -181,14 +182,6 @@ export function InvoiceStatusPill({ status }: { status: PortalInvoiceStatus }) {
   return <Pill tone={tone}>{label}</Pill>
 }
 
-const SUBSCRIPTION_TONE: Record<PortalSubscriptionStatus, PillTone> = {
-  active: 'success',
-  trialing: 'trial',
-  paused: 'warning',
-  cancelled: 'neutral',
-  other: 'neutral',
-}
-
 export function SubscriptionStatusPill({
   status,
   label,
@@ -196,7 +189,7 @@ export function SubscriptionStatusPill({
   status: PortalSubscriptionStatus
   label: string
 }) {
-  return <Pill tone={SUBSCRIPTION_TONE[status]}>{label}</Pill>
+  return <Pill tone={PORTAL_SUBSCRIPTION_STATUS_TONE[status]}>{label}</Pill>
 }
 
 export interface RadioRowOption {

@@ -1,5 +1,6 @@
 import { CreditNoteStatus } from '@fp/domain'
 import type { InvoiceActivity, InvoiceParty, StatusChip } from '../invoices/invoiceDocument'
+import { statusTone } from '../../shared/statusTones'
 
 /**
  * A credit memo as its page reads it: the invoice document's shape, for the
@@ -98,17 +99,17 @@ export function settlementNote(document: CreditNoteDocument, amount: string): st
 /** The chips beside the title: the status, then the settlement when it adds something. */
 export function creditNoteChips(document: CreditNoteDocument): StatusChip[] {
   const status: Record<CreditNoteStatus, StatusChip> = {
-    [CreditNoteStatus.Draft]: { label: 'Draft', tone: 'neutral' },
-    [CreditNoteStatus.Finalized]: { label: 'Finalized', tone: 'info' },
-    [CreditNoteStatus.Voided]: { label: 'Voided', tone: 'neutral' },
+    [CreditNoteStatus.Draft]: { label: 'Draft', tone: statusTone('Draft') },
+    [CreditNoteStatus.Finalized]: { label: 'Finalized', tone: statusTone('Finalized') },
+    [CreditNoteStatus.Voided]: { label: 'Voided', tone: statusTone('Voided') },
   }
   const chips: StatusChip[] = [status[document.status]]
   // Void already says it; draft has nothing to add. The other two are the news.
   if (document.settlement === CreditSettlement.Refunded) {
-    chips.push({ label: 'Refunded', tone: 'neutral' })
+    chips.push({ label: 'Refunded', tone: statusTone('Refunded') })
   }
   if (document.settlement === CreditSettlement.Adjusted) {
-    chips.push({ label: 'Invoice adjusted', tone: 'neutral' })
+    chips.push({ label: 'Invoice adjusted', tone: statusTone('Invoice adjusted') })
   }
   return chips
 }

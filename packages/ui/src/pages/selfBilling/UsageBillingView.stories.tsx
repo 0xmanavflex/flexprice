@@ -31,14 +31,16 @@ export const Trial: Story = {
     const canvas = within(canvasElement)
     await expect(
       canvas.getByText(
-        'Your trial ends on Nov 4, 2026, in 15 days. Then $199.00 a month + $0.005 per Invoice value.',
+        'Your trial ends on Nov 4, 2026, in 15 days. Then $199.00 a month + 0.5% of what you bill through Flexprice.',
       ),
     ).toBeVisible()
     await expect(canvas.getByText('Free trial, then Pay as you go')).toBeVisible()
     // The plan's charges, each priced as the API reports it.
     await expect(canvas.getByText('Platform fee')).toBeVisible()
     await expect(canvas.getByText('$199.00 a month')).toBeVisible()
-    await expect(canvas.getByText('$0.005 per Invoice value')).toBeVisible()
+    await expect(canvas.getByText('0.5% of what you bill through Flexprice')).toBeVisible()
+    // The zero-priced Events charge only meters the trial's limit: no price row.
+    await expect(canvas.queryByText('$0.00 per Events')).toBeNull()
     await expect(canvas.getByText('Nov 4, 2026 · 15 days left')).toBeVisible()
     await expect(canvas.getByText('No fee during the trial')).toBeVisible()
     await expect(canvas.getByText('No invoices yet')).toBeVisible()

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   toCheckoutBody,
   toSelfBillingCheckout,
+  toSelfBillingPlan,
   toSelfBillingStatus,
   toSelfBillingSummary,
 } from './selfBilling'
@@ -123,6 +124,7 @@ describe('toSelfBillingSummary', () => {
           billingPeriodCount: 1,
           divideBy: null,
           meterName: null,
+          shareOfBilled: false,
         },
         {
           id: 'price_rate',
@@ -134,11 +136,14 @@ describe('toSelfBillingSummary', () => {
           billingPeriodCount: 1,
           divideBy: null,
           meterName: 'Invoice value',
+          shareOfBilled: true,
         },
       ],
     })
     expect(toSelfBillingSummary({ status: 'trialing' }).plan).toBeNull()
-    expect(toSelfBillingSummary({ status: 'trialing', plan: { id: '', charges: [] } }).plan).toBeNull()
+    expect(
+      toSelfBillingSummary({ status: 'trialing', plan: { id: '', charges: [] } }).plan,
+    ).toBeNull()
   })
 })
 
@@ -164,6 +169,105 @@ describe('status and checkout', () => {
       terminal: false,
       state: 'trialing',
     })
+  })
+
+  it('reads a trial from subscription_status when status only says the account is usable', () => {
+    // As /portal/billing/summary answered on 2026-11-02 for a trialing tenant.
+    const summary = toSelfBillingSummary(
+      {
+        status: 'active',
+        subscription_status: 'trialing',
+        trial_ends_at: '2026-11-20T18:30:00Z',
+        usage: {
+          features: [
+            {
+              feature: {
+                lookup_key: 'feat-events',
+                meter: { id: 'meter_events', event_name: 'events_ingested' },
+              },
+              total_limit: 10000,
+              is_unlimited: false,
+              current_usage: '0',
+            },
+          ],
+          period: null,
+        },
+        plan: {
+          id: 'plan_1',
+          name: 'Billing prod',
+          charges: [
+            {
+              price_id: 'price_invoice_value',
+              display_name: 'Invoice value',
+              type: 'USAGE',
+              amount: '0.005',
+              currency: 'usd',
+              billing_period: 'MONTHLY',
+              meter_id: 'meter_invoice_value',
+              meter_display_name: 'Invoice value',
+            },
+            {
+              price_id: 'price_events',
+              display_name: 'Events',
+              type: 'USAGE',
+              amount: '0',
+              currency: 'usd',
+              billing_period: 'MONTHLY',
+              meter_id: 'meter_events',
+              meter_display_name: 'Events',
+            },
+            {
+              price_id: 'price_fixed',
+              display_name: 'Fixed charge',
+              type: 'FIXED',
+              amount: '1',
+              currency: 'usd',
+              billing_period: 'MONTHLY',
+              billing_period_count: 1,
+            },
+          ],
+        },
+      },
+      '2026-11-02',
+    )
+    expect(summary.state).toBe('trialing')
+    expect(summary.trialEndsOn).toBe('2026-11-20')
+    expect(summary.events).toEqual({ used: 0, cap: 10000 })
+    expect(summary.plan?.charges.map((c) => [c.id, c.shareOfBilled])).toEqual([
+      ['price_invoice_value', true],
+      ['price_events', false],
+      ['price_fixed', false],
+    ])
+  })
+
+  it('keeps an active, paying account active', () => {
+    expect(
+      toSelfBillingSummary({ status: 'active', subscription_status: 'active' }, '2026-11-02').state,
+    ).toBe('active')
+    expect(
+      toSelfBillingSummary({ status: 'suspended', subscription_status: 'trialing' }, '2026-11-02')
+        .state,
+    ).toBe('suspended')
+  })
+
+  it('knows the invoice-value charge by its meter even when it is renamed', () => {
+    const plan = toSelfBillingPlan(
+      {
+        id: 'plan_1',
+        name: 'Pro',
+        charges: [
+          {
+            price_id: 'p1',
+            display_name: 'Platform share',
+            type: 'USAGE',
+            amount: '0.01',
+            meter_id: 'm_iv',
+          },
+        ],
+      },
+      [{ feature: { meter: { id: 'm_iv', event_name: 'invoice_value' } }, current_usage: '0' }],
+    )
+    expect(plan?.charges[0]?.shareOfBilled).toBe(true)
   })
 
   it('sends the address as the API names it', () => {

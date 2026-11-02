@@ -18,6 +18,7 @@ import {
   textColumn,
 } from '../../shared/cells'
 import { providerLabel } from './usageSyncProviders'
+import { statusTone } from '../../shared/statusTones'
 
 /**
  * The Usage Syncs list, on the shared `EntityList`.
@@ -114,7 +115,7 @@ export function UsageSyncGrid({
         'syncs',
         'Synced to',
         (row) => {
-          if (row.syncs.length === 0) return { label: 'Not synced', tone: 'neutral' }
+          if (row.syncs.length === 0) return { label: 'Not synced', tone: statusTone('not synced') }
           const labels = row.syncs.map((entry) => providerLabel(entry.provider))
           const allSkipped = row.syncs.every((entry) => entry.skipped)
           return {

@@ -3,6 +3,7 @@ import { FEATURE_TYPE_LABEL, InvoiceStatus, needsAttention, type FeatureType } f
 import { provenance } from '@ui/provenance'
 import { FEATURE_TYPE_GLYPH, Pill, type PillTone } from './cells'
 import { INVOICE_STATUS_TONE } from './statusTones'
+import { statusTone } from './statusTones'
 
 /**
  * A billing status: a bordered pill with a coloured dot.
@@ -103,8 +104,8 @@ export function FeatureTypeBadge({ type }: FeatureTypeBadgeProps) {
 export type CatalogStatus = 'published' | 'archived'
 
 const CATALOG_STATUS: Record<CatalogStatus, { tone: PillTone; label: string }> = {
-  published: { tone: 'success', label: 'Published' },
-  archived: { tone: 'neutral', label: 'Archived' },
+  published: { tone: statusTone('published'), label: 'Published' },
+  archived: { tone: statusTone('archived'), label: 'Archived' },
 }
 
 export interface CatalogStatusBadgeProps {

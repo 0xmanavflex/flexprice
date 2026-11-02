@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
-import { INTEGRATION_LOGOS } from '@ui/assets/integrations'
+import { INTEGRATION_LOGOS, INTEGRATION_LOGOS_DARK } from '@ui/assets/integrations'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import {
   EMPTY_CATALOGUE,
@@ -96,11 +96,18 @@ function GallerySkeleton() {
   )
 }
 
-/** The provider's logo, or its initial when there is none. */
+/**
+ * The provider's logo, or its initial when there is none. The colour mark
+ * shows in light mode and its white version in dark mode.
+ */
 export function IntegrationLogo({ integration }: { integration: Integration }) {
   const src = INTEGRATION_LOGOS[integration.id]
+  const darkSrc = INTEGRATION_LOGOS_DARK[integration.id] ?? src
   return src ? (
-    <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+    <>
+      <img src={src} alt="" className="max-h-full max-w-full object-contain dark:hidden" />
+      <img src={darkSrc} alt="" className="hidden max-h-full max-w-full object-contain dark:block" />
+    </>
   ) : (
     <span aria-hidden className="text-base font-medium">
       {integration.name.charAt(0)}

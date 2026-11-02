@@ -1,5 +1,5 @@
 import type { CustomerIntegration } from '@fp/domain'
-import { INTEGRATION_LOGOS } from '@ui/assets/integrations'
+import { INTEGRATION_LOGOS, INTEGRATION_LOGOS_DARK } from '@ui/assets/integrations'
 import { cn } from '@ui/lib/cn'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 
@@ -16,16 +16,20 @@ export function IntegrationMark({
   className?: string
 }) {
   const src = INTEGRATION_LOGOS[integration.id]
+  const darkSrc = INTEGRATION_LOGOS_DARK[integration.id] ?? src
   return (
     <span
       title={integration.name}
       className={cn(
-        'bg-background dark:bg-foreground dark:text-background flex size-7 shrink-0 items-center justify-center rounded-lg border p-1 shadow-xs dark:border-transparent',
+        'bg-background flex size-7 shrink-0 items-center justify-center rounded-lg border p-1 shadow-xs',
         className,
       )}
     >
       {src ? (
-        <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+        <>
+          <img src={src} alt="" className="max-h-full max-w-full object-contain dark:hidden" />
+          <img src={darkSrc} alt="" className="hidden max-h-full max-w-full object-contain dark:block" />
+        </>
       ) : (
         <span aria-hidden className="text-[10px] font-medium">
           {integration.name.charAt(0)}

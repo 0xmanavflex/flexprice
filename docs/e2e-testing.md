@@ -131,19 +131,25 @@ a retry is called out as a finding.
 
 ## The Slack report
 
-`.github/scripts/e2e-release-slack.mjs` posts exactly one message per release-triggered run:
-status (PASS / FAIL / PARTIAL), release commit, environment, the deploy run, the E2E run,
-timestamp, duration, counts, every journey with its duration, and for each failure the
-failing step, expected, actual, error and evidence paths, then the artifact links and the
-failed journeys' videos. When the deploy succeeded but the journeys did not, it says so.
-If the run never reached the journeys (missing configuration, production never served the
-release, API down) the report is a FAIL with that reason.
+`.github/scripts/e2e-release-slack.mjs` posts exactly one message per release-triggered run, in
+this order: the verdict (Passed / Failed / Incomplete), release and environment, the deployment
+(and that it is live), one line of results (`12 journeys | 1 Passed | 1 Failed | 10 Skipped`),
+then for each failed journey its name, the failure in plain words (a hook or test timeout reads
+as "timed out after N seconds"), the failing step or "failed during setup", expected and actual
+when known, the likely cause, and its video. A failure adds numbered next steps with the local
+re-run command, a "Skipped" line (journeys not executed after the failure, and each skip reason),
+the artifact link, and, when the deploy succeeded, that nothing was rolled back. If the run never
+reached the journeys (missing configuration, production never served the release, API down) the
+report is a failure with that reason and steps to fix it.
 
 - **Re-runs**: with the bot token, a re-run of a release already reported is posted as a reply
   in that release's thread, not as a new message. With only the webhook a re-run posts a new
   message, labelled "re-run, attempt N".
 - **Failures to post** only warn; they never change the job's result or remove the artifact.
 - Videos over 200 MB, more than 10 videos, or any upload error fall back to the artifact link.
+- **`channel_not_found` / `not_in_channel`**: the bot cannot see `E2E_SLACK_CHANNEL_ID`. The id must be
+  the channel's `C…` id in the bot token's workspace, and the bot must be invited to the channel
+  (`/invite @<bot>`). Until then the report goes out through the webhook, without videos.
 
 ## Running locally
 

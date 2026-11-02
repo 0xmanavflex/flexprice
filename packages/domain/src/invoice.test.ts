@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  InvoiceDocumentStatus,
   InvoiceStatus,
   deriveInvoiceStatus,
+  invoiceDocumentStatus,
   isPastDue,
   needsAttention,
   sumLineAmounts,
@@ -118,5 +120,16 @@ describe('isPastDue', () => {
   })
   it('is never past due without a due date', () => {
     expect(isPastDue(null, new Date('2030-01-01T00:00:00Z'))).toBe(false)
+  })
+})
+
+describe('invoiceDocumentStatus', () => {
+  it('keeps draft, void and skipped, and reads every other status as finalized', () => {
+    expect(invoiceDocumentStatus(InvoiceStatus.Draft)).toBe(InvoiceDocumentStatus.Draft)
+    expect(invoiceDocumentStatus(InvoiceStatus.Void)).toBe(InvoiceDocumentStatus.Voided)
+    expect(invoiceDocumentStatus(InvoiceStatus.Skipped)).toBe(InvoiceDocumentStatus.Skipped)
+    for (const status of [InvoiceStatus.Open, InvoiceStatus.Paid, InvoiceStatus.Overdue]) {
+      expect(invoiceDocumentStatus(status)).toBe(InvoiceDocumentStatus.Finalized)
+    }
   })
 })

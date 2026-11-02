@@ -96,12 +96,12 @@ export function includedIcon(featureType: FeatureType, name: string): { Icon: Ic
   if (featureType === FeatureType.Metered) {
     if (n.includes('email') || n.includes('mail')) return { Icon: MailIcon, tone: 'text-info' }
     if (n.includes('sms') || n.includes('chat') || n.includes('message'))
-      return { Icon: MessageSquareTextIcon, tone: 'text-trial' }
+      return { Icon: MessageSquareTextIcon, tone: 'text-info' }
     if (n.includes('phone') || n.includes('call') || n.includes('minute'))
       return { Icon: SmartphoneIcon, tone: 'text-success' }
     if (n.includes('api') || n.includes('request') || n.includes('agent'))
       return { Icon: ZapIcon, tone: 'text-warning' }
-    return { Icon: GaugeIcon, tone: 'text-trial' }
+    return { Icon: GaugeIcon, tone: 'text-info' }
   }
   return { Icon: SparklesIcon, tone: 'text-success' }
 }
@@ -208,7 +208,7 @@ export function PricingPlanCard({
                 <span className="text-muted-foreground ms-2 text-xs">
                   /{per}
                   {preview && hasUsage ? (
-                    <span className="text-trial ms-1 text-[11px] font-medium">+ Usage</span>
+                    <span className="ms-1 text-[11px] font-medium">+ Usage</span>
                   ) : null}
                 </span>
               ) : null}

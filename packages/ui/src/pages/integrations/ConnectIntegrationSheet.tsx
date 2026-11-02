@@ -18,6 +18,10 @@ import {
   webhookEvents,
   webhookUrl,
   rotatableFields,
+  awsPermissionsPolicy,
+  awsTrustPolicy,
+  gcpSetupScript,
+  marketplaceExternalId,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
@@ -80,6 +84,11 @@ export interface ConnectionContext {
   environmentId: string
   /** Where QuickBooks and Zoho send the reader back after consent. */
   redirectUri: string
+  /**
+   * Flexprice's own AWS account and metering role, which the AWS trust policy
+   * and the GCP federation script name. Unset, those steps say so.
+   */
+  marketplace?: { awsAccountId: string | null; awsRoleName: string | null } | undefined
 }
 
 export interface ConnectIntegrationSheetProps {
@@ -183,7 +192,13 @@ function ConnectForm({
   const multi = stepIds.length > 1
 
   const submit = form.handleSubmit(
-    (values) => onSubmit(toConnectionPayload(spec, values), spec),
+    (values) =>
+      onSubmit(
+        toConnectionPayload(spec, values, {
+          externalId: marketplaceExternalId(context.tenantId, context.environmentId),
+        }),
+        spec,
+      ),
     (invalid) => {
       const failing = stepIds.find((id) =>
         fieldNames(id).some((name) => {
@@ -211,7 +226,9 @@ function ConnectForm({
         events: webhookEvents(spec, sync),
       }
     : null
-  const externalId = `${context.tenantId}_${context.environmentId}`
+  const externalId = marketplaceExternalId(context.tenantId, context.environmentId)
+  const awsAccountId = context.marketplace?.awsAccountId ?? null
+  const awsRoleName = context.marketplace?.awsRoleName ?? null
   const lastLabel =
     spec.setup === 'oauth' ? `Continue to ${integration.name}` : `Connect ${integration.name}`
 
@@ -224,7 +241,7 @@ function ConnectForm({
     >
       <SheetHeader>
         <div className="flex items-center gap-3">
-          <span className="bg-background dark:bg-foreground dark:text-background flex size-10 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs dark:border-transparent">
+          <span className="bg-background flex size-10 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs">
             {logo}
           </span>
           <div className="min-w-0">
@@ -272,12 +289,50 @@ function ConnectForm({
               </CodeBlock>
             ) : null}
             {spec.providerType === 'aws_marketplace' ? (
-              <CodeBlock code={externalId} language="text" label="External ID">
-                <CodeBlockHeader>
-                  <CodeBlockTitle>External ID</CodeBlockTitle>
-                  <CodeBlockCopyButton className="ml-auto" />
-                </CodeBlockHeader>
-              </CodeBlock>
+              <>
+                <CodeBlock code={externalId} language="text" label="External ID">
+                  <CodeBlockHeader>
+                    <CodeBlockTitle>External ID</CodeBlockTitle>
+                    <CodeBlockCopyButton className="ml-auto" />
+                  </CodeBlockHeader>
+                </CodeBlock>
+                <CodeBlock code={awsPermissionsPolicy()} language="json" label="Permissions policy">
+                  <CodeBlockHeader>
+                    <CodeBlockTitle>Permissions policy</CodeBlockTitle>
+                    <CodeBlockCopyButton className="ml-auto" />
+                  </CodeBlockHeader>
+                </CodeBlock>
+                {awsAccountId ? (
+                  <CodeBlock
+                    code={awsTrustPolicy(awsAccountId, externalId)}
+                    language="json"
+                    label="Trust relationship"
+                  >
+                    <CodeBlockHeader>
+                      <CodeBlockTitle>Trust relationship</CodeBlockTitle>
+                      <CodeBlockCopyButton className="ml-auto" />
+                    </CodeBlockHeader>
+                  </CodeBlock>
+                ) : (
+                  <MarketplaceNotConfigured />
+                )}
+              </>
+            ) : null}
+            {spec.providerType === 'gcp_marketplace' ? (
+              awsAccountId && awsRoleName ? (
+                <CodeBlock
+                  code={gcpSetupScript(awsAccountId, awsRoleName)}
+                  language="bash"
+                  label="Cloud Shell setup"
+                >
+                  <CodeBlockHeader>
+                    <CodeBlockTitle>Run in Cloud Shell</CodeBlockTitle>
+                    <CodeBlockCopyButton className="ml-auto" />
+                  </CodeBlockHeader>
+                </CodeBlock>
+              ) : (
+                <MarketplaceNotConfigured />
+              )
             ) : null}
 
             <Field label="Connection name" required error={errors.name?.message}>
@@ -352,5 +407,19 @@ function ConnectForm({
         </div>
       </SheetFooter>
     </form>
+  )
+}
+
+/** Flexprice's own AWS identity is deployment config; without it the setup cannot be shown. */
+function MarketplaceNotConfigured() {
+  return (
+    <Alert variant="warning">
+      <TriangleAlert aria-hidden="true" />
+      <AlertTitle>Setup details are not configured</AlertTitle>
+      <AlertDescription>
+        This console does not know Flexprice&apos;s AWS account. Contact support for the values to
+        use in the setup.
+      </AlertDescription>
+    </Alert>
   )
 }

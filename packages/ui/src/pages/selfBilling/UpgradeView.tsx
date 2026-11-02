@@ -9,6 +9,7 @@ import {
   planFixedTotal,
   planMoney,
   planPriceText,
+  pricedCharges,
 } from '@fp/domain'
 import flexpriceIcon from '@ui/assets/flexprice-icon.png'
 import { Button } from '@ui/components/primitives/button'
@@ -142,7 +143,7 @@ function Offer({
   onBack,
 }: Pick<UpgradeViewProps, 'state' | 'plan' | 'eventCap' | 'today' | 'onBack'>) {
   const fixed = planFixedTotal(plan)
-  const usage = plan?.charges.filter((charge) => charge.type === 'usage') ?? []
+  const usage = pricedCharges(plan).filter((charge) => charge.type === 'usage')
   const locked = state === AccountState.Suspended
   const benefits = [
     ...(locked ? ['Your account can be edited again'] : []),

@@ -54,6 +54,7 @@ import { Pill } from '../../shared/cells'
 import { SplitMeter } from '../../shared/SplitMeter'
 import { WebhookEventTypePicker } from './WebhookEventTypePicker'
 import { WebhookTime } from './webhookCells'
+import { statusTone } from '../../shared/statusTones'
 
 /**
  * One endpoint: Svix's endpoint page.
@@ -232,9 +233,9 @@ export function WebhookEndpointDetail({
       title={endpoint.url}
       badges={
         endpoint.disabled ? (
-          <Pill tone="neutral">Disabled</Pill>
+          <Pill tone={statusTone('disabled')}>Disabled</Pill>
         ) : (
-          <Pill tone="success">Enabled</Pill>
+          <Pill tone={statusTone('enabled')}>Enabled</Pill>
         )
       }
       id={endpoint.id}

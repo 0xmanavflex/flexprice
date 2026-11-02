@@ -245,6 +245,8 @@ export { CostSheetGrid, CostSheetGridProvenance } from './settings/cost-sheets/C
 export type { CostSheetGridProps } from './settings/cost-sheets/CostSheetGrid'
 export { CustomerGrid, CustomerGridProvenance } from './customers/CustomerGrid'
 export { IntegrationMark } from './customers/IntegrationMark'
+export { AddCardDialog, AddCardDialogProvenance } from './customers/AddCardDialog'
+export type { AddCardDialogProps, AddCardProvider } from './customers/AddCardDialog'
 export type { CustomerGridProps } from './customers/CustomerGrid'
 export { SubscriptionForm, SubscriptionFormProvenance } from './contracts/SubscriptionForm'
 export type { SubscriptionFormProps, SubscriptionPlanContext } from './contracts/SubscriptionForm'
