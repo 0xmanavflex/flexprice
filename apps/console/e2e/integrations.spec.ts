@@ -268,6 +268,23 @@ test.describe('integrations', () => {
     expect(ids[1]).toBe(ids[0])
   })
 
+  test('connects Razorpay without a webhook secret and flags it', async ({ page }) => {
+    await enableEntities(page)
+    await page.goto('/integrations/razorpay')
+    const row = page.getByRole('row').filter({ hasText: 'Northwind UK' })
+    await row.getByRole('button', { name: 'Connect Northwind UK' }).click()
+    const sheet = page.getByRole('dialog', { name: /Connect Razorpay/ })
+    await sheet.getByLabel('Connection name').fill('Razorpay UK')
+    await sheet.getByLabel('Key ID').fill('rzp_test_uk')
+    await sheet.locator('input[data-slot="input-group-control"]').first().fill('shh')
+    await sheet.getByRole('button', { name: 'Continue' }).click()
+    await sheet.getByRole('button', { name: 'Continue' }).click()
+    await sheet.getByRole('button', { name: 'Connect Razorpay' }).click()
+    await expect(sheet).toBeHidden()
+    await expect(row).toContainText('Razorpay UK')
+    await expect(row).toContainText('Webhook not set up')
+  })
+
   test('starts QuickBooks consent for a billing entity', async ({ page }) => {
     await enableEntities(page)
     await page.goto('/integrations')

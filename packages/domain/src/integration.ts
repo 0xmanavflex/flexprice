@@ -161,6 +161,8 @@ export interface IntegrationConnection {
   metadata: Record<string, string>
   /** The billing entity that owns it; null when the environment has no entities or the provider is not per entity. */
   billingEntityId: string | null
+  /** Whether the secret that verifies its inbound webhooks is saved; absent for providers without webhooks. */
+  webhookSecretSet?: boolean | undefined
   createdAt?: string | undefined
 }
 

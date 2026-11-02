@@ -1,4 +1,9 @@
-import { connectionForEntity, type BillingEntity, type Integration } from '@fp/domain'
+import {
+  connectionForEntity,
+  webhookMissing,
+  type BillingEntity,
+  type Integration,
+} from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { AppFailure } from '@ui/compositions/feedback/AppFailure'
 import { LoadingRows } from '@ui/compositions/feedback/States'
@@ -6,6 +11,7 @@ import { SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { IntegrationLogo } from '@ui/pages/integrations/IntegrationsBlock'
+import { Pill } from '@ui/pages/shared/cells'
 
 /**
  * A billing entity's Integrations tab: one Section per category, a row per
@@ -85,7 +91,19 @@ export function BillingEntityIntegrations({
               {
                 key: 'connection',
                 header: 'Connection',
-                cell: ({ connection }) => connection?.name ?? '—',
+                cell: ({ connection }) =>
+                  connection ? (
+                    <span className="flex items-center gap-2">
+                      <span>{connection.name}</span>
+                      {webhookMissing(connection) ? (
+                        <Pill tone="warning" size="sm">
+                          Webhook not set up
+                        </Pill>
+                      ) : null}
+                    </span>
+                  ) : (
+                    '—'
+                  ),
               },
               {
                 key: 'action',

@@ -614,6 +614,13 @@ export function toConnectionPayload(
   }
 }
 
+/** True when the provider posts webhooks and this connection cannot verify them yet. */
+export function webhookMissing(connection: IntegrationConnection): boolean {
+  return (
+    connection.webhookSecretSet === false && !!connectionSpecFor(connection.providerType)?.webhook
+  )
+}
+
 /** Providers whose webhook route takes the connection id, so each connection gets its own address. */
 export const PER_CONNECTION_WEBHOOK_PROVIDERS: readonly string[] = [
   'stripe',

@@ -35,6 +35,7 @@ export interface ConnectionWire {
   metadata?: Record<string, unknown> | null
   sync_config?: Record<string, { inbound?: boolean; outbound?: boolean } | undefined> | null
   billing_entity_id?: string | null
+  webhook_secret_set?: boolean
   created_at?: string
 }
 
@@ -62,6 +63,9 @@ export function toIntegrationConnection(wire: ConnectionWire): IntegrationConnec
     syncConfig,
     metadata,
     billingEntityId: wire.billing_entity_id ?? null,
+    ...(typeof wire.webhook_secret_set === 'boolean'
+      ? { webhookSecretSet: wire.webhook_secret_set }
+      : {}),
     createdAt: wire.created_at,
   }
 }

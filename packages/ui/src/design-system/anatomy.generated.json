@@ -848,6 +848,7 @@
         "AppFailure",
         "IntegrationLogo",
         "LoadingRows",
+        "Pill",
         "Section",
         "SimpleTable"
       ],
@@ -6019,6 +6020,7 @@
         "ActivityEventSheet",
         "BillingEntityDetail",
         "BillingEntityGrid",
+        "BillingEntityIntegrations",
         "CatalogStatusBadge",
         "ChargeSheet",
         "ChargeTable",

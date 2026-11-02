@@ -60,3 +60,48 @@ export const Default: Story = {
     await expect(args.onConnect).toHaveBeenCalledWith(entities[2])
   },
 }
+
+/** A connection saved without its webhook secret says so beside its name. */
+export const FlagsAMissingWebhook: Story = {
+  args: {
+    integration: {
+      ...stripe,
+      connections: [
+        { ...stripe.connections[0]!, webhookSecretSet: true },
+        { ...stripe.connections[1]!, webhookSecretSet: false },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const rowOf = (name: string) => canvas.getByRole('row', { name: new RegExp(name) })
+    await expect(await canvas.findByRole('heading', { name: 'Stripe' })).toBeInTheDocument()
+    await expect(rowOf('Northwind EU')).toHaveTextContent('Webhook not set up')
+    await expect(rowOf('Northwind US')).not.toHaveTextContent('Webhook not set up')
+  },
+}
+
+/** A provider that posts no webhooks never shows the flag. */
+export const NoWebhookProvider: Story = {
+  args: {
+    integration: {
+      ...INTEGRATION_CATALOG.find((item) => item.id === 'tabs')!,
+      connections: [
+        {
+          id: 'conn_tabs',
+          name: 'Tabs EU',
+          providerType: 'tabs',
+          syncConfig: {},
+          metadata: {},
+          billingEntityId: 'be_eu',
+          webhookSecretSet: false,
+        },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Tabs EU')).toBeInTheDocument()
+    await expect(canvas.queryByText('Webhook not set up')).not.toBeInTheDocument()
+  },
+}

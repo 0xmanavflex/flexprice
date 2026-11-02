@@ -1,5 +1,10 @@
 import type { ReactNode } from 'react'
-import { connectionForEntity, type Integration, type IntegrationConnection } from '@fp/domain'
+import {
+  connectionForEntity,
+  webhookMissing,
+  type Integration,
+  type IntegrationConnection,
+} from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
@@ -68,7 +73,19 @@ export function ProviderConnections({
               {
                 key: 'connection',
                 header: 'Connection',
-                cell: ({ connection }) => connection?.name ?? '—',
+                cell: ({ connection }) =>
+                  connection ? (
+                    <span className="flex items-center gap-2">
+                      <span>{connection.name}</span>
+                      {webhookMissing(connection) ? (
+                        <Pill tone="warning" size="sm">
+                          Webhook not set up
+                        </Pill>
+                      ) : null}
+                    </span>
+                  ) : (
+                    '—'
+                  ),
               },
               {
                 key: 'action',

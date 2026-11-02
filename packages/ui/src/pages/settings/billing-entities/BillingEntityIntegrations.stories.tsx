@@ -69,3 +69,23 @@ export const Default: Story = {
 export const Loading: Story = { args: { isLoading: true } }
 
 export const Failed: Story = { args: { failed: true } }
+
+/** The entity's connection saved without its webhook secret says so beside its name. */
+export const FlagsAMissingWebhook: Story = {
+  args: {
+    integrations: integrations.map((integration) =>
+      integration.id === 'razorpay'
+        ? {
+            ...integration,
+            connections: integration.connections.map((c) => ({ ...c, webhookSecretSet: false })),
+          }
+        : integration,
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('row', { name: /Razorpay India/ })).toHaveTextContent(
+      'Webhook not set up',
+    )
+  },
+}
