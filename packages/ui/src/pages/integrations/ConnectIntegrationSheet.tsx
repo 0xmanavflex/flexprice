@@ -224,7 +224,7 @@ function ConnectForm({
     >
       <SheetHeader>
         <div className="flex items-center gap-3">
-          <span className="bg-background dark:bg-foreground dark:text-background flex size-10 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs dark:border-transparent">
+          <span className="bg-background flex size-10 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs">
             {logo}
           </span>
           <div className="min-w-0">
