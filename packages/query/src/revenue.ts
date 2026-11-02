@@ -115,6 +115,10 @@ export function useRevenueOverview(
     enabled: Boolean(environmentId),
     staleTime: 60_000,
     placeholderData: (previous) => previous,
+    // Revenue is one part of the page that reads it (Home's top customers,
+    // Reports' summary). A 500 here ("failed to scan revenue row") leaves
+    // that part empty; it must not blank the rest of the page.
+    throwOnError: false,
   })
 }
 
@@ -175,6 +179,8 @@ export function useRevenueSeries(window: { start: Date; end: Date }): UseQueryRe
   const client = useFlexprice()
 
   return useQuery({
+    // A failed series leaves the headline without a chart, not a blank page.
+    throwOnError: false,
     queryKey: queryKeys.revenue.series({
       start: window.start.toISOString(),
       end: window.end.toISOString(),
