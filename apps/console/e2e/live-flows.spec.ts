@@ -138,11 +138,18 @@ const letters = (n: number) =>
     String.fromCharCode(65 + (Number(run.slice(-1 - i, run.length - i)) % 26)),
   ).join('')
 
+/**
+ * Sign-in and token refresh: Flexprice's own `/v1/auth/` and Supabase's
+ * `/auth/v1/` (`POST /auth/v1/token`). Neither belongs to an environment, and
+ * neither response may be logged: both carry the session token.
+ */
+const AUTH_PATH = /\/(v1\/auth|auth\/v1)\//
+
 /** Nothing that writes may leave the browser for another environment (guard three). */
 async function guardWrites(context: BrowserContext) {
   await context.route(/\/v1\//, async (route) => {
     const request = route.request()
-    const isAuth = /\/v1\/auth\//.test(request.url())
+    const isAuth = AUTH_PATH.test(request.url())
     if (request.method() !== 'GET' && !isAuth && request.headers()['x-environment-id'] !== envId) {
       violations.push(`${request.method()} ${new URL(request.url()).pathname}`)
       await route.abort()
@@ -163,7 +170,7 @@ function logApiAnswers(target: Page) {
     const request = response.request()
     if (
       !/\/v1\//.test(request.url()) ||
-      /\/v1\/auth\//.test(request.url()) ||
+      AUTH_PATH.test(request.url()) ||
       (response.status() < 400 &&
         !process.env['E2E_DEBUG_STATUS'] &&
         (request.method() === 'GET' || /\/search$/.test(request.url())))
@@ -192,6 +199,9 @@ test.describe('live flows', () => {
   test.use({ storageState: sessionFile })
 
   test.beforeAll(async ({ browser }) => {
+    // Sign-in, the environment list and the switch each wait up to 30s; the
+    // default 30s for the whole hook cannot hold them.
+    test.setTimeout(90_000)
     // `browser.newContext` inherits this file's `use` options, including the
     // `storageState` above, which does not exist until this hook writes it.
     // Sign-in starts from an empty state instead, and keeps the config's
