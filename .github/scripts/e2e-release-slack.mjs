@@ -89,119 +89,137 @@ const emoji =
 const journeys = summary?.journeys ?? []
 const failed = journeys.filter((j) => j.status === 'FAIL')
 
+/** Playwright's timeout sentences, in the words a person would use. */
+function plainError(message) {
+  const text = String(message ?? '').trim()
+  const hook = text.match(/^"(\w+)" hook timeout of (\d+)ms exceeded/)
+  if (hook) return `${code(hook[1])} hook timed out after ${Number(hook[2]) / 1000} seconds.`
+  const test = text.match(/^Test timeout of (\d+)ms exceeded/)
+  if (test) return `The journey timed out after ${Number(test[1]) / 1000} seconds.`
+  return code(text.split('\n')[0] || 'failed')
+}
+
+/**
+ * The local re-run for one journey. A live journey (`e2e/live-*.spec.ts`, which
+ * is every journey a release runs) skips itself without `E2E_LIVE=1` and the
+ * dedicated account, so its command carries them; the values stay `…` and the
+ * docs say where they come from.
+ */
+function rerunCommand(journey) {
+  const title = journey ? journey.name.replaceAll('`', "'").replaceAll('"', "'") : '<title>'
+  const live = !journey || /(^|\/)live-[^/]*\.spec\./.test(journey.file ?? '')
+  const target = env.E2E_TARGET_URL ? ` E2E_BASE_URL=${env.E2E_TARGET_URL}` : ''
+  return live
+    ? `E2E_LIVE=1 E2E_USER=… E2E_PASSWORD=… E2E_ENV_ID=… E2E_ENV_PREFIX=… E2E_ENVIRONMENT=…${target} pnpm --filter console test:e2e:journey "${title}"`
+    : `pnpm --filter console test:e2e:journey "${title}"`
+}
+
 function message({ videosAttached }) {
   const c = summary?.counts ?? {}
+  const environment = env.E2E_ENVIRONMENT || 'Production'
+  const deployed = env.E2E_DEPLOY_STATUS === 'succeeded'
+  const verdict =
+    finalStatus === 'PASS' ? 'Passed' : finalStatus === 'PARTIAL' ? 'Incomplete' : 'Failed'
+  const skipped = (c.skipped ?? 0) + (c.notRun ?? 0)
   const lines = [
-    `${emoji} *E2E Release Verification — ${finalStatus}*${attempt > 1 ? ` (re-run, attempt ${attempt})` : ''}`,
-    '',
-    `*Release:* ${shortSha ? link(commitUrl, shortSha) : code('unknown')}`,
-    `*Environment:* ${code(env.E2E_ENVIRONMENT || 'Production')}`,
-    `*Deployment:* ${env.E2E_DEPLOY_STATUS === 'succeeded' ? 'succeeded' : escape(env.E2E_DEPLOY_STATUS || 'unknown')} — ${link(env.E2E_DEPLOYMENT_URL, 'deployment run')}`,
-    `*E2E Run:* ${link(runUrl, 'GitHub Actions run')}`,
-    `*Target:* ${env.E2E_TARGET_URL ? link(env.E2E_TARGET_URL, env.E2E_TARGET_URL) : code('unknown')}`,
-    `*Timestamp:* ${code(summary?.startedAt ?? new Date().toISOString())}`,
-    `*Duration:* ${code(formatDuration(summary?.durationMs))}`,
+    `${emoji} *${escape(environment)} E2E Verification ${verdict}*${attempt > 1 ? ` (re-run, attempt ${attempt})` : ''}`,
+    `*Release:* ${shortSha ? link(commitUrl, shortSha) : code('unknown')} | *Environment:* ${escape(environment)}`,
+    `*Deployment:* ${
+      deployed
+        ? `:white_check_mark: Successful — Live at ${env.E2E_TARGET_URL ? link(env.E2E_TARGET_URL, env.E2E_TARGET_URL) : 'the production URL'}`
+        : escape(env.E2E_DEPLOY_STATUS || 'unknown')
+    }${env.E2E_DEPLOYMENT_URL ? ` (${link(env.E2E_DEPLOYMENT_URL, 'deploy run')})` : ''}`,
   ]
-  if (finalStatus !== 'PASS' && env.E2E_DEPLOY_STATUS === 'succeeded') {
-    lines.push(
-      '',
-      '_The deployment succeeded and is live; the post-deployment E2E verification did not pass. Nothing was rolled back._',
-    )
-  }
+
   if (env.E2E_SETUP_ERROR) {
-    lines.push('', `*The journeys did not run:* ${escape(env.E2E_SETUP_ERROR)}`)
+    lines.push(
+      `*Test Results:* the journeys did not run.`,
+      `*Reason:* ${escape(env.E2E_SETUP_ERROR)}`,
+    )
+  } else {
+    lines.push(
+      `*Test Results:* ${c.total ?? 0} journeys | ${c.passed ?? 0} Passed | ${c.failed ?? 0} Failed | ${skipped} Skipped${
+        c.retried ? ` | ${c.retried} Retried` : ''
+      } | ${escape(formatDuration(summary?.durationMs))}`,
+    )
   }
   for (const problem of summary?.infrastructure ?? []) {
     lines.push(`*Infrastructure error:* ${code(problem.split('\n')[0])}`)
   }
 
-  lines.push(
-    '',
-    '*Overall Summary*',
-    `• Total journeys: ${code(c.total ?? 0)}`,
-    `• Passed: ${code(c.passed ?? 0)}`,
-    `• Failed: ${code(c.failed ?? 0)}`,
-    `• Skipped: ${code(c.skipped ?? 0)}`,
-    `• Retried: ${code(c.retried ?? 0)}`,
-  )
-  if (c.notRun) lines.push(`• Not run (interrupted): ${code(c.notRun)}`)
-
-  if (journeys.length > 0) {
-    lines.push('', '*Journey Results*')
-    for (const j of journeys) {
-      if (j.status === 'SKIPPED') {
-        lines.push(
-          `• ${code('[SKIPPED]')} ${escape(j.name)} — ${escape(j.skipReason || 'no reason given')}`,
-        )
-        continue
-      }
-      if (j.status === 'NOT RUN') {
-        lines.push(`• ${code('[NOT RUN]')} ${escape(j.name)}`)
-        continue
-      }
-      const retried =
-        j.retries > 0 ? ` (after ${j.retries} retr${j.retries === 1 ? 'y' : 'ies'})` : ''
+  for (const j of failed) {
+    const f = j.failure ?? {}
+    lines.push('', `*Failed Journey:* ${code(j.name)}`, `*Failure:* ${plainError(f.message)}`)
+    if (f.step) {
+      lines.push(`*Failed at:* ${code(f.step)}`)
+    } else {
+      lines.push('The journey failed during setup, before its own steps could run.')
+    }
+    if (f.expected || f.actual) {
       lines.push(
-        `• ${code(`[${j.status}]`)} ${escape(j.name)} — ${code(formatDuration(j.durationMs))}${retried}`,
+        `*Expected:* ${code(f.expected ?? 'every step completes')} | *Actual:* ${code(f.actual ?? f.message)}`,
       )
-      if (j.status === 'FAIL' && j.failure) {
-        const f = j.failure
-        const evidence = [j.report, ...j.evidence.screenshots, ...j.evidence.trace].map((p) =>
-          p.startsWith('journeys/') ? p : `journeys/${j.id}/${p}`,
-        )
-        lines.push(
-          `    ◦ Failed at: ${code(f.step ?? 'a hook or fixture')}`,
-          `    ◦ Expected: ${code(f.expected ?? 'every step completes')}`,
-          `    ◦ Actual: ${code(f.actual ?? f.message)}`,
-          `    ◦ Error: ${code(f.message)}`,
-          `    ◦ Evidence: ${link(artifactUrl, 'artifact')} → ${evidence.map(code).join(', ')}`,
-          `    ◦ Video: ${
-            j.evidence.video.length === 0
-              ? 'none captured'
-              : videosAttached.has(j.id)
-                ? 'attached to this message'
-                : `${link(artifactUrl, 'artifact')} → ${code(`journeys/${j.id}/${j.evidence.video[0]}`)}`
-          }`,
-        )
-      }
+    }
+    lines.push(
+      `*Likely cause (inferred):* ${f.likelyCause?.[0] ? escape(f.likelyCause[0]) : 'not yet identified.'}`,
+    )
+    if (j.evidence.video.length > 0) {
+      lines.push(
+        `*Video:* ${videosAttached.has(j.id) ? 'attached to this message' : `${link(artifactUrl, 'in the artifact')} → ${code(`journeys/${j.id}/${j.evidence.video[0]}`)}`}`,
+      )
     }
   }
 
-  lines.push(
-    '',
-    '*Reports and Artifacts*',
-    `• Journey inventory: ${link(artifactUrl, 'e2e-results')} → ${code('journey-inventory.md')}`,
-    `• Overall summary: ${link(artifactUrl, 'e2e-results')} → ${code('summary.json')}`,
-    `• Individual journey reports: ${link(artifactUrl, 'e2e-results')} → ${code('journeys/<id>/summary.md')}`,
-    `• Failure screenshots and traces: ${failed.length > 0 ? `${link(artifactUrl, 'e2e-results')} → ${code('journeys/<id>/screenshots|trace')}` : 'none — nothing failed'}`,
-    '',
-    '*Failed Journey Videos*',
-  )
-  if (failed.length === 0) {
-    lines.push('No failed journeys; no videos generated.')
-  } else {
-    for (const j of failed) {
-      lines.push(
-        `• ${escape(j.name)} (${code(j.id)}): ${
-          videosAttached.has(j.id)
-            ? 'attached'
-            : j.evidence.video.length > 0
-              ? link(artifactUrl, 'download from the artifact')
-              : 'no recording captured'
-        }`,
-      )
-    }
-    const top = failed
-      .slice(0, 3)
-      .map((j) => `${escape(j.name)} — ${escape(j.failure?.message ?? 'failed')}`)
-      .join('; ')
+  if (env.E2E_SETUP_ERROR) {
     lines.push(
       '',
-      `*Most important:* ${top}${failed.length > 3 ? `; and ${failed.length - 3} more` : ''}.`,
-      '*Next:* open each failed journey’s `summary.md`, then its trace from the failing step backwards; re-run one locally with `pnpm --filter console test:e2e:journey "<title>"`.',
+      '*Next Steps:*',
+      '1. Fix the configuration or service named in the reason above.',
+      '2. Re-run this workflow from GitHub Actions (or run it by hand with the Slack option on).',
+    )
+  } else if (finalStatus !== 'PASS') {
+    const first = failed[0]
+    lines.push(
+      '',
+      '*Next Steps:*',
+      '1. Inspect the failure screenshot and Playwright trace in the artifact.',
+      `2. Identify what is causing ${first ? (first.failure?.step ? 'the failing step' : 'the setup to fail') : 'the run to stop'}.`,
+      `3. Re-run the journey locally:\n\`${rerunCommand(first)}\``,
+      '   Use the dedicated E2E account, never your own: see `docs/e2e-testing.md` → Running locally.',
+      '4. Fix the issue and rerun E2E verification.',
+    )
+    if (failed.length > 1)
+      lines.push(`_${failed.length} journeys failed; each one is listed above._`)
+  }
+
+  const notRun = c.notRun ?? journeys.filter((j) => j.status === 'NOT RUN').length
+  const reasons = [
+    ...new Set(
+      journeys.filter((j) => j.status === 'SKIPPED').map((j) => j.skipReason || 'no reason given'),
+    ),
+  ]
+  if (notRun > 0 || reasons.length > 0) {
+    const parts = []
+    if (notRun > 0) {
+      parts.push(
+        `The remaining ${notRun} journey${notRun === 1 ? ' was' : 's were'} not executed${failed.length > 0 ? ' after the failure' : ''}.`,
+      )
+    }
+    for (const reason of reasons) parts.push(escape(reason))
+    lines.push('', `*Skipped:* ${parts.join(' ')}`)
+  }
+
+  lines.push(
+    '',
+    `*Artifacts:* ${link(artifactUrl || runUrl, `GitHub Actions Run #${env.GITHUB_RUN_ID ?? 'local'}`)} — includes summary, screenshots and trace.`,
+  )
+  if (finalStatus !== 'PASS' && deployed) {
+    lines.push(
+      '*Important:* Deployment is successful and production is live. No rollback was triggered. Only post-deployment E2E verification failed.',
     )
   }
-  lines.push('', `_${marker} · run ${env.GITHUB_RUN_ID ?? 'local'} · attempt ${attempt}_`)
+  // The thread key for re-runs: `earlierReport` finds this line.
+  lines.push(`_${marker} · attempt ${attempt}_`)
 
   let text = lines.join('\n')
   if (text.length > MAX_TEXT) {
@@ -222,7 +240,13 @@ async function slackApi(method, token, body, { json = true } = {}) {
     body: json ? JSON.stringify(body) : new URLSearchParams(body),
   })
   const data = await response.json().catch(() => ({ ok: false, error: `HTTP ${response.status}` }))
-  if (!data.ok) throw new Error(`${method}: ${data.error ?? 'unknown error'}`)
+  if (!data.ok) {
+    const hint =
+      data.error === 'channel_not_found' || data.error === 'not_in_channel'
+        ? " — check that E2E_SLACK_CHANNEL_ID is the channel id (C…) in the bot token's workspace and that the bot was invited to it (/invite in the channel)"
+        : ''
+    throw new Error(`${method}: ${data.error ?? 'unknown error'}${hint}`)
+  }
   return data
 }
 

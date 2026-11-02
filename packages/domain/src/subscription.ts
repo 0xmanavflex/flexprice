@@ -860,6 +860,15 @@ export interface SubscriptionLine {
    * *that* it changed needs no second request, knowing *from what* does.
    */
   overridesPriceId: string
+  /**
+   * The line this version replaced, and the line that replaced this one.
+   *
+   * A price or quantity change ends the line and starts another. These ids are
+   * that chain. The history read walks them, so versions of one charge stay
+   * one charge even when the new price does not point back with `parent_price_id`.
+   */
+  predecessorLineItemId?: string | undefined
+  successorLineItemId?: string | undefined
 }
 
 export type SubscriptionLineSource = 'plan' | 'addon' | 'contract'
@@ -875,12 +884,13 @@ export interface LineLineage {
 /**
  * A contract's lines grouped into the charges they are versions of.
  *
- * Changing a charge's price on a contract never edits it in place: the API ends
- * the line (its `end_date`) and starts a new one whose price points back to the
- * one it replaced (`parent_price_id`). Linking those ids end to end turns the
- * ended lines back into what they are: earlier versions of one charge, kept
- * inactive, not deleted: so the table shows each charge once and its history
- * lists every price it has had.
+ * Changing a charge on a contract never edits the line in place: the API ends
+ * it and starts a new one. The new line points at the old one
+ * (`predecessor_line_item_id`), and the old line points forward
+ * (`successor_line_item_id`). A price change also points the new price back
+ * (`parent_price_id`). Either link turns the ended lines back into earlier
+ * versions of one charge, so the table shows each charge once and its history
+ * lists every version it has had.
  */
 export function lineLineages(
   lines: readonly SubscriptionLine[],
@@ -899,10 +909,13 @@ export function lineLineages(
     if (rootA !== rootB) parent.set(rootA, rootB)
   }
   const keyOf = (line: SubscriptionLine) => line.priceId || `line:${line.id}`
+  const byId = new Map(lines.map((line) => [line.id, line]))
 
   for (const line of lines) {
     find(keyOf(line))
     if (line.overridesPriceId) union(keyOf(line), line.overridesPriceId)
+    const previous = line.predecessorLineItemId ? byId.get(line.predecessorLineItemId) : undefined
+    if (previous) union(keyOf(line), keyOf(previous))
   }
 
   const groups = new Map<string, SubscriptionLine[]>()
@@ -917,9 +930,43 @@ export function lineLineages(
     (a.endDate ? 1 : 0) - (b.endDate ? 1 : 0)
 
   return [...groups.values()].map((group) => {
-    const versions = [...group].sort(newestFirst)
+    const versions = orderVersions(group, newestFirst)
     return { current: currentVersion(versions, now), versions }
   })
+}
+
+/**
+ * Newest first. A predecessor/successor chain is that order exactly: walk it
+ * from the line nothing replaced, then reverse. Built oldest first, so chain
+ * heads are taken oldest first and any line no chain reached is added oldest
+ * first too; the API's own order never decides it.
+ */
+function orderVersions(
+  group: readonly SubscriptionLine[],
+  newestFirst: (a: SubscriptionLine, b: SubscriptionLine) => number,
+): SubscriptionLine[] {
+  const byId = new Map(group.map((line) => [line.id, line]))
+  const linked = group.some((line) => line.predecessorLineItemId || line.successorLineItemId)
+  if (!linked) return [...group].sort(newestFirst)
+
+  const oldestFirstOrder = (a: SubscriptionLine, b: SubscriptionLine) => newestFirst(b, a)
+  const oldestFirst: SubscriptionLine[] = []
+  const seen = new Set<string>()
+  const heads = group
+    .filter((line) => !line.predecessorLineItemId || !byId.has(line.predecessorLineItemId))
+    .sort(oldestFirstOrder)
+  for (const head of heads) {
+    let cursor: SubscriptionLine | undefined = head
+    while (cursor && !seen.has(cursor.id)) {
+      seen.add(cursor.id)
+      oldestFirst.push(cursor)
+      cursor = cursor.successorLineItemId ? byId.get(cursor.successorLineItemId) : undefined
+    }
+  }
+  for (const line of [...group].sort(oldestFirstOrder)) {
+    if (!seen.has(line.id)) oldestFirst.push(line)
+  }
+  return oldestFirst.reverse()
 }
 
 /** End a charge. `effectiveFrom` empty means now. */

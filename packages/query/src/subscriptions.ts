@@ -239,6 +239,8 @@ export interface SubscriptionLineWire {
   priceType?: string | undefined
   entityType?: string | undefined
   priceId?: string | undefined
+  predecessorLineItemId?: string | undefined
+  successorLineItemId?: string | undefined
   quantity?: string | undefined
   billingPeriod?: string | undefined
   currency?: string | undefined
@@ -437,6 +439,8 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
      * flag can say that it changed and the sheet cannot yet say from what.
      */
     overridesPriceId: wire.price?.parentPriceId ?? '',
+    ...(wire.predecessorLineItemId ? { predecessorLineItemId: wire.predecessorLineItemId } : {}),
+    ...(wire.successorLineItemId ? { successorLineItemId: wire.successorLineItemId } : {}),
   }
 }
 

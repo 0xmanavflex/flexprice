@@ -633,6 +633,9 @@ export function SubscriptionDetailView({
     canModify && handler ? { label, onClick: open(kind) } : undefined
 
   const usageData = usage.data
+  // A history item often names its price by id only. The amount lives on the
+  // line the contract already loaded for that same price.
+  const knownPrices = chargesByPriceId([...(lineHistory ?? []), ...(lines.data ?? [])])
   // With the full history, a charge is its newest version and the rest are history.
   const lineages = lineHistory ? lineLineages(lineHistory) : null
   const chargeRows = chargesOfLines(
@@ -643,13 +646,15 @@ export function SubscriptionDetailView({
     if (!chargeId || lineage.versions.length < 2) continue
     chargeRows.details.set(chargeId, {
       ...chargeRows.details.get(chargeId),
-      versions: lineVersions(lineage.versions),
+      versions: lineVersions(lineage.versions, knownPrices),
     })
   }
   // The open charge's versions as the history API returned them.
   const chargeHistory: ChargeHistory | undefined = openLineHistory
     ? {
-        ...(openLineHistory.lines ? { versions: lineVersions(openLineHistory.lines) } : {}),
+        ...(openLineHistory.lines
+          ? { versions: lineVersions(openLineHistory.lines, knownPrices) }
+          : {}),
         isLoading: openLineHistory.isLoading,
         error: openLineHistory.error,
         onRetry: openLineHistory.onRetry,
@@ -1978,20 +1983,41 @@ export function SubscriptionDetailView({
 }
 
 /** A charge's line item versions as its sheet's History lists them. */
-function lineVersions(lines: readonly SubscriptionLine[]): ChargeVersion[] {
-  return lines.flatMap((version) =>
-    version.charge
-      ? [
-          {
-            id: version.id,
-            price: chargePriceLabel(version.charge),
-            startDate: version.startDate,
-            endDate: version.endDate,
-            updatedAt: version.charge.createdAt,
-          },
-        ]
-      : [],
-  )
+function lineVersions(
+  lines: readonly SubscriptionLine[],
+  knownPrices: ReadonlyMap<string, Charge>,
+): ChargeVersion[] {
+  return lines.flatMap((version) => {
+    const charge =
+      version.charge ?? (version.priceId ? knownPrices.get(version.priceId) : undefined)
+    const unit = charge ? chargePriceLabel(charge) : null
+    // A count of units only on a fixed charge: a metered line's quantity is
+    // usage (often 0), and its price is already a per-unit rate.
+    const counted = version.kind !== 'usage' && charge?.type !== PriceType.Usage
+    const quantity = counted ? version.quantity?.trim() : undefined
+    const priced = unit ? (quantity && quantity !== '1' ? `${unit} × ${quantity}` : unit) : null
+    const price =
+      priced ?? (quantity && quantity !== '1' ? `${version.name} × ${quantity}` : version.name)
+    if (!price) return []
+    return [
+      {
+        id: version.id,
+        price,
+        startDate: version.startDate,
+        endDate: version.endDate,
+        updatedAt: charge?.createdAt ?? null,
+      },
+    ]
+  })
+}
+
+/** Prices already loaded for this contract, keyed by price id. */
+function chargesByPriceId(lines: readonly SubscriptionLine[]): Map<string, Charge> {
+  const prices = new Map<string, Charge>()
+  for (const line of lines) {
+    if (line.priceId && line.charge) prices.set(line.priceId, line.charge)
+  }
+  return prices
 }
 
 /** The value a row is about: name, amount. Everything else in the row is `Muted`. */
