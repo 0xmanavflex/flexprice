@@ -110,7 +110,7 @@ function rerunCommand(journey) {
   const live = !journey || /(^|\/)live-[^/]*\.spec\./.test(journey.file ?? '')
   const target = env.E2E_TARGET_URL ? ` E2E_BASE_URL=${env.E2E_TARGET_URL}` : ''
   return live
-    ? `E2E_LIVE=1 E2E_USER=… E2E_PASSWORD=… E2E_ENV_ID=… E2E_ENV_PREFIX=…${target} pnpm --filter console test:e2e:journey "${title}"`
+    ? `E2E_LIVE=1 E2E_USER=… E2E_PASSWORD=… E2E_ENV_ID=… E2E_ENV_PREFIX=… E2E_ENVIRONMENT=…${target} pnpm --filter console test:e2e:journey "${title}"`
     : `pnpm --filter console test:e2e:journey "${title}"`
 }
 
