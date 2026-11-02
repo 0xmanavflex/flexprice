@@ -142,6 +142,14 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
   },
 ]
 
+/**
+ * Providers a card can be saved at from a customer's page, through a hosted
+ * setup page (`POST /payments/customers/{id}/setup/intent`). V1 offers Stripe
+ * from the customer page and Moyasar from its mapping card; Razorpay is offered
+ * as well. The menu item shows only when one of these is connected.
+ */
+export const CARD_SETUP_PROVIDERS = ['stripe', 'razorpay', 'moyasar'] as const
+
 /** An integration as the grid shows it: the catalogue entry plus this environment's connection count. */
 /** A published connection. Secrets never come back from the API, so none are here. */
 export interface IntegrationConnection {

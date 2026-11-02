@@ -18,6 +18,7 @@ import {
 } from '@fp/ui/pages'
 import { useFlexpriceServerURL } from '@fp/query'
 import { useSession } from '@/app/session'
+import { env } from '@/env'
 import { toListFailure } from '@/pages/shared/listFailure'
 import { savePendingOAuth } from './oauthSession'
 
@@ -51,6 +52,7 @@ export function IntegrationListPage() {
     tenantId: session?.tenantId ?? '',
     environmentId: environmentId ?? '',
     redirectUri: oauthRedirectUri(window.location.origin),
+    marketplace: env.marketplace,
   }
 
   const closeConnect = () => {

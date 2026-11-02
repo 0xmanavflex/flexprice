@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { CustomerStatus, SubscriptionStatus, type TenantFeatureUsage } from '@fp/domain'
+import {
+  CARD_SETUP_PROVIDERS,
+  CustomerStatus,
+  SubscriptionStatus,
+  type TenantFeatureUsage,
+} from '@fp/domain'
 import {
   useCustomer,
   useCustomerIntegrationLinks,
@@ -8,6 +13,7 @@ import {
   useLinkCustomerIntegration,
   useUnlinkCustomerIntegration,
   usePushCustomerToIntegrations,
+  useAddCustomerCard,
   useCustomerInvoices,
   useCustomerPayments,
   useCustomerSubscriptions,
@@ -20,6 +26,7 @@ import {
 } from '@fp/query'
 import {
   ActivityEventSheet,
+  AddCardDialog,
   CUSTOMER_TABS,
   CustomerDetail,
   CustomerEntitlementUsage,
@@ -102,6 +109,16 @@ export function CustomerDetailPage({
   const pushTargets = (integrations.data ?? [])
     .filter((integration) => integration.connection?.syncConfig.customer?.outbound)
     .map((integration) => integration.name)
+  // Where a card can be saved: the connected providers with a hosted setup page.
+  const cardProviders = (integrations.data ?? [])
+    .filter(
+      (integration) =>
+        integration.connection &&
+        (CARD_SETUP_PROVIDERS as readonly string[]).includes(integration.providerType),
+    )
+    .map(({ providerType, name }) => ({ providerType, name }))
+  const addCard = useAddCustomerCard(customerId)
+  const [addingCard, setAddingCard] = useState(false)
   // By internal id, so an archived customer's contracts and invoices still load.
   const subscriptions = useCustomerSubscriptions(customerId)
   const invoices = useCustomerInvoices(customerId)
@@ -247,6 +264,7 @@ export function CustomerDetailPage({
         }
         onEdit={() => onEdit(customer.data.id)}
         onArchive={() => setArchiving(true)}
+        {...(!archived && cardProviders.length > 0 ? { onAddCard: () => setAddingCard(true) } : {})}
         onCopyPortalLink={() => void portal.copy({ externalId: customer.data?.externalId })}
         {...(streamTarget && !sampleEvents.isPending
           ? { onStreamEvents: () => streamEvents(streamTarget.id, streamTarget.planName) }
@@ -389,6 +407,15 @@ export function CustomerDetailPage({
         isPending={remove.isPending}
         destructive
         error={remove.error ? 'Could not archive the customer. Try again.' : null}
+      />
+      <AddCardDialog
+        open={addingCard}
+        onOpenChange={setAddingCard}
+        customerName={customer.data.name}
+        providers={cardProviders}
+        onCreateLink={({ provider, setDefault }) =>
+          addCard.mutateAsync({ provider, setDefault, returnUrl: window.location.href })
+        }
       />
       {invoiceRows.dialogs}
       <ActivityEventSheet

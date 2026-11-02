@@ -419,6 +419,18 @@ export function parsePlatformConfig(raw: string | undefined): PlatformConfig {
 
 const platform = parsePlatformConfig(clean(import.meta.env.VITE_PLATFORM_CONFIG))
 
+/**
+ * Flexprice's own AWS identity for marketplace setup, as V1 reads it: the AWS
+ * trust policy names the account, and the GCP federation script names the
+ * account and the metering role. Public identifiers, not secrets; the same
+ * values as V1's deployment. Unset, the connect sheet says setup details are
+ * missing rather than showing a policy that trusts nobody.
+ */
+const marketplace = {
+  awsAccountId: clean(import.meta.env.VITE_FLEXPRICE_AWS_ACCOUNT_ID) ?? null,
+  awsRoleName: clean(import.meta.env.VITE_FLEXPRICE_AWS_ROLE_NAME) ?? null,
+}
+
 export const env = {
   useMocks,
   problem,
@@ -468,6 +480,8 @@ export const env = {
   posthog,
   /** `VITE_PLATFORM_CONFIG`: what this deployment allows, and how people reach us. */
   platform,
+  /** Flexprice's AWS account and role for AWS and GCP Marketplace setup. */
+  marketplace,
   /**
    * The Google Apps Script web app that appends each completed onboarding to
    * the team's sheet (V1's `VITE_GOOGLE_SHEETS_WEB_APP_URL`, same value).

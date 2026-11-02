@@ -181,7 +181,7 @@
       "usedBy": [
         "CustomerPortalView"
       ],
-      "story": null
+      "story": "./src/pages/customers/AddCardDialog.stories.tsx"
     },
     "AddChargeDialog": {
       "file": "src/pages/product-catalog/plans/AddChargeDialog.tsx",
@@ -1603,6 +1603,7 @@
       "layer": "surface",
       "composes": [
         "ConfirmDialog",
+        "ConnectorCard",
         "DataExportDialog",
         "DetailList",
         "DetailMoreMenu",
@@ -1631,8 +1632,13 @@
         "CheckIcon"
       ],
       "usedBy": [
+        "ConnectionExports",
+        "DataExportDetail",
+        "ExportRunList",
+        "ExportsOverview",
         "IntegrationLogo",
-        "IntegrationsBlock"
+        "IntegrationsBlock",
+        "S3ConnectionList"
       ],
       "story": "./src/compositions/layout/ConnectorCard.stories.tsx"
     },
@@ -2045,6 +2051,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "CustomerActivityView",
+        "CustomerDetail",
         "PageShell",
         "PaymentGrid",
         "PortalOverview",
@@ -2228,6 +2235,7 @@
         "ArrowUpDownIcon",
         "ContractIntegrations",
         "CopyValue",
+        "CreditCardIcon",
         "DetailTable",
         "DetailTabs",
         "EditableCard",
@@ -2456,6 +2464,7 @@
       "layer": "surface",
       "composes": [
         "ConfirmDialog",
+        "ConnectorCard",
         "DataExportDialog",
         "DetailList",
         "DetailMoreMenu",
@@ -3378,6 +3387,7 @@
       "layer": "surface",
       "composes": [
         "ConfirmDialog",
+        "ConnectorCard",
         "DataExportDialog",
         "DetailList",
         "DetailMoreMenu",
@@ -3403,6 +3413,7 @@
       "layer": "surface",
       "composes": [
         "ConfirmDialog",
+        "ConnectorCard",
         "DataExportDialog",
         "DetailList",
         "DetailMoreMenu",
@@ -6877,6 +6888,7 @@
       "layer": "surface",
       "composes": [
         "ConfirmDialog",
+        "ConnectorCard",
         "DataExportDialog",
         "DetailList",
         "DetailMoreMenu",
@@ -9559,6 +9571,13 @@
         "PortalNotice"
       ]
     },
+    "./src/pages/customers/AddCardDialog.stories.tsx": {
+      "title": "App/Customers/Add card dialog",
+      "component": "AddCardDialog",
+      "uses": [
+        "AddCardDialog"
+      ]
+    },
     "./src/pages/customers/CustomerActivityView.stories.tsx": {
       "title": "Customer created",
       "component": "CustomerActivityView",
@@ -10739,6 +10758,7 @@
       "route": "/customers/$customerId",
       "uses": [
         "ActivityEventSheet",
+        "AddCardDialog",
         "ConfirmDialog",
         "CustomerDetail",
         "CustomerEntitlementUsage",

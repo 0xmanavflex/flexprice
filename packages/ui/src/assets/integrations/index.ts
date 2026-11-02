@@ -14,6 +14,7 @@ import gcpMarketplace from './gcp_marketplace.svg'
 import azureMarketplace from './azure_marketplace.svg'
 import salesforce from './salesforce.svg'
 import paypal from './paypal.svg'
+import s3 from './s3.svg'
 import stripeDark from './dark/stripe.svg'
 import razorpayDark from './dark/razorpay.svg'
 import chargebeeDark from './dark/chargebee.svg'
@@ -28,6 +29,7 @@ import tabsDark from './dark/tabs.svg'
 import awsMarketplaceDark from './dark/aws_marketplace.svg'
 import gcpMarketplaceDark from './dark/gcp_marketplace.svg'
 import azureMarketplaceDark from './dark/azure_marketplace.svg'
+import s3Dark from './dark/s3.svg'
 
 /**
  * Brand marks for the integration catalogue, keyed by integration id: the
@@ -52,6 +54,8 @@ export const INTEGRATION_LOGOS: Record<string, string> = {
   azure_marketplace: azureMarketplace,
   salesforce,
   paypal,
+  /** Amazon S3, the data-export destination (not in the integrations catalogue). */
+  s3,
 }
 
 /**
@@ -73,4 +77,5 @@ export const INTEGRATION_LOGOS_DARK: Record<string, string> = {
   aws_marketplace: awsMarketplaceDark,
   gcp_marketplace: gcpMarketplaceDark,
   azure_marketplace: azureMarketplaceDark,
+  s3: s3Dark,
 }

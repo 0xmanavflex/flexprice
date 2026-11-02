@@ -544,6 +544,7 @@ export interface ConnectionPayload {
 export function toConnectionPayload(
   spec: ConnectionSpec,
   values: ConnectionFormValues,
+  context: { externalId?: string } = {},
 ): ConnectionPayload {
   const secrets: Record<string, string> = {}
   const metadata: Record<string, string> = {}
@@ -562,7 +563,11 @@ export function toConnectionPayload(
     const current = (syncConfig[option.entity] ?? {}) as Record<string, boolean>
     syncConfig[option.entity] = { ...current, [option.direction]: on }
   }
-  if (spec.providerType === 'aws_marketplace') syncConfig['aws_marketplace'] = syncExtra
+  if (spec.providerType === 'aws_marketplace') {
+    syncConfig['aws_marketplace'] = syncExtra
+    // The role's trust policy names this value; the API checks it with STS AssumeRole.
+    if (context.externalId) secrets['external_id'] = context.externalId
+  }
 
   return {
     name: values.name.trim(),
@@ -588,6 +593,7 @@ export function webhookEvents(spec: ConnectionSpec, sync: Record<string, boolean
   const events = [...(spec.webhook?.events ?? [])]
   if (spec.providerType === 'stripe') {
     if (sync['plan:inbound']) events.push('product.created', 'product.updated', 'product.deleted')
+    if (sync['invoice:outbound']) events.push('invoice_payment.paid')
     if (sync['subscription:inbound'])
       events.push(
         'customer.subscription.created',
@@ -680,4 +686,87 @@ export function toConnectionChanges(
   }
   if (Object.keys(secrets).length > 0) changes.encrypted_secret_data = secrets
   return changes
+}
+
+/** The ID AWS and GCP marketplace roles must name: one per tenant and environment. */
+export function marketplaceExternalId(tenantId: string, environmentId: string): string {
+  return `${tenantId}_${environmentId}`
+}
+
+/** The IAM permissions policy the AWS Marketplace role needs: metering only. */
+export function awsPermissionsPolicy(): string {
+  return JSON.stringify(
+    {
+      Version: '2012-10-17',
+      Statement: [{ Effect: 'Allow', Action: 'aws-marketplace:BatchMeterUsage', Resource: '*' }],
+    },
+    null,
+    2,
+  )
+}
+
+/** The trust relationship that lets Flexprice's AWS account assume the role, bound to the external ID. */
+export function awsTrustPolicy(flexpriceAccountId: string, externalId: string): string {
+  return JSON.stringify(
+    {
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Effect: 'Allow',
+          Principal: { AWS: `arn:aws:iam::${flexpriceAccountId}:root` },
+          Action: 'sts:AssumeRole',
+          Condition: { StringEquals: { 'sts:ExternalId': externalId } },
+        },
+      ],
+    },
+    null,
+    2,
+  )
+}
+
+/**
+ * The gcloud script the reader runs in Cloud Shell against their own project:
+ * it federates Flexprice's AWS role into GCP and writes the credentials file
+ * the form asks for. Command for command V1's script.
+ */
+export function gcpSetupScript(flexpriceAccountId: string, flexpriceRoleName: string): string {
+  return `GCP_PROJECT_ID="your-gcp-project-id"
+GCP_PROJECT_NUMBER="your-gcp-project-number"
+SA_ID="flexprice-metering-sa"
+FLEXPRICE_AWS_ACCOUNT_ID="${flexpriceAccountId}"
+FLEXPRICE_AWS_ROLE_NAME="${flexpriceRoleName}"
+
+# 1. Create the workload identity pool
+gcloud iam workload-identity-pools create "flexprice-pool" \\
+  --location="global" --project="$GCP_PROJECT_ID"
+
+# 2. Create the provider inside it, and pin exactly who to trust
+gcloud iam workload-identity-pools providers create-aws "flexprice-provider" \\
+  --location="global" --workload-identity-pool="flexprice-pool" \\
+  --account-id="$FLEXPRICE_AWS_ACCOUNT_ID" \\
+  --attribute-mapping="google.subject=assertion.arn,attribute.account=assertion.account,attribute.aws_role=assertion.arn.extract('assumed-role/{role}/')" \\
+  --attribute-condition="attribute.aws_role == '$FLEXPRICE_AWS_ROLE_NAME'" \\
+  --project="$GCP_PROJECT_ID"
+
+# 3. Create the service account
+gcloud iam service-accounts create "$SA_ID" --project="$GCP_PROJECT_ID"
+
+# 4. Grant it exactly one permission: report usage
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \\
+  --role="roles/servicemanagement.serviceController" \\
+  --member="serviceAccount:$SA_ID@$GCP_PROJECT_ID.iam.gserviceaccount.com"
+
+# 5. Let Flexprice's AWS identity impersonate the service account
+gcloud iam service-accounts add-iam-policy-binding \\
+  "$SA_ID@$GCP_PROJECT_ID.iam.gserviceaccount.com" \\
+  --role="roles/iam.workloadIdentityUser" \\
+  --member="principalSet://iam.googleapis.com/projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/flexprice-pool/attribute.account/$FLEXPRICE_AWS_ACCOUNT_ID" \\
+  --project="$GCP_PROJECT_ID"
+
+# 6. Generate the credentials JSON
+gcloud iam workload-identity-pools create-cred-config \\
+  "projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/flexprice-pool/providers/flexprice-provider" \\
+  --service-account="$SA_ID@$GCP_PROJECT_ID.iam.gserviceaccount.com" \\
+  --aws --output-file="flexprice-gcp-creds.json"
+`
 }

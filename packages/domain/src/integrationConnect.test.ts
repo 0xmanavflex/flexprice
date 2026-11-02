@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { IntegrationConnection } from './integration'
 import {
+  awsTrustPolicy,
   connectSteps,
   connectionFormSchema,
   connectionSpecFor,
   connectionToFormValues,
   defaultConnectionValues,
+  gcpSetupScript,
+  marketplaceExternalId,
   manageFormSchema,
   oauthRedirectUri,
   toConnectionChanges,
@@ -48,6 +51,50 @@ describe('connect payload', () => {
     expect(payload.encrypted_secret_data).toEqual({ client_id: 'id', client_secret: 'secret' })
     expect(payload.metadata).toMatchObject({ organization_id: '60001' })
   })
+
+  it('sends AWS Marketplace the external ID its trust policy names, and the region as sync config', () => {
+    const aws = spec('aws_marketplace')
+    const values = defaultConnectionValues(aws, 'AWS Marketplace')
+    values.fields['role_arn'] = 'arn:aws:iam::123456789012:role/fp'
+    const payload = toConnectionPayload(aws, values, {
+      externalId: marketplaceExternalId('t1', 'e1'),
+    })
+    expect(payload.encrypted_secret_data).toEqual({
+      role_arn: 'arn:aws:iam::123456789012:role/fp',
+      external_id: 't1_e1',
+    })
+    expect(payload.sync_config).toEqual({ aws_marketplace: { region: 'us-east-1' } })
+  })
+
+  it('never adds an external ID to other providers', () => {
+    const tabs = spec('tabs')
+    const values = defaultConnectionValues(tabs, 'Tabs')
+    values.fields['api_key'] = 'k'
+    expect(
+      toConnectionPayload(tabs, values, { externalId: 't1_e1' }).encrypted_secret_data,
+    ).toEqual({ api_key: 'k' })
+  })
+})
+
+describe('marketplace setup', () => {
+  it("trusts Flexprice's account only with the tenant's external ID", () => {
+    const policy = JSON.parse(awsTrustPolicy('999988887777', 't1_e1')) as {
+      Statement: { Principal: { AWS: string }; Condition: unknown }[]
+    }
+    expect(policy.Statement[0]!.Principal.AWS).toBe('arn:aws:iam::999988887777:root')
+    expect(policy.Statement[0]!.Condition).toEqual({
+      StringEquals: { 'sts:ExternalId': 't1_e1' },
+    })
+  })
+
+  it('names the account and role in the GCP script', () => {
+    const script = gcpSetupScript('999988887777', 'flexprice-metering')
+    expect(script).toContain('FLEXPRICE_AWS_ACCOUNT_ID="999988887777"')
+    expect(script).toContain('FLEXPRICE_AWS_ROLE_NAME="flexprice-metering"')
+    expect(script).toContain(
+      '--attribute-condition="attribute.aws_role == \'$FLEXPRICE_AWS_ROLE_NAME\'" \\\n',
+    )
+  })
 })
 
 describe('connect form', () => {
@@ -89,6 +136,8 @@ describe('addresses', () => {
     const stripe = spec('stripe')
     expect(webhookEvents(stripe, {})).not.toContain('product.created')
     expect(webhookEvents(stripe, { 'plan:inbound': true })).toContain('product.created')
+    expect(webhookEvents(stripe, {})).not.toContain('invoice_payment.paid')
+    expect(webhookEvents(stripe, { 'invoice:outbound': true })).toContain('invoice_payment.paid')
   })
 
   it('points the redirect URI at the callback path the API is configured with', () => {
