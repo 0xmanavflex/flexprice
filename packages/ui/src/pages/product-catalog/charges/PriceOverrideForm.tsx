@@ -13,6 +13,8 @@ import {
   emptyOverride,
   type PriceOverride,
   priceOverrideSchema,
+  type Tier,
+  withPackageSize,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
@@ -20,6 +22,7 @@ import { Label } from '@ui/components/primitives/label'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards, SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Field } from '@ui/compositions/forms/Field'
+import { InfoHint } from '@ui/compositions/forms/InfoHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
 import type { MeterOption } from './ChargeForm'
@@ -43,7 +46,7 @@ import type { MeterOption } from './ChargeForm'
  */
 export const PriceOverrideFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'ui/label', 'composition/DetailKit'],
+  composes: ['ui/button', 'ui/input', 'ui/label', 'composition/DetailKit', 'compositions/InfoHint'],
   note: 'RHF + the domain Zod schema; holds no state of its own.',
 })
 
@@ -91,7 +94,8 @@ function overrideStarted(value: PriceOverride): boolean {
       (tier) =>
         (tier.unitAmount ?? '').trim() !== '' ||
         (tier.flatAmount ?? '').trim() !== '' ||
-        tier.upTo != null,
+        tier.upTo != null ||
+        !!tier.transformQuantity?.divideBy,
     )
   }
   if (value.billingModel === BillingModel.Package) {
@@ -158,7 +162,12 @@ export function PriceOverrideForm({
   const tierErrors = (errors as { tiers?: { message?: string } }).tiers
   const tierRowErrors = (index: number) =>
     (errors as { tiers?: { message?: string }[] }).tiers?.[index] as
-      { upTo?: { message?: string }; unitAmount?: { message?: string } } | undefined
+      | {
+          upTo?: { message?: string }
+          unitAmount?: { message?: string }
+          transformQuantity?: { divideBy?: { message?: string } }
+        }
+      | undefined
 
   return (
     <form
@@ -298,7 +307,7 @@ export function PriceOverrideForm({
                   },
                   {
                     key: 'unit',
-                    header: 'Per unit',
+                    header: 'Price',
                     className: 'whitespace-normal py-2 align-top',
                     cell: ({ index }) => {
                       const rowErrors = tierRowErrors(index)
@@ -314,6 +323,49 @@ export function PriceOverrideForm({
                           {rowErrors?.unitAmount ? (
                             <p role="alert" className="text-destructive mt-1 text-xs">
                               {rowErrors.unitAmount.message}
+                            </p>
+                          ) : null}
+                        </>
+                      )
+                    },
+                  },
+                  {
+                    key: 'package',
+                    header: (
+                      <span className="inline-flex items-center gap-1">
+                        Package size
+                        <InfoHint>Units per package. Leave empty to charge per unit.</InfoHint>
+                      </span>
+                    ),
+                    className: 'whitespace-normal py-2 align-top',
+                    cell: ({ index }) => {
+                      const path = `tiers.${index}` as never
+                      const tier = (form.watch('tiers' as never) as Tier[] | undefined)?.[index]
+                      const packageSizeError =
+                        tierRowErrors(index)?.transformQuantity?.divideBy?.message
+                      return (
+                        <>
+                          <Input
+                            inputMode="numeric"
+                            disabled={isSubmitting}
+                            placeholder="Per unit"
+                            aria-label={`Tier ${index + 1} package size`}
+                            aria-invalid={packageSizeError ? true : undefined}
+                            value={tier?.transformQuantity?.divideBy || ''}
+                            onChange={(event) =>
+                              tier &&
+                              form.setValue(
+                                path,
+                                withPackageSize(tier, event.target.value) as never,
+                                {
+                                  shouldDirty: true,
+                                },
+                              )
+                            }
+                          />
+                          {packageSizeError ? (
+                            <p role="alert" className="text-destructive mt-1 text-xs">
+                              {packageSizeError}
                             </p>
                           ) : null}
                         </>

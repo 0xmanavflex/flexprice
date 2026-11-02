@@ -79,6 +79,12 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 - Informational alerts use the `info` variant instead of the default white card: price-version note (ChargeForm), contract-only edit note, pricing widget note, finalized-invoice note, environment create/copy notes, integration prerequisites. Error, status (cancelled/paused) and customer-portal alerts are unchanged. The `--info` hue (violet today) is untouched; changing it to blue is a token change that needs a design decision. Source: walkthrough QA 3.6.
 - FormDialog: new `dismissible` prop (default true). `false` hides the close control and ignores Escape/overlay, for bodies whose own button is the only exit. Used by the one-time API key secret, whose X rendered but did nothing. Source: walkthrough QA 8.1.
 
+## 2026-10-23
+
+- Tier table: new "Package size" column (optional; `InfoHint` on the header) that sets a band's `transformQuantity`; "Per unit" header renamed "Price". Composes `InfoHint`. Source: FLE-1515 per-tier package pricing.
+- Price override form: same "Package size" column in its tier table (keeps a band's rounding when the size is replaced); "Per unit" header renamed "Price". Composes `InfoHint`. Source: FLE-1515 per-tier package pricing.
+- Charge sheet, charge table, plan preview, subscription form: a package band reads "per N units" instead of per unit. Source: FLE-1515.
+
 ## 2026-10-22
 
 - Hosted invoice page: rebuilt on the customer portal's frame and kit parts — header band with the merchant's mark, one `Section` with a state `Pill`, `IconTile` and amount, `DetailList` facts, Download/Pay `Button`s and a ReUI `Alert` for pay/download errors; not-found, not-valid and failed pages use `ErrorState` (page variant) inside the same frame. `HostedInvoiceDetailsSheet` follows `PortalInvoiceSheet`: sheet header with number and state, `DetailList` parties, `SimpleTable` for lines and payment history, totals. Drops the Stripe-style floating card (shadow, oversized type, uppercase block headings). New `parts.tsx` (state pill, merchant mark). Source: review on #37 — the page must read as the product.

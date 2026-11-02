@@ -67,6 +67,22 @@ describe('chargePricing', () => {
     ])
   })
 
+  it('prices a package band per package', () => {
+    const pricing = chargePricing(flat, {
+      priceId: 'price_1',
+      billingModel: BillingModel.Tiered,
+      tierMode: TierMode.Slab,
+      tiers: [
+        { upTo: 1000, unitAmount: '0' },
+        { upTo: null, unitAmount: '1000', transformQuantity: { divideBy: 100, round: 'up' } },
+      ],
+    })
+    expect(pricing.tiers).toEqual([
+      'Up to 1,000: $0.00 / unit',
+      'Above 1,000: $1,000.00 per 100 units',
+    ])
+  })
+
   it('shows a flat-fee override amount', () => {
     expect(
       chargePricing(flat, { priceId: 'price_1', billingModel: BillingModel.FlatFee, amount: '30' })

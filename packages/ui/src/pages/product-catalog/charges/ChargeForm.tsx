@@ -260,11 +260,17 @@ export function ChargeForm({
   const rawTierErrors = (errors as { tiers?: unknown }).tiers
   if (Array.isArray(rawTierErrors)) {
     rawTierErrors.forEach((rowError, index) => {
-      const row = rowError as { upTo?: { message?: string }; unitAmount?: { message?: string } }
-      if (row?.upTo?.message || row?.unitAmount?.message) {
+      const row = rowError as {
+        upTo?: { message?: string }
+        unitAmount?: { message?: string }
+        transformQuantity?: { divideBy?: { message?: string } }
+      }
+      const packageSize = row?.transformQuantity?.divideBy?.message
+      if (row?.upTo?.message || row?.unitAmount?.message || packageSize) {
         tierRowErrors[index] = {
           ...(row.upTo?.message ? { upTo: row.upTo.message } : {}),
           ...(row.unitAmount?.message ? { unitAmount: row.unitAmount.message } : {}),
+          ...(packageSize ? { packageSize } : {}),
         }
       }
     })

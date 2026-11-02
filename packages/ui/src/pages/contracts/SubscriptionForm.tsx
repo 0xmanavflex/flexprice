@@ -77,6 +77,7 @@ import {
   INHERITANCE_BLOCK_LABEL,
   InheritanceBlock,
   contractDateToInstant,
+  tierUnitLabel,
 } from '@fp/domain'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { Badge } from '@ui/components/reui/badge'
@@ -1349,7 +1350,8 @@ function tierLines(tiers: readonly PriceTier[], currency: string): string[] {
         : `${from > 0 ? `${(from + 1).toLocaleString('en-US')}–` : 'Up to '}${tier.upTo.toLocaleString('en-US')}`
     if (tier.upTo != null) from = tier.upTo
     const flat = tier.flatAmount?.trim() ? ` + ${money(tier.flatAmount, currency)} flat` : ''
-    return `${band}: ${money(tier.unitAmount, currency)} / unit${flat}`
+    const unit = tier.transformQuantity?.divideBy ? tierUnitLabel(tier) : '/ unit'
+    return `${band}: ${money(tier.unitAmount, currency)} ${unit}${flat}`
   })
 }
 
@@ -1664,10 +1666,16 @@ function priceText(charge: Charge, override: PriceOverride | undefined): string 
         ? charge.tiers
         : null
   if (tiers && tiers.length > 0) {
+    const count = `${tiers.length} ${tiers.length === 1 ? 'tier' : 'tiers'}`
+    // Per-package and per-unit rates don't compare, so a packaged price leads with its first band.
+    if (tiers.some((tier) => tier.transformQuantity?.divideBy)) {
+      const first = tiers[0]!
+      return `${count}, from ${money(first.unitAmount, charge.currency)} ${tierUnitLabel(first)}`
+    }
     const lowest = Math.min(
       ...tiers.map((tier) => Number(tier.unitAmount)).filter((n) => Number.isFinite(n)),
     )
-    return `${tiers.length} ${tiers.length === 1 ? 'tier' : 'tiers'}${
+    return `${count}${
       Number.isFinite(lowest) ? `, from ${money(String(lowest), charge.currency)} per unit` : ''
     }`
   }

@@ -173,6 +173,13 @@ describe('tiers', () => {
     )
   })
 
+  it('accepts a package band and rejects a fractional package size on that row', () => {
+    const band = (divideBy: number) =>
+      tiered([{ upTo: null, unitAmount: '1000', transformQuantity: { divideBy, round: 'up' } }])
+    expect(parse(band(100)).success).toBe(true)
+    expect(pathsWithErrors(band(1.5))).toContain('tiers.0.transformQuantity.divideBy')
+  })
+
   it('rejects a non-positive ceiling', () => {
     expect(
       errors(

@@ -86,7 +86,14 @@ import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } 
 import { ALL_SUBSCRIPTION_STATUSES, LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 import { queryKeys } from './keys'
 import { toFilterConditions } from './search'
-import { type ChargeWire, toCharge, toChargeRequest, toTier } from './prices'
+import {
+  type ChargeWire,
+  type TierWire,
+  tierPackageFields,
+  toCharge,
+  toChargeRequest,
+  toTier,
+} from './prices'
 import { toCreateTaxAssociationRequest } from './taxAssociations'
 import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
@@ -284,8 +291,6 @@ export interface SubscriptionLineWire {
   startDate?: Date | undefined
   endDate?: Date | undefined
 }
-
-type TierWire = { upTo?: number | null; unitAmount?: string; flatAmount?: string }
 
 const LINE_SOURCE: Record<string, SubscriptionLineSource> = {
   plan: 'plan',
@@ -1511,6 +1516,7 @@ export function toUpdateLineItemRequest(draft: EditContractCharge): Record<strin
       upTo: tier.upTo,
       unitAmount: tier.unitAmount,
       flatAmount: tier.flatAmount ?? '0',
+      ...tierPackageFields(tier),
     }))
   const amountField = (amount: string) => (custom ? { priceUnitAmount: amount } : { amount })
 
