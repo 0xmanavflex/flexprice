@@ -198,6 +198,8 @@ const preview: Preview = {
               'Contract table',
               'Contract form',
               'Contract status badge',
+              'Contract revenue',
+              'Contract journal',
             ],
             'Billing',
             [
@@ -219,7 +221,7 @@ const preview: Preview = {
               ['Payment table', 'Payment form', 'Collections summary', 'Payment status badge'],
             ],
             'Revenue',
-            ['Revenue dashboard'],
+            ['Revenue dashboard', 'Revenue recognition', 'Deferred rollforward'],
             'Developers',
             [
               'Webhooks',

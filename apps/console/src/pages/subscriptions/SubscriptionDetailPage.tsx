@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
+import { useSession } from '@/app/session'
+import { SubscriptionJournalPanel } from './SubscriptionJournalPanel'
+import { SubscriptionRevenuePanel } from './SubscriptionRevenuePanel'
 import {
   AlertEntityType,
   DEFAULT_ADDON_QUERY,
@@ -14,6 +17,7 @@ import {
 import {
   ApiError,
   useActivateSubscription,
+  useRevenueRecognitionEnabled,
   useRemoveSubscriptionCoupon,
   usePauseSubscription,
   useResumeSubscription,
@@ -135,6 +139,8 @@ export function SubscriptionDetailPage({
     subscription.data?.subscriptionType === 'parent' ? subscriptionId : '',
   )
   const lines = useSubscriptionLines(subscriptionId)
+  const { environmentId } = useSession()
+  const revenueRecognition = useRevenueRecognitionEnabled(environmentId)
   // The Usage tab's breakdown is matched by the customer's external id.
   const contractCustomer = useCustomer(subscription.data?.customerId ?? '')
   // Ended lines too, so a changed price stays visible as an inactive version.
@@ -307,6 +313,18 @@ export function SubscriptionDetailPage({
               )
         }}
         chargeAlerts={part(chargeAlerts)}
+        {...(revenueRecognition.data
+          ? {
+              revenue: <SubscriptionRevenuePanel subscriptionId={subscriptionId} />,
+              journal: (
+                <SubscriptionJournalPanel
+                  subscriptionId={subscriptionId}
+                  invoices={invoices.data}
+                  onOpenInvoice={onOpenInvoice}
+                />
+              ),
+            }
+          : {})}
         fxOverrides={
           // A contract converts from its own currency; an ended one keeps its rows read-only.
           <FxRatesPanel

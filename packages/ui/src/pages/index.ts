@@ -31,6 +31,13 @@ export type {
   UsageRow,
 } from './home/DashboardHome'
 export { RevenueReport, RevenueReportProvenance } from './revenue/RevenueReport'
+export {
+  RevenueRecognitionReport,
+  RevenueRecognitionReportProvenance,
+} from './revenue/RevenueRecognitionReport'
+export type { RevenueRecognitionReportProps } from './revenue/RevenueRecognitionReport'
+export { AccountRollforward, AccountRollforwardProvenance } from './revenue/AccountRollforward'
+export type { AccountRollforwardProps } from './revenue/AccountRollforward'
 export type {
   AgingBucket,
   CreditRow,
@@ -622,6 +629,10 @@ export { CreditSettlement } from './billing/credit-notes/creditNoteDocument'
 export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocument'
 
 export { ContractIntegrations } from './contracts/ContractIntegrations'
+export { SubscriptionRevenue, SubscriptionRevenueProvenance } from './contracts/SubscriptionRevenue'
+export { SubscriptionJournal, SubscriptionJournalProvenance } from './contracts/SubscriptionJournal'
+export type { SubscriptionJournalProps } from './contracts/SubscriptionJournal'
+export type { SubscriptionRevenueProps } from './contracts/SubscriptionRevenue'
 
 export type { ContractIntegrationsProps } from './contracts/ContractIntegrations'
 export {

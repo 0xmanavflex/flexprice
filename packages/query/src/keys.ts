@@ -68,6 +68,27 @@ export const queryKeys = {
     series: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['revenue', 'series', filter] as const,
   },
+  revenueRecognition: {
+    all: () => ['revenueRecognition'] as const,
+    enabled: (environmentId: string | null) =>
+      ['revenueRecognition', 'enabled', environmentId] as const,
+    subscription: (environmentId: string | null, subscriptionId: string) =>
+      ['revenueRecognition', 'subscription', environmentId, subscriptionId] as const,
+    customers: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'customers', environmentId, filter] as const,
+    rollforward: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'rollforward', environmentId, filter] as const,
+    contracts: (environmentId: string | null, contractIds: readonly string[]) =>
+      ['revenueRecognition', 'contracts', environmentId, contractIds] as const,
+    subscriptionContract: (environmentId: string | null, subscriptionId: string) =>
+      ['revenueRecognition', 'subscriptionContract', environmentId, subscriptionId] as const,
+    entries: (environmentId: string | null, filter: Readonly<Record<string, unknown>>) =>
+      ['revenueRecognition', 'entries', environmentId, filter] as const,
+    journal: (environmentId: string | null, contractId: string) =>
+      ['revenueRecognition', 'journal', environmentId, contractId] as const,
+    recognizedThrough: (environmentId: string | null) =>
+      ['revenueRecognition', 'recognizedThrough', environmentId] as const,
+  },
   events: {
     all: () => ['events'] as const,
     analytics: (filter: Readonly<Record<string, unknown>> = {}) =>

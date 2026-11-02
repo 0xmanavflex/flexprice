@@ -262,6 +262,10 @@ export interface SubscriptionDetailViewProps {
    * usage charges for the period.
    */
   usageBreakdown?: ReactNode
+  /** The Revenue tab's content; omitted, the tab is hidden. */
+  revenue?: ReactNode
+  /** The Journal entries tab's content; omitted, the tab is hidden. */
+  journal?: ReactNode
   /** The FX overrides section on the Information tab; omitted, it is not shown. */
   fxOverrides?: ReactNode
   /**
@@ -327,6 +331,8 @@ export const SUBSCRIPTION_TABS = [
   'charges',
   'usage',
   'invoices',
+  'revenue',
+  'journal',
 ] as const
 export type SubscriptionTab = (typeof SUBSCRIPTION_TABS)[number]
 
@@ -463,6 +469,8 @@ export function SubscriptionDetailView({
   onCreateChargeAlert,
   loadChargeAlert,
   usageBreakdown,
+  revenue,
+  journal,
   fxOverrides,
   onAddTax,
   onRemoveAddon,
@@ -493,7 +501,12 @@ export function SubscriptionDetailView({
   onTabChange,
 }: SubscriptionDetailViewProps) {
   const [localTab, setLocalTab] = useState<SubscriptionTab>('overview')
-  const tab = controlledTab ?? localTab
+  const requested = controlledTab ?? localTab
+  // A Revenue or Journal link opens on Overview where revenue recognition is off.
+  const tab =
+    (requested === 'revenue' && !revenue) || (requested === 'journal' && !journal)
+      ? 'overview'
+      : requested
   const setTab = (next: SubscriptionTab) => (onTabChange ? onTabChange(next) : setLocalTab(next))
   const [pauseMode, setPauseMode] = useState<'pause' | 'resume' | null>(null)
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
@@ -949,6 +962,8 @@ export function SubscriptionDetailView({
               label: 'Invoices',
               ...(invoices.data ? { count: invoices.data.length } : {}),
             },
+            ...(revenue ? [{ value: 'revenue', label: 'Revenue' }] : []),
+            ...(journal ? [{ value: 'journal', label: 'Journal entries' }] : []),
             { value: 'information', label: 'Information' },
           ]}
         />
@@ -1698,6 +1713,9 @@ export function SubscriptionDetailView({
             )}
           </>
         ) : null}
+
+        {tab === 'revenue' && revenue ? revenue : null}
+        {tab === 'journal' && journal ? journal : null}
 
         {tab === 'invoices' ? (
           <PartSection

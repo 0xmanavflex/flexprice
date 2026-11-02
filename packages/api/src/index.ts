@@ -72,6 +72,28 @@ export { fetchSupportChatToken } from './supportChat'
 export type { SupportChatTokenWire } from './supportChat'
 export type { RevenueDashboardWire } from './revenue'
 
+/** Revenue recognition: contracts, POBs and the waterfall, live but absent from the SDK. See `revenueRecognition.ts`. */
+export {
+  fetchPerformanceObligations,
+  fetchRecognizedThrough,
+  fetchRevenueContract,
+  fetchRevenueWaterfall,
+  fetchRollforward,
+  searchJournalEntries,
+  searchRevenueContracts,
+} from './revenueRecognition'
+export type {
+  JournalEntryWire,
+  PerformanceObligationWire,
+  RevenueContractWire,
+  RevenueWaterfallRequest,
+  RevenueWaterfallWire,
+  RollforwardRequest,
+  RollforwardRowWire,
+  RollforwardWire,
+  WaterfallCellWire,
+} from './revenueRecognition'
+
 /** `PUT /subscriptions/{id}` with `{metadata}`, which the SDK strips. See `subscriptionMetadata.ts`. */
 export { updateSubscriptionMetadata } from './subscriptionMetadata'
 

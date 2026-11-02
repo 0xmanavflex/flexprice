@@ -26,7 +26,7 @@ import { AnalyticsIdentity, captureError } from './analytics'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
 import { DOCS_URL } from './shell/navigation'
-import type { InvoiceQuery } from '@fp/domain'
+import type { InvoiceQuery, RollforwardAccount } from '@fp/domain'
 const InvoiceFormPage = lazy(() =>
   import('@/pages/invoices/InvoiceFormPage').then((m) => ({ default: m.InvoiceFormPage })),
 )
@@ -230,6 +230,16 @@ import { EnvironmentToaster } from '@/pages/shared/RecordElsewhere'
 import { RouteAccessGate } from '@/app/access/RouteAccessGate'
 import { DEFAULT_HOME_SEARCH, parseHomeSearch, type HomeSearch } from '@/app/homeSearch'
 import { DEFAULT_REVENUE_SEARCH, parseRevenueSearch, type RevenueSearch } from '@/app/revenueSearch'
+import {
+  DEFAULT_REVENUE_RECOGNITION_SEARCH,
+  parseRevenueRecognitionSearch,
+  type RevenueRecognitionSearch,
+} from '@/app/revenueRecognitionSearch'
+import {
+  DEFAULT_ROLLFORWARD_SEARCH,
+  parseRollforwardSearch,
+  type RollforwardSearch,
+} from '@/app/rollforwardSearch'
 const WebhooksPage = lazy(() =>
   import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
 )
@@ -291,6 +301,14 @@ const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
 const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
+const RollforwardPage = lazy(() =>
+  import('@/pages/revenue/RollforwardPage').then((m) => ({ default: m.RollforwardPage })),
+)
+const RevenueRecognitionPage = lazy(() =>
+  import('@/pages/revenue/RevenueRecognitionPage').then((m) => ({
+    default: m.RevenueRecognitionPage,
+  })),
+)
 const ReportsPage = lazy(() =>
   import('@/pages/revenue/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 )
@@ -1624,6 +1642,77 @@ function ReportsRouteComponent() {
   )
 }
 
+/** Revenue › Revenue recognition: customers × months; the range, page and Details are in the URL. */
+const revenueRecognitionRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/revenue-recognition',
+  validateSearch: (search: Record<string, unknown>): RevenueRecognitionSearch =>
+    parseRevenueRecognitionSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_REVENUE_RECOGNITION_SEARCH)] },
+  component: RevenueRecognitionRouteComponent,
+})
+
+function RevenueRecognitionRouteComponent() {
+  const search = useSearch({ from: revenueRecognitionRoute.id })
+  const navigate = useNavigate()
+  return (
+    <RevenueRecognitionPage
+      search={search}
+      onSearchChange={(next) =>
+        void navigate({ to: '/revenue-recognition', search: next, replace: true })
+      }
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+    />
+  )
+}
+
+/** Revenue › Deferred and Unbilled rollforward: one ended month; month, search and page are in the URL. */
+const deferredRollforwardRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/deferred-rollforward',
+  validateSearch: (search: Record<string, unknown>): RollforwardSearch =>
+    parseRollforwardSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_ROLLFORWARD_SEARCH)] },
+  component: () => <RollforwardRouteComponent account="deferred_revenue" />,
+})
+
+const unbilledRollforwardRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/unbilled-rollforward',
+  validateSearch: (search: Record<string, unknown>): RollforwardSearch =>
+    parseRollforwardSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_ROLLFORWARD_SEARCH)] },
+  component: () => <RollforwardRouteComponent account="unbilled_receivable" />,
+})
+
+function RollforwardRouteComponent({ account }: { account: RollforwardAccount }) {
+  const route = account === 'deferred_revenue' ? deferredRollforwardRoute : unbilledRollforwardRoute
+  const search = useSearch({ from: route.id })
+  const navigate = useNavigate()
+  return (
+    <RollforwardPage
+      account={account}
+      search={search}
+      onSearchChange={(next) => void navigate({ to: route.fullPath, search: next, replace: true })}
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+      onOpenInvoice={(invoiceId) =>
+        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId }, search: {} as never })
+      }
+      onOpenSubscription={(subscriptionId) =>
+        void navigate({
+          to: '/contracts/$subscriptionId',
+          params: { subscriptionId },
+          search: {} as never,
+        })
+      }
+    />
+  )
+}
+
 /** The page's old address: links and bookmarks to /revenue land on Reports, filters kept. */
 const revenueRedirectRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -2661,6 +2750,9 @@ export const routeTree = rootRoute.addChildren([
     customerContractRedirect,
     homeRoute,
     reportsRoute,
+    revenueRecognitionRoute,
+    deferredRollforwardRoute,
+    unbilledRollforwardRoute,
     revenueRedirectRoute,
     featuresRoute,
     featureCreateRoute,

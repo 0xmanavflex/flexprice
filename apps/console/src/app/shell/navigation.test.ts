@@ -116,6 +116,7 @@ describe('the sidebar layout', () => {
       'Contracts',
       'Billing',
       'Collections',
+      'Revenue',
       'Reports',
       'Developers',
     ])
@@ -189,6 +190,9 @@ describe('every destination resolves', () => {
   const BUILT = [
     '/',
     '/reports',
+    '/revenue-recognition',
+    '/deferred-rollforward',
+    '/unbilled-rollforward',
     '/features',
     '/plans',
     '/addons',
