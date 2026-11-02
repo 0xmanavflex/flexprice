@@ -849,6 +849,7 @@
         "IntegrationLogo",
         "LoadingRows",
         "Pill",
+        "RowActionsMenu",
         "Section",
         "SimpleTable"
       ],
@@ -6638,6 +6639,7 @@
       "composes": [
         "EntityHeader",
         "Pill",
+        "RowActionsMenu",
         "Section",
         "SimpleTable"
       ],
@@ -6942,6 +6944,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "BillingEntityIntegrations",
         "ChargeTable",
         "CreditGrantTable",
         "CustomerDetail",
@@ -6949,6 +6952,7 @@
         "FxRatesSection",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
+        "ProviderConnections",
         "SubscriptionDetailView",
         "SubscriptionForm"
       ],

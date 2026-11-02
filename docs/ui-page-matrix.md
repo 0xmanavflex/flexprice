@@ -49,7 +49,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | home | `HomePage` | Dashboard | Panel | CUSTOM_RANGE_ID, DashboardHome |
 | integrations | `IntegrationListPage` | List | ConnectorCard, EmptyState | IntegrationsBlock |
 | integrations | `OAuthCallbackPage` | Other | — | Button, ErrorState, PageBody, PageLoadingState |
-| integrations | `ProviderConnectionsPage` | Other | ConnectorCard, DetailHeader, EmptyState, Section, SimpleTable | ErrorState, IntegrationLogo, PageLoadingState, ProviderConnections |
+| integrations | `ProviderConnectionsPage` | Other | ConnectorCard, DetailHeader, EmptyState, RowActionsMenu, Section, SimpleTable | ErrorState, IntegrationLogo, PageLoadingState, ProviderConnections |
 | invoices | `InvoiceDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EntityList, Field, FilterBar, FormDialog, MetricRail, Section, SortMenu | InvoiceDetailView, InvoicePendingAction, PaymentStatusDialog |
 | invoices | `InvoiceEditPage` | Form | ConfirmDialog, Field | AppFailure, EditableInvoice, EditableLine, InvoiceEditDraft, InvoiceForm, LoadingRows, PageBody |
 | invoices | `InvoiceFormPage` | Form | ConfirmDialog, Field | InvoiceForm, LoadingRows, PageBody |
