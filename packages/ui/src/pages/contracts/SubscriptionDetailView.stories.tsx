@@ -1332,6 +1332,8 @@ export const AddAddonWithCommitment: Story = {
     const price = within(
       await screen.findByRole('dialog', { name: 'Override price · Support seat' }),
     )
+    // The dialog opens on the charge's own price.
+    await userEvent.clear(price.getByLabelText(/^Amount/))
     await userEvent.type(price.getByLabelText(/^Amount/), '40')
     await userEvent.click(price.getByRole('button', { name: 'Save override' }))
 
