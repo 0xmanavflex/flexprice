@@ -2121,9 +2121,6 @@ function ChargesTable({
       >
         {repricingCharge ? (
           <div className="flex flex-col gap-4">
-            <p className="text-muted-foreground text-xs">
-              Plan price: <PlanPriceText charge={repricingCharge} />
-            </p>
             <PriceOverrideForm
               key={repricingCharge.id}
               priceId={repricingCharge.id}
@@ -3085,9 +3082,6 @@ export function AddonChargesDialog({
       >
         {repricing ? (
           <div className="flex flex-col gap-4">
-            <p className="text-muted-foreground text-xs">
-              Add-on price: <PlanPriceText charge={repricing} />
-            </p>
             <PriceOverrideForm
               key={repricing.id}
               priceId={repricing.id}
@@ -4728,16 +4722,6 @@ function ReviewStep({
         />
       </ReviewCard>
     </div>
-  )
-}
-
-/** The plan's own price for a charge, ignoring any override on it. */
-function PlanPriceText({ charge }: { charge: Charge }) {
-  return (
-    <PricingText
-      pricing={chargePricing(charge, undefined)}
-      period={BILLING_PERIOD_LABEL[charge.billingPeriod]}
-    />
   )
 }
 
