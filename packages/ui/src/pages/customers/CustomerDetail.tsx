@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactElement, type ReactNode } from 'react'
 import {
   ArchiveIcon,
+  CreditCardIcon,
   InfoIcon,
   ExternalLinkIcon,
   ArrowUpDownIcon,
@@ -133,6 +134,8 @@ export interface CustomerDetailProps {
   onEdit?: () => void
   /** Adds "Archive customer" to the header menu; the caller confirms and acts. */
   onArchive?: () => void
+  /** Adds "Add card" to the header menu: a connected payment provider can save one. */
+  onAddCard?: () => void
   /** Adds "Open customer portal" to the header menu (V1's portal link). */
   onOpenPortal?: () => void
   /** Adds "Copy portal link" to the header menu. */
@@ -261,6 +264,7 @@ export function CustomerDetail({
   onCreateContract,
   onEdit,
   onArchive,
+  onAddCard,
   onOpenPortal,
   onCopyPortalLink,
   onStreamEvents,
@@ -353,6 +357,17 @@ export function CustomerDetail({
           }
         : {}),
     },
+    ...(onAddCard
+      ? [
+          {
+            id: 'add-card',
+            label: 'Add card',
+            icon: <CreditCardIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: onAddCard,
+            entity: RBAC_ENTITY.Payment,
+          },
+        ]
+      : []),
     ...(onOpenPortal && customer.externalId
       ? [
           {

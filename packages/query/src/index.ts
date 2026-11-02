@@ -755,7 +755,7 @@ export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'
 export { reportBreakdown, reportCurrencies, reportScalar, reportSeries, useReport } from './reports'
 export type { ReportBreakdownRow, ReportPoint, ReportScalar } from './reports'
 export type { ReportQuery, ReportResult } from '@fp/api'
-export { usePushCustomerToIntegrations } from './integrationSync'
+export { useAddCustomerCard, usePushCustomerToIntegrations } from './integrationSync'
 export {
   toCreateFxRateRequest,
   toFxRate,

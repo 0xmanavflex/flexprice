@@ -728,7 +728,7 @@ export type {
   S3Connection,
   S3ConnectionErrors,
 } from './dataExport'
-export { INTEGRATION_CATALOG } from './integration'
+export { CARD_SETUP_PROVIDERS, INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './integrationConnect'
 export {
