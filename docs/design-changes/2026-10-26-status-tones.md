@@ -26,3 +26,12 @@ Affected:
 Open question: overdue and failed stay red. The agreed palette names no red; they move when that is decided.
 
 Migration: none. Callers keep `<Pill tone>`; `info` now renders blue.
+
+Follow-up 2026-11-02 (from the 2026-10-26 walkthrough: "purple only for trialing", "end state is grey"):
+- Red stays as the sixth tone, for a problem that needs action (overdue, failed); the walkthrough ruled failure out of
+  grey. This closes the open question above.
+- `past_due` / "past due" moves yellow -> red, to match overdue.
+- Workflow `TimedOut` moves yellow -> grey: it is an end state, like `Terminated`.
+- Pricing widget: SMS/message and default metered-feature icons move violet -> blue; the "+ Usage" label drops violet
+  and inherits the muted period text. Violet is now used only for trialing (the "Create with AI" wand keeps its own AI
+  accent, which is not a status tone).

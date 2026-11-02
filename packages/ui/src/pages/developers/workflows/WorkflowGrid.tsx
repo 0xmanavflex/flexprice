@@ -45,7 +45,7 @@ const STATUS_TONE: Record<WorkflowStatus, PillTone> = {
   [WorkflowStatus.Canceled]: 'neutral',
   [WorkflowStatus.Terminated]: 'neutral',
   [WorkflowStatus.ContinuedAsNew]: 'warning',
-  [WorkflowStatus.TimedOut]: 'warning',
+  [WorkflowStatus.TimedOut]: 'neutral',
 }
 
 const GUIDES: EntityGuide[] = [
