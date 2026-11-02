@@ -6,7 +6,7 @@ import { IntegrationLogo } from './IntegrationsBlock'
 
 function integration(id: string): Integration {
   const spec = INTEGRATION_CATALOG.find((item) => item.id === id)!
-  return { ...spec, connections: 0 }
+  return { ...spec, connections: [] }
 }
 
 const meta = {
@@ -23,7 +23,7 @@ const meta = {
       redirectUri: 'https://app.flexprice.io/tools/integrations/oauth/callback',
     },
     onClose: fn(),
-    onSubmit: fn(),
+    onSubmit: fn(async () => 'conn_new'),
   },
 } satisfies Meta<typeof ConnectIntegrationSheet>
 
@@ -101,6 +101,85 @@ export const SubmitsThePayload: Story = {
       }),
       expect.anything(),
     )
+  },
+}
+
+/**
+ * Entities on: the connection is for an entity (one that already has Razorpay
+ * is not choosable); the Webhook step shows its own address before create, and
+ * one submit sends the signing secret with the keys.
+ */
+export const PerEntityWithItsOwnWebhook: Story = {
+  args: {
+    integration: {
+      ...integration('razorpay'),
+      connections: [
+        {
+          id: 'conn_us',
+          name: 'Razorpay US',
+          providerType: 'razorpay',
+          syncConfig: {},
+          metadata: {},
+          billingEntityId: 'be_us',
+        },
+      ],
+    },
+    entities: [
+      { id: 'be_us', name: 'Northwind US', isDefault: true },
+      { id: 'be_uk', name: 'Northwind UK', isDefault: false },
+    ],
+  },
+  play: async ({ canvasElement, args }) => {
+    const screen = screenOf(canvasElement)
+    await userEvent.click(await screen.findByRole('combobox', { name: /Billing entity/ }))
+    await expect(await screen.findByRole('option', { name: /Northwind US/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('option', { name: /Northwind UK/ }))
+    await userEvent.type(screen.getByLabelText(/Key ID/), 'rzp_test_abc')
+    await userEvent.type(screen.getByLabelText(/Key secret/, { selector: 'input' }), 'shh')
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+
+    // The address names the connection before it exists, so the secret goes in the same submit.
+    const url = await screen.findByText(
+      /^https:\/\/api\.flexprice\.io\/v1\/webhooks\/razorpay\/tenant_demo\/env_demo\/conn_[0-9A-HJKMNP-TV-Z]{26}$/,
+    )
+    const id = url.textContent?.split('/').pop()
+    await userEvent.type(
+      screen.getByLabelText(/Webhook signing secret/, { selector: 'input' }),
+      'whsec',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Connect Razorpay' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id,
+          billing_entity_id: 'be_uk',
+          encrypted_secret_data: {
+            key_id: 'rzp_test_abc',
+            secret_key: 'shh',
+            webhook_secret: 'whsec',
+          },
+        }),
+        expect.anything(),
+      ),
+    )
+    await waitFor(() => expect(args.onClose).toHaveBeenCalled())
+  },
+}
+
+/** With entities on, an OAuth provider also shows its webhook before the reader leaves for consent. */
+export const OAuthPerEntityWebhook: Story = {
+  args: {
+    integration: integration('quickbooks'),
+    logo: null,
+    entities: [{ id: 'be_us', name: 'Northwind US', isDefault: true }],
+  },
+  play: async ({ canvasElement }) => {
+    const screen = screenOf(canvasElement)
+    await expect(await screen.findByRole('button', { name: /Webhook/ })).toBeInTheDocument()
   },
 }
 

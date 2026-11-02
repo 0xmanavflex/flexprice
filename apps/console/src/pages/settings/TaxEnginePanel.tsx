@@ -7,7 +7,7 @@ import {
   taxConfigSchema,
   usesExternalTaxEngine,
 } from '@fp/domain'
-import { useIntegrations, useResetTaxConfig, useTaxConfig, useUpdateTaxConfig } from '@fp/query'
+import { useConnections, useResetTaxConfig, useTaxConfig, useUpdateTaxConfig } from '@fp/query'
 import {
   ConfirmDialog,
   EmptyState,
@@ -97,13 +97,13 @@ function TaxEngineForm({ environmentId, config }: { environmentId: string; confi
 
   const external = usesExternalTaxEngine(draft.value)
   // Asked only once Stripe Tax is chosen: it is the one thing worth checking first.
-  const integrations = useIntegrations({ enabled: external })
+  const integrations = useConnections({ enabled: external })
   const stripe = integrations.data?.find((item) => item.providerType === TaxProvider.Stripe)
   const missingConnection =
     external &&
     draft.value.provider === TaxProvider.Stripe &&
     integrations.isSuccess &&
-    (stripe?.connections ?? 0) === 0
+    (stripe?.connections.length ?? 0) === 0
 
   const saveError = mutationMessage(update.error, 'The tax settings could not be saved.')
   const resetError = mutationMessage(reset.error, 'The tax settings could not be reset.')

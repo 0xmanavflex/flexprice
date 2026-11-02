@@ -193,6 +193,11 @@ const IntegrationListPage = lazy(() =>
     default: m.IntegrationListPage,
   })),
 )
+const ProviderConnectionsPage = lazy(() =>
+  import('@/pages/integrations/ProviderConnectionsPage').then((m) => ({
+    default: m.ProviderConnectionsPage,
+  })),
+)
 const ExportListPage = lazy(() =>
   import('@/pages/exports/ExportListPage').then((m) => ({ default: m.ExportListPage })),
 )
@@ -2320,8 +2325,36 @@ function InvoiceDetailRouteComponent() {
 const integrationsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/integrations',
-  component: IntegrationListPage,
+  component: IntegrationListRouteComponent,
 })
+
+function IntegrationListRouteComponent() {
+  const navigate = useNavigate()
+  return (
+    <IntegrationListPage
+      onOpenProvider={(provider) =>
+        void navigate({ to: '/integrations/$provider', params: { provider } })
+      }
+    />
+  )
+}
+
+const integrationProviderRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/integrations/$provider',
+  component: IntegrationProviderRouteComponent,
+})
+
+function IntegrationProviderRouteComponent() {
+  const { provider } = integrationProviderRoute.useParams()
+  const navigate = useNavigate()
+  return (
+    <ProviderConnectionsPage
+      providerId={provider}
+      onBack={() => void navigate({ to: '/integrations' })}
+    />
+  )
+}
 
 // The redirect URI QuickBooks and Zoho are registered with; the API config fixes the path.
 const oauthCallbackRoute = createRoute({
@@ -2891,6 +2924,7 @@ export const routeTree = rootRoute.addChildren([
     connectionExportsRoute,
     dataExportRoute,
     integrationsRoute,
+    integrationProviderRoute,
     oauthCallbackRoute,
     pricingWidgetRoute,
     usageSyncsRoute,

@@ -308,6 +308,11 @@ export type {
   BillingEntityTab,
 } from './settings/billing-entities/BillingEntityDetail'
 export {
+  BillingEntityIntegrations,
+  BillingEntityIntegrationsProvenance,
+} from './settings/billing-entities/BillingEntityIntegrations'
+export type { BillingEntityIntegrationsProps } from './settings/billing-entities/BillingEntityIntegrations'
+export {
   BillingEntityForm,
   BillingEntityFormProvenance,
 } from './settings/billing-entities/BillingEntityForm'
@@ -535,6 +540,11 @@ export type {
   PricingPlanCardProps,
   PricingPlanSection,
 } from './product-catalog/pricing-widget/PricingPlanCard'
+export {
+  ProviderConnections,
+  ProviderConnectionsProvenance,
+} from './integrations/ProviderConnections'
+export type { ProviderConnectionsProps } from './integrations/ProviderConnections'
 export { PricingCatalogBlock } from './product-catalog/pricing-widget/PricingCatalogBlock'
 export { toast, Toaster } from 'sonner'
 

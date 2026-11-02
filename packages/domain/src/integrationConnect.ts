@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { effectiveEntityId, type BillingEntity } from './billingEntity'
 import type { IntegrationConnection } from './integration'
 
 /**
@@ -40,6 +41,8 @@ export interface ConnectionField {
   step?: 'credentials' | 'webhook'
   /** Can be changed on an existing connection. */
   rotatable?: boolean
+  /** A webhook field the API needs at create, so it stays on credentials when the webhook is set after create. */
+  atCreate?: boolean
 }
 
 export type SyncEntity =
@@ -193,10 +196,15 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
       secret('api_key', 'API key'),
       text('webhook_username', 'Webhook username', {
         step: 'webhook',
+        atCreate: true,
         hint: 'Chargebee signs webhooks with HTTP Basic auth. Choose any username and password, then enter the same pair on the webhook.',
         rotatable: true,
       }),
-      secret('webhook_password', 'Webhook password', { step: 'webhook', rotatable: true }),
+      secret('webhook_password', 'Webhook password', {
+        step: 'webhook',
+        atCreate: true,
+        rotatable: true,
+      }),
     ],
     sync: [pushInvoices],
     webhook: { events: ['payment_succeeded'] },
@@ -456,6 +464,7 @@ export function connectionSpecFor(providerType: string): ConnectionSpec | undefi
 /** The steps a provider's sheet shows, in order. A provider with nothing to choose or register skips the step. */
 export type ConnectStep = 'credentials' | 'sync' | 'webhook'
 
+/** One submit at the end creates the connection; a per-connection webhook URL uses the id generated up front. */
 export function connectSteps(spec: ConnectionSpec): ConnectStep[] {
   const steps: ConnectStep[] = ['credentials']
   if (spec.sync.length > 0) steps.push('sync')
@@ -463,11 +472,18 @@ export function connectSteps(spec: ConnectionSpec): ConnectStep[] {
   return steps
 }
 
+/** With a per-connection webhook, webhook fields the API needs at create move to credentials. */
 export function fieldsForStep(
   spec: ConnectionSpec,
   step: 'credentials' | 'webhook',
+  perConnectionWebhook = false,
 ): ConnectionField[] {
-  return spec.fields.filter((field) => (field.step ?? 'credentials') === step)
+  return spec.fields.filter(
+    (field) =>
+      (field.step === 'webhook' && !(perConnectionWebhook && field.atCreate)
+        ? 'webhook'
+        : 'credentials') === step,
+  )
 }
 
 /** A form-safe key (no dot, which react-hook-form reads as nesting). */
@@ -479,6 +495,8 @@ export type ConnectionFormValues = {
   name: string
   fields: Record<string, string>
   sync: Record<string, boolean>
+  /** Set only while billing entities are enabled. */
+  billingEntityId?: string
 }
 
 export function defaultConnectionValues(
@@ -492,10 +510,9 @@ export function defaultConnectionValues(
   }
 }
 
-/** The schema a provider's form validates against. Built from the spec so a field cannot be required in one place and not the other. */
-export function connectionFormSchema(spec: ConnectionSpec) {
+function fieldRules(fields: ConnectionField[]) {
   const shape: Record<string, z.ZodType<string>> = {}
-  for (const field of spec.fields) {
+  for (const field of fields) {
     let rule = z.string().trim()
     if (field.required) rule = rule.min(1, `${field.label} is required.`)
     shape[field.key] = field.pattern
@@ -504,7 +521,14 @@ export function connectionFormSchema(spec: ConnectionSpec) {
         })
       : rule
   }
+  return shape
+}
+
+/** The create form's schema. Built from the spec so a field cannot be required in one place and not the other. */
+export function connectionFormSchema(spec: ConnectionSpec, { entity = false } = {}) {
+  const shape = fieldRules(spec.fields)
   return z.object({
+    billingEntityId: entity ? z.string().min(1, 'Choose a billing entity.') : z.string().optional(),
     name: z
       .string()
       .trim()
@@ -530,18 +554,28 @@ export function connectionFormSchema(spec: ConnectionSpec) {
 }
 
 export interface ConnectionPayload {
+  id?: string
   name: string
   provider_type: string
   encrypted_secret_data: Record<string, string>
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
+  billing_entity_id?: string
 }
 
 /** The `POST /connections` (or `/oauth/init`) body for a filled-in form. Blank optional values are left out. */
 export function toConnectionPayload(
   spec: ConnectionSpec,
   values: ConnectionFormValues,
-  context: { externalId?: string } = {},
+  {
+    externalId,
+    billingEntityId,
+    connectionId,
+  }: {
+    externalId?: string
+    billingEntityId?: string | undefined
+    connectionId?: string | undefined
+  } = {},
 ): ConnectionPayload {
   const secrets: Record<string, string> = {}
   const metadata: Record<string, string> = {}
@@ -563,26 +597,66 @@ export function toConnectionPayload(
   if (spec.providerType === 'aws_marketplace') {
     syncConfig['aws_marketplace'] = syncExtra
     // The role's trust policy names this value; the API checks it with STS AssumeRole.
-    if (context.externalId) secrets['external_id'] = context.externalId
+    if (externalId) secrets['external_id'] = externalId
   }
 
   return {
+    ...(connectionId ? { id: connectionId } : {}),
     name: values.name.trim(),
     provider_type: spec.providerType,
     encrypted_secret_data: secrets,
     ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     ...(Object.keys(syncConfig).length > 0 ? { sync_config: syncConfig } : {}),
+    ...(billingEntityId ? { billing_entity_id: billingEntityId } : {}),
   }
 }
 
-/** The address the provider posts events to. The API does not return it; it is built from the tenant and environment. */
+/** True when the provider posts webhooks and this connection cannot verify them yet. */
+export function webhookMissing(connection: IntegrationConnection): boolean {
+  return (
+    connection.webhookSecretSet === false && !!connectionSpecFor(connection.providerType)?.webhook
+  )
+}
+
+/** Providers whose webhook route takes the connection id, so each connection gets its own address. */
+export const PER_CONNECTION_WEBHOOK_PROVIDERS: readonly string[] = [
+  'stripe',
+  'hubspot',
+  'razorpay',
+  'chargebee',
+  'quickbooks',
+  'nomod',
+  'moyasar',
+  'paddle',
+  'zoho_books',
+  'whop',
+]
+
+/** The connection a billing entity owns for this provider; one without an entity is the default's. */
+export function connectionForEntity(
+  integration: { connections: readonly IntegrationConnection[] },
+  entityId: string,
+  entities: readonly Pick<BillingEntity, 'id' | 'isDefault'>[],
+): IntegrationConnection | null {
+  return (
+    integration.connections.find(
+      (connection) => effectiveEntityId(connection, entities) === entityId,
+    ) ?? null
+  )
+}
+
+/** The address the provider posts events to. The API does not return it; it is built from the tenant, environment and, where the route takes it, the connection. */
 export function webhookUrl(
   apiBase: string,
   providerType: string,
   tenantId: string,
   environmentId: string,
+  connectionId?: string,
 ): string {
-  return `${apiBase.replace(/\/+$/, '')}/webhooks/${providerType}/${tenantId}/${environmentId}`
+  const base = `${apiBase.replace(/\/+$/, '')}/webhooks/${providerType}/${tenantId}/${environmentId}`
+  return connectionId && PER_CONNECTION_WEBHOOK_PROVIDERS.includes(providerType)
+    ? `${base}/${connectionId}`
+    : base
 }
 
 /** Events to subscribe to for this provider, widened by what the reader chose to sync. */
@@ -611,14 +685,24 @@ export function rotatableFields(spec: ConnectionSpec): ConnectionField[] {
   return spec.fields.filter((field) => field.rotatable)
 }
 
+/** What the manage form can set: the rotatable keys and, with a per-connection webhook, every webhook field. */
+export function editableFields(
+  spec: ConnectionSpec,
+  perConnectionWebhook: boolean,
+): ConnectionField[] {
+  const webhook = perConnectionWebhook ? fieldsForStep(spec, 'webhook', true) : []
+  return spec.fields.filter((field) => field.rotatable || webhook.includes(field))
+}
+
 /** The manage form's starting point: the saved name and switches, every secret blank. */
 export function connectionToFormValues(
   spec: ConnectionSpec,
   connection: IntegrationConnection,
+  perConnectionWebhook = false,
 ): ConnectionFormValues {
   return {
     name: connection.name,
-    fields: Object.fromEntries(rotatableFields(spec).map((f) => [f.key, ''])),
+    fields: Object.fromEntries(editableFields(spec, perConnectionWebhook).map((f) => [f.key, ''])),
     sync: Object.fromEntries(
       spec.sync.map((o) => [syncKey(o), connection.syncConfig[o.entity]?.[o.direction] ?? false]),
     ),
@@ -628,6 +712,7 @@ export function connectionToFormValues(
 /** Manage-form rules: a name, and Chargebee's webhook login changes as a pair or not at all. */
 export function manageFormSchema(spec: ConnectionSpec) {
   return z.object({
+    billingEntityId: z.string().optional(),
     name: z
       .string()
       .trim()
@@ -652,18 +737,31 @@ export interface ConnectionChanges {
   name?: string
   sync_config?: Record<string, unknown>
   encrypted_secret_data?: Record<string, string>
+  billing_entity_id?: string
 }
 
-/** Only what changed, so an untouched secret is never resent and an untouched sync is never rewritten. */
+/**
+ * Only what changed, so an untouched secret is never resent and an untouched
+ * sync is never rewritten. `entities` (given while they are enabled) adds the
+ * move and the per-connection webhook fields.
+ */
 export function toConnectionChanges(
   spec: ConnectionSpec,
   connection: IntegrationConnection,
   values: ConnectionFormValues,
+  entities?: readonly Pick<BillingEntity, 'id' | 'isDefault'>[],
 ): ConnectionChanges {
   const changes: ConnectionChanges = {}
   if (values.name.trim() !== connection.name) changes.name = values.name.trim()
+  if (
+    entities &&
+    values.billingEntityId &&
+    values.billingEntityId !== effectiveEntityId(connection, entities)
+  )
+    changes.billing_entity_id = values.billingEntityId
 
-  const initial = connectionToFormValues(spec, connection)
+  const perConnectionWebhook = entities !== undefined
+  const initial = connectionToFormValues(spec, connection, perConnectionWebhook)
   if (spec.sync.some((o) => values.sync[syncKey(o)] !== initial.sync[syncKey(o)])) {
     const next: Record<string, unknown> = { ...connection.syncConfig }
     for (const option of spec.sync) {
@@ -677,7 +775,7 @@ export function toConnectionChanges(
   }
 
   const secrets: Record<string, string> = {}
-  for (const field of rotatableFields(spec)) {
+  for (const field of editableFields(spec, perConnectionWebhook)) {
     const value = (values.fields[field.key] ?? '').trim()
     if (value !== '') secrets[field.key] = value
   }
@@ -766,4 +864,24 @@ gcloud iam workload-identity-pools create-cred-config \\
   --service-account="$SA_ID@$GCP_PROJECT_ID.iam.gserviceaccount.com" \\
   --aws --output-file="flexprice-gcp-creds.json"
 `
+}
+
+export type WebhookFormValues = { fields: Record<string, string> }
+
+/** The per-connection webhook step's schema: the fields saved on the new connection beside its URL. */
+export function webhookFormSchema(spec: ConnectionSpec) {
+  return z.object({ fields: z.object(fieldRules(fieldsForStep(spec, 'webhook', true))) })
+}
+
+/** The per-connection webhook step's `PUT /connections/:id` body; blank values are left out. */
+export function toWebhookChanges(
+  spec: ConnectionSpec,
+  values: WebhookFormValues,
+): ConnectionChanges {
+  const secrets: Record<string, string> = {}
+  for (const field of fieldsForStep(spec, 'webhook', true)) {
+    const value = (values.fields[field.key] ?? '').trim()
+    if (value !== '') secrets[field.key] = value
+  }
+  return Object.keys(secrets).length > 0 ? { encrypted_secret_data: secrets } : {}
 }

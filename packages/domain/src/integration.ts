@@ -89,7 +89,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     id: 'whop',
     name: 'Whop',
     providerType: 'whop',
-    categories: ['Invoices', 'Payments'],
+    categories: ['Payments', 'Invoices'],
     description: 'Sync invoices to Whop and keep payment status current.',
   },
   {
@@ -150,7 +150,6 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
  */
 export const CARD_SETUP_PROVIDERS = ['stripe', 'razorpay', 'moyasar'] as const
 
-/** An integration as the grid shows it: the catalogue entry plus this environment's connection count. */
 /** A published connection. Secrets never come back from the API, so none are here. */
 export interface IntegrationConnection {
   id: string
@@ -160,11 +159,14 @@ export interface IntegrationConnection {
   syncConfig: Record<string, { inbound?: boolean; outbound?: boolean }>
   /** The non-secret settings saved with it (environment, redirect URLs). */
   metadata: Record<string, string>
+  /** The billing entity that owns it; null when the environment has no entities or the provider is not per entity. */
+  billingEntityId: string | null
+  /** Whether the secret that verifies its inbound webhooks is saved; absent for providers without webhooks. */
+  webhookSecretSet?: boolean | undefined
   createdAt?: string | undefined
 }
 
+/** An integration as the grid shows it: the catalogue entry plus this environment's published connections. */
 export interface Integration extends IntegrationSpec {
-  connections: number
-  /** The environment's connection for this provider, when there is one. */
-  connection?: IntegrationConnection | undefined
+  connections: IntegrationConnection[]
 }

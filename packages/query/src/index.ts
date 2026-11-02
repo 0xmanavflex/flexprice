@@ -622,14 +622,13 @@ export {
 } from './dataExports'
 export type { DataExportPage, DataExportWire, ExportRunWire, S3ConnectionWire } from './dataExports'
 export {
-  countConnections,
+  useConnections,
   fetchIntegrations,
   toIntegrationConnection,
   toIntegrations,
   useCompleteOAuth,
   useConnectIntegration,
   useDisconnectIntegration,
-  useIntegrations,
   useStartOAuth,
   useUpdateConnection,
 } from './integrations'
@@ -791,6 +790,7 @@ export {
   toBillingEntityRequest,
   useBillingEntities,
   useBillingEntity,
+  useBillingEntityMode,
   useBillingEntityStatus,
   useEntityFilterOptions,
   useCustomerBillingEntity,
@@ -798,4 +798,4 @@ export {
   useEnableBillingEntities,
   useUpdateBillingEntity,
 } from './billingEntities'
-export type { BillingEntityWire } from './billingEntities'
+export type { BillingEntityModeState, BillingEntityWire } from './billingEntities'

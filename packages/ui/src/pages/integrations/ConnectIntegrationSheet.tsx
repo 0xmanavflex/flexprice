@@ -1,5 +1,5 @@
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { ArrowUpRightIcon, InfoIcon, TriangleAlert } from '@ui/icons'
@@ -13,7 +13,9 @@ import {
   connectionFormSchema,
   connectionSpecFor,
   defaultConnectionValues,
+  connectionForEntity,
   fieldsForStep,
+  newConnectionId,
   toConnectionPayload,
   webhookEvents,
   webhookUrl,
@@ -45,23 +47,28 @@ import { Field } from '@ui/compositions/forms/Field'
 import { useFormSteps } from '@ui/compositions/forms/useFormSteps'
 import { WorkflowStepper } from '@ui/compositions/forms/WorkflowStepper'
 import { provenance } from '@ui/provenance'
-import { SpecField, SyncOptions, WebhookGuide } from './ConnectionFields'
+import type { ListBillingEntity } from '../shared/billingEntityColumn'
+import { BillingEntityField, SpecField, SyncOptions, WebhookGuide } from './ConnectionFields'
 
 /**
- * Connect a provider. One sheet, one form, steps only where the provider has
- * something to choose or register:
+ * Connect a provider. Steps only where the provider has something to choose or
+ * register:
  *
- *   Credentials  name and keys, from the provider's spec
+ *   Credentials  name and keys (and, with entities on, the billing entity)
  *   Sync         what Flexprice sends or pulls, off until switched on
  *   Webhook      the address to register, then the signing secret it yields
  *
- * The webhook secret comes last on purpose. V1 asks for it in the same long
- * form as the API keys, which forces the reader to leave, create the endpoint
- * and come back; here the URL and events are on screen first and the secret
- * field sits beside them.
+ * The webhook secret comes last on purpose: the URL and events are on screen
+ * first and the secret field sits beside them. With entities off, one submit
+ * at the end creates the connection with the secret. With them on, each
+ * connection has its own address ending with its id, so the connection is
+ * created on leaving the step before Webhook and the secret is saved onto it;
+ * "Do this later" leaves it without one, and Configure shows the same address.
  *
- * Presentational: the page owns the request. `onSubmit` receives the API body;
- * for QuickBooks and Zoho the page sends it to `/oauth/init` and redirects.
+ * Presentational: the page owns the requests. `onSubmit` receives the API body
+ * and resolves to the new connection's id, or `null` when QuickBooks and Zoho
+ * hand the reader to the provider (with entities on, their webhook is set up
+ * from Configure).
  */
 export const ConnectIntegrationSheetProvenance = provenance({
   source: 'composition',
@@ -97,7 +104,14 @@ export interface ConnectIntegrationSheetProps {
   logo: ReactNode
   context: ConnectionContext
   onClose: () => void
-  onSubmit: (payload: ConnectionPayload, spec: ConnectionSpec) => void
+  /** Creates the connection; resolves to its id, or `null` when the reader leaves for the provider. */
+  onSubmit: (payload: ConnectionPayload, spec: ConnectionSpec) => Promise<string | null>
+  /** The connection exists. */
+  onConnected?: ((connectionId: string) => void) | undefined
+  /** The environment's billing entities, given only while they are enabled: adds the entity picker and the per-connection webhook. */
+  entities?: readonly ListBillingEntity[] | undefined
+  /** The entity to preselect, e.g. the provider page row's. */
+  billingEntityId?: string | undefined
   isPending?: boolean
   /** The API's reason the last attempt failed, shown above the form. */
   error?: string | null
@@ -115,6 +129,9 @@ export function ConnectIntegrationSheet({
   context,
   onClose,
   onSubmit,
+  onConnected,
+  entities,
+  billingEntityId,
   isPending = false,
   error = null,
 }: ConnectIntegrationSheetProps) {
@@ -124,7 +141,7 @@ export function ConnectIntegrationSheet({
       <SheetContent className="gap-0">
         {integration ? (
           spec ? (
-            <ConnectForm
+            <ConnectFlow
               key={integration.id}
               integration={integration}
               spec={spec}
@@ -132,6 +149,9 @@ export function ConnectIntegrationSheet({
               context={context}
               onClose={onClose}
               onSubmit={onSubmit}
+              onConnected={onConnected}
+              entities={entities}
+              billingEntityId={billingEntityId}
               isPending={isPending}
               error={error}
             />
@@ -151,6 +171,50 @@ export function ConnectIntegrationSheet({
   )
 }
 
+type FlowProps = Omit<ConnectIntegrationSheetProps, 'integration'> & {
+  integration: Integration
+  spec: ConnectionSpec
+  isPending: boolean
+  error: string | null
+}
+
+/**
+ * One form and one submit at the end. With entities on, the connection id is
+ * generated when the sheet opens so its own webhook URL shows before create.
+ */
+function ConnectFlow(props: FlowProps) {
+  const perConnectionWebhook = props.entities !== undefined
+  const [connectionId] = useState(() => (perConnectionWebhook ? newConnectionId() : undefined))
+  return (
+    <ConnectForm
+      {...props}
+      steps={connectSteps(props.spec)}
+      perConnectionWebhook={perConnectionWebhook}
+      connectionId={connectionId}
+      onCreated={(id) => {
+        props.onConnected?.(id)
+        props.onClose()
+      }}
+    />
+  )
+}
+
+function ConnectHeader({ integration, logo }: { integration: Integration; logo: ReactNode }) {
+  return (
+    <SheetHeader>
+      <div className="flex items-center gap-3">
+        <span className="bg-background flex size-10 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs">
+          {logo}
+        </span>
+        <div className="min-w-0">
+          <SheetTitle>Connect {integration.name}</SheetTitle>
+          <SheetDescription>{integration.description}</SheetDescription>
+        </div>
+      </div>
+    </SheetHeader>
+  )
+}
+
 function ConnectForm({
   integration,
   spec,
@@ -158,20 +222,31 @@ function ConnectForm({
   context,
   onClose,
   onSubmit,
+  onCreated,
+  steps,
+  perConnectionWebhook,
+  connectionId,
+  entities,
+  billingEntityId,
   isPending,
   error,
-}: Omit<ConnectIntegrationSheetProps, 'integration'> & {
-  integration: Integration
-  spec: ConnectionSpec
-  isPending: boolean
-  error: string | null
+}: FlowProps & {
+  steps: ConnectStep[]
+  perConnectionWebhook: boolean
+  connectionId: string | undefined
+  onCreated: (id: string) => void
 }) {
-  const stepIds = connectSteps(spec)
+  const firstFree = entities?.find(
+    (entity) => !connectionForEntity(integration, entity.id, entities),
+  )
   const form = useCalmForm<ConnectionFormValues>({
     resolver: standardSchemaResolver(
-      connectionFormSchema(spec),
+      connectionFormSchema(spec, { entity: entities !== undefined }),
     ) as unknown as Resolver<ConnectionFormValues>,
-    defaultValues: defaultConnectionValues(spec, integration.name),
+    defaultValues: {
+      ...defaultConnectionValues(spec, integration.name),
+      ...(entities ? { billingEntityId: billingEntityId ?? firstFree?.id ?? '' } : {}),
+    },
   })
   const { control, register, watch, trigger, formState } = form
   const { errors } = formState
@@ -181,30 +256,41 @@ function ConnectForm({
       ? []
       : [
           ...(step === 'credentials' ? (['name'] as const) : []),
-          ...fieldsForStep(spec, step).map((f) => `fields.${f.key}` as const),
+          ...(step === 'credentials' && entities ? (['billingEntityId'] as const) : []),
+          ...fieldsForStep(spec, step, perConnectionWebhook).map((f) => `fields.${f.key}` as const),
         ]
 
   const flow = useFormSteps({
-    steps: stepIds.map((id) => ({ id, title: STEP_TITLE[id] })),
+    steps: steps.map((id) => ({ id, title: STEP_TITLE[id] })),
     validate: (id) => trigger(fieldNames(id as ConnectStep)),
   })
   const step = flow.step as ConnectStep
-  const multi = stepIds.length > 1
+  const multi = steps.length > 1
 
   const submit = form.handleSubmit(
-    (values) =>
-      onSubmit(
-        toConnectionPayload(spec, values, {
-          externalId: marketplaceExternalId(context.tenantId, context.environmentId),
-        }),
-        spec,
-      ),
+    async (values) => {
+      let id: string | null
+      try {
+        id = await onSubmit(
+          toConnectionPayload(spec, values, {
+            billingEntityId: entities ? values.billingEntityId : undefined,
+            connectionId,
+            externalId: marketplaceExternalId(context.tenantId, context.environmentId),
+          }),
+          spec,
+        )
+      } catch {
+        // The page shows the API's reason through `error`.
+        return
+      }
+      if (id !== null) onCreated(id)
+    },
     (invalid) => {
-      const failing = stepIds.find((id) =>
+      const failing = steps.find((id) =>
         fieldNames(id).some((name) => {
           const [, key] = name.split('.')
-          return name === 'name'
-            ? invalid.name
+          return name === 'name' || name === 'billingEntityId'
+            ? invalid[name]
             : key
               ? (invalid.fields as Record<string, unknown> | undefined)?.[key]
               : false
@@ -222,6 +308,7 @@ function ConnectForm({
           spec.providerType,
           context.tenantId,
           context.environmentId,
+          connectionId,
         ),
         events: webhookEvents(spec, sync),
       }
@@ -239,17 +326,7 @@ function ConnectForm({
       noValidate
       className="flex min-h-0 flex-1 flex-col"
     >
-      <SheetHeader>
-        <div className="flex items-center gap-3">
-          <span className="bg-background flex size-10 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs">
-            {logo}
-          </span>
-          <div className="min-w-0">
-            <SheetTitle>Connect {integration.name}</SheetTitle>
-            <SheetDescription>{integration.description}</SheetDescription>
-          </div>
-        </div>
-      </SheetHeader>
+      <ConnectHeader integration={integration} logo={logo} />
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
         {multi ? (
@@ -335,10 +412,18 @@ function ConnectForm({
               )
             ) : null}
 
+            {entities ? (
+              <BillingEntityField
+                integration={integration}
+                entities={entities}
+                control={control}
+                error={errors.billingEntityId?.message}
+              />
+            ) : null}
             <Field label="Connection name" required error={errors.name?.message}>
               {(aria) => <Input {...aria} autoComplete="off" {...register('name')} />}
             </Field>
-            {fieldsForStep(spec, 'credentials').map((field) => (
+            {fieldsForStep(spec, 'credentials', perConnectionWebhook).map((field) => (
               <SpecField key={field.key} field={field} control={control} errors={errors} />
             ))}
             <p className="text-muted-foreground flex items-start gap-2 text-xs">
@@ -379,7 +464,7 @@ function ConnectForm({
               event.
             </p>
             <WebhookGuide spec={spec} url={webhook.url} events={webhook.events} />
-            {fieldsForStep(spec, 'webhook').map((field) => (
+            {fieldsForStep(spec, 'webhook', perConnectionWebhook).map((field) => (
               <SpecField key={field.key} field={field} control={control} errors={errors} />
             ))}
           </div>

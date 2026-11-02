@@ -3,9 +3,11 @@ import type { IntegrationConnection } from './integration'
 import {
   awsTrustPolicy,
   connectSteps,
+  connectionForEntity,
   connectionFormSchema,
   connectionSpecFor,
   connectionToFormValues,
+  fieldsForStep,
   defaultConnectionValues,
   gcpSetupScript,
   marketplaceExternalId,
@@ -13,6 +15,7 @@ import {
   oauthRedirectUri,
   toConnectionChanges,
   toConnectionPayload,
+  toWebhookChanges,
   webhookEvents,
   webhookUrl,
 } from './integrationConnect'
@@ -39,6 +42,24 @@ describe('connect payload', () => {
     const stripe = spec('stripe')
     const payload = toConnectionPayload(stripe, defaultConnectionValues(stripe, 'Stripe'))
     expect(payload.sync_config).toMatchObject({ plan: { inbound: false } })
+  })
+
+  it('sends the webhook secret, and the connection id when given, in one create', () => {
+    const stripe = spec('stripe')
+    const values = defaultConnectionValues(stripe, 'Stripe')
+    values.fields['secret_key'] = 'sk'
+    values.fields['webhook_secret'] = 'whsec'
+    const offPayload = toConnectionPayload(stripe, values)
+    expect(offPayload.encrypted_secret_data).toEqual({ secret_key: 'sk', webhook_secret: 'whsec' })
+    expect(offPayload).not.toHaveProperty('id')
+    const perEntity = toConnectionPayload(stripe, values, { connectionId: 'conn_X' })
+    expect(perEntity).toMatchObject({
+      id: 'conn_X',
+      encrypted_secret_data: { secret_key: 'sk', webhook_secret: 'whsec' },
+    })
+    expect(toWebhookChanges(stripe, values)).toEqual({
+      encrypted_secret_data: { webhook_secret: 'whsec' },
+    })
   })
 
   it('routes metadata fields out of the secrets', () => {
@@ -106,9 +127,18 @@ describe('connect form', () => {
     expect(result.success).toBe(false)
   })
 
-  it('has a webhook step only where the provider posts events', () => {
+  it('has a webhook step only where the provider posts events, OAuth providers included', () => {
     expect(connectSteps(spec('razorpay'))).toEqual(['credentials', 'sync', 'webhook'])
     expect(connectSteps(spec('tabs'))).not.toContain('webhook')
+    expect(connectSteps(spec('quickbooks'))).toEqual(['credentials', 'sync', 'webhook'])
+  })
+
+  it('keeps webhook fields the API needs at create on credentials', () => {
+    const keys = (step: 'credentials' | 'webhook', perConnection: boolean) =>
+      fieldsForStep(spec('chargebee'), step, perConnection).map((f) => f.key)
+    expect(keys('webhook', false)).toEqual(['webhook_username', 'webhook_password'])
+    expect(keys('webhook', true)).toEqual([])
+    expect(keys('credentials', true)).toContain('webhook_password')
   })
 
   it('does not offer sync combinations the API rejects', () => {
@@ -129,6 +159,15 @@ describe('addresses', () => {
   it('builds the webhook URL from the API base, tenant and environment', () => {
     expect(webhookUrl('https://api.flexprice.io/v1/', 'stripe', 't1', 'e1')).toBe(
       'https://api.flexprice.io/v1/webhooks/stripe/t1/e1',
+    )
+  })
+
+  it('ends the webhook URL with the connection id when given', () => {
+    expect(webhookUrl('https://api.flexprice.io/v1', 'stripe', 't', 'e', 'conn_1')).toBe(
+      'https://api.flexprice.io/v1/webhooks/stripe/t/e/conn_1',
+    )
+    expect(webhookUrl('https://api.flexprice.io/v1', 'tabs', 't', 'e', 'conn_1')).toBe(
+      'https://api.flexprice.io/v1/webhooks/tabs/t/e',
     )
   })
 
@@ -154,6 +193,7 @@ describe('manage changes', () => {
     providerType: 'chargebee',
     syncConfig: { invoice: { outbound: false } },
     metadata: {},
+    billingEntityId: null,
   }
   const chargebee = spec('chargebee')
 
@@ -180,5 +220,25 @@ describe('manage changes', () => {
     const values = connectionToFormValues(chargebee, connection)
     values.fields['webhook_username'] = 'hook'
     expect(manageFormSchema(chargebee).safeParse(values).success).toBe(false)
+  })
+})
+
+describe('connectionForEntity', () => {
+  it('gives a connection without an entity to the default entity', () => {
+    const entities = [
+      { id: 'be_us', isDefault: true },
+      { id: 'be_eu', isDefault: false },
+    ]
+    const unowned: IntegrationConnection = {
+      id: 'conn_1',
+      name: 'Stripe',
+      providerType: 'stripe',
+      syncConfig: {},
+      metadata: {},
+      billingEntityId: null,
+    }
+    const integration = { connections: [unowned] }
+    expect(connectionForEntity(integration, 'be_us', entities)).toBe(unowned)
+    expect(connectionForEntity(integration, 'be_eu', entities)).toBeNull()
   })
 })

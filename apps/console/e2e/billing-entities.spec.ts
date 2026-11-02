@@ -142,14 +142,15 @@ test('billing entities: add a default tax on an entity, it posts as an auto-appl
   await expect(page.getByRole('cell', { name: /Canada GST/ })).toBeVisible()
 })
 
-test('billing entities: an integrations link falls back to the details tab', async ({ page }) => {
+test('billing entities: an unknown tab link falls back to the details tab', async ({ page }) => {
   await page.goto(SECTION)
   await page.getByRole('button', { name: 'Enable billing entities' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Enable billing entities' }).click()
   await page.getByRole('row').nth(1).getByRole('cell').first().click()
   await page.waitForURL(/billing-entities\/[^/?]+/)
   const base = page.url().split('?')[0]
-  await page.goto(`${base}?tab=integrations`)
+  await page.goto(`${base}?tab=bogus`)
+  await expect(page.getByRole('tab', { name: 'Details', selected: true })).toBeVisible()
   await expect(page.getByRole('textbox', { name: /^name/i })).toBeVisible()
 })
 
