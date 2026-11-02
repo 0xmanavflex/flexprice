@@ -256,6 +256,7 @@ test.describe('integrations', () => {
     await sheet.locator('input[data-slot="input-group-control"]').first().fill('shh')
     await sheet.getByRole('button', { name: 'Continue' }).click()
     await sheet.getByRole('button', { name: 'Continue' }).click()
+    await sheet.getByRole('textbox', { name: /Webhook signing secret/ }).fill('whsec_test')
     await sheet.getByRole('button', { name: 'Connect Razorpay' }).click()
     await expect(sheet.getByRole('alert')).toBeVisible()
     await sheet.getByRole('button', { name: 'Connect Razorpay' }).click()
@@ -268,7 +269,7 @@ test.describe('integrations', () => {
     expect(ids[1]).toBe(ids[0])
   })
 
-  test('connects Razorpay without a webhook secret and flags it', async ({ page }) => {
+  test('connects Razorpay for a billing entity', async ({ page }) => {
     await enableEntities(page)
     await page.goto('/integrations/razorpay')
     const row = page.getByRole('row').filter({ hasText: 'Northwind UK' })
@@ -279,10 +280,11 @@ test.describe('integrations', () => {
     await sheet.locator('input[data-slot="input-group-control"]').first().fill('shh')
     await sheet.getByRole('button', { name: 'Continue' }).click()
     await sheet.getByRole('button', { name: 'Continue' }).click()
+    // Razorpay signs every webhook, so its secret is required, as in V1.
+    await sheet.getByRole('textbox', { name: /Webhook signing secret/ }).fill('whsec_test')
     await sheet.getByRole('button', { name: 'Connect Razorpay' }).click()
     await expect(sheet).toBeHidden()
     await expect(row).toContainText('Razorpay UK')
-    await expect(row).toContainText('Webhook not set up')
   })
 
   test('starts QuickBooks consent for a billing entity', async ({ page }) => {
