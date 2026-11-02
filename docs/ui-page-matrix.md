@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-71 route pages.
+72 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
