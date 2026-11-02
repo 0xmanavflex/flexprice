@@ -33,6 +33,11 @@ export interface SelfBillingCharge {
   divideBy: number | null
   /** What a usage charge counts. Null for a fixed charge. */
   meterName: string | null
+  /**
+   * Priced on what the tenant bills its customers through Flexprice (the
+   * invoice-value meter): an amount of 0.005 is 0.5% of that, not a unit price.
+   */
+  shareOfBilled: boolean
 }
 
 export interface SelfBillingPlan {
@@ -206,8 +211,14 @@ export function periodText(period: string, count = 1): string {
   return n === 1 ? `a ${unit[0]}` : `every ${n} ${unit[0]}s`
 }
 
-/** One charge's price: "$199.00 a month", "$2.00 per 1,000 API calls". */
+/** One charge's price: "$199.00 a month", "$2.00 per 1,000 API calls", "0.5% of what you bill through Flexprice". */
 export function chargePriceText(charge: SelfBillingCharge): string {
+  if (charge.shareOfBilled) {
+    const percent = (Number(charge.amount) * 100).toLocaleString('en-US', {
+      maximumFractionDigits: 4,
+    })
+    return `${percent}% of what you bill through Flexprice`
+  }
   const price = planMoney(charge.amount, charge.currency)
   if (charge.type === 'fixed') {
     const every = periodText(charge.billingPeriod, charge.billingPeriodCount)
@@ -219,10 +230,21 @@ export function chargePriceText(charge: SelfBillingCharge): string {
     : `${price} per ${unit}`
 }
 
-/** Every charge's price, joined: "$199.00 a month + $0.005 per Invoice value". Null without charges. */
+/**
+ * The charges that cost something. A usage charge priced at zero only meters
+ * something the plan limits (trial events), so it is not shown as a price.
+ */
+export function pricedCharges(plan: SelfBillingPlan | null): SelfBillingCharge[] {
+  return (plan?.charges ?? []).filter(
+    (charge) => charge.type === 'fixed' || Number(charge.amount) !== 0,
+  )
+}
+
+/** Every priced charge, joined: "$199.00 a month + 0.5% of what you bill through Flexprice". Null without any. */
 export function planPriceText(plan: SelfBillingPlan | null): string | null {
-  if (!plan || plan.charges.length === 0) return null
-  return plan.charges.map(chargePriceText).join(' + ')
+  const charges = pricedCharges(plan)
+  if (charges.length === 0) return null
+  return charges.map(chargePriceText).join(' + ')
 }
 
 /** The plan's flat fees summed, in their currency: what an upgrade charges up front. */

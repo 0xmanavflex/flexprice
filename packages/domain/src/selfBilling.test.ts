@@ -8,6 +8,7 @@ import {
   periodText,
   planFixedTotal,
   planPriceText,
+  pricedCharges,
   selfInvoiceStatus,
   type SelfBillingCharge,
   type SelfBillingPlan,
@@ -24,6 +25,7 @@ const charge = (patch: Partial<SelfBillingCharge> = {}): SelfBillingCharge => ({
   billingPeriodCount: 1,
   divideBy: null,
   meterName: null,
+  shareOfBilled: false,
   ...patch,
 })
 const PLAN: SelfBillingPlan = {
@@ -141,10 +143,34 @@ describe('the plan, as the API reports it', () => {
     expect(chargePriceText(charge({ billingPeriod: '' }))).toBe('$199.00')
   })
 
+  it('prices a share of what is billed as a percentage', () => {
+    expect(chargePriceText(charge({ type: 'usage', amount: '0.005', shareOfBilled: true }))).toBe(
+      '0.5% of what you bill through Flexprice',
+    )
+  })
+
+  it('leaves out a usage charge priced at zero, never a fixed one', () => {
+    const plan: SelfBillingPlan = {
+      ...PLAN,
+      charges: [
+        charge({ id: 'fee', amount: '1' }),
+        charge({ id: 'share', type: 'usage', amount: '0.005', shareOfBilled: true }),
+        charge({ id: 'events', type: 'usage', amount: '0', meterName: 'Events' }),
+        charge({ id: 'free', amount: '0' }),
+      ],
+    }
+    expect(pricedCharges(plan).map((c) => c.id)).toEqual(['fee', 'share', 'free'])
+    expect(planPriceText(plan)).toBe(
+      '$1.00 a month + 0.5% of what you bill through Flexprice + $0.00 a month',
+    )
+  })
+
   it('prices a usage charge per unit, or per the units it groups', () => {
     expect(chargePriceText(PLAN.charges[1]!)).toBe('$0.005 per Invoice value')
     expect(
-      chargePriceText(charge({ type: 'usage', amount: '2', divideBy: 1000, meterName: 'API calls' })),
+      chargePriceText(
+        charge({ type: 'usage', amount: '2', divideBy: 1000, meterName: 'API calls' }),
+      ),
     ).toBe('$2.00 per 1,000 API calls')
   })
 

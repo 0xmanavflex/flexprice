@@ -8,6 +8,7 @@ import {
   chargePriceText,
   longDate,
   planPriceText,
+  pricedCharges,
   usd,
 } from '@fp/domain'
 import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
@@ -156,7 +157,7 @@ function PlanBlock({
           </span>
         </SettingRow>
         {/* The plan's charges, one row each, as the API reports them. */}
-        {plan?.charges.map((charge) => (
+        {pricedCharges(plan).map((charge) => (
           <SettingRow key={charge.id || charge.name} title={charge.name || 'Charge'}>
             <span className="text-sm tabular-nums">{chargePriceText(charge)}</span>
           </SettingRow>
