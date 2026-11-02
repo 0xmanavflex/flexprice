@@ -35,3 +35,9 @@ Follow-up 2026-11-02 (from the 2026-10-26 walkthrough: "purple only for trialing
 - Pricing widget: SMS/message and default metered-feature icons move violet -> blue; the "+ Usage" label drops violet
   and inherits the muted period text. Violet is now used only for trialing (the "Create with AI" wand keeps its own AI
   accent, which is not a status tone).
+
+Follow-up 2026-11-02, invoice list: the invoice grid's "Status" column showed the derived status (Open / Paid /
+Overdue), which repeats the payment status column beside it. It is now "Invoice status" and shows the document's own
+`invoice_status`, matching the filter of the same name: Draft grey, Finalized green, Voided yellow, Skipped grey
+(`INVOICE_DOCUMENT_STATUS_TONE`). This is the invoice document only; credit-note Finalized stays blue, and voided
+payments and credit notes stay grey.

@@ -1,4 +1,10 @@
-import { CreditNoteStatus, InvoiceStatus, PaymentStatus, SubscriptionStatus } from '@fp/domain'
+import {
+  CreditNoteStatus,
+  InvoiceDocumentStatus,
+  InvoiceStatus,
+  PaymentStatus,
+  SubscriptionStatus,
+} from '@fp/domain'
 import type { PillTone } from './cells'
 
 /**
@@ -21,6 +27,13 @@ export const INVOICE_STATUS_TONE: Record<InvoiceStatus, PillTone> = {
   [InvoiceStatus.Overdue]: 'danger',
   [InvoiceStatus.Void]: 'neutral',
   [InvoiceStatus.Skipped]: 'neutral',
+}
+
+export const INVOICE_DOCUMENT_STATUS_TONE: Record<InvoiceDocumentStatus, PillTone> = {
+  [InvoiceDocumentStatus.Draft]: 'neutral',
+  [InvoiceDocumentStatus.Finalized]: 'success',
+  [InvoiceDocumentStatus.Voided]: 'warning',
+  [InvoiceDocumentStatus.Skipped]: 'neutral',
 }
 
 export const PAYMENT_STATUS_TONE: Record<PaymentStatus, PillTone> = {

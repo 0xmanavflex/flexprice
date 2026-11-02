@@ -163,6 +163,44 @@ export function needsAttention(status: InvoiceStatus): boolean {
 }
 
 /**
+ * The invoice document's own lifecycle, the API's `invoice_status`: what the
+ * "Invoice status" column and filter show, beside the separate payment status.
+ *
+ * Read back from {@link InvoiceStatus} rather than carried as a second field:
+ * the derivation keeps draft, void and skipped as they are and only splits a
+ * finalized invoice by its payment, so open, paid and overdue are all finalized.
+ */
+export const InvoiceDocumentStatus = {
+  Draft: 'draft',
+  Finalized: 'finalized',
+  Voided: 'voided',
+  Skipped: 'skipped',
+} as const
+
+export type InvoiceDocumentStatus =
+  (typeof InvoiceDocumentStatus)[keyof typeof InvoiceDocumentStatus]
+
+export const INVOICE_DOCUMENT_STATUS_LABEL: Record<InvoiceDocumentStatus, string> = {
+  [InvoiceDocumentStatus.Draft]: 'Draft',
+  [InvoiceDocumentStatus.Finalized]: 'Finalized',
+  [InvoiceDocumentStatus.Voided]: 'Voided',
+  [InvoiceDocumentStatus.Skipped]: 'Skipped',
+}
+
+export function invoiceDocumentStatus(status: InvoiceStatus): InvoiceDocumentStatus {
+  switch (status) {
+    case InvoiceStatus.Draft:
+      return InvoiceDocumentStatus.Draft
+    case InvoiceStatus.Void:
+      return InvoiceDocumentStatus.Voided
+    case InvoiceStatus.Skipped:
+      return InvoiceDocumentStatus.Skipped
+    default:
+      return InvoiceDocumentStatus.Finalized
+  }
+}
+
+/**
  * What the user is asking for: which invoices, in what order, on which page.
  *
  * Lives in the domain because it is product vocabulary, not transport: it says

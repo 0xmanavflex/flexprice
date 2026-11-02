@@ -72,6 +72,9 @@ export {
   isStoredInvoiceStatus,
   needsAttention,
   STORED_INVOICE_STATUSES,
+  InvoiceDocumentStatus,
+  INVOICE_DOCUMENT_STATUS_LABEL,
+  invoiceDocumentStatus,
 } from './invoice'
 export type {
   CreateInvoice,
