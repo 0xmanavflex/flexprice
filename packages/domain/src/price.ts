@@ -237,10 +237,15 @@ export type PriceTier = z.infer<typeof priceTierSchema>
 /** The plan's name for the same thing. `PriceTier` is the override's. */
 export type Tier = PriceTier
 
-/** Applies a typed package size; empty or zero clears it to 0 so the band's rounding survives a retype. */
+/**
+ * Applies a typed package size; empty or zero clears it to 0 so the band's rounding survives a retype.
+ * Anything but digits and grouping commas leaves the tier unchanged, so "1.5" never saves as 15.
+ */
 export function withPackageSize(tier: Tier, input: string): Tier {
+  const digits = input.replace(/,/g, '').trim()
+  if (!/^\d*$/.test(digits)) return tier
   const { transformQuantity, ...rest } = tier
-  const divideBy = Number(input.replace(/\D/g, ''))
+  const divideBy = Number(digits)
   if (!divideBy)
     return transformQuantity
       ? { ...rest, transformQuantity: { ...transformQuantity, divideBy: 0 } }

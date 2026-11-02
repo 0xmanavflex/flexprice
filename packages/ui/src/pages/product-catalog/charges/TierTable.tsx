@@ -31,6 +31,7 @@ export interface TierRowError {
   upTo?: string | undefined
   unitAmount?: string | undefined
   flatAmount?: string | undefined
+  packageSize?: string | undefined
 }
 
 export interface TierTableProps {
@@ -173,16 +174,27 @@ export function TierTable({
                 </span>
               ),
               className: 'w-[18%] whitespace-normal py-2 align-top',
-              cell: ({ tier, index }) => (
-                <Input
-                  inputMode="numeric"
-                  aria-label={`Tier ${index + 1} package size`}
-                  placeholder="Per unit"
-                  disabled={disabled}
-                  value={tier.transformQuantity?.divideBy || ''}
-                  onChange={(event) => setPackageSize(index, event.target.value)}
-                />
-              ),
+              cell: ({ tier, index }) => {
+                const error = rowErrors?.[index]
+                return (
+                  <>
+                    <Input
+                      inputMode="numeric"
+                      aria-label={`Tier ${index + 1} package size`}
+                      aria-invalid={error?.packageSize ? true : undefined}
+                      placeholder="Per unit"
+                      disabled={disabled}
+                      value={tier.transformQuantity?.divideBy || ''}
+                      onChange={(event) => setPackageSize(index, event.target.value)}
+                    />
+                    {error?.packageSize ? (
+                      <p role="alert" className="text-destructive mt-1 text-xs">
+                        {error.packageSize}
+                      </p>
+                    ) : null}
+                  </>
+                )
+              },
             },
             {
               key: 'flat',

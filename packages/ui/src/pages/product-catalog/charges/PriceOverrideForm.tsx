@@ -162,7 +162,12 @@ export function PriceOverrideForm({
   const tierErrors = (errors as { tiers?: { message?: string } }).tiers
   const tierRowErrors = (index: number) =>
     (errors as { tiers?: { message?: string }[] }).tiers?.[index] as
-      { upTo?: { message?: string }; unitAmount?: { message?: string } } | undefined
+      | {
+          upTo?: { message?: string }
+          unitAmount?: { message?: string }
+          transformQuantity?: { divideBy?: { message?: string } }
+        }
+      | undefined
 
   return (
     <form
@@ -336,24 +341,34 @@ export function PriceOverrideForm({
                     cell: ({ index }) => {
                       const path = `tiers.${index}` as never
                       const tier = (form.watch('tiers' as never) as Tier[] | undefined)?.[index]
+                      const packageSizeError =
+                        tierRowErrors(index)?.transformQuantity?.divideBy?.message
                       return (
-                        <Input
-                          inputMode="numeric"
-                          disabled={isSubmitting}
-                          placeholder="Per unit"
-                          aria-label={`Tier ${index + 1} package size`}
-                          value={tier?.transformQuantity?.divideBy || ''}
-                          onChange={(event) =>
-                            tier &&
-                            form.setValue(
-                              path,
-                              withPackageSize(tier, event.target.value) as never,
-                              {
-                                shouldDirty: true,
-                              },
-                            )
-                          }
-                        />
+                        <>
+                          <Input
+                            inputMode="numeric"
+                            disabled={isSubmitting}
+                            placeholder="Per unit"
+                            aria-label={`Tier ${index + 1} package size`}
+                            aria-invalid={packageSizeError ? true : undefined}
+                            value={tier?.transformQuantity?.divideBy || ''}
+                            onChange={(event) =>
+                              tier &&
+                              form.setValue(
+                                path,
+                                withPackageSize(tier, event.target.value) as never,
+                                {
+                                  shouldDirty: true,
+                                },
+                              )
+                            }
+                          />
+                          {packageSizeError ? (
+                            <p role="alert" className="text-destructive mt-1 text-xs">
+                              {packageSizeError}
+                            </p>
+                          ) : null}
+                        </>
                       )
                     },
                   },
