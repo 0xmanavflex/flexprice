@@ -126,7 +126,6 @@ describe('tier package size', () => {
       expect(tiers).toEqual([
         { upTo: 1000, unitAmount: '0', flatAmount: '0' },
         {
-          upTo: null,
           unitAmount: '1000',
           flatAmount: '0',
           transformQuantity: { divideBy: 100, round: 'up' },

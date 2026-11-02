@@ -178,6 +178,19 @@ export function toCharge(wire: ChargeWire): Charge {
 }
 
 /**
+ * The open band has no ceiling. Create and update schemas reject `upTo: null`,
+ * so the field is left off and the API treats the missing ceiling as unbounded.
+ */
+function tiersOf(tiers: Tier[]) {
+  return tiers.map((tier) => ({
+    ...(tier.upTo == null ? {} : { upTo: tier.upTo }),
+    unitAmount: tier.unitAmount,
+    flatAmount: tier.flatAmount ?? '0',
+    ...tierPackageFields(tier),
+  }))
+}
+
+/**
  * A charge draft, as a `CreatePriceRequest` for the bulk endpoint.
  *
  * The inverse of `toCharge`: fills the fields the API requires (`priceUnitType`
@@ -220,14 +233,6 @@ export function toChargeRequest(
     ...(draft.groupId ? { groupId: draft.groupId } : {}),
     ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
   }
-  const tiersOf = (tiers: Tier[]) =>
-    tiers.map((tier) => ({
-      upTo: tier.upTo,
-      unitAmount: tier.unitAmount,
-      flatAmount: tier.flatAmount ?? '0',
-      ...tierPackageFields(tier),
-    }))
-
   switch (draft.billingModel) {
     case BillingModel.FlatFee:
       return custom
@@ -287,13 +292,6 @@ export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknow
      */
     ...(draft.type === PriceType.Usage ? { bucketSize: draft.bucketSize ?? BUCKET_SIZE_NONE } : {}),
   }
-  const tiersOf = (tiers: Tier[]) =>
-    tiers.map((tier) => ({
-      upTo: tier.upTo,
-      unitAmount: tier.unitAmount,
-      flatAmount: tier.flatAmount ?? '0',
-      ...tierPackageFields(tier),
-    }))
 
   switch (draft.billingModel) {
     case BillingModel.FlatFee:
