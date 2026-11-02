@@ -1189,6 +1189,7 @@
       "usedBy": [
         "ApiCard",
         "BlurredEmpty",
+        "CustomerAnalyticsView",
         "DashboardHome",
         "FilterSelect",
         "MetricChart",
@@ -2204,11 +2205,11 @@
       "layer": "surface",
       "composes": [
         "CalendarIcon",
+        "ChartSkeleton",
         "DayCalendar",
         "DetailTable",
         "EmptyState",
         "ErrorState",
-        "MetricChart",
         "Section",
         "SegmentMeter",
         "TotalRow",
@@ -4531,7 +4532,6 @@
         "FormCard",
         "FormRow",
         "LabelWithHint",
-        "PriceOverrideForm",
         "TierTable",
         "UpgradeView"
       ],
@@ -5327,7 +5327,6 @@
       ],
       "usedBy": [
         "ApiCard",
-        "CustomerAnalyticsView",
         "DashboardHome",
         "FilterSelect",
         "UsageCard",
@@ -6399,9 +6398,8 @@
       "composes": [
         "ChoiceCards",
         "Field",
-        "InfoHint",
         "OptionSelect",
-        "SimpleTable"
+        "TierTable"
       ],
       "usedBy": [
         "AddonChargesDialog",
@@ -7389,7 +7387,6 @@
         "ExportsOverview",
         "PlanAiSetupView",
         "PortalOverview",
-        "PriceOverrideForm",
         "RevenueRecognitionReport",
         "S3ConnectionList",
         "SubscriptionForm",
@@ -8028,7 +8025,8 @@
         "SimpleTable"
       ],
       "usedBy": [
-        "ChargeForm"
+        "ChargeForm",
+        "PriceOverrideForm"
       ],
       "story": "./src/pages/product-catalog/charges/TierTable.stories.tsx"
     },
@@ -10765,7 +10763,6 @@
         "AddCardDialog",
         "ConfirmDialog",
         "CustomerDetail",
-        "CustomerEntitlementUsage",
         "EmptyState",
         "Section"
       ]
