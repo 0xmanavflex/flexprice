@@ -1,6 +1,6 @@
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useEffect, useRef } from 'react'
-import { useFieldArray, type Resolver } from 'react-hook-form'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   BILLING_MODEL_LABEL,
@@ -14,18 +14,15 @@ import {
   type PriceOverride,
   priceOverrideSchema,
   type Tier,
-  withPackageSize,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
-import { Label } from '@ui/components/primitives/label'
 import { Input } from '@ui/components/primitives/input'
-import { ChoiceCards, SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
 import { Field } from '@ui/compositions/forms/Field'
-import { InfoHint } from '@ui/compositions/forms/InfoHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
 import type { MeterOption } from './ChargeForm'
+import { TierTable, type TierRowError } from './TierTable'
 
 /**
  * A price override, as one form rather than twelve pieces of state.
@@ -46,8 +43,8 @@ import type { MeterOption } from './ChargeForm'
  */
 export const PriceOverrideFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'ui/label', 'composition/DetailKit', 'compositions/InfoHint'],
-  note: 'RHF + the domain Zod schema; holds no state of its own.',
+  composes: ['ui/button', 'ui/input', 'composition/DetailKit', 'pages/TierTable'],
+  note: 'RHF + the domain Zod schema; tiered prices use the same TierTable as a charge.',
 })
 
 export interface PriceOverrideFormProps {
@@ -93,7 +90,7 @@ function overrideStarted(value: PriceOverride): boolean {
     return value.tiers.some(
       (tier) =>
         (tier.unitAmount ?? '').trim() !== '' ||
-        (tier.flatAmount ?? '').trim() !== '' ||
+        ((tier.flatAmount ?? '').trim() !== '' && tier.flatAmount !== '0') ||
         tier.upTo != null ||
         !!tier.transformQuantity?.divideBy,
     )
@@ -129,14 +126,6 @@ export function PriceOverrideForm({
   })
 
   const billingModel = form.watch('billingModel')
-  const watchedTierMode: unknown = form.watch('tierMode' as never)
-  const tierMode = typeof watchedTierMode === 'string' ? watchedTierMode : TierMode.Volume
-
-  const { fields, insert, remove } = useFieldArray({
-    control: form.control,
-    // Only present on the tiered branch; RHF tolerates the absent path.
-    name: 'tiers' as never,
-  })
 
   // Switching model replaces the whole value rather than merging, so a tier
   // array cannot survive into a flat fee and be submitted invisibly.
@@ -147,9 +136,13 @@ export function PriceOverrideForm({
     form.reset({ ...emptyOverride(priceId, next), ...(bucketSize ? { bucketSize } : {}) })
   }
 
+  // The dialog remounts per charge. Reset once from the seed so a new object
+  // for the same charge (the plan price, rebuilt on a parent render) does not
+  // wipe what the person has typed.
+  const seed = useRef(defaultValue)
   useEffect(() => {
-    if (defaultValue) form.reset(defaultValue)
-  }, [defaultValue, form])
+    if (seed.current) form.reset(seed.current)
+  }, [form])
 
   const started = overrideStarted(form.watch())
   const onStartedChangeRef = useRef(onStartedChange)
@@ -159,15 +152,27 @@ export function PriceOverrideForm({
   }, [started])
 
   const errors = form.formState.errors
-  const tierErrors = (errors as { tiers?: { message?: string } }).tiers
-  const tierRowErrors = (index: number) =>
-    (errors as { tiers?: { message?: string }[] }).tiers?.[index] as
-      | {
-          upTo?: { message?: string }
-          unitAmount?: { message?: string }
-          transformQuantity?: { divideBy?: { message?: string } }
+  const tiers = (form.watch('tiers' as never) ?? []) as Tier[]
+  const tierRowErrors: Record<number, TierRowError> = {}
+  const rawTierErrors = (errors as { tiers?: unknown }).tiers
+  if (Array.isArray(rawTierErrors)) {
+    rawTierErrors.forEach((rowError, index) => {
+      const row = rowError as {
+        upTo?: { message?: string }
+        unitAmount?: { message?: string }
+        transformQuantity?: { divideBy?: { message?: string } }
+      }
+      const packageSize = row?.transformQuantity?.divideBy?.message
+      if (row?.upTo?.message || row?.unitAmount?.message || packageSize) {
+        tierRowErrors[index] = {
+          ...(row.upTo?.message ? { upTo: row.upTo.message } : {}),
+          ...(row.unitAmount?.message ? { unitAmount: row.unitAmount.message } : {}),
+          ...(packageSize ? { packageSize } : {}),
         }
-      | undefined
+      }
+    })
+  }
+  const tierMessage = (rawTierErrors as { message?: string } | undefined)?.message
 
   return (
     <form
@@ -249,188 +254,49 @@ export function PriceOverrideForm({
       ) : null}
 
       {billingModel === BillingModel.Tiered ? (
-        <>
-          <fieldset className="flex flex-col gap-2" disabled={isSubmitting}>
-            <legend className="mb-2 text-sm font-medium">Tier mode</legend>
-            <RadioGroup
-              value={tierMode}
-              onValueChange={(value) =>
-                form.setValue('tierMode' as never, value as never, { shouldDirty: true })
-              }
-              className="flex flex-col gap-2"
+        <div className="flex flex-col gap-3">
+          <div className="max-w-sm">
+            <Field
+              label="Tier mode"
+              hint="Whether the whole quantity is priced at its tier rate (volume) or tier by tier (slab)."
             >
-              {TIER_MODES.map((mode) => (
-                <div key={mode} className="flex items-center gap-2">
-                  <RadioGroupItem value={mode} id={`tier-mode-${mode}`} />
-                  <Label htmlFor={`tier-mode-${mode}`} className="text-sm font-normal">
-                    {TIER_MODE_LABEL[mode]}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </fieldset>
-
-          <div className="flex flex-col gap-3">
-            <span className="text-sm font-medium">Tiers</span>
-
-            <div className="overflow-hidden rounded-lg border">
-              <SimpleTable
-                rows={fields.map((field, index) => ({ field, index }))}
-                getRowId={(row) => row.field.id}
-                columns={[
-                  {
-                    key: 'upTo',
-                    header: 'Up to',
-                    className: 'whitespace-normal py-2 align-top',
-                    cell: ({ index }) => {
-                      const rowErrors = tierRowErrors(index)
-                      return (
-                        <>
-                          <Input
-                            type="number"
-                            disabled={isSubmitting || index === fields.length - 1}
-                            placeholder={index === fields.length - 1 ? '∞' : ''}
-                            aria-label={`Tier ${index + 1} upper limit`}
-                            aria-invalid={rowErrors?.upTo ? true : undefined}
-                            {...form.register(`tiers.${index}.upTo` as never, {
-                              setValueAs: (v) => (v === '' || v == null ? null : Number(v)),
-                            })}
-                          />
-                          {rowErrors?.upTo ? (
-                            <p role="alert" className="text-destructive mt-1 text-xs">
-                              {rowErrors.upTo.message}
-                            </p>
-                          ) : null}
-                        </>
-                      )
-                    },
-                  },
-                  {
-                    key: 'unit',
-                    header: 'Price',
-                    className: 'whitespace-normal py-2 align-top',
-                    cell: ({ index }) => {
-                      const rowErrors = tierRowErrors(index)
-                      return (
-                        <>
-                          <Input
-                            inputMode="decimal"
-                            disabled={isSubmitting}
-                            aria-label={`Tier ${index + 1} unit price`}
-                            aria-invalid={rowErrors?.unitAmount ? true : undefined}
-                            {...form.register(`tiers.${index}.unitAmount` as never)}
-                          />
-                          {rowErrors?.unitAmount ? (
-                            <p role="alert" className="text-destructive mt-1 text-xs">
-                              {rowErrors.unitAmount.message}
-                            </p>
-                          ) : null}
-                        </>
-                      )
-                    },
-                  },
-                  {
-                    key: 'package',
-                    header: (
-                      <span className="inline-flex items-center gap-1">
-                        Package size
-                        <InfoHint>Units per package. Leave empty to charge per unit.</InfoHint>
-                      </span>
-                    ),
-                    className: 'whitespace-normal py-2 align-top',
-                    cell: ({ index }) => {
-                      const path = `tiers.${index}` as never
-                      const tier = (form.watch('tiers' as never) as Tier[] | undefined)?.[index]
-                      const packageSizeError =
-                        tierRowErrors(index)?.transformQuantity?.divideBy?.message
-                      return (
-                        <>
-                          <Input
-                            inputMode="numeric"
-                            disabled={isSubmitting}
-                            placeholder="Per unit"
-                            aria-label={`Tier ${index + 1} package size`}
-                            aria-invalid={packageSizeError ? true : undefined}
-                            value={tier?.transformQuantity?.divideBy || ''}
-                            onChange={(event) =>
-                              tier &&
-                              form.setValue(
-                                path,
-                                withPackageSize(tier, event.target.value) as never,
-                                {
-                                  shouldDirty: true,
-                                },
-                              )
-                            }
-                          />
-                          {packageSizeError ? (
-                            <p role="alert" className="text-destructive mt-1 text-xs">
-                              {packageSizeError}
-                            </p>
-                          ) : null}
-                        </>
-                      )
-                    },
-                  },
-                  {
-                    key: 'flat',
-                    header: 'Flat fee',
-                    className: 'whitespace-normal py-2 align-top',
-                    cell: ({ index }) => (
-                      <Input
-                        inputMode="decimal"
-                        disabled={isSubmitting}
-                        aria-label={`Tier ${index + 1} flat fee`}
-                        {...form.register(`tiers.${index}.flatAmount` as never)}
-                      />
-                    ),
-                  },
-                  {
-                    key: 'actions',
-                    header: '',
-                    className: 'py-2 align-top',
-                    cell: ({ index }) => (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        // The unbounded band cannot be removed: without it,
-                        // usage above the last ceiling is not billed at all.
-                        disabled={
-                          isSubmitting || index === fields.length - 1 || fields.length === 1
-                        }
-                        aria-label={`Remove tier ${index + 1}`}
-                        onClick={() => remove(index)}
-                      >
-                        Remove
-                      </Button>
-                    ),
-                  },
-                ]}
-              />
-            </div>
-
-            {/* Below the table, where the next band goes. */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-fit"
-              disabled={isSubmitting}
-              // The unbounded band must stay last, so a new one is inserted
-              // before it rather than appended after it.
-              onClick={() => insert(fields.length - 1, { upTo: null, unitAmount: '' } as never)}
-            >
-              Add tier
-            </Button>
-
-            {tierErrors?.message ? (
-              <p role="alert" className="text-destructive text-xs">
-                {tierErrors.message}
-              </p>
-            ) : null}
+              {({ id }) => (
+                <Controller
+                  control={form.control}
+                  name={'tierMode' as never}
+                  render={({ field }) => (
+                    <OptionSelect
+                      id={id}
+                      value={(field.value as string) || TierMode.Volume}
+                      onValueChange={field.onChange}
+                      options={TIER_MODES.map((mode) => ({
+                        value: mode,
+                        label: TIER_MODE_LABEL[mode],
+                      }))}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </Field>
           </div>
-        </>
+          <TierTable
+            tiers={tiers}
+            rowErrors={tierRowErrors}
+            disabled={isSubmitting}
+            onChange={(next) =>
+              form.setValue('tiers' as never, next as never, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          />
+          {tierMessage ? (
+            <p role="alert" className="text-destructive text-xs">
+              {tierMessage}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {meter && (meterBuckets || windowable) ? (

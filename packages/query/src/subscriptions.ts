@@ -1513,7 +1513,7 @@ export function toUpdateLineItemRequest(draft: EditContractCharge): Record<strin
   const from = effectiveFrom(draft.effectiveFrom)
   const tiersOf = (tiers: Tier[]) =>
     tiers.map((tier) => ({
-      upTo: tier.upTo,
+      ...(tier.upTo == null ? {} : { upTo: tier.upTo }),
       unitAmount: tier.unitAmount,
       flatAmount: tier.flatAmount ?? '0',
       ...tierPackageFields(tier),

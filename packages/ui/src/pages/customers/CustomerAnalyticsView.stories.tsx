@@ -66,7 +66,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Revenue, cost and margin up top, a tab per feature, and the breakdown below. */
+/** Revenue, cost and margin up top, usage by feature, and the breakdown below. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

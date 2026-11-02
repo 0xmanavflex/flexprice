@@ -173,11 +173,10 @@ export const SwitchingModelResets: Story = {
 }
 
 /**
- * The unbounded final band cannot be removed.
+ * Removing the open band leaves whatever remains open-ended.
  *
- * Remove it and usage above the last ceiling is not billed: revenue lost
- * silently, which is why this is a disabled control rather than a validation
- * message after the fact.
+ * The shared tier table allows removing any band while more than one exists,
+ * then forces the new last band to stay unbounded so usage above it is still billed.
  */
 export const FinalTierIsProtected: Story = {
   args: {
@@ -194,10 +193,10 @@ export const FinalTierIsProtected: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.getByRole('button', { name: 'Remove tier 1' })).toBeEnabled()
-    await expect(canvas.getByRole('button', { name: 'Remove tier 2' })).toBeDisabled()
-    // The open-ended band's ceiling is not editable either.
-    await expect(canvas.getByLabelText('Tier 2 upper limit')).toBeDisabled()
+    await userEvent.click(canvas.getByRole('button', { name: 'Remove tier 2' }))
+
+    await expect(canvas.getByRole('button', { name: 'Remove tier 1' })).toBeDisabled()
+    await expect(canvas.getByLabelText('Tier 1 up to')).toHaveValue('')
   },
 }
 
@@ -240,9 +239,9 @@ export const AddingATierKeepsTheOpenBandLast: Story = {
 
     await userEvent.click(canvas.getByRole('button', { name: /add tier/i }))
 
-    // Two rows now, and it is still the last one that is open-ended.
-    await expect(canvas.getByLabelText('Tier 1 upper limit')).toBeEnabled()
-    await expect(canvas.getByLabelText('Tier 2 upper limit')).toBeDisabled()
+    // The previous open band takes a ceiling; the new last band stays open.
+    await expect(canvas.getByLabelText('Tier 1 up to')).toHaveValue('1')
+    await expect(canvas.getByLabelText('Tier 2 up to')).toHaveValue('')
   },
 }
 

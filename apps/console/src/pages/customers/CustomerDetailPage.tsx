@@ -4,7 +4,6 @@ import {
   CARD_SETUP_PROVIDERS,
   CustomerStatus,
   SubscriptionStatus,
-  type TenantFeatureUsage,
 } from '@fp/domain'
 import {
   useCustomer,
@@ -29,7 +28,6 @@ import {
   AddCardDialog,
   CUSTOMER_TABS,
   CustomerDetail,
-  CustomerEntitlementUsage,
   toast,
   type CustomerTab,
 } from '@fp/ui/pages'
@@ -363,26 +361,18 @@ export function CustomerDetailPage({
           />
         }
         usage={
-          <div className="flex flex-col gap-8">
-            {customer.data.externalId ? (
-              <CustomerAnalyticsPanel externalId={customer.data.externalId} />
-            ) : (
-              <Section title="Analytics">
-                <EmptyState
-                  scene="customers"
-                  size="inline"
-                  title="No external ID"
-                  description="Usage is matched to a customer by external ID, and this customer has none. Allowances and consumption are below."
-                />
-              </Section>
-            )}
-            <UsageSection
-              features={usage.data?.features ?? []}
-              isLoading={usage.isLoading}
-              failed={usage.error !== null}
-              onRetry={() => void usage.refetch()}
-            />
-          </div>
+          customer.data.externalId ? (
+            <CustomerAnalyticsPanel externalId={customer.data.externalId} />
+          ) : (
+            <Section title="Analytics">
+              <EmptyState
+                scene="customers"
+                size="inline"
+                title="No external ID"
+                description="Usage is matched to a customer by external ID, and this customer has none."
+              />
+            </Section>
+          )
         }
       />
       <ConfirmDialog
@@ -425,56 +415,4 @@ export function CustomerDetailPage({
       />
     </>
   )
-}
-
-/**
- * A customer's entitlement quotas, one table row per entitled feature: the
- * table V1 shows, in place of the cards this used to draw.
- *
- * Reads `GET /customers/usage`, the only endpoint that answers "how much of
- * this allowance has been used" per feature. Source, mode and measure (V1's
- * other columns) are not on `TenantFeatureUsage`, and units are not kept
- * either, so the readings are bare counts rather than invented nouns.
- */
-function UsageSection({
-  features,
-  isLoading,
-  failed,
-  onRetry,
-}: {
-  features: TenantFeatureUsage[]
-  isLoading: boolean
-  failed: boolean
-  onRetry: () => void
-}) {
-  return (
-    <CustomerEntitlementUsage
-      rows={features.map((feature) => ({
-        id: feature.featureId,
-        name: feature.featureName || feature.featureId,
-        type: feature.featureType,
-        used: toCount(feature.currentUsage),
-        limit: feature.isUnlimited ? null : feature.limit,
-        isEnabled: feature.isEnabled,
-        resetsOn: feature.nextUsageResetAt,
-      }))}
-      isLoading={isLoading}
-      error={failed ? 'Usage could not be loaded.' : null}
-      onRetry={onRetry}
-    />
-  )
-}
-
-/**
- * A decimal string the API sent, as a number for display.
- *
- * These are counts: events, seats, calls: not money, so reading them as
- * numbers is display formatting rather than the arithmetic `money.ts` forbids.
- * `undefined` for anything unparseable, which renders as a dash rather than a
- * zero: "the API sent something we could not read" is not "nothing was used".
- */
-function toCount(value: string): number | undefined {
-  if (value === '') return undefined
-  const parsed = Number.parseFloat(value)
-  return Number.isFinite(parsed) ? parsed : undefined
 }

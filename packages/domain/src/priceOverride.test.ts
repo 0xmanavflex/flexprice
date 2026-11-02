@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { BillingModel, TierMode, emptyOverride, priceOverrideSchema } from './priceOverride'
+import {
+  BillingModel,
+  TierMode,
+  emptyOverride,
+  overrideFromCharge,
+  priceOverrideSchema,
+} from './priceOverride'
 
 const parse = (value: unknown) => priceOverrideSchema.safeParse(value)
 
@@ -209,6 +215,26 @@ describe('emptyOverride', () => {
       }
     },
   )
+
+  it('opens a tiered charge on its own bands', () => {
+    const value = overrideFromCharge({
+      id: 'price_tiered',
+      billingModel: BillingModel.Tiered,
+      amount: '',
+      tierMode: TierMode.Volume,
+      tiers: [
+        { upTo: 100, unitAmount: '2.00' },
+        { upTo: 200, unitAmount: '1.00' },
+        { upTo: null, unitAmount: '0.50' },
+      ],
+      transformQuantity: null,
+      bucketSize: null,
+    })
+    expect(value.billingModel).toBe(BillingModel.Tiered)
+    if (value.billingModel !== BillingModel.Tiered) return
+    expect(value.tierMode).toBe(TierMode.Volume)
+    expect(value.tiers.map((tier) => tier.unitAmount)).toEqual(['2.00', '1.00', '0.50'])
+  })
 
   it('opens a tiered override with the unbounded band already present', () => {
     const value = emptyOverride('p1', BillingModel.Tiered)

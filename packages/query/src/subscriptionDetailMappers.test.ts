@@ -455,7 +455,7 @@ describe('toPendingSchedules', () => {
       ).toEqual({
         billingModel: 'TIERED',
         tierMode: 'VOLUME',
-        priceUnitTiers: [{ upTo: null, unitAmount: '3', flatAmount: '0' }],
+        priceUnitTiers: [{ unitAmount: '3', flatAmount: '0' }],
       })
     })
 

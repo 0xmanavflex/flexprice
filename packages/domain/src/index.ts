@@ -130,7 +130,7 @@ export type {
   ChargeVersion,
 } from './chargeFlags'
 
-export { emptyOverride, priceOverrideSchema } from './priceOverride'
+export { emptyOverride, overrideFromCharge, priceOverrideSchema } from './priceOverride'
 export type { PriceOverride } from './priceOverride'
 
 export {

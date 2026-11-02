@@ -56,7 +56,9 @@ function toPricedLine(override: PriceOverride): OverrideLineItem {
         billingModel: override.billingModel,
         tierMode: override.tierMode,
         tiers: override.tiers.map((tier) => ({
-          upTo: tier.upTo,
+          // The open band is an absent up_to. The create-contract schema
+          // rejects null (`expected number, received null`).
+          ...(tier.upTo == null ? {} : { upTo: tier.upTo }),
           unitAmount: tier.unitAmount,
           ...(tier.flatAmount ? { flatAmount: tier.flatAmount } : {}),
           ...tierPackageFields(tier),

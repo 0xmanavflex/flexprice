@@ -33,8 +33,8 @@ export type PlanFormPageProps = {
  *
  * Create writes the plan, then the charges, entitlements and credit grants the
  * person staged, with the same hooks the plan page uses. The writes are not one
- * transaction, so progress is remembered: if a later write fails, the plan is
- * not created twice on retry and only what is left is resent.
+ * transaction. Once the plan exists, a later write that fails still leaves this
+ * screen: the plan is already saved, and what is left is added on the plan page.
  */
 export function PlanFormPage(props: PlanFormPageProps) {
   const { step, onStepChange, onCancel } = props
@@ -93,11 +93,13 @@ export function PlanFormPage(props: PlanFormPageProps) {
         }
         props.onDone(p.planId)
       } catch (error) {
-        setFailure(
-          p.planId
-            ? 'The plan was created, but some of its charges, entitlements or credit grants could not be saved. Press Create plan to retry what is left, or finish on the plan page.'
-            : toSubmitError(error),
-        )
+        // The plan row is already stored. Staying here only offers another
+        // press of Create plan, which cannot recreate it.
+        if (p.planId) {
+          props.onDone(p.planId)
+          return
+        }
+        setFailure(toSubmitError(error))
       }
     }
     const busy =
