@@ -120,6 +120,7 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
 
   // Integrations
   '/integrations': read(E.Connection),
+  '/integrations/$provider': read(E.Connection),
   '/tools/integrations/oauth/callback': OPEN,
 
   // Settings gates each panel itself (`SettingsPage`), as V1's tabs do.

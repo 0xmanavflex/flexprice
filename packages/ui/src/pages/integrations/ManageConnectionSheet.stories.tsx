@@ -6,7 +6,7 @@ import { IntegrationLogo } from './IntegrationsBlock'
 
 function connected(id: string, connection: IntegrationConnection): Integration {
   const spec = INTEGRATION_CATALOG.find((item) => item.id === id)!
-  return { ...spec, connections: 1, connection }
+  return { ...spec, connections: [connection] }
 }
 
 const stripe = connected('stripe', {
@@ -15,6 +15,7 @@ const stripe = connected('stripe', {
   providerType: 'stripe',
   syncConfig: { invoice: { outbound: true } },
   metadata: {},
+  billingEntityId: null,
   createdAt: '2026-08-12T09:30:00Z',
 })
 
@@ -24,6 +25,7 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   args: {
     integration: stripe,
+    connection: stripe.connections[0]!,
     logo: <IntegrationLogo integration={stripe} />,
     context: {
       webhookBaseUrl: 'https://api.flexprice.io/v1',
@@ -49,6 +51,36 @@ export const Default: Story = {
     await expect(await screen.findByLabelText(/Connection name/)).toHaveValue('Stripe (live)')
     await expect(screen.getByRole('switch', { name: 'Push invoices' })).toBeChecked()
     await expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
+    await expect(
+      screen.getByText('https://api.flexprice.io/v1/webhooks/stripe/tenant_demo/env_demo'),
+    ).toBeInTheDocument()
+  },
+}
+
+/** Entities on: its own webhook address and secret, and a move to an entity without Stripe. */
+export const MovesToAnotherEntity: Story = {
+  args: {
+    entities: [
+      { id: 'be_us', name: 'Northwind US', isDefault: true },
+      { id: 'be_uk', name: 'Northwind UK', isDefault: false },
+    ],
+  },
+  play: async ({ canvasElement, args }) => {
+    const screen = screenOf(canvasElement)
+    await expect(
+      await screen.findByText(
+        'https://api.flexprice.io/v1/webhooks/stripe/tenant_demo/env_demo/conn_stripe',
+      ),
+    ).toBeInTheDocument()
+    await expect(
+      screen.getByLabelText(/Webhook signing secret/, { selector: 'input' }),
+    ).toHaveValue('')
+    await userEvent.click(screen.getByRole('combobox', { name: /Billing entity/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Northwind UK/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() =>
+      expect(args.onSave).toHaveBeenCalledWith('conn_stripe', { billing_entity_id: 'be_uk' }),
+    )
   },
 }
 
@@ -107,5 +139,5 @@ export const SaveFailed: Story = {
 }
 
 export const Closed: Story = {
-  args: { integration: null },
+  args: { integration: null, connection: null },
 }

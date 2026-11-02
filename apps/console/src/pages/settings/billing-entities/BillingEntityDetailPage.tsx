@@ -3,6 +3,7 @@ import { BILLING_ENTITY_TABS, BillingEntityDetail, BillingEntityForm } from '@fp
 import type { BillingEntityTab } from '@fp/ui/pages'
 import { detailGate } from '@/pages/shared/detailGate'
 import { RequireBillingEntities } from './RequireBillingEntities'
+import { BillingEntityIntegrationsPanel } from './BillingEntityIntegrationsPanel'
 import { BillingEntityTaxPanel } from './BillingEntityTaxPanel'
 import { useEntityInvoicePreview } from './useEntityInvoicePreview'
 
@@ -40,6 +41,7 @@ export function BillingEntityDetailPage({
           onTabChange={onTabChange}
           onBack={onBack}
           taxes={<BillingEntityTaxPanel entityId={entity.data.id} />}
+          integrations={<BillingEntityIntegrationsPanel entityId={entity.data.id} />}
           details={
             <BillingEntityForm
               key={entity.data.id}

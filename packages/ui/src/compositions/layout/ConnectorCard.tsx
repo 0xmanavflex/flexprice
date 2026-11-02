@@ -12,6 +12,8 @@ export interface ConnectorCardProps {
   connected: boolean
   onConnect: () => void
   onConfigure: () => void
+  /** The connected action's label; "Configure" by default. */
+  configureLabel?: string | undefined
   testId?: string
   className?: string
 }
@@ -30,6 +32,7 @@ export function ConnectorCard({
   connected,
   onConnect,
   onConfigure,
+  configureLabel = 'Configure',
   testId,
   className,
 }: ConnectorCardProps) {
@@ -76,11 +79,11 @@ export function ConnectorCard({
               size="sm"
               variant="ghost"
               className="text-muted-foreground h-7 px-2"
-              aria-label={`Configure ${name}`}
+              aria-label={`${configureLabel} ${name}`}
               onClick={onConfigure}
             >
               <SettingsIcon aria-hidden="true" />
-              Configure
+              {configureLabel}
             </Button>
           </>
         ) : (

@@ -735,6 +735,7 @@ export type {
 } from './dataExport'
 export { CARD_SETUP_PROVIDERS, INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
+export * from './connectionId'
 export * from './integrationConnect'
 export {
   WalletKind,

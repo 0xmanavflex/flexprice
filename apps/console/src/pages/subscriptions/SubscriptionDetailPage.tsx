@@ -35,7 +35,7 @@ import {
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
   useCustomerIntegrationLinks,
-  useIntegrations,
+  useConnections,
   useLinkCustomerIntegration,
   useTaxRates,
   useUnlinkCustomerIntegration,
@@ -182,7 +182,7 @@ export function SubscriptionDetailPage({
   // customer overview reads, narrowed to this contract.
   const entitlementUsage = useContractUsageSummary(customerId, subscriptionId)
   const integrationLinks = useCustomerIntegrationLinks(customerId)
-  const integrations = useIntegrations()
+  const integrations = useConnections()
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const createEntitlement = useCreateSubscriptionEntitlement(subscriptionId)
@@ -243,7 +243,10 @@ export function SubscriptionDetailPage({
   const data = subscription.data
   const linkedTypes = new Set((integrationLinks.data ?? []).map((link) => link.providerType))
   const linkableProviders = (integrations.data ?? [])
-    .filter((integration) => integration.connection && !linkedTypes.has(integration.providerType))
+    .filter(
+      (integration) =>
+        integration.connections.length > 0 && !linkedTypes.has(integration.providerType),
+    )
     .map((integration) => ({ providerType: integration.providerType, name: integration.name }))
   const close = () => setDialog(null)
 

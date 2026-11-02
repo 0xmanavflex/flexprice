@@ -34,6 +34,8 @@ export interface ConnectionWire {
   connection_status?: string
   metadata?: Record<string, unknown> | null
   sync_config?: Record<string, { inbound?: boolean; outbound?: boolean } | undefined> | null
+  billing_entity_id?: string | null
+  webhook_secret_set?: boolean
   created_at?: string
 }
 
@@ -60,31 +62,22 @@ export function toIntegrationConnection(wire: ConnectionWire): IntegrationConnec
     providerType: wire.provider_type ?? '',
     syncConfig,
     metadata,
+    billingEntityId: wire.billing_entity_id ?? null,
+    ...(typeof wire.webhook_secret_set === 'boolean'
+      ? { webhookSecretSet: wire.webhook_secret_set }
+      : {}),
     createdAt: wire.created_at,
   }
 }
 
-/** Published connections per `provider_type`; drafts and archived ones do not count. */
-export function countConnections(wires: ConnectionWire[]): Map<string, number> {
-  const counts = new Map<string, number>()
-  for (const wire of wires) {
-    if (!wire.provider_type) continue
-    if (!isPublished(wire)) continue
-    counts.set(wire.provider_type, (counts.get(wire.provider_type) ?? 0) + 1)
-  }
-  return counts
-}
-
+/** Every published connection of each provider, in wire order; drafts and archived ones do not count. */
 export function toIntegrations(wires: ConnectionWire[]): Integration[] {
-  const counts = countConnections(wires)
-  return INTEGRATION_CATALOG.map((spec) => {
-    const first = wires.find((w) => w.id && w.provider_type === spec.providerType && isPublished(w))
-    return {
-      ...spec,
-      connections: counts.get(spec.providerType) ?? 0,
-      connection: first ? toIntegrationConnection(first) : undefined,
-    }
-  })
+  return INTEGRATION_CATALOG.map((spec) => ({
+    ...spec,
+    connections: wires
+      .filter((w) => w.id && w.provider_type === spec.providerType && isPublished(w))
+      .map(toIntegrationConnection),
+  }))
 }
 
 export async function fetchIntegrations(
@@ -94,12 +87,34 @@ export async function fetchIntegrations(
   const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
   if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to view integrations.')
 
-  const body = await listConnections(serverURL, token, environmentId ?? '')
-  const record = (body ?? {}) as { connections?: ConnectionWire[] | null }
-  return toIntegrations(record.connections ?? [])
+  // Every page: each billing entity has its own connections, so an
+  // environment can pass one page, and a connection left off would vanish
+  // from its entity's provider page and gateway picker.
+  const wires: ConnectionWire[] = []
+  for (let offset = 0; ; offset += CONNECTIONS_PAGE) {
+    const body = await listConnections(serverURL, token, environmentId ?? '', {
+      limit: CONNECTIONS_PAGE,
+      offset,
+    })
+    const record = (body ?? {}) as ConnectionsPage
+    const page = record.connections ?? []
+    wires.push(...page)
+    const total = record.total ?? record.pagination?.total
+    if (page.length < CONNECTIONS_PAGE || (total !== undefined && wires.length >= total)) break
+  }
+  return toIntegrations(wires)
 }
 
-export function useIntegrations(options: { enabled?: boolean } = {}) {
+const CONNECTIONS_PAGE = 100
+
+/** `GET /connections`: the API puts the counts at the top level; older shapes nest them. */
+interface ConnectionsPage {
+  connections?: ConnectionWire[] | null
+  total?: number
+  pagination?: { total?: number }
+}
+
+export function useConnections(options: { enabled?: boolean } = {}) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
 
