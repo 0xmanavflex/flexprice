@@ -57,8 +57,14 @@ export interface FeatureAnalytics {
   name: string
   /** Total usage, formatted, e.g. `120,000`. */
   usage: string
-  /** Compact total for the chart tab, e.g. `120K`. */
+  /** Compact total for the chart, e.g. `120K`. */
   short?: string | undefined
+  /**
+   * The total as a number, for the bar's length. The API's own total: daily
+   * points can be absent, or not add up (a MAX meter), so they are summed
+   * only when this is missing.
+   */
+  total?: number | undefined
   /** The unit of usage, e.g. `calls`. */
   unit?: string | undefined
   /** Revenue from this feature, formatted. Null when the API did not price it. */
@@ -220,8 +226,15 @@ function FeatureTick({
 function FeatureBars({ features }: { features: FeatureAnalytics[] }) {
   const data = features
     .map((feature) => {
-      const usage = feature.points.reduce((sum, point) => sum + point.value, 0)
-      return { name: feature.name, usage, total: compactUsage.format(usage) }
+      const usage = feature.total ?? feature.points.reduce((sum, point) => sum + point.value, 0)
+      // Each bar is labelled in its own unit: features measure different
+      // things, so the label, not the length across bars, is the reading.
+      const figure = feature.short ?? compactUsage.format(usage)
+      return {
+        name: feature.name,
+        usage,
+        total: feature.unit ? `${figure} ${feature.unit}` : figure,
+      }
     })
     .sort((a, b) => b.usage - a.usage)
   const config: ChartConfig = { usage: { label: 'Usage', color: toneColor('series-1') } }
