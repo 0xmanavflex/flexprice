@@ -7,6 +7,7 @@ import {
   SubscriptionStatus,
   connectionForEntity,
   effectiveEntityId,
+  type Integration,
 } from '@fp/domain'
 import {
   useBillingEntities,
@@ -115,21 +116,20 @@ export function CustomerDetailPage({
     entitiesOn && customer.data && entities.data
       ? effectiveEntityId(customer.data, entities.data)
       : null
+  // The customer's connection to a provider: its entity's while entities are on.
+  const customerConnection = (integration: Integration) =>
+    pushEntityId !== null
+      ? connectionForEntity(integration, pushEntityId, entities.data ?? [])
+      : integration.connections[0]
   // The providers a push reaches: connected, with customer sync on outbound.
   const pushTargets = (integrations.data ?? [])
-    .filter(
-      (integration) =>
-        (pushEntityId !== null
-          ? connectionForEntity(integration, pushEntityId, entities.data ?? [])
-          : integration.connections[0]
-        )?.syncConfig.customer?.outbound,
-    )
+    .filter((integration) => customerConnection(integration)?.syncConfig.customer?.outbound)
     .map((integration) => integration.name)
   // Where a card can be saved: the connected providers with a hosted setup page.
   const cardProviders = (integrations.data ?? [])
     .filter(
       (integration) =>
-        integration.connections.length > 0 &&
+        customerConnection(integration) &&
         (CARD_SETUP_PROVIDERS as readonly string[]).includes(integration.providerType),
     )
     .map(({ providerType, name }) => ({ providerType, name }))
