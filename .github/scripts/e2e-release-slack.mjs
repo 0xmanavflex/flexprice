@@ -99,6 +99,21 @@ function plainError(message) {
   return code(text.split('\n')[0] || 'failed')
 }
 
+/**
+ * The local re-run for one journey. A live journey (`e2e/live-*.spec.ts`, which
+ * is every journey a release runs) skips itself without `E2E_LIVE=1` and the
+ * dedicated account, so its command carries them; the values stay `…` and the
+ * docs say where they come from.
+ */
+function rerunCommand(journey) {
+  const title = journey ? journey.name.replaceAll('`', "'").replaceAll('"', "'") : '<title>'
+  const live = !journey || /(^|\/)live-[^/]*\.spec\./.test(journey.file ?? '')
+  const target = env.E2E_TARGET_URL ? ` E2E_BASE_URL=${env.E2E_TARGET_URL}` : ''
+  return live
+    ? `E2E_LIVE=1 E2E_USER=… E2E_PASSWORD=… E2E_ENV_ID=… E2E_ENV_PREFIX=…${target} pnpm --filter console test:e2e:journey "${title}"`
+    : `pnpm --filter console test:e2e:journey "${title}"`
+}
+
 function message({ videosAttached }) {
   const c = summary?.counts ?? {}
   const environment = env.E2E_ENVIRONMENT || 'Production'
@@ -169,7 +184,8 @@ function message({ videosAttached }) {
       '*Next Steps:*',
       '1. Inspect the failure screenshot and Playwright trace in the artifact.',
       `2. Identify what is causing ${first ? (first.failure?.step ? 'the failing step' : 'the setup to fail') : 'the run to stop'}.`,
-      `3. Re-run the journey locally:\n\`pnpm --filter console test:e2e:journey "${first ? first.name.replaceAll('`', "'") : '<title>'}"\``,
+      `3. Re-run the journey locally:\n\`${rerunCommand(first)}\``,
+      '   Use the dedicated E2E account, never your own: see `docs/e2e-testing.md` → Running locally.',
       '4. Fix the issue and rerun E2E verification.',
     )
     if (failed.length > 1)
