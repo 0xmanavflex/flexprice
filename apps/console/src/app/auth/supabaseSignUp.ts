@@ -1,8 +1,8 @@
 import { env } from '@/env'
 import { clientFor, sessionClientFor } from './supabaseClient'
-import { ConfirmationLinkInvalid, EmailNotConfirmed } from './signUpErrors'
+import { ConfirmationLinkInvalid, EmailAlreadyRegistered, EmailNotConfirmed } from './signUpErrors'
 
-export { ConfirmationLinkInvalid, EmailNotConfirmed }
+export { ConfirmationLinkInvalid, EmailAlreadyRegistered, EmailNotConfirmed }
 
 /**
  * Sign-up on the hosted regions, which is two halves with an inbox between them.
@@ -66,16 +66,25 @@ function configFor(region: string) {
 
 /**
  * Registers the email and password with Supabase, which emails a confirmation
- * link. Resolves the same way whether or not the address is already taken:
- * Supabase does not say, and neither does the screen that follows.
+ * link.
+ *
+ * An address that already has a confirmed account is not refused: Supabase
+ * answers with a stand-in user whose `identities` is empty, and sends nothing.
+ * That case throws {@link EmailAlreadyRegistered}, so the page says so instead
+ * of "Check your email". An address registered but never confirmed comes back
+ * with its identity, and Supabase sends the link again, so it resolves.
+ * https://supabase.com/docs/reference/javascript/auth-signup
  */
 export async function startSignUp(region: string, email: string, password: string): Promise<void> {
-  const { error } = await clientFor(configFor(region)).auth.signUp({
+  const { data, error } = await clientFor(configFor(region)).auth.signUp({
     email: email.trim(),
     password,
     options: { emailRedirectTo: signUpConfirmURL() },
   })
   if (error) throw new Error(error.message)
+  if (data.user && data.user.identities?.length === 0) {
+    throw new EmailAlreadyRegistered(email.trim())
+  }
 }
 
 /**
