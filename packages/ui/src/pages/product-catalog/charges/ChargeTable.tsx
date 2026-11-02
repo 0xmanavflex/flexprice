@@ -116,7 +116,13 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** Extra row-menu items, e.g. a contract's "Go to plan". */
   extraActions?: (
     charge: Charge,
-  ) => Array<{ label: string; icon: ReactElement; onSelect: () => void }>
+  ) => Array<{
+    label: string
+    icon: ReactElement
+    onSelect: () => void
+    /** Stays enabled for a viewer without write access: a copy or a link. */
+    readOnly?: boolean
+  }>
   /**
    * Replaces opening the sheet.
    *
