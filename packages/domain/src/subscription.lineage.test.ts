@@ -43,6 +43,37 @@ describe('lineLineages', () => {
     expect(lineages[0]?.versions.map((version) => version.id)).toEqual(['v3', 'v2', 'v1'])
   })
 
+  it('keeps a quantity change on the same charge through the line-item chain', () => {
+    // The history API sends predecessor and successor ids and no parent price.
+    // A quantity change reuses the price id; a price change does not.
+    const lineages = lineLineages([
+      line({
+        id: 'v1',
+        priceId: 'p1',
+        successorLineItemId: 'v2',
+        startDate: day('2026-10-23'),
+        endDate: day('2026-11-02'),
+      }),
+      line({
+        id: 'v2',
+        priceId: 'p2',
+        predecessorLineItemId: 'v1',
+        successorLineItemId: 'v3',
+        startDate: day('2026-11-02'),
+        endDate: day('2026-11-02'),
+      }),
+      line({
+        id: 'v3',
+        priceId: 'p2',
+        predecessorLineItemId: 'v2',
+        startDate: day('2026-11-02'),
+      }),
+    ])
+    expect(lineages).toHaveLength(1)
+    expect(lineages[0]?.versions.map((version) => version.id)).toEqual(['v3', 'v2', 'v1'])
+    expect(lineages[0]?.current.id).toBe('v3')
+  })
+
   it('leaves an ended charge with no successor as its own, ended row', () => {
     const [only] = lineLineages([
       line({ id: 'x', priceId: 'p9', startDate: day('2026-01-01'), endDate: day('2026-02-01') }),
