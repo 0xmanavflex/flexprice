@@ -13,3 +13,16 @@ export class EmailNotConfirmed extends Error {
     this.name = 'EmailNotConfirmed'
   }
 }
+
+/**
+ * The email already belongs to a confirmed account. Supabase does not refuse
+ * the sign-up: it returns a stand-in user with no identities and sends no
+ * email, so without this the screen would say to check an inbox that never
+ * gets a link.
+ */
+export class EmailAlreadyRegistered extends Error {
+  constructor(readonly email: string) {
+    super('An account with that email already exists. Sign in instead.')
+    this.name = 'EmailAlreadyRegistered'
+  }
+}
