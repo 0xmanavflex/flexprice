@@ -53,6 +53,10 @@ test.describe('integrations', () => {
     await expect(sheet.getByText('Push invoices')).toBeVisible()
     await sheet.getByRole('button', { name: 'Continue' }).click()
     await expect(sheet.getByText('Webhook URL', { exact: true })).toBeVisible()
+    // Razorpay signs every webhook, so its secret is required, as in V1.
+    await sheet.getByRole('button', { name: 'Connect Razorpay' }).click()
+    await expect(sheet.getByText('Webhook signing secret is required.')).toBeVisible()
+    await sheet.getByRole('textbox', { name: /Webhook signing secret/ }).fill('whsec_test')
     await sheet.getByRole('button', { name: 'Connect Razorpay' }).click()
 
     await expect(page.getByTestId('integration-razorpay')).toContainText('Connected')
