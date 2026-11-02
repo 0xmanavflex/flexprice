@@ -55,9 +55,10 @@ import type {
  *     nothing, the `events_volume` report fills it, which covers at most the
  *     last seven days and says so.
  *   - **Customers**: new customers per day from the customer list, newest
- *     first. A window with none is a zero. Only when the list cannot be read
- *     does the `active_customers` report fill it: customers with a subscription
- *     in the window, as a total with no daily line.
+ *     first, when that page holds the whole window. A window with none is a
+ *     zero. When the page is only a floor (`100+`), or the list cannot be
+ *     read, the `active_customers` report fills it: the exact count of
+ *     customers with a subscription in the window, with no daily line.
  *   - **Recent subscriptions** from `useSubscriptions`, bucketed here by start
  *     date. Note the deliberate use of `total` from the *rows*, not from the
  *     page: `SubscriptionPage.total` is the unfiltered server total, so a
@@ -398,14 +399,17 @@ export function HomePage({
     windows,
     granularity.id,
   )
-  // A window with no new customers is an answer (zero), not a gap: the report,
-  // which counts something else (customers with a subscription), stands in only
-  // when the list itself could not be read.
+  // A complete list is the daily series. A first page that never leaves the
+  // window is only a floor (`100+`); the report already has the exact total,
+  // so that floor does not get shown over it.
   const customersFromListPanel = customersFromList(customers, windows)
+  const customersFromReportPanel = customersFromReport(activeCustomers)
   const customersPanel =
-    customersFromListPanel.status === 'unavailable'
-      ? preferred(customersFromListPanel, customersFromReport(activeCustomers))
-      : customersFromListPanel
+    customersFromListPanel.status === 'ready' && customersFromListPanel.partial
+      ? preferred(customersFromReportPanel, customersFromListPanel)
+      : customersFromListPanel.status === 'unavailable'
+        ? preferred(customersFromListPanel, customersFromReportPanel)
+        : customersFromListPanel
 
   /*
    * Parked until quota-based metrics land.

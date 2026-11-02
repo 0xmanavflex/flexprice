@@ -41,14 +41,20 @@ export function SignUpConfirmPage() {
     void (async () => {
       try {
         const confirmed = await readConfirmedSession(region)
+        // No tenant yet: this link is creating the account, which has not been
+        // onboarded. An existing account already names one and goes back to
+        // the page that asked, or Home.
+        const created = !confirmed.tenantId
         const credentials = await completeAccount(region, confirmed, (details) =>
           createAccount.mutateAsync(details),
         )
         session.signIn(credentials)
         // The link's session is now the console's: the session client keeps refreshing it.
         await forgetConfirmation(region, { endSession: false })
-        // Google sign-in returns here: back to the page that asked for it, if any.
-        void navigate({ href: takeReturnTo() })
+        // Clear a stored return path either way, so a later sign-in does not reuse it.
+        const back = takeReturnTo()
+        if (created) void navigate({ to: '/onboarding' })
+        else void navigate({ href: back })
       } catch (cause) {
         await forgetConfirmation(region, { endSession: true })
         setError(messageForConfirmError(cause))
