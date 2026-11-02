@@ -586,7 +586,9 @@ export const Default: Story = {
     await expect(header.getByText('USD')).toBeVisible()
     // The header holds only the badges, the ID and More.
     await expect(header.queryByRole('button', { name: 'Cancel contract' })).toBeNull()
-    await expect(canvas.getAllByRole('tab')).toHaveLength(5)
+    await expect(canvas.getAllByRole('tab')).toHaveLength(4)
+    // Usage is hidden from the tab bar for now; `?tab=usage` still opens it.
+    await expect(canvas.queryByRole('tab', { name: 'Usage' })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: /Entitlements/ })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: 'Schedule' })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: 'Activity' })).toBeNull()
@@ -1905,10 +1907,11 @@ export const PricingWithoutEditing: Story = {
   },
 }
 
+/** Usage has no tab for now: these open it the way `?tab=usage` does. */
 export const UsageTab: Story = {
+  args: { tab: 'usage' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: 'Usage' }))
     await expect(await canvas.findByText('Usage to date')).toBeVisible()
     await expect(canvas.getByText('920,250')).toBeVisible()
   },
@@ -1917,6 +1920,7 @@ export const UsageTab: Story = {
 export const UsageOverage: Story = {
   args: {
     ...BASE,
+    tab: 'usage',
     usage: ready({
       ...USAGE,
       total: money('2900', 'USD'),
@@ -1936,7 +1940,6 @@ export const UsageOverage: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: 'Usage' }))
     await expect(await canvas.findByText('Usage to date')).toBeVisible()
     await expect((await canvas.findAllByText('Overage')).length).toBeGreaterThan(0)
   },
