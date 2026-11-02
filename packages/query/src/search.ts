@@ -155,6 +155,8 @@ export function toTopLevelChoice(
   field: string,
 ): string | undefined {
   if (specs.find((spec) => spec.field === field)?.kind !== 'choice') return undefined
-  const chosen = runnableFilters(filters, specs).find((filter) => filter.field === field)
+  // The latest rule, as the filter bar keeps it: a URL from before that rule
+  // can still carry two, and only one value can be sent.
+  const chosen = runnableFilters(filters, specs).findLast((filter) => filter.field === field)
   return chosen ? (chosen.value as string) : undefined
 }

@@ -453,6 +453,23 @@ function latestPairPerKey(filters: ListFilter[], specs: readonly ListFilterSpec[
   })
 }
 
+/**
+ * One rule per `choice` field, the latest kept. A choice travels as a single
+ * top-level request field (`billing_entity_id`), so two rules could never both
+ * apply; a second pick replaces the first, and the chips match the request.
+ */
+function latestChoicePerField(
+  filters: ListFilter[],
+  specs: readonly ListFilterSpec[],
+): ListFilter[] {
+  const isChoice = (filter: ListFilter) =>
+    specs.find((entry) => entry.field === filter.field)?.kind === 'choice'
+  return filters.filter(
+    (filter, index) =>
+      !isChoice(filter) || !filters.slice(index + 1).some((later) => later.field === filter.field),
+  )
+}
+
 /** `key=value` as the chip reads it: `region = eu`. */
 function formatKeyValue(value: unknown): string {
   if (typeof value !== 'string') return ''
@@ -639,7 +656,7 @@ function readGranularFilters(flat: FlatFilter[], specs: readonly ListFilterSpec[
       value: spec?.kind === 'options' ? entry.values.map(String) : String(entry.values[0] ?? ''),
     }
   })
-  return latestPairPerKey(runnableFilters(next, specs), specs)
+  return latestChoicePerField(latestPairPerKey(runnableFilters(next, specs), specs), specs)
 }
 
 /**

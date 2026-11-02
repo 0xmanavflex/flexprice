@@ -356,7 +356,7 @@ export function BillingEntityForm({
         {formEl}
         <div className="flex justify-end">
           <WriteGate entity={RBAC_ENTITY.Setting}>
-            <Button type="submit" form={FORM_ID} disabled={isSubmitting}>
+            <Button type="submit" form={FORM_ID} variant="outline" disabled={isSubmitting}>
               {isSubmitting ? 'Saving…' : 'Save changes'}
             </Button>
           </WriteGate>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FilterOp, type ListFilterSpec } from '@fp/domain'
-import { toFilterConditions, toMetadataFilter } from './search'
+import { toFilterConditions, toMetadataFilter, toTopLevelChoice } from './search'
 
 const SPECS: ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },
@@ -62,5 +62,36 @@ describe('toMetadataFilter', () => {
 
   it('is empty without key/value filters', () => {
     expect(toMetadataFilter([], SPECS)).toEqual({})
+  })
+})
+
+describe('toTopLevelChoice', () => {
+  const entity: ListFilterSpec = {
+    field: 'billing_entity_id',
+    label: 'Billing entity',
+    kind: 'choice',
+  }
+
+  it('sends the latest pick when two rules name the same choice', () => {
+    expect(
+      toTopLevelChoice(
+        [
+          { field: 'billing_entity_id', op: FilterOp.Eq, value: 'be_default' },
+          { field: 'billing_entity_id', op: FilterOp.Eq, value: 'be_in' },
+        ],
+        [entity],
+        'billing_entity_id',
+      ),
+    ).toBe('be_in')
+  })
+
+  it('sends nothing for a field this list does not offer', () => {
+    expect(
+      toTopLevelChoice(
+        [{ field: 'billing_entity_id', op: FilterOp.Eq, value: 'be_in' }],
+        SPECS,
+        'billing_entity_id',
+      ),
+    ).toBeUndefined()
   })
 })
