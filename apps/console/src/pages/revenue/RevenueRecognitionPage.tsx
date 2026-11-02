@@ -78,7 +78,13 @@ export function RevenueRecognitionPage({
           ? 'Revenue recognition is off for this environment.'
           : (failure?.message ?? null)
       }
-      onRetry={() => void (enabled.error ? enabled.refetch() : revenue.refetch())}
+      onRetry={() =>
+        void (enabled.error
+          ? enabled.refetch()
+          : matches.error
+            ? matches.refetch()
+            : revenue.refetch())
+      }
       search={search.search}
       onSearchChange={(next) => onSearchChange({ ...search, search: next, page: 1 })}
       from={search.from}

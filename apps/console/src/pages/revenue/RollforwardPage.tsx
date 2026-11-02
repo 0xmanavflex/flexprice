@@ -113,7 +113,13 @@ export function RollforwardPage({
           ? 'Revenue recognition is off for this environment.'
           : (failure?.message ?? null)
       }
-      onRetry={() => void (enabled.error ? enabled.refetch() : rollforward.refetch())}
+      onRetry={() =>
+        void (enabled.error
+          ? enabled.refetch()
+          : matches.error
+            ? matches.refetch()
+            : rollforward.refetch())
+      }
       search={search.search}
       onSearchChange={(next) => onSearchChange({ ...search, search: next, page: 1 })}
       period={search.period}
