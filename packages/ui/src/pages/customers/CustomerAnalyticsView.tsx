@@ -229,38 +229,38 @@ function FeatureBars({ features }: { features: FeatureAnalytics[] }) {
   return (
     <ChartContainer
       config={config}
-      className="aspect-auto! block! w-full max-w-none px-1 pt-4 pb-2"
+      className="block! aspect-auto! w-full max-w-none px-1 pt-4 pb-2"
       style={{ height }}
     >
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 4, right: 64, left: 8, bottom: 0 }}
-          barCategoryGap="28%"
-        >
-          <XAxis type="number" hide domain={[0, 'dataMax']} />
-          <YAxis
-            type="category"
-            dataKey="name"
-            axisLine={false}
-            tickLine={false}
-            width={NAME_AXIS}
-            tick={FeatureTick}
-            interval={0}
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 4, right: 64, left: 8, bottom: 0 }}
+        barCategoryGap="28%"
+      >
+        <XAxis type="number" hide domain={[0, 'dataMax']} />
+        <YAxis
+          type="category"
+          dataKey="name"
+          axisLine={false}
+          tickLine={false}
+          width={NAME_AXIS}
+          tick={FeatureTick}
+          interval={0}
+        />
+        <ChartTooltip
+          cursor={{ fill: 'var(--muted)', opacity: 0.5 }}
+          content={<ChartTooltipContent />}
+        />
+        <Bar dataKey="usage" fill="var(--color-usage)" radius={[0, 3, 3, 0]}>
+          <LabelList
+            dataKey="total"
+            position="right"
+            className="fill-muted-foreground"
+            fontSize={11}
           />
-          <ChartTooltip
-            cursor={{ fill: 'var(--muted)', opacity: 0.5 }}
-            content={<ChartTooltipContent />}
-          />
-          <Bar dataKey="usage" fill="var(--color-usage)" radius={[0, 3, 3, 0]}>
-            <LabelList
-              dataKey="total"
-              position="right"
-              className="fill-muted-foreground"
-              fontSize={11}
-            />
-          </Bar>
-        </BarChart>
+        </Bar>
+      </BarChart>
     </ChartContainer>
   )
 }

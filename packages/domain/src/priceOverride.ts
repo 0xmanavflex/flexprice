@@ -78,7 +78,6 @@ export const priceOverrideSchema = z.discriminatedUnion('billingModel', [
 
 export type PriceOverride = z.infer<typeof priceOverrideSchema>
 
-/** A starting value for each model, so switching models never lands on invalid state. */
 const BUCKETS = new Set<string>(Object.values(BucketSize))
 
 /**
@@ -136,6 +135,7 @@ function tierForOverride(tier: Tier): Tier {
   }
 }
 
+/** A starting value for each model, so switching models never lands on invalid state. */
 export function emptyOverride(priceId: string, billingModel: BillingModel): PriceOverride {
   switch (billingModel) {
     case BillingModel.FlatFee:

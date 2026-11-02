@@ -1,10 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import {
-  CARD_SETUP_PROVIDERS,
-  CustomerStatus,
-  SubscriptionStatus,
-} from '@fp/domain'
+import { CARD_SETUP_PROVIDERS, CustomerStatus, SubscriptionStatus } from '@fp/domain'
 import {
   useCustomer,
   useCustomerIntegrationLinks,
