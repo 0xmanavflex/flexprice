@@ -198,7 +198,15 @@ function featureLabel(name: string): string {
   return name.length > 34 ? `${name.slice(0, 32)}…` : name
 }
 
-function FeatureTick({ x, y, payload }: { x: number; y: number; payload?: { value?: string } }) {
+function FeatureTick({
+  x,
+  y,
+  payload,
+}: {
+  x: string | number
+  y: string | number
+  payload?: { value?: string }
+}) {
   const full = payload?.value ?? ''
   return (
     <text x={x} y={y} dy={4} textAnchor="end" fontSize={11} className="fill-muted-foreground">

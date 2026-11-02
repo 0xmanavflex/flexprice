@@ -19,7 +19,7 @@ export interface OverrideLineItem {
   amount?: string
   tierMode?: string
   tiers?: {
-    upTo: number | null
+    upTo?: number
     unitAmount: string
     flatAmount?: string
     transformQuantity?: { divideBy: number; round: RoundType }
