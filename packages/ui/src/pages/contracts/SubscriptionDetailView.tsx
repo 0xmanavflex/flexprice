@@ -836,6 +836,9 @@ export function SubscriptionDetailView({
     )
     const open = !charge.endDate && canEditCharges && canEditLine(line)
     const hasCommitment = Boolean(chargeRows.details.get(charge.id)?.commitment)
+    // The same gate as the section menu: an existing setting to edit, or none
+    // once the alerts have loaded, so a slow read never offers a second one.
+    const offersAlerts = editableChargeSections(charge).includes(ChargeSection.Alerts)
     return [
       ...(open && line.kind === 'usage'
         ? [
@@ -849,7 +852,7 @@ export function SubscriptionDetailView({
               icon: <ScaleIcon aria-hidden />,
               onSelect: () => editCharge(charge),
             },
-            ...(onCreateChargeAlert || onSaveChargeAlert
+            ...(offersAlerts
               ? [
                   {
                     label: 'Alert settings',
@@ -863,6 +866,7 @@ export function SubscriptionDetailView({
       {
         label: 'Copy line item ID',
         icon: <CopyIcon aria-hidden />,
+        readOnly: true,
         onSelect: () => {
           void navigator.clipboard
             .writeText(line.id)
@@ -899,6 +903,7 @@ export function SubscriptionDetailView({
             {
               label: 'Go to plan',
               icon: <PackageIcon aria-hidden />,
+              readOnly: true,
               onSelect: onOpenPlan,
             },
           ]
