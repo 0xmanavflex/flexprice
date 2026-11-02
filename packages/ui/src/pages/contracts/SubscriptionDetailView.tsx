@@ -1988,11 +1988,16 @@ function lineVersions(
   knownPrices: ReadonlyMap<string, Charge>,
 ): ChargeVersion[] {
   return lines.flatMap((version) => {
-    const charge = version.charge ?? (version.priceId ? knownPrices.get(version.priceId) : undefined)
+    const charge =
+      version.charge ?? (version.priceId ? knownPrices.get(version.priceId) : undefined)
     const unit = charge ? chargePriceLabel(charge) : null
-    const quantity = version.quantity?.trim()
+    // A count of units only on a fixed charge: a metered line's quantity is
+    // usage (often 0), and its price is already a per-unit rate.
+    const counted = version.kind !== 'usage' && charge?.type !== PriceType.Usage
+    const quantity = counted ? version.quantity?.trim() : undefined
     const priced = unit ? (quantity && quantity !== '1' ? `${unit} × ${quantity}` : unit) : null
-    const price = priced ?? (quantity && quantity !== '1' ? `${version.name} × ${quantity}` : version.name)
+    const price =
+      priced ?? (quantity && quantity !== '1' ? `${version.name} × ${quantity}` : version.name)
     if (!price) return []
     return [
       {

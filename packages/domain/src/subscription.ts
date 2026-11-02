@@ -914,9 +914,7 @@ export function lineLineages(
   for (const line of lines) {
     find(keyOf(line))
     if (line.overridesPriceId) union(keyOf(line), line.overridesPriceId)
-    const previous = line.predecessorLineItemId
-      ? byId.get(line.predecessorLineItemId)
-      : undefined
+    const previous = line.predecessorLineItemId ? byId.get(line.predecessorLineItemId) : undefined
     if (previous) union(keyOf(line), keyOf(previous))
   }
 
@@ -939,8 +937,9 @@ export function lineLineages(
 
 /**
  * Newest first. A predecessor/successor chain is that order exactly: walk it
- * from the line nothing replaced, then reverse. Lines with no link keep the
- * date order.
+ * from the line nothing replaced, then reverse. Built oldest first, so chain
+ * heads are taken oldest first and any line no chain reached is added oldest
+ * first too; the API's own order never decides it.
  */
 function orderVersions(
   group: readonly SubscriptionLine[],
@@ -950,11 +949,12 @@ function orderVersions(
   const linked = group.some((line) => line.predecessorLineItemId || line.successorLineItemId)
   if (!linked) return [...group].sort(newestFirst)
 
+  const oldestFirstOrder = (a: SubscriptionLine, b: SubscriptionLine) => newestFirst(b, a)
   const oldestFirst: SubscriptionLine[] = []
   const seen = new Set<string>()
-  const heads = group.filter(
-    (line) => !line.predecessorLineItemId || !byId.has(line.predecessorLineItemId),
-  )
+  const heads = group
+    .filter((line) => !line.predecessorLineItemId || !byId.has(line.predecessorLineItemId))
+    .sort(oldestFirstOrder)
   for (const head of heads) {
     let cursor: SubscriptionLine | undefined = head
     while (cursor && !seen.has(cursor.id)) {
@@ -963,7 +963,7 @@ function orderVersions(
       cursor = cursor.successorLineItemId ? byId.get(cursor.successorLineItemId) : undefined
     }
   }
-  for (const line of [...group].sort(newestFirst)) {
+  for (const line of [...group].sort(oldestFirstOrder)) {
     if (!seen.has(line.id)) oldestFirst.push(line)
   }
   return oldestFirst.reverse()
