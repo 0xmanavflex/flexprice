@@ -81,11 +81,22 @@ export const SubmitsThePayload: Story = {
       screen.getByText('https://api.flexprice.io/v1/webhooks/razorpay/tenant_demo/env_demo'),
     ).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Connect Razorpay' }))
+    await expect(await screen.findByText('Webhook signing secret is required.')).toBeVisible()
+    expect(args.onSubmit).not.toHaveBeenCalled()
+    await userEvent.type(
+      screen.getByLabelText(/Webhook signing secret/, { selector: 'input' }),
+      'whsec_test',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Connect Razorpay' }))
     await waitFor(() => expect(args.onSubmit).toHaveBeenCalledOnce())
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         provider_type: 'razorpay',
-        encrypted_secret_data: { key_id: 'rzp_test_abc', secret_key: 'shh' },
+        encrypted_secret_data: {
+          key_id: 'rzp_test_abc',
+          secret_key: 'shh',
+          webhook_secret: 'whsec_test',
+        },
         sync_config: { invoice: { outbound: true } },
       }),
       expect.anything(),
