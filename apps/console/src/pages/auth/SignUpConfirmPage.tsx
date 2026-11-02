@@ -53,7 +53,8 @@ export function SignUpConfirmPage() {
         await forgetConfirmation(region, { endSession: false })
         // Clear a stored return path either way, so a later sign-in does not reuse it.
         const back = takeReturnTo()
-        void navigate(created ? { to: '/onboarding' } : { href: back })
+        if (created) void navigate({ to: '/onboarding' })
+        else void navigate({ href: back })
       } catch (cause) {
         await forgetConfirmation(region, { endSession: true })
         setError(messageForConfirmError(cause))
