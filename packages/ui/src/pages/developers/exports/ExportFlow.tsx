@@ -51,12 +51,12 @@ import { EntityList, type EntityRowAction } from '../../shared/EntityList'
 import {
   type EntityColumn,
   Pill,
-  type PillTone,
   idColumn,
   pillColumn,
   textColumn,
 } from '../../shared/cells'
 import { DataExportDialog, RunExportDialog, S3ConnectionDialog } from './ExportForms'
+import { statusTone } from '../../shared/statusTones'
 
 /**
  * The Exports flow, as V1 has it, on the console's kit:
@@ -673,13 +673,6 @@ export function DataExportDetail({
 
 /* ---- Runs ---------------------------------------------------------------- */
 
-const RUN_TONE: Record<string, PillTone> = {
-  COMPLETED: 'success',
-  FAILED: 'danger',
-  PROCESSING: 'warning',
-  PENDING: 'warning',
-}
-
 export interface ExportRunListProps {
   runs: ExportRun[]
   total: number
@@ -716,7 +709,7 @@ export function ExportRunList({
   const columns: EntityColumn<ExportRun>[] = [
     pillColumn<ExportRun>('status', 'Status', (run) => ({
       label: EXPORT_RUN_STATUS_LABEL[run.status as ExportRunStatus] ?? (run.status || 'Unknown'),
-      tone: RUN_TONE[run.status] ?? 'neutral',
+      tone: statusTone(run.status),
     })),
     textColumn<ExportRun>('from', 'Data from', (run) => formatDateTime(run.intervalStart, locale), {
       width: 180,

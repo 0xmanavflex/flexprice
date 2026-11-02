@@ -71,10 +71,11 @@ import {
 } from '../../compositions'
 import { ChoiceCards, Composer, Properties } from '../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
-import { Pill, type PillTone } from '../shared/cells'
+import { Pill } from '../shared/cells'
 import { WalletLedgerTable, expiringSoon, formatCredits, formatDay } from './WalletLedgerTable'
 import { SubTabState } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
+import { WALLET_STATUS_TONE } from '../shared/statusTones'
 
 export interface CustomerWalletViewProps {
   wallets: Wallet[]
@@ -341,7 +342,7 @@ export function CustomerWalletView({
               {
                 label: 'Status',
                 value: (
-                  <Pill tone={STATUS_TONE[wallet.status]}>
+                  <Pill tone={WALLET_STATUS_TONE[wallet.status]}>
                     {WALLET_STATUS_LABEL[wallet.status]}
                   </Pill>
                 ),
@@ -449,12 +450,6 @@ export function CustomerWalletView({
       />
     </div>
   )
-}
-
-const STATUS_TONE: Record<WalletStatus, PillTone> = {
-  [WalletStatus.Active]: 'success',
-  [WalletStatus.Frozen]: 'warning',
-  [WalletStatus.Closed]: 'neutral',
 }
 
 function CreateWalletDialog({

@@ -123,6 +123,7 @@ import { ChargeAlertForm } from './ChargeAlertForm'
 import { PauseContractDialog } from './PauseContractDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
+import { statusTone } from '../shared/statusTones'
 
 /**
  * A unit price, with the precision a usage rate needs ($0.002 a request):
@@ -2003,7 +2004,8 @@ function Muted({ children, className }: { children: ReactNode; className?: strin
 }
 
 function ActiveBadge({ active }: { active: boolean }) {
-  return <Pill tone={active ? 'success' : 'neutral'}>{active ? 'Active' : 'Ended'}</Pill>
+  const label = active ? 'Active' : 'Ended'
+  return <Pill tone={statusTone(label)}>{label}</Pill>
 }
 
 const sentence = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : '—')

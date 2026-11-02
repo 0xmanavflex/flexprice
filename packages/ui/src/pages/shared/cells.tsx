@@ -9,6 +9,7 @@ import { provenance } from '@ui/provenance'
 import { usePillSize } from '../../compositions/detail/pillSize'
 import { formatStoredDay } from '../../compositions/forms/DateInput'
 import { Money } from './Money'
+import { statusTone } from './statusTones'
 
 /**
  * The cells every list table is built from.
@@ -182,50 +183,9 @@ export function Pill({ tone = 'neutral', size, icon, children, className }: Pill
   )
 }
 
-/** Status words and the tone each one carries. */
-const STATUS_TONE: Record<string, PillTone> = {
-  active: 'success',
-  paid: 'success',
-  succeeded: 'success',
-  published: 'success',
-  enabled: 'success',
-  healthy: 'success',
-  completed: 'success',
-  processed: 'success',
-  issued: 'success',
-  finalized: 'info',
-  // Open awaits payment: orange, as the invoice chips (walkthrough 6.1).
-  open: 'warning',
-  trialing: 'trial',
-  scheduled: 'warning',
-  running: 'warning',
-  draft: 'neutral',
-  archived: 'neutral',
-  inactive: 'neutral',
-  disabled: 'neutral',
-  voided: 'neutral',
-  void: 'neutral',
-  expired: 'neutral',
-  refunded: 'neutral',
-  skipped: 'neutral',
-  paused: 'warning',
-  pending: 'warning',
-  processing: 'warning',
-  past_due: 'danger',
-  'past due': 'danger',
-  partial: 'warning',
-  'partially paid': 'warning',
-  overdue: 'danger',
-  failed: 'danger',
-  cancelled: 'neutral',
-  canceled: 'neutral',
-  incomplete: 'warning',
-  overpaid: 'success',
-}
-
 /** A status word as a dot pill; the tone is looked up from the word. */
 export function Status({ value }: { value: string }) {
-  const tone = STATUS_TONE[value.toLowerCase()] ?? 'neutral'
+  const tone = statusTone(value)
   return (
     <Pill tone={tone}>
       <span className="capitalize">{value.replace(/_/g, ' ')}</span>

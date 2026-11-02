@@ -75,6 +75,7 @@ import {
 } from '../contracts/ContractIntegrations'
 import { IntegrationMark, IntegrationMarks } from './IntegrationMark'
 import { CopyValue } from '../shared/CopyValue'
+import { statusTone } from '../shared/statusTones'
 
 /**
  * A customer's detail page: an avatar-tile `EntityHeader` (name; on the right
@@ -1288,17 +1289,21 @@ function invoiceDocument(invoice: Invoice): string {
 
 /** The collection state of an invoice as a simple chip. */
 function invoicePayment(invoice: Invoice): { label: string; tone: PillTone } {
-  if (invoice.status === InvoiceStatus.Paid) return { label: 'Paid', tone: 'success' }
-  if (invoice.status === InvoiceStatus.Void) return { label: 'Void', tone: 'neutral' }
-  if (invoice.status === InvoiceStatus.Skipped) return { label: 'Skipped', tone: 'neutral' }
-  if (invoice.status === InvoiceStatus.Overdue) return { label: 'Overdue', tone: 'danger' }
+  if (invoice.status === InvoiceStatus.Paid) return { label: 'Paid', tone: statusTone('Paid') }
+  if (invoice.status === InvoiceStatus.Void) return { label: 'Void', tone: statusTone('Void') }
+  if (invoice.status === InvoiceStatus.Skipped)
+    return { label: 'Skipped', tone: statusTone('Skipped') }
+  if (invoice.status === InvoiceStatus.Overdue)
+    return { label: 'Overdue', tone: statusTone('Overdue') }
   const partial =
     !isZeroMoney(invoice.amountRemaining) &&
     compareMoney(invoice.amountRemaining, invoice.amountDue) < 0
-  if (partial) return { label: 'Partially Paid', tone: 'warning' }
-  if (invoice.paymentStatus === PaymentStatus.Failed) return { label: 'Failed', tone: 'danger' }
-  if (invoice.paymentStatus === PaymentStatus.Succeeded) return { label: 'Paid', tone: 'success' }
-  return { label: 'Pending', tone: 'warning' }
+  if (partial) return { label: 'Partially Paid', tone: statusTone('Partially Paid') }
+  if (invoice.paymentStatus === PaymentStatus.Failed)
+    return { label: 'Failed', tone: statusTone('Failed') }
+  if (invoice.paymentStatus === PaymentStatus.Succeeded)
+    return { label: 'Paid', tone: statusTone('Paid') }
+  return { label: 'Pending', tone: statusTone('Pending') }
 }
 
 const invoiceSorts: SortKey<Invoice>[] = [

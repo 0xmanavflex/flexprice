@@ -40,7 +40,8 @@ import {
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { Pill, type PillTone } from '../../shared/cells'
+import { Pill } from '../../shared/cells'
+import { VERSION_STATUS_TONE } from '../../shared/statusTones'
 
 /**
  * One charge, opened from its row or from one of its flags.
@@ -62,12 +63,6 @@ import { Pill, type PillTone } from '../../shared/cells'
  * order too many.
  */
 /** Current is the active green, Upcoming blue, History muted grey. */
-const VERSION_TONE: Record<VersionStatus, PillTone> = {
-  current: 'success',
-  upcoming: 'info',
-  history: 'neutral',
-}
-
 const VERSION_LABEL: Record<VersionStatus, string> = {
   current: 'Current',
   upcoming: 'Upcoming',
@@ -412,7 +407,7 @@ export function ChargeSheet({
       id: version.id,
       title: version.price,
       tag: (
-        <Pill tone={VERSION_TONE[status]} size="sm">
+        <Pill tone={VERSION_STATUS_TONE[status]} size="sm">
           {VERSION_LABEL[status]}
         </Pill>
       ),

@@ -41,3 +41,11 @@ Overdue), which repeats the payment status column beside it. It is now "Invoice 
 `invoice_status`, matching the filter of the same name: Draft grey, Finalized green, Voided yellow, Skipped grey
 (`INVOICE_DOCUMENT_STATUS_TONE`). This is the invoice document only; credit-note Finalized stays blue, and voided
 payments and credit notes stay grey.
+
+Follow-up 2026-11-02, one list: every status colour now comes from `STATUS_WORD_TONE` in `pages/shared/statusTones.ts`,
+read through `statusTone(word)` or a per-enum map built from it (invoice, invoice document, payment, contract, portal
+plan, credit note, wallet, price version, webhook delivery, workflow). The local maps in cells, wallets, charges,
+versions, exports, workflows, webhooks, the payment dialog, the invoice and credit-note header chips and the customer
+invoices tab are gone. Decision (product, 2026-11-02): Finalized is green and Voided yellow on every page, not just the
+invoice list, so one status word is one colour everywhere. Blue is now only "upcoming". This supersedes the
+finalized-blue and voided-grey lines above.

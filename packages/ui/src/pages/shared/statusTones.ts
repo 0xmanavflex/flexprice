@@ -4,62 +4,129 @@ import {
   InvoiceStatus,
   PaymentStatus,
   SubscriptionStatus,
+  WalletStatus,
+  WebhookDeliveryStatus,
+  WorkflowStatus,
+  type PortalSubscriptionStatus,
+  type VersionStatus,
 } from '@fp/domain'
 import type { PillTone } from './cells'
 
 /**
- * One tone per status, per enum: the colour semantics the whole console uses.
+ * The one list of status colours. A status word has one tone wherever it
+ * appears: a grid cell, a header chip, a dialog, the customer portal. Every
+ * per-enum map below is built from it, and every status pill in the console
+ * reads its tone from here, never from a local map.
  *
- * - success (green): done and healthy: paid, succeeded, active, completed.
- * - warning (yellow): waiting or possibly stuck: open, pending, processing, paused.
- * - info (blue): finalized, and other settled-but-not-finished document states.
+ * - success (green): done and healthy: paid, succeeded, active, completed, finalized.
+ * - warning (yellow): waiting, possibly stuck, or undone: open, pending, processing,
+ *   paused, voided.
+ * - info (blue): coming up: an upcoming price version.
  * - trial (violet): trialing, and nothing else.
- * - neutral (grey): terminal or quiet: draft, cancelled, refunded, voided, skipped.
- * - danger (red): a problem that needs action: overdue, failed. Kept red until the
- *   palette for problems is decided; the agreed palette names no red.
+ * - neutral (grey): ended or quiet: draft, cancelled, refunded, skipped.
+ * - danger (red): a problem that needs action: overdue, failed.
  *
- * Every badge and grid reads from here, so one status is one colour everywhere.
+ * Keys are normalised words (see {@link statusTone}): lower case, spaces for
+ * `_`, `-` and camelCase, so `PAST_DUE`, `past-due` and `pastDue` all read
+ * `past due`. A word missing here is grey.
  */
-export const INVOICE_STATUS_TONE: Record<InvoiceStatus, PillTone> = {
-  [InvoiceStatus.Draft]: 'neutral',
-  [InvoiceStatus.Open]: 'warning',
-  [InvoiceStatus.Paid]: 'success',
-  [InvoiceStatus.Overdue]: 'danger',
-  [InvoiceStatus.Void]: 'neutral',
-  [InvoiceStatus.Skipped]: 'neutral',
+const STATUS_WORD_TONE: Record<string, PillTone> = {
+  // Done
+  active: 'success',
+  paid: 'success',
+  succeeded: 'success',
+  overpaid: 'success',
+  completed: 'success',
+  finalized: 'success',
+  published: 'success',
+  enabled: 'success',
+  healthy: 'success',
+  processed: 'success',
+  issued: 'success',
+  synced: 'success',
+  current: 'success',
+  // Waiting, stuck or undone
+  open: 'warning',
+  pending: 'warning',
+  'payment pending': 'warning',
+  processing: 'warning',
+  sending: 'warning',
+  scheduled: 'warning',
+  running: 'warning',
+  'continued as new': 'warning',
+  paused: 'warning',
+  frozen: 'warning',
+  incomplete: 'warning',
+  partial: 'warning',
+  'partially paid': 'warning',
+  changed: 'warning',
+  deprecated: 'warning',
+  void: 'warning',
+  voided: 'warning',
+  // Coming up
+  upcoming: 'info',
+  // Trial
+  trialing: 'trial',
+  // Ended or quiet
+  draft: 'neutral',
+  archived: 'neutral',
+  inactive: 'neutral',
+  disabled: 'neutral',
+  expired: 'neutral',
+  refunded: 'neutral',
+  'refund issued': 'neutral',
+  'invoice adjusted': 'neutral',
+  skipped: 'neutral',
+  cancelled: 'neutral',
+  canceled: 'neutral',
+  terminated: 'neutral',
+  'timed out': 'neutral',
+  closed: 'neutral',
+  ended: 'neutral',
+  history: 'neutral',
+  other: 'neutral',
+  'not synced': 'neutral',
+  // Needs action
+  overdue: 'danger',
+  'past due': 'danger',
+  failed: 'danger',
+  'payment failed': 'danger',
 }
 
-export const INVOICE_DOCUMENT_STATUS_TONE: Record<InvoiceDocumentStatus, PillTone> = {
-  [InvoiceDocumentStatus.Draft]: 'neutral',
-  [InvoiceDocumentStatus.Finalized]: 'success',
-  [InvoiceDocumentStatus.Voided]: 'warning',
-  [InvoiceDocumentStatus.Skipped]: 'neutral',
+function normalise(word: string): string {
+  return word
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase()
 }
 
-export const PAYMENT_STATUS_TONE: Record<PaymentStatus, PillTone> = {
-  [PaymentStatus.Pending]: 'warning',
-  [PaymentStatus.Succeeded]: 'success',
-  // Paid in full and then some: still paid.
-  [PaymentStatus.Overpaid]: 'success',
-  [PaymentStatus.Failed]: 'danger',
-  [PaymentStatus.Refunded]: 'neutral',
-  [PaymentStatus.Voided]: 'neutral',
+/** The tone a status word carries, by word or label; grey when it is not a known status. */
+export function statusTone(word: string): PillTone {
+  return STATUS_WORD_TONE[normalise(word)] ?? 'neutral'
 }
 
-export const SUBSCRIPTION_STATUS_TONE: Record<SubscriptionStatus, PillTone> = {
-  [SubscriptionStatus.Active]: 'success',
-  [SubscriptionStatus.Trialing]: 'trial',
-  [SubscriptionStatus.Paused]: 'warning',
-  [SubscriptionStatus.Cancelled]: 'neutral',
-  // Waiting on a first payment: possibly stuck.
-  [SubscriptionStatus.Incomplete]: 'warning',
+/** A tone per value of a status enum, read from the one list. */
+function tonesFor<S extends string>(statuses: readonly S[]): Record<S, PillTone> {
+  return Object.fromEntries(statuses.map((s) => [s, statusTone(s)])) as Record<S, PillTone>
 }
 
-export const CREDIT_NOTE_STATUS_TONE: Record<CreditNoteStatus, PillTone> = {
-  [CreditNoteStatus.Draft]: 'neutral',
-  [CreditNoteStatus.Finalized]: 'info',
-  [CreditNoteStatus.Voided]: 'neutral',
-}
+export const INVOICE_STATUS_TONE = tonesFor(Object.values(InvoiceStatus))
+export const INVOICE_DOCUMENT_STATUS_TONE = tonesFor(Object.values(InvoiceDocumentStatus))
+export const PAYMENT_STATUS_TONE = tonesFor(Object.values(PaymentStatus))
+export const SUBSCRIPTION_STATUS_TONE = tonesFor(Object.values(SubscriptionStatus))
+export const CREDIT_NOTE_STATUS_TONE = tonesFor(Object.values(CreditNoteStatus))
+export const WALLET_STATUS_TONE = tonesFor(Object.values(WalletStatus))
+export const WEBHOOK_DELIVERY_STATUS_TONE = tonesFor(Object.values(WebhookDeliveryStatus))
+export const WORKFLOW_STATUS_TONE = tonesFor(Object.values(WorkflowStatus))
+export const VERSION_STATUS_TONE = tonesFor<VersionStatus>(['current', 'upcoming', 'history'])
+export const PORTAL_SUBSCRIPTION_STATUS_TONE = tonesFor<PortalSubscriptionStatus>([
+  'active',
+  'trialing',
+  'paused',
+  'cancelled',
+  'other',
+])
 
 /** A pill tone as the text and dot classes a glyph badge uses. */
 export const TONE_TEXT: Record<PillTone, string> = {

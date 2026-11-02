@@ -16,6 +16,7 @@ import type { ErrorKind } from '@ui/compositions/feedback/States'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { EntityCell, type EntityColumn, dateColumn, pillColumn } from '../../shared/cells'
+import { statusTone } from '../../shared/statusTones'
 
 /**
  * The Endpoints list: the first screen of Svix's app portal.
@@ -122,8 +123,8 @@ export function WebhookEndpointGrid({
         'Status',
         (row) =>
           row.disabled
-            ? { label: 'Disabled', tone: 'neutral' }
-            : { label: 'Enabled', tone: 'success' },
+            ? { label: 'Disabled', tone: statusTone('disabled') }
+            : { label: 'Enabled', tone: statusTone('enabled') },
         { width: 120 },
       ),
       {

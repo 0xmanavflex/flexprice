@@ -15,6 +15,7 @@ import { Section } from '@ui/compositions/layout/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Pill } from '../../shared/cells'
+import { statusTone } from '../../shared/statusTones'
 
 /**
  * The Event Catalog: every event type an endpoint can subscribe to.
@@ -158,7 +159,9 @@ export function WebhookEventCatalog({
               as="h3"
               title={eventType.name}
               {...(eventType.description ? { description: eventType.description } : {})}
-              {...(eventType.deprecated ? { actions: <Pill tone="warning">Deprecated</Pill> } : {})}
+              {...(eventType.deprecated
+                ? { actions: <Pill tone={statusTone('deprecated')}>Deprecated</Pill> }
+                : {})}
             >
               {eventType.example === null ? (
                 <p className="text-muted-foreground text-sm">
