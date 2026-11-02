@@ -164,7 +164,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
     fields: [
       text('key_id', 'Key ID', { placeholder: 'rzp_live_…' }),
       secret('secret_key', 'Key secret'),
-      webhookSecret({ required: false }),
+      webhookSecret(),
     ],
     sync: [pushInvoices],
     webhook: {
@@ -293,7 +293,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
           { value: 'https://accounts.zoho.jp', label: 'Japan (.jp)' },
         ],
       }),
-      webhookSecret({ required: false, rotatable: true }),
+      webhookSecret({ rotatable: true }),
     ],
     sync: [
       { ...pushInvoices, defaultOn: true },
@@ -315,7 +315,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
     setup: 'credentials',
     fields: [
       secret('api_key', 'API key', { placeholder: 'sk_live_…' }),
-      webhookSecret({ required: false }),
+      webhookSecret(),
     ],
     sync: [pushInvoices],
     webhook: { events: ['invoice.paid', 'payment_link.paid'] },
@@ -348,7 +348,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
           message: 'Enter a URL starting with http:// or https://.',
         },
       }),
-      webhookSecret({ required: false }),
+      webhookSecret(),
     ],
     sync: [{ ...pushInvoices, defaultOn: true }],
     webhook: { events: ['payment_paid', 'payment_failed'] },
