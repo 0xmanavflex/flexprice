@@ -314,3 +314,41 @@ export const UsageMeterOwnsBucket: Story = {
     await expect(canvas.queryByRole('combobox', { name: /Bucket size/ })).toBeNull()
   },
 }
+
+/** Retyping a package band's size keeps the rounding it came with. */
+export const TieredPackageOverride: Story = {
+  args: {
+    defaultValue: {
+      priceId: 'price_01',
+      billingModel: BillingModel.Tiered,
+      tierMode: TierMode.Slab,
+      tiers: [
+        { upTo: 1000, unitAmount: '0', flatAmount: '0' },
+        {
+          upTo: null,
+          unitAmount: '1000',
+          flatAmount: '0',
+          transformQuantity: { divideBy: 100, round: 'down' },
+        },
+      ],
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const size = canvas.getByRole('textbox', { name: /tier 2 package size/i })
+    await expect(size).toHaveValue('100')
+    await userEvent.clear(size)
+    await userEvent.type(size, '200')
+
+    await userEvent.click(canvas.getByRole('button', { name: /save override/i }))
+
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tiers: [
+          expect.objectContaining({ upTo: 1000, unitAmount: '0' }),
+          expect.objectContaining({ transformQuantity: { divideBy: 200, round: 'down' } }),
+        ],
+      }),
+    )
+  },
+}

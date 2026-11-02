@@ -13,6 +13,7 @@ import {
   PriceType,
   TierMode,
   isChargeCustomised,
+  tierUnitLabel,
 } from '@fp/domain'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import type { ReactElement } from 'react'
@@ -178,7 +179,9 @@ function valueOf(charge: Charge): string {
       return `${display || '0'} per ${charge.transformQuantity?.divideBy?.toLocaleString() ?? '?'}`
     case BillingModel.Tiered:
       // The tier count is its own grey line now, so the price says the price.
-      return charge.tiers[0]?.unitAmount ? `From ${charge.tiers[0].unitAmount}` : '—'
+      return charge.tiers[0]?.unitAmount
+        ? `From ${charge.tiers[0].unitAmount}${charge.tiers[0].transformQuantity?.divideBy ? ` ${tierUnitLabel(charge.tiers[0])}` : ''}`
+        : '—'
   }
 }
 

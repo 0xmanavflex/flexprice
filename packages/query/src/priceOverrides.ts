@@ -1,4 +1,5 @@
-import { BillingModel, type PriceOverride } from '@fp/domain'
+import { BillingModel, type PriceOverride, type RoundType } from '@fp/domain'
+import { tierPackageFields } from './prices'
 
 /**
  * A domain override, in the shape the API takes.
@@ -17,7 +18,12 @@ export interface OverrideLineItem {
   billingModel: string
   amount?: string
   tierMode?: string
-  tiers?: { upTo: number | null; unitAmount: string; flatAmount?: string }[]
+  tiers?: {
+    upTo: number | null
+    unitAmount: string
+    flatAmount?: string
+    transformQuantity?: { divideBy: number; round: RoundType }
+  }[]
   transformQuantity?: { divideBy: number }
   bucketSize?: string
 }
@@ -53,6 +59,7 @@ function toPricedLine(override: PriceOverride): OverrideLineItem {
           upTo: tier.upTo,
           unitAmount: tier.unitAmount,
           ...(tier.flatAmount ? { flatAmount: tier.flatAmount } : {}),
+          ...tierPackageFields(tier),
         })),
       }
   }

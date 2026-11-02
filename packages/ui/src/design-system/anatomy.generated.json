@@ -4531,6 +4531,8 @@
         "FormCard",
         "FormRow",
         "LabelWithHint",
+        "PriceOverrideForm",
+        "TierTable",
         "UpgradeView"
       ],
       "story": "./src/compositions/forms/InfoHint.stories.tsx"
@@ -6397,6 +6399,7 @@
       "composes": [
         "ChoiceCards",
         "Field",
+        "InfoHint",
         "OptionSelect",
         "SimpleTable"
       ],
@@ -8020,6 +8023,7 @@
       "file": "src/pages/product-catalog/charges/TierTable.tsx",
       "layer": "surface",
       "composes": [
+        "InfoHint",
         "PlusIcon",
         "SimpleTable"
       ],

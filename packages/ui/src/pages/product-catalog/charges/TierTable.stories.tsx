@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { type Tier } from '@fp/domain'
 import { TierTable } from './TierTable'
 
@@ -120,5 +120,61 @@ export const WithRowErrors: Story = {
   ),
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('Must be greater than 100')).toBeInTheDocument()
+  },
+}
+
+function SpiedTierTable({
+  initial,
+  onChange,
+}: {
+  initial: Tier[]
+  onChange: (tiers: Tier[]) => void
+}) {
+  const [tiers, setTiers] = useState<Tier[]>(initial)
+  return (
+    <TierTable
+      tiers={tiers}
+      onChange={(next) => {
+        setTiers(next)
+        onChange(next)
+      }}
+    />
+  )
+}
+
+/** A package size prices the band per package; clearing it goes back to per unit. */
+export const PackageSize: Story = {
+  args: { onChange: fn() },
+  render: (args) => (
+    <SpiedTierTable
+      initial={[
+        { upTo: 1000, unitAmount: '0' },
+        { upTo: null, unitAmount: '1000' },
+      ]}
+      onChange={args.onChange}
+    />
+  ),
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const size = canvas.getByRole('textbox', { name: /tier 2 package size/i })
+    await userEvent.type(size, '100')
+    await expect(args.onChange).toHaveBeenLastCalledWith([
+      { upTo: 1000, unitAmount: '0' },
+      { upTo: null, unitAmount: '1000', transformQuantity: { divideBy: 100, round: 'up' } },
+    ])
+    await userEvent.clear(size)
+    await expect(size).toHaveValue('')
+    await expect(args.onChange).toHaveBeenLastCalledWith([
+      { upTo: 1000, unitAmount: '0' },
+      { upTo: null, unitAmount: '1000', transformQuantity: { divideBy: 0, round: 'up' } },
+    ])
+    const hint = canvas.getByRole('button', { name: /more information/i })
+    await userEvent.hover(hint)
+    const copy = await within(document.body).findByText(
+      'Units per package. Leave empty to charge per unit.',
+    )
+    await expect(copy).toBeInTheDocument()
+    await userEvent.unhover(hint)
+    await waitFor(() => expect(copy).not.toBeInTheDocument())
   },
 }
