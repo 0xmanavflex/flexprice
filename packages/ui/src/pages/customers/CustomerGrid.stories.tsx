@@ -207,6 +207,25 @@ export const NoInventedColumns: Story = {
   },
 }
 
+/** Entities enabled: a Billing entity column, where a customer without one reads as the default. */
+export const WithBillingEntities: Story = {
+  args: {
+    billingEntities: [
+      { id: 'be_default', name: 'Northwind Inc', isDefault: true },
+      { id: 'be_india', name: 'Northwind India', isDefault: false },
+    ],
+    customers: customerFixtures().map((customer, index) =>
+      index === 0 ? { ...customer, billingEntityId: 'be_india' } : customer,
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('columnheader', { name: /billing entity/i })).toBeVisible()
+    await expect(canvas.getByText('Northwind India')).toBeInTheDocument()
+    await expect(canvas.getAllByText('Northwind Inc').length).toBeGreaterThanOrEqual(1)
+  },
+}
+
 /** The shared table's geometry, as this surface renders it. */
 export const Layout: Story = {
   play: async ({ canvasElement }) => {

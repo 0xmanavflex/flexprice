@@ -1,3 +1,4 @@
+import { setRawUnauthorizedHandler } from './unauthorized'
 import { type Fetcher, Flexprice, HTTPClient } from '@flexprice/sdk'
 import { toApiError } from './errors'
 import { DEFAULT_REQUEST_TIMEOUT_MS, withTimeout } from './timeout'
@@ -103,13 +104,16 @@ export function createFlexpriceClient({
    * key, so signing in again (a different token) re-arms it.
    */
   let rejectedCredential: string | undefined
-  httpClient.addHook('response', (response, request) => {
-    if (response.status !== 401) return
-    const credential = request.headers.get('Authorization') ?? ''
+  const reject = (credential: string) => {
     if (credential === rejectedCredential) return
     rejectedCredential = credential
     onUnauthorized?.()
+  }
+  httpClient.addHook('response', (response, request) => {
+    if (response.status !== 401) return
+    reject(request.headers.get('Authorization') ?? '')
   })
+  setRawUnauthorizedHandler(reject)
 
   return new Flexprice({ serverURL, httpClient })
 }

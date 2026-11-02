@@ -2,7 +2,11 @@ import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { type TaxAssociation, TaxBehavior } from '@fp/domain'
-import { CustomerTaxSection, type CustomerTaxSectionProps } from './CustomerTaxSection'
+import {
+  CustomerTaxSection,
+  TaxAssociationSection,
+  type CustomerTaxSectionProps,
+} from './CustomerTaxSection'
 
 const RATES = [
   { code: 'us_ca_sales', name: 'California sales tax', percentage: '7.25' },
@@ -210,5 +214,27 @@ export const RemoveError: Story = {
     await expect(
       await screen.findByText('Could not remove the tax rate. Try again.'),
     ).toBeInTheDocument()
+  },
+}
+
+/** A billing entity's default taxes: a description under the title and no auto-apply switch. */
+export const BillingEntityDefaults: Story = {
+  render: (args) => (
+    <TaxAssociationSection
+      {...args}
+      description="Added automatically to new customers of this entity. Existing customers keep their taxes."
+      subject="billing entity"
+      alwaysAutoApply
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByText(/Added automatically to new customers of this entity/),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('Auto-apply')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /add tax rate/i }))
+    const dialog = await screen.findByRole('dialog')
+    await expect(within(dialog).queryByText('Apply automatically to new invoices')).toBeNull()
   },
 }

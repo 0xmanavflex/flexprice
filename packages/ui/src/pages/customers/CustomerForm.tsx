@@ -2,10 +2,12 @@ import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
+  type BillingEntity,
   CUSTOMER_TAX_TREATMENT_LABEL,
   type CreateCustomer,
   CustomerTaxTreatment,
   createCustomerSchema,
+  effectiveEntityId,
   emptyCustomer,
   KEY_PREFIX,
   suggestKey,
@@ -50,6 +52,8 @@ export interface CustomerFormProps {
   isSubmitting?: boolean
   submitError?: string | null
   trail: DetailCrumb[]
+  /** Create only, while entities are enabled: adds the Billing entity picker, the default entity preselected. */
+  billingEntities?: readonly Pick<BillingEntity, 'id' | 'name' | 'isDefault'>[] | undefined
 }
 
 const FORM_ID = 'customer-form'
@@ -77,6 +81,7 @@ export function CustomerForm({
   isSubmitting = false,
   submitError = null,
   trail,
+  billingEntities,
 }: CustomerFormProps) {
   const isEdit = mode === 'edit'
   const form = useCalmForm<CreateCustomer>({
@@ -113,7 +118,14 @@ export function CustomerForm({
     disabled: isSubmitting,
   })
 
-  const submitAll = form.handleSubmit((values) => onSubmit(values))
+  const entityPicker = !isEdit && billingEntities ? billingEntities : undefined
+  const submitAll = form.handleSubmit((values) =>
+    onSubmit(
+      entityPicker
+        ? { ...values, billingEntityId: effectiveEntityId(values, entityPicker) }
+        : values,
+    ),
+  )
 
   const detailsRows = (
     <>
@@ -219,6 +231,30 @@ export function CustomerForm({
 
   const billingRows = (
     <>
+      {entityPicker ? (
+        <FormRow
+          label="Billing entity"
+          hint="Issues this customer's invoices. It can't be changed once the customer is created."
+          error={errors.billingEntityId?.message}
+        >
+          {({ id, ...field }) => (
+            <Controller
+              control={form.control}
+              name="billingEntityId"
+              render={({ field: control }) => (
+                <OptionSelect
+                  id={id}
+                  {...field}
+                  value={effectiveEntityId({ billingEntityId: control.value }, entityPicker)}
+                  onValueChange={(value) => control.onChange(value)}
+                  options={entityPicker.map((entity) => ({ value: entity.id, label: entity.name }))}
+                  disabled={isSubmitting}
+                />
+              )}
+            />
+          )}
+        </FormRow>
+      ) : null}
       <FormRow
         label="Tax treatment"
         hint="How tax is handled on this customer's invoices."

@@ -79,6 +79,29 @@ export const Create: Story = {
   },
 }
 
+/** Entities enabled: the default entity is preselected and sent unless another is picked. */
+export const CreateWithBillingEntity: Story = {
+  args: {
+    billingEntities: [
+      { id: 'be_default', name: 'Northwind Inc', isDefault: true },
+      { id: 'be_india', name: 'Northwind India', isDefault: false },
+    ],
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('combobox', { name: /billing entity/i })).toHaveTextContent(
+      'Northwind Inc',
+    )
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Corp')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create customer' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ billingEntityId: 'be_default' }),
+      ),
+    )
+  },
+}
+
 /** The external ID is filled from the name until the person types their own. */
 export const ExternalIdFollowsName: Story = {
   play: async ({ canvasElement }) => {

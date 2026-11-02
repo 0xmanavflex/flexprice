@@ -17,6 +17,8 @@ export interface ListCreditNotesParams {
   statuses?: string[]
   /** Only the credit notes issued against this invoice. */
   invoiceId?: string
+  /** Only credit notes of this billing entity; sent only while entities are enabled. */
+  billingEntityId?: string
 }
 
 export async function listCreditNotes(
@@ -31,6 +33,7 @@ export async function listCreditNotes(
   })
   for (const status of params.statuses ?? []) search.append('credit_note_status', status)
   if (params.invoiceId) search.set('invoice_id', params.invoiceId)
+  if (params.billingEntityId) search.set('billing_entity_id', params.billingEntityId)
   return request(serverURL, `/creditnotes?${search.toString()}`, {
     method: 'GET',
     token,

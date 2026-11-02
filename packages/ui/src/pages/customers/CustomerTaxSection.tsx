@@ -33,7 +33,28 @@ export interface TaxRateOption {
   label: string
 }
 
-export interface CustomerTaxSectionProps {
+export interface TaxAssociationCopy {
+  /** Under "Taxes could not be loaded". */
+  failedDetail: string
+  emptyDescription: string
+  /** After the rate's name in the remove confirmation. */
+  removeDescription: string
+}
+
+const CUSTOMER_COPY: TaxAssociationCopy = {
+  failedDetail: "The rest of this customer's record still works.",
+  emptyDescription: 'Add a rate to have it applied when this customer is invoiced.',
+  removeDescription: "will no longer be applied to this customer's invoices.",
+}
+
+export interface TaxAssociationSectionProps {
+  /** A line under the section title. */
+  description?: string
+  /** What the rates attach to, for the dialog hint. */
+  subject?: string
+  copy?: TaxAssociationCopy
+  /** The rates always auto-apply: the switch and column are left out. */
+  alwaysAutoApply?: boolean
   associations: TaxAssociation[]
   taxRates: TaxRateOption[]
   isLoading: boolean
@@ -53,8 +74,17 @@ const BEHAVIOR_OPTIONS = [TaxBehavior.Exclusive, TaxBehavior.Inclusive].map((val
   label: TAX_BEHAVIOR_LABEL[value],
 }))
 
-/** The tax rates attached to one customer: add, change priority/behavior, remove. */
-function CustomerTaxSectionInner({
+export type CustomerTaxSectionProps = Omit<
+  TaxAssociationSectionProps,
+  'description' | 'subject' | 'copy' | 'alwaysAutoApply'
+>
+
+/** The tax rates attached to one customer or billing entity: add, change priority/behavior, remove. */
+function TaxAssociationSectionInner({
+  description,
+  subject = 'customer',
+  copy = CUSTOMER_COPY,
+  alwaysAutoApply = false,
   associations,
   taxRates,
   isLoading,
@@ -65,7 +95,7 @@ function CustomerTaxSectionInner({
   onRemove,
   error,
   onResetError,
-}: CustomerTaxSectionProps) {
+}: TaxAssociationSectionProps) {
   const [dialog, setDialog] = useState<Dialog>(null)
   const [pending, setPending] = useState(false)
   const close = () => {
@@ -100,7 +130,13 @@ function CustomerTaxSectionInner({
   )
 
   return (
-    <Section table showTitle title="Taxes" action={addTaxRate}>
+    <Section
+      table
+      showTitle
+      title="Taxes"
+      {...(description ? { description } : {})}
+      action={addTaxRate}
+    >
       {isLoading ? (
         <div className="p-6">
           <LoadingRows />
@@ -109,7 +145,7 @@ function CustomerTaxSectionInner({
         <div className="p-6">
           <AppFailure
             title="Taxes could not be loaded"
-            detail="The rest of this customer's record still works."
+            detail={copy.failedDetail}
             onRetry={onRetry}
           />
         </div>
@@ -119,7 +155,7 @@ function CustomerTaxSectionInner({
             scene="settings"
             size="inline"
             title="No tax rates attached"
-            description="Add a rate to have it applied when this customer is invoiced."
+            description={copy.emptyDescription}
           />
         </div>
       ) : (
@@ -148,7 +184,15 @@ function CustomerTaxSectionInner({
               cell: (a) => TAX_BEHAVIOR_LABEL[a.taxBehavior],
             },
             { key: 'priority', header: 'Priority', cell: (a) => String(a.priority) },
-            { key: 'auto', header: 'Auto-apply', cell: (a) => (a.autoApply ? 'Yes' : 'No') },
+            ...(alwaysAutoApply
+              ? []
+              : [
+                  {
+                    key: 'auto',
+                    header: 'Auto-apply',
+                    cell: (a: TaxAssociation) => (a.autoApply ? 'Yes' : 'No'),
+                  },
+                ]),
             {
               key: 'actions',
               header: '',
@@ -182,6 +226,8 @@ function CustomerTaxSectionInner({
         key={dialog?.kind === 'edit' ? dialog.id : (dialog?.kind ?? 'closed')}
         open={dialog?.kind === 'add' || (dialog?.kind === 'edit' && target !== undefined)}
         mode={dialog?.kind === 'edit' ? 'edit' : 'add'}
+        subject={subject}
+        showAutoApply={!alwaysAutoApply}
         taxRates={taxRates}
         initial={
           target
@@ -204,7 +250,7 @@ function CustomerTaxSectionInner({
         open={dialog?.kind === 'remove' && target !== undefined}
         onOpenChange={(next) => (next ? undefined : close())}
         title="Remove this tax rate?"
-        description={`${target?.taxRateName || target?.taxRateCode || 'This rate'} will no longer be applied to this customer's invoices.`}
+        description={`${target?.taxRateName || target?.taxRateCode || 'This rate'} ${copy.removeDescription}`}
         confirmLabel="Remove tax rate"
         destructive
         isPending={pending}
@@ -219,6 +265,7 @@ export function TaxDialog({
   open,
   mode,
   subject = 'customer',
+  showAutoApply = true,
   taxRates,
   initial,
   pending,
@@ -230,6 +277,7 @@ export function TaxDialog({
   mode: 'add' | 'edit'
   /** What the rate is applied to, for the hint. */
   subject?: string
+  showAutoApply?: boolean
   taxRates: TaxRateOption[]
   initial: CreateTaxAssociation
   pending: boolean
@@ -303,19 +351,21 @@ export function TaxDialog({
             onChange={(event) => set({ priority: event.target.value })}
           />
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <LabelWithHint
-            htmlFor="tax-auto"
-            hint="Adds this rate to every new invoice for the customer without further steps."
-          >
-            Apply automatically to new invoices
-          </LabelWithHint>
-          <Switch
-            id="tax-auto"
-            checked={draft.autoApply}
-            onCheckedChange={(autoApply) => set({ autoApply })}
-          />
-        </div>
+        {showAutoApply ? (
+          <div className="flex items-center justify-between gap-4">
+            <LabelWithHint
+              htmlFor="tax-auto"
+              hint="Adds this rate to every new invoice for the customer without further steps."
+            >
+              Apply automatically to new invoices
+            </LabelWithHint>
+            <Switch
+              id="tax-auto"
+              checked={draft.autoApply}
+              onCheckedChange={(autoApply) => set({ autoApply })}
+            />
+          </div>
+        ) : null}
         {problem || error ? (
           <p role="alert" className="text-destructive text-sm">
             {problem ?? error}
@@ -326,11 +376,15 @@ export function TaxDialog({
   )
 }
 
-/** `CustomerTaxSection`, scoped to the entity it writes (Tax). */
-export function CustomerTaxSection(props: Parameters<typeof CustomerTaxSectionInner>[0]) {
+/** `TaxAssociationSectionInner`, scoped to the entity it writes (Tax). */
+export function TaxAssociationSection(props: TaxAssociationSectionProps) {
   return (
     <AccessScope entity={RBAC_ENTITY.Tax}>
-      <CustomerTaxSectionInner {...props} />
+      <TaxAssociationSectionInner {...props} />
     </AccessScope>
   )
+}
+
+export function CustomerTaxSection(props: CustomerTaxSectionProps) {
+  return <TaxAssociationSection {...props} />
 }

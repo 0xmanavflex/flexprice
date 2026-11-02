@@ -1,4 +1,5 @@
 import {
+  BILLING_ENTITY_FILTER,
   DEFAULT_INVOICE_QUERY,
   type InvoiceQuery,
   InvoiceSortField,
@@ -74,6 +75,10 @@ export function parseInvoiceSearch(raw: Record<string, unknown>): InvoiceQuery {
     // looks selected twice in the UI.
     statuses: [...new Set(statuses)],
     search: String(param(raw, 'q', 'search') ?? '').trim(),
-    filters: runnableFilters(decodeListFilters(raw['filters']), INVOICE_FILTERS),
+    // The entity filter is kept here; the list sends it only while entities are enabled.
+    filters: runnableFilters(decodeListFilters(raw['filters']), [
+      ...INVOICE_FILTERS,
+      BILLING_ENTITY_FILTER,
+    ]),
   }
 }

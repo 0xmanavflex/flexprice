@@ -1,6 +1,18 @@
 import { useId } from 'react'
-import { type Tenant, type UpdateTenant, toUpdateTenantDraft, updateTenantSchema } from '@fp/domain'
-import { useTenant, useUpdateTenant, useUserInfo } from '@fp/query'
+import {
+  BillingEntityMode,
+  type Tenant,
+  type UpdateTenant,
+  toUpdateTenantDraft,
+  updateTenantSchema,
+} from '@fp/domain'
+import {
+  useBillingEntities,
+  useBillingEntityStatus,
+  useTenant,
+  useUpdateTenant,
+  useUserInfo,
+} from '@fp/query'
 import {
   AddressPicker,
   type AddressPickerModel,
@@ -21,6 +33,7 @@ import {
   PanelUnavailable,
   queryPhase,
 } from './panelKit'
+import { EntityManagedLink } from './EntityManagedLink'
 import { useDraft } from './useDraft'
 
 /**
@@ -49,6 +62,7 @@ export function ProfilePanel() {
   const me = useUserInfo()
   const tenantId = me.data?.tenantId ?? ''
   const tenant = useTenant(tenantId)
+  const entityStatus = useBillingEntityStatus()
 
   const failure = toFailure(me.error ?? tenant.error, 'your organisation')
 
@@ -84,14 +98,23 @@ export function ProfilePanel() {
   }
   const tenantPhase = queryPhase(tenant)
   if (tenantPhase === 'idle') return <PanelUnavailable reason="unavailable" />
-  if (tenantPhase === 'loading' || !tenant.data) return <PanelLoading rows={6} />
+  if (tenantPhase === 'loading' || !tenant.data || entityStatus.isPending)
+    return <PanelLoading rows={6} />
 
   // Keyed on the record so a refetch that genuinely changes the organisation
   // re-seeds the draft rather than leaving the values it mounted with.
-  return <ProfileForm key={tenant.data.id} tenant={tenant.data} />
+  return (
+    <ProfileForm
+      key={tenant.data.id}
+      tenant={tenant.data}
+      sellerOnEntities={entityStatus.data === BillingEntityMode.Enabled}
+    />
+  )
 }
 
-function ProfileForm({ tenant }: { tenant: Tenant }) {
+function ProfileForm({ tenant, sellerOnEntities }: { tenant: Tenant; sellerOnEntities: boolean }) {
+  const entities = useBillingEntities()
+  const defaultEntityId = entities.data?.find((entity) => entity.isDefault)?.id
   const update = useUpdateTenant()
   const draft = useDraft<UpdateTenant>(updateTenantSchema, toUpdateTenantDraft(tenant))
 
@@ -117,6 +140,16 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
             legend="Organisation"
             description="The name on your invoices, and where Flexprice reaches you."
           >
+            {sellerOnEntities ? (
+              <SettingRow
+                title="Seller details"
+                description="Seller details now live on billing entities."
+              >
+                <EntityManagedLink entityId={defaultEntityId}>
+                  Manage default entity
+                </EntityManagedLink>
+              </SettingRow>
+            ) : null}
             <TextField
               label="Name"
               path="name"

@@ -68,6 +68,13 @@ describe('toPayment', () => {
   })
 })
 
+describe('toPayment billing entity', () => {
+  it('keeps the billing entity, and leaves it off when the wire has none', () => {
+    expect(toPayment({ billingEntityId: 'be_1' }).billingEntityId).toBe('be_1')
+    expect(toPayment({})).not.toHaveProperty('billingEntityId')
+  })
+})
+
 describe('toPaymentFilter', () => {
   it('turns the page and size into a limit and offset', () => {
     const filter = toPaymentFilter({ ...DEFAULT_PAYMENT_QUERY, page: 3, pageSize: 25 })

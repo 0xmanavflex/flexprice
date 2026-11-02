@@ -7,6 +7,7 @@ import {
   toApiError,
 } from './errors'
 import { fetchWithTimeout, transportError } from './timeout'
+import { reportRawUnauthorized } from './unauthorized'
 
 /**
  * Tenant settings: the routes the SDK cannot make, part two.
@@ -109,7 +110,13 @@ function str(source: Record<string, unknown>, key: string): string {
 export async function request(
   serverURL: string,
   path: string,
-  init: { method: string; token: string; environmentId: string; body?: unknown },
+  init: {
+    method: string
+    token: string
+    environmentId: string
+    body?: unknown
+    signal?: AbortSignal
+  },
 ): Promise<unknown> {
   if (init.environmentId.length === 0) {
     /*
@@ -138,6 +145,7 @@ export async function request(
       method: init.method,
       headers,
       ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      ...(init.signal ? { signal: init.signal } : {}),
     })
   } catch (cause) {
     // `fetch` rejects only for transport: offline, DNS, CORS, abort, deadline.
@@ -146,6 +154,8 @@ export async function request(
   }
 
   const text = await response.text()
+
+  if (response.status === 401) reportRawUnauthorized(`Bearer ${init.token}`)
 
   if (!response.ok) {
     const { message, details, fromServer } = readErrorBody(

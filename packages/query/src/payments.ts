@@ -1,7 +1,8 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Flexprice } from '@fp/api'
-import { call } from '@fp/api'
+import { type AuthSource, call, listPayments } from '@fp/api'
 import {
+  BILLING_ENTITY_FILTER,
+  type ListFilterSpec,
   type Payment,
   type PaymentDetail,
   type PaymentQuery,
@@ -11,12 +12,14 @@ import {
   toPaymentStatus,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { useFlexprice } from './provider'
+import { toTopLevelChoice } from './search'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
+import { credentials, fromWire } from './wire'
 
 /**
  * Payments: the translation between product vocabulary and the API.
  *
- * Reached through `GET /payments` (`client.payments.listPayments`), a plain
+ * Reached through `GET /payments`, a plain
  * paginated list rather than the `POST /search` the catalogue resources use.
  * The wire keeps the amount as a bare string beside a separate `currency` and
  * spreads the lifecycle across nine values; the domain joins the first into a
@@ -24,13 +27,14 @@ import { useFlexprice } from './provider'
  */
 
 /**
- * The wire shape this reads, after the SDK camelCases the response.
+ * The wire shape this reads, camelCased by `fromWire`.
  *
- * `createdAt`/`succeededAt` arrive as `Date` (the SDK parses them). Structural,
+ * `createdAt`/`succeededAt` arrive as `Date` (`fromWire` revives them). Structural,
  * so a fixture need not carry all ~30 fields to exercise the mapper.
  */
 export interface PaymentWire {
   id?: string | undefined
+  billingEntityId?: string | undefined
   amount?: string | undefined
   currency?: string | undefined
   paymentStatus?: string | undefined
@@ -65,6 +69,7 @@ export function toPayment(wire: PaymentWire): Payment {
     invoiceNumber: wire.invoiceNumber ?? '',
     createdAt: wire.createdAt ?? null,
     succeededAt: wire.succeededAt ?? null,
+    ...(wire.billingEntityId ? { billingEntityId: wire.billingEntityId } : {}),
     ...(wire.gatewayPaymentId ? { gatewayPaymentId: wire.gatewayPaymentId } : {}),
   }
 }
@@ -91,15 +96,31 @@ export interface PaymentPage {
 }
 
 export async function fetchPayments(
-  client: Flexprice,
+  serverURL: string,
+  auth: AuthSource,
   query: PaymentQuery,
   signal?: AbortSignal,
+  specs: readonly ListFilterSpec[] = [],
 ): Promise<PaymentPage> {
-  const response = await call(
-    (options) => client.payments.listPayments(toPaymentFilter(query) as never, options),
-    signal,
+  const { token, environmentId } = await credentials(auth, 'Sign in to view payments.')
+  const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, BILLING_ENTITY_FILTER.field)
+  const response = fromWire<{
+    items?: PaymentWire[] | null
+    pagination?: { total?: number }
+  }>(
+    await listPayments(
+      serverURL,
+      token,
+      environmentId,
+      {
+        limit: query.pageSize,
+        offset: (query.page - 1) * query.pageSize,
+        ...(billingEntityId ? { billingEntityId } : {}),
+      },
+      signal,
+    ),
   )
-  const payments = (response.items ?? []).map((item) => toPayment(item as PaymentWire))
+  const payments = (response?.items ?? []).map(toPayment)
 
   // Neither status nor search is a server-side filter on this endpoint, so both
   // are applied here, on the page the request returned: the same split coupons
@@ -114,7 +135,7 @@ export async function fetchPayments(
 
   return {
     payments: filtered,
-    total: response.pagination?.total ?? 0,
+    total: response?.pagination?.total ?? 0,
   }
 }
 
@@ -125,12 +146,27 @@ export async function fetchPayments(
  * listing payments is a GET with an offset: which is what lets the page hand
  * its state to a URL instead of to a component.
  */
-export function usePayments(query: PaymentQuery) {
-  const client = useFlexprice()
+/** `specs`: the filters the list offers; the entity filter only while entities are enabled. */
+export function usePayments(
+  query: PaymentQuery,
+  options: { specs?: readonly ListFilterSpec[] } = {},
+) {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const billingEntityId = toTopLevelChoice(
+    query.filters ?? [],
+    options.specs ?? [],
+    BILLING_ENTITY_FILTER.field,
+  )
 
   return useQuery({
-    queryKey: queryKeys.payments.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: ({ signal }) => fetchPayments(client, query, signal),
+    queryKey: queryKeys.payments.list({
+      ...query,
+      statuses: [...query.statuses].sort(),
+      // Whether the entity filter is sent, so turning entities on refetches.
+      ...(billingEntityId ? { billingEntityId } : {}),
+    }),
+    queryFn: ({ signal }) => fetchPayments(serverURL, auth, query, signal, options.specs),
     // Keeps the previous page on screen while the next one loads, so paging does
     // not blank the grid. TanStack's replacement for keepPreviousData.
     placeholderData: (previous) => previous,
@@ -144,28 +180,29 @@ export function usePayments(query: PaymentQuery) {
  * a server that ignores the filter still cannot show another invoice's payments.
  */
 export async function fetchInvoicePayments(
-  client: Flexprice,
+  serverURL: string,
+  auth: AuthSource,
   invoiceId: string,
 ): Promise<Payment[]> {
-  const response = await call(() =>
-    client.payments.listPayments({
+  const { token, environmentId } = await credentials(auth, 'Sign in to view payments.')
+  const response = fromWire<{ items?: (PaymentWire & { destinationId?: string })[] | null }>(
+    await listPayments(serverURL, token, environmentId, {
       destinationId: invoiceId,
       destinationType: 'INVOICE',
       limit: 100,
       offset: 0,
-    } as never),
+    }),
   )
-  return (response.items ?? [])
-    .filter((item) => (item as { destinationId?: string }).destinationId === invoiceId)
-    .map((item) => toPayment(item as PaymentWire))
+  return (response?.items ?? []).filter((item) => item.destinationId === invoiceId).map(toPayment)
 }
 
 export function useInvoicePayments(invoiceId: string) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery({
     queryKey: queryKeys.payments.list({ invoiceId }),
-    queryFn: () => fetchInvoicePayments(client, invoiceId),
+    queryFn: () => fetchInvoicePayments(serverURL, auth, invoiceId),
     enabled: invoiceId.length > 0,
   })
 }
@@ -180,12 +217,13 @@ export function useInvoicePayments(invoiceId: string) {
  * complete ledger, and the caller says so.
  */
 export function useCustomerPayments(invoiceIds: readonly string[]) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQueries({
     queries: invoiceIds.map((invoiceId) => ({
       queryKey: queryKeys.payments.list({ invoiceId }),
-      queryFn: () => fetchInvoicePayments(client, invoiceId),
+      queryFn: () => fetchInvoicePayments(serverURL, auth, invoiceId),
     })),
     combine: (results) => ({
       payments: results

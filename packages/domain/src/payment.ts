@@ -13,6 +13,7 @@
  * cell ever sees the two apart or reaches for `parseFloat`.
  */
 import { z } from 'zod'
+import type { ListFilter } from './listFilter'
 import type { Money } from './money'
 
 /**
@@ -94,6 +95,8 @@ export interface Payment {
   createdAt: Date | null
   /** When it landed. Null until (and unless) it does. */
   succeededAt: Date | null
+  /** The billing entity this payment was collected for; absent when the API sends none. */
+  billingEntityId?: string
   /** The gateway's own id for the charge (`pi_…`), when it went through one. */
   gatewayPaymentId?: string
 }
@@ -128,6 +131,8 @@ export interface PaymentQuery {
   statuses: PaymentStatus[]
   sortBy: PaymentSortField
   sortDirection: 'asc' | 'desc'
+  /** Field filters sent to the server; only the billing entity, while entities are enabled. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_PAYMENT_QUERY: PaymentQuery = {
@@ -139,6 +144,7 @@ export const DEFAULT_PAYMENT_QUERY: PaymentQuery = {
   // one.
   sortBy: PaymentSortField.CreatedAt,
   sortDirection: 'desc',
+  filters: [],
 }
 
 /** One payment with the fields only its own page shows. */

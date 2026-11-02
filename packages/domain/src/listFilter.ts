@@ -25,12 +25,14 @@ export const FilterOp = {
 export type FilterOp = (typeof FilterOp)[keyof typeof FilterOp]
 
 /** What a field holds, which decides its operators and its value editor. */
-export type FilterKind = 'text' | 'options' | 'date' | 'number' | 'keyvalue'
+export type FilterKind = 'text' | 'options' | 'choice' | 'date' | 'number' | 'keyvalue'
 
 /** The operators each kind offers, in the order V1 offered them. */
 export const FILTER_OPS: Record<FilterKind, readonly FilterOp[]> = {
   text: [FilterOp.Contains, FilterOp.NotContains, FilterOp.Eq],
   options: [FilterOp.In, FilterOp.NotIn],
+  // One of the choices, for a field the search takes as a single top-level value.
+  choice: [FilterOp.Eq],
   date: [FilterOp.Before, FilterOp.After],
   number: [FilterOp.Eq, FilterOp.Gt, FilterOp.Lt],
   // A key/value pair (metadata) matches when the key holds exactly that value.
@@ -53,14 +55,14 @@ export interface ListFilterSpec {
   field: string
   label: string
   kind: FilterKind
-  /** The choices of an `options` field. */
+  /** The choices of an `options` or `choice` field. */
   options?: readonly { value: string; label: string }[]
 }
 
 /**
  * One applied condition. `value` is a string for text, number and date
- * (`YYYY-MM-DD`, a calendar day), `key=value` for a key/value pair, and a list
- * for options.
+ * (`YYYY-MM-DD`, a calendar day), `key=value` for a key/value pair, one value
+ * for a choice, and a list for options.
  */
 export interface ListFilter {
   field: string
@@ -77,6 +79,8 @@ export function isRunnableFilter(filter: ListFilter, spec: ListFilterSpec | unde
   switch (spec.kind) {
     case 'options':
       return Array.isArray(value) && value.length > 0
+    case 'choice':
+      return typeof value === 'string' && value !== ''
     case 'date':
       return typeof value === 'string' && DAY.test(value)
     case 'number':
@@ -101,6 +105,15 @@ export function withFilterOptions(
     const choices = options[spec.field]
     return choices ? { ...spec, options: choices } : spec
   })
+}
+
+/** Adds a `choice` field with its choices; left out while `options` is null (the field is not offered here). */
+export function withChoiceFilter(
+  specs: readonly ListFilterSpec[],
+  spec: ListFilterSpec,
+  options: readonly { value: string; label: string }[] | null,
+): ListFilterSpec[] {
+  return options ? [...specs, { ...spec, options }] : [...specs]
 }
 
 /** Keeps the filters that are runnable against these specs. */

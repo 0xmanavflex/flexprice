@@ -178,6 +178,13 @@ export const queryKeys = {
   integrations: {
     all: () => ['integrations'] as const,
   },
+  billingEntities: {
+    all: () => ['billingEntities'] as const,
+    status: () => ['billingEntities', 'status'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['billingEntities', 'list', filter] as const,
+    detail: (id: string) => ['billingEntities', 'detail', id] as const,
+  },
   /** A customer's provider mappings: `GET /integrations/mappings`. */
   integrationLinks: {
     all: () => ['integrationLinks'] as const,

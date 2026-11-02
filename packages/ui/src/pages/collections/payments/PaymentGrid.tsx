@@ -9,6 +9,8 @@ import {
   type PaymentQuery,
   PaymentSortField,
   PaymentStatus,
+  BILLING_ENTITY_FILTER,
+  withChoiceFilter,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
@@ -20,9 +22,14 @@ import {
   pillColumn,
   textColumn,
 } from '../../shared/cells'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { statusFilter, statusWithFieldsFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { PAYMENT_STATUS_TONE } from '../../shared/statusTones'
+import {
+  billingEntityChoices,
+  billingEntityColumn,
+  type ListBillingEntity,
+} from '../../shared/billingEntityColumn'
 
 /**
  * The payment list, on the shared `EntityList`.
@@ -120,6 +127,8 @@ export interface PaymentGridProps {
   onClearFilters?: () => void
   /** Locale for dates and amounts. Supplied by the app, never read from a global. */
   locale?: string
+  /** The environment's billing entities, only while they are enabled: adds the Billing entity column and filter. */
+  billingEntities?: readonly ListBillingEntity[] | undefined
 }
 
 export function PaymentGrid({
@@ -138,6 +147,7 @@ export function PaymentGrid({
   onCreate,
   onClearFilters,
   locale,
+  billingEntities,
 }: PaymentGridProps) {
   const columns = useMemo<EntityColumn<Payment>[]>(
     () => [
@@ -160,12 +170,13 @@ export function PaymentGrid({
         label: PAYMENT_STATUS_LABEL[row.status],
         tone: STATUS_TONE[row.status],
       })),
+      ...(billingEntities ? [billingEntityColumn<Payment>(billingEntities)] : []),
       integrationColumn<Payment>(integrationMappings, 'payment', 'Integration'),
       idColumn<Payment>('reference', 'Gateway reference', (row) => row.gatewayPaymentId ?? '', {
         width: 180,
       }),
     ],
-    [locale, integrationMappings],
+    [locale, integrationMappings, billingEntities],
   )
 
   const isDefaultSort =
@@ -197,11 +208,18 @@ export function PaymentGrid({
    * what an empty result and the record count mean: "none on this page", and a
    * count of every payment rather than the matching ones.
    */
-  const isFiltered = query.search.length > 0 || query.statuses.length > 0
+  const isPageLocal = query.search.length > 0 || query.statuses.length > 0
+  const entitySpecs = withChoiceFilter(
+    [],
+    BILLING_ENTITY_FILTER,
+    billingEntities ? billingEntityChoices(billingEntities) : null,
+  )
+  // The entity filter is the server's, so it narrows the count as well as the rows.
+  const isFiltered = isPageLocal || (query.filters?.length ?? 0) > 0
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      {isFiltered ? (
+      {isPageLocal ? (
         <p
           role="status"
           className="text-muted-foreground flex items-start gap-2 text-xs leading-relaxed"
@@ -239,11 +257,22 @@ export function PaymentGrid({
          * server total to read, and counting the rows on screen would be a
          * number about this page dressed up as a number about the ledger.
          */
-        filter={statusFilter({
-          values: query.statuses,
-          choices: STATUS_CHOICES,
-          onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
-        })}
+        filter={
+          entitySpecs.length > 0
+            ? statusWithFieldsFilter({
+                values: query.statuses,
+                choices: STATUS_CHOICES,
+                specs: entitySpecs,
+                filters: query.filters ?? [],
+                onChange: (statuses, filters) =>
+                  onQueryChange({ ...query, statuses, filters, page: 1 }),
+              })
+            : statusFilter({
+                values: query.statuses,
+                choices: STATUS_CHOICES,
+                onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+              })
+        }
         sort={{
           options: SORT_OPTIONS,
           field: query.sortBy,
@@ -267,11 +296,16 @@ export function PaymentGrid({
         isRetrying={isRetrying}
         isRefreshing={isRefreshing}
         isProvisional={isProvisional}
-        isPageLocalFilter={isFiltered}
+        isPageLocalFilter={isPageLocal}
         isFiltered={isFiltered}
         {...(onClearFilters ? { onClearFilters } : {})}
-        filteredEmptyTitle="No matching payments on this page"
-        filteredEmptyDescription="Search and status only narrow the payments loaded on this page. Other pages may have matches; go to another page, or clear the filters."
+        {...(isPageLocal
+          ? {
+              filteredEmptyTitle: 'No matching payments on this page',
+              filteredEmptyDescription:
+                'Search and status only narrow the payments loaded on this page. Other pages may have matches; go to another page, or clear the filters.',
+            }
+          : { filteredEmptyTitle: 'No payments match these filters' })}
         empty={{
           scene: 'payments',
           title: 'No money has moved yet',

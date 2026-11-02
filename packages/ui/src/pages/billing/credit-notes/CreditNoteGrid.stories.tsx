@@ -136,6 +136,25 @@ export const Default: Story = {
 
 export const Empty: Story = { args: { creditNotes: [], total: 0 } }
 
+/** Entities enabled: a Billing entity column, where a credit memo without one reads as the default. */
+export const WithBillingEntities: Story = {
+  args: {
+    billingEntities: [
+      { id: 'be_default', name: 'Northwind Inc', isDefault: true },
+      { id: 'be_india', name: 'Northwind India', isDefault: false },
+    ],
+    creditNotes: fixtures().map((note, index) =>
+      index === 0 ? { ...note, billingEntityId: 'be_india' } : note,
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('columnheader', { name: /billing entity/i })).toBeVisible()
+    await expect(canvas.getByText('Northwind India')).toBeInTheDocument()
+    await expect(canvas.getAllByText('Northwind Inc').length).toBeGreaterThanOrEqual(1)
+  },
+}
+
 export const Searching: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)

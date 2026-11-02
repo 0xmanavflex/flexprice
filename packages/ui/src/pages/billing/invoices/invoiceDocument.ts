@@ -22,6 +22,8 @@ export interface InvoiceParty {
   address: string[]
   /** Square logo; the view draws an initial tile when it is absent. */
   logoUrl?: string | null
+  /** Tax IDs, each "type value". */
+  taxIds?: string[]
 }
 
 /** One entry in the invoice's activity log (right rail). */
@@ -68,7 +70,7 @@ export interface InvoiceDocument {
   issuedAt: string | null
   dueAt: string | null
   billTo: InvoiceParty
-  /** The issuing tenant. Absent while it loads or when it cannot be read; the block is then omitted. */
+  /** The issuer: the billing entity or the tenant. Absent while it loads or when it cannot be read; the block is then omitted. */
   from?: InvoiceParty
   payment?: { method: string; terms: string }
   /** The API's own figures. When present they replace the sums the view would otherwise compute. */

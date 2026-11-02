@@ -1,15 +1,20 @@
 import { useState } from 'react'
 import {
+  BILLING_ENTITY_FILTER,
+  CUSTOMER_FILTERS,
   type Customer,
   type CustomerQuery,
   DEFAULT_CUSTOMER_QUERY,
   isCustomerQueryFiltered,
+  withChoiceFilter,
 } from '@fp/domain'
 import {
   ApiError,
+  useBillingEntities,
   useCustomerContractCounts,
   useCustomers,
   useDeleteCustomer,
+  useEntityFilterOptions,
   serverReason,
 } from '@fp/query'
 import { CustomerGrid } from '@fp/ui/pages'
@@ -42,7 +47,11 @@ export function CustomerListPage({
   onCreateCustomer,
   onEditCustomer,
 }: CustomerListPageProps) {
-  const customers = useCustomers(query)
+  const entityOptions = useEntityFilterOptions()
+  const entities = useBillingEntities()
+  const customers = useCustomers(query, {
+    specs: withChoiceFilter(CUSTOMER_FILTERS, BILLING_ENTITY_FILTER, entityOptions),
+  })
   const remove = useDeleteCustomer()
 
   const [deleting, setDeleting] = useState<Customer | null>(null)
@@ -92,6 +101,7 @@ export function CustomerListPage({
             query={query}
             onQueryChange={onQueryChange}
             {...(contractCounts.data ? { contractCounts: contractCounts.data } : {})}
+            billingEntities={entityOptions ? (entities.data ?? []) : undefined}
             {...(onOpenCustomer
               ? { onCustomerClick: (customer) => onOpenCustomer(customer.id) }
               : {})}

@@ -67,6 +67,7 @@ export { PASSWORD_ONLY, useAuthCapabilities, useAuthCapabilitiesValue } from './
 export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
 
 export {
+  fetchInvoice,
   fetchInvoices,
   isServerFilterable,
   toCreateInvoiceRequest,
@@ -658,6 +659,7 @@ export {
   toUpdateTaxAssociationRequest,
   useCreateTaxAssociation,
   useCustomerTaxAssociations,
+  useEntityTaxAssociations,
   useDeleteTaxAssociation,
   useUpdateTaxAssociation,
 } from './taxAssociations'
@@ -783,3 +785,17 @@ export {
   useSubscriptionRevenue,
 } from './revenueRecognition'
 export type { CustomerRevenueQuery, RollforwardQuery } from './revenueRecognition'
+export {
+  statusRefetchInterval,
+  toBillingEntity,
+  toBillingEntityRequest,
+  useBillingEntities,
+  useBillingEntity,
+  useBillingEntityStatus,
+  useEntityFilterOptions,
+  useCustomerBillingEntity,
+  useCreateBillingEntity,
+  useEnableBillingEntities,
+  useUpdateBillingEntity,
+} from './billingEntities'
+export type { BillingEntityWire } from './billingEntities'

@@ -41,6 +41,7 @@
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
+        "TaxAssociationSection",
         "TaxDialog"
       ],
       "story": "./src/compositions/access/Access.stories.tsx"
@@ -302,6 +303,7 @@
         "OptionCombobox"
       ],
       "usedBy": [
+        "BillingEntityForm",
         "CustomerForm",
         "UpgradeView"
       ],
@@ -369,6 +371,7 @@
         "CustomerWalletView",
         "FxRatesSection",
         "PlanAiSetupView",
+        "TaxAssociationSection",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/AppFailure.stories.tsx"
@@ -774,6 +777,54 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "BillingEntitiesEnableCard": {
+      "file": "src/pages/settings/billing-entities/BillingEntitiesEnableCard.tsx",
+      "layer": "surface",
+      "composes": [
+        "Section"
+      ],
+      "usedBy": [],
+      "story": null
+    },
+    "BillingEntityDetail": {
+      "file": "src/pages/settings/billing-entities/BillingEntityDetail.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTabs",
+        "EntityHeader",
+        "Pill"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/billing-entities/BillingEntityDetail.stories.tsx"
+    },
+    "BillingEntityForm": {
+      "file": "src/pages/settings/billing-entities/BillingEntityForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "AddressPicker",
+        "FormCard",
+        "FormPage",
+        "FormRow",
+        "OptionCombobox",
+        "PlusIcon",
+        "WriteGate"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/billing-entities/BillingEntityForm.stories.tsx"
+    },
+    "BillingEntityGrid": {
+      "file": "src/pages/settings/billing-entities/BillingEntityGrid.tsx",
+      "layer": "surface",
+      "composes": [
+        "EntityCell",
+        "EntityList",
+        "Pill",
+        "PlusIcon",
+        "WriteGate"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/billing-entities/BillingEntityGrid.stories.tsx"
     },
     "BillingIconTile": {
       "file": "src/components/blocks/solution-billing-4/components/billing-icon-tile.tsx",
@@ -1550,6 +1601,7 @@
         "PaymentStatusDialog",
         "RemoveCardDialog",
         "SubscriptionForm",
+        "TaxAssociationSection",
         "TaxDialog"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1578,6 +1630,7 @@
         "RemoveCardDialog",
         "S3ConnectionList",
         "SubscriptionDetailView",
+        "TaxAssociationSection",
         "TaxDialog",
         "WebhookEndpointDetail"
       ],
@@ -2784,6 +2837,7 @@
         "SubscriptionDetailView",
         "SubscriptionForm",
         "SubscriptionJournal",
+        "TaxAssociationSection",
         "TaxDialog",
         "WalletLedgerTable",
         "WebhookEndpointDetail"
@@ -2799,6 +2853,7 @@
         "LockedMark"
       ],
       "usedBy": [
+        "BillingEntityDetail",
         "CatalogDetailFrame",
         "ConnectionExports",
         "CustomerDetail",
@@ -3018,6 +3073,7 @@
         "PricingCatalogBlock",
         "SettingsShell",
         "SubscriptionForm",
+        "TaxAssociationSection",
         "TaxDialog",
         "WebhookEventCatalog"
       ],
@@ -3127,6 +3183,7 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "BillingEntityGrid",
         "FeatureGrid",
         "PlanGrid",
         "WebhookEndpointGrid"
@@ -3142,6 +3199,7 @@
         "DetailMoreMenu"
       ],
       "usedBy": [
+        "BillingEntityDetail",
         "ConnectionExports",
         "CustomerDetail",
         "DataExportDetail",
@@ -3190,6 +3248,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonGrid",
+        "BillingEntityGrid",
         "ConnectionExports",
         "CostSheetGrid",
         "CouponGrid",
@@ -3988,6 +4047,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
         "CouponForm",
@@ -4043,6 +4103,7 @@
         "S3ConnectionDialog",
         "SubscriptionDetailView",
         "SubscriptionForm",
+        "TaxAssociationSection",
         "TaxDialog",
         "WebhookEndpointDetail"
       ],
@@ -4095,6 +4156,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
         "CouponForm",
@@ -4132,6 +4194,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
         "CouponForm",
@@ -4846,6 +4909,7 @@
         "EnvironmentForm",
         "InvoiceForm",
         "SubscriptionForm",
+        "TaxAssociationSection",
         "TaxDialog"
       ],
       "story": "./src/compositions/forms/LabelWithHint.stories.tsx"
@@ -5070,6 +5134,7 @@
         "CustomerWalletView",
         "EntityAlertDialog",
         "FxRatesSection",
+        "TaxAssociationSection",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
@@ -5518,6 +5583,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddressPicker",
+        "BillingEntityForm",
         "ChargeForm",
         "EntitlementCreateForm",
         "EntitlementEditForm",
@@ -5564,6 +5630,7 @@
         "SpecField",
         "SubscriptionForm",
         "SyncOptions",
+        "TaxAssociationSection",
         "TaxDialog",
         "TaxRateCreateForm",
         "TaxRateEditForm",
@@ -5913,6 +5980,8 @@
       ],
       "usedBy": [
         "ActivityEventSheet",
+        "BillingEntityDetail",
+        "BillingEntityGrid",
         "CatalogStatusBadge",
         "ChargeSheet",
         "ChargeTable",
@@ -6179,6 +6248,8 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonGrid",
+        "BillingEntityForm",
+        "BillingEntityGrid",
         "ChargeCommitmentDialog",
         "ChargeSheet",
         "ChargeTable",
@@ -6220,6 +6291,7 @@
         "SubscriptionDetailView",
         "SubscriptionForm",
         "SubscriptionGrid",
+        "TaxAssociationSection",
         "TaxDialog",
         "TaxRateGrid",
         "TierTable",
@@ -6985,6 +7057,7 @@
         "ActivityLog",
         "ActivitySection",
         "AddonSubscriptionsView",
+        "BillingEntitiesEnableCard",
         "ChargeTable",
         "ConnectionExports",
         "ContextualSection",
@@ -7021,6 +7094,7 @@
         "SubscriptionDetailView",
         "SubscriptionJournal",
         "SubscriptionRevenue",
+        "TaxAssociationSection",
         "TaxDialog",
         "UsageBillingView",
         "WebhookEndpointDetail",
@@ -7898,6 +7972,27 @@
       ],
       "story": null
     },
+    "TaxAssociationSection": {
+      "file": "src/pages/customers/CustomerTaxSection.tsx",
+      "layer": "surface",
+      "composes": [
+        "AccessScope",
+        "AppFailure",
+        "Composer",
+        "ConfirmDialog",
+        "DetailTable",
+        "EmptyState",
+        "FormDialog",
+        "LabelWithHint",
+        "LoadingRows",
+        "OptionSelect",
+        "PlusIcon",
+        "Section",
+        "WriteGate"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/customers/CustomerTaxSection.stories.tsx"
+    },
     "TaxDialog": {
       "file": "src/pages/customers/CustomerTaxSection.tsx",
       "layer": "surface",
@@ -8678,6 +8773,8 @@
         "PageLoadingState"
       ],
       "usedBy": [
+        "BillingEntityForm",
+        "BillingEntityGrid",
         "ChargeTable",
         "CreditGrantTable",
         "CustomerDetail",
@@ -8690,6 +8787,7 @@
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
+        "TaxAssociationSection",
         "TaxDialog"
       ],
       "story": "./src/compositions/access/Access.stories.tsx"
@@ -9654,7 +9752,8 @@
       "title": "App/Customers/Customer tax section",
       "component": "CustomerTaxSection",
       "uses": [
-        "CustomerTaxSection"
+        "CustomerTaxSection",
+        "TaxAssociationSection"
       ]
     },
     "./src/pages/customers/CustomerUsageSummary.stories.tsx": {
@@ -10164,6 +10263,29 @@
       "component": "UsageBillingView",
       "uses": [
         "UsageBillingView"
+      ]
+    },
+    "./src/pages/settings/billing-entities/BillingEntityDetail.stories.tsx": {
+      "title": "App/Settings/Billing entities/Billing entity detail",
+      "component": "BillingEntityDetail",
+      "uses": [
+        "BillingEntityDetail",
+        "BillingEntityForm"
+      ]
+    },
+    "./src/pages/settings/billing-entities/BillingEntityForm.stories.tsx": {
+      "title": "App/Settings/Billing entities/Billing entity form",
+      "component": "BillingEntityForm",
+      "uses": [
+        "BillingEntityForm"
+      ]
+    },
+    "./src/pages/settings/billing-entities/BillingEntityGrid.stories.tsx": {
+      "title": "App/Settings/Billing entities/Billing entity table",
+      "component": "BillingEntityGrid",
+      "uses": [
+        "BillingEntitiesEnableCard",
+        "BillingEntityGrid"
       ]
     },
     "./src/pages/settings/cost-sheets/CostMarginCard.stories.tsx": {
@@ -11185,6 +11307,23 @@
         "SettingsShell",
         "UsersIcon",
         "WriteGate"
+      ]
+    },
+    "BillingEntityDetailPage": {
+      "file": "apps/console/src/pages/settings/billing-entities/BillingEntityDetailPage.tsx",
+      "pattern": "Detail",
+      "route": "/settings/billing-entities/$entityId",
+      "uses": [
+        "BillingEntityDetail",
+        "BillingEntityForm"
+      ]
+    },
+    "BillingEntityFormPage": {
+      "file": "apps/console/src/pages/settings/billing-entities/BillingEntityFormPage.tsx",
+      "pattern": "Form",
+      "route": "/settings/billing-entities/new",
+      "uses": [
+        "BillingEntityForm"
       ]
     },
     "CustomerSubscriptionFormPage": {

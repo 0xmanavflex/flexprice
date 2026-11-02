@@ -1,11 +1,13 @@
 import {
   ApiError,
+  useBillingEntities,
+  useBillingEntityStatus,
   useCreateCustomer,
   useCustomer,
   useUpdateCustomer,
   serverReason,
 } from '@fp/query'
-import { customerToEdit, type CreateCustomer } from '@fp/domain'
+import { BillingEntityMode, customerToEdit, type CreateCustomer } from '@fp/domain'
 import { CustomerForm } from '@fp/ui/pages'
 import { detailGate } from '../shared/detailGate'
 
@@ -28,12 +30,15 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
   const create = useCreateCustomer()
   const update = useUpdateCustomer()
   const existing = useCustomer(props.mode === 'edit' ? props.customerId : '')
+  const entitiesOn = useBillingEntityStatus().data === BillingEntityMode.Enabled
+  const entities = useBillingEntities({ enabled: props.mode === 'create' })
 
   if (props.mode === 'create') {
     return (
       <CustomerForm
         mode="create"
         trail={[{ label: 'Customers', onClick: onCancel }, { label: 'Create customer' }]}
+        billingEntities={entitiesOn ? entities.data : undefined}
         onCancel={onCancel}
         isSubmitting={create.isPending}
         // The API's refusal is a toast (MutationToasts); validation stays in the form.

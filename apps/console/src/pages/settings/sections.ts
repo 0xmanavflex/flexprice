@@ -69,6 +69,11 @@ export const SETTINGS_SECTIONS = [
     tabs: [{ id: 'profile', label: 'Profile' }],
   },
   {
+    id: 'billing-entities',
+    label: 'Billing entities',
+    tabs: [{ id: 'entities', label: 'Entities' }],
+  },
+  {
     // The tenant's own Flexprice account: plan, usage, invoices.
     id: 'usage-billing',
     label: 'Usage & billing',

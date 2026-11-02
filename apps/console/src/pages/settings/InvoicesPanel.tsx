@@ -2,12 +2,20 @@ import { useState } from 'react'
 import {
   INVOICE_NUMBER_FORMATS,
   INVOICE_NUMBER_FORMAT_LABEL,
+  BillingEntityMode,
   type InvoiceConfig,
   invoiceConfigSchema,
+  entityInvoicePreview,
   previewInvoiceNumber,
   splitDelay,
 } from '@fp/domain'
-import { useInvoiceConfig, useResetInvoiceConfig, useUpdateInvoiceConfig } from '@fp/query'
+import {
+  useBillingEntities,
+  useBillingEntityStatus,
+  useInvoiceConfig,
+  useResetInvoiceConfig,
+  useUpdateInvoiceConfig,
+} from '@fp/query'
 import { ConfirmDialog, EmptyState, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
 import {
   Button,
@@ -33,6 +41,7 @@ import {
   PanelUnavailable,
   queryPhase,
 } from './panelKit'
+import { EntityManagedLink } from './EntityManagedLink'
 import { useDraft } from './useDraft'
 
 /**
@@ -68,6 +77,9 @@ import { useDraft } from './useDraft'
 export function InvoicesPanel() {
   const { environmentId } = useSession()
   const config = useInvoiceConfig(environmentId)
+  const entityStatus = useBillingEntityStatus()
+  const entities = useBillingEntities()
+  const onEntities = entityStatus.data === BillingEntityMode.Enabled
 
   const failure = toFailure(config.error, 'your invoice settings')
 
@@ -95,12 +107,27 @@ export function InvoicesPanel() {
 
   const phase = queryPhase(config)
   if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
-  if (phase === 'loading' || !config.data) return <PanelLoading rows={6} />
+  if (
+    phase === 'loading' ||
+    !config.data ||
+    entityStatus.isPending ||
+    (onEntities && entities.isPending)
+  )
+    return <PanelLoading rows={6} />
 
   // Keyed on the environment rather than on the record: the draft should
   // survive a save: the mutation writes its own response into this cache
   // entry: and be re-seeded only when the environment underneath it changes.
-  return <InvoiceForm key={environmentId} environmentId={environmentId} config={config.data} />
+  return (
+    <InvoiceForm
+      key={environmentId}
+      environmentId={environmentId}
+      config={config.data}
+      prefixOnEntities={onEntities}
+      entityPrefix={entities.data?.find((entity) => entity.isDefault)?.invoiceNumberPrefix}
+      canReset={entityStatus.data === BillingEntityMode.Off}
+    />
+  )
 }
 
 /** The units a finalisation delay is worth showing in, smallest first. */
@@ -134,7 +161,19 @@ function toNumber(text: string): number {
   return Number.isFinite(parsed) ? parsed : Number.NaN
 }
 
-function InvoiceForm({ environmentId, config }: { environmentId: string; config: InvoiceConfig }) {
+function InvoiceForm({
+  environmentId,
+  config,
+  prefixOnEntities,
+  entityPrefix,
+  canReset,
+}: {
+  environmentId: string
+  config: InvoiceConfig
+  prefixOnEntities: boolean
+  entityPrefix: string | undefined
+  canReset: boolean
+}) {
   const update = useUpdateInvoiceConfig(environmentId)
   const reset = useResetInvoiceConfig(environmentId)
   const draft = useDraft<InvoiceConfig>(invoiceConfigSchema, config)
@@ -200,7 +239,12 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
   // The preview renders only from a draft the schema accepts, so it never
   // shows a number the API would refuse.
   const parsed = invoiceConfigSchema.safeParse(draft.value)
-  const preview = parsed.success && parsed.data ? previewInvoiceNumber(parsed.data) : null
+  const preview =
+    parsed.success && parsed.data
+      ? prefixOnEntities && entityPrefix !== undefined
+        ? entityInvoicePreview(parsed.data, entityPrefix)
+        : previewInvoiceNumber(parsed.data)
+      : null
 
   return (
     <>
@@ -239,17 +283,30 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
               legend="Invoice numbering"
               description="The parts an invoice number is built from."
             >
-              <TextRow
-                id="invoice-prefix"
-                title="Prefix"
-                description="The literal an invoice number opens with."
-                required
-                busy={busy}
-                placeholder="INV"
-                value={draft.text('prefix')}
-                error={draft.error('prefix')}
-                onChange={(value) => draft.setText('prefix', value)}
-              />
+              {prefixOnEntities ? (
+                <SettingRow
+                  title="Prefix"
+                  description="The literal an invoice number opens with."
+                  labelFor="invoice-prefix"
+                >
+                  <div className="flex w-full flex-col gap-1">
+                    <Input id="invoice-prefix" readOnly value="Set on each billing entity" />
+                    <EntityManagedLink>Manage billing entities</EntityManagedLink>
+                  </div>
+                </SettingRow>
+              ) : (
+                <TextRow
+                  id="invoice-prefix"
+                  title="Prefix"
+                  description="The literal an invoice number opens with."
+                  required
+                  busy={busy}
+                  placeholder="INV"
+                  value={draft.text('prefix')}
+                  error={draft.error('prefix')}
+                  onChange={(value) => draft.setText('prefix', value)}
+                />
+              )}
               <TextRow
                 id="invoice-separator"
                 title="Separator"
@@ -403,14 +460,16 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 {!resetError && reset.isSuccess ? (
                   <ActionNote message="Back to the defaults." />
                 ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => setResetting(true)}
-                >
-                  Reset to defaults
-                </Button>
+                {canReset ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => setResetting(true)}
+                  >
+                    Reset to defaults
+                  </Button>
+                ) : null}
                 <Button type="submit" variant="outline" disabled={busy}>
                   {update.isPending ? 'Saving…' : 'Save changes'}
                 </Button>

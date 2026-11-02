@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, type AuthSource, ErrorKind, call, listCreditNotes } from '@fp/api'
 import {
+  BILLING_ENTITY_FILTER,
   type CreateCreditNote,
   type CreditNote,
   type CreditNoteDetail,
   type CreditNoteQuery,
   CreditNoteStatus,
   CreditNoteType,
+  type ListFilterSpec,
   moneyOr,
 } from '@fp/domain'
 import { queryKeys } from './keys'
+import { toTopLevelChoice } from './search'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
@@ -27,6 +30,7 @@ export interface CreditNoteWire {
   total_amount?: string | number
   created_at?: string
   invoice_id?: string
+  billing_entity_id?: string | null
   invoice?: { invoice_number?: string }
   customer?: { name?: string; external_id?: string }
 }
@@ -57,6 +61,7 @@ export function toCreditNote(wire: CreditNoteWire): CreditNote {
     invoiceNumber: wire.invoice?.invoice_number?.trim() || '',
     customerName: wire.customer?.name || wire.customer?.external_id || '',
     createdAt: created && !Number.isNaN(created.getTime()) ? created : null,
+    ...(wire.billing_entity_id ? { billingEntityId: wire.billing_entity_id } : {}),
   }
 }
 
@@ -69,14 +74,17 @@ export async function fetchCreditNotes(
   serverURL: string,
   auth: AuthSource,
   query: CreditNoteQuery,
+  specs: readonly ListFilterSpec[] = [],
 ): Promise<CreditNotePage> {
   const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
   if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to view credit notes.')
+  const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, BILLING_ENTITY_FILTER.field)
 
   const body = await listCreditNotes(serverURL, token, environmentId ?? '', {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     statuses: query.statuses.map((status) => status.toUpperCase()),
+    ...(billingEntityId ? { billingEntityId } : {}),
   })
   const record = (body ?? {}) as {
     items?: CreditNoteWire[] | null
@@ -96,13 +104,27 @@ export async function fetchCreditNotes(
   return { creditNotes, total: record.pagination?.total ?? all.length }
 }
 
-export function useCreditNotes(query: CreditNoteQuery) {
+/** `specs`: the filters the list offers; the entity filter only while entities are enabled. */
+export function useCreditNotes(
+  query: CreditNoteQuery,
+  options: { specs?: readonly ListFilterSpec[] } = {},
+) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
+  const billingEntityId = toTopLevelChoice(
+    query.filters ?? [],
+    options.specs ?? [],
+    BILLING_ENTITY_FILTER.field,
+  )
 
   return useQuery({
-    queryKey: queryKeys.creditNotes.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchCreditNotes(serverURL, auth, query),
+    queryKey: queryKeys.creditNotes.list({
+      ...query,
+      statuses: [...query.statuses].sort(),
+      // Whether the entity filter is sent, so turning entities on refetches.
+      ...(billingEntityId ? { billingEntityId } : {}),
+    }),
+    queryFn: () => fetchCreditNotes(serverURL, auth, query, options.specs),
     placeholderData: (previous) => previous,
   })
 }

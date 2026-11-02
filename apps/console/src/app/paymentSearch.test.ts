@@ -15,6 +15,7 @@ describe('parsePaymentSearch', () => {
       statuses: [PaymentStatus.Failed],
       sortBy: 'createdAt',
       sortDirection: 'desc',
+      filters: [],
     })
   })
 

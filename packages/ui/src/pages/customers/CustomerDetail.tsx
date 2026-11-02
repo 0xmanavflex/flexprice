@@ -231,6 +231,8 @@ export interface CustomerDetailProps {
   taxes?: ReactNode
   /** The FX overrides section on the Information tab, after Taxes; omitted, it is not shown. */
   fxOverrides?: ReactNode
+  /** The entity issuing this customer's invoices, while entities are enabled; read-only, a link to the entity. */
+  billingEntity?: { name: string; onOpen: () => void } | undefined
   locale?: string
 }
 
@@ -300,6 +302,7 @@ export function CustomerDetail({
   wallet,
   taxes,
   fxOverrides,
+  billingEntity,
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
@@ -490,6 +493,7 @@ export function CustomerDetail({
             activityError={activityError}
             activityAwaiting={activityAwaiting}
             {...(activityTab ? { onViewAllActivity: () => onTabChange('activity') } : {})}
+            billingEntity={billingEntity}
           />
         ) : null}
 
@@ -854,6 +858,7 @@ function OverviewTab({
   activityError,
   activityAwaiting,
   onViewAllActivity,
+  billingEntity,
 }: {
   customer: CustomerDetailModel
   subscriptions: Subscription[]
@@ -886,6 +891,7 @@ function OverviewTab({
   activityAwaiting: boolean | undefined
   /** Opens the Activity tab; omitted when there is none. */
   onViewAllActivity?: (() => void) | undefined
+  billingEntity: CustomerDetailProps['billingEntity']
 }) {
   // A loading or failed read is "not known", never "none": the tiles and the
   // activity note say so rather than count what has not arrived.
@@ -1053,6 +1059,16 @@ function OverviewTab({
         />
         <RelatedCard
           items={[
+            ...(billingEntity
+              ? [
+                  {
+                    id: 'billing-entity',
+                    label: 'Billing entity',
+                    value: billingEntity.name,
+                    onOpen: billingEntity.onOpen,
+                  },
+                ]
+              : []),
             ...(lastInvoice && onOpenInvoice
               ? [
                   {

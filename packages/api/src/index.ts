@@ -104,6 +104,15 @@ export { listCreditNotes } from './creditNotes'
 export type { ListCreditNotesParams } from './creditNotes'
 
 /**
+ * Customer, invoice and payment calls that carry billing-entity fields; raw
+ * fetch until the SDK has them. See `customers.ts`, `invoices.ts`, `payments.ts`.
+ */
+export { createCustomer, getCustomer, searchCustomers } from './customers'
+export { getInvoice, searchInvoices } from './invoices'
+export { listPayments } from './payments'
+export type { ListPaymentsParams } from './payments'
+
+/**
  * `GET /creditgrants`, live but absent from the SDK. See `creditGrants.ts`.
  */
 export { listCreditGrants } from './creditGrants'
@@ -234,3 +243,13 @@ export {
   updatePortalAutoTopup,
 } from './customerPortal'
 export type { PortalAuth } from './customerPortal'
+
+export {
+  createBillingEntity,
+  enableBillingEntities,
+  getBillingEntity,
+  getBillingEntityStatus,
+  listBillingEntities,
+  updateBillingEntity,
+} from './billingEntities'
+export type { ListBillingEntitiesParams } from './billingEntities'

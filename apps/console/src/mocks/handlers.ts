@@ -329,6 +329,105 @@ function publishedProviders(): string[] {
 }
 
 /**
+ * Billing entities, per environment (`X-Environment-ID`). Every environment
+ * starts `off`. Enabling answers `enabling`; the second status read after it
+ * reports `enabled` and seeds the default entity from the tenant, its prefix
+ * taken from `invoice_config`.
+ */
+interface EntityEnvironment {
+  mode: 'off' | 'enabling' | 'enabled'
+  readsSinceEnable: number
+  rows: Record<string, unknown>[]
+}
+/** Kept in sessionStorage so a reload mid-enable finds the same state, as the real API would. */
+const ENTITIES_KEY = 'flexprice.mock.billingEntities'
+function loadEntityState(): { environments: Map<string, EntityEnvironment>; seq: number } {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(ENTITIES_KEY) ?? 'null') as {
+      environments: [string, EntityEnvironment][]
+      seq: number
+    } | null
+    if (stored) return { environments: new Map(stored.environments), seq: stored.seq }
+  } catch {
+    /* no storage or a stale shape: start off */
+  }
+  return { environments: new Map(), seq: 0 }
+}
+const entityState = loadEntityState()
+const entityEnvironments = entityState.environments
+let entitySeq = entityState.seq
+function saveEntityState() {
+  try {
+    sessionStorage.setItem(
+      ENTITIES_KEY,
+      JSON.stringify({ environments: [...entityEnvironments], seq: entitySeq }),
+    )
+  } catch {
+    /* no storage: the state lives for the page only */
+  }
+}
+const ENTITIES_NOT_ENABLED = 'Billing entities are not enabled in this environment'
+
+/** As the API: `billing_entity_id` is refused unless entities are on; a record without one is the default's. */
+function entityScope(
+  request: Request,
+  entityId: string | null | undefined,
+): { refused: Response } | { keep: (row: Record<string, unknown>) => boolean } {
+  if (!entityId) return { keep: () => true }
+  const entities = entityEnvironment(request)
+  if (entities.mode !== 'enabled') {
+    return { refused: HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 }) }
+  }
+  const fallback = readString(entities.rows.find((row) => row['is_default']) ?? {}, 'id')
+  return { keep: (row) => (readString(row, 'billing_entity_id') || fallback) === entityId }
+}
+
+function entityEnvironment(request: Request): EntityEnvironment {
+  const id = request.headers.get('X-Environment-ID') ?? ''
+  let state = entityEnvironments.get(id)
+  if (!state) {
+    state = { mode: 'off', readsSinceEnable: 0, rows: [] }
+    entityEnvironments.set(id, state)
+  }
+  return state
+}
+
+/** `localStorage['flexprice.mock.taxEngine']` puts the environment on an external tax engine. */
+function mockTaxEngine(): string | null {
+  try {
+    return localStorage.getItem('flexprice.mock.taxEngine')
+  } catch {
+    return null
+  }
+}
+
+function seedDefaultEntity(): Record<string, unknown> {
+  const prefix = String(settingsStore['invoice_config']?.['prefix'] ?? 'INV')
+  return {
+    id: `be_mock_${++entitySeq}`,
+    name: TENANT_REF.name,
+    legal_name: TENANT_REF.name,
+    is_default: true,
+    invoice_number_prefix: prefix,
+    seller_details: { address: {} },
+    tax_identifiers: [],
+    status: 'published',
+    created_at: new Date().toISOString(),
+  }
+}
+
+function mockUserIsSuperAdmin(): boolean {
+  let id: string | null = null
+  try {
+    id = localStorage.getItem('flexprice.mock.userId')
+  } catch {
+    /* no storage: the demo user */
+  }
+  const user = users.find((item) => item['id'] === id) ?? users[0]
+  return ((user?.['roles'] as string[] | undefined) ?? []).includes('super_admin')
+}
+
+/**
  * Per-customer provider mappings once someone has linked or unlinked one.
  * Until then a customer's mappings are the demo slice below; the first write
  * freezes that slice into this map so the list marks, the contract header and
@@ -496,6 +595,9 @@ const search = (path: string, key: string) =>
     const refused = rejectUnknownExpand(key, body.expand)
     if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
+    const entityId = (body as { billing_entity_id?: string }).billing_entity_id
+    const entity = entityScope(request, entityId)
+    if ('refused' in entity) return entity.refused
     const source = sourceFor(key)
     // The API's rule: a subscription search that names no status answers active only.
     const wanted =
@@ -509,12 +611,13 @@ const search = (path: string, key: string) =>
     const pairs = metadata ? Object.entries(metadata) : []
     const matching = source.items.filter((row) => {
       if (wanted?.length && !wanted.includes(readString(row, 'subscription_status'))) return false
+      if (!entity.keep(row)) return false
       if (pairs.length === 0) return true
       const held = (row['metadata'] ?? {}) as Record<string, unknown>
       return pairs.every(([k, v]) => held[k] === v)
     })
     const result = page(
-      wanted?.length || pairs.length > 0 ? { ...source, items: matching } : source,
+      wanted?.length || pairs.length > 0 || entityId ? { ...source, items: matching } : source,
       body,
     )
     const payload =
@@ -3298,6 +3401,8 @@ export const handlers = [
       offset: Number(url.searchParams.get('offset') ?? 0),
     }
     if (demoEmpty()) return HttpResponse.json(emptyPage(window))
+    const entity = entityScope(request, url.searchParams.get('billing_entity_id'))
+    if ('refused' in entity) return entity.refused
     const destinationId = url.searchParams.get('destination_id')
     if (destinationId) {
       const items = [
@@ -3309,14 +3414,16 @@ export const handlers = [
         pagination: { total: items.length, limit: window.limit, offset: window.offset },
       })
     }
-    const base = page(corpus['invoices'] as Corpus, window) as {
+    const source = corpus['invoices'] as Corpus
+    const base = page({ ...source, items: source.items.filter(entity.keep) }, window) as {
       items: Record<string, unknown>[]
       pagination: { total: number }
     }
+    const recorded = paymentStore.filter(entity.keep)
     return HttpResponse.json({
       ...base,
-      items: window.offset === 0 ? [...paymentStore, ...base.items] : base.items,
-      pagination: { ...base.pagination, total: base.pagination.total + paymentStore.length },
+      items: window.offset === 0 ? [...recorded, ...base.items] : base.items,
+      pagination: { ...base.pagination, total: base.pagination.total + recorded.length },
     })
   }),
   http.post(`${BASE}/payments`, async ({ request }) => {
@@ -3805,9 +3912,13 @@ export const handlers = [
     const limit = Number(url.searchParams.get('limit') ?? 25)
     const offset = Number(url.searchParams.get('offset') ?? 0)
     const statuses = url.searchParams.getAll('credit_note_status')
+    const entity = entityScope(request, url.searchParams.get('billing_entity_id'))
+    if ('refused' in entity) return entity.refused
 
     const matches = creditNotes.filter(
-      (note) => statuses.length === 0 || statuses.includes(String(note['credit_note_status'])),
+      (note) =>
+        (statuses.length === 0 || statuses.includes(String(note['credit_note_status']))) &&
+        entity.keep(note),
     )
     return HttpResponse.json({
       items: matches.slice(offset, offset + limit),
@@ -3879,6 +3990,120 @@ export const handlers = [
       ...creditNotes.find((note) => note['id'] === id),
       total_amount: String(creditNotes.find((note) => note['id'] === id)?.['total_amount']),
     })
+  }),
+
+  /*
+   * `/billing-entities`: off until a super admin enables it. As the real API:
+   * enable is refused for anyone else (switch user with
+   * `localStorage['flexprice.mock.userId']`) and for an environment on an
+   * external tax engine (`localStorage['flexprice.mock.taxEngine'] = 'stripe'`); the entity routes are
+   * refused until the mode is `enabled`.
+   */
+  http.get(`${BASE}/billing-entities/status`, ({ request }) => {
+    const state = entityEnvironment(request)
+    if (state.mode === 'enabling' && ++state.readsSinceEnable >= 2) {
+      state.mode = 'enabled'
+      state.rows = [seedDefaultEntity()]
+    }
+    saveEntityState()
+    return HttpResponse.json({ mode: state.mode })
+  }),
+
+  http.post(`${BASE}/billing-entities/enable`, ({ request }) => {
+    const state = entityEnvironment(request)
+    if (!mockUserIsSuperAdmin()) {
+      return HttpResponse.json(
+        { message: 'Only a super admin can enable billing entities' },
+        { status: 403 },
+      )
+    }
+    const engine = mockTaxEngine()
+    if (engine) {
+      return HttpResponse.json(
+        {
+          message: `Billing entities cannot be used while this environment calculates tax with ${engine}. Turn the external tax engine off first.`,
+        },
+        { status: 400 },
+      )
+    }
+    if (state.mode === 'off') {
+      state.mode = 'enabling'
+      state.readsSinceEnable = 0
+      saveEntityState()
+      return HttpResponse.json({ mode: 'enabling' }, { status: 202 })
+    }
+    return HttpResponse.json({ mode: state.mode }, { status: state.mode === 'enabled' ? 200 : 202 })
+  }),
+
+  http.get(`${BASE}/billing-entities`, ({ request }) => {
+    const state = entityEnvironment(request)
+    if (state.mode !== 'enabled') {
+      return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+    }
+    const isDefault = new URL(request.url).searchParams.get('is_default')
+    const items =
+      isDefault === null
+        ? state.rows
+        : state.rows.filter((row) => String(row['is_default']) === isDefault)
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: 1000, offset: 0 },
+    })
+  }),
+
+  http.get(`${BASE}/billing-entities/:id`, ({ request, params }) => {
+    const state = entityEnvironment(request)
+    if (state.mode !== 'enabled') {
+      return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+    }
+    const row = state.rows.find((item) => item['id'] === params['id'])
+    return row
+      ? HttpResponse.json(row)
+      : HttpResponse.json({ message: 'Billing entity not found' }, { status: 404 })
+  }),
+
+  http.post(`${BASE}/billing-entities`, async ({ request }) => {
+    const state = entityEnvironment(request)
+    if (state.mode !== 'enabled') {
+      return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+    }
+    const body = (await request.json()) as Record<string, unknown>
+    const prefix = String(body['invoice_number_prefix'] ?? '')
+    if (state.rows.some((row) => row['invoice_number_prefix'] === prefix)) {
+      return HttpResponse.json({ message: 'Invoice prefix already in use' }, { status: 409 })
+    }
+    const row = {
+      tax_identifiers: [],
+      ...body,
+      id: `be_mock_${++entitySeq}`,
+      is_default: false,
+      status: 'published',
+      created_at: new Date().toISOString(),
+    }
+    state.rows.push(row)
+    saveEntityState()
+    return HttpResponse.json(row, { status: 201 })
+  }),
+
+  http.put(`${BASE}/billing-entities/:id`, async ({ request, params }) => {
+    const state = entityEnvironment(request)
+    if (state.mode !== 'enabled') {
+      return HttpResponse.json({ message: ENTITIES_NOT_ENABLED }, { status: 400 })
+    }
+    const row = state.rows.find((item) => item['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Billing entity not found' }, { status: 404 })
+    const body = (await request.json()) as Record<string, unknown>
+    const prefix = body['invoice_number_prefix']
+    if (
+      typeof prefix === 'string' &&
+      state.rows.some((item) => item !== row && item['invoice_number_prefix'] === prefix)
+    ) {
+      return HttpResponse.json({ message: 'Invoice prefix already in use' }, { status: 409 })
+    }
+    Object.assign(row, body)
+    saveEntityState()
+    // seller_details is replaced whole, as the backend does; absent leaves it unchanged.
+    return HttpResponse.json(row)
   }),
 
   /*
@@ -5563,7 +5788,12 @@ export const handlers = [
   http.get(`${BASE}/taxes/associations`, ({ request }) => {
     const url = new URL(request.url)
     const entityId = url.searchParams.get('entity_id')
-    const items = taxAssociations.filter((row) => !entityId || row['entity_id'] === entityId)
+    const entityType = url.searchParams.get('entity_type')
+    const items = taxAssociations.filter(
+      (row) =>
+        (!entityId || row['entity_id'] === entityId) &&
+        (!entityType || row['entity_type'] === entityType),
+    )
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
   }),
   http.post(`${BASE}/taxes/associations`, async ({ request }) => {
