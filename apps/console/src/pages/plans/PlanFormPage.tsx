@@ -15,7 +15,7 @@ import {
   PriceEntityType,
   type CreatePlan,
 } from '@fp/domain'
-import { PlanForm, type PlanFormValue } from '@fp/ui/pages'
+import { PlanForm, toast, type PlanFormValue } from '@fp/ui/pages'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { usePlanFormOptions } from './planFormOptions'
 
@@ -33,8 +33,9 @@ export type PlanFormPageProps = {
  *
  * Create writes the plan, then the charges, entitlements and credit grants the
  * person staged, with the same hooks the plan page uses. The writes are not one
- * transaction, so progress is remembered: if a later write fails, the plan is
- * not created twice on retry and only what is left is resent.
+ * transaction. Once the plan exists, a later write that fails still leaves this
+ * screen, with a toast saying so: the plan is already saved, and what is left
+ * is added on the plan page.
  */
 export function PlanFormPage(props: PlanFormPageProps) {
   const { step, onStepChange, onCancel } = props
@@ -93,11 +94,17 @@ export function PlanFormPage(props: PlanFormPageProps) {
         }
         props.onDone(p.planId)
       } catch (error) {
-        setFailure(
-          p.planId
-            ? 'The plan was created, but some of its charges, entitlements or credit grants could not be saved. Press Create plan to retry what is left, or finish on the plan page.'
-            : toSubmitError(error),
-        )
+        // The plan row is already stored. Staying here only offers another
+        // press of Create plan, which cannot recreate it. Say what did not
+        // save, so the plan page is not read as complete.
+        if (p.planId) {
+          toast.error(
+            'The plan was created, but some of its charges, entitlements or credit grants could not be saved. Add them on the plan page.',
+          )
+          props.onDone(p.planId)
+          return
+        }
+        setFailure(toSubmitError(error))
       }
     }
     const busy =

@@ -1,11 +1,20 @@
 import { useNavigate } from '@tanstack/react-router'
 import {
+  BILLING_ENTITY_FILTER,
   DEFAULT_CUSTOMER_QUERY,
+  INVOICE_FILTERS,
   type Invoice,
   type InvoiceQuery,
   isStoredInvoiceStatus,
+  withChoiceFilter,
 } from '@fp/domain'
-import { useCustomers, useInvoices, useEntityIntegrationColumns } from '@fp/query'
+import {
+  useBillingEntities,
+  useCustomers,
+  useEntityFilterOptions,
+  useInvoices,
+  useEntityIntegrationColumns,
+} from '@fp/query'
 import { InvoiceGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { useInvoiceRowActions } from './useInvoiceRowActions'
@@ -43,7 +52,11 @@ export function InvoiceListPage({
   onRecordPayment,
   onIssueCreditNote,
 }: InvoiceListPageProps) {
-  const invoices = useInvoices(query)
+  const entityOptions = useEntityFilterOptions()
+  const entities = useBillingEntities()
+  const invoices = useInvoices(query, {
+    specs: withChoiceFilter(INVOICE_FILTERS, BILLING_ENTITY_FILTER, entityOptions),
+  })
   const navigate = useNavigate()
   const { actionsFor, dialogs } = useInvoiceRowActions({
     onRecordPayment,
@@ -139,6 +152,7 @@ export function InvoiceListPage({
             query={query}
             onQueryChange={onQueryChange}
             filterOptions={filterOptions}
+            billingEntities={entityOptions ? (entities.data ?? []) : undefined}
             {...(isPageLocal ? { pageLocal: { fetchedCount: fetched.length } } : {})}
             {...(onCreate ? { onCreate } : {})}
             {...(onInvoiceClick ? { onInvoiceClick } : {})}

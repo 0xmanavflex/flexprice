@@ -1,15 +1,20 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
+  BillingEntityMode,
   CARD_SETUP_PROVIDERS,
   CustomerStatus,
   SubscriptionStatus,
-  type TenantFeatureUsage,
+  connectionForEntity,
+  effectiveEntityId,
+  type Integration,
 } from '@fp/domain'
 import {
+  useBillingEntities,
+  useBillingEntityStatus,
   useCustomer,
   useCustomerIntegrationLinks,
-  useIntegrations,
+  useConnections,
   useLinkCustomerIntegration,
   useUnlinkCustomerIntegration,
   usePushCustomerToIntegrations,
@@ -29,7 +34,6 @@ import {
   AddCardDialog,
   CUSTOMER_TABS,
   CustomerDetail,
-  CustomerEntitlementUsage,
   toast,
   type CustomerTab,
 } from '@fp/ui/pages'
@@ -101,19 +105,31 @@ export function CustomerDetailPage({
   const [openActivityId, setOpenActivityId] = useState<string | null>(null)
   const openActivity = activity.data?.find((entry) => entry.id === openActivityId) ?? null
   const integrationLinks = useCustomerIntegrationLinks(customerId)
-  const integrations = useIntegrations()
+  const integrations = useConnections()
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const pushCustomer = usePushCustomerToIntegrations(customerId)
+  const entitiesOn = useBillingEntityStatus().data === BillingEntityMode.Enabled
+  const entities = useBillingEntities()
+  // With entities on, a push reaches the customer's entity's connection.
+  const pushEntityId =
+    entitiesOn && customer.data && entities.data
+      ? effectiveEntityId(customer.data, entities.data)
+      : null
+  // The customer's connection to a provider: its entity's while entities are on.
+  const customerConnection = (integration: Integration) =>
+    pushEntityId !== null
+      ? connectionForEntity(integration, pushEntityId, entities.data ?? [])
+      : integration.connections[0]
   // The providers a push reaches: connected, with customer sync on outbound.
   const pushTargets = (integrations.data ?? [])
-    .filter((integration) => integration.connection?.syncConfig.customer?.outbound)
+    .filter((integration) => customerConnection(integration)?.syncConfig.customer?.outbound)
     .map((integration) => integration.name)
   // Where a card can be saved: the connected providers with a hosted setup page.
   const cardProviders = (integrations.data ?? [])
     .filter(
       (integration) =>
-        integration.connection &&
+        customerConnection(integration) &&
         (CARD_SETUP_PROVIDERS as readonly string[]).includes(integration.providerType),
     )
     .map(({ providerType, name }) => ({ providerType, name }))
@@ -185,10 +201,25 @@ export function CustomerDetailPage({
   // access scope: inline edits, metadata, integration links, the wallet and
   // tax panels: cannot write either.
   const archived = customer.data.status === CustomerStatus.Archived
+  const entityId = entitiesOn ? effectiveEntityId(customer.data, entities.data ?? []) : ''
+  const entity = entities.data?.find((item) => item.id === entityId)
 
   return (
     <>
       <CustomerDetail
+        {...(entity
+          ? {
+              billingEntity: {
+                name: entity.name,
+                onOpen: () =>
+                  void navigate({
+                    to: '/settings/billing-entities/$entityId',
+                    params: { entityId: entity.id },
+                    search: {} as never,
+                  }),
+              },
+            }
+          : {})}
         {...(!archived && integrationLinks.isSuccess && integrations.isSuccess
           ? {
               integrationControls: {
@@ -196,7 +227,7 @@ export function CustomerDetailPage({
                 linkable: integrations.data
                   .filter(
                     (integration) =>
-                      integration.connection &&
+                      integration.connections.length > 0 &&
                       !integrationLinks.data.some(
                         (link) => link.providerType === integration.providerType,
                       ),
@@ -363,26 +394,18 @@ export function CustomerDetailPage({
           />
         }
         usage={
-          <div className="flex flex-col gap-8">
-            {customer.data.externalId ? (
-              <CustomerAnalyticsPanel externalId={customer.data.externalId} />
-            ) : (
-              <Section title="Analytics">
-                <EmptyState
-                  scene="customers"
-                  size="inline"
-                  title="No external ID"
-                  description="Usage is matched to a customer by external ID, and this customer has none. Allowances and consumption are below."
-                />
-              </Section>
-            )}
-            <UsageSection
-              features={usage.data?.features ?? []}
-              isLoading={usage.isLoading}
-              failed={usage.error !== null}
-              onRetry={() => void usage.refetch()}
-            />
-          </div>
+          customer.data.externalId ? (
+            <CustomerAnalyticsPanel externalId={customer.data.externalId} />
+          ) : (
+            <Section title="Analytics">
+              <EmptyState
+                scene="customers"
+                size="inline"
+                title="No external ID"
+                description="Usage is matched to a customer by external ID, and this customer has none."
+              />
+            </Section>
+          )
         }
       />
       <ConfirmDialog
@@ -425,56 +448,4 @@ export function CustomerDetailPage({
       />
     </>
   )
-}
-
-/**
- * A customer's entitlement quotas, one table row per entitled feature: the
- * table V1 shows, in place of the cards this used to draw.
- *
- * Reads `GET /customers/usage`, the only endpoint that answers "how much of
- * this allowance has been used" per feature. Source, mode and measure (V1's
- * other columns) are not on `TenantFeatureUsage`, and units are not kept
- * either, so the readings are bare counts rather than invented nouns.
- */
-function UsageSection({
-  features,
-  isLoading,
-  failed,
-  onRetry,
-}: {
-  features: TenantFeatureUsage[]
-  isLoading: boolean
-  failed: boolean
-  onRetry: () => void
-}) {
-  return (
-    <CustomerEntitlementUsage
-      rows={features.map((feature) => ({
-        id: feature.featureId,
-        name: feature.featureName || feature.featureId,
-        type: feature.featureType,
-        used: toCount(feature.currentUsage),
-        limit: feature.isUnlimited ? null : feature.limit,
-        isEnabled: feature.isEnabled,
-        resetsOn: feature.nextUsageResetAt,
-      }))}
-      isLoading={isLoading}
-      error={failed ? 'Usage could not be loaded.' : null}
-      onRetry={onRetry}
-    />
-  )
-}
-
-/**
- * A decimal string the API sent, as a number for display.
- *
- * These are counts: events, seats, calls: not money, so reading them as
- * numbers is display formatting rather than the arithmetic `money.ts` forbids.
- * `undefined` for anything unparseable, which renders as a dash rather than a
- * zero: "the API sent something we could not read" is not "nothing was used".
- */
-function toCount(value: string): number | undefined {
-  if (value === '') return undefined
-  const parsed = Number.parseFloat(value)
-  return Number.isFinite(parsed) ? parsed : undefined
 }

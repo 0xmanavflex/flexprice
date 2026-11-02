@@ -51,6 +51,7 @@ export {
   splitKeyValue,
   runnableFilters,
   sameListFilters,
+  withChoiceFilter,
   withFilterOptions,
 } from './listFilter'
 export type { FilterKind, ListFilter, ListFilterSpec } from './listFilter'
@@ -82,6 +83,7 @@ export type {
   InvoiceDetail,
   InvoiceDetailLine,
   InvoiceQuery,
+  InvoiceSellerSnapshot,
   InvoiceStatusInput,
   InvoiceTax,
 } from './invoice'
@@ -130,7 +132,7 @@ export type {
   ChargeVersion,
 } from './chargeFlags'
 
-export { emptyOverride, priceOverrideSchema } from './priceOverride'
+export { emptyOverride, overrideFromCharge, priceOverrideSchema } from './priceOverride'
 export type { PriceOverride } from './priceOverride'
 
 export {
@@ -622,6 +624,7 @@ export {
   portalTabSchema,
   portalThemeSchema,
   portalUsageGraphSchema,
+  entityInvoicePreview,
   previewInvoiceNumber,
   quotedFiatCurrencies,
   rolloutToSubscriptionsActionSchema,
@@ -732,6 +735,7 @@ export type {
 } from './dataExport'
 export { CARD_SETUP_PROVIDERS, INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
+export * from './connectionId'
 export * from './integrationConnect'
 export {
   WalletKind,
@@ -1073,3 +1077,15 @@ export type {
   RollforwardRow,
   SubscriptionRevenue,
 } from './revenueRecognition'
+export {
+  BILLING_ENTITY_FILTER,
+  BillingEntityMode,
+  billingEntitySchema,
+  effectiveEntityId,
+  emptyBillingEntity,
+  type BillingEntity,
+  type BillingEntityDraft,
+  type SellerAddress,
+  type SellerDetails,
+  type TaxIdentifier,
+} from './billingEntity'

@@ -15,6 +15,7 @@ describe('parseCreditNoteSearch', () => {
       pageSize: 50,
       search: 'acme',
       statuses: [CreditNoteStatus.Draft, CreditNoteStatus.Voided],
+      filters: [],
     })
   })
 

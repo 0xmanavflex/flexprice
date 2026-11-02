@@ -293,6 +293,35 @@ export {
 } from './collections/payments/PaymentStatusBadge'
 export { TaxRateGrid, TaxRateGridProvenance } from './settings/taxes/TaxRateGrid'
 export type { TaxRateGridProps } from './settings/taxes/TaxRateGrid'
+export {
+  BillingEntityGrid,
+  BillingEntityGridProvenance,
+} from './settings/billing-entities/BillingEntityGrid'
+export type { BillingEntityGridProps } from './settings/billing-entities/BillingEntityGrid'
+export {
+  BillingEntityDetail,
+  BillingEntityDetailProvenance,
+  BILLING_ENTITY_TABS,
+} from './settings/billing-entities/BillingEntityDetail'
+export type {
+  BillingEntityDetailProps,
+  BillingEntityTab,
+} from './settings/billing-entities/BillingEntityDetail'
+export {
+  BillingEntityIntegrations,
+  BillingEntityIntegrationsProvenance,
+} from './settings/billing-entities/BillingEntityIntegrations'
+export type { BillingEntityIntegrationsProps } from './settings/billing-entities/BillingEntityIntegrations'
+export {
+  BillingEntityForm,
+  BillingEntityFormProvenance,
+} from './settings/billing-entities/BillingEntityForm'
+export type { BillingEntityFormProps } from './settings/billing-entities/BillingEntityForm'
+export {
+  BillingEntitiesEnableCard,
+  BillingEntitiesEnableCardProvenance,
+} from './settings/billing-entities/BillingEntitiesEnableCard'
+export type { BillingEntitiesEnableCardProps } from './settings/billing-entities/BillingEntitiesEnableCard'
 export { EventGrid, EventGridProvenance } from './developers/events/EventGrid'
 export type { EventGridProps } from './developers/events/EventGrid'
 export { EventDetailSheet, EventDetailSheetProvenance } from './developers/events/EventDetailSheet'
@@ -511,6 +540,11 @@ export type {
   PricingPlanCardProps,
   PricingPlanSection,
 } from './product-catalog/pricing-widget/PricingPlanCard'
+export {
+  ProviderConnections,
+  ProviderConnectionsProvenance,
+} from './integrations/ProviderConnections'
+export type { ProviderConnectionsProps } from './integrations/ProviderConnections'
 export { PricingCatalogBlock } from './product-catalog/pricing-widget/PricingCatalogBlock'
 export { toast, Toaster } from 'sonner'
 
@@ -518,10 +552,15 @@ export { CUSTOMER_EVENTS_LIMIT, CustomerEventsGrid } from './customers/CustomerE
 export type { CustomerEvent, CustomerEventsGridProps } from './customers/CustomerEventsGrid'
 export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
-export { CustomerTaxSection } from './customers/CustomerTaxSection'
+export { CustomerTaxSection, TaxAssociationSection } from './customers/CustomerTaxSection'
 export { FxRatesSection } from './shared/FxRatesSection'
 export type { FxRatesSectionProps } from './shared/FxRatesSection'
-export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
+export type {
+  CustomerTaxSectionProps,
+  TaxAssociationCopy,
+  TaxAssociationSectionProps,
+  TaxRateOption,
+} from './customers/CustomerTaxSection'
 export {
   CustomerEntitlementUsage,
   CustomerEntitlementUsageProvenance,

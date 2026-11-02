@@ -67,6 +67,7 @@ import {
   meteredAllowanceLabel,
   meteredResetLabel,
   type PriceOverride,
+  overrideFromCharge,
   type PriceTier,
   SUBSCRIPTION_BILLING_PERIODS,
   TierMode,
@@ -2131,9 +2132,7 @@ function ChargesTable({
                   ? meters.find((meter) => meter.id === repricingCharge.meterId)
                   : undefined
               }
-              {...(byId.get(repricingCharge.id)
-                ? { defaultValue: byId.get(repricingCharge.id)! }
-                : {})}
+              defaultValue={byId.get(repricingCharge.id) ?? overrideFromCharge(repricingCharge)}
               onSubmit={(value) => {
                 onChange([...overrides.filter((o) => o.priceId !== repricingCharge.id), value])
                 // One bucket per charge reaches the API: a bucket chosen here
@@ -3097,7 +3096,7 @@ export function AddonChargesDialog({
                   ? meters.find((meter) => meter.id === repricing.meterId)
                   : undefined
               }
-              {...(overrideOf(repricing.id) ? { defaultValue: overrideOf(repricing.id)! } : {})}
+              defaultValue={overrideOf(repricing.id) ?? overrideFromCharge(repricing)}
               onSubmit={(override) => {
                 // One bucket per charge reaches the API: a bucket chosen here
                 // becomes the commitment's too, so neither silently loses.

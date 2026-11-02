@@ -1,8 +1,11 @@
 import {
+  BILLING_ENTITY_FILTER,
   type PaymentQuery,
   PaymentSortField,
   PaymentStatus,
   DEFAULT_PAYMENT_QUERY,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -47,5 +50,7 @@ export function parsePaymentSearch(raw: Record<string, unknown>): PaymentQuery {
       : DEFAULT_PAYMENT_QUERY.sortBy,
     sortDirection:
       param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_PAYMENT_QUERY.sortDirection,
+    // Kept here; the list sends it only while entities are enabled.
+    filters: runnableFilters(decodeListFilters(raw['filters']), [BILLING_ENTITY_FILTER]),
   }
 }

@@ -71,6 +71,8 @@ export interface Customer {
   /** The IANA zone billing runs in, when set. Optional here; the detail always carries it. */
   timezone?: string
   status: CustomerStatus
+  /** The billing entity that issues this customer's invoices. Absent means the default entity. */
+  billingEntityId?: string
   /** Integrations this customer is connected to. Empty when none are. */
   integrations: CustomerIntegration[]
   createdAt: Date | null
@@ -229,6 +231,7 @@ export const createCustomerSchema = z.object({
     .union([z.literal(''), z.string().trim().length(2, 'Use a two-letter country code')])
     .optional(),
   metadata: z.record(z.string(), z.string()).optional(),
+  billingEntityId: z.string().optional(),
 })
 
 export type CreateCustomer = z.infer<typeof createCustomerSchema>

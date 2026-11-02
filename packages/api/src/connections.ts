@@ -12,8 +12,14 @@ export async function listConnections(
   serverURL: string,
   token: string,
   environmentId: string,
+  page: { limit: number; offset: number } = { limit: 100, offset: 0 },
 ): Promise<unknown> {
-  return request(serverURL, '/connections?status=published&limit=100', {
+  const query = new URLSearchParams({
+    status: 'published',
+    limit: String(page.limit),
+    offset: String(page.offset),
+  })
+  return request(serverURL, `/connections?${query}`, {
     method: 'GET',
     token,
     environmentId,
@@ -21,12 +27,15 @@ export async function listConnections(
 }
 
 export interface ConnectionRequest {
+  /** Client-generated `conn_` + ULID; the API generates one when absent. */
+  id?: string
   name: string
   provider_type: string
   /** Absent for a connection Flexprice manages itself, e.g. a managed S3 bucket. */
   encrypted_secret_data?: Record<string, string>
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
+  billing_entity_id?: string
 }
 
 export interface ConnectionUpdate {
@@ -34,14 +43,18 @@ export interface ConnectionUpdate {
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
   encrypted_secret_data?: Record<string, string>
+  billing_entity_id?: string
 }
 
 export interface OAuthInitRequest {
+  /** Client-generated `conn_` + ULID for the pending connection. */
+  id?: string
   provider: string
   name: string
   credentials: Record<string, string>
   metadata?: Record<string, string>
   sync_config?: Record<string, unknown>
+  billing_entity_id?: string
 }
 
 export interface OAuthCompleteRequest {

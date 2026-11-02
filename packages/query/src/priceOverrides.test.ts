@@ -43,10 +43,8 @@ describe('toOverrideLineItem', () => {
     )
 
     expect(result.tierMode).toBe('SLAB')
-    expect(result.tiers).toEqual([
-      { upTo: 100, unitAmount: '0.10' },
-      { upTo: null, unitAmount: '0.05' },
-    ])
+    expect(result.tiers).toEqual([{ upTo: 100, unitAmount: '0.10' }, { unitAmount: '0.05' }])
+    expect(result.tiers?.[1]).not.toHaveProperty('upTo')
   })
 
   it('omits an absent flat amount rather than sending an empty one', () => {

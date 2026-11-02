@@ -12,6 +12,8 @@ import { Fragment, useState, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
+  CircleDollarSignIcon,
+  ScaleIcon,
   BellIcon,
   CopyIcon,
   PencilIcon,
@@ -826,6 +828,89 @@ export function SubscriptionDetailView({
     ...(event.href ? { href: event.href } : {}),
   }))
 
+  const chargeExtras = (charge: Charge) => {
+    const line = chargeRows.lineOf.get(charge.id)
+    if (!line) return []
+    const lineCoupon = (coupons?.data ?? []).find(
+      (coupon) => coupon.active && coupon.lineItemId === line.id,
+    )
+    const open = !charge.endDate && canEditCharges && canEditLine(line)
+    const hasCommitment = Boolean(chargeRows.details.get(charge.id)?.commitment)
+    // The same gate as the section menu: an existing setting to edit, or none
+    // once the alerts have loaded, so a slow read never offers a second one.
+    const offersAlerts = editableChargeSections(charge).includes(ChargeSection.Alerts)
+    return [
+      ...(open && line.kind === 'usage'
+        ? [
+            {
+              label: 'Override price',
+              icon: <CircleDollarSignIcon aria-hidden />,
+              onSelect: () => editCharge(charge),
+            },
+            {
+              label: hasCommitment ? 'Edit commitment' : 'Add commitment',
+              icon: <ScaleIcon aria-hidden />,
+              onSelect: () => editCharge(charge),
+            },
+            ...(offersAlerts
+              ? [
+                  {
+                    label: 'Alert settings',
+                    icon: <BellIcon aria-hidden />,
+                    onSelect: () => editCharge(charge, ChargeSection.Alerts),
+                  },
+                ]
+              : []),
+          ]
+        : []),
+      {
+        label: 'Copy line item ID',
+        icon: <CopyIcon aria-hidden />,
+        readOnly: true,
+        onSelect: () => {
+          void navigator.clipboard
+            .writeText(line.id)
+            .then(() => toast.success('Line item ID copied'))
+            .catch(() => toast.error('Couldn’t copy the line item ID'))
+        },
+      },
+      ...(open && onAddCoupon && !lineCoupon
+        ? [
+            {
+              label: 'Apply coupon',
+              icon: <TicketPercentIcon aria-hidden />,
+              onSelect: () => editCharge(charge, ChargeSection.Discount),
+            },
+          ]
+        : []),
+      ...(open && onRemoveCoupon && lineCoupon
+        ? [
+            {
+              label: 'Remove coupon',
+              icon: <TicketPercentIcon aria-hidden />,
+              onSelect: () =>
+                setRemoval({
+                  title: `Remove ${lineCoupon.name}?`,
+                  description: `The discount stops applying to ${line.name || 'this charge'}.`,
+                  confirmLabel: 'Remove coupon',
+                  run: () => onRemoveCoupon(lineCoupon),
+                }),
+            },
+          ]
+        : []),
+      ...(line.source === 'plan' && onOpenPlan
+        ? [
+            {
+              label: 'Go to plan',
+              icon: <PackageIcon aria-hidden />,
+              readOnly: true,
+              onSelect: onOpenPlan,
+            },
+          ]
+        : []),
+    ]
+  }
+
   return (
     <DetailShell
       trail={[
@@ -1062,6 +1147,18 @@ export function SubscriptionDetailView({
                         title="Charges"
                         onEditSection={(charge, part) => editCharge(charge, part)}
                         editableSections={editableChargeSections}
+                        {...(canEditCharges
+                          ? { onEdit: (charge: Charge) => editCharge(charge) }
+                          : {})}
+                        canEdit={(charge) => {
+                          const line = chargeRows.lineOf.get(charge.id)
+                          return line ? canEditLine(line) : false
+                        }}
+                        {...(canEditCharges && onEndCharge
+                          ? { onTerminate: (charge: Charge) => endCharge(charge) }
+                          : {})}
+                        removeLabel="End charge"
+                        extraActions={chargeExtras}
                         variant="summary"
                         {...(revertCharge ? { onRevert: revertCharge } : {})}
                         {...(openCharge ? { onOpenCharge: openCharge } : {})}
@@ -1573,61 +1670,7 @@ export function SubscriptionDetailView({
             {...(revertCharge ? { onRevert: revertCharge } : {})}
             {...(openCharge ? { onOpenCharge: openCharge } : {})}
             {...(chargeHistory ? { history: chargeHistory } : {})}
-            extraActions={(charge) => {
-              const line = chargeRows.lineOf.get(charge.id)
-              if (!line) return []
-              // V1's charge row: the line item id beside the price id, and a
-              // coupon applied to (or taken off) just this charge.
-              const lineCoupon = (coupons?.data ?? []).find(
-                (coupon) => coupon.active && coupon.lineItemId === line.id,
-              )
-              const open = !charge.endDate && canEditCharges
-              return [
-                {
-                  label: 'Copy line item ID',
-                  icon: <CopyIcon aria-hidden />,
-                  onSelect: () => {
-                    void navigator.clipboard
-                      .writeText(line.id)
-                      .then(() => toast.success('Line item ID copied'))
-                      .catch(() => toast.error('Couldn’t copy the line item ID'))
-                  },
-                },
-                ...(open && onAddCoupon && !lineCoupon
-                  ? [
-                      {
-                        label: 'Apply coupon',
-                        icon: <TicketPercentIcon aria-hidden />,
-                        onSelect: () => editCharge(charge, ChargeSection.Discount),
-                      },
-                    ]
-                  : []),
-                ...(open && onRemoveCoupon && lineCoupon
-                  ? [
-                      {
-                        label: 'Remove coupon',
-                        icon: <TicketPercentIcon aria-hidden />,
-                        onSelect: () =>
-                          setRemoval({
-                            title: `Remove ${lineCoupon.name}?`,
-                            description: `The discount stops applying to ${line.name || 'this charge'}.`,
-                            confirmLabel: 'Remove coupon',
-                            run: () => onRemoveCoupon(lineCoupon),
-                          }),
-                      },
-                    ]
-                  : []),
-                ...(line.source === 'plan' && onOpenPlan
-                  ? [
-                      {
-                        label: 'Go to plan',
-                        icon: <PackageIcon aria-hidden />,
-                        onSelect: onOpenPlan,
-                      },
-                    ]
-                  : []),
-              ]
-            }}
+            extraActions={chargeExtras}
             isLoading={lines.isLoading ?? false}
             error={lines.isError ? 'Charges could not be loaded' : null}
             {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}

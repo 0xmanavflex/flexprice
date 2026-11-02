@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { CalendarIcon, ChevronDownIcon, LayersIcon } from '@ui/icons'
+import { Bar, BarChart, LabelList, XAxis, YAxis } from 'recharts'
+import { CalendarIcon, ChevronDownIcon, InfoIcon, LayersIcon } from '@ui/icons'
+import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -18,14 +19,18 @@ import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { ErrorState } from '@ui/compositions/feedback/States'
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
-import { MetricChart, type MetricPoint } from '../shared/charts'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@ui/components/primitives/chart'
+import type { ChartConfig } from '@ui/components/primitives/chart'
+import { ChartSkeleton } from '@ui/compositions/feedback/Skeletons'
+import { toneColor, type MetricPoint } from '../shared/charts'
 import { DetailTable } from '../shared/DetailTable'
 
 /**
  * A customer's Analytics tab, after the redesign (`customer-analytics.tsx`):
  * choose features, a date range and whether to include child customers, then
- * see Revenue, Cost, Margin and Margin %, each feature's usage over time, and a
- * per-feature breakdown with its share of revenue.
+ * see Revenue, Cost, Margin and Margin %, usage by feature, and a per-feature
+ * breakdown with its share of revenue. Features are the chart's Y axis, one
+ * bar each, not a tab per feature.
  *
  * Every figure comes from the page, already formatted: usage and revenue from
  * the usage analytics, cost and margin from the cost analytics (the cost
@@ -52,8 +57,14 @@ export interface FeatureAnalytics {
   name: string
   /** Total usage, formatted, e.g. `120,000`. */
   usage: string
-  /** Compact total for the chart tab, e.g. `120K`. */
+  /** Compact total for the chart, e.g. `120K`. */
   short?: string | undefined
+  /**
+   * The total as a number, for the bar's length. The API's own total: daily
+   * points can be absent, or not add up (a MAX meter), so they are summed
+   * only when this is missing.
+   */
+  total?: number | undefined
   /** The unit of usage, e.g. `calls`. */
   unit?: string | undefined
   /** Revenue from this feature, formatted. Null when the API did not price it. */
@@ -182,6 +193,91 @@ export interface CustomerAnalyticsViewProps {
   title?: string | undefined
 }
 
+const NAME_AXIS = 220
+const compactUsage = new Intl.NumberFormat(undefined, {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+})
+
+/** Keeps the start of a long feature id and ellipsizes the end so the axis does not clip it. */
+function featureLabel(name: string): string {
+  return name.length > 34 ? `${name.slice(0, 32)}…` : name
+}
+
+function FeatureTick({
+  x,
+  y,
+  payload,
+}: {
+  x: string | number
+  y: string | number
+  payload?: { value?: string }
+}) {
+  const full = payload?.value ?? ''
+  return (
+    <text x={x} y={y} dy={4} textAnchor="end" fontSize={11} className="fill-muted-foreground">
+      <title>{full}</title>
+      {featureLabel(full)}
+    </text>
+  )
+}
+
+/** Usage in the period, one bar per feature. The feature name is the Y axis. */
+function FeatureBars({ features }: { features: FeatureAnalytics[] }) {
+  const data = features
+    .map((feature) => {
+      const usage = feature.total ?? feature.points.reduce((sum, point) => sum + point.value, 0)
+      // Each bar is labelled in its own unit: features measure different
+      // things, so the label, not the length across bars, is the reading.
+      const figure = feature.short ?? compactUsage.format(usage)
+      return {
+        name: feature.name,
+        usage,
+        total: feature.unit ? `${figure} ${feature.unit}` : figure,
+      }
+    })
+    .sort((a, b) => b.usage - a.usage)
+  const config: ChartConfig = { usage: { label: 'Usage', color: toneColor('series-1') } }
+  const height = Math.max(220, data.length * 36)
+  return (
+    <ChartContainer
+      config={config}
+      className="block! aspect-auto! w-full max-w-none px-1 pt-4 pb-2"
+      style={{ height }}
+    >
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 4, right: 64, left: 8, bottom: 0 }}
+        barCategoryGap="28%"
+      >
+        <XAxis type="number" hide domain={[0, 'dataMax']} />
+        <YAxis
+          type="category"
+          dataKey="name"
+          axisLine={false}
+          tickLine={false}
+          width={NAME_AXIS}
+          tick={FeatureTick}
+          interval={0}
+        />
+        <ChartTooltip
+          cursor={{ fill: 'var(--muted)', opacity: 0.5 }}
+          content={<ChartTooltipContent />}
+        />
+        <Bar dataKey="usage" fill="var(--color-usage)" radius={[0, 3, 3, 0]}>
+          <LabelList
+            dataKey="total"
+            position="right"
+            className="fill-muted-foreground"
+            fontSize={11}
+          />
+        </Bar>
+      </BarChart>
+    </ChartContainer>
+  )
+}
+
 const Muted = ({ children }: { children: React.ReactNode }) => (
   <span className="text-muted-foreground">{children}</span>
 )
@@ -233,7 +329,6 @@ export function CustomerAnalyticsView({
   costNote,
   title,
 }: CustomerAnalyticsViewProps) {
-  const [activeTab, setActiveTab] = useState('')
   const all = selectedFeatureIds.length === 0
   const chosen = all ? featureOptions.map((f) => f.id) : selectedFeatureIds
   const range = `${query.from} to ${query.to}${query.includeChildren ? ', including child customers' : ''}`
@@ -336,7 +431,12 @@ export function CustomerAnalyticsView({
           </div>
         ))}
       </dl>
-      {costNote ? <p className="text-muted-foreground -mt-2 text-xs">{costNote}</p> : null}
+      {costNote ? (
+        <Alert variant="info">
+          <InfoIcon aria-hidden="true" />
+          <AlertDescription>{costNote}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {error ? (
         <ErrorState
@@ -352,25 +452,13 @@ export function CustomerAnalyticsView({
         />
       ) : (
         <>
-          <MetricChart
-            tabs={features.map((f) => ({
-              id: f.id,
-              label: f.name,
-              value: (
-                <>
-                  {f.short ?? f.usage}
-                  {f.unit ? <span className="text-muted-foreground text-xs"> {f.unit}</span> : null}
-                </>
-              ),
-              points: f.points,
-              ...(isLoading ? { status: 'loading' as const } : {}),
-            }))}
-            activeTab={
-              features.some((f) => f.id === activeTab) ? activeTab : (features[0]?.id ?? '')
-            }
-            onTabChange={setActiveTab}
-            caption={range}
-          />
+          <Section title="Usage" description={range}>
+            {isLoading ? (
+              <ChartSkeleton height={260} label="Loading usage by feature" />
+            ) : (
+              <FeatureBars features={features} />
+            )}
+          </Section>
 
           <Section title="Usage breakdown" description={range} flush>
             <DetailTable

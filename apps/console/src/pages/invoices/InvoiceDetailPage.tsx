@@ -3,6 +3,9 @@ import { useNavigate } from '@tanstack/react-router'
 import {
   ApiError,
   useAttemptInvoicePayment,
+  useBillingEntities,
+  useCustomer,
+  useCustomerBillingEntity,
   useFinalizeInvoice,
   useInvoice,
   useInvoiceHostedUrl,
@@ -21,6 +24,7 @@ import {
   serverReason,
 } from '@fp/query'
 import {
+  InvoiceStatus,
   PAYMENT_STATUS_LABEL,
   PaymentStatus,
   invoiceRecalculation,
@@ -38,6 +42,7 @@ import { ConfirmDialog } from '@fp/ui/compositions'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 import { toInvoiceDocument } from './invoiceDocumentAdapter'
+import { billFromFor } from './invoiceParties'
 
 export interface InvoiceDetailPageProps {
   invoiceId: string
@@ -69,6 +74,11 @@ export function InvoiceDetailPage({
   // `tenant_id` stands in until the user record has loaded.
   const me = useUserInfo()
   const tenant = useTenant(me.data?.tenantId || invoice.data?.tenantId || '')
+  const entities = useBillingEntities()
+  // Only a draft is issued from its customer's entity as it is now.
+  const isDraft = invoice.data?.status === InvoiceStatus.Draft
+  const customer = useCustomer(isDraft && entities.data ? (invoice.data?.customerId ?? '') : '')
+  const customerEntity = useCustomerBillingEntity(customer.data)
   const payments = useInvoicePayments(invoiceId)
   const creditNotes = useInvoiceCreditNotes(invoiceId)
   const finalize = useFinalizeInvoice()
@@ -115,6 +125,10 @@ export function InvoiceDetailPage({
   }
 
   const recalculation = invoiceRecalculation(data)
+  const entityId = isDraft
+    ? customerEntity?.id
+    : data.sellerSnapshot?.billingEntityId || data.billingEntityId
+  const entity = entities.data?.find((item) => item.id === entityId)
   // Replacing goes through a confirm: a finalized invoice is voided first, and
   // either way the new invoice is created by a workflow, not here and now.
   const confirmReplace = async () => {
@@ -140,6 +154,8 @@ export function InvoiceDetailPage({
         }}
         invoice={toInvoiceDocument(data, {
           tenant: tenant.data,
+          // Null leaves the tenant's own block: entities off, or issued before them.
+          billFrom: billFromFor(data, customerEntity, null),
           hostedUrl: hostedUrl.data ?? null,
           payments: payments.data,
           creditNotes: creditNotes.data,
@@ -185,6 +201,19 @@ export function InvoiceDetailPage({
           ? { onDownload: () => window.open(data.invoicePdfUrl ?? '', '_blank', 'noopener') }
           : {})}
         onOpenCustomer={() => onOpenCustomer(data.customerId)}
+        {...(entity
+          ? {
+              billingEntity: {
+                name: entity.name,
+                onOpen: () =>
+                  void navigate({
+                    to: '/settings/billing-entities/$entityId',
+                    params: { entityId: entity.id },
+                    search: {} as never,
+                  }),
+              },
+            }
+          : {})}
         {...(data.subscriptionId
           ? {
               onOpenSubscription: () =>

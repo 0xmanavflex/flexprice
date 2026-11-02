@@ -21,6 +21,24 @@ import type { TenantAddress } from './tenant'
  *
  * This is the layer where Flexprice's vocabulary becomes the product's.
  */
+/** The seller identity stamped on an invoice when it was issued. */
+export interface InvoiceSellerSnapshot {
+  billingEntityId: string
+  legalName: string
+  email: string
+  helpEmail: string
+  phone: string
+  address: {
+    line1: string
+    line2: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  }
+  taxIdentifiers: { country: string; type: string; value: string }[]
+}
+
 export interface Invoice {
   id: string
   /** Human-facing number. Empty when the API has not issued one. */
@@ -54,6 +72,9 @@ export interface Invoice {
   issuedAt: Date | null
   periodStart: Date | null
   periodEnd: Date | null
+  /** The billing entity that issued it; absent when the API sends none. */
+  billingEntityId?: string
+  sellerSnapshot?: InvoiceSellerSnapshot
 }
 
 /**

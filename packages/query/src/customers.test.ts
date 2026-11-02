@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { CustomerStatus, DEFAULT_CUSTOMER_QUERY } from '@fp/domain'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  BILLING_ENTITY_FILTER,
+  CUSTOMER_FILTERS,
+  CustomerStatus,
+  DEFAULT_CUSTOMER_QUERY,
+} from '@fp/domain'
 
 /** The default query without its "Active" filter, so each case sees only what it sets. */
 const ALL_CUSTOMERS = { ...DEFAULT_CUSTOMER_QUERY, filters: [] }
-import type { Flexprice } from '@fp/api'
+import type { AuthSource } from '@fp/api'
 import {
   fetchCustomers,
   toCustomer,
@@ -31,6 +36,11 @@ describe('toCustomer', () => {
       addressCountry: 'US',
       status: CustomerStatus.Published,
     })
+  })
+
+  it('keeps the billing entity, and leaves it off when the wire has none', () => {
+    expect(toCustomer({ billingEntityId: 'be_1' }).billingEntityId).toBe('be_1')
+    expect(toCustomer({})).not.toHaveProperty('billingEntityId')
   })
 
   it('keeps the createdAt/updatedAt dates, and null when absent', () => {
@@ -157,6 +167,23 @@ describe('toCustomerFilter', () => {
     ])
   })
 
+  it('sends a chosen billing entity as the top-level field, not a condition', () => {
+    const filters = [{ field: 'billing_entity_id', op: 'eq' as const, value: 'be_1' }]
+    const filter = toCustomerFilter({ ...ALL_CUSTOMERS, filters }, [
+      ...CUSTOMER_FILTERS,
+      BILLING_ENTITY_FILTER,
+    ])
+    expect(filter['billingEntityId']).toBe('be_1')
+    expect(filter).not.toHaveProperty('filters')
+  })
+
+  it('drops a billing entity from the URL when entities are off', () => {
+    const filters = [{ field: 'billing_entity_id', op: 'eq' as const, value: 'be_1' }]
+    expect(toCustomerFilter({ ...ALL_CUSTOMERS, filters }, CUSTOMER_FILTERS)).not.toHaveProperty(
+      'billingEntityId',
+    )
+  })
+
   it('expands integrations so the list can show each customer’s marks', () => {
     expect(toCustomerFilter(ALL_CUSTOMERS)).toMatchObject({ expand: 'integrations' })
   })
@@ -193,6 +220,8 @@ describe('toIntegrationLinks', () => {
 })
 
 describe('fetchCustomers', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
   /**
    * The page is returned as the server sent it.
    *
@@ -204,25 +233,35 @@ describe('fetchCustomers', () => {
    * back: the rows would still look right on page one.
    */
   it('does not narrow the page it was given', async () => {
-    const queryCustomer = async () => ({
-      items: [
-        { id: 'cust_1', name: 'Acme', status: 'published' },
-        // Neither of these matches the search term or the status asked for.
-        // The server decided they belong on this page; the browser must not
-        // second-guess it, or the count above the table stops matching it.
-        { id: 'cust_2', name: 'Globex', status: 'archived' },
-        { id: 'cust_3', name: 'Initech', status: 'archived' },
-      ],
-      pagination: { total: 97, limit: 25, offset: 0 },
-    })
-    const client = { customers: { queryCustomer } } as unknown as Flexprice
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        items: [
+          { id: 'cust_1', name: 'Acme', status: 'published', billing_entity_id: 'be_1' },
+          // Neither of these matches the search term or the status asked for.
+          // The server decided they belong on this page; the browser must not
+          // second-guess it, or the count above the table stops matching it.
+          { id: 'cust_2', name: 'Globex', status: 'archived' },
+          { id: 'cust_3', name: 'Initech', status: 'archived' },
+        ],
+        pagination: { total: 97, limit: 25, offset: 0 },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const auth: AuthSource = { getToken: async () => 'tok', getEnvironmentId: async () => 'env_1' }
 
-    const result = await fetchCustomers(client, {
+    const result = await fetchCustomers('https://api.test', auth, {
       ...ALL_CUSTOMERS,
       search: 'acme',
       statuses: [CustomerStatus.Published],
     })
 
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('https://api.test/customers/search')
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      status: 'published',
+      expand: 'integrations',
+    })
+    expect(result.customers[0]?.billingEntityId).toBe('be_1')
     expect(result.customers.map((customer) => customer.id)).toEqual(['cust_1', 'cust_2', 'cust_3'])
     expect(result.total).toBe(97)
   })

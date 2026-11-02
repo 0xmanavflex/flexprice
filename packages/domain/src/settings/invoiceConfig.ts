@@ -107,6 +107,11 @@ export function previewInvoiceNumber(config: InvoiceConfig, on: Date = new Date(
   return [config.prefix, date, sequence].filter((part) => part.length > 0).join(config.separator)
 }
 
+/** The example number for one billing entity: the environment's scheme with the entity's own prefix. */
+export function entityInvoicePreview(config: InvoiceConfig, prefix: string): string {
+  return previewInvoiceNumber({ ...config, prefix })
+}
+
 /**
  * A delay in the largest unit that divides it evenly.
  *

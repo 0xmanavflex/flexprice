@@ -933,6 +933,8 @@ export const OverridesAndResetsACharge: Story = {
     const dialog = within(
       await screen.findByRole('dialog', { name: 'Override price · Platform base' }),
     )
+    // The dialog opens on the charge's own price.
+    await userEvent.clear(dialog.getByLabelText(/^Amount/))
     await userEvent.type(dialog.getByLabelText(/^Amount/), '7')
     await userEvent.click(dialog.getByRole('button', { name: 'Save override' }))
 
@@ -1083,6 +1085,8 @@ export const AddonPriceOverride: Story = {
     const price = within(
       await screen.findByRole('dialog', { name: 'Override price · Storage base' }),
     )
+    // The dialog opens on the charge's own price.
+    await userEvent.clear(price.getByLabelText(/^Amount/))
     await userEvent.type(price.getByLabelText(/^Amount/), '20')
     await userEvent.click(price.getByRole('button', { name: 'Save override' }))
     dialog = within(await screen.findByRole('dialog', { name: 'Add add-on · Extra storage' }))

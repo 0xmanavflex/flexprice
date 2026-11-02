@@ -1,7 +1,7 @@
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { call, type Flexprice } from '@fp/api'
 import { toIntegrationLinks } from './customers'
-import { useIntegrations } from './integrations'
+import { useConnections } from './integrations'
 import { useFlexprice } from './provider'
 
 /** Entity types documented by the SDK mappings endpoint; never reuse customer mappings. */
@@ -65,7 +65,7 @@ export function useEntityIntegrationColumns(type: MappedEntityType, entityIds: r
 /** Shared mutations invalidate the same cache read by the list, header and Related. */
 export function useEntityIntegrationControls(type: MappedEntityType, id: string) {
   const mappings = useEntityIntegrationLinks(type, id)
-  const providers = useIntegrations()
+  const providers = useConnections()
   const client = useFlexprice()
   const cache = useQueryClient()
   const refresh = () => cache.invalidateQueries({ queryKey: entityIntegrationKey(type, id) })
@@ -91,7 +91,7 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
           linkable: (providers.data ?? [])
             .filter(
               (provider) =>
-                provider.connection &&
+                provider.connections.length > 0 &&
                 !mappings.data.some((mapping) => mapping.providerType === provider.providerType),
             )
             .map(({ providerType, name }) => ({ providerType, name })),

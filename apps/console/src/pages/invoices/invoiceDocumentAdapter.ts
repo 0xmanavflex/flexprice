@@ -9,7 +9,7 @@ import {
   formatAddress,
 } from '@fp/domain'
 import type { ActivityEntry } from '@fp/domain'
-import type { InvoiceDocument, InvoiceLine } from '@fp/ui/pages'
+import type { InvoiceDocument, InvoiceFormParty, InvoiceLine } from '@fp/ui/pages'
 import { railActivity } from '../shared/activityLog'
 import { invoiceLifecycle } from './invoiceLifecycle'
 
@@ -40,6 +40,8 @@ function unitPrice(quantity: string, amount: string): number | null {
 export interface InvoiceDocumentSources {
   /** The issuing tenant, for "Bill from". Omitted while it loads. */
   tenant?: Tenant | undefined
+  /** "Bill from" when a billing entity issues the invoice (`billFromFor`); the tenant otherwise. */
+  billFrom?: InvoiceFormParty | null | undefined
   payments?: Payment[] | undefined
   creditNotes?: CreditNote[] | undefined
   /** Audit trail. When set, it replaces the timestamps assembled from the invoice. */
@@ -64,6 +66,7 @@ export function toInvoiceDocument(
 ): InvoiceDocument {
   const {
     tenant,
+    billFrom,
     payments = [],
     creditNotes = [],
     activity,
@@ -86,17 +89,27 @@ export function toInvoiceDocument(
       ...(invoice.customerEmail ? { email: invoice.customerEmail } : {}),
       address: formatAddress(invoice.customerAddress),
     },
-    ...(tenant
+    ...(billFrom
       ? {
           from: {
-            name: tenant.name,
-            ...(supportEmail ? { email: supportEmail } : {}),
-            address: formatAddress(tenant.address),
-            // The tenant record carries no logo yet; the view draws an initial tile.
+            name: billFrom.name,
+            ...(billFrom.email ? { email: billFrom.email } : {}),
+            address: billFrom.address,
+            ...(billFrom.taxIds?.length ? { taxIds: billFrom.taxIds } : {}),
             logoUrl: null,
           },
         }
-      : {}),
+      : tenant
+        ? {
+            from: {
+              name: tenant.name,
+              ...(supportEmail ? { email: supportEmail } : {}),
+              address: formatAddress(tenant.address),
+              // The tenant record carries no logo yet; the view draws an initial tile.
+              logoUrl: null,
+            },
+          }
+        : {}),
     lines: invoice.lines.map((line): InvoiceLine => ({
       id: line.id,
       description: line.description,

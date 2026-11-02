@@ -127,6 +127,17 @@ const CustomerDetailPage = lazy(() =>
 )
 import { parseCustomerTab } from '@/pages/customers/CustomerDetailPage'
 import { parseActivitySearch, type ActivitySearch } from '@/pages/customers/activitySearch'
+const BillingEntityFormPage = lazy(() =>
+  import('@/pages/settings/billing-entities/BillingEntityFormPage').then((m) => ({
+    default: m.BillingEntityFormPage,
+  })),
+)
+const BillingEntityDetailPage = lazy(() =>
+  import('@/pages/settings/billing-entities/BillingEntityDetailPage').then((m) => ({
+    default: m.BillingEntityDetailPage,
+  })),
+)
+import { parseBillingEntityTab } from '@/pages/settings/billing-entities/BillingEntityDetailPage'
 const CustomerFormPage = lazy(() =>
   import('@/pages/customers/CustomerFormPage').then((m) => ({ default: m.CustomerFormPage })),
 )
@@ -135,7 +146,12 @@ const CustomerSubscriptionFormPage = lazy(() =>
     default: m.CustomerSubscriptionFormPage,
   })),
 )
-import { parseSubscriptionTab, type CustomerTab, type SubscriptionTab } from '@fp/ui/pages'
+import {
+  parseSubscriptionTab,
+  type BillingEntityTab,
+  type CustomerTab,
+  type SubscriptionTab,
+} from '@fp/ui/pages'
 import { parseCustomerSearch } from './customerSearch'
 import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
 const SubscriptionListPage = lazy(() =>
@@ -175,6 +191,11 @@ const OAuthCallbackPage = lazy(() =>
 const IntegrationListPage = lazy(() =>
   import('@/pages/integrations/IntegrationListPage').then((m) => ({
     default: m.IntegrationListPage,
+  })),
+)
+const ProviderConnectionsPage = lazy(() =>
+  import('@/pages/integrations/ProviderConnectionsPage').then((m) => ({
+    default: m.ProviderConnectionsPage,
   })),
 )
 const ExportListPage = lazy(() =>
@@ -2304,8 +2325,36 @@ function InvoiceDetailRouteComponent() {
 const integrationsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/integrations',
-  component: IntegrationListPage,
+  component: IntegrationListRouteComponent,
 })
+
+function IntegrationListRouteComponent() {
+  const navigate = useNavigate()
+  return (
+    <IntegrationListPage
+      onOpenProvider={(provider) =>
+        void navigate({ to: '/integrations/$provider', params: { provider } })
+      }
+    />
+  )
+}
+
+const integrationProviderRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/integrations/$provider',
+  component: IntegrationProviderRouteComponent,
+})
+
+function IntegrationProviderRouteComponent() {
+  const { provider } = integrationProviderRoute.useParams()
+  const navigate = useNavigate()
+  return (
+    <ProviderConnectionsPage
+      providerId={provider}
+      onBack={() => void navigate({ to: '/integrations' })}
+    />
+  )
+}
 
 // The redirect URI QuickBooks and Zoho are registered with; the API config fixes the path.
 const oauthCallbackRoute = createRoute({
@@ -2385,6 +2434,77 @@ function TaxEditRouteComponent() {
 
   return <TaxFormPage mode="edit" taxRateId={taxRateId} onCancel={toList} onDone={toList} />
 }
+
+/** Billing entity create is a full page; detail sits inside the Settings frame. */
+const billingEntityCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/billing-entities/new',
+  validateSearch: (search: Record<string, unknown>): { step?: string } =>
+    typeof search.step === 'string' ? { step: search.step } : {},
+  component: BillingEntityCreateRouteComponent,
+})
+
+function BillingEntityCreateRouteComponent() {
+  const navigate = useNavigate()
+  const { step } = billingEntityCreateRoute.useSearch()
+
+  return (
+    <BillingEntityFormPage
+      {...(step ? { step } : {})}
+      onStepChange={(next) =>
+        void navigate({
+          to: '/settings/billing-entities/new',
+          search: { step: next },
+          replace: true,
+        })
+      }
+      onCancel={() => void navigate({ to: '/settings', search: BILLING_ENTITIES_SECTION })}
+      onDone={(entityId) =>
+        void navigate({
+          to: '/settings/billing-entities/$entityId',
+          params: { entityId },
+          search: {} as never,
+        })
+      }
+    />
+  )
+}
+
+const billingEntityDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/billing-entities/$entityId',
+  validateSearch: (search: Record<string, unknown>): { tab: BillingEntityTab } => ({
+    tab: parseBillingEntityTab(search['tab']),
+  }),
+  search: { middlewares: [stripSearchParams({ tab: 'details' })] },
+  component: BillingEntityDetailRouteComponent,
+})
+
+function BillingEntityDetailRouteComponent() {
+  const { entityId } = billingEntityDetailRoute.useParams()
+  const { tab } = billingEntityDetailRoute.useSearch()
+  const navigate = useNavigate()
+
+  return (
+    <SettingsListFrame sectionId="billing-entities">
+      <BillingEntityDetailPage
+        entityId={entityId}
+        tab={tab}
+        onTabChange={(next) =>
+          void navigate({
+            to: '/settings/billing-entities/$entityId',
+            params: { entityId },
+            search: { tab: next },
+            replace: true,
+          })
+        }
+        onBack={() => void navigate({ to: '/settings', search: BILLING_ENTITIES_SECTION })}
+      />
+    </SettingsListFrame>
+  )
+}
+
+const BILLING_ENTITIES_SECTION = { section: 'billing-entities', tab: 'entities' } as const
 
 const eventsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -2804,6 +2924,7 @@ export const routeTree = rootRoute.addChildren([
     connectionExportsRoute,
     dataExportRoute,
     integrationsRoute,
+    integrationProviderRoute,
     oauthCallbackRoute,
     pricingWidgetRoute,
     usageSyncsRoute,
@@ -2815,6 +2936,8 @@ export const routeTree = rootRoute.addChildren([
     checkoutRoute,
     taxCreateRoute,
     taxEditRoute,
+    billingEntityCreateRoute,
+    billingEntityDetailRoute,
     eventsRoute,
     settingsRoute,
     subscriptionCreateRoute,

@@ -1,6 +1,13 @@
 import { z } from 'zod'
 import { BucketSize } from './contractCharge'
-import { BillingModel, TierMode, nonNegativeAmount, tiersSchema } from './price'
+import {
+  BillingModel,
+  TierMode,
+  nonNegativeAmount,
+  tiersSchema,
+  type Charge,
+  type Tier,
+} from './price'
 
 /**
  * A price override, as a schema rather than as twelve pieces of state.
@@ -71,6 +78,63 @@ export const priceOverrideSchema = z.discriminatedUnion('billingModel', [
 
 export type PriceOverride = z.infer<typeof priceOverrideSchema>
 
+const BUCKETS = new Set<string>(Object.values(BucketSize))
+
+/**
+ * The override dialog opens on the charge's own model.
+ *
+ * A tiered plan price starts on Tiered, with its bands, rather than on an empty
+ * flat fee. The person can still switch model; this is only the starting shape.
+ */
+export function overrideFromCharge(
+  charge: Pick<
+    Charge,
+    'id' | 'billingModel' | 'amount' | 'tierMode' | 'tiers' | 'transformQuantity' | 'bucketSize'
+  >,
+): PriceOverride {
+  const bucketSize =
+    charge.bucketSize && BUCKETS.has(charge.bucketSize)
+      ? { bucketSize: charge.bucketSize as (typeof BucketSize)[keyof typeof BucketSize] }
+      : {}
+  switch (charge.billingModel) {
+    case BillingModel.Package:
+      return {
+        priceId: charge.id,
+        billingModel: BillingModel.Package,
+        amount: charge.amount || '',
+        divideBy: charge.transformQuantity?.divideBy ?? 1,
+        ...bucketSize,
+      }
+    case BillingModel.Tiered:
+      return {
+        priceId: charge.id,
+        billingModel: BillingModel.Tiered,
+        tierMode: charge.tierMode ?? TierMode.Volume,
+        tiers:
+          charge.tiers.length > 0
+            ? charge.tiers.map(tierForOverride)
+            : [{ upTo: null, unitAmount: '', flatAmount: '0' }],
+        ...bucketSize,
+      }
+    case BillingModel.FlatFee:
+      return {
+        priceId: charge.id,
+        billingModel: BillingModel.FlatFee,
+        amount: charge.amount || '',
+        ...bucketSize,
+      }
+  }
+}
+
+function tierForOverride(tier: Tier): Tier {
+  return {
+    upTo: tier.upTo,
+    unitAmount: tier.unitAmount,
+    ...(tier.flatAmount != null && tier.flatAmount !== '' ? { flatAmount: tier.flatAmount } : {}),
+    ...(tier.transformQuantity ? { transformQuantity: tier.transformQuantity } : {}),
+  }
+}
+
 /** A starting value for each model, so switching models never lands on invalid state. */
 export function emptyOverride(priceId: string, billingModel: BillingModel): PriceOverride {
   switch (billingModel) {
@@ -85,7 +149,7 @@ export function emptyOverride(priceId: string, billingModel: BillingModel): Pric
         tierMode: TierMode.Volume,
         // Opens with the unbounded final tier already present, because a form
         // that starts invalid teaches people to ignore its errors.
-        tiers: [{ upTo: null, unitAmount: '' }],
+        tiers: [{ upTo: null, unitAmount: '', flatAmount: '0' }],
       }
   }
 }

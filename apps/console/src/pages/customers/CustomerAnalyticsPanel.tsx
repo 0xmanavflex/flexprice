@@ -146,6 +146,7 @@ export function CustomerAnalyticsPanel({
           name: row.name,
           usage: grouped.format(row.usage),
           short: compact.format(row.usage),
+          total: row.usage,
           unit: row.unitPlural,
           revenue: row.revenue ? formatMoney(row.revenue) : null,
           share: totalRevenue > 0 ? revenueOf(row.revenue?.amount) / totalRevenue : 0,

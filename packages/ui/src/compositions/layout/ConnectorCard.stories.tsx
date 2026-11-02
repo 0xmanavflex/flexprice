@@ -62,6 +62,18 @@ export const Connected: Story = {
   },
 }
 
+/** With billing entities: the connected action reads Manage. */
+export const WithManageLabel: Story = {
+  args: {
+    connected: true,
+    configureLabel: 'Manage',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Manage Stripe' })).toBeVisible()
+  },
+}
+
 /** No `docsUrl`: the setup-guide arrow is omitted. */
 export const WithoutDocsLink: Story = {
   args: { docsUrl: undefined },

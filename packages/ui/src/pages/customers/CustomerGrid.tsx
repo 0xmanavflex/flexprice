@@ -11,6 +11,7 @@ import {
   PlusIcon,
 } from '@ui/icons'
 import {
+  BILLING_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,
@@ -20,6 +21,7 @@ import {
   CustomerStatus,
   DEFAULT_CUSTOMER_QUERY,
   isCustomerQueryFiltered,
+  withChoiceFilter,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
@@ -35,6 +37,11 @@ import {
   textColumn,
 } from '../shared/cells'
 import { CopyValue } from '../shared/CopyValue'
+import {
+  billingEntityChoices,
+  billingEntityColumn,
+  type ListBillingEntity,
+} from '../shared/billingEntityColumn'
 import { IntegrationChips } from './IntegrationMark'
 
 /**
@@ -140,6 +147,8 @@ export interface CustomerGridProps {
   locale?: string
   /** Contracts per customer id, when the page has counted them; absent customers show an em dash. */
   contractCounts?: Record<string, number>
+  /** The environment's billing entities, only while they are enabled: adds the Billing entity column and filter. */
+  billingEntities?: readonly ListBillingEntity[] | undefined
 }
 
 export function CustomerGrid({
@@ -159,6 +168,7 @@ export function CustomerGrid({
   onClearFilters,
   locale,
   contractCounts,
+  billingEntities,
 }: CustomerGridProps) {
   const columns = useMemo<EntityColumn<Customer>[]>(
     () => [
@@ -167,14 +177,16 @@ export function CustomerGrid({
         sortable: true,
         sortValue: CustomerSortField.Name,
         // The column the list is *for*. Hiding it leaves a table of
-        // attributes belonging to nobody.
+        // attributes belonging to nobody. Same weight as the other columns.
         hideable: false,
+        primary: false,
       }),
       // Its own column rather than a subtitle under the name. Stacked, it was
       // unsortable, unexportable and clipped twice as often; beside the name
       // it is a value like any other: and it is the field support actually
       // searches by.
       textColumn<Customer>('email', 'Email', (row) => row.email, { width: 220 }),
+      ...(billingEntities ? [billingEntityColumn<Customer>(billingEntities)] : []),
       {
         ...idColumn<Customer>('externalId', 'External ID', (row) => row.externalId, { width: 170 }),
         cell: (row) =>
@@ -234,7 +246,7 @@ export function CustomerGrid({
         { width: 100, hiddenByDefault: true },
       ),
     ],
-    [locale, contractCounts],
+    [locale, contractCounts, billingEntities],
   )
 
   const isDefaultSort =
@@ -305,11 +317,16 @@ export function CustomerGrid({
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search customers…"
       /*
-       * Field-by-field filters (name, external ID, email, status, created),
+       * Field-by-field filters (name, external ID, email, status, created, and
+       * billing entity while entities are enabled),
        * applied by the search endpoint so the total and pages agree with them.
        */
       filter={granularFilter({
-        specs: CUSTOMER_FILTERS,
+        specs: withChoiceFilter(
+          CUSTOMER_FILTERS,
+          BILLING_ENTITY_FILTER,
+          billingEntities ? billingEntityChoices(billingEntities) : null,
+        ),
         filters: query.filters ?? [],
         onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}

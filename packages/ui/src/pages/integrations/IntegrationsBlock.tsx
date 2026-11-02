@@ -21,13 +21,14 @@ import {
 import { Bone, SkeletonRegion } from '@ui/compositions/feedback/Skeletons'
 import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
 import { provenance } from '@ui/provenance'
+import type { ListBillingEntity } from '../shared/billingEntityColumn'
 
 /**
  * The integrations gallery. The `settings-13` block is kept verbatim in
  * `components/blocks/settings-13`; the live page renders its layout (heading
  * and three-up grid) with the real catalogue through `ConnectorCard`.
  *
- * Connection state is real (`connections > 0`). Connect and Configure are
+ * Connection state is real (`connections.length > 0`). Connect and Configure are
  * callbacks: the page opens the connect or manage sheet, so this block holds no
  * connection state of its own.
  *
@@ -64,10 +65,18 @@ export interface IntegrationsBlockProps {
   error?: IntegrationsFailure | null
   /** Open the connect flow for an unconnected integration. */
   onConnect?: ((integration: Integration) => void) | undefined
-  /** Open the manage sheet for a connected integration. */
+  /**
+   * Open the manage sheet for a connected integration, or, with `entities`,
+   * its provider page.
+   */
   onConfigure?: ((integration: Integration) => void) | undefined
   onRetry?: (() => void) | undefined
   isRetrying?: boolean | undefined
+  /**
+   * The environment's billing entities, given only while they are enabled: a
+   * connected card's action then reads Manage.
+   */
+  entities?: readonly ListBillingEntity[] | undefined
 }
 
 function GallerySkeleton() {
@@ -123,6 +132,7 @@ export function IntegrationsBlock({
   onConfigure,
   onRetry,
   isRetrying,
+  entities,
 }: IntegrationsBlockProps) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState(ALL)
@@ -145,7 +155,7 @@ export function IntegrationsBlock({
     const needle = query.trim().toLowerCase()
     return needle === '' || `${i.name} ${i.description}`.toLowerCase().includes(needle)
   })
-  const isConnected = (i: Integration) => i.connections > 0
+  const isConnected = (i: Integration) => i.connections.length > 0
   const connected = visible.filter(isConnected)
   const available = visible.filter((i) => !isConnected(i))
 
@@ -160,6 +170,7 @@ export function IntegrationsBlock({
       connected={isConnected(integration)}
       onConnect={() => onConnect?.(integration)}
       onConfigure={() => onConfigure?.(integration)}
+      configureLabel={entities && isConnected(integration) ? 'Manage' : undefined}
     />
   )
 

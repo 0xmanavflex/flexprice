@@ -24,6 +24,25 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
+/** Entities enabled: a Billing entity column, where an invoice without one reads as the default. */
+export const WithBillingEntities: Story = {
+  args: {
+    billingEntities: [
+      { id: 'be_default', name: 'Northwind Inc', isDefault: true },
+      { id: 'be_india', name: 'Northwind India', isDefault: false },
+    ],
+    invoices: invoiceFixtures.map((invoice, index) =>
+      index === 0 ? { ...invoice, billingEntityId: 'be_india' } : invoice,
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('columnheader', { name: /billing entity/i })).toBeVisible()
+    await expect(canvas.getByText('Northwind India')).toBeInTheDocument()
+    await expect(canvas.getAllByText('Northwind Inc').length).toBeGreaterThanOrEqual(1)
+  },
+}
+
 /** Missing payment status stays unknown, without inferring it from the balance. */
 export const PaymentStatus: Story = {
   play: async ({ canvasElement }) => {

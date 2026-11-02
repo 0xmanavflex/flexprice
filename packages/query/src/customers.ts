@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type Flexprice, call } from '@fp/api'
 import {
+  type AuthSource,
+  type Flexprice,
+  call,
+  createCustomer,
+  getCustomer,
+  searchCustomers,
+} from '@fp/api'
+import {
+  BILLING_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   type CreateCustomer,
   type Customer,
@@ -10,6 +18,7 @@ import {
   type CustomerDetail,
   type CustomerQuery,
   CustomerSortField,
+  type ListFilterSpec,
   CustomerStatus,
   CustomerTaxTreatment,
   DEFAULT_INVOICE_QUERY,
@@ -24,8 +33,10 @@ import {
   statusFilterField,
   toFilterConditions,
   toMetadataFilter,
+  toTopLevelChoice,
 } from './search'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
+import { credentials, fromWire, toWireBody } from './wire'
 import { type SubscriptionWire, toSubscription } from './subscriptions'
 import { type InvoicePage, fetchInvoices } from './invoices'
 import { type FeatureUsageWire, toFeatureUsage } from './tenant'
@@ -34,23 +45,24 @@ import { sortWithTieBreak } from './listSort'
 /**
  * Customers: the translation between billing vocabulary and the API.
  *
- * Reached through `POST /customers/search` (`client.customers.queryCustomer`),
- * the same search shape the catalogue lists use. The wire's status knows a
+ * Reached through `POST /customers/search`, the same search shape the
+ * catalogue lists use. The wire's status knows a
  * soft-deleted state the list has no column for, so it collapses to the two a
  * billing list shows, with anything unrecognised falling to published rather
  * than vanishing from the list.
  */
 
-/** One row of the customer's `integrations` array, after the SDK camelCases it. */
+/** One row of the customer's `integrations` array, camelCased by `fromWire`. */
 export interface CustomerIntegrationWire {
   providerType?: string | undefined
   providerEntityId?: string | undefined
   status?: string | undefined
 }
 
-/** The wire shape this reads, after the SDK camelCases the response. */
+/** The wire shape this reads, camelCased by `fromWire`. */
 export interface CustomerWire {
   id?: string | undefined
+  billingEntityId?: string | undefined
   name?: string | undefined
   email?: string | undefined
   externalId?: string | undefined
@@ -101,6 +113,7 @@ export function toCustomer(wire: CustomerWire): Customer {
     ...(wire.billingCurrency ? { billingCurrency: wire.billingCurrency.toLowerCase() } : {}),
     ...(wire.timezone ? { timezone: wire.timezone } : {}),
     status,
+    ...(wire.billingEntityId ? { billingEntityId: wire.billingEntityId } : {}),
     integrations: toCustomerIntegrations(wire.integrations),
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -113,9 +126,14 @@ const SORT_FIELD: Record<CustomerSortField, string> = {
   [CustomerSortField.UpdatedAt]: 'updated_at',
 }
 
-export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> {
-  const conditions = toFilterConditions(query.filters ?? [], CUSTOMER_FILTERS)
-  const metadata = toMetadataFilter(query.filters ?? [], CUSTOMER_FILTERS)
+/** `specs` are the filters the list offers: the entity filter is among them only while entities are enabled. */
+export function toCustomerFilter(
+  query: CustomerQuery,
+  specs: readonly ListFilterSpec[] = CUSTOMER_FILTERS,
+): Record<string, unknown> {
+  const conditions = toFilterConditions(query.filters ?? [], specs)
+  const metadata = toMetadataFilter(query.filters ?? [], specs)
+  const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, BILLING_ENTITY_FILTER.field)
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
@@ -134,6 +152,7 @@ export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> 
       : {}),
     // Metadata pairs are the search's own map, every pair matching.
     ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+    ...(billingEntityId ? { billingEntityId } : {}),
   }
 }
 
@@ -143,15 +162,26 @@ export interface CustomerPage {
 }
 
 export async function fetchCustomers(
-  client: Flexprice,
+  serverURL: string,
+  auth: AuthSource,
   query: CustomerQuery,
   signal?: AbortSignal,
+  specs?: readonly ListFilterSpec[],
 ): Promise<CustomerPage> {
-  const response = await call(
-    (options) => client.customers.queryCustomer(toCustomerFilter(query) as never, options),
-    signal,
+  const { token, environmentId } = await credentials(auth, 'Sign in to view customers.')
+  const response = fromWire<{
+    items?: CustomerWire[] | null
+    pagination?: { total?: number }
+  }>(
+    await searchCustomers(
+      serverURL,
+      token,
+      environmentId,
+      toWireBody(toCustomerFilter(query, specs)),
+      signal,
+    ),
   )
-  const customers = (response.items ?? []).map((item) => toCustomer(item as CustomerWire))
+  const customers = (response?.items ?? []).map(toCustomer)
 
   /*
    * No narrowing happens here any more, and that is the fix.
@@ -175,16 +205,31 @@ export async function fetchCustomers(
    */
   return {
     customers,
-    total: response.pagination?.total ?? 0,
+    total: response?.pagination?.total ?? 0,
   }
 }
 
-export function useCustomers(query: CustomerQuery, options: { enabled?: boolean } = {}) {
-  const client = useFlexprice()
+/** `specs`: the filters the list offers, when they differ from `CUSTOMER_FILTERS` (the entity filter). */
+export function useCustomers(
+  query: CustomerQuery,
+  options: { enabled?: boolean; specs?: readonly ListFilterSpec[] } = {},
+) {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const billingEntityId = toTopLevelChoice(
+    query.filters ?? [],
+    options.specs ?? CUSTOMER_FILTERS,
+    BILLING_ENTITY_FILTER.field,
+  )
 
   return useQuery({
-    queryKey: queryKeys.customers.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: ({ signal }) => fetchCustomers(client, query, signal),
+    queryKey: queryKeys.customers.list({
+      ...query,
+      statuses: [...query.statuses].sort(),
+      // Whether the entity filter is sent, so turning entities on refetches.
+      ...(billingEntityId ? { billingEntityId } : {}),
+    }),
+    queryFn: ({ signal }) => fetchCustomers(serverURL, auth, query, signal, options.specs),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -193,7 +238,7 @@ export function useCustomers(query: CustomerQuery, options: { enabled?: boolean 
 /**
  * The detail read model, richer than the list's.
  *
- * `GET /customers/{id}` (`client.customers.getCustomer`) returns the fuller
+ * `GET /customers/{id}` returns the fuller
  * record: the postal address, a phone, the timezone, the tax treatment and any
  * metadata: that the search list drops. Everything optional collapses to empty
  * rather than absent, so the detail page renders a dash, never a hole.
@@ -233,12 +278,14 @@ export function toCustomerDetail(wire: CustomerDetailWire): CustomerDetail {
 }
 
 export async function fetchCustomer(
-  client: Flexprice,
+  serverURL: string,
+  auth: AuthSource,
   id: string,
   signal?: AbortSignal,
 ): Promise<CustomerDetail> {
-  const response = await call((options) => client.customers.getCustomer(id, options), signal)
-  return toCustomerDetail(response as CustomerDetailWire)
+  const { token, environmentId } = await credentials(auth, 'Sign in to view this customer.')
+  const body = await getCustomer(serverURL, token, environmentId, id, signal)
+  return toCustomerDetail(fromWire<CustomerDetailWire>(body))
 }
 
 /**
@@ -249,11 +296,12 @@ export async function fetchCustomer(
  * a detail page reads the customer first and scopes the rest to what it finds.
  */
 export function useCustomer(id: string) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery({
     queryKey: queryKeys.customers.detail(id),
-    queryFn: ({ signal }) => fetchCustomer(client, id, signal),
+    queryFn: ({ signal }) => fetchCustomer(serverURL, auth, id, signal),
     enabled: id.length > 0,
   })
 }
@@ -308,12 +356,15 @@ export function useCustomerSubscriptions(customerId: string) {
  * is derived, so a draft reads "Draft" and a past-due one "Overdue".
  */
 export function useCustomerInvoices(customerId: string) {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery<InvoicePage>({
     queryKey: queryKeys.invoices.list({ customerId }),
     queryFn: ({ signal }) =>
-      fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, pageSize: 200 }, signal, { customerId }),
+      fetchInvoices(serverURL, auth, { ...DEFAULT_INVOICE_QUERY, pageSize: 200 }, signal, {
+        customerId,
+      }),
     enabled: customerId.length > 0,
   })
 }
@@ -430,6 +481,7 @@ export function toCreateCustomerRequest(draft: CreateCustomer): Record<string, u
   }
   if (draft.taxTreatment) request.taxTreatment = draft.taxTreatment
   if (draft.metadata) request.metadata = draft.metadata
+  if (draft.billingEntityId) request.billingEntityId = draft.billingEntityId
   return request
 }
 
@@ -443,13 +495,21 @@ export function toUpdateCustomerRequest(draft: EditCustomer): Record<string, unk
 }
 
 export function useCreateCustomer() {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
   const queryClient = useQueryClient()
 
   return useMutation({
     meta: { notify: { success: 'Customer created', error: 'Could not create the customer.' } },
-    mutationFn: (draft: CreateCustomer) =>
-      call(() => client.customers.createCustomer(toCreateCustomerRequest(draft) as never)),
+    mutationFn: async (draft: CreateCustomer) => {
+      const { token, environmentId } = await credentials(auth, 'Sign in to create a customer.')
+      return createCustomer(
+        serverURL,
+        token,
+        environmentId,
+        toWireBody(toCreateCustomerRequest(draft)),
+      )
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
@@ -485,7 +545,7 @@ export function useDeleteCustomer() {
   })
 }
 
-/** One row of `GET /integrations/mappings`, after the SDK camelCases it. */
+/** One row of `GET /integrations/mappings`, camelCased by `fromWire`. */
 export interface IntegrationMappingWire {
   id?: string | undefined
   providerType?: string | undefined

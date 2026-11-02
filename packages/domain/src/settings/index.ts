@@ -18,6 +18,7 @@ export {
   INVOICE_NUMBER_FORMAT_LABEL,
   defaultInvoiceConfig,
   invoiceConfigSchema,
+  entityInvoicePreview,
   previewInvoiceNumber,
   splitDelay,
 } from './invoiceConfig'

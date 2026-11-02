@@ -9,6 +9,7 @@ import {
 import {
   useCreateInvoice,
   useCustomer,
+  useCustomerBillingEntity,
   useCustomerTaxAssociations,
   useCustomers,
   useTaxRates,
@@ -17,7 +18,7 @@ import {
 } from '@fp/query'
 import { LoadingRows, PageBody } from '@fp/ui/compositions'
 import { InvoiceForm } from '@fp/ui/pages'
-import { customerParty, tenantParty } from './invoiceParties'
+import { billFromFor, customerParty, tenantParty } from './invoiceParties'
 
 export interface InvoiceFormPageProps {
   /** Start with this customer chosen: the customer page's "Create invoice", as in V1. */
@@ -38,6 +39,7 @@ export function InvoiceFormPage({ customerId, onCancel, onDone }: InvoiceFormPag
   const [chosen, setChosen] = useState(customerId ?? '')
   const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
   const customer = useCustomer(chosen)
+  const customerEntity = useCustomerBillingEntity(chosen ? customer.data : undefined)
   const associations = useCustomerTaxAssociations(chosen)
   const rates = useTaxRates({
     ...DEFAULT_TAX_RATE_QUERY,
@@ -88,7 +90,7 @@ export function InvoiceFormPage({ customerId, onCancel, onDone }: InvoiceFormPag
       trail={[{ label: 'Invoices', onClick: onCancel }, { label: 'New invoice' }]}
       {...(customerId ? { defaultValue: { ...emptyInvoice(), customerId } } : {})}
       onCustomerChange={setChosen}
-      billFrom={tenantParty(tenant.data)}
+      billFrom={billFromFor(null, customerEntity, tenantParty(tenant.data))}
       billTo={chosen ? customerParty(customer.data) : null}
       taxRates={(rates.data?.taxRates ?? []).map((rate) => ({
         code: rate.code,
