@@ -310,7 +310,7 @@ describe('toPendingSchedules', () => {
         bucketSize: 'DAY',
         tiers: [
           { upTo: 1000, unitAmount: '0.01', flatAmount: '0' },
-          { upTo: null, unitAmount: '0.005', flatAmount: '2' },
+          { unitAmount: '0.005', flatAmount: '2' },
         ],
       },
       commitmentType: 'amount',

@@ -321,10 +321,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
   nomod: {
     providerType: 'nomod',
     setup: 'credentials',
-    fields: [
-      secret('api_key', 'API key', { placeholder: 'sk_live_…' }),
-      webhookSecret(),
-    ],
+    fields: [secret('api_key', 'API key', { placeholder: 'sk_live_…' }), webhookSecret()],
     sync: [pushInvoices],
     webhook: { events: ['invoice.paid', 'payment_link.paid'] },
     credentialHelp: 'https://docs.flexprice.io/integrations/nomod/',

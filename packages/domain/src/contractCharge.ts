@@ -5,7 +5,9 @@ import {
   type Tier,
   type TierMode,
 } from './price'
-import { type PriceOverride } from './priceOverride'
+// Type only: `priceOverride` reads `BucketSize` from here at load, so a
+// runtime import back would be a cycle.
+import type { PriceOverride } from './priceOverride'
 
 /**
  * Adding and editing a charge on one contract.
