@@ -47,6 +47,11 @@ export interface PaymentFormProps {
   invoiceCurrencies?: Readonly<Record<string, string>> | undefined
   /** Reports the chosen invoice, so the page can load its customer's wallets. */
   onInvoiceChange?: ((invoiceId: string) => void) | undefined
+  /**
+   * Connected providers a payment link can be raised through (value: provider
+   * type). Empty or omitted, "Payment link" is not offered, as in V1.
+   */
+  gateways?: readonly Option[] | undefined
 }
 
 /** Record a payment against an invoice: collected elsewhere, or run through a gateway now. */
@@ -61,6 +66,7 @@ export function PaymentForm({
   wallets,
   onInvoiceChange,
   invoiceCurrencies,
+  gateways = [],
 }: PaymentFormProps) {
   const form = useCalmForm<RecordPayment>({
     resolver: standardSchemaResolver(recordPaymentSchema) as Resolver<RecordPayment>,
@@ -68,6 +74,16 @@ export function PaymentForm({
   })
   const errors = form.formState.errors
   const methodType = form.watch('methodType')
+  const methods =
+    gateways.length > 0
+      ? [
+          ...METHODS,
+          {
+            value: PaymentMethod.PaymentLink,
+            label: PAYMENT_METHOD_LABEL[PaymentMethod.PaymentLink],
+          },
+        ]
+      : METHODS
 
   return (
     <FormPage
@@ -173,8 +189,13 @@ export function PaymentForm({
                     id={id}
                     {...field}
                     value={control.value}
-                    onValueChange={control.onChange}
-                    options={METHODS}
+                    onValueChange={(value) => {
+                      control.onChange(value)
+                      // One provider connected: it is the only place the link can go.
+                      if (value === PaymentMethod.PaymentLink && gateways.length === 1)
+                        form.setValue('gateway', gateways[0]!.value)
+                    }}
+                    options={methods}
                     disabled={isSubmitting}
                   />
                 )}
@@ -213,22 +234,51 @@ export function PaymentForm({
               )}
             </FormRow>
           ) : null}
-          <FormRow label="Process now" hint="Off leaves the payment initiated.">
-            {({ id }) => (
-              <Controller
-                control={form.control}
-                name="processNow"
-                render={({ field: control }) => (
-                  <Switch
-                    id={id}
-                    checked={control.value}
-                    onCheckedChange={control.onChange}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )}
-          </FormRow>
+          {methodType === PaymentMethod.PaymentLink ? (
+            <FormRow
+              label="Provider"
+              hint="Where the customer pays. The link opens their hosted payment page."
+              required
+              error={errors.gateway?.message}
+            >
+              {({ id, ...field }) => (
+                <Controller
+                  control={form.control}
+                  name="gateway"
+                  render={({ field: control }) => (
+                    <OptionSelect
+                      id={id}
+                      {...field}
+                      value={control.value ?? ''}
+                      onValueChange={control.onChange}
+                      options={gateways}
+                      placeholder="Choose a provider"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </FormRow>
+          ) : null}
+          {/* A link is raised at once; there is nothing to leave initiated. */}
+          {methodType === PaymentMethod.PaymentLink ? null : (
+            <FormRow label="Process now" hint="Off leaves the payment initiated.">
+              {({ id }) => (
+                <Controller
+                  control={form.control}
+                  name="processNow"
+                  render={({ field: control }) => (
+                    <Switch
+                      id={id}
+                      checked={control.value}
+                      onCheckedChange={control.onChange}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </FormRow>
+          )}
         </FormCard>
       </form>
     </FormPage>

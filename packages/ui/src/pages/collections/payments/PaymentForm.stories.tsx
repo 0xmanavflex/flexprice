@@ -131,6 +131,41 @@ export const Submits: Story = {
   },
 }
 
+/** With a provider connected, a payment can be raised as a link the customer pays online. */
+export const PaymentLink: Story = {
+  args: {
+    defaultValue: { ...PREFILLED, methodType: 'OFFLINE' },
+    gateways: [
+      { value: 'stripe', label: 'Stripe' },
+      { value: 'razorpay', label: 'Razorpay' },
+    ],
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await chooseOption(/^Method/, 'Payment link (paid online)')
+    // Nothing is left initiated: the link is raised at once.
+    await expect(canvas.queryByRole('switch', { name: /^Process now/ })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Create payment' }))
+    await expect(await canvas.findByText('Choose the payment provider')).toBeVisible()
+    await chooseOption(/^Provider/, 'Razorpay')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create payment' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ methodType: 'PAYMENT_LINK', gateway: 'razorpay' }),
+      ),
+    )
+  },
+}
+
+/** No provider connected: the method is not offered. */
+export const NoPaymentLinkWithoutProvider: Story = {
+  play: async () => {
+    await userEvent.click(screen.getByRole('combobox', { name: /^Method/ }))
+    await expect(await screen.findByRole('option', { name: /^Offline/ })).toBeVisible()
+    await expect(screen.queryByRole('option', { name: /^Payment link/ })).toBeNull()
+  },
+}
+
 export const Prefilled: Story = {
   args: { defaultValue: PREFILLED },
 }

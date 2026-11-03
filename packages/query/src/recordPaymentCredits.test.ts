@@ -24,3 +24,29 @@ describe('recording a payment from credits', () => {
     ).toBe(true)
   })
 })
+
+describe('recording a payment as a payment link', () => {
+  it('names the provider and where the customer comes back to', () => {
+    const body = toRecordPaymentRequest({
+      ...base,
+      methodType: 'PAYMENT_LINK',
+      gateway: 'stripe',
+      returnUrl: 'https://console.test/invoices/inv_1',
+      processNow: false,
+    })
+    expect(body).toMatchObject({
+      paymentMethodType: 'PAYMENT_LINK',
+      paymentGateway: 'stripe',
+      successUrl: 'https://console.test/invoices/inv_1',
+      cancelUrl: 'https://console.test/invoices/inv_1',
+      // A link is raised at once, whatever the switch said.
+      processPayment: true,
+    })
+  })
+
+  it('requires a provider', () => {
+    expect(recordPaymentSchema.safeParse({ ...base, methodType: 'PAYMENT_LINK' }).success).toBe(
+      false,
+    )
+  })
+})

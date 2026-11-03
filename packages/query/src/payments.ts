@@ -277,7 +277,21 @@ export function toRecordPaymentRequest(draft: RecordPayment): Record<string, unk
     ...(draft.methodType === 'CREDITS' && draft.walletId
       ? { paymentMethodId: draft.walletId }
       : {}),
-    processPayment: draft.processNow,
+    // A link is raised at the provider; the customer comes back to the page it was made on.
+    // V1 sends the return URLs in metadata; the request's own fields carry them too.
+    ...(draft.methodType === 'PAYMENT_LINK' && draft.gateway
+      ? {
+          paymentGateway: draft.gateway,
+          ...(draft.returnUrl
+            ? {
+                successUrl: draft.returnUrl,
+                cancelUrl: draft.returnUrl,
+                metadata: { success_url: draft.returnUrl, cancel_url: draft.returnUrl },
+              }
+            : {}),
+        }
+      : {}),
+    processPayment: draft.methodType === 'PAYMENT_LINK' ? true : draft.processNow,
   }
 }
 
