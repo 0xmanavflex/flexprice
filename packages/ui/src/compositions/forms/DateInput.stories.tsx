@@ -126,6 +126,27 @@ export const PicksADate: Story = {
   },
 }
 
+/** A date-only field stores a day: its time inputs are off, so it never turns into an instant. */
+export const DateOnlyHasNoTime: Story = {
+  args: { value: '2026-10-21' },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Start date' }))
+    await expect(await screen.findByRole('textbox', { name: 'Hours' })).toBeDisabled()
+    await expect(screen.getByRole('textbox', { name: 'Minutes' })).toBeDisabled()
+    await expect(args.onValueChange).not.toHaveBeenCalled()
+  },
+}
+
+/** Years well past a decade away stay reachable: navigation follows the field, not a fixed span. */
+export const ReachesDistantYears: Story = {
+  args: { value: '2003-06-15' },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Start date' }))
+    await userEvent.click(await screen.findByRole('button', { name: /June 20th/ }))
+    await expect(args.onValueChange).toHaveBeenCalledWith('2003-06-20')
+  },
+}
+
 /** Local 09:30 on Oct 21, 2026, as an instant: what the date-and-time stories start on. */
 const MORNING = new Date(2026, 9, 21, 9, 30).toISOString()
 

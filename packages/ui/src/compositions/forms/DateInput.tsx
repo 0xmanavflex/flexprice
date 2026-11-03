@@ -357,8 +357,9 @@ export function DateInput({
     if (!date) return onValueChange('')
     onValueChange(withTime ? at(date, hours, minutes) : toDay(date))
   }
+  // A date-only field stores a day, never an instant: its time does nothing.
   const setTime = (h: number, m: number) => {
-    if (calendarDay) onValueChange(at(calendarDay, h, m))
+    if (calendarDay && withTime) onValueChange(at(calendarDay, h, m))
   }
 
   const month = calendarDay ?? minDate
@@ -410,14 +411,16 @@ export function DateInput({
           {...(calendarDay ? { selected: calendarDay } : {})}
           {...(month ? { defaultMonth: month } : {})}
           {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
+          {...(minDate ? { min: minDate } : {})}
+          {...(maxDate ? { max: maxDate } : {})}
           onSelect={pick}
         />
         <TimeZoneRow
           zone={zone}
           named={named}
-          hours={selected ? hours : undefined}
-          minutes={selected ? minutes : undefined}
-          timeDisabled={!selected}
+          hours={selected && withTime ? hours : undefined}
+          minutes={selected && withTime ? minutes : undefined}
+          timeDisabled={!selected || !withTime}
           onZone={(next) => setPicked(next)}
           onTime={setTime}
         />
@@ -501,19 +504,30 @@ function YearMonthCalendar({
   selected,
   defaultMonth,
   disabled,
+  min,
+  max,
   onSelect,
 }: {
   selected?: Date
   defaultMonth?: Date
   disabled?: { before: Date }[] | { after: Date }[] | ({ before: Date } | { after: Date })[]
+  /** The field's own bounds; navigation never stops short of them. */
+  min?: Date
+  max?: Date
   onSelect: (date: Date | undefined) => void
 }) {
   const today = new Date()
   const [month, setMonth] = useState(defaultMonth ?? today)
   const [isYearView, setIsYearView] = useState(false)
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
-  const startDate = startOfYear(new Date(today.getFullYear() - 10, 0))
-  const endDate = endOfYear(new Date(today.getFullYear() + 10, 11))
+  // The field's bounds when it has them, else fifty years either way; a stored
+  // date outside that is still reachable.
+  const startDate = startOfYear(
+    min ?? new Date(Math.min(today.getFullYear() - 50, selected?.getFullYear() ?? Infinity), 0),
+  )
+  const endDate = endOfYear(
+    max ?? new Date(Math.max(today.getFullYear() + 50, selected?.getFullYear() ?? -Infinity), 11),
+  )
   const years = eachYearOfInterval({ start: startDate, end: endDate })
   return (
     <Calendar
