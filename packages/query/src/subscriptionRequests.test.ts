@@ -673,6 +673,17 @@ describe('contract-scoped creators', () => {
     })
   })
 
+  it('sends an add-on start when one was chosen', () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      startDate: '2026-11-03T09:30:00.000Z',
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      addon_id: 'addon_1',
+      start_date: '2026-11-03T09:30:00.000Z',
+    })
+  })
+
   it("sends an add-on's commitments keyed by its price, as the SDK serialises them", () => {
     const request = toAddAddonRequest('sub_1', {
       addonId: 'addon_1',

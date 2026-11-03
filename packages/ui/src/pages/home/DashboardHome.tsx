@@ -457,6 +457,7 @@ function CustomRangePicker({
       <PopoverContent className="w-auto p-0" align="end">
         <Calendar
           mode="range"
+          captionLayout="dropdown"
           numberOfMonths={2}
           disabled={{ after: today }}
           defaultMonth={value?.from ?? new Date(today.getFullYear(), today.getMonth() - 1, 1)}

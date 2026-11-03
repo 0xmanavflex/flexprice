@@ -180,6 +180,7 @@ function DateControls({
         <PopoverContent className="w-auto p-0" align="end">
           <Calendar
             mode="range"
+            captionLayout="dropdown"
             numberOfMonths={2}
             selected={draft}
             defaultMonth={new Date(now.getFullYear(), now.getMonth() - 1, 1)}

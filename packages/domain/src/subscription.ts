@@ -558,6 +558,8 @@ export const createSubscriptionSchema = z
         /** New prices for the add-on's own charges (`override_line_items`). */
         priceOverrides: z.array(priceOverrideSchema).optional(),
         commitments: z.array(chargeCommitmentSchema).optional(),
+        /** When this add-on starts. Blank starts it with the contract. An instant, or a day. */
+        startDate: z.string().optional(),
       }),
     ),
     // Billing configuration.
@@ -1226,6 +1228,8 @@ export interface AddContractAddon {
   /** New prices for the add-on's own charges, sent as `override_line_items`. */
   priceOverrides?: PriceOverride[]
   commitments?: ChargeCommitment[]
+  /** When the add-on starts. Blank starts it now, with the contract. */
+  startDate?: string
 }
 
 /** Apply a coupon to one contract, or replace the coupons on one of its charges. */

@@ -1289,6 +1289,7 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
           addons: draft.addons.map((addon) => ({
             addonId: addon.addonId,
             ...addonPricing(addon),
+            ...(addon.startDate ? { startDate: utcDay(addon.startDate) } : {}),
           })),
         }
       : {}),
@@ -2302,7 +2303,12 @@ export function toAddAddonRequest(
   subscriptionId: string,
   draft: AddContractAddon,
 ): FlexpriceModels.AddAddonRequest {
-  return { subscriptionId, addonId: draft.addonId, ...addonPricing(draft) }
+  return {
+    subscriptionId,
+    addonId: draft.addonId,
+    ...addonPricing(draft),
+    ...(draft.startDate ? { startDate: contractDateToInstant(draft.startDate) } : {}),
+  }
 }
 
 /** A coupon applied to one contract, or to one of its charges, as a `coupon` modification. */

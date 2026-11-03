@@ -2917,6 +2917,8 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
 export interface AddonPricing {
   priceOverrides: PriceOverride[]
   commitments: ChargeCommitment[]
+  /** When the add-on starts. Empty starts it with the contract. */
+  startDate?: string
 }
 
 /**
@@ -3097,6 +3099,23 @@ export function AddonChargesDialog({
               )}
             </div>
           )}
+          <div className="flex flex-col gap-2">
+            <LabelWithHint
+              htmlFor="addon-start"
+              hint="Leave empty to start this add-on with the contract."
+            >
+              Start date
+            </LabelWithHint>
+            <DateInput
+              id="addon-start"
+              withTime
+              clearable
+              clearLabel="Clear start date"
+              value={value.startDate ?? ''}
+              onValueChange={(startDate) => onChange({ ...value, startDate })}
+              placeholder="Starts with the contract"
+            />
+          </div>
           {error ? (
             <p role="alert" className="text-destructive text-sm">
               {error}
@@ -3182,6 +3201,7 @@ function withAddonPricing(
     name: addon.name,
     ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
     ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+    ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
   }
 }
 
@@ -3237,6 +3257,7 @@ function AddonsSection({
       currency,
       billingPeriod,
     }),
+    ...(addon.startDate ? { startDate: addon.startDate } : {}),
   })
   const available = options.filter((o) => !selected.some((a) => a.addonId === o.value))
   const optionOf = (addonId: string) => options.find((o) => o.value === addonId)

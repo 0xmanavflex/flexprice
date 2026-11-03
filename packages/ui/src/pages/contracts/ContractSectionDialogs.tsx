@@ -296,6 +296,7 @@ function AddonDialog({
           addonId,
           ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
           ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+          ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
         })
       }}
     >
