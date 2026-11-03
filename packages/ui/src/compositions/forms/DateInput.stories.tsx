@@ -120,7 +120,7 @@ export const PicksADate: Story = {
   args: { value: '2026-03-15' },
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Start date' }))
-    const day = await screen.findByRole('button', { name: /March 20/ })
+    const day = await screen.findByRole('button', { name: /March 20th/ })
     await userEvent.click(day)
     await expect(args.onValueChange).toHaveBeenCalledWith('2026-03-20')
   },
@@ -320,9 +320,11 @@ export const BareDayCalendar: StoryObj<DayCalendarProps> = {
     )
     await expect(canvas.getByRole('button', { name: /March 5/ })).toBeDisabled()
     await expect(canvas.getByRole('button', { name: /March 25/ })).toBeDisabled()
-    // Month and year menus in the caption, for jumping years back.
-    await expect(canvas.getByRole('combobox', { name: /month/i })).toBeInTheDocument()
-    await expect(canvas.getByRole('combobox', { name: /year/i })).toBeInTheDocument()
+    // The caption opens a year grid, then that year's months, for jumping years back.
+    await expect(canvas.getByRole('button', { name: /^March 2026/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
     await userEvent.click(canvas.getByRole('button', { name: /March 18/ }))
     await expect(args.onValueChange).toHaveBeenCalledWith('2026-03-18')
     await expect(canvas.getByRole('button', { name: /March 18/ })).toHaveAttribute(

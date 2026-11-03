@@ -372,7 +372,7 @@ export const CustomExpressionPlaceholder: Story = {
     const canvas = within(canvasElement)
     const before = canvasElement.querySelectorAll('textarea, input').length
     await userEvent.click(await canvas.findByRole('checkbox', { name: 'Use a custom expression' }))
-    const expression = await canvas.findByLabelText(/^Custom expression/)
+    const expression = await canvas.findByLabelText(/^Custom expression(?! docs)/)
     await expect(expression.tagName).toBe('TEXTAREA')
     await expect(expression).toHaveValue('')
     await expect(expression).toHaveAttribute('placeholder', 'duration_seconds / 60 / 100')
