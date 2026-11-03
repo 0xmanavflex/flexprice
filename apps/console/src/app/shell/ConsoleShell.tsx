@@ -24,6 +24,7 @@ import {
   ShellBreadcrumb,
   ShellCreateMenu,
   ShellDetailTrailProvider,
+  ShellPromoCard,
   ShellStrip,
   type ShellCrumb,
   type ShellDetailCrumb,
@@ -218,6 +219,18 @@ export function ConsoleShell({
         navGroups={toNavGroups(ICONS, revenueRecognition.data ? [] : ['revenue'])}
         {...(activeItemId === undefined ? {} : { activeItemId })}
         onNavigate={goTo}
+        pinned={
+          <ShellPromoCard
+            title="What's new"
+            description="Product changes, shipped."
+            dismissKey="fp.sidebar.changelog"
+            cta={{
+              label: 'View changelog',
+              onClick: () =>
+                window.open('https://docs.flexprice.io/changelog', '_blank', 'noreferrer'),
+            }}
+          />
+        }
         user={user}
         onSettings={() => goTo('settings')}
         {...(onSignOut ? { onSignOut } : {})}
