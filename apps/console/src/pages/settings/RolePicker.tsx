@@ -1,6 +1,7 @@
 import type { Role } from '@fp/domain'
 import { SUPER_ADMIN_ROLE_ID, isRoleSelected, summarizePermissions, toggleRole } from '@fp/domain'
 import { CheckboxRow } from '@fp/ui/compositions'
+import { Pill } from '@fp/ui/pages'
 
 /**
  * Choosing roles, with the one rule the domain enforces made visible.
@@ -61,5 +62,11 @@ export function RoleList({ roles, catalogue }: { roles: string[]; catalogue: Rol
 
   const name = (id: string) => catalogue.find((role) => role.id === id)?.name || id
 
-  return <span className="text-sm">{roles.map(name).join(', ')}</span>
+  return (
+    <span className="flex flex-wrap gap-1">
+      {roles.map((id) => (
+        <Pill key={id}>{name(id)}</Pill>
+      ))}
+    </span>
+  )
 }
