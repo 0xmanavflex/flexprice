@@ -19,7 +19,7 @@ import {
   type EditFeature,
   type Feature,
 } from '@fp/domain'
-import { PlusIcon, Trash2Icon } from '@ui/icons'
+import { InfoIcon, PlusIcon, Trash2Icon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
@@ -61,6 +61,8 @@ type FeatureFormProps = {
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
+  /** The API refused the custom expression. Shown on that field. */
+  expressionError?: string | null
   /** The tags a feature can be filed under. Empty disables the picker, never hides it. */
   groups?: readonly Option[]
   trail: DetailCrumb[]
@@ -317,7 +319,15 @@ function normalize(values: FormValues, mode: 'create' | 'edit', useExpression: b
 }
 
 export function FeatureForm(props: FeatureFormProps) {
-  const { mode, onCancel, isSubmitting = false, submitError = null, groups = [], trail } = props
+  const {
+    mode,
+    onCancel,
+    isSubmitting = false,
+    submitError = null,
+    expressionError = null,
+    groups = [],
+    trail,
+  } = props
   const feature = props.mode === 'edit' ? props.feature : undefined
   const isEdit = mode === 'edit'
 
@@ -598,23 +608,14 @@ export function FeatureForm(props: FeatureFormProps) {
               ? 'A CEL expression over the event. It replaces the event field, and only this is saved.'
               : 'The property on the event to aggregate.'
           }
-          error={expressionOn ? message('meter.expression') : message('meter.field')}
+          error={
+            expressionOn
+              ? (expressionError ?? message('meter.expression'))
+              : message('meter.field')
+          }
         >
           {({ id, ...field }) => (
             <div className="flex flex-col gap-3">
-              {allowsExpression(aggregationType) ? (
-                <CheckboxRow
-                  checked={useExpression}
-                  disabled={isEdit}
-                  onCheckedChange={(checked) => {
-                    setUseExpression(checked)
-                    if (checked) form.setValue('meter.field', '', { shouldDirty: true })
-                    else form.setValue('meter.expression', '', { shouldDirty: true })
-                  }}
-                >
-                  Use a custom expression
-                </CheckboxRow>
-              ) : null}
               {expressionOn ? (
                 <Textarea
                   id={id}
@@ -635,6 +636,30 @@ export function FeatureForm(props: FeatureFormProps) {
                   {...form.register('meter.field')}
                 />
               )}
+              {allowsExpression(aggregationType) ? (
+                <div className="flex items-center gap-1.5">
+                  <CheckboxRow
+                    checked={useExpression}
+                    disabled={isEdit}
+                    onCheckedChange={(checked) => {
+                      setUseExpression(checked)
+                      if (checked) form.setValue('meter.field', '', { shouldDirty: true })
+                      else form.setValue('meter.expression', '', { shouldDirty: true })
+                    }}
+                  >
+                    Use a custom expression
+                  </CheckboxRow>
+                  <a
+                    href="https://docs.flexprice.io/docs/product-catalogue/features/custom-expression"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Custom expression docs"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <InfoIcon aria-hidden className="size-3.5" />
+                  </a>
+                </div>
+              ) : null}
             </div>
           )}
         </FormRow>

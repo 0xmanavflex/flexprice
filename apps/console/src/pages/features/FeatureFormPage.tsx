@@ -8,7 +8,7 @@ import {
 import { useCreateFeature, useFeature, useGroups, useUpdateFeature } from '@fp/query'
 import { FeatureForm } from '@fp/ui/pages'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
-import { toSubmitError } from './featureMessages'
+import { expressionFieldError, toSubmitError } from './featureMessages'
 
 export type FeatureFormPageProps = {
   onCancel: () => void
@@ -56,8 +56,8 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
         trail={[{ label: 'Features', onClick: onCancel }, { label: 'Create feature' }]}
         {...formProps}
         isSubmitting={create.isPending}
-        // The API's refusal is a toast (MutationToasts); validation stays in the form.
-        submitError={null}
+        submitError={toSubmitError(create.error)}
+        expressionError={expressionFieldError(create.error)}
         onSubmit={(draft: CreateFeature) =>
           create.mutate(draft, {
             onSuccess: (created) => props.onDone((created as { id?: string }).id ?? ''),
@@ -101,6 +101,7 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
       {...formProps}
       isSubmitting={update.isPending}
       submitError={toSubmitError(update.error)}
+      expressionError={expressionFieldError(update.error)}
       onSubmit={(draft: EditFeature) =>
         update.mutate({ id: feature.id, draft }, { onSuccess: () => props.onDone(feature.id) })
       }
