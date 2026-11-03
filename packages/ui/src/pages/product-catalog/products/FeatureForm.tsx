@@ -19,7 +19,7 @@ import {
   type EditFeature,
   type Feature,
 } from '@fp/domain'
-import { InfoIcon, PlusIcon, Trash2Icon } from '@ui/icons'
+import { ArrowUpRightIcon, PlusIcon, Trash2Icon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
@@ -656,7 +656,7 @@ export function FeatureForm(props: FeatureFormProps) {
                     aria-label="Custom expression docs"
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    <InfoIcon aria-hidden className="size-3.5" />
+                    <ArrowUpRightIcon aria-hidden className="size-3.5" />
                   </a>
                 </div>
               ) : null}
