@@ -8,7 +8,6 @@ import {
   TaxRateScope,
   TaxRateStatus,
 } from '@fp/domain'
-import { statusFilterField } from './search'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -88,14 +87,11 @@ export function toTaxRateFilter(query: TaxRateQuery) {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    /*
-     * `status` is a declared parameter on `GET /taxes/rates`, so the facet is
-     * the server's. It used to narrow the fetched page instead, which left the
-     * pager counting every tax rate above the few that matched.
-     */
-    ...statusFilterField(query.statuses, Object.values(TaxRateStatus)),
   }
 }
+
+/** Enough to hold every tax rate an account keeps, when the status facet is on. */
+const STATUS_SCAN_LIMIT = 500
 
 export interface TaxRatePage {
   taxRates: TaxRate[]
@@ -103,6 +99,30 @@ export interface TaxRatePage {
 }
 
 export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Promise<TaxRatePage> {
+  /*
+   * The Status facet reads what the row shows: archived is the rate's
+   * `taxRateStatus` (what Archive and Edit write) before the record's own
+   * `status`, which an update cannot change. `GET /taxes/rates` only filters on
+   * the latter, so a republished rate would sit under Archived. With the facet
+   * on, every rate is read and the facet, search and page are applied here, so
+   * the rows, their labels and the total agree.
+   */
+  const wanted = new Set(query.statuses)
+  if (wanted.size > 0 && wanted.size < Object.values(TaxRateStatus).length) {
+    const response = await call(() =>
+      client.taxRates.getTaxRates({ limit: STATUS_SCAN_LIMIT, offset: 0 }),
+    )
+    const search = query.search.trim().toLowerCase()
+    const matching = (response.items ?? [])
+      .map((item) => toTaxRate(item as TaxRateWire))
+      .filter((taxRate) => wanted.has(taxRate.status))
+      .filter(
+        (taxRate) => !search || `${taxRate.name} ${taxRate.code}`.toLowerCase().includes(search),
+      )
+    const start = (query.page - 1) * query.pageSize
+    return { taxRates: matching.slice(start, start + query.pageSize), total: matching.length }
+  }
+
   const response = await call(() => client.taxRates.getTaxRates(toTaxRateFilter(query)))
   const taxRates = (response.items ?? []).map((item) => toTaxRate(item as TaxRateWire))
 
