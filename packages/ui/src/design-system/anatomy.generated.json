@@ -635,7 +635,6 @@
         "CheckoutReturnView",
         "ConnectIntegrationSheet",
         "ConnectorCard",
-        "ContractIntegrations",
         "CustomerWalletView",
         "DashboardHome",
         "EventDetailSheet",
@@ -1334,6 +1333,7 @@
         "CopyEmail",
         "CopyId",
         "CopyValue",
+        "CustomerWalletView",
         "DetailHeaderCluster",
         "DetailMoreMenu",
         "DetailTabs",
@@ -1804,7 +1804,6 @@
       "file": "src/pages/contracts/ContractIntegrations.tsx",
       "layer": "surface",
       "composes": [
-        "ArrowUpRightIcon",
         "Composer",
         "ConfirmDialog",
         "CopyIcon",
@@ -1847,6 +1846,7 @@
         "FormDialog",
         "LabelWithHint",
         "OptionSelect",
+        "PlusIcon",
         "TaxDialog"
       ],
       "usedBy": [
@@ -1957,6 +1957,7 @@
         "PriceUnitGrid",
         "Properties",
         "RadioRows",
+        "RelatedCard",
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
@@ -2485,6 +2486,7 @@
       "composes": [
         "AppFailure",
         "ArrowUpRightIcon",
+        "CheckIcon",
         "ChoiceCards",
         "Composer",
         "ConfirmDialog",
@@ -2495,6 +2497,7 @@
         "FormDialog",
         "InfoHint",
         "LabelWithHint",
+        "LinkIcon",
         "LoadingRows",
         "MetadataCard",
         "MinusIcon",
@@ -5077,6 +5080,7 @@
       "usedBy": [
         "CustomerDetail",
         "CustomerGrid",
+        "CustomerWalletView",
         "InvoiceDetailView",
         "ShellSearch",
         "TaxRateGrid"
@@ -6338,6 +6342,7 @@
         "ChargeTable",
         "ConnectionExports",
         "ContractIntegrations",
+        "ContractSectionDialogs",
         "CostSheetGrid",
         "CouponGrid",
         "CreditGrantTable",
@@ -6807,6 +6812,7 @@
       "layer": "composition",
       "composes": [
         "ArrowUpRightIcon",
+        "CopyIcon",
         "Section"
       ],
       "usedBy": [
