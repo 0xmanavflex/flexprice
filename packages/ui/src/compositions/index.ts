@@ -127,6 +127,7 @@ export type { SubTabQuery, SubTabStateProps } from './detail/SubTabState'
 export { DetailBreadcrumb, DetailShell, DetailShellProvenance } from './detail/DetailShell'
 export type { DetailCrumb, DetailShellProps } from './detail/DetailShell'
 export { ConfirmDialog, ConfirmDialogProvenance } from './feedback/ConfirmDialog'
+export { PaymentLink, PaymentLinkProvenance } from './feedback/PaymentLink'
 export type { ConfirmDialogProps } from './feedback/ConfirmDialog'
 
 export { FormDialog, FormDialogProvenance } from './forms/FormDialog'

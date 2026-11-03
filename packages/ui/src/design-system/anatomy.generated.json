@@ -5942,6 +5942,13 @@
       "usedBy": [],
       "story": "./src/pages/collections/payments/PaymentGrid.stories.tsx"
     },
+    "PaymentLink": {
+      "file": "src/compositions/feedback/PaymentLink.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/PaymentLink.stories.tsx"
+    },
     "PaymentMethodsCard": {
       "file": "src/components/blocks/solution-billing-4/components/payment-methods-card.tsx",
       "layer": "vendor/blocks",
@@ -9104,6 +9111,13 @@
         "GuidedEmptyState"
       ]
     },
+    "./src/compositions/feedback/PaymentLink.stories.tsx": {
+      "title": "Building blocks/Feedback & states/PaymentLink",
+      "component": "PaymentLink",
+      "uses": [
+        "PaymentLink"
+      ]
+    },
     "./src/compositions/feedback/SceneIllustration.stories.tsx": {
       "title": "Building blocks/Feedback & states/SceneIllustration",
       "component": "SceneIllustration",
@@ -11335,7 +11349,8 @@
         "ConfirmDialog",
         "LoadingRows",
         "PageBody",
-        "PaymentForm"
+        "PaymentForm",
+        "PaymentLink"
       ]
     },
     "PaymentListPage": {

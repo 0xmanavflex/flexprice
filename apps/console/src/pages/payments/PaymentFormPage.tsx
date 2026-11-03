@@ -8,7 +8,7 @@ import {
   useRecordPayment,
 } from '@fp/query'
 import { PaymentForm, toast } from '@fp/ui/pages'
-import { ConfirmDialog, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { ConfirmDialog, LoadingRows, PageBody, PaymentLink } from '@fp/ui/compositions'
 
 export interface PaymentFormPageProps {
   /** Start with this invoice chosen and its amount due filled in. */
@@ -140,15 +140,8 @@ export function PaymentFormPage({ invoiceId, onCancel, onDone }: PaymentFormPage
         title="Payment link ready"
         description={
           <>
-            Send this link to the customer. The invoice is paid once they complete it.{' '}
-            <a
-              href={link?.url ?? '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground font-mono break-all underline"
-            >
-              {link?.url}
-            </a>
+            Send this link to the customer. The invoice is paid once they complete it.
+            <PaymentLink url={link?.url} />
           </>
         }
         confirmLabel="Copy link"
