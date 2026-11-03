@@ -47,6 +47,7 @@ function detailPageLabel(listLabel: string): string {
     Tags: 'Tag details',
     'Cost sheets': 'Cost sheet details',
     Webhooks: 'Webhook details',
+    Taxes: 'Tax rate details',
   }
   return known[listLabel] ?? `${listLabel.replace(/s$/, '')} details`
 }

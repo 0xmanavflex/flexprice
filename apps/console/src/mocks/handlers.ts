@@ -6036,6 +6036,10 @@ export const handlers = [
     taxRates.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
+  http.get(`${BASE}/taxes/rates/:id`, ({ params }) => {
+    const rate = taxRates.find((row) => row['id'] === String(params['id']))
+    return rate ? HttpResponse.json(rate) : new HttpResponse(null, { status: 404 })
+  }),
   http.put(`${BASE}/taxes/rates/:id`, async ({ request, params }) =>
     patchRow(taxRates, String(params['id']), await readBody(request)),
   ),

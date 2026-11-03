@@ -358,6 +358,7 @@ export {
   fetchTaxRates,
   toTaxRate,
   toTaxRateFilter,
+  useTaxRate,
   useTaxRates,
   toCreateTaxRateRequest,
   toUpdateTaxRateRequest,

@@ -137,6 +137,20 @@ export function useTaxRates(
   })
 }
 
+/** One tax rate, by id: `GET /taxes/rates/{id}`, for its detail page. */
+export function useTaxRate(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.taxRates.detail(id),
+    queryFn: async ({ signal }) =>
+      toTaxRate(
+        (await call((options) => client.taxRates.getTaxRate(id, options), signal)) as TaxRateWire,
+      ),
+    enabled: Boolean(id),
+  })
+}
+
 /** Domain draft out, `CreateTaxRateRequest` in. Only percentage rates are offered. */
 export function toCreateTaxRateRequest(draft: CreateTaxRate): Record<string, unknown> {
   return {

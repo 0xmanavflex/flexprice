@@ -11,6 +11,8 @@ export interface TaxListPageProps {
   onQueryChange: (query: TaxRateQuery) => void
   onCreateTaxRate: () => void
   onEditTaxRate: (taxRate: TaxRate) => void
+  /** Opens a rate's detail page, from its row or its View action. */
+  onOpenTaxRate?: (taxRate: TaxRate) => void
 }
 
 /**
@@ -26,6 +28,7 @@ export function TaxListPage({
   onQueryChange,
   onCreateTaxRate,
   onEditTaxRate,
+  onOpenTaxRate,
 }: TaxListPageProps) {
   const taxRates = useTaxRates(query)
   const remove = useDeleteTaxRate()
@@ -68,6 +71,7 @@ export function TaxListPage({
             onQueryChange={onQueryChange}
             onCreate={onCreateTaxRate}
             onEdit={onEditTaxRate}
+            {...(onOpenTaxRate ? { onTaxRateClick: onOpenTaxRate } : {})}
             onDelete={setDeleting}
             onClearFilters={clearFilters}
           />

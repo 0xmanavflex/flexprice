@@ -11599,6 +11599,21 @@
         "TaxRateGrid"
       ]
     },
+    "TaxRateDetailPage": {
+      "file": "apps/console/src/pages/taxes/TaxRateDetailPage.tsx",
+      "pattern": "Detail",
+      "route": "/taxes/$taxRateId",
+      "uses": [
+        "ArchiveIcon",
+        "CatalogDetailFrame",
+        "CatalogStatusBadge",
+        "ConfirmDialog",
+        "EditableCard",
+        "MetadataCard",
+        "PencilIcon",
+        "Pill"
+      ]
+    },
     "UsageSyncListPage": {
       "file": "apps/console/src/pages/usage-syncs/UsageSyncListPage.tsx",
       "pattern": "List",
