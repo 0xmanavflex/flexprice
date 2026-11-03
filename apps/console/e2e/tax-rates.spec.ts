@@ -105,8 +105,12 @@ test.describe('a tax rate detail page', () => {
     // Archive is a status change (PUT), never a delete.
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/taxes\/rates\/[^/]+$/))
     await page.getByRole('button', { name: 'Archive tax rate' }).click()
-    expect((await request).postDataJSON()).toMatchObject({ tax_rate_status: 'INACTIVE' })
+    const sent = await request
+    expect(sent.postDataJSON()).toMatchObject({ tax_rate_status: 'INACTIVE' })
+    expect((await sent.response())?.ok()).toBe(true)
+    // The page stays, and the refreshed rate reads as archived.
     await expect(page).toHaveURL(/\/taxes\/tax_[^/]+$/)
+    await expect(page.getByText('Archived', { exact: true }).first()).toBeVisible()
 
     // An archived rate can still be opened in Edit, to publish it again.
     await page.getByRole('button', { name: 'Tax rate actions' }).click()

@@ -49,14 +49,18 @@ export function toTaxRate(wire: TaxRateWire): TaxRate {
   const scope = TAX_RATE_SCOPES.has(wire.scope ?? '')
     ? (wire.scope as TaxRateScope)
     : TaxRateScope.Internal
-  // An inactive rate is archived, whatever the record's own status says: that
-  // is the field archiving and the edit form write.
+  // `taxRateStatus` is the field archiving and the edit form write, so when it
+  // is present it decides, both ways: the record's own `status` is not changed
+  // by an update and would otherwise keep a republished rate archived.
+  const rateStatus = wire.taxRateStatus?.toUpperCase()
   const status =
-    wire.taxRateStatus?.toUpperCase() === 'INACTIVE'
+    rateStatus === 'INACTIVE'
       ? TaxRateStatus.Archived
-      : TAX_RATE_STATUSES.has(wire.status ?? '')
-        ? (wire.status as TaxRateStatus)
-        : TaxRateStatus.Published
+      : rateStatus === 'ACTIVE'
+        ? TaxRateStatus.Published
+        : TAX_RATE_STATUSES.has(wire.status ?? '')
+          ? (wire.status as TaxRateStatus)
+          : TaxRateStatus.Published
 
   return {
     id: wire.id ?? '',

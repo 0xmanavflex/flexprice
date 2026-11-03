@@ -68,5 +68,10 @@ describe('tax rate archive status', () => {
     expect(toTaxRate({ id: 't', status: 'published', taxRateStatus: 'ACTIVE' }).status).toBe(
       'published',
     )
+    // Republished: the record's own status stays archived, the rate's flag wins.
+    expect(toTaxRate({ id: 't', status: 'archived', taxRateStatus: 'ACTIVE' }).status).toBe(
+      'published',
+    )
+    expect(toTaxRate({ id: 't', status: 'archived' }).status).toBe('archived')
   })
 })
