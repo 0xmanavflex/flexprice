@@ -108,9 +108,6 @@ export function AppShell({
   strip,
   children,
 }: AppShellProps) {
-  // The pinned nav group already takes the free space above itself; a second
-  // `mt-auto` would split that space and leave a gap between the two.
-  const hasPinnedGroup = navGroups.some((group) => group.pinned)
   return (
     <SidebarProvider className={SHELL_CLASSES}>
       {/*
@@ -147,19 +144,9 @@ export function AppShell({
             <ShellNav
               groups={navGroups}
               {...(activeItemId === undefined ? {} : { activeItemId })}
+              {...(pinned ? { pinned } : {})}
               onNavigate={onNavigate}
             />
-
-            {pinned ? (
-              <div
-                className={cn(
-                  'px-2 pt-2 pb-2 in-data-[state=collapsed]:hidden',
-                  !hasPinnedGroup && 'mt-auto',
-                )}
-              >
-                {pinned}
-              </div>
-            ) : null}
           </SidebarContent>
 
           <SidebarFooter>
