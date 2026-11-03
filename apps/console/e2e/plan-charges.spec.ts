@@ -23,7 +23,7 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await page.getByRole('tab', { name: 'Information' }).click()
     await expect(page).toHaveURL(/[?&]tab=information/)
     await page.reload()
-    await expect(page.getByText('What customers see', { exact: true })).toBeVisible()
+    await expect(page.getByRole('complementary', { name: 'Plan preview' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Plan details', exact: true })).toBeVisible()
     await page.getByRole('tab', { name: 'Overview' }).click()
     await page.getByRole('button', { name: 'Add charge', exact: true }).click()

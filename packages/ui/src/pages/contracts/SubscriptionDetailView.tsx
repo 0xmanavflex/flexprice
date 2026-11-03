@@ -82,6 +82,8 @@ import {
   type SubscriptionUsageCharge,
   type TenantFeatureUsage,
   emptyAlertSettingConfig,
+  chargeHasEnded,
+  liveChargeCount,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
@@ -699,7 +701,7 @@ export function SubscriptionDetailView({
       : undefined
   const editableChargeSections = (charge: Charge): ChargeSection[] => {
     const line = chargeRows.lineOf.get(charge.id)
-    if (!canEditCharges || charge.endDate || !line || !canEditLine(line)) return []
+    if (!canEditCharges || chargeHasEnded(charge) || !line || !canEditLine(line)) return []
     const sections: ChargeSection[] =
       line.kind === 'fixed'
         ? [ChargeSection.Price]
@@ -834,7 +836,7 @@ export function SubscriptionDetailView({
     const lineCoupon = (coupons?.data ?? []).find(
       (coupon) => coupon.active && coupon.lineItemId === line.id,
     )
-    const open = !charge.endDate && canEditCharges && canEditLine(line)
+    const open = !chargeHasEnded(charge) && canEditCharges && canEditLine(line)
     const hasCommitment = Boolean(chargeRows.details.get(charge.id)?.commitment)
     // The same gate as the section menu: an existing setting to edit, or none
     // once the alerts have loaded, so a slow read never offers a second one.
@@ -1043,9 +1045,7 @@ export function SubscriptionDetailView({
             {
               value: 'charges',
               label: 'Charges',
-              ...(lines.data
-                ? { count: chargeRows.charges.filter((charge) => !charge.endDate).length }
-                : {}),
+              ...(lines.data ? { count: liveChargeCount(chargeRows.charges) } : {}),
             },
             // { value: 'usage', label: 'Usage' },
             {

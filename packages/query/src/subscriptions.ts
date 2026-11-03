@@ -17,6 +17,7 @@ import {
   BucketSize as BucketSizes,
   type BucketSize,
   CommitmentKind,
+  type Charge,
   type CancelSubscription,
   type PauseSubscription,
   type ResumeSubscription,
@@ -118,7 +119,9 @@ import { sortWithTieBreak } from './listSort'
 export interface SubscriptionWire {
   id?: string | undefined
   customerId?: string | undefined
-  customer?: { name?: string | undefined; email?: string | undefined } | undefined
+  customer?:
+    | { name?: string | undefined; email?: string | undefined; externalId?: string | undefined }
+    | undefined
   planId?: string | undefined
   plan?: { name?: string | undefined } | undefined
   subscriptionStatus?: string | undefined
@@ -158,6 +161,69 @@ function realDate(value: Date | undefined | null): Date | null {
   return value && value.getUTCFullYear() > 1 ? value : null
 }
 
+/** The contract's customer as a person reads it: name, then email, then their own id. */
+function customerNameOf(wire: SubscriptionWire): string {
+  return wire.customer?.name || wire.customer?.email || wire.customer?.externalId || ''
+}
+
+/**
+ * Fills in the customer of each contract the search returned without one.
+ *
+ * `expand: 'customer'` resolves every row's customer in one lookup, and a row
+ * whose customer that lookup missed comes back with no `customer` at all: the
+ * row then showed a raw `cust_…` id among names. The rows that need it get
+ * their customers in one `POST /customers/search` by id; anything that still
+ * cannot be named keeps the id, so no row is ever blank.
+ */
+export async function withCustomerNames(
+  client: Flexprice,
+  wires: readonly SubscriptionWire[],
+  signal?: AbortSignal,
+): Promise<SubscriptionWire[]> {
+  const missing = [
+    ...new Set(
+      wires
+        .filter((wire) => wire.customerId && !customerNameOf(wire))
+        .map((wire) => wire.customerId as string),
+    ),
+  ]
+  if (missing.length === 0) return [...wires]
+  let found: Map<string, NonNullable<SubscriptionWire['customer']>>
+  try {
+    const response = await call(
+      (options) =>
+        client.customers.queryCustomer(
+          { customerIds: missing, limit: missing.length, offset: 0 },
+          options,
+        ),
+      signal,
+    )
+    found = new Map(
+      (response.items ?? []).flatMap((item) =>
+        item.id
+          ? [
+              [
+                item.id,
+                {
+                  name: item.name,
+                  email: item.email,
+                  externalId: item.externalId,
+                },
+              ] as const,
+            ]
+          : [],
+      ),
+    )
+  } catch {
+    // The names are a nicety: the list still loads, with the ids it had.
+    return [...wires]
+  }
+  return wires.map((wire) => {
+    const customer = wire.customerId ? found.get(wire.customerId) : undefined
+    return customer && !customerNameOf(wire) ? { ...wire, customer } : wire
+  })
+}
+
 export function toSubscription(wire: SubscriptionWire): Subscription {
   // Known statuses pass through; everything else: the API's `draft`, and any
   // value this build has not learned: collapses to Incomplete, the state a
@@ -170,7 +236,7 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
     id: wire.id ?? '',
     customerId: wire.customerId ?? '',
     // Resolved here so no cell has to fall back, and no grid joins data.
-    customerName: wire.customer?.name || wire.customer?.email || wire.customerId || 'Unknown',
+    customerName: customerNameOf(wire) || wire.customerId || 'Unknown',
     planId: wire.planId ?? '',
     planName: wire.plan?.name || wire.planId || '—',
     status,
@@ -395,6 +461,23 @@ function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
   }
 }
 
+/**
+ * A contract charge is in effect for as long as its line is, not its price.
+ *
+ * The embedded price carries the plan price's own window: a plan price that
+ * was replaced on the plan has an end date even while this contract's line
+ * still bills it. Read off the price, that end date made a live charge look
+ * ended, so it was left out of the charge count and could not be edited. The
+ * line's dates are the contract's answer, so the charge takes them.
+ */
+function lineDated(wire: SubscriptionLineWire, charge: Charge): Charge {
+  return {
+    ...charge,
+    startDate: realDate(wire.startDate) ?? charge.startDate,
+    endDate: realDate(wire.endDate),
+  }
+}
+
 export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): SubscriptionLine {
   const name = wire.displayName || wire.planDisplayName || wire.meterDisplayName || 'Charge'
   return {
@@ -422,20 +505,23 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
      * Null when the API sent no price, which is a line that bills nothing.
      */
     charge: wire.price
-      ? toCharge({
-          ...wire.price,
-          id: wire.priceId ?? wire.price.id,
-          /*
-           * The line's name, not the price's.
-           *
-           * A price on a plan is often unnamed: what a contract calls the
-           * charge comes from `plan_display_name` or the meter, both of which
-           * are on the line and neither of which is on the price. Reusing the
-           * name the line already worked out keeps one answer to "what is this
-           * charge called" instead of two that disagree.
-           */
-          displayName: name,
-        })
+      ? lineDated(
+          wire,
+          toCharge({
+            ...wire.price,
+            id: wire.priceId ?? wire.price.id,
+            /*
+             * The line's name, not the price's.
+             *
+             * A price on a plan is often unnamed: what a contract calls the
+             * charge comes from `plan_display_name` or the meter, both of which
+             * are on the line and neither of which is on the price. Reusing the
+             * name the line already worked out keeps one answer to "what is this
+             * charge called" instead of two that disagree.
+             */
+            displayName: name,
+          }),
+        )
       : null,
     /*
      * `parent_price_id` is set when a subscription overrides a plan price, so
@@ -580,9 +666,12 @@ export async function fetchSubscriptions(
       client.subscriptions.querySubscription(toSubscriptionFilter(query) as never, options),
     signal,
   )
-  const subscriptions = (response.items ?? []).map((item) =>
-    toSubscription(item as SubscriptionWire),
+  const wires = await withCustomerNames(
+    client,
+    (response.items ?? []) as SubscriptionWire[],
+    signal,
   )
+  const subscriptions = wires.map(toSubscription)
 
   // Search is not a server-side filter, so it is applied on the page. Status is
   // re-checked here too, which keeps the page's filter exact while the server
@@ -642,7 +731,12 @@ export function useInheritedContracts(parentId: string) {
           ),
         signal,
       )
-      return (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
+      const wires = await withCustomerNames(
+        client,
+        (response.items ?? []) as SubscriptionWire[],
+        signal,
+      )
+      return wires.map(toSubscription)
     },
     enabled: parentId.length > 0,
   })
@@ -703,6 +797,66 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
       throw new Error('Too many contracts to count')
     },
     enabled: ids.length > 0,
+    staleTime: 30_000,
+  })
+}
+
+/** A contract a new one can be created under, as the parent picker lists it. */
+export interface ParentContractCandidate {
+  id: string
+  customerId: string
+  customerName: string
+  planName: string
+}
+
+/**
+ * The contracts that can be a parent: running ones (active or trialing) that
+ * do not sit under a parent themselves, since a child cannot have children.
+ */
+export function toParentContractCandidates(
+  contracts: readonly SubscriptionWire[],
+): ParentContractCandidate[] {
+  return contracts
+    .filter((contract) => contract.id && !contract.parentSubscriptionId)
+    .map((contract) => {
+      const row = toSubscription(contract)
+      return {
+        id: row.id,
+        customerId: row.customerId,
+        customerName: row.customerName,
+        planName: row.planName,
+      }
+    })
+}
+
+/**
+ * Contracts a new contract can sit under (`inheritance.parent_subscription_id`):
+ * the first page of running contracts, with their customer and plan named.
+ */
+export function useParentContractCandidates(enabled = true) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.list({ parentCandidates: true }),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.subscriptions.querySubscription(
+            {
+              subscriptionStatus: ['active', 'trialing'],
+              expand: 'customer,plan',
+              limit: 100,
+              offset: 0,
+            },
+            options,
+          ),
+        signal,
+      )
+      return toParentContractCandidates(
+        await withCustomerNames(client, (response.items ?? []) as SubscriptionWire[], signal),
+      )
+    },
+    enabled,
     staleTime: 30_000,
   })
 }
@@ -1146,9 +1300,15 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
     ...(draft.draft ? { subscriptionStatus: 'draft' } : {}),
     // Who pays: invoices routed to another customer, and the customers that
     // inherit this contract. Both are by external id, as the API takes them.
-    ...(draft.invoicingCustomerExternalId || draft.inheritedCustomerExternalIds.length > 0
+    ...(draft.invoicingCustomerExternalId ||
+    draft.inheritedCustomerExternalIds.length > 0 ||
+    draft.parentSubscriptionId
       ? {
           inheritance: {
+            // Under a parent contract (the customer hierarchy): by contract id.
+            ...(draft.parentSubscriptionId
+              ? { parentSubscriptionId: draft.parentSubscriptionId }
+              : {}),
             ...(draft.invoicingCustomerExternalId
               ? { invoicingCustomerExternalId: draft.invoicingCustomerExternalId }
               : {}),

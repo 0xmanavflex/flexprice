@@ -182,6 +182,16 @@ describe('toCreateSubscriptionRequest', () => {
     expect(parsed['inheritance']).toEqual({ invoicing_customer_external_id: 'payer_ext' })
   })
 
+  it('puts a contract under its parent contract by id', () => {
+    const request = toCreateSubscriptionRequest({ ...base, parentSubscriptionId: 'subs_parent' })
+    expect(request['inheritance']).toEqual({ parentSubscriptionId: 'subs_parent' })
+    const parsed = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<
+      string,
+      unknown
+    >
+    expect(parsed['inheritance']).toEqual({ parent_subscription_id: 'subs_parent' })
+  })
+
   it('names the inherited customers alone, beside a commitment, as V1 sends them', () => {
     // The API refuses `invoicing_customer_external_id` beside inherited
     // customers, so a parent contract sends only the children: the contract's

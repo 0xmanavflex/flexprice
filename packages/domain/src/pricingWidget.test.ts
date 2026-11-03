@@ -164,8 +164,49 @@ describe('pricing widget', () => {
   })
 })
 
+describe('pricing widget fees by model', () => {
+  it('prices a tiered recurring fee from its floor, not as a $0 flat fee', () => {
+    const [card] = pricingCards({
+      plans: [plan('plan_t', 'Tiered')],
+      chargesByPlan: new Map([
+        [
+          'plan_t',
+          [
+            charge('plan_t', { amount: '10' }),
+            {
+              ...charge('plan_t', {
+                amount: '',
+                billingModel: BillingModel.Tiered,
+                tiers: [{ upTo: 5, unitAmount: '2', flatAmount: '30' }],
+              } as Partial<Charge>),
+              id: 'tiered',
+            },
+          ],
+        ],
+      ]),
+      entitlements: [],
+      creditGrantsByPlan: new Map(),
+      selection: { period: BillingPeriod.Monthly, currency: 'USD' },
+      now: NOW,
+    })
+    expect(card?.price).toBe('from $42')
+  })
+
+  it('carries the plan description to the card', () => {
+    const [card] = pricingCards({
+      plans: [{ ...plan('plan_starter', 'Starter'), description: 'For small teams' }],
+      chargesByPlan,
+      entitlements: [],
+      creditGrantsByPlan: new Map(),
+      selection: { period: BillingPeriod.Monthly, currency: 'USD' },
+      now: NOW,
+    })
+    expect(card?.description).toBe('For small teams')
+  })
+})
+
 describe('plan preview', () => {
-  it('reads a plan as its widget card does, with its usage charges', () => {
+  it('reads a plan as its widget card does, saying usage bills on top without listing it', () => {
     const preview = pricingPreview({
       plan: plan('plan_pro', 'Pro'),
       charges: chargesByPlan.get('plan_pro')!,
@@ -174,7 +215,8 @@ describe('plan preview', () => {
       now: NOW,
     })
     expect(preview).toMatchObject({ name: 'Pro', price: '$49', per: 'month', hasUsage: true })
-    expect(preview?.usage.map((line) => line.price)).toEqual(['$0.01/unit'])
+    // Usage charges are not listed: a plan can meter thousands.
+    expect(preview).not.toHaveProperty('usage')
   })
 
   it('has nothing to show before the plan has a charge', () => {

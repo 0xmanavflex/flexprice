@@ -100,6 +100,33 @@ describe('unset Go times', () => {
   })
 })
 
+describe('contract charge dates', () => {
+  it('dates the charge by its line, so a replaced plan price still counts while the line bills', () => {
+    const priceEnded = new Date('2026-01-01T00:00:00Z')
+    const lineStart = new Date('2026-02-01T00:00:00Z')
+    const line = toSubscriptionLine({
+      id: 'line_1',
+      priceId: 'price_1',
+      priceType: 'USAGE',
+      startDate: lineStart,
+      price: { id: 'price_1', amount: '1', currency: 'usd', endDate: priceEnded } as never,
+    })
+    expect(line.charge?.endDate).toBeNull()
+    expect(line.charge?.startDate).toEqual(lineStart)
+  })
+
+  it('carries a line end date onto its charge', () => {
+    const lineEnd = new Date('2027-01-01T00:00:00Z')
+    const line = toSubscriptionLine({
+      id: 'line_2',
+      priceId: 'price_2',
+      endDate: lineEnd,
+      price: { id: 'price_2', amount: '10', currency: 'usd' } as never,
+    })
+    expect(line.charge?.endDate).toEqual(lineEnd)
+  })
+})
+
 describe('subscription detail additions', () => {
   it('reads commitment, trial start and latest invoice', () => {
     const detail = toSubscriptionDetail({

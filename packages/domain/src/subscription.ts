@@ -437,6 +437,11 @@ export const INHERITANCE_WITH_BILLING_CUSTOMER =
 export const INHERITANCE_WITH_THRESHOLD =
   'An auto-invoice threshold cannot be used on a contract with inherited customers. Clear it, or remove the inherited customers.'
 
+export const PARENT_WITH_BILLING_CUSTOMER =
+  'A contract under a parent is invoiced through the parent. Set the billing customer to Same customer, or clear the parent contract.'
+export const PARENT_WITH_INHERITED =
+  'A contract under a parent cannot have inherited customers of its own. Remove them, or clear the parent contract.'
+
 /**
  * Why a customer cannot inherit a contract, as the API decides it:
  * - `OwnContract`: it has a contract of its own (active, trialing or draft)
@@ -587,6 +592,14 @@ export const createSubscriptionSchema = z
      * (`inheritance.external_customer_ids_to_inherit_subscription`).
      */
     inheritedCustomerExternalIds: z.array(z.string().min(1)),
+    /**
+     * The parent contract this one sits under, for a customer hierarchy
+     * (`inheritance.parent_subscription_id`): its invoices are grouped into the
+     * parent's. Empty for a contract of its own. The API refuses it beside a
+     * billing customer or inherited customers: a child is not also a payer or
+     * a parent.
+     */
+    parentSubscriptionId: z.string(),
   })
   .superRefine((value, ctx) => {
     // A rate is above zero, and a window ends after it starts.
@@ -657,6 +670,24 @@ export const createSubscriptionSchema = z
           ? 'Choose a date on or after the contract start date'
           : 'The contract starts today, so choose today or a later date',
       })
+    }
+    // A contract under a parent is billed through it, so it can neither send
+    // its invoices to another customer nor be a parent itself.
+    if (value.parentSubscriptionId) {
+      if (value.invoicingCustomerExternalId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['parentSubscriptionId'],
+          message: PARENT_WITH_BILLING_CUSTOMER,
+        })
+      }
+      if (value.inheritedCustomerExternalIds.length > 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['parentSubscriptionId'],
+          message: PARENT_WITH_INHERITED,
+        })
+      }
     }
     // Customers that inherit a contract are billed through its own customer, so
     // the API takes either inherited customers or another billing customer,
@@ -734,6 +765,7 @@ export function emptySubscription(): CreateSubscription {
     draft: false,
     invoicingCustomerExternalId: '',
     inheritedCustomerExternalIds: [],
+    parentSubscriptionId: '',
   }
 }
 

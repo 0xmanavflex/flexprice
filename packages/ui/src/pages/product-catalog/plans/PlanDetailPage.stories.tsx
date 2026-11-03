@@ -330,11 +330,14 @@ export const PreviewIsACardThatJumps: Story = {
     const canvas = within(canvasElement)
     const preview = await canvas.findByRole('complementary', { name: 'Plan preview' })
 
-    // The ids come from each table's own Section heading.
-    await expect(within(preview).getByRole('link', { name: 'Usage' })).toHaveAttribute(
-      'href',
-      '#section-charges',
-    )
+    // The ids come from each table's own Section heading. The price goes to
+    // Charges; usage charges are not listed, so there is no Usage heading.
+    await expect(within(preview).queryByRole('link', { name: 'Usage' })).toBeNull()
+    await expect(
+      within(preview)
+        .getAllByRole('link')
+        .some((link) => link.getAttribute('href') === '#section-charges'),
+    ).toBe(true)
     await expect(within(preview).getByRole('link', { name: 'Included' })).toHaveAttribute(
       'href',
       '#section-entitlements',

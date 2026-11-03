@@ -13,6 +13,7 @@ import {
   useFeaturesByMeters,
   useFxRates,
   useInheritanceBlocks,
+  useParentContractCandidates,
   usePlanEntitlements,
   usePlans,
   usePrices,
@@ -167,6 +168,18 @@ export function SubscriptionFormPage({
     chosenCustomer,
     customerOptions.filter((c) => c.externalId).map((c) => c.value),
   )
+  // Contracts this one can sit under, for a customer hierarchy.
+  const parentCandidates = useParentContractCandidates()
+  const parentContracts = useMemo(
+    () =>
+      (parentCandidates.data ?? []).map((contract) => ({
+        value: contract.id,
+        label: `${contract.customerName} · ${contract.planName}`,
+        hint: contract.id,
+        customerId: contract.customerId,
+      })),
+    [parentCandidates.data],
+  )
   const nameOf = (externalId: string) =>
     customerOptions.find((c) => c.externalId === externalId)?.label ?? externalId
   const planOptions = useMemo(
@@ -180,6 +193,7 @@ export function SubscriptionFormPage({
       plans={planOptions}
       customerLocked={customerId !== undefined}
       {...(inheritanceBlocks.data ? { inheritanceBlocks: inheritanceBlocks.data } : {})}
+      parentContracts={parentContracts}
       {...(customerId ? { defaultValue: { customerId } } : {})}
       plan={
         planId
