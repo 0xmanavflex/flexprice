@@ -167,10 +167,25 @@ export function useTaxRates(
   } = {},
 ) {
   const client = useFlexprice()
+  // With the status facet on, every rate is scanned: cache that scan once per
+  // search and status, and cut each page from it, so paging makes no request.
+  const scanned =
+    query.statuses.length > 0 && query.statuses.length < Object.values(TaxRateStatus).length
+  const statuses = [...query.statuses].sort()
+
+  const { page: _page, pageSize: _pageSize, ...unpaged } = query
 
   return useQuery({
-    queryKey: queryKeys.taxRates.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchTaxRates(client, query),
+    queryKey: scanned
+      ? queryKeys.taxRates.list({ ...unpaged, statuses, scan: true })
+      : queryKeys.taxRates.list({ ...query, statuses }),
+    queryFn: () =>
+      fetchTaxRates(client, scanned ? { ...query, page: 1, pageSize: Infinity } : query),
+    select: (data: TaxRatePage): TaxRatePage => {
+      if (!scanned) return data
+      const start = (query.page - 1) * query.pageSize
+      return { taxRates: data.taxRates.slice(start, start + query.pageSize), total: data.total }
+    },
     placeholderData: (previous) => previous,
     ...(options.refetchOnWindowFocus ? { refetchOnWindowFocus: 'always' as const } : {}),
   })
