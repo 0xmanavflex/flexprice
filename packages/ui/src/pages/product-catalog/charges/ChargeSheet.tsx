@@ -40,6 +40,7 @@ import {
   TicketPercentIcon,
   Trash2Icon,
 } from '@ui/icons'
+import { useWriteAccess } from '@ui/compositions/access/Access'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Pill } from '../../shared/cells'
@@ -350,6 +351,8 @@ export function ChargeSheet({
   history: fetched,
 }: ChargeSheetProps) {
   const body = useRef<HTMLDivElement>(null)
+  // Ending a charge is a write: gated as the row menu's Terminate is.
+  const write = useWriteAccess()
 
   // Opened from a flag: bring that box into view once the sheet has settled.
   useEffect(() => {
@@ -582,6 +585,7 @@ export function ChargeSheet({
               type="button"
               variant="outline"
               className="text-destructive h-8"
+              disabled={!write.allowed}
               onClick={() => {
                 onClose()
                 onDelete()
@@ -590,6 +594,9 @@ export function ChargeSheet({
               <Trash2Icon aria-hidden />
               {deleteLabel}
             </Button>
+            {write.reason ? (
+              <p className="text-muted-foreground mt-1.5 text-xs">{write.reason}</p>
+            ) : null}
           </div>
         ) : null}
       </SheetContent>
