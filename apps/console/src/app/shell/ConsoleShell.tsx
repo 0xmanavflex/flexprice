@@ -22,6 +22,7 @@ import {
   AppShell,
   EnvironmentSwitcher,
   ShellBreadcrumb,
+  ShellChangelog,
   ShellCreateMenu,
   ShellDetailTrailProvider,
   type ShellCrumb,
@@ -35,6 +36,7 @@ import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
 import { MutationToasts } from '@/app/notifications/MutationToasts'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
+import { CHANGELOG, CHANGELOG_STORAGE_KEY } from './changelog'
 import { useMockAccounts } from '@/app/selfBilling/mockAccounts'
 import { useSession } from '@/app/session'
 import { useRevenueRecognitionEnabled } from '@fp/query'
@@ -220,6 +222,8 @@ export function ConsoleShell({
         onSettings={() => goTo('settings')}
         {...(onSignOut ? { onSignOut } : {})}
         {...(headerLeading ? { headerLeading } : {})}
+        // What changed from V1, as the dismissible stack above the account menu.
+        pinned={<ShellChangelog entries={CHANGELOG} storageKey={CHANGELOG_STORAGE_KEY} />}
         /*
          * The environment leads the trail, and it is where you change it too: the
          * switcher moved out of the sidebar and became this first crumb. The one

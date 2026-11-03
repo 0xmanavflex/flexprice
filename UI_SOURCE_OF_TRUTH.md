@@ -140,6 +140,8 @@ These no longer apply to visual decisions. They remain only as history.
 
 ## Known gaps
 
+- The sidebar's "What's new" stack (`ShellChangelog`) follows ReUI `app-shell-7` rather than the reference app,
+  which has no changelog. See `docs/design-changes/2026-11-03-sidebar-changelog.md`.
 - Component-level visual snapshots (Storybook) are not in place yet; only route-level snapshots are.
 - Baselines are regression baselines of the console, not pixel comparisons against the reference app. Comparing
   the two directly needs data parity and is a later step.

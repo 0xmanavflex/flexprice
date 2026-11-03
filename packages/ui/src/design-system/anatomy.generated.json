@@ -377,6 +377,13 @@
       ],
       "story": "./src/compositions/feedback/AppFailure.stories.tsx"
     },
+    "AppHeader": {
+      "file": "src/components/blocks/app-shell-7/components/app-header.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "AppShell": {
       "file": "src/compositions/shell/AppShell.tsx",
       "layer": "composition",
@@ -640,6 +647,7 @@
         "PortalEmpty",
         "RadioRows",
         "RelatedCard",
+        "ShellChangelog",
         "ShellNav",
         "SubscriptionStatusPill",
         "SummaryCell",
@@ -1577,6 +1585,13 @@
     "Coins": {
       "file": "src/icons/index.ts",
       "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CollapsibleNavItem": {
+      "file": "src/components/blocks/app-shell-7/components/nav-main.tsx",
+      "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -5018,6 +5033,13 @@
       "usedBy": [],
       "story": null
     },
+    "LeafNavItem": {
+      "file": "src/components/blocks/app-shell-7/components/nav-main.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "LearnMoreGuides": {
       "file": "src/components/blocks/empty-state-1/components/learn-more-guides.tsx",
       "layer": "vendor/blocks",
@@ -5240,6 +5262,13 @@
     },
     "LoginForm": {
       "file": "src/components/blocks/auth-18/components/login-form.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Logo": {
+      "file": "src/components/blocks/app-shell-7/components/logo.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
@@ -5550,6 +5579,13 @@
     },
     "NavProjects": {
       "file": "src/components/blocks/app-shell-3/components/nav-projects.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "NavUser": {
+      "file": "src/components/blocks/app-shell-7/components/nav-user.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
@@ -7074,6 +7110,7 @@
         "ListOfferProvider",
         "MetricChart",
         "SectionEmpty",
+        "ShellChangelog",
         "TrendBadge"
       ],
       "story": "./src/compositions/feedback/SceneIllustration.stories.tsx"
@@ -7365,6 +7402,16 @@
       ],
       "story": "./src/compositions/shell/ShellBreadcrumb.stories.tsx"
     },
+    "ShellChangelog": {
+      "file": "src/compositions/shell/ShellChangelog.tsx",
+      "layer": "composition",
+      "composes": [
+        "ArrowUpRightIcon",
+        "SceneIllustration"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/shell/ShellChangelog.stories.tsx"
+    },
     "ShellCreateMenu": {
       "file": "src/compositions/shell/ShellCreateMenu.tsx",
       "layer": "composition",
@@ -7456,6 +7503,20 @@
     "ShoppingCart": {
       "file": "src/icons/index.ts",
       "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SidebarNews": {
+      "file": "src/components/blocks/app-shell-7/components/sidebar-news.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SidebarRailToggle": {
+      "file": "src/components/blocks/app-shell-7/components/sidebar-rail-toggle.tsx",
+      "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -8017,6 +8078,13 @@
         "ConnectIntegrationSheet",
         "ManageConnectionSheet"
       ],
+      "story": null
+    },
+    "SystemStats": {
+      "file": "src/components/blocks/app-shell-7/components/system-stats.tsx",
+      "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
       "story": null
     },
     "TableSkeleton": {
@@ -9305,6 +9373,7 @@
         "EnvironmentSwitcher",
         "PackageIcon",
         "ShellBreadcrumb",
+        "ShellChangelog",
         "ShellCreateMenu"
       ]
     },
@@ -9327,6 +9396,13 @@
       "component": "ShellBreadcrumb",
       "uses": [
         "ShellBreadcrumb"
+      ]
+    },
+    "./src/compositions/shell/ShellChangelog.stories.tsx": {
+      "title": "A new console",
+      "component": "ShellChangelog",
+      "uses": [
+        "ShellChangelog"
       ]
     },
     "./src/compositions/shell/ShellCreateMenu.stories.tsx": {
