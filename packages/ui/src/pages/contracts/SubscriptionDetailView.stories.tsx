@@ -803,6 +803,34 @@ export const ChargesTab: Story = {
   },
 }
 
+/** Every line ends on a future date, as on a fixed-term contract. */
+const END_DATED_LINES: SubscriptionLine[] = LINES.map((line) => ({
+  ...line,
+  endDate: date('2099-12-31'),
+  charge: line.charge ? { ...line.charge, endDate: date('2099-12-31') } : null,
+}))
+
+/**
+ * A fixed-term contract: every charge has an end date, still ahead. They still
+ * bill, so they are counted, listed, and their price and commitment can be
+ * changed: an end date is scheduled, not ended.
+ */
+export const EndDatedChargesStillCount: Story = {
+  parameters: menuA11y,
+  args: { ...BASE, lines: ready(END_DATED_LINES) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const tab = canvas.getByRole('tab', { name: /Charges/ })
+    await expect(tab).toHaveTextContent(String(END_DATED_LINES.length))
+    await userEvent.click(tab)
+    await expect(await canvas.findByText('API requests')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for API requests' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Override price' })).toBeVisible()
+    await expect(screen.getByRole('menuitem', { name: /commitment/ })).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+  },
+}
+
 const openPricing = async (canvasElement: HTMLElement) => {
   const canvas = within(canvasElement)
   const tab = canvas.getByRole('tab', { name: /Charges/ })

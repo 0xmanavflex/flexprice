@@ -21,8 +21,13 @@ import { provenance } from '@ui/provenance'
  * Name, the fee and its period, then what the plan includes and the credits
  * it grants, each line led by an icon picked from the feature as V1 picks it.
  * The widget adds "View plan" and shows three lines a section with "+N more";
- * a preview (`preview`) also lists the usage charges, shows every line and
- * has no button.
+ * a preview (`preview`) shows every line and has no button.
+ *
+ * Usage charges are never listed, here or in the widget: a plan can meter
+ * thousands, and a pricing card says only that usage bills on top ("+ Usage").
+ * Fixed fees make the price (one-time ones are listed), then what the plan
+ * includes and the credits it grants. Each block starts a clear step below
+ * the one before it, under a rule.
  */
 export const PricingPlanCardProvenance = provenance({
   source: 'composition',
@@ -50,29 +55,30 @@ export interface PricingPlanCredit {
   recurring: boolean
 }
 
-export interface PricingPlanUsage {
+/** A listed fee: a one-time charge, by name and price ("$49", "from $49"). */
+export interface PricingPlanFee {
   key: string
   name: string
-  /** "$0.01/unit", "from $0.002/unit". */
   price: string
 }
 
 export interface PricingPlanCardProps {
   name: string
-  /** "$29", "$0". */
+  /** The plan's description, under its name. Empty or left out, nothing is shown. */
+  description?: string | undefined
+  /** "$29", "$0", "from $49" (a tiered fee is priced from its first band). */
   price: string
   /** "month", "year". Omitted for a plan with no period. */
   per?: string | null | undefined
-  /** Usage bills on top of the fee: a preview says "+ Usage" after the period. */
+  /** Usage bills on top of the fee: "+ Usage" after the price. Its charges are not listed. */
   hasUsage?: boolean
-  usage?: PricingPlanUsage[]
   /** One-time fees, listed in a preview: never part of the price per period. */
-  oneTime?: PricingPlanUsage[]
+  oneTime?: PricingPlanFee[]
   included: PricingPlanIncluded[]
   credits: PricingPlanCredit[]
   /** The widget's button. Left out of a preview. */
   onViewPlan?: (() => void) | undefined
-  /** The plan preview: usage lines, every line, no button. */
+  /** The plan preview: every line, no button. */
   preview?: boolean
   /**
    * Makes the section headings links, for a preview that sits beside the
@@ -86,7 +92,7 @@ export interface PricingPlanCardProps {
   className?: string
 }
 
-export type PricingPlanSection = 'price' | 'usage' | 'oneTime' | 'included' | 'credits'
+export type PricingPlanSection = 'price' | 'oneTime' | 'included' | 'credits'
 
 type Icon = typeof GaugeIcon
 
@@ -109,6 +115,9 @@ export function includedIcon(featureType: FeatureType, name: string): { Icon: Ic
 const LIMIT = 3
 
 const HEADING = 'text-muted-foreground mb-2.5 text-[10px] font-medium tracking-wide uppercase'
+
+/** One block of the card: a rule, and room above and below it, so blocks never touch. */
+const BLOCK = 'mt-5 border-t pt-5'
 
 function Heading({
   children,
@@ -163,10 +172,10 @@ function useCapped<T>(items: readonly T[], all: boolean) {
 
 export function PricingPlanCard({
   name,
+  description,
   price,
   per,
   hasUsage = false,
-  usage = [],
   oneTime = [],
   included,
   credits,
@@ -184,7 +193,6 @@ export function PricingPlanCard({
           ...(onSection ? { onClick: () => onSection(section) } : {}),
         }
       : {}
-  const charges = useCapped(usage, preview)
   const fees = useCapped(oneTime, preview)
   const lines = useCapped(included, preview)
   const grants = useCapped(credits, preview)
@@ -198,19 +206,18 @@ export function PricingPlanCard({
       )}
     >
       <Title className="text-lg font-light">{name}</Title>
+      {description ? (
+        <p className="text-muted-foreground mt-1 text-[13px]/relaxed">{description}</p>
+      ) : null}
 
-      <div className="mt-5 space-y-3">
+      <div className="mt-5">
         {(() => {
           const body = (
             <>
               <span className="text-[28px] font-normal tabular-nums">{price}</span>
-              {per ? (
-                <span className="text-muted-foreground ms-2 text-xs">
-                  /{per}
-                  {preview && hasUsage ? (
-                    <span className="ms-1 text-[11px] font-medium">+ Usage</span>
-                  ) : null}
-                </span>
+              {per ? <span className="text-muted-foreground ms-2 text-xs">/{per}</span> : null}
+              {hasUsage ? (
+                <span className="text-muted-foreground ms-1 text-[11px] font-medium">+ Usage</span>
               ) : null}
             </>
           )
@@ -236,27 +243,8 @@ export function PricingPlanCard({
           )
         })()}
 
-        {preview && usage.length > 0 ? (
-          <div className="border-t pt-3.5">
-            <Heading {...jump('usage')}>Usage</Heading>
-            <ul className="space-y-2">
-              {charges.shown.map((charge) => (
-                <li
-                  key={charge.key}
-                  className="flex items-start justify-between gap-2 text-[11px] leading-snug"
-                >
-                  <span className="text-muted-foreground min-w-0 flex-1">{charge.name}</span>
-                  <span className="shrink-0 font-medium whitespace-nowrap tabular-nums">
-                    {charge.price}
-                  </span>
-                </li>
-              ))}
-              {charges.toggle}
-            </ul>
-          </div>
-        ) : null}
         {preview && oneTime.length > 0 ? (
-          <div className="border-t pt-3.5">
+          <div className={BLOCK}>
             <Heading {...jump('oneTime')}>One-time</Heading>
             <ul className="space-y-2">
               {fees.shown.map((charge) => (
@@ -283,7 +271,7 @@ export function PricingPlanCard({
       ) : null}
 
       {included.length > 0 || credits.length > 0 ? (
-        <div className="mt-4 border-t pt-4">
+        <div className={BLOCK}>
           {included.length > 0 ? (
             <>
               <Heading {...jump('included')}>Included</Heading>
@@ -305,7 +293,7 @@ export function PricingPlanCard({
           ) : null}
 
           {credits.length > 0 ? (
-            <div className={cn(included.length > 0 && 'mt-3 border-t pt-3')}>
+            <div className={cn(included.length > 0 && BLOCK)}>
               <Heading {...jump('credits')}>Credits</Heading>
               <ul className="space-y-2.5" aria-label={`Credits in ${name}`}>
                 {grants.shown.map((grant) => (

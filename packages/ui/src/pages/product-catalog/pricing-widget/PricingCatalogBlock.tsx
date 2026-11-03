@@ -112,6 +112,7 @@ export function PricingCatalogBlock({
               <PricingPlanCard
                 key={card.planId}
                 name={card.name}
+                description={card.description}
                 price={card.price}
                 per={card.per}
                 hasUsage={card.hasUsage}

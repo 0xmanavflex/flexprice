@@ -581,6 +581,27 @@ export function versionStatus(version: Dated, now: number = Date.now()): Version
 }
 
 /**
+ * Whether a charge has stopped billing: its end date has passed. A future end
+ * date is scheduled, not ended: the charge still bills, still counts, and can
+ * still be edited until then. `!charge.endDate` is not this test: it drops
+ * every end-dated charge, a contract with a fixed term among them.
+ */
+export function chargeHasEnded(
+  charge: { endDate: Date | null },
+  now: number = Date.now(),
+): boolean {
+  return charge.endDate !== null && charge.endDate.getTime() <= now
+}
+
+/** How many of these charges still bill (end-dated ones whose end is ahead included). */
+export function liveChargeCount(
+  charges: readonly { endDate: Date | null }[],
+  now: number = Date.now(),
+): number {
+  return charges.filter((charge) => !chargeHasEnded(charge, now)).length
+}
+
+/**
  * The version a charges table shows, from versions sorted newest first: the
  * one billing now. With none billing now, the next to start (a charge that is
  * only scheduled so far); with none of those either, the last to end.

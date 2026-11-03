@@ -27,6 +27,7 @@ import {
   type SubscriptionAddonOption,
   type SubscriptionCouponOption,
   type SubscriptionCustomerOption,
+  type SubscriptionParentOption,
   type SubscriptionPlanContext,
 } from './SubscriptionForm'
 
@@ -146,6 +147,8 @@ interface PlaygroundProps {
   seededAddons?: CreateSubscription['addons']
   /** Customers (by id) that cannot inherit, as the page loads them. */
   inheritanceBlocks?: Record<string, InheritanceBlock>
+  /** Contracts the new one can sit under, as the page loads them. */
+  parentContracts?: SubscriptionParentOption[]
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   onStepChange: (step: string) => void
@@ -179,6 +182,7 @@ function SubscriptionFormPlayground({
   currency,
   seededAddons,
   inheritanceBlocks,
+  parentContracts,
   onSubmit,
   onCancel,
   onStepChange,
@@ -319,6 +323,7 @@ function SubscriptionFormPlayground({
       ]}
       customerLocked={customerLocked}
       {...(inheritanceBlocks ? { inheritanceBlocks } : {})}
+      {...(parentContracts ? { parentContracts } : {})}
       isSubmitting={isSubmitting}
       submitError={submitError || null}
       trail={[{ label: 'Contracts' }, { label: 'Create contract' }]}
@@ -1795,6 +1800,48 @@ export const InheritedCustomersKeepTheSamePayer: Story = {
     await userEvent.click(canvas.getByRole('radio', { name: /Same customer/ }))
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
+  },
+}
+
+const PARENT_CONTRACTS: SubscriptionParentOption[] = [
+  {
+    value: 'subs_parent',
+    label: 'GobbleCube · Enterprise',
+    hint: 'subs_parent',
+    customerId: 'cus_1',
+  },
+  // The contract's own customer's contract: never offered as its parent.
+  { value: 'subs_own', label: 'Own customer · Starter', hint: 'subs_own', customerId: 'cus_0' },
+]
+
+/**
+ * A contract created under a parent contract, for a customer hierarchy: picked
+ * by customer and plan, sent as `parent_subscription_id`. A child is invoiced
+ * through its parent, so the billing customer and inherited customers step
+ * aside while a parent is chosen.
+ */
+export const ChoosesAParentContract: Story = {
+  args: { prefilled: true, step: 'billing', parentContracts: PARENT_CONTRACTS },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const picker = canvas.getByRole('combobox', { name: /^Parent contract/ })
+    await userEvent.click(picker)
+    await expect(screen.queryByRole('option', { name: /Own customer/ })).toBeNull()
+    await userEvent.click(await screen.findByRole('option', { name: /GobbleCube/ }))
+    await expect(canvas.queryByText('Billing customer', { exact: true })).toBeNull()
+    await expect(canvas.queryByText('Inherited customers', { exact: true })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parentSubscriptionId: 'subs_parent',
+          invoicingCustomerExternalId: '',
+          inheritedCustomerExternalIds: [],
+        }),
+      ),
+    )
   },
 }
 

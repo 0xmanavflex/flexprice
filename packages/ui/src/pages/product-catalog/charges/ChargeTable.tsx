@@ -9,6 +9,7 @@ import {
   type ChargeDetail,
   type ChargeHistory,
   type ChargeSection,
+  chargeHasEnded,
   InvoiceCadence,
   PriceType,
   TierMode,
@@ -114,9 +115,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** The destructive item's wording; "Terminate" on a catalogue, "End charge" on a contract. */
   removeLabel?: string
   /** Extra row-menu items, e.g. a contract's "Go to plan". */
-  extraActions?: (
-    charge: Charge,
-  ) => Array<{
+  extraActions?: (charge: Charge) => Array<{
     label: string
     icon: ReactElement
     onSelect: () => void
@@ -243,7 +242,7 @@ function stamp(date: Date, locale?: string): string {
 
 /** Whether a charge's end has passed. A future end date is scheduled: the charge still bills. */
 export function hasEnded(charge: Charge, now: number = Date.now()): boolean {
-  return charge.endDate !== null && charge.endDate.getTime() <= now
+  return chargeHasEnded(charge, now)
 }
 
 /**
@@ -558,11 +557,11 @@ export function ChargeTable({
                   ]),
             ]}
             onEdit={
-              onEdit && !charge.endDate && (canEdit?.(charge) ?? true)
+              onEdit && !hasEnded(charge) && (canEdit?.(charge) ?? true)
                 ? () => onEdit(charge)
                 : undefined
             }
-            onRemove={onTerminate && !charge.endDate ? () => onTerminate(charge) : undefined}
+            onRemove={onTerminate && !hasEnded(charge) ? () => onTerminate(charge) : undefined}
             removeLabel={removeLabel}
             removeIcon={<CircleSlashIcon aria-hidden />}
           />
