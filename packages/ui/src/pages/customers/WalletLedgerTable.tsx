@@ -113,6 +113,12 @@ function detailLine(tx: WalletTransaction): string {
 
 const hasBreakdown = (tx: WalletTransaction) => (tx.drawnFrom?.length ?? 0) > 0
 
+/** An open debit's line: how many top-ups the lines under it come from. */
+function drewFrom(tx: WalletTransaction): string {
+  const count = tx.drawnFrom?.length ?? 0
+  return `Drew from ${count} ${count === 1 ? 'top-up' : 'top-ups'}`
+}
+
 /** "Added Sep 24, 2026 · expires Dec 1, 2026": which top-up a debit drew from. */
 function sourceLine(topUp: WalletTransaction | undefined, topUpId: string): string {
   if (!topUp) return `Top-up …${topUpId.slice(-6)}`
@@ -254,7 +260,10 @@ export function WalletLedgerTable({
             width: 280,
             cell: (row) =>
               row.kind === 'source' ? (
-                <div className="flex min-w-0 items-center gap-2 pl-8">
+                // A rule down the left ties every line a debit drew from to it,
+                // so it is plain where that debit's group ends and the next row
+                // begins.
+                <div className="border-border ml-3 flex min-w-0 items-center gap-2 border-l-2 pl-4">
                   <div className="min-w-0">
                     <p className="truncate text-sm">
                       {'From '}
@@ -286,7 +295,11 @@ export function WalletLedgerTable({
                   ) : null}
                   <div className="min-w-0">
                     <p className="truncate text-sm">{row.tx.reason || '—'}</p>
-                    <p className="text-muted-foreground truncate text-xs">{detailLine(row.tx)}</p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {row.kind === 'debit' && open.has(row.tx.id)
+                        ? drewFrom(row.tx)
+                        : detailLine(row.tx)}
+                    </p>
                   </div>
                 </div>
               ),

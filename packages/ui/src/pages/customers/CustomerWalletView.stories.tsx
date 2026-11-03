@@ -391,6 +391,8 @@ export const ExpandsDebit: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /expand manual debit/i }))
     await expect(await canvas.findByText('From Subscription grant')).toBeInTheDocument()
     await expect(canvas.getByText('From Credit memo')).toBeInTheDocument()
+    // The open debit says how many lines sit under it.
+    await expect(canvas.getByText('Drew from 2 top-ups')).toBeInTheDocument()
     await expect(canvas.getByText('−640')).toBeInTheDocument()
     await expect(canvas.getByText('−30')).toBeInTheDocument()
     // Top-ups do not expand.
