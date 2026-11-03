@@ -104,11 +104,16 @@ export interface AddonPage {
 
 export async function fetchAddons(client: Flexprice, query: AddonQuery): Promise<AddonPage> {
   const response = await call(() => client.addons.queryAddon(toAddonFilter(query) as never))
-  const addons = (response.items ?? []).map((item) => toAddon(item as AddonWire))
+  const mapped = (response.items ?? []).map((item) => toAddon(item as AddonWire))
+  // An add-on with no charge is a shell. The list offers priced extras, so it
+  // is left out. The search endpoint cannot filter on prices, so this page's
+  // empty shells are dropped and taken out of the reported total.
+  const addons = mapped.filter((addon) => addon.chargeCount > 0)
+  const reported = response.pagination?.total ?? mapped.length
 
   return {
     addons,
-    total: response.pagination?.total ?? 0,
+    total: Math.max(0, reported - (mapped.length - addons.length)),
   }
 }
 
