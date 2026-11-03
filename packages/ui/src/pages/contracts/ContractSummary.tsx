@@ -7,6 +7,7 @@ import {
   InvoiceCadence,
   periodNoun,
   PriceType,
+  moneyFormatLocale,
 } from '@fp/domain'
 import { FormPreview, PreviewRow, PreviewRows } from '@ui/compositions/forms/FormPreview'
 import { provenance } from '@ui/provenance'
@@ -87,7 +88,7 @@ export function runsText(values: CreateSubscription, today: string): string {
 export function moneyText(amount: number, currency: string): string {
   const code = currency.trim().toUpperCase()
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(code), {
       style: 'currency',
       currency: /^[A-Z]{3}$/.test(code) ? code : 'USD',
       currencyDisplay: 'narrowSymbol',

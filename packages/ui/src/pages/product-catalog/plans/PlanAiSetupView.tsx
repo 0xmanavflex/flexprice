@@ -4,6 +4,7 @@ import {
   type PricingFeature,
   type PricingPlan,
   type PricingSchema,
+  moneyFormatLocale,
   pricingSchemaProblems,
 } from '@fp/domain'
 import { AI_TEMPLATE_LOGOS } from '@ui/assets/ai-templates'
@@ -214,7 +215,7 @@ const STEP_MS = 750
 
 function money(amount: number, currency: string): string {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currency: currency.toUpperCase() || 'USD',
       currencyDisplay: 'narrowSymbol',

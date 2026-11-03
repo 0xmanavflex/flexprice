@@ -77,6 +77,7 @@ import {
   INHERITANCE_BLOCK_LABEL,
   InheritanceBlock,
   contractDateToInstant,
+  moneyFormatLocale,
   tierUnitLabel,
 } from '@fp/domain'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
@@ -1359,7 +1360,7 @@ function money(amount: string | undefined, currency: string): string {
   const value = Number(raw)
   if (!Number.isFinite(value) || !/^[A-Z]{3}$/.test(code)) return `${raw} ${code}`.trim()
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(code), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency: code,

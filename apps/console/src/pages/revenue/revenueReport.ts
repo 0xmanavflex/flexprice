@@ -1,4 +1,11 @@
-import { InvoiceStatus, PaymentStatus, type Invoice, type Money, type Payment } from '@fp/domain'
+import {
+  InvoiceStatus,
+  PaymentStatus,
+  moneyFormatLocale,
+  type Invoice,
+  type Money,
+  type Payment,
+} from '@fp/domain'
 import type {
   AgingBucket,
   CreditRow,
@@ -103,7 +110,7 @@ export function amountOf(value: Money | string | number | null | undefined): num
 
 export function formatAmount(value: number, currency: string, fractionDigits = 0): string {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currency,
       currencyDisplay: 'narrowSymbol',
@@ -117,7 +124,7 @@ export function formatAmount(value: number, currency: string, fractionDigits = 0
 
 export function formatCompactAmount(value: number, currency: string): string {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currency,
       currencyDisplay: 'narrowSymbol',

@@ -23,7 +23,7 @@ import {
   XCircleIcon,
 } from '@ui/icons'
 import { toast } from 'sonner'
-import { DRAFT_INVOICE_NUMBER_LABEL, InvoiceStatus, PaymentStatus } from '@fp/domain'
+import { DRAFT_INVOICE_NUMBER_LABEL, InvoiceStatus, PaymentStatus, moneyFormatLocale } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -178,13 +178,13 @@ export function InvoiceDetailView({
   const [tab, setTab] = useState<InvoiceTab>('details')
   const totals = invoiceTotals(invoice)
   const money = (value: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat(moneyFormatLocale(invoice.currency), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency: invoice.currency,
     }).format(value)
   const unitMoney = (value: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat(moneyFormatLocale(invoice.currency), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency: invoice.currency,

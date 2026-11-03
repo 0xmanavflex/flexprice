@@ -13,6 +13,7 @@
  * routes it needs to pay its way back.
  */
 import { z } from 'zod'
+import { moneyFormatLocale } from './money'
 
 /**
  * One charge on the tenant's Flexprice plan. Read from the summary's `plan`:
@@ -182,7 +183,7 @@ export function planMoney(amount: string | number, currency: string): string {
   const n = Number(amount)
   if (!Number.isFinite(n)) return String(amount)
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currency: currency.toUpperCase() || 'USD',
       minimumFractionDigits: 2,

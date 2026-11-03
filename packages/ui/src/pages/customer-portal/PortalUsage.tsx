@@ -11,6 +11,7 @@ import {
   portalRangeWindow,
   projectSpend,
   spendChange,
+  moneyFormatLocale,
   unitPriceLabel,
 } from '@fp/domain'
 import {
@@ -758,7 +759,7 @@ function Breakdown({
                         <td className="px-4" />
                         <td className="px-4" />
                         <td className="px-4 font-medium tabular-nums">
-                          {new Intl.NumberFormat(locale, {
+                          {new Intl.NumberFormat(moneyFormatLocale(data.currency), {
                             style: 'currency',
                             currency: data.currency,
                           }).format(group.cost)}

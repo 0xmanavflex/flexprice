@@ -1,4 +1,5 @@
 import { decimalSum } from './customerPortal'
+import { moneyFormatLocale } from './money'
 import { CREDIT_GRANT_PERIOD_LABEL, CreditGrantCadence, type CreditGrant } from './creditGrant'
 import { meteredAllowanceLabel, type Entitlement } from './entitlement'
 import { FeatureType } from './feature'
@@ -205,7 +206,7 @@ export function pricingAmount(amount: number | string, currency: string): string
     typeof amount === 'string' ? (amount.split('.')[1] ?? '').replace(/0+$/, '').length : 0
   try {
     // A decimal string is formatted as written (Intl.NumberFormat v3), not as a float.
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currency,
       currencyDisplay: 'narrowSymbol',

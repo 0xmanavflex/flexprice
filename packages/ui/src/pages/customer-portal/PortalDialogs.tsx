@@ -7,6 +7,7 @@ import {
   type PortalWallet,
   creditsAfter,
   creditsCost,
+  moneyFormatLocale,
   parseCreditAmount,
 } from '@fp/domain'
 import { FileTextIcon, SheetIcon, TriangleAlertIcon } from '@ui/icons'
@@ -180,7 +181,8 @@ export function PayInvoiceDialog({
 }
 
 function amountText(invoice: PortalInvoice, locale: string | undefined): string {
-  return new Intl.NumberFormat(locale, {
+  void locale
+  return new Intl.NumberFormat(moneyFormatLocale(invoice.amountDue.currency), {
     style: 'currency',
     currency: invoice.amountDue.currency,
   }).format(Number(invoice.amountDue.amount))
@@ -269,7 +271,7 @@ export function AddCreditsDialog({
         <Composer
           submitLabel={
             cost
-              ? `Pay ${new Intl.NumberFormat(locale, { style: 'currency', currency: cost.currency }).format(Number(cost.amount))}`
+              ? `Pay ${new Intl.NumberFormat(moneyFormatLocale(cost.currency), { style: 'currency', currency: cost.currency }).format(Number(cost.amount))}`
               : 'Pay'
           }
           onCancel={close}

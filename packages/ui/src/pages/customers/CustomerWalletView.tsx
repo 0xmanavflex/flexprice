@@ -37,6 +37,7 @@ import {
   emptyWallet,
   formatMoney,
   money,
+  moneyFormatLocale,
   resolveBonus,
   topUpWalletSchema,
   currencyCodes,
@@ -1107,7 +1108,7 @@ function creditRate(rate: string, currency: string): string {
   const value = Number(trimmed)
   if (!trimmed || !Number.isFinite(value)) return '—'
   const fraction = trimmed.split('.')[1]?.length ?? 0
-  const formatted = new Intl.NumberFormat('en-US', {
+  const formatted = new Intl.NumberFormat(moneyFormatLocale(currency), {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,

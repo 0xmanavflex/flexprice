@@ -41,6 +41,7 @@ import {
   PriceType,
   SubscriptionStatus,
   formatMoney,
+  moneyFormatLocale,
   type AlertSettingConfig,
   type AddContractCharge,
   type CreateCreditGrant,
@@ -136,7 +137,7 @@ import { statusTone } from '../shared/statusTones'
  */
 function unitMoney(value: Money): string {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(value.currency), {
       style: 'currency',
       currency: value.currency,
       currencyDisplay: 'narrowSymbol',

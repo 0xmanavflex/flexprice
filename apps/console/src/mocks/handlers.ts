@@ -1,3 +1,4 @@
+import { moneyFormatLocale } from '@fp/domain'
 import { http, HttpResponse } from 'msw'
 import { type Corpus, corpus } from '@fp/query/fixtures'
 import { selfBillingHandlers } from './selfBillingHandlers'
@@ -2338,7 +2339,7 @@ function formatMoney(amount: string, currency: string): string {
   const value = Number(amount)
   if (!Number.isFinite(value)) return amount
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currency: (currency || 'usd').toUpperCase(),
     }).format(value)

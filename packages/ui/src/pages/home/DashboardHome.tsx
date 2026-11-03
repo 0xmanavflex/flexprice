@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowUpRightIcon, CalendarIcon } from '@ui/icons'
-import { formatMoney, type Money as MoneyValue } from '@fp/domain'
+import { formatMoney, moneyFormatLocale, type Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   Select,
@@ -703,7 +703,7 @@ function MetricsSection({
 
 /** Compact currency figures for a chart's tooltip and axis: "$1.2K". */
 function currencyFormat(currency: string): (value: number) => string {
-  const format = new Intl.NumberFormat(undefined, {
+  const format = new Intl.NumberFormat(moneyFormatLocale(currency), {
     style: 'currency',
     currency,
     notation: 'compact',

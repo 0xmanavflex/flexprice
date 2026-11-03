@@ -8,6 +8,7 @@ import {
   CreditGrantCadence,
   type CreditGrantPeriod,
   FeatureType,
+  moneyFormatLocale,
   PriceType,
   tierUnitLabel,
 } from '@fp/domain'
@@ -119,10 +120,11 @@ export function chargeLabel(charge: CreateCharge, meterLabel: (id: string) => st
 }
 
 export function money(amount: number, currency: string, locale?: string): string {
+  void locale
   try {
     // Sub-cent unit prices ($0.002 per call) must not round to $0.00.
     const wholeCents = Math.abs(amount * 100 - Math.round(amount * 100)) < 1e-9
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency,
