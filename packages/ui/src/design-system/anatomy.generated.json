@@ -10007,6 +10007,24 @@
         "ProviderConnections"
       ]
     },
+    "./src/pages/product-catalog/addons/AddonDetailPage.stories.tsx": {
+      "title": "App/Product catalog/Add-ons/Add-on detail",
+      "component": null,
+      "uses": [
+        "AddonSubscriptionsView",
+        "ArchiveIcon",
+        "CatalogDetailFrame",
+        "CatalogStatusBadge",
+        "EditableCard",
+        "MetadataCard",
+        "PageShell",
+        "PencilIcon",
+        "Pill",
+        "PlanChargesView",
+        "PlanCreditGrantsView",
+        "PlanEntitlementsView"
+      ]
+    },
     "./src/pages/product-catalog/addons/AddonForm.stories.tsx": {
       "title": "App/Product catalog/Add-ons/Add-on form",
       "component": "AddonForm",
@@ -10747,14 +10765,7 @@
         "CatalogDetailFrame",
         "CatalogStatusBadge",
         "ConfirmDialog",
-        "CreditGrantCreateForm",
-        "CreditGrantEditForm",
-        "CreditGrantTable",
         "EditableCard",
-        "EntitlementCreateForm",
-        "EntitlementEditForm",
-        "EntitlementTable",
-        "FormDialog",
         "MetadataCard",
         "PencilIcon",
         "Pill"
@@ -11242,27 +11253,18 @@
       "pattern": "Detail",
       "route": "/plans/$planId",
       "uses": [
-        "AddChargeDialog",
         "ArchiveIcon",
         "ConfirmDialog",
         "ContractIntegrations",
         "CopyIcon",
-        "CreditGrantCreateForm",
-        "CreditGrantEditForm",
         "DetailBreadcrumb",
         "DetailHeader",
         "DetailTabs",
         "EditableCard",
-        "EntitlementCreateForm",
-        "EntitlementEditForm",
-        "FormDialog",
         "MetadataCard",
         "PencilIcon",
         "Pill",
-        "PlanChargesView",
-        "PlanCreditGrantsView",
         "PlanCustomerPreview",
-        "PlanEntitlementsView",
         "RelatedCard",
         "Status"
       ]

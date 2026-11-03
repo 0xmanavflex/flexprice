@@ -32,6 +32,8 @@ export interface PlanChargesViewProps {
   onOpenCharge?: ((charge: Charge | null) => void) | undefined
   /** The open charge's versions from `GET /prices/{id}/history`. */
   history?: ChargeHistory | undefined
+  /** The empty state's line, naming what the charges belong to. */
+  emptyDescription?: string | undefined
 }
 
 /** Plan actions and pricing labels composed over the shared charges table and sheet. */
@@ -49,6 +51,7 @@ function PlanChargesViewInner({
   onRevert,
   onOpenCharge,
   history,
+  emptyDescription,
 }: PlanChargesViewProps) {
   const meterName = (id: string) => charges.find((charge) => charge.meterId === id)?.meterName ?? id
   return (
@@ -74,6 +77,7 @@ function PlanChargesViewInner({
       hideRowActions={readOnly ?? false}
       {...(!readOnly ? { onAdd, onEdit, onTerminate } : {})}
       addLabel="Add charge"
+      {...(emptyDescription ? { emptyDescription } : {})}
       priceLabel={(charge) =>
         charge.displayAmount && charge.billingModel === BillingModel.FlatFee
           ? charge.displayAmount
