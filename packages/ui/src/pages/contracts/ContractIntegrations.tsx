@@ -20,6 +20,7 @@ import {
   CopyIcon,
   MoreHorizontalIcon,
   PlusIcon,
+  DownloadIcon,
   UploadIcon,
 } from '@ui/icons'
 import { provenance } from '@ui/provenance'
@@ -70,6 +71,9 @@ export interface ContractIntegrationsProps {
    */
   pushProviders?: string[]
   onPush?: () => void
+  /** Provider names a pull reads from (inbound sync on); one "Pull from {names}" action. */
+  pullProviders?: string[]
+  onPull?: () => void
 }
 
 const stamp = new Intl.DateTimeFormat('en-US', {
@@ -96,6 +100,8 @@ export function ContractIntegrations({
   onUnlink,
   pushProviders,
   onPush,
+  pullProviders,
+  onPull,
 }: ContractIntegrationsProps) {
   const [unlinking, setUnlinking] = useState<IntegrationLink | null>(null)
   const [internalLinking, setInternalLinking] = useState(false)
@@ -107,6 +113,8 @@ export function ContractIntegrations({
   const canLink = showLink && Boolean(onLink) && linkable.length > 0
   const pushTo = onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
   const canPush = layout === 'rows' && pushTo !== null
+  const pullFrom = onPull && pullProviders && pullProviders.length > 0 ? pullProviders : null
+  const canPull = layout === 'rows' && pullFrom !== null
   const none = `No integrations linked to this ${entityLabel}.`
 
   // In the Related card the rows are the card's whole body, so rendering nothing
@@ -114,7 +122,7 @@ export function ContractIntegrations({
   // marks have nowhere to put a sentence, so they still render nothing: unless
   // the parent opened the link dialog itself (a plan's overflow menu), which
   // has to mount even though there is nothing to show beside it.
-  if (links.length === 0 && !canLink && !linking && !canPush) {
+  if (links.length === 0 && !canLink && !linking && !canPush && !canPull) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
     ) : null
@@ -272,6 +280,17 @@ export function ContractIntegrations({
         >
           <UploadIcon aria-hidden className="size-3.5" />
           Push to {pushTo.join(', ')}
+        </Button>
+      ) : null}
+      {canPull && pullFrom && onPull ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+          onClick={onPull}
+        >
+          <DownloadIcon aria-hidden className="size-3.5" />
+          Pull from {pullFrom.join(', ')}
         </Button>
       ) : null}
 

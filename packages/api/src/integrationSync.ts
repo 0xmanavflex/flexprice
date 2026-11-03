@@ -14,11 +14,12 @@ export async function pushToIntegrations(
   token: string,
   environmentId: string,
   entity: { entityType: string; entityId: string },
+  method: 'push' | 'pull' = 'push',
 ): Promise<void> {
   await request(serverURL, '/integrations/sync', {
     method: 'POST',
     token,
     environmentId,
-    body: { entity_type: entity.entityType, entity_id: entity.entityId, method: 'push' },
+    body: { entity_type: entity.entityType, entity_id: entity.entityId, method },
   })
 }

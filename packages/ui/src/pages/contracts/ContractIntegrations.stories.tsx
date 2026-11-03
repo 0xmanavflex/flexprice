@@ -78,6 +78,23 @@ export const FirstPush: Story = {
   },
 }
 
+/** An invoice can be read back from a provider that syncs invoices inbound (V1's Pull). */
+export const PullFromProvider: Story = {
+  args: {
+    entityLabel: 'invoice',
+    pushProviders: ['Stripe'],
+    onPush: fn(),
+    pullProviders: ['Stripe'],
+    onPull: fn(),
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Pull from Stripe' }))
+    await expect(args.onPull).toHaveBeenCalledTimes(1)
+    await expect(args.onPush).not.toHaveBeenCalled()
+  },
+}
+
 /**
  * One push reaches every provider that syncs outbound, so the card names them
  * all on a single action instead of offering a push in each provider's menu.

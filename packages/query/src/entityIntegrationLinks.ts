@@ -1,6 +1,7 @@
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError, ErrorKind, call, pushToIntegrations, type Flexprice } from '@fp/api'
 import { toIntegrationLinks } from './customers'
+import { queryKeys } from './keys'
 import { useConnections } from './integrations'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
@@ -87,14 +88,26 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
   })
   // V1's "Push to Integration": the API writes the entity to every connection
   // that syncs this type outbound, creating the provider record when unmapped.
-  const push = useMutation({
-    mutationFn: async () => {
-      const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
-      if (!token) throw new ApiError(ErrorKind.Unauthorized, `Sign in to push this ${type}.`)
-      if (!environmentId) throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
-      await pushToIntegrations(serverURL, token, environmentId, { entityType: type, entityId: id })
+  const sync = (method: 'push' | 'pull') => async () => {
+    const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+    if (!token) throw new ApiError(ErrorKind.Unauthorized, `Sign in to ${method} this ${type}.`)
+    if (!environmentId) throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
+    await pushToIntegrations(
+      serverURL,
+      token,
+      environmentId,
+      { entityType: type, entityId: id },
+      method,
+    )
+  }
+  const push = useMutation({ mutationFn: sync('push'), onSuccess: refresh })
+  // V1's "Pull from Integration": the provider's copy is read back over this one.
+  const pull = useMutation({
+    mutationFn: sync('pull'),
+    onSuccess: () => {
+      void refresh()
+      if (type === 'invoice') void cache.invalidateQueries({ queryKey: queryKeys.invoices.all() })
     },
-    onSuccess: refresh,
   })
   // The providers a push reaches: connected, with this entity's outbound sync on.
   const pushProviders = (providers.data ?? [])
@@ -106,6 +119,13 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
     ...mappings,
     push,
     pushProviders,
+    pull,
+    // The providers a pull reads from: connected, with this entity's inbound sync on.
+    pullProviders: (providers.data ?? [])
+      .filter((provider) =>
+        provider.connections.some((connection) => connection.syncConfig[type]?.inbound),
+      )
+      .map((provider) => provider.name),
     controls: mappings.isSuccess
       ? {
           links: mappings.data,
