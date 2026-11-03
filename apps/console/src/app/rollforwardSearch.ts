@@ -37,7 +37,7 @@ export function parseRollforwardSearch(raw: Record<string, unknown>): Rollforwar
   const page = Number.parseInt(String(raw['page'] ?? ''), 10)
   return {
     period,
-    search: typeof raw['search'] === 'string' ? raw['search'].trim() : '',
+    search: typeof raw['search'] === 'string' ? raw['search'] : '',
     page: Number.isFinite(page) && page >= 1 ? page : 1,
   }
 }

@@ -33,7 +33,7 @@ export function parseWorkflowSearch(raw: Record<string, unknown>): WorkflowQuery
       DEFAULT_WORKFLOW_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     sortDirection: direction === 'asc' ? 'asc' : DEFAULT_WORKFLOW_QUERY.sortDirection,
   }

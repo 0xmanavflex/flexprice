@@ -44,14 +44,14 @@ export function parsePriceUnitSearch(raw: Record<string, unknown>): PriceUnitQue
       DEFAULT_PRICE_UNIT_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
       ? (String(param(raw, 'sort', 'sortBy')) as PriceUnitSortField)
       : DEFAULT_PRICE_UNIT_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc'
-        ? 'desc'
+      param(raw, 'dir', 'sortDirection') === 'asc'
+        ? 'asc'
         : DEFAULT_PRICE_UNIT_QUERY.sortDirection,
     view:
       param(raw, 'view', 'view') === PriceUnitView.Cards

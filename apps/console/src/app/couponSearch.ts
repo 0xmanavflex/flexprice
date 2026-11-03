@@ -44,13 +44,13 @@ export function parseCouponSearch(raw: Record<string, unknown>): CouponQuery {
       DEFAULT_COUPON_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
       ? (String(param(raw, 'sort', 'sortBy')) as CouponSortField)
       : DEFAULT_COUPON_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_COUPON_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_COUPON_QUERY.sortDirection,
     view: param(raw, 'view', 'view') === CouponView.Cards ? CouponView.Cards : CouponView.Table,
     filters: runnableFilters(decodeListFilters(raw['filters']), COUPON_FILTERS),
   }

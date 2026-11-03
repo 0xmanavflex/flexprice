@@ -45,13 +45,13 @@ export function parsePlanSearch(raw: Record<string, unknown>): PlanQuery {
       DEFAULT_PLAN_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
       ? (String(param(raw, 'sort', 'sortBy')) as PlanSortField)
       : DEFAULT_PLAN_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_PLAN_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_PLAN_QUERY.sortDirection,
     // A layout, not a filter. `cards` persists; anything else is the table.
     view: param(raw, 'view', 'view') === PlanView.Cards ? PlanView.Cards : PlanView.Table,
     filters: runnableFilters(decodeListFilters(raw['filters']), PLAN_FILTERS),

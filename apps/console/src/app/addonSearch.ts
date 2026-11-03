@@ -44,13 +44,13 @@ export function parseAddonSearch(raw: Record<string, unknown>): AddonQuery {
       DEFAULT_ADDON_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
       ? (String(param(raw, 'sort', 'sortBy')) as AddonSortField)
       : DEFAULT_ADDON_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_ADDON_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_ADDON_QUERY.sortDirection,
     view: param(raw, 'view', 'view') === AddonView.Cards ? AddonView.Cards : AddonView.Table,
     filters: runnableFilters(decodeListFilters(raw['filters']), ADDON_FILTERS),
   }

@@ -74,7 +74,7 @@ export function parseInvoiceSearch(raw: Record<string, unknown>): InvoiceQuery {
     // De-duplicated so `?status=paid&status=paid` cannot produce a filter that
     // looks selected twice in the UI.
     statuses: [...new Set(statuses)],
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     // The entity filter is kept here; the list sends it only while entities are enabled.
     filters: runnableFilters(decodeListFilters(raw['filters']), [
       ...INVOICE_FILTERS,

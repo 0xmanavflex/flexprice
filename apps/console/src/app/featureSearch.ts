@@ -64,7 +64,7 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
       DEFAULT_FEATURE_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     types: [...new Set(types)],
     // A status link becomes the visible status filter below; the facet is
     // cleared so removing that chip really shows every status.
@@ -75,7 +75,7 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
       ? (String(param(raw, 'sort', 'sortBy')) as FeatureSortField)
       : DEFAULT_FEATURE_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_FEATURE_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_FEATURE_QUERY.sortDirection,
     // A layout, not a filter. `cards` persists; anything else is the table.
     view: param(raw, 'view', 'view') === FeatureView.Cards ? FeatureView.Cards : FeatureView.Table,
     // No `filters` param is the default view (published features); an explicit

@@ -55,7 +55,9 @@ async function waitForReady(page: Page, ready: Ready) {
     await expect(page.getByRole('heading', { name: ready.heading }).first()).toBeVisible()
   }
   if (ready.text !== undefined) {
-    await expect(page.getByText(ready.text).first()).toBeVisible()
+    // Exact: a line-clamped changelog blurb contains these words and Playwright
+    // treats the whole paragraph as hidden, so a substring match never settles.
+    await expect(page.getByText(ready.text, { exact: true }).first()).toBeVisible()
   }
   if (ready.rows) {
     // Row 0 is the header; the first data row is what proves the grid loaded.

@@ -48,7 +48,7 @@ export function parseSubscriptionSearch(raw: Record<string, unknown>): Subscript
       DEFAULT_SUBSCRIPTION_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
       ? (String(param(raw, 'sort', 'sortBy')) as SubscriptionSortField)

@@ -28,7 +28,7 @@ export function parseUsageSyncSearch(raw: Record<string, unknown>): UsageSyncQue
       DEFAULT_USAGE_SYNC_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     state: STATES.has(state) ? (state as UsageSyncQuery['state']) : DEFAULT_USAGE_SYNC_QUERY.state,
   }
 }

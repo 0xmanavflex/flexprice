@@ -3,9 +3,9 @@ import { lastEndedPeriod, parseRollforwardSearch } from './rollforwardSearch'
 
 describe('parseRollforwardSearch', () => {
   it('reads an ended month, a search and a page', () => {
-    expect(parseRollforwardSearch({ period: '2025-06', search: ' acme ', page: '3' })).toEqual({
+    expect(parseRollforwardSearch({ period: '2025-06', search: 'acme corp', page: '3' })).toEqual({
       period: '2025-06',
-      search: 'acme',
+      search: 'acme corp',
       page: 3,
     })
   })
