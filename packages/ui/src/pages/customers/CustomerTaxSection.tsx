@@ -435,6 +435,9 @@ export function TaxDialog({
       open={creating}
       onOpenChange={(next) => (next ? undefined : setCreating(false))}
       title="Create tax rate"
+      // A create in flight cannot be abandoned: closing would not stop the
+      // request, and the rate would be saved with nothing to attach it to.
+      isPending={createPending}
     >
       <Composer
         submitLabel="Create tax rate"
