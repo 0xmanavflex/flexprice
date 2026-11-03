@@ -9,6 +9,7 @@ import {
   emptyPortalData,
   loadingPortalData,
   noopPortalActions,
+  portalCards,
   portalData,
   portalInvoices,
   portalSpend,
@@ -84,6 +85,43 @@ export const Overview: Story = {
       'aria-selected',
       'true',
     )
+  },
+}
+
+/**
+ * Cards saved at two providers are split by provider, each with its own
+ * default, and every card names the provider that holds it.
+ */
+export const CardsAtTwoProviders: Story = {
+  args: {
+    data: {
+      ...portalData,
+      paymentMethods: {
+        status: 'ready',
+        data: [
+          ...portalCards,
+          {
+            id: 'pm_rzp',
+            provider: 'razorpay',
+            brand: 'Visa',
+            network: 'visa',
+            last4: '1111',
+            expires: '12/34',
+            expired: false,
+            isDefault: true,
+          },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Stripe · 3 cards')).toBeVisible()
+    await expect(canvas.getByText('Razorpay · 1 card')).toBeVisible()
+    const razorpay = within(canvas.getByRole('list', { name: 'Razorpay cards' }))
+    await expect(razorpay.getByText('Visa •••• 1111')).toBeVisible()
+    await expect(razorpay.getByText('Default')).toBeVisible()
+    await expect(razorpay.getByText('Razorpay · Expires 12/34')).toBeVisible()
   },
 }
 

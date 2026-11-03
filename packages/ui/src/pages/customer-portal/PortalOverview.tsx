@@ -1,4 +1,5 @@
 import {
+  gatewayLabel,
   type PortalGateway,
   type PortalInvoice,
   type PortalPaymentMethod,
@@ -308,72 +309,99 @@ function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: Portal
               description="Save a card to pay invoices in one click and turn on automatic top-ups."
             />
           ) : (
-            <ul className="divide-border/50 divide-y">
-              {cards.map((card) => {
-                const label = `${card.brand} •••• ${card.last4}`
-                return (
-                  <li key={card.id} className="flex items-center gap-3 px-6 py-3.5">
-                    <CardLogo network={card.network} label={card.brand} />
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-2 text-sm">
-                        {label}
-                        {card.isDefault ? (
-                          <span className="bg-muted text-muted-foreground rounded-full px-2 py-px text-xs">
-                            Default
-                          </span>
+            // Cards live at a provider, and each provider keeps its own default:
+            // with more than one, each gets its own group so the two defaults read right.
+            byProvider(cards).map(([provider, group], index, groups) => (
+              <div key={provider || index}>
+                {groups.length > 1 ? (
+                  <p className="text-muted-foreground border-border/50 bg-muted/30 border-y px-6 py-2 text-xs first:border-t-0">
+                    {gatewayLabel(provider)} · {group.length}{' '}
+                    {group.length === 1 ? 'card' : 'cards'}
+                  </p>
+                ) : null}
+                <ul
+                  className="divide-border/50 divide-y"
+                  aria-label={`${gatewayLabel(provider)} cards`}
+                >
+                  {group.map((card) => {
+                    const label = `${card.brand} •••• ${card.last4}`
+                    return (
+                      <li key={card.id} className="flex items-center gap-3 px-6 py-3.5">
+                        <CardLogo network={card.network} label={card.brand} />
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-2 text-sm">
+                            {label}
+                            {card.isDefault ? (
+                              <span className="bg-muted text-muted-foreground rounded-full px-2 py-px text-xs">
+                                Default
+                              </span>
+                            ) : null}
+                            {card.expired ? (
+                              <span className="bg-destructive/10 text-destructive-foreground dark:text-destructive rounded-full px-2 py-px text-xs">
+                                Expired
+                              </span>
+                            ) : null}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {[
+                              gatewayLabel(card.provider),
+                              card.expires ? `Expires ${card.expires}` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                        {managed(card) ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-muted-foreground size-8"
+                                  aria-label={`Options for ${label}`}
+                                />
+                              }
+                            >
+                              <MoreHorizontalIcon aria-hidden="true" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem
+                                disabled={card.isDefault || card.expired}
+                                onClick={() => onMakeDefault(card)}
+                              >
+                                <StarIcon aria-hidden="true" />
+                                Make default
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => onRemoveCard(card)}
+                              >
+                                <Trash2Icon aria-hidden="true" />
+                                Remove card
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         ) : null}
-                        {card.expired ? (
-                          <span className="bg-destructive/10 text-destructive-foreground dark:text-destructive rounded-full px-2 py-px text-xs">
-                            Expired
-                          </span>
-                        ) : null}
-                      </p>
-                      {card.expires ? (
-                        <p className="text-muted-foreground text-xs">Expires {card.expires}</p>
-                      ) : null}
-                    </div>
-                    {managed(card) ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground size-8"
-                              aria-label={`Options for ${label}`}
-                            />
-                          }
-                        >
-                          <MoreHorizontalIcon aria-hidden="true" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                          <DropdownMenuItem
-                            disabled={card.isDefault || card.expired}
-                            onClick={() => onMakeDefault(card)}
-                          >
-                            <StarIcon aria-hidden="true" />
-                            Make default
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => onRemoveCard(card)}
-                          >
-                            <Trash2Icon aria-hidden="true" />
-                            Remove card
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ul>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ))
           )
         }
       </Loaded>
     </Section>
   )
+}
+
+/** Cards by the provider that holds them, in first-seen order (the default sorts first). */
+function byProvider(cards: readonly PortalPaymentMethod[]): [string, PortalPaymentMethod[]][] {
+  const groups = new Map<string, PortalPaymentMethod[]>()
+  for (const card of cards) groups.set(card.provider, [...(groups.get(card.provider) ?? []), card])
+  return [...groups]
 }
 
 /** Read-only, as the portal API allows: one row per plan with its period and renewal. */
