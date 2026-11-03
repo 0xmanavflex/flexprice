@@ -12,7 +12,7 @@
  *
  * Off-limits to components — import from `@fp/query`. ESLint enforces it.
  */
-export { call, createFlexpriceClient } from './client'
+export { call, callWrite, createFlexpriceClient } from './client'
 export type { AuthSource, CallOptions, ClientOptions } from './client'
 export { DEFAULT_REQUEST_TIMEOUT_MS } from './timeout'
 

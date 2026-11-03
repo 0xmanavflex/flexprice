@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createFlexpriceClient, call } from './client'
+import { createFlexpriceClient, call, callWrite } from './client'
 import { ApiError, ErrorKind } from './errors'
 import { listCreditNotes } from './creditNotes'
 
@@ -381,5 +381,52 @@ describe('a 401 from a raw route', () => {
     )
     expect(onUnauthorized).toHaveBeenCalledTimes(1)
     vi.unstubAllGlobals()
+  })
+})
+
+describe('callWrite', () => {
+  const draft = {
+    entityType: 'customer',
+    entityId: 'cust_1',
+    taxRateCode: 'gb_vat',
+    taxBehavior: 'exclusive',
+    priority: 100,
+    autoApply: true,
+  }
+
+  it('resolves a successful write whose empty body the SDK cannot parse', async () => {
+    const { client } = harness({ respond: () => new Response('', { status: 200 }) })
+    // The same call through `call` is the version-mismatch error the form showed.
+    await expect(
+      call(() => client.taxAssociations.createTaxAssociation(draft as never)),
+    ).rejects.toMatchObject({ kind: ErrorKind.Unknown })
+    await expect(
+      callWrite(() => client.taxAssociations.createTaxAssociation(draft as never)),
+    ).resolves.toBeUndefined()
+  })
+
+  it('resolves a successful write whose body does not match the schema', async () => {
+    const { client } = harness({
+      respond: () =>
+        new Response(JSON.stringify({ tax_behavior: 42 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    })
+    await expect(
+      call(() => client.taxAssociations.createTaxAssociation(draft as never)),
+    ).rejects.toMatchObject({ message: expect.stringMatching(/version mismatch/) })
+    await expect(
+      callWrite(() => client.taxAssociations.createTaxAssociation(draft as never)),
+    ).resolves.toBeUndefined()
+  })
+
+  it('still rejects a failed write', async () => {
+    const { client } = harness({
+      respond: () => apiFailure(400, { error: { message: 'tax rate not found' } }),
+    })
+    await expect(
+      callWrite(() => client.taxAssociations.createTaxAssociation(draft as never)),
+    ).rejects.toBeInstanceOf(ApiError)
   })
 })
