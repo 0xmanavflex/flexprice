@@ -5,7 +5,6 @@ import {
   type Flexprice,
   type FlexpriceModels,
   call,
-  callWrite,
   updateSubscriptionMetadata,
 } from '@fp/api'
 import {
@@ -2403,10 +2402,8 @@ export function useCreateSubscriptionTax(subscriptionId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // The list refetches after this; the response is not read. The API has
-    // answered a successful create with a body the SDK cannot parse.
     mutationFn: (draft: CreateTaxAssociation) =>
-      callWrite(() =>
+      call(() =>
         client.taxAssociations.createTaxAssociation(
           toCreateTaxAssociationRequest(
             subscriptionId,

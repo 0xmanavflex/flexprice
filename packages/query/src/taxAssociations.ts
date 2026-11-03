@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { call, callWrite } from '@fp/api'
+import { call } from '@fp/api'
 import {
   type CreateTaxAssociation,
   type EditTaxAssociation,
@@ -94,10 +94,8 @@ export function useCreateTaxAssociation(
   const queryClient = useQueryClient()
 
   return useMutation({
-    // The list refetches after this; the response is not read. The API has
-    // answered a successful create with a body the SDK cannot parse.
     mutationFn: (draft: CreateTaxAssociation) =>
-      callWrite(() =>
+      call(() =>
         client.taxAssociations.createTaxAssociation(
           toCreateTaxAssociationRequest(entityId, draft, entityType) as never,
         ),
@@ -114,7 +112,7 @@ export function useUpdateTaxAssociation() {
 
   return useMutation({
     mutationFn: ({ id, draft }: { id: string; draft: EditTaxAssociation }) =>
-      callWrite(() =>
+      call(() =>
         client.taxAssociations.updateTaxAssociation(
           id,
           toUpdateTaxAssociationRequest(draft) as never,

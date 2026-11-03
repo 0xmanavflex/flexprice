@@ -1,5 +1,5 @@
 import { setRawUnauthorizedHandler } from './unauthorized'
-import { type Fetcher, Flexprice, FlexPriceError, HTTPClient } from '@flexprice/sdk'
+import { type Fetcher, Flexprice, HTTPClient } from '@flexprice/sdk'
 import { toApiError } from './errors'
 import { DEFAULT_REQUEST_TIMEOUT_MS, withTimeout } from './timeout'
 
@@ -146,34 +146,6 @@ export async function call<T>(
   try {
     return await operation(signal ? { signal } : {})
   } catch (cause) {
-    throw toApiError(cause)
-  }
-}
-
-/**
- * `call` for a write whose response the caller does not read.
- *
- * Some endpoints answer a successful write with a body the SDK cannot parse
- * (an empty body, or a shape the generated schema has not caught up with). The
- * write happened, but `call` reports it as a version mismatch, and the form
- * shows an error for a save that worked. Here a 2xx the SDK rejected resolves
- * as done. Any other failure, and every non-2xx, still rejects as `call` does.
- *
- * Only for callers that refetch instead of reading the result; one that needs
- * the created record must use `call` and see the mismatch.
- */
-export async function callWrite(
-  operation: (options: CallOptions) => Promise<unknown>,
-  signal?: AbortSignal,
-): Promise<void> {
-  try {
-    await operation(signal ? { signal } : {})
-  } catch (cause) {
-    // A 2xx the SDK could not read (a body its schema rejects, or none at
-    // all): both surface as a FlexPriceError carrying the successful status.
-    if (cause instanceof FlexPriceError && cause.statusCode >= 200 && cause.statusCode < 300) {
-      return
-    }
     throw toApiError(cause)
   }
 }
