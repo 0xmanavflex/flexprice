@@ -11,6 +11,11 @@
  * framed as it is: Flexprice stores the PDF typed and inline. Any other link
  * gets null, and the dialog offers a new tab and the download instead of a
  * frame that would download.
+ *
+ * A one-page PDF opens with the viewer's toolbar off (`#toolbar=0`), so the
+ * preview does not carry a "1 / 1" page counter; the dialog already offers
+ * Download and Open in a new tab. Longer PDFs, and any whose pages cannot be
+ * counted, keep the toolbar to page through.
  */
 export async function frameablePdf(
   url: string,
@@ -20,7 +25,9 @@ export async function frameablePdf(
     const response = await fetchImpl(url, { credentials: 'omit' })
     if (response.ok) {
       const bytes = await response.blob()
-      return URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
+      const blobUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
+      const pages = pdfPageCount(await bytes.text().catch(() => ''))
+      return pages === 1 ? `${blobUrl}${SINGLE_PAGE_VIEW}` : blobUrl
     }
   } catch {
     /* blocked by CORS or the network: decided below from the link itself */
@@ -36,4 +43,22 @@ export function isPresignedStorageLink(url: string): boolean {
   } catch {
     return false
   }
+}
+
+/** Viewer open parameters for a one-page PDF: no toolbar (and its page counter), no sidebar. */
+const SINGLE_PAGE_VIEW = '#toolbar=0&navpanes=0'
+
+/**
+ * The page objects in a PDF's source (`/Type /Page`, not `/Pages`). Zero when
+ * they cannot be read, for example when the page objects sit in a compressed
+ * object stream; callers treat that as unknown, not as one page.
+ */
+export function pdfPageCount(source: string): number {
+  return source.match(/\/Type\s*\/Page(?![a-zA-Z])/g)?.length ?? 0
+}
+
+/** The `blob:` URL a frame URL was made from, without its viewer parameters, for revoking. */
+export function blobOf(frameUrl: string): string {
+  const hash = frameUrl.indexOf('#')
+  return hash === -1 ? frameUrl : frameUrl.slice(0, hash)
 }

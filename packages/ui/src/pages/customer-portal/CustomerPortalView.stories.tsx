@@ -153,6 +153,8 @@ export const Usage: Story = {
     await expect(canvas.getByText('$13.11')).toBeVisible()
     await expect(canvas.getByText('1.4M over · billed as usage')).toBeVisible()
     await expect(canvas.getByText('$0.20 per 1K calls')).toBeVisible()
+    // A tiered price has a unit cost too: its effective rate, marked as an average.
+    await expect(canvas.getByText('avg. $0.01999 per minute')).toBeVisible()
   },
 }
 

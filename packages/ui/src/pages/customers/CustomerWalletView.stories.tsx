@@ -285,8 +285,11 @@ export const Default: Story = {
     await expect(canvas.getAllByRole('button', { name: 'More information' })).toHaveLength(2)
     await expect(canvas.getByText('Active')).toBeInTheDocument()
     await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
-    await expect(canvas.getByText('Expiring soon')).toBeInTheDocument()
+    // Expiring credits live in the ledger's Expires column, not a property of their own.
+    await expect(canvas.queryByText('Expiring soon')).toBeNull()
     await expect(canvas.getByText(/used, not yet invoiced/)).toBeInTheDocument()
+    // The bar's share is stated: used (last invoiced − real-time) over the last invoiced balance.
+    await expect(canvas.getByText(/^\d+% of the last invoiced balance used$/)).toBeVisible()
     await expect(canvas.getByRole('button', { name: /auto top-up off/i })).toBeEnabled()
     await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /top up wallet/i })).toBeEnabled()
@@ -542,7 +545,7 @@ export const PreviewsBonusCredits: Story = {
     await userEvent.type(dialog.getByLabelText(/^credits/i), '500')
     await expect(
       dialog.getByText(
-        'Earns 50 bonus credits from the bonus settings: 10% of the top-up, expires 3 months after the top-up.',
+        'Earns 50 bonus credits: 10% of the top-up, expires 3 months after the top-up.',
       ),
     ).toBeVisible()
     await userEvent.type(dialog.getByLabelText(/^bonus credits/i), '75')
@@ -553,6 +556,51 @@ export const PreviewsBonusCredits: Story = {
         expect.objectContaining({ credits: '500', bonusCredits: '75' }),
       ),
     )
+  },
+}
+
+/**
+ * With bonus credits off (or no slab for the amount) the dialog says nothing
+ * about a bonus: no sentence pointing at a setting that is not on this screen.
+ */
+export const NoBonusNoSentence: Story = {
+  args: { bonusConfig: null },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/^credits/i), '500')
+    await expect(dialog.queryByText(/bonus credits are off/i)).toBeNull()
+    await expect(dialog.queryByText(/Settings → Wallets/)).toBeNull()
+    await expect(dialog.queryByText(/^Earns /)).toBeNull()
+  },
+}
+
+/**
+ * Create wallet reads in pairs: Currency then Description, the two rates on
+ * one line, initial credits beside their expiry. Inputs never ask a password
+ * manager for a login.
+ */
+export const CreateWalletLayout: Story = {
+  args: { wallets: [], transactions: [], selectedId: null },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /create wallet/i }))
+    const dialog = await screen.findByRole('dialog')
+    const order = [...dialog.querySelectorAll('label[for^="wallet-"]')].map((label) =>
+      label.getAttribute('for'),
+    )
+    await expect(order).toEqual([
+      'wallet-currency',
+      'wallet-description',
+      'wallet-rate',
+      'wallet-topup-rate',
+      'wallet-initial',
+      'wallet-initial-expiry',
+    ])
+    for (const id of ['wallet-rate', 'wallet-topup-rate', 'wallet-initial', 'wallet-description']) {
+      const input = dialog.querySelector(`#${id}`)
+      await expect(input).toHaveAttribute('type', 'text')
+      await expect(input).toHaveAttribute('autocomplete', 'off')
+    }
   },
 }
 

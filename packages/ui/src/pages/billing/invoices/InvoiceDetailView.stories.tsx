@@ -65,6 +65,7 @@ function makeInvoice(
       id: `line_${index}`,
       description: `${ITEMS[index % ITEMS.length]}${index >= ITEMS.length ? ` ${index + 1}` : ''}`,
       detail: zero ? 'No usage this period' : 'May 1 – May 31',
+      ...(zero ? {} : { detailFull: 'May 1, 2026 – May 31, 2026' }),
       quantity: String(zero ? 0 : index + 1),
       unitPrice: zero ? null : 100,
       amount: zero ? 0 : 100 * (index + 1),
@@ -274,6 +275,23 @@ export const Default: Story = {
   },
 }
 
+/**
+ * The Interval column keeps the short period on one line; hovering (or
+ * focusing) it shows the full dates with years.
+ */
+export const IntervalTooltip: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('columnheader', { name: 'Interval' })).toBeVisible()
+    const [period] = canvas.getAllByLabelText('Service period May 1, 2026 – May 31, 2026')
+    await expect(period).toHaveTextContent('May 1 – May 31')
+    await userEvent.hover(period!)
+    await expect(
+      await screen.findByText('May 1, 2026 – May 31, 2026', {}, { timeout: 3000 }),
+    ).toBeVisible()
+  },
+}
+
 /** Every action lives in More, Download PDF and Copy link included. */
 export const MoreMenu: Story = {
   parameters: menuA11y,
@@ -321,9 +339,10 @@ export const HostedLink: Story = {
     await expect(
       await screen.findByRole('menuitem', { name: /Copy hosted invoice link/ }),
     ).not.toHaveAttribute('aria-disabled', 'true')
-    await expect(
-      screen.getByRole('menuitem', { name: /Open hosted invoice/ }),
-    ).not.toHaveAttribute('aria-disabled', 'true')
+    await expect(screen.getByRole('menuitem', { name: /Open hosted invoice/ })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
     // The Related card names the page, not the raw URL.
     await expect(canvas.getByRole('link', { name: 'Open hosted invoice' })).toHaveAttribute(
       'href',

@@ -1,4 +1,4 @@
-import { type ReactNode, useRef } from 'react'
+import { useRef } from 'react'
 import {
   type PortalCustomer,
   type PortalInvoice,
@@ -16,6 +16,7 @@ import {
 } from '@ui/components/primitives/sheet'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { ErrorState } from '@ui/compositions/feedback/States'
+import { TotalRow, TotalsList } from '@ui/compositions/detail/DetailKit'
 import { provenance } from '@ui/provenance'
 import { Money } from '../shared/Money'
 import { toneColor } from '../shared/charts'
@@ -35,6 +36,7 @@ export const PortalInvoiceSheetProvenance = provenance({
     'primitives/sheet',
     'primitives/button',
     'compositions/feedback/States',
+    'compositions/detail-kit',
     'shared/Money',
   ],
   note: 'Customer portal invoice drawer, after the portal prototype (receipt-1 layout, 672px).',
@@ -96,6 +98,9 @@ function Details({
     <Money value={value} {...(locale ? { locale } : {})} />
   )
   const owed = isPayable(i)
+  const paidSoFar = Number(i.amountPaid.amount) !== 0
+  // The figure the drawer is about: what is left to pay, what was paid, or (void) what it was for.
+  const hero = owed ? 'Amount due' : i.status === 'paid' ? 'Total paid' : 'Total'
   const payment =
     i.status === 'paid'
       ? 'Paid'
@@ -134,7 +139,7 @@ function Details({
       <div className="flex-1 space-y-8 overflow-y-auto px-8 py-7">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-muted-foreground text-xs">{owed ? 'Amount due' : 'Total paid'}</p>
+            <p className="text-muted-foreground text-xs">{hero}</p>
             <p className="text-3xl font-medium tracking-tight tabular-nums">
               {money(owed ? i.amountDue : i.total)}
             </p>
@@ -211,20 +216,23 @@ function Details({
           </tbody>
         </table>
 
-        <dl className="ml-auto w-full max-w-xs space-y-2 text-[13px]">
-          <Total label="Subtotal" value={money(i.subtotal)} />
-          {i.discount ? <Total label="Discount" value={<>− {money(i.discount)}</>} /> : null}
-          <Total
-            label="Tax"
-            value={i.tax ? money(i.tax) : money({ amount: '0', currency: i.currency })}
-          />
-          <Total label="Total" value={money(i.total)} />
-          <Total label="Paid" value={<>− {money(i.amountPaid)}</>} />
-          <div className="flex justify-between border-t pt-3 text-sm font-medium">
-            <dt>Amount due</dt>
-            <dd className="tabular-nums">{money(i.amountDue)}</dd>
-          </div>
-        </dl>
+        {/* The kit's totals: the sum closes on a rule at Total, and only what applies is listed
+            (no "Paid − 0" on an unpaid invoice), so the amount due stands out. */}
+        <div className="flex justify-end">
+          <TotalsList className="text-[13px]">
+            <TotalRow label="Subtotal" value={money(i.subtotal)} />
+            {i.discount ? <TotalRow label="Discount" value={<>− {money(i.discount)}</>} /> : null}
+            <TotalRow
+              label="Tax"
+              value={i.tax ? money(i.tax) : money({ amount: '0', currency: i.currency })}
+            />
+            <TotalRow label="Total" value={money(i.total)} emphasis="total" rule />
+            {paidSoFar ? <TotalRow label="Paid" value={<>− {money(i.amountPaid)}</>} /> : null}
+            {owed || paidSoFar ? (
+              <TotalRow label="Amount due" value={money(i.amountDue)} emphasis="due" />
+            ) : null}
+          </TotalsList>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-2 border-t px-8 py-4">
@@ -244,14 +252,5 @@ function Details({
         </div>
       </div>
     </>
-  )
-}
-
-function Total({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
-    </div>
   )
 }
