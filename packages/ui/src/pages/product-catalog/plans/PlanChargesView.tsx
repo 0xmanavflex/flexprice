@@ -26,8 +26,6 @@ export interface PlanChargesViewProps {
   meterUnit?: (meterId: string) => string | undefined
   /** Per charge: what else is known, such as its earlier price versions. */
   details?: ReadonlyMap<string, ChargeDetail> | undefined
-  /** Brings back a charge's previous price version. */
-  onRevert?: ((charge: Charge, versionId: string) => Promise<unknown>) | undefined
   /** Which charge's sheet is open, so the page can read its history. */
   onOpenCharge?: ((charge: Charge | null) => void) | undefined
   /** The open charge's versions from `GET /prices/{id}/history`. */
@@ -48,7 +46,6 @@ function PlanChargesViewInner({
   onRetry,
   meterUnit,
   details,
-  onRevert,
   onOpenCharge,
   history,
   emptyDescription,
@@ -68,7 +65,6 @@ function PlanChargesViewInner({
       // When each charge is billed and when it is in effect, on screen.
       showDates
       {...(details ? { details } : {})}
-      {...(onRevert && !readOnly ? { onRevert } : {})}
       {...(onOpenCharge ? { onOpenCharge } : {})}
       {...(history ? { history } : {})}
       isLoading={loading ?? false}

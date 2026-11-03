@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
@@ -38,8 +38,8 @@ import {
   RotateCcwIcon,
   ScaleIcon,
   TicketPercentIcon,
+  Trash2Icon,
 } from '@ui/icons'
-import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Pill } from '../../shared/cells'
@@ -91,10 +91,12 @@ export interface ChargeSheetProps {
   priceLabel?: string | undefined
   editableSections?: readonly ChargeSection[] | undefined
   /**
-   * Bring back the version just before the current one. Resolves when saved;
-   * rejects with an Error whose message is shown. Omitted, no revert is offered.
+   * Ends the charge. The sheet closes first so the existing delete confirm can
+   * take over. Omitted, no delete is offered.
    */
-  onRevert?: ((versionId: string) => Promise<unknown>) | undefined
+  onDelete?: (() => void) | undefined
+  /** The delete button's wording. Catalogue charges say "Terminate"; a contract says "End charge". */
+  deleteLabel?: string | undefined
   /**
    * The versions read from the history API as the sheet opened. Given, it
    * replaces `detail.versions`, and its loading and error states show in the
@@ -343,15 +345,11 @@ export function ChargeSheet({
   locale,
   priceLabel,
   editableSections,
-  onRevert,
+  onDelete,
+  deleteLabel = 'Delete charge',
   history: fetched,
 }: ChargeSheetProps) {
   const body = useRef<HTMLDivElement>(null)
-  const [reverting, setReverting] = useState<{ id: string; price: string; from: string } | null>(
-    null,
-  )
-  const [revertPending, setRevertPending] = useState(false)
-  const [revertError, setRevertError] = useState<string | null>(null)
 
   // Opened from a flag: bring that box into view once the sheet has settled.
   useEffect(() => {
@@ -397,8 +395,6 @@ export function ChargeSheet({
   // later, and ones that have ended. A future end date is still current.
   const now = Date.now()
   const statusOf = (version: (typeof versions)[number]) => versionStatus(version, now)
-  // Only the version that ended last can be brought back.
-  const revertible = versions.find((version) => statusOf(version) === 'history')
 
   const history: ActivityLogEntry[] = versions.map((version) => {
     const status = statusOf(version)
@@ -422,28 +418,6 @@ export function ChargeSheet({
         .filter(Boolean)
         .join(' · '),
       ...(version.actor ? { by: version.actor } : {}),
-      ...(version === revertible && onRevert
-        ? {
-            action: (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 px-3"
-                onClick={() => {
-                  setRevertError(null)
-                  setReverting({
-                    id: version.id,
-                    price: version.price,
-                    from: version.startDate ? dates.format(version.startDate) : '',
-                  })
-                }}
-              >
-                <RotateCcwIcon aria-hidden />
-                Revert to this version
-              </Button>
-            ),
-          }
-        : {}),
     }
   })
 
@@ -602,37 +576,23 @@ export function ChargeSheet({
             </section>
           ) : null}
         </div>
+        {onDelete ? (
+          <div className="border-t px-4 py-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="text-destructive h-8"
+              onClick={() => {
+                onClose()
+                onDelete()
+              }}
+            >
+              <Trash2Icon aria-hidden />
+              {deleteLabel}
+            </Button>
+          </div>
+        ) : null}
       </SheetContent>
-      <ConfirmDialog
-        open={reverting !== null}
-        onOpenChange={(open) => (open ? undefined : setReverting(null))}
-        title={
-          reverting?.from
-            ? `Revert to the version from ${reverting.from}?`
-            : 'Revert to the earlier version?'
-        }
-        description={`${name} goes back to ${reverting?.price ?? 'its previous price'}, as a new version starting now. The current price is kept in the history as inactive, and invoices already issued keep the price they were billed at.`}
-        confirmLabel="Revert"
-        isPending={revertPending}
-        error={revertError}
-        onConfirm={() => {
-          if (!reverting || !onRevert) return
-          setRevertPending(true)
-          onRevert(reverting.id)
-            .then(() => {
-              setReverting(null)
-              onClose()
-            })
-            .catch((caught: unknown) =>
-              setRevertError(
-                caught instanceof Error && caught.message
-                  ? caught.message
-                  : 'The price could not be reverted. Try again.',
-              ),
-            )
-            .finally(() => setRevertPending(false))
-        }}
-      />
     </Sheet>
   )
 }

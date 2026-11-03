@@ -109,14 +109,6 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await expect(sheet.getByText(/^\d+ versions$/)).toBeVisible()
     // The old price's tag, not the History heading ("History · N versions").
     await expect(sheet.getByText('History', { exact: true }).first()).toBeVisible()
-
-    // Reverting brings the earlier price back as a new version.
-    await sheet.getByRole('button', { name: 'Revert to this version' }).click()
-    const confirm = page.getByRole('dialog', { name: /^Revert to the/ })
-    await confirm.getByRole('button', { name: 'Revert' }).click()
-    await expect(confirm).toBeHidden()
-    await expect(rows).toHaveCount(before)
-    await expect(row).toContainText('123.45')
   })
 
   test('adds then edits an entitlement', async ({ page }) => {

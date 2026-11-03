@@ -190,13 +190,6 @@ export interface SubscriptionDetailViewProps {
    */
   lineHistory?: SubscriptionLine[] | undefined
   /**
-   * Bring a charge back to an earlier version: `line` is the version billing
-   * now, `previous` the one to return to. Offered on the version just before
-   * the current one, in the charge's History.
-   */
-  onRevertLine?:
-    ((line: SubscriptionLine, previous: SubscriptionLine) => Promise<unknown>) | undefined
-  /**
    * Which charge's sheet is open, by its line item (`null` once closed), so the
    * page can read `GET /subscriptions/lineitems/{id}/history` for it.
    */
@@ -448,7 +441,6 @@ export function SubscriptionDetailView({
   subscription,
   lines,
   lineHistory,
-  onRevertLine,
   onOpenLine,
   openLineHistory,
   entitlements,
@@ -690,19 +682,6 @@ export function SubscriptionDetailView({
       })
     }
   }
-  // From a charge's History: find its lineage and the version picked.
-  const revertCharge =
-    onRevertLine && lineages && canEditCharges
-      ? (charge: Charge, versionId: string) => {
-          const lineage = lineages.find((candidate) => candidate.current.charge?.id === charge.id)
-          const previous =
-            lineage?.versions.find((version) => version.id === versionId) ??
-            openLineHistory?.lines?.find((version) => version.id === versionId)
-          return lineage && previous
-            ? onRevertLine(lineage.current, previous)
-            : Promise.reject(new Error('That version is no longer on this contract.'))
-        }
-      : undefined
   const editableChargeSections = (charge: Charge): ChargeSection[] => {
     const line = chargeRows.lineOf.get(charge.id)
     if (!canEditCharges || chargeHasEnded(charge) || !line || !canEditLine(line)) return []
@@ -1166,7 +1145,6 @@ export function SubscriptionDetailView({
                         removeLabel="End charge"
                         extraActions={chargeExtras}
                         variant="summary"
-                        {...(revertCharge ? { onRevert: revertCharge } : {})}
                         {...(openCharge ? { onOpenCharge: openCharge } : {})}
                         {...(chargeHistory ? { history: chargeHistory } : {})}
                         layout="narrow"
@@ -1673,7 +1651,6 @@ export function SubscriptionDetailView({
               ? { onTerminate: (charge: Charge) => endCharge(charge) }
               : {})}
             removeLabel="End charge"
-            {...(revertCharge ? { onRevert: revertCharge } : {})}
             {...(openCharge ? { onOpenCharge: openCharge } : {})}
             {...(chargeHistory ? { history: chargeHistory } : {})}
             extraActions={chargeExtras}
@@ -2027,6 +2004,12 @@ export function SubscriptionDetailView({
         {...(commitmentCharge ? { detail: chargeRows.details.get(commitmentCharge.id) } : {})}
         section={ChargeSection.Commitment}
         onClose={() => setCommitmentCharge(null)}
+        {...(canEditCharges && onEndCharge && commitmentCharge && !chargeHasEnded(commitmentCharge)
+          ? {
+              deleteLabel: 'End charge',
+              onDelete: () => endCharge(commitmentCharge),
+            }
+          : {})}
       />
     </DetailShell>
   )

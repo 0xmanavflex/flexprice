@@ -195,15 +195,8 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
         title="Checkout link ready"
         description={
           <>
-            Send this link to the customer. The credits land once they pay.{' '}
-            <a
-              href={checkoutLink ?? '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground font-mono break-all underline"
-            >
-              {checkoutLink}
-            </a>
+            Send this link to the customer. The credits land once they pay.
+            <CheckoutLink url={checkoutLink} />
           </>
         }
         confirmLabel="Copy link"
@@ -221,28 +214,16 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
         title="A checkout is already open"
         description={
           <>
-            This wallet has a checkout the customer has not finished
+            This wallet already has an unfinished checkout
             {blocked?.session.expiresAt
-              ? `, open until ${blocked.session.expiresAt.toLocaleString()}`
+              ? `, open until ${blocked.session.expiresAt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`
               : ''}
-            . They may be paying it now, so nothing new was created. Send them that link, or cancel
-            it and create one for this top-up.
-            {blocked?.session.url ? (
-              <>
-                {' '}
-                <a
-                  href={blocked.session.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground font-mono break-all underline"
-                >
-                  {blocked.session.url}
-                </a>
-              </>
-            ) : null}
+            . Nothing new was created. The customer may be paying it now — send them this link, or
+            cancel it and start a new checkout for this top-up.
+            {blocked?.session.url ? <CheckoutLink url={blocked.session.url} /> : null}
           </>
         }
-        confirmLabel="Cancel it and create new"
+        confirmLabel="Cancel and create new"
         pendingLabel="Creating…"
         destructive
         isPending={topUp.isPending}
@@ -250,6 +231,21 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
         onConfirm={() => blocked && void runTopUp(blocked.draft, true).catch(() => undefined)}
       />
     </>
+  )
+}
+
+/** The payment URL, on its own line so a long checkout link does not run through the sentence. */
+function CheckoutLink({ url }: { url: string | null }) {
+  if (!url) return null
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="border-border bg-muted text-foreground mt-3 block rounded-md border px-3 py-2 font-mono text-xs break-all no-underline"
+    >
+      {url}
+    </a>
   )
 }
 

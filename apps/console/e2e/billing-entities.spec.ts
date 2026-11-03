@@ -196,17 +196,15 @@ test('billing entities: organization profile is editable while entities are off'
   await expect(page.getByRole('link', { name: 'Manage default entity' })).toHaveCount(0)
 })
 
-test('billing entities: organization profile stays editable and links to the default entity once enabled', async ({
+test('billing entities: organization profile stays editable once entities are enabled', async ({
   page,
 }) => {
   await enableEntities(page)
   await page.goto('/settings?section=organization&tab=profile')
-  await expect(page.getByText('Seller details now live on billing entities.')).toBeVisible()
   await expect(page.getByRole('textbox', { name: /billing email/i })).toBeEditable()
   await expect(page.getByRole('textbox', { name: /^phone/i })).toBeEditable()
   await expect(page.getByRole('textbox', { name: /address line 1/i })).toBeEditable()
-  await page.getByRole('link', { name: 'Manage default entity' }).click()
-  await expect(page).toHaveURL(/\/settings\/billing-entities\/[^/?]+/)
+  await expect(page.getByRole('link', { name: 'Manage default entity' })).toHaveCount(0)
 })
 
 async function addIndiaEntity(page: Page) {

@@ -12,7 +12,6 @@ import {
   SubscriptionStatus,
   type SubscriptionCancellationType,
   type SubscriptionLine,
-  lineRevertDraft,
 } from '@fp/domain'
 import {
   ApiError,
@@ -308,15 +307,6 @@ export function SubscriptionDetailPage({
               },
             }
           : {})}
-        onRevertLine={(line, previous) => {
-          // No revert endpoint: the old price goes out as a new version from now.
-          const draft = lineRevertDraft(previous, line.priceId)
-          return draft
-            ? editLine.mutateAsync({ lineItemId: line.id, draft })
-            : Promise.reject(
-                new Error('The earlier price was not reported, so it cannot be restored.'),
-              )
-        }}
         chargeAlerts={part(chargeAlerts)}
         {...(revenueRecognition.data
           ? {
