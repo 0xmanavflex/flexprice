@@ -720,38 +720,20 @@ const search = (path: string, key: string) =>
         : key === 'customers'
           ? { ...result, items: result.items.map(withDemoIntegrations) }
           : key === 'addons' && body.expand?.includes('prices')
-            ? { ...result, items: result.items.map(withDemoAddonPrice) }
+            ? { ...result, items: result.items.map(withAddonPrices) }
             : result
     return HttpResponse.json(payload)
   })
 
 /**
- * The captured add-ons carry no prices, and the list leaves an add-on with no
- * charge off (it is a shell). So that the list shows them under mocks, as it
- * does against an account with priced add-ons, each gets one flat monthly fee.
+ * An add-on row as the search answers it with `expand=prices`: its charges from
+ * the price corpus, the same rows its detail page and charge counts read.
  */
-function withDemoAddonPrice(row: Record<string, unknown>): Record<string, unknown> {
-  const prices = row['prices']
-  if (Array.isArray(prices) && prices.length > 0) return row
+function withAddonPrices(row: Record<string, unknown>): Record<string, unknown> {
   const id = readString(row, 'id')
   return {
     ...row,
-    prices: [
-      {
-        id: `price_${id}`,
-        entity_id: id,
-        entity_type: 'ADDON',
-        type: 'FIXED',
-        billing_model: 'FLAT_FEE',
-        billing_cadence: 'RECURRING',
-        billing_period: 'MONTHLY',
-        billing_period_count: 1,
-        currency: 'usd',
-        amount: '25',
-        display_amount: '$25.00',
-        invoice_cadence: 'ADVANCE',
-      },
-    ],
+    prices: priceCorpus.items.filter((price) => readString(price, 'entity_id') === id),
   }
 }
 
@@ -2822,8 +2804,33 @@ const DASHBOARD_CORPUS: Record<string, Corpus> = {
  */
 const priceCorpus: Corpus = (() => {
   const base = corpus.prices as Corpus
-  return { items: [...base.items], pagination: { ...base.pagination } }
+  const items = [...base.items, ...demoAddonPrices(base.items)]
+  return { items, pagination: { ...base.pagination, total: items.length } }
 })()
+
+/**
+ * The synthesized add-ons have no charges of their own, and the add-on charges
+ * in the corpus belong to captured add-ons that were not kept. Each demo add-on
+ * takes one of those real charges (cycled), except every fourth, which stays an
+ * uncharged shell so the list's rule of leaving those off is shown too. They
+ * live in the price corpus, so the list, the detail page and every count agree.
+ */
+function demoAddonPrices(prices: Record<string, unknown>[]): Record<string, unknown>[] {
+  const seen = new Set<string>()
+  const templates = prices.filter((price) => {
+    const owner = readString(price, 'entity_id')
+    if (readString(price, 'entity_type') !== 'ADDON' || seen.has(owner)) return false
+    seen.add(owner)
+    return true
+  })
+  if (templates.length === 0) return []
+  return (corpus.addons as Corpus).items.flatMap((addon, index) => {
+    if (index % 4 === 3) return []
+    const id = readString(addon, 'id')
+    const template = templates[index % templates.length]!
+    return [{ ...template, id: `${readString(template, 'id')}_${id}`, entity_id: id }]
+  })
+}
 
 function sourceFor(key: string): Corpus {
   if (key === 'prices') return priceCorpus
