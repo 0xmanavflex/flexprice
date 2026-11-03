@@ -742,13 +742,14 @@ export function useInheritedContracts(parentId: string) {
   })
 }
 
-export function useSubscriptions(query: SubscriptionQuery) {
+export function useSubscriptions(query: SubscriptionQuery, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
   return useQuery({
     queryKey: queryKeys.subscriptions.list({ ...query, statuses: [...query.statuses].sort() }),
     queryFn: ({ signal }) => fetchSubscriptions(client, query, signal),
     placeholderData: (previous) => previous,
+    enabled: options.enabled ?? true,
   })
 }
 

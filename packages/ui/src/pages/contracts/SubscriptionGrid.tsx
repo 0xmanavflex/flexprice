@@ -25,12 +25,7 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import {
-  type EntityColumn,
-  dateColumn,
-  pillColumn,
-  textColumn,
-} from '../shared/cells'
+import { type EntityColumn, dateColumn, pillColumn, textColumn } from '../shared/cells'
 import { SUBSCRIPTION_STATUS_TONE } from '../shared/statusTones'
 
 /**
@@ -111,6 +106,11 @@ export interface SubscriptionGridProps {
   query: SubscriptionQuery
   onQueryChange: (query: SubscriptionQuery) => void
   isLoading?: boolean
+  /**
+   * Whether the list is narrowed. Defaults to the query past its Active and
+   * Trialing default; the page sets it when that default hides contracts.
+   */
+  isFiltered?: boolean
   /** Already a message; the grid does not know what an ApiError is. */
   error?: string | null
   onRetry?: () => void
@@ -135,6 +135,7 @@ export function SubscriptionGrid({
   query,
   onQueryChange,
   isLoading = false,
+  isFiltered,
   error = null,
   onRetry,
   onSubscriptionClick,
@@ -305,7 +306,7 @@ export function SubscriptionGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={isSubscriptionQueryFiltered(query)}
+      isFiltered={isFiltered ?? isSubscriptionQueryFiltered(query)}
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No contracts match these filters"
       empty={{

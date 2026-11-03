@@ -56,13 +56,23 @@ export function SubscriptionListPage({
 
   const failure = toListFailure(subscriptions.error, 'contracts')
   const rows = subscriptions.data?.subscriptions ?? []
-  const isFiltered = isSubscriptionQueryFiltered(query)
+  const narrowed = isSubscriptionQueryFiltered(query)
+  // The Active and Trialing default can hide every contract an account has
+  // (all paused or cancelled). Only when it comes back empty, ask whether any
+  // contract exists at all, so the page says "none match" rather than "none yet".
+  const defaultEmpty =
+    !narrowed && subscriptions.isSuccess && (subscriptions.data?.total ?? 0) === 0
+  const anyAtAll = useSubscriptions(
+    { ...query, search: '', statuses: [], filters: [], page: 1, pageSize: 1 },
+    { enabled: defaultEmpty },
+  )
+  const isFiltered = narrowed || (defaultEmpty && (anyAtAll.data?.total ?? 0) > 0)
 
   return (
     <>
       <PageBody>
         <ListState
-          isLoading={subscriptions.isPending}
+          isLoading={subscriptions.isPending || (defaultEmpty && anyAtAll.isPending)}
           error={failure}
           isEmpty={rows.length === 0 && (subscriptions.data?.total ?? 0) === 0 && !isFiltered}
           hasRows={rows.length > 0}
@@ -84,6 +94,7 @@ export function SubscriptionListPage({
             total={subscriptions.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            isFiltered={isFiltered}
             filterOptions={filterOptions}
             onCreate={onCreate}
             {...(onOpen ? { onSubscriptionClick: (subscription) => onOpen(subscription.id) } : {})}
