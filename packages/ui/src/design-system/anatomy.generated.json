@@ -1016,7 +1016,6 @@
         "DashboardHome",
         "DateInput",
         "DayCalendar",
-        "FilterBar",
         "FilterSelect",
         "PortalUsage",
         "UsageCard"
@@ -2680,7 +2679,8 @@
         "CalendarIcon"
       ],
       "usedBy": [
-        "CustomerAnalyticsView"
+        "CustomerAnalyticsView",
+        "FilterBar"
       ],
       "story": "./src/compositions/forms/DateInput.stories.tsx"
     },
@@ -3826,7 +3826,7 @@
       "file": "src/compositions/tables/FilterBar.tsx",
       "layer": "composition",
       "composes": [
-        "Calendar",
+        "DayCalendar",
         "Filters"
       ],
       "usedBy": [
