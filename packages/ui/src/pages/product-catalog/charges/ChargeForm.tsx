@@ -23,6 +23,7 @@ import {
   emptyCharge,
   currencyCodes,
 } from '@fp/domain'
+import { NOT_A_LOGIN } from '@ui/compositions/forms/notALogin'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
 import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
@@ -306,6 +307,7 @@ export function ChargeForm({
     <Field label={label} required error={messageOf(errors, 'amount')}>
       {({ id, ...field }) => (
         <Input
+          {...NOT_A_LOGIN}
           id={id}
           inputMode="decimal"
           placeholder="0.00"
@@ -432,6 +434,7 @@ export function ChargeForm({
               lockedInput(id, form.getValues('displayName') ?? '')
             ) : (
               <Input
+                {...NOT_A_LOGIN}
                 id={id}
                 disabled={isSubmitting}
                 placeholder={isUsage ? 'e.g. API calls' : 'e.g. Platform base'}
@@ -579,6 +582,7 @@ export function ChargeForm({
           >
             {({ id, ...field }) => (
               <Input
+                {...NOT_A_LOGIN}
                 id={id}
                 type="number"
                 min={1}
@@ -672,6 +676,7 @@ export function ChargeForm({
             >
               {({ id, ...field }) => (
                 <Input
+                  {...NOT_A_LOGIN}
                   id={id}
                   type="number"
                   min={0}
@@ -725,6 +730,7 @@ export function ChargeForm({
           >
             {({ id, ...field }) => (
               <Input
+                {...NOT_A_LOGIN}
                 id={id}
                 type="number"
                 min={1}

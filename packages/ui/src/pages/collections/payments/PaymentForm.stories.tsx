@@ -102,7 +102,14 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   render: (args) => <PaymentFormPlayground {...args} />,
 }
 
-export const Default: Story = {}
+/** Form fields are not logins: password managers are told to leave them alone. */
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const amount = within(canvasElement).getByRole('textbox', { name: /^Amount/ })
+    await expect(amount).toHaveAttribute('autocomplete', 'off')
+    await expect(amount).toHaveAttribute('data-1p-ignore')
+  },
+}
 
 /** Submitting an empty form is rejected by the domain schema. */
 export const ValidationFromDomain: Story = {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { NOT_A_LOGIN } from '@ui/compositions/forms/notALogin'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
@@ -132,19 +133,6 @@ type Dialog = 'create' | 'top-up' | 'debit' | 'auto-topup' | 'terminate' | null
 const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
 
 const credits = formatCredits
-
-/**
- * Wallet fields are amounts, rates and notes, never credentials. Without this a
- * browser or password manager offers saved logins on them and draws its key
- * icon, so they read as password fields.
- */
-const NOT_A_LOGIN = {
-  autoComplete: 'off',
-  'data-1p-ignore': true,
-  'data-lpignore': 'true',
-  'data-bwignore': true,
-  'data-form-type': 'other',
-} as const
 
 export function CustomerWalletView({
   wallets,

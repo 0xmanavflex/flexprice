@@ -1,4 +1,5 @@
 import { Children, Fragment, isValidElement, useId, type ReactNode } from 'react'
+import { NOT_A_LOGIN } from './notALogin'
 import {
   Field as FieldRoot,
   FieldContent,
@@ -122,7 +123,7 @@ export function FormCard({
   )
 }
 
-interface ControlProps {
+interface ControlProps extends Readonly<typeof NOT_A_LOGIN> {
   id: string
   'aria-describedby': string | undefined
   'aria-invalid': true | undefined
@@ -198,6 +199,7 @@ export function FormRow({
       <div className="flex min-w-0 flex-col gap-1.5">
         {isControl
           ? children({
+              ...NOT_A_LOGIN,
               id,
               'aria-describedby': describedBy,
               'aria-invalid': error ? true : undefined,
