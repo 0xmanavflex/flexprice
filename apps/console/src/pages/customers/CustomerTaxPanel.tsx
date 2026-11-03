@@ -3,6 +3,7 @@ import { DEFAULT_TAX_RATE_QUERY } from '@fp/domain'
 import {
   ApiError,
   useCreateTaxAssociation,
+  useCreateTaxRate,
   useCustomerTaxAssociations,
   useDeleteTaxAssociation,
   useTaxRates,
@@ -20,6 +21,7 @@ export function CustomerTaxPanel({ customerId }: CustomerTaxPanelProps) {
   const associations = useCustomerTaxAssociations(customerId)
   const rates = useTaxRates({ ...DEFAULT_TAX_RATE_QUERY, pageSize: 100, statuses: ['published'] })
   const create = useCreateTaxAssociation(customerId)
+  const createRate = useCreateTaxRate()
   const update = useUpdateTaxAssociation()
   const remove = useDeleteTaxAssociation()
 
@@ -46,6 +48,13 @@ export function CustomerTaxPanel({ customerId }: CustomerTaxPanelProps) {
       isLoading={associations.isPending}
       failed={associations.error !== null}
       onRetry={() => void associations.refetch()}
+      onCreateTaxRate={async (draft) => {
+        await createRate.mutateAsync(draft)
+        return {
+          code: draft.code,
+          label: `${draft.name}${draft.percentageValue ? ` (${draft.percentageValue}%)` : ''}`,
+        }
+      }}
       onCreate={(draft) =>
         create.mutateAsync(draft).then((result) => {
           toast.success('Tax rate added')

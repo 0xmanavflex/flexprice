@@ -17,8 +17,16 @@ describe('parseSubscriptionSearch', () => {
       statuses: [SubscriptionStatus.Paused],
       sortBy: DEFAULT_SUBSCRIPTION_QUERY.sortBy,
       sortDirection: 'asc',
-      filters: [],
+      filters: DEFAULT_SUBSCRIPTION_QUERY.filters,
     })
+  })
+
+  it('opens on Active and Trialing, and keeps a cleared filter cleared', () => {
+    expect(parseSubscriptionSearch({}).filters).toEqual([
+      { field: 'subscription_status', op: 'in', value: ['active', 'trialing'] },
+    ])
+    expect(parseSubscriptionSearch({ filters: [] }).filters).toEqual([])
+    expect(parseSubscriptionSearch({ filters: '[]' }).filters).toEqual([])
   })
 
   it('accepts statuses as a repeated param or a comma list', () => {

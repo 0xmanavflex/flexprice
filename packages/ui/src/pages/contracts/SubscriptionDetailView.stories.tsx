@@ -803,6 +803,34 @@ export const ChargesTab: Story = {
   },
 }
 
+/** Every line ends on a future date, as on a fixed-term contract. */
+const END_DATED_LINES: SubscriptionLine[] = LINES.map((line) => ({
+  ...line,
+  endDate: date('2099-12-31'),
+  charge: line.charge ? { ...line.charge, endDate: date('2099-12-31') } : null,
+}))
+
+/**
+ * A fixed-term contract: every charge has an end date, still ahead. They still
+ * bill, so they are counted, listed, and their price and commitment can be
+ * changed: an end date is scheduled, not ended.
+ */
+export const EndDatedChargesStillCount: Story = {
+  parameters: menuA11y,
+  args: { ...BASE, lines: ready(END_DATED_LINES) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const tab = canvas.getByRole('tab', { name: /Charges/ })
+    await expect(tab).toHaveTextContent(String(END_DATED_LINES.length))
+    await userEvent.click(tab)
+    await expect(await canvas.findByText('API requests')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for API requests' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Override price' })).toBeVisible()
+    await expect(screen.getByRole('menuitem', { name: /commitment/ })).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+  },
+}
+
 const openPricing = async (canvasElement: HTMLElement) => {
   const canvas = within(canvasElement)
   const tab = canvas.getByRole('tab', { name: /Charges/ })
@@ -1287,7 +1315,45 @@ export const AddAddon: Story = {
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
-    await waitFor(() => expect(args.onAddAddon).toHaveBeenCalledWith({ addonId: 'addon_support' }))
+    await waitFor(() =>
+      expect(args.onAddAddon).toHaveBeenCalledWith([{ addonId: 'addon_support' }]),
+    )
+  },
+}
+
+/** "Add another add-on" sets the first aside, so several are attached together as one change. */
+export const AddSeveralAddons: Story = {
+  parameters: menuA11y,
+  args: {
+    sectionOptions: {
+      ...SECTION_OPTIONS,
+      addons: [
+        { id: 'addon_support', name: 'Priority support' },
+        { id: 'addon_sso', name: 'SSO' },
+      ],
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Add another add-on' }))
+    const staged = within(dialog.getByRole('list', { name: 'Add-ons to attach' }))
+    await expect(staged.getByText('Priority support')).toBeVisible()
+
+    // The one set aside leaves the picker.
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await expect(screen.queryByRole('option', { name: 'Priority support' })).toBeNull()
+    await userEvent.click(await screen.findByRole('option', { name: 'SSO' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Add 2 add-ons' }))
+    await waitFor(() =>
+      expect(args.onAddAddon).toHaveBeenCalledWith([
+        { addonId: 'addon_support' },
+        { addonId: 'addon_sso' },
+      ]),
+    )
   },
 }
 
@@ -1346,7 +1412,7 @@ export const AddAddonWithCommitment: Story = {
     const back = within(await screen.findByRole('dialog', { name: 'Add add-on' }))
     await userEvent.click(back.getByRole('button', { name: 'Add add-on' }))
     await waitFor(() =>
-      expect(args.onAddAddon).toHaveBeenCalledWith(
+      expect(args.onAddAddon).toHaveBeenCalledWith([
         expect.objectContaining({
           addonId: 'addon_support',
           priceOverrides: [
@@ -1354,7 +1420,7 @@ export const AddAddonWithCommitment: Story = {
           ],
           commitments: [expect.objectContaining({ value: '500' })],
         }),
-      ),
+      ]),
     )
   },
 }

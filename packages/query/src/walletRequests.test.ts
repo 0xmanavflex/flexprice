@@ -106,6 +106,28 @@ describe('wallet requests', () => {
     expect(body.idempotency_key).toBe('po-77')
   })
 
+  it('sends a checkout top-up as pay-first, and supersedes only when asked', () => {
+    const payAt = { provider: 'razorpay', returnUrl: 'https://console.test/wallet' }
+    const draft = { ...emptyTopUp(), credits: '100', checkout: true }
+    const body = TopUpWalletRequest$outboundSchema.parse(toTopUpRequest(draft, payAt))
+    expect(body.transaction_reason).toBe('PURCHASED_CREDIT_INVOICED')
+    expect(body.checkout).toEqual({
+      payment_provider: 'razorpay',
+      success_url: payAt.returnUrl,
+      cancel_url: payAt.returnUrl,
+    })
+    const retry = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest(draft, { ...payAt, supersede: true }),
+    )
+    expect(retry.checkout?.entity_creation_options).toEqual({
+      entity_creation_conflict_policies: { on_existing_entity: 'supersede' },
+    })
+    // A free grant never goes to checkout.
+    expect(
+      TopUpWalletRequest$outboundSchema.parse(toTopUpRequest({ ...draft, kind: 'free' }, payAt)),
+    ).not.toHaveProperty('checkout')
+  })
+
   it('leaves blank options out of a top-up', () => {
     const body = TopUpWalletRequest$outboundSchema.parse(
       toTopUpRequest({ ...emptyTopUp(), credits: '1' }),

@@ -8,7 +8,6 @@ import {
   TaxRateScope,
   TaxRateStatus,
 } from '@fp/domain'
-import { statusFilterField } from './search'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -36,6 +35,8 @@ export interface TaxRateWire {
   percentageValue?: string | undefined
   scope?: string | undefined
   status?: string | undefined
+  /** `ACTIVE` or `INACTIVE`: what archiving and the edit form's status change. */
+  taxRateStatus?: string | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
 }
@@ -47,9 +48,18 @@ export function toTaxRate(wire: TaxRateWire): TaxRate {
   const scope = TAX_RATE_SCOPES.has(wire.scope ?? '')
     ? (wire.scope as TaxRateScope)
     : TaxRateScope.Internal
-  const status = TAX_RATE_STATUSES.has(wire.status ?? '')
-    ? (wire.status as TaxRateStatus)
-    : TaxRateStatus.Published
+  // `taxRateStatus` is the field archiving and the edit form write, so when it
+  // is present it decides, both ways: the record's own `status` is not changed
+  // by an update and would otherwise keep a republished rate archived.
+  const rateStatus = wire.taxRateStatus?.toUpperCase()
+  const status =
+    rateStatus === 'INACTIVE'
+      ? TaxRateStatus.Archived
+      : rateStatus === 'ACTIVE'
+        ? TaxRateStatus.Published
+        : TAX_RATE_STATUSES.has(wire.status ?? '')
+          ? (wire.status as TaxRateStatus)
+          : TaxRateStatus.Published
 
   return {
     id: wire.id ?? '',
@@ -77,14 +87,11 @@ export function toTaxRateFilter(query: TaxRateQuery) {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    /*
-     * `status` is a declared parameter on `GET /taxes/rates`, so the facet is
-     * the server's. It used to narrow the fetched page instead, which left the
-     * pager counting every tax rate above the few that matched.
-     */
-    ...statusFilterField(query.statuses, Object.values(TaxRateStatus)),
   }
 }
+
+/** Enough to hold every tax rate an account keeps, when the status facet is on. */
+const STATUS_SCAN_LIMIT = 500
 
 export interface TaxRatePage {
   taxRates: TaxRate[]
@@ -92,6 +99,38 @@ export interface TaxRatePage {
 }
 
 export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Promise<TaxRatePage> {
+  /*
+   * The Status facet reads what the row shows: archived is the rate's
+   * `taxRateStatus` (what Archive and Edit write) before the record's own
+   * `status`, which an update cannot change. `GET /taxes/rates` only filters on
+   * the latter, so a republished rate would sit under Archived. With the facet
+   * on, every rate is read and the facet, search and page are applied here, so
+   * the rows, their labels and the total agree.
+   */
+  const wanted = new Set(query.statuses)
+  if (wanted.size > 0 && wanted.size < Object.values(TaxRateStatus).length) {
+    // Read every page: a single capped read would drop rates past the limit.
+    const all: unknown[] = []
+    for (let offset = 0; ; offset += STATUS_SCAN_LIMIT) {
+      const response = await call(() =>
+        client.taxRates.getTaxRates({ limit: STATUS_SCAN_LIMIT, offset }),
+      )
+      const items = response.items ?? []
+      all.push(...items)
+      const total = response.pagination?.total ?? 0
+      if (items.length < STATUS_SCAN_LIMIT || offset + STATUS_SCAN_LIMIT >= total) break
+    }
+    const search = query.search.trim().toLowerCase()
+    const matching = all
+      .map((item) => toTaxRate(item as TaxRateWire))
+      .filter((taxRate) => wanted.has(taxRate.status))
+      .filter(
+        (taxRate) => !search || `${taxRate.name} ${taxRate.code}`.toLowerCase().includes(search),
+      )
+    const start = (query.page - 1) * query.pageSize
+    return { taxRates: matching.slice(start, start + query.pageSize), total: matching.length }
+  }
+
   const response = await call(() => client.taxRates.getTaxRates(toTaxRateFilter(query)))
   const taxRates = (response.items ?? []).map((item) => toTaxRate(item as TaxRateWire))
 
@@ -128,12 +167,41 @@ export function useTaxRates(
   } = {},
 ) {
   const client = useFlexprice()
+  // With the status facet on, every rate is scanned: cache that scan once per
+  // search and status, and cut each page from it, so paging makes no request.
+  const scanned =
+    query.statuses.length > 0 && query.statuses.length < Object.values(TaxRateStatus).length
+  const statuses = [...query.statuses].sort()
+
+  const { page: _page, pageSize: _pageSize, ...unpaged } = query
 
   return useQuery({
-    queryKey: queryKeys.taxRates.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchTaxRates(client, query),
+    queryKey: scanned
+      ? queryKeys.taxRates.list({ ...unpaged, statuses, scan: true })
+      : queryKeys.taxRates.list({ ...query, statuses }),
+    queryFn: () =>
+      fetchTaxRates(client, scanned ? { ...query, page: 1, pageSize: Infinity } : query),
+    select: (data: TaxRatePage): TaxRatePage => {
+      if (!scanned) return data
+      const start = (query.page - 1) * query.pageSize
+      return { taxRates: data.taxRates.slice(start, start + query.pageSize), total: data.total }
+    },
     placeholderData: (previous) => previous,
     ...(options.refetchOnWindowFocus ? { refetchOnWindowFocus: 'always' as const } : {}),
+  })
+}
+
+/** One tax rate, by id: `GET /taxes/rates/{id}`, for its detail page. */
+export function useTaxRate(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.taxRates.detail(id),
+    queryFn: async ({ signal }) =>
+      toTaxRate(
+        (await call((options) => client.taxRates.getTaxRate(id, options), signal)) as TaxRateWire,
+      ),
+    enabled: Boolean(id),
   })
 }
 

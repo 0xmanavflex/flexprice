@@ -1,5 +1,15 @@
-import { useEffect, useState } from 'react'
-import { CalendarIcon, XIcon } from '@ui/icons'
+import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import {
+  eachMonthOfInterval,
+  eachYearOfInterval,
+  endOfYear,
+  format,
+  isAfter,
+  isBefore,
+  startOfYear,
+} from 'date-fns'
+import type { CaptionLabelProps, MonthGridProps } from 'react-day-picker'
+import { CalendarIcon, ChevronDownIcon, XIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Calendar } from '@ui/components/primitives/calendar'
 import { Input } from '@ui/components/primitives/input'
@@ -21,11 +31,10 @@ import { provenance } from '@ui/provenance'
  *
  * Date only, the value is a day: `YYYY-MM-DD` (or empty), as the forms hold it.
  *
- * With `withTime`, the calendar is followed by a Time row (hours : minutes)
- * with Local or UTC beside it, as production's DateTimePicker has it, and the
- * value is an instant: an ISO string (`2026-10-21T04:00:00.000Z`). A plain day
- * already in the form reads as midnight local. The trigger says
- * "Oct 21, 2026, 09:30 AM" in the chosen zone, with "UTC" after it in UTC.
+ * The time row and the timezone (local by default, or the customer's zone)
+ * are always shown. With `withTime` the value is an ISO instant
+ * (`2026-10-21T04:00:00.000Z`); otherwise the pick still stores `YYYY-MM-DD`.
+ * The caption opens a year grid, then the months of that year (ReUI c-calendar-26).
  *
  * Both take `min` and `max` days (outside them is disabled), and `clearable`
  * puts a clear button in the trigger for an optional date.
@@ -33,7 +42,7 @@ import { provenance } from '@ui/provenance'
 export const DateInputProvenance = provenance({
   source: 'composition',
   composes: ['ui/popover', 'ui/calendar', 'ui/button', 'ui/input', 'ui/select'],
-  note: 'Day or instant picker over the stock Calendar in a Popover, with today as a primary tint (darker than hover, lighter than the selected day); the time row is the reference DateTimeField (hours, minutes, Local/UTC).',
+  note: 'Day or instant picker over the stock Calendar in a Popover. The caption is the ReUI c-calendar-26 year-then-month picker. Time and timezone are always shown; timezone defaults to local, or the customer zone when one is passed.',
 })
 
 export interface DateInputProps {
@@ -278,19 +287,31 @@ export function DayCalendar({ value, onValueChange, min, max }: DayCalendarProps
     ...(maxDate ? [{ after: maxDate }] : []),
   ]
   const month = selected ?? minDate ?? maxDate
+  const [zone, setZone] = useState<DateZone>('local')
+  const [hours, setHours] = useState(0)
+  const [minutes, setMinutes] = useState(0)
   return (
-    <Calendar
-      mode="single"
-      classNames={dayPickerClassNames}
-      // Month and year menus: a range can start years back without paging month by month.
-      captionLayout="dropdown"
-      {...(selected ? { selected } : {})}
-      {...(month ? { defaultMonth: month } : {})}
-      {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
-      onSelect={(date) => {
-        if (date) onValueChange(toDay(date))
-      }}
-    />
+    <div>
+      <YearMonthCalendar
+        {...(selected ? { selected } : {})}
+        {...(month ? { defaultMonth: month } : {})}
+        {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
+        onSelect={(date) => {
+          if (date) onValueChange(toDay(date))
+        }}
+      />
+      <TimeZoneRow
+        zone={zone}
+        hours={hours}
+        minutes={minutes}
+        timeDisabled={!selected}
+        onZone={setZone}
+        onTime={(h, m) => {
+          setHours(h)
+          setMinutes(m)
+        }}
+      />
+    </div>
   )
 }
 
@@ -336,8 +357,9 @@ export function DateInput({
     if (!date) return onValueChange('')
     onValueChange(withTime ? at(date, hours, minutes) : toDay(date))
   }
+  // A date-only field stores a day, never an instant: its time does nothing.
   const setTime = (h: number, m: number) => {
-    if (calendarDay) onValueChange(at(calendarDay, h, m))
+    if (calendarDay && withTime) onValueChange(at(calendarDay, h, m))
   }
 
   const month = calendarDay ?? minDate
@@ -385,63 +407,300 @@ export function DateInput({
         ) : null}
       </div>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          classNames={dayPickerClassNames}
+        <YearMonthCalendar
           {...(calendarDay ? { selected: calendarDay } : {})}
           {...(month ? { defaultMonth: month } : {})}
           {...(disabledDays.length > 0 ? { disabled: disabledDays } : {})}
+          {...(minDate ? { min: minDate } : {})}
+          {...(maxDate ? { max: maxDate } : {})}
           onSelect={pick}
         />
-        {withTime ? (
-          <div className="flex items-center gap-2 border-t px-3 py-3">
-            <span className="text-muted-foreground w-10 text-xs font-medium">Time</span>
-            <div className="flex flex-1 items-center gap-1">
-              <TimePart
-                label="Hours"
-                placeholder="HH"
-                max={23}
-                value={selected ? hours : undefined}
-                disabled={!selected}
-                onCommit={(h) => setTime(h, minutes)}
-              />
-              <span aria-hidden className="text-muted-foreground font-medium">
-                :
-              </span>
-              <TimePart
-                label="Minutes"
-                placeholder="MM"
-                max={59}
-                value={selected ? minutes : undefined}
-                disabled={!selected}
-                onCommit={(m) => setTime(hours, m)}
-              />
-            </div>
-            <Select value={zone} onValueChange={(next) => next && setPicked(next)}>
-              <SelectTrigger
-                size="sm"
-                className="h-8 w-auto max-w-40 min-w-20 text-xs"
-                aria-label="Time zone"
-                title={zoneLabel(zone)}
-              >
-                <SelectValue>
-                  <span className="truncate">{zoneLabel(zone)}</span>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent align="end" className="w-auto min-w-(--anchor-width)">
-                {named ? <SelectItem value={named}>{named}</SelectItem> : null}
-                <SelectItem value="local">Local</SelectItem>
-                <SelectItem value="utc">UTC</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
+        <TimeZoneRow
+          zone={zone}
+          named={named}
+          hours={selected && withTime ? hours : undefined}
+          minutes={selected && withTime ? minutes : undefined}
+          timeDisabled={!selected || !withTime}
+          onZone={(next) => setPicked(next)}
+          onTime={setTime}
+        />
       </PopoverContent>
     </Popover>
   )
 }
 
 const zoneLabel = (zone: DateZone) => (zone === 'utc' ? 'UTC' : zone === 'local' ? 'Local' : zone)
+
+/** Time and timezone, always present. Timezone defaults to local unless a customer zone is passed. */
+function TimeZoneRow({
+  zone,
+  named,
+  hours,
+  minutes,
+  timeDisabled,
+  onZone,
+  onTime,
+}: {
+  zone: DateZone
+  named?: string | undefined
+  hours: number | undefined
+  minutes: number | undefined
+  timeDisabled: boolean
+  onZone: (zone: DateZone) => void
+  onTime: (hours: number, minutes: number) => void
+}) {
+  const h = hours ?? 0
+  const m = minutes ?? 0
+  return (
+    <div className="flex items-center gap-2 border-t px-3 py-3">
+      <span className="text-muted-foreground w-10 text-xs font-medium">Time</span>
+      <div className="flex flex-1 items-center gap-1">
+        <TimePart
+          label="Hours"
+          placeholder="HH"
+          max={23}
+          value={hours}
+          disabled={timeDisabled}
+          onCommit={(next) => onTime(next, m)}
+        />
+        <span aria-hidden className="text-muted-foreground font-medium">
+          :
+        </span>
+        <TimePart
+          label="Minutes"
+          placeholder="MM"
+          max={59}
+          value={minutes}
+          disabled={timeDisabled}
+          onCommit={(next) => onTime(h, next)}
+        />
+      </div>
+      <Select value={zone} onValueChange={(next) => next && onZone(next)}>
+        <SelectTrigger
+          size="sm"
+          className="h-8 w-auto max-w-40 min-w-20 text-xs"
+          aria-label="Time zone"
+          title={zoneLabel(zone)}
+        >
+          <SelectValue>
+            <span className="truncate">{zoneLabel(zone)}</span>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent align="end" className="w-auto min-w-(--anchor-width)">
+          {named ? <SelectItem value={named}>{named}</SelectItem> : null}
+          <SelectItem value="local">Local</SelectItem>
+          <SelectItem value="utc">UTC</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+/**
+ * Single-day calendar with the ReUI c-calendar-26 caption: the month label
+ * opens a year grid, then the twelve months of the chosen year.
+ */
+function YearMonthCalendar({
+  selected,
+  defaultMonth,
+  disabled,
+  min,
+  max,
+  onSelect,
+}: {
+  selected?: Date
+  defaultMonth?: Date
+  disabled?: { before: Date }[] | { after: Date }[] | ({ before: Date } | { after: Date })[]
+  /** The field's own bounds; navigation never stops short of them. */
+  min?: Date
+  max?: Date
+  onSelect: (date: Date | undefined) => void
+}) {
+  const today = new Date()
+  const [month, setMonth] = useState(defaultMonth ?? today)
+  const [isYearView, setIsYearView] = useState(false)
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  // The field's bounds when it has them, else fifty years either way; a stored
+  // date outside that is still reachable.
+  const startDate = startOfYear(
+    min ?? new Date(Math.min(today.getFullYear() - 50, selected?.getFullYear() ?? Infinity), 0),
+  )
+  const endDate = endOfYear(
+    max ?? new Date(Math.max(today.getFullYear() + 50, selected?.getFullYear() ?? -Infinity), 11),
+  )
+  const years = eachYearOfInterval({ start: startDate, end: endDate })
+  return (
+    <Calendar
+      mode="single"
+      classNames={{
+        ...dayPickerClassNames,
+        month_caption: 'justify-start',
+        nav: 'flex items-center w-full absolute inset-x-0 justify-end pointer-events-none [&>button]:pointer-events-auto',
+      }}
+      components={{
+        CaptionLabel: (props: CaptionLabelProps) => (
+          <CaptionLabel
+            isYearView={isYearView}
+            setIsYearView={(val) => {
+              setIsYearView(val)
+              if (!val) setSelectedYear(null)
+            }}
+            {...props}
+          />
+        ),
+        MonthGrid: (props: MonthGridProps) => (
+          <MonthGrid
+            className={props.className}
+            currentMonth={month.getMonth()}
+            currentYear={month.getFullYear()}
+            endDate={endDate}
+            isYearView={isYearView}
+            onMonthSelect={(selectedMonth: Date) => {
+              setMonth(selectedMonth)
+              setIsYearView(false)
+              setSelectedYear(null)
+            }}
+            setIsYearView={setIsYearView}
+            startDate={startDate}
+            years={years}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+          >
+            {props.children}
+          </MonthGrid>
+        ),
+      }}
+      {...(selected ? { selected } : {})}
+      month={month}
+      onMonthChange={setMonth}
+      onSelect={onSelect}
+      startMonth={startDate}
+      endMonth={endDate}
+      {...(disabled && disabled.length > 0 ? { disabled } : {})}
+    />
+  )
+}
+
+function MonthGrid({
+  className,
+  children,
+  isYearView,
+  years,
+  currentYear,
+  currentMonth,
+  onMonthSelect,
+  selectedYear,
+  setSelectedYear,
+  startDate,
+  endDate,
+}: {
+  className?: string | undefined
+  children: ReactNode
+  isYearView: boolean
+  setIsYearView: Dispatch<SetStateAction<boolean>>
+  startDate: Date
+  endDate: Date
+  years: Date[]
+  currentYear: number
+  currentMonth: number
+  onMonthSelect: (date: Date) => void
+  selectedYear: number | null
+  setSelectedYear: Dispatch<SetStateAction<number | null>>
+}) {
+  return (
+    <div className="relative">
+      <table className={className}>{children}</table>
+      {isYearView ? (
+        <div className="bg-background absolute inset-0 z-20 -m-2 overflow-y-auto">
+          <div className="px-3 pt-1 pb-3">
+            {selectedYear === null ? (
+              <div className="grid grid-cols-4 gap-2">
+                {years.map((year) => {
+                  const y = year.getFullYear()
+                  const isCurrent = y === currentYear
+                  return (
+                    <Button
+                      key={y}
+                      type="button"
+                      variant={isCurrent ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-8"
+                      onClick={() => setSelectedYear(y)}
+                    >
+                      {y}
+                    </Button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-fit px-2"
+                  onClick={() => setSelectedYear(null)}
+                >
+                  <ChevronDownIcon className="mr-1 size-4 rotate-90" />
+                  {selectedYear}
+                </Button>
+                <div className="grid grid-cols-3 gap-2">
+                  {eachMonthOfInterval({
+                    start: startOfYear(new Date(selectedYear, 0)),
+                    end: endOfYear(new Date(selectedYear, 0)),
+                  }).map((monthDate) => {
+                    const isCurrent =
+                      monthDate.getMonth() === currentMonth && selectedYear === currentYear
+                    const isDisabled =
+                      isBefore(monthDate, startOfYear(startDate)) ||
+                      isAfter(monthDate, endOfYear(endDate))
+                    return (
+                      <Button
+                        key={monthDate.getTime()}
+                        type="button"
+                        variant={isCurrent ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-8"
+                        disabled={isDisabled}
+                        onClick={() => onMonthSelect(monthDate)}
+                      >
+                        {format(monthDate, 'MMM')}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function CaptionLabel({
+  children,
+  isYearView,
+  setIsYearView,
+}: {
+  children?: ReactNode
+  isYearView: boolean
+  setIsYearView: Dispatch<SetStateAction<boolean>>
+} & CaptionLabelProps) {
+  return (
+    <Button
+      type="button"
+      className="-ms-2 flex items-center gap-2 text-sm hover:bg-transparent"
+      aria-expanded={isYearView}
+      onClick={() => setIsYearView((prev) => !prev)}
+      size="sm"
+      variant="ghost"
+    >
+      {children}
+      <ChevronDownIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />
+    </Button>
+  )
+}
 
 /** One half of the time row: typed freely, clamped and applied on blur or Enter. */
 function TimePart({

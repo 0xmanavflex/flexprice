@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_TAX_RATE_QUERY, TaxRateScope, TaxRateStatus } from '@fp/domain'
-import { toTaxRate, toTaxRateFilter, type TaxRateWire } from './taxRates'
+import type { Flexprice } from '@fp/api'
+import { fetchTaxRates, toTaxRate, toTaxRateFilter, type TaxRateWire } from './taxRates'
 
 describe('toTaxRate', () => {
   it('keeps the percentage as the raw string the API sends', () => {
@@ -57,5 +58,50 @@ describe('toTaxRateFilter', () => {
 
   it('offsets to zero on the first page', () => {
     expect(toTaxRateFilter(DEFAULT_TAX_RATE_QUERY)).toMatchObject({ limit: 25, offset: 0 })
+  })
+})
+
+describe('tax rate archive status', () => {
+  it('reads an inactive rate as archived', () => {
+    expect(toTaxRate({ id: 't', status: 'published', taxRateStatus: 'INACTIVE' }).status).toBe(
+      'archived',
+    )
+    expect(toTaxRate({ id: 't', status: 'published', taxRateStatus: 'ACTIVE' }).status).toBe(
+      'published',
+    )
+    // Republished: the record's own status stays archived, the rate's flag wins.
+    expect(toTaxRate({ id: 't', status: 'archived', taxRateStatus: 'ACTIVE' }).status).toBe(
+      'published',
+    )
+    expect(toTaxRate({ id: 't', status: 'archived' }).status).toBe('archived')
+  })
+})
+
+describe('the tax rate status facet', () => {
+  const client = {
+    taxRates: {
+      getTaxRates: async () => ({
+        items: [
+          { id: 'a', name: 'Active', status: 'published', taxRateStatus: 'ACTIVE' },
+          { id: 'b', name: 'Archived by flag', status: 'published', taxRateStatus: 'INACTIVE' },
+          { id: 'c', name: 'Republished', status: 'archived', taxRateStatus: 'ACTIVE' },
+        ],
+        pagination: { total: 3 },
+      }),
+    },
+  } as unknown as Flexprice
+
+  it('filters on the status the row shows, and counts what it shows', async () => {
+    const archived = await fetchTaxRates(client, {
+      ...DEFAULT_TAX_RATE_QUERY,
+      statuses: [TaxRateStatus.Archived],
+    })
+    expect(archived.taxRates.map((rate) => rate.id)).toEqual(['b'])
+    expect(archived.total).toBe(1)
+    const published = await fetchTaxRates(client, {
+      ...DEFAULT_TAX_RATE_QUERY,
+      statuses: [TaxRateStatus.Published],
+    })
+    expect(published.taxRates.map((rate) => rate.id)).toEqual(['a', 'c'])
   })
 })

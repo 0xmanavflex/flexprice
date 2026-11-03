@@ -12,7 +12,7 @@ describe('parseRevenueRecognitionSearch', () => {
         to: '2027-03',
         page: '2',
         details: 'true',
-        search: ' car ',
+        search: 'car wash',
       }),
     ).toEqual({
       from: '2026-04',
@@ -20,7 +20,7 @@ describe('parseRevenueRecognitionSearch', () => {
       page: 2,
       pageSize: 50,
       details: true,
-      search: 'car',
+      search: 'car wash',
     })
   })
 

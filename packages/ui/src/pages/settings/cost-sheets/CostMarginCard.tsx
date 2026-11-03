@@ -1,3 +1,4 @@
+import { moneyFormatLocale } from '@fp/domain'
 import { EmptyState, Section } from '../../../compositions'
 
 export interface CostMargin {
@@ -25,7 +26,7 @@ export function CostMarginCard({ margin }: { margin?: CostMargin | undefined }) 
     )
   }
   const fmt = (value: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat(moneyFormatLocale(margin.currency), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency: margin.currency,

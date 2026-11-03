@@ -7,6 +7,7 @@ import {
   ComboboxList,
 } from '@ui/components/primitives/combobox'
 import { InputGroupAddon } from '@ui/components/primitives/input-group'
+import type { ReactNode } from 'react'
 import { SearchIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 import { OptionBody, type Option } from './OptionSelect'
@@ -20,6 +21,9 @@ export const OptionComboboxProvenance = provenance({
   composes: ['ui/combobox'],
   note: 'Options-array wrapper over the stock Combobox with label-based filtering.',
 })
+
+/** The create item's value: never a real option's, and never emitted. */
+const CREATE_VALUE = '__fp_create__'
 
 export interface OptionComboboxProps {
   id?: string
@@ -40,6 +44,13 @@ export interface OptionComboboxProps {
    */
   searchable?: boolean
   disabled?: boolean
+  /**
+   * A last item that leaves the picker for the entity's own create form, e.g.
+   * "Create feature" led by a plus icon. It is never a value: choosing it calls `onSelect` and
+   * keeps the current choice. It stays in the list whatever is typed, so a
+   * search that finds nothing still offers the way to make it.
+   */
+  createAction?: { label: string; icon: ReactNode; onSelect: () => void } | undefined
   /** For a picker with no visible label of its own. */
   'aria-label'?: string | undefined
   'aria-describedby'?: string | undefined
@@ -56,18 +67,37 @@ export function OptionCombobox({
   emptyText = 'No matches.',
   searchable = false,
   disabled,
+  createAction,
   'aria-label': label,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
 }: OptionComboboxProps) {
   const selected = options.find((option) => option.value === value) ?? null
+  const create: Option | null = createAction
+    ? { value: CREATE_VALUE, label: createAction.label }
+    : null
+  const items = create ? [...options, create] : options
   return (
     <Combobox
-      items={options as Option[]}
+      items={items as Option[]}
       value={selected}
-      onValueChange={(next) => onValueChange((next as Option | null)?.value ?? '')}
+      onValueChange={(next) => {
+        const option = next as Option | null
+        if (option?.value === CREATE_VALUE) {
+          createAction?.onSelect()
+          return
+        }
+        onValueChange(option?.value ?? '')
+      }}
       itemToStringLabel={(option) => (option as Option).label}
       itemToStringValue={(option) => (option as Option).value}
+      {...(create
+        ? {
+            filter: (item: unknown, query: string) =>
+              (item as Option).value === CREATE_VALUE ||
+              (item as Option).label.toLowerCase().includes(query.trim().toLowerCase()),
+          }
+        : {})}
       openOnInputClick
       {...(onInputValueChange
         ? { onInputValueChange: (text: string) => onInputValueChange(text) }
@@ -96,7 +126,14 @@ export function OptionCombobox({
         <ComboboxList>
           {(option: Option) => (
             <ComboboxItem key={option.value} value={option} disabled={option.disabled ?? false}>
-              <OptionBody option={option} />
+              {option.value === CREATE_VALUE ? (
+                <>
+                  {createAction?.icon}
+                  <span className="min-w-0 truncate">{option.label}</span>
+                </>
+              ) : (
+                <OptionBody option={option} />
+              )}
             </ComboboxItem>
           )}
         </ComboboxList>

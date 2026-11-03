@@ -102,6 +102,7 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   '/credit-memos/new': write(E.CreditNote),
   '/taxes': read(E.Tax),
   '/taxes/new': write(E.Tax),
+  '/taxes/$taxRateId': read(E.Tax),
   '/taxes/$taxRateId/edit': write(E.Tax),
 
   // Developers

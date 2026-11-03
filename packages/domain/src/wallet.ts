@@ -189,6 +189,11 @@ export const topUpWalletSchema = z.object({
   description: z.string().trim().max(200, 'Keep the note under 200 characters'),
   /** Purchased credits only: raise an invoice for them, rather than record them as paid. */
   invoice: z.boolean(),
+  /**
+   * Purchased credits only: the customer pays first through the connected
+   * provider's hosted checkout, and the credits land once that payment succeeds.
+   */
+  checkout: z.boolean(),
   /** The day the credits expire (`YYYY-MM-DD`), or blank for never. */
   expiryDate: z
     .string()
@@ -247,6 +252,7 @@ export const emptyTopUp = (): TopUpWallet => ({
   credits: '',
   description: '',
   invoice: false,
+  checkout: false,
   expiryDate: '',
   priority: '',
   referenceId: '',

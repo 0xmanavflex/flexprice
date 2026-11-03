@@ -135,7 +135,7 @@ export const EndDateIsAUtcDay: Story = {
     const end = canvas.getByRole('button', { name: /^End date/ })
     await expect(end).toHaveTextContent('Mar 10, 2027')
     await userEvent.click(end)
-    await userEvent.click(await screen.findByRole('button', { name: /March 20/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /March 20th/ }))
     await userEvent.click(canvas.getByRole('button', { name: /save/i }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ endDate: new Date('2027-03-20T23:59:59.999Z') }),

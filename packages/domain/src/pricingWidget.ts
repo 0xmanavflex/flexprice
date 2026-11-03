@@ -1,4 +1,5 @@
 import { decimalSum } from './customerPortal'
+import { moneyFormatLocale } from './money'
 import { CREDIT_GRANT_PERIOD_LABEL, CreditGrantCadence, type CreditGrant } from './creditGrant'
 import { meteredAllowanceLabel, type Entitlement } from './entitlement'
 import { FeatureType } from './feature'
@@ -60,7 +61,8 @@ export interface PricingCard {
   description: string
   /**
    * The recurring fixed fee, as V1 prints it: "$29", "$0". A plan that only
-   * meters usage reads "$0", as in V1, with usage on top.
+   * meters usage reads "$0", as in V1, with usage on top. A tiered fee costs
+   * what its quantity makes it, so a price with one reads "from $49".
    */
   price: string
   /** "month", "year": what the price is per. Null for one-time fees alone. */
@@ -204,7 +206,7 @@ export function pricingAmount(amount: number | string, currency: string): string
     typeof amount === 'string' ? (amount.split('.')[1] ?? '').replace(/0+$/, '').length : 0
   try {
     // A decimal string is formatted as written (Intl.NumberFormat v3), not as a float.
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currency,
       currencyDisplay: 'narrowSymbol',
@@ -257,18 +259,20 @@ export function pricingCards(input: {
     )
     if (charges.length === 0) continue
     const fixed = charges.filter(isRecurringFixed)
-    const total = fixed.reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0)
+    // Each fee by its own model: a flat fee at its amount, a tiered one at its
+    // floor (its amount is empty), so a tiered fee is never read as $0.
+    const total = decimalSum(fixed.map(feeFloor))
     const hasUsage = charges.some((charge) => charge.type === PriceType.Usage)
     cards.push({
       planId: plan.id,
       name: plan.name,
       description: plan.description,
-      price: pricingAmount(Number(total.toFixed(6)), input.selection.currency),
+      price: `${fixed.some(isTiered) ? 'from ' : ''}${pricingAmount(total, input.selection.currency)}`,
       per,
       hasUsage,
       included: includedLines(input.entitlements.filter((e) => e.entityId === plan.id)),
       credits: (input.creditGrantsByPlan.get(plan.id) ?? []).map(creditLine),
-      sortAmount: fixed.length > 0 ? total : Number.POSITIVE_INFINITY,
+      sortAmount: fixed.length > 0 ? Number(total) : Number.POSITIVE_INFINITY,
     })
   }
   return cards
@@ -286,9 +290,11 @@ export function usageChargeCompact(charge: Charge): string {
   return charge.billingModel === BillingModel.Package ? `${amount}/pkg` : `${amount}/unit`
 }
 
+/**
+ * A plan's own preview. Usage charges are not listed: a plan can meter
+ * thousands, and the card says only that usage bills on top (`hasUsage`).
+ */
 export interface PricingPreview extends PricingCard {
-  /** The plan's usage charges in the previewed period and currency. */
-  usage: { id: string; name: string; price: string }[]
   /** One-time fees, in the previewed currency: never part of the recurring price. */
   oneTime: { id: string; name: string; price: string }[]
 }
@@ -306,6 +312,11 @@ const isTiered = (charge: Charge) =>
 function tieredFloor(charge: Charge): string {
   const first = charge.tiers[0]!
   return decimalSum([first.flatAmount || '0', first.unitAmount || '0'])
+}
+
+/** What a fee costs at least: its amount, or a tiered fee's floor. */
+function feeFloor(charge: Charge): string {
+  return isTiered(charge) ? tieredFloor(charge) : charge.amount || '0'
 }
 
 /** A fee as its line shows it: a tiered one "from" its floor, never its empty amount. */
@@ -345,9 +356,7 @@ export function pricingPreview(input: {
     const oneTime = oneTimeIn(currency)
     const inCurrency = fees.filter((charge) => charge.currency.toUpperCase() === currency)
     // Every fee counts: a tiered one at its floor, which makes the total a floor too.
-    const total = decimalSum(
-      inCurrency.map((charge) => (isTiered(charge) ? tieredFloor(charge) : charge.amount || '0')),
-    )
+    const total = decimalSum(inCurrency.map(feeFloor))
     const price = `${inCurrency.some(isTiered) ? 'from ' : ''}${pricingAmount(total, currency)}`
     return {
       planId: input.plan.id,
@@ -358,7 +367,6 @@ export function pricingPreview(input: {
       hasUsage: false,
       included: includedLines(input.entitlements),
       credits: input.creditGrants.map(creditLine),
-      usage: [],
       oneTime,
     }
   }
@@ -374,12 +382,5 @@ export function pricingPreview(input: {
     now,
   })
   if (!card) return null
-  const usage = live(input.charges, now)
-    .filter((charge) => charge.type === PriceType.Usage && inSelection(charge, selection))
-    .map((charge) => ({
-      id: charge.id,
-      name: charge.displayName || charge.meterName || 'Usage',
-      price: usageChargeCompact(charge),
-    }))
-  return { ...card, usage, oneTime: oneTimeIn(selection.currency) }
+  return { ...card, oneTime: oneTimeIn(selection.currency) }
 }

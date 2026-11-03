@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   BillingModel,
@@ -10,7 +11,8 @@ import {
 } from '@fp/domain'
 import { useCreateBulkPrices, usePlans } from '@fp/query'
 import { ChargeForm, type MeterOption } from '@fp/ui/pages'
-import { Field, FormDialog, OptionSelect } from '@fp/ui/compositions'
+import { Field, FormDialog, OptionCombobox } from '@fp/ui/compositions'
+import { PlusIcon } from '@fp/ui/icons'
 import { usePlanFormOptions } from '../plans/planFormOptions'
 
 /**
@@ -32,6 +34,7 @@ export function AddFeatureChargeDialog({
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, pageSize: 100, statuses: [PlanStatus.Published] })
   const { units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
+  const navigate = useNavigate()
   const [planId, setPlanId] = useState('')
 
   // The one meter on offer is this feature's, built from the record already
@@ -70,14 +73,25 @@ export function AddFeatureChargeDialog({
     >
       <div className="flex flex-col gap-5">
         <Field label="Plan" required hint="The plan that bills this feature's usage.">
-          {({ id, ...field }) => (
-            <OptionSelect
+          {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
+            <OptionCombobox
               id={id}
-              {...field}
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
               value={planId}
               onValueChange={setPlanId}
               options={planOptions}
-              placeholder={plans.isPending ? 'Loading plans…' : 'Choose a plan'}
+              searchable
+              placeholder={plans.isPending ? 'Loading plans…' : 'Search plans…'}
+              emptyText="No published plans match."
+              createAction={{
+                label: 'Create plan',
+                icon: <PlusIcon aria-hidden />,
+                onSelect: () => {
+                  close(false)
+                  void navigate({ to: '/plans/new' })
+                },
+              }}
               disabled={create.isPending}
             />
           )}

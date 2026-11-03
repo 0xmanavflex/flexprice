@@ -147,7 +147,57 @@ export function InvoiceDetailPage({
     <>
       <InvoiceDetailView
         integrationLinks={mappings.data}
-        integrationControls={mappings.controls}
+        integrationControls={
+          mappings.controls
+            ? {
+                ...mappings.controls,
+                ...(mappings.pushProviders.length > 0
+                  ? {
+                      pushProviders: mappings.pushProviders,
+                      onPush: () =>
+                        mappings.push.mutate(undefined, {
+                          onSuccess: () =>
+                            toast.success(
+                              `Pushing invoice to ${mappings.pushProviders.join(', ')}`,
+                              {
+                                description:
+                                  'The provider record is created or updated in the background.',
+                              },
+                            ),
+                          onError: (cause) =>
+                            toast.error(
+                              cause instanceof Error
+                                ? cause.message
+                                : 'Could not push this invoice.',
+                            ),
+                        }),
+                    }
+                  : {}),
+                ...(mappings.pullProviders.length > 0
+                  ? {
+                      pullProviders: mappings.pullProviders,
+                      onPull: () =>
+                        mappings.pull.mutate(undefined, {
+                          onSuccess: () =>
+                            toast.success(
+                              `Pulling invoice from ${mappings.pullProviders.join(', ')}`,
+                              {
+                                description:
+                                  'Payments and status recorded there update here in the background.',
+                              },
+                            ),
+                          onError: (cause) =>
+                            toast.error(
+                              cause instanceof Error
+                                ? cause.message
+                                : 'Could not pull this invoice.',
+                            ),
+                        }),
+                    }
+                  : {}),
+              }
+            : undefined
+        }
         integrationsError={mappings.isError}
         onRetryIntegrations={() => {
           void mappings.refetch()

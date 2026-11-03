@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { tierUnitLabel, withPackageSize, type Tier } from './price'
+import { chargeHasEnded, liveChargeCount, tierUnitLabel, withPackageSize, type Tier } from './price'
+
+describe('chargeHasEnded / liveChargeCount', () => {
+  const now = Date.UTC(2026, 5, 1)
+  const ended = { endDate: new Date(Date.UTC(2026, 0, 1)) }
+  const scheduled = { endDate: new Date(Date.UTC(2027, 0, 1)) }
+  const open = { endDate: null }
+
+  it('treats a future end date as still billing', () => {
+    expect(chargeHasEnded(scheduled, now)).toBe(false)
+    expect(chargeHasEnded(open, now)).toBe(false)
+    expect(chargeHasEnded(ended, now)).toBe(true)
+  })
+
+  it('counts end-dated charges whose end is ahead, so a fixed-term contract is not zero', () => {
+    expect(liveChargeCount([scheduled, scheduled], now)).toBe(2)
+    expect(liveChargeCount([scheduled, open, ended], now)).toBe(2)
+  })
+})
 
 const band: Tier = { upTo: null, unitAmount: '1000' }
 

@@ -9,6 +9,7 @@ import {
   emptyPortalData,
   loadingPortalData,
   noopPortalActions,
+  portalCards,
   portalData,
   portalInvoices,
   portalSpend,
@@ -87,6 +88,43 @@ export const Overview: Story = {
   },
 }
 
+/**
+ * Cards saved at two providers are split by provider, each with its own
+ * default, and every card names the provider that holds it.
+ */
+export const CardsAtTwoProviders: Story = {
+  args: {
+    data: {
+      ...portalData,
+      paymentMethods: {
+        status: 'ready',
+        data: [
+          ...portalCards,
+          {
+            id: 'pm_rzp',
+            provider: 'razorpay',
+            brand: 'Visa',
+            network: 'visa',
+            last4: '1111',
+            expires: '12/34',
+            expired: false,
+            isDefault: true,
+          },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Stripe · 3 cards')).toBeVisible()
+    await expect(canvas.getByText('Razorpay · 1 card')).toBeVisible()
+    const razorpay = within(canvas.getByRole('list', { name: 'Razorpay cards' }))
+    await expect(razorpay.getByText('Visa •••• 1111')).toBeVisible()
+    await expect(razorpay.getByText('Default')).toBeVisible()
+    await expect(razorpay.getByText('Razorpay · Expires 12/34')).toBeVisible()
+  },
+}
+
 /** Pay from the alert: the gateway's page opens, and its link stays in the dialog. */
 export const PayInvoice: Story = {
   play: async ({ canvasElement }) => {
@@ -153,6 +191,8 @@ export const Usage: Story = {
     await expect(canvas.getByText('$13.11')).toBeVisible()
     await expect(canvas.getByText('1.4M over · billed as usage')).toBeVisible()
     await expect(canvas.getByText('$0.20 per 1K calls')).toBeVisible()
+    // A tiered price has a unit cost too: its effective rate, marked as an average.
+    await expect(canvas.getByText('avg. $0.01999 per minute')).toBeVisible()
   },
 }
 

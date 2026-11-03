@@ -5,6 +5,8 @@ import {
   type ResumeSubscription,
   canPauseSubscription,
   canResumeSubscription,
+  everyPeriod,
+  periodNoun,
 } from '@fp/domain'
 import { toast } from 'sonner'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
@@ -39,17 +41,17 @@ import {
   PriceType,
   SubscriptionStatus,
   formatMoney,
+  moneyFormatLocale,
   type AlertSettingConfig,
   type AddContractCharge,
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreateTaxAssociation,
+  type CreateTaxRate,
   type AddContractAddon,
   type AddContractCoupon,
-  BILLING_PERIOD_LABEL,
   commitmentPeriodNoun,
   ChargeSection,
-  type BillingPeriod,
   type ChangeLineQuantity,
   type Charge,
   type ChargeCommitmentDetail,
@@ -82,6 +84,8 @@ import {
   type SubscriptionUsageCharge,
   type TenantFeatureUsage,
   emptyAlertSettingConfig,
+  chargeHasEnded,
+  liveChargeCount,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
@@ -133,7 +137,7 @@ import { statusTone } from '../shared/statusTones'
  */
 function unitMoney(value: Money): string {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(value.currency), {
       style: 'currency',
       currency: value.currency,
       currencyDisplay: 'narrowSymbol',
@@ -186,13 +190,6 @@ export interface SubscriptionDetailViewProps {
    */
   lineHistory?: SubscriptionLine[] | undefined
   /**
-   * Bring a charge back to an earlier version: `line` is the version billing
-   * now, `previous` the one to return to. Offered on the version just before
-   * the current one, in the charge's History.
-   */
-  onRevertLine?:
-    ((line: SubscriptionLine, previous: SubscriptionLine) => Promise<unknown>) | undefined
-  /**
    * Which charge's sheet is open, by its line item (`null` once closed), so the
    * page can read `GET /subscriptions/lineitems/{id}/history` for it.
    */
@@ -242,7 +239,7 @@ export interface SubscriptionDetailViewProps {
    */
   onAddEntitlement?: ((draft: CreateEntitlement) => Promise<unknown> | void) | undefined
   onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
-  onAddAddon?: ((draft: AddContractAddon) => Promise<unknown> | void) | undefined
+  onAddAddon?: ((drafts: AddContractAddon[]) => Promise<unknown> | void) | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   /**
    * Save the thresholds of an alert already watching one charge.
@@ -278,6 +275,7 @@ export interface SubscriptionDetailViewProps {
    */
   loadChargeAlert?: ((lineId: string) => Promise<AlertSettingConfig | null>) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
+  onCreateTaxRate?: ((draft: CreateTaxRate) => Promise<{ code: string; label: string }>) | undefined
   /** A charge's row menu: take its coupon off. Resolves when done. */
   onRemoveCoupon?: ((coupon: SubscriptionCoupon) => Promise<unknown>) | undefined
   /** Row menus: take an add-on off, stop a tax, end a credit grant. Each resolves when done. */
@@ -443,7 +441,6 @@ export function SubscriptionDetailView({
   subscription,
   lines,
   lineHistory,
-  onRevertLine,
   onOpenLine,
   openLineHistory,
   entitlements,
@@ -476,6 +473,7 @@ export function SubscriptionDetailView({
   journal,
   fxOverrides,
   onAddTax,
+  onCreateTaxRate,
   onRemoveAddon,
   onRemoveTax,
   onCancelCreditGrant,
@@ -684,22 +682,9 @@ export function SubscriptionDetailView({
       })
     }
   }
-  // From a charge's History: find its lineage and the version picked.
-  const revertCharge =
-    onRevertLine && lineages && canEditCharges
-      ? (charge: Charge, versionId: string) => {
-          const lineage = lineages.find((candidate) => candidate.current.charge?.id === charge.id)
-          const previous =
-            lineage?.versions.find((version) => version.id === versionId) ??
-            openLineHistory?.lines?.find((version) => version.id === versionId)
-          return lineage && previous
-            ? onRevertLine(lineage.current, previous)
-            : Promise.reject(new Error('That version is no longer on this contract.'))
-        }
-      : undefined
   const editableChargeSections = (charge: Charge): ChargeSection[] => {
     const line = chargeRows.lineOf.get(charge.id)
-    if (!canEditCharges || charge.endDate || !line || !canEditLine(line)) return []
+    if (!canEditCharges || chargeHasEnded(charge) || !line || !canEditLine(line)) return []
     const sections: ChargeSection[] =
       line.kind === 'fixed'
         ? [ChargeSection.Price]
@@ -769,16 +754,16 @@ export function SubscriptionDetailView({
   const commitmentRows: CommitmentRow[] = chargeRows.charges.flatMap((charge) => {
     const commitment = chargeRows.details.get(charge.id)?.commitment
     if (!commitment) return []
-    const period = BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? 'period'
     return [
       {
         id: charge.id,
         charge,
         name: charge.displayName || charge.meterName || 'Charge',
         commitment,
+        // "every month" / "per month": a period after a preposition is a noun, never "monthly".
         per: commitment.windowed
-          ? `every ${period.toLowerCase().replace(/ly$/, '')}`
-          : `per ${period.toLowerCase()}`,
+          ? everyPeriod(charge.billingPeriod)
+          : `per ${charge.billingPeriod ? periodNoun(charge.billingPeriod) : 'period'}`,
       },
     ]
   })
@@ -796,6 +781,7 @@ export function SubscriptionDetailView({
       id: 'customer',
       label: 'Customer',
       value: s.customerName,
+      copyValue: s.customerId,
       ...(onOpenCustomer ? { onOpen: onOpenCustomer } : {}),
     },
     {
@@ -810,6 +796,7 @@ export function SubscriptionDetailView({
             id: 'latest-invoice',
             label: 'Latest invoice',
             value: s.latestInvoice.number || '—',
+            copyValue: s.latestInvoice.id,
             onOpen: () => onOpenInvoice(s.latestInvoice!.id),
           },
         ]
@@ -834,7 +821,7 @@ export function SubscriptionDetailView({
     const lineCoupon = (coupons?.data ?? []).find(
       (coupon) => coupon.active && coupon.lineItemId === line.id,
     )
-    const open = !charge.endDate && canEditCharges && canEditLine(line)
+    const open = !chargeHasEnded(charge) && canEditCharges && canEditLine(line)
     const hasCommitment = Boolean(chargeRows.details.get(charge.id)?.commitment)
     // The same gate as the section menu: an existing setting to edit, or none
     // once the alerts have loaded, so a slow read never offers a second one.
@@ -1043,9 +1030,7 @@ export function SubscriptionDetailView({
             {
               value: 'charges',
               label: 'Charges',
-              ...(lines.data
-                ? { count: chargeRows.charges.filter((charge) => !charge.endDate).length }
-                : {}),
+              ...(lines.data ? { count: liveChargeCount(chargeRows.charges) } : {}),
             },
             // { value: 'usage', label: 'Usage' },
             {
@@ -1160,7 +1145,6 @@ export function SubscriptionDetailView({
                         removeLabel="End charge"
                         extraActions={chargeExtras}
                         variant="summary"
-                        {...(revertCharge ? { onRevert: revertCharge } : {})}
                         {...(openCharge ? { onOpenCharge: openCharge } : {})}
                         {...(chargeHistory ? { history: chargeHistory } : {})}
                         layout="narrow"
@@ -1667,7 +1651,6 @@ export function SubscriptionDetailView({
               ? { onTerminate: (charge: Charge) => endCharge(charge) }
               : {})}
             removeLabel="End charge"
-            {...(revertCharge ? { onRevert: revertCharge } : {})}
             {...(openCharge ? { onOpenCharge: openCharge } : {})}
             {...(chargeHistory ? { history: chargeHistory } : {})}
             extraActions={chargeExtras}
@@ -1939,6 +1922,7 @@ export function SubscriptionDetailView({
               }
             : undefined,
           onAddTax,
+          onCreateTaxRate,
         }}
         {...(couponLineId
           ? {
@@ -2020,6 +2004,12 @@ export function SubscriptionDetailView({
         {...(commitmentCharge ? { detail: chargeRows.details.get(commitmentCharge.id) } : {})}
         section={ChargeSection.Commitment}
         onClose={() => setCommitmentCharge(null)}
+        {...(canEditCharges && onEndCharge && commitmentCharge && !chargeHasEnded(commitmentCharge)
+          ? {
+              deleteLabel: 'End charge',
+              onDelete: () => endCharge(commitmentCharge),
+            }
+          : {})}
       />
     </DetailShell>
   )

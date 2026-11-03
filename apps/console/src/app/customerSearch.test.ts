@@ -3,6 +3,18 @@ import { ACTIVE_CUSTOMERS_FILTER, DEFAULT_CUSTOMER_QUERY, CustomerStatus } from 
 import { parseCustomerSearch } from './customerSearch'
 
 describe('parseCustomerSearch', () => {
+  it('keeps an ascending sort; the default is descending, so asc must not fall back to it', () => {
+    expect(parseCustomerSearch({ sortBy: 'name', sortDirection: 'asc' })).toMatchObject({
+      sortBy: 'name',
+      sortDirection: 'asc',
+    })
+  })
+
+  it('keeps a space in the search, so the box can hold one while typing', () => {
+    expect(parseCustomerSearch({ search: 'demo customer' }).search).toBe('demo customer')
+    expect(parseCustomerSearch({ search: 'demo ' }).search).toBe('demo ')
+  })
+
   it('returns defaults for an empty URL', () => {
     expect(parseCustomerSearch({})).toEqual(DEFAULT_CUSTOMER_QUERY)
   })

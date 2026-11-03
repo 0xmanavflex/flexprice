@@ -27,6 +27,22 @@ type Story = StoryObj<typeof meta>
 
 /** The trial: info strip, no invoices, Upgrade in the plan's footer. */
 export const Trial: Story = {
+  args: {
+    summary: {
+      ...ACCOUNTS.trial,
+      invoices: [
+        {
+          id: 'inv_trial_zero',
+          number: 'INV-202611-02088',
+          status: 'paid',
+          total: 0,
+          currency: 'USD',
+          dueDate: '2026-11-04',
+          pdfUrl: null,
+        },
+      ],
+    },
+  },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(

@@ -5,6 +5,7 @@ import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from
 import { AppShell } from './AppShell'
 import { EnvironmentSwitcher } from './EnvironmentSwitcher'
 import { ShellBreadcrumb } from './ShellBreadcrumb'
+import { ShellChangelog } from './ShellChangelog'
 import { ShellCreateMenu } from './ShellCreateMenu'
 import type { ShellEnvironment, ShellNavGroup } from './types'
 
@@ -439,6 +440,42 @@ export const WithPinnedContent: Story = {
         <p className="text-muted-foreground">Oldest is 35 days past due.</p>
       </div>
     ),
+  },
+  // No group here is pinned: the content still reaches the foot of the sidebar.
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('3 invoices overdue')).toBeInTheDocument()
+  },
+}
+
+/** What's new: the console's changelog stack, where it lives, above the account menu. */
+export const WithChangelog: Story = {
+  args: {
+    pinned: (
+      <ShellChangelog
+        entries={[
+          {
+            id: 'console-v2',
+            title: 'A new console',
+            summary: 'Search every record with ⌘K, and switch environments from the breadcrumb.',
+            href: 'https://docs.flexprice.io/docs/overview',
+            scene: 'home',
+          },
+          {
+            id: 'contracts',
+            title: 'Subscriptions are now contracts',
+            summary:
+              'Charges split into Current, Upcoming and History, and a contract can have a parent.',
+            href: 'https://docs.flexprice.io/docs/subscriptions/customers-create-subscription',
+            scene: 'contracts',
+          },
+        ]}
+      />
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('region', { name: "What's new" }),
+    ).toBeInTheDocument()
   },
 }
 

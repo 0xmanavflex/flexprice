@@ -44,13 +44,13 @@ export function parseGroupSearch(raw: Record<string, unknown>): GroupQuery {
       DEFAULT_GROUP_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
       ? (String(param(raw, 'sort', 'sortBy')) as GroupSortField)
       : DEFAULT_GROUP_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_GROUP_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_GROUP_QUERY.sortDirection,
     view: param(raw, 'view', 'view') === GroupView.Cards ? GroupView.Cards : GroupView.Table,
     filters: runnableFilters(decodeListFilters(raw['filters']), GROUP_FILTERS),
   }

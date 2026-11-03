@@ -46,7 +46,9 @@ export function parseCustomerSearch(raw: Record<string, unknown>): CustomerQuery
       DEFAULT_CUSTOMER_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    // Kept as typed. Trimming here deletes a space the moment it is written to
+    // the URL, so the box cannot hold one. The request trims before it is sent.
+    search: String(param(raw, 'q', 'search') ?? ''),
     // A status link becomes the visible status filter below; the facet is
     // cleared so removing that chip really shows every status.
     statuses: raw['filters'] === undefined ? [] : [...new Set(statuses)],
@@ -54,7 +56,7 @@ export function parseCustomerSearch(raw: Record<string, unknown>): CustomerQuery
       ? (String(param(raw, 'sort', 'sortBy')) as CustomerSortField)
       : DEFAULT_CUSTOMER_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_CUSTOMER_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_CUSTOMER_QUERY.sortDirection,
     // No `filters` param is the default view (active customers); an explicit
     // empty list is "every status", so removing the chip sticks across reloads.
     filters:

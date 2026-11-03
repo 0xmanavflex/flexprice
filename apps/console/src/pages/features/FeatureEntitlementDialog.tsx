@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   DEFAULT_PLAN_QUERY,
@@ -9,7 +10,8 @@ import {
 } from '@fp/domain'
 import { useCreateBulkEntitlements, usePlans } from '@fp/query'
 import { EntitlementCreateForm } from '@fp/ui/pages'
-import { Field, FormDialog, OptionSelect } from '@fp/ui/compositions'
+import { Field, FormDialog, OptionCombobox } from '@fp/ui/compositions'
+import { PlusIcon } from '@fp/ui/icons'
 
 export interface FeatureEntitlementDialogProps {
   /** The feature the entitlement grants; null keeps the dialog closed. */
@@ -30,6 +32,7 @@ export function FeatureEntitlementDialog({ feature, onClose }: FeatureEntitlemen
     },
   )
   const create = useCreateBulkEntitlements()
+  const navigate = useNavigate()
   const [planId, setPlanId] = useState('')
   const [planError, setPlanError] = useState<string | null>(null)
 
@@ -72,17 +75,28 @@ export function FeatureEntitlementDialog({ feature, onClose }: FeatureEntitlemen
             required
             error={planError ?? undefined}
           >
-            {({ id, ...field }) => (
-              <OptionSelect
+            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
+              <OptionCombobox
                 id={id}
-                {...field}
-                value={planId || undefined}
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                value={planId}
                 onValueChange={(value) => {
                   setPlanId(value)
                   setPlanError(null)
                 }}
                 options={planOptions}
-                placeholder={plans.isPending ? 'Loading plans…' : 'Select a plan'}
+                searchable
+                placeholder={plans.isPending ? 'Loading plans…' : 'Search plans…'}
+                emptyText="No published plans match."
+                createAction={{
+                  label: 'Create plan',
+                  icon: <PlusIcon aria-hidden />,
+                  onSelect: () => {
+                    close()
+                    void navigate({ to: '/plans/new' })
+                  },
+                }}
                 disabled={plans.isPending || create.isPending}
               />
             )}

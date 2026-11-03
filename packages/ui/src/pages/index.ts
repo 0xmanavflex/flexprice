@@ -14,7 +14,6 @@
 export { CUSTOM_RANGE_ID, DashboardHome, DashboardHomeProvenance } from './home/DashboardHome'
 export type {
   ApiPanel,
-  CustomersPanel,
   DashboardHomeProps,
   DayRange,
   EventPoint,

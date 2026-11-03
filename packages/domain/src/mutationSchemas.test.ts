@@ -94,13 +94,16 @@ describe('feature create/edit/clone', () => {
     expect(messages(result)).toContain('Group by is only available with the Maximum aggregation')
   })
 
-  it('requires both units or neither', () => {
+  it('takes a singular unit alone, and rejects a plural without one', () => {
+    expect(
+      createFeatureSchema.safeParse({ name: 'Flag', type: 'boolean', unitSingular: 'x' }).success,
+    ).toBe(true)
     const result = createFeatureSchema.safeParse({
       name: 'Flag',
       type: 'boolean',
-      unitSingular: 'x',
+      unitPlural: 'xs',
     })
-    expect(messages(result)).toContain('Enter both the singular and plural unit, or neither')
+    expect(messages(result)).toContain('Enter the singular unit, or leave both blank')
   })
 
   it('edit keeps the name required and rejects an empty filter value list', () => {

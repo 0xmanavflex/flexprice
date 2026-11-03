@@ -1,4 +1,4 @@
-import { type Money, money } from './money'
+import { type Money, money, perUnit } from './money'
 
 /**
  * The customer portal's view of one customer's billing: what
@@ -683,8 +683,13 @@ export interface PortalSpendItem {
   unit: string
   usage: string
   cost: Money
-  /** The per-unit price, when the feature has one flat price. */
+  /**
+   * The per-unit price: a flat price's own rate, or, for a tiered, package or
+   * mixed price, the effective rate (cost over usage). Null with no usage.
+   */
   unitCost: Money | null
+  /** `unitCost` is the period's average (cost over usage), not a price list rate. */
+  unitCostIsAverage: boolean
   /** Share of the period's spend, 0–1. */
   share: number
   points: PortalSpendPoint[]
@@ -724,11 +729,14 @@ export function toPortalSpend(wire: unknown): PortalSpend {
     if (existing) {
       // One feature priced twice (a plan and an add-on): one row, summed exactly.
       const sum = decimalSum([existing.cost.amount, cost])
+      const usage = decimalSum([existing.usage, decimalText(item['total_usage']) || '0'])
       merged.set(featureId, {
         ...existing,
-        usage: decimalSum([existing.usage, decimalText(item['total_usage']) || '0']),
+        usage,
         cost: money(sum, currency),
-        unitCost: null,
+        // Two prices have no one rate: what the usage cost on average.
+        unitCost: averageUnitCost(sum, usage, currency),
+        unitCostIsAverage: true,
         share: totalNumber > 0 ? Number(sum) / totalNumber : 0,
         points: mergePoints(existing.points, points),
       })
@@ -741,7 +749,10 @@ export function toPortalSpend(wire: unknown): PortalSpend {
       unit: text(item['unit_plural']) || text(item['unit']) || text(feature['unit_plural']) || '',
       usage: decimalText(item['total_usage']) || '0',
       cost: money(cost, currency),
-      unitCost: flat ? money(flat, currency) : null,
+      unitCost: flat
+        ? money(flat, currency)
+        : averageUnitCost(cost, decimalText(item['total_usage']) || '0', currency),
+      unitCostIsAverage: !flat,
       share: totalNumber > 0 ? Number(cost) / totalNumber : 0,
       points,
     })
@@ -751,6 +762,11 @@ export function toPortalSpend(wire: unknown): PortalSpend {
     total: money(totalText, currency),
     items: [...merged.values()].sort((a, b) => Number(b.cost.amount) - Number(a.cost.amount)),
   }
+}
+
+/** Cost over usage, to eight places: a tiered price's effective rate. Null with no usage. */
+function averageUnitCost(cost: string, usage: string, currency: string): Money | null {
+  return Number(usage) > 0 ? perUnit(money(cost, currency), usage, 8) : null
 }
 
 function mergePoints(a: PortalSpendPoint[], b: PortalSpendPoint[]): PortalSpendPoint[] {

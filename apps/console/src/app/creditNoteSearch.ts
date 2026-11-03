@@ -38,7 +38,7 @@ export function parseCreditNoteSearch(raw: Record<string, unknown>): CreditNoteQ
       DEFAULT_CREDIT_NOTE_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     // Kept here; the list sends it only while entities are enabled.
     filters: runnableFilters(decodeListFilters(raw['filters']), [BILLING_ENTITY_FILTER]),

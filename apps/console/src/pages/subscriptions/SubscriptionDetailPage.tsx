@@ -12,7 +12,6 @@ import {
   SubscriptionStatus,
   type SubscriptionCancellationType,
   type SubscriptionLine,
-  lineRevertDraft,
 } from '@fp/domain'
 import {
   ApiError,
@@ -34,6 +33,7 @@ import {
   useCreateSubscriptionCreditGrant,
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
+  useCreateTaxRate,
   useCustomerIntegrationLinks,
   useConnections,
   useLinkCustomerIntegration,
@@ -197,6 +197,7 @@ export function SubscriptionDetailPage({
   const addLineAlert = useAddLineItemAlert(subscriptionId)
   const loadLineAlert = useLineItemAlertLookup(subscriptionId)
   const createTax = useCreateSubscriptionTax(subscriptionId)
+  const createTaxRate = useCreateTaxRate()
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
   // The charges of add-ons that have any, so attaching one can reprice them and commit on usage.
@@ -306,15 +307,6 @@ export function SubscriptionDetailPage({
               },
             }
           : {})}
-        onRevertLine={(line, previous) => {
-          // No revert endpoint: the old price goes out as a new version from now.
-          const draft = lineRevertDraft(previous, line.priceId)
-          return draft
-            ? editLine.mutateAsync({ lineItemId: line.id, draft })
-            : Promise.reject(
-                new Error('The earlier price was not reported, so it cannot be restored.'),
-              )
-        }}
         chargeAlerts={part(chargeAlerts)}
         {...(revenueRecognition.data
           ? {
@@ -353,7 +345,7 @@ export function SubscriptionDetailPage({
         onUnlinkIntegration={(input) => unlinkIntegration.mutateAsync(input)}
         onAddEntitlement={(draft) => createEntitlement.mutateAsync(draft)}
         onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
-        onAddAddon={(draft) => addAddon.mutateAsync(draft)}
+        onAddAddon={(drafts) => addAddon.mutateAsync(drafts)}
         onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
         onRemoveCoupon={(coupon) => removeCoupon.mutateAsync(coupon.id)}
         onSaveChargeAlert={({ settingId, config }) =>
@@ -362,6 +354,13 @@ export function SubscriptionDetailPage({
         onCreateChargeAlert={(draft) => addLineAlert.mutateAsync(draft)}
         loadChargeAlert={loadLineAlert}
         onAddTax={(draft) => createTax.mutateAsync(draft)}
+        onCreateTaxRate={async (draft) => {
+          await createTaxRate.mutateAsync(draft)
+          return {
+            code: draft.code,
+            label: `${draft.name}${draft.percentageValue ? ` (${draft.percentageValue}%)` : ''}`,
+          }
+        }}
         onRemoveAddon={(addon) => removeAddon.mutateAsync(addon.id)}
         onRemoveTax={(tax) => removeTax.mutateAsync(tax.id)}
         onCancelCreditGrant={(grant) => endGrant.mutateAsync(grant.id)}

@@ -294,11 +294,17 @@ function InvoicesSection({
 }: Pick<UsageBillingViewProps, 'summary' | 'today' | 'onOpenPortal' | 'portalPending'>) {
   const byLimit =
     lockReason(summary, today) === 'event_limit' && summary.state === AccountState.Suspended
+  // Starting a trial raises a $0 paid invoice. It is not a bill, so a trial
+  // still reads as having no invoices until a real one exists.
+  const invoices =
+    summary.state === AccountState.Trialing
+      ? summary.invoices.filter((invoice) => invoice.total !== 0 || invoice.status !== 'paid')
+      : summary.invoices
   return (
     <Section title="Invoices" flush table showTitle>
-      {summary.invoices.length > 0 ? (
+      {invoices.length > 0 ? (
         <SimpleTable<SelfBillingInvoice>
-          rows={summary.invoices}
+          rows={invoices}
           columns={[
             {
               key: 'number',

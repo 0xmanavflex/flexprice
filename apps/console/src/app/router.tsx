@@ -313,6 +313,9 @@ const GroupFormPage = lazy(() =>
 const TaxFormPage = lazy(() =>
   import('@/pages/taxes/TaxFormPage').then((m) => ({ default: m.TaxFormPage })),
 )
+const TaxRateDetailPage = lazy(() =>
+  import('@/pages/taxes/TaxRateDetailPage').then((m) => ({ default: m.TaxRateDetailPage })),
+)
 const CostSheetDetailPage = lazy(() =>
   import('@/pages/cost-sheets/CostSheetDetailPage').then((m) => ({
     default: m.CostSheetDetailPage,
@@ -2402,6 +2405,31 @@ function TaxesRouteComponent() {
         onEditTaxRate={(taxRate) =>
           void navigate({ to: '/taxes/$taxRateId/edit', params: { taxRateId: taxRate.id } })
         }
+        onOpenTaxRate={(taxRate) =>
+          void navigate({ to: '/taxes/$taxRateId', params: { taxRateId: taxRate.id } })
+        }
+      />
+    </SettingsListFrame>
+  )
+}
+
+/** One tax rate: its details, edited in place, inside the Settings frame. */
+const taxDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/taxes/$taxRateId',
+  component: TaxDetailRouteComponent,
+})
+
+function TaxDetailRouteComponent() {
+  const { taxRateId } = taxDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <SettingsListFrame sectionId="taxes">
+      <TaxRateDetailPage
+        taxRateId={taxRateId}
+        onNavigateToList={() => void navigate({ to: '/taxes', search: {} as never })}
+        onEdit={() => void navigate({ to: '/taxes/$taxRateId/edit', params: { taxRateId } })}
       />
     </SettingsListFrame>
   )
@@ -2929,6 +2957,7 @@ export const routeTree = rootRoute.addChildren([
     pricingWidgetRoute,
     usageSyncsRoute,
     taxesRoute,
+    taxDetailRoute,
     usageBillingRoute,
     upgradeRoute,
     checkoutSuccessRoute,

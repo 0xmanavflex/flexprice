@@ -16,11 +16,11 @@ import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import {
-  ArrowUpRightIcon,
   CircleSlashIcon,
   CopyIcon,
   MoreHorizontalIcon,
   PlusIcon,
+  DownloadIcon,
   UploadIcon,
 } from '@ui/icons'
 import { provenance } from '@ui/provenance'
@@ -71,6 +71,9 @@ export interface ContractIntegrationsProps {
    */
   pushProviders?: string[]
   onPush?: () => void
+  /** Provider names a pull reads from (inbound sync on); one "Pull from {names}" action. */
+  pullProviders?: string[]
+  onPull?: () => void
 }
 
 const stamp = new Intl.DateTimeFormat('en-US', {
@@ -97,6 +100,8 @@ export function ContractIntegrations({
   onUnlink,
   pushProviders,
   onPush,
+  pullProviders,
+  onPull,
 }: ContractIntegrationsProps) {
   const [unlinking, setUnlinking] = useState<IntegrationLink | null>(null)
   const [internalLinking, setInternalLinking] = useState(false)
@@ -108,6 +113,8 @@ export function ContractIntegrations({
   const canLink = showLink && Boolean(onLink) && linkable.length > 0
   const pushTo = onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
   const canPush = layout === 'rows' && pushTo !== null
+  const pullFrom = onPull && pullProviders && pullProviders.length > 0 ? pullProviders : null
+  const canPull = layout === 'rows' && pullFrom !== null
   const none = `No integrations linked to this ${entityLabel}.`
 
   // In the Related card the rows are the card's whole body, so rendering nothing
@@ -115,7 +122,7 @@ export function ContractIntegrations({
   // marks have nowhere to put a sentence, so they still render nothing: unless
   // the parent opened the link dialog itself (a plan's overflow menu), which
   // has to mount even though there is nothing to show beside it.
-  if (links.length === 0 && !canLink && !linking && !canPush) {
+  if (links.length === 0 && !canLink && !linking && !canPush && !canPull) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
     ) : null
@@ -151,18 +158,24 @@ export function ContractIntegrations({
                 {/* The row shows a shortened id; the accessible name carries it whole. */}
                 <TooltipTrigger
                   aria-label={`${link.name} ID ${link.providerEntityId}`}
-                  className="inline-flex min-w-0 items-center gap-1 text-sm"
+                  className="inline-flex min-w-0 items-center text-sm"
                 >
                   <span className="truncate font-mono">{shortId(link.providerEntityId)}</span>
-                  <ArrowUpRightIcon
-                    aria-hidden
-                    className="text-muted-foreground size-3.5 shrink-0"
-                  />
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
                   {link.providerEntityId}
                 </TooltipContent>
               </Tooltip>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground size-7 shrink-0"
+                aria-label={`Copy ${entityLabel} ID`}
+                onClick={() => copyEntityId(link, entityLabel)}
+              >
+                <CopyIcon aria-hidden />
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   aria-label={`Manage ${link.name} integration`}
@@ -269,6 +282,17 @@ export function ContractIntegrations({
           Push to {pushTo.join(', ')}
         </Button>
       ) : null}
+      {canPull && pullFrom && onPull ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+          onClick={onPull}
+        >
+          <DownloadIcon aria-hidden className="size-3.5" />
+          Pull from {pullFrom.join(', ')}
+        </Button>
+      ) : null}
 
       <ConfirmDialog
         open={unlinking !== null}
@@ -313,6 +337,13 @@ function shortId(value: string): string {
   return `${value.slice(0, 9)}…${value.slice(-4)}`
 }
 
+function copyEntityId(link: IntegrationLink, entityLabel: string) {
+  void navigator.clipboard
+    ?.writeText(link.providerEntityId)
+    .then(() => toast.success(`${link.name} ${entityLabel} ID copied`))
+    .catch(() => toast.error('Copy failed'))
+}
+
 function IntegrationMenu({
   link,
   entityLabel,
@@ -326,14 +357,7 @@ function IntegrationMenu({
 }) {
   return (
     <DropdownMenuContent align="end" className="min-w-48">
-      <DropdownMenuItem
-        onClick={() => {
-          void navigator.clipboard
-            ?.writeText(link.providerEntityId)
-            .then(() => toast.success(`${link.name} ${entityLabel} ID copied`))
-            .catch(() => toast.error('Copy failed'))
-        }}
-      >
+      <DropdownMenuItem onClick={() => copyEntityId(link, entityLabel)}>
         <CopyIcon aria-hidden /> Copy {entityLabel} ID
       </DropdownMenuItem>
       {onUnlink ? (

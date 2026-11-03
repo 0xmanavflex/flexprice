@@ -1,3 +1,4 @@
+import { moneyFormatLocale } from '@fp/domain'
 import { http, HttpResponse } from 'msw'
 import { type Corpus, corpus } from '@fp/query/fixtures'
 import { selfBillingHandlers } from './selfBillingHandlers'
@@ -718,9 +719,23 @@ const search = (path: string, key: string) =>
         ? applyFeatureExpand(result, body.expand)
         : key === 'customers'
           ? { ...result, items: result.items.map(withDemoIntegrations) }
-          : result
+          : key === 'addons' && body.expand?.includes('prices')
+            ? { ...result, items: result.items.map(withAddonPrices) }
+            : result
     return HttpResponse.json(payload)
   })
+
+/**
+ * An add-on row as the search answers it with `expand=prices`: its charges from
+ * the price corpus, the same rows its detail page and charge counts read.
+ */
+function withAddonPrices(row: Record<string, unknown>): Record<string, unknown> {
+  const id = readString(row, 'id')
+  return {
+    ...row,
+    prices: priceCorpus.items.filter((price) => readString(price, 'entity_id') === id),
+  }
+}
 
 /** Finds one row in a corpus by id: the by-id GET endpoints read it. */
 function byId(key: string, id: string): Record<string, unknown> | null {
@@ -2338,7 +2353,7 @@ function formatMoney(amount: string, currency: string): string {
   const value = Number(amount)
   if (!Number.isFinite(value)) return amount
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currency: (currency || 'usd').toUpperCase(),
     }).format(value)
@@ -2789,8 +2804,33 @@ const DASHBOARD_CORPUS: Record<string, Corpus> = {
  */
 const priceCorpus: Corpus = (() => {
   const base = corpus.prices as Corpus
-  return { items: [...base.items], pagination: { ...base.pagination } }
+  const items = [...base.items, ...demoAddonPrices(base.items)]
+  return { items, pagination: { ...base.pagination, total: items.length } }
 })()
+
+/**
+ * The synthesized add-ons have no charges of their own, and the add-on charges
+ * in the corpus belong to captured add-ons that were not kept. Each demo add-on
+ * takes one of those real charges (cycled), except every fourth, which stays an
+ * uncharged shell so the list's rule of leaving those off is shown too. They
+ * live in the price corpus, so the list, the detail page and every count agree.
+ */
+function demoAddonPrices(prices: Record<string, unknown>[]): Record<string, unknown>[] {
+  const seen = new Set<string>()
+  const templates = prices.filter((price) => {
+    const owner = readString(price, 'entity_id')
+    if (readString(price, 'entity_type') !== 'ADDON' || seen.has(owner)) return false
+    seen.add(owner)
+    return true
+  })
+  if (templates.length === 0) return []
+  return (corpus.addons as Corpus).items.flatMap((addon, index) => {
+    if (index % 4 === 3) return []
+    const id = readString(addon, 'id')
+    const template = templates[index % templates.length]!
+    return [{ ...template, id: `${readString(template, 'id')}_${id}`, entity_id: id }]
+  })
+}
 
 function sourceFor(key: string): Corpus {
   if (key === 'prices') return priceCorpus
@@ -5995,6 +6035,10 @@ export const handlers = [
     }
     taxRates.unshift(row)
     return HttpResponse.json(row, { status: 201 })
+  }),
+  http.get(`${BASE}/taxes/rates/:id`, ({ params }) => {
+    const rate = taxRates.find((row) => row['id'] === String(params['id']))
+    return rate ? HttpResponse.json(rate) : new HttpResponse(null, { status: 404 })
   }),
   http.put(`${BASE}/taxes/rates/:id`, async ({ request, params }) =>
     patchRow(taxRates, String(params['id']), await readBody(request)),

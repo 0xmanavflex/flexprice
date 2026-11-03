@@ -38,7 +38,7 @@ export function AuthFrame({ children, quote, footer }: AuthFrameProps) {
           <div className="w-full max-w-[400px]">{children}</div>
         </div>
         <footer className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
-          <span>© {new Date().getFullYear()} Flexprice</span>
+          <span>© {new Date().getFullYear()} Flexprice AI, Inc.</span>
           {footer}
         </footer>
       </section>

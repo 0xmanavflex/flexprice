@@ -21,6 +21,7 @@ import {
   currencyCodes,
   emptyInvoice,
   formatMoney,
+  moneyFormatLocale,
   sumLineAmounts,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
@@ -259,7 +260,7 @@ function money(amount: string | null, currency: string): string {
   const code = currency.trim().toUpperCase()
   const value = Number(amount ?? '0')
   if (!/^[A-Z]{3}$/.test(code) || !Number.isFinite(value)) return '—'
-  return new Intl.NumberFormat(undefined, {
+  return new Intl.NumberFormat(moneyFormatLocale(code), {
     style: 'currency',
     currencyDisplay: 'narrowSymbol',
     currency: code,

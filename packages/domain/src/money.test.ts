@@ -52,6 +52,13 @@ describe('formatMoney', () => {
     expect(formatMoney(money('1234.5', 'USD'), 'en-US')).toBe('$1,234.50')
     expect(formatMoney(money('-42', 'USD'), 'en-US')).toBe('-$42.00')
   })
+
+  it('groups INR in lakhs and crores, and every other currency in thousands', () => {
+    expect(formatMoney(money('8113946.26', 'INR'))).toBe('₹81,13,946.26')
+    expect(formatMoney(money('8113946.26', 'INR'), 'en-US')).toBe('₹81,13,946.26')
+    expect(formatMoney(money('8113946.26', 'USD'))).toBe('$8,113,946.26')
+    expect(formatMoney(money('8113946.26', 'EUR'), 'en-IN')).toBe('€8,113,946.26')
+  })
 })
 
 describe('compareMoney', () => {

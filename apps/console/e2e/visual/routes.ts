@@ -257,7 +257,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: `/customers/${CUSTOMER}?tab=usage`,
     reference: 'pages/customer-analytics.tsx',
     pattern: 'detail',
-    ready: { text: 'Usage' },
+    ready: { text: 'Analytics' },
   },
   {
     name: 'customer-new',

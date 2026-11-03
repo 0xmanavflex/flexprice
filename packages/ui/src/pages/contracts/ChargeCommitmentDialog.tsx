@@ -13,6 +13,7 @@ import {
   WindowBillingModel,
   chargeCommitmentSchema,
   currencySymbol,
+  moneyFormatLocale,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -592,7 +593,7 @@ export function commitmentText(commitment: ChargeCommitment, currency: string): 
   let what: string
   if (commitment.type === CommitmentType.Amount) {
     try {
-      what = new Intl.NumberFormat('en-US', {
+      what = new Intl.NumberFormat(moneyFormatLocale(code), {
         style: 'currency',
         currency: /^[A-Z]{3}$/.test(code) ? code : 'USD',
         currencyDisplay: 'narrowSymbol',

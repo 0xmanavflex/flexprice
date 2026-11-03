@@ -200,6 +200,16 @@ describe('aggregationFormula', () => {
     ).toBe('SUM(tokens * multiplier)')
   })
 
+  it('shows a custom expression in place of the field', () => {
+    expect(
+      aggregationFormula({
+        aggregationType: AggregationType.Sum,
+        aggregationField: null,
+        aggregationExpression: 'duration_seconds / 60',
+      }),
+    ).toBe('SUM(duration_seconds / 60)')
+  })
+
   it('is null without a meter', () => {
     expect(aggregationFormula({ aggregationType: null })).toBeNull()
   })

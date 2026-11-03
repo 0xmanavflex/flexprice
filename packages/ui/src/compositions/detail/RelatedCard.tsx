@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
-import { ArrowUpRightIcon } from '@ui/icons'
+import { ArrowUpRightIcon, CopyIcon } from '@ui/icons'
+import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { toast } from 'sonner'
 import { Section } from '../layout/Section'
 
 export const RelatedCardProvenance = provenance({
@@ -16,6 +18,8 @@ export interface RelatedItem {
   label: string
   /** The linked record's name or number. */
   value: string
+  /** An id to copy, such as the customer or invoice id behind this row. */
+  copyValue?: string
   /** Opens the record in the console. */
   onOpen?: () => void
   /** An external URL, opened in a new tab. Used when there is no `onOpen`. */
@@ -59,12 +63,12 @@ export function RelatedCard({
             <dt className="text-muted-foreground min-w-0 truncate text-xs" title={item.label}>
               {item.label}
             </dt>
-            <dd className="min-w-0">
+            <dd className="flex min-w-0 items-center gap-1">
               {item.onOpen ? (
                 <button
                   type="button"
                   onClick={item.onOpen}
-                  className="hover:text-primary inline-flex max-w-full items-center gap-1 text-left underline-offset-2 hover:underline"
+                  className="hover:text-primary inline-flex max-w-full min-w-0 items-center gap-1 text-left underline-offset-2 hover:underline"
                 >
                   <span className="truncate" title={item.value}>
                     {item.value}
@@ -79,7 +83,7 @@ export function RelatedCard({
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-primary inline-flex max-w-full items-center gap-1 underline-offset-2 hover:underline"
+                  className="hover:text-primary inline-flex max-w-full min-w-0 items-center gap-1 underline-offset-2 hover:underline"
                 >
                   <span className="truncate" title={item.value}>
                     {item.value}
@@ -90,6 +94,25 @@ export function RelatedCard({
                   />
                 </a>
               )}
+              {item.copyValue ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground size-7 shrink-0"
+                  aria-label={`Copy ${item.label} ID`}
+                  onClick={() => {
+                    const id = item.copyValue
+                    if (!id) return
+                    void navigator.clipboard
+                      ?.writeText(id)
+                      .then(() => toast.success(`${item.label} ID copied`))
+                      .catch(() => toast.error('Copy failed'))
+                  }}
+                >
+                  <CopyIcon aria-hidden />
+                </Button>
+              ) : null}
             </dd>
           </div>
         ))}

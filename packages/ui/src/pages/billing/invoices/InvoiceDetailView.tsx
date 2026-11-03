@@ -23,7 +23,7 @@ import {
   XCircleIcon,
 } from '@ui/icons'
 import { toast } from 'sonner'
-import { DRAFT_INVOICE_NUMBER_LABEL, InvoiceStatus, PaymentStatus } from '@fp/domain'
+import { DRAFT_INVOICE_NUMBER_LABEL, InvoiceStatus, PaymentStatus, moneyFormatLocale } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -48,6 +48,7 @@ import {
   type SubTabQuery,
 } from '../../../compositions/detail/SubTabState'
 import { Spinner } from '@ui/components/primitives/spinner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { DetailTable } from '../../shared/DetailTable'
 import { Pill, Status } from '../../shared/cells'
 import {
@@ -177,13 +178,13 @@ export function InvoiceDetailView({
   const [tab, setTab] = useState<InvoiceTab>('details')
   const totals = invoiceTotals(invoice)
   const money = (value: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat(moneyFormatLocale(invoice.currency), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency: invoice.currency,
     }).format(value)
   const unitMoney = (value: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat(moneyFormatLocale(invoice.currency), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency: invoice.currency,
@@ -230,6 +231,7 @@ export function InvoiceDetailView({
       id: 'customer',
       label: 'Customer',
       value: invoice.billTo.name,
+      copyValue: invoice.customerId,
       ...(onOpenCustomer ? { onOpen: onOpenCustomer } : {}),
     },
     ...(billingEntity
@@ -246,6 +248,7 @@ export function InvoiceDetailView({
       id: 'subscription',
       label: 'Contract',
       value: invoice.subscriptionLabel,
+      ...(invoice.subscriptionId ? { copyValue: invoice.subscriptionId } : {}),
       ...(onOpenSubscription && invoice.subscriptionId ? { onOpen: onOpenSubscription } : {}),
     },
     // The page the customer sees: a payment page while money is owed, a receipt once paid.
@@ -268,7 +271,7 @@ export function InvoiceDetailView({
         { label: 'Invoice details' },
       ]}
       icon={<ReceiptIcon />}
-      title="Invoice"
+      title={invoice.number || 'Invoice'}
       id={invoice.id}
       leading={
         integrationControls ? (
@@ -779,7 +782,7 @@ function InvoiceDocumentArticle({
 
       {/* Five columns need room: on a narrow screen the lines scroll sideways
           rather than the amounts being clipped. */}
-      <div className="mx-8 overflow-x-auto border-t pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mx-8 [scrollbar-width:none] overflow-x-auto border-t pt-3 [&::-webkit-scrollbar]:hidden">
         <div role="table" aria-label="Line items" className="min-w-[40rem] text-sm">
           <div
             role="row"
@@ -812,8 +815,8 @@ function InvoiceDocumentArticle({
                   </span>
                 ) : null}
               </span>
-              <span role="cell" className="text-muted-foreground tabular-nums">
-                {line.detail || '—'}
+              <span role="cell" className="text-muted-foreground min-w-0 text-xs tabular-nums">
+                {line.detail ? <IntervalLabel short={line.detail} full={line.detailFull} /> : '—'}
               </span>
               <span role="cell" className="text-muted-foreground text-right tabular-nums">
                 {line.quantity || '—'}
@@ -866,6 +869,26 @@ function InvoiceDocumentArticle({
         </div>
       )}
     </article>
+  )
+}
+
+/**
+ * A line's service period: the compact label on one line, the full dates (with
+ * years) in a tooltip on hover or focus.
+ */
+function IntervalLabel({ short, full }: { short: string; full?: string | undefined }) {
+  if (!full || full === short) return <span className="block truncate">{short}</span>
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span tabIndex={0} />}
+        aria-label={`Service period ${full}`}
+        className="block cursor-default truncate"
+      >
+        {short}
+      </TooltipTrigger>
+      <TooltipContent side="top">{full}</TooltipContent>
+    </Tooltip>
   )
 }
 

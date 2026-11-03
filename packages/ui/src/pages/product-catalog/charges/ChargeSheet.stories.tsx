@@ -143,7 +143,7 @@ export const CommitmentPerPeriod: Story = {
   play: async ({ canvasElement }) => {
     const screen = within(canvasElement.ownerDocument.body)
     await expect(await screen.findByText('2,000,000 units')).toBeInTheDocument()
-    await expect(screen.getByText('per quarterly')).toBeInTheDocument()
+    await expect(screen.getByText('per quarter')).toBeInTheDocument()
     await expect(screen.getByText('×1.2')).toBeInTheDocument()
     await expect(screen.getByText('Disabled')).toBeInTheDocument()
   },

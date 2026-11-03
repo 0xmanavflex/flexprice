@@ -175,12 +175,17 @@ export function DetailShell({
           with each other and with the shell header, and the detail page fills a
           1440 screen but stops sprawling edge-to-edge at 2560.
 
+          No `min-h-0` here: the body must grow with its content. Allowed to
+          shrink inside the scrolling shell, a tall tab (the invoice document)
+          overflowed the body box and its `pb-10` was lost, so the page ended flush
+          on the last block while short table tabs kept the gap.
+
           `TAB_STRIP` rides along here because the page owns its `<Tabs>`: the
           rule is a `data-slot` descendant selector rather than a prop, so no
           detail page can forget it and clip its last tab off a phone. */}
       <div
         className={cn(
-          'mx-auto flex min-h-0 w-full max-w-[var(--shell-max)] flex-1 flex-col gap-6 px-6 pb-10',
+          'mx-auto flex w-full max-w-[var(--shell-max)] flex-1 flex-col gap-6 px-6 pb-10',
           TAB_STRIP,
         )}
       >

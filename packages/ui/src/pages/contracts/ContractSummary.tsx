@@ -1,10 +1,13 @@
 import {
   BillingCycle,
   BillingModel,
+  everyPeriod,
   type Charge,
   type CreateSubscription,
   InvoiceCadence,
+  periodNoun,
   PriceType,
+  moneyFormatLocale,
 } from '@fp/domain'
 import { FormPreview, PreviewRow, PreviewRows } from '@ui/compositions/forms/FormPreview'
 import { provenance } from '@ui/provenance'
@@ -36,25 +39,8 @@ export interface ContractSummaryProps {
   today?: string
 }
 
-const PERIOD_NOUN: Record<string, [string, string]> = {
-  DAILY: ['day', 'days'],
-  WEEKLY: ['week', 'weeks'],
-  MONTHLY: ['month', 'months'],
-  QUARTERLY: ['quarter', 'quarters'],
-  HALF_YEARLY: ['half-year', 'half-years'],
-  ANNUAL: ['year', 'years'],
-}
-
-/** "month", "quarter": one period, as a noun. */
-export function periodNoun(period: string): string {
-  return PERIOD_NOUN[period]?.[0] ?? period.toLowerCase()
-}
-
-/** "every month", "every 3 months". */
-export function everyPeriod(period: string, count: number): string {
-  const [one, many] = PERIOD_NOUN[period] ?? [period.toLowerCase(), period.toLowerCase()]
-  return count > 1 ? `every ${count} ${many}` : `every ${one}`
-}
+/** "every month", "every 3 months": the domain's, re-exported where the contract pages import it. */
+export { everyPeriod, periodNoun }
 
 /**
  * A contract date in words: a day (`YYYY-MM-DD`) as "Oct 20, 2026", an
@@ -102,7 +88,7 @@ export function runsText(values: CreateSubscription, today: string): string {
 export function moneyText(amount: number, currency: string): string {
   const code = currency.trim().toUpperCase()
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(code), {
       style: 'currency',
       currency: /^[A-Z]{3}$/.test(code) ? code : 'USD',
       currencyDisplay: 'narrowSymbol',

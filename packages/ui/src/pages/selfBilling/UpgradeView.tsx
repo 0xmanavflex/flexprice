@@ -79,19 +79,11 @@ function BillingBox({ today, plan }: { today: string; plan: SelfBillingPlan | nu
   const fixed = planFixedTotal(plan)
   const base = fixed ? planMoney(fixed.amount, fixed.currency) : null
   const recurring = planPriceText(plan)
-  const steps: [string, string, string][] = [
+  const steps: { when: string; amount: string; what?: string }[] = [
     ...(base
-      ? ([['Today', base, 'The flat fees for your first period.']] as [string, string, string][])
+      ? [{ when: 'Today', amount: base, what: 'The flat fees for your first period.' }]
       : []),
-    ...(recurring
-      ? ([
-          [
-            `From ${longDate(monthAfter(today))}`,
-            recurring,
-            "Your plan's charges, on what you invoice your customers through Flexprice in production.",
-          ],
-        ] as [string, string, string][])
-      : []),
+    ...(recurring ? [{ when: `From ${longDate(monthAfter(today))}`, amount: recurring }] : []),
   ]
   if (steps.length === 0) return null
   return (
@@ -105,7 +97,7 @@ function BillingBox({ today, plan }: { today: string; plan: SelfBillingPlan | nu
           How you&apos;re billed
         </h2>
         <ol className="flex flex-col">
-          {steps.map(([when, amount, what], i) => (
+          {steps.map(({ when, amount, what }, i) => (
             <li key={when} className="relative flex gap-3 pb-4 last:pb-0">
               {i < steps.length - 1 ? (
                 <span aria-hidden className="bg-border absolute top-4 left-[3.5px] h-full w-px" />
@@ -119,10 +111,14 @@ function BillingBox({ today, plan }: { today: string; plan: SelfBillingPlan | nu
               />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                  <span className="font-medium">{when}</span>
-                  <span className="tabular-nums">{amount}</span>
+                  <span className="font-medium whitespace-nowrap">{when}</span>
+                  {what ? <span className="tabular-nums">{amount}</span> : null}
                 </div>
-                <p className="text-muted-foreground text-xs">{what}</p>
+                {what ? (
+                  <p className="text-muted-foreground text-xs">{what}</p>
+                ) : (
+                  <p className="text-left text-[13px]">{amount}</p>
+                )}
               </div>
             </li>
           ))}
@@ -171,7 +167,7 @@ function Offer({
             {locked ? 'Upgrade to unlock your account' : 'Upgrade Flexprice'}
           </p>
           {fixed ? (
-            <p className="text-4xl font-medium tracking-tight tabular-nums">
+            <p className="text-foreground text-4xl font-medium tracking-tight tabular-nums">
               {planMoney(fixed.amount, fixed.currency)}
             </p>
           ) : null}

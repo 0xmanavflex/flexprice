@@ -4,6 +4,12 @@ import { toEntitlementRequest, toUpdateEntitlementRequest } from './entitlements
 
 const metered = (draft: CreateEntitlement): CreateEntitlement => draft
 
+describe('emptyMeteredGrant', () => {
+  it('resets every billing period by default', () => {
+    expect(emptyMeteredGrant().unit).toBe('subscription_period')
+  })
+})
+
 describe('toEntitlementRequest with a V1 grant', () => {
   const base = {
     featureId: 'feat_1',
@@ -15,7 +21,7 @@ describe('toEntitlementRequest with a V1 grant', () => {
 
   it('sends a daily window as V1 does, and no usage limit', () => {
     const request = toEntitlementRequest(
-      metered({ ...base, grant: { ...emptyMeteredGrant(), quota: '1000' } }),
+      metered({ ...base, grant: { ...emptyMeteredGrant(), quota: '1000', unit: 'day' } }),
       'PLAN' as never,
       'plan_1',
     )

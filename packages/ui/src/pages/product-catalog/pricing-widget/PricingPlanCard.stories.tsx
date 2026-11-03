@@ -74,21 +74,32 @@ export const FeatureIcons: Story = {
   },
 }
 
-/** The plan preview: usage and "+ Usage", every line, no button. */
+/** The plan preview: "+ Usage" beside the price, but no usage charges listed; every line, no button. */
 export const Preview: Story = {
   args: {
     preview: true,
     price: '$49',
-    usage: [
-      { key: 'u1', name: 'API calls', price: '$0.01/unit' },
-      { key: 'u2', name: 'Storage', price: 'from $0.002/unit' },
-    ],
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('+ Usage')).toBeVisible()
-    await expect(canvas.getByText('from $0.002/unit')).toBeVisible()
+    await expect(canvas.queryByText('Usage', { exact: true })).toBeNull()
     await expect(canvas.queryByRole('button', { name: 'View plan' })).toBeNull()
+  },
+}
+
+/** The widget card with the plan's description under its name, and "+ Usage" for a metered plan. */
+export const WithDescription: Story = {
+  args: {
+    name: 'Growth',
+    description: 'For teams shipping AI features to production.',
+    price: 'from $49',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('For teams shipping AI features to production.')).toBeVisible()
+    await expect(canvas.getByText('from $49')).toBeVisible()
+    await expect(canvas.getByText('+ Usage')).toBeVisible()
   },
 }
 

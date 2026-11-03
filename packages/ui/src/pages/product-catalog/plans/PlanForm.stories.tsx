@@ -160,6 +160,10 @@ export const EditsAStagedCreditGrant: Story = {
     await expect(await canvas.findByText('100 credits')).toBeInTheDocument()
 
     await userEvent.click(canvas.getByRole('button', { name: 'Edit Free credits' }))
+    // The form opens in the row's place: one "Edit credit grant", and no second
+    // copy of the row with its own Edit beside it.
+    await expect(canvas.getAllByText('Edit credit grant')).toHaveLength(1)
+    await expect(canvas.queryByRole('button', { name: 'Edit Free credits' })).toBeNull()
     const credits = canvas.getByRole('textbox', { name: /^Credits/ })
     await expect(credits).toHaveValue('100')
     await userEvent.clear(credits)

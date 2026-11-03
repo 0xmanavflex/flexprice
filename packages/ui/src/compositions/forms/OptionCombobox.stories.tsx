@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { GaugeIcon } from '@ui/icons'
+import { GaugeIcon, PlusIcon } from '@ui/icons'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { OptionCombobox, type OptionComboboxProps } from './OptionCombobox'
 import type { Option } from './OptionSelect'
@@ -146,6 +146,25 @@ export const FiltersAndPicks: Story = {
     await userEvent.click(screen.getByRole('option', { name: 'EUR: Euro' }))
     await expect(args.onValueChange).toHaveBeenCalledWith('eur')
     await waitFor(() => expect(input).toHaveValue('EUR: Euro'))
+  },
+}
+
+/**
+ * A "Create …" item at the end leaves for the entity's own create form. It
+ * survives any search, and choosing it is never a value.
+ */
+export const WithCreateAction: Story = {
+  args: {
+    createAction: { label: 'Create currency', icon: <PlusIcon aria-hidden />, onSelect: fn() },
+  },
+  play: async ({ canvasElement, args }) => {
+    const input = within(canvasElement).getByRole('combobox', { name: 'Currency' })
+    await userEvent.click(input)
+    await userEvent.type(input, 'zzz')
+    const create = await screen.findByRole('option', { name: 'Create currency' })
+    await userEvent.click(create)
+    await expect(args.createAction?.onSelect).toHaveBeenCalledOnce()
+    await expect(args.onValueChange).not.toHaveBeenCalled()
   },
 }
 

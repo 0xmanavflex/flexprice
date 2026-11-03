@@ -8,6 +8,7 @@ import {
   CreditGrantCadence,
   type CreditGrantPeriod,
   FeatureType,
+  moneyFormatLocale,
   PriceType,
   tierUnitLabel,
 } from '@fp/domain'
@@ -119,10 +120,11 @@ export function chargeLabel(charge: CreateCharge, meterLabel: (id: string) => st
 }
 
 export function money(amount: number, currency: string, locale?: string): string {
+  void locale
   try {
     // Sub-cent unit prices ($0.002 per call) must not round to $0.00.
     const wholeCents = Math.abs(amount * 100 - Math.round(amount * 100)) < 1e-9
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(moneyFormatLocale(currency), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency,
@@ -133,12 +135,19 @@ export function money(amount: number, currency: string, locale?: string): string
   }
 }
 
-/** A short human line describing how a charge prices, e.g. "$2 per 1,000". */
+/**
+ * A short human line describing how a charge prices, e.g. "$2 per 1,000".
+ *
+ * A tiered charge leads with its tier count ("2 tiers, from $1 per call")
+ * unless `tierCount` is false, for a surface that shows the count on a line
+ * of its own and would otherwise say it twice.
+ */
 export function pricingSummary(
   charge: CreateCharge,
   currency: string,
   locale?: string,
   unit?: string,
+  { tierCount = true }: { tierCount?: boolean } = {},
 ): string {
   const per = `per ${unit || 'unit'}`
   switch (charge.billingModel) {
@@ -157,7 +166,8 @@ export function pricingSummary(
       const from = first ? Number(first.unitAmount || 0) : 0
       const n = charge.tiers.length
       const unit = first?.transformQuantity?.divideBy ? tierUnitLabel(first) : per
-      return `${n} tier${n === 1 ? '' : 's'}, from ${money(from, currency, locale)} ${unit}`
+      const price = `${money(from, currency, locale)} ${unit}`
+      return tierCount ? `${n} tier${n === 1 ? '' : 's'}, from ${price}` : `From ${price}`
     }
   }
 }

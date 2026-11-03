@@ -240,13 +240,17 @@ export function usePriceGroupOptions() {
     page: 1,
     pageSize: 100,
     search: '',
-    statuses: [],
+    // Only live tags are offered: an archived one cannot take a new price.
+    statuses: [GroupStatus.Published],
     sortBy: GroupSortField.Name,
     sortDirection: 'asc',
     view: 'table' as GroupQuery['view'],
     filters: [{ field: 'entity_type', op: 'in', value: [GroupEntityType.Price] }],
   })
   return (groups.data?.groups ?? [])
-    .filter((group) => group.entityType === GroupEntityType.Price)
+    .filter(
+      (group) =>
+        group.entityType === GroupEntityType.Price && group.status === GroupStatus.Published,
+    )
     .map((group) => ({ value: group.id, label: group.name }))
 }

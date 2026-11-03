@@ -1,4 +1,5 @@
 import { useState, type ReactElement, type ReactNode } from 'react'
+import { NOT_A_LOGIN } from '../forms/notALogin'
 import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
@@ -495,7 +496,7 @@ export function SimpleTable<T>({
     getRowId ? getRowId(row) : String((row as { id?: string }).id ?? index)
   return (
     <div>
-      <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="[scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden">
         <table className="w-full text-sm" onMouseOver={revealTruncated}>
           <thead>
             <tr className="bg-muted/60">
@@ -662,6 +663,7 @@ export function Composer({
   const inDialog = useInFormDialog()
   return (
     <form
+      {...NOT_A_LOGIN}
       className={cn('flex flex-col gap-6', !inDialog && 'p-6')}
       onSubmit={(event) => {
         event.preventDefault()
@@ -673,7 +675,14 @@ export function Composer({
       <div className="flex items-center justify-end gap-2 border-t pt-5">
         {secondary ? <div className="mr-auto">{secondary}</div> : null}
         {onCancel ? (
-          <Button type="button" variant="ghost" className="h-8" onClick={onCancel}>
+          // Off while submitting: cancelling would not stop the request in flight.
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-8"
+            disabled={submitting}
+            onClick={onCancel}
+          >
             Cancel
           </Button>
         ) : null}

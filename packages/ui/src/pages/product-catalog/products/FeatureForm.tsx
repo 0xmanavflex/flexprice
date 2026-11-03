@@ -12,13 +12,14 @@ import {
   allowsExpression,
   createFeatureSchema,
   defaultFeatureLookupKey,
+  defaultUnitPlural,
   editFeatureSchema,
   needsAggregationTarget,
   type CreateFeature,
   type EditFeature,
   type Feature,
 } from '@fp/domain'
-import { PlusIcon, Trash2Icon } from '@ui/icons'
+import { ArrowUpRightIcon, PlusIcon, Trash2Icon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
@@ -60,6 +61,8 @@ type FeatureFormProps = {
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
+  /** The API refused the custom expression. Shown on that field. */
+  expressionError?: string | null
   /** The tags a feature can be filed under. Empty disables the picker, never hides it. */
   groups?: readonly Option[]
   trail: DetailCrumb[]
@@ -258,17 +261,27 @@ const hasUnits = (type: FeatureType) => type === FeatureType.Metered
  * carries untouched.
  */
 function normalize(values: FormValues, mode: 'create' | 'edit', useExpression: boolean) {
-  const ru = values.reportingUnit
+  // The plurals have no inputs: they follow the singular unless the feature
+  // already carried one of its own.
+  const ru = {
+    ...values.reportingUnit,
+    unitPlural:
+      values.reportingUnit.unitPlural.trim() ||
+      defaultUnitPlural(values.reportingUnit.unitSingular),
+  }
   const units = hasUnits(values.type)
   const hasReportingUnit =
-    units && [ru.unitSingular, ru.unitPlural, ru.conversionRate].some((v) => v.trim() !== '')
+    units && [ru.unitSingular, ru.conversionRate].some((v) => v.trim() !== '')
+  const unitPlural = values.unitSingular.trim()
+    ? values.unitPlural.trim() || defaultUnitPlural(values.unitSingular)
+    : ''
 
   const filters = values.filters.map((f) => ({ key: f.key, values: splitValues(f.valuesText) }))
   const expressionOn = useExpression && allowsExpression(values.meter.aggregationType)
   const shared = {
     name: values.name,
     description: values.description,
-    ...(units ? { unitSingular: values.unitSingular, unitPlural: values.unitPlural } : {}),
+    ...(units ? { unitSingular: values.unitSingular, unitPlural } : {}),
     ...(values.groupId ? { groupId: values.groupId } : {}),
     ...(hasReportingUnit ? { reportingUnit: ru } : {}),
   }
@@ -306,7 +319,15 @@ function normalize(values: FormValues, mode: 'create' | 'edit', useExpression: b
 }
 
 export function FeatureForm(props: FeatureFormProps) {
-  const { mode, onCancel, isSubmitting = false, submitError = null, groups = [], trail } = props
+  const {
+    mode,
+    onCancel,
+    isSubmitting = false,
+    submitError = null,
+    expressionError = null,
+    groups = [],
+    trail,
+  } = props
   const feature = props.mode === 'edit' ? props.feature : undefined
   const isEdit = mode === 'edit'
 
@@ -587,23 +608,14 @@ export function FeatureForm(props: FeatureFormProps) {
               ? 'A CEL expression over the event. It replaces the event field, and only this is saved.'
               : 'The property on the event to aggregate.'
           }
-          error={expressionOn ? message('meter.expression') : message('meter.field')}
+          error={
+            expressionOn
+              ? (expressionError ?? message('meter.expression'))
+              : message('meter.field')
+          }
         >
           {({ id, ...field }) => (
             <div className="flex flex-col gap-3">
-              {allowsExpression(aggregationType) ? (
-                <CheckboxRow
-                  checked={useExpression}
-                  disabled={isEdit}
-                  onCheckedChange={(checked) => {
-                    setUseExpression(checked)
-                    if (checked) form.setValue('meter.field', '', { shouldDirty: true })
-                    else form.setValue('meter.expression', '', { shouldDirty: true })
-                  }}
-                >
-                  Use a custom expression
-                </CheckboxRow>
-              ) : null}
               {expressionOn ? (
                 <Textarea
                   id={id}
@@ -624,6 +636,30 @@ export function FeatureForm(props: FeatureFormProps) {
                   {...form.register('meter.field')}
                 />
               )}
+              {allowsExpression(aggregationType) ? (
+                <div className="flex items-center gap-1.5">
+                  <CheckboxRow
+                    checked={useExpression}
+                    disabled={isEdit}
+                    onCheckedChange={(checked) => {
+                      setUseExpression(checked)
+                      if (checked) form.setValue('meter.field', '', { shouldDirty: true })
+                      else form.setValue('meter.expression', '', { shouldDirty: true })
+                    }}
+                  >
+                    Use a custom expression
+                  </CheckboxRow>
+                  <a
+                    href="https://docs.flexprice.io/docs/product-catalogue/features/custom-expression"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Custom expression docs"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <ArrowUpRightIcon aria-hidden className="size-3.5" />
+                  </a>
+                </div>
+              ) : null}
             </div>
           )}
         </FormRow>
@@ -679,47 +715,26 @@ export function FeatureForm(props: FeatureFormProps) {
     </>
   )
 
-  /* Only a metered feature is counted, so only it has units. */
+  /*
+   * Only a metered feature is counted, so only it has units. Each unit is asked
+   * for once, in the singular: the plural follows it ("call" → "calls"), and an
+   * edit keeps whatever plural the feature already has until the singular changes.
+   */
   const unitRows = hasUnits(type) ? (
     <>
       <FormRow
-        label="Unit (singular)"
-        hint="Shown after a quantity of one, for example call."
-        error={message('unitSingular')}
+        label="Unit"
+        hint="Shown after a quantity, for example call. The plural adds an s."
+        error={message('unitSingular') ?? message('unitPlural')}
       >
-        {({ id, ...field }) => (
-          <Input id={id} placeholder={isMetered ? 'call' : 'seat'} {...field} {...singularField} />
-        )}
+        {({ id, ...field }) => <Input id={id} placeholder="call" {...field} {...singularField} />}
       </FormRow>
       <FormRow
-        label="Unit (plural)"
-        hint="Shown after any other quantity, for example calls."
-        error={message('unitPlural')}
-      >
-        {({ id, ...field }) => (
-          <Input
-            id={id}
-            placeholder={isMetered ? 'calls' : 'seats'}
-            {...field}
-            {...form.register('unitPlural')}
-          />
-        )}
-      </FormRow>
-      <FormRow
-        label="Reporting unit (singular)"
-        hint="How usage is displayed in reports: the feature unit times a conversion rate. Fill all three or none."
-        error={message('reportingUnit.unitSingular')}
+        label="Reporting unit"
+        hint="How usage is displayed in reports: the feature unit times a conversion rate. Fill both or neither."
+        error={message('reportingUnit.unitSingular') ?? message('reportingUnit.unitPlural')}
       >
         {({ id, ...field }) => <Input id={id} {...field} {...reportingSingularField} />}
-      </FormRow>
-      <FormRow
-        label="Reporting unit (plural)"
-        hint="The unit usage is shown in on reports."
-        error={message('reportingUnit.unitPlural')}
-      >
-        {({ id, ...field }) => (
-          <Input id={id} {...field} {...form.register('reportingUnit.unitPlural')} />
-        )}
       </FormRow>
       <FormRow
         label="Conversion rate"
@@ -737,11 +752,19 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
     </>
   ) : null
+  const unitError = Boolean(
+    message('unitSingular') ||
+    message('unitPlural') ||
+    message('reportingUnit.unitSingular') ||
+    message('reportingUnit.unitPlural') ||
+    message('reportingUnit.conversionRate'),
+  )
 
   /*
-   * What the feature *is* (Details), then, for a metered feature only, how it
-   * is counted (Metering). Boolean and static features have no usage to count,
-   * so they are Details alone.
+   * Name first, then, for a metered feature only, the event and how it is
+   * aggregated: the three things a feature cannot do without. Everything else
+   * is optional and comes after, with units last. Boolean and static features
+   * have no usage to count, so they have no event, aggregation or units.
    */
   const formEl = (
     <form id={FORM_ID} onSubmit={submitAll} noValidate>
@@ -753,7 +776,6 @@ export function FeatureForm(props: FeatureFormProps) {
         </FormCard>
         {isMetered ? (
           <>
-            <FormCard title="Units">{unitRows}</FormCard>
             <FormCard title="Event">{eventRows}</FormCard>
             <FormCard title="Aggregation">{aggregationRows}</FormCard>
           </>
@@ -765,6 +787,15 @@ export function FeatureForm(props: FeatureFormProps) {
         >
           {optionalRows}
         </FormDisclosure>
+        {unitRows ? (
+          <FormDisclosure
+            title="Units"
+            summary="Optional. The unit usage is counted in, and the unit it is reported in."
+            forceOpen={unitError}
+          >
+            {unitRows}
+          </FormDisclosure>
+        ) : null}
       </fieldset>
     </form>
   )

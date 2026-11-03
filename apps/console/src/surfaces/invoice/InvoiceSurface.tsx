@@ -10,7 +10,7 @@ import { publicApiUrls } from '../publicApi'
 import { type HostedInvoiceLink, parseHostedInvoiceLink } from './link'
 import { pageKind } from './pageKind'
 import { isSafeNavigationUrl } from '../safeUrl'
-import { frameablePdf } from './pdfFrame'
+import { blobOf, frameablePdf } from './pdfFrame'
 
 const GENERIC_ERROR = 'Something went wrong, please try again.'
 
@@ -43,7 +43,7 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
   const frame = useRef<string | null>(null)
   const previewSeq = useRef(0)
   const releaseFrame = () => {
-    if (frame.current) URL.revokeObjectURL(frame.current)
+    if (frame.current) URL.revokeObjectURL(blobOf(frame.current))
     frame.current = null
   }
   useEffect(() => releaseFrame, [])
@@ -106,7 +106,7 @@ function HostedInvoicePage({ link }: { link: HostedInvoiceLink }) {
       }
       const frameUrl = await frameablePdf(url)
       if (seq !== previewSeq.current) {
-        if (frameUrl?.startsWith('blob:')) URL.revokeObjectURL(frameUrl)
+        if (frameUrl?.startsWith('blob:')) URL.revokeObjectURL(blobOf(frameUrl))
         return
       }
       if (frameUrl?.startsWith('blob:')) frame.current = frameUrl

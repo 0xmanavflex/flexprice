@@ -17,7 +17,7 @@ import type {
   FilterField,
   FilterQuery,
 } from '@ui/components/reui/filters/filters-types'
-import { Calendar } from '@ui/components/primitives/calendar'
+import { DayCalendar } from '@ui/compositions/forms/DateInput'
 import { Input } from '@ui/components/primitives/input'
 import {
   FILTER_OPS,
@@ -550,18 +550,7 @@ function formatDay(value: unknown): string {
 
 /** The date step: one calendar, a pick commits the day as `YYYY-MM-DD`. */
 function FilterDayEditor({ value, commit }: FilterEditorProps<string, unknown>) {
-  const selected = value ? new Date(`${value}T00:00:00`) : undefined
-  return (
-    <Calendar
-      mode="single"
-      {...(selected ? { selected, defaultMonth: selected } : {})}
-      onSelect={(day: Date | undefined) => {
-        if (!day) return
-        const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
-        commit(iso)
-      }}
-    />
-  )
+  return <DayCalendar value={value || undefined} onValueChange={commit} />
 }
 
 /**

@@ -23,6 +23,7 @@ import { toCreditGrantRequest } from './creditGrants'
 import { toEntitlementRequest } from './entitlements'
 import {
   toAddAddonRequest,
+  toAddAddonsRequest,
   toAddCouponRequest,
   toRemoveCouponRequest,
   toCancelSubscriptionRequest,
@@ -180,6 +181,16 @@ describe('toCreateSubscriptionRequest', () => {
       unknown
     >
     expect(parsed['inheritance']).toEqual({ invoicing_customer_external_id: 'payer_ext' })
+  })
+
+  it('puts a contract under its parent contract by id', () => {
+    const request = toCreateSubscriptionRequest({ ...base, parentSubscriptionId: 'subs_parent' })
+    expect(request['inheritance']).toEqual({ parentSubscriptionId: 'subs_parent' })
+    const parsed = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<
+      string,
+      unknown
+    >
+    expect(parsed['inheritance']).toEqual({ parent_subscription_id: 'subs_parent' })
   })
 
   it('names the inherited customers alone, beside a commitment, as V1 sends them', () => {
@@ -655,11 +666,34 @@ describe('contract-scoped creators', () => {
     })
   })
 
+  it('sends several add-ons as one addon modification', () => {
+    const request = toAddAddonsRequest('sub_1', [
+      { addonId: 'addon_1' },
+      { addonId: 'addon_2', startDate: '2030-01-01' },
+    ])
+    expect(request.type).toBe('addon')
+    expect(request.addonBulkParams?.adds).toHaveLength(2)
+    expect(request.addonBulkParams?.adds?.[0]).toEqual({ addonId: 'addon_1' })
+    expect(request.addonBulkParams?.adds?.[1]).toMatchObject({ addonId: 'addon_2' })
+    expect(request.addonBulkParams?.adds?.[1]).not.toHaveProperty('subscriptionId')
+  })
+
   it('builds an add-on request the SDK accepts', () => {
     const request = toAddAddonRequest('sub_1', { addonId: 'addon_1' })
     expect(AddAddonRequest$outboundSchema.parse(request)).toEqual({
       subscription_id: 'sub_1',
       addon_id: 'addon_1',
+    })
+  })
+
+  it('sends an add-on start when one was chosen', () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      startDate: '2026-11-03T09:30:00.000Z',
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      addon_id: 'addon_1',
+      start_date: '2026-11-03T09:30:00.000Z',
     })
   })
 

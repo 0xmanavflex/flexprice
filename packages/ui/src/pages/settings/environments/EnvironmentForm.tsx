@@ -6,7 +6,6 @@ import {
   CircleAlertIcon,
   InfoIcon,
   MailIcon,
-  SparklesIcon,
   TriangleAlertIcon,
 } from '@ui/icons'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
@@ -263,7 +262,7 @@ export function EnvironmentForm({
             className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-4"
           >
             <div className="flex items-start gap-2.5">
-              <SparklesIcon aria-hidden className="text-primary mt-0.5 size-4 shrink-0" />
+              <InfoIcon aria-hidden className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               <div className="flex flex-col gap-0.5">
                 <p className="text-sm font-medium">Production comes with an upgrade</p>
                 {upgrade.price ? (

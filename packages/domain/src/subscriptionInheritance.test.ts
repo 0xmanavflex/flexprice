@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   INHERITANCE_WITH_BILLING_CUSTOMER,
   INHERITANCE_WITH_THRESHOLD,
+  PARENT_WITH_BILLING_CUSTOMER,
+  PARENT_WITH_INHERITED,
   createSubscriptionSchema,
   emptySubscription,
 } from './subscription'
@@ -46,5 +48,23 @@ describe('inherited customers', () => {
       ),
     ).toEqual([INHERITANCE_WITH_THRESHOLD])
     expect(issues({ ...base, autoInvoiceThreshold: '500' }, 'autoInvoiceThreshold')).toEqual([])
+  })
+
+  it('takes a parent contract alone, and refuses it beside a payer or inherited customers', () => {
+    expect(
+      issues({ ...base, parentSubscriptionId: 'subs_parent' }, 'parentSubscriptionId'),
+    ).toEqual([])
+    expect(
+      issues(
+        { ...base, parentSubscriptionId: 'subs_parent', invoicingCustomerExternalId: 'payer' },
+        'parentSubscriptionId',
+      ),
+    ).toEqual([PARENT_WITH_BILLING_CUSTOMER])
+    expect(
+      issues(
+        { ...base, parentSubscriptionId: 'subs_parent', inheritedCustomerExternalIds: ['child'] },
+        'parentSubscriptionId',
+      ),
+    ).toEqual([PARENT_WITH_INHERITED])
   })
 })

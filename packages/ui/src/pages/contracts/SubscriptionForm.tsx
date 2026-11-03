@@ -54,7 +54,6 @@ import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
-  CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
   CreditGrantExpiryType,
   type Entitlement,
@@ -78,6 +77,7 @@ import {
   INHERITANCE_BLOCK_LABEL,
   InheritanceBlock,
   contractDateToInstant,
+  moneyFormatLocale,
   tierUnitLabel,
 } from '@fp/domain'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
@@ -197,6 +197,15 @@ export interface SubscriptionCustomerOption extends Option {
   timezone?: string | undefined
 }
 
+/**
+ * A contract this one can sit under, for a customer hierarchy: label it by
+ * customer and plan (an id says nothing to the person picking).
+ */
+export interface SubscriptionParentOption extends Option {
+  /** The parent contract's customer, so the contract's own can be left out. */
+  customerId?: string | undefined
+}
+
 /** A global exchange rate, one unit of `fromCurrency` in `toCurrency` (lower-case codes). */
 export interface SubscriptionFxRateOption {
   fromCurrency: string
@@ -266,6 +275,11 @@ export interface SubscriptionFormProps {
    * Loaded for the chosen customer; they are listed but cannot be picked.
    */
   inheritanceBlocks?: Readonly<Record<string, InheritanceBlock>>
+  /**
+   * Contracts this one can be created under (`inheritance.parent_subscription_id`),
+   * for a customer hierarchy. Left out, the form offers no parent.
+   */
+  parentContracts?: readonly SubscriptionParentOption[] | undefined
   /**
    * The global exchange rates. A contract billed in another currency than the
    * invoicing customer's needs one for the pair (the API refuses it otherwise),
@@ -344,7 +358,12 @@ const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
   ],
   phases: ['phases', 'chargeCommitments'],
   commitments: ['commitmentAmount', 'overageFactor'],
-  billing: ['autoInvoiceThreshold', 'inheritedCustomerExternalIds', 'fxRates'],
+  billing: [
+    'autoInvoiceThreshold',
+    'inheritedCustomerExternalIds',
+    'parentSubscriptionId',
+    'fxRates',
+  ],
 }
 
 const unique = <T,>(values: T[]) => [...new Set(values)]
@@ -381,10 +400,15 @@ function calendarTitle(period: string): string {
     : `Start of ${everyPeriod(period, 1).replace('every', 'every calendar')}`
 }
 
-/** A `YYYY-MM-DD` day at 00:00 local, as an instant: where a new contract starts by default. */
-function startOfDay(day: string): string {
+/**
+ * Where a new contract starts. Today means right now. A fixture day (stories)
+ * stays at local midnight so the clock does not move under the test.
+ */
+function defaultStart(day: string): string {
   const [y, m, d] = day.split('-').map(Number) as [number, number, number]
-  return new Date(y, m - 1, d).toISOString()
+  const now = new Date()
+  const isToday = now.getFullYear() === y && now.getMonth() === m - 1 && now.getDate() === d
+  return isToday ? now.toISOString() : new Date(y, m - 1, d).toISOString()
 }
 
 /** What the calendar billing day is called in a sentence: "the 1st", "the start of the quarter". */
@@ -413,6 +437,7 @@ export function SubscriptionForm({
   priceUnits = [],
   customerLocked = false,
   inheritanceBlocks = NO_BLOCKS,
+  parentContracts,
   fxGlobalRates,
   fxCustomCurrencies,
   fxSettingsFailed = false,
@@ -427,10 +452,10 @@ export function SubscriptionForm({
 }: SubscriptionFormProps) {
   const form = useCalmForm<CreateSubscription>({
     resolver: standardSchemaResolver(createSubscriptionSchema) as Resolver<CreateSubscription>,
-    // Starts today at midnight unless the caller says otherwise, as the reference does.
+    // Starts now unless the caller says otherwise.
     defaultValues: {
       ...emptySubscription(),
-      startDate: startOfDay(today),
+      startDate: defaultStart(today),
       ...defaultValue,
     },
   })
@@ -1228,10 +1253,21 @@ export function SubscriptionForm({
         isSubmitting={isSubmitting}
         customers={customers}
         inheritanceBlocks={inheritanceBlocks}
+        {...(parentContracts ? { parentContracts } : {})}
         onChange={(name, value) => {
           set(name, value)
           if (name === 'invoicingCustomerExternalId' || name === 'inheritedCustomerExternalIds')
             form.clearErrors(name)
+          // A contract under a parent is invoiced through it: it neither bills
+          // another customer nor has inherited customers of its own.
+          if (name === 'parentSubscriptionId') {
+            form.clearErrors('parentSubscriptionId')
+            if (value) {
+              set('invoicingCustomerExternalId', '')
+              set('inheritedCustomerExternalIds', [])
+              setWhoPays(WhoPays.Same)
+            }
+          }
         }}
         whoPays={whoPays}
         onWhoPays={(next) => {
@@ -1329,7 +1365,7 @@ function money(amount: string | undefined, currency: string): string {
   const value = Number(raw)
   if (!Number.isFinite(value) || !/^[A-Z]{3}$/.test(code)) return `${raw} ${code}`.trim()
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(moneyFormatLocale(code), {
       style: 'currency',
       currencyDisplay: 'narrowSymbol',
       currency: code,
@@ -2887,6 +2923,8 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
 export interface AddonPricing {
   priceOverrides: PriceOverride[]
   commitments: ChargeCommitment[]
+  /** When the add-on starts. Empty starts it with the contract. */
+  startDate?: string
 }
 
 /**
@@ -3067,6 +3105,23 @@ export function AddonChargesDialog({
               )}
             </div>
           )}
+          <div className="flex flex-col gap-2">
+            <LabelWithHint
+              htmlFor="addon-start"
+              hint="Leave empty to start this add-on with the contract."
+            >
+              Start date
+            </LabelWithHint>
+            <DateInput
+              id="addon-start"
+              withTime
+              clearable
+              clearLabel="Clear start date"
+              value={value.startDate ?? ''}
+              onValueChange={(startDate) => onChange({ ...value, startDate })}
+              placeholder="Starts with the contract"
+            />
+          </div>
           {error ? (
             <p role="alert" className="text-destructive text-sm">
               {error}
@@ -3152,6 +3207,7 @@ function withAddonPricing(
     name: addon.name,
     ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
     ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+    ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
   }
 }
 
@@ -3207,6 +3263,7 @@ function AddonsSection({
       currency,
       billingPeriod,
     }),
+    ...(addon.startDate ? { startDate: addon.startDate } : {}),
   })
   const available = options.filter((o) => !selected.some((a) => a.addonId === o.value))
   const optionOf = (addonId: string) => options.find((o) => o.value === addonId)
@@ -4203,6 +4260,7 @@ function BillingStep({
   isSubmitting,
   customers,
   inheritanceBlocks,
+  parentContracts,
   onChange,
   whoPays,
   onWhoPays,
@@ -4215,6 +4273,7 @@ function BillingStep({
   isSubmitting: boolean
   customers: readonly SubscriptionCustomerOption[]
   inheritanceBlocks: Readonly<Record<string, InheritanceBlock>>
+  parentContracts?: readonly SubscriptionParentOption[] | undefined
   onChange: <K extends keyof CreateSubscription>(name: K, value: CreateSubscription[K]) => void
   whoPays: WhoPays
   onWhoPays: (next: WhoPays) => void
@@ -4243,6 +4302,11 @@ function BillingStep({
   const nameOf = (externalId: string) =>
     payerOptions.find((o) => o.value === externalId)?.label ?? externalId
   const [pickerKey, setPickerKey] = useState(0)
+  // The contract's own customer's contracts are not a parent for it.
+  const parentOptions = (parentContracts ?? []).filter(
+    (option) => !option.customerId || option.customerId !== values.customerId,
+  )
+  const underParent = Boolean(values.parentSubscriptionId)
 
   return (
     <>
@@ -4278,109 +4342,136 @@ function BillingStep({
         title="Customer hierarchy"
         icon={<UsersIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
       >
-        <FormRow
-          label="Billing customer"
-          hint="Invoices for this contract go to this customer."
-          align="start"
-        >
-          <ChoiceCards
-            label="Billing customer"
-            value={whoPays}
-            onChange={(next) => {
-              onWhoPays(next)
-              if (next === WhoPays.Same) onChange('invoicingCustomerExternalId', '')
-            }}
-            choices={[
-              {
-                value: WhoPays.Same,
-                title: 'Same customer',
-                description: 'Invoices go to the customer on this contract.',
-              },
-              {
-                value: WhoPays.Another,
-                title: 'Another customer',
-                description: 'A parent account pays, e.g. a holding company.',
-              },
-            ]}
-          />
-        </FormRow>
-        {whoPays === WhoPays.Another ? (
+        {parentContracts ? (
           <FormRow
-            label="Invoiced to"
-            hint="The customer that receives and pays the invoices."
-            error={errors.invoicingCustomerExternalId?.message}
+            label="Parent contract"
+            hint="Optional. Put this contract under another customer's contract: its invoices are grouped into the parent's."
+            error={errors.parentSubscriptionId?.message}
           >
             {({ id, ...field }) => (
               <OptionCombobox
                 id={id}
                 {...field}
-                value={values.invoicingCustomerExternalId}
-                onValueChange={(value) => onChange('invoicingCustomerExternalId', value)}
-                options={payerOptions}
-                placeholder="Search the paying customer…"
-                emptyText="No other customer has an external ID."
+                value={values.parentSubscriptionId}
+                onValueChange={(value) => onChange('parentSubscriptionId', value)}
+                options={parentOptions}
+                placeholder="No parent: search a contract…"
+                emptyText="No other customer has a contract to sit under."
+                searchable
                 disabled={isSubmitting}
               />
             )}
           </FormRow>
         ) : null}
-        <FormRow
-          label="Inherited customers"
-          hint="Customers that share this contract's charges, entitlements and credits. Their usage is invoiced to this contract's customer, so the billing customer stays the same."
-          align="start"
-          error={errors.inheritedCustomerExternalIds?.message}
-        >
-          {({ id, ...field }) => (
-            <div className="flex flex-col gap-2">
-              {values.inheritedCustomerExternalIds.length > 0 ? (
-                <ul className="flex flex-wrap gap-1.5">
-                  {values.inheritedCustomerExternalIds.map((externalId) => (
-                    <li key={externalId}>
-                      <Badge variant="secondary" className="gap-1 pr-1">
-                        {nameOf(externalId)}
-                        <button
-                          type="button"
-                          aria-label={`Remove ${nameOf(externalId)}`}
-                          className="hover:text-foreground rounded-sm"
-                          onClick={() =>
-                            onChange(
-                              'inheritedCustomerExternalIds',
-                              values.inheritedCustomerExternalIds.filter((e) => e !== externalId),
-                            )
-                          }
-                        >
-                          <XIcon aria-hidden className="size-3" />
-                        </button>
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <OptionCombobox
-                key={pickerKey}
-                id={id}
-                {...field}
-                value=""
-                onValueChange={(value) => {
-                  if (!value) return
-                  onChange('inheritedCustomerExternalIds', [
-                    ...values.inheritedCustomerExternalIds,
-                    value,
-                  ])
-                  setPickerKey((n) => n + 1)
+        {underParent ? null : (
+          <>
+            <FormRow
+              label="Billing customer"
+              hint="Invoices for this contract go to this customer."
+              align="start"
+            >
+              <ChoiceCards
+                label="Billing customer"
+                value={whoPays}
+                onChange={(next) => {
+                  onWhoPays(next)
+                  if (next === WhoPays.Same) onChange('invoicingCustomerExternalId', '')
                 }}
-                options={inheritable}
-                placeholder={
-                  values.inheritedCustomerExternalIds.length > 0
-                    ? 'Add another customer…'
-                    : 'Add customers to inherit…'
-                }
-                emptyText="No other customer has an external ID."
-                disabled={isSubmitting}
+                choices={[
+                  {
+                    value: WhoPays.Same,
+                    title: 'Same customer',
+                    description: 'Invoices go to the customer on this contract.',
+                  },
+                  {
+                    value: WhoPays.Another,
+                    title: 'Another customer',
+                    description: 'A parent account pays, e.g. a holding company.',
+                  },
+                ]}
               />
-            </div>
-          )}
-        </FormRow>
+            </FormRow>
+            {whoPays === WhoPays.Another ? (
+              <FormRow
+                label="Invoiced to"
+                hint="The customer that receives and pays the invoices."
+                error={errors.invoicingCustomerExternalId?.message}
+              >
+                {({ id, ...field }) => (
+                  <OptionCombobox
+                    id={id}
+                    {...field}
+                    value={values.invoicingCustomerExternalId}
+                    onValueChange={(value) => onChange('invoicingCustomerExternalId', value)}
+                    options={payerOptions}
+                    placeholder="Search the paying customer…"
+                    emptyText="No other customer has an external ID."
+                    disabled={isSubmitting}
+                  />
+                )}
+              </FormRow>
+            ) : null}
+            <FormRow
+              label="Inherited customers"
+              hint="Customers that share this contract's charges, entitlements and credits. Their usage is invoiced to this contract's customer, so the billing customer stays the same."
+              align="start"
+              error={errors.inheritedCustomerExternalIds?.message}
+            >
+              {({ id, ...field }) => (
+                <div className="flex flex-col gap-2">
+                  {values.inheritedCustomerExternalIds.length > 0 ? (
+                    <ul className="flex flex-wrap gap-1.5">
+                      {values.inheritedCustomerExternalIds.map((externalId) => (
+                        <li key={externalId}>
+                          <Badge variant="secondary" className="gap-1 pr-1">
+                            {nameOf(externalId)}
+                            <button
+                              type="button"
+                              aria-label={`Remove ${nameOf(externalId)}`}
+                              className="hover:text-foreground rounded-sm"
+                              onClick={() =>
+                                onChange(
+                                  'inheritedCustomerExternalIds',
+                                  values.inheritedCustomerExternalIds.filter(
+                                    (e) => e !== externalId,
+                                  ),
+                                )
+                              }
+                            >
+                              <XIcon aria-hidden className="size-3" />
+                            </button>
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <OptionCombobox
+                    key={pickerKey}
+                    id={id}
+                    {...field}
+                    value=""
+                    onValueChange={(value) => {
+                      if (!value) return
+                      onChange('inheritedCustomerExternalIds', [
+                        ...values.inheritedCustomerExternalIds,
+                        value,
+                      ])
+                      setPickerKey((n) => n + 1)
+                    }}
+                    options={inheritable}
+                    placeholder={
+                      values.inheritedCustomerExternalIds.length > 0
+                        ? 'Add another customer…'
+                        : 'Add customers to inherit…'
+                    }
+                    emptyText="No other customer has an external ID."
+                    disabled={isSubmitting}
+                  />
+                </div>
+              )}
+            </FormRow>
+          </>
+        )}
       </FormCard>
       {fx ? (
         <CurrencyConversionCard
@@ -4738,15 +4829,13 @@ function planEntitlementValue(entitlement: Entitlement): string {
   }
 }
 
-/** "Every month", "Every 3 × month", or "Once". */
+/** "Every month", "Every 3 months", or "Once". */
 function grantCadenceText(grant: CreateSubscription['creditGrants'][number]): string {
   if (grant.cadence !== CreditGrantCadence.Recurring || !grant.period) {
     return CREDIT_GRANT_CADENCE_LABEL[grant.cadence]
   }
-  const period = CREDIT_GRANT_PERIOD_LABEL[grant.period]
-  return grant.periodCount && grant.periodCount > 1
-    ? `Every ${grant.periodCount} × ${period.toLowerCase()}`
-    : `Every ${period.toLowerCase()}`
+  const every = everyPeriod(grant.period, grant.periodCount ?? 1)
+  return every.charAt(0).toUpperCase() + every.slice(1)
 }
 
 /** "Never expires", "Expires with the billing cycle", or "Expires after 30 days". */

@@ -26,6 +26,8 @@ export interface PlanEntitlementsViewProps extends Partial<SubTabQuery> {
   onEdit: (entitlement: Entitlement) => void
   onDelete: (entitlement: Entitlement) => void
   onOpenFeature?: (featureId: string) => void
+  /** What the entitlements belong to, for the copy ("plan", "add-on"). Defaults to "plan". */
+  noun?: string
 }
 
 const TYPE_LABEL: Record<FeatureType, string> = {
@@ -70,6 +72,7 @@ function PlanEntitlementsViewInner({
   onEdit,
   onDelete,
   onOpenFeature,
+  noun = 'plan',
   isLoading,
   error,
   errorKind,
@@ -101,7 +104,7 @@ function PlanEntitlementsViewInner({
           empty={{
             scene: 'catalog',
             title: 'No entitlements yet',
-            description: 'Add the features this plan includes.',
+            description: `Add the features this ${noun} includes.`,
           }}
         >
           {null}
@@ -168,7 +171,7 @@ function PlanEntitlementsViewInner({
                 </span>
               ) : (
                 <span className="text-muted-foreground text-[13px]">
-                  No usage price on this plan
+                  No usage price on this {noun}
                 </span>
               )
             },

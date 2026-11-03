@@ -72,13 +72,29 @@ export function moneyOr(
 }
 
 /**
+ * The locale that groups this currency.
+ *
+ * INR uses the Indian system (lakhs and crores: `81,13,946`). Every other
+ * currency uses the international thousands comma (`8,113,946`), even when
+ * the browser's own locale would regroup it.
+ */
+export function moneyFormatLocale(currency: string): string {
+  return currency.trim().toUpperCase() === 'INR' ? 'en-IN' : 'en-US'
+}
+
+/**
  * Formats for display.
  *
  * `Intl.NumberFormat.format` accepts a string and formats the exact decimal, so
  * the value never round-trips through a double on its way to the screen.
+ * Grouping follows the currency (`moneyFormatLocale`), not the browser
+ * locale: a rupee amount is lakhs even in an en-US session, and a dollar
+ * amount stays in thousands even in an en-IN session. `locale` is accepted
+ * so existing callers keep compiling; it does not change the grouping.
  */
 export function formatMoney(value: Money, locale?: string): string {
-  return new Intl.NumberFormat(locale, {
+  void locale
+  return new Intl.NumberFormat(moneyFormatLocale(value.currency), {
     style: 'currency',
     currencyDisplay: 'narrowSymbol',
     currency: value.currency,

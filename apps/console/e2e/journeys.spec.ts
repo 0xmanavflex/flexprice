@@ -90,7 +90,7 @@ test.describe('customer journeys', { tag: '@journey' }, () => {
     await expect(invoices.getByRole('row').nth(1)).toBeVisible()
     await invoices.getByRole('row').nth(1).getByRole('cell').first().click()
     await expect(page).toHaveURL(/\/invoices\/(?!new\b)[^/?]+(?:\?|$)/)
-    await expect(page.getByRole('heading', { name: 'Invoice', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   })
 
   test('an invoice is finalized, then a payment recorded against it settles it', async ({

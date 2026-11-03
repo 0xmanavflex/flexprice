@@ -191,19 +191,51 @@ export const ValidationFromDomain: Story = {
   },
 }
 
-/** Two sections, centred on their own: what the feature is, then how it is metered. */
+/**
+ * Name, then event, then aggregation: the three a metered feature needs. Units
+ * are optional and come last, folded, with one singular field each (the plural
+ * follows it).
+ */
 export const DetailsThenMetering: Story = {
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.getByRole('heading', { name: 'Feature' })).toBeInTheDocument()
-    // Metering is split into its three parts.
-    for (const name of ['Units', 'Event', 'Aggregation']) {
-      await expect(canvas.getByRole('heading', { name })).toBeInTheDocument()
-    }
+    const headings = canvas.getAllByRole('heading').map((h) => h.textContent?.trim())
+    await expect(headings).toEqual(['Feature', 'Event', 'Aggregation'])
+    const disclosures = canvas
+      .getAllByRole('button', { expanded: false })
+      .map((b) => b.textContent ?? '')
+    await expect(disclosures.at(-1)).toMatch(/^Units/)
+    await expect(canvas.queryByLabelText(/^Unit \(plural\)/)).not.toBeInTheDocument()
     await expect(canvas.queryByRole('complementary')).not.toBeInTheDocument()
     // No feature-level alerts on the form.
     await expect(canvas.queryByText(/usage alerts/i)).not.toBeInTheDocument()
+
+    // Units are optional; a singular alone sends the plural that follows it.
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'Calls')
+    await userEvent.type(canvas.getByLabelText(/^Event name/), 'api_call')
+    await userEvent.type(canvas.getByLabelText(/^Event field/), 'count')
+    await userEvent.click(canvas.getByRole('button', { name: /^Units/ }))
+    await userEvent.type(await canvas.findByLabelText(/^Unit$/), 'call')
+    await submit(canvas)
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ unitSingular: 'call', unitPlural: 'calls' }),
+    )
+  },
+}
+
+/** Units are optional: a metered feature saves without them. */
+export const UnitsAreOptional: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'Calls')
+    await userEvent.type(canvas.getByLabelText(/^Event name/), 'api_call')
+    await userEvent.type(canvas.getByLabelText(/^Event field/), 'count')
+    await submit(canvas)
+    // Blank (or absent), so the request leaves the units out.
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.not.objectContaining({ unitSingular: expect.stringMatching(/\S/) }),
+    )
   },
 }
 
@@ -217,9 +249,10 @@ export const BooleanHasNoUnits: Story = {
     await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Event name/)).not.toBeInTheDocument()
     // No metering cards for a feature that is not metered.
-    for (const name of ['Units', 'Event', 'Aggregation']) {
+    for (const name of ['Event', 'Aggregation']) {
       await expect(canvas.queryByRole('heading', { name })).not.toBeInTheDocument()
     }
+    await expect(canvas.queryByRole('button', { name: /^Units/ })).not.toBeInTheDocument()
   },
 }
 
@@ -233,15 +266,16 @@ export const StaticHasNoUsage: Story = {
 
     await expect(canvas.queryByRole('heading', { name: 'Usage' })).not.toBeInTheDocument()
     // No metering cards for a feature that is not metered.
-    for (const name of ['Units', 'Event', 'Aggregation']) {
+    for (const name of ['Event', 'Aggregation']) {
       await expect(canvas.queryByRole('heading', { name })).not.toBeInTheDocument()
     }
+    await expect(canvas.queryByRole('button', { name: /^Units/ })).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
 
     // Units belong to metered features, where usage is counted.
     await userEvent.click(canvas.getByRole('radio', { name: /Metered/ }))
-    await expect(await canvas.findByLabelText(/^Unit \(singular\)/)).toBeInTheDocument()
+    await expect(await canvas.findByRole('button', { name: /^Units/ })).toBeInTheDocument()
   },
 }
 
@@ -338,7 +372,7 @@ export const CustomExpressionPlaceholder: Story = {
     const canvas = within(canvasElement)
     const before = canvasElement.querySelectorAll('textarea, input').length
     await userEvent.click(await canvas.findByRole('checkbox', { name: 'Use a custom expression' }))
-    const expression = await canvas.findByLabelText(/^Custom expression/)
+    const expression = await canvas.findByLabelText(/^Custom expression(?! docs)/)
     await expect(expression.tagName).toBe('TEXTAREA')
     await expect(expression).toHaveValue('')
     await expect(expression).toHaveAttribute('placeholder', 'duration_seconds / 60 / 100')

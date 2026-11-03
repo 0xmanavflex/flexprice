@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   ApiError,
   useBonusCreditsConfig,
+  useConnections,
   useCreateWallet,
   useDebitWallet,
   useCustomerWallets,
@@ -13,9 +14,11 @@ import {
   useWalletBalance,
   useWalletTransactions,
   serverReason,
+  type TopUpCheckoutSession,
 } from '@fp/query'
-import { emptyAlertSettingConfig } from '@fp/domain'
+import { emptyAlertSettingConfig, type TopUpWallet } from '@fp/domain'
 import { CustomerWalletView, EntityAlertDialog, toast } from '@fp/ui/pages'
+import { ConfirmDialog, PaymentLink } from '@fp/ui/compositions'
 import { subTab } from '@/pages/shared/subTab'
 import { useSession } from '@/app/session'
 
@@ -24,6 +27,12 @@ export interface CustomerWalletPanelProps {
   /** View only: an archived customer's wallets can be read, not changed. */
   readOnly?: boolean
 }
+
+/**
+ * The provider a checkout top-up is paid through. V1 sends every checkout to
+ * Razorpay, so the link is offered only while a Razorpay connection exists.
+ */
+const CHECKOUT_PROVIDER = 'razorpay'
 
 /** Wires a customer's wallets: reads them, and runs create, top-up, auto top-up and terminate. */
 export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWalletPanelProps) {
@@ -67,6 +76,51 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
   const walletMetadata = useUpdateWalletMetadata(selected?.id ?? '')
   const [alerting, setAlerting] = useState(false)
   const terminate = useTerminateWallet()
+  const connections = useConnections()
+  const checkoutProvider =
+    connections.data?.find(
+      (integration) =>
+        integration.providerType === CHECKOUT_PROVIDER && integration.connections.length > 0,
+    )?.name ?? null
+  // The link a checkout top-up created, to hand to the customer.
+  const [checkoutLink, setCheckoutLink] = useState<string | null>(null)
+  // A checkout already in flight that refused the last one, with the top-up it refused.
+  const [blocked, setBlocked] = useState<{
+    session: TopUpCheckoutSession
+    draft: TopUpWallet
+  } | null>(null)
+
+  const runTopUp = (draft: TopUpWallet, supersede = false) =>
+    topUp
+      .mutateAsync({
+        ...draft,
+        ...(draft.kind === 'purchased' && draft.checkout && checkoutProvider
+          ? {
+              payAt: {
+                provider: CHECKOUT_PROVIDER,
+                returnUrl: window.location.href,
+                ...(supersede ? { supersede: true } : {}),
+              },
+            }
+          : {}),
+      })
+      .then((result) => {
+        const session = result.checkoutSession
+        // Checked first: a blocked answer carries the other checkout's live link,
+        // for an amount nobody entered here, so it must not be handed on as this one.
+        if (session?.blocked) {
+          setBlocked({ session, draft })
+        } else if (draft.kind === 'purchased' && draft.checkout) {
+          setBlocked(null)
+          if (session?.url) setCheckoutLink(session.url)
+          else toast.success('Checkout created. The provider sent no link to share.')
+        } else if (draft.kind === 'purchased' && draft.invoice) {
+          toast.success('Invoice created. The credits land once it is paid.')
+        } else {
+          toast.success(draft.kind === 'free' ? 'Credits granted' : 'Wallet topped up')
+        }
+        return result
+      })
 
   return (
     <>
@@ -91,12 +145,8 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
           })
         }
         createError={failure(create.error, 'create the wallet')}
-        onTopUp={(draft) =>
-          topUp.mutateAsync(draft).then((result) => {
-            toast.success(draft.kind === 'free' ? 'Credits granted' : 'Wallet topped up')
-            return result
-          })
-        }
+        onTopUp={(draft) => runTopUp(draft)}
+        checkoutProvider={checkoutProvider}
         topUpError={failure(topUp.error, 'top up the wallet')}
         bonusConfig={bonusConfig.data ?? null}
         onDebit={(draft) =>
@@ -138,6 +188,47 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
         isNew={!selected?.alertSettings}
         initial={selected?.alertSettings ?? emptyAlertSettingConfig()}
         onSave={(config) => walletAlerts.mutateAsync(config)}
+      />
+      <ConfirmDialog
+        open={checkoutLink !== null}
+        onOpenChange={(open) => (open ? undefined : setCheckoutLink(null))}
+        title="Checkout link ready"
+        description={
+          <>
+            Send this link to the customer. The credits land once they pay.
+            <PaymentLink url={checkoutLink} />
+          </>
+        }
+        confirmLabel="Copy link"
+        cancelLabel="Done"
+        onConfirm={() =>
+          void navigator.clipboard
+            ?.writeText(checkoutLink ?? '')
+            .then(() => toast.success('Checkout link copied'))
+            .catch(() => toast.error('Copy failed'))
+        }
+      />
+      <ConfirmDialog
+        open={blocked !== null}
+        onOpenChange={(open) => (open || topUp.isPending ? undefined : setBlocked(null))}
+        title="A checkout is already open"
+        description={
+          <>
+            This wallet already has an unfinished checkout
+            {blocked?.session.expiresAt
+              ? `, open until ${blocked.session.expiresAt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`
+              : ''}
+            . Nothing new was created. The customer may be paying it now — send them this link, or
+            cancel it and start a new checkout for this top-up.
+            {blocked?.session.url ? <PaymentLink url={blocked.session.url} /> : null}
+          </>
+        }
+        confirmLabel="Cancel and create new"
+        pendingLabel="Creating…"
+        destructive
+        isPending={topUp.isPending}
+        error={failure(topUp.error, 'create the checkout')}
+        onConfirm={() => blocked && void runTopUp(blocked.draft, true).catch(() => undefined)}
       />
     </>
   )

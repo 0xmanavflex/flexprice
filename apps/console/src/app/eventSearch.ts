@@ -29,7 +29,7 @@ export function parseEventSearch(raw: Record<string, unknown>): RawEventQuery {
       DEFAULT_RAW_EVENT_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: text(param(raw, 'q', 'search')),
+    search: String(param(raw, 'q', 'search') ?? ''),
     customer: text(raw['customer']),
     source: text(raw['source']),
     sortDirection:

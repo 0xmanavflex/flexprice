@@ -9,6 +9,7 @@ import {
   type ChargeDetail,
   type ChargeHistory,
   type ChargeSection,
+  chargeHasEnded,
   InvoiceCadence,
   PriceType,
   TierMode,
@@ -114,9 +115,7 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** The destructive item's wording; "Terminate" on a catalogue, "End charge" on a contract. */
   removeLabel?: string
   /** Extra row-menu items, e.g. a contract's "Go to plan". */
-  extraActions?: (
-    charge: Charge,
-  ) => Array<{
+  extraActions?: (charge: Charge) => Array<{
     label: string
     icon: ReactElement
     onSelect: () => void
@@ -133,8 +132,6 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   /** Wires the sheet's per-part "Edit". A part with no handler shows no button. */
   onEditSection?: (charge: Charge, section: ChargeSection) => void
   editableSections?: (charge: Charge) => readonly ChargeSection[]
-  /** Brings back a charge's previous price version, from its sheet's History. */
-  onRevert?: ((charge: Charge, versionId: string) => Promise<unknown>) | undefined
   /**
    * Told which charge's sheet is open (`null` once closed), so the page can
    * read that charge's history from the API and pass it back as `history`.
@@ -243,7 +240,7 @@ function stamp(date: Date, locale?: string): string {
 
 /** Whether a charge's end has passed. A future end date is scheduled: the charge still bills. */
 export function hasEnded(charge: Charge, now: number = Date.now()): boolean {
-  return charge.endDate !== null && charge.endDate.getTime() <= now
+  return chargeHasEnded(charge, now)
 }
 
 /**
@@ -306,7 +303,6 @@ export function ChargeTable({
   onRowClick,
   onEditSection,
   editableSections,
-  onRevert,
   onOpenCharge,
   history,
   onShowAll,
@@ -558,11 +554,11 @@ export function ChargeTable({
                   ]),
             ]}
             onEdit={
-              onEdit && !charge.endDate && (canEdit?.(charge) ?? true)
+              onEdit && !hasEnded(charge) && (canEdit?.(charge) ?? true)
                 ? () => onEdit(charge)
                 : undefined
             }
-            onRemove={onTerminate && !charge.endDate ? () => onTerminate(charge) : undefined}
+            onRemove={onTerminate && !hasEnded(charge) ? () => onTerminate(charge) : undefined}
             removeLabel={removeLabel}
             removeIcon={<CircleSlashIcon aria-hidden />}
           />
@@ -656,8 +652,15 @@ export function ChargeTable({
               }
             : {})}
           {...(locale ? { locale } : {})}
-          {...(onRevert && open
-            ? { onRevert: (versionId: string) => onRevert(open.charge, versionId) }
+          {...(onTerminate && open && !hasEnded(open.charge)
+            ? {
+                onDelete: () => {
+                  const charge = open.charge
+                  setOpen(null)
+                  onTerminate(charge)
+                },
+                deleteLabel: removeLabel,
+              }
             : {})}
           {...(open && history ? { history } : {})}
           onClose={() => setOpen(null)}

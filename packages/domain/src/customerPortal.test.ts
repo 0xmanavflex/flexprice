@@ -608,5 +608,39 @@ describe('usage', () => {
       { at: new Date('2026-10-01T00:00:00Z'), usage: 15, cost: 1.5 },
     ])
     expect(spend.items[0]!.share).toBeCloseTo(0.428, 2)
+    // Priced twice: the effective rate, marked as an average.
+    expect(spend.items[0]!.unitCost?.amount).toBe('0.0002')
+    expect(spend.items[0]!.unitCostIsAverage).toBe(true)
+  })
+
+  it('gives a tiered price a unit price too: cost over usage', () => {
+    const spend = toPortalSpend({
+      currency: 'usd',
+      items: [
+        {
+          feature_id: 'f1',
+          name: 'Voice minutes',
+          total_cost: '39.98',
+          total_usage: '2000',
+          price: { billing_model: 'TIERED', amount: '' },
+          points: [],
+        },
+        {
+          feature_id: 'f2',
+          name: 'Calls',
+          total_cost: '10',
+          total_usage: '50000',
+          price: { billing_model: 'FLAT_FEE', amount: '0.0002' },
+          points: [],
+        },
+        { feature_id: 'f3', name: 'Idle', total_cost: '0', total_usage: '0', points: [] },
+      ],
+    })
+    const byName = Object.fromEntries(spend.items.map((i) => [i.name, i]))
+    expect(byName['Voice minutes']?.unitCost?.amount).toBe('0.01999')
+    expect(byName['Voice minutes']?.unitCostIsAverage).toBe(true)
+    expect(byName['Calls']?.unitCost?.amount).toBe('0.0002')
+    expect(byName['Calls']?.unitCostIsAverage).toBe(false)
+    expect(byName['Idle']?.unitCost).toBeNull()
   })
 })

@@ -126,11 +126,11 @@ honestly shows no link: which is the current behaviour.
 
 ### 1.4 Surfaces that exist but are not reachable
 
-| Surface           | What exists                                                                                           | What is missing                                                                                                                                               |
-| ----------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Forgot password   | `ui/pages/auth/ForgotPasswordForm.tsx` + stories; `SignInForm` accepts `onForgotPassword`             | **no backend endpoint** (§1.3); no route, no hook                                                                                                             |
+| Surface           | What exists                                                                                           | What is missing                                                                                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Forgot password   | `ui/pages/auth/ForgotPasswordForm.tsx` + stories; `SignInForm` accepts `onForgotPassword`             | **no backend endpoint** (§1.3); no route, no hook                                                                                                            |
 | Accept invitation | `ui/pages/auth/AcceptInvitationForm.tsx` + stories; `MembersPanel` can send invites                   | **no backend endpoint**; no route: the invitee has nowhere to land                                                                                           |
-| SAML sign-in      | `useSamlConfig` reads the setting (`query/settings.ts:888`); routes exist on the backend when enabled | no button, no `?sso=`, no callback route                                                                                                                      |
+| SAML sign-in      | `useSamlConfig` reads the setting (`query/settings.ts:888`); routes exist on the backend when enabled | no button, no `?sso=`, no callback route                                                                                                                     |
 | Google            | button drawn in the design                                                                            | no user-facing OAuth route on the backend at all: `/oauth/init` and `/oauth/complete` are the QuickBooks and Zoho **integration** consent flows, not sign-in |
 
 `docs/v1-v2-gap.md:68` claims V2 "has sign-in, forgot-password and
@@ -390,7 +390,7 @@ capabilities seam have landed.
 | Work                                                                                                         | Where   | Commit    |
 | ------------------------------------------------------------------------------------------------------------ | ------- | --------- |
 | Sign-up screen, `/sign-up` route, `POST /auth/signup`                                                        | console | `0ea3133` |
-| Data region picker: switches the API between India and US at runtime                                        | console | `d80bf15` |
+| Data region picker: switches the API between India and US at runtime                                         | console | `d80bf15` |
 | `GET /auth/capabilities` client + `useAuthCapabilities`, fail-open to password-only                          | console | `ac3237c` |
 | Google button drawn only where Google exists (was: always drawn, explained on click that it was not enabled) | console | `ac3237c` |
 | Sign-up password minimum 6 → 8, matching what the API enforces                                               | console | `ac3237c` |
@@ -405,7 +405,7 @@ regions cannot show each other's sign-in methods.
 | #      | Work                                                                        | Where   | Size | Notes                                                     |
 | ------ | --------------------------------------------------------------------------- | ------- | ---- | --------------------------------------------------------- |
 | **1c** | `GET /v1/auth/capabilities`                                                 | backend | S    | the console already consumes it and degrades without it   |
-| **2**  | **Decide §1.3**: broker reset server-side, or supabase-js in the browser    |:       |:    | **blocks forgot-password and accept-invitation entirely** |
+| **2**  | **Decide §1.3**: broker reset server-side, or supabase-js in the browser    | :       | :    | **blocks forgot-password and accept-invitation entirely** |
 | 3      | Public reset + invite routes, brokered through the provider                 | backend | M    | only if §1.3 resolves to "broker"                         |
 | 4      | `AuthStrategy` interface; current path becomes `PasswordStrategy`           | console | M    |                                                           |
 | 5      | Forgot-password and accept-invitation routes + hooks, gated on capabilities | console | M    | needs 2, and 3 if brokering                               |
@@ -467,8 +467,8 @@ All in `apps/console/src/env.ts`, the only module that touches `import.meta.env`
 | ------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `VITE_FLEXPRICE_API_URL`  | yes, unless mocking | Which backend. India `https://api.cloud.flexprice.io/v1`, US `https://us.api.flexprice.io/v1`, or your own. Unset ⇒ mocks, announced in the console. |
 | `VITE_USE_MOCKS`          | no                  | `true` serves the fixture corpus; no network, no account.                                                                                            |
-| `VITE_FLEXPRICE_API_KEY`  | no                  | Dev-only bearer override; bypasses `/sign-in`. **Dropped from production builds** by dead-code elimination: never set it for one.                   |
-| `VITE_LEGACY_CONSOLE_URL` | no                  | Where the migration placeholders hand off to.                                                                                                        |
+| `VITE_FLEXPRICE_API_KEY`  | no                  | Dev-only bearer override; bypasses `/sign-in`. **Dropped from production builds** by dead-code elimination: never set it for one.                    |
+| `VITE_LEGACY_CONSOLE_URL` | no                  | Where the migration placeholders and the "Go back to old UI" strip hand off to.                                                                      |
 
 Setting `VITE_FLEXPRICE_API_URL` to one of the two hosted APIs is also what turns
 the region picker on (`app/region.tsx:22-24`); a self-hosted URL offers no switch,
@@ -507,9 +507,9 @@ a browser bundle; the provider is a server fact the console now asks for.
 
 Then, and only then:
 
-| Variable                 | Why                                                   |
-| ------------------------ | ----------------------------------------------------- |
-| `VITE_SUPABASE_URL`      | project URL for the browser client                    |
+| Variable                 | Why                                                  |
+| ------------------------ | ---------------------------------------------------- |
+| `VITE_SUPABASE_URL`      | project URL for the browser client                   |
 | `VITE_SUPABASE_ANON_KEY` | anon key: public by design, but still per-deployment |
 
 And the costs come with it: every origin the console is served from (both region

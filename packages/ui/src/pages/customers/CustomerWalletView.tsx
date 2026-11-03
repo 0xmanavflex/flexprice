@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { NOT_A_LOGIN } from '@ui/compositions/forms/notALogin'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
   BellIcon,
   ArrowUpRightIcon,
+  CheckIcon,
   CopyIcon,
+  LinkIcon,
   MinusIcon,
   MoreHorizontalIcon,
   PlusIcon,
+  ReceiptIcon,
   RepeatIcon,
   WalletIcon,
   XCircleIcon,
@@ -37,6 +41,7 @@ import {
   emptyWallet,
   formatMoney,
   money,
+  moneyFormatLocale,
   resolveBonus,
   topUpWalletSchema,
   currencyCodes,
@@ -72,7 +77,7 @@ import {
 import { ChoiceCards, Composer, Properties } from '../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { Pill } from '../shared/cells'
-import { WalletLedgerTable, expiringSoon, formatCredits, formatDay } from './WalletLedgerTable'
+import { WalletLedgerTable, formatCredits } from './WalletLedgerTable'
 import { SubTabState } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
 import { WALLET_STATUS_TONE } from '../shared/statusTones'
@@ -99,6 +104,11 @@ export interface CustomerWalletViewProps {
   topUpError?: string | null
   /** Settings → Wallets → Bonus credits, to preview the bonus a purchased top-up earns. */
   bonusConfig?: BonusCreditsConfig | null
+  /**
+   * The connected provider a purchased top-up can be paid through by hosted
+   * checkout (V1: Razorpay). Omitted, the top-up offers no checkout link.
+   */
+  checkoutProvider?: string | null
   onDebit: (draft: DebitWallet) => Promise<unknown>
   debitError?: string | null
   onTerminate: () => Promise<unknown>
@@ -142,6 +152,7 @@ export function CustomerWalletView({
   onTopUp,
   topUpError = null,
   bonusConfig = null,
+  checkoutProvider = null,
   onDebit,
   debitError = null,
   onTerminate,
@@ -367,15 +378,6 @@ export function CustomerWalletView({
                   </button>
                 ),
               },
-              {
-                label: 'Expiring soon',
-                value: expiringSoonLabel(
-                  expiringSoon(
-                    transactions.filter((tx) => tx.direction !== 'out'),
-                    asOf,
-                  ),
-                ),
-              },
             ]}
           />
         </div>
@@ -417,6 +419,7 @@ export function CustomerWalletView({
         pending={pending}
         error={topUpError}
         bonusConfig={bonusConfig}
+        checkoutProvider={checkoutProvider}
         onSubmit={(draft) => run(() => onTopUp(draft))}
       />
       <DebitDialog
@@ -506,6 +509,8 @@ function CreateWalletDialog({
             },
           ]}
         />
+        {/* Currency, then what the wallet is for; the two rates side by side; the
+            initial credits beside their expiry. */}
         <div className="grid gap-5 sm:grid-cols-2">
           <Field>
             <LabelWithHint
@@ -522,6 +527,22 @@ function CreateWalletDialog({
             />
           </Field>
           <Field>
+            <LabelWithHint
+              htmlFor="wallet-description"
+              hint="A note about what this wallet is for. Optional."
+            >
+              Description
+            </LabelWithHint>
+            <Input
+              id="wallet-description"
+              type="text"
+              {...NOT_A_LOGIN}
+              className="h-9"
+              value={draft.description}
+              onChange={(event) => set({ description: event.target.value })}
+            />
+          </Field>
+          <Field>
             <LabelWithHint htmlFor="wallet-rate" hint="How much money one credit is worth.">
               Conversion rate
             </LabelWithHint>
@@ -529,6 +550,8 @@ function CreateWalletDialog({
               <InputGroupAddon align="inline-start">1 credit =</InputGroupAddon>
               <InputGroupInput
                 id="wallet-rate"
+                type="text"
+                {...NOT_A_LOGIN}
                 inputMode="decimal"
                 value={draft.conversionRate}
                 onChange={(event) => set({ conversionRate: event.target.value })}
@@ -547,6 +570,8 @@ function CreateWalletDialog({
               <InputGroupAddon align="inline-start">1 credit =</InputGroupAddon>
               <InputGroupInput
                 id="wallet-topup-rate"
+                type="text"
+                {...NOT_A_LOGIN}
                 inputMode="decimal"
                 placeholder={draft.conversionRate}
                 value={draft.topupConversionRate}
@@ -564,6 +589,8 @@ function CreateWalletDialog({
             </LabelWithHint>
             <Input
               id="wallet-initial"
+              type="text"
+              {...NOT_A_LOGIN}
               className="h-9"
               inputMode="decimal"
               value={draft.initialCredits}
@@ -583,20 +610,6 @@ function CreateWalletDialog({
               onValueChange={(initialCreditsExpiry) => set({ initialCreditsExpiry })}
               placeholder="Never"
               disabled={draft.initialCredits.trim() === ''}
-            />
-          </Field>
-          <Field>
-            <LabelWithHint
-              htmlFor="wallet-description"
-              hint="A note about what this wallet is for. Optional."
-            >
-              Description
-            </LabelWithHint>
-            <Input
-              id="wallet-description"
-              className="h-9"
-              value={draft.description}
-              onChange={(event) => set({ description: event.target.value })}
             />
           </Field>
         </div>
@@ -658,6 +671,8 @@ function DebitDialog({
             </LabelWithHint>
             <Input
               id="debit-credits"
+              type="text"
+              {...NOT_A_LOGIN}
               className="h-9"
               inputMode="decimal"
               value={draft.credits}
@@ -670,6 +685,8 @@ function DebitDialog({
             </LabelWithHint>
             <Input
               id="debit-note"
+              type="text"
+              {...NOT_A_LOGIN}
               className="h-9"
               value={draft.description}
               onChange={(event) => set({ description: event.target.value })}
@@ -692,6 +709,7 @@ function TopUpDialog({
   pending,
   error,
   bonusConfig,
+  checkoutProvider,
   onSubmit,
 }: {
   open: boolean
@@ -699,6 +717,7 @@ function TopUpDialog({
   pending: boolean
   error: string | null
   bonusConfig: BonusCreditsConfig | null
+  checkoutProvider: string | null
   onSubmit: (draft: TopUpWallet) => void
 }) {
   const [draft, setDraft] = useState<TopUpWallet>(emptyTopUp())
@@ -714,7 +733,11 @@ function TopUpDialog({
       title="Top up wallet"
     >
       <Composer
-        submitLabel="Top up"
+        submitLabel={
+          draft.kind === 'purchased' && draft.checkout && checkoutProvider
+            ? 'Create checkout link'
+            : 'Top up'
+        }
         onCancel={onClose}
         submitting={pending}
         onSubmit={() => {
@@ -751,6 +774,8 @@ function TopUpDialog({
             </LabelWithHint>
             <Input
               id="topup-credits"
+              type="text"
+              {...NOT_A_LOGIN}
               className="h-9"
               inputMode="decimal"
               value={draft.credits}
@@ -763,6 +788,8 @@ function TopUpDialog({
             </LabelWithHint>
             <Input
               id="topup-note"
+              type="text"
+              {...NOT_A_LOGIN}
               className="h-9"
               value={draft.description}
               onChange={(event) => set({ description: event.target.value })}
@@ -791,6 +818,8 @@ function TopUpDialog({
             </LabelWithHint>
             <Input
               id="topup-priority"
+              type="text"
+              {...NOT_A_LOGIN}
               className="h-9"
               inputMode="numeric"
               value={draft.priority}
@@ -806,6 +835,8 @@ function TopUpDialog({
             </LabelWithHint>
             <Input
               id="topup-reference"
+              type="text"
+              {...NOT_A_LOGIN}
               className="h-9"
               value={draft.referenceId}
               onChange={(event) => set({ referenceId: event.target.value })}
@@ -823,6 +854,8 @@ function TopUpDialog({
               </LabelWithHint>
               <Input
                 id="topup-bonus"
+                type="text"
+                {...NOT_A_LOGIN}
                 className="h-9"
                 inputMode="decimal"
                 placeholder={settled ? settled.credits : 'From bonus settings'}
@@ -844,18 +877,52 @@ function TopUpDialog({
                 placeholder={settled ? 'As the slab sets' : 'Never'}
               />
             </Field>
-            <p className="text-muted-foreground text-xs sm:col-span-2" aria-live="polite">
+            {/* Said only once there is a bonus to describe: no line pointing at a
+                setting that is not on this screen. */}
+            <p
+              className="text-muted-foreground text-xs empty:hidden sm:col-span-2"
+              aria-live="polite"
+            >
               {draft.bonusCredits.trim()
                 ? `${draft.bonusCredits.trim()} bonus credits, as entered. The bonus settings are skipped for this top-up.`
                 : settled
-                  ? `Earns ${settled.credits} bonus credits from the bonus settings: ${bonusText(settled.slab)}, ${draft.bonusExpiryDate ? 'expiring on the date above' : bonusExpiryText(settled.slab)}.`
-                  : bonusConfig?.enabled
-                    ? 'No bonus slab applies to this amount.'
-                    : 'No bonus: bonus credits are off in Settings → Wallets.'}
+                  ? `Earns ${settled.credits} bonus credits: ${bonusText(settled.slab)}, ${draft.bonusExpiryDate ? 'expiring on the date above' : bonusExpiryText(settled.slab)}.`
+                  : null}
             </p>
           </div>
         ) : null}
-        {draft.kind === 'purchased' ? (
+        {/* With a checkout provider connected, how the customer pays is a choice of
+            three, as V1's three settle buttons; otherwise it stays one switch. */}
+        {draft.kind === 'purchased' && checkoutProvider ? (
+          <ChoiceCards
+            label="How the customer pays"
+            stacked
+            value={draft.checkout ? 'checkout' : draft.invoice ? 'invoice' : 'paid'}
+            onChange={(settle) =>
+              set({ invoice: settle === 'invoice', checkout: settle === 'checkout' })
+            }
+            choices={[
+              {
+                value: 'paid',
+                title: 'Already paid',
+                description: 'The credits land now and nothing is billed.',
+                icon: <CheckIcon aria-hidden="true" />,
+              },
+              {
+                value: 'invoice',
+                title: 'Invoice the customer',
+                description: 'Raise an invoice; the credits land once it is paid.',
+                icon: <ReceiptIcon aria-hidden="true" />,
+              },
+              {
+                value: 'checkout',
+                title: 'Checkout link',
+                description: `A ${checkoutProvider} payment link to send the customer; the credits land once they pay.`,
+                icon: <LinkIcon aria-hidden="true" />,
+              },
+            ]}
+          />
+        ) : draft.kind === 'purchased' ? (
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
               <label htmlFor="topup-invoice" className="text-sm font-medium">
@@ -952,6 +1019,8 @@ function AutoTopupDialog({
             <InputGroup className="h-9" aria-disabled={!draft.enabled || undefined}>
               <InputGroupInput
                 id="auto-topup-threshold"
+                type="text"
+                {...NOT_A_LOGIN}
                 inputMode="decimal"
                 value={draft.threshold}
                 // Nothing to set until auto top-up is on.
@@ -971,6 +1040,8 @@ function AutoTopupDialog({
             <InputGroup className="h-9" aria-disabled={!draft.enabled || undefined}>
               <InputGroupInput
                 id="auto-topup-amount"
+                type="text"
+                {...NOT_A_LOGIN}
                 inputMode="decimal"
                 value={draft.amount}
                 // Nothing to set until auto top-up is on.
@@ -1016,6 +1087,8 @@ function AutoTopupDialog({
               </LabelWithHint>
               <Input
                 id="auto-topup-cooldown"
+                type="text"
+                {...NOT_A_LOGIN}
                 inputMode="numeric"
                 value={draft.cooldownValue ?? ''}
                 onChange={(event) => set({ cooldownValue: event.target.value })}
@@ -1070,7 +1143,7 @@ function creditRate(rate: string, currency: string): string {
   const value = Number(trimmed)
   if (!trimmed || !Number.isFinite(value)) return '—'
   const fraction = trimmed.split('.')[1]?.length ?? 0
-  const formatted = new Intl.NumberFormat('en-US', {
+  const formatted = new Intl.NumberFormat(moneyFormatLocale(currency), {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
@@ -1085,18 +1158,19 @@ function autoTopupSummary(wallet: Wallet, currency: string): string {
   return `Below ${whole(wallet.autoTopup.threshold)}, add ${whole(wallet.autoTopup.amount)}`
 }
 
-function expiringSoonLabel(soon: { credits: string; date: Date } | null): string {
-  if (!soon) return '—'
-  return `${formatCredits(soon.credits)} credits on ${formatDay(soon.date, false)}`
-}
-
-/** Usage recorded since the last invoice, against what is still available. */
+/**
+ * Usage recorded since the last invoice, against what is still available.
+ *
+ * The share is used ÷ last invoiced balance, where used = last invoiced balance
+ * − real-time balance (credits). The bar draws it and the legend states it.
+ */
 function UsageSinceInvoice({ wallet }: { wallet: Wallet }) {
   const invoiced = Number(wallet.creditBalance)
   const live = Number(wallet.realTimeCreditBalance)
   const used = Number.isFinite(invoiced) && Number.isFinite(live) ? Math.max(0, invoiced - live) : 0
   const available = Number.isFinite(live) ? Math.max(0, live) : 0
   const share = invoiced > 0 ? Math.min(1, used / invoiced) : 0
+  const percent = invoiced > 0 ? Math.round(share * 100) : null
   const usedMoney = Math.max(
     0,
     Number(wallet.balance.amount) - Number(wallet.realTimeBalance.amount),
@@ -1111,7 +1185,7 @@ function UsageSinceInvoice({ wallet }: { wallet: Wallet }) {
       <div
         className="bg-muted flex h-2 overflow-hidden rounded-full"
         role="img"
-        aria-label={`${usedLabel} used, not yet invoiced. ${availableLabel} available.`}
+        aria-label={`${usedLabel} used, not yet invoiced${percent === null ? '' : ` (${percent}% of the last invoiced balance)`}. ${availableLabel} available.`}
       >
         <div className="bg-success h-full" style={{ width: `${share * 100}%` }} />
       </div>
@@ -1124,6 +1198,9 @@ function UsageSinceInvoice({ wallet }: { wallet: Wallet }) {
           <span className="bg-muted-foreground/30 size-2 rounded-sm" aria-hidden />
           {availableLabel} available
         </span>
+        {percent === null ? null : (
+          <span className="ml-auto tabular-nums">{percent}% of the last invoiced balance used</span>
+        )}
       </div>
     </div>
   )

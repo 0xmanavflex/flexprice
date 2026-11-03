@@ -188,6 +188,34 @@ export const OpensAddDialog: Story = {
   },
 }
 
+/**
+ * With no rates yet, the picker offers Create tax rate. While that create is in
+ * flight the dialog cannot be cancelled or dismissed: closing would not stop
+ * the request, and the rate would be saved anyway.
+ */
+export const CreateRateCannotBeAbandoned: Story = {
+  args: {
+    associations: [],
+    taxRates: [],
+    // Never settles, so the create stays in flight for the assertions.
+    onCreateTaxRate: fn(() => new Promise<never>(() => undefined)),
+  },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /add tax rate/i }))
+    await userEvent.click(await screen.findByRole('combobox', { name: /^Tax rate/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Create tax rate' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Create tax rate' })
+    const form = within(dialog)
+    await userEvent.type(form.getByLabelText(/^Name/), 'UK VAT')
+    await userEvent.type(form.getByLabelText(/^Rate/), '20')
+    await userEvent.click(form.getByRole('button', { name: 'Create tax rate' }))
+    await expect(args.onCreateTaxRate).toHaveBeenCalled()
+    await expect(form.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    await expect(screen.getByRole('dialog', { name: 'Create tax rate' })).toBeInTheDocument()
+  },
+}
+
 /** Removing asks for confirmation first. */
 export const ConfirmsRemove: Story = {
   parameters: {

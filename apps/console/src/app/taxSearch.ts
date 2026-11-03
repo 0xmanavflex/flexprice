@@ -40,12 +40,12 @@ export function parseTaxSearch(raw: Record<string, unknown>): TaxRateQuery {
       DEFAULT_TAX_RATE_QUERY.pageSize,
       MAX_PAGE_SIZE,
     ),
-    search: String(param(raw, 'q', 'search') ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? ''),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
       ? (String(param(raw, 'sort', 'sortBy')) as TaxRateSortField)
       : DEFAULT_TAX_RATE_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_TAX_RATE_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_TAX_RATE_QUERY.sortDirection,
   }
 }

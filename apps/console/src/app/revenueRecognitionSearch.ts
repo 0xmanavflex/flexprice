@@ -62,6 +62,6 @@ export function parseRevenueRecognitionSearch(
       MAX_PAGE_SIZE,
     ),
     details: raw['details'] === true || raw['details'] === 'true',
-    search: typeof raw['search'] === 'string' ? raw['search'].trim() : '',
+    search: typeof raw['search'] === 'string' ? raw['search'] : '',
   }
 }

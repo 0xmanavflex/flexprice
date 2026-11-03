@@ -1075,6 +1075,7 @@ function OverviewTab({
                     id: 'latest-invoice',
                     label: 'Latest invoice',
                     value: lastInvoice.number,
+                    copyValue: lastInvoice.id,
                     onOpen: () => onOpenInvoice(lastInvoice.id),
                   },
                 ]

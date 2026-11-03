@@ -11,6 +11,7 @@ import {
   portalRangeWindow,
   projectSpend,
   spendChange,
+  moneyFormatLocale,
   unitPriceLabel,
 } from '@fp/domain'
 import {
@@ -180,6 +181,7 @@ function DateControls({
         <PopoverContent className="w-auto p-0" align="end">
           <Calendar
             mode="range"
+            captionLayout="dropdown"
             numberOfMonths={2}
             selected={draft}
             defaultMonth={new Date(now.getFullYear(), now.getMonth() - 1, 1)}
@@ -705,7 +707,7 @@ function Breakdown({
             <Money value={value} {...(locale ? { locale } : {})} />
           )
           return (
-            <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="[scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/60 text-muted-foreground text-left text-[11px] tracking-wider uppercase">
@@ -757,7 +759,7 @@ function Breakdown({
                         <td className="px-4" />
                         <td className="px-4" />
                         <td className="px-4 font-medium tabular-nums">
-                          {new Intl.NumberFormat(locale, {
+                          {new Intl.NumberFormat(moneyFormatLocale(data.currency), {
                             style: 'currency',
                             currency: data.currency,
                           }).format(group.cost)}
@@ -779,8 +781,9 @@ function Breakdown({
                               {formatNumber(item.usage, locale)} {item.unit}
                             </td>
                             <td className="text-muted-foreground px-4 whitespace-nowrap tabular-nums">
+                              {/* A tiered or mixed price has no one rate: its average, said so. */}
                               {price
-                                ? `${formatUnitPrice(price.amount.amount, price.amount.currency, locale)} per ${price.per}`
+                                ? `${item.unitCostIsAverage ? 'avg. ' : ''}${formatUnitPrice(price.amount.amount, price.amount.currency, locale)} per ${price.per}`
                                 : '—'}
                             </td>
                             <td className="px-4 tabular-nums">{money(item.cost)}</td>

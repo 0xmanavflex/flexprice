@@ -19,7 +19,6 @@ export interface PlanCustomerPreviewProps {
  */
 const JUMP_TARGETS: Record<PricingPlanSection, string> = {
   price: 'section-charges',
-  usage: 'section-charges',
   oneTime: 'section-charges',
   included: 'section-entitlements',
   credits: 'section-credit-grants',
@@ -27,8 +26,13 @@ const JUMP_TARGETS: Record<PricingPlanSection, string> = {
 
 /**
  * "What customers see" for a saved plan: the plan as V1's pricing card shows
- * it, in preview mode (its usage charges, every line, no View plan), worked
- * out the way the pricing widget works it out, so the two never disagree.
+ * it, in preview mode (every line, no View plan), worked out the way the
+ * pricing widget works it out, so the two never disagree.
+ *
+ * Its fee, one-time fees, what it includes and its credits: usage charges are
+ * not listed (a plan can meter thousands), only "+ Usage" beside the price.
+ * No heading above the card: the card is named by the plan, and the panel by
+ * its `aria-label`.
  */
 export function PlanCustomerPreview({
   plan,
@@ -41,15 +45,14 @@ export function PlanCustomerPreview({
   const preview = pricingPreview({ plan, charges, entitlements, creditGrants: grants })
   return (
     <aside aria-label="Plan preview" className={className}>
-      <p className="text-muted-foreground mb-2 text-xs">What customers see</p>
       {preview ? (
         <PricingPlanCard
           preview
           name={preview.name}
+          description={preview.description}
           price={preview.price}
           per={preview.per}
           hasUsage={preview.hasUsage}
-          usage={preview.usage.map((line) => ({ ...line, key: line.id }))}
           oneTime={preview.oneTime.map((line) => ({ ...line, key: line.id }))}
           included={preview.included.map((line) => ({ ...line, key: line.id }))}
           credits={preview.credits.map((line) => ({ ...line, key: line.id }))}

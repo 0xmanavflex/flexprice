@@ -1,10 +1,5 @@
-import {
-  DEFAULT_TAX_RATE_QUERY,
-  taxRateToEdit,
-  type CreateTaxRate,
-  type EditTaxRate,
-} from '@fp/domain'
-import { ApiError, useCreateTaxRate, useTaxRates, useUpdateTaxRate, serverReason } from '@fp/query'
+import { taxRateToEdit, type CreateTaxRate, type EditTaxRate } from '@fp/domain'
+import { ApiError, useCreateTaxRate, useTaxRate, useUpdateTaxRate, serverReason } from '@fp/query'
 import { TaxRateCreateForm, TaxRateEditForm } from '@fp/ui/pages'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 
@@ -17,14 +12,14 @@ export type TaxFormPageProps = { onCancel: () => void; onDone: () => void } & (
  *
  * There is no detail page, so both return to the list. Edit is prepopulated and
  * limited to what the API lets change (name, code, description, status). The
- * API has no get-by-id for a rate, so edit finds it in the list the page already
- * caches.
+ * edit reads the rate by id (`GET /taxes/rates/{id}`), so a rate past the first
+ * page of the list can be edited too.
  */
 export function TaxFormPage(props: TaxFormPageProps) {
   const { onCancel, onDone } = props
   const create = useCreateTaxRate()
   const update = useUpdateTaxRate()
-  const rates = useTaxRates({ ...DEFAULT_TAX_RATE_QUERY, pageSize: 100 })
+  const rates = useTaxRate(props.mode === 'edit' ? props.taxRateId : '')
 
   if (props.mode === 'create') {
     return (
@@ -39,7 +34,7 @@ export function TaxFormPage(props: TaxFormPageProps) {
     )
   }
 
-  if (rates.isPending) {
+  if (rates.isLoading) {
     return (
       <PageBody>
         <div className="pt-4">
@@ -48,7 +43,7 @@ export function TaxFormPage(props: TaxFormPageProps) {
       </PageBody>
     )
   }
-  const taxRate = rates.data?.taxRates.find((rate) => rate.id === props.taxRateId)
+  const taxRate = rates.data
   if (rates.error || !taxRate) {
     return (
       <PageBody>

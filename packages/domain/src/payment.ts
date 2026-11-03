@@ -166,6 +166,7 @@ export const PaymentMethod = {
   Card: 'CARD',
   Ach: 'ACH',
   Upi: 'UPI',
+  PaymentLink: 'PAYMENT_LINK',
 } as const
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]
 
@@ -175,7 +176,14 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   CARD: 'Card',
   ACH: 'ACH',
   UPI: 'UPI',
+  PAYMENT_LINK: 'Payment link (paid online)',
 }
+
+/**
+ * The providers a payment link can be raised through, as V1 offers them. Only
+ * those connected in this environment are shown.
+ */
+export const PAYMENT_LINK_GATEWAYS = ['stripe', 'razorpay', 'nomod', 'moyasar', 'paddle'] as const
 
 /**
  * What a person records a payment as, as V1 offers it: money that moved
@@ -194,15 +202,21 @@ export const recordPaymentSchema = z
       .trim()
       .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount like 120 or 120.50')
       .refine((value) => Number(value) > 0, 'Enter an amount above zero'),
-    methodType: z.enum(['OFFLINE', 'CREDITS', 'CARD', 'ACH', 'UPI']),
+    methodType: z.enum(['OFFLINE', 'CREDITS', 'CARD', 'ACH', 'UPI', 'PAYMENT_LINK']),
     /** The wallet the credits come from; required for `CREDITS`. */
     walletId: z.string().optional(),
+    /** The provider the link is raised through (its type, e.g. `stripe`); required for `PAYMENT_LINK`. */
+    gateway: z.string().optional(),
+    /** Where the customer lands after paying or leaving a payment link. Set by the page. */
+    returnUrl: z.string().optional(),
     /** Run the payment straight away instead of leaving it initiated. */
     processNow: z.boolean(),
   })
   .superRefine((value, ctx) => {
     if (value.methodType === PaymentMethod.Credits && !value.walletId)
       ctx.addIssue({ code: 'custom', path: ['walletId'], message: 'Choose the wallet to pay from' })
+    if (value.methodType === PaymentMethod.PaymentLink && !value.gateway)
+      ctx.addIssue({ code: 'custom', path: ['gateway'], message: 'Choose the payment provider' })
   })
 export type RecordPayment = z.infer<typeof recordPaymentSchema>
 

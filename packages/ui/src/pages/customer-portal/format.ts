@@ -1,3 +1,5 @@
+import { moneyFormatLocale } from '@fp/domain'
+
 const DAY = 86_400_000
 
 export function formatDate(value: Date, locale?: string): string {
@@ -54,7 +56,8 @@ export function formatPercent(fraction: number, locale?: string): string {
 }
 
 export function formatChartMoney(value: number, currency: string, locale?: string): string {
-  return new Intl.NumberFormat(locale, {
+  void locale
+  return new Intl.NumberFormat(moneyFormatLocale(currency), {
     style: 'currency',
     currency,
     maximumFractionDigits: value < 10 ? 2 : 0,
@@ -66,8 +69,9 @@ export function formatChartMoney(value: number, currency: string, locale?: strin
  * not "$0.00". Display only; the amount is the API's decimal string.
  */
 export function formatUnitPrice(amount: string, currency: string, locale?: string): string {
+  void locale
   const places = Math.min(6, Math.max(2, amount.split('.')[1]?.replace(/0+$/, '').length ?? 0))
-  return new Intl.NumberFormat(locale, {
+  return new Intl.NumberFormat(moneyFormatLocale(currency), {
     style: 'currency',
     currency,
     minimumFractionDigits: places,

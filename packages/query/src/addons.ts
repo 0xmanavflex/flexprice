@@ -102,25 +102,56 @@ export interface AddonPage {
   total: number
 }
 
-export async function fetchAddons(client: Flexprice, query: AddonQuery): Promise<AddonPage> {
-  const response = await call(() => client.addons.queryAddon(toAddonFilter(query) as never))
-  const addons = (response.items ?? []).map((item) => toAddon(item as AddonWire))
+/** How many add-ons one read asks for while collecting the priced ones. */
+const SCAN_PAGE = 100
 
-  return {
-    addons,
-    total: response.pagination?.total ?? 0,
+/**
+ * Every priced add-on matching the query, in its order. An add-on with no
+ * charge is a shell, and the list offers priced extras, so shells are left
+ * out. The search endpoint cannot filter on prices, so every match is read and
+ * the priced ones are paged here: dropping shells from one server page would
+ * shrink that page and miscount the total, and could strand priced add-ons on
+ * later pages no pager reaches.
+ */
+export async function fetchPricedAddons(client: Flexprice, query: AddonQuery): Promise<Addon[]> {
+  const priced: Addon[] = []
+  for (let page = 1; ; page++) {
+    const response = await call(() =>
+      client.addons.queryAddon(toAddonFilter({ ...query, page, pageSize: SCAN_PAGE }) as never),
+    )
+    const items = response.items ?? []
+    for (const item of items) {
+      const addon = toAddon(item as AddonWire)
+      if (addon.chargeCount > 0) priced.push(addon)
+    }
+    const total = response.pagination?.total ?? 0
+    if (items.length < SCAN_PAGE || page * SCAN_PAGE >= total) break
   }
+  return priced
+}
+
+/** One page of the priced add-ons. */
+export function pageOfAddons(priced: readonly Addon[], query: AddonQuery): AddonPage {
+  const start = (query.page - 1) * query.pageSize
+  return { addons: priced.slice(start, start + query.pageSize), total: priced.length }
+}
+
+export async function fetchAddons(client: Flexprice, query: AddonQuery): Promise<AddonPage> {
+  return pageOfAddons(await fetchPricedAddons(client, query), query)
 }
 
 export function useAddons(query: AddonQuery) {
   const client = useFlexprice()
 
   // `view` is a layout, not a filter: it must not miss the cache on a toggle.
-  const { view: _view, ...key } = query
+  // Nor is the page: the scan is cached per search, filter and sort, and each
+  // page is cut from it, so paging makes no request.
+  const { view: _view, page: _page, pageSize: _pageSize, ...key } = query
 
   return useQuery({
     queryKey: queryKeys.addons.list({ ...key, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchAddons(client, query),
+    queryFn: () => fetchPricedAddons(client, query),
+    select: (priced) => pageOfAddons(priced, query),
     placeholderData: (previous) => previous,
   })
 }

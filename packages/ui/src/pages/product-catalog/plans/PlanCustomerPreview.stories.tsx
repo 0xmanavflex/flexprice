@@ -70,12 +70,14 @@ type Story = StoryObj<typeof meta>
 export const Playground: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('What customers see')).toBeInTheDocument()
+    // No heading above the card: the plan's name heads it.
+    await expect(canvas.queryByText('What customers see')).toBeNull()
     // V1's card: the plan's name, then the price and its period.
     await expect(canvas.getByRole('heading', { name: 'Pay as you go' })).toBeVisible()
     await expect(canvas.getByText('/month', { exact: false })).toBeVisible()
-    // A preview lists usage and has no View plan.
-    await expect(canvas.getByRole('link', { name: 'Usage' })).toBeVisible()
+    // A preview says usage bills on top, lists none of it, and has no View plan.
+    await expect(canvas.getByText('+ Usage')).toBeVisible()
+    await expect(canvas.queryByRole('link', { name: 'Usage' })).toBeNull()
     await expect(canvas.queryByRole('button', { name: 'View plan' })).toBeNull()
   },
 }
@@ -103,7 +105,7 @@ export const UsageOnly: Story = {
   args: { fixedCharges: 0, entitlements: 2, creditGrants: 0 },
 }
 
-/** A preview lists every line, as V1's preview does. */
+/** A preview lists every included line and grant, as V1's preview does; usage charges are never listed. */
 export const LongLists: Story = {
   args: { fixedCharges: 3, usageCharges: 4, entitlements: 20, creditGrants: 6 },
 }

@@ -33,6 +33,7 @@ export {
   InvalidMoneyError,
   compareMoney,
   formatMoney,
+  moneyFormatLocale,
   absoluteMoney,
   isNegativeMoney,
   isZeroMoney,
@@ -91,6 +92,8 @@ export type {
 export {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
+  everyPeriod,
+  periodNoun,
   BILLING_PERIOD_SHORT,
   BillingModel,
   BillingPeriod,
@@ -114,7 +117,9 @@ export {
   tierUnitLabel,
   withPackageSize,
   chargeLineages,
+  chargeHasEnded,
   currentVersion,
+  liveChargeCount,
   versionStatus,
   type VersionStatus,
   type ChargeLineage,
@@ -201,6 +206,7 @@ export {
   editFeatureSchema,
   cloneFeatureSchema,
   defaultFeatureLookupKey,
+  defaultUnitPlural,
   emptyCloneFeature,
 } from './feature'
 export type {
@@ -335,6 +341,8 @@ export type {
 
 export {
   DEFAULT_SUBSCRIPTION_QUERY,
+  DEFAULT_SUBSCRIPTION_FILTERS,
+  isSubscriptionQueryFiltered,
   SUBSCRIPTION_FILTERS,
   SUBSCRIPTION_BILLING_PERIODS,
   SUBSCRIPTION_CANCELLATION_TYPES,
@@ -348,6 +356,8 @@ export {
   INHERITANCE_BLOCK_LABEL,
   INHERITANCE_WITH_BILLING_CUSTOMER,
   INHERITANCE_WITH_THRESHOLD,
+  PARENT_WITH_BILLING_CUSTOMER,
+  PARENT_WITH_INHERITED,
   InheritanceBlock,
   emptySubscription,
   emptyPhase,
@@ -431,6 +441,7 @@ export type {
 export {
   DEFAULT_PAYMENT_QUERY,
   RECORDABLE_PAYMENT_METHODS,
+  PAYMENT_LINK_GATEWAYS,
   PAYMENT_METHOD_LABEL,
   PAYMENT_SORT_LABEL,
   PAYMENT_STATUS_LABEL,
