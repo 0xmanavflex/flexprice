@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { ArrowUpRightIcon, ChevronRightIcon } from '@ui/icons'
 import {
   DropdownMenu,
@@ -269,7 +269,12 @@ function Items({
   )
 }
 
-export function ShellNav({ groups, activeItemId, onNavigate }: ShellNavProps) {
+export function ShellNav({
+  groups,
+  activeItemId,
+  onNavigate,
+  pinned,
+}: ShellNavProps & { pinned?: ReactNode }) {
   // One section open at a time across every group, defaulting to the one that
   // holds the current page. The default follows the page when it changes (a
   // deep link, the back button) so the open section never falls out of step
@@ -284,27 +289,42 @@ export function ShellNav({ groups, activeItemId, onNavigate }: ShellNavProps) {
     setOpenId(current)
   }
   const effectiveOpen = openId ?? current
+  // The slot sits above the first pinned group. With none, it still belongs
+  // at the foot of the sidebar, after the last group.
+  const hasPinnedGroup = groups.some((group) => group.pinned)
+  const pinnedSlot = (
+    <div className="mt-auto px-2 pt-2 pb-1 in-data-[state=collapsed]:hidden">{pinned}</div>
+  )
 
   return (
     <>
-      {groups.map((group) => (
-        <SidebarGroup
-          key={group.id}
-          className={cn(group.pinned && 'mt-auto border-t pt-2 pb-0')}
-          data-pinned={group.pinned ? '' : undefined}
-        >
-          {group.title ? <SidebarGroupLabel>{group.title}</SidebarGroupLabel> : null}
-          <SidebarGroupContent>
-            <Items
-              items={group.items}
-              {...(activeItemId === undefined ? {} : { activeItemId })}
-              openId={effectiveOpen}
-              onToggle={(id) => setOpenId(effectiveOpen === id ? '' : id)}
-              onNavigate={onNavigate}
-            />
-          </SidebarGroupContent>
-        </SidebarGroup>
-      ))}
+      {groups.map((group, index) => {
+        const showPinned = Boolean(group.pinned && pinned && !groups[index - 1]?.pinned)
+        return (
+          <Fragment key={group.id}>
+            {showPinned ? pinnedSlot : null}
+            <SidebarGroup
+              className={cn(
+                group.pinned && !showPinned && 'mt-auto',
+                group.pinned && 'border-t pt-2 pb-0',
+              )}
+              data-pinned={group.pinned ? '' : undefined}
+            >
+              {group.title ? <SidebarGroupLabel>{group.title}</SidebarGroupLabel> : null}
+              <SidebarGroupContent>
+                <Items
+                  items={group.items}
+                  {...(activeItemId === undefined ? {} : { activeItemId })}
+                  openId={effectiveOpen}
+                  onToggle={(id) => setOpenId(effectiveOpen === id ? '' : id)}
+                  onNavigate={onNavigate}
+                />
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </Fragment>
+        )
+      })}
+      {pinned && !hasPinnedGroup ? pinnedSlot : null}
     </>
   )
 }

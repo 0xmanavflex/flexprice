@@ -34,6 +34,7 @@ import {
   useCreateSubscriptionCreditGrant,
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
+  useCreateTaxRate,
   useCustomerIntegrationLinks,
   useConnections,
   useLinkCustomerIntegration,
@@ -197,6 +198,7 @@ export function SubscriptionDetailPage({
   const addLineAlert = useAddLineItemAlert(subscriptionId)
   const loadLineAlert = useLineItemAlertLookup(subscriptionId)
   const createTax = useCreateSubscriptionTax(subscriptionId)
+  const createTaxRate = useCreateTaxRate()
   const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
   const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
   // The charges of add-ons that have any, so attaching one can reprice them and commit on usage.
@@ -362,6 +364,13 @@ export function SubscriptionDetailPage({
         onCreateChargeAlert={(draft) => addLineAlert.mutateAsync(draft)}
         loadChargeAlert={loadLineAlert}
         onAddTax={(draft) => createTax.mutateAsync(draft)}
+        onCreateTaxRate={async (draft) => {
+          await createTaxRate.mutateAsync(draft)
+          return {
+            code: draft.code,
+            label: `${draft.name}${draft.percentageValue ? ` (${draft.percentageValue}%)` : ''}`,
+          }
+        }}
         onRemoveAddon={(addon) => removeAddon.mutateAsync(addon.id)}
         onRemoveTax={(tax) => removeTax.mutateAsync(tax.id)}
         onCancelCreditGrant={(grant) => endGrant.mutateAsync(grant.id)}

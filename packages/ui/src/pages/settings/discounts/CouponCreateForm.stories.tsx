@@ -148,10 +148,10 @@ export const RedeemableDaysAreUtc: Story = {
     await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Launch')
     await userEvent.type(canvas.getByRole('textbox', { name: /^Percent/ }), '20')
     await userEvent.click(canvas.getByRole('button', { name: /^Redeemable from/ }))
-    await userEvent.click(await screen.findByRole('button', { name: new RegExp(`${month} 10`) }))
+    await userEvent.click(await screen.findByRole('button', { name: new RegExp(`${month} 10th`) }))
     await userEvent.keyboard('{Escape}')
     await userEvent.click(canvas.getByRole('button', { name: /^Redeemable until/ }))
-    await userEvent.click(await screen.findByRole('button', { name: new RegExp(`${month} 20`) }))
+    await userEvent.click(await screen.findByRole('button', { name: new RegExp(`${month} 20th`) }))
     await userEvent.keyboard('{Escape}')
     await userEvent.click(canvas.getByRole('button', { name: /create coupon/i }))
     await expect(args.onSubmit).toHaveBeenCalledWith(

@@ -46,6 +46,7 @@ import {
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreateTaxAssociation,
+  type CreateTaxRate,
   type AddContractAddon,
   type AddContractCoupon,
   commitmentPeriodNoun,
@@ -280,6 +281,7 @@ export interface SubscriptionDetailViewProps {
    */
   loadChargeAlert?: ((lineId: string) => Promise<AlertSettingConfig | null>) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
+  onCreateTaxRate?: ((draft: CreateTaxRate) => Promise<{ code: string; label: string }>) | undefined
   /** A charge's row menu: take its coupon off. Resolves when done. */
   onRemoveCoupon?: ((coupon: SubscriptionCoupon) => Promise<unknown>) | undefined
   /** Row menus: take an add-on off, stop a tax, end a credit grant. Each resolves when done. */
@@ -478,6 +480,7 @@ export function SubscriptionDetailView({
   journal,
   fxOverrides,
   onAddTax,
+  onCreateTaxRate,
   onRemoveAddon,
   onRemoveTax,
   onCancelCreditGrant,
@@ -1939,6 +1942,7 @@ export function SubscriptionDetailView({
               }
             : undefined,
           onAddTax,
+          onCreateTaxRate,
         }}
         {...(couponLineId
           ? {

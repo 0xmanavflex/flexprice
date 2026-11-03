@@ -4,6 +4,7 @@ import {
   ApiError,
   serverReason,
   useCreateTaxAssociation,
+  useCreateTaxRate,
   useDeleteTaxAssociation,
   useEntityTaxAssociations,
   useTaxRates,
@@ -22,6 +23,7 @@ export function BillingEntityTaxPanel({ entityId }: { entityId: string }) {
   const associations = useEntityTaxAssociations('billing_entity', entityId)
   const rates = useTaxRates({ ...DEFAULT_TAX_RATE_QUERY, pageSize: 100, statuses: ['published'] })
   const create = useCreateTaxAssociation(entityId, 'billing_entity')
+  const createRate = useCreateTaxRate()
   const update = useUpdateTaxAssociation()
   const remove = useDeleteTaxAssociation()
 
@@ -52,6 +54,13 @@ export function BillingEntityTaxPanel({ entityId }: { entityId: string }) {
       isLoading={associations.isPending}
       failed={associations.error !== null}
       onRetry={() => void associations.refetch()}
+      onCreateTaxRate={async (draft) => {
+        await createRate.mutateAsync(draft)
+        return {
+          code: draft.code,
+          label: `${draft.name}${draft.percentageValue ? ` (${draft.percentageValue}%)` : ''}`,
+        }
+      }}
       onCreate={(draft) =>
         create.mutateAsync({ ...draft, autoApply: true }).then((result) => {
           toast.success('Tax rate added')
