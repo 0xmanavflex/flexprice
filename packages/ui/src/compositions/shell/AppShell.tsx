@@ -66,7 +66,7 @@ export interface AppShellProps {
   headerLeading?: ReactNode
   /** One control that belongs to the page as a whole, not to its content. */
   headerActions?: ReactNode
-  /** A full-width strip under the header, such as `ShellStrip`. */
+  /** A full-width strip above the header, such as `ShellStrip`. */
   strip?: ReactNode
   children: ReactNode
 }
@@ -169,6 +169,7 @@ export function AppShell({
             scrolls with the page; it is not pinned above the scroller.
           */}
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            {strip}
             {/* The rule spans the inset; the row inside takes the same measure as
               the page below it (`--shell-max`, `px-6`, centred), so the
               breadcrumb and the header cluster line up with the content's edges
@@ -191,7 +192,6 @@ export function AppShell({
                 </div>
               </div>
             </header>
-            {strip}
             {children}
           </div>
         </SidebarInset>

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { ShellStrip } from './ShellStrip'
 
-/** The strip under the shell's top bar that links back to the old console. */
+/** The strip above the shell's top bar that links back to the old console. */
 const meta = {
   title: 'Building blocks/Shell/ShellStrip',
   component: ShellStrip,

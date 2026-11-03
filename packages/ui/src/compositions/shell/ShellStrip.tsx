@@ -1,8 +1,7 @@
-import { ArrowUpRightIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 
 /**
- * A one-line strip under the shell's top bar: a sentence and one link.
+ * A one-line strip above the shell's top bar: a sentence and one link.
  *
  * It is always there, not dismissible, and it scrolls with the page like the
  * bar above it. Today it carries "Go back to old UI", so anyone moving to the
@@ -12,7 +11,7 @@ import { provenance } from '@ui/provenance'
 export const ShellStripProvenance = provenance({
   source: 'composition',
   composes: [],
-  note: 'A full-width notice row under the shell header; one sentence and one outbound link.',
+  note: 'A full-width notice row above the shell header; one sentence and one outbound link.',
 })
 
 export interface ShellStripProps {
@@ -34,10 +33,9 @@ export function ShellStrip({ message, actionLabel, href }: ShellStripProps) {
           // A new tab, so an unfinished form in the console is not discarded by
           // following the link out of it (as on the migration placeholder).
           target="_blank"
-          className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
+          className="text-primary underline underline-offset-4"
         >
           {actionLabel}
-          <ArrowUpRightIcon aria-hidden className="size-3" />
         </a>
       </div>
     </div>
