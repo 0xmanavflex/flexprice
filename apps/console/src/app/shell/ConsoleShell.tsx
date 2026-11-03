@@ -22,6 +22,7 @@ import {
   AppShell,
   EnvironmentSwitcher,
   ShellBreadcrumb,
+  ShellChangelog,
   ShellCreateMenu,
   ShellDetailTrailProvider,
   ShellStrip,
@@ -36,6 +37,7 @@ import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
 import { MutationToasts } from '@/app/notifications/MutationToasts'
 import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
+import { CHANGELOG, CHANGELOG_STORAGE_KEY } from './changelog'
 import { useMockAccounts } from '@/app/selfBilling/mockAccounts'
 import { useSession } from '@/app/session'
 import { env } from '@/env'
@@ -222,6 +224,8 @@ export function ConsoleShell({
         onSettings={() => goTo('settings')}
         {...(onSignOut ? { onSignOut } : {})}
         {...(headerLeading ? { headerLeading } : {})}
+        // What changed from V1, as the dismissible stack above the account menu.
+        pinned={<ShellChangelog entries={CHANGELOG} storageKey={CHANGELOG_STORAGE_KEY} />}
         /*
          * While V1 still runs, every page offers the way back. The old console
          * carries the mirror strip ("Take me to the new UI"). No old console

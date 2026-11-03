@@ -143,6 +143,8 @@ These no longer apply to visual decisions. They remain only as history.
 - The shell carries a migration strip under its header (`ShellStrip`, "Go back to old UI") while V1 still runs.
   It is scaffolding, not part of the reference; delete it with V1. See
   `docs/design-changes/2026-11-03-console-switch-strip.md`.
+- The sidebar's "What's new" stack (`ShellChangelog`) follows ReUI `app-shell-7` rather than the reference app,
+  which has no changelog. See `docs/design-changes/2026-11-03-sidebar-changelog.md`.
 - Component-level visual snapshots (Storybook) are not in place yet; only route-level snapshots are.
 - Baselines are regression baselines of the console, not pixel comparisons against the reference app. Comparing
   the two directly needs data parity and is a later step.
