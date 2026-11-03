@@ -1,4 +1,14 @@
-import { RBAC_ENTITY } from '@fp/domain'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
+import type { Resolver } from 'react-hook-form'
+import { Textarea } from '@ui/components/primitives/textarea'
+import {
+  RBAC_ENTITY,
+  type CreateTaxRate,
+  createTaxRateSchema,
+  emptyTaxRate,
+  suggestTaxCode,
+} from '@fp/domain'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
@@ -61,6 +71,11 @@ export interface TaxAssociationSectionProps {
   failed: boolean
   onRetry: () => void
   onCreate: (draft: CreateTaxAssociation) => Promise<unknown>
+  /**
+   * Creates a tax rate from this dialog when none exist yet, then returns here
+   * with that rate selected.
+   */
+  onCreateTaxRate?: (draft: CreateTaxRate) => Promise<TaxRateOption>
   onUpdate: (id: string, draft: EditTaxAssociation) => Promise<unknown>
   onRemove: (id: string) => Promise<unknown>
   error: string | null
@@ -91,6 +106,7 @@ function TaxAssociationSectionInner({
   failed,
   onRetry,
   onCreate,
+  onCreateTaxRate,
   onUpdate,
   onRemove,
   error,
@@ -229,6 +245,7 @@ function TaxAssociationSectionInner({
         subject={subject}
         showAutoApply={!alwaysAutoApply}
         taxRates={taxRates}
+        {...(onCreateTaxRate ? { onCreateTaxRate } : {})}
         initial={
           target
             ? {
@@ -272,6 +289,7 @@ export function TaxDialog({
   error,
   onClose,
   onSubmit,
+  onCreateTaxRate,
 }: {
   open: boolean
   mode: 'add' | 'edit'
@@ -284,15 +302,46 @@ export function TaxDialog({
   error: string | null
   onClose: () => void
   onSubmit: (draft: CreateTaxAssociation) => void
+  /** When there are no rates, the dropdown offers this. Resolves with the new rate. */
+  onCreateTaxRate?: ((draft: CreateTaxRate) => Promise<TaxRateOption>) | undefined
 }) {
+  const CREATE = '__create_tax_rate__'
   const [draft, setDraft] = useState(initial)
   const [problem, setProblem] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [created, setCreated] = useState<TaxRateOption | null>(null)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createPending, setCreatePending] = useState(false)
+  const rateForm = useCalmForm<CreateTaxRate>({
+    resolver: standardSchemaResolver(createTaxRateSchema) as Resolver<CreateTaxRate>,
+    defaultValues: emptyTaxRate(),
+  })
   const set = (patch: Partial<CreateTaxAssociation>) =>
     setDraft((current) => ({ ...current, ...patch }))
+  const rates =
+    created && !taxRates.some((rate) => rate.code === created.code)
+      ? [created, ...taxRates]
+      : taxRates
+  const rateOptions = [
+    ...rates.map((rate) => ({ value: rate.code, label: rate.label })),
+    ...(rates.length === 0 && onCreateTaxRate
+      ? [{ value: CREATE, label: 'Create tax rate' }]
+      : []),
+  ]
+
+  const nameField = rateForm.register('name', {
+    onChange: (event: { target: { value: string } }) => {
+      if (!rateForm.getFieldState('code').isDirty) {
+        rateForm.setValue('code', suggestTaxCode(event.target.value))
+      }
+    },
+  })
+  const rateErrors = rateForm.formState.errors
 
   return (
+    <>
     <FormDialog
-      open={open}
+      open={open && !creating}
       onOpenChange={(next) => (next ? undefined : onClose())}
       title={mode === 'add' ? 'Add tax rate' : 'Edit tax rate'}
     >
@@ -318,8 +367,17 @@ export function TaxDialog({
           <OptionSelect
             id="tax-rate"
             value={draft.taxRateCode}
-            onValueChange={(taxRateCode) => set({ taxRateCode })}
-            options={taxRates.map((rate) => ({ value: rate.code, label: rate.label }))}
+            onValueChange={(taxRateCode) => {
+              if (taxRateCode === CREATE) {
+                rateForm.reset(emptyTaxRate())
+                setCreateError(null)
+                setCreating(true)
+                return
+              }
+              set({ taxRateCode })
+            }}
+            options={rateOptions}
+            placeholder={rates.length === 0 ? 'Create tax rate' : 'Select…'}
             disabled={mode === 'edit'}
           />
         </div>
@@ -373,6 +431,85 @@ export function TaxDialog({
         ) : null}
       </Composer>
     </FormDialog>
+    <FormDialog
+      open={creating}
+      onOpenChange={(next) => (next ? undefined : setCreating(false))}
+      title="Create tax rate"
+    >
+      <Composer
+        submitLabel="Create tax rate"
+        onCancel={() => setCreating(false)}
+        submitting={createPending}
+        onSubmit={() => {
+          void rateForm.handleSubmit(async (values) => {
+            if (!onCreateTaxRate) return
+            setCreatePending(true)
+            setCreateError(null)
+            try {
+              const rate = await onCreateTaxRate(values)
+              setCreated(rate)
+              set({ taxRateCode: rate.code })
+              setCreating(false)
+            } catch (caught) {
+              setCreateError(caught instanceof Error ? caught.message : 'Could not create the tax rate.')
+            } finally {
+              setCreatePending(false)
+            }
+          })()
+        }}
+      >
+        <div className="flex flex-col gap-2">
+          <LabelWithHint htmlFor="new-tax-name" hint="What the tax rate is called on invoices.">
+            Name
+          </LabelWithHint>
+          <Input id="new-tax-name" disabled={createPending} {...nameField} />
+          {rateErrors.name?.message ? (
+            <p className="text-destructive text-sm">{rateErrors.name.message}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-2">
+          <LabelWithHint htmlFor="new-tax-code" hint="Letters, numbers, hyphens and underscores.">
+            Code
+          </LabelWithHint>
+          <Input id="new-tax-code" disabled={createPending} {...rateForm.register('code')} />
+          {rateErrors.code?.message ? (
+            <p className="text-destructive text-sm">{rateErrors.code.message}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-2">
+          <LabelWithHint htmlFor="new-tax-rate" hint="The percentage added to taxable amounts.">
+            Rate (%)
+          </LabelWithHint>
+          <Input
+            id="new-tax-rate"
+            inputMode="decimal"
+            placeholder="18"
+            disabled={createPending}
+            {...rateForm.register('percentageValue')}
+          />
+          {rateErrors.percentageValue?.message ? (
+            <p className="text-destructive text-sm">{rateErrors.percentageValue.message}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-2">
+          <LabelWithHint htmlFor="new-tax-description" hint="An internal note. Optional.">
+            Description
+          </LabelWithHint>
+          <Textarea
+            id="new-tax-description"
+            rows={3}
+            disabled={createPending}
+            {...rateForm.register('description')}
+          />
+        </div>
+        {createError ? (
+          <p role="alert" className="text-destructive text-sm">
+            {createError}
+          </p>
+        ) : null}
+      </Composer>
+    </FormDialog>
+    </>
   )
 }
 
