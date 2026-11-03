@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import {
   BillingModel,
   BillingPeriod,
@@ -258,5 +258,49 @@ export const UsageWindowHiddenOnFixed: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText('Usage window')).toBeNull()
+  },
+}
+
+/**
+ * Feature first, then the billing model; amount and start date last. The start
+ * date never leads, and no sentence repeats what the Usage card already says.
+ */
+export const FieldOrder: Story = {
+  args: { meters, priceOptions: { groups: [] } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('radio', { name: /Usage/ }))
+    const feature = await canvas.findByRole('combobox', { name: /^Metered feature/ })
+    const model = canvas.getByRole('radiogroup', { name: 'Billing model' })
+    const amount = canvas.getByLabelText(/^Amount/)
+    const start = canvas.getByLabelText(/^Start date/)
+    const before = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    await expect(before(feature, model)).toBe(true)
+    await expect(before(model, amount)).toBe(true)
+    await expect(before(amount, start)).toBe(true)
+    await expect(canvas.queryByText(/Usage charges bill in arrears/)).toBeNull()
+  },
+}
+
+/** A path that cannot bill in bands leaves Tiered out of the billing models. */
+export const WithoutTiered: Story = {
+  args: { billingModels: [BillingModel.FlatFee, BillingModel.Package] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('radio', { name: /Flat fee/ })).toBeInTheDocument()
+    await expect(canvas.queryByRole('radio', { name: /Tiered/ })).toBeNull()
+  },
+}
+
+/** The feature picker offers "Create feature", handed to the container to navigate. */
+export const CreateFeatureFromPicker: Story = {
+  args: { meters, onCreateFeature: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('radio', { name: /Usage/ }))
+    await userEvent.click(await canvas.findByRole('combobox', { name: /^Metered feature/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Create feature' }))
+    await expect(args.onCreateFeature).toHaveBeenCalledOnce()
   },
 }

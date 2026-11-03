@@ -5,6 +5,8 @@ import {
   type ResumeSubscription,
   canPauseSubscription,
   canResumeSubscription,
+  everyPeriod,
+  periodNoun,
 } from '@fp/domain'
 import { toast } from 'sonner'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
@@ -46,10 +48,8 @@ import {
   type CreateTaxAssociation,
   type AddContractAddon,
   type AddContractCoupon,
-  BILLING_PERIOD_LABEL,
   commitmentPeriodNoun,
   ChargeSection,
-  type BillingPeriod,
   type ChangeLineQuantity,
   type Charge,
   type ChargeCommitmentDetail,
@@ -771,16 +771,16 @@ export function SubscriptionDetailView({
   const commitmentRows: CommitmentRow[] = chargeRows.charges.flatMap((charge) => {
     const commitment = chargeRows.details.get(charge.id)?.commitment
     if (!commitment) return []
-    const period = BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? 'period'
     return [
       {
         id: charge.id,
         charge,
         name: charge.displayName || charge.meterName || 'Charge',
         commitment,
+        // "every month" / "per month": a period after a preposition is a noun, never "monthly".
         per: commitment.windowed
-          ? `every ${period.toLowerCase().replace(/ly$/, '')}`
-          : `per ${period.toLowerCase()}`,
+          ? everyPeriod(charge.billingPeriod)
+          : `per ${charge.billingPeriod ? periodNoun(charge.billingPeriod) : 'period'}`,
       },
     ]
   })

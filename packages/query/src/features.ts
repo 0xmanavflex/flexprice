@@ -12,6 +12,7 @@ import {
   FeatureType,
   FeatureSortField,
   FEATURE_FILTERS,
+  defaultUnitPlural,
 } from '@fp/domain'
 import { type AlertConfigWire, toAlertConfig, toAlertConfigRequest } from './alertSettings'
 import { queryKeys } from './keys'
@@ -186,8 +187,13 @@ export function toCreateFeatureRequest(draft: CreateFeature): Record<string, unk
     type: draft.type,
     ...(draft.lookupKey ? { lookupKey: draft.lookupKey } : {}),
     ...(draft.description ? { description: draft.description } : {}),
-    ...(draft.unitSingular ? { unitSingular: draft.unitSingular } : {}),
-    ...(draft.unitPlural ? { unitPlural: draft.unitPlural } : {}),
+    ...(draft.unitSingular
+      ? {
+          unitSingular: draft.unitSingular,
+          // The form asks for the singular only; the API stores the pair.
+          unitPlural: draft.unitPlural || defaultUnitPlural(draft.unitSingular),
+        }
+      : {}),
     ...(draft.groupId ? { groupId: draft.groupId } : {}),
     ...(draft.reportingUnit ? { reportingUnit: toReportingUnitRequest(draft.reportingUnit) } : {}),
     ...(draft.alertSettings ? { alertSettings: toAlertConfigRequest(draft.alertSettings) } : {}),
@@ -250,8 +256,13 @@ export function toUpdateFeatureRequest(draft: EditFeature): Record<string, unkno
   return {
     name: draft.name,
     ...(draft.description !== undefined ? { description: draft.description } : {}),
-    ...(draft.unitSingular ? { unitSingular: draft.unitSingular } : {}),
-    ...(draft.unitPlural ? { unitPlural: draft.unitPlural } : {}),
+    ...(draft.unitSingular
+      ? {
+          unitSingular: draft.unitSingular,
+          // The form asks for the singular only; the API stores the pair.
+          unitPlural: draft.unitPlural || defaultUnitPlural(draft.unitSingular),
+        }
+      : {}),
     ...(draft.reportingUnit ? { reportingUnit: toReportingUnitRequest(draft.reportingUnit) } : {}),
     ...(draft.groupId ? { groupId: draft.groupId } : {}),
     ...(draft.alertSettings ? { alertSettings: toAlertConfigRequest(draft.alertSettings) } : {}),

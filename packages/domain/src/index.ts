@@ -91,6 +91,8 @@ export type {
 export {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
+  everyPeriod,
+  periodNoun,
   BILLING_PERIOD_SHORT,
   BillingModel,
   BillingPeriod,
@@ -203,6 +205,7 @@ export {
   editFeatureSchema,
   cloneFeatureSchema,
   defaultFeatureLookupKey,
+  defaultUnitPlural,
   emptyCloneFeature,
 } from './feature'
 export type {

@@ -17,6 +17,7 @@ import {
   type VersionStatus,
   versionStatus,
   tierUnitLabel,
+  periodNoun,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Frame, FrameHeader, FramePanel, FrameTitle } from '@ui/components/reui/frame'
@@ -270,9 +271,7 @@ function windowEvery(charge: Charge): string {
   if (charge.bucketSize && charge.bucketSize in WINDOW_EVERY) {
     return WINDOW_EVERY[charge.bucketSize as PriceWindowSize]
   }
-  return (BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? 'period')
-    .toLowerCase()
-    .replace(/ly$/, '')
+  return charge.billingPeriod ? periodNoun(charge.billingPeriod) : 'period'
 }
 
 function CommitmentBody({
@@ -289,9 +288,7 @@ function CommitmentBody({
   ]
 
   if (!commitment.windowed) {
-    const period = commitment.duration
-      ? (BILLING_PERIOD_LABEL[commitment.duration] ?? commitment.duration).toLowerCase()
-      : 'billing period'
+    const period = commitment.duration ? periodNoun(commitment.duration) : 'billing period'
     return (
       <>
         <Lead value={commitment.value} label={`per ${period}`} />

@@ -54,7 +54,6 @@ import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
-  CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
   CreditGrantExpiryType,
   type Entitlement,
@@ -4803,15 +4802,13 @@ function planEntitlementValue(entitlement: Entitlement): string {
   }
 }
 
-/** "Every month", "Every 3 × month", or "Once". */
+/** "Every month", "Every 3 months", or "Once". */
 function grantCadenceText(grant: CreateSubscription['creditGrants'][number]): string {
   if (grant.cadence !== CreditGrantCadence.Recurring || !grant.period) {
     return CREDIT_GRANT_CADENCE_LABEL[grant.cadence]
   }
-  const period = CREDIT_GRANT_PERIOD_LABEL[grant.period]
-  return grant.periodCount && grant.periodCount > 1
-    ? `Every ${grant.periodCount} × ${period.toLowerCase()}`
-    : `Every ${period.toLowerCase()}`
+  const every = everyPeriod(grant.period, grant.periodCount ?? 1)
+  return every.charAt(0).toUpperCase() + every.slice(1)
 }
 
 /** "Never expires", "Expires with the billing cycle", or "Expires after 30 days". */

@@ -148,6 +148,28 @@ export const Populated: Story = {
   },
 }
 
+/** A meter that aggregates a custom expression shows that expression in the fx chip, not a blank field. */
+export const CustomExpression: Story = {
+  args: {
+    features: [
+      {
+        ...(featureFixtures[0] as Feature),
+        id: 'feat_expr',
+        name: 'Call minutes',
+        aggregationType: 'SUM',
+        aggregationField: null,
+        aggregationExpression: 'duration_seconds / 60',
+      },
+    ],
+    total: 1,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('Call minutes')
+    await expect(canvas.getByText('SUM(duration_seconds / 60)')).toBeInTheDocument()
+  },
+}
+
 /**
  * Plans as chips, with the overflow collapsing to +N.
  *

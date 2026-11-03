@@ -1,11 +1,10 @@
-import { RBAC_ENTITY } from '@fp/domain'
+import { RBAC_ENTITY, periodNoun } from '@fp/domain'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import { PlusIcon, CoinsIcon } from '@ui/icons'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
-  CREDIT_GRANT_PERIOD_LABEL,
   type CreditGrant,
   CreditGrantCadence,
 } from '@fp/domain'
@@ -24,7 +23,7 @@ export interface PlanCreditGrantsViewProps extends Partial<SubTabQuery> {
 
 function grantedLabel(g: CreditGrant): string {
   if (g.cadence === CreditGrantCadence.Recurring && g.period) {
-    return `Every ${CREDIT_GRANT_PERIOD_LABEL[g.period].toLowerCase()}`
+    return `Every ${periodNoun(g.period)}`
   }
   return CREDIT_GRANT_CADENCE_LABEL[g.cadence]
 }

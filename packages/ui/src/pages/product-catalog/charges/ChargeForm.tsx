@@ -1,4 +1,4 @@
-import { InfoIcon } from '@ui/icons'
+import { InfoIcon, PlusIcon } from '@ui/icons'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { type ReactNode } from 'react'
 import { Controller, type Resolver } from 'react-hook-form'
@@ -142,6 +142,29 @@ export interface ChargeFormProps {
    * controls for one field in one dialog is worse than either.
    */
   showUsageWindow?: boolean
+  /**
+   * The billing models on offer. Default: all three. A path that cannot bill in
+   * bands (a charge added alongside an entitlement) leaves Tiered out. The
+   * model a charge already has is always kept, so an edit never loses it.
+   */
+  billingModels?: readonly BillingModel[]
+  /**
+   * Adds "Create feature" to the metered-feature picker. The container decides
+   * where it goes (the feature create form); the form only offers it.
+   */
+  onCreateFeature?: (() => void) | undefined
+}
+
+const ALL_BILLING_MODELS = [
+  BillingModel.FlatFee,
+  BillingModel.Package,
+  BillingModel.Tiered,
+] as const
+
+const BILLING_MODEL_DESCRIPTION: Record<BillingModel, string> = {
+  [BillingModel.FlatFee]: 'One amount for the charge.',
+  [BillingModel.Package]: 'A price for each pack of units.',
+  [BillingModel.Tiered]: 'A different rate in each band.',
 }
 
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
@@ -183,6 +206,8 @@ export function ChargeForm({
   lockDisplayName = false,
   priceOptions,
   showUsageWindow = true,
+  billingModels = ALL_BILLING_MODELS,
+  onCreateFeature,
 }: ChargeFormProps) {
   const isEdit = mode === 'edit'
   const form = useCalmForm<CreateCharge>({
@@ -329,60 +354,9 @@ export function ChargeForm({
         />
       )}
 
-      {/* The date a price starts is the first thing a create or an edit decides, so it leads. */}
-      {isEdit ? (
-        <div className="max-w-xs">
-          <Field
-            label="Effective from"
-            hint="Leave empty to start the new price now. Earlier invoices keep the old price."
-          >
-            {({ id, 'aria-describedby': describedBy }) => (
-              <Controller
-                control={form.control}
-                name={'effectiveFrom' as never}
-                render={({ field }) => (
-                  <DateInput
-                    id={id}
-                    value={(field.value as string | undefined) ?? ''}
-                    onValueChange={field.onChange}
-                    placeholder="Now"
-                    disabled={isSubmitting}
-                    aria-describedby={describedBy}
-                  />
-                )}
-              />
-            )}
-          </Field>
-        </div>
-      ) : priceOptions ? (
-        // A new price's start date leads too: it belongs to the price, not to its model.
-        <div className="max-w-xs">
-          <Field
-            label="Start date"
-            hint="Optional. The price applies from this day; empty means now."
-          >
-            {({ id, 'aria-describedby': describedBy }) => (
-              <Controller
-                control={form.control}
-                name={'startDate' as never}
-                render={({ field }) => (
-                  <DateInput
-                    id={id}
-                    value={(field.value as string | undefined) ?? ''}
-                    onValueChange={(value) => field.onChange(value || undefined)}
-                    placeholder="Now"
-                    disabled={isSubmitting}
-                    aria-describedby={describedBy}
-                  />
-                )}
-              />
-            )}
-          </Field>
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {isUsage ? (
+      {/* Feature first (usage), then the billing model, then the price's terms; amount and start date last. */}
+      {isUsage ? (
+        <div className="max-w-md">
           <Field
             label="Metered feature"
             required
@@ -412,6 +386,15 @@ export function ChargeForm({
                         trailing: <FeatureTypeGlyph type="metered" />,
                       }))}
                       searchable
+                      {...(onCreateFeature
+                        ? {
+                            createAction: {
+                              label: 'Create feature',
+                              icon: <PlusIcon aria-hidden />,
+                              onSelect: onCreateFeature,
+                            },
+                          }
+                        : {})}
                       placeholder="Search metered features…"
                       emptyText="No metered features match."
                       disabled={isSubmitting || isEdit}
@@ -423,8 +406,26 @@ export function ChargeForm({
               )
             }
           </Field>
-        ) : null}
+        </div>
+      ) : null}
 
+      <fieldset disabled={isSubmitting} className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-medium">Billing model</legend>
+        <ChoiceCards
+          label="Billing model"
+          value={billingModel}
+          onChange={(next) => reseed(type, next)}
+          choices={ALL_BILLING_MODELS.filter(
+            (model) => model === billingModel || billingModels.includes(model),
+          ).map((model) => ({
+            value: model,
+            title: BILLING_MODEL_LABEL[model],
+            description: BILLING_MODEL_DESCRIPTION[model],
+          }))}
+        />
+      </fieldset>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Display name" hint="Optional. What this charge is called on an invoice.">
           {({ id, ...field }) =>
             lockDisplayName ? (
@@ -596,12 +597,6 @@ export function ChargeForm({
         ) : null}
       </div>
 
-      {isUsage ? (
-        <p className="text-muted-foreground text-xs">
-          Usage charges bill in arrears: once the period’s usage is known.
-        </p>
-      ) : null}
-
       {showWindow ? (
         <div className="max-w-xs">
           <Field
@@ -647,31 +642,54 @@ export function ChargeForm({
         </div>
       ) : null}
 
-      <fieldset disabled={isSubmitting} className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-medium">Billing model</legend>
-        <ChoiceCards
-          label="Billing model"
-          value={billingModel}
-          onChange={(next) => reseed(type, next)}
-          choices={[
-            {
-              value: BillingModel.FlatFee,
-              title: BILLING_MODEL_LABEL[BillingModel.FlatFee],
-              description: 'One amount for the charge.',
-            },
-            {
-              value: BillingModel.Package,
-              title: BILLING_MODEL_LABEL[BillingModel.Package],
-              description: 'A price for each pack of units.',
-            },
-            {
-              value: BillingModel.Tiered,
-              title: BILLING_MODEL_LABEL[BillingModel.Tiered],
-              description: 'A different rate in each band.',
-            },
-          ]}
-        />
-      </fieldset>
+      {priceOptions && !isEdit && (priceOptions.groups.length > 0 || !isUsage) ? (
+        <div className="grid gap-5 sm:grid-cols-2">
+          {priceOptions.groups.length > 0 ? (
+            <Field label="Tag" hint="Optional. Tags related prices for reporting and bulk changes.">
+              {({ id }) => (
+                <Controller
+                  control={form.control}
+                  name={'groupId' as never}
+                  render={({ field }) => (
+                    <OptionCombobox
+                      id={id}
+                      value={(field.value as string | undefined) ?? ''}
+                      onValueChange={(value) => field.onChange(value || undefined)}
+                      options={[...priceOptions.groups]}
+                      placeholder="No tag"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </Field>
+          ) : null}
+          {!isUsage ? (
+            <Field
+              label="Minimum quantity"
+              hint="Optional. The fewest units a subscriber can hold of this charge."
+              error={messageOf(errors, 'minQuantity')}
+            >
+              {({ id, ...field }) => (
+                <Input
+                  id={id}
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  disabled={isSubmitting}
+                  {...field}
+                  {...form.register('minQuantity' as never, {
+                    setValueAs: (value: unknown) =>
+                      value === '' || value == null || Number.isNaN(Number(value))
+                        ? undefined
+                        : Number(value),
+                  })}
+                />
+              )}
+            </Field>
+          ) : null}
+        </div>
+      ) : null}
 
       {billingModel === BillingModel.FlatFee && isUsage ? (
         // A usage flat fee is a rate per unit: a contract value per period does not apply.
@@ -767,52 +785,55 @@ export function ChargeForm({
         </div>
       ) : null}
 
-      {priceOptions && !isEdit && (priceOptions.groups.length > 0 || !isUsage) ? (
-        <div className="grid gap-5 sm:grid-cols-2">
-          {priceOptions.groups.length > 0 ? (
-            <Field label="Tag" hint="Optional. Tags related prices for reporting and bulk changes.">
-              {({ id }) => (
-                <Controller
-                  control={form.control}
-                  name={'groupId' as never}
-                  render={({ field }) => (
-                    <OptionCombobox
-                      id={id}
-                      value={(field.value as string | undefined) ?? ''}
-                      onValueChange={(value) => field.onChange(value || undefined)}
-                      options={[...priceOptions.groups]}
-                      placeholder="No tag"
-                      disabled={isSubmitting}
-                    />
-                  )}
-                />
-              )}
-            </Field>
-          ) : null}
-          {!isUsage ? (
-            <Field
-              label="Minimum quantity"
-              hint="Optional. The fewest units a subscriber can hold of this charge."
-              error={messageOf(errors, 'minQuantity')}
-            >
-              {({ id, ...field }) => (
-                <Input
-                  id={id}
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  disabled={isSubmitting}
-                  {...field}
-                  {...form.register('minQuantity' as never, {
-                    setValueAs: (value: unknown) =>
-                      value === '' || value == null || Number.isNaN(Number(value))
-                        ? undefined
-                        : Number(value),
-                  })}
-                />
-              )}
-            </Field>
-          ) : null}
+      {/* The date a price starts comes last, after what is billed and how much: it never leads. */}
+      {isEdit ? (
+        <div className="max-w-xs">
+          <Field
+            label="Effective from"
+            hint="Leave empty to start the new price now. Earlier invoices keep the old price."
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <Controller
+                control={form.control}
+                name={'effectiveFrom' as never}
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={(field.value as string | undefined) ?? ''}
+                    onValueChange={field.onChange}
+                    placeholder="Now"
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      ) : priceOptions ? (
+        // A new price's start date: it belongs to the price, not to its model.
+        <div className="max-w-xs">
+          <Field
+            label="Start date"
+            hint="Optional. The price applies from this day; empty means now."
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <Controller
+                control={form.control}
+                name={'startDate' as never}
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={(field.value as string | undefined) ?? ''}
+                    onValueChange={(value) => field.onChange(value || undefined)}
+                    placeholder="Now"
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )}
+          </Field>
         </div>
       ) : null}
 

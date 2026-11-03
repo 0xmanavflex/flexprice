@@ -159,6 +159,34 @@ export const BILLING_PERIOD_LABEL: Record<BillingPeriod, string> = {
   [BillingPeriod.OneTime]: 'One-time',
 }
 
+/**
+ * A recurring period as a noun, one and many: what follows "every" or "per".
+ * Keyed by the wire value, which billing periods, credit grant periods and
+ * usage reset periods share.
+ */
+const PERIOD_NOUN: Record<string, readonly [one: string, many: string]> = {
+  DAILY: ['day', 'days'],
+  WEEKLY: ['week', 'weeks'],
+  MONTHLY: ['month', 'months'],
+  QUARTERLY: ['quarter', 'quarters'],
+  HALF_YEARLY: ['half-year', 'half-years'],
+  ANNUAL: ['year', 'years'],
+}
+
+/** "month", "quarter": one period, as a noun. */
+export function periodNoun(period: string): string {
+  return PERIOD_NOUN[period]?.[0] ?? period.toLowerCase()
+}
+
+/**
+ * "every month", "every 3 months": never "every monthly". The adjective labels
+ * ("Monthly") stand alone; after "every" a period is a noun.
+ */
+export function everyPeriod(period: string, count = 1): string {
+  const [one, many] = PERIOD_NOUN[period] ?? [period.toLowerCase(), period.toLowerCase()]
+  return count > 1 ? `every ${count} ${many}` : `every ${one}`
+}
+
 /** Billing period, shortened the way a pricing page writes it: "/mo", "/yr". */
 export const BILLING_PERIOD_SHORT: Record<BillingPeriod, string> = {
   [BillingPeriod.Daily]: 'day',

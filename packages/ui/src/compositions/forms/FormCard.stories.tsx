@@ -129,6 +129,18 @@ export const RequiredCard: Story = {
   },
 }
 
+/** The card title is heavier than its row labels, so it reads as their heading, not as one more label. */
+export const TitleOutweighsRowLabels: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const heading = canvas.getByRole('heading', { name: 'Plan details' })
+    const label = canvasElement.querySelector('[data-slot="field-label"]') as HTMLElement
+    await expect(Number(getComputedStyle(heading).fontWeight)).toBeGreaterThan(
+      Number(getComputedStyle(label).fontWeight),
+    )
+  },
+}
+
 /** Optional fields carry the Optional badge. */
 export const OptionalCard: Story = {
   args: { title: 'Advanced', status: 'optional' },

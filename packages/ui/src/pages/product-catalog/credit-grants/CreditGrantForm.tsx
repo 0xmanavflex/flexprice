@@ -14,6 +14,7 @@ import {
   createCreditGrantSchema,
   editCreditGrantSchema,
   emptyCreditGrant,
+  periodNoun,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
@@ -189,7 +190,7 @@ export function CreditGrantCreateForm({
           ).toLowerCase()}`
   const summary = `${
     cadence === CreditGrantCadence.Recurring
-      ? `Every ${period ? (CREDIT_GRANT_PERIOD_LABEL[period] ?? period).toLowerCase() : 'period'}, subscribers receive`
+      ? `Every ${period ? periodNoun(period) : 'period'}, subscribers receive`
       : 'Subscribers receive once'
   } ${creditsNumber > 0 ? creditsNumber.toLocaleString() : 'some'} credits${
     dollarValue ? ` (${dollarValue})` : ''

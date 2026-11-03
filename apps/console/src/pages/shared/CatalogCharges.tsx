@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { type Charge, type CreateCharge, type PriceEntityType, chargeToDraft } from '@fp/domain'
 import {
@@ -39,6 +40,7 @@ export function CatalogCharges({
   const charges = usePriceHistory(entityType, entityId)
   const rows = priceHistoryRows(charges.data ?? [])
   const { meters, units, priceGroups } = usePlanFormOptions()
+  const navigate = useNavigate()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const [target, setTarget] = useState<Charge | null>(null)
@@ -94,6 +96,7 @@ export function CatalogCharges({
         meters={meters}
         priceUnits={units}
         priceGroups={priceGroups}
+        onCreateFeature={() => void navigate({ to: '/features/new' })}
         onSubmit={submit}
         isSubmitting={create.isPending || updatePrice.isPending}
         submitError={

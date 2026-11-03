@@ -104,6 +104,7 @@ export function CatalogChargesSection({
   // Ended prices too, so an edited charge keeps its earlier price as history.
   const charges = usePriceHistory(entityType, entityId)
   const { meters, units, priceGroups } = usePlanFormOptions()
+  const navigate = useNavigate()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const [form, setForm] = useState<'add' | Charge | null>(null)
@@ -171,6 +172,7 @@ export function CatalogChargesSection({
         meters={meters}
         priceUnits={units}
         priceGroups={priceGroups}
+        onCreateFeature={() => void navigate({ to: '/features/new' })}
         onSubmit={submit}
         isSubmitting={create.isPending || updatePrice.isPending}
         submitError={
@@ -283,6 +285,7 @@ export function CatalogEntitlementsSection({ entity, entityId }: CatalogSectionP
           <EntitlementCreateForm
             features={options}
             grantModel
+            onCreateFeature={() => void navigate({ to: '/features/new' })}
             onSubmit={(draft: CreateEntitlement) =>
               create.mutate({ entityType, entityId, entitlements: [draft] }, { onSuccess: close })
             }
