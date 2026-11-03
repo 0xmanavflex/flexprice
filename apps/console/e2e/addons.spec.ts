@@ -69,6 +69,26 @@ test.describe('the add-ons list', () => {
     await expect(page.getByLabel('Description', { exact: true })).toBeHidden()
   })
 
+  test('the detail has two tabs, with charges, entitlements and grants on Overview', async ({
+    page,
+  }) => {
+    await page.goto('/addons')
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
+    await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
+    await page.getByRole('menuitem', { name: 'View add-on' }).click()
+    await expect(page).toHaveURL(/\/addons\/[^/]+$/)
+
+    await expect(page.getByRole('tab')).toHaveText(['Overview', 'Information'])
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    // The same sections a plan's Overview stacks, one after another.
+    await expect(page.getByRole('region', { name: 'Charges', exact: true })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Entitlements', exact: true })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Credit grants', exact: true })).toBeVisible()
+  })
+
   test('the Add-on details pencil edits in place without navigating', async ({ page }) => {
     await page.goto('/addons')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })

@@ -1,55 +1,15 @@
-import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import {
-  type Addon,
-  type CreateCreditGrant,
-  type CreateEntitlement,
-  type CreditGrant,
-  type EditCreditGrant,
-  type EditEntitlement,
-  type Entitlement,
-  CreditGrantScope,
-  DEFAULT_FEATURE_QUERY,
-  EntitlementEntityType,
-  FeatureType,
-  PriceEntityType,
-  creditGrantToEdit,
-  entitlementToEdit,
-} from '@fp/domain'
-import {
-  useAddon,
-  useCreateBulkEntitlements,
-  useCreateCreditGrant,
-  useCreditGrants,
-  useDeleteAddon,
-  useDeleteCreditGrant,
-  useDeleteEntitlement,
-  useEntitlements,
-  useFeatures,
-  usePrices,
-  useUpdateAddon,
-  useUpdateCreditGrant,
-  useUpdateEntitlement,
-  useSyncAddonPrices,
-} from '@fp/query'
-import {
-  AddonSubscriptionsView,
-  CatalogDetailFrame,
-  CatalogStatusBadge,
-  CreditGrantCreateForm,
-  CreditGrantEditForm,
-  CreditGrantTable,
-  EntitlementCreateForm,
-  EntitlementEditForm,
-  EntitlementTable,
-  type FeatureOption,
-  Pill,
-} from '@fp/ui/pages'
-import { ConfirmDialog, EditableCard, FormDialog, MetadataCard } from '@fp/ui/compositions'
+import { type Addon, PriceEntityType } from '@fp/domain'
+import { useAddon, useDeleteAddon, usePrices, useUpdateAddon, useSyncAddonPrices } from '@fp/query'
+import { AddonSubscriptionsView, CatalogDetailFrame, CatalogStatusBadge, Pill } from '@fp/ui/pages'
+import { ConfirmDialog, EditableCard, MetadataCard } from '@fp/ui/compositions'
 import { ArchiveIcon, PencilIcon, PuzzleIcon, RefreshCwIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
-import { subTab } from '../shared/subTab'
-import { CatalogCharges } from '../shared/CatalogCharges'
+import {
+  CatalogChargesSection,
+  CatalogCreditGrantsSection,
+  CatalogEntitlementsSection,
+} from '../shared/CatalogSections'
 import { useContractSync } from '../shared/useContractSync'
 
 export interface AddonDetailPageProps {
@@ -59,27 +19,30 @@ export interface AddonDetailPageProps {
   onNavigateToList: () => void
 }
 
-/** The tabs, in order. Overview leads with the add-on's prices. */
-type AddonTab = 'charges' | 'entitlements' | 'credit-grants' | 'subscriptions' | 'information'
+/**
+ * Two tabs, the same as a plan's.
+ *
+ * Charges, entitlements and credit grants were a tab each, holding one table
+ * apiece, so seeing what an add-on contains took three clicks. An add-on
+ * carries the same three things a plan does, so it is laid out the same way:
+ * all of them on Overview, one after another, and the record on Information.
+ */
+type AddonTab = 'overview' | 'information'
 
 /**
  * One add-on, in full.
  *
- * The shared detail shell: a large title with its status badge and lookup key,
- * an Edit action, and a metric rail of the numbers that say what the add-on
- * bills: then a set of tabs that mirror the plan: the prices it carries, the
- * entitlements it grants, the credit grants it hands subscribers, and the record
- * itself. An add-on shares a plan's charges, entitlements, and credit grants, so
- * it reuses the exact same read tables and editors rather than restating them.
+ * The shared detail shell: a large title with its status badge and lookup key
+ * and a ⋯ menu of record actions, then two tabs. Overview stacks the prices it
+ * carries, the entitlements it grants, the credit grants it hands subscribers
+ * and the contracts using it; Information holds the record itself. The three
+ * catalogue sections are the plan page's own (`CatalogSections`), keyed to the
+ * add-on, so the two cannot drift apart.
  *
- * Name and description edit in place on the Information tab (`EditableFields`):
- * the header Edit turns them all into inputs at once, with no edit page. Adding or editing an entitlement or credit grant opens its
- * form in a `FormDialog`.
- *
- * The page fetches and composes; every relational section is a presentational
- * component from `@fp/ui`, and every destructive action passes through a
- * `ConfirmDialog`: a charge is terminated, an entitlement or grant removed, only
- * after a confirming beat.
+ * Name and description edit in place on the Information tab (`EditableCard`):
+ * the header's Edit details switches to it. Adding or editing a charge,
+ * entitlement or credit grant opens its form in a dialog, and every
+ * destructive action passes through a `ConfirmDialog` first.
  */
 export function AddonDetailPage({
   addonId,
@@ -91,12 +54,10 @@ export function AddonDetailPage({
   const sync = useSyncAddonPrices()
   const syncing = useContractSync('add-on', addonId)
   const remove = useDeleteAddon()
-  // Fetched here too (deduped by react-query) so the rail can carry real counts.
+  // Fetched here too (deduped by react-query) so the header can carry a real count.
   const prices = usePrices(PriceEntityType.Addon, addonId)
-  const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
-  const grants = useCreditGrants(CreditGrantScope.Addon, addonId)
 
-  const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'charges')
+  const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'overview')
   const [archiving, setArchiving] = useState(false)
 
   if (!addon.data) {
@@ -110,7 +71,6 @@ export function AddonDetailPage({
 
   const data = addon.data
   const chargeCount = (prices.data ?? []).length
-  const entitlementCount = (entitlements.data ?? []).length
   const badges = (
     <>
       <CatalogStatusBadge status={data.status} />
@@ -157,31 +117,22 @@ export function AddonDetailPage({
       onTabChange={(next) => setTab(next as AddonTab)}
       tabs={[
         {
-          value: 'charges',
-          label: 'Charges',
-          ...(prices.data ? { count: chargeCount } : {}),
+          value: 'overview',
+          label: 'Overview',
           content: (
-            <CatalogCharges
-              entityType={PriceEntityType.Addon}
-              entityId={addonId}
-              noun="add-on"
-              emptyDescription="This add-on bills nothing until it has a charge."
-            />
+            <div className="flex min-w-0 flex-col gap-5">
+              <CatalogChargesSection
+                entity="addon"
+                entityId={addonId}
+                readOnly={data.status === 'archived'}
+                emptyDescription="This add-on bills nothing until it has a charge."
+              />
+              <CatalogEntitlementsSection entity="addon" entityId={addonId} />
+              <CatalogCreditGrantsSection entity="addon" entityId={addonId} />
+              <AddonSubscriptionsView />
+            </div>
           ),
         },
-        {
-          value: 'entitlements',
-          label: 'Entitlements',
-          ...(entitlements.data ? { count: entitlementCount } : {}),
-          content: <EntitlementsTab addonId={addonId} />,
-        },
-        {
-          value: 'credit-grants',
-          label: 'Credit grants',
-          ...(grants.data ? { count: grants.data.length } : {}),
-          content: <CreditGrantsTab addonId={addonId} />,
-        },
-        { value: 'subscriptions', label: 'Contracts', content: <AddonSubscriptionsView /> },
         {
           value: 'information',
           label: 'Information',
@@ -230,204 +181,6 @@ export function AddonDetailPage({
         }
       />
     </CatalogDetailFrame>
-  )
-}
-
-/** Entitlements: what the add-on includes of each feature. Removal is confirmed. */
-function EntitlementsTab({ addonId }: { addonId: string }) {
-  const navigate = useNavigate()
-  const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
-  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
-  const create = useCreateBulkEntitlements()
-  const updateEntitlement = useUpdateEntitlement()
-  const remove = useDeleteEntitlement()
-  const [adding, setAdding] = useState(false)
-  const [editing, setEditing] = useState<Entitlement | null>(null)
-  const [target, setTarget] = useState<Entitlement | null>(null)
-
-  // Only features not already entitled can be added: a feature is granted once.
-  const granted = new Set((entitlements.data ?? []).map((e) => e.featureId))
-  const toOption = (f: NonNullable<typeof features.data>['features'][number]): FeatureOption => ({
-    id: f.id,
-    name: f.name,
-    type: f.type,
-    ...(f.type === FeatureType.Metered && f.unitPlural ? { unit: f.unitPlural } : {}),
-  })
-  const allFeatures = features.data?.features ?? []
-  const options = allFeatures.filter((f) => !granted.has(f.id)).map(toOption)
-  const editingFeature = editing ? allFeatures.find((f) => f.id === editing.featureId) : undefined
-
-  const submit = (draft: CreateEntitlement) => {
-    create.mutate(
-      { entityType: EntitlementEntityType.Addon, entityId: addonId, entitlements: [draft] },
-      { onSuccess: () => setAdding(false) },
-    )
-  }
-
-  const submitEdit = (draft: EditEntitlement) => {
-    if (!editing) return
-    updateEntitlement.mutate({ id: editing.id, draft }, { onSuccess: () => setEditing(null) })
-  }
-
-  const close = () => {
-    setTarget(null)
-    remove.reset()
-  }
-
-  const form = adding ? (
-    <EntitlementCreateForm
-      features={options}
-      grantModel
-      onSubmit={submit}
-      onCancel={() => setAdding(false)}
-      isSubmitting={create.isPending}
-      submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
-    />
-  ) : editing ? (
-    <EntitlementEditForm
-      feature={
-        editingFeature
-          ? toOption(editingFeature)
-          : {
-              id: editing.featureId,
-              name: editing.featureName ?? 'Feature',
-              type: editing.featureType,
-            }
-      }
-      defaultValue={entitlementToEdit(editing)}
-      onSubmit={submitEdit}
-      onCancel={() => setEditing(null)}
-      isSubmitting={updateEntitlement.isPending}
-      submitError={updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null}
-    />
-  ) : undefined
-
-  return (
-    <>
-      <EntitlementTable
-        showTitle
-        entitlements={entitlements.data ?? []}
-        {...subTab(entitlements, 'entitlements')}
-        onAdd={() => setAdding(true)}
-        onEdit={(entitlement) => setEditing(entitlement)}
-        onDelete={(entitlement) => setTarget(entitlement)}
-        onOpenFeature={(featureId) =>
-          void navigate({ to: '/features/$featureId', params: { featureId } })
-        }
-      />
-      <FormDialog
-        open={adding || editing !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setAdding(false)
-            setEditing(null)
-          }
-        }}
-        title={editing ? 'Edit entitlement' : 'Add entitlement'}
-      >
-        {form}
-      </FormDialog>
-      <ConfirmDialog
-        open={target !== null}
-        onOpenChange={(open) => {
-          if (!open) close()
-        }}
-        title="Remove this entitlement?"
-        description={`“${target?.featureName || 'This feature'}” will no longer be included in the add-on.`}
-        confirmLabel="Remove entitlement"
-        destructive
-        isPending={remove.isPending}
-        error={remove.isError ? 'Could not remove the entitlement. Try again.' : null}
-        onConfirm={() => {
-          if (target) remove.mutate(target.id, { onSuccess: () => setTarget(null) })
-        }}
-      />
-    </>
-  )
-}
-
-/** Credit Grants: the balances the add-on hands its subscribers. Removal is confirmed. */
-function CreditGrantsTab({ addonId }: { addonId: string }) {
-  const grants = useCreditGrants(CreditGrantScope.Addon, addonId)
-  const create = useCreateCreditGrant()
-  const updateGrant = useUpdateCreditGrant()
-  const remove = useDeleteCreditGrant()
-  const [adding, setAdding] = useState(false)
-  const [editing, setEditing] = useState<CreditGrant | null>(null)
-  const [target, setTarget] = useState<CreditGrant | null>(null)
-
-  const submit = (grant: CreateCreditGrant) => {
-    create.mutate(
-      { scope: CreditGrantScope.Addon, id: addonId, grant },
-      { onSuccess: () => setAdding(false) },
-    )
-  }
-
-  const submitEdit = (draft: EditCreditGrant) => {
-    if (!editing) return
-    updateGrant.mutate({ id: editing.id, draft }, { onSuccess: () => setEditing(null) })
-  }
-
-  const close = () => {
-    setTarget(null)
-    remove.reset()
-  }
-
-  const form = adding ? (
-    <CreditGrantCreateForm
-      onSubmit={submit}
-      onCancel={() => setAdding(false)}
-      isSubmitting={create.isPending}
-      submitError={create.isError ? 'Could not create the grant. Try again.' : null}
-    />
-  ) : editing ? (
-    <CreditGrantEditForm
-      defaultValue={creditGrantToEdit(editing)}
-      onSubmit={submitEdit}
-      onCancel={() => setEditing(null)}
-      isSubmitting={updateGrant.isPending}
-      submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
-    />
-  ) : undefined
-
-  return (
-    <>
-      <CreditGrantTable
-        showTitle
-        grants={grants.data ?? []}
-        {...subTab(grants, 'credit grants')}
-        onAdd={() => setAdding(true)}
-        onEdit={(grant) => setEditing(grant)}
-        onDelete={(grant) => setTarget(grant)}
-      />
-      <FormDialog
-        open={adding || editing !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setAdding(false)
-            setEditing(null)
-          }
-        }}
-        title={editing ? 'Edit credit grant' : 'Add credit grant'}
-      >
-        {form}
-      </FormDialog>
-      <ConfirmDialog
-        open={target !== null}
-        onOpenChange={(open) => {
-          if (!open) close()
-        }}
-        title="Remove this credit grant?"
-        description={`“${target?.name || 'This grant'}” will no longer be included in the add-on.`}
-        confirmLabel="Remove grant"
-        destructive
-        isPending={remove.isPending}
-        error={remove.isError ? 'Could not remove the grant. Try again.' : null}
-        onConfirm={() => {
-          if (target) remove.mutate(target.id, { onSuccess: () => setTarget(null) })
-        }}
-      />
-    </>
   )
 }
 
