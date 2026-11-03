@@ -649,7 +649,6 @@
         "RelatedCard",
         "ShellChangelog",
         "ShellNav",
-        "ShellStrip",
         "SubscriptionStatusPill",
         "SummaryCell",
         "UsageBillingView",
@@ -7469,9 +7468,7 @@
     "ShellStrip": {
       "file": "src/compositions/shell/ShellStrip.tsx",
       "layer": "composition",
-      "composes": [
-        "ArrowUpRightIcon"
-      ],
+      "composes": [],
       "usedBy": [],
       "story": "./src/compositions/shell/ShellStrip.stories.tsx"
     },
