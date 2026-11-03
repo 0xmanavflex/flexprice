@@ -24,6 +24,7 @@ import {
   ShellBreadcrumb,
   ShellCreateMenu,
   ShellDetailTrailProvider,
+  ShellStrip,
   type ShellCrumb,
   type ShellDetailCrumb,
   type ShellEnvironment,
@@ -37,6 +38,7 @@ import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenam
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { useMockAccounts } from '@/app/selfBilling/mockAccounts'
 import { useSession } from '@/app/session'
+import { env } from '@/env'
 import { useRevenueRecognitionEnabled } from '@fp/query'
 import { SUPPORT_CHAT_ACTION_ID, searchableDestinations, useGlobalSearch } from './useGlobalSearch'
 import { openSupportChat } from '@/app/supportChat/SupportChat'
@@ -220,6 +222,22 @@ export function ConsoleShell({
         onSettings={() => goTo('settings')}
         {...(onSignOut ? { onSignOut } : {})}
         {...(headerLeading ? { headerLeading } : {})}
+        /*
+         * While V1 still runs, every page offers the way back. The old console
+         * carries the mirror strip ("Take me to the new UI"). No old console
+         * configured, no strip: a link to nowhere is worse than none.
+         */
+        {...(env.legacyConsoleUrl
+          ? {
+              strip: (
+                <ShellStrip
+                  message="You are on the new Flexprice console."
+                  actionLabel="Go back to old UI"
+                  href={env.legacyConsoleUrl}
+                />
+              ),
+            }
+          : {})}
         /*
          * The environment leads the trail, and it is where you change it too: the
          * switcher moved out of the sidebar and became this first crumb. The one

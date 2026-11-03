@@ -66,6 +66,8 @@ export interface AppShellProps {
   headerLeading?: ReactNode
   /** One control that belongs to the page as a whole, not to its content. */
   headerActions?: ReactNode
+  /** A full-width strip under the header, such as `ShellStrip`. */
+  strip?: ReactNode
   children: ReactNode
 }
 
@@ -103,6 +105,7 @@ export function AppShell({
   breadcrumb,
   headerLeading,
   headerActions,
+  strip,
   children,
 }: AppShellProps) {
   // The pinned nav group already takes the free space above itself; a second
@@ -201,6 +204,7 @@ export function AppShell({
                 </div>
               </div>
             </header>
+            {strip}
             {children}
           </div>
         </SidebarInset>
