@@ -18,6 +18,27 @@ const day = (date: Date | null) =>
     ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date)
     : null
 
+const shortDay = (date: Date) =>
+  new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date)
+const longDay = (date: Date) =>
+  new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }).format(date)
+
+/**
+ * The line's service period: a compact label for the Interval column ("Oct 1 – Nov 1")
+ * and the full dates with years for its tooltip. Falls back to the read model's label.
+ */
+function linePeriod(
+  line: InvoiceDetail['lines'][number],
+): Pick<InvoiceLine, 'detail' | 'detailFull'> {
+  if (line.periodStart && line.periodEnd) {
+    return {
+      detail: `${shortDay(line.periodStart)} – ${shortDay(line.periodEnd)}`,
+      detailFull: `${longDay(line.periodStart)} – ${longDay(line.periodEnd)}`,
+    }
+  }
+  return line.detail ? { detail: line.detail } : {}
+}
+
 /** Display-only: the view formats these, and the API's own totals ride along unsummed. */
 const num = (value: string) => {
   const parsed = Number(value)
@@ -113,7 +134,7 @@ export function toInvoiceDocument(
     lines: invoice.lines.map((line): InvoiceLine => ({
       id: line.id,
       description: line.description,
-      ...(line.detail ? { detail: line.detail } : {}),
+      ...linePeriod(line),
       quantity: line.quantity,
       unitPrice: unitPrice(line.quantity, line.amount),
       amount: num(line.amount),

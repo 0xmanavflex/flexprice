@@ -6402,7 +6402,9 @@
         "ErrorState",
         "InvoiceStatusPill",
         "Money",
-        "Sheet"
+        "Sheet",
+        "TotalRow",
+        "TotalsList"
       ],
       "usedBy": [
         "CustomerPortalView"
@@ -8251,6 +8253,7 @@
         "CustomerAnalyticsView",
         "InvoiceDetailView",
         "InvoiceForm",
+        "PortalInvoiceSheet",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -8268,6 +8271,7 @@
         "CustomerAnalyticsView",
         "InvoiceDetailView",
         "InvoiceForm",
+        "PortalInvoiceSheet",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"

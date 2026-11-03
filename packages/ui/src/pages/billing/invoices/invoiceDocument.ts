@@ -7,6 +7,8 @@ export interface InvoiceLine {
   description: string
   /** The service period ("Oct 1 – Nov 1"), shown in the Interval column. */
   detail?: string
+  /** The full service period with years, shown in the Interval tooltip. */
+  detailFull?: string
   quantity: string
   /** Per-unit price for display; `null` when it cannot be stated (no quantity). */
   unitPrice?: number | null
@@ -192,6 +194,7 @@ export const DEMO_INVOICE: InvoiceDocument = {
       id: 'l1',
       description: 'Scale plan',
       detail: 'May 1 – May 31',
+      detailFull: 'May 1, 2026 – May 31, 2026',
       quantity: '1',
       unitPrice: 750,
       amount: 750,
@@ -201,6 +204,7 @@ export const DEMO_INVOICE: InvoiceDocument = {
       id: 'l2',
       description: 'API requests',
       detail: 'May 1 – May 31',
+      detailFull: 'May 1, 2026 – May 31, 2026',
       quantity: '1,204,000',
       unitPrice: 0.0001,
       amount: 120.4,

@@ -48,6 +48,7 @@ import {
   type SubTabQuery,
 } from '../../../compositions/detail/SubTabState'
 import { Spinner } from '@ui/components/primitives/spinner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { DetailTable } from '../../shared/DetailTable'
 import { Pill, Status } from '../../shared/cells'
 import {
@@ -779,7 +780,7 @@ function InvoiceDocumentArticle({
 
       {/* Five columns need room: on a narrow screen the lines scroll sideways
           rather than the amounts being clipped. */}
-      <div className="mx-8 overflow-x-auto border-t pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mx-8 [scrollbar-width:none] overflow-x-auto border-t pt-3 [&::-webkit-scrollbar]:hidden">
         <div role="table" aria-label="Line items" className="min-w-[40rem] text-sm">
           <div
             role="row"
@@ -812,8 +813,8 @@ function InvoiceDocumentArticle({
                   </span>
                 ) : null}
               </span>
-              <span role="cell" className="text-muted-foreground tabular-nums">
-                {line.detail || '—'}
+              <span role="cell" className="text-muted-foreground min-w-0 text-xs tabular-nums">
+                {line.detail ? <IntervalLabel short={line.detail} full={line.detailFull} /> : '—'}
               </span>
               <span role="cell" className="text-muted-foreground text-right tabular-nums">
                 {line.quantity || '—'}
@@ -866,6 +867,26 @@ function InvoiceDocumentArticle({
         </div>
       )}
     </article>
+  )
+}
+
+/**
+ * A line's service period: the compact label on one line, the full dates (with
+ * years) in a tooltip on hover or focus.
+ */
+function IntervalLabel({ short, full }: { short: string; full?: string | undefined }) {
+  if (!full || full === short) return <span className="block truncate">{short}</span>
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span tabIndex={0} />}
+        aria-label={`Service period ${full}`}
+        className="block cursor-default truncate"
+      >
+        {short}
+      </TooltipTrigger>
+      <TooltipContent side="top">{full}</TooltipContent>
+    </Tooltip>
   )
 }
 

@@ -705,7 +705,7 @@ function Breakdown({
             <Money value={value} {...(locale ? { locale } : {})} />
           )
           return (
-            <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="[scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/60 text-muted-foreground text-left text-[11px] tracking-wider uppercase">
@@ -779,8 +779,9 @@ function Breakdown({
                               {formatNumber(item.usage, locale)} {item.unit}
                             </td>
                             <td className="text-muted-foreground px-4 whitespace-nowrap tabular-nums">
+                              {/* A tiered or mixed price has no one rate: its average, said so. */}
                               {price
-                                ? `${formatUnitPrice(price.amount.amount, price.amount.currency, locale)} per ${price.per}`
+                                ? `${item.unitCostIsAverage ? 'avg. ' : ''}${formatUnitPrice(price.amount.amount, price.amount.currency, locale)} per ${price.per}`
                                 : '—'}
                             </td>
                             <td className="px-4 tabular-nums">{money(item.cost)}</td>
