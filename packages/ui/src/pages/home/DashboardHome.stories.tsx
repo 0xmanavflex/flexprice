@@ -4,7 +4,6 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { money } from '@fp/domain'
 import { DashboardHome } from './DashboardHome'
 import type {
-  CustomersPanel,
   DashboardHomeProps,
   EventsPanel,
   InvoicesPanel,
@@ -51,18 +50,6 @@ const events: EventsPanel = {
   revenueChangePercent: -2.1,
 }
 
-// 1 + 0 + 2 + 3 + 1 + 4 + 2 + 1 = 14, the Customers headline.
-const customers: CustomersPanel = {
-  status: 'ready',
-  newCount: 14,
-  partial: false,
-  points: ['22 Sep', ...DAYS].map((label, index) => ({
-    label,
-    customers: [1, 0, 2, 3, 1, 4, 2, 1][index]!,
-  })),
-  changePercent: 27.3,
-}
-
 // 11 + 10 + 9 + 8 = 38, the number above the bars.
 const subscriptions: SubscriptionsPanel = {
   status: 'ready',
@@ -101,7 +88,6 @@ const meta = {
     onGranularityChange: fn(),
     rangeLabel: 'last 7 days',
     events,
-    customers,
     subscriptions,
     invoices,
     onNavigate: fn(),
@@ -113,7 +99,6 @@ const meta = {
     rangeOptions: { control: false },
     granularityOptions: { control: false },
     events: { control: 'object' },
-    customers: { control: 'object' },
     subscriptions: { control: 'object' },
     invoices: { control: 'object' },
     onRangeChange: { control: false },
@@ -141,15 +126,12 @@ interface PlaygroundArgs {
   range: string
   granularity: string
   eventsStatus: PanelStatus
-  customersStatus: PanelStatus
   subscriptionsStatus: PanelStatus
   invoicesStatus: PanelStatus
   dayCount: number
   eventsPerDay: number
   revenue: string
   currency: string
-  newCustomersPerDay: number
-  partialCustomers: boolean
   showChange: boolean
   plansShown: number
   contractsPerDay: number
@@ -164,7 +146,7 @@ interface PlaygroundArgs {
 /** Builds all four panels from the playground args; non-ready panels carry no data, as in the real page. */
 function makePanels(
   args: PlaygroundArgs,
-): Pick<DashboardHomeProps, 'events' | 'customers' | 'subscriptions' | 'invoices'> {
+): Pick<DashboardHomeProps, 'events' | 'subscriptions' | 'invoices'> {
   const labels = Array.from({ length: args.dayCount }, (_, index) => `Day ${index + 1}`)
   const plans = PLAN_POOL.slice(0, args.plansShown)
   const eventsReady = args.eventsStatus === 'ready'
@@ -195,13 +177,6 @@ function makePanels(
   const subscriptionTotal = planCounts.reduce((sum, plan) => sum + plan.count, 0)
 
   const invoiceReady = args.invoicesStatus === 'ready'
-  const customersReady = args.customersStatus === 'ready'
-  const customerPoints = customersReady
-    ? labels.map((label, index) => ({
-        label,
-        customers: Math.round(args.newCustomersPerDay * (0.5 + ((index * 3) % 4) * 0.25)),
-      }))
-    : []
 
   return {
     events: {
@@ -211,15 +186,6 @@ function makePanels(
       revenue: eventsReady ? money(revenueAmount, args.currency) : null,
       totalChangePercent: eventsReady && args.showChange ? 8.4 : null,
       revenueChangePercent: eventsReady && args.showChange ? -2.1 : null,
-    },
-    customers: {
-      status: args.customersStatus,
-      newCount: customersReady
-        ? customerPoints.reduce((sum, point) => sum + point.customers, 0)
-        : null,
-      partial: customersReady && args.partialCustomers,
-      points: customerPoints,
-      changePercent: customersReady && args.showChange && !args.partialCustomers ? 27.3 : null,
     },
     subscriptions: {
       status: args.subscriptionsStatus,
@@ -276,15 +242,12 @@ export const Playground = {
     range: '7d',
     granularity: 'daily',
     eventsStatus: 'ready',
-    customersStatus: 'ready',
     subscriptionsStatus: 'ready',
     invoicesStatus: 'ready',
     dayCount: 7,
     eventsPerDay: 750_000,
     revenue: '184210.00',
     currency: 'USD',
-    newCustomersPerDay: 2,
-    partialCustomers: false,
     showChange: true,
     plansShown: 4,
     contractsPerDay: 2,
@@ -302,15 +265,12 @@ export const Playground = {
       options: GRANULARITY_OPTIONS.map((option) => option.id),
     },
     eventsStatus: { control: 'select', options: PANEL_STATUSES },
-    customersStatus: { control: 'select', options: PANEL_STATUSES },
     subscriptionsStatus: { control: 'select', options: PANEL_STATUSES },
     invoicesStatus: { control: 'select', options: PANEL_STATUSES },
     dayCount: { control: { type: 'range', min: 0, max: 30, step: 1 } },
     eventsPerDay: { control: { type: 'number', min: 0, max: 5_000_000, step: 50_000 } },
     revenue: { control: 'text', description: 'Plain decimal string; invalid reads as 0.' },
     currency: { control: 'select', options: ['USD', 'EUR', 'GBP', 'INR'] },
-    newCustomersPerDay: { control: { type: 'range', min: 0, max: 20, step: 1 } },
-    partialCustomers: { control: 'boolean', description: 'Shows the count as a floor, with a +.' },
     showChange: {
       control: 'boolean',
       description: 'Shows each tab’s change against the prior window.',
@@ -330,15 +290,12 @@ export const Playground = {
         'range',
         'granularity',
         'eventsStatus',
-        'customersStatus',
         'subscriptionsStatus',
         'invoicesStatus',
         'dayCount',
         'eventsPerDay',
         'revenue',
         'currency',
-        'newCustomersPerDay',
-        'partialCustomers',
         'showChange',
         'plansShown',
         'contractsPerDay',
@@ -372,7 +329,6 @@ export const Populated: Story = {
     const tabs = canvas.getAllByRole('tab')
     await expect(tabs.map((tab) => tab.textContent)).toEqual([
       expect.stringContaining('Revenue'),
-      expect.stringContaining('Customers'),
       expect.stringContaining('Usage ingestion'),
     ])
     await expect(canvas.getByRole('tab', { name: /Revenue/ })).toHaveAttribute(
@@ -384,7 +340,6 @@ export const Populated: Story = {
 
     // Each tab reads the totals it was given, compactly.
     await expect(canvas.getByText('5.1M')).toBeInTheDocument()
-    await expect(canvas.getByText('14')).toBeInTheDocument()
 
     // The invoice gauge's centre total equals the sum of its three buckets.
     await expect(canvas.getByText('56')).toBeInTheDocument()
@@ -406,19 +361,6 @@ export const SwitchesMetric: Story = {
       'aria-selected',
       'true',
     )
-    await userEvent.click(canvas.getByRole('tab', { name: /Customers/ }))
-    await expect(canvas.getByRole('tab', { name: /Customers/ })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
-  },
-}
-
-/** A first page that is entirely inside the window is a floor, and says so. */
-export const PartialCustomerCount: Story = {
-  args: { customers: { ...customers, newCount: 100, partial: true } },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('100+')).toBeInTheDocument()
   },
 }
 
@@ -457,7 +399,6 @@ export const FirstRun: Story = {
     range: '30d',
     rangeLabel: 'last 30 days',
     events: { status: 'empty', points: [], total: null, revenue: null },
-    customers: { status: 'empty', newCount: 0, partial: false, points: [] },
     subscriptions: { status: 'empty', total: 0, changePercent: null, days: [], plans: [] },
     invoices: { status: 'empty', total: 0, paid: 0, open: 0, overdue: 0 },
   },
@@ -488,7 +429,6 @@ export const FirstRun: Story = {
 export const PeriodEmpty: Story = {
   args: {
     events: { status: 'empty', points: [], total: null, revenue: null },
-    customers: { status: 'empty', newCount: 0, partial: false, points: [] },
     subscriptions: { status: 'empty', total: 0, changePercent: null, days: [], plans: [] },
     invoices: { status: 'empty', total: 0, paid: 0, open: 0, overdue: 0 },
   },
@@ -503,13 +443,41 @@ export const PeriodEmpty: Story = {
 }
 
 /**
+ * Invoices were billed but no usage events arrived: fixed fees only. Revenue
+ * comes from invoices, so the Revenue tab stays and the first-run invitation
+ * does not cover it.
+ */
+export const BilledWithoutUsage: Story = {
+  args: {
+    events: { status: 'empty', points: [], total: null, revenue: null },
+    revenue: {
+      status: 'ready',
+      total: money('200.00', 'USD'),
+      fixed: money('200.00', 'USD'),
+      usage: null,
+      points: [],
+      topCustomers: [],
+      otherCurrencies: [],
+    },
+    subscriptions: { status: 'empty', total: 0, changePercent: null, days: [], plans: [] },
+    invoices: { status: 'empty', total: 0, paid: 0, open: 0, overdue: 0 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText('No events received yet')).toBeNull()
+    await expect(canvas.queryByText('No usage in this period')).toBeNull()
+    await expect(canvas.getByRole('tab', { name: /Revenue/ })).toBeInTheDocument()
+    await expect(canvas.getAllByText('$200.00').length).toBeGreaterThan(0)
+  },
+}
+
+/**
  * Every query is in flight. Bars where the numbers go, a skeleton where the
  * chart goes, no first-run invitation and no zeroes.
  */
 export const Loading: Story = {
   args: {
     events: { status: 'loading', points: [], total: null, revenue: null },
-    customers: { status: 'loading', newCount: null, partial: false, points: [] },
     subscriptions: { status: 'loading', total: 0, changePercent: null, days: [], plans: [] },
     invoices: { status: 'loading', total: 0, paid: 0, open: 0, overdue: 0 },
   },
@@ -528,7 +496,7 @@ export const Loading: Story = {
 
 /**
  * Part of the page failed. The events tabs say so with a retry while the
- * customer count and the invoice ring, which loaded, stay on screen.
+ * invoice ring, which loaded, stays on screen.
  */
 export const PartialFailure: Story = {
   args: {
@@ -538,7 +506,6 @@ export const PartialFailure: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Revenue couldn’t be loaded.')).toBeInTheDocument()
-    await expect(canvas.getByText('14')).toBeInTheDocument()
     await expect(canvas.getByText('56')).toBeInTheDocument()
     // A sampling note is not drawn under the panel.
     await expect(canvas.queryByText('Based on the latest 100 invoices.')).toBeNull()
@@ -564,13 +531,6 @@ export const StaleKeepsData: Story = {
 export const Unavailable: Story = {
   args: {
     events: { status: 'unavailable', points: [], total: null, revenue: null, onRetry: fn() },
-    customers: {
-      status: 'unavailable',
-      newCount: null,
-      partial: false,
-      points: [],
-      onRetry: fn(),
-    },
     subscriptions: {
       status: 'unavailable',
       total: 0,

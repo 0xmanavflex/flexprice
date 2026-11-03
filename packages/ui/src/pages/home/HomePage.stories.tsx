@@ -26,7 +26,6 @@ interface HomePageProps {
   dayCount: number
   eventsPerDay: number
   plansShown: number
-  newCustomersPerDay: number
   paid: number
   open: number
   overdue: number
@@ -35,7 +34,7 @@ interface HomePageProps {
 /** Builds the four panels. Panels that are not ready carry no data, as on the real page. */
 function makePanels(
   args: HomePageProps,
-): Pick<DashboardHomeProps, 'events' | 'customers' | 'subscriptions' | 'invoices'> {
+): Pick<DashboardHomeProps, 'events' | 'subscriptions' | 'invoices'> {
   const ready = args.status === 'ready'
   const labels = Array.from({ length: args.dayCount }, (_, index) => `Day ${index + 1}`)
   const plans = PLAN_POOL.slice(0, args.plansShown)
@@ -61,25 +60,12 @@ function makePanels(
   }))
   const subscriptionTotal = planCounts.reduce((sum, plan) => sum + plan.count, 0)
 
-  const customerPoints = ready
-    ? labels.map((label, index) => ({
-        label,
-        customers: Math.round(args.newCustomersPerDay * (0.6 + ((index * 3) % 5) * 0.2)),
-      }))
-    : []
-
   return {
     events: {
       status: args.status,
       points,
       total: ready ? points.reduce((sum, point) => sum + point.events, 0) : null,
       revenue: ready ? money('184210.00', 'USD') : null,
-    },
-    customers: {
-      status: args.status,
-      newCount: ready ? customerPoints.reduce((sum, point) => sum + point.customers, 0) : null,
-      partial: false,
-      points: customerPoints,
     },
     subscriptions: {
       status: args.status,
@@ -138,7 +124,6 @@ const meta = {
     dayCount: 7,
     eventsPerDay: 750_000,
     plansShown: 4,
-    newCustomersPerDay: 12,
     paid: 34,
     open: 15,
     overdue: 7,
@@ -153,7 +138,6 @@ const meta = {
     dayCount: { control: { type: 'range', min: 0, max: 30, step: 1 } },
     eventsPerDay: { control: { type: 'number', min: 0, max: 5_000_000, step: 50_000 } },
     plansShown: { control: { type: 'range', min: 0, max: PLAN_POOL.length, step: 1 } },
-    newCustomersPerDay: { control: { type: 'number', min: 0, max: 500, step: 1 } },
     paid: { control: { type: 'number', min: 0, max: 500, step: 1 } },
     open: { control: { type: 'number', min: 0, max: 500, step: 1 } },
     overdue: { control: { type: 'number', min: 0, max: 500, step: 1 } },

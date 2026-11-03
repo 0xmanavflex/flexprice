@@ -27,7 +27,7 @@ export const HOME_CUSTOM_RANGE = 'custom'
 
 const RANGES = new Set(['7d', '14d', '30d', '90d', '180d', '365d', HOME_CUSTOM_RANGE])
 const GRAINS = new Set(['hourly', 'daily', 'weekly'])
-const METRICS = new Set(['revenue', 'customers', 'events'])
+const METRICS = new Set(['revenue', 'events'])
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 
 export function parseHomeSearch(search: Record<string, unknown>): HomeSearch {

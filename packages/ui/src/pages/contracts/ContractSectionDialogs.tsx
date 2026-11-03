@@ -9,6 +9,7 @@ import {
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreateTaxAssociation,
+  type CreateTaxRate,
   attachableAddonCharges,
 } from '@fp/domain'
 import { Composer } from '@ui/compositions/detail/DetailKit'
@@ -59,6 +60,7 @@ export interface ContractSectionActions {
   onAddAddon?: ((draft: AddContractAddon) => Promise<unknown> | void) | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
+  onCreateTaxRate?: ((draft: CreateTaxRate) => Promise<TaxRateOption>) | undefined
 }
 
 export function ContractSectionDialogs({
@@ -153,6 +155,7 @@ export function ContractSectionDialogs({
         error={error}
         onClose={onClose}
         onSubmit={(draft) => onRun(actions.onAddTax?.(draft))}
+        {...(actions.onCreateTaxRate ? { onCreateTaxRate: actions.onCreateTaxRate } : {})}
       />
     </>
   )

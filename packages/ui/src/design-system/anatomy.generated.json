@@ -649,6 +649,7 @@
         "RelatedCard",
         "ShellChangelog",
         "ShellNav",
+        "ShellStrip",
         "SubscriptionStatusPill",
         "SummaryCell",
         "UsageBillingView",
@@ -7465,6 +7466,15 @@
       ],
       "story": "./src/compositions/shell/ShellSearch.stories.tsx"
     },
+    "ShellStrip": {
+      "file": "src/compositions/shell/ShellStrip.tsx",
+      "layer": "composition",
+      "composes": [
+        "ArrowUpRightIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/shell/ShellStrip.stories.tsx"
+    },
     "Shield": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -9444,6 +9454,13 @@
       "uses": [
         "ShellSearch",
         "UsersIcon"
+      ]
+    },
+    "./src/compositions/shell/ShellStrip.stories.tsx": {
+      "title": "Building blocks/Shell/ShellStrip",
+      "component": "ShellStrip",
+      "uses": [
+        "ShellStrip"
       ]
     },
     "./src/compositions/shell/ThemeProvider.stories.tsx": {

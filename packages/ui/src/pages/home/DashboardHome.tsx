@@ -53,7 +53,7 @@ import type { SegmentMeterRow } from '../shared/SegmentMeter'
  * rather than as whatever the network happened to do.
  *
  * Every mark on it now comes from the shared chart library rather than from a
- * ReUI block adapted in place: `MetricChart` for the revenue, customer and
+ * ReUI block adapted in place: `MetricChart` for the revenue and
  * usage-ingestion strip and the series it switches between, `PillColumns` for the per-day subscription stack,
  * `HalfDonut` for the invoice gauge, `SegmentMeter` for the per-feature usage
  * rows, `ArcGauge` for key health, and `BlurredEmpty` for the first run. The
@@ -85,7 +85,7 @@ export const DashboardHomeProvenance = provenance({
     'compositions/feedback/RetryAction',
     'compositions/feedback/Skeletons',
   ],
-  note: 'Billing overview: revenue, customers and usage ingestion, contracts and invoice payment status (metered usage and API keys parked), drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
+  note: 'Billing overview: revenue and usage ingestion, contracts and invoice payment status (metered usage and API keys parked), drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
 })
 
 /* ---- What the page is told ---------------------------------------------- */
@@ -218,28 +218,6 @@ export interface InvoicesPanel extends PanelMeta {
   overdue: number
 }
 
-/**
- * New customers across the window, for the Customers tab.
- *
- * Counted by the page from the customers' own creation dates, so the headline
- * and the series are the same measurement and always agree.
- */
-export interface CustomersPanel extends PanelMeta {
-  status: PanelStatus
-  /** Customers created inside the window. `null` when it could not be counted. */
-  newCount: number | null
-  /**
-   * `true` when the page could only see the newest customers and every one of
-   * them fell inside the window: so `newCount` is a floor, not a total, and is
-   * shown with a `+` rather than as an exact figure.
-   */
-  partial: boolean
-  /** New customers per bucket, oldest first. */
-  points: { label: string; customers: number }[]
-  /** Change in `newCount` against the window before this one. Omitted or `null` when that window was not fully read. */
-  changePercent?: number | null | undefined
-}
-
 export interface UsageRow {
   featureId: string
   name: string
@@ -307,7 +285,6 @@ export interface DashboardHomeProps {
    * tab falls back to the usage subtotal on `events`.
    */
   revenue?: RevenuePanel | undefined
-  customers: CustomersPanel
   subscriptions: SubscriptionsPanel
   invoices: InvoicesPanel
   /**
@@ -503,7 +480,6 @@ function ChartFilters(props: {
 /* ---- 2. Key metrics ---------------------------------------------------- */
 
 const METRIC_REVENUE = 'revenue'
-const METRIC_CUSTOMERS = 'customers'
 const METRIC_EVENTS = 'events'
 
 /**
@@ -559,7 +535,6 @@ interface Exit {
 function MetricsSection({
   events,
   revenue,
-  customers,
   filters,
   onQuickstart,
   widen,
@@ -568,7 +543,6 @@ function MetricsSection({
 }: {
   events: EventsPanel
   revenue?: RevenuePanel | undefined
-  customers: CustomersPanel
   /** The chart's granularity and range, drawn above it. */
   filters: ReactNode
   onQuickstart: () => void
@@ -584,20 +558,22 @@ function MetricsSection({
   const setMetric = (id: string) => (onMetricChange ? onMetricChange(id) : setLocalMetric(id))
 
   const eventsReady = events.status === 'ready'
-  const customersReady = customers.status === 'ready'
-  // The first-run invitation is for an account whose sources *both* answered
-  // "nothing". A source that is still loading or failed is not empty, and
-  // saying "no events yet" over it would be a claim nobody has checked.
-  const nothingYet = events.status === 'empty' && customers.status === 'empty'
+  // A source that is still loading or failed is not empty, and saying "no
+  // events yet" over it would be a claim nobody has checked.
+  //
+  // Billed revenue comes from invoices, not events: a tenant that bills fixed
+  // fees with no usage this window still has a Revenue tab worth showing, so
+  // only a revenue panel that is itself absent or empty lets the invitation in.
+  const nothingYet =
+    events.status === 'empty' && (revenue === undefined || revenue.status === 'empty')
   const revenueKnown = eventsReady && events.revenue !== null
 
   /**
    * The tab strip is the stat strip, in the order the overview is read:
-   * Revenue, Customers, then Usage ingestion.
+   * Revenue, then Usage ingestion.
    *
    * Each tab carries its own status, because they come from different
-   * requests: Revenue and Usage ingestion from events, Customers from the
-   * customer list. A tab whose source is loading shows a placeholder bar and a
+   * requests. A tab whose source is loading shows a placeholder bar and a
    * skeleton, one that failed says so with a retry, and neither ever shows a
    * dash or a zero. The dash is kept for a figure that is genuinely empty.
    *
@@ -650,21 +626,6 @@ function MetricsSection({
       emptyMessage: 'No revenue to plot for this period.',
     },
     {
-      id: METRIC_CUSTOMERS,
-      label: 'Customers',
-      status: tabStatus(customers.status),
-      onRetry: customers.onRetry,
-      value:
-        customersReady && customers.newCount !== null
-          ? `${whole.format(customers.newCount)}${customers.partial ? '+' : ''}`
-          : NOTHING,
-      ...changeOf(customersReady ? customers.changePercent : null),
-      points: customersReady
-        ? customers.points.map((point) => ({ label: point.label, value: point.customers }))
-        : [],
-      emptyMessage: 'Active customers in this period. This figure has no daily series.',
-    },
-    {
       id: METRIC_EVENTS,
       label: 'Usage ingestion',
       status: tabStatus(events.status),
@@ -682,7 +643,7 @@ function MetricsSection({
     tab.id === METRIC_REVENUE ? { ...tab, points: PLACEHOLDER_SHAPE } : tab,
   )
 
-  const fresh = revenue ? freshnessOf(events, customers, revenue) : freshnessOf(events, customers)
+  const fresh = revenue ? freshnessOf(events, revenue) : freshnessOf(events)
 
   // Period-empty ("this window has nothing; earlier data is unchanged") is a
   // different message from first-run ("nothing has ever arrived"). A narrower
@@ -1212,7 +1173,6 @@ export function DashboardHome({
   rangeLabel,
   events,
   revenue,
-  customers,
   subscriptions,
   invoices,
   onNavigate,
@@ -1234,7 +1194,6 @@ export function DashboardHome({
       <MetricsSection
         events={events}
         {...(revenue ? { revenue } : {})}
-        customers={customers}
         {...(metric ? { metric } : {})}
         {...(onMetricChange ? { onMetricChange } : {})}
         filters={

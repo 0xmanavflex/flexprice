@@ -495,7 +495,7 @@ export function SimpleTable<T>({
     getRowId ? getRowId(row) : String((row as { id?: string }).id ?? index)
   return (
     <div>
-      <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="[scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden">
         <table className="w-full text-sm" onMouseOver={revealTruncated}>
           <thead>
             <tr className="bg-muted/60">
@@ -673,7 +673,14 @@ export function Composer({
       <div className="flex items-center justify-end gap-2 border-t pt-5">
         {secondary ? <div className="mr-auto">{secondary}</div> : null}
         {onCancel ? (
-          <Button type="button" variant="ghost" className="h-8" onClick={onCancel}>
+          // Off while submitting: cancelling would not stop the request in flight.
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-8"
+            disabled={submitting}
+            onClick={onCancel}
+          >
             Cancel
           </Button>
         ) : null}
