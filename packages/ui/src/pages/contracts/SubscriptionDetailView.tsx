@@ -246,7 +246,7 @@ export interface SubscriptionDetailViewProps {
    */
   onAddEntitlement?: ((draft: CreateEntitlement) => Promise<unknown> | void) | undefined
   onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
-  onAddAddon?: ((draft: AddContractAddon) => Promise<unknown> | void) | undefined
+  onAddAddon?: ((drafts: AddContractAddon[]) => Promise<unknown> | void) | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   /**
    * Save the thresholds of an alert already watching one charge.
@@ -802,6 +802,7 @@ export function SubscriptionDetailView({
       id: 'customer',
       label: 'Customer',
       value: s.customerName,
+      copyValue: s.customerId,
       ...(onOpenCustomer ? { onOpen: onOpenCustomer } : {}),
     },
     {
@@ -816,6 +817,7 @@ export function SubscriptionDetailView({
             id: 'latest-invoice',
             label: 'Latest invoice',
             value: s.latestInvoice.number || '—',
+            copyValue: s.latestInvoice.id,
             onOpen: () => onOpenInvoice(s.latestInvoice!.id),
           },
         ]

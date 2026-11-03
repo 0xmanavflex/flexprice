@@ -36,7 +36,6 @@ const meta = {
       control: 'boolean',
       description: 'The server lookup failed: says so instead of "No results".',
     },
-    onRetry: { control: false },
     placeholder: { control: 'text' },
     onSelect: { control: false },
     onTermChange: { control: false },
@@ -190,25 +189,24 @@ export const AnnouncesResultCount: Story = {
   },
 }
 
-/** A failed lookup is not "No results": it says search is unavailable and offers a retry. */
+/** A failed lookup is not "No results": it says search is unavailable. */
 export const SearchUnavailable: Story = {
-  args: { items: [], results: [], hasError: true, onRetry: fn() },
-  play: async ({ canvasElement, args }) => {
+  args: { items: [], results: [], hasError: true },
+  play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.type(dialog.getByRole('combobox', { name: 'Search' }), 'acme')
     await waitFor(() =>
-      expect(dialog.getAllByText('Search is unavailable. Try again.').length).toBeGreaterThan(0),
+      expect(dialog.getAllByText('Search is unavailable.').length).toBeGreaterThan(0),
     )
     await expect(dialog.queryByText(/No results/)).not.toBeInTheDocument()
-    await userEvent.click(dialog.getByRole('button', { name: 'Retry' }))
-    await expect(args.onRetry).toHaveBeenCalledOnce()
+    await expect(dialog.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
   },
 }
 
 /** Pages still match locally when the record lookup fails; the gap is named rather than hidden. */
 export const PartialFailure: Story = {
-  args: { results: [], hasError: true, onRetry: fn() },
+  args: { results: [], hasError: true },
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
     const dialog = within(await screen.findByRole('dialog'))

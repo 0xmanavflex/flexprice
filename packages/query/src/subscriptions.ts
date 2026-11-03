@@ -2335,16 +2335,48 @@ export function toRemoveCouponRequest(
   }
 }
 
-/** Attach an add-on to this contract: `POST /subscriptions/addon`. */
+/**
+ * Several add-ons attached as one change, as V1's add-on dialog sends them:
+ * `POST /subscriptions/{id}/modify/execute`, type `addon`, so the set settles
+ * as one netted change rather than one proration per add-on.
+ */
+export function toAddAddonsRequest(
+  subscriptionId: string,
+  drafts: readonly AddContractAddon[],
+): FlexpriceModels.ExecuteSubscriptionModifyRequest {
+  return {
+    type: 'addon',
+    addonBulkParams: {
+      adds: drafts.map((draft) => {
+        const { subscriptionId: _, ...add } = toAddAddonRequest(subscriptionId, draft)
+        return add
+      }),
+    },
+  }
+}
+
+/**
+ * Attach add-ons to this contract. One goes to `POST /subscriptions/addon`;
+ * more go together as one `addon` modification.
+ */
 export function useAddSubscriptionAddon(subscriptionId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (draft: AddContractAddon) =>
-      call(() =>
-        client.subscriptions.addSubscriptionAddon(toAddAddonRequest(subscriptionId, draft)),
-      ),
+    mutationFn: (drafts: readonly AddContractAddon[]) =>
+      drafts.length === 1
+        ? call(() =>
+            client.subscriptions.addSubscriptionAddon(
+              toAddAddonRequest(subscriptionId, drafts[0]!),
+            ),
+          )
+        : call(() =>
+            client.subscriptions.executeSubscriptionModify(
+              subscriptionId,
+              toAddAddonsRequest(subscriptionId, drafts),
+            ),
+          ),
     onSuccess: () => invalidateContract(queryClient),
   })
 }

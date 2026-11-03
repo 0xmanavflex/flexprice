@@ -249,7 +249,7 @@ export const Playground: Story = {}
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { level: 1, name: 'Invoice' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { level: 1, name: 'INV-20418' })).toBeVisible()
     // The chips sit in the header, not beside the name and not in a subtitle.
     const header = within(canvas.getByRole('banner'))
     await expect(header.getByText('Finalized')).toBeVisible()

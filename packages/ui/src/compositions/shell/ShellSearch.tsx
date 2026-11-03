@@ -115,8 +115,6 @@ export interface ShellSearchProps {
    * results", because an empty list and a broken lookup are different news.
    */
   hasError?: boolean
-  /** Re-runs the failed lookup. Offered next to the error when given. */
-  onRetry?: () => void
   /** Reports the typed term (empty when the dialog closes) so the app can query. */
   onTermChange?: (term: string) => void
   onSelect?: (item: ShellSearchItem) => void
@@ -194,7 +192,6 @@ export function ShellSearch({
   results = [],
   isSearching = false,
   hasError = false,
-  onRetry,
   onTermChange,
   onSelect,
   placeholder = 'Search everything',
@@ -266,7 +263,7 @@ export function ShellSearch({
     : isSearching
       ? 'Searching'
       : hasError && visible.length === 0
-        ? 'Search is unavailable. Try again.'
+        ? 'Search is unavailable.'
         : `${visible.length} ${visible.length === 1 ? 'result' : 'results'}${
             hasError ? '. Some results could not be loaded.' : ''
           }`
@@ -376,7 +373,7 @@ export function ShellSearch({
                 ref={listRef}
                 className="max-h-[min(32rem,calc(100dvh-16rem))] overflow-y-auto p-2"
               >
-                {/* The listbox holds options only; messages and Retry sit outside it. */}
+                {/* The listbox holds options only; status messages sit outside it. */}
                 <div
                   {...(visible.length > 0
                     ? { id: 'shell-search-list', role: 'listbox', 'aria-label': 'Results' }
@@ -388,8 +385,8 @@ export function ShellSearch({
                         Searching…
                       </p>
                     ) : hasError ? (
-                      <p className="text-muted-foreground px-3 pt-14 pb-3 text-center text-sm">
-                        Search is unavailable. Try again.
+                      <p className="text-muted-foreground px-3 py-16 text-center text-sm">
+                        Search is unavailable.
                       </p>
                     ) : (
                       <p className="text-muted-foreground px-3 py-16 text-center text-sm">
@@ -447,24 +444,12 @@ export function ShellSearch({
                     ))
                   )}
                 </div>
-                {hasError && !isSearching && visible.length === 0 && onRetry ? (
-                  <div className="flex justify-center pb-14">
-                    <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-                      Retry
-                    </Button>
-                  </div>
-                ) : null}
                 {isSearching && visible.length > 0 ? (
                   <p className="text-muted-foreground px-3 py-2 text-xs">Searching…</p>
                 ) : null}
                 {hasError && !isSearching && visible.length > 0 ? (
-                  <p className="text-muted-foreground flex items-center gap-2 px-3 py-2 text-xs">
+                  <p className="text-muted-foreground px-3 py-2 text-xs">
                     Some results could not be loaded.
-                    {onRetry ? (
-                      <Button type="button" variant="link" size="xs" onClick={onRetry}>
-                        Retry
-                      </Button>
-                    ) : null}
                   </p>
                 ) : null}
               </div>

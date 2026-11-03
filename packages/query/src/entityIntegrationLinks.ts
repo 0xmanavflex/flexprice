@@ -1,8 +1,8 @@
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { call, type Flexprice } from '@fp/api'
+import { ApiError, ErrorKind, call, pushToIntegrations, type Flexprice } from '@fp/api'
 import { toIntegrationLinks } from './customers'
 import { useConnections } from './integrations'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /** Entity types documented by the SDK mappings endpoint; never reuse customer mappings. */
 export type MappedEntityType = 'invoice' | 'plan' | 'payment'
@@ -67,6 +67,8 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
   const mappings = useEntityIntegrationLinks(type, id)
   const providers = useConnections()
   const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
   const cache = useQueryClient()
   const refresh = () => cache.invalidateQueries({ queryKey: entityIntegrationKey(type, id) })
   const link = useMutation({
@@ -83,8 +85,27 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
       ),
     onSuccess: refresh,
   })
+  // V1's "Push to Integration": the API writes the entity to every connection
+  // that syncs this type outbound, creating the provider record when unmapped.
+  const push = useMutation({
+    mutationFn: async () => {
+      const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+      if (!token) throw new ApiError(ErrorKind.Unauthorized, `Sign in to push this ${type}.`)
+      if (!environmentId) throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
+      await pushToIntegrations(serverURL, token, environmentId, { entityType: type, entityId: id })
+    },
+    onSuccess: refresh,
+  })
+  // The providers a push reaches: connected, with this entity's outbound sync on.
+  const pushProviders = (providers.data ?? [])
+    .filter((provider) =>
+      provider.connections.some((connection) => connection.syncConfig[type]?.outbound),
+    )
+    .map((provider) => provider.name)
   return {
     ...mappings,
+    push,
+    pushProviders,
     controls: mappings.isSuccess
       ? {
           links: mappings.data,

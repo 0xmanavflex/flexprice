@@ -628,6 +628,23 @@ export const TopsUpWithOptions: Story = {
   },
 }
 
+/** With a checkout provider connected, a purchased top-up can be paid by checkout link. */
+export const TopsUpByCheckoutLink: Story = {
+  args: { onTopUp: fn(async () => undefined), checkoutProvider: 'Razorpay' },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/^credits/i), '100')
+    await userEvent.click(dialog.getByRole('radio', { name: /checkout link/i }))
+    await userEvent.click(dialog.getByRole('button', { name: /^create checkout link$/i }))
+    await waitFor(() =>
+      expect(args.onTopUp).toHaveBeenCalledWith(
+        expect.objectContaining({ credits: '100', checkout: true, invoice: false }),
+      ),
+    )
+  },
+}
+
 /** A priority must be a whole number. */
 export const RejectsAFractionalPriority: Story = {
   play: async ({ canvasElement }) => {

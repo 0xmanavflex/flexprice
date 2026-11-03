@@ -231,6 +231,7 @@ export function InvoiceDetailView({
       id: 'customer',
       label: 'Customer',
       value: invoice.billTo.name,
+      copyValue: invoice.customerId,
       ...(onOpenCustomer ? { onOpen: onOpenCustomer } : {}),
     },
     ...(billingEntity
@@ -247,6 +248,7 @@ export function InvoiceDetailView({
       id: 'subscription',
       label: 'Contract',
       value: invoice.subscriptionLabel,
+      ...(invoice.subscriptionId ? { copyValue: invoice.subscriptionId } : {}),
       ...(onOpenSubscription && invoice.subscriptionId ? { onOpen: onOpenSubscription } : {}),
     },
     // The page the customer sees: a payment page while money is owed, a receipt once paid.
@@ -269,7 +271,7 @@ export function InvoiceDetailView({
         { label: 'Invoice details' },
       ]}
       icon={<ReceiptIcon />}
-      title="Invoice"
+      title={invoice.number || 'Invoice'}
       id={invoice.id}
       leading={
         integrationControls ? (

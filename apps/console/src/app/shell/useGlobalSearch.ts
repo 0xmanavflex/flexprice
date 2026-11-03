@@ -125,14 +125,11 @@ export function useGlobalSearch(rawTerm: string) {
     ? [customers, plans, features, invoices].filter((query) => query.isError)
     : []
   const hasError = failed.length > 0
-  const retry = () => {
-    for (const query of failed) void query.refetch()
-  }
 
   const isSearching =
     rawTerm.trim() !== term ||
     (enabled &&
       (customers.isFetching || plans.isFetching || features.isFetching || invoices.isFetching))
 
-  return { results, paths, isSearching, hasError, retry }
+  return { results, paths, isSearching, hasError }
 }

@@ -23,6 +23,7 @@ import { toCreditGrantRequest } from './creditGrants'
 import { toEntitlementRequest } from './entitlements'
 import {
   toAddAddonRequest,
+  toAddAddonsRequest,
   toAddCouponRequest,
   toRemoveCouponRequest,
   toCancelSubscriptionRequest,
@@ -663,6 +664,18 @@ describe('contract-scoped creators', () => {
     expect(toCreditGrantRequest(grant, CreditGrantScope.Addon, 'addon_1')).toMatchObject({
       addonId: 'addon_1',
     })
+  })
+
+  it('sends several add-ons as one addon modification', () => {
+    const request = toAddAddonsRequest('sub_1', [
+      { addonId: 'addon_1' },
+      { addonId: 'addon_2', startDate: '2030-01-01' },
+    ])
+    expect(request.type).toBe('addon')
+    expect(request.addonBulkParams?.adds).toHaveLength(2)
+    expect(request.addonBulkParams?.adds?.[0]).toEqual({ addonId: 'addon_1' })
+    expect(request.addonBulkParams?.adds?.[1]).toMatchObject({ addonId: 'addon_2' })
+    expect(request.addonBulkParams?.adds?.[1]).not.toHaveProperty('subscriptionId')
   })
 
   it('builds an add-on request the SDK accepts', () => {

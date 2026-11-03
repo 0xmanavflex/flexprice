@@ -147,7 +147,25 @@ export function InvoiceDetailPage({
     <>
       <InvoiceDetailView
         integrationLinks={mappings.data}
-        integrationControls={mappings.controls}
+        integrationControls={
+          mappings.controls && mappings.pushProviders.length > 0
+            ? {
+                ...mappings.controls,
+                pushProviders: mappings.pushProviders,
+                onPush: () =>
+                  mappings.push.mutate(undefined, {
+                    onSuccess: () =>
+                      toast.success(`Pushing invoice to ${mappings.pushProviders.join(', ')}`, {
+                        description: 'The provider record is created or updated in the background.',
+                      }),
+                    onError: (cause) =>
+                      toast.error(
+                        cause instanceof Error ? cause.message : 'Could not push this invoice.',
+                      ),
+                  }),
+              }
+            : mappings.controls
+        }
         integrationsError={mappings.isError}
         onRetryIntegrations={() => {
           void mappings.refetch()

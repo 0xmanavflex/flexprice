@@ -16,7 +16,6 @@ import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import {
-  ArrowUpRightIcon,
   CircleSlashIcon,
   CopyIcon,
   MoreHorizontalIcon,
@@ -151,18 +150,24 @@ export function ContractIntegrations({
                 {/* The row shows a shortened id; the accessible name carries it whole. */}
                 <TooltipTrigger
                   aria-label={`${link.name} ID ${link.providerEntityId}`}
-                  className="inline-flex min-w-0 items-center gap-1 text-sm"
+                  className="inline-flex min-w-0 items-center text-sm"
                 >
                   <span className="truncate font-mono">{shortId(link.providerEntityId)}</span>
-                  <ArrowUpRightIcon
-                    aria-hidden
-                    className="text-muted-foreground size-3.5 shrink-0"
-                  />
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
                   {link.providerEntityId}
                 </TooltipContent>
               </Tooltip>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground size-7 shrink-0"
+                aria-label={`Copy ${entityLabel} ID`}
+                onClick={() => copyEntityId(link, entityLabel)}
+              >
+                <CopyIcon aria-hidden />
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   aria-label={`Manage ${link.name} integration`}
@@ -313,6 +318,13 @@ function shortId(value: string): string {
   return `${value.slice(0, 9)}…${value.slice(-4)}`
 }
 
+function copyEntityId(link: IntegrationLink, entityLabel: string) {
+  void navigator.clipboard
+    ?.writeText(link.providerEntityId)
+    .then(() => toast.success(`${link.name} ${entityLabel} ID copied`))
+    .catch(() => toast.error('Copy failed'))
+}
+
 function IntegrationMenu({
   link,
   entityLabel,
@@ -326,14 +338,7 @@ function IntegrationMenu({
 }) {
   return (
     <DropdownMenuContent align="end" className="min-w-48">
-      <DropdownMenuItem
-        onClick={() => {
-          void navigator.clipboard
-            ?.writeText(link.providerEntityId)
-            .then(() => toast.success(`${link.name} ${entityLabel} ID copied`))
-            .catch(() => toast.error('Copy failed'))
-        }}
-      >
+      <DropdownMenuItem onClick={() => copyEntityId(link, entityLabel)}>
         <CopyIcon aria-hidden /> Copy {entityLabel} ID
       </DropdownMenuItem>
       {onUnlink ? (

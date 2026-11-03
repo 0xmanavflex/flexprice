@@ -5,10 +5,13 @@ import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
   BellIcon,
   ArrowUpRightIcon,
+  CheckIcon,
   CopyIcon,
+  LinkIcon,
   MinusIcon,
   MoreHorizontalIcon,
   PlusIcon,
+  ReceiptIcon,
   RepeatIcon,
   WalletIcon,
   XCircleIcon,
@@ -100,6 +103,11 @@ export interface CustomerWalletViewProps {
   topUpError?: string | null
   /** Settings → Wallets → Bonus credits, to preview the bonus a purchased top-up earns. */
   bonusConfig?: BonusCreditsConfig | null
+  /**
+   * The connected provider a purchased top-up can be paid through by hosted
+   * checkout (V1: Razorpay). Omitted, the top-up offers no checkout link.
+   */
+  checkoutProvider?: string | null
   onDebit: (draft: DebitWallet) => Promise<unknown>
   debitError?: string | null
   onTerminate: () => Promise<unknown>
@@ -156,6 +164,7 @@ export function CustomerWalletView({
   onTopUp,
   topUpError = null,
   bonusConfig = null,
+  checkoutProvider = null,
   onDebit,
   debitError = null,
   onTerminate,
@@ -422,6 +431,7 @@ export function CustomerWalletView({
         pending={pending}
         error={topUpError}
         bonusConfig={bonusConfig}
+        checkoutProvider={checkoutProvider}
         onSubmit={(draft) => run(() => onTopUp(draft))}
       />
       <DebitDialog
@@ -711,6 +721,7 @@ function TopUpDialog({
   pending,
   error,
   bonusConfig,
+  checkoutProvider,
   onSubmit,
 }: {
   open: boolean
@@ -718,6 +729,7 @@ function TopUpDialog({
   pending: boolean
   error: string | null
   bonusConfig: BonusCreditsConfig | null
+  checkoutProvider: string | null
   onSubmit: (draft: TopUpWallet) => void
 }) {
   const [draft, setDraft] = useState<TopUpWallet>(emptyTopUp())
@@ -733,7 +745,11 @@ function TopUpDialog({
       title="Top up wallet"
     >
       <Composer
-        submitLabel="Top up"
+        submitLabel={
+          draft.kind === 'purchased' && draft.checkout && checkoutProvider
+            ? 'Create checkout link'
+            : 'Top up'
+        }
         onCancel={onClose}
         submitting={pending}
         onSubmit={() => {
@@ -887,7 +903,38 @@ function TopUpDialog({
             </p>
           </div>
         ) : null}
-        {draft.kind === 'purchased' ? (
+        {/* With a checkout provider connected, how the customer pays is a choice of
+            three, as V1's three settle buttons; otherwise it stays one switch. */}
+        {draft.kind === 'purchased' && checkoutProvider ? (
+          <ChoiceCards
+            label="How the customer pays"
+            stacked
+            value={draft.checkout ? 'checkout' : draft.invoice ? 'invoice' : 'paid'}
+            onChange={(settle) =>
+              set({ invoice: settle === 'invoice', checkout: settle === 'checkout' })
+            }
+            choices={[
+              {
+                value: 'paid',
+                title: 'Already paid',
+                description: 'The credits land now and nothing is billed.',
+                icon: <CheckIcon aria-hidden="true" />,
+              },
+              {
+                value: 'invoice',
+                title: 'Invoice the customer',
+                description: 'Raise an invoice; the credits land once it is paid.',
+                icon: <ReceiptIcon aria-hidden="true" />,
+              },
+              {
+                value: 'checkout',
+                title: 'Checkout link',
+                description: `A ${checkoutProvider} payment link to send the customer; the credits land once they pay.`,
+                icon: <LinkIcon aria-hidden="true" />,
+              },
+            ]}
+          />
+        ) : draft.kind === 'purchased' ? (
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
               <label htmlFor="topup-invoice" className="text-sm font-medium">

@@ -400,10 +400,15 @@ function calendarTitle(period: string): string {
     : `Start of ${everyPeriod(period, 1).replace('every', 'every calendar')}`
 }
 
-/** A `YYYY-MM-DD` day at 00:00 local, as an instant: where a new contract starts by default. */
-function startOfDay(day: string): string {
+/**
+ * Where a new contract starts. Today means right now. A fixture day (stories)
+ * stays at local midnight so the clock does not move under the test.
+ */
+function defaultStart(day: string): string {
   const [y, m, d] = day.split('-').map(Number) as [number, number, number]
-  return new Date(y, m - 1, d).toISOString()
+  const now = new Date()
+  const isToday = now.getFullYear() === y && now.getMonth() === m - 1 && now.getDate() === d
+  return isToday ? now.toISOString() : new Date(y, m - 1, d).toISOString()
 }
 
 /** What the calendar billing day is called in a sentence: "the 1st", "the start of the quarter". */
@@ -447,10 +452,10 @@ export function SubscriptionForm({
 }: SubscriptionFormProps) {
   const form = useCalmForm<CreateSubscription>({
     resolver: standardSchemaResolver(createSubscriptionSchema) as Resolver<CreateSubscription>,
-    // Starts today at midnight unless the caller says otherwise, as the reference does.
+    // Starts now unless the caller says otherwise.
     defaultValues: {
       ...emptySubscription(),
-      startDate: startOfDay(today),
+      startDate: defaultStart(today),
       ...defaultValue,
     },
   })

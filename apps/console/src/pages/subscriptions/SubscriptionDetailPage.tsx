@@ -355,7 +355,7 @@ export function SubscriptionDetailPage({
         onUnlinkIntegration={(input) => unlinkIntegration.mutateAsync(input)}
         onAddEntitlement={(draft) => createEntitlement.mutateAsync(draft)}
         onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
-        onAddAddon={(draft) => addAddon.mutateAsync(draft)}
+        onAddAddon={(drafts) => addAddon.mutateAsync(drafts)}
         onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
         onRemoveCoupon={(coupon) => removeCoupon.mutateAsync(coupon.id)}
         onSaveChargeAlert={({ settingId, config }) =>

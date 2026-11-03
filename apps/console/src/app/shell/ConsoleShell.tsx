@@ -305,7 +305,6 @@ export function ConsoleShell({
           results: searchResults,
           isSearching: found.isSearching,
           hasError: found.hasError,
-          onRetry: found.retry,
           onTermChange: setSearchTerm,
           onSelect: (item) => {
             if (item.id === SUPPORT_CHAT_ACTION_ID) return openSupportChat()

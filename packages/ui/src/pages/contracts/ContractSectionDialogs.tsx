@@ -12,6 +12,8 @@ import {
   type CreateTaxRate,
   attachableAddonCharges,
 } from '@fp/domain'
+import { Button } from '@ui/components/primitives/button'
+import { PlusIcon, XIcon } from '@ui/icons'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
@@ -57,7 +59,8 @@ export interface ContractSectionOptions {
 export interface ContractSectionActions {
   onAddEntitlement?: ((draft: CreateEntitlement) => Promise<unknown> | void) | undefined
   onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
-  onAddAddon?: ((draft: AddContractAddon) => Promise<unknown> | void) | undefined
+  /** One or more add-ons, attached together as one change. */
+  onAddAddon?: ((drafts: AddContractAddon[]) => Promise<unknown> | void) | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
   onCreateTaxRate?: ((draft: CreateTaxRate) => Promise<TaxRateOption>) | undefined
@@ -127,7 +130,7 @@ export function ContractSectionDialogs({
         pending={pending}
         error={error}
         onClose={onClose}
-        onSubmit={(draft) => onRun(actions.onAddAddon?.(draft))}
+        onSubmit={(drafts) => onRun(actions.onAddAddon?.(drafts))}
       />
 
       <PickDialog
@@ -234,11 +237,16 @@ function PickDialog({
   )
 }
 
+/** V1's cap: adds and removes together in one `addon` modification. */
+const MAX_ADDONS = 20
+
 /**
- * Attach an add-on, repricing its charges first if you like, as V1's add-on
- * card: choosing one lists all its charges, fixed and usage, each with
+ * Attach add-ons, repricing their charges first if you like, as V1's add-on
+ * dialog: choosing one lists all its charges, fixed and usage, each with
  * Override price (sent as `override_line_items`) and, on a usage charge, Add
- * commitment, the same dialogs as a plan charge.
+ * commitment, the same dialogs as a plan charge. "Add another add-on" sets the
+ * one in hand aside with its pricing and clears the picker, so several are
+ * attached together as one change.
  */
 function AddonDialog({
   open,
@@ -263,8 +271,10 @@ function AddonDialog({
   pending: boolean
   error: string | null
   onClose: () => void
-  onSubmit: (draft: AddContractAddon) => void
+  onSubmit: (drafts: AddContractAddon[]) => void
 }) {
+  // Add-ons set aside to attach with the one in hand.
+  const [staged, setStaged] = useState<{ draft: AddContractAddon; name: string }[]>([])
   const [addonId, setAddonId] = useState('')
   const [pricing, setPricing] = useState<AddonPricing>({ priceOverrides: [], commitments: [] })
   const [problem, setProblem] = useState<string | null>(null)
@@ -277,11 +287,24 @@ function AddonDialog({
         ? attachableAddonCharges(loaded, { currency, billingPeriod })
         : undefined
 
+  const current = (): AddContractAddon | null =>
+    addonId
+      ? {
+          addonId,
+          ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
+          ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+          ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
+        }
+      : null
+  const total = staged.length + (addonId ? 1 : 0)
+  // An add-on goes on a contract once: those set aside leave the picker.
+  const choosable = addons.filter((a) => !staged.some(({ draft }) => draft.addonId === a.id))
+
   return (
     <AddonChargesDialog
       open={open}
       title="Add add-on"
-      submitLabel="Add add-on"
+      submitLabel={total > 1 ? `Add ${total} add-ons` : 'Add add-on'}
       charges={charges}
       chargesFailed={chargesFailed}
       meters={meters}
@@ -293,16 +316,44 @@ function AddonDialog({
       disabled={addons.length === 0}
       onClose={onClose}
       onSubmit={() => {
-        if (!addonId) return setProblem('Choose an add-on')
+        const inHand = current()
+        const drafts = [...staged.map(({ draft }) => draft), ...(inHand ? [inHand] : [])]
+        if (drafts.length === 0) return setProblem('Choose an add-on')
         setProblem(null)
-        onSubmit({
-          addonId,
-          ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
-          ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
-          ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
-        })
+        onSubmit(drafts)
       }}
     >
+      {staged.length > 0 ? (
+        <ul
+          className="divide-border flex flex-col divide-y rounded-lg border"
+          aria-label="Add-ons to attach"
+        >
+          {staged.map(({ draft, name }) => (
+            <li key={draft.addonId} className="flex items-center justify-between gap-3 px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{name}</p>
+                <p className="text-muted-foreground text-xs">
+                  {draft.priceOverrides?.length || draft.commitments?.length
+                    ? 'Repriced for this contract'
+                    : 'At its catalog prices'}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground size-7 shrink-0"
+                aria-label={`Remove ${name}`}
+                onClick={() =>
+                  setStaged((list) => list.filter((item) => item.draft.addonId !== draft.addonId))
+                }
+              >
+                <XIcon aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <div className="flex flex-col gap-2">
         <LabelWithHint htmlFor="pick-add-on" hint="The add-on to attach to this contract.">
           Add-on
@@ -314,11 +365,31 @@ function AddonDialog({
             setAddonId(next)
             setPricing({ priceOverrides: [], commitments: [] })
           }}
-          options={addons.map((a) => ({ value: a.id, label: a.name }))}
-          placeholder="Select add-on"
+          options={choosable.map((a) => ({ value: a.id, label: a.name }))}
+          placeholder={staged.length > 0 ? 'Select another add-on' : 'Select add-on'}
         />
         {addons.length === 0 ? (
           <p className="text-muted-foreground text-[13px]">No add-ons are available to attach.</p>
+        ) : null}
+        {addonId && choosable.length > 1 && total < MAX_ADDONS ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start"
+            onClick={() => {
+              const inHand = current()
+              if (!inHand) return
+              const name = addons.find((a) => a.id === addonId)?.name ?? addonId
+              setStaged((list) => [...list, { draft: inHand, name }])
+              setAddonId('')
+              setPricing({ priceOverrides: [], commitments: [] })
+              setProblem(null)
+            }}
+          >
+            <PlusIcon aria-hidden />
+            Add another add-on
+          </Button>
         ) : null}
       </div>
     </AddonChargesDialog>

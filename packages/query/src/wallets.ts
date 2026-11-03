@@ -177,17 +177,47 @@ export function toCreateWalletRequest(
   }
 }
 
-/** Builds `POST /wallets/{id}/top-up`. Purchased credits are charged; free ones are a grant. */
-export function toTopUpRequest(draft: TopUpWallet): Record<string, unknown> {
+/** Where a checkout top-up is paid, and where the customer comes back to. */
+export interface TopUpCheckout {
+  provider: string
+  returnUrl: string
+  /** Cancel a checkout already in flight for this wallet and start this one instead. */
+  supersede?: boolean
+}
+
+/**
+ * Builds `POST /wallets/{id}/top-up`. Purchased credits are charged; free ones
+ * are a grant. A checkout top-up is pay-first and rides the invoiced reason, the
+ * only one the API accepts a checkout on.
+ */
+export function toTopUpRequest(draft: TopUpWallet, payAt?: TopUpCheckout): Record<string, unknown> {
   const description = draft.description.trim()
   const referenceId = draft.referenceId.trim()
+  const viaCheckout = draft.kind === 'purchased' && draft.checkout ? payAt : undefined
   const reason =
     draft.kind === 'free'
       ? 'FREE_CREDIT_GRANT'
-      : draft.invoice
+      : draft.invoice || viaCheckout
         ? 'PURCHASED_CREDIT_INVOICED'
         : 'PURCHASED_CREDIT_DIRECT'
   return {
+    // No mandate limit: a one-off top-up needs no recurring debit.
+    ...(viaCheckout
+      ? {
+          checkout: {
+            paymentProvider: viaCheckout.provider,
+            successUrl: viaCheckout.returnUrl,
+            cancelUrl: viaCheckout.returnUrl,
+            ...(viaCheckout.supersede
+              ? {
+                  entityCreationOptions: {
+                    entityCreationConflictPolicies: { onExistingEntity: 'supersede' },
+                  },
+                }
+              : {}),
+          },
+        }
+      : {}),
     creditsToAdd: draft.credits,
     transactionReason: reason,
     ...(description ? { description } : {}),
@@ -359,13 +389,45 @@ export function useDebitWallet(walletId: string) {
   })
 }
 
+/** A checkout top-up's hosted session, as the console needs it. */
+export interface TopUpCheckoutSession {
+  id: string
+  /** The link the customer pays on. Empty when the provider sent none. */
+  url: string
+  expiresAt: Date | null
+  /**
+   * Nothing was created: a checkout already in flight for this wallet blocked
+   * the top-up, and this session is that one, not a new one for this amount.
+   */
+  blocked: boolean
+}
+
 export function useTopUpWallet(walletId: string) {
   const client = useFlexprice()
   const invalidate = useInvalidateWallets()
 
   return useMutation({
-    mutationFn: (draft: TopUpWallet) =>
-      call(() => client.wallets.topUpWallet(walletId, toTopUpRequest(draft) as never)),
+    mutationFn: async ({
+      payAt,
+      ...draft
+    }: TopUpWallet & { payAt?: TopUpCheckout | undefined }): Promise<{
+      checkoutSession: TopUpCheckoutSession | null
+    }> => {
+      const response = await call(() =>
+        client.wallets.topUpWallet(walletId, toTopUpRequest(draft, payAt) as never),
+      )
+      const session = response.checkoutSession
+      return {
+        checkoutSession: session
+          ? {
+              id: session.id ?? '',
+              url: session.paymentAction?.url ?? '',
+              expiresAt: session.expiresAt ?? null,
+              blocked: session.entityCreationResult?.status === 'failed_already_exists',
+            }
+          : null,
+      }
+    },
     onSuccess: invalidate,
   })
 }
