@@ -102,19 +102,34 @@ export interface AddonPage {
   total: number
 }
 
-export async function fetchAddons(client: Flexprice, query: AddonQuery): Promise<AddonPage> {
-  const response = await call(() => client.addons.queryAddon(toAddonFilter(query) as never))
-  const mapped = (response.items ?? []).map((item) => toAddon(item as AddonWire))
-  // An add-on with no charge is a shell. The list offers priced extras, so it
-  // is left out. The search endpoint cannot filter on prices, so this page's
-  // empty shells are dropped and taken out of the reported total.
-  const addons = mapped.filter((addon) => addon.chargeCount > 0)
-  const reported = response.pagination?.total ?? mapped.length
+/** How many add-ons one read asks for while collecting the priced ones. */
+const SCAN_PAGE = 100
 
-  return {
-    addons,
-    total: Math.max(0, reported - (mapped.length - addons.length)),
+/**
+ * One page of priced add-ons. An add-on with no charge is a shell, and the
+ * list offers priced extras, so shells are left out. The search endpoint
+ * cannot filter on prices, so every match is read (in the query's order) and
+ * the priced ones are paged here: dropping shells from one server page would
+ * shrink that page and miscount the total, and could strand priced add-ons on
+ * later pages no pager reaches.
+ */
+export async function fetchAddons(client: Flexprice, query: AddonQuery): Promise<AddonPage> {
+  const priced: Addon[] = []
+  for (let page = 1; ; page++) {
+    const response = await call(() =>
+      client.addons.queryAddon(toAddonFilter({ ...query, page, pageSize: SCAN_PAGE }) as never),
+    )
+    const items = response.items ?? []
+    for (const item of items) {
+      const addon = toAddon(item as AddonWire)
+      if (addon.chargeCount > 0) priced.push(addon)
+    }
+    const total = response.pagination?.total ?? 0
+    if (items.length < SCAN_PAGE || page * SCAN_PAGE >= total) break
   }
+
+  const start = (query.page - 1) * query.pageSize
+  return { addons: priced.slice(start, start + query.pageSize), total: priced.length }
 }
 
 export function useAddons(query: AddonQuery) {
