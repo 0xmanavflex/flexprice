@@ -109,11 +109,19 @@ export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Pro
    */
   const wanted = new Set(query.statuses)
   if (wanted.size > 0 && wanted.size < Object.values(TaxRateStatus).length) {
-    const response = await call(() =>
-      client.taxRates.getTaxRates({ limit: STATUS_SCAN_LIMIT, offset: 0 }),
-    )
+    // Read every page: a single capped read would drop rates past the limit.
+    const all: unknown[] = []
+    for (let offset = 0; ; offset += STATUS_SCAN_LIMIT) {
+      const response = await call(() =>
+        client.taxRates.getTaxRates({ limit: STATUS_SCAN_LIMIT, offset }),
+      )
+      const items = response.items ?? []
+      all.push(...items)
+      const total = response.pagination?.total ?? 0
+      if (items.length < STATUS_SCAN_LIMIT || offset + STATUS_SCAN_LIMIT >= total) break
+    }
     const search = query.search.trim().toLowerCase()
-    const matching = (response.items ?? [])
+    const matching = all
       .map((item) => toTaxRate(item as TaxRateWire))
       .filter((taxRate) => wanted.has(taxRate.status))
       .filter(
