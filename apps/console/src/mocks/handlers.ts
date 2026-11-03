@@ -719,9 +719,41 @@ const search = (path: string, key: string) =>
         ? applyFeatureExpand(result, body.expand)
         : key === 'customers'
           ? { ...result, items: result.items.map(withDemoIntegrations) }
-          : result
+          : key === 'addons' && body.expand?.includes('prices')
+            ? { ...result, items: result.items.map(withDemoAddonPrice) }
+            : result
     return HttpResponse.json(payload)
   })
+
+/**
+ * The captured add-ons carry no prices, and the list leaves an add-on with no
+ * charge off (it is a shell). So that the list shows them under mocks, as it
+ * does against an account with priced add-ons, each gets one flat monthly fee.
+ */
+function withDemoAddonPrice(row: Record<string, unknown>): Record<string, unknown> {
+  const prices = row['prices']
+  if (Array.isArray(prices) && prices.length > 0) return row
+  const id = readString(row, 'id')
+  return {
+    ...row,
+    prices: [
+      {
+        id: `price_${id}`,
+        entity_id: id,
+        entity_type: 'ADDON',
+        type: 'FIXED',
+        billing_model: 'FLAT_FEE',
+        billing_cadence: 'RECURRING',
+        billing_period: 'MONTHLY',
+        billing_period_count: 1,
+        currency: 'usd',
+        amount: '25',
+        display_amount: '$25.00',
+        invoice_cadence: 'ADVANCE',
+      },
+    ],
+  }
+}
 
 /** Finds one row in a corpus by id: the by-id GET endpoints read it. */
 function byId(key: string, id: string): Record<string, unknown> | null {
