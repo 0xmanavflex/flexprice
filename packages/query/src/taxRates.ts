@@ -36,6 +36,8 @@ export interface TaxRateWire {
   percentageValue?: string | undefined
   scope?: string | undefined
   status?: string | undefined
+  /** `ACTIVE` or `INACTIVE`: what archiving and the edit form's status change. */
+  taxRateStatus?: string | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
 }
@@ -47,9 +49,14 @@ export function toTaxRate(wire: TaxRateWire): TaxRate {
   const scope = TAX_RATE_SCOPES.has(wire.scope ?? '')
     ? (wire.scope as TaxRateScope)
     : TaxRateScope.Internal
-  const status = TAX_RATE_STATUSES.has(wire.status ?? '')
-    ? (wire.status as TaxRateStatus)
-    : TaxRateStatus.Published
+  // An inactive rate is archived, whatever the record's own status says: that
+  // is the field archiving and the edit form write.
+  const status =
+    wire.taxRateStatus?.toUpperCase() === 'INACTIVE'
+      ? TaxRateStatus.Archived
+      : TAX_RATE_STATUSES.has(wire.status ?? '')
+        ? (wire.status as TaxRateStatus)
+        : TaxRateStatus.Published
 
   return {
     id: wire.id ?? '',

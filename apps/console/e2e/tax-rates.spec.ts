@@ -86,3 +86,30 @@ test.describe('the tax rates list', () => {
     await expect(dialog).toBeHidden()
   })
 })
+
+test.describe('a tax rate detail page', () => {
+  test('opens from its row, archives by status and stays editable', async ({ page }) => {
+    await page.goto('/taxes')
+    const rows = new CatalogListPage(page, {
+      heading: 'Tax rates',
+      searchLabel: 'Search tax rates',
+    }).rows()
+    await expect(rows.first()).toBeVisible({ timeout: 20_000 })
+
+    await rows.first().click()
+    await expect(page).toHaveURL(/\/taxes\/tax_[^/]+$/)
+    await expect(page.getByRole('heading', { name: 'Tax rate details' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Tax rate actions' }).click()
+    await page.getByRole('menuitem', { name: 'Archive' }).click()
+    // Archive is a status change (PUT), never a delete.
+    const request = page.waitForRequest(isWrite('PUT', /\/v1\/taxes\/rates\/[^/]+$/))
+    await page.getByRole('button', { name: 'Archive tax rate' }).click()
+    expect((await request).postDataJSON()).toMatchObject({ tax_rate_status: 'INACTIVE' })
+    await expect(page).toHaveURL(/\/taxes\/tax_[^/]+$/)
+
+    // An archived rate can still be opened in Edit, to publish it again.
+    await page.getByRole('button', { name: 'Tax rate actions' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Edit tax rate' })).toBeEnabled()
+  })
+})

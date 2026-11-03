@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { TAX_RATE_SCOPE_LABEL, TaxRateStatus, taxRateToEdit } from '@fp/domain'
-import { useDeleteTaxRate, useTaxRate, useUpdateTaxRate } from '@fp/query'
+import { useTaxRate, useUpdateTaxRate } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, Pill } from '@fp/ui/pages'
 import { ConfirmDialog, EditableCard, MetadataCard } from '@fp/ui/compositions'
 import { ArchiveIcon, PencilIcon, PercentIcon } from '@fp/ui/icons'
@@ -17,12 +17,15 @@ export interface TaxRateDetailPageProps {
  *
  * Its name, code, description, value, scope, status and dates, then its
  * metadata. The name and description change in place; Edit opens the full form,
- * and Archive takes the rate out of use (invoices that carry it keep it).
+ * and Archive takes the rate out of use (invoices that carry it keep it); an archived
+ * rate stays on this page and Edit can publish it again.
  */
 export function TaxRateDetailPage({ taxRateId, onNavigateToList, onEdit }: TaxRateDetailPageProps) {
   const taxRate = useTaxRate(taxRateId)
   const update = useUpdateTaxRate()
-  const remove = useDeleteTaxRate()
+  // Archive is a status change, not a delete: the rate stays here, and Edit
+  // can publish it again.
+  const archive = useUpdateTaxRate()
   const [archiving, setArchiving] = useState(false)
 
   if (!taxRate.data) {
@@ -57,7 +60,6 @@ export function TaxRateDetailPage({ taxRateId, onNavigateToList, onEdit }: TaxRa
           id: 'edit',
           label: 'Edit tax rate',
           icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
-          disabled: archived,
           onSelect: onEdit,
         },
         {
@@ -157,22 +159,20 @@ export function TaxRateDetailPage({ taxRateId, onNavigateToList, onEdit }: TaxRa
         onOpenChange={(open) => {
           if (!open) {
             setArchiving(false)
-            remove.reset()
+            archive.reset()
           }
         }}
         title={`Archive ${data.name}?`}
-        description="The rate can no longer be applied. Invoices that already carry it keep it."
+        description="The rate can no longer be applied. Invoices that already carry it keep it, and you can publish it again from Edit."
         confirmLabel="Archive tax rate"
         destructive
-        isPending={remove.isPending}
-        error={remove.isError ? 'Could not archive the tax rate. Try again.' : null}
+        isPending={archive.isPending}
+        error={archive.isError ? 'Could not archive the tax rate. Try again.' : null}
         onConfirm={() =>
-          remove.mutate(data.id, {
-            onSuccess: () => {
-              setArchiving(false)
-              onNavigateToList()
-            },
-          })
+          archive.mutate(
+            { id: data.id, draft: { ...taxRateToEdit(data), status: TaxRateStatus.Archived } },
+            { onSuccess: () => setArchiving(false) },
+          )
         }
       />
     </CatalogDetailFrame>

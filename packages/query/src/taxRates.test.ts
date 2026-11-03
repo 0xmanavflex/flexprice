@@ -59,3 +59,14 @@ describe('toTaxRateFilter', () => {
     expect(toTaxRateFilter(DEFAULT_TAX_RATE_QUERY)).toMatchObject({ limit: 25, offset: 0 })
   })
 })
+
+describe('tax rate archive status', () => {
+  it('reads an inactive rate as archived', () => {
+    expect(toTaxRate({ id: 't', status: 'published', taxRateStatus: 'INACTIVE' }).status).toBe(
+      'archived',
+    )
+    expect(toTaxRate({ id: 't', status: 'published', taxRateStatus: 'ACTIVE' }).status).toBe(
+      'published',
+    )
+  })
+})
