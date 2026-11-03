@@ -166,14 +166,15 @@ export const meteredGrantSchema = z
 export type MeteredGrant = z.infer<typeof meteredGrantSchema>
 
 /**
- * V1's starting point for a metered allowance: quantity, a daily window that
- * opens on first use, additive. The quota is left for the person to type.
+ * The starting point for a metered allowance: quantity, renewed every billing
+ * period, additive. A shorter window (hour, day, week) is a choice, not the
+ * default. The quota is left for the person to type.
  */
 export function emptyMeteredGrant(): MeteredGrant {
   return {
     measure: EntitlementGrantMeasure.Quantity,
     quota: '',
-    unit: EntitlementGrantDurationUnit.Day,
+    unit: EntitlementGrantDurationUnit.SubscriptionPeriod,
     allocation: EntitlementGrantAllocationBehavior.FirstUsage,
     aggregation: EntitlementAggregationMode.Additive,
   }

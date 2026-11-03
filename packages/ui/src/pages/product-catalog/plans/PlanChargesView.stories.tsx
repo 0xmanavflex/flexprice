@@ -186,12 +186,17 @@ export const TerminatesACharge: Story = {
   },
 }
 
-/** Tier details move from inline lists into the shared charge sheet. */
+/**
+ * Tier details move from inline lists into the shared charge sheet. The tier
+ * count is said once, on the grey line under the price, not again in the price.
+ */
 export const TieredChargeOpensSheet: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const price = (await canvas.findAllByText(/tiers, from/i))[0] as HTMLElement
-    const row = price.closest('tr')!
+    const count = (await canvas.findAllByText(/^\d+ tiers?$/))[0] as HTMLElement
+    const row = count.closest('tr')!
+    await expect(within(row).queryByText(/tiers?, from/i)).toBeNull()
+    const price = within(row).getByText(/^From /)
     await expect(within(row).queryAllByRole('listitem')).toHaveLength(0)
     await userEvent.click(price)
     const sheet = await screen.findByRole('dialog')

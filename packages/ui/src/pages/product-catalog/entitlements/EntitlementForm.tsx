@@ -13,6 +13,7 @@ import {
   emptyMeteredGrant,
   type MeteredGrant,
 } from '@fp/domain'
+import { PlusIcon } from '@ui/icons'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
 import { Textarea } from '@ui/components/primitives/textarea'
@@ -99,6 +100,8 @@ export interface EntitlementCreateFormProps extends SharedProps {
    * entitlement still uses.
    */
   grantModel?: boolean
+  /** Adds "Create feature" to the feature picker; the container navigates to its form. */
+  onCreateFeature?: (() => void) | undefined
 }
 
 /** A fresh draft for the feature, with an empty grant when it is metered and granted. */
@@ -119,6 +122,7 @@ export function EntitlementCreateForm({
   submitLabel,
   usagePrice,
   grantModel = false,
+  onCreateFeature,
 }: EntitlementCreateFormProps) {
   const form = useCalmForm<CreateEntitlement>({
     resolver: standardSchemaResolver(createEntitlementSchema) as Resolver<CreateEntitlement>,
@@ -185,6 +189,15 @@ export function EntitlementCreateForm({
               trailing: <FeatureTypeGlyph type={option.type} />,
             }))}
             searchable
+            {...(onCreateFeature
+              ? {
+                  createAction: {
+                    label: 'Create feature',
+                    icon: <PlusIcon aria-hidden />,
+                    onSelect: onCreateFeature,
+                  },
+                }
+              : {})}
             placeholder="Search features…"
             emptyText="Every feature is already granted."
             disabled={isSubmitting}

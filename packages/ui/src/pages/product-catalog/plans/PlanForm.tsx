@@ -286,6 +286,7 @@ export function PlanForm({
         label:
           charge.displayName || (charge.type === PriceType.Usage ? 'Usage charge' : 'Fixed charge'),
         detail: `${'amount' in charge ? `${charge.amount} ` : ''}${charge.currency} · ${BILLING_PERIOD_LABEL[charge.billingPeriod]}`,
+        editing: adding === 'charges' && editIndex === index,
         onEdit: () => openForm('charges', index),
         onRemove: () => removeAt('charges', setCharges, index),
       }))}
@@ -321,6 +322,7 @@ export function PlanForm({
         key: entitlement.featureId,
         label: featureName(entitlement.featureId),
         detail: String(entitlement.featureType),
+        editing: adding === 'entitlements' && editIndex === index,
         onEdit: () => openForm('entitlements', index),
         onRemove: () => removeAt('entitlements', setEntitlements, index),
       }))}
@@ -354,6 +356,7 @@ export function PlanForm({
         key: `${index}`,
         label: grant.name,
         detail: `${grant.credits} credits`,
+        editing: adding === 'credit-grants' && editIndex === index,
         onEdit: () => openForm('credit-grants', index),
         onRemove: () => removeAt('credit-grants', setGrants, index),
       }))}
@@ -414,6 +417,8 @@ interface StagedItem {
   key: string
   label: string
   detail: string
+  /** This row's form is open: the form takes the row's place, so "Edit" shows once. */
+  editing?: boolean
   onEdit: () => void
   onRemove: () => void
 }
@@ -439,69 +444,81 @@ function StagedStep({
   onClose: () => void
   form: ReactNode
 }) {
+  const editingRow = items.some((item) => item.editing)
+  const openForm = (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">{addLabel}</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Close ${addLabel.toLowerCase()}`}
+          onClick={onClose}
+        >
+          <XIcon aria-hidden />
+        </Button>
+      </div>
+      {form}
+    </div>
+  )
   return (
     <FormCard title={title} status="optional">
       {items.length === 0 ? (
         <p className="text-muted-foreground px-5 py-4 text-sm sm:px-6">{emptyText}</p>
       ) : (
         <ul className="divide-y">
-          {items.map((item) => (
-            <li
-              key={item.key}
-              className="flex items-center justify-between gap-3 px-5 py-2.5 sm:px-6"
-            >
-              <div className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-medium">{item.label}</span>
-                <span className="text-muted-foreground truncate text-xs">{item.detail}</span>
-              </div>
-              <span className="flex shrink-0 items-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Edit ${item.label}`}
-                  onClick={item.onEdit}
-                >
-                  <PencilIcon aria-hidden className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remove ${item.label}`}
-                  onClick={item.onRemove}
-                >
-                  <Trash2Icon aria-hidden className="size-4" />
-                </Button>
-              </span>
-            </li>
-          ))}
+          {items.map((item) =>
+            item.editing && adding ? (
+              <li key={item.key} className="px-5 py-4 sm:px-6">
+                {openForm}
+              </li>
+            ) : (
+              <li
+                key={item.key}
+                className="flex items-center justify-between gap-3 px-5 py-2.5 sm:px-6"
+              >
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-sm font-medium">{item.label}</span>
+                  <span className="text-muted-foreground truncate text-xs">{item.detail}</span>
+                </div>
+                <span className="flex shrink-0 items-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Edit ${item.label}`}
+                    onClick={item.onEdit}
+                  >
+                    <PencilIcon aria-hidden className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${item.label}`}
+                    onClick={item.onRemove}
+                  >
+                    <Trash2Icon aria-hidden className="size-4" />
+                  </Button>
+                </span>
+              </li>
+            ),
+          )}
         </ul>
       )}
-      <div className="px-5 py-4 sm:px-6">
-        {adding ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">{addLabel}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Close ${addLabel.toLowerCase()}`}
-                onClick={onClose}
-              >
-                <XIcon aria-hidden />
-              </Button>
-            </div>
-            {form}
-          </div>
-        ) : (
-          <Button type="button" variant="outline" className="w-fit" onClick={onAdd}>
-            <PlusIcon aria-hidden className="size-4" />
-            {addLabel}
-          </Button>
-        )}
-      </div>
+      {adding && editingRow ? null : (
+        <div className="px-5 py-4 sm:px-6">
+          {adding ? (
+            openForm
+          ) : (
+            <Button type="button" variant="outline" className="w-fit" onClick={onAdd}>
+              <PlusIcon aria-hidden className="size-4" />
+              {addLabel}
+            </Button>
+          )}
+        </div>
+      )}
     </FormCard>
   )
 }

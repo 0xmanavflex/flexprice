@@ -25,6 +25,8 @@ export interface AddChargeDialogProps {
   onSubmit: (draft: CreateCharge) => void
   isSubmitting: boolean
   submitError: string | null
+  /** Adds "Create feature" to the metered-feature picker; the page navigates. */
+  onCreateFeature?: (() => void) | undefined
 }
 
 /**
@@ -41,6 +43,7 @@ export function AddChargeDialog({
   onSubmit,
   isSubmitting,
   submitError,
+  onCreateFeature,
 }: AddChargeDialogProps) {
   const [type, setType] = useState<PriceType>(PriceType.Fixed)
   const [chosen, setChosen] = useState(false)
@@ -71,6 +74,7 @@ export function AddChargeDialog({
           meters={meters}
           priceUnits={priceUnits}
           priceOptions={{ groups: priceGroups }}
+          onCreateFeature={onCreateFeature}
           onSubmit={onSubmit}
           onCancel={() => handleOpenChange(false)}
           isSubmitting={isSubmitting}

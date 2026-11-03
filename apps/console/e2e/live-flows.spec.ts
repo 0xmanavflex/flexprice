@@ -292,9 +292,8 @@ test.describe('live flows', () => {
 
     await openRowMenu(name, 'Edit feature')
     await fill(main, 'Description', 'metered, edited by live e2e')
-    await page.getByRole('button', { name: /Additional/ }).click()
-    await fill(main, 'Unit (singular)', 'call')
-    await fill(main, 'Unit (plural)', 'calls')
+    await page.getByRole('button', { name: /^Units/ }).click()
+    await fill(main, 'Unit', 'call')
     await submitPage(/^Save changes/)
 
     await open('/features')

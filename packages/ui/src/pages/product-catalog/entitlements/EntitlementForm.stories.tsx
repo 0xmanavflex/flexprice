@@ -168,7 +168,8 @@ export const GrantModel: Story = {
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         featureId: 'feat_api',
-        grant: expect.objectContaining({ quota: '500', unit: 'day' }),
+        // Usage resets every billing period unless another window is chosen.
+        grant: expect.objectContaining({ quota: '500', unit: 'subscription_period' }),
       }),
     )
   },

@@ -82,6 +82,8 @@ function PlanChargesViewInner({
               (charge.currency || 'usd').toUpperCase(),
               undefined,
               charge.meterId ? meterUnit?.(charge.meterId) : undefined,
+              // The table puts the tier count on its own grey line under the price.
+              { tierCount: false },
             )
       }
     />

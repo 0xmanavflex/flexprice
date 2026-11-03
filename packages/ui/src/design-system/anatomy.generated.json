@@ -1161,6 +1161,7 @@
         "FormActions",
         "OptionCombobox",
         "OptionSelect",
+        "PlusIcon",
         "TierTable"
       ],
       "usedBy": [
@@ -3126,7 +3127,8 @@
         "FormActions",
         "GrantAllowanceFields",
         "MeteredEntitlementFields",
-        "OptionCombobox"
+        "OptionCombobox",
+        "PlusIcon"
       ],
       "usedBy": [
         "ContractSectionDialogs",
@@ -3143,7 +3145,8 @@
         "FormActions",
         "GrantAllowanceFields",
         "MeteredEntitlementFields",
-        "OptionCombobox"
+        "OptionCombobox",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/entitlements/EntitlementForm.stories.tsx"
@@ -6292,6 +6295,7 @@
         "BillingEntityForm",
         "BillingEntityGrid",
         "ChargeCommitmentDialog",
+        "ChargeForm",
         "ChargeSheet",
         "ChargeTable",
         "ConnectionExports",
@@ -6305,6 +6309,8 @@
         "CustomerWalletView",
         "DataExportDetail",
         "DataExportDialog",
+        "EntitlementCreateForm",
+        "EntitlementEditForm",
         "EntitlementTable",
         "EnvironmentSwitcher",
         "ExportRunList",
@@ -9210,7 +9216,8 @@
       "title": "Building blocks/Forms/OptionCombobox",
       "component": "OptionCombobox",
       "uses": [
-        "OptionCombobox"
+        "OptionCombobox",
+        "PlusIcon"
       ]
     },
     "./src/compositions/forms/OptionSelect.stories.tsx": {

@@ -172,15 +172,17 @@ export function FormRow({
         align === 'start' ? 'md:items-start' : 'md:items-center',
       )}
     >
+      {/* Row labels are regular weight so the card's medium title reads as the
+          heading above them rather than as one more label. */}
       <FieldContent className="gap-0.5 md:pt-0.5">
         <div className="flex items-center gap-1.5">
           {isControl ? (
-            <FieldLabel htmlFor={id}>
+            <FieldLabel htmlFor={id} className="font-normal">
               {label}
               {asterisk}
             </FieldLabel>
           ) : (
-            <FieldTitle>
+            <FieldTitle className="font-normal">
               {label}
               {asterisk}
             </FieldTitle>

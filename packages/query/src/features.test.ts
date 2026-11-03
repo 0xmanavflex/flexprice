@@ -41,6 +41,13 @@ describe('toCreateFeatureRequest', () => {
     expect(result).not.toHaveProperty('lookupKey')
   })
 
+  it('fills the plural unit from the singular when only the singular is given', () => {
+    const result = toCreateFeatureRequest(
+      valid({ name: 'Seats', type: FeatureType.Boolean, unitSingular: 'seat' }),
+    )
+    expect(result).toMatchObject({ unitSingular: 'seat', unitPlural: 'seats' })
+  })
+
   it('nests the meter inline, so one call creates both', () => {
     const result = toCreateFeatureRequest(
       valid({

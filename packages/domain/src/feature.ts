@@ -199,16 +199,30 @@ const common = {
   alertSettings: alertSettingConfigSchema.optional(),
 }
 
-/** The backend wants a feature's own unit names as a pair, or not at all. */
+/**
+ * The plural a unit takes when none is given: the singular plus "s". The form
+ * asks for the singular only; the backend still stores the pair, so the
+ * request fills the plural from this when it is absent.
+ */
+export function defaultUnitPlural(singular: string): string {
+  const trimmed = singular.trim()
+  return trimmed ? `${trimmed}s` : ''
+}
+
+/**
+ * Units are optional. The singular is the one the form asks for, and the plural
+ * follows it (`defaultUnitPlural`) unless given; a plural with no singular is
+ * the one combination that means nothing.
+ */
 function refineUnitPair(
   value: { unitSingular?: string | undefined; unitPlural?: string | undefined },
   ctx: z.RefinementCtx,
 ): void {
-  if (Boolean(value.unitSingular) !== Boolean(value.unitPlural)) {
+  if (value.unitPlural && !value.unitSingular) {
     ctx.addIssue({
       code: 'custom',
-      path: [value.unitSingular ? 'unitPlural' : 'unitSingular'],
-      message: 'Enter both the singular and plural unit, or neither',
+      path: ['unitSingular'],
+      message: 'Enter the singular unit, or leave both blank',
     })
   }
 }
@@ -360,15 +374,20 @@ const FORMULA_FUNCTION: Record<AggregationType, string> = {
 /**
  * A metered feature's aggregation as a formula over its event property:
  * `COUNT()`, `SUM(tokens)`, `COUNTUNIQUE(user_id)`. Null when there is no meter.
+ *
+ * A meter that aggregates a custom (CEL) expression instead of a field shows
+ * that expression as the argument: `SUM(duration_seconds / 60)`.
  */
 export function aggregationFormula(
-  feature: Pick<Feature, 'aggregationType' | 'aggregationField'>,
+  feature: Pick<Feature, 'aggregationType' | 'aggregationField'> &
+    Partial<Pick<Feature, 'aggregationExpression'>>,
 ): string | null {
   const { aggregationType: type, aggregationField: field } = feature
   if (!type) return null
   const name = FORMULA_FUNCTION[type]
   if (!needsAggregationTarget(type)) return `${name}()`
-  const target = field ?? ''
+  const expression = feature.aggregationExpression?.trim()
+  const target = expression || field || ''
   return type === AggregationType.SumWithMultiplier
     ? `${name}(${target} * multiplier)`
     : `${name}(${target})`

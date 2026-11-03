@@ -415,6 +415,7 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
   // Ended prices too, so an edited charge keeps its earlier price as history.
   const charges = usePriceHistory(PriceEntityType.Plan, planId)
   const { meters, units, priceGroups } = usePlanFormOptions()
+  const navigate = useNavigate()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const [form, setForm] = useState<'add' | Charge | null>(null)
@@ -484,6 +485,7 @@ function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolea
         meters={meters}
         priceUnits={units}
         priceGroups={priceGroups}
+        onCreateFeature={() => void navigate({ to: '/features/new' })}
         onSubmit={submit}
         isSubmitting={create.isPending || updatePrice.isPending}
         submitError={
@@ -594,6 +596,7 @@ function EntitlementsSection({ planId }: { planId: string }) {
           <EntitlementCreateForm
             features={options}
             grantModel
+            onCreateFeature={() => void navigate({ to: '/features/new' })}
             onSubmit={(draft: CreateEntitlement) =>
               create.mutate(
                 {

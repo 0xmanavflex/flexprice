@@ -297,10 +297,7 @@ function EntitlementsSection({
 }) {
   if (rows.length === 0) {
     return (
-      <Section
-        title="Entitlements"
-        flush
-      >
+      <Section title="Entitlements" flush>
         <SubTabState
           hasData={false}
           isLoading={isLoading}
@@ -321,11 +318,7 @@ function EntitlementsSection({
     )
   }
   return (
-    <Section
-      table
-      showTitle
-      title="Entitlements"
-    >
+    <Section table showTitle title="Entitlements">
       <DetailTable
         compact
         label="Entitlements"
@@ -597,6 +590,19 @@ function InformationTab({
                     value: feature.aggregationField,
                     display: mono(feature.aggregationField),
                     hint: 'The property on the event to aggregate.',
+                    readOnly: true,
+                  },
+                ]
+              : []),
+            // A meter that aggregates a CEL expression shows it in place of the field.
+            ...(feature.aggregationExpression?.trim()
+              ? [
+                  {
+                    key: 'expression',
+                    label: 'Custom expression',
+                    value: feature.aggregationExpression,
+                    display: mono(feature.aggregationExpression),
+                    hint: 'A CEL expression over the event, used instead of an event field.',
                     readOnly: true,
                   },
                 ]
