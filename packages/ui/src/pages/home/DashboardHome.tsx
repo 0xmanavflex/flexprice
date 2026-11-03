@@ -560,7 +560,12 @@ function MetricsSection({
   const eventsReady = events.status === 'ready'
   // A source that is still loading or failed is not empty, and saying "no
   // events yet" over it would be a claim nobody has checked.
-  const nothingYet = events.status === 'empty'
+  //
+  // Billed revenue comes from invoices, not events: a tenant that bills fixed
+  // fees with no usage this window still has a Revenue tab worth showing, so
+  // only a revenue panel that is itself absent or empty lets the invitation in.
+  const nothingYet =
+    events.status === 'empty' && (revenue === undefined || revenue.status === 'empty')
   const revenueKnown = eventsReady && events.revenue !== null
 
   /**

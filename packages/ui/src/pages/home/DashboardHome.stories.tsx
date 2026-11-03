@@ -443,6 +443,35 @@ export const PeriodEmpty: Story = {
 }
 
 /**
+ * Invoices were billed but no usage events arrived: fixed fees only. Revenue
+ * comes from invoices, so the Revenue tab stays and the first-run invitation
+ * does not cover it.
+ */
+export const BilledWithoutUsage: Story = {
+  args: {
+    events: { status: 'empty', points: [], total: null, revenue: null },
+    revenue: {
+      status: 'ready',
+      total: money('200.00', 'USD'),
+      fixed: money('200.00', 'USD'),
+      usage: null,
+      points: [],
+      topCustomers: [],
+      otherCurrencies: [],
+    },
+    subscriptions: { status: 'empty', total: 0, changePercent: null, days: [], plans: [] },
+    invoices: { status: 'empty', total: 0, paid: 0, open: 0, overdue: 0 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText('No events received yet')).toBeNull()
+    await expect(canvas.queryByText('No usage in this period')).toBeNull()
+    await expect(canvas.getByRole('tab', { name: /Revenue/ })).toBeInTheDocument()
+    await expect(canvas.getAllByText('$200.00').length).toBeGreaterThan(0)
+  },
+}
+
+/**
  * Every query is in flight. Bars where the numbers go, a skeleton where the
  * chart goes, no first-run invitation and no zeroes.
  */
