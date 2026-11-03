@@ -632,6 +632,7 @@
         "CustomerWalletView",
         "DashboardHome",
         "EventDetailSheet",
+        "FeatureForm",
         "FilterSelect",
         "InvoiceStatusPill",
         "LedgerRow",
@@ -3626,6 +3627,7 @@
       "file": "src/pages/product-catalog/products/FeatureForm.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowUpRightIcon",
         "CheckboxRow",
         "Field",
         "FormCard",
