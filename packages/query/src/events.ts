@@ -354,7 +354,51 @@ async function fetchUsageAnalytics(
     } as never),
   )) as AnalyticsResponseWire
 
-  return toUsageAnalytics(response)
+  return toUsageAnalytics(await withFeatureNames(client, response))
+}
+
+/**
+ * Names the rows the `feature` expand left bare. Some analytics windows come
+ * back without it (an older window, an archived feature), and the row then
+ * fell back to its event name or id. One features search by id fills them in.
+ */
+async function withFeatureNames(
+  client: Flexprice,
+  response: AnalyticsResponseWire,
+): Promise<AnalyticsResponseWire> {
+  const items = response.items ?? []
+  const missing = [
+    ...new Set(
+      items
+        .filter((item) => !item.feature?.name)
+        .map((item) => item.featureId ?? item.feature?.id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ]
+  if (missing.length === 0) return response
+  try {
+    const found = await call(() =>
+      client.features.queryFeature({ featureIds: missing, limit: missing.length } as never),
+    )
+    const byId = new Map(
+      (found.items ?? []).map((feature) => [
+        (feature as { id?: string }).id ?? '',
+        feature as { id?: string; name?: string; lookupKey?: string; unitPlural?: string },
+      ]),
+    )
+    return {
+      ...response,
+      items: items.map((item) => {
+        const feature = byId.get(item.featureId ?? item.feature?.id ?? '')
+        return feature && !item.feature?.name
+          ? { ...item, feature: { ...item.feature, ...feature } }
+          : item
+      }),
+    }
+  } catch {
+    // The names are a nicety: the usage itself is already here.
+    return response
+  }
 }
 
 /** Everything the key needs to distinguish one window from another. */
