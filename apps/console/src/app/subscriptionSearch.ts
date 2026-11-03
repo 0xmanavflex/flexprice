@@ -3,6 +3,7 @@ import {
   SubscriptionSortField,
   SubscriptionStatus,
   DEFAULT_SUBSCRIPTION_QUERY,
+  DEFAULT_SUBSCRIPTION_FILTERS,
   SUBSCRIPTION_FILTERS,
   decodeListFilters,
   runnableFilters,
@@ -15,6 +16,9 @@ import {
  * is a shareable link, and a hand-edited URL shows the first page rather than an
  * error. There is no `view`: the list is one table: and the default sort is
  * newest-started first.
+ *
+ * No `filters` param means the default (Active and Trialing); a cleared filter
+ * is written as an empty list, so it stays cleared on reload.
  */
 const STATUSES = new Set<string>(Object.values(SubscriptionStatus))
 const SORT_FIELDS = new Set<string>(Object.values(SubscriptionSortField))
@@ -53,6 +57,9 @@ export function parseSubscriptionSearch(raw: Record<string, unknown>): Subscript
       param(raw, 'dir', 'sortDirection') === 'asc'
         ? 'asc'
         : DEFAULT_SUBSCRIPTION_QUERY.sortDirection,
-    filters: runnableFilters(decodeListFilters(raw['filters']), SUBSCRIPTION_FILTERS),
+    filters:
+      raw['filters'] === undefined
+        ? DEFAULT_SUBSCRIPTION_FILTERS
+        : runnableFilters(decodeListFilters(raw['filters']), SUBSCRIPTION_FILTERS),
   }
 }

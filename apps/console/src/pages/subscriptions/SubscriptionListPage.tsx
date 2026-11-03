@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   DEFAULT_CUSTOMER_QUERY,
   DEFAULT_PLAN_QUERY,
+  isSubscriptionQueryFiltered,
   type Subscription,
   type SubscriptionCancellationType,
   type SubscriptionQuery,
@@ -55,8 +56,7 @@ export function SubscriptionListPage({
 
   const failure = toListFailure(subscriptions.error, 'contracts')
   const rows = subscriptions.data?.subscriptions ?? []
-  const isFiltered =
-    query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+  const isFiltered = isSubscriptionQueryFiltered(query)
 
   return (
     <>

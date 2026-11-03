@@ -335,6 +335,8 @@ export function HomePage({
    */
   const subscriptions = useSubscriptions({
     ...DEFAULT_SUBSCRIPTION_QUERY,
+    // Every contract, not the list's Active and Trialing default.
+    filters: [],
     pageSize: 100,
     sortBy: 'startDate',
     sortDirection: 'desc',

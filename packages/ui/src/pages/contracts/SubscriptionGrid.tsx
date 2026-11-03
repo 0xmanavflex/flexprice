@@ -11,6 +11,7 @@ import {
 } from '@ui/icons'
 import {
   DEFAULT_SUBSCRIPTION_QUERY,
+  isSubscriptionQueryFiltered,
   SUBSCRIPTION_SORT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
   type Subscription,
@@ -304,9 +305,7 @@ export function SubscriptionGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={
-        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
-      }
+      isFiltered={isSubscriptionQueryFiltered(query)}
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No contracts match these filters"
       empty={{

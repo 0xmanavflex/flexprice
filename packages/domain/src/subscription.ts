@@ -1,4 +1,4 @@
-import type { ListFilter, ListFilterSpec } from './listFilter'
+import { FilterOp, type ListFilter, type ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
 import {
@@ -100,6 +100,32 @@ export interface SubscriptionQuery {
   filters?: ListFilter[]
 }
 
+/**
+ * The contract list opens on the contracts that bill: Active and Trialing. It is
+ * an ordinary Status filter, so the chip shows it and clearing it shows every
+ * contract.
+ */
+export const DEFAULT_SUBSCRIPTION_FILTERS: ListFilter[] = [
+  {
+    field: 'subscription_status',
+    op: FilterOp.In,
+    value: [SubscriptionStatus.Active, SubscriptionStatus.Trialing],
+  },
+]
+
+/**
+ * Whether the list is narrowed past its default. The Active and Trialing default
+ * does not count, so an account with no contracts still gets the first-run empty
+ * state rather than "no contracts match".
+ */
+export function isSubscriptionQueryFiltered(query: SubscriptionQuery): boolean {
+  return (
+    query.search.length > 0 ||
+    query.statuses.length > 0 ||
+    JSON.stringify(query.filters ?? []) !== JSON.stringify(DEFAULT_SUBSCRIPTION_FILTERS)
+  )
+}
+
 export const DEFAULT_SUBSCRIPTION_QUERY: SubscriptionQuery = {
   page: 1,
   pageSize: 25,
@@ -107,7 +133,7 @@ export const DEFAULT_SUBSCRIPTION_QUERY: SubscriptionQuery = {
   statuses: [],
   sortBy: SubscriptionSortField.UpdatedAt,
   sortDirection: 'desc',
-  filters: [],
+  filters: DEFAULT_SUBSCRIPTION_FILTERS,
 }
 
 /**
