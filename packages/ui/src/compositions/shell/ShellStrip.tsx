@@ -30,6 +30,10 @@ export function ShellStrip({ message, actionLabel, href }: ShellStripProps) {
             announce it as a button. Styled as Button's link variant. */}
         <a
           href={href}
+          rel="noreferrer"
+          // A new tab, so an unfinished form in the console is not discarded by
+          // following the link out of it (as on the migration placeholder).
+          target="_blank"
           className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
         >
           {actionLabel}

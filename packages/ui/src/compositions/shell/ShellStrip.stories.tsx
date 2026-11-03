@@ -21,5 +21,6 @@ export const Playground: Story = {
   play: async ({ canvasElement }) => {
     const link = within(canvasElement).getByRole('link', { name: /Go back to old UI/ })
     await expect(link).toHaveAttribute('href', 'https://admin.flexprice.io')
+    await expect(link).toHaveAttribute('target', '_blank')
   },
 }
