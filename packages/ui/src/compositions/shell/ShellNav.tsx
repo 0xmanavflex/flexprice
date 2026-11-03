@@ -289,6 +289,12 @@ export function ShellNav({
     setOpenId(current)
   }
   const effectiveOpen = openId ?? current
+  // The slot sits above the first pinned group. With none, it still belongs
+  // at the foot of the sidebar, after the last group.
+  const hasPinnedGroup = groups.some((group) => group.pinned)
+  const pinnedSlot = (
+    <div className="mt-auto px-2 pt-2 pb-1 in-data-[state=collapsed]:hidden">{pinned}</div>
+  )
 
   return (
     <>
@@ -296,9 +302,7 @@ export function ShellNav({
         const showPinned = Boolean(group.pinned && pinned && !groups[index - 1]?.pinned)
         return (
           <Fragment key={group.id}>
-            {showPinned ? (
-              <div className="mt-auto px-2 pt-2 pb-1 in-data-[state=collapsed]:hidden">{pinned}</div>
-            ) : null}
+            {showPinned ? pinnedSlot : null}
             <SidebarGroup
               className={cn(
                 group.pinned && !showPinned && 'mt-auto',
@@ -320,6 +324,7 @@ export function ShellNav({
           </Fragment>
         )
       })}
+      {pinned && !hasPinnedGroup ? pinnedSlot : null}
     </>
   )
 }

@@ -440,6 +440,10 @@ export const WithPinnedContent: Story = {
       </div>
     ),
   },
+  // No group here is pinned: the content still reaches the foot of the sidebar.
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('3 invoices overdue')).toBeInTheDocument()
+  },
 }
 
 /**
