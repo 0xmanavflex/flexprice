@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
@@ -43,6 +43,7 @@ import {
   Trash2Icon,
 } from '@ui/icons'
 import { useWriteAccess } from '@ui/compositions/access/Access'
+import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Pill } from '../../shared/cells'
@@ -100,6 +101,11 @@ export interface ChargeSheetProps {
   onDelete?: (() => void) | undefined
   /** The delete button's wording. Catalogue charges say "Terminate"; a contract says "End charge". */
   deleteLabel?: string | undefined
+  /**
+   * Drops a version that has not started. The price delete clears the end date
+   * on the version billing now. Omitted, upcoming versions have no delete.
+   */
+  onDeleteUpcoming?: ((versionId: string) => Promise<unknown>) | undefined
   /**
    * The versions read from the history API as the sheet opened. Given, it
    * replaces `detail.versions`, and its loading and error states show in the
@@ -364,9 +370,13 @@ export function ChargeSheet({
   editableSections,
   onDelete,
   deleteLabel = 'Delete charge',
+  onDeleteUpcoming,
   history: fetched,
 }: ChargeSheetProps) {
   const body = useRef<HTMLDivElement>(null)
+  const [dropping, setDropping] = useState<string | null>(null)
+  const [dropPending, setDropPending] = useState(false)
+  const [dropError, setDropError] = useState<string | null>(null)
   // Ending a charge is a write: gated as the row menu's Terminate is.
   const write = useWriteAccess()
 
@@ -437,6 +447,25 @@ export function ChargeSheet({
         .filter(Boolean)
         .join(' · '),
       ...(version.actor ? { by: version.actor } : {}),
+      ...(status === 'upcoming' && onDeleteUpcoming && write.allowed
+        ? {
+            action: (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-destructive size-8"
+                aria-label="Delete upcoming price"
+                onClick={() => {
+                  setDropError(null)
+                  setDropping(version.id)
+                }}
+              >
+                <Trash2Icon aria-hidden />
+              </Button>
+            ),
+          }
+        : {}),
     }
   })
 
@@ -616,6 +645,30 @@ export function ChargeSheet({
           </div>
         ) : null}
       </SheetContent>
+      <ConfirmDialog
+        open={dropping !== null}
+        onOpenChange={(open) => (open ? undefined : setDropping(null))}
+        title="Delete this upcoming price?"
+        description="The scheduled price is removed. The charge billing now keeps going, and its end date is cleared."
+        confirmLabel="Delete upcoming price"
+        destructive
+        isPending={dropPending}
+        error={dropError}
+        onConfirm={() => {
+          if (!dropping || !onDeleteUpcoming) return
+          setDropPending(true)
+          onDeleteUpcoming(dropping)
+            .then(() => setDropping(null))
+            .catch((caught: unknown) =>
+              setDropError(
+                caught instanceof Error && caught.message
+                  ? caught.message
+                  : 'The upcoming price could not be deleted. Try again.',
+              ),
+            )
+            .finally(() => setDropPending(false))
+        }}
+      />
     </Sheet>
   )
 }

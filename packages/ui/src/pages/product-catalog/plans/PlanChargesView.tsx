@@ -30,6 +30,8 @@ export interface PlanChargesViewProps {
   onOpenCharge?: ((charge: Charge | null) => void) | undefined
   /** The open charge's versions from `GET /prices/{id}/history`. */
   history?: ChargeHistory | undefined
+  /** Deletes a version that has not started. */
+  onDeleteUpcoming?: ((versionId: string) => Promise<unknown>) | undefined
   /** The empty state's line, naming what the charges belong to. */
   emptyDescription?: string | undefined
 }
@@ -48,6 +50,7 @@ function PlanChargesViewInner({
   details,
   onOpenCharge,
   history,
+  onDeleteUpcoming,
   emptyDescription,
 }: PlanChargesViewProps) {
   const meterName = (id: string) => charges.find((charge) => charge.meterId === id)?.meterName ?? id
@@ -67,6 +70,7 @@ function PlanChargesViewInner({
       {...(details ? { details } : {})}
       {...(onOpenCharge ? { onOpenCharge } : {})}
       {...(history ? { history } : {})}
+      {...(onDeleteUpcoming ? { onDeleteUpcoming } : {})}
       isLoading={loading ?? false}
       error={error ? 'Charges could not be loaded' : null}
       onRetry={onRetry}

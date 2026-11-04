@@ -429,6 +429,9 @@ export function SubscriptionDetailPage({
         onEndCharge={async (line, draft) => {
           await endLine.mutateAsync({ lineItemId: line.id, draft })
         }}
+        onDeleteUpcomingLine={(lineId) =>
+          endLine.mutateAsync({ lineItemId: lineId, draft: { effectiveFrom: '' } })
+        }
         onPreviewQuantity={(line, draft) =>
           previewChange.mutateAsync({ subscriptionId: data.id, line, draft })
         }
