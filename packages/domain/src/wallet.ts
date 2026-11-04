@@ -129,6 +129,11 @@ export interface WalletTransaction {
   reference?: WalletTransactionReference | null
   /** The API's transaction status (completed, pending, failed), lower case. */
   status?: string
+  /**
+   * A debit that is credits lapsing (`CREDIT_EXPIRED`), not usage: what it
+   * drew from a top-up expired rather than was consumed.
+   */
+  expiry?: boolean
 }
 
 const decimal = /^\d+(\.\d+)?$/

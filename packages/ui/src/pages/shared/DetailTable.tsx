@@ -85,6 +85,12 @@ export interface DetailTableProps<T> {
   border?: boolean
   /** Skeleton rows while the set is still loading; `empty` waits until it has arrived. */
   isLoading?: boolean
+  /**
+   * A row that belongs to the row above it, such as a line an expanded row
+   * opens: it is not counted in "1 - 10 of 24", and it pages with its parent
+   * rather than pushing a record onto the next page.
+   */
+  isChild?: (row: T) => boolean
   className?: string
 }
 
@@ -114,6 +120,7 @@ export function DetailTable<T extends object>({
   footer = true,
   border = false,
   isLoading = false,
+  isChild,
   className,
 }: DetailTableProps<T>) {
   const toolsSlot = useContext(SectionToolsContext)
@@ -231,8 +238,15 @@ export function DetailTable<T extends object>({
       ? [{ value: column.key, label: column.header }]
       : [],
   )
+  // Each record with the child rows beneath it: the unit that is counted and paged.
+  const groups = visible.reduce<T[][]>((out, row) => {
+    const last = out[out.length - 1]
+    if (last && isChild?.(row)) last.push(row)
+    else out.push([row])
+    return out
+  }, [])
   const start = (page - 1) * pageSize
-  const slice = visible.slice(start, start + pageSize)
+  const slice = groups.slice(start, start + pageSize).flat()
   const activeSpecs = specs.filter((spec) => (choicesById[spec.id]?.length ?? 0) > 0)
   const isFiltered =
     search.trim().length > 0 || activeSpecs.some((spec) => (selected[spec.id]?.length ?? 0) > 0)
@@ -332,11 +346,11 @@ export function DetailTable<T extends object>({
         // With its tools in the section header the table is usually short
         // enough to need no footer, but a longer one keeps its pager: rows are
         // sliced to one page, so without it the rest could not be reached.
-        hideFooter={!footer || (inHeader && visible.length <= pageSize)}
+        hideFooter={!footer || (inHeader && groups.length <= pageSize)}
         label={`${label} table`}
         noun={noun}
         rows={slice}
-        total={visible.length}
+        total={groups.length}
         columns={entityColumns}
         getRowId={(row) => idOf(row, rows.indexOf(row))}
         page={page}

@@ -252,6 +252,15 @@ describe('wallet mapping', () => {
     expect(toWalletTransaction({ type: 'credit' }).reason).toBe('Wallet activity')
   })
 
+  it('marks credits lapsing as an expiry, not usage', () => {
+    expect(toWalletTransaction({ type: 'debit', transactionReason: 'CREDIT_EXPIRED' }).expiry).toBe(
+      true,
+    )
+    expect(
+      toWalletTransaction({ type: 'debit', transactionReason: 'INVOICE_PAYMENT' }).expiry,
+    ).toBeUndefined()
+  })
+
   it('carries what is left of a top-up and when it expires, null when unsent', () => {
     const expiry = new Date('2026-10-17T00:00:00Z')
     const topUp = toWalletTransaction({
