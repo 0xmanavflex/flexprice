@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type AuthSource, type Flexprice, call, getInvoice, searchInvoices } from '@fp/api'
+import {
+  type AuthSource,
+  type Flexprice,
+  call,
+  getInvoice,
+  getInvoicePdfUrl,
+  searchInvoices,
+} from '@fp/api'
 import {
   type CreateInvoice,
   type Invoice,
@@ -445,25 +452,37 @@ export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
   })
 }
 
+/** Reads one invoice on demand, through the detail page's cache: a row's CSV download. */
+export function useInvoiceDetailLoader() {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const queryClient = useQueryClient()
+
+  return (id: string): Promise<InvoiceDetail> =>
+    queryClient.fetchQuery({
+      queryKey: queryKeys.invoices.detail(id),
+      queryFn: ({ signal }) => fetchInvoice(serverURL, auth, id, signal),
+    })
+}
+
 /**
- * An invoice's PDF link, read on demand for a row's "Download invoice".
+ * An invoice's PDF link, read on demand for "Download invoice".
  *
- * Rows come from the list, which does not carry `invoice_pdf_url`; this reads
- * the invoice through the same query the detail page uses (so a later visit is
- * cached) and resolves to its link, or null when no PDF exists yet.
+ * The invoice's own `invoice_pdf_url` when it has one; otherwise the PDF route
+ * (`/invoices/{id}/pdf?url=true`), which renders it and answers a presigned
+ * link. Null when neither gives one.
  */
 export function useInvoicePdfLink() {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
   const queryClient = useQueryClient()
 
-  return (id: string): Promise<string | null> =>
-    queryClient
-      .fetchQuery({
-        queryKey: queryKeys.invoices.detail(id),
-        queryFn: ({ signal }) => fetchInvoice(serverURL, auth, id, signal),
-      })
-      .then((invoice) => invoice.invoicePdfUrl)
+  return async (id: string): Promise<string | null> => {
+    const cached = queryClient.getQueryData<InvoiceDetail>(queryKeys.invoices.detail(id))
+    if (cached?.invoicePdfUrl) return cached.invoicePdfUrl
+    const { token, environmentId } = await credentials(auth, 'Sign in to download this invoice.')
+    return getInvoicePdfUrl(serverURL, token, environmentId, id)
+  }
 }
 
 /** Builds `POST /invoices`. Money stays a string; the form's total is sent as given. */

@@ -94,6 +94,8 @@ export interface InvoiceDetailViewProps {
   isFinalizing?: boolean
   /** More menu: Download PDF. Omitted, the item is disabled. */
   onDownload?: () => void
+  /** More menu: Download CSV of the line items. Omitted, the item is not offered. */
+  onDownloadCsv?: () => void
   onRecordPayment?: () => void
   /** Recompute a draft in place, or replace a (voided) contract invoice with a fresh one. */
   onRecalculate?: () => void
@@ -161,6 +163,7 @@ export function InvoiceDetailView({
   onFinalize,
   isFinalizing = false,
   onDownload,
+  onDownloadCsv,
   onRecordPayment,
   onRecalculate,
   recalculateBlocked,
@@ -351,10 +354,13 @@ export function InvoiceDetailView({
               ) : null}
               <MenuAction
                 icon={<DownloadIcon />}
-                label="Download invoice"
+                label="Download PDF"
                 onSelect={onDownload}
-                hint="Available once the invoice has a PDF"
+                hint="Available once the invoice is finalized"
               />
+              {onDownloadCsv ? (
+                <MenuAction icon={<DownloadIcon />} label="Download CSV" onSelect={onDownloadCsv} />
+              ) : null}
               <MenuAction
                 icon={<ExternalLinkIcon />}
                 label="Open hosted invoice"

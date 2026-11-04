@@ -108,7 +108,7 @@ export type { ListCreditNotesParams } from './creditNotes'
  * fetch until the SDK has them. See `customers.ts`, `invoices.ts`, `payments.ts`.
  */
 export { createCustomer, getCustomer, searchCustomers } from './customers'
-export { getInvoice, searchInvoices } from './invoices'
+export { getInvoice, getInvoicePdfUrl, searchInvoices } from './invoices'
 export { listPayments } from './payments'
 export type { ListPaymentsParams } from './payments'
 

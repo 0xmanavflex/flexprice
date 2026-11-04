@@ -196,6 +196,7 @@ const meta = {
     onVoid: fn(),
     onRetryPayment: fn(),
     onDownload: fn(),
+    onDownloadCsv: fn(),
     onOpenCustomer: fn(),
     onOpenSubscription: fn(),
     onOpenPayment: fn(),
@@ -230,6 +231,7 @@ const meta = {
     onVoid: { control: false },
     onRetryPayment: { control: false },
     onDownload: { control: false },
+    onDownloadCsv: { control: false },
     onOpenCustomer: { control: false },
     onOpenSubscription: { control: false },
     onOpenPayment: { control: false },
@@ -313,8 +315,11 @@ export const MoreMenu: Story = {
     await expect(
       await screen.findByRole('menuitem', { name: /Record payment/ }),
     ).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('menuitem', { name: /Download invoice/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Download PDF/ }))
     await expect(args.onDownload).toHaveBeenCalledOnce()
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Download CSV/ }))
+    await expect(args.onDownloadCsv).toHaveBeenCalledOnce()
     await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
     await screen.findByRole('menuitem', { name: 'Void invoice' })
     await expect(

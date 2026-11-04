@@ -86,6 +86,7 @@ export {
   useUpdateInvoicePaymentStatus,
   useInvoice,
   useInvoicePdfLink,
+  useInvoiceDetailLoader,
   useInvoices,
   useRecalculateInvoice,
   useReplaceVoidedInvoice,
