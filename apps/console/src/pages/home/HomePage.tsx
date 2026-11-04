@@ -6,6 +6,7 @@ import {
   reportCurrencies,
   reportScalar,
   reportSeries,
+  reportsUnconfigured,
   useInvoices,
   useRevenueOverview,
   useReport,
@@ -13,7 +14,7 @@ import {
   useUsageAnalytics,
   UsageWindowSize,
 } from '@fp/query'
-import type { ReportQuery, ReportResult, UsageAnalytics } from '@fp/query'
+import type { ReportQuery, ReportResult, RevenueOverview, UsageAnalytics } from '@fp/query'
 import {
   DEFAULT_INVOICE_QUERY,
   DEFAULT_SUBSCRIPTION_QUERY,
@@ -368,14 +369,16 @@ export function HomePage({
       eventsStart.getTime() > windows.current.start.getTime(),
     ),
   )
-  const revenuePanel = toRevenuePanel(
-    revenueAll,
-    revenueByDay,
-    revenueByCustomer.data,
-    leaderNames,
-    windows,
-    granularity.id,
-  )
+  const revenuePanel = reportsUnconfigured(revenueAll.error)
+    ? revenueFromDashboard(billed)
+    : toRevenuePanel(
+        revenueAll,
+        revenueByDay,
+        revenueByCustomer.data,
+        leaderNames,
+        windows,
+        granularity.id,
+      )
   /*
    * Parked until quota-based metrics land.
    *
@@ -562,6 +565,39 @@ function largestCurrency(result: ReportResult | undefined): string | null {
     if (value > 0 && (best === null || value > best.value)) best = { currency, value }
   }
   return best?.currency ?? null
+}
+
+/** Revenue from `POST /dashboard/revenue-dashboard` when the report library is not configured. */
+function revenueFromDashboard(view: QueryView<RevenueOverview>): RevenuePanel {
+  const meta = qualityOf(view)
+  const blank = {
+    total: null,
+    fixed: null,
+    usage: null,
+    points: [],
+    hideChart: true,
+    topCustomers: [],
+    otherCurrencies: [],
+  }
+  if (!view.data) return { ...meta, ...blank, status: withoutData(view) }
+  const summary = view.data.summaries[0]
+  if (!summary) return { ...meta, ...blank, status: 'empty' }
+  const currency = summary.currency
+  return {
+    ...meta,
+    status: 'ready',
+    total: summary.total,
+    fixed: summary.fixed,
+    usage: summary.usage,
+    changePercent: null,
+    points: [],
+    hideChart: true,
+    topCustomers: view.data.customers
+      .filter((row) => row.total.currency === currency)
+      .slice(0, TOP_CUSTOMERS)
+      .map((row) => ({ id: row.customerId, name: row.name, total: row.total })),
+    otherCurrencies: view.data.summaries.slice(1).map((row) => row.currency),
+  }
 }
 
 function toRevenuePanel(

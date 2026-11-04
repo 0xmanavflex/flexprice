@@ -5,6 +5,7 @@ import {
   reportCurrencies,
   reportScalar,
   reportSeries,
+  reportsUnconfigured,
   useCustomerNames,
   useReport,
   useRevenueOverview,
@@ -385,7 +386,34 @@ export function ReportsPage({
   )
   const count = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
 
-  const revenueStatus: ReportStatus = statusOf(revenueAll, revenue.value === null)
+  const revenueOnly = reportsUnconfigured(revenueAll.error)
+  const shown =
+    revenueOnly
+      ? (overview.data?.summaries.find((row) => row.currency === search.currency)?.currency ??
+        overview.data?.summaries[0]?.currency ??
+        currency)
+      : currency
+  const dashSummary = overview.data?.summaries.find((row) => row.currency === shown)
+  const dashRows = dashboardCustomerRows(overview.data?.customers ?? [], shown)
+  const dashTotal = amountOf(dashSummary?.total)
+  const dashUsage = amountOf(dashSummary?.usage)
+  const dashContract = amountOf(dashSummary?.fixed)
+  const dashMoney = (value: number) => formatAmount(value, shown)
+  const dashStatus: ReportStatus = overview.isPending
+    ? 'loading'
+    : overview.isError && !overview.data
+      ? 'error'
+      : dashSummary
+        ? 'ready'
+        : 'empty'
+  const shownView =
+    revenueOnly && search.view !== 'overview' && search.view !== 'revenue' && search.view !== 'customers'
+      ? 'overview'
+      : search.view
+
+  const revenueStatus: ReportStatus = revenueOnly
+    ? dashStatus
+    : statusOf(revenueAll, revenue.value === null)
   const openCustomer = (customerId: string) =>
     void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
   const retry =
@@ -413,11 +441,17 @@ export function ReportsPage({
       }}
       rangeLabel={rangeLabel}
       comparing={comparing}
-      view={search.view}
+      {...(revenueOnly ? { revenueOnly: true } : {})}
+      view={shownView}
       onViewChange={(view) => onSearchChange({ ...search, view })}
       headline={{
         status: revenueStatus === 'loading' || revenueStatus === 'error' ? revenueStatus : 'ready',
-        revenue: {
+        revenue: revenueOnly
+          ? {
+              value: dashSummary ? dashMoney(dashTotal) : '—',
+              detail: `${rangeLabel.charAt(0).toUpperCase()}${rangeLabel.slice(1)}`,
+            }
+          : {
           ...figure(revenue, moneyOrDash),
           ...(comparing
             ? {}
@@ -439,29 +473,59 @@ export function ReportsPage({
       revenue={{
         // An all-zero series is drawn as the empty state by the chart itself;
         // the totals come from their own read and still show.
-        status: statusOf(revenueSeries, points.length === 0),
-        reason: revenueSeries.isError ? 'The billing report did not respond.' : undefined,
-        onRetry: retry(revenueAll, revenueSeries),
-        total: figure(revenue, moneyOrDash),
-        usage: { value: summary ? money(usage) : '—' },
-        contract: { value: summary ? money(contract) : '—' },
-        usageShare: percentOf(usage, usage + contract),
+        status: revenueOnly ? dashStatus : statusOf(revenueSeries, points.length === 0),
+        reason: revenueOnly
+          ? overview.isError
+            ? 'Revenue could not be loaded.'
+            : undefined
+          : revenueSeries.isError
+            ? 'The billing report did not respond.'
+            : undefined,
+        onRetry: revenueOnly ? retry(overview) : retry(revenueAll, revenueSeries),
+        total: revenueOnly
+          ? { value: dashSummary ? dashMoney(dashTotal) : '—' }
+          : figure(revenue, moneyOrDash),
+        usage: { value: revenueOnly ? (dashSummary ? dashMoney(dashUsage) : '—') : summary ? money(usage) : '—' },
+        contract: {
+          value: revenueOnly ? (dashSummary ? dashMoney(dashContract) : '—') : summary ? money(contract) : '—',
+        },
+        usageShare: percentOf(
+          revenueOnly ? dashUsage : usage,
+          (revenueOnly ? dashUsage : usage) + (revenueOnly ? dashContract : contract),
+        ),
         grain,
-        series: points,
+        series: revenueOnly ? [] : points,
       }}
       customers={{
-        status: statusOf(revenueByCustomer, customerRows.length === 0),
-        reason: revenueByCustomer.isError ? 'The billing report did not respond.' : undefined,
-        onRetry: retry(revenueByCustomer, arpuReport),
-        rows: customerRows,
-        billed: customerRows.length,
+        status: revenueOnly ? dashStatus : statusOf(revenueByCustomer, customerRows.length === 0),
+        reason: revenueOnly
+          ? overview.isError
+            ? 'Revenue could not be loaded.'
+            : undefined
+          : revenueByCustomer.isError
+            ? 'The billing report did not respond.'
+            : undefined,
+        onRetry: revenueOnly ? retry(overview) : retry(revenueByCustomer, arpuReport),
+        rows: revenueOnly ? dashRows : customerRows,
+        billed: (revenueOnly ? dashRows : customerRows).length,
         arpu: figure(arpu, moneyOrDash),
         topTenShare: percentOf(
-          customerRows.slice(0, 10).reduce((sum, row) => sum + row.revenue, 0),
-          total,
+          (revenueOnly ? dashRows : customerRows)
+            .slice(0, 10)
+            .reduce((sum, row) => sum + row.revenue, 0),
+          revenueOnly ? dashTotal : total,
         ),
         onOpenCustomer: openCustomer,
-        all: {
+        all: revenueOnly
+          ? {
+              status: dashStatus,
+              rows: dashRows,
+              offset: 0,
+              size: dashRows.length || PAGE,
+              hasMore: false,
+              onPage: setOffset,
+            }
+          : {
           status: customerPage.isPlaceholderData
             ? 'loading'
             : statusOf(customerPage, pageRows.length === 0 && offset === 0),

@@ -259,6 +259,10 @@ export interface MetricTab {
    * pass something else for a metric that simply has no series.
    */
   emptyMessage?: string | undefined
+  /**
+   * No series exists for this metric. Omit the plot instead of an empty box.
+   */
+  hideChart?: boolean | undefined
 }
 
 export interface MetricChartProps {
@@ -436,6 +440,8 @@ function MetricSeries({
       </div>
     )
   }
+
+  if (tab.hideChart && tab.points.length === 0) return null
 
   if (tab.points.length === 0) {
     return (

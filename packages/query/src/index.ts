@@ -765,7 +765,14 @@ export type { PortalAction, PortalQuery } from './customerPortal'
 export type { PortalAuth } from '@fp/api'
 export { useCreateCustomerPortalSession } from './customerPortalSession'
 export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'
-export { reportBreakdown, reportCurrencies, reportScalar, reportSeries, useReport } from './reports'
+export {
+  reportBreakdown,
+  reportCurrencies,
+  reportScalar,
+  reportSeries,
+  reportsUnconfigured,
+  useReport,
+} from './reports'
 export type { ReportBreakdownRow, ReportPoint, ReportScalar } from './reports'
 export type { ReportQuery, ReportResult } from '@fp/api'
 export { useAddCustomerCard, usePushCustomerToIntegrations } from './integrationSync'
