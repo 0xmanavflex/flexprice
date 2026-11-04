@@ -43,6 +43,13 @@ describe('windows', () => {
     expect(rangeWindow('month', NOW).start).toEqual(day('2026-10-01'))
   })
 
+  it('counts last 30 and 90 days as exactly that many days, today included', () => {
+    const now = new Date('2026-11-04T12:00:00Z')
+    expect(rangeWindow('30d', now).start).toEqual(day('2026-10-06'))
+    expect(rangeWindow('90d', now).start).toEqual(day('2026-08-07'))
+    expect(alignToWindow([], rangeWindow('30d', now), 'day')).toHaveLength(30)
+  })
+
   it('puts the comparison window immediately before, the same length', () => {
     const window = { start: day('2026-10-01'), end: day('2026-10-11') }
     expect(previousWindow(window)).toEqual({ start: day('2026-09-21'), end: day('2026-10-01') })
@@ -279,7 +286,7 @@ describe('alignToWindow at a partial first bucket', () => {
     expect(out.reduce((sum, point) => sum + (point.value ?? 0), 0)).toBe(0)
   })
 
-  it('does not add two weekly averages when the series is not additive', () => {
+  it('keeps two weekly averages in their own Monday weeks when not additive', () => {
     const out = alignToWindow(
       [
         { at: new Date('2026-09-21T00:00:00Z'), value: 7 },
@@ -291,7 +298,18 @@ describe('alignToWindow at a partial first bucket', () => {
       null,
       false,
     )
-    expect(out[0]?.value).toBe(5)
+    expect(out.slice(0, 2).map((point) => point.value)).toEqual([7, 5])
+  })
+
+  it('labels each week with the Monday the report buckets it under', () => {
+    const quarter = rangeWindow('quarter', new Date('2026-11-04T12:00:00Z'))
+    const out = alignToWindow(
+      [{ at: new Date('2026-11-02T00:00:00Z'), value: 216.23 }],
+      quarter,
+      'week',
+    )
+    expect(out[0]?.label).toBe('Sep 28')
+    expect(out.at(-1)).toEqual({ label: 'Nov 2', value: 216.23 })
   })
 
   it('keeps a partial first average when the series is not additive', () => {
