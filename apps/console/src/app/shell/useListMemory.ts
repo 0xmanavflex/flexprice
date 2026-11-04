@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import {
   DEFAULT_ADDON_QUERY,
@@ -22,6 +22,7 @@ import {
 import { DEFAULT_HOME_SEARCH } from '../homeSearch'
 import { rememberQuery, rememberedQuery, restoreTarget } from '../listMemory'
 import { useSession } from '../session/SessionProvider'
+import { ENVIRONMENT_PARAM } from './environmentParam'
 
 /**
  * Which paths are lists, and what "no query" means for each.
@@ -68,7 +69,14 @@ export function useListMemory(): void {
   const navigate = useNavigate()
   const { environmentId } = useSession()
   const pathname = useLocation({ select: (location) => location.pathname })
-  const search = useLocation({ select: (location) => location.search }) as Record<string, unknown>
+  const location = useLocation({ select: (location) => location.search }) as Record<string, unknown>
+  // The list's own query, without `?env=`: every console page carries the
+  // environment, so with it no list would ever read as bare. The shell route
+  // keeps `env` on the restore navigation by itself.
+  const search = useMemo(() => {
+    const { [ENVIRONMENT_PARAM]: _environment, ...query } = location
+    return query
+  }, [location])
 
   /*
    * Which list this hook has already tried to restore.

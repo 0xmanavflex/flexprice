@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test'
+import { type Page, test as base, expect as baseExpect } from '@playwright/test'
 
 /**
  * Every journey's `test`: Playwright's, plus failure evidence the reporter
@@ -64,4 +64,45 @@ export const test = base.extend<{ evidence: void }>({
   ],
 })
 
-export { expect }
+/** A URL as the journeys read it: without the console's `env` parameter. */
+function withoutEnvironment(url: URL): string {
+  const copy = new URL(url)
+  copy.searchParams.delete('env')
+  return copy.toString().replace(/\?$/, '')
+}
+
+/**
+ * Every console page carries `?env=<environment id>` (see
+ * `app/shell/environmentInUrl.ts`). The journeys assert where a page is, not
+ * which environment it names, so `toHaveURL` compares the address with that
+ * parameter removed; `shared-link-environment.spec.ts` checks `env` itself
+ * by reading `page.url()`. Built on Playwright's own retrying `toHaveURL`.
+ */
+export const expect = baseExpect.extend({
+  async toHaveURL(
+    page: Page,
+    expected: string | RegExp | ((url: URL) => boolean),
+    options?: { timeout?: number; ignoreCase?: boolean },
+  ) {
+    const matches = (url: URL): boolean => {
+      if (typeof expected === 'function') return expected(url)
+      const actual = withoutEnvironment(url)
+      if (typeof expected === 'string') return actual === withoutEnvironment(new URL(expected, url))
+      expected.lastIndex = 0
+      return expected.test(actual)
+    }
+    try {
+      if (this.isNot) await baseExpect(page).not.toHaveURL(matches, options)
+      else await baseExpect(page).toHaveURL(matches, options)
+      return { pass: !this.isNot, name: 'toHaveURL', message: () => '' }
+    } catch {
+      return {
+        pass: this.isNot,
+        name: 'toHaveURL',
+        message: () =>
+          `Expected the URL (env removed) ${this.isNot ? 'not ' : ''}to match ${String(expected)}\n` +
+          `Received: ${withoutEnvironment(new URL(page.url()))}`,
+      }
+    }
+  },
+})

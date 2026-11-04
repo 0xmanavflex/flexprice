@@ -6,6 +6,7 @@ import {
   createRoute,
   createRouter,
   redirect,
+  retainSearchParams,
   stripSearchParams,
   useCanGoBack,
   useNavigate,
@@ -25,6 +26,11 @@ import { hasSession, needsSignIn, useSession } from './session'
 import { AnalyticsIdentity, captureError } from './analytics'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
+import {
+  ENVIRONMENT_PARAM,
+  parseEnvironmentParam,
+  useEnvironmentInUrl,
+} from './shell/environmentInUrl'
 import { DOCS_URL } from './shell/navigation'
 import type { InvoiceQuery, RollforwardAccount } from '@fp/domain'
 const InvoiceFormPage = lazy(() =>
@@ -368,6 +374,8 @@ function ShellLayout() {
   const { pathname, searchStr } = useRouterState({ select: (state) => state.location })
   const params = useParams({ strict: false })
   const environments = useEnvironments()
+  // Every page's address names its environment (`?env=`): a shared link opens there.
+  useEnvironmentInUrl(environments)
   const { session, signOut, environmentId } = useSession()
   /*
    * Who is signed in, when anyone is.
@@ -556,6 +564,10 @@ const rootRoute = createRootRoute({
 const shellRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: '_shell',
+  // `?env=<environment id>` on every console page, kept across navigation so
+  // in-app links need not repeat it. See `shell/environmentInUrl.ts`.
+  validateSearch: (search: Record<string, unknown>) => parseEnvironmentParam(search),
+  search: { middlewares: [retainSearchParams([ENVIRONMENT_PARAM])] },
   /**
    * The guard, in `beforeLoad` rather than in a component.
    *

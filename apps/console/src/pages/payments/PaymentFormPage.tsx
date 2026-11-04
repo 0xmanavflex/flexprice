@@ -9,6 +9,8 @@ import {
 } from '@fp/query'
 import { PaymentForm, toast } from '@fp/ui/pages'
 import { ConfirmDialog, LoadingRows, PageBody, PaymentLink } from '@fp/ui/compositions'
+import { getActiveEnvironmentId } from '@/app/session'
+import { ENVIRONMENT_PARAM } from '@/app/shell/environmentParam'
 
 export interface PaymentFormPageProps {
   /** Start with this invoice chosen and its amount due filled in. */
@@ -123,7 +125,7 @@ export function PaymentFormPage({ invoiceId, onCancel, onDone }: PaymentFormPage
         onSubmit={(draft) =>
           record.mutate(
             draft.methodType === 'PAYMENT_LINK'
-              ? { ...draft, returnUrl: `${window.location.origin}/invoices/${draft.invoiceId}` }
+              ? { ...draft, returnUrl: invoiceReturnUrl(draft.invoiceId) }
               : draft,
             {
               onSuccess: (payment) =>
@@ -155,4 +157,12 @@ export function PaymentFormPage({ invoiceId, onCancel, onDone }: PaymentFormPage
       />
     </>
   )
+}
+
+/** Where a payment link returns: the invoice, in the environment it lives in. */
+function invoiceReturnUrl(invoiceId: string): string {
+  const url = new URL(`/invoices/${encodeURIComponent(invoiceId)}`, window.location.origin)
+  const environmentId = getActiveEnvironmentId()
+  if (environmentId) url.searchParams.set(ENVIRONMENT_PARAM, environmentId)
+  return url.toString()
 }

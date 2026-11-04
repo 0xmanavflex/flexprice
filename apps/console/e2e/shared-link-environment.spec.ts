@@ -12,6 +12,7 @@ import { expect, test } from './fixtures'
  */
 const PRODUCTION_ONLY_INVOICE = 'inv_01PRODUCTIONONLYDEMO000001'
 const SANDBOX = 'env_01KVSNYVPMAP6JJGDF177V2DE6'
+const PRODUCTION = 'env_01M020PHF0GF9KP1E9CEVNKJA1'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -44,7 +45,9 @@ test('opens a shared invoice from another environment, and switches there', asyn
   await expect(page.getByText('Switched to Production')).toBeVisible()
   await expect(page.getByRole('tab', { name: /Invoice details/ })).toBeVisible()
   await expect(page.getByText('Invoice not found')).toHaveCount(0)
-  await expect(page).toHaveURL(new RegExp(`/invoices/${PRODUCTION_ONLY_INVOICE}$`))
+  await expect
+    .poll(() => page.url())
+    .toMatch(new RegExp(`/invoices/${PRODUCTION_ONLY_INVOICE}\\?env=${PRODUCTION}$`))
 
   // The console stays in Production: a reload opens the invoice straight away.
   await page.reload()
@@ -55,4 +58,32 @@ test('opens a shared invoice from another environment, and switches there', asyn
 test('a record no environment has is still "not found"', async ({ page }) => {
   await page.goto('/invoices/inv_01DOESNOTEXISTANYWHERE00000')
   await expect(page.getByText('Invoice not found')).toBeVisible()
+})
+
+test('every page names its environment in the address', async ({ page }) => {
+  await page.goto('/customers')
+  await expect(page.getByRole('heading', { name: 'Customers' }).first()).toBeVisible({
+    timeout: 20_000,
+  })
+  await expect.poll(() => page.url()).toMatch(new RegExp(`[?&]env=${SANDBOX}`))
+
+  // In-app navigation keeps it.
+  await page.goto(`/customers?env=${SANDBOX}`)
+  await page.getByRole('button', { name: 'Contracts' }).first().click()
+  await expect.poll(() => page.url()).toMatch(new RegExp(`/contracts.*[?&]env=${SANDBOX}`))
+})
+
+test('a shared link opens in the environment it names', async ({ page }) => {
+  await page.goto(`/contracts?env=${PRODUCTION}`)
+  await expect(page.getByText('Switched to Production')).toBeVisible({ timeout: 20_000 })
+  await expect.poll(() => page.url()).toMatch(new RegExp(`/contracts.*[?&]env=${PRODUCTION}`))
+})
+
+test('a link to an environment you cannot reach opens in your own', async ({ page }) => {
+  await page.goto('/customers?env=env_NOTONEOFYOURS')
+  await expect(page.getByRole('heading', { name: 'Customers' }).first()).toBeVisible({
+    timeout: 20_000,
+  })
+  await expect.poll(() => page.url()).toMatch(new RegExp(`[?&]env=${SANDBOX}`))
+  await expect(page.getByText(/^Switched to/)).toHaveCount(0)
 })
