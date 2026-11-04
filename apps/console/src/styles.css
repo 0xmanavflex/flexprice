@@ -25,3 +25,19 @@ html {
 :root {
   --shell-max: 1800px;
 }
+
+/*
+ * Pylon's bubble is fixed bottom-right and covers the primary action on a
+ * right-hand sheet (Connect, Continue). Park it bottom-left, with the chat
+ * window opening from that corner. Pylon sets its own !important positions.
+ */
+.PylonChat-bubbleFrameContainer {
+  right: auto !important;
+  left: 8px !important;
+}
+
+.PylonChat-chatWindowFrameContainer {
+  right: auto !important;
+  left: 8px !important;
+  transform-origin: 20px calc(100% - 76px) !important;
+}
