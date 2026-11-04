@@ -566,7 +566,7 @@ export function SubscriptionDetailView({
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
   const canCancel = !isCancelled && !isCancelling && !s.cancelledAt
   const canActivate = isUnstartedSubscription(s.status) && Boolean(onActivate)
-  const canPause = Boolean(onPause) && canPauseSubscription(s.status) && !isCancelling
+  const canPause = Boolean(onPause) && canPauseSubscription(s) && !isCancelling
   const canResume = Boolean(onResume) && canResumeSubscription(s.status)
   const title = `${s.customerName} on ${s.planName}`
 

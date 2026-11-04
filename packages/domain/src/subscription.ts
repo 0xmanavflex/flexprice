@@ -1186,9 +1186,20 @@ export interface ResumeSubscription {
   prorate: boolean
 }
 
-/** Pause is offered on a running contract; resume only on a paused one. */
-export function canPauseSubscription(status: SubscriptionStatus): boolean {
-  return status === SubscriptionStatus.Active || status === SubscriptionStatus.Trialing
+/**
+ * Pause is offered only where the API takes it (`validatePause`): an active
+ * contract (not a trial: "Only active subscriptions can be paused") that is not
+ * a child following its parent (an inherited or grouped-invoicing contract:
+ * "Pause the parent subscription instead"). Resume only on a paused one.
+ */
+export function canPauseSubscription(
+  contract: Pick<SubscriptionDetail, 'status' | 'subscriptionType'>,
+): boolean {
+  return (
+    contract.status === SubscriptionStatus.Active &&
+    contract.subscriptionType !== 'inherited' &&
+    contract.subscriptionType !== 'grouped_invoicing'
+  )
 }
 
 export function canResumeSubscription(status: SubscriptionStatus): boolean {

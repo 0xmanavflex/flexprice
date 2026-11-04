@@ -744,6 +744,39 @@ export const CancelledMetadataReadOnly: Story = {
   },
 }
 
+/**
+ * Pause is offered only where the API takes it (QA #53): a trial ("Only active
+ * subscriptions can be paused") and an inherited child ("Pause the parent
+ * subscription instead") offer none.
+ */
+export const NoPauseOnTrial: Story = {
+  args: {
+    ...withSubscription({ status: SubscriptionStatus.Trialing }),
+    onPause: fn(async () => undefined),
+  },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Cancel contract' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: 'Pause contract' })).toBeNull()
+  },
+}
+
+export const NoPauseOnInheritedChild: Story = {
+  args: {
+    ...withSubscription({ subscriptionType: 'inherited', parentSubscriptionId: 'sub_parent' }),
+    onPause: fn(async () => undefined),
+  },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Cancel contract' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: 'Pause contract' })).toBeNull()
+  },
+}
+
 /** A paused contract says so, and its menu offers Resume instead of Pause. */
 export const Paused: Story = {
   args: {
