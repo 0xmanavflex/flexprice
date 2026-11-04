@@ -524,3 +524,22 @@ export function emptyInvoice(): CreateInvoice {
     ],
   }
 }
+
+/**
+ * Where an invoice can be opened at a provider it is synced to: the page the
+ * provider shows for it. The sync writes that page into the invoice's
+ * metadata (Stripe's hosted invoice, `stripe_hosted_invoice_url`); a provider
+ * that leaves none has no link. Only http(s) addresses are returned.
+ */
+export function invoiceProviderUrl(
+  metadata: Readonly<Record<string, string>> | undefined,
+  providerType: string,
+): string | null {
+  const key = INVOICE_PROVIDER_URL_KEY[providerType.toLowerCase()]
+  const url = key ? metadata?.[key]?.trim() : undefined
+  return url && /^https?:\/\//i.test(url) ? url : null
+}
+
+const INVOICE_PROVIDER_URL_KEY: Record<string, string> = {
+  stripe: 'stripe_hosted_invoice_url',
+}

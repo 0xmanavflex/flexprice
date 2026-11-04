@@ -99,6 +99,8 @@ export interface Payment {
   billingEntityId?: string
   /** The gateway's own id for the charge (`pi_…`), when it went through one. */
   gatewayPaymentId?: string
+  /** The page a payment link sends the customer to; set once the link exists. */
+  paymentUrl?: string
 }
 
 /**
@@ -176,7 +178,20 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   CARD: 'Card',
   ACH: 'ACH',
   UPI: 'UPI',
-  PAYMENT_LINK: 'Payment link (paid online)',
+  PAYMENT_LINK: 'Payment link',
+}
+
+/**
+ * A payment method as a person reads it: "Payment link", not the wire's
+ * `payment_link`. Known methods take their label's short form (no note in
+ * brackets); anything else is spaced and capitalised.
+ */
+export function paymentMethodName(method: string): string {
+  const key = method.trim().toUpperCase() as PaymentMethod
+  const label = PAYMENT_METHOD_LABEL[key]
+  if (label) return label.replace(/\s*\(.*\)$/, '')
+  const words = method.trim().replaceAll('_', ' ').toLowerCase()
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : ''
 }
 
 /**

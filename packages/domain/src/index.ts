@@ -461,6 +461,7 @@ export {
   RECORDABLE_PAYMENT_METHODS,
   PAYMENT_LINK_GATEWAYS,
   PAYMENT_METHOD_LABEL,
+  paymentMethodName,
   PAYMENT_SORT_LABEL,
   PAYMENT_STATUS_LABEL,
   PaymentMethod,
@@ -1150,3 +1151,4 @@ export {
 } from './billingEntity'
 export { DOCS } from './docsLinks'
 export { eventPropertyNames, expressionProblem } from './featureExpression'
+export { invoiceProviderUrl } from './invoice'

@@ -149,7 +149,7 @@ export const PaymentLink: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await chooseOption(/^Method/, 'Payment link (paid online)')
+    await chooseOption(/^Method/, 'Payment link')
     // Nothing is left initiated: the link is raised at once.
     await expect(canvas.queryByRole('switch', { name: /^Process now/ })).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Create payment' }))

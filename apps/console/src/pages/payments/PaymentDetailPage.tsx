@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { CreditCardIcon, PlayIcon, Trash2Icon } from '@fp/ui/icons'
-import { PaymentStatus, formatMoney, PAYMENT_STATUS_LABEL } from '@fp/domain'
+import { CopyIcon, CreditCardIcon, LinkIcon, PlayIcon, Trash2Icon } from '@fp/ui/icons'
+import { PaymentStatus, formatMoney, paymentMethodName, PAYMENT_STATUS_LABEL } from '@fp/domain'
 import { ApiError, useDeletePayment, usePayment, useProcessPayment, serverReason } from '@fp/query'
 import {
   CatalogDetailFrame,
@@ -8,8 +8,16 @@ import {
   IntegrationMark,
   PaymentStatusBadge,
   Pill,
+  toast,
 } from '@fp/ui/pages'
-import { AppFailure, ConfirmDialog, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
+import {
+  AppFailure,
+  ConfirmDialog,
+  CopyChip,
+  EditableCard,
+  LoadingRows,
+  PageBody,
+} from '@fp/ui/compositions'
 
 export interface PaymentDetailPageProps {
   paymentId: string
@@ -64,7 +72,20 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
   }
 
   const data = payment.data
-  const canProcess = data.status === PaymentStatus.Pending
+  const isPaymentLink = data.methodType.toUpperCase() === 'PAYMENT_LINK'
+  // A payment link's Process only creates the link; once it exists there is nothing to run.
+  const canProcess = data.status === PaymentStatus.Pending && !(isPaymentLink && data.paymentUrl)
+  const method = paymentMethodName(data.methodType)
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(data.paymentUrl)
+      toast.success('Payment link copied')
+    } catch {
+      toast.error('Couldn’t copy the link', {
+        description: 'Your browser blocked clipboard access.',
+      })
+    }
+  }
   const close = () => setDialog(null)
 
   return (
@@ -73,11 +94,22 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
       onBack={onBack}
       icon={<CreditCardIcon />}
       title={`Payment ${formatMoney(data.amount)}`}
-      badges={data.methodType ? <Pill>{data.methodType}</Pill> : undefined}
+      badges={method ? <Pill>{method}</Pill> : undefined}
       id={data.id}
       {...(data.gateway ? { leading: <GatewayMark gateway={data.gateway} /> } : {})}
       menuLabel="Payment actions"
       menu={[
+        ...(data.paymentUrl
+          ? [
+              {
+                id: 'copy-link',
+                label: 'Copy payment link',
+                icon: <CopyIcon className="text-muted-foreground" aria-hidden />,
+                readOnly: true,
+                onSelect: () => void copyLink(),
+              },
+            ]
+          : []),
         ...(canProcess
           ? [
               {
@@ -129,7 +161,37 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
                       },
                     ]
                   : []),
-                { key: 'method', label: 'Method', value: data.methodType || '—', readOnly: true },
+                { key: 'method', label: 'Method', value: method || '—', readOnly: true },
+                // The page the customer pays on: copied from here, outside any menu.
+                ...(data.paymentUrl
+                  ? [
+                      {
+                        key: 'paymentUrl',
+                        label: 'Payment link',
+                        value: data.paymentUrl,
+                        display: (
+                          <span className="flex min-w-0 items-center gap-2">
+                            <a
+                              href={data.paymentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="truncate underline underline-offset-2"
+                            >
+                              {data.paymentUrl}
+                            </a>
+                            <CopyChip
+                              value={data.paymentUrl}
+                              icon={<LinkIcon aria-hidden />}
+                              label="Copy link"
+                              ariaLabel="Copy payment link"
+                              copiedMessage="Payment link copied"
+                            />
+                          </span>
+                        ),
+                        readOnly: true,
+                      },
+                    ]
+                  : []),
                 { key: 'gateway', label: 'Gateway', value: data.gateway || '—', readOnly: true },
                 ...(data.gatewayPaymentId
                   ? [

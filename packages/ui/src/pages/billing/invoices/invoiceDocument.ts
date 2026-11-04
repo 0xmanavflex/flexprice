@@ -55,6 +55,8 @@ export interface InvoicePaymentRow {
   method: string
   amount: number
   status: string
+  /** A payment link's page, to copy for the customer. */
+  paymentUrl?: string
 }
 
 export interface InvoiceCreditNoteRow {

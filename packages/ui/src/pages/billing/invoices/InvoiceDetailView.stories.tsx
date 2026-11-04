@@ -641,3 +641,63 @@ export const CreditMemoCue: Story = {
     await expect(await canvas.findByText('CN-1000')).toBeVisible()
   },
 }
+
+const STRIPE_PAGE = 'https://invoice.stripe.com/i/acct_demo/test_demo'
+
+/**
+ * Integrations are their own card, after Metadata and before Related; a
+ * Stripe row opens the invoice's page on Stripe, and Related keeps only the
+ * records this invoice belongs to.
+ */
+export const IntegrationsCard: Story = {
+  parameters: menuA11y,
+  render: (args) => {
+    const invoice = {
+      ...makeInvoice({ ...args, hasHostedLink: false }),
+      metadata: { stripe_hosted_invoice_url: STRIPE_PAGE },
+    }
+    return (
+      <InvoiceDetailView
+        invoice={invoice}
+        payments={subTab('loaded', args.onRetrySubTab)}
+        creditNotes={subTab('loaded', args.onRetrySubTab)}
+        {...(args.onOpenCustomer ? { onOpenCustomer: args.onOpenCustomer } : {})}
+        {...(args.onOpenSubscription ? { onOpenSubscription: args.onOpenSubscription } : {})}
+        integrationControls={{
+          links: [
+            {
+              id: 'stripe',
+              name: 'Stripe',
+              providerType: 'stripe',
+              mappingId: 'map_1',
+              providerEntityId: 'in_1UXlX7demo',
+              createdAt: null,
+              updatedAt: null,
+            },
+          ],
+          linkable: [{ providerType: 'zoho', name: 'Zoho' }],
+          onLink: fn(),
+          onUnlink: fn(),
+          pushProviders: ['Stripe', 'Zoho'],
+          onPush: fn(),
+        }}
+      />
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const integrations = await canvas.findByRole('region', { name: 'Integrations' })
+    await expect(
+      within(integrations).getByRole('link', { name: 'Open this invoice in Stripe' }),
+    ).toHaveAttribute('href', STRIPE_PAGE)
+    // Link and Push live in the card's own menu, not as rows.
+    await expect(within(integrations).queryByText(/^Push to/)).toBeNull()
+    await userEvent.click(within(integrations).getByRole('button', { name: 'Integration actions' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Link integration' })).toBeVisible()
+    await expect(screen.getByRole('menuitem', { name: 'Push to Stripe, Zoho' })).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+    // Related lists the customer and contract only.
+    const related = canvas.getByRole('region', { name: 'Related' })
+    await expect(within(related).queryByText('Stripe')).toBeNull()
+  },
+}

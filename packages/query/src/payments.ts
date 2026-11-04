@@ -46,6 +46,7 @@ export interface PaymentWire {
   createdAt?: Date | undefined
   succeededAt?: Date | undefined
   gatewayPaymentId?: string | undefined
+  paymentUrl?: string | null | undefined
 }
 
 /**
@@ -72,6 +73,7 @@ export function toPayment(wire: PaymentWire): Payment {
     succeededAt: wire.succeededAt ?? null,
     ...(wire.billingEntityId ? { billingEntityId: wire.billingEntityId } : {}),
     ...(wire.gatewayPaymentId ? { gatewayPaymentId: wire.gatewayPaymentId } : {}),
+    ...(wire.paymentUrl?.trim() ? { paymentUrl: wire.paymentUrl.trim() } : {}),
   }
 }
 

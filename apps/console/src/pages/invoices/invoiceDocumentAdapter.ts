@@ -1,7 +1,7 @@
 import {
   BillingModel,
   CREDIT_NOTE_STATUS_LABEL,
-  PAYMENT_METHOD_LABEL,
+  paymentMethodName,
   PAYMENT_STATUS_LABEL,
   type Charge,
   type CreditNote,
@@ -205,9 +205,8 @@ export function toInvoiceDocument(
     payments: payments.map((payment) => ({
       id: payment.id,
       date: day(payment.succeededAt ?? payment.createdAt) ?? '—',
-      method:
-        PAYMENT_METHOD_LABEL[payment.methodType as keyof typeof PAYMENT_METHOD_LABEL] ??
-        payment.methodType,
+      method: paymentMethodName(payment.methodType),
+      ...(payment.paymentUrl ? { paymentUrl: payment.paymentUrl } : {}),
       amount: num(payment.amount.amount),
       status: PAYMENT_STATUS_LABEL[payment.status],
     })),
