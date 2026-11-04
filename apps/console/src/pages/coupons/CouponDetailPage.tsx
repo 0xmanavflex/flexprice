@@ -106,16 +106,17 @@ export function CouponDetailPage({
       }
       id={record.code || record.id}
       menuLabel="Coupon actions"
-      menu={[
-        {
-          id: 'edit-details',
-          label: 'Edit details',
-          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
-          onSelect: () => setTab('information'),
-        },
-        ...(isArchived
+      // An archived coupon is read-only, so it offers neither edit nor archive.
+      menu={
+        isArchived
           ? []
           : [
+              {
+                id: 'edit-details',
+                label: 'Edit details',
+                icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+                onSelect: () => setTab('information'),
+              },
               {
                 id: 'archive',
                 label: 'Archive',
@@ -123,8 +124,8 @@ export function CouponDetailPage({
                 destructive: true,
                 onSelect: () => setArchiving(true),
               },
-            ]),
-      ]}
+            ]
+      }
       tab={tab}
       onTabChange={(next) => setTab(next as CouponTab)}
       tabs={[
