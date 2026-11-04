@@ -395,8 +395,7 @@ export function CustomerWalletView({
           empty={{
             scene: 'customers',
             title: 'No transactions yet',
-            description:
-              'Top-ups and debits on this wallet appear here. Open a debit to see which top-ups it drew from.',
+            description: 'Top-ups and debits on this wallet appear here.',
           }}
         >
           <WalletLedgerTable transactions={transactions} now={asOf} noun="transactions" />
